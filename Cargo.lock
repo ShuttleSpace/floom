@@ -910,6 +910,7 @@ dependencies = [
 name = "floem-widget-cupertino-button"
 version = "0.1.0"
 dependencies = [
+ "floem",
  "floem-core-theme",
 ]
 
@@ -966,6 +967,7 @@ dependencies = [
 name = "floem-widget-fluent-button"
 version = "0.1.0"
 dependencies = [
+ "floem",
  "floem-core-theme",
 ]
 
