@@ -1,0 +1,7 @@
+[package]
+name = "floem-widget-cupertino-switch"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+floem-core-theme = { workspace = true }

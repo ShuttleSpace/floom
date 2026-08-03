@@ -14,6 +14,22 @@ floem-widget-md-switch = { path = "../material/md-switch", optional = true }
 floem-widget-md-dialog = { path = "../material/md-dialog", optional = true }
 floem-widget-md-menu = { path = "../material/md-menu", optional = true }
 floem-widget-md-card = { path = "../material/md-card", optional = true }
+floem-widget-cupertino-button = { path = "../cupertino/cupertino-button", optional = true }
+floem-widget-cupertino-text = { path = "../cupertino/cupertino-text", optional = true }
+floem-widget-cupertino-text-field = { path = "../cupertino/cupertino-text-field", optional = true }
+floem-widget-cupertino-checkbox = { path = "../cupertino/cupertino-checkbox", optional = true }
+floem-widget-cupertino-switch = { path = "../cupertino/cupertino-switch", optional = true }
+floem-widget-cupertino-dialog = { path = "../cupertino/cupertino-dialog", optional = true }
+floem-widget-cupertino-menu = { path = "../cupertino/cupertino-menu", optional = true }
+floem-widget-cupertino-card = { path = "../cupertino/cupertino-card", optional = true }
+floem-widget-fluent-button = { path = "../fluent/fluent-button", optional = true }
+floem-widget-fluent-text = { path = "../fluent/fluent-text", optional = true }
+floem-widget-fluent-text-field = { path = "../fluent/fluent-text-field", optional = true }
+floem-widget-fluent-checkbox = { path = "../fluent/fluent-checkbox", optional = true }
+floem-widget-fluent-switch = { path = "../fluent/fluent-switch", optional = true }
+floem-widget-fluent-dialog = { path = "../fluent/fluent-dialog", optional = true }
+floem-widget-fluent-menu = { path = "../fluent/fluent-menu", optional = true }
+floem-widget-fluent-card = { path = "../fluent/fluent-card", optional = true }
 
 [features]
 default = ["material"]
@@ -26,4 +42,24 @@ material = [
     "floem-widget-md-dialog",
     "floem-widget-md-menu",
     "floem-widget-md-card",
+]
+cupertino = [
+    "floem-widget-cupertino-button",
+    "floem-widget-cupertino-text",
+    "floem-widget-cupertino-text-field",
+    "floem-widget-cupertino-checkbox",
+    "floem-widget-cupertino-switch",
+    "floem-widget-cupertino-dialog",
+    "floem-widget-cupertino-menu",
+    "floem-widget-cupertino-card",
+]
+fluent = [
+    "floem-widget-fluent-button",
+    "floem-widget-fluent-text",
+    "floem-widget-fluent-text-field",
+    "floem-widget-fluent-checkbox",
+    "floem-widget-fluent-switch",
+    "floem-widget-fluent-dialog",
+    "floem-widget-fluent-menu",
+    "floem-widget-fluent-card",
 ]

@@ -868,6 +868,22 @@ name = "floem-elements"
 version = "0.1.0"
 dependencies = [
  "floem-core-theme",
+ "floem-widget-cupertino-button",
+ "floem-widget-cupertino-card",
+ "floem-widget-cupertino-checkbox",
+ "floem-widget-cupertino-dialog",
+ "floem-widget-cupertino-menu",
+ "floem-widget-cupertino-switch",
+ "floem-widget-cupertino-text",
+ "floem-widget-cupertino-text-field",
+ "floem-widget-fluent-button",
+ "floem-widget-fluent-card",
+ "floem-widget-fluent-checkbox",
+ "floem-widget-fluent-dialog",
+ "floem-widget-fluent-menu",
+ "floem-widget-fluent-switch",
+ "floem-widget-fluent-text",
+ "floem-widget-fluent-text-field",
  "floem-widget-md-button",
  "floem-widget-md-card",
  "floem-widget-md-checkbox",
@@ -888,6 +904,118 @@ dependencies = [
  "linebender_resource_handle",
  "rect_packer",
  "wgpu",
+]
+
+[[package]]
+name = "floem-widget-cupertino-button"
+version = "0.1.0"
+dependencies = [
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-cupertino-card"
+version = "0.1.0"
+dependencies = [
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-cupertino-checkbox"
+version = "0.1.0"
+dependencies = [
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-cupertino-dialog"
+version = "0.1.0"
+dependencies = [
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-cupertino-menu"
+version = "0.1.0"
+dependencies = [
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-cupertino-switch"
+version = "0.1.0"
+dependencies = [
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-cupertino-text"
+version = "0.1.0"
+dependencies = [
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-cupertino-text-field"
+version = "0.1.0"
+dependencies = [
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-fluent-button"
+version = "0.1.0"
+dependencies = [
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-fluent-card"
+version = "0.1.0"
+dependencies = [
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-fluent-checkbox"
+version = "0.1.0"
+dependencies = [
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-fluent-dialog"
+version = "0.1.0"
+dependencies = [
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-fluent-menu"
+version = "0.1.0"
+dependencies = [
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-fluent-switch"
+version = "0.1.0"
+dependencies = [
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-fluent-text"
+version = "0.1.0"
+dependencies = [
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-fluent-text-field"
+version = "0.1.0"
+dependencies = [
+ "floem-core-theme",
 ]
 
 [[package]]
