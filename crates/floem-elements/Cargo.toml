@@ -1,0 +1,29 @@
+[package]
+name = "floem-elements"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+floem-core-theme = { workspace = true }
+
+floem-widget-md-button = { path = "../material/md-button", optional = true }
+floem-widget-md-text = { path = "../material/md-text", optional = true }
+floem-widget-md-text-field = { path = "../material/md-text-field", optional = true }
+floem-widget-md-checkbox = { path = "../material/md-checkbox", optional = true }
+floem-widget-md-switch = { path = "../material/md-switch", optional = true }
+floem-widget-md-dialog = { path = "../material/md-dialog", optional = true }
+floem-widget-md-menu = { path = "../material/md-menu", optional = true }
+floem-widget-md-card = { path = "../material/md-card", optional = true }
+
+[features]
+default = ["material"]
+material = [
+    "floem-widget-md-button",
+    "floem-widget-md-text",
+    "floem-widget-md-text-field",
+    "floem-widget-md-checkbox",
+    "floem-widget-md-switch",
+    "floem-widget-md-dialog",
+    "floem-widget-md-menu",
+    "floem-widget-md-card",
+]

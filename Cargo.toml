@@ -1,0 +1,24 @@
+[workspace]
+members = [
+    "crates/floem-core-theme",
+    "crates/floem-widget-runtime",
+    "crates/floem-elements",
+    "crates/material/md-button",
+    "crates/material/md-text",
+    "crates/material/md-text-field",
+    "crates/material/md-checkbox",
+    "crates/material/md-switch",
+    "crates/material/md-dialog",
+    "crates/material/md-menu",
+    "crates/material/md-card",
+    "crates/floem-testing",
+    "examples/demo",
+]
+
+resolver = "2"
+
+[workspace.dependencies]
+floem = { git = "https://github.com/lapce/floem" }
+floem-core-theme = { path = "crates/floem-core-theme" }
+floem-widget-runtime = { path = "crates/floem-widget-runtime" }
+floem-elements = { path = "crates/floem-elements" }
