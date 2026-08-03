@@ -1,24 +1,40 @@
+use floem::reactive::{RwSignal, SignalGet, SignalUpdate};
+use floem_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floem_core_theme::props::switch::SwitchProps;
+use floem_core_theme::theme::{CupertinoTheme, Theme};
+use floem_core_theme::tokens::color::Color;
 
 const DESIGN_SYSTEM: &str = "cupertino";
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct CupertinoSwitchStyle {
     pub design_system: &'static str,
+    pub track_color: Color,
+    pub thumb_color: Color,
+    pub width: f32,
+    pub height: f32,
+    pub thumb_size: f32,
+    pub thumb_offset: f32,
 }
 
 pub struct CupertinoSwitch {
     props: SwitchProps,
+    checked: RwSignal<bool>,
+    theme: RwSignal<CupertinoTheme>,
 }
 
 impl CupertinoSwitch {
     pub fn new() -> Self {
+        let props = SwitchProps::default();
         Self {
-            props: SwitchProps::default(),
+            checked: RwSignal::new(props.checked),
+            theme: RwSignal::new(CupertinoTheme::new()),
+            props,
         }
     }
     pub fn checked(mut self, checked: bool) -> Self {
         self.props.checked = checked;
+        self.checked.set(checked);
         self
     }
     pub fn disabled(mut self, disabled: bool) -> Self {
@@ -32,9 +48,53 @@ impl CupertinoSwitch {
     pub fn props(&self) -> &SwitchProps {
         &self.props
     }
+    pub fn toggle(&mut self) {
+        if self.props.disabled {
+            return;
+        }
+        let next = !self.checked.get();
+        self.checked.set(next);
+        self.props.checked = next;
+        if let Some(callback) = &self.props.on_change {
+            callback(next);
+        }
+    }
+    pub fn is_checked(&self) -> bool {
+        self.checked.get()
+    }
+    pub fn theme(&self) -> RwSignal<CupertinoTheme> {
+        self.theme
+    }
+    pub fn with_theme(mut self, theme: CupertinoTheme) -> Self {
+        self.theme = RwSignal::new(theme);
+        self
+    }
     pub fn resolved_style(&self) -> CupertinoSwitchStyle {
+        let theme = self.theme.get();
+        let ComponentTokens::Switch(tokens) = theme.component(ComponentId::Switch) else {
+            unreachable!("ComponentId::Switch must resolve to SwitchTokens")
+        };
+        let checked = self.is_checked();
         CupertinoSwitchStyle {
             design_system: DESIGN_SYSTEM,
+            track_color: if checked {
+                theme.colors().primary
+            } else {
+                theme.colors().surface_variant
+            },
+            thumb_color: if checked {
+                theme.colors().on_primary
+            } else {
+                theme.colors().outline
+            },
+            width: tokens.width,
+            height: tokens.height,
+            thumb_size: tokens.thumb_size,
+            thumb_offset: if checked {
+                tokens.width - tokens.height
+            } else {
+                0.0
+            },
         }
     }
 }

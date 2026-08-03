@@ -918,6 +918,7 @@ dependencies = [
 name = "floem-widget-cupertino-card"
 version = "0.1.0"
 dependencies = [
+ "floem",
  "floem-core-theme",
 ]
 
@@ -925,6 +926,7 @@ dependencies = [
 name = "floem-widget-cupertino-checkbox"
 version = "0.1.0"
 dependencies = [
+ "floem",
  "floem-core-theme",
 ]
 
@@ -932,6 +934,7 @@ dependencies = [
 name = "floem-widget-cupertino-dialog"
 version = "0.1.0"
 dependencies = [
+ "floem",
  "floem-core-theme",
 ]
 
@@ -939,6 +942,7 @@ dependencies = [
 name = "floem-widget-cupertino-menu"
 version = "0.1.0"
 dependencies = [
+ "floem",
  "floem-core-theme",
 ]
 
@@ -946,6 +950,7 @@ dependencies = [
 name = "floem-widget-cupertino-switch"
 version = "0.1.0"
 dependencies = [
+ "floem",
  "floem-core-theme",
 ]
 
@@ -953,6 +958,7 @@ dependencies = [
 name = "floem-widget-cupertino-text"
 version = "0.1.0"
 dependencies = [
+ "floem",
  "floem-core-theme",
 ]
 
@@ -960,6 +966,7 @@ dependencies = [
 name = "floem-widget-cupertino-text-field"
 version = "0.1.0"
 dependencies = [
+ "floem",
  "floem-core-theme",
 ]
 
@@ -975,6 +982,7 @@ dependencies = [
 name = "floem-widget-fluent-card"
 version = "0.1.0"
 dependencies = [
+ "floem",
  "floem-core-theme",
 ]
 
@@ -982,6 +990,7 @@ dependencies = [
 name = "floem-widget-fluent-checkbox"
 version = "0.1.0"
 dependencies = [
+ "floem",
  "floem-core-theme",
 ]
 
@@ -989,6 +998,7 @@ dependencies = [
 name = "floem-widget-fluent-dialog"
 version = "0.1.0"
 dependencies = [
+ "floem",
  "floem-core-theme",
 ]
 
@@ -996,6 +1006,7 @@ dependencies = [
 name = "floem-widget-fluent-menu"
 version = "0.1.0"
 dependencies = [
+ "floem",
  "floem-core-theme",
 ]
 
@@ -1003,6 +1014,7 @@ dependencies = [
 name = "floem-widget-fluent-switch"
 version = "0.1.0"
 dependencies = [
+ "floem",
  "floem-core-theme",
 ]
 
@@ -1010,6 +1022,7 @@ dependencies = [
 name = "floem-widget-fluent-text"
 version = "0.1.0"
 dependencies = [
+ "floem",
  "floem-core-theme",
 ]
 
@@ -1017,6 +1030,7 @@ dependencies = [
 name = "floem-widget-fluent-text-field"
 version = "0.1.0"
 dependencies = [
+ "floem",
  "floem-core-theme",
 ]
 

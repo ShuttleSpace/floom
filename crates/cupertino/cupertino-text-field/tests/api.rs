@@ -1,3 +1,4 @@
+use floem_core_theme::theme::{CupertinoTheme, Theme};
 use floem_widget_cupertino_text_field::CupertinoTextField;
 
 #[test]
@@ -15,4 +16,17 @@ fn text_field_exposes_neutral_contract_api() {
     assert_eq!(field.props().max_length, Some(8));
     assert!(field.props().disabled);
     assert_eq!(field.resolved_style().design_system, "cupertino");
+}
+
+#[test]
+fn text_field_style_resolves_from_cupertino_theme() {
+    let theme = CupertinoTheme::new();
+    let style = CupertinoTextField::new()
+        .with_theme(theme.clone())
+        .resolved_style();
+
+    assert_eq!(style.border_color, theme.colors().outline);
+    assert_eq!(style.text_color, theme.colors().on_surface);
+    assert_eq!(style.height, 44.0);
+    assert_eq!(style.border_radius, 10.0);
 }
