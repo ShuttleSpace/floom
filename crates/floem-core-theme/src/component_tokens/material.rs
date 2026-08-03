@@ -27,6 +27,90 @@ impl MaterialComponentTokens {
             card: CardTokens::from_spacing(&spacing),
         }
     }
+
+    pub fn cupertino() -> Self {
+        let spacing = SpacingTokens::default();
+        Self {
+            button: ButtonTokens {
+                height: 44.0,
+                padding_horizontal: spacing.md,
+                gap: spacing.sm,
+                icon_size: 20.0,
+            },
+            text: TextTokens::default(),
+            text_field: TextFieldTokens {
+                height: 44.0,
+                padding_horizontal: spacing.md,
+                border_radius: 10.0,
+            },
+            checkbox: CheckboxTokens {
+                size: 20.0,
+                border_radius: 6.0,
+            },
+            switch: SwitchTokens {
+                width: 51.0,
+                height: 31.0,
+                thumb_size: 27.0,
+            },
+            dialog: DialogTokens {
+                max_width: 420.0,
+                padding: spacing.lg,
+                border_radius: 14.0,
+            },
+            menu: MenuTokens {
+                min_width: 160.0,
+                item_height: 44.0,
+                padding: spacing.sm,
+            },
+            card: CardTokens {
+                elevation: 0,
+                border_radius: 12.0,
+                padding: spacing.md,
+            },
+        }
+    }
+
+    pub fn fluent() -> Self {
+        let spacing = SpacingTokens::default();
+        Self {
+            button: ButtonTokens {
+                height: 32.0,
+                padding_horizontal: spacing.md,
+                gap: spacing.sm,
+                icon_size: 16.0,
+            },
+            text: TextTokens::default(),
+            text_field: TextFieldTokens {
+                height: 32.0,
+                padding_horizontal: spacing.sm,
+                border_radius: 4.0,
+            },
+            checkbox: CheckboxTokens {
+                size: 20.0,
+                border_radius: 4.0,
+            },
+            switch: SwitchTokens {
+                width: 40.0,
+                height: 20.0,
+                thumb_size: 14.0,
+            },
+            dialog: DialogTokens {
+                max_width: 540.0,
+                padding: spacing.lg,
+                border_radius: 8.0,
+            },
+            menu: MenuTokens {
+                min_width: 120.0,
+                item_height: 32.0,
+                padding: spacing.xs,
+            },
+            card: CardTokens {
+                elevation: 1,
+                border_radius: 4.0,
+                padding: spacing.md,
+            },
+        }
+    }
     pub fn get(&self, id: ComponentId) -> ComponentTokens {
         match id {
             ComponentId::Button => ComponentTokens::Button(self.button.clone()),

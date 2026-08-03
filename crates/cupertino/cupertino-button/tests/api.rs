@@ -1,4 +1,5 @@
 use floem_core_theme::props::button::{ButtonSize, ButtonVariant};
+use floem_core_theme::theme::{CupertinoTheme, Theme};
 use floem_widget_cupertino_button::CupertinoButton;
 
 #[test]
@@ -15,4 +16,14 @@ fn button_exposes_neutral_contract_api() {
     assert!(button.props().disabled);
     assert!(button.props().loading);
     assert_eq!(button.resolved_style().design_system, "cupertino");
+}
+
+#[test]
+fn button_style_resolves_from_cupertino_theme() {
+    let theme = CupertinoTheme::new();
+    let style = CupertinoButton::new("Save").resolved_style();
+
+    assert_eq!(style.background, theme.colors().primary);
+    assert_eq!(style.foreground, theme.colors().on_primary);
+    assert_eq!(style.height, 44.0);
 }
