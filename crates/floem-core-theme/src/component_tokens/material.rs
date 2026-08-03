@@ -11,6 +11,8 @@ pub struct MaterialComponentTokens {
     dialog: DialogTokens,
     menu: MenuTokens,
     card: CardTokens,
+    icon: IconTokens,
+    divider: DividerTokens,
 }
 
 impl MaterialComponentTokens {
@@ -25,6 +27,8 @@ impl MaterialComponentTokens {
             dialog: DialogTokens::from_spacing(&spacing),
             menu: MenuTokens::from_spacing(&spacing),
             card: CardTokens::from_spacing(&spacing),
+            icon: IconTokens::default(),
+            divider: DividerTokens::default(),
         }
     }
 
@@ -67,6 +71,8 @@ impl MaterialComponentTokens {
                 border_radius: 12.0,
                 padding: spacing.md,
             },
+            icon: IconTokens { size: 22.0 },
+            divider: DividerTokens::default(),
         }
     }
 
@@ -109,6 +115,8 @@ impl MaterialComponentTokens {
                 border_radius: 4.0,
                 padding: spacing.md,
             },
+            icon: IconTokens { size: 20.0 },
+            divider: DividerTokens::default(),
         }
     }
     pub fn get(&self, id: ComponentId) -> ComponentTokens {
@@ -121,6 +129,8 @@ impl MaterialComponentTokens {
             ComponentId::Dialog => ComponentTokens::Dialog(self.dialog.clone()),
             ComponentId::Menu => ComponentTokens::Menu(self.menu.clone()),
             ComponentId::Card => ComponentTokens::Card(self.card.clone()),
+            ComponentId::Icon => ComponentTokens::Icon(self.icon.clone()),
+            ComponentId::Divider => ComponentTokens::Divider(self.divider.clone()),
         }
     }
 }

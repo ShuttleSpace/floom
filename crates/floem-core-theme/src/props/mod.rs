@@ -2,6 +2,8 @@ pub mod button;
 pub mod card;
 pub mod checkbox;
 pub mod dialog;
+pub mod divider;
+pub mod icon;
 pub mod menu;
 pub mod switch;
 pub mod text;

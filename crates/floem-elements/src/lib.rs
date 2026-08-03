@@ -12,6 +12,8 @@ pub mod button;
 pub mod card;
 pub mod checkbox;
 pub mod dialog;
+pub mod divider;
+pub mod icon;
 pub mod menu;
 pub mod switch;
 pub mod text;
@@ -22,6 +24,8 @@ pub mod prelude {
     pub use crate::card::*;
     pub use crate::checkbox::*;
     pub use crate::dialog::*;
+    pub use crate::divider::*;
+    pub use crate::icon::*;
     pub use crate::menu::*;
     pub use crate::switch::*;
     pub use crate::text::*;

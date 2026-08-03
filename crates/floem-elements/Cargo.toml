@@ -14,6 +14,8 @@ floem-widget-md-switch = { path = "../material/md-switch", optional = true }
 floem-widget-md-dialog = { path = "../material/md-dialog", optional = true }
 floem-widget-md-menu = { path = "../material/md-menu", optional = true }
 floem-widget-md-card = { path = "../material/md-card", optional = true }
+floem-widget-md-icon = { path = "../material/md-icon", optional = true }
+floem-widget-md-divider = { path = "../material/md-divider", optional = true }
 floem-widget-cupertino-button = { path = "../cupertino/cupertino-button", optional = true }
 floem-widget-cupertino-text = { path = "../cupertino/cupertino-text", optional = true }
 floem-widget-cupertino-text-field = { path = "../cupertino/cupertino-text-field", optional = true }
@@ -22,6 +24,8 @@ floem-widget-cupertino-switch = { path = "../cupertino/cupertino-switch", option
 floem-widget-cupertino-dialog = { path = "../cupertino/cupertino-dialog", optional = true }
 floem-widget-cupertino-menu = { path = "../cupertino/cupertino-menu", optional = true }
 floem-widget-cupertino-card = { path = "../cupertino/cupertino-card", optional = true }
+floem-widget-cupertino-icon = { path = "../cupertino/cupertino-icon", optional = true }
+floem-widget-cupertino-divider = { path = "../cupertino/cupertino-divider", optional = true }
 floem-widget-fluent-button = { path = "../fluent/fluent-button", optional = true }
 floem-widget-fluent-text = { path = "../fluent/fluent-text", optional = true }
 floem-widget-fluent-text-field = { path = "../fluent/fluent-text-field", optional = true }
@@ -30,6 +34,8 @@ floem-widget-fluent-switch = { path = "../fluent/fluent-switch", optional = true
 floem-widget-fluent-dialog = { path = "../fluent/fluent-dialog", optional = true }
 floem-widget-fluent-menu = { path = "../fluent/fluent-menu", optional = true }
 floem-widget-fluent-card = { path = "../fluent/fluent-card", optional = true }
+floem-widget-fluent-icon = { path = "../fluent/fluent-icon", optional = true }
+floem-widget-fluent-divider = { path = "../fluent/fluent-divider", optional = true }
 
 [features]
 default = ["material"]
@@ -42,6 +48,8 @@ material = [
     "floem-widget-md-dialog",
     "floem-widget-md-menu",
     "floem-widget-md-card",
+    "floem-widget-md-icon",
+    "floem-widget-md-divider",
 ]
 cupertino = [
     "floem-widget-cupertino-button",
@@ -52,6 +60,8 @@ cupertino = [
     "floem-widget-cupertino-dialog",
     "floem-widget-cupertino-menu",
     "floem-widget-cupertino-card",
+    "floem-widget-cupertino-icon",
+    "floem-widget-cupertino-divider",
 ]
 fluent = [
     "floem-widget-fluent-button",
@@ -62,4 +72,6 @@ fluent = [
     "floem-widget-fluent-dialog",
     "floem-widget-fluent-menu",
     "floem-widget-fluent-card",
+    "floem-widget-fluent-icon",
+    "floem-widget-fluent-divider",
 ]

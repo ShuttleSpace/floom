@@ -872,6 +872,8 @@ dependencies = [
  "floem-widget-cupertino-card",
  "floem-widget-cupertino-checkbox",
  "floem-widget-cupertino-dialog",
+ "floem-widget-cupertino-divider",
+ "floem-widget-cupertino-icon",
  "floem-widget-cupertino-menu",
  "floem-widget-cupertino-switch",
  "floem-widget-cupertino-text",
@@ -880,6 +882,8 @@ dependencies = [
  "floem-widget-fluent-card",
  "floem-widget-fluent-checkbox",
  "floem-widget-fluent-dialog",
+ "floem-widget-fluent-divider",
+ "floem-widget-fluent-icon",
  "floem-widget-fluent-menu",
  "floem-widget-fluent-switch",
  "floem-widget-fluent-text",
@@ -888,6 +892,8 @@ dependencies = [
  "floem-widget-md-card",
  "floem-widget-md-checkbox",
  "floem-widget-md-dialog",
+ "floem-widget-md-divider",
+ "floem-widget-md-icon",
  "floem-widget-md-menu",
  "floem-widget-md-switch",
  "floem-widget-md-text",
@@ -932,6 +938,22 @@ dependencies = [
 
 [[package]]
 name = "floem-widget-cupertino-dialog"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-cupertino-divider"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-cupertino-icon"
 version = "0.1.0"
 dependencies = [
  "floem",
@@ -1003,6 +1025,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "floem-widget-fluent-divider"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-fluent-icon"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
 name = "floem-widget-fluent-menu"
 version = "0.1.0"
 dependencies = [
@@ -1063,6 +1101,24 @@ dependencies = [
 
 [[package]]
 name = "floem-widget-md-dialog"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+ "floem-widget-runtime",
+]
+
+[[package]]
+name = "floem-widget-md-divider"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+ "floem-widget-runtime",
+]
+
+[[package]]
+name = "floem-widget-md-icon"
 version = "0.1.0"
 dependencies = [
  "floem",

@@ -4,6 +4,8 @@ mod button;
 mod card;
 mod checkbox;
 mod dialog;
+mod divider;
+mod icon;
 mod menu;
 mod switch;
 mod text;
@@ -13,6 +15,8 @@ pub use button::ButtonTokens;
 pub use card::CardTokens;
 pub use checkbox::CheckboxTokens;
 pub use dialog::DialogTokens;
+pub use divider::DividerTokens;
+pub use icon::IconTokens;
 pub use menu::MenuTokens;
 pub use switch::SwitchTokens;
 pub use text::TextTokens;
@@ -28,6 +32,8 @@ pub enum ComponentId {
     Dialog,
     Menu,
     Card,
+    Icon,
+    Divider,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -40,4 +46,6 @@ pub enum ComponentTokens {
     Dialog(DialogTokens),
     Menu(MenuTokens),
     Card(CardTokens),
+    Icon(IconTokens),
+    Divider(DividerTokens),
 }

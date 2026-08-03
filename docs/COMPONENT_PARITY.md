@@ -15,7 +15,7 @@ The Vuetify documentation page is the source of truth for component inventory. I
 
 ## Current implemented contract
 
-Phase 1 has a cross-design-system skeleton for these 8 components:
+Phase 1 has a cross-design-system implementation for these 10 components:
 
 | Contract component | Material | Cupertino | Fluent | Current capability |
 | --- | --- | --- | --- | --- |
@@ -27,8 +27,10 @@ Phase 1 has a cross-design-system skeleton for these 8 components:
 | Dialog | `md-dialog` | `cupertino-dialog` | `fluent-dialog` | props, builder API, style resolution |
 | Menu | `md-menu` | `cupertino-menu` | `fluent-menu` | props, builder API, style resolution |
 | Card | `md-card` | `cupertino-card` | `fluent-card` | props, builder API, style resolution |
+| Icon | `md-icon` | `cupertino-icon` | `fluent-icon` | props, builder API, style resolution |
+| Divider | `md-divider` | `cupertino-divider` | `fluent-divider` | props, builder API, style resolution |
 
-The Cupertino and Fluent crates currently provide compileable API skeletons. They do not yet implement native Cupertino or Fluent visual tokens.
+The Cupertino and Fluent crates for the implemented contract components resolve native Cupertino or Fluent theme tokens.
 
 ## Vuetify-aligned target inventory
 
@@ -160,7 +162,7 @@ Vuetify 0 is treated as a capability reference for a lower-level, composable UI 
 
 ## Implementation order
 
-1. Stabilize the 8 current contract components across Material, Cupertino, and Fluent.
+1. Stabilize the current contract components across Material, Cupertino, and Fluent.
 2. Add missing high-use Vuetify controls: `Select`, `RadioGroup`, `Slider`, `Textarea`, `Tooltip`, `Snackbar`, `Tabs`, `List`.
 3. Add layout primitives: `App`, `Container`, `Grid`, `Divider`, `Sheet`, `Toolbar`, navigation shell components.
 4. Add data-heavy components: `DataTable`, `Treeview`, `Timeline`, virtual scrolling.
