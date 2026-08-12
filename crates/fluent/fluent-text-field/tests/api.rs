@@ -1,4 +1,4 @@
-use floem_core_theme::theme::{FluentTheme, Theme};
+use floem_core_theme::theme::{MultiTheme, Theme};
 use floem_widget_fluent_text_field::FluentTextField;
 
 #[test]
@@ -20,7 +20,7 @@ fn text_field_exposes_neutral_contract_api() {
 
 #[test]
 fn text_field_style_resolves_from_fluent_theme() {
-    let theme = FluentTheme::new();
+    let theme = MultiTheme::new_for(floem_core_theme::global_theme::DesignSystem::Fluent);
     let style = FluentTextField::new()
         .with_theme(theme.clone())
         .resolved_style();

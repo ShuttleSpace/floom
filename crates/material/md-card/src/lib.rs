@@ -1,9 +1,11 @@
-use floem::reactive::{RwSignal, SignalGet};
+use floem::prelude::*;
+use floem::view::AnyView;
+use floem::IntoView;
 use floem_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floem_core_theme::props::card::CardProps;
-use floem_core_theme::theme::Theme;
+use floem_core_theme::theme::{MultiTheme, Theme};
 use floem_core_theme::tokens::color::Color;
-use floem_core_theme::tokens::shadow::ShadowData;
+use floem_core_theme::tokens::color_ext::*;
 use floem_widget_runtime::theme_signal;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -12,12 +14,13 @@ pub struct MdCardStyle {
     pub content_color: Color,
     pub padding: f32,
     pub border_radius: f32,
-    pub shadow: ShadowData,
+    pub shadow: floem_core_theme::tokens::shadow::ShadowData,
 }
 
 pub struct MdCard {
     props: CardProps,
-    theme: RwSignal<floem_core_theme::theme::MaterialTheme>,
+    theme: RwSignal<MultiTheme>,
+    child: Option<AnyView>,
 }
 
 impl MdCard {
@@ -25,6 +28,7 @@ impl MdCard {
         Self {
             props: CardProps::default(),
             theme: theme_signal(),
+            child: None,
         }
     }
 
@@ -33,15 +37,21 @@ impl MdCard {
         self
     }
 
+    /// Set the card's content.
+    pub fn child(mut self, child: impl IntoView + 'static) -> Self {
+        self.child = Some(child.into_any());
+        self
+    }
+
     pub fn props(&self) -> &CardProps {
         &self.props
     }
 
-    pub fn theme(&self) -> RwSignal<floem_core_theme::theme::MaterialTheme> {
+    pub fn theme(&self) -> RwSignal<MultiTheme> {
         self.theme
     }
 
-    pub fn with_theme(mut self, theme: floem_core_theme::theme::MaterialTheme) -> Self {
+    pub fn with_theme(mut self, theme: MultiTheme) -> Self {
         self.theme = RwSignal::new(theme);
         self
     }
@@ -59,6 +69,30 @@ impl MdCard {
             border_radius: tokens.border_radius,
             shadow: theme.shadow().levels[level],
         }
+    }
+
+    /// Build a renderable Material 3 card surface.
+    pub fn view(self) -> impl View {
+        let theme = self.theme;
+        let elevation = self.props.elevation;
+        let child = self.child.unwrap_or_else(|| Empty::new().into_any());
+        Container::new(child).style(move |s| {
+            let t = theme.get();
+            let ComponentTokens::Card(tokens) = t.component(ComponentId::Card) else {
+                unreachable!()
+            };
+            let level = usize::from(elevation.min(5));
+            let shadow = t.shadow().levels[level];
+            s.background(t.colors().surface.to_peniko())
+                .color(t.colors().on_surface.to_peniko())
+                .padding(tokens.padding)
+                .border_radius(tokens.border_radius)
+                .box_shadow_h_offset(shadow.offset_x)
+                .box_shadow_v_offset(shadow.offset_y)
+                .box_shadow_blur(shadow.blur)
+                .box_shadow_spread(shadow.spread)
+                .box_shadow_color(with_alpha(BLACK, shadow.color_a).to_peniko())
+        })
     }
 }
 

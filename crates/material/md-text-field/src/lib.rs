@@ -1,8 +1,15 @@
-use floem::reactive::{RwSignal, SignalGet, SignalUpdate};
+use std::cell::Cell;
+use std::rc::Rc;
+
+use floem::event::EventPropagation;
+use floem::prelude::*;
+use floem::reactive::{RwSignal, SignalGet, SignalUpdate, create_effect};
+use floem::style::CursorStyle;
 use floem_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floem_core_theme::props::text_field::TextFieldProps;
-use floem_core_theme::theme::Theme;
+use floem_core_theme::theme::{MultiTheme, Theme};
 use floem_core_theme::tokens::color::Color;
+use floem_core_theme::tokens::color_ext::*;
 use floem_widget_runtime::theme_signal;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -18,7 +25,7 @@ pub struct MdTextField {
     props: TextFieldProps,
     value: RwSignal<String>,
     focused: RwSignal<bool>,
-    theme: RwSignal<floem_core_theme::theme::MaterialTheme>,
+    theme: RwSignal<MultiTheme>,
 }
 
 impl MdTextField {
@@ -92,11 +99,11 @@ impl MdTextField {
         &self.props
     }
 
-    pub fn theme(&self) -> RwSignal<floem_core_theme::theme::MaterialTheme> {
+    pub fn theme(&self) -> RwSignal<MultiTheme> {
         self.theme
     }
 
-    pub fn with_theme(mut self, theme: floem_core_theme::theme::MaterialTheme) -> Self {
+    pub fn with_theme(mut self, theme: MultiTheme) -> Self {
         self.theme = RwSignal::new(theme);
         self
     }
@@ -136,6 +143,87 @@ impl MdTextField {
             Some(max_length) => value.chars().take(max_length).collect(),
             None => value,
         }
+    }
+
+    /// Build a renderable, interactive Material 3 outlined text field.
+    pub fn view(self) -> impl View {
+        let theme = self.theme;
+        let value = self.value;
+        let focused = self.focused;
+        let disabled = self.props.disabled;
+        let placeholder = self.props.placeholder.clone();
+        let on_change = Rc::new(self.props.on_change);
+
+        let tokens = match theme.get().component(ComponentId::TextField) {
+            ComponentTokens::TextField(t) => t,
+            _ => unreachable!(),
+        };
+        let height = tokens.height;
+        let padding_horizontal = tokens.padding_horizontal;
+        let radius = tokens.border_radius;
+
+        // Fire the consumer callback whenever the buffer changes (after init).
+        let initialized = Rc::new(Cell::new(false));
+        create_effect(move |_| {
+            let v = value.get();
+            if initialized.get() {
+                if let Some(cb) = on_change.as_ref() {
+                    cb(&v);
+                }
+            } else {
+                initialized.set(true);
+            }
+        });
+
+        let input = TextInput::new(value)
+            .placeholder(&placeholder)
+            .style(move |s| {
+                let t = theme.get();
+                let c = if disabled {
+                    with_alpha(t.colors().on_surface, 38)
+                } else {
+                    t.colors().on_surface
+                };
+                s.color(c.to_peniko())
+                    .font_size(t.typography().body.medium.font_size)
+                    .width_pct(100.0)
+            })
+            .on_event(listener::FocusGained, move |_, _| {
+                focused.set(true);
+                EventPropagation::Continue
+            })
+            .on_event(listener::FocusLost, move |_, _| {
+                focused.set(false);
+                EventPropagation::Continue
+            })
+            .style(move |s| s.set_disabled(disabled));
+
+        Container::new(input)
+            .style(move |s| {
+                let t = theme.get();
+                let border = if disabled {
+                    with_alpha(t.colors().on_surface, 38)
+                } else if focused.get() {
+                    t.colors().primary
+                } else {
+                    t.colors().outline
+                };
+                let bg = if disabled {
+                    with_alpha(t.colors().on_surface, 4)
+                } else {
+                    t.colors().surface
+                };
+                s.height(height)
+                    .padding_horiz(padding_horizontal)
+                    .border(1.0)
+                    .border_color(border.to_peniko())
+                    .border_radius(radius)
+                    .background(bg.to_peniko())
+                    .items_center()
+                    .width_pct(100.0)
+                    .cursor(CursorStyle::Text)
+            })
+            .style(move |s| s.set_disabled(disabled))
     }
 }
 

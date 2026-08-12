@@ -1,9 +1,12 @@
-use floem::reactive::{RwSignal, SignalGet};
+use floem::prelude::*;
+use floem::views::{Container, Decorators, svg};
 use floem_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floem_core_theme::props::icon::IconProps;
-use floem_core_theme::theme::{MaterialTheme, Theme};
+use floem_core_theme::theme::{MultiTheme, Theme};
 use floem_core_theme::tokens::color::Color;
 use floem_widget_runtime::theme_signal;
+
+mod icons;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct MdIconStyle {
@@ -13,7 +16,7 @@ pub struct MdIconStyle {
 
 pub struct MdIcon {
     props: IconProps,
-    theme: RwSignal<MaterialTheme>,
+    theme: RwSignal<MultiTheme>,
 }
 
 impl MdIcon {
@@ -47,11 +50,11 @@ impl MdIcon {
         &self.props
     }
 
-    pub fn theme(&self) -> RwSignal<MaterialTheme> {
+    pub fn theme(&self) -> RwSignal<MultiTheme> {
         self.theme
     }
 
-    pub fn with_theme(mut self, theme: MaterialTheme) -> Self {
+    pub fn with_theme(mut self, theme: MultiTheme) -> Self {
         self.theme = RwSignal::new(theme);
         self
     }
@@ -65,5 +68,21 @@ impl MdIcon {
             color: theme.colors().on_surface_variant,
             size: self.props.size.unwrap_or(tokens.size),
         }
+    }
+
+    /// Build a renderable Material 3 icon.
+    pub fn view(self) -> impl View {
+        let theme = self.theme;
+        let name = self.props.name.clone();
+        let size = self.props.size;
+        svg(move || icons::md_icon_svg(&name)).style(move |s| {
+            let t = theme.get();
+            let ComponentTokens::Icon(tokens) = t.component(ComponentId::Icon) else {
+                unreachable!()
+            };
+            let sz = size.unwrap_or(tokens.size);
+            s.size(sz, sz)
+                .color(t.colors().on_surface_variant.to_peniko())
+        })
     }
 }

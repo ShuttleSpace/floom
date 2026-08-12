@@ -1,10 +1,10 @@
 use floem_core_theme::props::divider::DividerOrientation;
-use floem_core_theme::theme::{CupertinoTheme, Theme};
+use floem_core_theme::theme::{MultiTheme, Theme};
 use floem_widget_cupertino_divider::CupertinoDivider;
 
 #[test]
 fn divider_exposes_orientation_inset_and_theme_style() {
-    let theme = CupertinoTheme::new();
+    let theme = MultiTheme::new_for(floem_core_theme::global_theme::DesignSystem::Cupertino);
     let divider = CupertinoDivider::new()
         .orientation(DividerOrientation::Vertical)
         .inset(16.0);

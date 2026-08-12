@@ -1,7 +1,8 @@
-use floem::reactive::{RwSignal, SignalGet};
+use floem::prelude::*;
+use floem::views::{Container, Decorators};
 use floem_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floem_core_theme::props::divider::{DividerOrientation, DividerProps};
-use floem_core_theme::theme::{MaterialTheme, Theme};
+use floem_core_theme::theme::{MultiTheme, Theme};
 use floem_core_theme::tokens::color::Color;
 use floem_widget_runtime::theme_signal;
 
@@ -15,7 +16,7 @@ pub struct MdDividerStyle {
 
 pub struct MdDivider {
     props: DividerProps,
-    theme: RwSignal<MaterialTheme>,
+    theme: RwSignal<MultiTheme>,
 }
 
 impl MdDivider {
@@ -40,11 +41,11 @@ impl MdDivider {
         &self.props
     }
 
-    pub fn theme(&self) -> RwSignal<MaterialTheme> {
+    pub fn theme(&self) -> RwSignal<MultiTheme> {
         self.theme
     }
 
-    pub fn with_theme(mut self, theme: MaterialTheme) -> Self {
+    pub fn with_theme(mut self, theme: MultiTheme) -> Self {
         self.theme = RwSignal::new(theme);
         self
     }
@@ -60,6 +61,30 @@ impl MdDivider {
             inset: self.props.inset,
             orientation: self.props.orientation,
         }
+    }
+
+    /// Build a renderable Material 3 divider.
+    pub fn view(self) -> impl View {
+        let theme = self.theme;
+        let orientation = self.props.orientation;
+        let inset = self.props.inset;
+        Container::new(empty()).style(move |s| {
+            let t = theme.get();
+            let ComponentTokens::Divider(tokens) = t.component(ComponentId::Divider) else {
+                unreachable!()
+            };
+            let color = t.colors().outline_variant.to_peniko();
+            match orientation {
+                DividerOrientation::Horizontal => s.height(tokens.thickness)
+                    .width_full()
+                    .background(color)
+                    .margin_horiz(inset),
+                DividerOrientation::Vertical => s.width(tokens.thickness)
+                    .height_full()
+                    .background(color)
+                    .margin_vert(inset),
+            }
+        })
     }
 }
 

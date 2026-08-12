@@ -40,4 +40,21 @@ impl Color {
     pub const fn rgb(r: u8, g: u8, b: u8) -> Self {
         Self::rgba(r, g, b, 255)
     }
+
+    /// Convert our design-system `Color` into Floem's `peniko::Color`
+    /// so it can be used directly with Floem's styling API.
+    pub fn to_peniko(self) -> floem::peniko::Color {
+        floem::peniko::Color::from_rgba8(self.r, self.g, self.b, self.a)
+    }
+
+    /// Convert to a CSS `rgba(...)` string, used for inline SVG fills.
+    pub fn to_css(self) -> String {
+        format!(
+            "rgba({},{},{},{:.3})",
+            self.r,
+            self.g,
+            self.b,
+            self.a as f32 / 255.0
+        )
+    }
 }

@@ -1,7 +1,8 @@
+use floem::prelude::*;
 use floem::reactive::{RwSignal, SignalGet};
 use floem_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floem_core_theme::props::divider::{DividerOrientation, DividerProps};
-use floem_core_theme::theme::{CupertinoTheme, Theme};
+use floem_core_theme::theme::{MultiTheme, Theme};
 use floem_core_theme::tokens::color::Color;
 
 const DESIGN_SYSTEM: &str = "cupertino";
@@ -17,14 +18,14 @@ pub struct CupertinoDividerStyle {
 
 pub struct CupertinoDivider {
     props: DividerProps,
-    theme: RwSignal<CupertinoTheme>,
+    theme: RwSignal<MultiTheme>,
 }
 
 impl CupertinoDivider {
     pub fn new() -> Self {
         Self {
             props: DividerProps::default(),
-            theme: RwSignal::new(CupertinoTheme::new()),
+            theme: RwSignal::new(MultiTheme::new_for(floem_core_theme::global_theme::DesignSystem::Cupertino)),
         }
     }
 
@@ -42,11 +43,11 @@ impl CupertinoDivider {
         &self.props
     }
 
-    pub fn theme(&self) -> RwSignal<CupertinoTheme> {
+    pub fn theme(&self) -> RwSignal<MultiTheme> {
         self.theme
     }
 
-    pub fn with_theme(mut self, theme: CupertinoTheme) -> Self {
+    pub fn with_theme(mut self, theme: MultiTheme) -> Self {
         self.theme = RwSignal::new(theme);
         self
     }
@@ -63,6 +64,30 @@ impl CupertinoDivider {
             inset: self.props.inset,
             orientation: self.props.orientation,
         }
+    }
+
+    /// Build a renderable Cupertino divider.
+    pub fn view(self) -> impl View {
+        let theme = self.theme;
+        let orientation = self.props.orientation;
+        let inset = self.props.inset;
+        Container::new(empty()).style(move |s| {
+            let t = theme.get();
+            let ComponentTokens::Divider(tokens) = t.component(ComponentId::Divider) else {
+                unreachable!()
+            };
+            let color = t.colors().outline_variant.to_peniko();
+            match orientation {
+                DividerOrientation::Horizontal => s.height(tokens.thickness)
+                    .width_full()
+                    .background(color)
+                    .margin_horiz(inset),
+                DividerOrientation::Vertical => s.width(tokens.thickness)
+                    .height_full()
+                    .background(color)
+                    .margin_vert(inset),
+            }
+        })
     }
 }
 

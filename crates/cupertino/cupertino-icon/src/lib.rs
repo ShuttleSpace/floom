@@ -1,8 +1,12 @@
+use floem::prelude::*;
 use floem::reactive::{RwSignal, SignalGet};
+use floem::views::{Decorators, svg};
 use floem_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floem_core_theme::props::icon::IconProps;
-use floem_core_theme::theme::{CupertinoTheme, Theme};
+use floem_core_theme::theme::{MultiTheme, Theme};
 use floem_core_theme::tokens::color::Color;
+
+mod icons;
 
 const DESIGN_SYSTEM: &str = "cupertino";
 
@@ -15,7 +19,7 @@ pub struct CupertinoIconStyle {
 
 pub struct CupertinoIcon {
     props: IconProps,
-    theme: RwSignal<CupertinoTheme>,
+    theme: RwSignal<MultiTheme>,
 }
 
 impl CupertinoIcon {
@@ -25,7 +29,7 @@ impl CupertinoIcon {
                 name: name.into(),
                 ..Default::default()
             },
-            theme: RwSignal::new(CupertinoTheme::new()),
+            theme: RwSignal::new(MultiTheme::new_for(floem_core_theme::global_theme::DesignSystem::Cupertino)),
         }
     }
 
@@ -49,11 +53,11 @@ impl CupertinoIcon {
         &self.props
     }
 
-    pub fn theme(&self) -> RwSignal<CupertinoTheme> {
+    pub fn theme(&self) -> RwSignal<MultiTheme> {
         self.theme
     }
 
-    pub fn with_theme(mut self, theme: CupertinoTheme) -> Self {
+    pub fn with_theme(mut self, theme: MultiTheme) -> Self {
         self.theme = RwSignal::new(theme);
         self
     }
@@ -68,5 +72,21 @@ impl CupertinoIcon {
             color: theme.colors().on_surface,
             size: self.props.size.unwrap_or(tokens.size),
         }
+    }
+
+    /// Build a renderable Cupertino icon.
+    pub fn view(self) -> impl View {
+        let theme = self.theme;
+        let name = self.props.name.clone();
+        let size = self.props.size;
+        svg(move || icons::cupertino_icon_svg(&name)).style(move |s| {
+            let t = theme.get();
+            let ComponentTokens::Icon(tokens) = t.component(ComponentId::Icon) else {
+                unreachable!()
+            };
+            let sz = size.unwrap_or(tokens.size);
+            s.size(sz, sz)
+                .color(t.colors().on_surface_variant.to_peniko())
+        })
     }
 }

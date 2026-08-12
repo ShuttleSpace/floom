@@ -1,5 +1,6 @@
 use crate::component_tokens::material::MaterialComponentTokens;
 use crate::component_tokens::{ComponentId, ComponentTokens};
+use crate::global_theme::{DesignSystem, current_design_system};
 use crate::tokens::color::{Color, ColorTokens};
 use crate::tokens::motion::MotionTokens;
 use crate::tokens::radius::RadiusTokens;
@@ -389,5 +390,94 @@ fn text_style(font_size: f32, font_weight: FontWeight) -> TextStyle {
         line_height: font_size + 6.0,
         letter_spacing: 0.0,
         font_weight,
+    }
+}
+
+/// A runtime-agnostic theme that can hold any of the three Design System
+/// themes. This is the foundation for switching Design System at runtime:
+/// every component stores its theme as `RwSignal<MultiTheme>` instead of a
+/// concrete `*Theme`, and `MultiTheme` forwards the `Theme` trait to whichever
+/// variant is active (today it is seeded from the compile-time feature, but a
+/// running app can replace it via the global theme signal).
+#[derive(Debug, Clone)]
+pub struct MultiTheme {
+    material: MaterialTheme,
+    cupertino: CupertinoTheme,
+    fluent: FluentTheme,
+}
+
+impl MultiTheme {
+    /// Build a `MultiTheme` whose active variant matches the given Design
+    /// System. Used when an app switches DS at runtime.
+    pub fn new_for(ds: DesignSystem) -> Self {
+        Self {
+            material: MaterialTheme::new(),
+            cupertino: CupertinoTheme::new(),
+            fluent: FluentTheme::new(),
+        }
+        .activate(ds)
+    }
+
+    /// Record the active Design System. (The active variant is selected at read
+    /// time via `current_design_system`, so this is a no-op placeholder kept for
+    /// call-site clarity / future per-DS overrides.)
+    pub fn activate(self, _ds: DesignSystem) -> Self {
+        self
+    }
+
+    fn ds(&self) -> DesignSystem {
+        current_design_system()
+    }
+}
+
+impl Theme for MultiTheme {
+    fn colors(&self) -> &ColorTokens {
+        match self.ds() {
+            DesignSystem::Material => self.material.colors(),
+            DesignSystem::Cupertino => self.cupertino.colors(),
+            DesignSystem::Fluent => self.fluent.colors(),
+        }
+    }
+    fn spacing(&self) -> &SpacingTokens {
+        match self.ds() {
+            DesignSystem::Material => self.material.spacing(),
+            DesignSystem::Cupertino => self.cupertino.spacing(),
+            DesignSystem::Fluent => self.fluent.spacing(),
+        }
+    }
+    fn typography(&self) -> &TypographyTokens {
+        match self.ds() {
+            DesignSystem::Material => self.material.typography(),
+            DesignSystem::Cupertino => self.cupertino.typography(),
+            DesignSystem::Fluent => self.fluent.typography(),
+        }
+    }
+    fn radius(&self) -> &RadiusTokens {
+        match self.ds() {
+            DesignSystem::Material => self.material.radius(),
+            DesignSystem::Cupertino => self.cupertino.radius(),
+            DesignSystem::Fluent => self.fluent.radius(),
+        }
+    }
+    fn shadow(&self) -> &ElevationTokens {
+        match self.ds() {
+            DesignSystem::Material => self.material.shadow(),
+            DesignSystem::Cupertino => self.cupertino.shadow(),
+            DesignSystem::Fluent => self.fluent.shadow(),
+        }
+    }
+    fn motion(&self) -> &MotionTokens {
+        match self.ds() {
+            DesignSystem::Material => self.material.motion(),
+            DesignSystem::Cupertino => self.cupertino.motion(),
+            DesignSystem::Fluent => self.fluent.motion(),
+        }
+    }
+    fn component(&self, id: ComponentId) -> ComponentTokens {
+        match self.ds() {
+            DesignSystem::Material => self.material.component(id),
+            DesignSystem::Cupertino => self.cupertino.component(id),
+            DesignSystem::Fluent => self.fluent.component(id),
+        }
     }
 }

@@ -840,12 +840,18 @@ dependencies = [
 [[package]]
 name = "floem-core-theme"
 version = "0.1.0"
+dependencies = [
+ "floem",
+]
 
 [[package]]
 name = "floem-demo"
 version = "0.1.0"
 dependencies = [
+ "floem",
+ "floem-core-theme",
  "floem-elements",
+ "floem-widget-runtime",
 ]
 
 [[package]]
@@ -867,37 +873,302 @@ dependencies = [
 name = "floem-elements"
 version = "0.1.0"
 dependencies = [
+ "floem",
  "floem-core-theme",
+ "floem-widget-cupertino-alert",
+ "floem-widget-cupertino-app",
+ "floem-widget-cupertino-app_bar",
+ "floem-widget-cupertino-autocomplete",
+ "floem-widget-cupertino-avatar",
+ "floem-widget-cupertino-badge",
+ "floem-widget-cupertino-banner",
+ "floem-widget-cupertino-bottom_navigation",
+ "floem-widget-cupertino-breadcrumbs",
  "floem-widget-cupertino-button",
+ "floem-widget-cupertino-button_group",
+ "floem-widget-cupertino-calendar",
  "floem-widget-cupertino-card",
+ "floem-widget-cupertino-carousel",
  "floem-widget-cupertino-checkbox",
+ "floem-widget-cupertino-checkbox_btn",
+ "floem-widget-cupertino-chip",
+ "floem-widget-cupertino-chip_group",
+ "floem-widget-cupertino-code",
+ "floem-widget-cupertino-color_picker",
+ "floem-widget-cupertino-combobox",
+ "floem-widget-cupertino-confirm_edit",
+ "floem-widget-cupertino-container",
+ "floem-widget-cupertino-counter",
+ "floem-widget-cupertino-data_iterator",
+ "floem-widget-cupertino-datatable",
+ "floem-widget-cupertino-date_adapter_provider",
+ "floem-widget-cupertino-date_picker",
+ "floem-widget-cupertino-defaults_provider",
  "floem-widget-cupertino-dialog",
+ "floem-widget-cupertino-display_provider",
  "floem-widget-cupertino-divider",
+ "floem-widget-cupertino-empty_state",
+ "floem-widget-cupertino-expand_transition",
+ "floem-widget-cupertino-expansion_panels",
+ "floem-widget-cupertino-fade_transition",
+ "floem-widget-cupertino-file_input",
+ "floem-widget-cupertino-floating_action_button",
+ "floem-widget-cupertino-footer",
+ "floem-widget-cupertino-form",
+ "floem-widget-cupertino-grid",
+ "floem-widget-cupertino-hover",
  "floem-widget-cupertino-icon",
+ "floem-widget-cupertino-icon_button",
+ "floem-widget-cupertino-icons_provider",
+ "floem-widget-cupertino-image",
+ "floem-widget-cupertino-infinite_scroller",
+ "floem-widget-cupertino-item_group",
+ "floem-widget-cupertino-kbd",
+ "floem-widget-cupertino-list",
+ "floem-widget-cupertino-list_group",
+ "floem-widget-cupertino-list_item",
+ "floem-widget-cupertino-list_subheader",
+ "floem-widget-cupertino-locale_provider",
+ "floem-widget-cupertino-main",
  "floem-widget-cupertino-menu",
+ "floem-widget-cupertino-navigation_drawer",
+ "floem-widget-cupertino-number_input",
+ "floem-widget-cupertino-otp_input",
+ "floem-widget-cupertino-overlay",
+ "floem-widget-cupertino-pagination",
+ "floem-widget-cupertino-parallax",
+ "floem-widget-cupertino-progress_circular",
+ "floem-widget-cupertino-progress_linear",
+ "floem-widget-cupertino-pull_to_refresh",
+ "floem-widget-cupertino-radio",
+ "floem-widget-cupertino-radio-group",
+ "floem-widget-cupertino-range_slider",
+ "floem-widget-cupertino-rating",
+ "floem-widget-cupertino-responsive",
+ "floem-widget-cupertino-scale_transition",
+ "floem-widget-cupertino-select",
+ "floem-widget-cupertino-sheet",
+ "floem-widget-cupertino-skeleton_loader",
+ "floem-widget-cupertino-slide_group",
+ "floem-widget-cupertino-slide_transition",
+ "floem-widget-cupertino-slider",
+ "floem-widget-cupertino-snackbar",
+ "floem-widget-cupertino-spacer",
+ "floem-widget-cupertino-sparkline",
+ "floem-widget-cupertino-speed_dial",
+ "floem-widget-cupertino-stepper",
  "floem-widget-cupertino-switch",
+ "floem-widget-cupertino-system_bar",
+ "floem-widget-cupertino-table",
+ "floem-widget-cupertino-tabs",
  "floem-widget-cupertino-text",
  "floem-widget-cupertino-text-field",
+ "floem-widget-cupertino-textarea",
+ "floem-widget-cupertino-theme_provider",
+ "floem-widget-cupertino-time_picker",
+ "floem-widget-cupertino-timeline",
+ "floem-widget-cupertino-toolbar",
+ "floem-widget-cupertino-tooltip",
+ "floem-widget-cupertino-treeview",
+ "floem-widget-cupertino-validation_messages",
+ "floem-widget-cupertino-virtual_scroller",
+ "floem-widget-cupertino-window",
+ "floem-widget-fluent-alert",
+ "floem-widget-fluent-app",
+ "floem-widget-fluent-app_bar",
+ "floem-widget-fluent-autocomplete",
+ "floem-widget-fluent-avatar",
+ "floem-widget-fluent-badge",
+ "floem-widget-fluent-banner",
+ "floem-widget-fluent-bottom_navigation",
+ "floem-widget-fluent-breadcrumbs",
  "floem-widget-fluent-button",
+ "floem-widget-fluent-button_group",
+ "floem-widget-fluent-calendar",
  "floem-widget-fluent-card",
+ "floem-widget-fluent-carousel",
  "floem-widget-fluent-checkbox",
+ "floem-widget-fluent-checkbox_btn",
+ "floem-widget-fluent-chip",
+ "floem-widget-fluent-chip_group",
+ "floem-widget-fluent-code",
+ "floem-widget-fluent-color_picker",
+ "floem-widget-fluent-combobox",
+ "floem-widget-fluent-confirm_edit",
+ "floem-widget-fluent-container",
+ "floem-widget-fluent-counter",
+ "floem-widget-fluent-data_iterator",
+ "floem-widget-fluent-datatable",
+ "floem-widget-fluent-date_adapter_provider",
+ "floem-widget-fluent-date_picker",
+ "floem-widget-fluent-defaults_provider",
  "floem-widget-fluent-dialog",
+ "floem-widget-fluent-display_provider",
  "floem-widget-fluent-divider",
+ "floem-widget-fluent-empty_state",
+ "floem-widget-fluent-expand_transition",
+ "floem-widget-fluent-expansion_panels",
+ "floem-widget-fluent-fade_transition",
+ "floem-widget-fluent-file_input",
+ "floem-widget-fluent-floating_action_button",
+ "floem-widget-fluent-footer",
+ "floem-widget-fluent-form",
+ "floem-widget-fluent-grid",
+ "floem-widget-fluent-hover",
  "floem-widget-fluent-icon",
+ "floem-widget-fluent-icon_button",
+ "floem-widget-fluent-icons_provider",
+ "floem-widget-fluent-image",
+ "floem-widget-fluent-infinite_scroller",
+ "floem-widget-fluent-item_group",
+ "floem-widget-fluent-kbd",
+ "floem-widget-fluent-list",
+ "floem-widget-fluent-list_group",
+ "floem-widget-fluent-list_item",
+ "floem-widget-fluent-list_subheader",
+ "floem-widget-fluent-locale_provider",
+ "floem-widget-fluent-main",
  "floem-widget-fluent-menu",
+ "floem-widget-fluent-navigation_drawer",
+ "floem-widget-fluent-number_input",
+ "floem-widget-fluent-otp_input",
+ "floem-widget-fluent-overlay",
+ "floem-widget-fluent-pagination",
+ "floem-widget-fluent-parallax",
+ "floem-widget-fluent-progress_circular",
+ "floem-widget-fluent-progress_linear",
+ "floem-widget-fluent-pull_to_refresh",
+ "floem-widget-fluent-radio",
+ "floem-widget-fluent-radio-group",
+ "floem-widget-fluent-range_slider",
+ "floem-widget-fluent-rating",
+ "floem-widget-fluent-responsive",
+ "floem-widget-fluent-scale_transition",
+ "floem-widget-fluent-select",
+ "floem-widget-fluent-sheet",
+ "floem-widget-fluent-skeleton_loader",
+ "floem-widget-fluent-slide_group",
+ "floem-widget-fluent-slide_transition",
+ "floem-widget-fluent-slider",
+ "floem-widget-fluent-snackbar",
+ "floem-widget-fluent-spacer",
+ "floem-widget-fluent-sparkline",
+ "floem-widget-fluent-speed_dial",
+ "floem-widget-fluent-stepper",
  "floem-widget-fluent-switch",
+ "floem-widget-fluent-system_bar",
+ "floem-widget-fluent-table",
+ "floem-widget-fluent-tabs",
  "floem-widget-fluent-text",
  "floem-widget-fluent-text-field",
+ "floem-widget-fluent-textarea",
+ "floem-widget-fluent-theme_provider",
+ "floem-widget-fluent-time_picker",
+ "floem-widget-fluent-timeline",
+ "floem-widget-fluent-toolbar",
+ "floem-widget-fluent-tooltip",
+ "floem-widget-fluent-treeview",
+ "floem-widget-fluent-validation_messages",
+ "floem-widget-fluent-virtual_scroller",
+ "floem-widget-fluent-window",
+ "floem-widget-md-alert",
+ "floem-widget-md-app",
+ "floem-widget-md-app_bar",
+ "floem-widget-md-autocomplete",
+ "floem-widget-md-avatar",
+ "floem-widget-md-badge",
+ "floem-widget-md-banner",
+ "floem-widget-md-bottom_navigation",
+ "floem-widget-md-breadcrumbs",
  "floem-widget-md-button",
+ "floem-widget-md-button_group",
+ "floem-widget-md-calendar",
  "floem-widget-md-card",
+ "floem-widget-md-carousel",
  "floem-widget-md-checkbox",
+ "floem-widget-md-checkbox_btn",
+ "floem-widget-md-chip",
+ "floem-widget-md-chip_group",
+ "floem-widget-md-code",
+ "floem-widget-md-color_picker",
+ "floem-widget-md-combobox",
+ "floem-widget-md-confirm_edit",
+ "floem-widget-md-container",
+ "floem-widget-md-counter",
+ "floem-widget-md-data_iterator",
+ "floem-widget-md-datatable",
+ "floem-widget-md-date_adapter_provider",
+ "floem-widget-md-date_picker",
+ "floem-widget-md-defaults_provider",
  "floem-widget-md-dialog",
+ "floem-widget-md-display_provider",
  "floem-widget-md-divider",
+ "floem-widget-md-empty_state",
+ "floem-widget-md-expand_transition",
+ "floem-widget-md-expansion_panels",
+ "floem-widget-md-fade_transition",
+ "floem-widget-md-file_input",
+ "floem-widget-md-floating_action_button",
+ "floem-widget-md-footer",
+ "floem-widget-md-form",
+ "floem-widget-md-grid",
+ "floem-widget-md-hover",
  "floem-widget-md-icon",
+ "floem-widget-md-icon_button",
+ "floem-widget-md-icons_provider",
+ "floem-widget-md-image",
+ "floem-widget-md-infinite_scroller",
+ "floem-widget-md-item_group",
+ "floem-widget-md-kbd",
+ "floem-widget-md-list",
+ "floem-widget-md-list_group",
+ "floem-widget-md-list_item",
+ "floem-widget-md-list_subheader",
+ "floem-widget-md-locale_provider",
+ "floem-widget-md-main",
  "floem-widget-md-menu",
+ "floem-widget-md-navigation_drawer",
+ "floem-widget-md-number_input",
+ "floem-widget-md-otp_input",
+ "floem-widget-md-overlay",
+ "floem-widget-md-pagination",
+ "floem-widget-md-parallax",
+ "floem-widget-md-progress_circular",
+ "floem-widget-md-progress_linear",
+ "floem-widget-md-pull_to_refresh",
+ "floem-widget-md-radio",
+ "floem-widget-md-radio-group",
+ "floem-widget-md-range_slider",
+ "floem-widget-md-rating",
+ "floem-widget-md-responsive",
+ "floem-widget-md-scale_transition",
+ "floem-widget-md-select",
+ "floem-widget-md-sheet",
+ "floem-widget-md-skeleton_loader",
+ "floem-widget-md-slide_group",
+ "floem-widget-md-slide_transition",
+ "floem-widget-md-slider",
+ "floem-widget-md-snackbar",
+ "floem-widget-md-spacer",
+ "floem-widget-md-sparkline",
+ "floem-widget-md-speed_dial",
+ "floem-widget-md-stepper",
  "floem-widget-md-switch",
+ "floem-widget-md-system_bar",
+ "floem-widget-md-table",
+ "floem-widget-md-tabs",
  "floem-widget-md-text",
  "floem-widget-md-text-field",
+ "floem-widget-md-textarea",
+ "floem-widget-md-theme_provider",
+ "floem-widget-md-time_picker",
+ "floem-widget-md-timeline",
+ "floem-widget-md-toolbar",
+ "floem-widget-md-tooltip",
+ "floem-widget-md-treeview",
+ "floem-widget-md-validation_messages",
+ "floem-widget-md-virtual_scroller",
+ "floem-widget-md-window",
 ]
 
 [[package]]
@@ -913,7 +1184,95 @@ dependencies = [
 ]
 
 [[package]]
+name = "floem-widget-cupertino-alert"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-cupertino-app"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-cupertino-app_bar"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-cupertino-autocomplete"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-cupertino-avatar"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-cupertino-badge"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-cupertino-banner"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-cupertino-bottom_navigation"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-cupertino-breadcrumbs"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
 name = "floem-widget-cupertino-button"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-cupertino-button_group"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-cupertino-calendar"
 version = "0.1.0"
 dependencies = [
  "floem",
@@ -929,7 +1288,127 @@ dependencies = [
 ]
 
 [[package]]
+name = "floem-widget-cupertino-carousel"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
 name = "floem-widget-cupertino-checkbox"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-cupertino-checkbox_btn"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-cupertino-chip"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-cupertino-chip_group"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-cupertino-code"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-cupertino-color_picker"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-cupertino-combobox"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-cupertino-confirm_edit"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-cupertino-container"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-cupertino-counter"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-cupertino-data_iterator"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-cupertino-datatable"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-cupertino-date_adapter_provider"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-cupertino-date_picker"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-cupertino-defaults_provider"
 version = "0.1.0"
 dependencies = [
  "floem",
@@ -945,7 +1424,95 @@ dependencies = [
 ]
 
 [[package]]
+name = "floem-widget-cupertino-display_provider"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
 name = "floem-widget-cupertino-divider"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-cupertino-empty_state"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-cupertino-expand_transition"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-cupertino-expansion_panels"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-cupertino-fade_transition"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-cupertino-file_input"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-cupertino-floating_action_button"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-cupertino-footer"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-cupertino-form"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-cupertino-grid"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-cupertino-hover"
 version = "0.1.0"
 dependencies = [
  "floem",
@@ -961,6 +1528,102 @@ dependencies = [
 ]
 
 [[package]]
+name = "floem-widget-cupertino-icon_button"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-cupertino-icons_provider"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-cupertino-image"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-cupertino-infinite_scroller"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-cupertino-item_group"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-cupertino-kbd"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-cupertino-list"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-cupertino-list_group"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-cupertino-list_item"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-cupertino-list_subheader"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-cupertino-locale_provider"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-cupertino-main"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
 name = "floem-widget-cupertino-menu"
 version = "0.1.0"
 dependencies = [
@@ -969,7 +1632,239 @@ dependencies = [
 ]
 
 [[package]]
+name = "floem-widget-cupertino-navigation_drawer"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-cupertino-number_input"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-cupertino-otp_input"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-cupertino-overlay"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-cupertino-pagination"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-cupertino-parallax"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-cupertino-progress_circular"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-cupertino-progress_linear"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-cupertino-pull_to_refresh"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-cupertino-radio"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-cupertino-radio-group"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-cupertino-range_slider"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-cupertino-rating"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-cupertino-responsive"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-cupertino-scale_transition"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-cupertino-select"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-cupertino-sheet"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-cupertino-skeleton_loader"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-cupertino-slide_group"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-cupertino-slide_transition"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-cupertino-slider"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-cupertino-snackbar"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-cupertino-spacer"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-cupertino-sparkline"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-cupertino-speed_dial"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-cupertino-stepper"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
 name = "floem-widget-cupertino-switch"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-cupertino-system_bar"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-cupertino-table"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-cupertino-tabs"
 version = "0.1.0"
 dependencies = [
  "floem",
@@ -993,7 +1888,175 @@ dependencies = [
 ]
 
 [[package]]
+name = "floem-widget-cupertino-textarea"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-cupertino-theme_provider"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-cupertino-time_picker"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-cupertino-timeline"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-cupertino-toolbar"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-cupertino-tooltip"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-cupertino-treeview"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-cupertino-validation_messages"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-cupertino-virtual_scroller"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-cupertino-window"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-fluent-alert"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-fluent-app"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-fluent-app_bar"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-fluent-autocomplete"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-fluent-avatar"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-fluent-badge"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-fluent-banner"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-fluent-bottom_navigation"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-fluent-breadcrumbs"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
 name = "floem-widget-fluent-button"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-fluent-button_group"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-fluent-calendar"
 version = "0.1.0"
 dependencies = [
  "floem",
@@ -1009,7 +2072,127 @@ dependencies = [
 ]
 
 [[package]]
+name = "floem-widget-fluent-carousel"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
 name = "floem-widget-fluent-checkbox"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-fluent-checkbox_btn"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-fluent-chip"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-fluent-chip_group"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-fluent-code"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-fluent-color_picker"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-fluent-combobox"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-fluent-confirm_edit"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-fluent-container"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-fluent-counter"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-fluent-data_iterator"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-fluent-datatable"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-fluent-date_adapter_provider"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-fluent-date_picker"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-fluent-defaults_provider"
 version = "0.1.0"
 dependencies = [
  "floem",
@@ -1025,7 +2208,95 @@ dependencies = [
 ]
 
 [[package]]
+name = "floem-widget-fluent-display_provider"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
 name = "floem-widget-fluent-divider"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-fluent-empty_state"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-fluent-expand_transition"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-fluent-expansion_panels"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-fluent-fade_transition"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-fluent-file_input"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-fluent-floating_action_button"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-fluent-footer"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-fluent-form"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-fluent-grid"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-fluent-hover"
 version = "0.1.0"
 dependencies = [
  "floem",
@@ -1041,6 +2312,102 @@ dependencies = [
 ]
 
 [[package]]
+name = "floem-widget-fluent-icon_button"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-fluent-icons_provider"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-fluent-image"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-fluent-infinite_scroller"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-fluent-item_group"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-fluent-kbd"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-fluent-list"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-fluent-list_group"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-fluent-list_item"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-fluent-list_subheader"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-fluent-locale_provider"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-fluent-main"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
 name = "floem-widget-fluent-menu"
 version = "0.1.0"
 dependencies = [
@@ -1049,7 +2416,239 @@ dependencies = [
 ]
 
 [[package]]
+name = "floem-widget-fluent-navigation_drawer"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-fluent-number_input"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-fluent-otp_input"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-fluent-overlay"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-fluent-pagination"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-fluent-parallax"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-fluent-progress_circular"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-fluent-progress_linear"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-fluent-pull_to_refresh"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-fluent-radio"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-fluent-radio-group"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-fluent-range_slider"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-fluent-rating"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-fluent-responsive"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-fluent-scale_transition"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-fluent-select"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-fluent-sheet"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-fluent-skeleton_loader"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-fluent-slide_group"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-fluent-slide_transition"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-fluent-slider"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-fluent-snackbar"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-fluent-spacer"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-fluent-sparkline"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-fluent-speed_dial"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-fluent-stepper"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
 name = "floem-widget-fluent-switch"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-fluent-system_bar"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-fluent-table"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-fluent-tabs"
 version = "0.1.0"
 dependencies = [
  "floem",
@@ -1073,7 +2672,186 @@ dependencies = [
 ]
 
 [[package]]
+name = "floem-widget-fluent-textarea"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-fluent-theme_provider"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-fluent-time_picker"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-fluent-timeline"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-fluent-toolbar"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-fluent-tooltip"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-fluent-treeview"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-fluent-validation_messages"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-fluent-virtual_scroller"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-fluent-window"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-md-alert"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+ "floem-widget-runtime",
+]
+
+[[package]]
+name = "floem-widget-md-app"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+ "floem-widget-runtime",
+]
+
+[[package]]
+name = "floem-widget-md-app_bar"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+ "floem-widget-runtime",
+]
+
+[[package]]
+name = "floem-widget-md-autocomplete"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+ "floem-widget-runtime",
+]
+
+[[package]]
+name = "floem-widget-md-avatar"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+ "floem-widget-runtime",
+]
+
+[[package]]
+name = "floem-widget-md-badge"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+ "floem-widget-runtime",
+]
+
+[[package]]
+name = "floem-widget-md-banner"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+ "floem-widget-runtime",
+]
+
+[[package]]
+name = "floem-widget-md-bottom_navigation"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+ "floem-widget-runtime",
+]
+
+[[package]]
+name = "floem-widget-md-breadcrumbs"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+ "floem-widget-runtime",
+]
+
+[[package]]
 name = "floem-widget-md-button"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+ "floem-widget-runtime",
+]
+
+[[package]]
+name = "floem-widget-md-button_group"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+ "floem-widget-runtime",
+]
+
+[[package]]
+name = "floem-widget-md-calendar"
 version = "0.1.0"
 dependencies = [
  "floem",
@@ -1091,12 +2869,145 @@ dependencies = [
 ]
 
 [[package]]
+name = "floem-widget-md-carousel"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+ "floem-widget-runtime",
+]
+
+[[package]]
 name = "floem-widget-md-checkbox"
 version = "0.1.0"
 dependencies = [
  "floem",
  "floem-core-theme",
  "floem-widget-runtime",
+]
+
+[[package]]
+name = "floem-widget-md-checkbox_btn"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+ "floem-widget-runtime",
+]
+
+[[package]]
+name = "floem-widget-md-chip"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+ "floem-widget-runtime",
+]
+
+[[package]]
+name = "floem-widget-md-chip_group"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+ "floem-widget-runtime",
+]
+
+[[package]]
+name = "floem-widget-md-code"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+ "floem-widget-runtime",
+]
+
+[[package]]
+name = "floem-widget-md-color_picker"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+ "floem-widget-runtime",
+]
+
+[[package]]
+name = "floem-widget-md-combobox"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+ "floem-widget-runtime",
+]
+
+[[package]]
+name = "floem-widget-md-confirm_edit"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+ "floem-widget-runtime",
+]
+
+[[package]]
+name = "floem-widget-md-container"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+ "floem-widget-runtime",
+]
+
+[[package]]
+name = "floem-widget-md-counter"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+ "floem-widget-runtime",
+]
+
+[[package]]
+name = "floem-widget-md-data_iterator"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+ "floem-widget-runtime",
+]
+
+[[package]]
+name = "floem-widget-md-datatable"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+ "floem-widget-runtime",
+]
+
+[[package]]
+name = "floem-widget-md-date_adapter_provider"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-md-date_picker"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+ "floem-widget-runtime",
+]
+
+[[package]]
+name = "floem-widget-md-defaults_provider"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
 ]
 
 [[package]]
@@ -1109,7 +3020,105 @@ dependencies = [
 ]
 
 [[package]]
+name = "floem-widget-md-display_provider"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
 name = "floem-widget-md-divider"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+ "floem-widget-runtime",
+]
+
+[[package]]
+name = "floem-widget-md-empty_state"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+ "floem-widget-runtime",
+]
+
+[[package]]
+name = "floem-widget-md-expand_transition"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+ "floem-widget-runtime",
+]
+
+[[package]]
+name = "floem-widget-md-expansion_panels"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+ "floem-widget-runtime",
+]
+
+[[package]]
+name = "floem-widget-md-fade_transition"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+ "floem-widget-runtime",
+]
+
+[[package]]
+name = "floem-widget-md-file_input"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+ "floem-widget-runtime",
+]
+
+[[package]]
+name = "floem-widget-md-floating_action_button"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+ "floem-widget-runtime",
+]
+
+[[package]]
+name = "floem-widget-md-footer"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+ "floem-widget-runtime",
+]
+
+[[package]]
+name = "floem-widget-md-form"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+ "floem-widget-runtime",
+]
+
+[[package]]
+name = "floem-widget-md-grid"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+ "floem-widget-runtime",
+]
+
+[[package]]
+name = "floem-widget-md-hover"
 version = "0.1.0"
 dependencies = [
  "floem",
@@ -1127,6 +3136,112 @@ dependencies = [
 ]
 
 [[package]]
+name = "floem-widget-md-icon_button"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+ "floem-widget-runtime",
+]
+
+[[package]]
+name = "floem-widget-md-icons_provider"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-md-image"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+ "floem-widget-runtime",
+]
+
+[[package]]
+name = "floem-widget-md-infinite_scroller"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+ "floem-widget-runtime",
+]
+
+[[package]]
+name = "floem-widget-md-item_group"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+ "floem-widget-runtime",
+]
+
+[[package]]
+name = "floem-widget-md-kbd"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+ "floem-widget-runtime",
+]
+
+[[package]]
+name = "floem-widget-md-list"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+ "floem-widget-runtime",
+]
+
+[[package]]
+name = "floem-widget-md-list_group"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+ "floem-widget-runtime",
+]
+
+[[package]]
+name = "floem-widget-md-list_item"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+ "floem-widget-runtime",
+]
+
+[[package]]
+name = "floem-widget-md-list_subheader"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+ "floem-widget-runtime",
+]
+
+[[package]]
+name = "floem-widget-md-locale_provider"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-md-main"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+ "floem-widget-runtime",
+]
+
+[[package]]
 name = "floem-widget-md-menu"
 version = "0.1.0"
 dependencies = [
@@ -1136,7 +3251,268 @@ dependencies = [
 ]
 
 [[package]]
+name = "floem-widget-md-navigation_drawer"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+ "floem-widget-runtime",
+]
+
+[[package]]
+name = "floem-widget-md-number_input"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+ "floem-widget-runtime",
+]
+
+[[package]]
+name = "floem-widget-md-otp_input"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+ "floem-widget-runtime",
+]
+
+[[package]]
+name = "floem-widget-md-overlay"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+ "floem-widget-runtime",
+]
+
+[[package]]
+name = "floem-widget-md-pagination"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+ "floem-widget-runtime",
+]
+
+[[package]]
+name = "floem-widget-md-parallax"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+ "floem-widget-runtime",
+]
+
+[[package]]
+name = "floem-widget-md-progress_circular"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+ "floem-widget-runtime",
+]
+
+[[package]]
+name = "floem-widget-md-progress_linear"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+ "floem-widget-runtime",
+]
+
+[[package]]
+name = "floem-widget-md-pull_to_refresh"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+ "floem-widget-runtime",
+]
+
+[[package]]
+name = "floem-widget-md-radio"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+ "floem-widget-runtime",
+]
+
+[[package]]
+name = "floem-widget-md-radio-group"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+ "floem-widget-runtime",
+]
+
+[[package]]
+name = "floem-widget-md-range_slider"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+ "floem-widget-runtime",
+]
+
+[[package]]
+name = "floem-widget-md-rating"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+ "floem-widget-runtime",
+]
+
+[[package]]
+name = "floem-widget-md-responsive"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+ "floem-widget-runtime",
+]
+
+[[package]]
+name = "floem-widget-md-scale_transition"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+ "floem-widget-runtime",
+]
+
+[[package]]
+name = "floem-widget-md-select"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+ "floem-widget-runtime",
+]
+
+[[package]]
+name = "floem-widget-md-sheet"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+ "floem-widget-runtime",
+]
+
+[[package]]
+name = "floem-widget-md-skeleton_loader"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+ "floem-widget-runtime",
+]
+
+[[package]]
+name = "floem-widget-md-slide_group"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+ "floem-widget-runtime",
+]
+
+[[package]]
+name = "floem-widget-md-slide_transition"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+ "floem-widget-runtime",
+]
+
+[[package]]
+name = "floem-widget-md-slider"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+ "floem-widget-runtime",
+]
+
+[[package]]
+name = "floem-widget-md-snackbar"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+ "floem-widget-runtime",
+]
+
+[[package]]
+name = "floem-widget-md-spacer"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+ "floem-widget-runtime",
+]
+
+[[package]]
+name = "floem-widget-md-sparkline"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+ "floem-widget-runtime",
+]
+
+[[package]]
+name = "floem-widget-md-speed_dial"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+ "floem-widget-runtime",
+]
+
+[[package]]
+name = "floem-widget-md-stepper"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+ "floem-widget-runtime",
+]
+
+[[package]]
 name = "floem-widget-md-switch"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+ "floem-widget-runtime",
+]
+
+[[package]]
+name = "floem-widget-md-system_bar"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+ "floem-widget-runtime",
+]
+
+[[package]]
+name = "floem-widget-md-table"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+ "floem-widget-runtime",
+]
+
+[[package]]
+name = "floem-widget-md-tabs"
 version = "0.1.0"
 dependencies = [
  "floem",
@@ -1155,6 +3531,95 @@ dependencies = [
 
 [[package]]
 name = "floem-widget-md-text-field"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+ "floem-widget-runtime",
+]
+
+[[package]]
+name = "floem-widget-md-textarea"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+ "floem-widget-runtime",
+]
+
+[[package]]
+name = "floem-widget-md-theme_provider"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+]
+
+[[package]]
+name = "floem-widget-md-time_picker"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+ "floem-widget-runtime",
+]
+
+[[package]]
+name = "floem-widget-md-timeline"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+ "floem-widget-runtime",
+]
+
+[[package]]
+name = "floem-widget-md-toolbar"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+ "floem-widget-runtime",
+]
+
+[[package]]
+name = "floem-widget-md-tooltip"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+ "floem-widget-runtime",
+]
+
+[[package]]
+name = "floem-widget-md-treeview"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+ "floem-widget-runtime",
+]
+
+[[package]]
+name = "floem-widget-md-validation_messages"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+ "floem-widget-runtime",
+]
+
+[[package]]
+name = "floem-widget-md-virtual_scroller"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-core-theme",
+ "floem-widget-runtime",
+]
+
+[[package]]
+name = "floem-widget-md-window"
 version = "0.1.0"
 dependencies = [
  "floem",

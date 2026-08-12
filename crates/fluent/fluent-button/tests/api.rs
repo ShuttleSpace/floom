@@ -1,5 +1,5 @@
 use floem_core_theme::props::button::{ButtonSize, ButtonVariant};
-use floem_core_theme::theme::{FluentTheme, Theme};
+use floem_core_theme::theme::{MultiTheme, Theme};
 use floem_widget_fluent_button::FluentButton;
 
 #[test]
@@ -20,7 +20,7 @@ fn button_exposes_neutral_contract_api() {
 
 #[test]
 fn button_style_resolves_from_fluent_theme() {
-    let theme = FluentTheme::new();
+    let theme = MultiTheme::new_for(floem_core_theme::global_theme::DesignSystem::Fluent);
     let style = FluentButton::new("Save").resolved_style();
 
     assert_eq!(style.background, theme.colors().primary);

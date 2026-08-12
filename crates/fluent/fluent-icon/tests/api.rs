@@ -1,9 +1,9 @@
-use floem_core_theme::theme::{FluentTheme, Theme};
+use floem_core_theme::theme::{MultiTheme, Theme};
 use floem_widget_fluent_icon::FluentIcon;
 
 #[test]
 fn icon_exposes_accessible_builder_api_and_theme_style() {
-    let theme = FluentTheme::new();
+    let theme = MultiTheme::new_for(floem_core_theme::global_theme::DesignSystem::Fluent);
     let icon = FluentIcon::new("home").label("Home");
     let style = icon.with_theme(theme.clone()).resolved_style();
 

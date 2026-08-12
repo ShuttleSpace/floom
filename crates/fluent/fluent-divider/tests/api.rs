@@ -1,10 +1,10 @@
 use floem_core_theme::props::divider::DividerOrientation;
-use floem_core_theme::theme::{FluentTheme, Theme};
+use floem_core_theme::theme::{MultiTheme, Theme};
 use floem_widget_fluent_divider::FluentDivider;
 
 #[test]
 fn divider_exposes_orientation_inset_and_theme_style() {
-    let theme = FluentTheme::new();
+    let theme = MultiTheme::new_for(floem_core_theme::global_theme::DesignSystem::Fluent);
     let divider = FluentDivider::new()
         .orientation(DividerOrientation::Vertical)
         .inset(16.0);

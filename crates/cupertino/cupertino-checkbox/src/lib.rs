@@ -1,8 +1,14 @@
-use floem::reactive::{RwSignal, SignalGet, SignalUpdate};
+use std::rc::Rc;
+
+use floem::prelude::*;
+use floem::style::CursorStyle;
+use floem::event::EventPropagation;
 use floem_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floem_core_theme::props::checkbox::CheckboxProps;
-use floem_core_theme::theme::{CupertinoTheme, Theme};
+use floem_core_theme::theme::{MultiTheme, Theme};
 use floem_core_theme::tokens::color::Color;
+use floem_core_theme::tokens::color_ext::*;
+use floem_core_theme::tokens::typography::FontWeight;
 
 const DESIGN_SYSTEM: &str = "cupertino";
 
@@ -19,7 +25,7 @@ pub struct CupertinoCheckboxStyle {
 pub struct CupertinoCheckbox {
     props: CheckboxProps,
     checked: RwSignal<bool>,
-    theme: RwSignal<CupertinoTheme>,
+    theme: RwSignal<MultiTheme>,
 }
 
 impl CupertinoCheckbox {
@@ -30,7 +36,7 @@ impl CupertinoCheckbox {
         };
         Self {
             checked: RwSignal::new(props.checked),
-            theme: RwSignal::new(CupertinoTheme::new()),
+            theme: RwSignal::new(MultiTheme::new_for(floem_core_theme::global_theme::DesignSystem::Cupertino)),
             props,
         }
     }
@@ -64,10 +70,10 @@ impl CupertinoCheckbox {
     pub fn is_checked(&self) -> bool {
         self.checked.get()
     }
-    pub fn theme(&self) -> RwSignal<CupertinoTheme> {
+    pub fn theme(&self) -> RwSignal<MultiTheme> {
         self.theme
     }
-    pub fn with_theme(mut self, theme: CupertinoTheme) -> Self {
+    pub fn with_theme(mut self, theme: MultiTheme) -> Self {
         self.theme = RwSignal::new(theme);
         self
     }
@@ -100,5 +106,108 @@ impl CupertinoCheckbox {
             size: tokens.size,
             border_radius: tokens.border_radius,
         }
+    }
+
+    /// Build a renderable, interactive Cupertino checkbox.
+    pub fn view(self) -> impl View {
+        let theme = self.theme;
+        let checked = self.checked;
+        let disabled = self.props.disabled;
+        let on_change = Rc::new(self.props.on_change);
+        let label_text = self.props.label.clone();
+
+        let tokens = match theme.get().component(ComponentId::Checkbox) {
+            ComponentTokens::Checkbox(t) => t,
+            _ => unreachable!(),
+        };
+        let size = tokens.size;
+        let radius = tokens.border_radius;
+
+        let mark = label(move || {
+            if checked.get() {
+                "✓".to_string()
+            } else {
+                String::new()
+            }
+        })
+        .style(move |s| {
+            let t = theme.get();
+            let mk = if checked.get() {
+                t.colors().on_primary
+            } else {
+                Color::rgba(0, 0, 0, 0)
+            };
+            let mk = if disabled {
+                with_alpha(t.colors().on_surface, 38)
+            } else {
+                mk
+            };
+            s.color(mk.to_peniko())
+                .font_size(size * 0.7)
+                .font_weight(FontWeight::Bold.to_floem())
+        });
+
+        let box_ = Container::new(mark).style(move |s| {
+            let t = theme.get();
+            let is_checked = checked.get();
+            let (bg, border) = if is_checked {
+                (t.colors().primary, t.colors().primary)
+            } else {
+                (Color::rgba(0, 0, 0, 0), t.colors().outline)
+            };
+            let (bg, border) = if disabled {
+                (
+                    with_alpha(t.colors().on_surface, 12),
+                    with_alpha(t.colors().on_surface, 38),
+                )
+            } else {
+                (bg, border)
+            };
+            s.size(size, size)
+                .border_radius(radius)
+                .background(bg.to_peniko())
+                .border(2.0)
+                .border_color(border.to_peniko())
+                .items_center()
+                .justify_center()
+        });
+
+        let label_view = text(label_text).style(move |s| {
+            let t = theme.get();
+            let c = if disabled {
+                with_alpha(t.colors().on_surface, 38)
+            } else {
+                t.colors().on_surface
+            };
+            s.color(c.to_peniko())
+                .font_size(t.typography().body.medium.font_size)
+        });
+
+        let toggle = Rc::new(move || {
+            if !disabled {
+                let next = !checked.get();
+                checked.set(next);
+                if let Some(cb) = on_change.as_ref() {
+                    cb(next);
+                }
+            }
+        });
+
+        h_stack((box_, label_view))
+            .style(|s| s.items_center().gap(8.0).cursor(CursorStyle::Pointer))
+            .on_event(listener::Click, {
+                let toggle = toggle.clone();
+                move |_, _| {
+                    toggle();
+                    EventPropagation::Continue
+                }
+            })
+            .on_event(listener::KeyDown, move |_, e: &KeyboardEvent| {
+                if e.key == Key::Named(NamedKey::Enter) || e.key == Key::Character(" ".to_string()) {
+                    toggle();
+                }
+                EventPropagation::Continue
+            })
+            .style(move |s| s.set_disabled(disabled).keyboard_navigable())
     }
 }

@@ -1,6 +1,6 @@
-use floem::reactive::{RwSignal, SignalGet};
+use floem::prelude::*;
 use floem_core_theme::props::text::TextProps;
-use floem_core_theme::theme::{FluentTheme, Theme};
+use floem_core_theme::theme::{MultiTheme, Theme};
 use floem_core_theme::tokens::color::Color;
 use floem_core_theme::tokens::typography::TextStyle;
 
@@ -17,7 +17,7 @@ pub struct FluentTextStyle {
 
 pub struct FluentText {
     props: TextProps,
-    theme: RwSignal<FluentTheme>,
+    theme: RwSignal<MultiTheme>,
 }
 
 impl FluentText {
@@ -27,7 +27,7 @@ impl FluentText {
                 content: content.into(),
                 ..Default::default()
             },
-            theme: RwSignal::new(FluentTheme::new()),
+            theme: RwSignal::new(MultiTheme::new_for(floem_core_theme::global_theme::DesignSystem::Fluent)),
         }
     }
     pub fn max_lines(mut self, max_lines: usize) -> Self {
@@ -42,11 +42,11 @@ impl FluentText {
         &self.props
     }
 
-    pub fn theme(&self) -> RwSignal<FluentTheme> {
+    pub fn theme(&self) -> RwSignal<MultiTheme> {
         self.theme
     }
 
-    pub fn with_theme(mut self, theme: FluentTheme) -> Self {
+    pub fn with_theme(mut self, theme: MultiTheme) -> Self {
         self.theme = RwSignal::new(theme);
         self
     }
@@ -61,5 +61,18 @@ impl FluentText {
             line_height: typography.line_height,
             typography,
         }
+    }
+
+    /// Build a renderable Fluent text view.
+    pub fn view(self) -> impl View {
+        let theme = self.theme;
+        let content = self.props.content.clone();
+        text(content).style(move |s| {
+            let t = theme.get();
+            let ts = t.typography().body.medium.clone();
+            s.color(t.colors().on_surface.to_peniko())
+                .font_size(ts.font_size)
+                .font_weight(ts.font_weight.to_floem())
+        })
     }
 }

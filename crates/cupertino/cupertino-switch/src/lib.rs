@@ -1,12 +1,18 @@
+use std::rc::Rc;
+
+use floem::prelude::*;
 use floem::reactive::{RwSignal, SignalGet, SignalUpdate};
+use floem::style::CursorStyle;
+use floem::event::EventPropagation;
 use floem_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floem_core_theme::props::switch::SwitchProps;
-use floem_core_theme::theme::{CupertinoTheme, Theme};
+use floem_core_theme::theme::{MultiTheme, Theme};
 use floem_core_theme::tokens::color::Color;
+use floem_core_theme::tokens::color_ext::*;
 
 const DESIGN_SYSTEM: &str = "cupertino";
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct CupertinoSwitchStyle {
     pub design_system: &'static str,
     pub track_color: Color,
@@ -20,7 +26,7 @@ pub struct CupertinoSwitchStyle {
 pub struct CupertinoSwitch {
     props: SwitchProps,
     checked: RwSignal<bool>,
-    theme: RwSignal<CupertinoTheme>,
+    theme: RwSignal<MultiTheme>,
 }
 
 impl CupertinoSwitch {
@@ -28,7 +34,7 @@ impl CupertinoSwitch {
         let props = SwitchProps::default();
         Self {
             checked: RwSignal::new(props.checked),
-            theme: RwSignal::new(CupertinoTheme::new()),
+            theme: RwSignal::new(MultiTheme::new_for(floem_core_theme::global_theme::DesignSystem::Cupertino)),
             props,
         }
     }
@@ -62,10 +68,10 @@ impl CupertinoSwitch {
     pub fn is_checked(&self) -> bool {
         self.checked.get()
     }
-    pub fn theme(&self) -> RwSignal<CupertinoTheme> {
+    pub fn theme(&self) -> RwSignal<MultiTheme> {
         self.theme
     }
-    pub fn with_theme(mut self, theme: CupertinoTheme) -> Self {
+    pub fn with_theme(mut self, theme: MultiTheme) -> Self {
         self.theme = RwSignal::new(theme);
         self
     }
@@ -97,7 +103,86 @@ impl CupertinoSwitch {
             },
         }
     }
+
+    /// Build a renderable, interactive Cupertino pill switch.
+    pub fn view(self) -> impl View {
+        let theme = self.theme;
+        let checked = self.checked;
+        let disabled = self.props.disabled;
+        let on_change = Rc::new(self.props.on_change);
+
+        let tokens = match theme.get().component(ComponentId::Switch) {
+            ComponentTokens::Switch(t) => t,
+            _ => unreachable!(),
+        };
+        let width = tokens.width;
+        let height = tokens.height;
+        let thumb = tokens.thumb_size;
+        let radius = height / 2.0;
+
+        let thumb_view = Container::new(empty()).style(move |s| {
+            let t = theme.get();
+            let c = if disabled {
+                with_alpha(t.colors().outline, 38)
+            } else if checked.get() {
+                t.colors().on_primary
+            } else {
+                t.colors().outline
+            };
+            s.size(thumb, thumb)
+                .border_radius(thumb / 2.0)
+                .background(c.to_peniko())
+        });
+
+        let track = Container::new(thumb_view)
+            .style(move |s| {
+                let t = theme.get();
+                let c = if disabled {
+                    with_alpha(t.colors().on_surface, 12)
+                } else if checked.get() {
+                    t.colors().primary
+                } else {
+                    t.colors().surface_variant
+                };
+                s.width(width)
+                    .height(height)
+                    .border_radius(radius)
+                    .background(c.to_peniko())
+                    .items_center()
+                    .apply_if(checked.get(), |s| s.justify_end())
+                    .apply_if(!checked.get(), |s| s.justify_start())
+                    .padding(2.0)
+                    .cursor(CursorStyle::Pointer)
+            })
+            .style(move |s| s.set_disabled(disabled).keyboard_navigable());
+
+        let toggle = Rc::new(move || {
+            if !disabled {
+                let next = !checked.get();
+                checked.set(next);
+                if let Some(cb) = on_change.as_ref() {
+                    cb(next);
+                }
+            }
+        });
+
+        track
+            .on_event(listener::Click, {
+                let toggle = toggle.clone();
+                move |_, _| {
+                    toggle();
+                    EventPropagation::Continue
+                }
+            })
+            .on_event(listener::KeyDown, move |_, e: &KeyboardEvent| {
+                if e.key == Key::Named(NamedKey::Enter) || e.key == Key::Character(" ".to_string()) {
+                    toggle();
+                }
+                EventPropagation::Continue
+            })
+    }
 }
+
 impl Default for CupertinoSwitch {
     fn default() -> Self {
         Self::new()

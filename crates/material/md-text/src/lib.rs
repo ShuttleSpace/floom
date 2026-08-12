@@ -1,8 +1,8 @@
-use floem::reactive::{RwSignal, SignalGet};
+use floem::prelude::*;
+use floem::views::{Container, Decorators};
 use floem_core_theme::props::text::TextProps;
-use floem_core_theme::theme::Theme;
+use floem_core_theme::theme::{MultiTheme, Theme};
 use floem_core_theme::tokens::color::Color;
-use floem_core_theme::tokens::typography::TextStyle;
 use floem_widget_runtime::theme_signal;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -10,12 +10,12 @@ pub struct MdTextStyle {
     pub color: Color,
     pub font_size: f32,
     pub line_height: f32,
-    pub typography: TextStyle,
+    pub typography: floem_core_theme::tokens::typography::TextStyle,
 }
 
 pub struct MdText {
     props: TextProps,
-    theme: RwSignal<floem_core_theme::theme::MaterialTheme>,
+    theme: RwSignal<MultiTheme>,
 }
 
 impl MdText {
@@ -43,11 +43,11 @@ impl MdText {
         &self.props
     }
 
-    pub fn theme(&self) -> RwSignal<floem_core_theme::theme::MaterialTheme> {
+    pub fn theme(&self) -> RwSignal<MultiTheme> {
         self.theme
     }
 
-    pub fn with_theme(mut self, theme: floem_core_theme::theme::MaterialTheme) -> Self {
+    pub fn with_theme(mut self, theme: MultiTheme) -> Self {
         self.theme = RwSignal::new(theme);
         self
     }
@@ -61,5 +61,18 @@ impl MdText {
             line_height: typography.line_height,
             typography,
         }
+    }
+
+    /// Build a renderable Material 3 text view.
+    pub fn view(self) -> impl View {
+        let theme = self.theme;
+        let content = self.props.content.clone();
+        text(content).style(move |s| {
+            let t = theme.get();
+            let ts = t.typography().body.medium.clone();
+            s.color(t.colors().on_surface.to_peniko())
+                .font_size(ts.font_size)
+                .font_weight(ts.font_weight.to_floem())
+        })
     }
 }

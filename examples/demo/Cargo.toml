@@ -4,4 +4,14 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-floem-elements = { workspace = true, features = ["material"] }
+floem = { workspace = true }
+floem-core-theme = { workspace = true }
+floem-elements = { workspace = true }
+floem-widget-runtime = { workspace = true }
+
+[features]
+default = ["material"]
+material = ["floem-elements/material", "floem-widget-runtime/material"]
+cupertino = ["floem-elements/cupertino", "floem-widget-runtime/cupertino"]
+fluent = ["floem-elements/fluent", "floem-widget-runtime/fluent"]
+multi = ["floem-elements/multi", "floem-widget-runtime/material"]

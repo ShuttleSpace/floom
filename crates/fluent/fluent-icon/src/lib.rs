@@ -1,8 +1,11 @@
-use floem::reactive::{RwSignal, SignalGet};
+use floem::prelude::*;
+use floem::views::{Container, Decorators, svg};
 use floem_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floem_core_theme::props::icon::IconProps;
-use floem_core_theme::theme::{FluentTheme, Theme};
+use floem_core_theme::theme::{MultiTheme, Theme};
 use floem_core_theme::tokens::color::Color;
+
+mod icons;
 
 const DESIGN_SYSTEM: &str = "fluent";
 
@@ -15,7 +18,7 @@ pub struct FluentIconStyle {
 
 pub struct FluentIcon {
     props: IconProps,
-    theme: RwSignal<FluentTheme>,
+    theme: RwSignal<MultiTheme>,
 }
 
 impl FluentIcon {
@@ -25,7 +28,7 @@ impl FluentIcon {
                 name: name.into(),
                 ..Default::default()
             },
-            theme: RwSignal::new(FluentTheme::new()),
+            theme: RwSignal::new(MultiTheme::new_for(floem_core_theme::global_theme::DesignSystem::Fluent)),
         }
     }
 
@@ -49,11 +52,11 @@ impl FluentIcon {
         &self.props
     }
 
-    pub fn theme(&self) -> RwSignal<FluentTheme> {
+    pub fn theme(&self) -> RwSignal<MultiTheme> {
         self.theme
     }
 
-    pub fn with_theme(mut self, theme: FluentTheme) -> Self {
+    pub fn with_theme(mut self, theme: MultiTheme) -> Self {
         self.theme = RwSignal::new(theme);
         self
     }
@@ -68,5 +71,21 @@ impl FluentIcon {
             color: theme.colors().on_surface,
             size: self.props.size.unwrap_or(tokens.size),
         }
+    }
+
+    /// Build a renderable Fluent icon.
+    pub fn view(self) -> impl View {
+        let theme = self.theme;
+        let name = self.props.name.clone();
+        let size = self.props.size;
+        svg(move || icons::fluent_icon_svg(&name)).style(move |s| {
+            let t = theme.get();
+            let ComponentTokens::Icon(tokens) = t.component(ComponentId::Icon) else {
+                unreachable!()
+            };
+            let sz = size.unwrap_or(tokens.size);
+            s.size(sz, sz)
+                .color(t.colors().on_surface.to_peniko())
+        })
     }
 }

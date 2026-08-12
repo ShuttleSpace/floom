@@ -1,4 +1,4 @@
-use floem_core_theme::theme::{CupertinoTheme, Theme};
+use floem_core_theme::theme::{MultiTheme, Theme};
 use floem_widget_cupertino_menu::CupertinoMenu;
 
 #[test]
@@ -13,7 +13,7 @@ fn menu_exposes_neutral_contract_api() {
 
 #[test]
 fn menu_style_resolves_from_cupertino_theme() {
-    let theme = CupertinoTheme::new();
+    let theme = MultiTheme::new_for(floem_core_theme::global_theme::DesignSystem::Cupertino);
     let style = CupertinoMenu::new()
         .with_theme(theme.clone())
         .resolved_style();
