@@ -308,3 +308,13 @@ floem = { git = "https://github.com/lapce/floem" }
 floem-core-theme = { path = "crates/floem-core-theme" }
 floem-widget-runtime = { path = "crates/floem-widget-runtime" }
 floem-elements = { path = "crates/floem-elements" }
+floem-widget-md-icon = { path = "crates/material/md-icon" }
+floem-widget-cupertino-icon = { path = "crates/cupertino/cupertino-icon" }
+floem-widget-fluent-icon = { path = "crates/fluent/fluent-icon" }
+
+# Use the local floem checkout (commits export `Scope` / `create_global_rw_signal`)
+# so floem-core-theme can bind process-wide signals to the never-disposed root
+# scope instead of a transient view scope. Keeps the upstream git source as the
+# canonical spec; this only overrides the resolved artifact.
+[patch."https://github.com/lapce/floem"]
+floem = { path = "/Users/ahs/Project/Rust/floem" }
