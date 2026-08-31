@@ -13,10 +13,11 @@ pub use floem_widget_md_responsive::MdResponsive as Responsive;
 /// Runtime-dispatch `Responsive` for the `multi` feature.
 #[cfg(feature = "multi")]
 mod dispatch {
+    use std::rc::Rc;
     use floem::IntoView;
     use floem::reactive::SignalGet;
     use floem::view::{AnyView, View};
-    use floem::views::Empty;
+    use floem::views::{Empty};
     use floem_core_theme::global_theme::{design_system_signal, DesignSystem};
     use floem_core_theme::props::responsive::ResponsiveProps;
 
@@ -26,7 +27,7 @@ mod dispatch {
 
     pub struct Responsive {
         props: ResponsiveProps,
-        child: Option<Box<dyn Fn() -> AnyView>>,
+        child: Option<Rc<dyn Fn() -> AnyView>>,
     }
 
     impl Responsive {
@@ -41,7 +42,7 @@ mod dispatch {
         }
 
         pub fn child(mut self, child: impl Fn() -> AnyView + 'static) -> Self {
-            self.child = Some(Box::new(child));
+            self.child = Some(Rc::new(child));
             self
         }
 
@@ -51,6 +52,7 @@ mod dispatch {
             let child = self.child;
             let child_factory = move || {
                 child
+                    .clone()
                     .map(|f| f())
                     .unwrap_or_else(|| Empty::new().into_any())
             };

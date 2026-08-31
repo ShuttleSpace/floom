@@ -19,12 +19,13 @@ pub use floem_widget_md_slide_transition::MdSlideTransitionStyle as SlideTransit
 /// Runtime-dispatch `SlideTransition` for the `multi` feature.
 #[cfg(feature = "multi")]
 mod dispatch {
+    use std::rc::Rc;
     use floem::IntoView;
-    use floem::reactive::SignalGet;
+    use floem::reactive::{RwSignal, SignalGet};
     use floem::view::{AnyView, View};
-    use floem::views::Empty;
+    use floem::views::{Empty};
     use floem_core_theme::global_theme::{design_system_signal, DesignSystem};
-    use floem_core_theme::props::slide_transition::SlideDirection;
+    use floem_core_theme::props::slide_transition::{SlideDirection, SlideTransitionProps};
 
     use floem_widget_md_slide_transition::MdSlideTransition;
     use floem_widget_cupertino_slide_transition::CupertinoSlideTransition;
@@ -32,7 +33,8 @@ mod dispatch {
 
     pub struct SlideTransition {
         props: SlideTransitionProps,
-        child: Option<Box<dyn Fn() -> AnyView>>,
+        child: Option<Rc<dyn Fn() -> AnyView>>,
+        show: RwSignal<bool>,
     }
 
     impl SlideTransition {
@@ -40,6 +42,7 @@ mod dispatch {
             Self {
                 props: SlideTransitionProps::default(),
                 child: None,
+                show: RwSignal::new(false),
             }
         }
 
@@ -50,7 +53,7 @@ mod dispatch {
             F: Fn() -> IV + 'static,
             IV: IntoView + 'static,
         {
-            self.child = Some(Box::new(move || child().into_any()));
+            self.child = Some(Rc::new(move || child().into_any()));
             self
         }
 
@@ -60,12 +63,19 @@ mod dispatch {
             self
         }
 
+        /// Expose the internal show signal so an external trigger can enter/leave.
+        pub fn show_signal(&self) -> RwSignal<bool> {
+            self.show
+        }
+
         pub fn view(self) -> impl View {
             let ds = design_system_signal().get();
             let direction = self.props.direction;
+            let show = self.show;
             let child = self.child;
             let child_factory = move || {
                 child
+                    .clone()
                     .map(|f| f())
                     .unwrap_or_else(|| Empty::new().into_any())
             };
@@ -73,16 +83,19 @@ mod dispatch {
                 DesignSystem::Material => MdSlideTransition::new()
                     .child(child_factory)
                     .direction(direction)
+                    .with_show_signal(show)
                     .view()
                     .into_any(),
                 DesignSystem::Cupertino => CupertinoSlideTransition::new()
                     .child(child_factory)
                     .direction(direction)
+                    .with_show_signal(show)
                     .view()
                     .into_any(),
                 DesignSystem::Fluent => FluentSlideTransition::new()
                     .child(child_factory)
                     .direction(direction)
+                    .with_show_signal(show)
                     .view()
                     .into_any(),
             }

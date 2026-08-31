@@ -18,7 +18,7 @@ pub use floem_widget_md_menu::MdMenuStyle as MenuStyle;
 #[cfg(feature = "multi")]
 mod dispatch {
     use floem::IntoView;
-    use floem::reactive::SignalGet;
+    use floem::reactive::{RwSignal, SignalGet, SignalUpdate};
     use floem::view::View;
     use floem_core_theme::global_theme::{design_system_signal, DesignSystem};
     use floem_core_theme::props::menu::MenuItem;
@@ -30,7 +30,7 @@ mod dispatch {
 
     pub struct Menu {
         items: Vec<MenuItem>,
-        open: bool,
+        open: RwSignal<bool>,
         theme: Option<MultiTheme>,
     }
 
@@ -38,7 +38,7 @@ mod dispatch {
         pub fn new() -> Self {
             Self {
                 items: Vec::new(),
-                open: false,
+                open: RwSignal::new(false),
                 theme: None,
             }
         }
@@ -57,6 +57,18 @@ mod dispatch {
         }
 
         pub fn open(mut self, open: bool) -> Self {
+            self.open.set(open);
+            self
+        }
+
+        /// Expose the internal open signal so an external trigger can show/hide.
+        pub fn open_signal(&self) -> RwSignal<bool> {
+            self.open
+        }
+
+        /// Replace the internal open signal with an external one so a trigger
+        /// (built separately, e.g. on the same page) can show/hide the menu.
+        pub fn with_open_signal(mut self, open: RwSignal<bool>) -> Self {
             self.open = open;
             self
         }
@@ -70,21 +82,30 @@ mod dispatch {
             let ds = design_system_signal().get();
             match ds {
                 DesignSystem::Material => {
-                    let mut c = MdMenu::new().items(self.items).open(self.open);
+                    let mut c = MdMenu::new().with_open_signal(self.open);
+                    for it in self.items {
+                        c = c.item(it.label, it.on_select.unwrap_or_else(|| Box::new(|| {})));
+                    }
                     if let Some(th) = self.theme {
                         c = c.with_theme(th);
                     }
                     c.view().into_any()
                 }
                 DesignSystem::Cupertino => {
-                    let mut c = CupertinoMenu::new().items(self.items).open(self.open);
+                    let mut c = CupertinoMenu::new().with_open_signal(self.open);
+                    for it in self.items {
+                        c = c.item(it.label, it.on_select.unwrap_or_else(|| Box::new(|| {})));
+                    }
                     if let Some(th) = self.theme {
                         c = c.with_theme(th);
                     }
                     c.view().into_any()
                 }
                 DesignSystem::Fluent => {
-                    let mut c = FluentMenu::new().items(self.items).open(self.open);
+                    let mut c = FluentMenu::new().with_open_signal(self.open);
+                    for it in self.items {
+                        c = c.item(it.label, it.on_select.unwrap_or_else(|| Box::new(|| {})));
+                    }
                     if let Some(th) = self.theme {
                         c = c.with_theme(th);
                     }

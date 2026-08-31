@@ -24,7 +24,7 @@ mod dispatch {
     use floem::reactive::SignalGet;
     use floem::view::AnyView;
     use floem::view::View;
-    use floem::views::empty;
+    use floem::views::{empty, Empty};
     use floem_core_theme::global_theme::{design_system_signal, DesignSystem};
     use floem_core_theme::props::system_bar::SystemBarProps;
 
@@ -46,7 +46,7 @@ mod dispatch {
         }
 
         pub fn height(mut self, height: f32) -> Self {
-            self.props.height = height;
+            self.props.height = Some(height);
             self
         }
 
@@ -56,7 +56,7 @@ mod dispatch {
         }
 
         pub fn pad(mut self, pad: f32) -> Self {
-            self.props.pad = pad;
+            self.props.pad = Some(pad);
             self
         }
 
@@ -67,29 +67,42 @@ mod dispatch {
 
         pub fn view(self) -> impl View {
             let ds = design_system_signal().get();
-            let child = self.child.unwrap_or_else(|| empty().into_any());
+            let child = self.child.unwrap_or_else(|| Empty::new().into_any());
+            // `height`/`pad` are only forwarded when the caller set them
+            // explicitly; otherwise each design system resolves its own
+            // `SystemBarTokens` (M3 24/8, Cupertino 22/6, Fluent 28/8).
+            let (height, dark, pad) = (self.props.height, self.props.dark, self.props.pad);
             match ds {
-                DesignSystem::Material => MdSystemBar::new()
-                    .height(self.props.height)
-                    .dark(self.props.dark)
-                    .pad(self.props.pad)
-                    .child(child)
-                    .view()
-                    .into_any(),
-                DesignSystem::Cupertino => CupertinoSystemBar::new()
-                    .height(self.props.height)
-                    .dark(self.props.dark)
-                    .pad(self.props.pad)
-                    .child(child)
-                    .view()
-                    .into_any(),
-                DesignSystem::Fluent => FluentSystemBar::new()
-                    .height(self.props.height)
-                    .dark(self.props.dark)
-                    .pad(self.props.pad)
-                    .child(child)
-                    .view()
-                    .into_any(),
+                DesignSystem::Material => {
+                    let mut b = MdSystemBar::new().dark(dark);
+                    if let Some(h) = height {
+                        b = b.height(h);
+                    }
+                    if let Some(p) = pad {
+                        b = b.pad(p);
+                    }
+                    b.child(child).view().into_any()
+                }
+                DesignSystem::Cupertino => {
+                    let mut b = CupertinoSystemBar::new().dark(dark);
+                    if let Some(h) = height {
+                        b = b.height(h);
+                    }
+                    if let Some(p) = pad {
+                        b = b.pad(p);
+                    }
+                    b.child(child).view().into_any()
+                }
+                DesignSystem::Fluent => {
+                    let mut b = FluentSystemBar::new().dark(dark);
+                    if let Some(h) = height {
+                        b = b.height(h);
+                    }
+                    if let Some(p) = pad {
+                        b = b.pad(p);
+                    }
+                    b.child(child).view().into_any()
+                }
             }
         }
     }

@@ -14,7 +14,7 @@ mod dispatch {
     use floem::IntoView;
     use floem::reactive::SignalGet;
     use floem::view::{AnyView, View};
-    use floem::views::empty;
+    use floem::views::{empty, Empty};
     use floem_core_theme::global_theme::{design_system_signal, DesignSystem};
 
     use floem_widget_md_main::MdMain;
@@ -38,7 +38,7 @@ mod dispatch {
 
         pub fn view(self) -> impl View {
             let ds = design_system_signal().get();
-            let child = self.child.unwrap_or_else(|| empty().into_any());
+            let child = self.child.unwrap_or_else(|| Empty::new().into_any());
             match ds {
                 DesignSystem::Material => MdMain::new().child(child).view().into_any(),
                 DesignSystem::Cupertino => CupertinoMain::new().child(child).view().into_any(),

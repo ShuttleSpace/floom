@@ -63,21 +63,30 @@ mod dispatch {
             let ds = design_system_signal().get();
             match ds {
                 DesignSystem::Material => {
-                    let mut c = MdList::new().items(self.items);
+                    let mut c = MdList::new();
+                    for it in self.items {
+                        c = c.item(it.label, it.on_select.unwrap_or_else(|| Box::new(|| {})));
+                    }
                     if let Some(th) = self.theme {
                         c = c.with_theme(th);
                     }
                     c.view().into_any()
                 }
                 DesignSystem::Cupertino => {
-                    let mut c = CupertinoList::new().items(self.items);
+                    let mut c = CupertinoList::new();
+                    for it in self.items {
+                        c = c.item(it.label, it.on_select.unwrap_or_else(|| Box::new(|| {})));
+                    }
                     if let Some(th) = self.theme {
                         c = c.with_theme(th);
                     }
                     c.view().into_any()
                 }
                 DesignSystem::Fluent => {
-                    let mut c = FluentList::new().items(self.items);
+                    let mut c = FluentList::new();
+                    for it in self.items {
+                        c = c.item(it.label, it.on_select.unwrap_or_else(|| Box::new(|| {})));
+                    }
                     if let Some(th) = self.theme {
                         c = c.with_theme(th);
                     }

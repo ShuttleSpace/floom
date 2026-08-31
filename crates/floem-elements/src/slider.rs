@@ -18,6 +18,7 @@ pub use floem_widget_md_slider::MdSliderStyle as SliderStyle;
 #[cfg(feature = "multi")]
 mod dispatch {
     use floem::IntoView;
+    use floem::reactive::RwSignal;
     use floem::reactive::SignalGet;
     use floem::view::View;
     use floem_core_theme::global_theme::{design_system_signal, DesignSystem};
@@ -34,6 +35,7 @@ mod dispatch {
         step: f32,
         disabled: bool,
         on_change: Option<Box<dyn Fn(f32)>>,
+        value_signal: Option<RwSignal<f32>>,
         theme: Option<MultiTheme>,
     }
 
@@ -46,6 +48,7 @@ mod dispatch {
                 step: 1.0,
                 disabled: false,
                 on_change: None,
+                value_signal: None,
                 theme: None,
             }
         }
@@ -85,6 +88,11 @@ mod dispatch {
             self
         }
 
+        pub fn value_signal(mut self, value: RwSignal<f32>) -> Self {
+            self.value_signal = Some(value);
+            self
+        }
+
         pub fn view(self) -> impl View {
             let ds = design_system_signal().get();
             let on_change = self.on_change.unwrap_or_else(|| Box::new(|_| {}));
@@ -97,6 +105,9 @@ mod dispatch {
                         .step(self.step)
                         .disabled(self.disabled)
                         .on_change(on_change);
+                    if let Some(sig) = self.value_signal {
+                        c = c.value_signal(sig);
+                    }
                     if let Some(th) = self.theme {
                         c = c.with_theme(th);
                     }
@@ -110,6 +121,9 @@ mod dispatch {
                         .step(self.step)
                         .disabled(self.disabled)
                         .on_change(on_change);
+                    if let Some(sig) = self.value_signal {
+                        c = c.value_signal(sig);
+                    }
                     if let Some(th) = self.theme {
                         c = c.with_theme(th);
                     }
@@ -123,6 +137,9 @@ mod dispatch {
                         .step(self.step)
                         .disabled(self.disabled)
                         .on_change(on_change);
+                    if let Some(sig) = self.value_signal {
+                        c = c.value_signal(sig);
+                    }
                     if let Some(th) = self.theme {
                         c = c.with_theme(th);
                     }

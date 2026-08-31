@@ -21,7 +21,7 @@ pub use floem_widget_md_snackbar::MdSnackbarStyle as SnackbarStyle;
 #[cfg(feature = "multi")]
 mod dispatch {
     use floem::IntoView;
-    use floem::reactive::SignalGet;
+    use floem::reactive::{RwSignal, SignalGet};
     use floem::view::View;
     use floem_core_theme::global_theme::{design_system_signal, DesignSystem};
     use floem_core_theme::props::snackbar::SnackbarProps;
@@ -33,6 +33,7 @@ mod dispatch {
     pub struct Snackbar {
         props: SnackbarProps,
         on_action: Option<Box<dyn Fn()>>,
+        open: RwSignal<bool>,
     }
 
     impl Snackbar {
@@ -40,6 +41,7 @@ mod dispatch {
             Self {
                 props: SnackbarProps::default(),
                 on_action: None,
+                open: RwSignal::new(false),
             }
         }
 
@@ -63,6 +65,18 @@ mod dispatch {
             self
         }
 
+        /// Expose the internal open signal so an external trigger can show/hide.
+        pub fn open_signal(&self) -> RwSignal<bool> {
+            self.open
+        }
+
+        /// Replace the internal open signal with an external one so a trigger
+        /// (built separately, e.g. on the same page) can show/hide the snackbar.
+        pub fn with_open_signal(mut self, open: RwSignal<bool>) -> Self {
+            self.open = open;
+            self
+        }
+
         pub fn view(self) -> impl View {
             let ds = design_system_signal().get();
             let on_action = self.on_action.unwrap_or_else(|| Box::new(|| {}));
@@ -72,6 +86,7 @@ mod dispatch {
                     .action_label(self.props.action_label.clone())
                     .on_action(on_action)
                     .duration_ms(self.props.duration_ms)
+                    .with_open_signal(self.open)
                     .view()
                     .into_any(),
                 DesignSystem::Cupertino => CupertinoSnackbar::new()
@@ -79,6 +94,7 @@ mod dispatch {
                     .action_label(self.props.action_label.clone())
                     .on_action(on_action)
                     .duration_ms(self.props.duration_ms)
+                    .with_open_signal(self.open)
                     .view()
                     .into_any(),
                 DesignSystem::Fluent => FluentSnackbar::new()
@@ -86,6 +102,7 @@ mod dispatch {
                     .action_label(self.props.action_label.clone())
                     .on_action(on_action)
                     .duration_ms(self.props.duration_ms)
+                    .with_open_signal(self.open)
                     .view()
                     .into_any(),
             }

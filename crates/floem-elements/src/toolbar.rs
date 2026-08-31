@@ -24,7 +24,7 @@ mod dispatch {
     use floem::reactive::SignalGet;
     use floem::view::AnyView;
     use floem::view::View;
-    use floem::views::empty;
+    use floem::views::{empty, Empty};
     use floem_core_theme::global_theme::{design_system_signal, DesignSystem};
     use floem_core_theme::props::toolbar::ToolbarProps;
     use floem_core_theme::theme::MultiTheme;
@@ -80,12 +80,12 @@ mod dispatch {
 
         pub fn view(self) -> impl View {
             let ds = design_system_signal().get();
-            let actions = self.actions.unwrap_or_else(|| empty().into_any());
+            let actions = self.actions.unwrap_or_else(|| Empty::new().into_any());
             match ds {
                 DesignSystem::Material => {
                     let b = MdToolbar::new()
                         .title(self.props.title.clone())
-                        .leading(self.props.leading.clone())
+                        .leading(self.props.leading.clone().unwrap_or_default())
                         .elevation(self.props.elevation)
                         .height(self.props.height)
                         .actions(actions);
@@ -99,7 +99,7 @@ mod dispatch {
                 DesignSystem::Cupertino => {
                     let b = CupertinoToolbar::new()
                         .title(self.props.title.clone())
-                        .leading(self.props.leading.clone())
+                        .leading(self.props.leading.clone().unwrap_or_default())
                         .elevation(self.props.elevation)
                         .height(self.props.height)
                         .actions(actions);
@@ -113,7 +113,7 @@ mod dispatch {
                 DesignSystem::Fluent => {
                     let b = FluentToolbar::new()
                         .title(self.props.title.clone())
-                        .leading(self.props.leading.clone())
+                        .leading(self.props.leading.clone().unwrap_or_default())
                         .elevation(self.props.elevation)
                         .height(self.props.height)
                         .actions(actions);

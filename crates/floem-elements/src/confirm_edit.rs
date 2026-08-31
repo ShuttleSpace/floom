@@ -18,7 +18,7 @@ mod dispatch {
     use floem::IntoView;
     use floem::reactive::SignalGet;
     use floem::view::{AnyView, View};
-    use floem::views::Empty;
+    use floem::views::{Empty};
     use floem_core_theme::global_theme::{design_system_signal, DesignSystem};
     use floem_core_theme::props::confirm_edit::ConfirmEditProps;
 
@@ -28,7 +28,7 @@ mod dispatch {
 
     pub struct ConfirmEdit {
         props: ConfirmEditProps,
-        child: Option<Box<dyn Fn() -> AnyView>>,
+        child: Option<Rc<dyn Fn() -> AnyView>>,
     }
 
     impl ConfirmEdit {
@@ -40,7 +40,7 @@ mod dispatch {
         }
 
         pub fn child(mut self, child: impl Fn() -> AnyView + 'static) -> Self {
-            self.child = Some(Box::new(child));
+            self.child = Some(Rc::new(child));
             self
         }
 
@@ -61,6 +61,7 @@ mod dispatch {
             let child = self.child;
             let child_factory = move || {
                 child
+                    .clone()
                     .map(|f| f())
                     .unwrap_or_else(|| Empty::new().into_any())
             };

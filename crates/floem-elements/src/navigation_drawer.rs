@@ -1,5 +1,5 @@
 pub use floem_core_theme::component_tokens::NavigationDrawerTokens;
-pub use floem_core_theme::props::navigation_drawer::NavigationDrawerProps;
+pub use floem_core_theme::props::navigation_drawer::{NavigationDrawerProps, NavigationDrawerSide};
 
 #[cfg(all(feature = "cupertino", not(feature = "multi")))]
 pub use floem_widget_cupertino_navigation_drawer::CupertinoNavigationDrawer as NavigationDrawer;
@@ -17,37 +17,53 @@ pub use floem_widget_md_navigation_drawer::MdNavigationDrawerStyle as Navigation
 /// Runtime-dispatch `NavigationDrawer` for the `multi` feature.
 #[cfg(feature = "multi")]
 mod dispatch {
+    use std::rc::Rc;
     use floem::IntoView;
-    use floem::reactive::SignalGet;
+    use floem::reactive::{RwSignal, SignalGet, SignalUpdate};
     use floem::view::AnyView;
     use floem::view::View;
-    use floem::views::empty;
+    use floem::views::{empty, Empty};
     use floem_core_theme::global_theme::{design_system_signal, DesignSystem};
 
     use floem_widget_md_navigation_drawer::MdNavigationDrawer;
     use floem_widget_cupertino_navigation_drawer::CupertinoNavigationDrawer;
     use floem_widget_fluent_navigation_drawer::FluentNavigationDrawer;
+    use floem_core_theme::props::navigation_drawer::NavigationDrawerSide;
 
     pub struct NavigationDrawer {
-        open: bool,
+        open: RwSignal<bool>,
         width: f32,
         elevation: u8,
-        header: Option<AnyView>,
-        child: Option<AnyView>,
+        side: NavigationDrawerSide,
+        header: Option<Rc<dyn Fn() -> AnyView>>,
+        child: Option<Rc<dyn Fn() -> AnyView>>,
     }
 
     impl NavigationDrawer {
         pub fn new() -> Self {
             Self {
-                open: false,
+                open: RwSignal::new(false),
                 width: 304.0,
                 elevation: 4,
+                side: NavigationDrawerSide::Left,
                 header: None,
                 child: None,
             }
         }
 
         pub fn open(mut self, open: bool) -> Self {
+            self.open.set(open);
+            self
+        }
+
+        /// Expose the internal open signal so an external trigger can show/hide.
+        pub fn open_signal(&self) -> RwSignal<bool> {
+            self.open
+        }
+
+        /// Replace the internal open signal with an external one so a trigger
+        /// (built separately, e.g. on the same page) can show/hide the drawer.
+        pub fn with_open_signal(mut self, open: RwSignal<bool>) -> Self {
             self.open = open;
             self
         }
@@ -62,43 +78,76 @@ mod dispatch {
             self
         }
 
-        pub fn header(mut self, header: impl IntoView + 'static) -> Self {
-            self.header = Some(header.into_any());
+        /// Choose the edge the drawer slides in from (`Left` or `Right`).
+        pub fn side(mut self, side: NavigationDrawerSide) -> Self {
+            self.side = side;
             self
         }
 
-        pub fn child(mut self, child: impl IntoView + 'static) -> Self {
-            self.child = Some(child.into_any());
+        /// Accept a header factory so the content can be rebuilt for each
+        /// concrete DS in the `view()` match below.
+        pub fn header<F, IV>(mut self, header: F) -> Self
+        where
+            F: Fn() -> IV + 'static,
+            IV: IntoView + 'static,
+        {
+            self.header = Some(Rc::new(move || header().into_any()));
+            self
+        }
+
+        /// Accept a child factory so the content can be rebuilt for each
+        /// concrete DS in the `view()` match below.
+        pub fn child<F, IV>(mut self, child: F) -> Self
+        where
+            F: Fn() -> IV + 'static,
+            IV: IntoView + 'static,
+        {
+            self.child = Some(Rc::new(move || child().into_any()));
             self
         }
 
         pub fn view(self) -> impl View {
             let ds = design_system_signal().get();
-            let header = self.header.unwrap_or_else(|| empty().into_any());
-            let child = self.child.unwrap_or_else(|| empty().into_any());
+            let header = self.header;
+            let child = self.child;
+            let header_factory = move || {
+                header
+                    .clone()
+                    .map(|f| f())
+                    .unwrap_or_else(|| Empty::new().into_any())
+            };
+            let child_factory = move || {
+                child
+                    .clone()
+                    .map(|f| f())
+                    .unwrap_or_else(|| Empty::new().into_any())
+            };
             match ds {
                 DesignSystem::Material => MdNavigationDrawer::new()
-                    .open(self.open)
+                    .with_open_signal(self.open)
                     .width(self.width)
                     .elevation(self.elevation)
-                    .header(header)
-                    .child(child)
+                    .side(self.side)
+                    .header(header_factory())
+                    .child(child_factory())
                     .view()
                     .into_any(),
                 DesignSystem::Cupertino => CupertinoNavigationDrawer::new()
-                    .open(self.open)
+                    .with_open_signal(self.open)
                     .width(self.width)
                     .elevation(self.elevation)
-                    .header(header)
-                    .child(child)
+                    .side(self.side)
+                    .header(header_factory())
+                    .child(child_factory())
                     .view()
                     .into_any(),
                 DesignSystem::Fluent => FluentNavigationDrawer::new()
-                    .open(self.open)
+                    .with_open_signal(self.open)
                     .width(self.width)
                     .elevation(self.elevation)
-                    .header(header)
-                    .child(child)
+                    .side(self.side)
+                    .header(header_factory())
+                    .child(child_factory())
                     .view()
                     .into_any(),
             }

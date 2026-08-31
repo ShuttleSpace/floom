@@ -18,7 +18,7 @@ pub use floem_widget_md_dialog::MdDialogStyle as DialogStyle;
 #[cfg(feature = "multi")]
 mod dispatch {
     use floem::IntoView;
-    use floem::reactive::SignalGet;
+    use floem::reactive::{RwSignal, SignalGet, SignalUpdate};
     use floem::view::View;
     use floem_core_theme::global_theme::{design_system_signal, DesignSystem};
     use floem_core_theme::theme::MultiTheme;
@@ -30,8 +30,9 @@ mod dispatch {
     pub struct Dialog {
         title: String,
         content: String,
-        open: bool,
+        open: RwSignal<bool>,
         on_close: Option<Box<dyn Fn()>>,
+        actions: Vec<(String, Box<dyn Fn()>)>,
         theme: Option<MultiTheme>,
     }
 
@@ -40,8 +41,9 @@ mod dispatch {
             Self {
                 title: String::new(),
                 content: String::new(),
-                open: false,
+                open: RwSignal::new(false),
                 on_close: None,
+                actions: Vec::new(),
                 theme: None,
             }
         }
@@ -57,12 +59,32 @@ mod dispatch {
         }
 
         pub fn open(mut self, open: bool) -> Self {
-            self.open = open;
+            self.open.set(open);
             self
         }
 
         pub fn on_close(mut self, callback: impl Fn() + 'static) -> Self {
             self.on_close = Some(Box::new(callback));
+            self
+        }
+
+        /// Add an action button rendered at the bottom of the dialog. Clicking it
+        /// fires `callback` and closes the dialog.
+        pub fn action(mut self, label: impl Into<String>, callback: impl Fn() + 'static) -> Self {
+            self.actions.push((label.into(), Box::new(callback)));
+            self
+        }
+
+        /// Expose the internal open signal so an external trigger (e.g. a button)
+        /// can show or hide the dialog.
+        pub fn open_signal(&self) -> RwSignal<bool> {
+            self.open
+        }
+
+        /// Replace the internal open signal with an external one so a trigger
+        /// (built separately, e.g. on the same page) can show/hide the dialog.
+        pub fn with_open_signal(mut self, open: RwSignal<bool>) -> Self {
+            self.open = open;
             self
         }
 
@@ -78,8 +100,11 @@ mod dispatch {
                     let mut c = MdDialog::new()
                         .title(self.title)
                         .content(self.content)
-                        .open(self.open)
+                        .with_open_signal(self.open)
                         .on_close(self.on_close.unwrap_or_else(|| Box::new(|| {})));
+                    for (label, cb) in self.actions {
+                        c = c.action(label, cb);
+                    }
                     if let Some(th) = self.theme {
                         c = c.with_theme(th);
                     }
@@ -89,8 +114,11 @@ mod dispatch {
                     let mut c = CupertinoDialog::new()
                         .title(self.title)
                         .content(self.content)
-                        .open(self.open)
+                        .with_open_signal(self.open)
                         .on_close(self.on_close.unwrap_or_else(|| Box::new(|| {})));
+                    for (label, cb) in self.actions {
+                        c = c.action(label, cb);
+                    }
                     if let Some(th) = self.theme {
                         c = c.with_theme(th);
                     }
@@ -100,8 +128,11 @@ mod dispatch {
                     let mut c = FluentDialog::new()
                         .title(self.title)
                         .content(self.content)
-                        .open(self.open)
+                        .with_open_signal(self.open)
                         .on_close(self.on_close.unwrap_or_else(|| Box::new(|| {})));
+                    for (label, cb) in self.actions {
+                        c = c.action(label, cb);
+                    }
                     if let Some(th) = self.theme {
                         c = c.with_theme(th);
                     }

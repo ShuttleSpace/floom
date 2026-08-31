@@ -19,10 +19,11 @@ pub use floem_widget_md_expand_transition::MdExpandTransitionStyle as ExpandTran
 /// Runtime-dispatch `ExpandTransition` for the `multi` feature.
 #[cfg(feature = "multi")]
 mod dispatch {
+    use std::rc::Rc;
     use floem::IntoView;
-    use floem::reactive::SignalGet;
+    use floem::reactive::{RwSignal, SignalGet};
     use floem::view::{AnyView, View};
-    use floem::views::Empty;
+    use floem::views::{Empty};
     use floem_core_theme::global_theme::{design_system_signal, DesignSystem};
 
     use floem_widget_md_expand_transition::MdExpandTransition;
@@ -30,12 +31,16 @@ mod dispatch {
     use floem_widget_fluent_expand_transition::FluentExpandTransition;
 
     pub struct ExpandTransition {
-        child: Option<Box<dyn Fn() -> AnyView>>,
+        child: Option<Rc<dyn Fn() -> AnyView>>,
+        show: RwSignal<bool>,
     }
 
     impl ExpandTransition {
         pub fn new() -> Self {
-            Self { child: None }
+            Self {
+                child: None,
+                show: RwSignal::new(false),
+            }
         }
 
         /// Set the element that expands / collapses. Takes a factory closure because the
@@ -45,27 +50,46 @@ mod dispatch {
             F: Fn() -> IV + 'static,
             IV: IntoView + 'static,
         {
-            self.child = Some(Box::new(move || child().into_any()));
+            self.child = Some(Rc::new(move || child().into_any()));
             self
+        }
+
+        /// Expose the internal show signal so an external trigger can enter/leave.
+        pub fn show_signal(&self) -> RwSignal<bool> {
+            self.show
         }
 
         pub fn view(self) -> impl View {
             let ds = design_system_signal().get();
+            let show = self.show;
             let child = self.child;
             let child_factory = move || {
                 child
+                    .clone()
                     .map(|f| f())
                     .unwrap_or_else(|| Empty::new().into_any())
             };
             match ds {
                 DesignSystem::Material => {
-                    MdExpandTransition::new().child(child_factory).view().into_any()
+                    MdExpandTransition::new()
+                        .child(child_factory)
+                        .with_show_signal(show)
+                        .view()
+                        .into_any()
                 }
                 DesignSystem::Cupertino => {
-                    CupertinoExpandTransition::new().child(child_factory).view().into_any()
+                    CupertinoExpandTransition::new()
+                        .child(child_factory)
+                        .with_show_signal(show)
+                        .view()
+                        .into_any()
                 }
                 DesignSystem::Fluent => {
-                    FluentExpandTransition::new().child(child_factory).view().into_any()
+                    FluentExpandTransition::new()
+                        .child(child_factory)
+                        .with_show_signal(show)
+                        .view()
+                        .into_any()
                 }
             }
         }

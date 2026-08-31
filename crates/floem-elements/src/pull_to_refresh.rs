@@ -13,10 +13,11 @@ pub use floem_widget_md_pull_to_refresh::MdPullToRefresh as PullToRefresh;
 /// Runtime-dispatch `PullToRefresh` for the `multi` feature.
 #[cfg(feature = "multi")]
 mod dispatch {
+    use std::rc::Rc;
     use floem::IntoView;
-    use floem::reactive::SignalGet;
+    use floem::reactive::{RwSignal, SignalGet};
     use floem::view::{AnyView, View};
-    use floem::views::Empty;
+    use floem::views::{Empty};
     use floem_core_theme::global_theme::{design_system_signal, DesignSystem};
     use floem_core_theme::props::pull_to_refresh::PullToRefreshProps;
 
@@ -26,17 +27,22 @@ mod dispatch {
 
     pub struct PullToRefresh {
         props: PullToRefreshProps,
-        child: Option<Box<dyn Fn() -> AnyView>>,
+        child: Option<Rc<dyn Fn() -> AnyView>>,
+        refreshing: RwSignal<bool>,
     }
 
     impl PullToRefresh {
         pub fn new() -> Self {
             let props = PullToRefreshProps::default();
-            Self { props, child: None }
+            Self {
+                props,
+                child: None,
+                refreshing: RwSignal::new(false),
+            }
         }
 
         pub fn child(mut self, child: impl Fn() -> AnyView + 'static) -> Self {
-            self.child = Some(Box::new(child));
+            self.child = Some(Rc::new(child));
             self
         }
 
@@ -55,12 +61,19 @@ mod dispatch {
             self
         }
 
+        /// Expose the internal refreshing signal so the host can clear it when done.
+        pub fn refreshing_signal(&self) -> RwSignal<bool> {
+            self.refreshing
+        }
+
         pub fn view(self) -> impl View {
             let ds = design_system_signal().get();
             let props = self.props;
             let child = self.child;
+            let refreshing = self.refreshing;
             let child_factory = move || {
                 child
+                    .clone()
                     .map(|f| f())
                     .unwrap_or_else(|| Empty::new().into_any())
             };
@@ -69,18 +82,21 @@ mod dispatch {
                     .child(child_factory)
                     .loading(props.loading)
                     .threshold(props.threshold)
+                    .with_refreshing_signal(refreshing)
                     .view()
                     .into_any(),
                 DesignSystem::Cupertino => CupertinoPullToRefresh::new()
                     .child(child_factory)
                     .loading(props.loading)
                     .threshold(props.threshold)
+                    .with_refreshing_signal(refreshing)
                     .view()
                     .into_any(),
                 DesignSystem::Fluent => FluentPullToRefresh::new()
                     .child(child_factory)
                     .loading(props.loading)
                     .threshold(props.threshold)
+                    .with_refreshing_signal(refreshing)
                     .view()
                     .into_any(),
             }

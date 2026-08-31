@@ -21,7 +21,7 @@ mod dispatch {
     use floem::reactive::SignalGet;
     use floem::view::AnyView;
     use floem::view::View;
-    use floem::views::empty;
+    use floem::views::{empty, Empty};
     use floem_core_theme::global_theme::{design_system_signal, DesignSystem};
 
     use floem_widget_md_empty_state::MdEmptyState;
@@ -67,7 +67,7 @@ mod dispatch {
 
         pub fn view(self) -> impl View {
             let ds = design_system_signal().get();
-            let child = self.child.unwrap_or_else(|| empty().into_any());
+            let child = self.child.unwrap_or_else(|| Empty::new().into_any());
             match ds {
                 DesignSystem::Material => MdEmptyState::new()
                     .icon(self.icon)

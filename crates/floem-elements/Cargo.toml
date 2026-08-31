@@ -818,6 +818,10 @@ multi = [
     "floem-widget-cupertino-confirm_edit",
     "floem-widget-fluent-number_input",
     "floem-widget-fluent-pull_to_refresh",
-    "floem-widget-fluent-confirm_edit"
+    "floem-widget-fluent-confirm_edit",
+    "floem-widget-cupertino-radio-group",
+    "floem-widget-fluent-radio-group",
+    "floem-widget-cupertino-text-field",
+    "floem-widget-fluent-text-field"
 ]
 

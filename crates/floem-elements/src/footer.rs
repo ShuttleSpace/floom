@@ -21,7 +21,7 @@ mod dispatch {
     use floem::reactive::SignalGet;
     use floem::view::AnyView;
     use floem::view::View;
-    use floem::views::empty;
+    use floem::views::{empty, Empty};
     use floem_core_theme::global_theme::{design_system_signal, DesignSystem};
 
     use floem_widget_md_footer::MdFooter;
@@ -29,26 +29,28 @@ mod dispatch {
     use floem_widget_fluent_footer::FluentFooter;
 
     pub struct Footer {
-        height: f32,
+        /// `None` defers to the active design system's `FooterTokens::height`.
+        height: Option<f32>,
         elevation: u8,
         bordered: bool,
-        pad: f32,
+        /// `None` defers to the active design system's `FooterTokens::pad`.
+        pad: Option<f32>,
         child: Option<AnyView>,
     }
 
     impl Footer {
         pub fn new() -> Self {
             Self {
-                height: 56.0,
+                height: None,
                 elevation: 0,
                 bordered: true,
-                pad: 16.0,
+                pad: None,
                 child: None,
             }
         }
 
         pub fn height(mut self, height: f32) -> Self {
-            self.height = height;
+            self.height = Some(height);
             self
         }
 
@@ -63,7 +65,7 @@ mod dispatch {
         }
 
         pub fn pad(mut self, pad: f32) -> Self {
-            self.pad = pad;
+            self.pad = Some(pad);
             self
         }
 
@@ -74,32 +76,43 @@ mod dispatch {
 
         pub fn view(self) -> impl View {
             let ds = design_system_signal().get();
-            let child = self.child.unwrap_or_else(|| empty().into_any());
+            let child = self.child.unwrap_or_else(|| Empty::new().into_any());
+            // `height`/`pad` are only forwarded when the caller set them
+            // explicitly; otherwise each design system resolves its own
+            // `FooterTokens` (M3 56/16, Cupertino 44/12, Fluent 48/16).
+            let (height, pad) = (self.height, self.pad);
+            let (elevation, bordered) = (self.elevation, self.bordered);
             match ds {
-                DesignSystem::Material => MdFooter::new()
-                    .height(self.height)
-                    .elevation(self.elevation)
-                    .bordered(self.bordered)
-                    .pad(self.pad)
-                    .child(child)
-                    .view()
-                    .into_any(),
-                DesignSystem::Cupertino => CupertinoFooter::new()
-                    .height(self.height)
-                    .elevation(self.elevation)
-                    .bordered(self.bordered)
-                    .pad(self.pad)
-                    .child(child)
-                    .view()
-                    .into_any(),
-                DesignSystem::Fluent => FluentFooter::new()
-                    .height(self.height)
-                    .elevation(self.elevation)
-                    .bordered(self.bordered)
-                    .pad(self.pad)
-                    .child(child)
-                    .view()
-                    .into_any(),
+                DesignSystem::Material => {
+                    let mut b = MdFooter::new().elevation(elevation).bordered(bordered);
+                    if let Some(h) = height {
+                        b = b.height(h);
+                    }
+                    if let Some(p) = pad {
+                        b = b.pad(p);
+                    }
+                    b.child(child).view().into_any()
+                }
+                DesignSystem::Cupertino => {
+                    let mut b = CupertinoFooter::new().elevation(elevation).bordered(bordered);
+                    if let Some(h) = height {
+                        b = b.height(h);
+                    }
+                    if let Some(p) = pad {
+                        b = b.pad(p);
+                    }
+                    b.child(child).view().into_any()
+                }
+                DesignSystem::Fluent => {
+                    let mut b = FluentFooter::new().elevation(elevation).bordered(bordered);
+                    if let Some(h) = height {
+                        b = b.height(h);
+                    }
+                    if let Some(p) = pad {
+                        b = b.pad(p);
+                    }
+                    b.child(child).view().into_any()
+                }
             }
         }
     }

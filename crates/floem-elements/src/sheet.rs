@@ -17,11 +17,12 @@ pub use floem_widget_md_sheet::MdSheetStyle as SheetStyle;
 /// Runtime-dispatch `Sheet` for the `multi` feature.
 #[cfg(feature = "multi")]
 mod dispatch {
+    use std::rc::Rc;
     use floem::IntoView;
-    use floem::reactive::SignalGet;
+    use floem::reactive::{RwSignal, SignalGet, SignalUpdate};
     use floem::view::AnyView;
     use floem::view::View;
-    use floem::views::empty;
+    use floem::views::{empty, Empty};
     use floem_core_theme::global_theme::{design_system_signal, DesignSystem};
     use floem_core_theme::props::sheet::SheetSide;
 
@@ -31,16 +32,16 @@ mod dispatch {
 
     pub struct Sheet {
         side: SheetSide,
-        open: bool,
+        open: RwSignal<bool>,
         elevated: bool,
-        child: Option<AnyView>,
+        child: Option<Rc<dyn Fn() -> AnyView>>,
     }
 
     impl Sheet {
         pub fn new() -> Self {
             Self {
                 side: SheetSide::Bottom,
-                open: false,
+                open: RwSignal::new(false),
                 elevated: true,
                 child: None,
             }
@@ -52,6 +53,18 @@ mod dispatch {
         }
 
         pub fn open(mut self, open: bool) -> Self {
+            self.open.set(open);
+            self
+        }
+
+        /// Expose the internal open signal so an external trigger can show/hide.
+        pub fn open_signal(&self) -> RwSignal<bool> {
+            self.open
+        }
+
+        /// Replace the internal open signal with an external one so a trigger
+        /// (built separately, e.g. on the same page) can show/hide the sheet.
+        pub fn with_open_signal(mut self, open: RwSignal<bool>) -> Self {
             self.open = open;
             self
         }
@@ -61,34 +74,46 @@ mod dispatch {
             self
         }
 
-        pub fn child(mut self, child: impl IntoView + 'static) -> Self {
-            self.child = Some(child.into_any());
+        /// Accept a child factory so the content can be rebuilt for each
+        /// concrete DS in the `view()` match below.
+        pub fn child<F, IV>(mut self, child: F) -> Self
+        where
+            F: Fn() -> IV + 'static,
+            IV: IntoView + 'static,
+        {
+            self.child = Some(Rc::new(move || child().into_any()));
             self
         }
 
         pub fn view(self) -> impl View {
             let ds = design_system_signal().get();
-            let child = self.child.unwrap_or_else(|| empty().into_any());
+            let child = self.child;
+            let child_factory = move || {
+                child
+                    .clone()
+                    .map(|f| f())
+                    .unwrap_or_else(|| Empty::new().into_any())
+            };
             match ds {
                 DesignSystem::Material => MdSheet::new()
                     .side(self.side)
-                    .open(self.open)
+                    .with_open_signal(self.open)
                     .elevated(self.elevated)
-                    .child(child)
+                    .child(child_factory())
                     .view()
                     .into_any(),
                 DesignSystem::Cupertino => CupertinoSheet::new()
                     .side(self.side)
-                    .open(self.open)
+                    .with_open_signal(self.open)
                     .elevated(self.elevated)
-                    .child(child)
+                    .child(child_factory())
                     .view()
                     .into_any(),
                 DesignSystem::Fluent => FluentSheet::new()
                     .side(self.side)
-                    .open(self.open)
+                    .with_open_signal(self.open)
                     .elevated(self.elevated)
-                    .child(child)
+                    .child(child_factory())
                     .view()
                     .into_any(),
             }

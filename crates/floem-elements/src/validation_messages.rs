@@ -19,7 +19,7 @@ pub use floem_widget_md_validation_messages::MdValidationMessagesStyle as Valida
 mod dispatch {
     use floem::IntoView;
     use floem::reactive::RwSignal;
-    use floem::reactive::SignalGet;
+    use floem::reactive::{SignalGet, SignalUpdate};
     use floem::view::View;
     use floem_core_theme::global_theme::{design_system_signal, DesignSystem};
     use floem_core_theme::props::validation_messages::ValidationMessagesProps;
