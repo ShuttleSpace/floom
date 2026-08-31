@@ -6,7 +6,7 @@ use floem::reactive::RwSignal;
 use floem::taffy::style::Overflow;
 use floem::ui_events::{ScrollDelta, pointer::PointerScrollEvent};
 use floem::view::AnyView;
-use floem::views::dyn_view;
+use floem::views::{dyn_view, Empty, Label, Stack};
 use floem_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floem_core_theme::props::infinite_scroller::InfiniteScrollerProps;
 use floem_core_theme::theme::{MultiTheme, Theme};
@@ -126,7 +126,7 @@ impl CupertinoInfiniteScroller {
 
         let footer = dyn_view(move || {
             if loading.get() {
-                Container::new(text("Loading…"))
+                Container::new(Label::new("Loading…"))
                     .style(move |s| {
                         s.height(indicator + footer_pad * 2.0)
                             .width_pct(100.0)
@@ -143,7 +143,7 @@ impl CupertinoInfiniteScroller {
             }
         });
 
-        let content_stack = v_stack((child, footer)).style(move |s| {
+        let content_stack = Stack::vertical((child, footer)).style(move |s| {
             s.width_pct(100.0)
                 .height(content_height.get())
                 .translate_y(-offset.get())

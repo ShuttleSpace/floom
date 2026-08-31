@@ -88,7 +88,7 @@ impl CupertinoValidationMessages {
             let items: Vec<AnyView> = msgs
                 .iter()
                 .map(|m| {
-                    text(m.clone())
+                    Label::new(m.clone())
                         .style(move |s| {
                             s.font_size(font_size)
                                 .color(theme.get().colors().error.to_peniko())

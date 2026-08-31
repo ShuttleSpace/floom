@@ -4,7 +4,7 @@ use floem::context::EventCx;
 use floem::event::EventPropagation;
 use floem::style::CursorStyle;
 use floem::style::Length;
-use floem::views::Decorators;
+use floem::views::{Decorators, Empty, Stack};
 use floem::{
     prelude::*,
     reactive::RwSignal,
@@ -31,6 +31,7 @@ pub struct CupertinoSlider {
     props: SliderProps,
     theme: RwSignal<MultiTheme>,
     value: RwSignal<f32>,
+    value_signal: Option<RwSignal<f32>>,
 }
 
 impl CupertinoSlider {
@@ -41,6 +42,7 @@ impl CupertinoSlider {
             props,
             theme: RwSignal::new(MultiTheme::new_for(floem_core_theme::global_theme::DesignSystem::Cupertino)),
             value: RwSignal::new(value),
+            value_signal: None,
         }
     }
     pub fn value(mut self, value: f32) -> Self {
@@ -68,6 +70,10 @@ impl CupertinoSlider {
         self.props.on_change = Some(Box::new(callback));
         self
     }
+    pub fn value_signal(mut self, value: RwSignal<f32>) -> Self {
+        self.value_signal = Some(value);
+        self
+    }
     pub fn props(&self) -> &SliderProps {
         &self.props
     }
@@ -93,7 +99,7 @@ impl CupertinoSlider {
     /// Build a renderable, interactive Cupertino slider.
     pub fn view(self) -> impl View {
         let theme = self.theme;
-        let value = self.value;
+        let value = self.value_signal.unwrap_or(self.value);
         let on_change = Rc::new(self.props.on_change);
         let disabled = self.props.disabled;
         let min = self.props.min;
@@ -142,12 +148,15 @@ impl CupertinoSlider {
                 .inset_top((track_height - thumb_size) / 2.0)
                 .inset_left_pct((ratio * 100.0) as f64)
                 .translate_x(Length::Pt(-(thumb_size as f64 / 2.0)))
-                .background(t.colors().primary.to_peniko())
+                .background(t.colors().surface.to_peniko())
                 .border_radius(thumb_radius)
+                .box_shadow_blur(3.0)
+                .box_shadow_spread(0.0)
+                .box_shadow_color(with_alpha(Color::rgba(0, 0, 0, 255), 60).to_peniko())
                 .apply_if(disabled, |s| s.set_disabled(true))
         });
 
-        let track = v_stack((fill, thumb))
+        let track = Stack::vertical((fill, thumb))
             .style(move |s| {
                 let t = theme.get();
                 s.width_pct(100.0)

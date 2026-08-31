@@ -3,7 +3,6 @@ use floem::view::AnyView;
 use floem::views::{Container, Decorators, Empty, dyn_view};
 use floem_core_theme::props::responsive::ResponsiveProps;
 use floem_core_theme::theme::{MultiTheme, Theme};
-use floem_core_theme::tokens::color::Color;
 
 pub struct CupertinoResponsive {
     props: ResponsiveProps,

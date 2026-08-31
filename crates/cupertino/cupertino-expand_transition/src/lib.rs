@@ -48,6 +48,12 @@ impl CupertinoExpandTransition {
         self.show
     }
 
+    /// Set the internal `show` signal from an external signal.
+    pub fn with_show_signal(mut self, show: RwSignal<bool>) -> Self {
+        self.show = show;
+        self
+    }
+
     pub fn resolved_style(&self) -> CupertinoExpandTransitionStyle {
         let theme = self.theme.get();
         let ComponentTokens::ExpandTransition(tokens) =

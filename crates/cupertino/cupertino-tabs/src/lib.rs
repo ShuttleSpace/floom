@@ -3,7 +3,7 @@ use std::rc::Rc;
 use floem::event::EventPropagation;
 use floem::style::CursorStyle;
 use floem::view::AnyView;
-use floem::views::Decorators;
+use floem::views::{Decorators, Empty, Label, Stack};
 use floem::{
     prelude::*,
     reactive::RwSignal,
@@ -12,7 +12,6 @@ use floem_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floem_core_theme::props::tabs::TabsProps;
 use floem_core_theme::theme::{MultiTheme, Theme};
 use floem_core_theme::tokens::color::Color;
-use floem_core_theme::tokens::color_ext::*;
 use floem_core_theme::tokens::typography::FontWeight;
 
 const DESIGN_SYSTEM: &str = "cupertino";
@@ -107,8 +106,8 @@ impl CupertinoTabs {
                 let on_change = on_change.clone();
                 let theme = theme;
 
-                let tab = v_stack((
-                    text(label).style(move |s| {
+                let tab = Stack::vertical((
+                    Label::new(label).style(move |s| {
                         let t = theme.get();
                         let active = selected.get() == i;
                         s.padding_horiz(padding)
@@ -152,7 +151,7 @@ impl CupertinoTabs {
             })
             .collect();
 
-        Container::new(h_stack_from_iter(tab_views)).style(move |s| {
+        Container::new(Stack::horizontal_from_iter(tab_views)).style(move |s| {
             let t = theme.get();
             s.height(height)
                 .background(t.colors().surface.to_peniko())

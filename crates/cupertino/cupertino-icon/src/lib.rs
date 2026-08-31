@@ -7,6 +7,7 @@ use floem_core_theme::theme::{MultiTheme, Theme};
 use floem_core_theme::tokens::color::Color;
 
 mod icons;
+pub use icons::cupertino_icon_svg;
 
 const DESIGN_SYSTEM: &str = "cupertino";
 

@@ -1,7 +1,7 @@
 use floem::event::EventPropagation;
 use floem::view::AnyView;
 use floem::IntoView;
-use floem::views::Decorators;
+use floem::views::{Decorators, Empty, Label, Stack};
 use floem::{
     prelude::*,
     reactive::RwSignal,
@@ -86,7 +86,7 @@ impl CupertinoTooltip {
         let border_radius = tokens.border_radius;
         let font_size = tokens.font_size;
 
-        let bubble = Container::new(text(text_str))
+        let bubble = Container::new(Label::new(text_str))
             .style(move |s| {
                 let t = theme.get();
                 s.padding(padding)
@@ -97,7 +97,7 @@ impl CupertinoTooltip {
                     .apply_if(!hover.get(), |s| s.hide())
             });
 
-        Container::new(v_stack((child, Overlay::new(bubble))))
+        Container::new(Stack::vertical((child, Overlay::new(bubble))))
             .style(|s| s.items_center())
             .on_event(listener::PointerEnter, {
                 let hover = hover;

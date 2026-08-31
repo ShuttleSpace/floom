@@ -1,4 +1,5 @@
 use std::rc::Rc;
+use std::time::Duration;
 
 use floem::event::EventPropagation;
 use floem::ext_event::ArcRwSignal;
@@ -68,6 +69,12 @@ impl CupertinoSnackbar {
     /// Expose the internal open signal so an external trigger can show or hide the snackbar.
     pub fn open_signal(&self) -> RwSignal<bool> {
         self.open
+    }
+
+    /// Set the internal `open` signal from an external signal.
+    pub fn with_open_signal(mut self, open: RwSignal<bool>) -> Self {
+        self.open = open;
+        self
     }
     pub fn theme(&self) -> RwSignal<MultiTheme> {
         self.theme
@@ -150,7 +157,7 @@ impl CupertinoSnackbar {
             _ => unreachable!(),
         };
         let padding = tokens.padding;
-        let radius = tokens.border_radius;
+        let radius = theme.get().radius().lg;
         let min_height = tokens.min_height;
         let max_width = tokens.max_width;
         let font_size = tokens.font_size;
@@ -159,7 +166,7 @@ impl CupertinoSnackbar {
         let has_action = action_label.is_some();
         let action_label_str = action_label.unwrap_or_default();
 
-        let action_view = text(action_label_str)
+        let action_view = Label::new(action_label_str)
             .style(move |s| {
                 let t = theme.get();
                 s.color(t.colors().primary.to_peniko())
@@ -182,7 +189,7 @@ impl CupertinoSnackbar {
             });
 
         let surface = Container::new(
-            h_stack((text(message).style(move |s| {
+            Stack::horizontal((Label::new(message).style(move |s| {
                 let t = theme.get();
                 s.color(t.colors().surface.to_peniko())
                     .font_size(font_size)
@@ -202,7 +209,15 @@ impl CupertinoSnackbar {
                     .box_shadow_spread(1.0)
                     .box_shadow_color(with_alpha(Color::rgba(0, 0, 0, 255), 40).to_peniko())
             }),
-        );
+        )
+        // Slide up from the bottom edge and fade in; reverse on dismiss.
+        .animation(|a| {
+            a.run_on_create(true)
+                .run_on_remove(true)
+                .duration(Duration::from_millis(250))
+                .keyframe(0, |f| f.style(|s| s.translate_y(40.0).opacity(0.0)))
+                .keyframe(100, |f| f.computed_style())
+        });
 
         let layer = Container::new(surface).style(move |s| {
             let _t = theme.get();

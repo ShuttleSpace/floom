@@ -102,7 +102,7 @@ impl CupertinoPagination {
         {
             let enabled = current > 1;
             let on_change = on_change.clone();
-            let btn = Container::new(text("‹".to_string()))
+            let btn = Container::new(Label::new("‹".to_string()))
                 .style(move |s| {
                     let t = theme.get();
                     let fg = if enabled {
@@ -140,7 +140,7 @@ impl CupertinoPagination {
         for p in 1..=total {
             let selected = p == current;
             let on_change = on_change.clone();
-            let btn = Container::new(text(p.to_string()))
+            let btn = Container::new(Label::new(p.to_string()))
                 .style(move |s| {
                     let t = theme.get();
                     let (bg, fg) = if selected {
@@ -171,7 +171,7 @@ impl CupertinoPagination {
         {
             let enabled = current < total;
             let on_change = on_change.clone();
-            let btn = Container::new(text("›".to_string()))
+            let btn = Container::new(Label::new("›".to_string()))
                 .style(move |s| {
                     let t = theme.get();
                     let fg = if enabled {

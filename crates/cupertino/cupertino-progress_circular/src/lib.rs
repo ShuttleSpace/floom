@@ -2,12 +2,11 @@ use std::f32::consts::PI;
 
 use floem::prelude::*;
 use floem::reactive::RwSignal;
-use floem::views::svg;
+use floem::views::{svg};
 use floem_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floem_core_theme::props::progress_circular::ProgressCircularProps;
 use floem_core_theme::theme::{MultiTheme, Theme};
 use floem_core_theme::tokens::color::Color;
-use floem_core_theme::tokens::color_ext::*;
 
 const DESIGN_SYSTEM: &str = "cupertino";
 

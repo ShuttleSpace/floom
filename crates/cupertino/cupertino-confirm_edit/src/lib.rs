@@ -2,15 +2,14 @@ use std::rc::Rc;
 
 use floem::event::EventPropagation;
 use floem::prelude::*;
+use floem_widget_cupertino_icon::cupertino_icon_svg;
 use floem::reactive::{RwSignal, SignalGet, SignalUpdate};
 use floem::style::CursorStyle;
 use floem::view::AnyView;
-use floem::views::{Container, Decorators, Empty, TextInput, h_stack, text};
+use floem::views::{Container, Decorators, TextInput, Stack, Label};
 use floem_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floem_core_theme::props::confirm_edit::ConfirmEditProps;
 use floem_core_theme::theme::{MultiTheme, Theme};
-use floem_core_theme::tokens::color::Color;
-use floem_core_theme::tokens::color_ext::*;
 
 /// Material 3 click-to-edit wrapper (Vuetify `VConfirmEdit`).
 ///
@@ -78,7 +77,7 @@ impl CupertinoConfirmEdit {
                     let editing = editing;
                     let on_save = on_save.clone();
                     let draft = draft;
-                    Container::new(text("✓"))
+                    Container::new(svg(move || cupertino_icon_svg("check")).style(move |s| { let t = theme.get(); s.size(16.0, 16.0).color(t.colors().primary.to_peniko()) }))
                         .style(move |s| {
                             let t = theme.get();
                             s.padding_horiz(8.0)
@@ -99,7 +98,7 @@ impl CupertinoConfirmEdit {
                     let editing = editing;
                     let draft = draft;
                     let value = value;
-                    Container::new(text("✗"))
+                    Container::new(svg(move || cupertino_icon_svg("close")).style(move |s| { let t = theme.get(); s.size(16.0, 16.0).color(t.colors().on_surface_variant.to_peniko()) }))
                         .style(move |s| {
                             let t = theme.get();
                             s.padding_horiz(8.0)
@@ -112,19 +111,19 @@ impl CupertinoConfirmEdit {
                             EventPropagation::Continue
                         })
                 };
-                h_stack((input, save, cancel))
+                Stack::horizontal((input, save, cancel))
                     .style(move |s| s.gap(tk.gap).items_center())
                     .into_any()
             } else {
                 let content: AnyView = match &child_factory {
                     Some(f) => f(),
-                    None => text(value.get()).into_any(),
+                    None => Label::new(value.get()).into_any(),
                 };
                 let edit_btn = {
                     let editing = editing;
                     let draft = draft;
                     let value = value;
-                    Container::new(text("✎"))
+                    Container::new(svg(move || cupertino_icon_svg("edit")).style(move |s| { let t = theme.get(); s.size(16.0, 16.0).color(t.colors().on_surface_variant.to_peniko()) }))
                         .style(move |s| {
                             let t = theme.get();
                             s.padding_horiz(8.0)
@@ -137,7 +136,7 @@ impl CupertinoConfirmEdit {
                             EventPropagation::Continue
                         })
                 };
-                h_stack((content, edit_btn))
+                Stack::horizontal((content, edit_btn))
                     .style(move |s| s.gap(tk.gap).items_center())
                     .into_any()
             }

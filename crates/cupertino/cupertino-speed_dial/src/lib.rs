@@ -1,14 +1,12 @@
 use std::rc::Rc;
 
-use floem::event::EventPropagation;
 use floem::prelude::*;
 use floem::style::CursorStyle;
 use floem::view::AnyView;
-use floem::views::{Container, Decorators, Empty, svg, dyn_view, h_stack, v_stack, h_stack_from_iter, v_stack_from_iter};
+use floem::views::{Container, Decorators, Empty, svg, dyn_view, Stack};
 use floem_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floem_core_theme::props::speed_dial::{SpeedDialProps, SpeedDialDirection};
 use floem_core_theme::theme::{MultiTheme, Theme};
-use floem_core_theme::tokens::color::Color;
 use floem_core_theme::tokens::color_ext::*;
 
 struct SpeedDialAction {
@@ -144,16 +142,16 @@ impl CupertinoSpeedDial {
                     .collect();
                 match direction {
                     SpeedDialDirection::Up => {
-                        v_stack_from_iter(items).style(move |s| s.gap(gap).items_end())
+                        Stack::vertical_from_iter(items).style(move |s| s.gap(gap).items_end())
                     }
                     SpeedDialDirection::Down => {
-                        v_stack_from_iter(items).style(move |s| s.gap(gap).items_start())
+                        Stack::vertical_from_iter(items).style(move |s| s.gap(gap).items_start())
                     }
                     SpeedDialDirection::Left => {
-                        h_stack_from_iter(items).style(move |s| s.gap(gap).items_center())
+                        Stack::horizontal_from_iter(items).style(move |s| s.gap(gap).items_center())
                     }
                     SpeedDialDirection::Right => {
-                        h_stack_from_iter(items).style(move |s| s.gap(gap).items_center())
+                        Stack::horizontal_from_iter(items).style(move |s| s.gap(gap).items_center())
                     }
                 }
                 .into_any()
@@ -164,16 +162,16 @@ impl CupertinoSpeedDial {
 
         match direction {
             SpeedDialDirection::Up => {
-                v_stack((actions_view, fab)).style(move |s| s.gap(gap).items_end())
+                Stack::vertical((actions_view, fab)).style(move |s| s.gap(gap).items_end())
             }
             SpeedDialDirection::Down => {
-                v_stack((fab, actions_view)).style(move |s| s.gap(gap).items_start())
+                Stack::vertical((fab, actions_view)).style(move |s| s.gap(gap).items_start())
             }
             SpeedDialDirection::Left => {
-                h_stack((actions_view, fab)).style(move |s| s.gap(gap).items_center())
+                Stack::horizontal((actions_view, fab)).style(move |s| s.gap(gap).items_center())
             }
             SpeedDialDirection::Right => {
-                h_stack((fab, actions_view)).style(move |s| s.gap(gap).items_center())
+                Stack::horizontal((fab, actions_view)).style(move |s| s.gap(gap).items_center())
             }
         }
     }

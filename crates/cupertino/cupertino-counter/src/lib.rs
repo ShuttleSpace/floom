@@ -3,12 +3,10 @@ use std::rc::Rc;
 use floem::event::EventPropagation;
 use floem::prelude::*;
 use floem::style::CursorStyle;
-use floem::views::{Container, Decorators, h_stack, label, text};
+use floem::views::{Container, Decorators, Stack, Label};
 use floem_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floem_core_theme::props::counter::CounterProps;
 use floem_core_theme::theme::{MultiTheme, Theme};
-use floem_core_theme::tokens::color::Color;
-use floem_core_theme::tokens::color_ext::*;
 
 fn clamp_value(v: i64, min: Option<i64>, max: Option<i64>) -> i64 {
     let mut r = v;
@@ -75,7 +73,7 @@ impl CupertinoCounter {
         let tk_inc = tokens.clone();
         let tk_out = tokens;
 
-        let dec = Container::new(text("-"))
+        let dec = Container::new(Label::new("-"))
             .style(move |s| {
                 let t = theme.get();
                 s.size(tk_dec.button_size, tk_dec.button_size)
@@ -99,12 +97,12 @@ impl CupertinoCounter {
                 }
             });
 
-        let val = label(move || value.get().to_string()).style(move |s| {
+        let val = Label::derived(move || value.get().to_string()).style(move |s| {
             let t = theme.get();
             s.font_size(16.0).color(t.colors().on_surface.to_peniko())
         });
 
-        let inc = Container::new(text("+"))
+        let inc = Container::new(Label::new("+"))
             .style(move |s| {
                 let t = theme.get();
                 s.size(tk_inc.button_size, tk_inc.button_size)
@@ -128,7 +126,7 @@ impl CupertinoCounter {
                 }
             });
 
-        h_stack((dec, val, inc)).style(move |s| {
+        Stack::horizontal((dec, val, inc)).style(move |s| {
             let t = theme.get();
             s.height(tk_out.height)
                 .width(tk_out.width)

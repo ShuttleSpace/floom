@@ -118,6 +118,7 @@ impl CupertinoBottomNavigation {
         let icon_size = tokens.icon_size;
         let label_font_size = tokens.label_font_size;
         let item_min_width = tokens.item_min_width;
+        let gap = tokens.gap;
 
         let mut icon_iter = icons.into_iter();
         let items: Vec<AnyView> = labels
@@ -133,9 +134,9 @@ impl CupertinoBottomNavigation {
                 let label_i = label;
 
                 Container::new(
-                    v_stack((
+                    Stack::vertical((
                         icon.style(move |s| s.size(icon_size, icon_size).items_center().justify_center()),
-                        text(label_i.clone()).style(move |s| {
+                        Label::new(label_i.clone()).style(move |s| {
                             let t = theme_i.get();
                             let active = selected_i.get() == i;
                             s.margin_top(4.0)
@@ -150,11 +151,11 @@ impl CupertinoBottomNavigation {
                                 .font_size(label_font_size)
                         }),
                     ))
-                    .style(|s| s.items_center().justify_center().gap(2.0)),
+                    .style(move |s| s.items_center().justify_center().gap(gap)),
                 )
                 .style(move |s| {
-                    let t = theme_i.get();
-                    let active = selected_i.get() == i;
+                    let _t = theme_i.get();
+                    let _active = selected_i.get() == i;
                     s.flex_grow(1.0)
                         .min_width(item_min_width)
                         .height(bar_height)

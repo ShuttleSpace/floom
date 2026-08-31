@@ -1,7 +1,7 @@
 use floem::event::EventPropagation;
 use floem::style::CursorStyle;
 use floem::view::AnyView;
-use floem::views::Decorators;
+use floem::views::{Decorators, Label};
 use floem::{
     prelude::*,
     reactive::RwSignal,
@@ -88,6 +88,7 @@ impl CupertinoList {
         let padding = tokens.padding;
         let min_width = tokens.min_width;
         let gap = tokens.gap;
+        let padding_horizontal = tokens.padding_horizontal;
 
         let rows: Vec<AnyView> = items
             .into_iter()
@@ -95,12 +96,12 @@ impl CupertinoList {
                 let on_select = item.on_select;
                 let label = item.label.clone();
                 let theme = theme;
-                text(label)
+                Label::new(label)
                     .style(move |s| {
                         let t = theme.get();
                         s.width_pct(100.0)
                             .height(item_height)
-                            .padding_horiz(12.0)
+                            .padding_horiz(padding_horizontal)
                             .color(t.colors().on_surface.to_peniko())
                             .font_size(t.typography().body.medium.font_size)
                             .items_center()

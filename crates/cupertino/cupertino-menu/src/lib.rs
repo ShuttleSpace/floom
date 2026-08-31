@@ -64,6 +64,12 @@ impl CupertinoMenu {
     pub fn open_signal(&self) -> RwSignal<bool> {
         self.open
     }
+
+    /// Set the internal `open` signal from an external signal.
+    pub fn with_open_signal(mut self, open: RwSignal<bool>) -> Self {
+        self.open = open;
+        self
+    }
     pub fn theme(&self) -> RwSignal<MultiTheme> {
         self.theme
     }
@@ -106,7 +112,7 @@ impl CupertinoMenu {
                 let label = item.label.clone();
                 let open_sig = open;
                 let theme_hover = theme;
-                text(label)
+                Label::new(label)
                     .style(move |s| {
                         let t = theme.get();
                         s.width_pct(100.0)
@@ -135,12 +141,13 @@ impl CupertinoMenu {
         let panel = Container::new(list(rows)).style(move |s| {
             let t = theme.get();
             s.min_width(tokens.min_width)
+                .max_width(tokens.max_width)
                 .padding(tokens.padding)
                 .background(t.colors().surface.to_peniko())
                 .border_radius(radius)
-                .box_shadow_blur(8.0)
+                .box_shadow_blur(12.0)
                 .box_shadow_spread(1.0)
-                .box_shadow_color(with_alpha(Color::rgba(0, 0, 0, 255), 20).to_peniko())
+                .box_shadow_color(with_alpha(Color::rgba(0, 0, 0, 255), 24).to_peniko())
                 .apply_if(!open.get(), |s| s.hide())
         });
 

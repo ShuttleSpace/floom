@@ -1,7 +1,7 @@
 use floem::prelude::*;
 use floem::reactive::RwSignal;
 use floem::style::CursorStyle;
-use floem::views::Decorators;
+use floem::views::{Decorators, Label};
 use floem_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floem_core_theme::props::button::{ButtonProps, ButtonSize, ButtonVariant};
 use floem_core_theme::theme::{MultiTheme, Theme};
@@ -104,7 +104,7 @@ impl CupertinoButton {
             ButtonSize::Large => tokens.height + 8.0,
         };
 
-        Button::new(text(label))
+        Button::new(Label::new(label))
             .style(move |s| {
                 let t = theme.get();
                 let (bg, fg) = base_colors(&t, variant, disabled);

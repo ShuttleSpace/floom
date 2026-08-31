@@ -3,7 +3,7 @@ use std::rc::Rc;
 use floem::event::EventPropagation;
 use floem::style::CursorStyle;
 use floem::view::AnyView;
-use floem::views::Decorators;
+use floem::views::{Decorators, Empty, Label, Stack};
 use floem::{
     prelude::*,
     reactive::RwSignal,
@@ -12,7 +12,6 @@ use floem_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floem_core_theme::props::radio_group::RadioGroupProps;
 use floem_core_theme::theme::{MultiTheme, Theme};
 use floem_core_theme::tokens::color::Color;
-use floem_core_theme::tokens::color_ext::*;
 
 const DESIGN_SYSTEM: &str = "cupertino";
 
@@ -131,7 +130,7 @@ impl CupertinoRadioGroup {
                             .justify_center()
                     });
 
-                let row = h_stack((radio, text(label)))
+                let row = Stack::horizontal((radio, Label::new(label)))
                     .style(move |s| {
                         s.height(item_height)
                             .gap(gap)

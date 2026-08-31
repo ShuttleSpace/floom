@@ -104,7 +104,7 @@ impl CupertinoChip {
         let font_size = tokens.font_size;
         let gap = tokens.gap;
 
-        Container::new(text(label))
+        Container::new(Label::new(label))
             .style(move |s| {
                 let t = theme.get();
                 let (bg, fg) = chip_colors(&t, selected, disabled);

@@ -4,7 +4,6 @@ use floem_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floem_core_theme::props::avatar::AvatarProps;
 use floem_core_theme::theme::{MultiTheme, Theme};
 use floem_core_theme::tokens::color::Color;
-use floem_core_theme::tokens::color_ext::*;
 
 const DESIGN_SYSTEM: &str = "cupertino";
 
@@ -78,7 +77,7 @@ impl CupertinoAvatar {
         let size = self.resolved_style().size;
         let font_size = self.resolved_style().font_size;
 
-        Container::new(text(content))
+        Container::new(Label::new(content))
             .style(move |s| {
                 let t = theme.get();
                 s.width(size)

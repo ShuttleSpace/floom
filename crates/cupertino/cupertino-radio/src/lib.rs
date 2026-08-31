@@ -102,6 +102,7 @@ impl CupertinoRadio {
         let disabled = self.props.disabled;
         let on_change = Rc::new(self.props.on_change);
         let label_text = self.props.label.clone();
+        let hover = RwSignal::new(false);
 
         let tokens = match theme.get().component(ComponentId::Radio) {
             ComponentTokens::Radio(t) => t,
@@ -119,7 +120,25 @@ impl CupertinoRadio {
                 .apply_if(!checked.get(), |s| s.hide())
         });
 
-        let circle = Container::new(dot).style(move |s| {
+        let hover_bg = Container::new(Empty::new()).style(move |s| {
+            let t = theme.get();
+            let pad = 4.0;
+            s.absolute()
+                .inset_top(0.0)
+                .inset_left(0.0)
+                .size(size + pad * 2.0, size + pad * 2.0)
+                .translate_x(-pad)
+                .translate_y(-pad)
+                .border_radius(9999.0)
+                .background(with_alpha(t.colors().primary, 10).to_peniko())
+                .apply_if(!hover.get() || disabled, |s| s.hide())
+        });
+
+        let circle = Container::new(
+            Stack::new((hover_bg, dot))
+                .style(|s| s.width_full().height_full().items_center().justify_center()),
+        )
+        .style(move |s| {
             let t = theme.get();
             let c = if checked.get() {
                 t.colors().primary
@@ -139,7 +158,7 @@ impl CupertinoRadio {
                 .justify_center()
         });
 
-        let label_view = text(label_text).style(move |s| {
+        let label_view = Label::new(label_text).style(move |s| {
             let t = theme.get();
             let c = if disabled {
                 with_alpha(t.colors().on_surface, 38)
@@ -159,7 +178,7 @@ impl CupertinoRadio {
             }
         });
 
-        h_stack((circle, label_view))
+        Stack::horizontal((circle, label_view))
             .style(|s| s.items_center().gap(8.0).cursor(CursorStyle::Pointer))
             .on_event(listener::Click, {
                 let toggle = toggle.clone();
@@ -174,7 +193,28 @@ impl CupertinoRadio {
                 }
                 EventPropagation::Continue
             })
-            .style(move |s| s.set_disabled(disabled).keyboard_navigable())
+            .on_event(listener::PointerEnter, {
+                let hover = hover;
+                move |_, _| {
+                    if !disabled {
+                        hover.set(true);
+                    }
+                    EventPropagation::Continue
+                }
+            })
+            .on_event(listener::PointerLeave, {
+                let hover = hover;
+                move |_, _| {
+                    hover.set(false);
+                    EventPropagation::Continue
+                }
+            })
+            .style(move |s| {
+                let t = theme.get();
+                s.set_disabled(disabled)
+                    .keyboard_navigable()
+                    .focus(|s| s.outline(2.0).outline_color(t.colors().primary.to_peniko()))
+            })
     }
 }
 

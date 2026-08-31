@@ -6,7 +6,6 @@ use floem_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floem_core_theme::props::badge::BadgeProps;
 use floem_core_theme::theme::{MultiTheme, Theme};
 use floem_core_theme::tokens::color::Color;
-use floem_core_theme::tokens::color_ext::*;
 
 const DESIGN_SYSTEM: &str = "cupertino";
 
@@ -110,7 +109,7 @@ impl CupertinoBadge {
                 })
                 .into_any()
         } else {
-            Container::new(text(content))
+            Container::new(Label::new(content))
                 .style(move |s| {
                     let t = theme.get();
                     let off = min_size / 2.0;

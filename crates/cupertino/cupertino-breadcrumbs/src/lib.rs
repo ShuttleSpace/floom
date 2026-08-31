@@ -4,7 +4,7 @@ use floem::event::EventPropagation;
 use floem::prelude::*;
 use floem::style::CursorStyle;
 use floem::view::AnyView;
-use floem::views::{Container, Decorators, Empty, h_stack_from_iter};
+use floem::views::{Container, Decorators, Empty, Stack, Label};
 use floem_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floem_core_theme::theme::{MultiTheme, Theme};
 use floem_core_theme::tokens::color::Color;
@@ -36,7 +36,7 @@ impl CupertinoBreadcrumbs {
     }
 
     /// The ordered breadcrumb labels, last item is the current location.
-    pub fn items(mut self, items: Vec<String>) -> Self {
+    pub fn items(self, items: Vec<String>) -> Self {
         self.items.set(items);
         self
     }
@@ -86,7 +86,7 @@ impl CupertinoBreadcrumbs {
             for (i, label) in labels.iter().enumerate() {
                 let is_last = i == n - 1;
                 let theme_it = theme;
-                let label_view = text(label.clone()).style(move |s| {
+                let label_view = Label::new(label.clone()).style(move |s| {
                     let t = theme_it.get();
                     let c = if is_last {
                         t.colors().on_surface
@@ -125,7 +125,7 @@ impl CupertinoBreadcrumbs {
 
                 if !is_last {
                     let theme_d = theme;
-                    let d = text(divider.clone()).style(move |s| {
+                    let d = Label::new(divider.clone()).style(move |s| {
                         let t = theme_d.get();
                         s.font_size(font_size)
                             .color(t.colors().outline_variant.to_peniko())
@@ -137,7 +137,7 @@ impl CupertinoBreadcrumbs {
             if kids.is_empty() {
                 return Empty::new().into_any();
             }
-            h_stack_from_iter(kids)
+            Stack::horizontal_from_iter(kids)
                 .style(move |s| s.items_center().gap(gap).width_pct(100.0))
                 .into_any()
         });

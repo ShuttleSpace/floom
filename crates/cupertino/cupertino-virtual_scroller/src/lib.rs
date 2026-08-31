@@ -7,7 +7,7 @@ use floem::style::CursorStyle;
 use floem::taffy::style::Overflow;
 use floem::ui_events::{ScrollDelta, pointer::PointerScrollEvent};
 use floem::view::AnyView;
-use floem::views::dyn_view;
+use floem::views::{dyn_view, Empty, Stack};
 use floem::IntoView;
 use floem_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floem_core_theme::props::virtual_scroller::VirtualScrollerProps;
@@ -157,9 +157,9 @@ impl CupertinoVirtualScroller {
             let bot_sp = Empty::new()
                 .style(move |s| s.height(bottom))
                 .into_any();
-            let body = v_stack_from_iter(vis).style(move |s| s.gap(row_gap));
+            let body = Stack::vertical_from_iter(vis).style(move |s| s.gap(row_gap));
 
-            v_stack((top_sp, body, bot_sp)).style(|s| s.width_pct(100.0))
+            Stack::vertical((top_sp, body, bot_sp)).style(|s| s.width_pct(100.0))
         });
 
         viewport_view

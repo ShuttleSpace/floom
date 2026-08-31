@@ -88,7 +88,7 @@ impl CupertinoSkeletonLoader {
         let content: AnyView = match props.skeleton_type {
             SkeletonType::Circle => {
                 let size = props.width.or(props.height).unwrap_or(avatar);
-                Container::new(empty())
+                Container::new(Empty::new())
                     .style(move |s| {
                         s.size(size, size)
                             .background(color.to_peniko())
@@ -99,7 +99,7 @@ impl CupertinoSkeletonLoader {
             SkeletonType::Rect => {
                 let h = props.height.unwrap_or(text_h * 2.0);
                 let w = props.width.unwrap_or(160.0);
-                Container::new(empty())
+                Container::new(Empty::new())
                     .style(move |s| {
                         s.width(w)
                             .height(h)
@@ -111,7 +111,7 @@ impl CupertinoSkeletonLoader {
             SkeletonType::Card => {
                 let w = props.width.unwrap_or(200.0);
                 let h = props.height.unwrap_or(120.0);
-                Container::new(empty())
+                Container::new(Empty::new())
                     .style(move |s| {
                         s.width(w)
                             .height(h)
@@ -125,7 +125,7 @@ impl CupertinoSkeletonLoader {
                 let mut bars: Vec<AnyView> = Vec::with_capacity(lines);
                 for _ in 0..lines {
                     bars.push(
-                        Container::new(empty())
+                        Container::new(Empty::new())
                             .style(move |s| {
                                 s.width_pct(100.0)
                                     .height(text_h)
@@ -138,7 +138,7 @@ impl CupertinoSkeletonLoader {
                 list(bars).into_any()
             }
             SkeletonType::Avatar => {
-                let circ = Container::new(empty())
+                let circ = Container::new(Empty::new())
                     .style(move |s| {
                         s.size(avatar, avatar)
                             .background(color.to_peniko())
@@ -149,7 +149,7 @@ impl CupertinoSkeletonLoader {
                 let mut bars: Vec<AnyView> = Vec::with_capacity(lines);
                 for _ in 0..lines {
                     bars.push(
-                        Container::new(empty())
+                        Container::new(Empty::new())
                             .style(move |s| {
                                 s.width_pct(100.0)
                                     .height(text_h)
@@ -160,7 +160,7 @@ impl CupertinoSkeletonLoader {
                     );
                 }
                 let right = list(bars).style(move |s| s.gap(gap));
-                h_stack((circ, right.into_any()))
+                Stack::horizontal((circ, right.into_any()))
                     .style(move |s| s.gap(gap).items_center())
                     .into_any()
             }

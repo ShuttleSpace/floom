@@ -7,7 +7,6 @@ use floem::view::AnyView;
 use floem_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floem_core_theme::props::hover::HoverProps;
 use floem_core_theme::theme::{MultiTheme, Theme};
-use floem_core_theme::tokens::color::Color;
 use floem_core_theme::tokens::color_ext::*;
 
 #[derive(Debug, Clone, Copy, PartialEq)]

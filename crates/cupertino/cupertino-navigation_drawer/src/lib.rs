@@ -1,10 +1,12 @@
+use std::time::Duration;
+
 use floem::event::EventPropagation;
 use floem::prelude::*;
 use floem::reactive::RwSignal;
 use floem::view::AnyView;
 use floem::IntoView;
 use floem_core_theme::component_tokens::{ComponentId, ComponentTokens};
-use floem_core_theme::props::navigation_drawer::NavigationDrawerProps;
+use floem_core_theme::props::navigation_drawer::{NavigationDrawerProps, NavigationDrawerSide};
 use floem_core_theme::theme::{MultiTheme, Theme};
 use floem_core_theme::tokens::color::Color;
 use floem_core_theme::tokens::color_ext::*;
@@ -55,6 +57,11 @@ impl CupertinoNavigationDrawer {
         self.props.elevation = elevation;
         self
     }
+    /// Choose the edge the drawer slides in from (`Left` or `Right`).
+    pub fn side(mut self, side: NavigationDrawerSide) -> Self {
+        self.props.side = side;
+        self
+    }
     /// Optional header view rendered at the top of the drawer.
     pub fn header(mut self, header: impl IntoView + 'static) -> Self {
         self.header = Some(header.into_any());
@@ -72,6 +79,12 @@ impl CupertinoNavigationDrawer {
     /// button) can show or hide the drawer.
     pub fn open_signal(&self) -> RwSignal<bool> {
         self.open
+    }
+
+    /// Set the internal `open` signal from an external signal.
+    pub fn with_open_signal(mut self, open: RwSignal<bool>) -> Self {
+        self.open = open;
+        self
     }
     pub fn is_open(&self) -> bool {
         self.open.get()
@@ -106,6 +119,7 @@ impl CupertinoNavigationDrawer {
     pub fn view(self) -> impl View {
         let theme = self.theme;
         let open = self.open;
+        let side = self.props.side;
         let header = self.header.unwrap_or_else(|| Empty::new().into_any());
         let content = self.content.unwrap_or_else(|| Empty::new().into_any());
 
@@ -119,24 +133,25 @@ impl CupertinoNavigationDrawer {
 // layout-provider auto-register
         floem::reactive::create_effect(move |_prev: Option<()>| {
             let w = if open.get() { drawer_width } else { 0.0 };
-            floem_core_theme::layout::register_layout(
-                floem_core_theme::layout::LayoutSlot::NavDrawerLeft,
-                w,
-            );
+            let slot = match side {
+                NavigationDrawerSide::Left => floem_core_theme::layout::LayoutSlot::NavDrawerLeft,
+                NavigationDrawerSide::Right => floem_core_theme::layout::LayoutSlot::NavDrawerRight,
+            };
+            floem_core_theme::layout::register_layout(slot, w);
         });
 
 
         let panel = Container::new(
-            v_stack((header, content))
+            Stack::vertical((header, content))
                 .style(move |s| s.gap(8.0).items_start().flex_grow(1.0)),
         )
         .style(move |s| {
             let t = theme.get();
             let elevation_blur = (elevation as f32) * 4.0;
-            s.absolute()
+            let mut s = s
+                .absolute()
                 .inset_top(0.0)
                 .inset_bottom(0.0)
-                .inset_left(0.0)
                 .width(drawer_width)
                 .padding(padding)
                 .background(with_alpha(t.colors().surface, 235).to_peniko())
@@ -148,7 +163,29 @@ impl CupertinoNavigationDrawer {
                         .box_shadow_color(with_alpha(Color::rgba(0, 0, 0, 255), 50).to_peniko())
                 })
                 .items_start()
-                .apply_if(!open.get(), |s| s.hide())
+                .apply_if(!open.get(), |s| s.hide());
+            match side {
+                NavigationDrawerSide::Left => {
+                    s = s.inset_left(0.0);
+                }
+                NavigationDrawerSide::Right => {
+                    s = s.inset_right(0.0);
+                    s = s.border_right(0.0).border_left(0.5);
+                }
+            }
+            s
+        })
+        // Slide in from the chosen edge, slide back out on close.
+        .animation(move |a| {
+            let from = match side {
+                NavigationDrawerSide::Left => -drawer_width,
+                NavigationDrawerSide::Right => drawer_width,
+            };
+            a.run_on_create(true)
+                .run_on_remove(true)
+                .duration(Duration::from_millis(260))
+                .keyframe(0, |f| f.style(|s| s.translate_x(from)))
+                .keyframe(100, |f| f.computed_style())
         });
 
         let scrim = Container::new(panel)
@@ -158,6 +195,13 @@ impl CupertinoNavigationDrawer {
                     .height_pct(100.0)
                     .background(with_alpha(t.colors().scrim, 150).to_peniko())
                     .apply_if(!open.get(), |s| s.hide())
+            })
+            .animation(move |a| {
+                a.run_on_create(true)
+                    .run_on_remove(true)
+                    .duration(Duration::from_millis(260))
+                    .keyframe(0, |f| f.style(|s| s.opacity(0.0)))
+                    .keyframe(100, |f| f.computed_style())
             })
             .on_event(listener::Click, {
                 let open = open;

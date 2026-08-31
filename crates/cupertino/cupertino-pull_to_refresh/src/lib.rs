@@ -4,12 +4,10 @@ use floem::event::EventPropagation;
 use floem::prelude::*;
 use floem::reactive::{RwSignal, SignalGet, SignalUpdate};
 use floem::view::AnyView;
-use floem::views::{Container, Decorators, Empty, v_stack, text};
+use floem::views::{Container, Decorators, Empty, Stack, Label};
 use floem_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floem_core_theme::props::pull_to_refresh::PullToRefreshProps;
 use floem_core_theme::theme::{MultiTheme, Theme};
-use floem_core_theme::tokens::color::Color;
-use floem_core_theme::tokens::color_ext::*;
 
 /// Material 3 pull-to-refresh wrapper (Vuetify `VPullToRefresh`).
 ///
@@ -61,6 +59,12 @@ impl CupertinoPullToRefresh {
         self.refreshing
     }
 
+    /// Set the internal `refreshing` signal from an external signal.
+    pub fn with_refreshing_signal(mut self, refreshing: RwSignal<bool>) -> Self {
+        self.refreshing = refreshing;
+        self
+    }
+
     pub fn view(self) -> impl View {
         let theme = self.theme;
         let threshold = self.props.threshold;
@@ -87,7 +91,7 @@ impl CupertinoPullToRefresh {
             } else {
                 ("↓ Pull to refresh", p.min(28.0))
             };
-            text(label)
+            Label::new(label)
                 .style(move |s| {
                     let t = theme.get();
                     s.height(h)
@@ -104,7 +108,7 @@ impl CupertinoPullToRefresh {
             None => Empty::new().into_any(),
         };
 
-        let content = v_stack((indicator, child_view));
+        let content = Stack::vertical((indicator, child_view));
 
         Container::new(content)
             .style(move |s| {
@@ -116,7 +120,7 @@ impl CupertinoPullToRefresh {
             .on_event(listener::PointerDown, {
                 let dragging = dragging;
                 let start_y = start_y;
-                let pull = pull;
+                let _pull = pull;
                 move |cx, pbe| {
                     let y = pbe.state.logical_point().y as f32;
                     start_y.set(y);

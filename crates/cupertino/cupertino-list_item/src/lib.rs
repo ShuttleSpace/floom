@@ -1,12 +1,12 @@
 use floem::prelude::*;
 use floem::style::CursorStyle;
 use floem::view::AnyView;
-use floem::views::{Decorators, h_stack_from_iter};
+use floem::views::{Decorators, Stack, Label};
 use floem::reactive::{RwSignal, SignalGet};
 use floem_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floem_core_theme::props::list_item::ListItemProps;
 use floem_core_theme::theme::{MultiTheme, Theme};
-use floem_core_theme::tokens::color_ext::*;
+use floem_widget_runtime::Ripple;
 
 /// Material 3 list item: a single row with an optional leading slot, a title /
 /// subtitle text column, and an optional trailing slot. Clickable when an
@@ -90,11 +90,11 @@ impl CupertinoListItem {
             ComponentTokens::ListItem(t) => t,
             _ => unreachable!(),
         };
-        let min_height = tokens.min_height;
+        let min_height = 44.0;
         let pad_h = tokens.padding_horizontal;
         let gap = tokens.gap;
-        let title_fs = tokens.title_font_size;
-        let subtitle_fs = tokens.subtitle_font_size;
+        let title_fs = 17.0;
+        let subtitle_fs = 15.0;
 
         let mut row_kids: Vec<AnyView> = Vec::new();
         if let Some(lead) = leading {
@@ -103,7 +103,7 @@ impl CupertinoListItem {
 
         let mut text_col_kids: Vec<AnyView> = Vec::new();
         text_col_kids.push(
-            text(title)
+            Label::new(title)
                 .style(move |s| {
                     let t = theme.get();
                     s.font_size(title_fs)
@@ -114,7 +114,7 @@ impl CupertinoListItem {
         );
         if let Some(sub) = subtitle {
             text_col_kids.push(
-                text(sub)
+                Label::new(sub)
                     .style(move |s| {
                         let t = theme.get();
                         s.font_size(subtitle_fs).color(t.colors().on_surface_variant.to_peniko())
@@ -123,15 +123,15 @@ impl CupertinoListItem {
             );
         }
         row_kids.push(
-            h_stack_from_iter(text_col_kids)
-                .style(move |s| s.gap(2.0).flex_grow(1.0).items_center())
+            Stack::vertical_from_iter(text_col_kids)
+                .style(move |s| s.gap(4.0).flex_grow(1.0).justify_center().items_start())
                 .into_any(),
         );
         if let Some(trail) = trailing {
             row_kids.push(trail);
         }
 
-        let row = h_stack_from_iter(row_kids).style(move |s| {
+        let row = Stack::horizontal_from_iter(row_kids).style(move |s| {
             s.gap(gap)
                 .items_center()
                 .width_pct(100.0)
@@ -139,7 +139,7 @@ impl CupertinoListItem {
                 .padding_horiz(pad_h)
         });
 
-        Container::new(row)
+        let inner = Container::new(row)
             .style(move |s| {
                 let t = theme.get();
                 let mut st = s
@@ -157,7 +157,11 @@ impl CupertinoListItem {
                         cb();
                     }
                 }
-            })
+            });
+
+        // Press ripple (sharp corners, Material list-item style); suppressed when
+        // the item is disabled.
+        Ripple::new(inner).disabled(disabled).view()
     }
 }
 

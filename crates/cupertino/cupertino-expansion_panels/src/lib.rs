@@ -2,13 +2,13 @@ use std::rc::Rc;
 
 use floem::event::EventPropagation;
 use floem::prelude::*;
+use floem_widget_cupertino_icon::cupertino_icon_svg;
 use floem::style::CursorStyle;
 use floem::view::AnyView;
-use floem::views::{Container, Decorators, Empty, dyn_view, h_stack, v_stack, v_stack_from_iter};
+use floem::views::{svg, Container, Decorators, Empty, dyn_view, Stack, Label};
 use floem_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floem_core_theme::props::expansion_panels::ExpansionPanelsProps;
 use floem_core_theme::theme::{MultiTheme, Theme};
-use floem_core_theme::tokens::color::Color;
 use floem_core_theme::tokens::color_ext::*;
 
 struct ExpansionPanelItem {
@@ -70,26 +70,26 @@ impl CupertinoExpansionPanels {
                 let theme = theme;
                 let tk_h = tokens.clone();
                 let tk_c = tokens.clone();
+                let icon_size = tokens.icon_size;
                 let expanded = expanded;
                 let on_change = on_change.clone();
                 let multiple = multiple;
                 let title = item.title;
                 let content_factory = item.content;
 
-                let glyph = label(move || {
+                let glyph = svg(move || {
                     if expanded.get()[i] {
-                        "▾".to_string()
+                        cupertino_icon_svg("expand_more")
                     } else {
-                        "▸".to_string()
+                        cupertino_icon_svg("chevron_right")
                     }
                 })
                 .style(move |s| {
                     let t = theme.get();
-                    s.color(t.colors().on_surface_variant.to_peniko())
-                        .font_size(16.0)
+                    s.size(icon_size, icon_size).color(t.colors().on_surface_variant.to_peniko())
                 });
 
-                let header = h_stack((text(title), glyph))
+                let header = Stack::horizontal((Label::new(title), glyph))
                     .style(move |s| {
                         let t = theme.get();
                         s.height(tk_h.header_height)
@@ -134,13 +134,13 @@ impl CupertinoExpansionPanels {
                     }
                 });
 
-                v_stack((header, content))
+                Stack::vertical((header, content))
                     .style(|s| s.gap(0.0))
                     .into_any()
             })
             .collect();
 
-        v_stack_from_iter(panel_views)
+        Stack::vertical_from_iter(panel_views)
             .style(move |s| s.gap(tokens_final.gap))
     }
 }

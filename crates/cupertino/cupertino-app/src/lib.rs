@@ -1,6 +1,6 @@
 use floem::prelude::*;
 use floem::view::AnyView;
-use floem::views::{Container, empty};
+use floem::views::{Container, Empty};
 use floem_core_theme::layout::layout_signal;
 use floem_core_theme::theme::{MultiTheme, Theme};
 /// Material 3 application root — the layout provider frame.
@@ -32,7 +32,7 @@ impl CupertinoApp {
         let theme = self.theme;
         // Initialize the process-wide layout signal for the whole app.
         let _ = layout_signal();
-        let child = self.child.unwrap_or_else(|| empty().into_any());
+        let child = self.child.unwrap_or_else(|| Empty::new().into_any());
         Container::new(child).style(move |s| {
             let t = theme.get();
             s.width_pct(100.0)

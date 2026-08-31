@@ -79,7 +79,11 @@ impl CupertinoAppBar {
         };
         CupertinoAppBarStyle {
             design_system: DESIGN_SYSTEM,
-            height: self.props.height.max(0.0),
+            height: if self.props.height > 0.0 {
+                self.props.height
+            } else {
+                tokens.height
+            },
             padding_horizontal: tokens.padding_horizontal,
             title_font_size: tokens.title_font_size,
             elevation: self.props.elevation,
@@ -101,7 +105,11 @@ impl CupertinoAppBar {
             ComponentTokens::AppBar(t) => t,
             _ => unreachable!(),
         };
-        let bar_height = self.props.height.max(0.0);
+        let bar_height = if self.props.height > 0.0 {
+            self.props.height
+        } else {
+            tokens.height
+        };
         let padding_horizontal = tokens.padding_horizontal;
         let title_font_size = tokens.title_font_size;
         let elevation = self.props.elevation;
@@ -117,7 +125,7 @@ impl CupertinoAppBar {
             .map(|a| a.style(move |s| s.cursor(CursorStyle::Pointer)))
             .collect();
 
-        let title_view = text(title).style(move |s| {
+        let title_view = Label::new(title).style(move |s| {
             let t = theme.get();
             s.flex_grow(1.0)
                 .justify_center()
@@ -126,7 +134,7 @@ impl CupertinoAppBar {
                 .font_weight(FontWeight::SemiBold.to_floem())
         });
 
-        h_stack((
+        Stack::horizontal((
             leading.style(move |s| s.padding_right(padding_horizontal / 2.0)),
             title_view,
             list(action_views)

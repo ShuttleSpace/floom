@@ -5,8 +5,9 @@ use floem::prelude::*;
 use floem::reactive::RwSignal;
 use floem::style::CursorStyle;
 use floem::view::AnyView;
-use floem::views::h_stack_from_iter;
+use floem::views::{Label, Stack};
 use floem::IntoView;
+use floem::context::{LayoutChanged, LayoutChangedListener};
 use floem_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floem_core_theme::props::date_picker::{DatePickerProps, DateValue};
 use floem_core_theme::theme::{MultiTheme, Theme};
@@ -187,7 +188,7 @@ impl CupertinoDatePicker {
         let cell_size = tokens.cell_size;
 
         let trigger = Container::new(
-            label(move || match value.get() {
+            Label::derived(move || match value.get() {
                 Some(d) => format!("{:04}-{:02}-{:02}", d.year, d.month, d.day),
                 None => placeholder.clone(),
             })
@@ -239,7 +240,7 @@ impl CupertinoDatePicker {
             EventPropagation::Continue
         });
 
-        let prev_btn = text("‹")
+        let prev_btn = Label::new("‹")
             .style(move |s| {
                 let t = theme.get();
                 s.color(t.colors().on_surface.to_peniko())
@@ -253,7 +254,7 @@ impl CupertinoDatePicker {
                 EventPropagation::Continue
             });
 
-        let next_btn = text("›")
+        let next_btn = Label::new("›")
             .style(move |s| {
                 let t = theme.get();
                 s.color(t.colors().on_surface.to_peniko())
@@ -267,7 +268,7 @@ impl CupertinoDatePicker {
                 EventPropagation::Continue
             });
 
-        let title = label(move || {
+        let title = Label::derived(move || {
             let (y, m) = view_month.get();
             format!("{} {}", MONTHS[(m as usize) - 1], y)
         })
@@ -278,17 +279,17 @@ impl CupertinoDatePicker {
                 .font_weight(FontWeight::Medium.to_floem())
         });
 
-        let header = h_stack((prev_btn, title, next_btn))
+        let header = Stack::horizontal((prev_btn, title, next_btn))
             .style(|s| s.justify_between().items_center().width_pct(100.0));
 
-        let weekday_row = h_stack((
-            text("S"),
-            text("M"),
-            text("T"),
-            text("W"),
-            text("T"),
-            text("F"),
-            text("S"),
+        let weekday_row = Stack::horizontal((
+            Label::new("S"),
+            Label::new("M"),
+            Label::new("T"),
+            Label::new("W"),
+            Label::new("T"),
+            Label::new("F"),
+            Label::new("S"),
         ))
         .style(move |s| {
             s.justify_between()
@@ -309,7 +310,7 @@ impl CupertinoDatePicker {
                         let open = open;
                         let on_change = on_change.clone();
                         let theme = theme;
-                        label(move || {
+                        Label::derived(move || {
                             let (yy, mm) = view_month.get();
                             match day_at(k, yy, mm) {
                                 Some(n) => n.to_string(),
@@ -377,7 +378,7 @@ impl CupertinoDatePicker {
                         .into_any()
                     })
                     .collect();
-                h_stack_from_iter(week)
+                Stack::horizontal_from_iter(week)
                     .style(|s| s.justify_between())
                     .into_any()
             })
@@ -385,16 +386,20 @@ impl CupertinoDatePicker {
 
         let grid = list(rows).style(|s| s.gap(2.0));
 
+        let origin = RwSignal::new((0.0f64, 0.0f64));
+        let trigger_h = RwSignal::new(0.0f32);
+
         let panel = Container::new(
-            v_stack((header, weekday_row, grid)).style(|s| s.gap(6.0)),
+            Stack::vertical((header, weekday_row, grid)).style(|s| s.gap(6.0)),
         )
         .style(move |s| {
             let t = theme.get();
+            let (ox, oy) = origin.get();
+            let h = trigger_h.get() as f64;
             s.absolute()
-                .inset_top_pct(100.0)
-                .inset_left_pct(0.0)
+                .inset_top(oy + h)
+                .inset_left(ox)
                 .width(panel_width)
-                .margin_top(4.0)
                 .padding(8.0)
                 .background(t.colors().surface.to_peniko())
                 .border_radius(radius)
@@ -405,8 +410,15 @@ impl CupertinoDatePicker {
                 .box_shadow_color(with_alpha(Color::rgba(0, 0, 0, 255), 24).to_peniko())
                 .apply_if(!open.get(), |s| s.hide())
         });
+        let dropdown = Overlay::new(panel);
 
-        Stack::new((trigger, panel))
+        Container::new(Stack::vertical((trigger, dropdown)))
+            .style(|s| s.items_start())
+            .on_event(LayoutChangedListener, move |_cx, layout: &LayoutChanged| {
+                origin.set((layout.new_window_origin.x, layout.new_window_origin.y));
+                trigger_h.set(layout.new_box.size().height as f32);
+                EventPropagation::Continue
+            })
     }
 }
 

@@ -1,7 +1,7 @@
 use floem::prelude::*;
 use floem::style::CursorStyle;
 use floem::view::AnyView;
-use floem::views::{Decorators, Empty, h_stack_from_iter};
+use floem::views::{Decorators, Empty, Stack, Label};
 use floem_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floem_core_theme::props::floating_action_button::FloatingActionButtonProps;
 use floem_core_theme::theme::{MultiTheme, Theme};
@@ -78,9 +78,9 @@ impl CupertinoFloatingActionButton {
         let elevation = tokens.elevation;
 
         let content: AnyView = if extended {
-            h_stack_from_iter(vec![
+            Stack::horizontal_from_iter(vec![
                 child,
-                text(label)
+                Label::new(label)
                     .style(move |s| {
                         let t = theme.get();
                         s.color(t.colors().on_primary.to_peniko())

@@ -43,7 +43,7 @@ impl CupertinoSpacer {
     /// Build an empty, flex-growing view that pushes siblings apart.
     pub fn view(self) -> impl View {
         let grow = self.props.grow;
-        Container::new(empty()).style(move |s| s.flex_grow(grow))
+        Container::new(Empty::new()).style(move |s| s.flex_grow(grow))
     }
 }
 

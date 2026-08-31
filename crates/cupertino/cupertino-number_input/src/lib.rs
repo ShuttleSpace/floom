@@ -4,11 +4,10 @@ use floem::event::EventPropagation;
 use floem::prelude::*;
 use floem::reactive::{RwSignal, SignalGet, SignalUpdate, create_effect};
 use floem::style::CursorStyle;
-use floem::views::{Container, Decorators, Empty, TextInput, h_stack, v_stack, text};
+use floem::views::{Container, Decorators, TextInput, Stack, Label};
 use floem_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floem_core_theme::props::number_input::NumberInputProps;
 use floem_core_theme::theme::{MultiTheme, Theme};
-use floem_core_theme::tokens::color::Color;
 use floem_core_theme::tokens::color_ext::*;
 
 fn clamp_value(v: i64, min: Option<i64>, max: Option<i64>) -> i64 {
@@ -112,7 +111,7 @@ impl CupertinoNumberInput {
             let value = value;
             let buf = buf;
             let on_change = on_change.clone();
-            Container::new(text("-"))
+            Container::new(Label::new("-"))
                 .style(move |s| {
                     let t = theme.get();
                     s.size(tk.button_size, tk.button_size)
@@ -138,7 +137,7 @@ impl CupertinoNumberInput {
             let value = value;
             let buf = buf;
             let on_change = on_change.clone();
-            Container::new(text("+"))
+            Container::new(Label::new("+"))
                 .style(move |s| {
                     let t = theme.get();
                     s.size(tk.button_size, tk.button_size)
@@ -177,7 +176,7 @@ impl CupertinoNumberInput {
             .on_event(listener::FocusLost, move |_, _| EventPropagation::Continue)
             .style(move |s| s.set_disabled(disabled));
 
-        let field = Container::new(h_stack((dec, input, inc)))
+        let field = Container::new(Stack::horizontal((dec, input, inc)))
             .style(move |s| {
                 let t = theme.get();
                 let border = if disabled {
@@ -203,8 +202,8 @@ impl CupertinoNumberInput {
             .style(move |s| s.set_disabled(disabled));
 
         match label {
-            Some(l) => v_stack((
-                text(l).style(move |s| {
+            Some(l) => Stack::vertical((
+                Label::new(l).style(move |s| {
                     let t = theme.get();
                     s.font_size(12.0).color(t.colors().on_surface_variant.to_peniko())
                 }),

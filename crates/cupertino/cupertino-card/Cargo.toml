@@ -6,3 +6,4 @@ edition = "2021"
 [dependencies]
 floem = { workspace = true }
 floem-core-theme = { workspace = true }
+floem-widget-runtime = { workspace = true, features = ["cupertino"] }

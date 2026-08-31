@@ -2,10 +2,12 @@ use std::rc::Rc;
 
 use floem::event::EventPropagation;
 use floem::prelude::*;
+use floem_widget_cupertino_icon::cupertino_icon_svg;
 use floem::reactive::RwSignal;
 use floem::style::CursorStyle;
 use floem::view::AnyView;
 use floem::IntoView;
+use floem::context::{LayoutChanged, LayoutChangedListener};
 use floem_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floem_core_theme::props::combobox::ComboboxProps;
 use floem_core_theme::theme::{MultiTheme, Theme};
@@ -126,6 +128,9 @@ impl CupertinoCombobox {
         let min_width = tokens.min_width;
         let item_height = tokens.item_height;
 
+        let origin = RwSignal::new((0.0f64, 0.0f64));
+        let trigger_h = RwSignal::new(0.0f32);
+
         let input = TextInput::new(query)
             .placeholder(&placeholder)
             .style(move |s| {
@@ -147,7 +152,7 @@ impl CupertinoCombobox {
             })
             .style(move |s| s.set_disabled(disabled));
 
-        let chevron = text("▾")
+        let chevron = svg(move || cupertino_icon_svg("expand_more"))
             .style(move |s| {
                 let t = theme.get();
                 s.color(
@@ -158,7 +163,7 @@ impl CupertinoCombobox {
                     }
                     .to_peniko(),
                 )
-                .font_size(14.0)
+                .size(14.0, 14.0)
                 .cursor(CursorStyle::Pointer)
             })
             .on_event(listener::Click, move |_, _| {
@@ -168,7 +173,7 @@ impl CupertinoCombobox {
                 EventPropagation::Continue
             });
 
-        let trigger = Container::new(h_stack((input, chevron)).style(|s| s.items_center().gap(8.0)))
+        let trigger = Container::new(Stack::horizontal((input, chevron)).style(|s| s.items_center().gap(8.0)))
             .style(move |s| {
                 let t = theme.get();
                 let border = if disabled {
@@ -201,7 +206,7 @@ impl CupertinoCombobox {
                 let selected = selected;
                 let open = open;
                 let on_change = on_change.clone();
-                text(opt)
+                Label::new(opt)
                     .style(move |s| {
                         let q = query.get().to_lowercase();
                         let matches = q.is_empty() || opt_style.to_lowercase().contains(&q);
@@ -238,13 +243,14 @@ impl CupertinoCombobox {
             })
             .collect();
 
-        let dropdown = Container::new(list(rows)).style(move |s| {
+        let panel = Container::new(list(rows)).style(move |s| {
             let t = theme.get();
+            let (ox, oy) = origin.get();
+            let h = trigger_h.get() as f64;
             s.absolute()
-                .inset_top_pct(100.0)
-                .inset_left_pct(0.0)
+                .inset_top(oy + h)
+                .inset_left(ox)
                 .min_width(min_width)
-                .margin_top(4.0)
                 .padding(4.0)
                 .background(t.colors().surface.to_peniko())
                 .border_radius(radius)
@@ -255,8 +261,15 @@ impl CupertinoCombobox {
                 .box_shadow_color(with_alpha(Color::rgba(0, 0, 0, 255), 20).to_peniko())
                 .apply_if(!open.get(), |s| s.hide())
         });
+        let dropdown = Overlay::new(panel);
 
-        Stack::new((trigger, dropdown))
+        Container::new(Stack::vertical((trigger, dropdown)))
+            .style(|s| s.items_start())
+            .on_event(LayoutChangedListener, move |_cx, layout: &LayoutChanged| {
+                origin.set((layout.new_window_origin.x, layout.new_window_origin.y));
+                trigger_h.set(layout.new_box.size().height as f32);
+                EventPropagation::Continue
+            })
     }
 }
 

@@ -2,9 +2,11 @@ use std::rc::Rc;
 
 use floem::event::EventPropagation;
 use floem::prelude::*;
+use floem_widget_cupertino_icon::cupertino_icon_svg;
 use floem::style::CursorStyle;
 use floem::view::AnyView;
 use floem::IntoView;
+use floem::context::{LayoutChanged, LayoutChangedListener};
 use floem::reactive::RwSignal;
 use floem_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floem_core_theme::props::select::SelectProps;
@@ -117,8 +119,12 @@ impl CupertinoSelect {
         let radius = tokens.border_radius;
         let min_width = tokens.min_width;
         let item_height = tokens.item_height;
+        let icon_size = tokens.icon_size;
 
-        let label_text = label(move || {
+        let origin = RwSignal::new((0.0f64, 0.0f64));
+        let trigger_h = RwSignal::new(0.0f32);
+
+        let label_text = Label::derived(move || {
             let idx = selected.get();
             match idx {
                 Some(i) if i < options_for_label.len() => options_for_label[i].clone(),
@@ -142,14 +148,14 @@ impl CupertinoSelect {
                 .flex_grow(1.0)
         });
 
-        let chevron = text("▾").style(move |s| {
+        let chevron = svg(move || cupertino_icon_svg("expand_more")).style(move |s| {
             let t = theme.get();
             s.color(with_alpha(t.colors().on_surface, 140).to_peniko())
-                .font_size(12.0)
+                .size(icon_size, icon_size)
         });
 
         let trigger = Container::new(
-            h_stack((label_text, chevron)).style(|s| s.items_center().justify_between().gap(8.0)),
+            Stack::horizontal((label_text, chevron)).style(|s| s.items_center().justify_between().gap(8.0)),
         )
         .style(move |s| {
             let t = theme.get();
@@ -194,7 +200,7 @@ impl CupertinoSelect {
                 let open_sig = open;
                 let theme_row = theme;
                 let opt = opt.clone();
-                text(opt)
+                Label::new(opt)
                     .style(move |s| {
                         let t = theme_row.get();
                         let is_sel = sel_sig.get() == Some(i);
@@ -229,10 +235,14 @@ impl CupertinoSelect {
             })
             .collect();
 
-        let dropdown = Container::new(list(rows)).style(move |s| {
+        let panel = Container::new(list(rows)).style(move |s| {
             let t = theme.get();
-            s.min_width(min_width)
-                .margin_top(4.0)
+            let (ox, oy) = origin.get();
+            let h = trigger_h.get() as f64;
+            s.absolute()
+                .inset_top(oy + h)
+                .inset_left(ox)
+                .min_width(min_width)
                 .padding(4.0)
                 .background(t.colors().surface.to_peniko())
                 .border_radius(radius)
@@ -241,8 +251,15 @@ impl CupertinoSelect {
                 .box_shadow_color(with_alpha(Color::rgba(0, 0, 0, 255), 24).to_peniko())
                 .apply_if(!open.get(), |s| s.hide())
         });
+        let dropdown = Overlay::new(panel);
 
-        v_stack((trigger, dropdown)).style(|s| s.items_start())
+        Container::new(Stack::vertical((trigger, dropdown)))
+            .style(|s| s.items_start())
+            .on_event(LayoutChangedListener, move |_cx, layout: &LayoutChanged| {
+                origin.set((layout.new_window_origin.x, layout.new_window_origin.y));
+                trigger_h.set(layout.new_box.size().height as f32);
+                EventPropagation::Continue
+            })
     }
 }
 

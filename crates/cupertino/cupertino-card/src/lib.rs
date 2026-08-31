@@ -8,6 +8,7 @@ use floem_core_theme::theme::{MultiTheme, Theme};
 use floem_core_theme::tokens::color::Color;
 use floem_core_theme::tokens::color_ext::*;
 use floem_core_theme::tokens::shadow::ShadowData;
+use floem_widget_runtime::Ripple;
 
 const DESIGN_SYSTEM: &str = "cupertino";
 
@@ -75,14 +76,14 @@ impl CupertinoCard {
         let theme = self.theme;
         let elevation = self.props.elevation;
         let child = self.child.unwrap_or_else(|| Empty::new().into_any());
-        Container::new(child).style(move |s| {
+        let inner = Container::new(child).style(move |s| {
             let t = theme.get();
             let ComponentTokens::Card(tokens) = t.component(ComponentId::Card) else {
                 unreachable!()
             };
             let level = usize::from(elevation.min(5));
             let shadow = t.shadow().levels[level];
-            let radius = t.radius().lg;
+            let radius = t.radius().md;
             s.background(t.colors().surface.to_peniko())
                 .color(t.colors().on_surface.to_peniko())
                 .padding(tokens.padding)
@@ -92,7 +93,12 @@ impl CupertinoCard {
                 .box_shadow_blur(shadow.blur)
                 .box_shadow_spread(shadow.spread)
                 .box_shadow_color(with_alpha(BLACK, shadow.color_a).to_peniko())
-        })
+        });
+
+        // Press ripple, clipped to the card's rounded bounds.
+        Ripple::new(inner)
+            .radius_fn(|t| t.radius().md)
+            .view()
     }
 }
 

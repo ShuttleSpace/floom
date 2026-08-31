@@ -56,6 +56,12 @@ impl CupertinoOverlay {
         self.show
     }
 
+    /// Set the internal show signal from an external signal.
+    pub fn with_show_signal(mut self, show: RwSignal<bool>) -> Self {
+        self.show = show;
+        self
+    }
+
     pub fn props(&self) -> &OverlayProps {
         &self.props
     }
@@ -91,7 +97,7 @@ impl CupertinoOverlay {
             ComponentTokens::Overlay(t) => t.content_padding,
             _ => unreachable!(),
         };
-        let child = self.child.unwrap_or_else(|| empty().into_any());
+        let child = self.child.unwrap_or_else(|| Empty::new().into_any());
 
         let content = Container::new(child)
             .style(move |s| {
