@@ -23,9 +23,9 @@ pub struct DataTableTokens {
 impl Default for DataTableTokens {
     fn default() -> Self {
         Self {
-            header_height: 48.0,
+            header_height: 56.0,
             row_height: 52.0,
-            dense_row_height: 40.0,
+            dense_row_height: 44.0,
             cell_padding: 16.0,
             border_radius: 12.0,
             border_width: 1.0,

@@ -8,6 +8,8 @@ pub struct ListTokens {
     pub min_width: f32,
     /// Gap between rows (0 = flush rows).
     pub gap: f32,
+    /// Horizontal inner padding of the list surface in px.
+    pub padding_horizontal: f32,
 }
 
 impl Default for ListTokens {
@@ -17,6 +19,7 @@ impl Default for ListTokens {
             padding: 8.0,
             min_width: 200.0,
             gap: 0.0,
+            padding_horizontal: 16.0,
         }
     }
 }

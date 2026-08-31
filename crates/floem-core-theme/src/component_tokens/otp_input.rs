@@ -14,7 +14,7 @@ impl Default for OtpInputTokens {
     fn default() -> Self {
         Self {
             box_size: 48.0,
-            border_radius: 8.0,
+            border_radius: 4.0,
             gap: 8.0,
             font_size: 24.0,
         }

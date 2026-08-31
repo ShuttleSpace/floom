@@ -7,7 +7,7 @@ pub struct SparklineTokens {
     /// Bar width in px.
     pub line_width: f32,
     /// Translucent fill alpha (0..=255) used when `fill` is set.
-    pub fill_opacity: f32,
+    pub fill_opacity: u8,
 }
 
 impl Default for SparklineTokens {
@@ -16,7 +16,7 @@ impl Default for SparklineTokens {
             width: 200.0,
             height: 48.0,
             line_width: 4.0,
-            fill_opacity: 90.0,
+            fill_opacity: 90,
         }
     }
 }

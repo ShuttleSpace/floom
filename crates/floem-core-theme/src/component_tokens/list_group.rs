@@ -8,6 +8,8 @@ pub struct ListGroupTokens {
     pub content_padding: f32,
     /// Vertical gap between items in px.
     pub gap: f32,
+    /// Size of the group expand/collapse indicator icon in px.
+    pub icon_size: f32,
 }
 
 impl Default for ListGroupTokens {
@@ -17,6 +19,7 @@ impl Default for ListGroupTokens {
             header_height: 48.0,
             content_padding: 8.0,
             gap: 4.0,
+            icon_size: 18.0,
         }
     }
 }

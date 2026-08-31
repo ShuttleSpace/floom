@@ -1,3 +1,5 @@
+use floem::reactive::RwSignal;
+
 pub struct SliderProps {
     /// Current value.
     pub value: f32,
@@ -11,6 +13,10 @@ pub struct SliderProps {
     pub disabled: bool,
     /// Called with the new value whenever the thumb is dragged.
     pub on_change: Option<Box<dyn Fn(f32)>>,
+    /// Optional external signal the slider reads from and writes to directly.
+    /// When set, the slider never needs to be rebuilt to reflect value changes
+    /// (eliminates the drag "flash-back" when the host rebuilds on every change).
+    pub value_signal: Option<RwSignal<f32>>,
 }
 
 impl Clone for SliderProps {
@@ -22,6 +28,7 @@ impl Clone for SliderProps {
             step: self.step,
             disabled: self.disabled,
             on_change: None,
+            value_signal: self.value_signal,
         }
     }
 }
@@ -48,6 +55,7 @@ impl Default for SliderProps {
             step: 1.0,
             disabled: false,
             on_change: None,
+            value_signal: None,
         }
     }
 }

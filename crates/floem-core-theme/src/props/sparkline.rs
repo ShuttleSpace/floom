@@ -1,10 +1,10 @@
 pub struct SparklineProps {
     /// Series of values rendered as a mini bar chart.
     pub values: Vec<f32>,
-    /// Rendered width in px.
-    pub width: f32,
-    /// Rendered height in px.
-    pub height: f32,
+    /// Rendered width in px. `None` defers to the per-DS `SparklineTokens`.
+    pub width: Option<f32>,
+    /// Rendered height in px. `None` defers to the per-DS `SparklineTokens`.
+    pub height: Option<f32>,
     /// When true, bars use a translucent fill; otherwise solid.
     pub fill: bool,
     /// Width of each bar in px.
@@ -39,8 +39,8 @@ impl Default for SparklineProps {
     fn default() -> Self {
         Self {
             values: Vec::new(),
-            width: 200.0,
-            height: 48.0,
+            width: None,
+            height: None,
             fill: true,
             line_width: 4.0,
         }

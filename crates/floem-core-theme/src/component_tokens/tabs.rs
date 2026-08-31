@@ -12,7 +12,7 @@ impl Default for TabsTokens {
     fn default() -> Self {
         Self {
             height: 48.0,
-            indicator_height: 2.0,
+            indicator_height: 3.0,
             padding: 16.0,
         }
     }

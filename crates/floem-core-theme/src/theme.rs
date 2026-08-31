@@ -1,6 +1,6 @@
 use crate::component_tokens::material::MaterialComponentTokens;
 use crate::component_tokens::{ComponentId, ComponentTokens};
-use crate::global_theme::{DesignSystem, current_design_system};
+use crate::global_theme::{DesignSystem, current_design_system, is_dark};
 use crate::tokens::color::{Color, ColorTokens};
 use crate::tokens::motion::MotionTokens;
 use crate::tokens::radius::RadiusTokens;
@@ -21,6 +21,7 @@ pub trait Theme: Clone + Send + Sync + 'static {
 #[derive(Debug, Clone)]
 pub struct MaterialTheme {
     colors: ColorTokens,
+    colors_dark: ColorTokens,
     spacing: SpacingTokens,
     typography: TypographyTokens,
     radius: RadiusTokens,
@@ -55,6 +56,31 @@ impl MaterialTheme {
                 outline_variant: Color::rgb(202, 196, 208),
                 background: Color::rgb(254, 247, 255),
                 on_background: Color::rgb(29, 27, 32),
+                scrim: Color::rgba(0, 0, 0, 128),
+            },
+            colors_dark: ColorTokens {
+                primary: Color::rgb(208, 188, 255),
+                on_primary: Color::rgb(55, 30, 110),
+                primary_container: Color::rgb(79, 55, 139),
+                on_primary_container: Color::rgb(234, 221, 255),
+                secondary: Color::rgb(204, 194, 220),
+                on_secondary: Color::rgb(51, 45, 65),
+                secondary_container: Color::rgb(73, 68, 88),
+                on_secondary_container: Color::rgb(232, 222, 248),
+                tertiary: Color::rgb(239, 184, 200),
+                on_tertiary: Color::rgb(73, 37, 50),
+                error: Color::rgb(255, 180, 171),
+                on_error: Color::rgb(105, 0, 5),
+                error_container: Color::rgb(147, 0, 10),
+                on_error_container: Color::rgb(255, 218, 214),
+                surface: Color::rgb(28, 27, 31),
+                on_surface: Color::rgb(231, 224, 236),
+                surface_variant: Color::rgb(73, 69, 79),
+                on_surface_variant: Color::rgb(202, 196, 208),
+                outline: Color::rgb(147, 143, 153),
+                outline_variant: Color::rgb(73, 69, 79),
+                background: Color::rgb(28, 27, 31),
+                on_background: Color::rgb(231, 224, 236),
                 scrim: Color::rgba(0, 0, 0, 128),
             },
             spacing: SpacingTokens::default(),
@@ -170,7 +196,7 @@ impl MaterialTheme {
 
 impl Theme for MaterialTheme {
     fn colors(&self) -> &ColorTokens {
-        &self.colors
+        if is_dark() { &self.colors_dark } else { &self.colors }
     }
     fn spacing(&self) -> &SpacingTokens {
         &self.spacing
@@ -195,6 +221,7 @@ impl Theme for MaterialTheme {
 #[derive(Debug, Clone)]
 pub struct CupertinoTheme {
     colors: ColorTokens,
+    colors_dark: ColorTokens,
     spacing: SpacingTokens,
     typography: TypographyTokens,
     radius: RadiusTokens,
@@ -231,6 +258,31 @@ impl CupertinoTheme {
                 on_background: Color::rgb(28, 28, 30),
                 scrim: Color::rgba(0, 0, 0, 76),
             },
+            colors_dark: ColorTokens {
+                primary: Color::rgb(10, 132, 255),
+                on_primary: Color::rgb(255, 255, 255),
+                primary_container: Color::rgb(38, 83, 138),
+                on_primary_container: Color::rgb(158, 200, 255),
+                secondary: Color::rgb(94, 92, 230),
+                on_secondary: Color::rgb(255, 255, 255),
+                secondary_container: Color::rgb(67, 65, 160),
+                on_secondary_container: Color::rgb(190, 188, 255),
+                tertiary: Color::rgb(255, 69, 105),
+                on_tertiary: Color::rgb(255, 255, 255),
+                error: Color::rgb(255, 100, 97),
+                on_error: Color::rgb(255, 255, 255),
+                error_container: Color::rgb(130, 30, 26),
+                on_error_container: Color::rgb(255, 178, 174),
+                surface: Color::rgb(28, 28, 30),
+                on_surface: Color::rgb(235, 235, 245),
+                surface_variant: Color::rgb(44, 44, 46),
+                on_surface_variant: Color::rgb(174, 174, 178),
+                outline: Color::rgb(84, 84, 88),
+                outline_variant: Color::rgb(58, 58, 60),
+                background: Color::rgb(0, 0, 0),
+                on_background: Color::rgb(235, 235, 245),
+                scrim: Color::rgba(0, 0, 0, 140),
+            },
             spacing: SpacingTokens::default(),
             typography: typography(17.0),
             radius: RadiusTokens {
@@ -251,7 +303,7 @@ impl CupertinoTheme {
 
 impl Theme for CupertinoTheme {
     fn colors(&self) -> &ColorTokens {
-        &self.colors
+        if is_dark() { &self.colors_dark } else { &self.colors }
     }
     fn spacing(&self) -> &SpacingTokens {
         &self.spacing
@@ -276,6 +328,7 @@ impl Theme for CupertinoTheme {
 #[derive(Debug, Clone)]
 pub struct FluentTheme {
     colors: ColorTokens,
+    colors_dark: ColorTokens,
     spacing: SpacingTokens,
     typography: TypographyTokens,
     radius: RadiusTokens,
@@ -312,6 +365,31 @@ impl FluentTheme {
                 on_background: Color::rgb(32, 31, 30),
                 scrim: Color::rgba(0, 0, 0, 102),
             },
+            colors_dark: ColorTokens {
+                primary: Color::rgb(96, 205, 255),
+                on_primary: Color::rgb(0, 0, 0),
+                primary_container: Color::rgb(0, 69, 120),
+                on_primary_container: Color::rgb(173, 230, 255),
+                secondary: Color::rgb(121, 119, 117),
+                on_secondary: Color::rgb(0, 0, 0),
+                secondary_container: Color::rgb(60, 58, 56),
+                on_secondary_container: Color::rgb(232, 230, 228),
+                tertiary: Color::rgb(175, 136, 223),
+                on_tertiary: Color::rgb(0, 0, 0),
+                error: Color::rgb(249, 129, 116),
+                on_error: Color::rgb(0, 0, 0),
+                error_container: Color::rgb(116, 0, 6),
+                on_error_container: Color::rgb(255, 186, 182),
+                surface: Color::rgb(32, 31, 30),
+                on_surface: Color::rgb(249, 249, 249),
+                surface_variant: Color::rgb(50, 49, 48),
+                on_surface_variant: Color::rgb(223, 221, 219),
+                outline: Color::rgb(128, 128, 128),
+                outline_variant: Color::rgb(72, 70, 68),
+                background: Color::rgb(32, 31, 30),
+                on_background: Color::rgb(249, 249, 249),
+                scrim: Color::rgba(0, 0, 0, 150),
+            },
             spacing: SpacingTokens::default(),
             typography: typography(14.0),
             radius: RadiusTokens {
@@ -332,7 +410,7 @@ impl FluentTheme {
 
 impl Theme for FluentTheme {
     fn colors(&self) -> &ColorTokens {
-        &self.colors
+        if is_dark() { &self.colors_dark } else { &self.colors }
     }
     fn spacing(&self) -> &SpacingTokens {
         &self.spacing

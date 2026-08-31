@@ -18,7 +18,7 @@ impl Default for ChipTokens {
             height: 32.0,
             padding_horizontal: 12.0,
             border_radius: 16.0,
-            font_size: 13.0,
+            font_size: 14.0,
             gap: 6.0,
         }
     }

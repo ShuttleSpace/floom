@@ -12,12 +12,12 @@ pub struct NumberInputTokens {
 impl Default for NumberInputTokens {
     fn default() -> Self {
         Self {
-            height: 40.0,
+            height: 56.0,
             width: 200.0,
             button_size: 32.0,
-            padding_horizontal: 12.0,
+            padding_horizontal: 16.0,
             border: 1.0,
-            radius: 8.0,
+            radius: 4.0,
             font_size: 16.0,
         }
     }

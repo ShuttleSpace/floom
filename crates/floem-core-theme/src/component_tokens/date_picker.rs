@@ -19,9 +19,9 @@ pub struct DatePickerTokens {
 impl Default for DatePickerTokens {
     fn default() -> Self {
         Self {
-            height: 40.0,
-            padding_horizontal: 12.0,
-            border_radius: 8.0,
+            height: 56.0,
+            padding_horizontal: 16.0,
+            border_radius: 4.0,
             min_width: 200.0,
             panel_width: 280.0,
             cell_size: 36.0,

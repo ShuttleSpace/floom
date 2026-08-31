@@ -17,9 +17,9 @@ pub struct TimePickerTokens {
 impl Default for TimePickerTokens {
     fn default() -> Self {
         Self {
-            height: 40.0,
-            padding_horizontal: 12.0,
-            border_radius: 8.0,
+            height: 56.0,
+            padding_horizontal: 16.0,
+            border_radius: 4.0,
             min_width: 160.0,
             panel_width: 220.0,
             cell_height: 40.0,

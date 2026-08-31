@@ -22,6 +22,7 @@
 
 use std::cell::OnceCell;
 
+use floem::create_global_rw_signal;
 use floem::reactive::{RwSignal, SignalUpdate};
 
 /// Which piece of the application shell is reporting its size.
@@ -81,7 +82,10 @@ thread_local! {
 }
 
 fn layout_global() -> RwSignal<LayoutState> {
-    LAYOUT.with(|c| *c.get_or_init(|| RwSignal::new(LayoutState::default())))
+    // Bound to the never-disposed root scope via `create_global_rw_signal` so
+    // the shell primitives keep working even after the `dyn_view` child scopes
+    // that first touch it are disposed and rebuilt.
+    LAYOUT.with(|c| *c.get_or_init(|| create_global_rw_signal(LayoutState::default())))
 }
 
 /// Returns a copy of the process-wide layout signal.

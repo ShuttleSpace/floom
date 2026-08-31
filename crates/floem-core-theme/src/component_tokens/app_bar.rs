@@ -13,10 +13,10 @@ pub struct AppBarTokens {
 impl Default for AppBarTokens {
     fn default() -> Self {
         Self {
-            height: 56.0,
+            height: 64.0,
             padding_horizontal: 16.0,
-            title_font_size: 20.0,
-            elevation: 2,
+            title_font_size: 22.0,
+            elevation: 0,
         }
     }
 }

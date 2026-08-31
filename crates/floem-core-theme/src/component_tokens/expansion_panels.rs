@@ -12,6 +12,8 @@ pub struct ExpansionPanelsTokens {
     pub gap: f32,
     /// Panel corner radius in px.
     pub radius: f32,
+    /// Size of the expand/collapse indicator icon in px.
+    pub icon_size: f32,
 }
 
 impl Default for ExpansionPanelsTokens {
@@ -23,6 +25,7 @@ impl Default for ExpansionPanelsTokens {
             border: 1.0,
             gap: 8.0,
             radius: 12.0,
+            icon_size: 18.0,
         }
     }
 }

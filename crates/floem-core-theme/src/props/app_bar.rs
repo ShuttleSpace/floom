@@ -12,8 +12,8 @@ impl Default for AppBarProps {
     fn default() -> Self {
         Self {
             title: String::new(),
-            elevation: 2,
-            height: 56.0,
+            elevation: 0,
+            height: 0.0,
         }
     }
 }

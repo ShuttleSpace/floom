@@ -1,4 +1,3 @@
-use crate::tokens::color::Color;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct BannerTokens {

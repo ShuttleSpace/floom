@@ -3,6 +3,9 @@ pub struct DialogProps {
     pub content: String,
     pub open: bool,
     pub on_close: Option<Box<dyn Fn()>>,
+    /// Action buttons rendered at the bottom of the dialog (e.g. Cancel / Confirm).
+    /// Each entry is (label, on_click). Callbacks are dropped on clone.
+    pub actions: Vec<(String, Box<dyn Fn()>)>,
 }
 impl Clone for DialogProps {
     fn clone(&self) -> Self {
@@ -11,6 +14,7 @@ impl Clone for DialogProps {
             content: self.content.clone(),
             open: self.open,
             on_close: None,
+            actions: Vec::new(),
         }
     }
 }
@@ -21,6 +25,7 @@ impl std::fmt::Debug for DialogProps {
             .field("content", &self.content)
             .field("open", &self.open)
             .field("on_close", &self.on_close.as_ref().map(|_| "Fn()"))
+            .field("actions", &self.actions.len())
             .finish()
     }
 }
@@ -31,6 +36,7 @@ impl Default for DialogProps {
             content: String::new(),
             open: false,
             on_close: None,
+            actions: Vec::new(),
         }
     }
 }

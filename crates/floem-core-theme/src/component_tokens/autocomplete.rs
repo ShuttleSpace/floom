@@ -17,11 +17,11 @@ pub struct AutocompleteTokens {
 impl Default for AutocompleteTokens {
     fn default() -> Self {
         Self {
-            height: 40.0,
-            padding_horizontal: 12.0,
-            border_radius: 8.0,
+            height: 56.0,
+            padding_horizontal: 16.0,
+            border_radius: 4.0,
             min_width: 220.0,
-            item_height: 40.0,
+            item_height: 48.0,
             panel_max_height: 240.0,
         }
     }

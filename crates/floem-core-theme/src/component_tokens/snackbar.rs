@@ -18,11 +18,11 @@ impl Default for SnackbarTokens {
     fn default() -> Self {
         Self {
             padding: 14.0,
-            border_radius: 8.0,
+            border_radius: 4.0,
             min_height: 48.0,
             font_size: 14.0,
-            max_width: 560.0,
-            action_gap: 16.0,
+            max_width: 672.0,
+            action_gap: 8.0,
         }
     }
 }

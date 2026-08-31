@@ -16,6 +16,7 @@
 
 use std::cell::OnceCell;
 
+use floem::create_global_rw_signal;
 use floem::reactive::{RwSignal, SignalGet, SignalUpdate};
 
 use crate::theme::MultiTheme;
@@ -30,7 +31,13 @@ thread_local! {
 
 #[cfg(any(feature = "material", feature = "cupertino", feature = "fluent"))]
 fn global() -> RwSignal<SelectedTheme> {
-    GLOBAL.with(|c| *c.get_or_init(|| RwSignal::new(SelectedTheme::new_for(DesignSystem::default()))))
+    // `create_global_rw_signal` binds the signal to the runtime's root scope,
+    // which lives for the whole process and is never disposed. A plain
+    // `RwSignal::new` would bind to whatever scope is active on first touch
+    // (e.g. a `dyn_view` child scope) and get removed from the runtime when that
+    // scope re-runs — after which every `.get()` panics in floem's
+    // `reactive/src/read.rs`.
+    GLOBAL.with(|c| *c.get_or_init(|| create_global_rw_signal(SelectedTheme::new_for(DesignSystem::default()))))
 }
 
 /// Returns a copy of the process-wide theme signal.
@@ -84,7 +91,8 @@ thread_local! {
 }
 
 fn ds_global() -> RwSignal<DesignSystem> {
-    DS_GLOBAL.with(|c| *c.get_or_init(|| RwSignal::new(DesignSystem::default())))
+    // Bound to the never-disposed root scope (see `global()` above).
+    DS_GLOBAL.with(|c| *c.get_or_init(|| create_global_rw_signal(DesignSystem::default())))
 }
 
 /// Returns a copy of the process-wide active Design System signal.
@@ -106,4 +114,31 @@ pub fn set_design_system(ds: DesignSystem) {
 /// Read the currently active Design System.
 pub fn current_design_system() -> DesignSystem {
     ds_global().get()
+}
+
+thread_local! {
+    static DARK: OnceCell<RwSignal<bool>> = const { OnceCell::new() };
+}
+
+fn dark_global() -> RwSignal<bool> {
+    // Bound to the never-disposed root scope (see `global()` above).
+    DARK.with(|c| *c.get_or_init(|| create_global_rw_signal(false)))
+}
+
+/// Returns a copy of the process-wide dark-mode signal.
+///
+/// Every component reads its color palette through [`crate::theme::Theme::colors`],
+/// which branches on this flag, so flipping it re-themes the whole app.
+pub fn dark_signal() -> RwSignal<bool> {
+    dark_global()
+}
+
+/// Enable or disable dark mode for the whole app.
+pub fn set_dark(dark: bool) {
+    dark_global().set(dark);
+}
+
+/// Read the current dark-mode flag.
+pub fn is_dark() -> bool {
+    dark_global().get()
 }

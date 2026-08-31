@@ -19,7 +19,7 @@ pub struct SheetTokens {
 impl Default for SheetTokens {
     fn default() -> Self {
         Self {
-            corner_radius: 16.0,
+            corner_radius: 28.0,
             padding: 16.0,
             side_width: 360.0,
             shadow_blur: 24.0,

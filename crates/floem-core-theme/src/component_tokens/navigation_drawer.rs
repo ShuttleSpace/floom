@@ -11,7 +11,7 @@ pub struct NavigationDrawerTokens {
 impl Default for NavigationDrawerTokens {
     fn default() -> Self {
         Self {
-            width: 304.0,
+            width: 360.0,
             elevation: 4,
             padding: 12.0,
         }

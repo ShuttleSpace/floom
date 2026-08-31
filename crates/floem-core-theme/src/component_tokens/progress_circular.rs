@@ -9,7 +9,7 @@ pub struct ProgressCircularTokens {
 impl Default for ProgressCircularTokens {
     fn default() -> Self {
         Self {
-            size: 36.0,
+            size: 48.0,
             stroke_width: 4.0,
         }
     }

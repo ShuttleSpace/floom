@@ -15,10 +15,10 @@ pub struct TextareaTokens {
 impl Default for TextareaTokens {
     fn default() -> Self {
         Self {
-            padding: 12.0,
-            border_radius: 8.0,
+            padding: 16.0,
+            border_radius: 4.0,
             min_height: 80.0,
-            font_size: 14.0,
+            font_size: 16.0,
             max_width: 360.0,
         }
     }

@@ -15,9 +15,9 @@ pub struct ListItemTokens {
 impl Default for ListItemTokens {
     fn default() -> Self {
         Self {
-            min_height: 48.0,
+            min_height: 56.0,
             padding_horizontal: 16.0,
-            gap: 12.0,
+            gap: 16.0,
             title_font_size: 16.0,
             subtitle_font_size: 14.0,
         }
