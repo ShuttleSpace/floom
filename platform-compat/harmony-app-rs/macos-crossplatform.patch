@@ -1,0 +1,109 @@
+--- a/src/sdk.rs
++++ b/src/sdk.rs
+@@ -18,6 +18,10 @@
+ #[derive(Clone, Debug)]
+ pub struct HvigorInfo {
+     pub wrapper_bat: PathBuf,
++    /// The hvigor wrapper program to actually invoke. On Windows this is
++    /// `hvigorw.bat`; on macOS/Linux it is `hvigorw` (a shell wrapper) or, as
++    /// a fallback, `hvigorw.js` (run via node).
++    pub wrapper: PathBuf,
+     pub wrapper_js: PathBuf,
+     pub hvigor_package_dir: PathBuf,
+     pub hvigor_plugin_package_dir: PathBuf,
+@@ -70,16 +74,23 @@
+ }
+ 
+ pub fn discover_hvigor(deveco_studio_dir: &Path) -> Result<HvigorInfo> {
+-    let wrapper_bat = deveco_studio_dir
++    let bin_dir = deveco_studio_dir
+         .join("tools")
+         .join("hvigor")
+-        .join("bin")
+-        .join("hvigorw.bat");
+-    let wrapper_js = deveco_studio_dir
+-        .join("tools")
+-        .join("hvigor")
+-        .join("bin")
+-        .join("hvigorw.js");
++        .join("bin");
++    let wrapper_bat = bin_dir.join("hvigorw.bat");
++    let wrapper_js = bin_dir.join("hvigorw.js");
++    // On Windows DevEco ships `hvigorw.bat`; on macOS/Linux it ships `hvigorw`
++    // (a shell wrapper, preferred) or `hvigorw.js` (run via node). Pick the
++    // right one so the tool is not Windows-only.
++    #[cfg(windows)]
++    let wrapper = wrapper_bat.clone();
++    #[cfg(not(windows))]
++    let wrapper = if bin_dir.join("hvigorw").exists() {
++        bin_dir.join("hvigorw")
++    } else {
++        wrapper_js.clone()
++    };
+     let hvigor_package_dir = deveco_studio_dir
+         .join("tools")
+         .join("hvigor")
+@@ -89,18 +100,26 @@
+         .join("hvigor")
+         .join("hvigor-ohos-plugin");
+ 
+-    for path in [
+-        &wrapper_bat,
+-        &wrapper_js,
+-        &hvigor_package_dir,
+-        &hvigor_plugin_package_dir,
+-    ] {
++    // The package dirs are always required. The actually-invoked `wrapper` is
++    // required on every platform; the Windows-only `.bat` is additionally
++    // required on Windows (where `wrapper == wrapper_bat`).
++    let mut required: Vec<&Path> = vec![
++        wrapper.as_path(),
++        hvigor_package_dir.as_path(),
++        hvigor_plugin_package_dir.as_path(),
++    ];
++    #[cfg(windows)]
++    required.push(wrapper_bat.as_path());
++    for path in required {
+         if !path.exists() {
+-            return Err(HarmonyAppError::MissingFile { path: path.clone() });
++            return Err(HarmonyAppError::MissingFile {
++                path: path.to_path_buf(),
++            });
+         }
+     }
+ 
+     Ok(HvigorInfo {
++        wrapper,
+         wrapper_bat,
+         wrapper_js,
+         hvigor_package_dir,
+
+--- a/src/commands/package.rs
++++ b/src/commands/package.rs
+@@ -25,7 +25,9 @@
+         env: command_env(&app),
+     };
+     let hvigor_command = CommandSpec {
+-        program: app.hvigor.wrapper_bat.clone(),
++        // Use the platform-correct hvigor wrapper (hvigorw on macOS/Linux,
++        // hvigorw.bat on Windows) discovered in `discover_hvigor`.
++        program: app.hvigor.wrapper.clone(),
+         args: vec![
+             "clean".to_string(),
+             hvigor_task(command.artifact).to_string(),
+@@ -85,8 +87,14 @@
+     }
+ 
+     runner.run(&install_command).or_else(|_error| {
++        // `npm.cmd` is Windows-only; use `npm` on macOS/Linux.
++        let npm_program = if cfg!(windows) {
++            PathBuf::from("npm.cmd")
++        } else {
++            PathBuf::from("npm")
++        };
+         let fallback = CommandSpec {
+-            program: PathBuf::from("npm.cmd"),
++            program: npm_program,
+             args: vec!["install".to_string()],
+             cwd: app.config.output_dir.clone(),
+             env: command_env(&app),
