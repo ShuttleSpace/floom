@@ -55,6 +55,10 @@ Inspired by [Xilem](https://github.com/linebender/xilem), [Leptos](https://githu
 - **Global themes**: Support for light and dark themes, built in design system to easly delare your own
 - **Localization**: Floem supports localizations via [Fluent](https://github.com/projectfluent/fluent-rs) crate with support for fallbacks, easy switching languages on runtime or even overriding active language for chosen part of you app
 
+## Ecosystem
+
+Design-system widgets live in the separate **flome-ui** project. The rich text/code editor will live in **floem-editor**. Neither is part of the floem 1.0 core guarantee — see [docs/ecosystem.md](docs/ecosystem.md).
+
 Backend authors can experiment with the public but unstable [`floem::embedder`](docs/embedder.md) API for integrating Floem with platform backends other than the default winit desktop path. Ordinary applications should continue to use `floem::launch(...)`.
 
 To sample Floem's capabilities, check out the repo and run the [widget gallery](examples/widget-gallery/src/main.rs) example with cargo.
