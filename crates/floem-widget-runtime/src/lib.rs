@@ -11,16 +11,19 @@
 
 use floem::IntoView;
 use floem::view::View;
-use floem::views::Container;
+use floem::views::{Container};
 use floem::reactive::RwSignal;
 use floem_core_theme::global_theme::{
     design_system_signal as design_system_signal_impl,
+    dark_signal as dark_signal_impl,
+    is_dark as is_dark_impl,
+    set_dark as set_dark_impl,
     set_design_system as set_design_system_impl,
     set_theme as set_theme_impl,
     theme_signal as theme_signal_impl,
 };
 use floem_core_theme::layout::{layout_signal as layout_signal_impl, register_layout as register_layout_impl};
-use floem_core_theme::theme::{MultiTheme, Theme};
+use floem_core_theme::theme::MultiTheme;
 
 #[cfg(any(feature = "material", feature = "cupertino", feature = "fluent"))]
 type SelectedTheme = MultiTheme;
@@ -61,9 +64,38 @@ pub fn set_design_system(ds: DesignSystem) {
     set_design_system_impl(ds);
 }
 
+/// Returns a copy of the process-wide dark-mode signal. Flipping it re-themes
+/// the whole app because every component reads its palette through
+/// [`Theme::colors`](floem_core_theme::theme::Theme::colors), which branches on
+/// this flag.
+#[cfg(any(feature = "material", feature = "cupertino", feature = "fluent"))]
+pub fn dark_signal() -> RwSignal<bool> {
+    dark_signal_impl()
+}
+
+/// Enable or disable dark mode app-wide.
+#[cfg(any(feature = "material", feature = "cupertino", feature = "fluent"))]
+pub fn set_dark(dark: bool) {
+    set_dark_impl(dark);
+}
+
+/// Read the current dark-mode flag.
+#[cfg(any(feature = "material", feature = "cupertino", feature = "fluent"))]
+pub fn is_dark() -> bool {
+    is_dark_impl()
+}
+
 /// Re-export of the layout provider types so application code depends on a
 /// single facade regardless of the active Design System feature.
 pub use floem_core_theme::layout::{LayoutSlot, LayoutState};
+
+/// Reusable Material-style press ripple. Wrap any custom component with
+/// [`Ripple::new`] (or the [`ripple`] convenience function) to give it a
+/// pointer-down ink effect, with theme-aware color and corner radius.
+#[cfg(any(feature = "material", feature = "cupertino", feature = "fluent"))]
+mod ripple;
+#[cfg(any(feature = "material", feature = "cupertino", feature = "fluent"))]
+pub use ripple::{ripple, Ripple};
 
 /// Returns a copy of the app-wide layout signal (see
 /// [`floem_core_theme::layout::layout_signal`]).
