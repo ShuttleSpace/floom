@@ -493,6 +493,15 @@ impl WindowHandle {
         self.window_state.safe_area.read_only()
     }
 
+    /// The current neutral accessibility tree for this window.
+    ///
+    /// Rebuilt at the end of every [`Self::process_update_no_paint`] via
+    /// [`Self::update_accessibility_tree`]. Headless tests read this after
+    /// [`crate::headless::HeadlessHarness::rebuild`].
+    pub fn access_tree(&self) -> &crate::accessibility::AccessTree {
+        &self.window_state.accessibility
+    }
+
     pub fn event(&mut self, event: Event) {
         set_current_view(self.id.root());
 

@@ -1,4 +1,5 @@
 #![deny(missing_docs)]
+use crate::accessibility::{AccessAction, AccessRole};
 use crate::{IntoView, View, ViewId, style_class, views::Decorators};
 
 style_class!(
@@ -80,6 +81,8 @@ impl Button {
     /// Button's label is not reactive. For reactive content, pass a reactive view as the child.
     pub fn new(child: impl IntoView) -> Self {
         let id = ViewId::new();
+        id.accessibility_role(AccessRole::Button);
+        id.accessibility_actions([AccessAction::Default]);
         id.add_child(Box::new(child.into_view()));
         Button { id }.class(ButtonClass)
     }

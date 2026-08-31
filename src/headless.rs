@@ -553,6 +553,13 @@ impl HeadlessHarness {
         &self.window_handle
     }
 
+    /// The current neutral accessibility tree for this window.
+    ///
+    /// Call [`Self::rebuild`] first so the tree matches the latest layout.
+    pub fn access_tree(&self) -> &crate::accessibility::AccessTree {
+        self.window_handle().access_tree()
+    }
+
     /// The protocol-level id of this headless window.
     pub fn embedder_window_id(&self) -> crate::embedder::EmbedderWindowId {
         self.window_handle.window_id().into_raw() as crate::embedder::EmbedderWindowId
