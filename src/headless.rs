@@ -542,6 +542,44 @@ impl HeadlessHarness {
     }
 }
 
+impl HeadlessHarness {
+    /// Mutable access to the underlying headless `WindowHandle`.
+    pub fn window_handle_mut(&mut self) -> &mut WindowHandle {
+        &mut self.window_handle
+    }
+
+    /// Read-only access to the underlying headless `WindowHandle`.
+    pub fn window_handle(&self) -> &WindowHandle {
+        &self.window_handle
+    }
+
+    /// The protocol-level id of this headless window.
+    pub fn embedder_window_id(&self) -> crate::embedder::EmbedderWindowId {
+        self.window_handle.window_id().into_raw() as crate::embedder::EmbedderWindowId
+    }
+
+    /// Focus the root view and mark the window focused, then process updates.
+    pub fn focus_root(&mut self) {
+        self.window_handle.focused(true);
+        self.window_handle.id.request_focus();
+        self.process_update_no_paint();
+    }
+
+    /// Whether any pointer currently has capture in this window.
+    pub fn has_any_pointer_capture(&self) -> bool {
+        !self
+            .window_handle
+            .window_state
+            .pointer_capture_target
+            .is_empty()
+            || !self
+                .window_handle
+                .window_state
+                .pending_pointer_capture_target
+                .is_empty()
+    }
+}
+
 impl Drop for HeadlessHarness {
     fn drop(&mut self) {
         // Clean up the view tree and reactive scope to ensure test isolation.
