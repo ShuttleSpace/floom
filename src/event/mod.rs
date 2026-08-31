@@ -15,10 +15,12 @@ use dpi::LogicalPosition;
 
 mod dispatch;
 mod drag_state;
+mod long_press;
 pub mod dropped_file;
 pub(crate) mod path;
 pub use drag_state::DragConfig;
 pub(crate) use drag_state::DragTracker;
+pub(crate) use long_press::LongPressState;
 
 pub mod listener;
 

@@ -19,15 +19,20 @@ use crate::platform::{Duration, Instant};
 use crate::{
     app::{AppUpdateEvent, add_app_update_event},
     message::{UPDATE_MESSAGES, UpdateMessage},
-    platform::menu::Menu,
     view::View,
     view::ViewId,
     views::Decorators,
     window::handle::{get_current_view, set_current_view},
     window::tracking::with_window,
 };
+use crate::platform::menu::Menu;
 
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(not(any(
+    target_arch = "wasm32",
+    target_os = "android",
+    target_os = "ios",
+    target_env = "ohos"
+)))]
 pub use crate::platform::file_action::*;
 
 /// Add an update message
@@ -257,11 +262,29 @@ where
 /// Show a system context menu at the specified position.
 ///
 /// Platform support:
-/// - Windows: Yes
-/// - macOS: Yes
-/// - Linux: Uses a custom Floem View
+/// - Windows: Yes (native)
+/// - macOS: Yes (native)
+/// - Linux / FreeBSD / wasm32 / Android: Uses a custom Floem View
 pub fn show_context_menu(menu: Menu, pos: Option<Point>) {
-    add_update_message(UpdateMessage::ShowContextMenu { menu, pos });
+    show_context_menu_internal(menu, pos, false);
+}
+
+/// Crate-internal variant of [`show_context_menu`] that also carries the
+/// `had_pointer_down` flag used by the Android in-UI context menu renderer.
+///
+/// When `had_pointer_down` is `true`, the menu is presented while the pointer is
+/// still held (e.g. opened by a long-press gesture); the renderer keeps it open
+/// across the finger-lift that ends the gesture instead of dismissing it.
+pub(crate) fn show_context_menu_internal(
+    menu: Menu,
+    pos: Option<Point>,
+    had_pointer_down: bool,
+) {
+    add_update_message(UpdateMessage::ShowContextMenu {
+        menu,
+        pos,
+        had_pointer_down,
+    });
 }
 
 /// Set the system window menu.
@@ -271,7 +294,9 @@ pub fn show_context_menu(menu: Menu, pos: Option<Point>) {
 /// - macOS: Yes
 /// - Linux: No
 /// - wasm32: No
-#[cfg(not(target_arch = "wasm32"))]
+/// - Android: No
+/// - iOS: No
+#[cfg(not(any(target_arch = "wasm32", target_os = "android", target_os = "ios")))]
 pub fn set_window_menu(menu: Menu) {
     add_update_message(UpdateMessage::WindowMenu { menu });
 }
@@ -299,6 +324,15 @@ pub fn set_ime_allowed(allowed: bool) {
 /// Set the ime cursor area.
 pub fn set_ime_cursor_area(position: Point, size: Size) {
     add_update_message(UpdateMessage::SetImeCursorArea { position, size });
+}
+
+/// Set the semantic IME input purpose (text / password / number / …).
+///
+/// Forwarded to backends that configure the platform soft keyboard (currently
+/// OHOS). Additive: calling it is optional and does not affect backends that
+/// ignore it.
+pub fn set_ime_purpose(purpose: crate::embedder::ImePurpose) {
+    add_update_message(UpdateMessage::SetImePurpose { purpose });
 }
 
 /// Creates a new overlay on the current window.

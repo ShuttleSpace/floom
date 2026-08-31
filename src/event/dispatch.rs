@@ -15,11 +15,11 @@ use understory_event_state::{click::ClickResult, hover::HoverEvent};
 use understory_focus::{
     DefaultPolicy, FocusEntry, FocusPolicy, FocusSpace, Navigation as FocusNavigation, WrapMode,
 };
+use crate::action::show_context_menu;
 use winit::keyboard::KeyCode;
 
 use crate::{
     BoxTree, ElementId, ElementMeta, ViewId,
-    action::show_context_menu,
     context::Phases,
     event::{
         DragEvent, DragToken, Event, FocusEvent, InteractionEvent, Phase, PointerCaptureEvent,
@@ -1092,6 +1092,39 @@ impl RouteCx<'_, '_> {
     /// Handle browser-style default behaviors: drag threshold, drag events,
     /// pointer-up capture release, tab/arrow navigation, context menus, etc.
     fn handle_default_behaviors(&mut self) {
+        // Touch long-press → context menu gesture tracking.
+        //
+        // Touch devices have no secondary button, so the Secondary-button
+        // context-menu path never fires. Here we watch touch primary presses
+        // and, if the pointer stays put long enough, open the context menu of
+        // the view under the press (see `LongPressState`).
+        match &self.event {
+            Event::Pointer(PointerEvent::Down(pbe)) => {
+                let element = self
+                    .hit_path
+                    .as_ref()
+                    .and_then(|p| p.last().copied())
+                    .filter(|id| id.is_view());
+                let menu_cb = element
+                    .map(|id| id.owning_id().state().borrow().context_menu.clone())
+                    .flatten();
+                self.gcx
+                    .window_state
+                    .long_press
+                    .on_pointer_down(pbe, element, menu_cb);
+            }
+            Event::Pointer(PointerEvent::Move(pu)) => {
+                self.gcx.window_state.long_press.on_pointer_move(pu);
+            }
+            Event::Pointer(PointerEvent::Up(pbe)) => {
+                self.gcx.window_state.long_press.on_pointer_up(pbe);
+            }
+            Event::Pointer(PointerEvent::Cancel(pi)) => {
+                self.gcx.window_state.long_press.on_pointer_cancel(*pi);
+            }
+            _ => {}
+        }
+
         // Pointer move — check drag threshold and dispatch active-drag events.
         let pointer_move = match &self.event {
             Event::Pointer(PointerEvent::Move(pu)) => Some(pu.clone()),
@@ -1195,13 +1228,15 @@ impl RouteCx<'_, '_> {
         }
 
         // Context / popout menus (platform-specific timing).
-        let pbe = match &self.event {
-            Event::Pointer(PointerEvent::Down(pbe)) if cfg!(target_os = "macos") => Some(pbe),
-            Event::Pointer(PointerEvent::Up(pbe)) if !cfg!(target_os = "macos") => Some(pbe),
-            _ => None,
-        };
-        if let Some(pbe) = pbe {
-            self.handle_menu_events(&pbe.clone());
+        {
+            let pbe = match &self.event {
+                Event::Pointer(PointerEvent::Down(pbe)) if cfg!(target_os = "macos") => Some(pbe),
+                Event::Pointer(PointerEvent::Up(pbe)) if !cfg!(target_os = "macos") => Some(pbe),
+                _ => None,
+            };
+            if let Some(pbe) = pbe {
+                self.handle_menu_events(&pbe.clone());
+            }
         }
 
         // Window close — close the window if not prevented.
