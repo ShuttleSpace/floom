@@ -5,7 +5,6 @@ use floem::reactive::{RwSignal, SignalGet};
 use floem_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floem_core_theme::props::data_iterator::DataIteratorProps;
 use floem_core_theme::theme::{MultiTheme, Theme};
-use floem_core_theme::tokens::color_ext::*;
 
 /// Material 3 data iterator: a container that lays out a sequence of item
 /// views with an optional header/footer band and optional dividers.

@@ -4,13 +4,12 @@ use floem::event::EventPropagation;
 use floem::prelude::*;
 use floem::style::CursorStyle;
 use floem::view::AnyView;
-use floem::views::Decorators;
+use floem::views::{Decorators, Empty, Label, Stack};
 use floem::IntoView;
 use floem_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floem_core_theme::props::tabs::TabsProps;
 use floem_core_theme::theme::{MultiTheme, Theme};
 use floem_core_theme::tokens::color::Color;
-use floem_core_theme::tokens::color_ext::*;
 use floem_core_theme::tokens::typography::FontWeight;
 
 const DESIGN_SYSTEM: &str = "fluent";
@@ -96,7 +95,7 @@ impl FluentTabs {
                 let on_change = on_change.clone();
                 let label = label.clone();
 
-                let label_view = text(label).style(move |s| {
+                let label_view = Label::new(label).style(move |s| {
                     let t = theme.get();
                     let ComponentTokens::Tabs(tk) = t.component(ComponentId::Tabs) else {
                         unreachable!()
@@ -136,7 +135,7 @@ impl FluentTabs {
                         .apply_if(!active, |s| s.hide())
                 });
 
-                v_stack((label_view, indicator))
+                Stack::vertical((label_view, indicator))
                     .style(|s| s.items_center().cursor(CursorStyle::Pointer))
                     .on_event(listener::Click, move |_, _| {
                         selected.set(i);

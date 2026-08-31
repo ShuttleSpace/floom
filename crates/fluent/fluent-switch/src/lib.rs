@@ -120,7 +120,7 @@ impl FluentSwitch {
         let thumb = tokens.thumb_size;
         let radius = height / 2.0;
 
-        let thumb_view = Container::new(empty()).style(move |s| {
+        let thumb_view = Container::new(Empty::new()).style(move |s| {
             let t = theme.get();
             let c = if disabled {
                 with_alpha(t.colors().outline, 38)

@@ -112,7 +112,7 @@ impl FluentChip {
         let font_size = tokens.font_size;
         let gap = tokens.gap;
 
-        let chip = Container::new(text(label))
+        let chip = Container::new(Label::new(label))
             .style(move |s| {
                 let t = theme.get();
                 let (bg, fg) = if disabled {

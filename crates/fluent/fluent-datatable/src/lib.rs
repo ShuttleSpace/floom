@@ -118,7 +118,7 @@ impl FluentDataTable {
             .iter()
             .map(|col| {
                 let a = col.align;
-                text(col.title.clone())
+                Label::new(col.title.clone())
                     .style(move |s| {
                         let base = match a {
                             ColumnAlign::Start => s.justify_start(),
@@ -136,7 +136,7 @@ impl FluentDataTable {
             })
             .collect();
 
-        let header = h_stack_from_iter(header_cells).style(move |s| {
+        let header = Stack::horizontal_from_iter(header_cells).style(move |s| {
             let t = theme.get();
             s.height(header_height)
                 .background(t.colors().surface_variant.to_peniko())
@@ -156,7 +156,7 @@ impl FluentDataTable {
                     .zip(row.iter())
                     .map(|(col, cell)| {
                         let a = col.align;
-                        text(cell.clone())
+                        Label::new(cell.clone())
                             .style(move |s| {
                                 let base = match a {
                                     ColumnAlign::Start => s.justify_start(),
@@ -174,7 +174,7 @@ impl FluentDataTable {
                     .collect();
                 let on_row_click = on_row_click.clone();
                 let rh = row_height;
-                h_stack_from_iter(cells)
+                Stack::horizontal_from_iter(cells)
                     .style(move |s| {
                         let t = theme.get();
                         s.height(rh)

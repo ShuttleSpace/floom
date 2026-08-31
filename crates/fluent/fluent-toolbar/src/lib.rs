@@ -92,7 +92,7 @@ impl FluentToolbar {
         let leading = props.leading.clone();
         let title = props.title.clone();
         let elevation = props.elevation;
-        let actions = self.actions.unwrap_or_else(|| empty().into_any());
+        let actions = self.actions.unwrap_or_else(|| Empty::new().into_any());
 
         let tokens = match theme.get().component(ComponentId::Toolbar) {
             ComponentTokens::Toolbar(t) => t,
@@ -102,17 +102,17 @@ impl FluentToolbar {
         let title_fs = tokens.title_font_size;
 
         let leading_v: AnyView = if let Some(ic) = leading {
-            Container::new(text(ic))
+            Container::new(Label::new(ic))
                 .style(move |s| {
                     let t = theme.get();
                     s.font_size(22.0).color(t.colors().on_surface.to_peniko())
                 })
                 .into_any()
         } else {
-            empty().into_any()
+            Empty::new().into_any()
         };
 
-        let title_v = text(title)
+        let title_v = Label::new(title)
             .style(move |s| {
                 let t = theme.get();
                 s.font_size(title_fs)
@@ -121,11 +121,11 @@ impl FluentToolbar {
             })
             .into_any();
 
-        let left = h_stack((leading_v, title_v))
+        let left = Stack::horizontal((leading_v, title_v))
             .style(|s| s.gap(4.0).items_center())
             .into_any();
 
-        Container::new(h_stack((left, actions)).style(|s| s.items_center().justify_between()))
+        Container::new(Stack::horizontal((left, actions)).style(|s| s.items_center().justify_between()))
             .style(move |s| {
                 let t = theme.get();
                 let mut s = s

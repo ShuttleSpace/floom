@@ -3,10 +3,10 @@ use std::rc::Rc;
 use floem::context::{LayoutChanged, LayoutChangedListener};
 use floem::event::EventPropagation;
 use floem::prelude::*;
+use floem_widget_fluent_icon::fluent_icon_svg;
 use floem::style::CursorStyle;
 use floem::view::AnyView;
 use floem::IntoView;
-use floem::reactive::create_effect;
 use floem_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floem_core_theme::props::select::SelectProps;
 use floem_core_theme::theme::{MultiTheme, Theme};
@@ -109,6 +109,7 @@ impl FluentSelect {
         let radius = tokens.border_radius;
         let min_width = tokens.min_width;
         let item_height = tokens.item_height;
+        let icon_size = tokens.icon_size;
 
         let origin = RwSignal::new((0.0f64, 0.0f64));
         let trigger_h = RwSignal::new(0.0f32);
@@ -122,7 +123,7 @@ impl FluentSelect {
                 let selected = selected;
                 let open = open;
                 let on_change = on_change.clone();
-                text(opt)
+                Label::new(opt)
                     .style(move |s| {
                         let th = theme_row;
                         let t = th.get();
@@ -177,7 +178,7 @@ impl FluentSelect {
 
         let dropdown = Overlay::new(panel);
 
-        let trigger_label = label(move || match selected.get() {
+        let trigger_label = Label::derived(move || match selected.get() {
             Some(i) => options
                 .get(i)
                 .cloned()
@@ -185,14 +186,14 @@ impl FluentSelect {
             None => placeholder.clone(),
         });
 
-        let chevron = text("▾").style(move |s| {
+        let chevron = svg(move || fluent_icon_svg("expand_more")).style(move |s| {
             let t = theme.get();
             s.color(with_alpha(t.colors().on_surface, 160).to_peniko())
-                .font_size(12.0)
+                .size(icon_size, icon_size)
         });
 
         let trigger = Container::new(
-            h_stack((trigger_label, chevron)).style(|s| s.items_center().justify_between().gap(8.0)),
+            Stack::horizontal((trigger_label, chevron)).style(|s| s.items_center().justify_between().gap(8.0)),
         )
         .style(move |s| {
             let t = theme.get();
@@ -224,7 +225,7 @@ impl FluentSelect {
             EventPropagation::Continue
         });
 
-        Container::new(v_stack((trigger, dropdown)))
+        Container::new(Stack::vertical((trigger, dropdown)))
             .style(|s| s.items_start())
             .on_event(LayoutChangedListener, move |_cx, layout: &LayoutChanged| {
                 origin.set((layout.new_window_origin.x, layout.new_window_origin.y));

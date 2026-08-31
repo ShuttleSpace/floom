@@ -2,7 +2,7 @@ use floem::context::{LayoutChanged, LayoutChangedListener};
 use floem::event::EventPropagation;
 use floem::prelude::*;
 use floem::view::AnyView;
-use floem::views::Decorators;
+use floem::views::{Decorators, Empty, Label, Stack};
 use floem_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floem_core_theme::props::tooltip::TooltipProps;
 use floem_core_theme::theme::{MultiTheme, Theme};
@@ -79,7 +79,7 @@ impl FluentTooltip {
         let origin = RwSignal::new((0.0f64, 0.0f64));
         let trigger_h = RwSignal::new(0.0f32);
 
-        let bubble = Container::new(text(tooltip_text)).style(move |s| {
+        let bubble = Container::new(Label::new(tooltip_text)).style(move |s| {
             let t = theme.get();
             let ComponentTokens::Tooltip(tk) = t.component(ComponentId::Tooltip) else {
                 unreachable!()
@@ -99,7 +99,7 @@ impl FluentTooltip {
 
         let overlay = Overlay::new(bubble);
 
-        Container::new(v_stack((child, overlay)))
+        Container::new(Stack::vertical((child, overlay)))
             .style(|s| s.items_center())
             .on_event(LayoutChangedListener, move |_cx, layout: &LayoutChanged| {
                 origin.set((layout.new_window_origin.x, layout.new_window_origin.y));

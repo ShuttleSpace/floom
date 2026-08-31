@@ -70,7 +70,7 @@ impl FluentDivider {
         let theme = self.theme;
         let orientation = self.props.orientation;
         let inset = self.props.inset;
-        Container::new(empty()).style(move |s| {
+        Container::new(Empty::new()).style(move |s| {
             let t = theme.get();
             let ComponentTokens::Divider(tokens) = t.component(ComponentId::Divider) else {
                 unreachable!()

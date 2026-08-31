@@ -2,9 +2,9 @@ use std::rc::Rc;
 
 use floem::event::EventPropagation;
 use floem::prelude::*;
+use floem_widget_fluent_icon::fluent_icon_svg;
 use floem::style::CursorStyle;
-use floem::view::AnyView;
-use floem::views::{Container, Decorators, Empty, h_stack, label, text};
+use floem::views::{svg, Decorators, Empty, Stack, Label};
 use floem_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floem_core_theme::props::checkbox_btn::CheckboxBtnProps;
 use floem_core_theme::theme::{MultiTheme, Theme};
@@ -58,14 +58,7 @@ impl FluentCheckboxBtn {
         };
         let tk = tokens.clone();
 
-        let mark = label(move || {
-            if checked.get() {
-                "✓".to_string()
-            } else {
-                String::new()
-            }
-        })
-        .style(move |s| {
+        let mark = svg(move || fluent_icon_svg("check")).style(move |s| {
             let t = theme.get();
             let mk = if checked.get() {
                 t.colors().on_primary
@@ -77,13 +70,11 @@ impl FluentCheckboxBtn {
             } else {
                 mk
             };
-            s.color(mk.to_peniko())
-                .font_size(tk.font_size * 1.2)
-                .font_weight(FontWeight::Bold.to_floem())
+            s.size(tk.font_size * 1.2, tk.font_size * 1.2).color(mk.to_peniko())
         });
 
         let label_view = match label_text {
-            Some(txt) => text(txt)
+            Some(txt) => Label::new(txt)
                 .style(move |s| {
                     let t = theme.get();
                     let c = if disabled {
@@ -107,7 +98,7 @@ impl FluentCheckboxBtn {
             }
         });
 
-        h_stack((mark, label_view))
+        Stack::horizontal((mark, label_view))
             .style(move |s| {
                 let t = theme.get();
                 let is_checked = checked.get();

@@ -7,6 +7,7 @@ use floem_core_theme::theme::{MultiTheme, Theme};
 use floem_core_theme::tokens::color::Color;
 use floem_core_theme::tokens::color_ext::*;
 use floem_core_theme::tokens::shadow::ShadowData;
+use floem_widget_runtime::Ripple;
 
 const DESIGN_SYSTEM: &str = "fluent";
 
@@ -74,7 +75,7 @@ impl FluentCard {
         let theme = self.theme;
         let elevation = self.props.elevation;
         let child = self.child.unwrap_or_else(|| Empty::new().into_any());
-        Container::new(child).style(move |s| {
+        let inner = Container::new(child).style(move |s| {
             let t = theme.get();
             let ComponentTokens::Card(tokens) = t.component(ComponentId::Card) else {
                 unreachable!()
@@ -84,13 +85,18 @@ impl FluentCard {
             s.background(t.colors().surface.to_peniko())
                 .color(t.colors().on_surface.to_peniko())
                 .padding(tokens.padding)
-                .border_radius(t.radius().lg)
+                .border_radius(t.radius().xl)
                 .box_shadow_h_offset(shadow.offset_x)
                 .box_shadow_v_offset(shadow.offset_y)
                 .box_shadow_blur(shadow.blur)
                 .box_shadow_spread(shadow.spread)
                 .box_shadow_color(with_alpha(BLACK, shadow.color_a).to_peniko())
-        })
+        });
+
+        // Press ripple, clipped to the card's rounded bounds.
+        Ripple::new(inner)
+            .radius_fn(|t| t.radius().xl)
+            .view()
     }
 }
 

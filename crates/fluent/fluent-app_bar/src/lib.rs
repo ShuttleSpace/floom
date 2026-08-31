@@ -1,8 +1,7 @@
-use floem::event::EventPropagation;
 use floem::prelude::*;
 use floem::view::AnyView;
 use floem::IntoView;
-use floem::views::Decorators;
+use floem::views::{Decorators, Empty, Label};
 use floem_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floem_core_theme::props::app_bar::AppBarProps;
 use floem_core_theme::theme::{MultiTheme, Theme};
@@ -80,7 +79,11 @@ impl FluentAppBar {
             design_system: DESIGN_SYSTEM,
             background: theme.colors().surface,
             title_color: theme.colors().on_surface,
-            height: self.props.height,
+            height: if self.props.height > 0.0 {
+                self.props.height
+            } else {
+                tokens.height
+            },
             padding_horizontal: tokens.padding_horizontal,
             title_font_size: tokens.title_font_size,
             elevation: self.props.elevation,
@@ -93,14 +96,7 @@ impl FluentAppBar {
         let leading = self.leading;
         let actions = self.actions;
         let title = self.props.title.clone();
-        let bar_height = self.props.height;
         let elevation = self.props.elevation;
-// layout-provider auto-register
-        floem_core_theme::layout::register_layout(
-            floem_core_theme::layout::LayoutSlot::AppBar,
-            bar_height,
-        );
-
 
         let tokens = match theme.get().component(ComponentId::AppBar) {
             ComponentTokens::AppBar(t) => t,
@@ -108,8 +104,18 @@ impl FluentAppBar {
         };
         let pad = tokens.padding_horizontal;
         let title_fs = tokens.title_font_size;
+        let bar_height = if self.props.height > 0.0 {
+            self.props.height
+        } else {
+            tokens.height
+        };
+// layout-provider auto-register
+        floem_core_theme::layout::register_layout(
+            floem_core_theme::layout::LayoutSlot::AppBar,
+            bar_height,
+        );
 
-        let title_view = text(title).style(move |s| {
+        let title_view = Label::new(title).style(move |s| {
             let t = theme.get();
             s.color(t.colors().on_surface.to_peniko())
                 .font_size(title_fs)

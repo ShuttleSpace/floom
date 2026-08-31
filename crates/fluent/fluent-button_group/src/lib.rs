@@ -1,12 +1,9 @@
 use floem::prelude::*;
-use floem::style::CursorStyle;
 use floem::view::AnyView;
-use floem::views::{Decorators, Empty, h_stack_from_iter};
+use floem::views::{Decorators, Stack};
 use floem_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floem_core_theme::props::button_group::ButtonGroupProps;
 use floem_core_theme::theme::{MultiTheme, Theme};
-use floem_core_theme::tokens::color::Color;
-use floem_core_theme::tokens::color_ext::*;
 
 /// Material 3 button group: a surface that lays out a set of buttons with a
 /// shared gap (or, when `joined`, as a segmented/connected control).
@@ -67,7 +64,7 @@ impl FluentButtonGroup {
         let inner: AnyView = if vertical {
             list(kids).style(move |s| s.gap(gap)).into_any()
         } else {
-            h_stack_from_iter(kids).style(move |s| s.gap(gap)).into_any()
+            Stack::horizontal_from_iter(kids).style(move |s| s.gap(gap)).into_any()
         };
 
         Container::new(inner).style(move |s| {

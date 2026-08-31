@@ -4,13 +4,12 @@ use floem::event::EventPropagation;
 use floem::prelude::*;
 use floem::style::CursorStyle;
 use floem::view::AnyView;
-use floem::views::Decorators;
+use floem::views::{Decorators, Empty, Label, Stack};
 use floem::IntoView;
 use floem_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floem_core_theme::props::radio_group::RadioGroupProps;
 use floem_core_theme::theme::{MultiTheme, Theme};
 use floem_core_theme::tokens::color::Color;
-use floem_core_theme::tokens::color_ext::*;
 use floem_core_theme::tokens::typography::FontWeight;
 
 const DESIGN_SYSTEM: &str = "fluent";
@@ -136,7 +135,7 @@ impl FluentRadioGroup {
                         .justify_center()
                 });
 
-                let label_view = text(label).style(move |s| {
+                let label_view = Label::new(label).style(move |s| {
                     let t = theme.get();
                     let sel = selected.get() == Some(i);
                     s.color(
@@ -158,7 +157,7 @@ impl FluentRadioGroup {
                     )
                 });
 
-                h_stack((indicator, label_view))
+                Stack::horizontal((indicator, label_view))
                     .style(move |s| {
                         let ComponentTokens::RadioGroup(tk) =
                             theme.get().component(ComponentId::RadioGroup) else { unreachable!() };

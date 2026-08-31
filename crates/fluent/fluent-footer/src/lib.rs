@@ -1,5 +1,6 @@
 use floem::prelude::*;
 use floem::view::AnyView;
+use floem_core_theme::component_tokens::{ComponentId, ComponentTokens, FooterTokens};
 use floem_core_theme::props::footer::FooterProps;
 use floem_core_theme::theme::{MultiTheme, Theme};
 use floem_core_theme::tokens::color::Color;
@@ -31,7 +32,7 @@ impl FluentFooter {
     }
 
     pub fn height(mut self, height: f32) -> Self {
-        self.props.height = height;
+        self.props.height = Some(height);
         self
     }
 
@@ -46,7 +47,7 @@ impl FluentFooter {
     }
 
     pub fn pad(mut self, pad: f32) -> Self {
-        self.props.pad = pad;
+        self.props.pad = Some(pad);
         self
     }
 
@@ -66,11 +67,12 @@ impl FluentFooter {
 
     pub fn resolved_style(&self) -> FluentFooterStyle {
         let theme = self.theme.get();
+        let tokens = footer_tokens(&theme);
         FluentFooterStyle {
             surface: theme.colors().surface,
             content: theme.colors().on_surface,
-            height: self.props.height,
-            pad: self.props.pad,
+            height: self.props.height.unwrap_or(tokens.height),
+            pad: self.props.pad.unwrap_or(tokens.pad),
             bordered: self.props.bordered,
             elevated: self.props.elevation > 0,
         }
@@ -80,31 +82,33 @@ impl FluentFooter {
     pub fn view(self) -> impl View {
         let theme = self.theme;
         let props = self.props;
-        let child = self.child.unwrap_or_else(|| empty().into_any());
-        let height = props.height;
-// layout-provider auto-register
+        let child = self.child.unwrap_or_else(|| Empty::new().into_any());
+        let prop_height = props.height;
+        let prop_pad = props.pad;
+        let height = prop_height.unwrap_or_else(|| footer_tokens(&theme.get()).height);
+        // layout-provider auto-register
         floem_core_theme::layout::register_layout(
             floem_core_theme::layout::LayoutSlot::Footer,
             height,
         );
 
-        let pad = props.pad;
         let bordered = props.bordered;
         let elevation = props.elevation;
 
         Container::new(child).style(move |s| {
             let t = theme.get();
+            let tk = footer_tokens(&t);
             let mut s = s
                 .width_pct(100.0)
-                .height(height)
-                .padding(pad)
+                .height(prop_height.unwrap_or(tk.height))
+                .padding(prop_pad.unwrap_or(tk.pad))
                 .items_center()
                 .background(t.colors().surface.to_peniko())
                 .color(t.colors().on_surface.to_peniko());
             if bordered {
                 s = s
                     .border_color(t.colors().outline_variant.to_peniko())
-                    .border_top(1.0);
+                    .border_top(tk.border);
             }
             if elevation > 0 {
                 s = s
@@ -120,5 +124,12 @@ impl FluentFooter {
 impl Default for FluentFooter {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+fn footer_tokens(theme: &MultiTheme) -> FooterTokens {
+    match theme.component(ComponentId::Footer) {
+        ComponentTokens::Footer(t) => t,
+        _ => unreachable!("ComponentId::Footer must resolve to FooterTokens"),
     }
 }

@@ -1,6 +1,7 @@
 use std::rc::Rc;
 
 use floem::prelude::*;
+use floem_widget_fluent_icon::fluent_icon_svg;
 use floem::style::CursorStyle;
 use floem::event::EventPropagation;
 use floem_core_theme::component_tokens::{ComponentId, ComponentTokens};
@@ -115,6 +116,7 @@ impl FluentCheckbox {
         let disabled = self.props.disabled;
         let on_change = Rc::new(self.props.on_change);
         let label_text = self.props.label.clone();
+        let hover = RwSignal::new(false);
 
         let tokens = match theme.get().component(ComponentId::Checkbox) {
             ComponentTokens::Checkbox(t) => t,
@@ -123,14 +125,7 @@ impl FluentCheckbox {
         let size = tokens.size;
         let radius = tokens.border_radius;
 
-        let mark = label(move || {
-            if checked.get() {
-                "✓".to_string()
-            } else {
-                String::new()
-            }
-        })
-        .style(move |s| {
+        let mark = svg(move || fluent_icon_svg("check")).style(move |s| {
             let t = theme.get();
             let mk = if checked.get() {
                 t.colors().on_primary
@@ -142,12 +137,28 @@ impl FluentCheckbox {
             } else {
                 mk
             };
-            s.color(mk.to_peniko())
-                .font_size(size * 0.7)
-                .font_weight(FontWeight::Bold.to_floem())
+            s.size(size * 0.7, size * 0.7).color(mk.to_peniko())
         });
 
-        let box_ = Container::new(mark).style(move |s| {
+        let hover_bg = Container::new(Empty::new()).style(move |s| {
+            let t = theme.get();
+            let pad = 4.0;
+            s.absolute()
+                .inset_top(0.0)
+                .inset_left(0.0)
+                .size(size + pad * 2.0, size + pad * 2.0)
+                .translate_x(-pad)
+                .translate_y(-pad)
+                .border_radius(radius + pad)
+                .background(with_alpha(t.colors().on_surface, 8).to_peniko())
+                .apply_if(!hover.get() || disabled, |s| s.hide())
+        });
+
+        let box_ = Container::new(
+            Stack::new((hover_bg, mark))
+                .style(|s| s.width_full().height_full().items_center().justify_center()),
+        )
+        .style(move |s| {
             let t = theme.get();
             let is_checked = checked.get();
             let (bg, border) = if is_checked {
@@ -172,7 +183,7 @@ impl FluentCheckbox {
                 .justify_center()
         });
 
-        let label_view = text(label_text).style(move |s| {
+        let label_view = Label::new(label_text).style(move |s| {
             let t = theme.get();
             let c = if disabled {
                 with_alpha(t.colors().on_surface, 38)
@@ -193,7 +204,7 @@ impl FluentCheckbox {
             }
         });
 
-        h_stack((box_, label_view))
+        Stack::horizontal((box_, label_view))
             .style(|s| s.items_center().gap(8.0).cursor(CursorStyle::Pointer))
             .on_event(listener::Click, {
                 let toggle = toggle.clone();
@@ -207,6 +218,22 @@ impl FluentCheckbox {
                     toggle();
                 }
                 EventPropagation::Continue
+            })
+            .on_event(listener::PointerEnter, {
+                let hover = hover;
+                move |_, _| {
+                    if !disabled {
+                        hover.set(true);
+                    }
+                    EventPropagation::Continue
+                }
+            })
+            .on_event(listener::PointerLeave, {
+                let hover = hover;
+                move |_, _| {
+                    hover.set(false);
+                    EventPropagation::Continue
+                }
             })
             .style(move |s| {
                 let t = theme.get();

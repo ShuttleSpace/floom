@@ -1,10 +1,9 @@
 use floem::prelude::*;
-use floem::views::Decorators;
+use floem::views::{Decorators, Empty};
 use floem_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floem_core_theme::props::progress_linear::ProgressLinearProps;
 use floem_core_theme::theme::{MultiTheme, Theme};
 use floem_core_theme::tokens::color::Color;
-use floem_core_theme::tokens::color_ext::*;
 
 const DESIGN_SYSTEM: &str = "fluent";
 

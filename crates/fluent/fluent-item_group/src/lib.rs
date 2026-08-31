@@ -9,7 +9,6 @@ use floem_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floem_core_theme::props::item_group::ItemGroupProps;
 use floem_core_theme::theme::{MultiTheme, Theme};
 use floem_core_theme::tokens::color::Color;
-use floem_core_theme::tokens::color_ext::*;
 
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -198,7 +197,7 @@ impl FluentItemGroup {
             })
             .collect();
 
-        v_stack_from_iter(rows).style(move |s| s.gap(gap).width_pct(100.0).apply_if(n == 0, |s| s.hide()))
+        Stack::vertical_from_iter(rows).style(move |s| s.gap(gap).width_pct(100.0).apply_if(n == 0, |s| s.hide()))
     }
 }
 

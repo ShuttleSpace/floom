@@ -1,6 +1,6 @@
 use floem::prelude::*;
 use floem::view::AnyView;
-use floem::views::{Container, Empty, Stack, empty};
+use floem::views::{Container, Empty, Stack};
 use floem_core_theme::layout::layout_signal;
 use floem_core_theme::theme::{MultiTheme, Theme};
 /// Material 3 main content region.
@@ -33,7 +33,7 @@ impl FluentMain {
     pub fn view(self) -> impl View {
         let theme = self.theme;
         let layout = layout_signal();
-        let child = self.child.unwrap_or_else(|| empty().into_any());
+        let child = self.child.unwrap_or_else(|| Empty::new().into_any());
 
         let top = Empty::new().style(move |s| {
             let l = layout.get();

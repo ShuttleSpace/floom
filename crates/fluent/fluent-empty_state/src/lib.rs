@@ -6,7 +6,6 @@ use floem_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floem_core_theme::props::empty_state::EmptyStateProps;
 use floem_core_theme::theme::{MultiTheme, Theme};
 use floem_core_theme::tokens::color::Color;
-use floem_core_theme::tokens::color_ext::*;
 use floem_core_theme::tokens::typography::FontWeight;
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct FluentEmptyStateStyle {
@@ -93,7 +92,7 @@ impl FluentEmptyState {
 
         if !props.icon.is_empty() {
             kids.push(
-                text(props.icon.clone())
+                Label::new(props.icon.clone())
                     .style(move |s| {
                         let t = theme.get();
                         s.font_size(icon_size)
@@ -104,7 +103,7 @@ impl FluentEmptyState {
         }
 
         kids.push(
-            text(props.title.clone())
+            Label::new(props.title.clone())
                 .style(move |s| {
                     let t = theme.get();
                     s.font_size(title_font)
@@ -116,7 +115,7 @@ impl FluentEmptyState {
 
         if !props.description.is_empty() {
             kids.push(
-                text(props.description.clone())
+                Label::new(props.description.clone())
                     .style(move |s| {
                         let t = theme.get();
                         s.font_size(desc_font)

@@ -96,9 +96,17 @@ impl FluentImage {
         let placeholder = tokens.placeholder_color;
         let bytes = load_image_bytes(&props.src);
         let content: AnyView = if let Some(b) = bytes {
-            img(move || b.clone()).into_any()
+            img(move || b.clone())
+                .style(move |s| {
+                    s.object_fit(if props.cover {
+                        floem::style::ObjectFit::Cover
+                    } else {
+                        floem::style::ObjectFit::Contain
+                    })
+                })
+                .into_any()
         } else {
-            text(props.alt.clone())
+            Label::new(props.alt.clone())
                 .style(move |s| {
                     let t = theme.get();
                     s.color(with_alpha(t.colors().on_surface_variant, 180).to_peniko())

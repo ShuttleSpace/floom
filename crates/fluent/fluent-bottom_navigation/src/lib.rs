@@ -5,7 +5,7 @@ use floem::prelude::*;
 use floem::style::CursorStyle;
 use floem::view::AnyView;
 use floem::IntoView;
-use floem::views::Decorators;
+use floem::views::{Decorators, Empty, Label, Stack};
 use floem_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floem_core_theme::props::bottom_navigation::BottomNavigationProps;
 use floem_core_theme::theme::{MultiTheme, Theme};
@@ -117,6 +117,7 @@ impl FluentBottomNavigation {
 
         let icon_size = tokens.icon_size;
         let label_fs = tokens.label_font_size;
+        let gap = tokens.gap;
 
         let items: Vec<AnyView> = labels
             .iter()
@@ -133,11 +134,11 @@ impl FluentBottomNavigation {
                 let label_fs = label_fs;
                 let lbl = lbl.clone();
 
-                let item = v_stack((
+                let item = Stack::vertical((
                     Container::new(icon).style(move |s| {
                         s.width(icon_size).height(icon_size).items_center().justify_center()
                     }),
-                    text(lbl).style(move |s| {
+                    Label::new(lbl).style(move |s| {
                         let t = theme.get();
                         let sel = selected.get() == i;
                         s.font_size(label_fs).color(if sel {
@@ -153,6 +154,7 @@ impl FluentBottomNavigation {
                     s.flex()
                         .items_center()
                         .justify_center()
+                        .gap(gap)
                         .padding_vert(8.0)
                         .cursor(CursorStyle::Pointer)
                         .apply_if(sel, |s| {

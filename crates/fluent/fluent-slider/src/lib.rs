@@ -4,12 +4,11 @@ use floem::context::{LayoutChanged, LayoutChangedListener};
 use floem::event::EventPropagation;
 use floem::prelude::*;
 use floem::style::CursorStyle;
-use floem::views::Decorators;
+use floem::views::{Decorators, Empty, Stack};
 use floem_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floem_core_theme::props::slider::SliderProps;
 use floem_core_theme::theme::{MultiTheme, Theme};
 use floem_core_theme::tokens::color::Color;
-use floem_core_theme::tokens::color_ext::*;
 
 const DESIGN_SYSTEM: &str = "fluent";
 
@@ -27,6 +26,7 @@ pub struct FluentSlider {
     props: SliderProps,
     theme: RwSignal<MultiTheme>,
     value: RwSignal<f32>,
+    value_signal: Option<RwSignal<f32>>,
     width: RwSignal<f32>,
     dragging: RwSignal<bool>,
 }
@@ -63,6 +63,7 @@ impl FluentSlider {
             theme: RwSignal::new(MultiTheme::new_for(floem_core_theme::global_theme::DesignSystem::Fluent)),
             props,
             value: RwSignal::new(v),
+            value_signal: None,
             width: RwSignal::new(200.0),
             dragging: RwSignal::new(false),
         }
@@ -92,6 +93,10 @@ impl FluentSlider {
         self.props.on_change = Some(Box::new(callback));
         self
     }
+    pub fn value_signal(mut self, value: RwSignal<f32>) -> Self {
+        self.value_signal = Some(value);
+        self
+    }
     pub fn props(&self) -> &SliderProps {
         &self.props
     }
@@ -117,7 +122,7 @@ impl FluentSlider {
     /// Build a renderable, interactive Fluent slider.
     pub fn view(self) -> impl View {
         let theme = self.theme;
-        let value = self.value;
+        let value = self.value_signal.unwrap_or(self.value);
         let width = self.width;
         let dragging = self.dragging;
         let min = self.props.min;
@@ -137,6 +142,28 @@ impl FluentSlider {
                 .height(tk.track_height)
                 .background(t.colors().surface_variant.to_peniko())
                 .border_radius(t.radius().sm)
+        });
+
+        // Filled (selected) track segment — primary, from the left edge to the
+        // current value, matching md/cupertino sliders and fluent-range_slider.
+        let fill = Container::new(Empty::new()).style(move |s| {
+            let t = theme.get();
+            let ComponentTokens::Slider(tk) = t.component(ComponentId::Slider) else {
+                unreachable!()
+            };
+            let ratio = if max > min {
+                (value.get() - min) / (max - min)
+            } else {
+                0.0
+            };
+            s.absolute()
+                .inset_top(0.0)
+                .inset_left(0.0)
+                .height(tk.track_height)
+                .width_pct((ratio * 100.0) as f64)
+                .background(t.colors().primary.to_peniko())
+                .border_radius(t.radius().sm)
+                .apply_if(disabled, |s| s.set_disabled(true))
         });
 
         let thumb = Container::new(Empty::new()).style(move |s| {
@@ -161,7 +188,7 @@ impl FluentSlider {
                 .apply_if(disabled, |s| s.set_disabled(true))
         });
 
-        h_stack((track_line, thumb))
+        Stack::horizontal((track_line, fill, thumb))
             .style(move |s| {
                 let ComponentTokens::Slider(tk) = theme.get().component(ComponentId::Slider) else {
                     unreachable!()

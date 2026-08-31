@@ -1,6 +1,5 @@
 use floem::prelude::*;
 use floem::view::AnyView;
-use floem_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floem_core_theme::props::container::ContainerProps;
 use floem_core_theme::theme::{MultiTheme, Theme};
 use floem_core_theme::tokens::color::Color;
@@ -76,7 +75,7 @@ impl FluentContainer {
     pub fn view(self) -> impl View {
         let theme = self.theme;
         let props = self.props;
-        let child = self.child.unwrap_or_else(|| empty().into_any());
+        let child = self.child.unwrap_or_else(|| Empty::new().into_any());
         let max_width = props.max_width;
         let padding = props.padding;
         let fluid = props.fluid;

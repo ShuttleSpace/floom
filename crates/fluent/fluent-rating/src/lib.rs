@@ -2,6 +2,7 @@ use std::rc::Rc;
 
 use floem::event::EventPropagation;
 use floem::prelude::*;
+use floem_widget_fluent_icon::fluent_icon_svg;
 use floem::reactive::RwSignal;
 use floem::style::CursorStyle;
 use floem::view::AnyView;
@@ -9,7 +10,6 @@ use floem_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floem_core_theme::props::rating::RatingProps;
 use floem_core_theme::theme::{MultiTheme, Theme};
 use floem_core_theme::tokens::color::Color;
-use floem_core_theme::tokens::color_ext::*;
 
 const DESIGN_SYSTEM: &str = "fluent";
 
@@ -99,7 +99,7 @@ impl FluentRating {
 
         let mut stars: Vec<AnyView> = Vec::with_capacity(max);
         for i in 0..max {
-            let star = Container::new(text("★".to_string()))
+            let star = svg(move || fluent_icon_svg("star"))
                 .style(move |s| {
                     let v = value.get();
                     let t = theme.get();
@@ -108,7 +108,7 @@ impl FluentRating {
                     } else {
                         t.colors().outline_variant
                     };
-                    s.font_size(star_size).color(c.to_peniko())
+                    s.size(star_size, star_size).color(c.to_peniko())
                 })
                 .style(move |s| {
                     s.cursor(if readonly {

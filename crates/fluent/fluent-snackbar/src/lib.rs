@@ -1,4 +1,5 @@
 use std::rc::Rc;
+use std::time::Duration;
 
 use floem::event::EventPropagation;
 use floem::prelude::*;
@@ -67,6 +68,12 @@ impl FluentSnackbar {
     pub fn open_signal(&self) -> RwSignal<bool> {
         self.open
     }
+
+    /// Set the internal `open` signal from an external signal.
+    pub fn with_open_signal(mut self, open: RwSignal<bool>) -> Self {
+        self.open = open;
+        self
+    }
     pub fn theme(&self) -> RwSignal<MultiTheme> {
         self.theme
     }
@@ -106,7 +113,7 @@ impl FluentSnackbar {
             _ => unreachable!(),
         };
         let padding = tokens.padding;
-        let radius = tokens.border_radius;
+        let radius = theme.get().radius().sm;
         let min_height = tokens.min_height;
         let font_size = tokens.font_size;
         let max_width = tokens.max_width;
@@ -125,7 +132,7 @@ impl FluentSnackbar {
             });
         }
 
-        let msg_view: AnyView = text(message)
+        let msg_view: AnyView = Label::new(message)
             .style(move |s| {
                 let t = theme.get();
                 s.color(t.colors().surface.to_peniko())
@@ -137,7 +144,7 @@ impl FluentSnackbar {
             Some(lbl) => {
                 let on_action = on_action.clone();
                 let open = open;
-                text(lbl)
+                Label::new(lbl)
                     .style(move |s| {
                         let t = theme.get();
                         s.color(t.colors().primary.to_peniko())
@@ -158,8 +165,8 @@ impl FluentSnackbar {
             None => Empty::new().into_any(),
         };
 
-        let stack = h_stack((msg_view, action_view)).style(move |s| {
-            let t = theme.get();
+        let stack = Stack::horizontal((msg_view, action_view)).style(move |s| {
+            let _t = theme.get();
             s.gap(action_gap).items_center()
         });
 
@@ -175,6 +182,14 @@ impl FluentSnackbar {
                     .box_shadow_blur(16.0)
                     .box_shadow_spread(1.0)
                     .box_shadow_color(with_alpha(BLACK, 25).to_peniko())
+            })
+            // Slide up from the bottom edge and fade in; reverse on dismiss.
+            .animation(|a| {
+                a.run_on_create(true)
+                    .run_on_remove(true)
+                    .duration(Duration::from_millis(250))
+                    .keyframe(0, |f| f.style(|s| s.translate_y(40.0).opacity(0.0)))
+                    .keyframe(100, |f| f.computed_style())
             });
 
         let positioned = Container::new(surface)

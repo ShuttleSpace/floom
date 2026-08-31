@@ -2,9 +2,10 @@ use std::rc::Rc;
 
 use floem::event::EventPropagation;
 use floem::prelude::*;
+use floem_widget_fluent_icon::fluent_icon_svg;
 use floem::style::CursorStyle;
 use floem::view::AnyView;
-use floem::views::{Container, Decorators, Empty, h_stack_from_iter, v_stack};
+use floem::views::{svg, Container, Decorators, Empty, Stack, Label};
 use floem_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floem_core_theme::props::stepper::StepperProps;
 use floem_core_theme::theme::{MultiTheme, Theme};
@@ -47,13 +48,13 @@ impl FluentStepper {
     }
 
     /// The ordered step labels.
-    pub fn items(mut self, items: Vec<String>) -> Self {
+    pub fn items(self, items: Vec<String>) -> Self {
         self.items.set(items);
         self
     }
 
     /// The initially-active step index.
-    pub fn selected(mut self, selected: usize) -> Self {
+    pub fn selected(self, selected: usize) -> Self {
         self.selected.set(selected);
         self
     }
@@ -127,11 +128,22 @@ impl FluentStepper {
                 let theme_m = theme;
                 let sel_m = selected;
                 let completed = i < sel;
-                let marker = Container::new(text(if completed {
-                    "✓".to_string()
+                let marker = Container::new(if completed {
+                    svg(move || fluent_icon_svg("check"))
+                        .style(move |s| {
+                            let t = theme_m.get();
+                            let done = sel_m.get() > i || sel_m.get() == i;
+                            let fg = if done {
+                                t.colors().on_primary
+                            } else {
+                                t.colors().on_surface_variant
+                            };
+                            s.size(step_size * 0.55, step_size * 0.55).color(fg.to_peniko())
+                        })
+                        .into_any()
                 } else {
-                    format!("{}", i + 1)
-                }))
+                    Label::new(format!("{}", i + 1)).into_any()
+                })
                 .style(move |s| {
                     let t = theme_m.get();
                     let done = sel_m.get() > i || sel_m.get() == i;
@@ -155,7 +167,7 @@ impl FluentStepper {
 
                 let theme_l = theme;
                 let sel_l = selected;
-                let label_view = text(label.clone()).style(move |s| {
+                let label_view = Label::new(label.clone()).style(move |s| {
                     let t = theme_l.get();
                     let c = if sel_l.get() == i {
                         t.colors().on_surface
@@ -174,7 +186,7 @@ impl FluentStepper {
                         .font_weight(w.to_floem())
                 });
 
-                let node: AnyView = v_stack((marker, label_view))
+                let node: AnyView = Stack::vertical((marker, label_view))
                     .style(move |s| s.items_center().gap(8.0))
                     .into_any();
 
@@ -224,7 +236,7 @@ impl FluentStepper {
             if kids.is_empty() {
                 return Empty::new().into_any();
             }
-            h_stack_from_iter(kids)
+            Stack::horizontal_from_iter(kids)
                 .style(move |s| s.items_center().gap(gap).width_pct(100.0))
                 .into_any()
         });

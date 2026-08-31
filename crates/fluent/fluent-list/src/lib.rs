@@ -4,7 +4,7 @@ use floem::event::EventPropagation;
 use floem::prelude::*;
 use floem::style::CursorStyle;
 use floem::view::AnyView;
-use floem::views::Decorators;
+use floem::views::{Decorators, Label};
 use floem::IntoView;
 use floem_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floem_core_theme::props::list::ListProps;
@@ -78,7 +78,7 @@ impl FluentList {
                 let on_select = Rc::new(item.on_select);
                 let label = item.label.clone();
 
-                text(label)
+                Label::new(label)
                     .style(move |s| {
                         let t = theme.get();
                         let ComponentTokens::List(tk) = t.component(ComponentId::List) else {
@@ -87,7 +87,7 @@ impl FluentList {
                         let theme_hover = theme;
                         s.width_full()
                             .height(tk.item_height)
-                            .padding_horiz(tk.padding)
+                            .padding_horiz(tk.padding_horizontal)
                             .items_center()
                             .color(t.colors().on_surface.to_peniko())
                             .font_size(t.typography().body.medium.font_size)

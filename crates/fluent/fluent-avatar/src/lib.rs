@@ -4,7 +4,6 @@ use floem_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floem_core_theme::props::avatar::AvatarProps;
 use floem_core_theme::theme::{MultiTheme, Theme};
 use floem_core_theme::tokens::color::Color;
-use floem_core_theme::tokens::color_ext::*;
 use floem_core_theme::tokens::typography::FontWeight;
 
 const DESIGN_SYSTEM: &str = "fluent";
@@ -72,19 +71,20 @@ impl FluentAvatar {
         }
     }
 
-    /// Build a circular Fluent avatar showing initials/text.
+    /// Build a Fluent 2 avatar showing initials/text. Fluent 2 avatars are
+    /// rounded squares (4dp corner radius), not circles.
     pub fn view(self) -> impl View {
         let theme = self.theme;
         let content = self.props.content.clone();
         let size = self.resolved_style().size;
         let font_size = self.resolved_style().font_size;
 
-        Container::new(text(content))
+        Container::new(Label::new(content))
             .style(move |s| {
                 let t = theme.get();
                 s.width(size)
                     .height(size)
-                    .border_radius(t.radius().full)
+                    .border_radius(t.radius().md)
                     .background(t.colors().primary_container.to_peniko())
                     .color(t.colors().on_primary_container.to_peniko())
                     .font_size(font_size)

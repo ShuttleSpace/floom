@@ -1,7 +1,7 @@
 use std::f32::consts::PI;
 
 use floem::prelude::*;
-use floem::views::Decorators;
+use floem::views::{Decorators};
 use floem_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floem_core_theme::props::progress_circular::ProgressCircularProps;
 use floem_core_theme::theme::{MultiTheme, Theme};

@@ -10,6 +10,7 @@ use floem_core_theme::theme::{MultiTheme, Theme};
 use floem_core_theme::tokens::color::Color;
 use floem_core_theme::tokens::color_ext::*;
 use floem_core_theme::tokens::typography::FontWeight;
+use floem_widget_fluent_icon::FluentIcon;
 
 const DESIGN_SYSTEM: &str = "fluent";
 
@@ -122,7 +123,7 @@ impl FluentAlert {
         let font_size = tokens.font_size;
         let title_font_size = tokens.title_font_size;
 
-        let dot = Container::new(text("".to_string())).style(move |s| {
+        let dot = Container::new(Label::new("".to_string())).style(move |s| {
             let a = alert_accent(&theme.get(), variant);
             s.width(10.0)
                 .height(10.0)
@@ -130,32 +131,28 @@ impl FluentAlert {
                 .background(a.to_peniko())
         });
 
-        let body = v_stack((
-            text(title).style(move |s| {
+        let body = Stack::vertical((
+            Label::new(title).style(move |s| {
                 s.font_size(title_font_size)
                     .font_weight(FontWeight::SemiBold.to_floem())
                     .color(theme.get().colors().on_surface.to_peniko())
             }),
-            text(message).style(move |s| {
+            Label::new(message).style(move |s| {
                 s.font_size(font_size)
                     .color(theme.get().colors().on_surface_variant.to_peniko())
             }),
         ))
         .style(|s| s.gap(4.0));
 
-        let content = h_stack((dot, body))
+        let content = Stack::horizontal((dot, body))
             .style(|s| s.gap(12.0).items_center())
             .into_any();
 
         let dismiss = if dismissible {
-            Container::new(text("×".to_string()))
-                .style(move |s| {
-                    let t = theme.get();
-                    s.font_size(22.0)
-                        .padding(2.0)
-                        .color(t.colors().on_surface_variant.to_peniko())
-                        .cursor(CursorStyle::Pointer)
-                })
+            FluentIcon::new("close")
+                .size(20.0)
+                .view()
+                .style(|s| s.padding(2.0).cursor(CursorStyle::Pointer))
                 .on_event(listener::Click, move |_, _| {
                     if let Some(cb) = on_dismiss.as_ref() {
                         cb();
@@ -164,10 +161,10 @@ impl FluentAlert {
                 })
                 .into_any()
         } else {
-            text("".to_string()).into_any()
+            Label::new("".to_string()).into_any()
         };
 
-        Container::new(h_stack((content, dismiss)).style(|s| s.gap(8.0).items_center()))
+        Container::new(Stack::horizontal((content, dismiss)).style(|s| s.gap(8.0).items_center()))
             .style(move |s| {
                 let accent = alert_accent(&theme.get(), variant);
                 s.padding(padding)

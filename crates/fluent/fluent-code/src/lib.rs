@@ -1,11 +1,10 @@
 use floem::prelude::*;
 use floem::view::AnyView;
-use floem::views::Decorators;
+use floem::views::{Decorators, Label};
 use floem::reactive::{RwSignal, SignalGet};
 use floem_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floem_core_theme::props::code::CodeProps;
 use floem_core_theme::theme::{MultiTheme, Theme};
-use floem_core_theme::tokens::color_ext::*;
 
 /// Material 3 `<code>`: an inline code chip with a subtle surface background.
 /// Defaults to a monospace font.
@@ -69,7 +68,7 @@ impl FluentCode {
         let inner: AnyView = if let Some(c) = child {
             c
         } else {
-            text(content.unwrap_or_default())
+            Label::new(content.unwrap_or_default())
                 .style(move |s| s.color(theme.get().colors().on_surface.to_peniko()))
                 .into_any()
         };

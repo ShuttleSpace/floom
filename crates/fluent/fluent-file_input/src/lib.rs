@@ -1,11 +1,10 @@
 use floem::prelude::*;
 use floem::style::CursorStyle;
-use floem::views::Decorators;
+use floem::views::{Decorators, Label, Stack};
 use floem::reactive::{RwSignal, SignalGet};
 use floem_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floem_core_theme::props::file_input::FileInputProps;
 use floem_core_theme::theme::{MultiTheme, Theme};
-use floem_core_theme::tokens::color::Color;
 use floem_core_theme::tokens::color_ext::*;
 
 /// Material 3 file input: a trigger affordance plus a readout of the
@@ -89,14 +88,14 @@ impl FluentFileInput {
         let pad_h = tokens.padding_horizontal;
         let font_size = tokens.font_size;
 
-        let trigger = h_stack((
-            text(label_text).style(move |s| {
+        let trigger = Stack::horizontal((
+            Label::new(label_text).style(move |s| {
                 let t = theme.get();
                 s.color(t.colors().primary.to_peniko())
                     .font_size(font_size)
                     .font_weight(t.typography().label.large.font_weight.to_floem())
             }),
-            label(move || {
+            Label::derived(move || {
                 path.get()
                     .clone()
                     .unwrap_or_else(|| "No file chosen".to_string())

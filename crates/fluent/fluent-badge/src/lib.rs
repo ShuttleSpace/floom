@@ -7,7 +7,6 @@ use floem_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floem_core_theme::props::badge::BadgeProps;
 use floem_core_theme::theme::{MultiTheme, Theme};
 use floem_core_theme::tokens::color::Color;
-use floem_core_theme::tokens::color_ext::*;
 
 const DESIGN_SYSTEM: &str = "fluent";
 
@@ -99,7 +98,7 @@ impl FluentBadge {
         let inner: AnyView = if dot {
             Empty::new().into_any()
         } else {
-            text(content).into_any()
+            Label::new(content).into_any()
         };
 
         let bubble = Container::new(inner)
@@ -130,7 +129,7 @@ impl FluentBadge {
 
         let overlay = Overlay::new(bubble);
 
-        Container::new(v_stack((child, overlay)))
+        Container::new(Stack::vertical((child, overlay)))
             .style(|s| s.items_start())
             .on_event(LayoutChangedListener, move |_cx, layout: &LayoutChanged| {
                 origin.set((layout.new_window_origin.x, layout.new_window_origin.y));

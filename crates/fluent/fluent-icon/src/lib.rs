@@ -1,11 +1,12 @@
 use floem::prelude::*;
-use floem::views::{Container, Decorators, svg};
+use floem::views::{Decorators, svg};
 use floem_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floem_core_theme::props::icon::IconProps;
 use floem_core_theme::theme::{MultiTheme, Theme};
 use floem_core_theme::tokens::color::Color;
 
 mod icons;
+pub use icons::fluent_icon_svg;
 
 const DESIGN_SYSTEM: &str = "fluent";
 

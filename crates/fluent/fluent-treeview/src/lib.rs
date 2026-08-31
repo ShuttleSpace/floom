@@ -2,10 +2,11 @@ use std::rc::Rc;
 
 use floem::event::EventPropagation;
 use floem::prelude::*;
+use floem_widget_fluent_icon::fluent_icon_svg;
 use floem::reactive::RwSignal;
 use floem::style::CursorStyle;
 use floem::view::AnyView;
-use floem::views::dyn_view;
+use floem::views::{svg, dyn_view, Empty, Label, Stack};
 use floem::IntoView;
 use floem_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floem_core_theme::props::treeview::{TreeviewNode, TreeviewProps};
@@ -71,15 +72,13 @@ fn flatten(
 
         let expander = if has_children {
             let t2 = toggle.clone();
-            let chevron = if expanded { "▾" } else { "▸" };
-            text(chevron)
+            let chevron_name = if expanded { "expand_more" } else { "chevron_right" };
+            svg(move || fluent_icon_svg(chevron_name))
                 .style(move |s| {
-                    s.width(expander_size)
-                        .height(expander_size)
+                    s.size(expander_size, expander_size)
                         .items_center()
                         .justify_center()
                         .color(theme.get().colors().on_surface_variant.to_peniko())
-                        .font_size(12.0)
                         .cursor(CursorStyle::Pointer)
                 })
                 .on_event(listener::Click, move |_, _| {
@@ -95,7 +94,7 @@ fn flatten(
         };
 
         let icon_view = if let Some(ic) = icon {
-            text(ic)
+            Label::new(ic)
                 .style(move |s| {
                     s.width(icon_size)
                         .height(icon_size)
@@ -114,7 +113,7 @@ fn flatten(
             .into_any();
 
         let on_node_click_label = on_node_click.clone();
-        let label_view = text(label.clone())
+        let label_view = Label::new(label.clone())
             .style(move |s| {
                 s.flex_grow(1.0)
                     .color(theme.get().colors().on_surface.to_peniko())
@@ -129,7 +128,7 @@ fn flatten(
             })
             .into_any();
 
-        let row = h_stack((indent_sp, expander, icon_view, label_view))
+        let row = Stack::horizontal((indent_sp, expander, icon_view, label_view))
             .style(move |s| {
                 s.height(row_height)
                     .items_center()
