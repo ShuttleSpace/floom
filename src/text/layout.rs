@@ -26,8 +26,14 @@ use crate::paint::Renderer;
 ///
 /// This is exposed so callers that need to register or inspect fonts can work
 /// with the same font database used by [`TextLayout`].
-pub static FONT_CONTEXT: LazyLock<Mutex<FontContext>> =
-    LazyLock::new(|| Mutex::new(FontContext::new()));
+pub static FONT_CONTEXT: LazyLock<Mutex<FontContext>> = LazyLock::new(|| {
+    let mut ctx = FontContext::new();
+    // OHOS has no fontconfig, so the system-font scan yields nothing. Inject
+    // bundled fonts so default text renders (see src/platform/ohos_font.rs).
+    #[cfg(target_env = "ohos")]
+    crate::platform::ohos_font::register_bundled_fonts(&mut ctx.collection);
+    Mutex::new(ctx)
+});
 
 thread_local! {
     static LAYOUT_CONTEXT: RefCell<LayoutContext<TextBrush>> =

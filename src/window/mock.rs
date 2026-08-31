@@ -258,8 +258,10 @@ impl Window for MockWindow {
     }
 
     fn request_ime_update(&self, _request: ImeRequest) -> Result<(), ImeRequestError> {
-        // Return error indicating IME is not supported in mock
-        Err(ImeRequestError::NotSupported)
+        // Headless has no platform IME; degrade IME requests to a no-op so that
+        // focusing a text input (which requests IME enable) does not panic.
+        // This matches `BackendCapabilities::headless()` where `ime == false`.
+        Ok(())
     }
 
     fn ime_capabilities(&self) -> Option<ImeCapabilities> {

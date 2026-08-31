@@ -1,6 +1,7 @@
 use std::{cell::RefCell, collections::HashMap, time::Instant};
 
 use crate::{
+    accessibility::{AccessTree, AccessibilityBackend},
     action::exec_after_animation_frame,
     inspector::CaptureState,
     platform::menu_types::MenuId,
@@ -16,15 +17,19 @@ use ui_events::pointer::{PointerId, PointerInfo};
 use understory_event_state::{click::ClickState, focus::FocusState, hover::HoverState};
 use understory_focus::{FocusEntry, FocusSpace};
 use winit::cursor::CursorIcon;
+use winit::dpi::PhysicalInsets;
 use winit::window::Theme;
 
+use floem_reactive::{RwSignal, SignalGet};
+
 use std::rc::Rc;
+use slotmap::KeyData;
 
 use crate::{
     BoxTree, ElementId,
     action::add_update_message,
-    context::FrameUpdate,
-    event::{DragTracker, Event, WindowEvent, clear_hit_test_cache},
+    context::{FrameUpdate, Phases},
+    event::{DragTracker, Event, InteractionEvent, LongPressState, RouteKind, WindowEvent, clear_hit_test_cache},
     layout::responsive::{GridBreakpoints, ScreenSizeBp},
     message::UpdateMessage,
     style::{CursorStyle, Style, StyleSelector, theme::default_theme},
@@ -115,6 +120,15 @@ pub struct WindowState {
     pub(crate) root_view_id: ViewId,
     pub(crate) root_layout_node: NodeId,
     pub(crate) root_size: Size,
+    /// Safe-area insets in physical (device) pixels, kept in sync with the
+    /// backend via `EmbedderEvent::SafeArea`. Apps can read it through
+    /// `WindowHandle::safe_area()`; when `apply_safe_area` is set, core insets
+    /// the root layout node by these insets so content clears OS chrome.
+    pub(crate) safe_area: RwSignal<PhysicalInsets<u32>>,
+    /// When `true`, core applies `safe_area` as padding on the root layout
+    /// node. Off by default so existing apps are unaffected; mobile apps opt in
+    /// via `WindowConfig::apply_safe_area(true)`.
+    pub(crate) apply_safe_area: bool,
     /// Set of ViewIds that have IsFixed style. When root_size changes,
     /// we request layout on these views directly instead of traversing the tree.
     pub(crate) fixed_elements: FxHashSet<ViewId>,
@@ -142,6 +156,8 @@ pub struct WindowState {
     pub(crate) selected_selector_views: FxHashMap<ViewId, ()>,
     pub(crate) request_paint: bool,
     pub(crate) drag_tracker: DragTracker,
+    /// Touch long-press gesture tracker (opens the in-UI context menu).
+    pub(crate) long_press: LongPressState,
     pub(crate) screen_size_bp: ScreenSizeBp,
     pub(crate) grid_bps: GridBreakpoints,
     pub(crate) click_state: ClickState<SmallVec<[ElementId; 64]>>,
@@ -150,6 +166,16 @@ pub struct WindowState {
     pub(crate) key_trigger_state: bool,
     pub(crate) focus_state: FocusState<ElementId>,
     pub(crate) last_focused_element: Option<ElementId>,
+    /// The authoritative neutral accessibility tree for this window, rebuilt by
+    /// core on every view/layout change. Platform backends read it (or receive
+    /// deltas via [`Self::accessibility_backend`]) to drive the native screen
+    /// reader. See [`crate::accessibility`].
+    pub(crate) accessibility: AccessTree,
+    /// Optional platform bridge for the accessibility tree. When `Some`, core
+    /// forwards every [`crate::accessibility::AccessTreeUpdate`] here (e.g. the
+    /// macOS/iOS `NSAccessibility` bridge, an AT-SPI2 bridge, ...). `None`
+    /// means no screen reader bridge is wired for this window yet.
+    pub(crate) accessibility_backend: Option<Rc<RefCell<dyn AccessibilityBackend>>>,
     pub(crate) file_drag_paths: Option<Rc<[std::path::PathBuf]>>,
     pub(crate) element_id_cursors: FxHashMap<ElementId, CursorStyle>,
     // whether the window is in light or dark mode
@@ -214,6 +240,13 @@ impl WindowState {
             os_scale,
             user_scale: 1.0,
             root_size: Size::ZERO,
+            safe_area: RwSignal::new(PhysicalInsets {
+                top: 0,
+                left: 0,
+                bottom: 0,
+                right: 0,
+            }),
+            apply_safe_area: false,
             fixed_elements: FxHashSet::default(),
             screen_size_bp: ScreenSizeBp::Xs,
             scheduled_updates: vec![FrameUpdate::Paint(root_view_id)],
@@ -223,8 +256,11 @@ impl WindowState {
             disabled_selector_views: FxHashMap::default(),
             selected_selector_views: FxHashMap::default(),
             drag_tracker: DragTracker::new(),
+            long_press: LongPressState::new(),
             focus_state: FocusState::new(),
             last_focused_element: None,
+            accessibility: AccessTree::new(),
+            accessibility_backend: None,
             key_trigger_state: false,
             click_state: ClickState::new(),
             hover_state: HoverState::new(),
@@ -264,6 +300,98 @@ impl WindowState {
     pub(crate) fn invalidate_focus_nav_cache(&mut self) {
         self.focus_nav_cache.built = false;
         self.focus_nav_cache.entries.clear();
+    }
+
+    /// Register the platform accessibility backend for this window.
+    ///
+    /// Core forwards every [`crate::accessibility::AccessTreeUpdate`] it builds
+    /// to this backend, which bridges Floem's neutral tree to the native screen
+    /// reader. Passing `None` (the default) means no bridge is active and the
+    /// updates are only kept in [`Self::accessibility`].
+    ///
+    /// Called from `WindowHandle::new` once a platform a11y backend is built
+    /// via `crate::accessibility::native_backend_for_window` (desktop only so
+    /// far; macOS wired in Phase 4 Step 2).
+    pub(crate) fn set_accessibility_backend(
+        &mut self,
+        backend: Option<Rc<RefCell<dyn AccessibilityBackend>>>,
+    ) {
+        self.accessibility_backend = backend;
+    }
+
+    /// Dispatch a platform-requested accessibility action (e.g. a screen
+    /// reader "press" on a button) back into the core.
+    ///
+    /// This is the sink for [`crate::accessibility::AccessibilityBackend::poll_actions`].
+    /// The neutral [`AccessNodeId`](crate::accessibility::AccessNodeId) is the
+    /// stable `u64` floem assigned from the view's `ViewId` (`as_ffi`), so we
+    /// recover the `ViewId` and drive the view through its normal event/focus
+    /// paths — no screen-reader-specific code in the views themselves.
+    pub(crate) fn handle_accessibility_action(
+        &mut self,
+        action: crate::accessibility::PendingAction,
+    ) {
+        use crate::accessibility::AccessAction;
+
+        let (node, action, payload) = action;
+        // `AccessNodeId` carries the view's `KeyData` `u64`; reconstruct the
+        // `ViewId` so we can route real events to it.
+        let view_id = ViewId::from(KeyData::from_ffi(node.0));
+        let target = view_id.get_element_id();
+
+        match action {
+            AccessAction::Focus => {
+                // Move keyboard focus to the node's view.
+                view_id.request_focus();
+            }
+            AccessAction::Default => {
+                // "Activate" — a screen reader's primary action on a control.
+                // Dispatch a directed `Click` so the view's `Click` listener
+                // (e.g. `Button::action`) fires, exactly like a real click.
+                view_id.route_event(
+                    Event::Interaction(InteractionEvent::Click),
+                    RouteKind::Directed {
+                        target,
+                        phases: Phases::TARGET,
+                    },
+                );
+            }
+            AccessAction::ShowContextMenu => {
+                // Open the view's context menu via a directed secondary click.
+                view_id.route_event(
+                    Event::Interaction(InteractionEvent::SecondaryClick),
+                    RouteKind::Directed {
+                        target,
+                        phases: Phases::TARGET,
+                    },
+                );
+            }
+            // Semantic actions have no generic Floem event; route them to the
+            // view's registered a11y handler (if any). Views that own a value
+            // or disclosure state register one via
+            // [`crate::ViewId::accessibility_action`]. Without a handler we
+            // silently ignore (no panic, no broken core state).
+            AccessAction::Increment
+            | AccessAction::Decrement
+            | AccessAction::Expand
+            | AccessAction::Collapse
+            | AccessAction::SetValue
+            | AccessAction::ScrollIntoView => {
+                let handler = view_id
+                    .state()
+                    .borrow()
+                    .accessibility
+                    .as_ref()
+                    .and_then(|a| a.on_action.clone());
+                if let Some(handler) = handler {
+                    handler(action, payload);
+                }
+            }
+            // `Select` is advertised but not yet dispatched from any backend
+            // (the platform `ActionHandler` maps skip it); keep it ignored
+            // until a routing decision is made.
+            _ => {}
+        }
     }
 
     /// Returns the effective window scale used when converting between logical
@@ -752,9 +880,25 @@ impl WindowState {
 
     pub fn compute_layout(&mut self) {
         let mut measure_context = MeasureCx::default();
+        let mut root_style = crate::style::Style::new().size_full().to_taffy_style();
+        // When the window opts in, inset the root by the safe-area so content
+        // clears the notch / gesture bar / status bar. `safe_area` is in
+        // physical pixels; layout space is `physical / effective_scale`.
+        if self.apply_safe_area {
+            let scale = self.effective_scale() as f32;
+            if scale > 0.0 {
+                let insets = self.safe_area.get_untracked();
+                root_style.padding = taffy::prelude::Rect {
+                    top: taffy::style::LengthPercentage::length(insets.top as f32 / scale),
+                    left: taffy::style::LengthPercentage::length(insets.left as f32 / scale),
+                    bottom: taffy::style::LengthPercentage::length(insets.bottom as f32 / scale),
+                    right: taffy::style::LengthPercentage::length(insets.right as f32 / scale),
+                };
+            }
+        }
         let _ = self.root_view_id.taffy().borrow_mut().set_style(
             self.root_layout_node,
-            crate::style::Style::new().size_full().to_taffy_style(),
+            root_style,
         );
 
         self.apply_fixed_element_styles();

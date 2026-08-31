@@ -2,7 +2,6 @@ use dpi::PhysicalPosition;
 use floem_renderer::gpu_resources::GpuResources;
 #[cfg(not(target_arch = "wasm32"))]
 use std::time::Instant;
-use ui_events_winit::WindowEventTranslation;
 #[cfg(target_arch = "wasm32")]
 use web_time::Instant;
 
@@ -22,6 +21,7 @@ use winit::{
 use super::{APP_UPDATE_EVENTS, AppConfig, AppEventCallback, AppUpdateEvent, UserEvent};
 #[cfg(not(feature = "skia"))]
 use crate::context::PaintState;
+use crate::embedder::{EmbedderEvent, VecCommandSink};
 use crate::{
     AppEvent, Application,
     action::{Timer, TimerToken},
@@ -36,6 +36,7 @@ use crate::{
     window::{WindowConfig, handle::WindowHandle, id::process_window_updates},
 };
 
+#[cfg(not(any(target_os = "android", target_os = "ios", target_env = "ohos")))]
 struct PendingContextMenu {
     window_id: WindowId,
     menu: super::MenuWrapper,
@@ -46,6 +47,7 @@ pub(crate) struct ApplicationHandle {
     window_handles: HashMap<winit::window::WindowId, WindowHandle>,
     timers: HashMap<TimerToken, Timer>,
     animating_windows: std::collections::HashSet<winit::window::WindowId>,
+    #[cfg(not(any(target_os = "android", target_os = "ios", target_env = "ohos")))]
     pending_context_menus: Vec<PendingContextMenu>,
     pub(crate) event_listener: Option<Box<AppEventCallback>>,
     pub(crate) gpu_resources: Option<GpuResources>,
@@ -60,6 +62,7 @@ impl ApplicationHandle {
             window_handles: HashMap::new(),
             timers: HashMap::new(),
             animating_windows: std::collections::HashSet::new(),
+            #[cfg(not(any(target_os = "android", target_os = "ios", target_env = "ohos")))]
             pending_context_menus: Vec::new(),
             event_listener: None,
             gpu_resources: None,
@@ -114,6 +117,7 @@ impl ApplicationHandle {
                     panic!("Sent a gpu resource update after it had already been initialized");
                 }
             }
+            #[cfg(not(any(target_os = "android", target_os = "ios", target_env = "ohos")))]
             UserEvent::ShowContextMenu {
                 window_id,
                 menu,
@@ -124,6 +128,14 @@ impl ApplicationHandle {
                     menu,
                     pos,
                 });
+            }
+            #[cfg(target_os = "ios")]
+            UserEvent::IosIme { window_id, event } => {
+                // Route the iOS keyboard edit to the focused window as a plain
+                // `Event::Ime` (bypassing winit, which has no iOS IME support).
+                if let Some(window_handle) = self.window_handles.get_mut(&window_id) {
+                    window_handle.event(crate::event::Event::Ime(event.to_floem()));
+                }
             }
         }
     }
@@ -200,9 +212,17 @@ impl ApplicationHandle {
                 #[cfg(not(target_arch = "wasm32"))]
                 AppUpdateEvent::MenuAction { action_id } => {
                     for (_, handle) in self.window_handles.iter_mut() {
-                        if handle.window_state.context_menu.contains_key(&action_id)
-                            || handle.window_menu_actions.contains_key(&action_id)
+                        #[cfg_attr(
+                            any(target_arch = "wasm32", target_os = "android", target_os = "ios"),
+                            allow(unused_mut)
+                        )]
+                        let mut matched =
+                            handle.window_state.context_menu.contains_key(&action_id);
+                        #[cfg(not(any(target_arch = "wasm32", target_os = "android", target_os = "ios")))]
                         {
+                            matched |= handle.window_menu_actions.contains_key(&action_id);
+                        }
+                        if matched {
                             handle.menu_action(&action_id);
                             break;
                         }
@@ -294,18 +314,26 @@ impl ApplicationHandle {
 
         let event_scale = window_handle.window_state.effective_scale();
 
-        match window_handle.event_reducer.reduce(event_scale, &event) {
-            Some(WindowEventTranslation::Keyboard(ke)) => {
-                if let WindowEvent::KeyboardInput { is_synthetic, .. } = event
-                    && !is_synthetic
-                {
-                    window_handle.key_event(ke)
+        // Route keyboard & pointer input through the backend-neutral embedder
+        // translator. Lifecycle events (resize, focus, IME, drag-drop, close,
+        // occlusion, theme) continue to be handled by the `match` below, which
+        // performs extra platform bookkeeping (live-resize, close handling,
+        // animation bookkeeping) that the neutral protocol does not yet own.
+        let embedder_window_id = crate::app::winit_embedder::winit_window_id(window_id);
+        let translated = crate::app::winit_embedder::translate_window_event(
+            embedder_window_id,
+            event_scale,
+            &mut window_handle.event_reducer,
+            &event,
+        );
+        let mut commands = VecCommandSink::default();
+        for translated_event in translated {
+            match translated_event {
+                EmbedderEvent::Keyboard { .. } | EmbedderEvent::Pointer { .. } => {
+                    window_handle.handle_embedder_event(translated_event, &mut commands);
                 }
+                _ => {}
             }
-            Some(WindowEventTranslation::Pointer(pe)) => {
-                window_handle.pointer_event(pe);
-            }
-            None => {}
         }
 
         match event {
@@ -315,6 +343,23 @@ impl ApplicationHandle {
                 let size: LogicalSize<f64> = size.to_logical(window_handle.window_state.os_scale);
                 let size = Size::new(size.width, size.height);
                 window_handle.size(size);
+                // On iOS a surface resize (rotation / orientation change) is
+                // also when the safe-area insets change. Push them into the
+                // neutral protocol so the core layout can inset its root away
+                // from the notch / Home Indicator (when the window opted into
+                // `apply_safe_area`). See `docs/ios.md` §Step 9.
+                #[cfg(target_os = "ios")]
+                {
+                    let insets = crate::embedder::ios::read_safe_area();
+                    let mut cmds = VecCommandSink::default();
+                    window_handle.handle_embedder_event(
+                        EmbedderEvent::SafeArea {
+                            window_id: embedder_window_id,
+                            insets,
+                        },
+                        &mut cmds,
+                    );
+                }
             }
             WindowEvent::Moved(position) => {
                 let position: LogicalPosition<f64> =
@@ -450,6 +495,7 @@ impl ApplicationHandle {
             window_level,
             theme_override,
             apply_default_theme,
+            apply_safe_area,
             mac_os_config,
             win_os_config,
             web_config,
@@ -629,6 +675,68 @@ impl ApplicationHandle {
             }
         }
         let window_id = window.id();
+
+        // Capture the raw content-view pointer so the macOS accessibility
+        // backend (accesskit_macos) can anchor its native a11y tree to it.
+        #[cfg(target_os = "macos")]
+        let a11y_ns_view = {
+            use raw_window_handle::{HasWindowHandle, RawWindowHandle};
+            match window.window_handle() {
+                Ok(h) => match h.as_raw() {
+                    // `raw-window-handle` 0.6 only exposes `ns_view` (a
+                    // `NonNull<c_void>`); the `NSWindow` is recovered at runtime
+                    // inside accesskit_macos's view subclassing.
+                    RawWindowHandle::AppKit(a) => a.ns_view.as_ptr(),
+                    _ => std::ptr::null_mut(),
+                },
+                Err(_) => std::ptr::null_mut(),
+            }
+        };
+
+        // Capture the raw `HWND` so the Windows accessibility backend
+        // (accesskit_windows) can register its UI Automation provider.
+        #[cfg(target_os = "windows")]
+        let a11y_hwnd = {
+            use raw_window_handle::{HasWindowHandle, RawWindowHandle};
+            match window.window_handle() {
+                Ok(h) => match h.as_raw() {
+                    // `raw-window-handle` 0.6 names the Win32 variant `Win32`
+                    // (not `Windows`); the `HWND` is `hwnd` (`NonNull<c_void>`).
+                    RawWindowHandle::Win32(a) => a.hwnd.get() as *mut std::ffi::c_void,
+                    _ => std::ptr::null_mut(),
+                },
+                Err(_) => std::ptr::null_mut(),
+            }
+        };
+
+        // Capture the raw `UIView` so the iOS accessibility backend
+        // (backend_ios — VoiceOver) can anchor its `UIAccessibilityElement`
+        // tree to it.
+        #[cfg(target_os = "ios")]
+        let a11y_ui_view = {
+            use raw_window_handle::{HasWindowHandle, RawWindowHandle};
+            match window.window_handle() {
+                Ok(h) => match h.as_raw() {
+                    // `raw-window-handle` 0.6 names the iOS variant `UiKit`;
+                    // `ui_view` is the window's `UIView` (`NonNull<c_void>`).
+                    RawWindowHandle::UiKit(a) => a.ui_view.as_ptr(),
+                    _ => std::ptr::null_mut(),
+                },
+                Err(_) => std::ptr::null_mut(),
+            }
+        };
+
+        // Capture the raw `OH_NativeXComponent*` so the OHOS accessibility
+        // backend (#122, Route A) can register its provider on the XComponent.
+        // `window` is a `Box<dyn winit::window::Window>` (= `floem_winit_core`'s
+        // `Window`, the same trait `tgui-winit-ohos`' `WindowExtOhos` is
+        // implemented for), so `xcomponent_ptr()` is reachable via that trait.
+        #[cfg(target_env = "ohos")]
+        let a11y_xcomponent = {
+            use tgui_winit_ohos::WindowExtOhos;
+            window.as_ref().xcomponent_ptr()
+        };
+
         let window_handle = WindowHandle::new(
             window,
             self.gpu_resources.clone(),
@@ -637,9 +745,39 @@ impl ApplicationHandle {
             view_fn,
             transparent,
             apply_default_theme,
+            apply_safe_area,
             font_embolden,
+            #[cfg(target_os = "macos")]
+            a11y_ns_view,
+            #[cfg(target_os = "windows")]
+            a11y_hwnd,
+            #[cfg(target_os = "ios")]
+            a11y_ui_view,
+            #[cfg(target_env = "ohos")]
+            a11y_xcomponent,
         );
         self.window_handles.insert(window_id, window_handle);
+    }
+
+    /// Mark every window's GPU surface as lost. Called from the Android `destroy_surfaces`
+    /// lifecycle hook, just before the OS destroys the native window.
+    #[cfg(target_os = "android")]
+    pub(crate) fn mark_android_surfaces_lost(&mut self) {
+        for handle in self.window_handles.values_mut() {
+            handle.gpu_surface_lost = true;
+        }
+    }
+
+    /// Rebuild every lost GPU surface against its (newly created) native window. Called from the
+    /// Android `can_create_surfaces` lifecycle hook, which winit fires whenever a new `ANativeWindow`
+    /// becomes available (pause/resume, rotation).
+    #[cfg(target_os = "android")]
+    pub(crate) fn recreate_lost_android_surfaces(&mut self) {
+        for handle in self.window_handles.values_mut() {
+            if handle.gpu_surface_lost {
+                handle.recreate_gpu_surface();
+            }
+        }
     }
 
     fn close_window(&mut self, window_id: WindowId, event_loop: &dyn ActiveEventLoop) {
@@ -823,11 +961,12 @@ impl ApplicationHandle {
         self.fire_timer(event_loop);
     }
 
+    #[cfg(not(any(target_os = "android", target_os = "ios", target_env = "ohos")))]
     pub(crate) fn flush_deferred_context_menus(&mut self) {
         let pending = std::mem::take(&mut self.pending_context_menus);
         for item in pending {
             if let Some(handle) = self.window_handles.get_mut(&item.window_id) {
-                handle.show_context_menu(item.menu.0, item.pos);
+                handle.show_context_menu(item.menu.0, item.pos, false);
             }
         }
     }

@@ -1,8 +1,9 @@
 #![deny(missing_docs)]
 use crate::{
     Clipboard, ViewId, WindowState,
-    action::{TimerToken, exec_after, set_ime_allowed, set_ime_cursor_area},
+    action::{TimerToken, exec_after, set_ime_allowed, set_ime_cursor_area, set_ime_purpose},
     custom_event,
+    embedder::ImePurpose,
     event::{EventPropagation, FocusEvent, ImeEvent, Phase, RouteKind},
     prop_extractor,
     reactive::RwSignal,
@@ -148,6 +149,10 @@ pub struct TextInput {
     last_pointer_down: Point,
     last_cursor_action_on: Instant,
     last_ime_cursor_area: Option<(Point, Size)>,
+    /// Semantic IME input purpose (text / password / number / …), forwarded to
+    /// backends that configure the platform soft keyboard (currently OHOS) when
+    /// the field gains focus.
+    input_purpose: ImePurpose,
     text_node: Option<taffy::NodeId>,
     layout_node: Option<taffy::NodeId>,
     cursor_blink_timer: crate::action::TimerToken,
@@ -315,6 +320,7 @@ impl TextInput {
             last_pointer_down: Point::ZERO,
             last_cursor_action_on: Instant::now(),
             last_ime_cursor_area: None,
+            input_purpose: ImePurpose::Text,
             text_node: None,
             layout_node: None,
             cursor_blink_timer: TimerToken::INVALID,
@@ -345,6 +351,18 @@ impl TextInput {
     /// Add an event listener to run when the enter key is pressed.
     pub fn on_enter(self, action: impl Fn() + 'static) -> Self {
         self.on_event_stop(TextInputEnter::listener(), move |_, _| action())
+    }
+
+    /// Set the semantic IME input purpose (text / password / number / …).
+    ///
+    /// When this field gains focus, the purpose is forwarded to backends that
+    /// configure the platform soft keyboard (currently OHOS) so the on-screen
+    /// keyboard can adapt — e.g. a numeric keypad for [`ImePurpose::Number`] or
+    /// secure entry for [`ImePurpose::Password`]. Other backends ignore it.
+    /// Defaults to [`ImePurpose::Text`].
+    pub fn input_purpose(mut self, purpose: ImePurpose) -> Self {
+        self.input_purpose = purpose;
+        self
     }
 
     fn set_taffy_layout(&mut self) {
@@ -1401,6 +1419,7 @@ impl View for TextInput {
                 match focus {
                     FocusEvent::Gained(keyboard) => {
                         set_ime_allowed(true);
+                        set_ime_purpose(self.input_purpose);
 
                         if *keyboard {
                             // Keyboard navigation (Tab, etc.)

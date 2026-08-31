@@ -11,7 +11,7 @@ parking_lot = { workspace = true }
 peniko = { workspace = true }
 resvg = { workspace = true }
 parley = { workspace = true }
-fontique = { workspace = true }
+fontique = { workspace = true, features = ["fontconfig-dlopen"] }
 winit = { workspace = true }
 wgpu = { workspace = true }
 crossbeam = { version = "0.8", optional = true }

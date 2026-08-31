@@ -1,6 +1,7 @@
 #[cfg(target_os = "macos")]
 pub(crate) mod delegate;
 pub(crate) mod handle;
+pub(crate) mod winit_embedder;
 
 use std::{
     cell::RefCell,
@@ -11,6 +12,7 @@ use std::{
 use crate::platform::menu_types::MenuId;
 #[cfg(feature = "crossbeam")]
 use crossbeam::channel::{Receiver, Sender, unbounded as channel};
+#[cfg(not(any(target_os = "android", target_os = "ios", target_env = "ohos")))]
 use peniko::kurbo::Point;
 #[cfg(not(feature = "crossbeam"))]
 use std::sync::mpsc::{Receiver, Sender, channel};
@@ -107,13 +109,16 @@ pub enum AppEvent {
     Reopen { has_visible_windows: bool },
 }
 
+#[cfg(not(any(target_os = "android", target_os = "ios", target_env = "ohos")))]
 pub(crate) struct MenuWrapper(pub(crate) muda::Menu);
 // SAFETY: these unsafe wappers are needed so that we can send the muda memu.
 // The muda menu internally uses RC on a String ID and it's Vec of children.
 // This unsafe wrapper is memory safe but the race condition could potentially (unlikely)
 // lead to bad reference counts and leaked memory.
 // I think this is fine for this case.
+#[cfg(not(any(target_os = "android", target_os = "ios", target_env = "ohos")))]
 unsafe impl Send for MenuWrapper {}
+#[cfg(not(any(target_os = "android", target_os = "ios", target_env = "ohos")))]
 unsafe impl Sync for MenuWrapper {}
 
 pub(crate) enum UserEvent {
@@ -128,10 +133,19 @@ pub(crate) enum UserEvent {
     GpuResourcesUpdate {
         window_id: WindowId,
     },
+    #[cfg(not(any(target_os = "android", target_os = "ios", target_env = "ohos")))]
     ShowContextMenu {
         window_id: WindowId,
         menu: MenuWrapper,
         pos: Option<Point>,
+    },
+    /// iOS soft-keyboard / IME edit produced by the hidden `UITextField`
+    /// delegate (`platform::ios_ime`). Carries the winit window id whose text
+    /// input is focused plus the neutral IME edit to inject as `Event::Ime`.
+    #[cfg(target_os = "ios")]
+    IosIme {
+        window_id: winit::window::WindowId,
+        event: crate::platform::ios_ime::IosImeEvent,
     },
 }
 
@@ -225,6 +239,10 @@ impl ApplicationHandler for Application {
                 window_creation.config.unwrap_or_default(),
             );
         }
+        // On Android the native window is recreated on every pause/resume and rotation. When a new
+        // native window appears we must rebuild the (now invalid) wgpu surface against it.
+        #[cfg(target_os = "android")]
+        self.handle.recreate_lost_android_surfaces();
     }
 
     fn window_event(
@@ -249,12 +267,17 @@ impl ApplicationHandler for Application {
     }
 
     fn destroy_surfaces(&mut self, _event_loop: &dyn ActiveEventLoop) {
+        // On Android the native window is about to be destroyed by the OS. Mark every surface as
+        // lost so we stop painting against it (and recreate it in `can_create_surfaces`).
+        #[cfg(target_os = "android")]
+        self.handle.mark_android_surfaces_lost();
         if let Some(action) = self.handle.event_listener.as_ref() {
             action(AppEvent::WillTerminate);
         }
     }
 
     fn about_to_wait(&mut self, event_loop: &dyn ActiveEventLoop) {
+        #[cfg(not(any(target_os = "android", target_os = "ios", target_env = "ohos")))]
         self.handle.flush_deferred_context_menus();
         self.handle.handle_timer(event_loop);
         if Runtime::has_pending_work() {
@@ -295,6 +318,168 @@ impl Application {
             event_loop: Some(event_loop),
             initial_windows: Vec::new(),
         }
+    }
+
+    /// Create an `Application` bound to the Android `NativeActivity`.
+    ///
+    /// Unlike [`Application::new_with_config`], which builds a default
+    /// `EventLoop`, this associates the `AndroidApp` passed to `android_main()`
+    /// with the event loop via winit's `EventLoopBuilderExtAndroid`. The
+    /// returned application is then driven exactly like the desktop one
+    /// (`.window(...).run()`).
+    #[cfg(target_os = "android")]
+    pub fn new_android(
+        app: winit::platform::android::activity::AndroidApp,
+        mut config: AppConfig,
+    ) -> Self {
+        use winit::platform::android::EventLoopBuilderExtAndroid;
+
+        // Android only supports the Vulkan backend; probing other backends is pointless and can
+        // error. Default to Vulkan unless the caller explicitly chose backends.
+        if config.wgpu_backends.is_none() {
+            config.wgpu_backends = Some(wgpu::Backends::VULKAN);
+        }
+
+        let mut builder = EventLoop::builder();
+        // Capture JNI handles before `with_android_app` moves `app` into the
+        // builder; the clipboard bridge needs the JavaVM + Activity pointers.
+        let clipboard_vm = app.vm_as_ptr();
+        let clipboard_activity = app.activity_as_ptr() as jni::sys::jobject;
+        builder.with_android_app(app);
+        let event_loop = builder
+            .build()
+            .expect("can't start the android event loop");
+
+        let event_loop_proxy = event_loop.create_proxy();
+        let (sender, receiver) = channel();
+
+        *EVENT_LOOP_PROXY.lock() = Some((event_loop_proxy.clone(), sender));
+        unsafe {
+            // Initialize the shared Android JNI bridge from the AndroidApp's
+            // JNI handles (the legacy `display`-based init has no clipboard on
+            // Android). The bridge is used by the clipboard, external-URL
+            // opening, file dialogs, and receiving shared files.
+            Clipboard::init_android(clipboard_vm, clipboard_activity);
+        }
+        #[cfg(target_os = "android")]
+        {
+            // Read the launch intent (if the app was started by a share). Safe
+            // with the default `NativeActivity`; the JNI bridge is now ready.
+            crate::platform::android_intent::read_launch_intent();
+        }
+        let handle = ApplicationHandle::new(config);
+
+        Self {
+            receiver,
+            handle,
+            event_loop: Some(event_loop),
+            initial_windows: Vec::new(),
+        }
+    }
+
+    /// Create an `Application` for iOS.
+    ///
+    /// Unlike [`Application::new_with_config`], this builds a plain
+    /// `EventLoop` with no `AndroidApp`/JNI handle: the lapce winit fork's iOS
+    /// backend turns the Rust `fn main` into a proper UIKit app — `EventLoop::run`
+    /// calls `UIApplicationMain` with winit's own `UIApplicationDelegate`. Floem's
+    /// existing winit event path (pointer/keyboard/IME) therefore reuses with no
+    /// custom input translation. (No `EventLoopBuilderExtIOS` exists in this
+    /// fork; a plain `EventLoop` is sufficient.) See `docs/ios.md`.
+    #[cfg(target_os = "ios")]
+    pub fn new_ios(mut config: AppConfig) -> Self {
+        // iOS only supports the Metal backend; probing other backends is
+        // pointless and can error. Default to Metal unless the caller chose.
+        if config.wgpu_backends.is_none() {
+            config.wgpu_backends = Some(wgpu::Backends::METAL);
+        }
+
+        // The iOS backend owns the UIKit lifecycle; no desktop `Clipboard::init`
+        // (display-handle clipboard), no macOS app delegate, and no muda
+        // `MenuEvent` handler (muda has no iOS backend — iOS uses the in-UI
+        // context menu like Android).
+        let event_loop = EventLoop::new().expect("can't start the ios event loop");
+
+        let event_loop_proxy = event_loop.create_proxy();
+        let (sender, receiver) = channel();
+
+        *EVENT_LOOP_PROXY.lock() = Some((event_loop_proxy.clone(), sender));
+        let handle = ApplicationHandle::new(config);
+
+        // Install the share/intent hook (iOS Step 8): inject
+        // `application:openURL:options:` onto winit's `WinitApplicationDelegate`
+        // so files shared into the app are delivered to the registered
+        // `set_shared_files_handler`. Scheduled on the main queue because winit
+        // registers that class lazily inside `EventLoop::run()`.
+        crate::platform::ios_receive::install_openurl_hook();
+
+        Self {
+            receiver,
+            handle,
+            event_loop: Some(event_loop),
+            initial_windows: Vec::new(),
+        }
+    }
+
+    /// Create an `Application` for OpenHarmony (HarmonyOS).
+    ///
+    /// Unlike Android/iOS/macOS, the event loop is **not** created here. The
+    /// `tgui-winit-ohos` runtime owns the OHOS event loop: its `runtime_new`
+    /// calls `EventLoop::bootstrap()` and then drives this `Application` as the
+    /// `ApplicationHandler` from a worker thread via `pump_app_events`. So this
+    /// constructor only builds the handler state (`event_loop` stays `None`);
+    /// the real loop lives inside `tgui-winit-ohos`.
+    ///
+    /// # Compile-time note
+    ///
+    /// `tgui-winit-ohos`'s `RuntimeApplication` requires
+    /// `floem_winit_core::application::ApplicationHandler`. That is the **same**
+    /// trait Floem implements: `floem-winit` (the facade Floem depends on)
+    /// re-exports `floem-winit-core::application::ApplicationHandler`, and
+    /// `floem-winit-core` is a single shared crate instance used by both
+    /// `floem-winit` and `tgui-winit-ohos`. So the `ApplicationHandler` bound
+    /// is satisfied — the two traits unify through `floem-winit-core`.
+    ///
+    /// The fork's runtime owns the OHOS event loop **and** the `ApplicationHandler`
+    /// entirely on its worker thread: the handler is created inside the thread
+    /// via `AppFactory` and never crosses a thread boundary, so `RuntimeApplication`
+    /// does **not** require `Send`. Floem's `Application` is intentionally
+    /// `!Send` (its reactivity layer uses `Rc`-backed signals and
+    /// `Box<dyn Fn>` callbacks), so the fork's `Send` bound was relaxed to
+    /// match. The method set (`can_create_surfaces` / `window_event` /
+    /// `about_to_wait` / `proxy_wake_up` / `destroy_surfaces`) already matches.
+    #[cfg(target_env = "ohos")]
+    pub fn new_ohos(mut config: AppConfig) -> Self {
+        // OHOS uses the Vulkan backend via VK_OHOS_surface (requires wgpu >= 0.30).
+        if config.wgpu_backends.is_none() {
+            config.wgpu_backends = Some(wgpu::Backends::VULKAN);
+        }
+
+        let (_sender, receiver) = channel();
+        let handle = ApplicationHandle::new(config);
+
+        Self {
+            receiver,
+            handle,
+            event_loop: None,
+            initial_windows: Vec::new(),
+        }
+    }
+
+    /// Factory handed to `tgui_winit_ohos::export_ohos_winit_app!`.
+    ///
+    /// `runtime_new` calls this once to obtain the `ApplicationHandler` it
+    /// pumps. Returns an `Application` built by [`Application::new_ohos`].
+    ///
+    /// NOTE: this stub returns an `Application` with **no** window. Apps should
+    /// normally supply their own factory that calls `.window(...)` (see
+    /// `examples/ohos/src/lib.rs`). The `RuntimeApplication` bound is satisfied
+    /// now that the fork no longer requires `Send` — the OHOS runtime owns the
+    /// handler on its worker thread, so `Application`'s `!Send` reactivity
+    /// layer is not a problem.
+    #[cfg(target_env = "ohos")]
+    pub fn floem_app_factory() -> Self {
+        Self::new_ohos(AppConfig::default())
     }
 
     pub fn on_event(mut self, action: impl Fn(AppEvent) + 'static) -> Self {

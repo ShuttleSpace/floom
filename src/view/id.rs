@@ -44,6 +44,8 @@ use crate::{
 
 use super::AnyView;
 
+use crate::accessibility::{AccessAction, AccessRole};
+
 #[allow(unused)]
 pub struct NotThreadSafe(*const ());
 
@@ -1097,6 +1099,114 @@ impl ViewId {
     /// This will be overridden by any cursor set by view styles and will be overriden by cursors set on visual ids.
     pub fn set_cursor(&self, cursor: Option<crate::style::CursorStyle>) {
         self.state().borrow_mut().user_cursor = cursor;
+    }
+
+    /// Set the accessibility role for this view.
+    ///
+    /// Backends map this to the native role (e.g. `NSAccessibilityButtonRole`,
+    /// `AccessibilityRole.Button`, an AT-SPI `ROLE_PUSH_BUTTON`, ...). Views
+    /// with no role set default to [`AccessRole::Unknown`].
+    pub fn accessibility_role(&self, role: AccessRole) {
+        self.state()
+            .borrow_mut()
+            .accessibility
+            .get_or_insert_with(Default::default)
+            .role = role;
+    }
+
+    /// Set the accessible name (label) for this view.
+    ///
+    /// For editable text this is usually empty and [`accessibility_value`]
+    /// carries the content instead.
+    pub fn accessibility_label(&self, label: impl Into<String>) {
+        self.state()
+            .borrow_mut()
+            .accessibility
+            .get_or_insert_with(Default::default)
+            .label = Some(label.into());
+    }
+
+    /// Set the accessible value (text content, slider value as a string, ...).
+    pub fn accessibility_value(&self, value: impl Into<String>) {
+        self.state()
+            .borrow_mut()
+            .accessibility
+            .get_or_insert_with(Default::default)
+            .value = Some(value.into());
+    }
+
+    /// Set a longer description beyond the label.
+    pub fn accessibility_description(&self, description: impl Into<String>) {
+        self.state()
+            .borrow_mut()
+            .accessibility
+            .get_or_insert_with(Default::default)
+            .description = Some(description.into());
+    }
+
+    /// Set the actions this node can respond to.
+    ///
+    /// Drives which verbs the screen reader offers (e.g. a button advertises
+    /// [`AccessAction::Default`], a slider advertises [`AccessAction::Increment`]).
+    pub fn accessibility_actions(&self, actions: impl IntoIterator<Item = AccessAction>) {
+        self.state()
+            .borrow_mut()
+            .accessibility
+            .get_or_insert_with(Default::default)
+            .actions = actions.into_iter().collect();
+    }
+
+    /// Mark this view as decorative / presentational.
+    ///
+    /// The view is removed from the accessibility tree and its children are
+    /// re-parented to the nearest exposed ancestor, mirroring ARIA
+    /// `role="presentation"` / `role="none"`.
+    pub fn accessibility_skip(&self, hidden: bool) {
+        self.state()
+            .borrow_mut()
+            .accessibility
+            .get_or_insert_with(Default::default)
+            .hidden = hidden;
+    }
+
+    /// Register a semantic-action handler for this view.
+    ///
+    /// Screen readers can request semantic actions — [`AccessAction::Increment`],
+    /// [`AccessAction::Decrement`], [`AccessAction::Expand`],
+    /// [`AccessAction::Collapse`], [`AccessAction::SetValue`],
+    /// [`AccessAction::ScrollIntoView`] — that have no generic Floem event.
+    /// Register a handler here to make the view operable: it receives the
+    /// requested [`AccessAction`] and, for `SetValue`, the new value as a
+    /// string payload.
+    ///
+    /// For example, a slider would handle `Increment`/`Decrement` by stepping
+    /// its reactive value, and `SetValue` by parsing the string into that
+    /// value:
+    ///
+    /// ```ignore
+    /// let value = self.value; // a RwSignal<f64>
+    /// view.accessibility_action(move |action, payload| match action {
+    ///     AccessAction::Increment => value.update(|v| *v += STEP),
+    ///     AccessAction::Decrement => value.update(|v| *v -= STEP),
+    ///     AccessAction::SetValue => {
+    ///         if let Some(s) = payload.and_then(|s| s.parse::<f64>().ok()) {
+    ///             value.set(s);
+    ///         }
+    ///     }
+    ///     _ => {}
+    /// });
+    /// ```
+    ///
+    /// Generic actions (`Focus`, `Default`, `ShowContextMenu`) are routed
+    /// through Floem's normal focus/event paths and need no handler.
+    ///
+    /// See also [`super::accessibility::AccessibilityActionHandler`].
+    pub fn accessibility_action(&self, handler: impl Fn(AccessAction, Option<String>) + 'static) {
+        self.state()
+            .borrow_mut()
+            .accessibility
+            .get_or_insert_with(Default::default)
+            .on_action = Some(std::sync::Arc::new(handler));
     }
 
     /// Disables the default view behavior for the specified event.

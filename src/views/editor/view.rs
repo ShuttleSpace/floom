@@ -2,8 +2,9 @@ use std::{collections::HashMap, ops::RangeInclusive, rc::Rc};
 
 use crate::{
     Renderer,
-    action::{set_ime_allowed, set_ime_cursor_area},
+    action::{set_ime_allowed, set_ime_cursor_area, set_ime_purpose},
     context::{LayoutChanged, LayoutChangedListener, PaintCx, UpdateCx, VisualChanged},
+    embedder::ImePurpose,
     event::{
         CustomEvent, Event, EventPropagation, ImeEvent, PointerScrollEventExt, listener,
         listener::UpdatePhaseBoxTreeCommit,
@@ -349,9 +350,25 @@ pub struct EditorView {
     editor: RwSignal<Editor>,
     is_active: Memo<bool>,
     inner_node: Option<NodeId>,
+    /// Semantic IME input purpose (text / password / number / …), forwarded to
+    /// backends that configure the platform soft keyboard (currently OHOS) when
+    /// the editor gains focus.
+    input_purpose: RwSignal<ImePurpose>,
 }
 
 impl EditorView {
+    /// Set the semantic IME input purpose (text / password / number / …).
+    ///
+    /// When this editor gains focus, the purpose is forwarded to backends that
+    /// configure the platform soft keyboard (currently OHOS) so the on-screen
+    /// keyboard can adapt — e.g. a numeric keypad for [`ImePurpose::Number`] or
+    /// secure entry for [`ImePurpose::Password`]. Other backends ignore it.
+    /// Defaults to [`ImePurpose::Text`].
+    pub fn input_purpose(self, purpose: ImePurpose) -> Self {
+        self.input_purpose.set(purpose);
+        self
+    }
+
     /// Create a taffy layout function for editor content
     pub fn create_editor_layout_fn(editor: RwSignal<Editor>) -> Box<MeasureFn> {
         Box::new(
@@ -1115,6 +1132,7 @@ pub fn editor_view(
     let focused = ed.editor_view_focused_value;
     let prev_ime_area = ed.ime_cursor_area;
     let preedit = ed.preedit().preedit;
+    let input_purpose = Scope::current().create_rw_signal(ImePurpose::Text);
 
     Effect::new(move |_| {
         if !is_active.get() {
@@ -1173,6 +1191,7 @@ pub fn editor_view(
         editor,
         is_active,
         inner_node: None,
+        input_purpose,
     };
 
     ed_view.set_taffy_layout();
@@ -1182,6 +1201,7 @@ pub fn editor_view(
         .on_event_cont(listener::FocusGained, move |_, _| {
             focused.set(true);
             prev_ime_area.set(None);
+            set_ime_purpose(input_purpose.get_untracked());
 
             if allows_ime.get_untracked() {
                 set_ime_allowed(true);

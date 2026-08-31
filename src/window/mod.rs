@@ -46,6 +46,10 @@ pub struct WindowConfig {
     /// Applies chosen theme or os theme, when `None` is provided.
     pub(crate) theme_override: Option<Theme>,
     pub(crate) apply_default_theme: bool,
+    /// When `true`, core insets the root layout node by the window's safe-area
+    /// (notch / gesture-bar / status bar) so content clears OS chrome. Mobile
+    /// apps typically enable this; desktop apps leave it off.
+    pub(crate) apply_safe_area: bool,
     pub(crate) font_embolden: f32,
     #[allow(dead_code)]
     pub(crate) mac_os_config: Option<MacOSWindowConfig>,
@@ -75,6 +79,7 @@ impl Default for WindowConfig {
             window_level: WindowLevel::Normal,
             theme_override: None,
             apply_default_theme: true,
+            apply_safe_area: false,
             font_embolden: if cfg!(target_os = "macos") { 0.1 } else { 0. },
             mac_os_config: None,
             win_os_config: None,
@@ -221,6 +226,19 @@ impl WindowConfig {
     #[inline]
     pub fn apply_default_theme(mut self, apply: bool) -> Self {
         self.apply_default_theme = apply;
+        self
+    }
+
+    /// Insets the root layout node by the window's safe-area (notch / gesture
+    /// bar / status bar) so content clears OS chrome.
+    ///
+    /// Off by default. Mobile apps generally enable this; desktop apps that
+    /// manage their own insets (or run on platforms without a safe area) leave
+    /// it off. The insets are still observable via `WindowHandle::safe_area()`
+    /// either way.
+    #[inline]
+    pub fn apply_safe_area(mut self, apply: bool) -> Self {
+        self.apply_safe_area = apply;
         self
     }
 

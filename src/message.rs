@@ -7,12 +7,13 @@ use winit::window::{ResizeDirection, Theme};
 
 use crate::{
     ElementId,
+    embedder::ImePurpose,
     event::{Event, RouteKind, listener},
-    platform::menu::Menu,
     style::recalc::StyleReason,
     view::{AnyView, View, ViewId},
     window::state::WindowState,
 };
+use crate::platform::menu::Menu;
 
 thread_local! {
     /// Stores all the update message with their original `ViewId`
@@ -87,8 +88,12 @@ pub enum UpdateMessage {
     ShowContextMenu {
         menu: Menu,
         pos: Option<Point>,
+        /// On Android (in-UI renderer), `true` when the menu was opened while the
+        /// pointer is still held (e.g. long-press). Keeps the menu from being
+        /// dismissed by the finger-lift that ends the gesture.
+        had_pointer_down: bool,
     },
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(not(any(target_arch = "wasm32", target_os = "android", target_os = "ios")))]
     WindowMenu {
         menu: Menu,
     },
@@ -113,6 +118,13 @@ pub enum UpdateMessage {
     SetImeCursorArea {
         position: Point,
         size: Size,
+    },
+    /// Semantic IME input purpose (text / password / number / …), forwarded to
+    /// backends that configure the platform soft keyboard (currently OHOS).
+    /// Additive: existing `set_ime_allowed` callers are unaffected, and desktop
+    /// keeps hard-coding `ImePurpose::Normal` as before.
+    SetImePurpose {
+        purpose: ImePurpose,
     },
     WindowVisible(bool),
     ViewTransitionAnimComplete(ViewId),

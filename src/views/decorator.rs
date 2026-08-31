@@ -607,10 +607,12 @@ pub trait Decorators: IntoView {
     /// - macOS: Yes (not currently implemented)
     /// - Linux: No
     /// - wasm32: No
+    /// - Android: No
+    /// - iOS: No
     ///
     /// # Reactivity
     /// The menu function is reactive and will rereun in response to any signal changes in the function.
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(not(any(target_arch = "wasm32", target_os = "android", target_os = "ios")))]
     fn window_menu(self, menu_fn: impl Fn() -> Menu + 'static) -> Self::Intermediate {
         let intermediate = self.into_intermediate();
         Effect::new(move |_| {

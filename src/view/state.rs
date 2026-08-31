@@ -387,6 +387,10 @@ pub struct ViewState {
     pub(crate) style_cursor: Option<CursorStyle>,
     /// the cursor style that a user can set on a view through the `ViewId`. This takes precedance over style_cursor.
     pub(crate) user_cursor: Option<CursorStyle>,
+    /// Declared accessibility attributes (role/label/value/actions/...).
+    /// `None` means no overrides; the view is still exposed in the a11y tree
+    /// with an unknown role. See [`crate::accessibility::AccessibilityAttrs`].
+    pub(crate) accessibility: Option<crate::accessibility::AccessibilityAttrs>,
     pub(crate) taffy_style: taffy::style::Style,
     pub(crate) event_listeners: FxHashMap<EventListenerKey, EventListenerVec>,
     /// these are the listeners that are registered in the window state. This is used to efficiently clean up those listeners from the window state.
@@ -469,6 +473,7 @@ impl ViewState {
             visibility: Visibility::default(),
             style_cursor: None,
             user_cursor: None,
+            accessibility: None,
             children_scope: None,
             keyed_children: None,
             scope: None,

@@ -176,11 +176,13 @@
 //!
 //! For additional information about animation, [see here](crate::animate::Animation).
 
+pub mod accessibility;
 pub mod action;
 pub mod animate;
 mod app;
 mod box_tree;
 pub mod context;
+pub mod embedder;
 pub mod event;
 pub mod ext_event;
 mod inspector;
@@ -225,18 +227,32 @@ pub(crate) use box_tree::{bump_focus_nav_meta_revision, focus_nav_meta_revision}
 
 pub use app::{AppConfig, AppEvent, Application, launch, quit_app, reopen};
 pub use floem_reactive as reactive;
+// Re-export the most commonly used reactive primitives at the crate root so they
+// can be reached as `floem::Scope`, `floem::create_global_rw_signal`, etc. without
+// going through the `reactive` module path. The full set remains available under
+// `floem::reactive::*`.
+pub use floem_reactive::{
+    Memo, RwSignal, Scope, Trigger, create_effect, create_global_memo, create_global_rw_signal,
+    create_global_signal, create_global_trigger, create_memo, create_rw_signal, create_signal,
+    create_trigger, root_scope,
+};
 pub use floem_renderer::Renderer;
 pub use floem_renderer::Svg as RendererSvg;
 pub use floem_renderer::gpu_resources::GpuResources;
 pub use imbl;
 pub use layout::ScreenLayout;
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(not(any(
+    target_arch = "wasm32",
+    target_os = "android",
+    target_os = "ios",
+    target_env = "ohos"
+)))]
 pub use muda;
 pub use peniko;
 pub use peniko::kurbo;
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(not(any(target_arch = "wasm32", target_os = "android", target_os = "ios")))]
 pub use platform::open_file;
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(not(any(target_arch = "wasm32", target_os = "android", target_os = "ios")))]
 pub use platform::save_as;
 pub use platform::{Clipboard, ClipboardError, FileDialogOptions, FileInfo, FileSpec};
 pub use platform::{Menu, SubMenu};
@@ -268,7 +284,10 @@ pub mod prelude {
     pub use crate::{HasViewId, IntoView, ParentView, View};
     #[allow(deprecated)]
     pub use floem_reactive::{
-        RwSignal, SignalGet, SignalTrack, SignalUpdate, SignalWith, create_rw_signal, create_signal,
+        Memo, RwSignal, Scope, SignalGet, SignalTrack, SignalUpdate, SignalWith, Trigger,
+        create_effect, create_global_memo, create_global_rw_signal, create_global_signal,
+        create_global_trigger, create_memo, create_rw_signal, create_signal, create_trigger,
+        root_scope,
     };
     pub use palette::css;
     pub use peniko::Color;

@@ -1,4 +1,4 @@
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(not(any(target_arch = "wasm32", target_os = "android", target_os = "ios")))]
 use std::collections::HashMap;
 use std::{cell::RefCell, mem, rc::Rc, sync::Arc};
 
@@ -19,33 +19,42 @@ use ui_events::keyboard::{Key, KeyboardEvent, Modifiers, NamedKey};
 use ui_events::pointer::PointerEvent;
 use ui_events_winit::WindowEventReducer;
 
+#[cfg(not(any(target_os = "ios", target_env = "ohos")))]
 use winit::window::{
     ImeCapabilities, ImeEnableRequest, ImeHint, ImePurpose, ImeRequest, ImeRequestData,
 };
 
-use floem_reactive::{RwSignal, Scope, SignalGet, SignalUpdate};
+use floem_reactive::{ReadSignal, RwSignal, Scope, SignalGet, SignalUpdate};
 use floem_renderer::Renderer;
 use floem_renderer::gpu_resources::GpuResources;
 use peniko::color::palette;
 use peniko::kurbo::{self, Point, Size};
 use winit::{
     cursor::CursorIcon,
-    dpi::{LogicalPosition, LogicalSize},
+    dpi::{LogicalSize, PhysicalInsets},
     event::Ime,
     window::{Window, WindowId},
 };
 
 use super::state::WindowState;
 use super::tracking::{remove_window_id_mapping, store_window_id_mapping};
-use crate::app::{MenuWrapper, add_app_update_event};
-#[cfg(any(target_os = "linux", target_os = "freebsd", target_arch = "wasm32"))]
+use crate::app::add_app_update_event;
+#[cfg(not(any(target_os = "android", target_os = "ios", target_env = "ohos")))]
+use crate::app::MenuWrapper;
+#[cfg(any(target_os = "linux", target_os = "freebsd", target_arch = "wasm32", target_os = "android", target_os = "ios"))]
 use crate::platform::context_menu::context_menu_view;
-#[cfg(any(target_os = "linux", target_os = "freebsd", target_arch = "wasm32"))]
+#[cfg(any(
+    target_os = "linux",
+    target_os = "freebsd",
+    target_arch = "wasm32",
+    target_os = "android",
+    target_os = "ios"
+))]
 use crate::reactive::SignalWith;
-#[cfg(any(target_os = "linux", target_os = "freebsd", target_arch = "wasm32"))]
+#[cfg(any(target_os = "linux", target_os = "freebsd", target_arch = "wasm32", target_os = "android", target_os = "ios"))]
 use crate::unit::UnitExt;
 use crate::view::{LayoutTree, VIEW_STORAGE};
-#[cfg(any(target_os = "linux", target_os = "freebsd", target_arch = "wasm32"))]
+#[cfg(any(target_os = "linux", target_os = "freebsd", target_arch = "wasm32", target_os = "android", target_os = "ios"))]
 use crate::views::{Container, Decorators, Stack};
 use crate::{
     Application,
@@ -87,17 +96,24 @@ pub(crate) struct WindowHandle {
     transparent: bool,
     pub(crate) modifiers: Modifiers,
     pub(crate) window_position: Point,
-    #[cfg(any(target_os = "linux", target_os = "freebsd", target_arch = "wasm32"))]
+    #[cfg(any(target_os = "linux", target_os = "freebsd", target_arch = "wasm32", target_os = "android", target_os = "ios"))]
     pub(crate) context_menu: RwSignal<Option<(MudaMenu, Point, bool)>>,
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(not(any(target_arch = "wasm32", target_os = "android", target_os = "ios")))]
     pub(crate) window_menu_actions: HashMap<MenuId, Box<dyn Fn()>>,
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(not(any(target_arch = "wasm32", target_os = "android", target_os = "ios")))]
     pub(crate) window_menu: Option<MudaMenu>,
     pub(crate) event_reducer: WindowEventReducer,
     pub(crate) gpu_resources: Option<GpuResources>,
     last_presented_at: Instant,
     is_occluded: bool,
     live_resize_until: Option<Instant>,
+    // On Android the OS destroys and recreates the native window (`ANativeWindow`) on every
+    // pause/resume and rotation. When that happens the wgpu surface becomes invalid and must be
+    // rebuilt against the new native window before the next paint.
+    #[cfg(target_os = "android")]
+    pub(crate) gpu_surface_lost: bool,
+    #[cfg(target_os = "android")]
+    pub(crate) font_embolden: f32,
 }
 
 impl Drop for WindowHandle {
@@ -120,7 +136,16 @@ impl WindowHandle {
         view_fn: impl FnOnce(winit::window::WindowId) -> Box<dyn View> + 'static,
         transparent: bool,
         apply_default_theme: bool,
+        apply_safe_area: bool,
         font_embolden: f32,
+        #[cfg(target_os = "macos")]
+        ns_view: *mut std::ffi::c_void,
+        #[cfg(target_os = "windows")]
+        hwnd: *mut std::ffi::c_void,
+        #[cfg(target_os = "ios")]
+        ui_view: *mut std::ffi::c_void,
+        #[cfg(target_env = "ohos")]
+        xcomponent: *mut std::ffi::c_void,
     ) -> Self {
         let id = ViewId::new_root();
         let window_id = window.id();
@@ -135,13 +160,13 @@ impl WindowHandle {
 
         set_current_view(id);
 
-        #[cfg(any(target_os = "linux", target_os = "freebsd", target_arch = "wasm32"))]
+        #[cfg(any(target_os = "linux", target_os = "freebsd", target_arch = "wasm32", target_os = "android", target_os = "ios"))]
         let context_menu = scope.create_rw_signal(None);
 
-        #[cfg(not(any(target_os = "linux", target_os = "freebsd", target_arch = "wasm32")))]
+        #[cfg(not(any(target_os = "linux", target_os = "freebsd", target_arch = "wasm32", target_os = "android", target_os = "ios")))]
         let view = scope.enter(move || view_fn(window_id));
 
-        #[cfg(any(target_os = "linux", target_os = "freebsd", target_arch = "wasm32"))]
+        #[cfg(any(target_os = "linux", target_os = "freebsd", target_arch = "wasm32", target_os = "android", target_os = "ios"))]
         let view = scope.enter(move || {
             let main_view = view_fn(window_id);
             Stack::new((
@@ -172,7 +197,66 @@ impl WindowHandle {
 
         let paint_state_initialized = matches!(paint_state, PaintState::Initialized { .. });
 
-        let window_state = WindowState::new(id, os_theme, os_scale);
+        let mut window_state = WindowState::new(id, os_theme, os_scale);
+        window_state.apply_safe_area = apply_safe_area;
+
+        // Attach the platform-native accessibility bridge (desktop only). On
+        // macOS this anchors an NSAccessibility tree to the content view; the
+        // backend then receives every `AccessTreeUpdate` from
+        // `update_accessibility_tree`. Other platforms wire their bridge here
+        // too once compiled for that target.
+        #[cfg(target_os = "macos")]
+        if let Some(backend) =
+            crate::accessibility::native_backend_for_window(ns_view)
+        {
+            window_state.set_accessibility_backend(Some(backend));
+        }
+        #[cfg(target_os = "windows")]
+        if let Some(backend) =
+            crate::accessibility::native_backend_for_window(hwnd)
+        {
+            window_state.set_accessibility_backend(Some(backend));
+        }
+
+        // Attach the iOS accessibility bridge (VoiceOver). Like macOS, it
+        // anchors a native a11y tree to the window's `UIView` and receives
+        // every `AccessTreeUpdate` from `update_accessibility_tree`.
+        #[cfg(target_os = "ios")]
+        if let Some(backend) =
+            crate::accessibility::native_backend_for_window(ui_view)
+        {
+            window_state.set_accessibility_backend(Some(backend));
+        }
+
+        // Attach the OpenHarmony accessibility bridge. It needs no native view
+        // pointer — the a11y tree is serialized and pushed to ArkTS via the
+        // shared N-API platform bridge, which registers it with the OHOS
+        // Accessibility Kit. Receives every `AccessTreeUpdate` from
+        // `update_accessibility_tree` (as do the other platforms).
+        #[cfg(target_env = "ohos")]
+        if let Some(backend) = crate::accessibility::native_backend_for_window() {
+            window_state.set_accessibility_backend(Some(backend));
+        }
+
+        // Register the native accessibility provider on the window's XComponent
+        // so the OHOS screen reader can reach the tree (#122, Route A). The
+        // XComponent pointer is already held by the winit fork; no custom ArkUI
+        // node or window-tree mount is required.
+        #[cfg(target_env = "ohos")]
+        {
+            crate::accessibility::backend_ohos::attach_xcomponent_provider(xcomponent);
+        }
+
+        // Attach the Android accessibility bridge (TalkBack). Like OHOS/iOS it
+        // needs no native view pointer — it injects a transparent
+        // `AccessibilityNodeProvider` overlay into the Activity's decor view
+        // (see `backend_android.rs` / `FloemAccessibilityView.java`) and reads
+        // the `Activity` through the shared JNI handle. Receives every
+        // `AccessTreeUpdate` from `update_accessibility_tree`.
+        #[cfg(target_os = "android")]
+        if let Some(backend) = crate::accessibility::native_backend_for_window() {
+            window_state.set_accessibility_backend(Some(backend));
+        }
 
         let mut window_handle = Self {
             window,
@@ -191,17 +275,21 @@ impl WindowHandle {
             profile: None,
             modifiers: Modifiers::default(),
             window_position: Point::ZERO,
-            #[cfg(any(target_os = "linux", target_os = "freebsd", target_arch = "wasm32"))]
+            #[cfg(any(target_os = "linux", target_os = "freebsd", target_arch = "wasm32", target_os = "android", target_os = "ios"))]
             context_menu,
-            #[cfg(not(target_arch = "wasm32"))]
+            #[cfg(not(any(target_arch = "wasm32", target_os = "android", target_os = "ios")))]
             window_menu_actions: HashMap::new(),
-            #[cfg(not(target_arch = "wasm32"))]
+            #[cfg(not(any(target_arch = "wasm32", target_os = "android", target_os = "ios")))]
             window_menu: None,
             event_reducer: WindowEventReducer::default(),
             gpu_resources,
             last_presented_at: Instant::now(),
             is_occluded: false,
             live_resize_until: None,
+            #[cfg(target_os = "android")]
+            gpu_surface_lost: false,
+            #[cfg(target_os = "android")]
+            font_embolden,
         };
         if paint_state_initialized {
             window_handle.init_renderer();
@@ -321,7 +409,8 @@ impl WindowHandle {
             0.0, // font_embolden
         );
 
-        let window_state = WindowState::new(id, os_theme, os_scale);
+        let mut window_state = WindowState::new(id, os_theme, os_scale);
+        window_state.apply_safe_area = false;
 
         let mut window_handle = Self {
             window,
@@ -337,17 +426,21 @@ impl WindowHandle {
             profile: None,
             modifiers: Modifiers::default(),
             window_position: Point::ZERO,
-            #[cfg(any(target_os = "linux", target_os = "freebsd", target_arch = "wasm32"))]
+            #[cfg(any(target_os = "linux", target_os = "freebsd", target_arch = "wasm32", target_os = "android", target_os = "ios"))]
             context_menu: scope.create_rw_signal(None),
-            #[cfg(not(target_arch = "wasm32"))]
+            #[cfg(not(any(target_arch = "wasm32", target_os = "android", target_os = "ios")))]
             window_menu_actions: HashMap::new(),
-            #[cfg(not(target_arch = "wasm32"))]
+            #[cfg(not(any(target_arch = "wasm32", target_os = "android", target_os = "ios")))]
             window_menu: None,
             event_reducer: WindowEventReducer::default(),
             gpu_resources: None,
             last_presented_at: Instant::now(),
             is_occluded: false,
             live_resize_until: None,
+            #[cfg(target_os = "android")]
+            gpu_surface_lost: false,
+            #[cfg(target_os = "android")]
+            font_embolden: 0.0,
         };
 
         window_handle
@@ -388,13 +481,37 @@ impl WindowHandle {
         self.window.set_visible(true);
     }
 
+    /// Returns a reactive signal with the window's current safe-area insets
+    /// (notch / gesture-bar / status bar) in **physical (device) pixels**.
+    ///
+    /// The insets are pushed by the backend via [`crate::embedder::EmbedderEvent::SafeArea`]
+    /// and start at zero. When the window was created with
+    /// `WindowConfig::apply_safe_area(true)`, core also insets the root layout
+    /// node automatically; otherwise apps can read this signal to apply their
+    /// own padding (e.g. for a custom top bar that should sit below the notch).
+    pub fn safe_area(&self) -> ReadSignal<PhysicalInsets<u32>> {
+        self.window_state.safe_area.read_only()
+    }
+
     pub fn event(&mut self, event: Event) {
         set_current_view(self.id.root());
 
         // Check event type for platform-specific context menu handling
-        #[cfg(any(target_os = "linux", target_os = "freebsd", target_arch = "wasm32"))]
+        #[cfg(any(
+            target_os = "linux",
+            target_os = "freebsd",
+            target_arch = "wasm32",
+            target_os = "android",
+            target_os = "ios"
+        ))]
         let is_pointer_down = matches!(&event, Event::Pointer(PointerEvent::Down { .. }));
-        #[cfg(any(target_os = "linux", target_os = "freebsd", target_arch = "wasm32"))]
+        #[cfg(any(
+            target_os = "linux",
+            target_os = "freebsd",
+            target_arch = "wasm32",
+            target_os = "android",
+            target_os = "ios"
+        ))]
         let is_pointer_up = matches!(&event, Event::Pointer(PointerEvent::Up { .. }));
 
         let root_element_id = self.window_state.root_view_id.get_element_id();
@@ -420,6 +537,36 @@ impl WindowHandle {
                 // if context menu is still shown
                 // we should hide it
                 self.context_menu.set(None);
+            }
+        }
+
+        // Android in-UI context menu handling.
+        //
+        // A long-press menu opens while the finger is still down
+        // (`had_pointer_down == true`). The finger-lift that ends the gesture
+        // must NOT dismiss the menu — instead we flip `had_pointer_down` to
+        // `false` so a *subsequent* tap closes it (or selects an item). A
+        // right-click menu also opens with `had_pointer_down == false`, and the
+        // same lift simply keeps it open. A new pointer-down on an armed menu
+        // (`had_pointer_down == false`) dismisses it. We never dismiss on
+        // pointer-up, which distinguishes Android from the linux/wasm block.
+        #[cfg(any(target_os = "android", target_os = "ios"))]
+        {
+            if is_pointer_down
+                && self.context_menu.with_untracked(|c| {
+                    c.as_ref()
+                        .map(|(_, _, had_pointer_down)| !*had_pointer_down)
+                        .unwrap_or(false)
+                })
+            {
+                self.context_menu.set(None);
+            }
+            if is_pointer_up {
+                self.context_menu.update(|c| {
+                    if let Some((_, _, had_pointer_down)) = c.as_mut() {
+                        *had_pointer_down = false;
+                    }
+                });
             }
         }
     }
@@ -587,6 +734,13 @@ impl WindowHandle {
             self.event(Event::Window(WindowEvent::FocusGained));
         } else {
             self.event(Event::Window(WindowEvent::FocusLost));
+        }
+
+        // Keep the platform a11y adapter's window-focus state in sync so the
+        // screen reader (VoiceOver / Narrator) reflects focus changes. Platforms
+        // without that concept (Linux AT-SPI) ignore it via the trait default.
+        if let Some(backend) = &self.window_state.accessibility_backend {
+            backend.borrow_mut().update_focus_state(focused);
         }
     }
 
@@ -786,6 +940,12 @@ impl WindowHandle {
     }
 
     pub(crate) fn render_frame(&mut self) {
+        // On Android the native window may have been destroyed by the OS (pause/rotate). Painting
+        // against a stale surface would panic in the wgpu present step, so skip until it is rebuilt.
+        #[cfg(target_os = "android")]
+        if self.gpu_surface_lost {
+            return;
+        }
         let renderer_ready = matches!(self.paint_state, PaintState::Initialized { .. });
         if self.window_state.request_paint && renderer_ready {
             self.window_state.request_paint = false;
@@ -808,6 +968,46 @@ impl WindowHandle {
         } else {
             add_app_update_event(crate::app::AppUpdateEvent::AnimationFrame(false, window_id));
         }
+    }
+
+    /// Rebuild the wgpu surface against a freshly (re)created Android native window.
+    ///
+    /// Android destroys the `ANativeWindow` on pause/resume and rotation, after which winit
+    /// re-emits `can_create_surfaces` with a new native window. The previous `VkSurfaceKHR` is then
+    /// invalid, so we recreate the surface from the (now valid) window handle while reusing the
+    /// already-acquired device/queue. Called only from the Android surface-lifecycle path.
+    #[cfg(target_os = "android")]
+    pub(crate) fn recreate_gpu_surface(&mut self) {
+        let Some(gpu) = self.gpu_resources.clone() else {
+            self.gpu_surface_lost = true;
+            return;
+        };
+        let surface = match gpu.instance.create_surface(Arc::clone(&self.window)) {
+            Ok(surface) => surface,
+            Err(err) => {
+                eprintln!("floem: failed to recreate Android GPU surface: {err}");
+                self.gpu_surface_lost = true;
+                return;
+            }
+        };
+        let os_scale = self.window.scale_factor();
+        let logical: LogicalSize<f64> = self.window.surface_size().to_logical(os_scale);
+        let logical_size = Size::new(logical.width, logical.height);
+        let physical_size = logical_size * os_scale;
+        self.paint_state = PaintState::new(
+            self.window.clone(),
+            surface,
+            gpu,
+            os_scale,
+            physical_size,
+            self.font_embolden,
+        );
+        self.size.set(logical_size);
+        self.window_state.set_root_size(logical_size);
+        self.window_state.update_screen_size_bp(logical_size);
+        self.gpu_surface_lost = false;
+        // The freshly created surface is empty; force a paint on the next frame.
+        self.window_state.request_paint = true;
     }
 
     pub fn paint(&mut self) -> Option<peniko::ImageBrush> {
@@ -1057,9 +1257,65 @@ impl WindowHandle {
 
         self.set_cursor();
 
+        // Rebuild the neutral accessibility tree for this frame and forward it
+        // to any registered platform backend. Runs after layout is committed so
+        // the a11y tree mirrors the freshly committed frame. See
+        // `src/accessibility/bridge.rs`.
+        self.update_accessibility_tree();
+
         let root_element_id = self.window_state.root_view_id.get_element_id();
         let event = Event::Window(WindowEvent::UpdatePhase(UpdatePhaseEvent::Complete));
         GlobalEventCx::new(&mut self.window_state, root_element_id, event).route_window_event();
+    }
+
+    /// Rebuild the neutral accessibility tree for this window from the current
+    /// view/layout/focus state and forward it to the platform backend (if any).
+    ///
+    /// Called at the end of every [`Self::process_update_no_paint`] once layout
+    /// is committed. See `src/accessibility/bridge.rs` for the traversal and
+    /// the neutral protocol definition in `src/accessibility/`.
+    pub(crate) fn update_accessibility_tree(&mut self) {
+        use crate::view::VIEW_STORAGE;
+
+        let root = self.window_state.root_view_id;
+        let focused = self.window_state.last_focused_element.map(|e| e.owning_id());
+
+        let update = VIEW_STORAGE.with(|storage| {
+            crate::accessibility::bridge::build_access_tree_update(&storage.borrow(), root, focused)
+        });
+
+        // No root established (e.g. the root view is hidden): nothing to emit.
+        if update.is_empty() {
+            return;
+        }
+
+        let applied = update.clone();
+        self.window_state.accessibility.apply(applied);
+        if let Some(backend) = &self.window_state.accessibility_backend {
+            backend.borrow_mut().update_tree(update);
+        }
+
+        // Drain platform-requested actions (e.g. a screen reader "press") and
+        // dispatch them to the core. Done after `update_tree` so the tree and
+        // pending actions stay in sync within the same frame.
+        let pending: Vec<crate::accessibility::PendingAction> =
+            if let Some(backend) = &self.window_state.accessibility_backend {
+                backend.borrow_mut().poll_actions()
+            } else {
+                Vec::new()
+            };
+        for action in pending {
+            self.window_state.handle_accessibility_action(action);
+        }
+
+        // Drain OHOS IME edits queued from ArkTS (N-API callbacks) and inject
+        // them as `Event::Ime`. Mirrors the accessibility-action drain above.
+        #[cfg(target_env = "ohos")]
+        {
+            for ev in crate::platform::ohos_ime::drain_ime_events() {
+                self.event(Event::Ime(ev));
+            }
+        }
     }
 
     fn process_central_messages(&self) {
@@ -1216,7 +1472,8 @@ impl WindowHandle {
                         let scale = cx.window_state.effective_scale();
                         self.paint_state.set_scale(scale);
                     }
-                    UpdateMessage::ShowContextMenu { menu, pos } => {
+                    #[cfg(not(any(target_os = "android", target_os = "ios", target_env = "ohos")))]
+                    UpdateMessage::ShowContextMenu { menu, pos, .. } => {
                         let (menu, registry) = menu.build();
                         cx.window_state.context_menu.clear();
                         cx.window_state.update_context_menu(registry);
@@ -1228,6 +1485,35 @@ impl WindowHandle {
                             pos,
                         });
                     }
+                    #[cfg(any(target_os = "android", target_os = "ios"))]
+                    UpdateMessage::ShowContextMenu {
+                        menu,
+                        pos,
+                        had_pointer_down,
+                    } => {
+                        let (menu, registry) = menu.build();
+                        cx.window_state.context_menu.clear();
+                        cx.window_state.update_context_menu(registry);
+                        // Android has no native menu backend; show the in-UI
+                        // context menu renderer directly (the `context_menu`
+                        // signal is already compiled in for Android).
+                        self.show_context_menu(menu, pos, had_pointer_down);
+                    }
+                    #[cfg(target_env = "ohos")]
+                    UpdateMessage::ShowContextMenu {
+                        menu,
+                        pos,
+                        had_pointer_down,
+                    } => {
+                        let (menu, registry) = menu.build();
+                        cx.window_state.context_menu.clear();
+                        cx.window_state.update_context_menu(registry);
+                        // OpenHarmony has no native menu backend (muda is not
+                        // ported); show the in-UI context menu renderer directly,
+                        // the same path Android / iOS use.
+                        self.show_context_menu(menu, pos, had_pointer_down);
+                    }
+                    #[cfg(not(any(target_arch = "wasm32", target_os = "android", target_os = "ios")))]
                     UpdateMessage::WindowMenu { menu } => {
                         self.window_menu_actions.clear();
                         let (menu, registry) = menu.build();
@@ -1246,51 +1532,95 @@ impl WindowHandle {
                         self.window.set_title(&title);
                     }
                     UpdateMessage::SetImeAllowed { allowed } => {
-                        if self.window.ime_capabilities().is_some() != allowed {
-                            let ime = if allowed {
-                                let position = LogicalPosition::new(0, 0);
-                                let size = LogicalSize::new(0, 0);
-                                let request_data = ImeRequestData::default()
-                                    .with_cursor_area(position.into(), size.into())
-                                    .with_hint_and_purpose(ImeHint::NONE, ImePurpose::Normal);
+                        #[cfg(target_os = "ios")]
+                        {
+                            // iOS has no winit IME; drive the soft keyboard via
+                            // the hidden `UITextField` first responder instead.
+                            crate::platform::ios_ime::set_keyboard_visible(allowed, self.window_id);
+                        }
+                        #[cfg(target_env = "ohos")]
+                        {
+                            // OHOS has no winit IME either; drive the soft
+                            // keyboard through the shared N-API platform bridge.
+                            crate::platform::ohos_ime::set_keyboard_visible(allowed);
+                        }
+                        #[cfg(not(any(target_os = "ios", target_env = "ohos")))]
+                        {
+                            if self.window.ime_capabilities().is_some() != allowed {
+                                let ime = if allowed {
+                                    let position = winit::dpi::LogicalPosition::new(0, 0);
+                                    let size = LogicalSize::new(0, 0);
+                                    let request_data = ImeRequestData::default()
+                                        .with_cursor_area(position.into(), size.into())
+                                        .with_hint_and_purpose(ImeHint::NONE, ImePurpose::Normal);
 
-                                ImeRequest::Enable(
-                                    ImeEnableRequest::new(
-                                        ImeCapabilities::new()
-                                            .with_hint_and_purpose()
-                                            .with_cursor_area(),
-                                        request_data,
+                                    ImeRequest::Enable(
+                                        ImeEnableRequest::new(
+                                            ImeCapabilities::new()
+                                                .with_hint_and_purpose()
+                                                .with_cursor_area(),
+                                            request_data,
+                                        )
+                                        .unwrap(),
                                     )
-                                    .unwrap(),
-                                )
-                            } else {
-                                ImeRequest::Disable
-                            };
+                                } else {
+                                    ImeRequest::Disable
+                                };
 
-                            self.window.request_ime_update(ime).unwrap();
+                                self.window.request_ime_update(ime).unwrap();
+                            }
                         }
                     }
+                    #[cfg_attr(target_os = "ios", allow(unused_variables))]
                     UpdateMessage::SetImeCursorArea { position, size } => {
-                        if self
-                            .window
-                            .ime_capabilities()
-                            .map(|caps| caps.cursor_area())
-                            .unwrap_or(false)
+                        #[cfg(not(any(target_os = "ios", target_env = "ohos")))]
                         {
-                            let position =
-                                winit::dpi::Position::Logical(winit::dpi::LogicalPosition::new(
-                                    position.x * self.window_state.user_scale,
-                                    position.y * self.window_state.user_scale,
+                            if self
+                                .window
+                                .ime_capabilities()
+                                .map(|caps| caps.cursor_area())
+                                .unwrap_or(false)
+                            {
+                                let position = winit::dpi::Position::Logical(
+                                    winit::dpi::LogicalPosition::new(
+                                        position.x * self.window_state.user_scale,
+                                        position.y * self.window_state.user_scale,
+                                    ),
+                                );
+                                let size = winit::dpi::Size::Logical(winit::dpi::LogicalSize::new(
+                                    size.width * self.window_state.user_scale,
+                                    size.height * self.window_state.user_scale,
                                 ));
-                            let size = winit::dpi::Size::Logical(winit::dpi::LogicalSize::new(
+                                self.window
+                                    .request_ime_update(ImeRequest::Update(
+                                        ImeRequestData::default().with_cursor_area(position, size),
+                                    ))
+                                    .unwrap();
+                            }
+                        }
+                        #[cfg(target_env = "ohos")]
+                        {
+                            // Forward the caret rect to ArkTS so the IME
+                            // candidate window can avoid it. Coordinates are
+                            // logical (CSS) px, matching the desktop path above.
+                            crate::platform::ohos_ime::set_ime_cursor_area(
+                                position.x * self.window_state.user_scale,
+                                position.y * self.window_state.user_scale,
                                 size.width * self.window_state.user_scale,
                                 size.height * self.window_state.user_scale,
-                            ));
-                            self.window
-                                .request_ime_update(ImeRequest::Update(
-                                    ImeRequestData::default().with_cursor_area(position, size),
-                                ))
-                                .unwrap();
+                            );
+                        }
+                        // On iOS the soft keyboard has no winit IME candidate
+                        // window, so the cursor-area hint is unused.
+                    }
+                    #[cfg_attr(not(target_env = "ohos"), allow(unused_variables))]
+                    UpdateMessage::SetImePurpose { purpose } => {
+                        #[cfg(target_env = "ohos")]
+                        {
+                            // Forward the semantic input purpose to ArkTS so the
+                            // soft keyboard can adapt (secure entry, numeric
+                            // keypad, …). Other backends ignore it.
+                            crate::platform::ohos_ime::set_ime_purpose(purpose);
                         }
                     }
                     UpdateMessage::Inspect => {
@@ -1479,7 +1809,12 @@ impl WindowHandle {
     }
 
     #[cfg(target_os = "macos")]
-    pub(crate) fn show_context_menu(&self, menu: MudaMenu, pos: Option<Point>) {
+    pub(crate) fn show_context_menu(
+        &self,
+        menu: MudaMenu,
+        pos: Option<Point>,
+        _had_pointer_down: bool,
+    ) {
         use dispatch2::DispatchQueue;
         use muda::{
             ContextMenu,
@@ -1517,7 +1852,12 @@ impl WindowHandle {
     }
 
     #[cfg(target_os = "windows")]
-    pub(crate) fn show_context_menu(&self, menu: MudaMenu, pos: Option<Point>) {
+    pub(crate) fn show_context_menu(
+        &self,
+        menu: MudaMenu,
+        pos: Option<Point>,
+        _had_pointer_down: bool,
+    ) {
         use muda::{
             ContextMenu,
             dpi::{LogicalPosition, Position},
@@ -1578,14 +1918,25 @@ impl WindowHandle {
         }
     }
 
-    #[cfg(any(target_os = "linux", target_os = "freebsd", target_arch = "wasm32"))]
-    pub(crate) fn show_context_menu(&self, menu: MudaMenu, pos: Option<Point>) {
+    #[cfg(any(
+        target_os = "linux",
+        target_os = "freebsd",
+        target_arch = "wasm32",
+        target_os = "android",
+        target_os = "ios"
+    ))]
+    pub(crate) fn show_context_menu(
+        &self,
+        menu: MudaMenu,
+        pos: Option<Point>,
+        had_pointer_down: bool,
+    ) {
         let pos = pos.unwrap_or(self.window_state.last_pointer.0);
         let pos = Point::new(
             pos.x / self.window_state.user_scale,
             pos.y / self.window_state.user_scale,
         );
-        self.context_menu.set(Some((menu, pos, false)));
+        self.context_menu.set(Some((menu, pos, had_pointer_down)));
     }
 
     #[cfg(target_arch = "wasm32")]
@@ -1603,9 +1954,14 @@ impl WindowHandle {
         if let Some(action) = self.window_state.context_menu.get(id) {
             (*action)();
             self.process_update();
-        } else if let Some(action) = self.window_menu_actions.get(id) {
-            (*action)();
-            self.process_update();
+            return;
+        }
+        #[cfg(not(any(target_arch = "wasm32", target_os = "android", target_os = "ios")))]
+        {
+            if let Some(action) = self.window_menu_actions.get(id) {
+                (*action)();
+                self.process_update();
+            }
         }
     }
 
