@@ -71,7 +71,7 @@ and the fork depends on the very same `floem-winit-core` package). So the
 `floem-winit-core`. The drift between upstream `winit_core 0.31.0-beta.2` and
 `floem-winit-core` is near-zero (byte-identical `ApplicationHandler`, tgui uses
 only the unchanged subset), so the retarget (`winit_core → floem_winit_core`
-rename; see `../tgui-winit-ohos-patch/retarget-to-floem-winit-core.patch`) is
+rename; see `platform-compat/tgui-winit-ohos/patch/retarget-to-floem-winit-core.patch`) is
 mechanical and the method set (`can_create_surfaces` / `window_event` /
 `about_to_wait` / `proxy_wake_up` / `destroy_surfaces`) already matches.
 
@@ -94,7 +94,7 @@ intentionally single-threaded design — a sweeping, risky change.
 `runtime_new` spawns a worker thread and creates the `ApplicationHandler`
 **inside** that thread via `AppFactory`; the handler never crosses a thread
 boundary (only the `Send` `EventLoop` is moved into the worker). So the `Send`
-bound was defensive and unnecessary. `tgui-winit-ohos-fork/src/ffi.rs` now
+bound was defensive and unnecessary. `platform-compat/tgui-winit-ohos/src/ffi.rs` now
 defines `pub trait RuntimeApplication: ApplicationHandler {}` (no `+ Send`),
 with a comment explaining the safety argument. After this change,
 `examples/ohos` compiles:
@@ -135,18 +135,17 @@ and pushes the neutral tree to ArkTS — see "Accessibility bridge" below and
 - Complete **DevEco Studio** + **OpenHarmony SDK** (e.g. under
   `/Users/ahs/Library/OpenHarmony`), `ohpm`, network access, and signing config.
 - `cargo-ohos-app` is effectively **Windows-only** upstream; macOS/Linux users
-  must first apply the cross-platform patch in the separate
-  `harmony-app-rs-patch` deliverable (selects `hvigorw` instead of
+  must first apply the cross-platform patch in
+  `platform-compat/harmony-app-rs/` (selects `hvigorw` instead of
   `hvigorw.bat`).
-- Point floem's `tgui-winit-ohos = "0.4"` dependency (`Cargo.toml`,
-  `target_os = "ohos"` block) at your retargeted fork.
+- Floem's `tgui-winit-ohos = "0.4"` dependency is retargeted via
+  `[patch.crates-io]` → `platform-compat/tgui-winit-ohos/` (see root `Cargo.toml`).
 
 ## Build & run (sketch)
 
 ```sh
-# 1. fork + retarget tgui-winit-ohos (see tgui-winit-ohos-patch/README.md)
-# 2. point floem's [target.'cfg(target_os = "ohos")'.dependencies] tgui-winit-ohos
-#    at that fork (git source)
+# 1. retarget notes: platform-compat/tgui-winit-ohos/patch/README.md
+# 2. [patch.crates-io] already points at platform-compat/tgui-winit-ohos/
 # 3. build the staticlib + package via the patched cargo-ohos-app, then
 #    load the HAP on a device/emulator (x86_64 target → emulator, no signing needed)
 cargo check -p floem --target aarch64-unknown-linux-ohos
@@ -154,8 +153,8 @@ cargo check -p floem --target aarch64-unknown-linux-ohos
 
 ## References
 
-- `tgui-winit-ohos-patch/` — retarget patch + drift analysis.
-- `harmony-app-rs-patch/` — macOS cross-platform patch for `cargo-ohos-app`.
+- `platform-compat/tgui-winit-ohos/patch/` — retarget patch + drift analysis.
+- `platform-compat/harmony-app-rs/` — macOS cross-platform patch for `cargo-ohos-app`.
 - `src/embedder/ohos.rs`, `src/embedder/mod.rs`, `src/app/mod.rs`
   (`new_ohos` / `floem_app_factory` / `export_ohos_winit_app!`).
 - `src/platform/ohos_bridge.rs` — shared N-API registration

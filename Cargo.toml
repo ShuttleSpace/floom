@@ -1,5 +1,6 @@
 [workspace]
 resolver = "3"
+exclude = ["platform-compat"]
 members = [
   "renderer",
   "skia",
@@ -228,8 +229,8 @@ objc2-ui-kit = { version = "0.3", features = [
 # retargeting that crate onto `floem-winit-core`. The drift is near-zero (the
 # `ApplicationHandler` trait is byte-identical and tgui only uses the unchanged
 # subset), so the retarget is a pure `winit_core -> floem_winit_core` rename —
-# see `../tgui-winit-ohos-patch/retarget-to-floem-winit-core.patch` and
-# `docs/ohos.md`. Point this dependency at your retargeted fork.
+# see `platform-compat/tgui-winit-ohos/patch/retarget-to-floem-winit-core.patch` and
+# `docs/ohos.md`. The retargeted fork lives under `platform-compat/tgui-winit-ohos/`.
 [target.'cfg(target_env = "ohos")'.dependencies]
 tgui-winit-ohos = "0.4"
 # N-API bridge for clipboard / file_dialog / open_external / receive_files.
@@ -329,11 +330,11 @@ harness = false
 # `export_ohos_winit_app!(floem_app_factory)` cannot compile until both sides
 # share one `ApplicationHandler` definition. This patch points the published
 # crate at a local fork that renames `winit_core -> floem_winit_core` (pure
-# crate rename, zero logic change — see ../tgui-winit-ohos-patch/README.md).
+# crate rename, zero logic change — see platform-compat/tgui-winit-ohos/patch/README.md).
 # The fork's `floem-winit-core` git rev matches floem's `floem-winit` git rev
 # exactly, so the trait is byte-identical.
 [patch.crates-io]
-tgui-winit-ohos = { path = "../tgui-winit-ohos-fork" }
+tgui-winit-ohos = { path = "platform-compat/tgui-winit-ohos" }
 
 # --- iOS: fork floem-winit to forward shared files/URLs (floem #109) ---
 # lapce/winit @ 133268de owns the `WinitApplicationDelegate` and used to drop
@@ -346,4 +347,4 @@ tgui-winit-ohos = { path = "../tgui-winit-ohos-fork" }
 # so the patch must point at the `floem-winit` member package (`winit/`), not
 # the workspace root. See docs/ios.md "Step 8b".
 [patch."https://github.com/lapce/winit"]
-floem-winit = { path = "../floem-winit-ios-fork/winit" }
+floem-winit = { path = "platform-compat/floem-winit/winit" }

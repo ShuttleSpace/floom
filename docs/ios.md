@@ -415,13 +415,12 @@ This is a small, contained cfg-extension and is the main "UI" piece for iOS.
   `NSNotificationCenter`-driven** — `EventLoop::run` calls
   `UIApplication::main(None, None, mtm)` with **no custom delegate**, so the
   cold-start launch URL in `launchOptions[UIApplicationLaunchOptionsURLKey]`
-  is never read. The old `floem-winit-ios-fork` was the **wrong base** (a
+  is never read. An earlier out-of-tree fork was the **wrong base** (a
   0.29.5 published artifact, API-incompatible with the 25.10.0
   `objc2`/`define_class!` world) and its `[patch]` was silently ignored →
   `set_on_open_url` unresolved (E0425). Fix: rebuilt the fork from the cached
   checkout `lapce/winit@133268de` (= 25.10.0 virtual workspace, members
-  `dpi`/`winit*`), backed up the dead 0.29.5 fork as
-  `floem-winit-ios-fork.old0295`.
+  `dpi`/`winit*`); it now lives at `platform-compat/floem-winit/`.
 
   **Wiring** — workspace root `Cargo.toml`:
   ```toml
@@ -430,10 +429,10 @@ This is a small, contained cfg-extension and is the main "UI" piece for iOS.
   # `floem-winit` member package (`winit/`), not the workspace root
   # (which would error "found a virtual manifest").
   [patch."https://github.com/lapce/winit"]
-  floem-winit = { path = "../floem-winit-ios-fork/winit" }
+  floem-winit = { path = "platform-compat/floem-winit/winit" }
   ```
 
-  **Fork changes** (all in `floem-winit-ios-fork`):
+  **Fork changes** (all in `platform-compat/floem-winit/`):
   - `winit-uikit/src/app_delegate.rs` (new): `define_class!` defines
     `FloemWinitApplicationDelegate`
     (`#[name = "FloemWinitApplicationDelegate"]`,
