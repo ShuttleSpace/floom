@@ -507,6 +507,8 @@ pub struct CapturedView {
     direct_style: Style,
     keyboard_navigable: bool,
     focused: bool,
+    access_role: Option<String>,
+    access_label: Option<String>,
 }
 
 impl CapturedView {
@@ -519,6 +521,8 @@ impl CapturedView {
         let focus = view_state.combined_style.builtin().set_focus();
         let focused = window_state.focus_state.current_path().last() == Some(&id.get_element_id());
         let custom_name = &view_state.debug_name;
+        let (access_role, access_label) =
+            data::capture_access_readout(view_state.accessibility.as_ref());
         let view = id.view();
         let view = view.borrow();
         let name = custom_name
@@ -539,6 +543,8 @@ impl CapturedView {
             direct_style: combined_style,
             keyboard_navigable: focus.allows_keyboard_navigation(),
             focused,
+            access_role,
+            access_label,
             children: id
                 .children()
                 .into_iter()
@@ -733,6 +739,14 @@ fn selected_view(
             let name = info("View Debug", view.name.clone());
             let id = info("Id", format!("{:?}", view.id));
             let count = info("Child Count", format!("{}", view.children.len()));
+            let access_role = info(
+                "Access Role",
+                view.access_role.clone().unwrap_or_else(|| "—".to_string()),
+            );
+            let access_label = info(
+                "Access Label",
+                view.access_label.clone().unwrap_or_else(|| "—".to_string()),
+            );
             let beyond = |view: f64, window| {
                 if view > window {
                     format!(" ({} after window edge)", view - window)
@@ -838,19 +852,31 @@ fn selected_view(
                 });
 
             let selected_view_info = Stack::vertical_from_iter(
-                [name, id, count, x, y, w, h, tx, ty, tw, th]
-                    .into_iter()
-                    .enumerate()
-                    .map(|(idx, v)| {
-                        v.style(move |s| {
-                            s.padding(3).with_theme(move |s, t| {
-                                s.apply_if(idx.is_multiple_of(2), |s| s.background(t.bg_base()))
-                                    .apply_if(!idx.is_multiple_of(2), |s| {
-                                        s.background(t.bg_elevated())
-                                    })
-                            })
+                [
+                    name,
+                    id,
+                    count,
+                    access_role,
+                    access_label,
+                    x,
+                    y,
+                    w,
+                    h,
+                    tx,
+                    ty,
+                    tw,
+                    th,
+                ]
+                .into_iter()
+                .enumerate()
+                .map(|(idx, v)| {
+                    v.style(move |s| {
+                        s.padding(3).with_theme(move |s, t| {
+                            s.apply_if(idx.is_multiple_of(2), |s| s.background(t.bg_base()))
+                                .apply_if(!idx.is_multiple_of(2), |s| s.background(t.bg_elevated()))
                         })
-                    }),
+                    })
+                }),
             )
             .style(|s| s.flex_grow(1.).height_full().gap(2.0));
 

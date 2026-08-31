@@ -1,4 +1,5 @@
 use crate::ViewId;
+use crate::accessibility::AccessibilityAttrs;
 use crate::inspector::CapturedView;
 use crate::views::VirtualVector;
 use floem_reactive::{RwSignal, SignalGet, SignalUpdate};
@@ -6,6 +7,19 @@ use std::collections::HashMap;
 use std::ops::AddAssign;
 use std::rc::Rc;
 use taffy::Display;
+
+/// Snapshot declared a11y attrs for the inspector selected-view panel.
+///
+/// `None` attrs means the view never set accessibility overrides; both fields
+/// stay empty. When attrs exist, role is always shown (including `Unknown`).
+pub(crate) fn capture_access_readout(
+    attrs: Option<&AccessibilityAttrs>,
+) -> (Option<String>, Option<String>) {
+    match attrs {
+        Some(attrs) => (Some(format!("{:?}", attrs.role)), attrs.label.clone()),
+        None => (None, None),
+    }
+}
 
 #[derive(Clone)]
 pub struct CapturedDatas {
@@ -222,5 +236,29 @@ impl VirtualVector<(usize, usize, CapturedData)> for CapturedDatas {
         let max = range.end;
         let children = self.get_children(&mut 0, min, max, 0);
         children.into_iter()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::capture_access_readout;
+    use crate::accessibility::{AccessRole, AccessibilityAttrs};
+
+    #[test]
+    fn capture_access_readout_empty_when_no_attrs() {
+        assert_eq!(capture_access_readout(None), (None, None));
+    }
+
+    #[test]
+    fn capture_access_readout_from_button_attrs() {
+        let attrs = AccessibilityAttrs {
+            role: AccessRole::Button,
+            label: Some("Save".into()),
+            ..Default::default()
+        };
+        assert_eq!(
+            capture_access_readout(Some(&attrs)),
+            (Some("Button".into()), Some("Save".into()))
+        );
     }
 }
