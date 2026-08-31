@@ -4,6 +4,7 @@
 /.idea
 /.zed
 /.worktrees
+/.workbuddy
 .DS_Store
 rustc-ice*
 *.orig
