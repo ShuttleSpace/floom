@@ -4,8 +4,10 @@ use floem::event::EventPropagation;
 use floem::prelude::*;
 use floem::style::CursorStyle;
 use floem::view::AnyView;
-use floem::views::{Container, Decorators, Empty, dyn_view, h_stack, text, v_stack, v_stack_from_iter};
+use floem::views::{Container, Decorators, Empty, dyn_view, v_stack_from_iter, v_stack, h_stack, text, Stack, Label};
+use floem::views::svg;
 use floem_core_theme::component_tokens::{ComponentId, ComponentTokens};
+use floem_widget_md_icon::md_icon_svg;
 use floem_core_theme::props::list_group::ListGroupProps;
 use floem_core_theme::theme::{MultiTheme, Theme};
 use floem_core_theme::tokens::color::Color;
@@ -68,22 +70,23 @@ impl MdListGroup {
         let tk_header = tokens.clone();
         let tk_items = tokens.clone();
         let tk_gap = tokens.clone();
+        let icon_size = tokens.icon_size;
 
         let header_title = title.clone().unwrap_or_default();
-        let glyph = label(move || {
+        let glyph = svg(move || {
             if expanded.get() {
-                "▾".to_string()
+                md_icon_svg("expand_more")
             } else {
-                "▸".to_string()
+                md_icon_svg("chevron_right")
             }
         })
         .style(move |s| {
             let t = theme.get();
-            s.color(t.colors().on_surface_variant.to_peniko())
-                .font_size(16.0)
+            s.size(icon_size, icon_size)
+                .color(t.colors().on_surface_variant.to_peniko())
         });
 
-        let header = h_stack((text(header_title), glyph))
+        let header = Stack::horizontal((Label::new(header_title), glyph))
             .style(move |s| {
                 let t = theme.get();
                 s.height(tk_header.header_height)
@@ -116,7 +119,7 @@ impl MdListGroup {
                         let theme = theme;
                         let tk = tk_items.clone();
                         let pad = if inset { tk.indent } else { tk.content_padding };
-                        Container::new(text(label))
+                        Container::new(Label::new(label))
                             .style(move |s| {
                                 let t = theme.get();
                                 s.height(tk.header_height)
@@ -128,7 +131,7 @@ impl MdListGroup {
                             .into_any()
                     })
                     .collect();
-                v_stack_from_iter(item_views)
+                Stack::vertical_from_iter(item_views)
                     .style(move |s| s.gap(tk_gap.gap).padding_vert(tk_gap.content_padding))
                     .into_any()
             } else {
@@ -136,7 +139,7 @@ impl MdListGroup {
             }
         });
 
-        v_stack((header, items_view)).style(|s| s.gap(0.0))
+        Stack::vertical((header, items_view)).style(|s| s.gap(0.0))
     }
 }
 

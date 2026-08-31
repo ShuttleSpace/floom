@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use floem::event::EventPropagation;
 use floem::prelude::*;
 use floem::reactive::RwSignal;
@@ -5,7 +7,7 @@ use floem::view::AnyView;
 use floem::IntoView;
 use floem::views::{Container, Decorators, Empty, Overlay, Stack, v_stack};
 use floem_core_theme::component_tokens::{ComponentId, ComponentTokens};
-use floem_core_theme::props::navigation_drawer::NavigationDrawerProps;
+use floem_core_theme::props::navigation_drawer::{NavigationDrawerProps, NavigationDrawerSide};
 use floem_core_theme::theme::{MultiTheme, Theme};
 use floem_core_theme::tokens::color::Color;
 use floem_core_theme::tokens::color_ext::*;
@@ -58,6 +60,12 @@ impl MdNavigationDrawer {
         self
     }
 
+    /// Choose the edge the drawer slides in from (`Left` or `Right`).
+    pub fn side(mut self, side: NavigationDrawerSide) -> Self {
+        self.props.side = side;
+        self
+    }
+
     /// Optional header widget shown at the top of the drawer.
     pub fn header(mut self, header: impl IntoView + 'static) -> Self {
         self.header = Some(header.into_any());
@@ -73,6 +81,12 @@ impl MdNavigationDrawer {
     /// Expose the internal open signal so an external trigger can open/close the drawer.
     pub fn open_signal(&self) -> RwSignal<bool> {
         self.open
+    }
+
+    /// Set the internal `open` signal from an external signal.
+    pub fn with_open_signal(mut self, open: RwSignal<bool>) -> Self {
+        self.open = open;
+        self
     }
 
     pub fn resolved_style(&self) -> MdNavigationDrawerStyle {
@@ -101,6 +115,7 @@ impl MdNavigationDrawer {
     pub fn view(self) -> impl View {
         let theme = self.theme;
         let open = self.open;
+        let side = self.props.side;
         let header = self.header;
         let content = self.content;
 
@@ -117,10 +132,11 @@ impl MdNavigationDrawer {
 // layout-provider auto-register
         floem::reactive::create_effect(move |_prev: Option<()>| {
             let w = if open.get() { width } else { 0.0 };
-            floem_core_theme::layout::register_layout(
-                floem_core_theme::layout::LayoutSlot::NavDrawerLeft,
-                w,
-            );
+            let slot = match side {
+                NavigationDrawerSide::Left => floem_core_theme::layout::LayoutSlot::NavDrawerLeft,
+                NavigationDrawerSide::Right => floem_core_theme::layout::LayoutSlot::NavDrawerRight,
+            };
+            floem_core_theme::layout::register_layout(slot, w);
         });
 
         let padding = tokens.padding;
@@ -129,14 +145,14 @@ impl MdNavigationDrawer {
         let content_view = content.unwrap_or_else(|| Empty::new().into_any());
 
         let panel = Container::new(
-            v_stack((header_view, content_view))
+            Stack::vertical((header_view, content_view))
                 .style(move |s| s.width_full().height_full().gap(8.0).items_start()),
         )
         .style(move |s| {
             let t = theme.get();
-            s.absolute()
+            let mut s = s
+                .absolute()
                 .inset_top(0.0)
-                .inset_left(0.0)
                 .height_pct(100.0)
                 .width(width)
                 .padding(padding)
@@ -144,10 +160,31 @@ impl MdNavigationDrawer {
                 .color(t.colors().on_surface.to_peniko())
                 .box_shadow_blur(2.0 + 3.0 * (elevation as f64))
                 .box_shadow_spread(1.0)
-                .box_shadow_color(with_alpha(Color::rgba(0, 0, 0, 255), 40).to_peniko())
+                .box_shadow_color(with_alpha(Color::rgba(0, 0, 0, 255), 40).to_peniko());
+            match side {
+                NavigationDrawerSide::Left => {
+                    s = s.inset_left(0.0);
+                }
+                NavigationDrawerSide::Right => {
+                    s = s.inset_right(0.0);
+                }
+            }
+            s
         })
         // Clicks inside the panel must not dismiss the drawer.
-        .on_event(listener::Click, |_, _| EventPropagation::Stop);
+        .on_event(listener::Click, |_, _| EventPropagation::Stop)
+        // Slide in from the chosen edge, slide back out on close.
+        .animation(move |a| {
+            let from = match side {
+                NavigationDrawerSide::Left => -width,
+                NavigationDrawerSide::Right => width,
+            };
+            a.run_on_create(true)
+                .run_on_remove(true)
+                .duration(Duration::from_millis(260))
+                .keyframe(0, |f| f.style(|s| s.translate_x(from)))
+                .keyframe(100, |f| f.computed_style())
+        });
 
         let scrim = Container::new(panel)
             .style(move |s| {
@@ -156,6 +193,13 @@ impl MdNavigationDrawer {
                     .height_pct(100.0)
                     .background(with_alpha(t.colors().scrim, 150).to_peniko())
                     .apply_if(!open.get(), |s| s.hide())
+            })
+            .animation(move |a| {
+                a.run_on_create(true)
+                    .run_on_remove(true)
+                    .duration(Duration::from_millis(260))
+                    .keyframe(0, |f| f.style(|s| s.opacity(0.0)))
+                    .keyframe(100, |f| f.computed_style())
             })
             .on_event(listener::Click, {
                 let open = open;

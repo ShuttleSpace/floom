@@ -103,6 +103,9 @@ impl MdRadio {
         let disabled = self.props.disabled;
         let on_change = Rc::new(self.props.on_change);
         let label_text = self.props.label.clone();
+        let hover = RwSignal::new(false);
+        let pressed = RwSignal::new(false);
+        let focused = RwSignal::new(false);
 
         let tokens = match theme.get().component(ComponentId::Radio) {
             ComponentTokens::Radio(t) => t,
@@ -112,6 +115,22 @@ impl MdRadio {
         let bw = tokens.border_width;
         let label_fs = tokens.label_font_size;
 
+        let halo = Container::new(Empty::new()).style(move |s| {
+            let t = theme.get();
+            let active = hover.get() || pressed.get() || focused.get();
+            let alpha = if pressed.get() { 30 } else { 20 };
+            let extra = 40.0 - size as f64;
+            s.absolute()
+                .inset_top(0.0)
+                .inset_left(0.0)
+                .size(40.0, 40.0)
+                .translate_x(-(extra / 2.0))
+                .translate_y(-(extra / 2.0))
+                .border_radius(9999.0)
+                .background(with_alpha(t.colors().primary, alpha).to_peniko())
+                .apply_if(!active, |s| s.hide())
+        });
+
         let dot = Container::new(Empty::new()).style(move |s| {
             let t = theme.get();
             s.size(size * 0.5, size * 0.5)
@@ -120,7 +139,11 @@ impl MdRadio {
                 .apply_if(!checked.get(), |s| s.hide())
         });
 
-        let circle = Container::new(dot).style(move |s| {
+        let circle = Container::new(
+            Stack::new((halo, dot))
+                .style(|s| s.width_full().height_full().items_center().justify_center()),
+        )
+        .style(move |s| {
             let t = theme.get();
             let c = if checked.get() {
                 t.colors().primary
@@ -140,7 +163,7 @@ impl MdRadio {
                 .justify_center()
         });
 
-        let label_view = text(label_text).style(move |s| {
+        let label_view = Label::new(label_text).style(move |s| {
             let t = theme.get();
             let c = if disabled {
                 with_alpha(t.colors().on_surface, 38)
@@ -160,7 +183,7 @@ impl MdRadio {
             }
         });
 
-        h_stack((circle, label_view))
+        Stack::horizontal((circle, label_view))
             .style(|s| s.items_center().gap(8.0).cursor(CursorStyle::Pointer))
             .on_event(listener::Click, {
                 let toggle = toggle.clone();
@@ -174,6 +197,56 @@ impl MdRadio {
                     toggle();
                 }
                 EventPropagation::Continue
+            })
+            .on_event(listener::PointerEnter, {
+                let hover = hover;
+                move |_, _| {
+                    if !disabled {
+                        hover.set(true);
+                    }
+                    EventPropagation::Continue
+                }
+            })
+            .on_event(listener::PointerLeave, {
+                let hover = hover;
+                let pressed = pressed;
+                move |_, _| {
+                    hover.set(false);
+                    pressed.set(false);
+                    EventPropagation::Continue
+                }
+            })
+            .on_event(listener::PointerDown, {
+                let pressed = pressed;
+                move |_, _| {
+                    if !disabled {
+                        pressed.set(true);
+                    }
+                    EventPropagation::Continue
+                }
+            })
+            .on_event(listener::PointerUp, {
+                let pressed = pressed;
+                move |_, _| {
+                    pressed.set(false);
+                    EventPropagation::Continue
+                }
+            })
+            .on_event(listener::FocusGained, {
+                let focused = focused;
+                move |_, _| {
+                    if !disabled {
+                        focused.set(true);
+                    }
+                    EventPropagation::Continue
+                }
+            })
+            .on_event(listener::FocusLost, {
+                let focused = focused;
+                move |_, _| {
+                    focused.set(false);
+                    EventPropagation::Continue
+                }
             })
             .style(move |s| s.set_disabled(disabled).keyboard_navigable())
     }

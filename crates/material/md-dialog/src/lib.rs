@@ -1,8 +1,10 @@
 use std::rc::Rc;
+use std::time::Duration;
 
 use floem::prelude::*;
 use floem::style::CursorStyle;
 use floem::event::EventPropagation;
+use floem::view::AnyView;
 use floem_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floem_core_theme::props::dialog::DialogProps;
 use floem_core_theme::theme::{MultiTheme, Theme};
@@ -10,6 +12,7 @@ use floem_core_theme::tokens::color::Color;
 use floem_core_theme::tokens::color_ext::*;
 use floem_core_theme::tokens::typography::FontWeight;
 use floem_widget_runtime::theme_signal;
+use floem_widget_md_icon::MdIcon;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct MdDialogStyle {
@@ -58,6 +61,13 @@ impl MdDialog {
         self
     }
 
+    /// Add an action button rendered at the bottom of the dialog. Clicking it
+    /// fires `callback` and closes the dialog.
+    pub fn action(mut self, label: impl Into<String>, callback: impl Fn() + 'static) -> Self {
+        self.props.actions.push((label.into(), Box::new(callback)));
+        self
+    }
+
     pub fn close(&mut self) {
         self.props.open = false;
         self.open.set(false);
@@ -74,6 +84,12 @@ impl MdDialog {
     /// can show or hide the dialog.
     pub fn open_signal(&self) -> RwSignal<bool> {
         self.open
+    }
+
+    /// Set the internal `open` signal from an external signal.
+    pub fn with_open_signal(mut self, open: RwSignal<bool>) -> Self {
+        self.open = open;
+        self
     }
 
     pub fn props(&self) -> &DialogProps {
@@ -111,6 +127,7 @@ impl MdDialog {
         let on_close = Rc::new(self.props.on_close);
         let title = self.props.title.clone();
         let content = self.props.content.clone();
+        let actions = self.props.actions;
 
         let tokens = match theme.get().component(ComponentId::Dialog) {
             ComponentTokens::Dialog(t) => t,
@@ -120,27 +137,55 @@ impl MdDialog {
         let padding = tokens.padding;
         let radius = tokens.border_radius;
 
-        let title_view = text(title).style(move |s| {
+        // Action buttons rendered at the bottom of the dialog.
+        let actions_view = {
+            let buttons: Vec<AnyView> = actions
+                .into_iter()
+                .map(|(label, cb)| {
+                    let open = open;
+                    Container::new(Label::new(label))
+                        .style(move |s| {
+                            let t = theme.get();
+                            let hover = with_alpha(t.colors().primary, 8).to_peniko();
+                            s.color(t.colors().primary.to_peniko())
+                                .font_size(t.typography().label.large.font_size)
+                                .font_weight(FontWeight::Medium.to_floem())
+                                .padding_horiz(12.0)
+                                .padding_vert(10.0)
+                                .border_radius(8.0)
+                                .cursor(CursorStyle::Pointer)
+                                .hover(move |s| s.background(hover))
+                        })
+                        .on_event(listener::Click, move |_, _| {
+                            cb();
+                            open.set(false);
+                            EventPropagation::Continue
+                        })
+                        .into_any()
+                })
+                .collect();
+            Stack::horizontal_from_iter(buttons)
+                .style(|s| s.gap(8.0).justify_end().items_center())
+                .into_any()
+        };
+
+        let title_view = Label::new(title).style(move |s| {
             let t = theme.get();
             s.color(t.colors().on_surface.to_peniko())
                 .font_size(t.typography().headline.small.font_size)
                 .font_weight(FontWeight::Medium.to_floem())
         });
 
-        let content_view = text(content).style(move |s| {
+        let content_view = Label::new(content).style(move |s| {
             let t = theme.get();
             s.color(with_alpha(t.colors().on_surface, 222).to_peniko())
                 .font_size(t.typography().body.medium.font_size)
         });
 
-        let close_btn = text("✕")
-            .style(move |s| {
-                let t = theme.get();
-                s.color(t.colors().on_surface_variant.to_peniko())
-                    .font_size(20.0)
-                    .padding(4.0)
-                    .cursor(CursorStyle::Pointer)
-            })
+        let close_btn = MdIcon::new("close")
+            .size(20.0)
+            .view()
+            .style(|s| s.padding(4.0).cursor(CursorStyle::Pointer))
             .on_event(listener::Click, {
                 let open = open;
                 let on_close = on_close.clone();
@@ -154,9 +199,10 @@ impl MdDialog {
             });
 
         let card = Container::new(
-            v_stack((
-                h_stack((title_view, close_btn)).style(|s| s.items_center().justify_between()),
+            Stack::vertical((
+                Stack::horizontal((title_view, close_btn)).style(|s| s.items_center().justify_between()),
                 content_view,
+                actions_view,
             ))
             .style(move |s| {
                 let t = theme.get();
@@ -173,7 +219,15 @@ impl MdDialog {
             }),
         )
         // Clicks inside the card must not dismiss the dialog.
-        .on_event(listener::Click, |_, _| EventPropagation::Stop);
+        .on_event(listener::Click, |_, _| EventPropagation::Stop)
+        // Pop in with a subtle scale, pop out on close.
+        .animation(|a| {
+            a.run_on_create(true)
+                .run_on_remove(true)
+                .duration(Duration::from_millis(220))
+                .keyframe(0, |f| f.style(|s| s.scale(95.pct())))
+                .keyframe(100, |f| f.style(|s| s.scale(100.pct())))
+        });
 
         let scrim = Container::new(card)
             .style(move |s| {
@@ -196,6 +250,14 @@ impl MdDialog {
                     }
                     EventPropagation::Continue
                 }
+            })
+            // Fade the scrim in/out alongside the card.
+            .animation(|a| {
+                a.run_on_create(true)
+                    .run_on_remove(true)
+                    .duration(Duration::from_millis(220))
+                    .keyframe(0, |f| f.style(|s| s.opacity(0.0)))
+                    .keyframe(100, |f| f.computed_style())
             });
 
         Overlay::new(scrim)

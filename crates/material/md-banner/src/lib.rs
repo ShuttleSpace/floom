@@ -115,29 +115,29 @@ impl MdBanner {
         let icon_size = tokens.icon_size;
 
         let icon_view: AnyView = if let Some(ic) = icon {
-            Container::new(text(ic))
+            Container::new(Label::new(ic))
                 .style(move |s| {
                     let a = banner_accent(&theme.get(), variant);
                     s.font_size(icon_size).color(a.to_peniko())
                 })
                 .into_any()
         } else {
-            empty().into_any()
+            Empty::new().into_any()
         };
 
-        let message_view = text(message)
+        let message_view = Label::new(message)
             .style(move |s| {
                 let t = theme.get();
                 s.font_size(font_size).color(t.colors().on_surface.to_peniko())
             })
             .into_any();
 
-        let left_group = h_stack((icon_view, message_view))
+        let left_group = Stack::horizontal((icon_view, message_view))
             .style(move |s| s.gap(gap).items_center())
             .into_any();
 
         let right: AnyView = if let Some(al) = action_label {
-            Container::new(text(al))
+            Container::new(Label::new(al))
                 .style(move |s| {
                     let t = theme.get();
                     s.font_size(action_font_size)
@@ -156,10 +156,10 @@ impl MdBanner {
                 })
                 .into_any()
         } else {
-            empty().into_any()
+            Empty::new().into_any()
         };
 
-        Container::new(h_stack((left_group, right)).style(|s| s.items_center().justify_between()))
+        Container::new(Stack::horizontal((left_group, right)).style(|s| s.items_center().justify_between()))
             .style(move |s| {
                 let a = banner_accent(&theme.get(), variant);
                 s.padding(padding)

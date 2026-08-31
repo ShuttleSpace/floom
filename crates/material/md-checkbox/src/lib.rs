@@ -3,12 +3,13 @@ use std::rc::Rc;
 use floem::prelude::*;
 use floem::style::CursorStyle;
 use floem::event::EventPropagation;
+use floem::views::svg;
 use floem_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floem_core_theme::props::checkbox::CheckboxProps;
 use floem_core_theme::theme::{MultiTheme, Theme};
 use floem_core_theme::tokens::color::Color;
 use floem_core_theme::tokens::color_ext::*;
-use floem_core_theme::tokens::typography::FontWeight;
+use floem_widget_md_icon::md_icon_svg;
 use floem_widget_runtime::theme_signal;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -121,6 +122,9 @@ impl MdCheckbox {
         let disabled = self.props.disabled;
         let on_change = Rc::new(self.props.on_change);
         let label_text = self.props.label.clone();
+        let hover = RwSignal::new(false);
+        let pressed = RwSignal::new(false);
+        let focused = RwSignal::new(false);
 
         let tokens = match theme.get().component(ComponentId::Checkbox) {
             ComponentTokens::Checkbox(t) => t,
@@ -129,31 +133,41 @@ impl MdCheckbox {
         let size = tokens.size;
         let radius = tokens.border_radius;
 
-        let mark = label(move || {
-            if checked.get() {
-                "✓".to_string()
-            } else {
-                String::new()
-            }
-        })
-        .style(move |s| {
+        let mark = svg(move || md_icon_svg("check")).style(move |s| {
             let t = theme.get();
             let mk = if checked.get() {
-                t.colors().on_primary
+                if disabled {
+                    with_alpha(t.colors().on_surface, 38)
+                } else {
+                    t.colors().on_primary
+                }
             } else {
                 Color::rgba(0, 0, 0, 0)
             };
-            let mk = if disabled {
-                with_alpha(t.colors().on_surface, 38)
-            } else {
-                mk
-            };
-            s.color(mk.to_peniko())
-                .font_size(size * 0.7)
-                .font_weight(FontWeight::Bold.to_floem())
+            s.size(size * 0.7, size * 0.7).color(mk.to_peniko())
         });
 
-        let box_ = Container::new(mark).style(move |s| {
+        let halo = Container::new(Empty::new()).style(move |s| {
+            let t = theme.get();
+            let active = hover.get() || pressed.get() || focused.get();
+            let alpha = if pressed.get() { 30 } else { 20 };
+            let extra = 40.0 - size as f64;
+            s.absolute()
+                .inset_top(0.0)
+                .inset_left(0.0)
+                .size(40.0, 40.0)
+                .translate_x(-(extra / 2.0))
+                .translate_y(-(extra / 2.0))
+                .border_radius(9999.0)
+                .background(with_alpha(t.colors().primary, alpha).to_peniko())
+                .apply_if(!active, |s| s.hide())
+        });
+
+        let box_ = Container::new(
+            Stack::new((halo, mark))
+                .style(|s| s.width_full().height_full().items_center().justify_center()),
+        )
+        .style(move |s| {
             let t = theme.get();
             let is_checked = checked.get();
             let (bg, border) = if is_checked {
@@ -178,7 +192,7 @@ impl MdCheckbox {
                 .justify_center()
         });
 
-        let label_view = text(label_text).style(move |s| {
+        let label_view = Label::new(label_text).style(move |s| {
             let t = theme.get();
             let c = if disabled {
                 with_alpha(t.colors().on_surface, 38)
@@ -199,7 +213,7 @@ impl MdCheckbox {
             }
         });
 
-        h_stack((box_, label_view))
+        Stack::horizontal((box_, label_view))
             .style(|s| s.items_center().gap(8.0).cursor(CursorStyle::Pointer))
             .on_event(listener::Click, {
                 let toggle = toggle.clone();
@@ -213,6 +227,56 @@ impl MdCheckbox {
                     toggle();
                 }
                 EventPropagation::Continue
+            })
+            .on_event(listener::PointerEnter, {
+                let hover = hover;
+                move |_, _| {
+                    if !disabled {
+                        hover.set(true);
+                    }
+                    EventPropagation::Continue
+                }
+            })
+            .on_event(listener::PointerLeave, {
+                let hover = hover;
+                let pressed = pressed;
+                move |_, _| {
+                    hover.set(false);
+                    pressed.set(false);
+                    EventPropagation::Continue
+                }
+            })
+            .on_event(listener::PointerDown, {
+                let pressed = pressed;
+                move |_, _| {
+                    if !disabled {
+                        pressed.set(true);
+                    }
+                    EventPropagation::Continue
+                }
+            })
+            .on_event(listener::PointerUp, {
+                let pressed = pressed;
+                move |_, _| {
+                    pressed.set(false);
+                    EventPropagation::Continue
+                }
+            })
+            .on_event(listener::FocusGained, {
+                let focused = focused;
+                move |_, _| {
+                    if !disabled {
+                        focused.set(true);
+                    }
+                    EventPropagation::Continue
+                }
+            })
+            .on_event(listener::FocusLost, {
+                let focused = focused;
+                move |_, _| {
+                    focused.set(false);
+                    EventPropagation::Continue
+                }
             })
             .style(move |s| s.set_disabled(disabled).keyboard_navigable())
     }

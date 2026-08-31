@@ -1,7 +1,7 @@
 use floem::prelude::*;
 use floem::style::CursorStyle;
 use floem::view::AnyView;
-use floem::views::{Decorators, Empty, h_stack_from_iter};
+use floem::views::{Decorators, Empty, h_stack_from_iter, Stack};
 use floem_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floem_core_theme::props::button_group::ButtonGroupProps;
 use floem_core_theme::theme::{MultiTheme, Theme};
@@ -68,7 +68,7 @@ impl MdButtonGroup {
         let inner: AnyView = if vertical {
             list(kids).style(move |s| s.gap(gap)).into_any()
         } else {
-            h_stack_from_iter(kids).style(move |s| s.gap(gap)).into_any()
+            Stack::horizontal_from_iter(kids).style(move |s| s.gap(gap)).into_any()
         };
 
         Container::new(inner).style(move |s| {

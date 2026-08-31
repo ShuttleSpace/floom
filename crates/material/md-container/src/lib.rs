@@ -77,7 +77,7 @@ impl MdContainer {
     pub fn view(self) -> impl View {
         let theme = self.theme;
         let props = self.props;
-        let child = self.child.unwrap_or_else(|| empty().into_any());
+        let child = self.child.unwrap_or_else(|| Empty::new().into_any());
         let max_width = props.max_width;
         let padding = props.padding;
         let fluid = props.fluid;

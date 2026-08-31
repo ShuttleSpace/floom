@@ -4,7 +4,7 @@ use floem::event::EventPropagation;
 use floem::prelude::*;
 use floem::view::AnyView;
 use floem::style::CursorStyle;
-use floem::views::Decorators;
+use floem::views::{Decorators, Empty};
 use floem_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floem_core_theme::props::range_slider::RangeSliderProps;
 use floem_core_theme::theme::{MultiTheme, Theme};

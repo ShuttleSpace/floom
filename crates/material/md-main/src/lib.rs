@@ -35,7 +35,7 @@ impl MdMain {
     pub fn view(self) -> impl View {
         let theme = self.theme;
         let layout = layout_signal();
-        let child = self.child.unwrap_or_else(|| empty().into_any());
+        let child = self.child.unwrap_or_else(|| Empty::new().into_any());
 
         let top = Empty::new().style(move |s| {
             let l = layout.get();

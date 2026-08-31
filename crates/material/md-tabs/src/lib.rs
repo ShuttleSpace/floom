@@ -4,12 +4,13 @@ use floem::event::EventPropagation;
 use floem::prelude::*;
 use floem::style::CursorStyle;
 use floem::view::AnyView;
-use floem::views::Decorators;
+use floem::views::{Decorators, Empty, Label, Stack};
 use floem_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floem_core_theme::props::tabs::TabsProps;
 use floem_core_theme::theme::{MultiTheme, Theme};
 use floem_core_theme::tokens::color::Color;
 use floem_core_theme::tokens::color_ext::*;
+use floem_core_theme::tokens::typography::FontWeight;
 use floem_widget_runtime::theme_signal;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -116,14 +117,16 @@ impl MdTabs {
 
                 let is_active = move || selected.get() == i;
 
-                v_stack((
-                    text(label).style(move |s| {
+                Stack::vertical((
+                    Label::new(label).style(move |s| {
                         let t = theme.get();
                         let active = is_active();
                         s.padding_horiz(padding)
                             .height(height)
                             .items_center()
                             .justify_center()
+                            .font_size(14.0)
+                            .font_weight(FontWeight::Medium.to_floem())
                             .color(
                                 if active {
                                     t.colors().primary

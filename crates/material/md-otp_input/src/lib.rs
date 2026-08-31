@@ -2,7 +2,7 @@ use std::rc::Rc;
 
 use floem::prelude::*;
 use floem::view::AnyView;
-use floem::views::{Decorators, TextInput, h_stack_from_iter};
+use floem::views::{Decorators, TextInput, h_stack_from_iter, Stack};
 use floem::reactive::{RwSignal, SignalGet, create_effect};
 use floem_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floem_core_theme::props::otp_input::OtpInputProps;
@@ -136,19 +136,14 @@ impl MdOtpInput {
                         }
                     }
                 }
-                // normalize the displayed glyph
-                let target = if masked {
-                    if ch.is_empty() {
-                        String::new()
-                    } else {
-                        "•".to_string()
-                    }
-                } else {
-                    ch.clone()
-                };
-                if target != shown.get() {
-                    shown.set(target);
-                }
+                // NOTE: do NOT write `shown` here. `shown` is the TextInput's own
+                // buffer and is derived solely from `code` by the `code -> boxes`
+                // effect below. Writing it from this effect (the old mask
+                // normalization) made the same signal be read+written by two
+                // cross-subscribed effects, which under floem's synchronous
+                // re-entrant effect dispatch recursed without bound (stack
+                // overflow crash). Keeping this effect read-only on `shown`
+                // makes the binding converge.
             });
         }
 
@@ -207,7 +202,7 @@ impl MdOtpInput {
             })
             .collect();
 
-        h_stack_from_iter(kids).style(move |s| s.gap(gap).items_center())
+        Stack::horizontal_from_iter(kids).style(move |s| s.gap(gap).items_center())
     }
 }
 

@@ -1,6 +1,6 @@
 use floem::prelude::*;
 use floem::view::AnyView;
-use floem::views::h_stack_from_iter;
+use floem::views::{h_stack_from_iter, Empty, Stack};
 use floem_core_theme::props::grid::GridProps;
 use floem_core_theme::theme::{MultiTheme, Theme};
 use floem_core_theme::tokens::color::Color;
@@ -87,13 +87,13 @@ impl MdGrid {
         }
         if !chunk.is_empty() {
             while chunk.len() < cols {
-                chunk.push(empty().into_any());
+                chunk.push(Empty::new().into_any());
             }
             rows.push(build_row(chunk, gap));
         }
 
         if rows.is_empty() {
-            return empty().into_any();
+            return Empty::new().into_any();
         }
 
         list(rows).style(move |s| s.gap(row_gap)).into_any()
@@ -105,7 +105,7 @@ fn build_row(cells: Vec<AnyView>, gap: f32) -> AnyView {
         .into_iter()
         .map(|c| Container::new(c).style(|s| s.flex_grow(1.0)).into_any())
         .collect();
-    h_stack_from_iter(cells)
+    Stack::horizontal_from_iter(cells)
         .style(move |s| s.gap(gap).width_pct(100.0))
         .into_any()
 }

@@ -212,7 +212,7 @@ impl MdCalendar {
         let panel_width = tokens.panel_width;
         let weeknumber_width = tokens.weeknumber_width;
 
-        let prev_btn = text("‹")
+        let prev_btn = Label::new("‹")
             .style(move |s| {
                 let t = theme.get();
                 s.color(t.colors().on_surface.to_peniko())
@@ -226,7 +226,7 @@ impl MdCalendar {
                 EventPropagation::Continue
             });
 
-        let next_btn = text("›")
+        let next_btn = Label::new("›")
             .style(move |s| {
                 let t = theme.get();
                 s.color(t.colors().on_surface.to_peniko())
@@ -240,7 +240,7 @@ impl MdCalendar {
                 EventPropagation::Continue
             });
 
-        let title = label(move || {
+        let title = Label::derived(move || {
             let (y, m) = view_month.get();
             format!("{} {}", MONTHS[(m as usize) - 1], y)
         })
@@ -250,7 +250,7 @@ impl MdCalendar {
                 .font_weight(FontWeight::Medium.to_floem())
         });
 
-        let header = h_stack((prev_btn, title, next_btn))
+        let header = Stack::horizontal((prev_btn, title, next_btn))
             .style(|s| s.justify_between().items_center().width_pct(100.0));
 
         let mut weekday_cells: Vec<AnyView> = Vec::new();
@@ -263,7 +263,7 @@ impl MdCalendar {
         }
         for w in ["S", "M", "T", "W", "T", "F", "S"] {
             weekday_cells.push(
-                text(w)
+                Label::new(w)
                     .style(move |s| {
                         s.width(cell_size)
                             .height(cell_size)
@@ -275,7 +275,7 @@ impl MdCalendar {
                     .into_any(),
             );
         }
-        let weekday_row = h_stack_from_iter(weekday_cells)
+        let weekday_row = Stack::horizontal_from_iter(weekday_cells)
             .style(|s| s.justify_between().width_pct(100.0));
 
         let rows: Vec<AnyView> = (0..6)
@@ -287,7 +287,7 @@ impl MdCalendar {
                         let view_month = view_month;
                         let on_change = on_change.clone();
                         let theme = theme;
-                        label(move || {
+                        Label::derived(move || {
                             let (yy, mm) = view_month.get();
                             match day_at(k, yy, mm) {
                                 Some(n) => n.to_string(),
@@ -359,7 +359,7 @@ impl MdCalendar {
                     let (yy, mm) = view_month.get();
                     let (wy, wm, wd) = abs_date_of_cell(r * 7, yy, mm);
                     let wnum = week_number(wy, wm, wd);
-                    let wnum_view = text(wnum.to_string())
+                    let wnum_view = Label::new(wnum.to_string())
                         .style(move |s| {
                             s.width(weeknumber_width)
                                 .height(cell_size)
@@ -375,7 +375,7 @@ impl MdCalendar {
                 } else {
                     week
                 };
-                h_stack_from_iter(week_row)
+                Stack::horizontal_from_iter(week_row)
                     .style(|s| s.justify_between())
                     .into_any()
             })
@@ -383,7 +383,7 @@ impl MdCalendar {
 
         let grid = list(rows).style(|s| s.gap(2.0));
 
-        let panel = Container::new(v_stack((header, weekday_row, grid)).style(|s| s.gap(6.0)))
+        let panel = Container::new(Stack::vertical((header, weekday_row, grid)).style(|s| s.gap(6.0)))
             .style(move |s| {
                 let t = theme.get();
                 s.width(panel_width)

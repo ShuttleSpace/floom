@@ -102,7 +102,7 @@ impl MdChip {
 
         let selected = self.props.selected;
 
-        Container::new(text(label))
+        Container::new(Label::new(label))
             .style(move |s| {
                 let t = theme.get();
                 let bg = if disabled {

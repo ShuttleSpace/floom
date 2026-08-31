@@ -100,7 +100,7 @@ impl MdBadge {
                 })
                 .into_any()
         } else if !content.is_empty() {
-            Container::new(text(content))
+            Container::new(Label::new(content))
                 .style(move |s| {
                     let t = theme.get();
                     s.absolute()

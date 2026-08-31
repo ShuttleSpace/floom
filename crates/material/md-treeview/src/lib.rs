@@ -5,9 +5,10 @@ use floem::prelude::*;
 use floem::reactive::RwSignal;
 use floem::style::CursorStyle;
 use floem::view::AnyView;
-use floem::views::dyn_view;
+use floem::views::{dyn_view, Empty, Label, Stack};
 use floem::IntoView;
 use floem_core_theme::component_tokens::{ComponentId, ComponentTokens};
+use floem_widget_md_icon::MdIcon;
 use floem_core_theme::props::treeview::{TreeviewNode, TreeviewProps};
 use floem_core_theme::theme::{MultiTheme, Theme};
 use floem_core_theme::tokens::color::Color;
@@ -73,15 +74,15 @@ fn flatten(
 
         let expander = if has_children {
             let t2 = toggle.clone();
-            let chevron = if expanded { "▾" } else { "▸" };
-            text(chevron)
+            let icon_name = if expanded { "expand_more" } else { "chevron_right" };
+            MdIcon::new(icon_name)
+                .size(expander_size)
+                .view()
                 .style(move |s| {
                     s.width(expander_size)
                         .height(expander_size)
                         .items_center()
                         .justify_center()
-                        .color(theme.get().colors().on_surface_variant.to_peniko())
-                        .font_size(12.0)
                         .cursor(CursorStyle::Pointer)
                 })
                 .on_event(listener::Click, move |_, _| {
@@ -97,14 +98,14 @@ fn flatten(
         };
 
         let icon_view = if let Some(ic) = icon {
-            text(ic)
+            MdIcon::new(ic)
+                .size(icon_size * 0.7)
+                .view()
                 .style(move |s| {
                     s.width(icon_size)
                         .height(icon_size)
                         .items_center()
                         .justify_center()
-                        .font_size(icon_size * 0.7)
-                        .color(theme.get().colors().on_surface_variant.to_peniko())
                 })
                 .into_any()
         } else {
@@ -116,7 +117,7 @@ fn flatten(
             .into_any();
 
         let on_node_click_label = on_node_click.clone();
-        let label_view = text(label.clone())
+        let label_view = Label::new(label.clone())
             .style(move |s| {
                 s.flex_grow(1.0)
                     .color(theme.get().colors().on_surface.to_peniko())
@@ -131,7 +132,7 @@ fn flatten(
             })
             .into_any();
 
-        let row = h_stack((indent_sp, expander, icon_view, label_view))
+        let row = Stack::horizontal((indent_sp, expander, icon_view, label_view))
             .style(move |s| {
                 s.height(row_height)
                     .items_center()

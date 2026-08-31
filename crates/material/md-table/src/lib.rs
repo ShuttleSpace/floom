@@ -1,6 +1,6 @@
 use floem::prelude::*;
 use floem::view::AnyView;
-use floem::views::{Decorators, h_stack_from_iter, list};
+use floem::views::{Decorators, list, h_stack_from_iter, Stack, Label};
 use floem::reactive::{RwSignal, SignalGet};
 use floem_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floem_core_theme::props::table::TableProps;
@@ -84,7 +84,7 @@ impl MdTable {
         let header_cells: Vec<AnyView> = headers
             .iter()
             .map(|h| {
-                text(h.clone())
+                Label::new(h.clone())
                     .style(move |s| {
                         let t = theme.get();
                         s.flex_grow(1.0)
@@ -96,7 +96,7 @@ impl MdTable {
                     .into_any()
             })
             .collect();
-        let header_row = h_stack_from_iter(header_cells).style(move |s| {
+        let header_row = Stack::horizontal_from_iter(header_cells).style(move |s| {
             let t = theme.get();
             s.height(hh)
                 .background(t.colors().surface_variant.to_peniko())
@@ -109,7 +109,7 @@ impl MdTable {
             let cells: Vec<AnyView> = row
                 .iter()
                 .map(|c| {
-                    text(c.clone())
+                    Label::new(c.clone())
                         .style(move |s| {
                             let t = theme.get();
                             s.flex_grow(1.0)
@@ -121,7 +121,7 @@ impl MdTable {
                 })
                 .collect();
             let is_stripe = striped && ri % 2 == 1;
-            let row_view = h_stack_from_iter(cells).style(move |s| {
+            let row_view = Stack::horizontal_from_iter(cells).style(move |s| {
                 let t = theme.get();
                 let bg = if is_stripe {
                     t.colors().surface_variant

@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use floem::prelude::*;
 use floem::reactive::RwSignal;
 use floem::view::AnyView;
@@ -62,6 +64,12 @@ impl MdSheet {
         self.open
     }
 
+    /// Set the internal `open` signal from an external signal.
+    pub fn with_open_signal(mut self, open: RwSignal<bool>) -> Self {
+        self.open = open;
+        self
+    }
+
     pub fn props(&self) -> &SheetProps {
         &self.props
     }
@@ -92,7 +100,7 @@ impl MdSheet {
         let side = props.side;
         let open = self.open;
         let elevated = props.elevated;
-        let child = self.child.unwrap_or_else(|| empty().into_any());
+        let child = self.child.unwrap_or_else(|| Empty::new().into_any());
 
         let tokens = match theme.get().component(ComponentId::Sheet) {
             ComponentTokens::Sheet(t) => t,
@@ -129,6 +137,21 @@ impl MdSheet {
                 }
                 s
             })
+            // Slide in from the anchored edge, slide back out on close.
+            .animation(move |a| {
+                a.run_on_create(true)
+                    .run_on_remove(true)
+                    .duration(Duration::from_millis(300))
+                    .keyframe(0, |f| {
+                        f.style(|s| match side {
+                            SheetSide::Bottom => s.translate_y(56.0),
+                            SheetSide::Top => s.translate_y(-56.0),
+                            SheetSide::Start => s.translate_x(-side_w),
+                            SheetSide::End => s.translate_x(side_w),
+                        })
+                    })
+                    .keyframe(100, |f| f.computed_style())
+            })
             .into_any();
 
         let scrim: AnyView = match side {
@@ -142,6 +165,13 @@ impl MdSheet {
                         .background(with_alpha(scrim_color, 160).to_peniko())
                         .apply_if(!open.get(), |s| s.hide())
                 })
+                .animation(|a| {
+                    a.run_on_create(true)
+                        .run_on_remove(true)
+                        .duration(Duration::from_millis(300))
+                        .keyframe(0, |f| f.style(|s| s.opacity(0.0)))
+                        .keyframe(100, |f| f.computed_style())
+                })
                 .into_any(),
             SheetSide::Top => Container::new(panel)
                 .style(move |s| {
@@ -152,6 +182,13 @@ impl MdSheet {
                         .items_center()
                         .background(with_alpha(scrim_color, 160).to_peniko())
                         .apply_if(!open.get(), |s| s.hide())
+                })
+                .animation(|a| {
+                    a.run_on_create(true)
+                        .run_on_remove(true)
+                        .duration(Duration::from_millis(300))
+                        .keyframe(0, |f| f.style(|s| s.opacity(0.0)))
+                        .keyframe(100, |f| f.computed_style())
                 })
                 .into_any(),
             SheetSide::Start => Container::new(panel)
@@ -164,6 +201,13 @@ impl MdSheet {
                         .background(with_alpha(scrim_color, 160).to_peniko())
                         .apply_if(!open.get(), |s| s.hide())
                 })
+                .animation(|a| {
+                    a.run_on_create(true)
+                        .run_on_remove(true)
+                        .duration(Duration::from_millis(300))
+                        .keyframe(0, |f| f.style(|s| s.opacity(0.0)))
+                        .keyframe(100, |f| f.computed_style())
+                })
                 .into_any(),
             SheetSide::End => Container::new(panel)
                 .style(move |s| {
@@ -174,6 +218,13 @@ impl MdSheet {
                         .items_center()
                         .background(with_alpha(scrim_color, 160).to_peniko())
                         .apply_if(!open.get(), |s| s.hide())
+                })
+                .animation(|a| {
+                    a.run_on_create(true)
+                        .run_on_remove(true)
+                        .duration(Duration::from_millis(300))
+                        .keyframe(0, |f| f.style(|s| s.opacity(0.0)))
+                        .keyframe(100, |f| f.computed_style())
                 })
                 .into_any(),
         };

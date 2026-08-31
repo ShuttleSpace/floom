@@ -4,8 +4,10 @@ use floem::event::EventPropagation;
 use floem::prelude::*;
 use floem::style::CursorStyle;
 use floem::view::AnyView;
-use floem::views::{Container, Decorators, Empty, h_stack_from_iter, v_stack};
+use floem::views::{Container, Decorators, Empty, h_stack_from_iter, v_stack, Stack, Label};
+use floem::views::svg;
 use floem_core_theme::component_tokens::{ComponentId, ComponentTokens};
+use floem_widget_md_icon::md_icon_svg;
 use floem_core_theme::props::stepper::StepperProps;
 use floem_core_theme::theme::{MultiTheme, Theme};
 use floem_core_theme::tokens::color::Color;
@@ -128,11 +130,17 @@ impl MdStepper {
                 let theme_m = theme;
                 let sel_m = selected;
                 let completed = i < sel;
-                let marker = Container::new(text(if completed {
-                    "✓".to_string()
+                let marker = Container::new(if completed {
+                    svg(move || md_icon_svg("check"))
+                        .style(move |s| {
+                            let t = theme_m.get();
+                            s.size(step_size * 0.55, step_size * 0.55)
+                                .color(t.colors().on_primary.to_peniko())
+                        })
+                        .into_any()
                 } else {
-                    format!("{}", i + 1)
-                }))
+                    Label::new(format!("{}", i + 1)).into_any()
+                })
                 .style(move |s| {
                     let t = theme_m.get();
                     let done = sel_m.get() > i || sel_m.get() == i;
@@ -156,7 +164,7 @@ impl MdStepper {
 
                 let theme_l = theme;
                 let sel_l = selected;
-                let label_view = text(label.clone()).style(move |s| {
+                let label_view = Label::new(label.clone()).style(move |s| {
                     let t = theme_l.get();
                     let c = if sel_l.get() == i {
                         t.colors().on_surface
@@ -175,7 +183,7 @@ impl MdStepper {
                         .font_weight(w.to_floem())
                 });
 
-                let node: AnyView = v_stack((marker, label_view))
+                let node: AnyView = Stack::vertical((marker, label_view))
                     .style(move |s| s.items_center().gap(8.0))
                     .into_any();
 
@@ -225,7 +233,7 @@ impl MdStepper {
             if kids.is_empty() {
                 return Empty::new().into_any();
             }
-            h_stack_from_iter(kids)
+            Stack::horizontal_from_iter(kids)
                 .style(move |s| s.items_center().gap(gap).width_pct(100.0))
                 .into_any()
         });

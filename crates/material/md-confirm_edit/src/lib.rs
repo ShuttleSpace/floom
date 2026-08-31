@@ -5,8 +5,10 @@ use floem::prelude::*;
 use floem::reactive::{RwSignal, SignalGet, SignalUpdate};
 use floem::style::CursorStyle;
 use floem::view::AnyView;
-use floem::views::{Container, Decorators, Empty, TextInput, h_stack, text};
+use floem::views::{Container, Decorators, Empty, TextInput, h_stack, text, Stack, Label};
+use floem::views::svg;
 use floem_core_theme::component_tokens::{ComponentId, ComponentTokens};
+use floem_widget_md_icon::md_icon_svg;
 use floem_core_theme::props::confirm_edit::ConfirmEditProps;
 use floem_core_theme::theme::{MultiTheme, Theme};
 use floem_core_theme::tokens::color::Color;
@@ -79,13 +81,18 @@ impl MdConfirmEdit {
                     let editing = editing;
                     let on_save = on_save.clone();
                     let draft = draft;
-                    Container::new(text("✓"))
-                        .style(move |s| {
-                            let t = theme.get();
-                            s.padding_horiz(8.0)
-                                .color(t.colors().primary.to_peniko())
-                                .cursor(CursorStyle::Pointer)
-                        })
+                Container::new(
+                    svg(move || md_icon_svg("check")).style(move |s| {
+                        let t = theme.get();
+                        s.size(16.0, 16.0).color(t.colors().primary.to_peniko())
+                    }),
+                )
+                    .style(move |s| {
+                        let t = theme.get();
+                        s.padding_horiz(8.0)
+                            .color(t.colors().primary.to_peniko())
+                            .cursor(CursorStyle::Pointer)
+                    })
                         .on_event(listener::Click, move |_, _| {
                             let nv = draft.get();
                             value.set(nv.clone());
@@ -100,45 +107,55 @@ impl MdConfirmEdit {
                     let editing = editing;
                     let draft = draft;
                     let value = value;
-                    Container::new(text("✗"))
-                        .style(move |s| {
-                            let t = theme.get();
-                            s.padding_horiz(8.0)
-                                .color(t.colors().on_surface_variant.to_peniko())
-                                .cursor(CursorStyle::Pointer)
-                        })
+                Container::new(
+                    svg(move || md_icon_svg("close")).style(move |s| {
+                        let t = theme.get();
+                        s.size(16.0, 16.0).color(t.colors().on_surface_variant.to_peniko())
+                    }),
+                )
+                    .style(move |s| {
+                        let t = theme.get();
+                        s.padding_horiz(8.0)
+                            .color(t.colors().on_surface_variant.to_peniko())
+                            .cursor(CursorStyle::Pointer)
+                    })
                         .on_event(listener::Click, move |_, _| {
                             draft.set(value.get());
                             editing.set(false);
                             EventPropagation::Continue
                         })
                 };
-                h_stack((input, save, cancel))
+                Stack::horizontal((input, save, cancel))
                     .style(move |s| s.gap(tk.gap).items_center())
                     .into_any()
             } else {
                 let content: AnyView = match &child_factory {
                     Some(f) => f(),
-                    None => text(value.get()).into_any(),
+                    None => Label::new(value.get()).into_any(),
                 };
                 let edit_btn = {
                     let editing = editing;
                     let draft = draft;
                     let value = value;
-                    Container::new(text("✎"))
-                        .style(move |s| {
-                            let t = theme.get();
-                            s.padding_horiz(8.0)
-                                .color(t.colors().on_surface_variant.to_peniko())
-                                .cursor(CursorStyle::Pointer)
-                        })
+                Container::new(
+                    svg(move || md_icon_svg("edit")).style(move |s| {
+                        let t = theme.get();
+                        s.size(16.0, 16.0).color(t.colors().on_surface_variant.to_peniko())
+                    }),
+                )
+                    .style(move |s| {
+                        let t = theme.get();
+                        s.padding_horiz(8.0)
+                            .color(t.colors().on_surface_variant.to_peniko())
+                            .cursor(CursorStyle::Pointer)
+                    })
                         .on_event(listener::Click, move |_, _| {
                             draft.set(value.get());
                             editing.set(true);
                             EventPropagation::Continue
                         })
                 };
-                h_stack((content, edit_btn))
+                Stack::horizontal((content, edit_btn))
                     .style(move |s| s.gap(tk.gap).items_center())
                     .into_any()
             }

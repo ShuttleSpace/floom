@@ -11,6 +11,7 @@ use floem_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floem_core_theme::props::snackbar::SnackbarProps;
 use floem_core_theme::theme::{MultiTheme, Theme};
 use floem_core_theme::tokens::color::Color;
+use floem_core_theme::tokens::color_ext::*;
 use floem_core_theme::tokens::typography::FontWeight;
 use floem_widget_runtime::theme_signal;
 
@@ -69,6 +70,12 @@ impl MdSnackbar {
         self.open
     }
 
+    /// Set the internal `open` signal from an external signal.
+    pub fn with_open_signal(mut self, open: RwSignal<bool>) -> Self {
+        self.open = open;
+        self
+    }
+
     pub fn resolved_style(&self) -> MdSnackbarStyle {
         let theme = self.theme.get();
         let ComponentTokens::Snackbar(tokens) = theme.component(ComponentId::Snackbar) else {
@@ -121,14 +128,14 @@ impl MdSnackbar {
             });
         }
 
-        let message_view = text(message).style(move |s| {
+        let message_view = Label::new(message).style(move |s| {
             let t = theme.get();
             s.color(t.colors().surface.to_peniko())
                 .font_size(font_size)
         });
 
         let action_view: AnyView = match action_label {
-            Some(lbl) => text(lbl)
+            Some(lbl) => Label::new(lbl)
                 .style(move |s| {
                     let t = theme.get();
                     s.color(t.colors().primary.to_peniko())
@@ -153,7 +160,7 @@ impl MdSnackbar {
         };
 
         let surface = Container::new(
-            h_stack((message_view, action_view)).style(move |s| s.items_center().gap(gap)),
+            Stack::horizontal((message_view, action_view)).style(move |s| s.items_center().gap(gap)),
         )
         .style(move |s| {
             let t = theme.get();
@@ -164,7 +171,18 @@ impl MdSnackbar {
                 .background(t.colors().on_surface.to_peniko())
                 .color(t.colors().surface.to_peniko())
                 .items_center()
+                .box_shadow_blur(16.0)
+                .box_shadow_spread(1.0)
+                .box_shadow_color(with_alpha(Color::rgba(0, 0, 0, 255), 40).to_peniko())
                 .apply_if(!open.get(), |s| s.hide())
+        })
+        // Slide up from the bottom edge and fade in; reverse on dismiss.
+        .animation(|a| {
+            a.run_on_create(true)
+                .run_on_remove(true)
+                .duration(Duration::from_millis(250))
+                .keyframe(0, |f| f.style(|s| s.translate_y(40.0).opacity(0.0)))
+                .keyframe(100, |f| f.computed_style())
         });
 
         let overlay = Container::new(surface).style(move |s| {

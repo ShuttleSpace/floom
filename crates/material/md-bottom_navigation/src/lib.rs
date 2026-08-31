@@ -5,7 +5,7 @@ use floem::prelude::*;
 use floem::reactive::RwSignal;
 use floem::style::CursorStyle;
 use floem::view::AnyView;
-use floem::views::{Container, Decorators, Empty, h_stack_from_iter, v_stack};
+use floem::views::{Container, Decorators, Empty, h_stack_from_iter, v_stack, Stack, Label};
 use floem_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floem_core_theme::props::bottom_navigation::BottomNavigationProps;
 use floem_core_theme::theme::{MultiTheme, Theme};
@@ -108,6 +108,7 @@ impl MdBottomNavigation {
         let _icon_size = tokens.icon_size;
         let label_font = tokens.label_font_size;
         let min_width = tokens.item_min_width;
+        let gap = tokens.gap;
 
         let mut icon_iter = icons.into_iter();
         let destinations: Vec<AnyView> = labels
@@ -124,7 +125,7 @@ impl MdBottomNavigation {
                     None => Empty::new().into_any(),
                 };
 
-                v_stack((icon_view, text(label)))
+                Stack::vertical((icon_view, Label::new(label)))
                     .style(move |s| {
                         let t = theme.get();
                         let is_sel = selected.get() == i;
@@ -135,7 +136,7 @@ impl MdBottomNavigation {
                         };
                         s.items_center()
                             .justify_center()
-                            .gap(4.0)
+                            .gap(gap)
                             .width_full()
                             .min_width(min_width)
                             .font_size(label_font)
@@ -153,7 +154,7 @@ impl MdBottomNavigation {
             })
             .collect();
 
-        Container::new(h_stack_from_iter(destinations).style(move |s| {
+        Container::new(Stack::horizontal_from_iter(destinations).style(move |s| {
             s.width_full()
                 .height_full()
                 .items_center()

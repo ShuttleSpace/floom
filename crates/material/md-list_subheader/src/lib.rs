@@ -1,5 +1,5 @@
 use floem::prelude::*;
-use floem::views::{Container, Decorators, text};
+use floem::views::{Container, Decorators, text, Label};
 use floem_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floem_core_theme::props::list_subheader::ListSubheaderProps;
 use floem_core_theme::theme::{MultiTheme, Theme};
@@ -38,7 +38,7 @@ impl MdListSubheader {
         };
         let tk = tokens.clone();
 
-        Container::new(text(text_content)).style(move |s| {
+        Container::new(Label::new(text_content)).style(move |s| {
             let t = theme.get();
             let pad = if inset {
                 tk.inset_padding

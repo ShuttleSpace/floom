@@ -4,13 +4,14 @@ use floem::event::EventPropagation;
 use floem::prelude::*;
 use floem::style::CursorStyle;
 use floem::view::AnyView;
-use floem::views::{Container, Decorators, Empty, h_stack, label, text};
+use floem::views::{Container, Decorators, Empty, h_stack, label, text, Stack, Label};
+use floem::views::svg;
 use floem_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floem_core_theme::props::checkbox_btn::CheckboxBtnProps;
 use floem_core_theme::theme::{MultiTheme, Theme};
 use floem_core_theme::tokens::color::Color;
 use floem_core_theme::tokens::color_ext::*;
-use floem_core_theme::tokens::typography::FontWeight;
+use floem_widget_md_icon::md_icon_svg;
 use floem_widget_runtime::theme_signal;
 
 pub struct MdCheckboxBtn {
@@ -59,32 +60,23 @@ impl MdCheckboxBtn {
         };
         let tk = tokens.clone();
 
-        let mark = label(move || {
-            if checked.get() {
-                "✓".to_string()
-            } else {
-                String::new()
-            }
-        })
-        .style(move |s| {
+        let mark = svg(move || md_icon_svg("check")).style(move |s| {
             let t = theme.get();
             let mk = if checked.get() {
-                t.colors().on_primary
+                if disabled {
+                    with_alpha(t.colors().on_surface, 38)
+                } else {
+                    t.colors().on_primary
+                }
             } else {
                 Color::rgba(0, 0, 0, 0)
             };
-            let mk = if disabled {
-                with_alpha(t.colors().on_surface, 38)
-            } else {
-                mk
-            };
-            s.color(mk.to_peniko())
-                .font_size(tk.font_size * 1.2)
-                .font_weight(FontWeight::Bold.to_floem())
+            s.size(tk.font_size * 1.2, tk.font_size * 1.2)
+                .color(mk.to_peniko())
         });
 
         let label_view = match label_text {
-            Some(txt) => text(txt)
+            Some(txt) => Label::new(txt)
                 .style(move |s| {
                     let t = theme.get();
                     let c = if disabled {
@@ -108,7 +100,7 @@ impl MdCheckboxBtn {
             }
         });
 
-        h_stack((mark, label_view))
+        Stack::horizontal((mark, label_view))
             .style(move |s| {
                 let t = theme.get();
                 let is_checked = checked.get();

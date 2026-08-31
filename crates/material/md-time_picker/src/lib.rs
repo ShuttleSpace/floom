@@ -3,6 +3,7 @@ use std::rc::Rc;
 use floem::event::EventPropagation;
 use floem::prelude::*;
 use floem::reactive::RwSignal;
+use floem::context::{LayoutChanged, LayoutChangedListener};
 use floem::style::CursorStyle;
 use floem_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floem_core_theme::props::time_picker::{TimePickerProps, TimeValue};
@@ -118,7 +119,7 @@ impl MdTimePicker {
         let cell_height = tokens.cell_height;
 
         let stepper_btn = |label_text: &'static str, theme: RwSignal<MultiTheme>| {
-            text(label_text).style(move |s| {
+            Label::new(label_text).style(move |s| {
                 let t = theme.get();
                 s.width(32.0)
                     .height(32.0)
@@ -177,7 +178,7 @@ impl MdTimePicker {
                 }
             });
 
-        let hour_val = label(move || {
+        let hour_val = Label::derived(move || {
             format!("{:02}", value.get().map(|t| t.hour).unwrap_or(0))
         })
         .style(move |s| {
@@ -189,7 +190,7 @@ impl MdTimePicker {
                 .items_center()
                 .justify_center()
         });
-        let minute_val = label(move || {
+        let minute_val = Label::derived(move || {
             format!("{:02}", value.get().map(|t| t.minute).unwrap_or(0))
         })
         .style(move |s| {
@@ -202,12 +203,12 @@ impl MdTimePicker {
                 .justify_center()
         });
 
-        let hour_row = h_stack((hour_dec, hour_val, hour_inc))
+        let hour_row = Stack::horizontal((hour_dec, hour_val, hour_inc))
             .style(move |s| s.items_center().justify_center().gap(8.0).height(cell_height));
-        let minute_row = h_stack((minute_dec, minute_val, minute_inc))
+        let minute_row = Stack::horizontal((minute_dec, minute_val, minute_inc))
             .style(move |s| s.items_center().justify_center().gap(8.0).height(cell_height));
 
-        let done = text("Done")
+        let done = Label::new("Done")
             .style(move |s| {
                 let t = theme.get();
                 s.padding_horiz(12.0)
@@ -223,17 +224,21 @@ impl MdTimePicker {
                 EventPropagation::Continue
             });
 
+        let origin = RwSignal::new((0.0f64, 0.0f64));
+        let trigger_h = RwSignal::new(0.0f32);
+
         let panel = Container::new(
-            v_stack((hour_row, minute_row, done))
+            Stack::vertical((hour_row, minute_row, done))
                 .style(|s| s.items_center().gap(8.0)),
         )
         .style(move |s| {
             let t = theme.get();
+            let (ox, oy) = origin.get();
+            let h = trigger_h.get() as f64;
             s.absolute()
-                .inset_top_pct(100.0)
-                .inset_left_pct(0.0)
+                .inset_top(oy + h)
+                .inset_left(ox)
                 .width(panel_width)
-                .margin_top(4.0)
                 .padding(12.0)
                 .background(t.colors().surface.to_peniko())
                 .border_radius(radius)
@@ -246,7 +251,7 @@ impl MdTimePicker {
         });
 
         let trigger = Container::new(
-            label(move || match value.get() {
+            Label::derived(move || match value.get() {
                 Some(tv) => format!("{:02}:{:02}", tv.hour, tv.minute),
                 None => placeholder.clone(),
             })
@@ -291,7 +296,15 @@ impl MdTimePicker {
             EventPropagation::Continue
         });
 
-        Stack::new((trigger, panel))
+        let dropdown = Overlay::new(panel);
+
+        Container::new(Stack::vertical((trigger, dropdown)))
+            .style(|s| s.items_start())
+            .on_event(LayoutChangedListener, move |_cx, layout: &LayoutChanged| {
+                origin.set((layout.new_window_origin.x, layout.new_window_origin.y));
+                trigger_h.set(layout.new_box.size().height as f32);
+                EventPropagation::Continue
+            })
     }
 }
 

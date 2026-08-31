@@ -1,5 +1,6 @@
 use floem::prelude::*;
 use floem::view::AnyView;
+use floem_core_theme::component_tokens::{ComponentId, ComponentTokens, SystemBarTokens};
 use floem_core_theme::props::system_bar::SystemBarProps;
 use floem_core_theme::theme::{MultiTheme, Theme};
 use floem_core_theme::tokens::color::Color;
@@ -30,7 +31,7 @@ impl MdSystemBar {
     }
 
     pub fn height(mut self, height: f32) -> Self {
-        self.props.height = height;
+        self.props.height = Some(height);
         self
     }
 
@@ -41,7 +42,7 @@ impl MdSystemBar {
     }
 
     pub fn pad(mut self, pad: f32) -> Self {
-        self.props.pad = pad;
+        self.props.pad = Some(pad);
         self
     }
 
@@ -61,6 +62,7 @@ impl MdSystemBar {
 
     pub fn resolved_style(&self) -> MdSystemBarStyle {
         let theme = self.theme.get();
+        let tokens = system_bar_tokens(&theme);
         let (surface, content) = if self.props.dark {
             (theme.colors().scrim, theme.colors().on_surface)
         } else {
@@ -69,8 +71,8 @@ impl MdSystemBar {
         MdSystemBarStyle {
             surface,
             content,
-            height: self.props.height,
-            pad: self.props.pad,
+            height: self.props.height.unwrap_or(tokens.height),
+            pad: self.props.pad.unwrap_or(tokens.pad),
             dark: self.props.dark,
         }
     }
@@ -79,15 +81,16 @@ impl MdSystemBar {
     pub fn view(self) -> impl View {
         let theme = self.theme;
         let props = self.props;
-        let child = self.child.unwrap_or_else(|| empty().into_any());
-        let height = props.height;
-// layout-provider auto-register
+        let child = self.child.unwrap_or_else(|| Empty::new().into_any());
+        let prop_height = props.height;
+        let prop_pad = props.pad;
+        let height = prop_height.unwrap_or_else(|| system_bar_tokens(&theme.get()).height);
+        // layout-provider auto-register
         floem_core_theme::layout::register_layout(
             floem_core_theme::layout::LayoutSlot::SystemBar,
             height,
         );
 
-        let pad = props.pad;
         let dark = props.dark;
 
         Container::new(child).style(move |s| {
@@ -97,9 +100,10 @@ impl MdSystemBar {
             } else {
                 (t.colors().surface_variant, t.colors().on_surface_variant)
             };
+            let tk = system_bar_tokens(&t);
             s.width_pct(100.0)
-                .height(height)
-                .padding(pad)
+                .height(prop_height.unwrap_or(tk.height))
+                .padding(prop_pad.unwrap_or(tk.pad))
                 .items_center()
                 .background(bg.to_peniko())
                 .color(fg.to_peniko())
@@ -110,5 +114,12 @@ impl MdSystemBar {
 impl Default for MdSystemBar {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+fn system_bar_tokens(theme: &MultiTheme) -> SystemBarTokens {
+    match theme.component(ComponentId::SystemBar) {
+        ComponentTokens::SystemBar(t) => t,
+        _ => unreachable!("ComponentId::SystemBar must resolve to SystemBarTokens"),
     }
 }

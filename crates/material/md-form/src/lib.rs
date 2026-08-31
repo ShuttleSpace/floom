@@ -107,7 +107,7 @@ impl MdForm {
     pub fn view(self) -> impl View {
         let theme = self.theme;
         let props = self.props;
-        let child = self.child.unwrap_or_else(|| empty().into_any());
+        let child = self.child.unwrap_or_else(|| Empty::new().into_any());
         let valid = self.valid;
         let errors = self.errors;
         let on_submit: Rc<Option<Box<dyn Fn()>>> = Rc::new(self.on_submit);
@@ -133,12 +133,12 @@ impl MdForm {
                 unreachable!("ComponentId::ValidationMessages must resolve")
             };
             if errs.is_empty() {
-                return empty().into_any();
+                return Empty::new().into_any();
             }
             let items: Vec<AnyView> = errs
                 .iter()
                 .map(|e| {
-                    text(e.clone())
+                    Label::new(e.clone())
                         .style(move |s| {
                             s.font_size(vmt.font_size)
                                 .color(theme.get().colors().error.to_peniko())
@@ -153,7 +153,7 @@ impl MdForm {
         let submit_btn: AnyView = if show_submit {
             let lbl = submit_label.clone();
             Container::new(
-                text(lbl).style(move |s| {
+                Label::new(lbl).style(move |s| {
                     let t = theme.get();
                     s.font_size(14.0)
                         .font_weight(FontWeight::Medium.to_floem())
@@ -190,10 +190,10 @@ impl MdForm {
             })
             .into_any()
         } else {
-            empty().into_any()
+            Empty::new().into_any()
         };
 
-        let content = v_stack((child, error_view.into_any(), submit_btn))
+        let content = Stack::vertical((child, error_view.into_any(), submit_btn))
             .style(move |s| s.gap(gap).items_start().width_pct(100.0));
 
         Container::new(content).style(move |s| {

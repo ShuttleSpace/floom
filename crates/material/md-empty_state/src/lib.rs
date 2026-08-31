@@ -95,7 +95,7 @@ impl MdEmptyState {
 
         if !props.icon.is_empty() {
             kids.push(
-                text(props.icon.clone())
+                Label::new(props.icon.clone())
                     .style(move |s| {
                         let t = theme.get();
                         s.font_size(icon_size)
@@ -106,7 +106,7 @@ impl MdEmptyState {
         }
 
         kids.push(
-            text(props.title.clone())
+            Label::new(props.title.clone())
                 .style(move |s| {
                     let t = theme.get();
                     s.font_size(title_font)
@@ -118,7 +118,7 @@ impl MdEmptyState {
 
         if !props.description.is_empty() {
             kids.push(
-                text(props.description.clone())
+                Label::new(props.description.clone())
                     .style(move |s| {
                         let t = theme.get();
                         s.font_size(desc_font)

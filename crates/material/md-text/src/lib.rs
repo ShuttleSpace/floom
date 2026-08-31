@@ -1,5 +1,5 @@
 use floem::prelude::*;
-use floem::views::{Container, Decorators};
+use floem::views::{Container, Decorators, Label};
 use floem_core_theme::props::text::TextProps;
 use floem_core_theme::theme::{MultiTheme, Theme};
 use floem_core_theme::tokens::color::Color;
@@ -67,7 +67,7 @@ impl MdText {
     pub fn view(self) -> impl View {
         let theme = self.theme;
         let content = self.props.content.clone();
-        text(content).style(move |s| {
+        Label::new(content).style(move |s| {
             let t = theme.get();
             let ts = t.typography().body.medium.clone();
             s.color(t.colors().on_surface.to_peniko())

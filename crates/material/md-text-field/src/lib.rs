@@ -215,7 +215,7 @@ impl MdTextField {
                 };
                 s.height(height)
                     .padding_horiz(padding_horizontal)
-                    .border(1.0)
+                    .border(if focused.get() { 2.0 } else { 1.0 })
                     .border_color(border.to_peniko())
                     .border_radius(radius)
                     .background(bg.to_peniko())

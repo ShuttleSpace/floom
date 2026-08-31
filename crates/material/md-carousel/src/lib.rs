@@ -149,7 +149,7 @@ impl MdCarousel {
         if show_arrows && n > 1 {
             let index = index;
             let on_change_prev = on_change.clone();
-            let prev = Container::new(text("‹").style(move |s| {
+            let prev = Container::new(Label::new("‹").style(move |s| {
                 s.font_size(arrow_size * 0.6)
                     .color(theme.get().colors().on_surface.to_peniko())
             }))
@@ -175,7 +175,7 @@ impl MdCarousel {
 
             let index = index;
             let on_change_next = on_change.clone();
-            let next = Container::new(text("›").style(move |s| {
+            let next = Container::new(Label::new("›").style(move |s| {
                 s.font_size(arrow_size * 0.6)
                     .color(theme.get().colors().on_surface.to_peniko())
             }))
@@ -236,7 +236,7 @@ impl MdCarousel {
                         .into_any()
                 })
                 .collect();
-            let dots_row = h_stack_from_iter(dots)
+            let dots_row = Stack::horizontal_from_iter(dots)
                 .style(|s| s.justify_center().items_center().gap(0.0));
             let dots_overlay = Container::new(dots_row)
                 .style(move |s| {

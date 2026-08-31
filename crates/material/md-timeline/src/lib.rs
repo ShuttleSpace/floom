@@ -82,29 +82,29 @@ impl MdTimeline {
             let is_last = idx + 1 == n;
             let line_w = if is_last { 0.0 } else { line_width };
 
-            let dot = Container::new(text("".to_string())).style(move |s| {
+            let dot = Container::new(Label::new("".to_string())).style(move |s| {
                 let t = theme.get();
                 s.width(dot_size)
                     .height(dot_size)
                     .border_radius(9999.0)
                     .background(t.colors().primary.to_peniko())
             });
-            let line = Container::new(text("".to_string())).style(move |s| {
+            let line = Container::new(Label::new("".to_string())).style(move |s| {
                 let t = theme.get();
                 s.width(line_w)
                     .flex_grow(1.0)
                     .background(t.colors().outline_variant.to_peniko())
             });
-            let left = v_stack((dot, line)).style(|s| s.items_center());
+            let left = Stack::vertical((dot, line)).style(|s| s.items_center());
 
-            let right = v_stack((
-                text(item.title).style(move |s| {
+            let right = Stack::vertical((
+                Label::new(item.title).style(move |s| {
                     let t = theme.get();
                     s.font_size(15.0)
                         .font_weight(FontWeight::SemiBold.to_floem())
                         .color(t.colors().on_surface.to_peniko())
                 }),
-                text(item.description).style(move |s| {
+                Label::new(item.description).style(move |s| {
                     let t = theme.get();
                     s.font_size(13.0)
                         .color(t.colors().on_surface_variant.to_peniko())
@@ -112,7 +112,7 @@ impl MdTimeline {
             ))
             .style(|s| s.gap(2.0));
 
-            let row = h_stack((left, right)).style(move |s| s.gap(padding).items_start());
+            let row = Stack::horizontal((left, right)).style(move |s| s.gap(padding).items_start());
             rows.push(row.into_any());
         }
 

@@ -1,7 +1,7 @@
 use floem::prelude::*;
 use floem::view::AnyView;
 use floem::IntoView;
-use floem::views::{Container, Decorators, Empty, h_stack_from_iter};
+use floem::views::{Container, Decorators, Empty, h_stack_from_iter, Stack, Label};
 use floem_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floem_core_theme::props::app_bar::AppBarProps;
 use floem_core_theme::theme::{MultiTheme, Theme};
@@ -117,7 +117,7 @@ impl MdAppBar {
             children.push(lead);
         }
 
-        let title_view = text(title).style(move |s| {
+        let title_view = Label::new(title).style(move |s| {
             let t = theme.get();
             s.flex_grow(1.0)
                 .color(t.colors().on_surface.to_peniko())
@@ -126,12 +126,12 @@ impl MdAppBar {
         children.push(title_view.into_any());
 
         if !actions.is_empty() {
-            let actions_view = h_stack_from_iter(actions)
+            let actions_view = Stack::horizontal_from_iter(actions)
                 .style(move |s| s.gap(8.0).items_center().justify_end());
             children.push(actions_view.into_any());
         }
 
-        Container::new(h_stack_from_iter(children).style(move |s| {
+        Container::new(Stack::horizontal_from_iter(children).style(move |s| {
             s.items_center().gap(pad).height_full().padding_horiz(pad)
         }))
         .style(move |s| {
@@ -141,9 +141,11 @@ impl MdAppBar {
                 .items_center()
                 .background(t.colors().surface.to_peniko())
                 .color(t.colors().on_surface.to_peniko())
-                .box_shadow_blur(2.0 + 2.0 * (elevation as f64))
-                .box_shadow_spread(1.0)
-                .box_shadow_color(with_alpha(Color::rgba(0, 0, 0, 255), 30).to_peniko())
+                .apply_if(elevation > 0, |s| {
+                    s.box_shadow_blur(2.0 + 2.0 * (elevation as f64))
+                        .box_shadow_spread(1.0)
+                        .box_shadow_color(with_alpha(Color::rgba(0, 0, 0, 255), 30).to_peniko())
+                })
         })
     }
 }

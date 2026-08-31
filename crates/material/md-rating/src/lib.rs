@@ -5,7 +5,9 @@ use floem::prelude::*;
 use floem::reactive::RwSignal;
 use floem::style::CursorStyle;
 use floem::view::AnyView;
+use floem::views::svg;
 use floem_core_theme::component_tokens::{ComponentId, ComponentTokens};
+use floem_widget_md_icon::md_icon_svg;
 use floem_core_theme::props::rating::RatingProps;
 use floem_core_theme::theme::{MultiTheme, Theme};
 use floem_core_theme::tokens::color::Color;
@@ -85,8 +87,8 @@ impl MdRating {
 
         let mut stars: Vec<AnyView> = Vec::with_capacity(max);
         for i in 0..max {
-            let star = Container::new(text("★".to_string()))
-                .style(move |s| {
+            let star = Container::new(
+                svg(move || md_icon_svg("star")).style(move |s| {
                     let v = value.get();
                     let t = theme.get();
                     let c = if (i as f32) < v {
@@ -94,30 +96,31 @@ impl MdRating {
                     } else {
                         t.colors().outline_variant
                     };
-                    s.font_size(star_size).color(c.to_peniko())
+                    s.size(star_size, star_size).color(c.to_peniko())
+                }),
+            )
+            .style(move |s| {
+                s.cursor(if readonly {
+                    CursorStyle::Default
+                } else {
+                    CursorStyle::Pointer
                 })
-                .style(move |s| {
-                    s.cursor(if readonly {
-                        CursorStyle::Default
-                    } else {
-                        CursorStyle::Pointer
-                    })
-                })
-                .on_event(listener::Click, {
-                    let on_change = on_change.clone();
-                    let value = value;
-                    move |_, _| {
-                        if !readonly {
-                            let nv = (i as f32) + 1.0;
-                            value.set(nv);
-                            if let Some(cb) = on_change.as_ref() {
-                                cb(nv);
-                            }
+            })
+            .on_event(listener::Click, {
+                let on_change = on_change.clone();
+                let value = value;
+                move |_, _| {
+                    if !readonly {
+                        let nv = (i as f32) + 1.0;
+                        value.set(nv);
+                        if let Some(cb) = on_change.as_ref() {
+                            cb(nv);
                         }
-                        EventPropagation::Continue
                     }
-                })
-                .into_any();
+                    EventPropagation::Continue
+                }
+            })
+            .into_any();
             stars.push(star);
         }
 

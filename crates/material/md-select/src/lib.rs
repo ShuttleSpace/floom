@@ -6,12 +6,14 @@ use floem::reactive::{create_effect, RwSignal, SignalGet, SignalUpdate};
 use floem::style::CursorStyle;
 use floem::view::AnyView;
 use floem::IntoView;
+use floem::context::{LayoutChanged, LayoutChangedListener};
 use floem_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floem_core_theme::props::select::SelectProps;
 use floem_core_theme::theme::{MultiTheme, Theme};
 use floem_core_theme::tokens::color::Color;
 use floem_core_theme::tokens::color_ext::*;
 use floem_widget_runtime::theme_signal;
+use floem_widget_md_icon::MdIcon;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct MdSelectStyle {
@@ -111,9 +113,13 @@ impl MdSelect {
         let radius = tokens.border_radius;
         let min_width = tokens.min_width;
         let item_height = tokens.item_height;
+        let icon_size = tokens.icon_size;
+
+        let origin = RwSignal::new((0.0f64, 0.0f64));
+        let trigger_h = RwSignal::new(0.0f32);
 
         let label_options = options.clone();
-        let label = label(move || {
+        let label = Label::derived(move || {
             let idx = selected.get();
             match idx {
                 Some(i) if i < label_options.len() => label_options[i].clone(),
@@ -134,20 +140,22 @@ impl MdSelect {
                 .font_size(t.typography().body.medium.font_size)
         });
 
-        let chevron = text("▾").style(move |s| {
-            let t = theme.get();
-            s.color(
-                if disabled {
-                    with_alpha(t.colors().on_surface, 97)
-                } else {
-                    t.colors().on_surface_variant
-                }
-                .to_peniko(),
-            )
-            .font_size(14.0)
-        });
+        let chevron = MdIcon::new("expand_more")
+            .size(icon_size)
+            .view()
+            .style(move |s| {
+                let t = theme.get();
+                s.color(
+                    if disabled {
+                        with_alpha(t.colors().on_surface, 97)
+                    } else {
+                        t.colors().on_surface_variant
+                    }
+                    .to_peniko(),
+                )
+            });
 
-        let trigger = Container::new(h_stack((label, chevron)).style(|s| s.items_center().gap(8.0)))
+        let trigger = Container::new(Stack::horizontal((label, chevron)).style(|s| s.items_center().gap(8.0)))
             .style(move |s| {
                 let t = theme.get();
                 let border = if disabled {
@@ -185,7 +193,7 @@ impl MdSelect {
                 let selected = selected;
                 let open = open;
                 let on_change = on_change.clone();
-                text(opt)
+                Label::new(opt)
                     .style(move |s| {
                         let t = theme.get();
                         let is_sel = selected.get() == Some(i);
@@ -218,11 +226,13 @@ impl MdSelect {
             })
             .collect();
 
-        let dropdown = Container::new(list(rows)).style(move |s| {
+        let panel = Container::new(list(rows)).style(move |s| {
             let t = theme.get();
+            let (ox, oy) = origin.get();
+            let h = trigger_h.get() as f64;
             s.absolute()
-                .inset_top_pct(100.0)
-                .inset_left_pct(0.0)
+                .inset_top(oy + h)
+                .inset_left(ox)
                 .min_width(min_width)
                 .padding(4.0)
                 .background(t.colors().surface.to_peniko())
@@ -234,8 +244,15 @@ impl MdSelect {
                 .box_shadow_color(with_alpha(Color::rgba(0, 0, 0, 255), 20).to_peniko())
                 .apply_if(!open.get(), |s| s.hide())
         });
+        let dropdown = Overlay::new(panel);
 
-        Stack::new((trigger, dropdown))
+        Container::new(Stack::vertical((trigger, dropdown)))
+            .style(|s| s.items_start())
+            .on_event(LayoutChangedListener, move |_cx, layout: &LayoutChanged| {
+                origin.set((layout.new_window_origin.x, layout.new_window_origin.y));
+                trigger_h.set(layout.new_box.size().height as f32);
+                EventPropagation::Continue
+            })
     }
 }
 

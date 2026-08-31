@@ -1,7 +1,8 @@
 use floem::event::EventPropagation;
 use floem::prelude::*;
+use floem::context::{LayoutChanged, LayoutChangedListener};
 use floem::view::AnyView;
-use floem::views::Decorators;
+use floem::views::{Decorators, Empty, Label, Stack};
 use floem_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floem_core_theme::props::tooltip::TooltipProps;
 use floem_core_theme::theme::{MultiTheme, Theme};
@@ -106,11 +107,17 @@ impl MdTooltip {
                 }
             });
 
-        let bubble = Container::new(text(tip_text))
+        let origin = RwSignal::new((0.0f64, 0.0f64));
+        let trigger_h = RwSignal::new(0.0f32);
+
+        let bubble = Container::new(Label::new(tip_text))
             .style(move |s| {
                 let t = theme.get();
+                let (ox, oy) = origin.get();
+                let h = trigger_h.get() as f64;
                 s.absolute()
-                    .inset_top_pct(100.0)
+                    .inset_top(oy + h)
+                    .inset_left(ox)
                     .translate_y(4.0)
                     .padding(padding)
                     .border_radius(border_radius)
@@ -119,8 +126,15 @@ impl MdTooltip {
                     .color(t.colors().surface.to_peniko())
                     .apply_if(!hover.get(), |s| s.hide())
             });
+        let dropdown = Overlay::new(bubble);
 
-        Stack::new((trigger, bubble))
+        Container::new(Stack::vertical((trigger, dropdown)))
+            .style(|s| s.items_start())
+            .on_event(LayoutChangedListener, move |_cx, layout: &LayoutChanged| {
+                origin.set((layout.new_window_origin.x, layout.new_window_origin.y));
+                trigger_h.set(layout.new_box.size().height as f32);
+                EventPropagation::Continue
+            })
     }
 }
 

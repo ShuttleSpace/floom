@@ -2,7 +2,7 @@ use floem::event::EventPropagation;
 use floem::prelude::*;
 use floem::style::CursorStyle;
 use floem::view::AnyView;
-use floem::views::Decorators;
+use floem::views::{Decorators, Label};
 use floem_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floem_core_theme::props::list::ListProps;
 use floem_core_theme::props::menu::MenuItem;
@@ -90,6 +90,7 @@ impl MdList {
         let padding = tokens.padding;
         let min_width = tokens.min_width;
         let gap = tokens.gap;
+        let padding_horizontal = tokens.padding_horizontal;
 
         let rows: Vec<AnyView> = self
             .props
@@ -99,12 +100,12 @@ impl MdList {
                 let label = item.label;
                 let on_select = item.on_select;
                 let theme_hover = theme;
-                Container::new(text(label))
+                Container::new(Label::new(label))
                     .style(move |s| {
                         let t = theme.get();
                         s.width_pct(100.0)
                             .height(item_height)
-                            .padding_horiz(16.0)
+                            .padding_horiz(padding_horizontal)
                             .items_center()
                             .color(t.colors().on_surface.to_peniko())
                             .font_size(t.typography().body.medium.font_size)

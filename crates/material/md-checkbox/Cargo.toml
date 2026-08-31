@@ -7,3 +7,4 @@ edition = "2021"
 floem = { workspace = true }
 floem-core-theme = { workspace = true }
 floem-widget-runtime = { workspace = true, features = ["material"] }
+floem-widget-md-icon = { workspace = true }

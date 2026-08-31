@@ -8,6 +8,8 @@ use floem_widget_runtime::theme_signal;
 
 mod icons;
 
+pub use icons::md_icon_svg;
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct MdIconStyle {
     pub color: Color,

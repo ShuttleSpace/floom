@@ -4,7 +4,7 @@ use floem::event::EventPropagation;
 use floem::prelude::*;
 use floem::style::CursorStyle;
 use floem::view::AnyView;
-use floem::views::Decorators;
+use floem::views::{Decorators, Empty, Label, Stack};
 use floem_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floem_core_theme::props::radio_group::RadioGroupProps;
 use floem_core_theme::theme::{MultiTheme, Theme};
@@ -144,7 +144,7 @@ impl MdRadioGroup {
                         .justify_center()
                 });
 
-                h_stack((indicator, text(label)))
+                Stack::horizontal((indicator, Label::new(label)))
                     .style(move |s| {
                         s.height(item_height)
                             .items_center()

@@ -1,5 +1,5 @@
 use floem::prelude::*;
-use floem::views::{Container, Decorators};
+use floem::views::{Container, Decorators, Empty};
 use floem_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floem_core_theme::props::divider::{DividerOrientation, DividerProps};
 use floem_core_theme::theme::{MultiTheme, Theme};
@@ -68,7 +68,7 @@ impl MdDivider {
         let theme = self.theme;
         let orientation = self.props.orientation;
         let inset = self.props.inset;
-        Container::new(empty()).style(move |s| {
+        Container::new(Empty::new()).style(move |s| {
             let t = theme.get();
             let ComponentTokens::Divider(tokens) = t.component(ComponentId::Divider) else {
                 unreachable!()

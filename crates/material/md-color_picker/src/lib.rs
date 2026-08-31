@@ -522,7 +522,7 @@ impl MdColorPicker {
                 }
                 EventPropagation::Continue
             });
-        let bottom = h_stack((preview.into_any(), hex_input.into_any())).style(move |s| {
+        let bottom = Stack::horizontal((preview.into_any(), hex_input.into_any())).style(move |s| {
             s.margin_top(12.0).gap(12.0).items_center()
         });
         stack_children.push(bottom.into_any());

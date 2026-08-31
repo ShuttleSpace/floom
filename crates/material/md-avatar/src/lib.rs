@@ -64,7 +64,7 @@ impl MdAvatar {
         let size = self.resolved_style().size;
         let font_size = self.resolved_style().font_size;
 
-        Container::new(text(content))
+        Container::new(Label::new(content))
             .style(move |s| {
                 let t = theme.get();
                 s.width(size)

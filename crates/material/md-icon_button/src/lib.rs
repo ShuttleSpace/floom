@@ -7,6 +7,7 @@ use floem_core_theme::theme::{MultiTheme, Theme};
 use floem_core_theme::tokens::color::Color;
 use floem_core_theme::tokens::color_ext::*;
 use floem_widget_runtime::theme_signal;
+use floem_widget_runtime::Ripple;
 
 pub struct MdIconButton {
     props: IconButtonProps,
@@ -69,7 +70,7 @@ impl MdIconButton {
             s.size(icon_size, icon_size).color(fg.to_peniko())
         });
 
-        Container::new(icon_view)
+        let inner = Container::new(icon_view)
             .style(move |s| {
                 let t = theme.get();
                 let (bg, border) = match variant {
@@ -101,6 +102,17 @@ impl MdIconButton {
                         cb();
                     }
                 }
+            });
+
+        // Press ripple, clipped to the button's rounded bounds; ink color
+        // follows the surface/foreground so it reads on every variant.
+        Ripple::new(inner)
+            .radius(tokens.radius)
+            .color(move |t: &MultiTheme| match variant {
+                IconButtonVariant::Contained => with_alpha(t.colors().on_primary, 24),
+                _ => with_alpha(t.colors().on_surface, 24),
             })
+            .disabled(disabled)
+            .view()
     }
 }

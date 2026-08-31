@@ -1,6 +1,6 @@
 use floem::prelude::*;
 use floem::view::AnyView;
-use floem::views::{Decorators, Empty, h_stack_from_iter};
+use floem::views::{Decorators, Empty, h_stack_from_iter, Stack};
 use floem::reactive::{RwSignal, SignalGet};
 use floem_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floem_core_theme::props::sparkline::SparklineProps;
@@ -31,13 +31,13 @@ impl MdSparkline {
 
     /// Rendered width in px.
     pub fn width(mut self, width: f32) -> Self {
-        self.props.width = width;
+        self.props.width = Some(width);
         self
     }
 
     /// Rendered height in px.
     pub fn height(mut self, height: f32) -> Self {
-        self.props.height = height;
+        self.props.height = Some(height);
         self
     }
 
@@ -64,10 +64,19 @@ impl MdSparkline {
     pub fn view(self) -> impl View {
         let theme = self.theme;
         let values = self.props.values.clone();
-        let width = self.props.width;
-        let height = self.props.height;
+        let width0 = self.props.width;
+        let height0 = self.props.height;
         let fill = self.props.fill;
         let gap = self.props.line_width.max(0.0);
+
+        // Resolve default size from per-DS SparklineTokens when the caller
+        // didn't override it, so the widget follows runtime design-system switch.
+        let base = match theme.get().component(ComponentId::Sparkline) {
+            ComponentTokens::Sparkline(tk) => tk,
+            _ => unreachable!(),
+        };
+        let base_w = width0.unwrap_or(base.width);
+        let base_h = height0.unwrap_or(base.height);
 
         let n = values.len();
         let (min, max) = if n == 0 {
@@ -84,11 +93,11 @@ impl MdSparkline {
         };
         let bar_w = if n > 0 {
             let total_gap = gap * (n as f32 - 1.0);
-            ((width - total_gap) / n as f32).max(1.0)
+            ((base_w - total_gap) / n as f32).max(1.0)
         } else {
             0.0
         };
-        let avail_h = height;
+        let avail_h = base_h;
 
         let bars: Vec<AnyView> = values
             .iter()
@@ -98,8 +107,12 @@ impl MdSparkline {
                 Container::new(Empty::new())
                     .style(move |s| {
                         let t = theme.get();
+                        let tk = match t.component(ComponentId::Sparkline) {
+                            ComponentTokens::Sparkline(tk) => tk,
+                            _ => unreachable!(),
+                        };
                         let c = if fill {
-                            with_alpha(t.colors().primary, 90)
+                            with_alpha(t.colors().primary, tk.fill_opacity)
                         } else {
                             t.colors().primary
                         };
@@ -112,7 +125,13 @@ impl MdSparkline {
             })
             .collect();
 
-        h_stack_from_iter(bars).style(move |s| {
+        Stack::horizontal_from_iter(bars).style(move |s| {
+            let tk = match theme.get().component(ComponentId::Sparkline) {
+                ComponentTokens::Sparkline(tk) => tk,
+                _ => unreachable!(),
+            };
+            let width = width0.unwrap_or(tk.width);
+            let height = height0.unwrap_or(tk.height);
             s.gap(gap).width(width).height(height).items_center()
         })
     }

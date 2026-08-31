@@ -126,7 +126,7 @@ impl MdSwitch {
         let thumb = tokens.thumb_size;
         let radius = height / 2.0;
 
-        let thumb_view = Container::new(empty()).style(move |s| {
+        let thumb_view = Container::new(Empty::new()).style(move |s| {
             let t = theme.get();
             let c = if disabled {
                 with_alpha(t.colors().outline, 38)
@@ -138,6 +138,9 @@ impl MdSwitch {
             s.size(thumb, thumb)
                 .border_radius(thumb / 2.0)
                 .background(c.to_peniko())
+                .box_shadow_blur(1.0)
+                .box_shadow_spread(0.0)
+                .box_shadow_color(with_alpha(Color::rgba(0, 0, 0, 255), 40).to_peniko())
         });
 
         let track = Container::new(thumb_view)

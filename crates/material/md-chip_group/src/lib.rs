@@ -4,7 +4,7 @@ use floem::event::EventPropagation;
 use floem::prelude::*;
 use floem::style::CursorStyle;
 use floem::view::AnyView;
-use floem::views::{Container, Decorators, h_stack_from_iter};
+use floem::views::{Container, Decorators, h_stack_from_iter, Stack, Label};
 use floem_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floem_core_theme::props::chip_group::ChipGroupProps;
 use floem_core_theme::theme::{MultiTheme, Theme};
@@ -74,7 +74,7 @@ impl MdChipGroup {
                 let multiple = multiple;
                 let mandatory = mandatory;
 
-                Container::new(text(label))
+                Container::new(Label::new(label))
                     .style(move |s| {
                         let t = theme.get();
                         let sel = selected.get()[i];
@@ -124,7 +124,7 @@ impl MdChipGroup {
             })
             .collect();
 
-        h_stack_from_iter(chip_views)
+        Stack::horizontal_from_iter(chip_views)
             .style(move |s| s.gap(tokens_final.gap).items_center())
     }
 }

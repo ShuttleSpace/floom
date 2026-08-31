@@ -1,12 +1,12 @@
 use floem::prelude::*;
 use floem::style::CursorStyle;
-use floem::views::Decorators;
+use floem::views::{Decorators, Label};
+use floem_widget_runtime::{theme_signal, Ripple};
 use floem_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floem_core_theme::props::button::{ButtonProps, ButtonSize, ButtonVariant};
 use floem_core_theme::theme::{MultiTheme, Theme};
 use floem_core_theme::tokens::color::Color;
 use floem_core_theme::tokens::color_ext::*;
-use floem_widget_runtime::theme_signal;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct MdButtonStyle {
@@ -131,7 +131,7 @@ impl MdButton {
         }
     }
 
-    /// Build a renderable, interactive Material 3 button.
+    /// Build a renderable, interactive Material 3 button with a press ripple.
     pub fn view(self) -> impl View {
         let theme = self.theme;
         let disabled = self.disabled;
@@ -151,7 +151,7 @@ impl MdButton {
         };
         let outlined = matches!(variant, ButtonVariant::Ghost);
 
-        Button::new(text(label))
+        let button = Button::new(Label::new(label))
             .style(move |s| {
                 let t = theme.get();
                 let (bg, fg) = base_colors(&t, variant, disabled.get());
@@ -187,7 +187,17 @@ impl MdButton {
                 if let Some(cb) = &on_click {
                     cb();
                 }
-            })
+            });
+
+        // Wrap the button in the shared Material press ripple. The ink circle is
+        // clipped to the button's fully-rounded bounds and tinted with the
+        // button's foreground color (matching its fill), so the ripple reads as
+        // a press affordance on every variant.
+        Ripple::new(button)
+            .radius_fn(|t| t.radius().full)
+            .color(move |t| with_alpha(base_colors(t, variant, disabled.get()).1, 24))
+            .disabled(disabled.get())
+            .view()
     }
 }
 

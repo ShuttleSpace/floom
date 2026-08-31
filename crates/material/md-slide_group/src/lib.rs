@@ -150,7 +150,7 @@ impl MdSlideGroup {
             .collect();
 
         let row_stack =
-            h_stack_from_iter(row).style(move |s| s.items_center().gap(0.0).height(height));
+            Stack::horizontal_from_iter(row).style(move |s| s.items_center().gap(0.0).height(height));
 
         let mut area_children: Vec<AnyView> = Vec::new();
         area_children.push(row_stack.into_any());
@@ -158,7 +158,7 @@ impl MdSlideGroup {
         if show_arrows && n > 1 {
             let selected = selected;
             let prev = Container::new(
-                text("‹").style(move |s| {
+                Label::new("‹").style(move |s| {
                     s.font_size(arrow_size * 0.6)
                         .color(theme.get().colors().on_surface_variant.to_peniko())
                 }),
@@ -185,7 +185,7 @@ impl MdSlideGroup {
 
             let selected = selected;
             let next = Container::new(
-                text("›").style(move |s| {
+                Label::new("›").style(move |s| {
                     s.font_size(arrow_size * 0.6)
                         .color(theme.get().colors().on_surface_variant.to_peniko())
                 }),
