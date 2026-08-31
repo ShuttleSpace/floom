@@ -560,6 +560,44 @@ impl HeadlessHarness {
         self.window_handle().access_tree()
     }
 
+    /// First node whose accessible name matches `label`.
+    pub fn find_by_accessible_label(
+        &self,
+        label: &str,
+    ) -> Option<crate::accessibility::AccessNodeId> {
+        self.access_tree()
+            .iter()
+            .find(|node| node.label.as_deref() == Some(label))
+            .map(|node| node.id)
+    }
+
+    /// All node ids with the given role, in iteration order.
+    pub fn find_by_accessible_role(
+        &self,
+        role: crate::accessibility::AccessRole,
+    ) -> Vec<crate::accessibility::AccessNodeId> {
+        self.access_tree()
+            .iter()
+            .filter(|node| node.role == role)
+            .map(|node| node.id)
+            .collect()
+    }
+
+    /// Dispatch a platform accessibility action to `id`.
+    ///
+    /// Returns `false` if the node is not in the current tree.
+    pub fn perform_access_action(
+        &mut self,
+        id: crate::accessibility::AccessNodeId,
+        action: crate::accessibility::AccessAction,
+    ) -> bool {
+        if !self.access_tree().contains(id) {
+            return false;
+        }
+        self.window_handle.perform_access_action(id, action);
+        true
+    }
+
     /// The protocol-level id of this headless window.
     pub fn embedder_window_id(&self) -> crate::embedder::EmbedderWindowId {
         self.window_handle.window_id().into_raw() as crate::embedder::EmbedderWindowId

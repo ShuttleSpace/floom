@@ -502,6 +502,18 @@ impl WindowHandle {
         &self.window_state.accessibility
     }
 
+    /// Dispatch a platform accessibility action into [`WindowState`].
+    ///
+    /// `PendingAction` is `(AccessNodeId, AccessAction, Option<String>)`.
+    pub(crate) fn perform_access_action(
+        &mut self,
+        id: crate::accessibility::AccessNodeId,
+        action: crate::accessibility::AccessAction,
+    ) {
+        self.window_state
+            .handle_accessibility_action((id, action, None));
+    }
+
     pub fn event(&mut self, event: Event) {
         set_current_view(self.id.root());
 

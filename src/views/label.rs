@@ -171,6 +171,11 @@ impl Label {
     fn with_effective_text_layout<O>(&self, with: impl FnOnce(&TextLayout) -> O) -> O {
         self.layout_data.borrow().with_effective_text_layout(with)
     }
+
+    /// The current displayed text.
+    pub(crate) fn text(&self) -> &str {
+        &self.label
+    }
 }
 
 /// A non-reactive view that can display text from an item that implements [`Display`]. See also [`label`].

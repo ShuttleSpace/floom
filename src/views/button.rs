@@ -80,10 +80,14 @@ impl Button {
     /// ### Reactivity
     /// Button's label is not reactive. For reactive content, pass a reactive view as the child.
     pub fn new(child: impl IntoView) -> Self {
+        let child = child.into_view();
         let id = ViewId::new();
         id.accessibility_role(AccessRole::Button);
         id.accessibility_actions([AccessAction::Default]);
-        id.add_child(Box::new(child.into_view()));
+        if let Some(text) = button_label_from_child(&child) {
+            id.accessibility_label(text);
+        }
+        id.add_child(Box::new(child));
         Button { id }.class(ButtonClass)
     }
 }
@@ -97,4 +101,11 @@ impl<T: IntoView + 'static> ButtonExt for T {
     fn button(self) -> Button {
         Button::new(self)
     }
+}
+
+fn button_label_from_child<V: View + 'static>(child: &V) -> Option<String> {
+    use std::any::Any;
+    (child as &dyn Any)
+        .downcast_ref::<crate::views::Label>()
+        .map(|label| label.text().to_string())
 }
