@@ -380,3 +380,220 @@ where
         (result, scope)
     }
 }
+
+/// Returns the stable root [`Scope`] of the current runtime.
+///
+/// This is a convenience accessor that forwards to [`Runtime::root_scope`]. The
+/// root scope is created when the runtime is constructed and is the scope that
+/// signals/effects created outside of any explicitly entered scope are attached
+/// to. Use it to create global, application-lifetime reactive state via the
+/// `create_global_*` helpers, or to enter a scope that lives for the whole app.
+///
+/// # Example
+/// ```rust
+/// # use floem_reactive::{root_scope, create_global_rw_signal, SignalGet};
+/// let counter = create_global_rw_signal(0);
+/// root_scope().enter(|| {
+///     assert_eq!(counter.get(), 0);
+/// });
+/// ```
+pub fn root_scope() -> Scope {
+    Runtime::root_scope()
+}
+
+/// Create a global [`RwSignal`] attached to the runtime's root scope.
+///
+/// The signal lives for the lifetime of the application (it is not disposed when
+/// a view subtree is torn down) and can be accessed from anywhere without first
+/// obtaining a scope. Its lifetime can still be explicitly managed by disposing
+/// [`root_scope`].
+///
+/// # Example
+/// ```rust
+/// # use floem_reactive::create_global_rw_signal;
+/// let theme = create_global_rw_signal(String::from("dark"));
+/// ```
+#[cfg_attr(debug_assertions, track_caller)]
+pub fn create_global_rw_signal<T>(value: T) -> RwSignal<T>
+where
+    T: Any + 'static,
+{
+    root_scope().create_rw_signal(value)
+}
+
+/// Create a global paired `(ReadSignal, WriteSignal)` attached to the root scope.
+#[cfg_attr(debug_assertions, track_caller)]
+pub fn create_global_signal<T>(value: T) -> (ReadSignal<T>, WriteSignal<T>)
+where
+    T: Any + 'static,
+{
+    root_scope().create_signal(value)
+}
+
+/// Create a global sync [`RwSignal`] (for cross-thread state) attached to the root scope.
+#[cfg_attr(debug_assertions, track_caller)]
+pub fn create_global_sync_rw_signal<T>(value: T) -> RwSignal<T, SyncStorage>
+where
+    T: Any + Send + Sync + 'static,
+{
+    root_scope().create_sync_rw_signal(value)
+}
+
+/// Create a global paired sync signal attached to the root scope.
+#[cfg_attr(debug_assertions, track_caller)]
+pub fn create_global_sync_signal<T>(
+    value: T,
+) -> (ReadSignal<T, SyncStorage>, WriteSignal<T, SyncStorage>)
+where
+    T: Any + Send + Sync + 'static,
+{
+    root_scope().create_sync_signal(value)
+}
+
+/// Create a global local (unsync) [`RwSignal`] attached to the root scope.
+#[cfg_attr(debug_assertions, track_caller)]
+pub fn create_global_local_rw_signal<T>(value: T) -> RwSignal<T, UnsyncStorage>
+where
+    T: Any + 'static,
+{
+    root_scope().create_local_rw_signal(value)
+}
+
+/// Create a global paired local signal attached to the root scope.
+#[cfg_attr(debug_assertions, track_caller)]
+pub fn create_global_local_signal<T>(
+    value: T,
+) -> (ReadSignal<T, UnsyncStorage>, WriteSignal<T, UnsyncStorage>)
+where
+    T: Any + 'static,
+{
+    root_scope().create_local_signal(value)
+}
+
+/// Create a global [`Memo`] attached to the root scope.
+#[cfg_attr(debug_assertions, track_caller)]
+pub fn create_global_memo<T>(f: impl Fn(Option<&T>) -> T + 'static) -> Memo<T>
+where
+    T: PartialEq + 'static,
+{
+    root_scope().create_memo(f)
+}
+
+/// Create a global [`Trigger`] attached to the root scope.
+#[cfg_attr(debug_assertions, track_caller)]
+pub fn create_global_trigger() -> Trigger {
+    root_scope().create_trigger()
+}
+
+/// Create a global effect attached to the root scope.
+#[cfg_attr(debug_assertions, track_caller)]
+pub fn create_global_effect<T>(f: impl Fn(Option<T>) -> T + 'static)
+where
+    T: Any + 'static,
+{
+    root_scope().create_effect(f)
+}
+
+/// Create a global updater attached to the root scope.
+#[cfg_attr(debug_assertions, track_caller)]
+pub fn create_global_updater<R>(
+    compute: impl Fn() -> R + 'static,
+    on_change: impl Fn(R) + 'static,
+) -> R
+where
+    R: 'static,
+{
+    root_scope().create_updater(compute, on_change)
+}
+
+#[cfg(test)]
+mod tests {
+    use std::cell::Cell;
+    use std::rc::Rc;
+
+    use crate::{SignalGet, SignalTrack, SignalUpdate, SignalWrite};
+
+    use super::*;
+
+    #[test]
+    fn root_scope_is_stable_and_default_current() {
+        let root = root_scope();
+        // The root scope is the current scope before any scope is entered.
+        assert_eq!(Scope::current(), root);
+        // root_scope() returns the same id on repeated calls.
+        assert_eq!(root_scope(), root);
+    }
+
+    #[test]
+    fn global_signals_attach_to_root_scope() {
+        let counter = create_global_rw_signal(0);
+        let root = root_scope();
+
+        // The global signal lives on the root scope tree.
+        root.enter(|| {
+            assert_eq!(counter.get(), 0);
+        });
+
+        counter.set(5);
+        root.enter(|| {
+            assert_eq!(counter.get(), 5);
+        });
+
+        // A brand-new child scope can still read the root-scoped global.
+        let child = root.create_child();
+        child.enter(|| {
+            assert_eq!(counter.get(), 5);
+        });
+    }
+
+    #[test]
+    fn global_signal_survives_unrelated_scope_disposal() {
+        let global = create_global_rw_signal(1);
+        let local_scope = Scope::new();
+        let (local, _set_local) = local_scope.create_signal(2);
+        local_scope.enter(|| assert_eq!(local.get(), 2));
+
+        // Disposing an unrelated scope must not affect the root-scoped global.
+        local_scope.dispose();
+        Runtime::drain_pending_work();
+        assert_eq!(global.get(), 1);
+
+        // The local signal should be gone, the global should still be alive.
+        global.set(42);
+        assert_eq!(global.get(), 42);
+    }
+
+    #[test]
+    fn global_memo_and_trigger_work() {
+        let input = create_global_rw_signal(2);
+        let doubled = create_global_memo(move |_| input.get() * 2);
+        let trigger = create_global_trigger();
+
+        assert_eq!(doubled.get(), 4);
+        input.set(5);
+        Runtime::drain_pending_work();
+        assert_eq!(doubled.get(), 10);
+        // trigger exists on the root scope
+        trigger.track();
+        trigger.notify();
+    }
+
+    #[test]
+    fn global_effect_runs_on_root_scope() {
+        let signal = create_global_rw_signal(0);
+        let count = Rc::new(Cell::new(0));
+        create_global_effect({
+            let signal = signal;
+            let count = count.clone();
+            move |_| {
+                signal.track();
+                count.set(count.get() + 1);
+            }
+        });
+
+        assert_eq!(count.get(), 1);
+        signal.set(1);
+        Runtime::drain_pending_work();
+        assert_eq!(count.get(), 2);
+    }
+}

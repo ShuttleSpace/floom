@@ -35,7 +35,12 @@ pub use id::Id as ReactiveId;
 pub use memo::{Memo, create_memo};
 pub use read::{ReadRef, SignalGet, SignalRead, SignalTrack, SignalWith};
 pub use runtime::Runtime;
-pub use scope::{Scope, as_child_of_current_scope, with_scope};
+pub use scope::{
+    Scope, as_child_of_current_scope, create_global_effect, create_global_local_rw_signal,
+    create_global_local_signal, create_global_memo, create_global_rw_signal, create_global_signal,
+    create_global_sync_rw_signal, create_global_sync_signal, create_global_trigger,
+    create_global_updater, root_scope, with_scope,
+};
 pub use signal::{
     ReadSignal, RwSignal, SyncReadSignal, SyncRwSignal, SyncWriteSignal, WriteSignal,
     create_rw_signal, create_signal,

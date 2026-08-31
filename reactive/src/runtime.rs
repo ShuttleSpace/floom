@@ -11,11 +11,14 @@ use std::{
     thread::{self, ThreadId},
 };
 
+use std::marker::PhantomData;
+
 use smallvec::SmallVec;
 
 use crate::{
     effect::{EffectPriority, EffectTrait, run_effect},
     id::Id,
+    scope::Scope,
     signal::SignalState,
     sync_runtime::SYNC_RUNTIME,
 };
@@ -36,6 +39,10 @@ static ENFORCE_UI_THREAD: AtomicBool = AtomicBool::new(false);
 /// thread local.
 pub struct Runtime {
     pub(crate) current_effect: RefCell<Option<Rc<dyn EffectTrait>>>,
+    /// The stable root scope created when the runtime is constructed. This is the
+    /// scope that signals/effects created outside of any explicitly entered scope
+    /// are attached to, and the one used by the global-signal helpers.
+    pub(crate) root_id: Id,
     pub(crate) current_scope: RefCell<Id>,
     pub(crate) children: RefCell<HashMap<Id, HashSet<Id>>>,
     pub(crate) parents: RefCell<HashMap<Id, Id>>,
@@ -55,9 +62,11 @@ impl Default for Runtime {
 
 impl Runtime {
     pub(crate) fn new() -> Self {
+        let root_id = Id::next();
         Self {
             current_effect: RefCell::new(None),
-            current_scope: RefCell::new(Id::next()),
+            root_id,
+            current_scope: RefCell::new(root_id),
             children: RefCell::new(HashMap::new()),
             parents: RefCell::new(HashMap::new()),
             signals: Default::default(),
@@ -238,5 +247,20 @@ impl Runtime {
         let _restore = EffectRestoreGuard(saved_effect);
         Runtime::set_current_effect(effect);
         f()
+    }
+
+    /// Returns the stable root [`Scope`] of this runtime.
+    ///
+    /// The root scope is created when the runtime is constructed and is the scope
+    /// that signals/effects created outside of any explicitly entered scope are
+    /// attached to. Unlike an anonymous scope-id, it has a stable handle that can
+    /// be entered, queried, and disposed.
+    ///
+    /// Disposing the root scope also disposes every signal, memo, effect, and child
+    /// scope that belongs to it. It is normally never disposed for the lifetime of
+    /// the application, but the handle makes explicit cleanup (e.g. in tests) and
+    /// structured global-state ownership possible.
+    pub fn root_scope() -> Scope {
+        RUNTIME.with(|runtime| Scope(runtime.root_id, PhantomData))
     }
 }
