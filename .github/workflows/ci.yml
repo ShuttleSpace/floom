@@ -73,6 +73,19 @@ jobs:
         run: cargo test --doc --no-fail-fast
 
 
+  architecture-deps:
+    name: Architecture dependency boundaries
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Update toolchain
+        run: rustup update --no-self-update
+
+      - name: Check architecture dependency boundaries
+        run: ./scripts/check-architecture-deps.sh
+
   fmt:
     name: Rustfmt
     runs-on: ubuntu-latest

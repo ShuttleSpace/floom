@@ -10,3 +10,6 @@ gate-docs:
     test -f docs/gates/android.md
     test -f docs/gates/ios.md
     test -f docs/gates/ohos.md
+
+arch-deps:
+    ./scripts/check-architecture-deps.sh

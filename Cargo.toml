@@ -305,6 +305,18 @@ harness = false
 name = "view_creation"
 harness = false
 
+[[bench]]
+name = "runtime_baseline"
+harness = false
+
+[[bench]]
+name = "scene_baseline"
+harness = false
+
+[[bench]]
+name = "render_baseline"
+harness = false
+
 # --- OHOS: retarget tgui-winit-ohos onto floem-winit-core ---
 # `tgui-winit-ohos` 0.4.11 depends on upstream `winit-core` 0.31.0-beta.2, whose
 # `ApplicationHandler` is a *different* trait from the one floem's `Application`
