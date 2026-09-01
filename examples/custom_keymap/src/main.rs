@@ -8,18 +8,17 @@
 
 use floem::{
     prelude::{Key, Modifiers},
-    views::{
-        editor::{
-            command::CommandExecuted,
-            keypress::{KeypressKey, KeypressMap},
-        },
-        text_editor::text_editor_keys,
-        Decorators,
-    },
+    views::Decorators,
     IntoView,
 };
-
-use floem::views::editor::core::command::EditCommand;
+use floem_editor::{
+    editor::{
+        command::{Command, CommandExecuted},
+        core::command::EditCommand,
+        keypress::{KeypressKey, KeypressMap},
+    },
+    text_editor_keys,
+};
 
 fn app_view() -> impl IntoView {
     let mut keymap = KeypressMap::default();
@@ -31,7 +30,7 @@ fn app_view() -> impl IntoView {
             key: Key::Character("d".into()),
             modifiers: Modifiers::CONTROL,
         },
-        floem::views::editor::command::Command::Edit(EditCommand::DuplicateLineDown),
+        Command::Edit(EditCommand::DuplicateLineDown),
     );
 
     let editor = text_editor_keys(

@@ -5,6 +5,7 @@ edition = "2024"
 
 [dependencies]
 floem = { path = "../..", features = ["skia"] }
+floem-editor = { path = "../../../floem-editor/floem-editor" }
 strum = { workspace = true }
 files = { path = "../files/", optional = true }
 

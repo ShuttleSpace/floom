@@ -1,13 +1,13 @@
-use floem::{
-    action::inspect,
-    prelude::*,
-    views::editor::{
+use floem::{action::inspect, prelude::*};
+use floem_editor::{
+    editor::{
         command::{Command, CommandExecuted},
         core::{
             command::EditCommand, cursor::CursorAffinity, editor::EditType, selection::Selection,
         },
         text::{SimpleStyling, default_dark_color},
     },
+    text_editor,
 };
 
 pub fn editor_view() -> impl IntoView {
