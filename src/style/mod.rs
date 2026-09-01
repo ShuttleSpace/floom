@@ -158,7 +158,6 @@ use crate::layout::responsive::{GridBreakpoints, ScreenSize, ScreenSizeBp};
 
 use crate::style::components::Focus;
 use crate::text::{OverflowWrap, WordBreakStrength};
-use crate::views::editor::SelectionColor;
 // Import macros from crate root (they are #[macro_export] in props.rs)
 use crate::{prop, prop_extractor};
 
@@ -2013,6 +2012,11 @@ define_builtin_props!(
     ///
     /// Controls how rounded the corners of selected text appear.
     SelectionCornerRadius selection_corer_radius { nocb, tr }: f64 {} = 1.,
+
+    /// Highlight color for selected text.
+    ///
+    /// Shared by labels, text inputs, and satellite editor views (`floem-editor`).
+    SelectionColor selection_color { tr }: Brush {} = Brush::Solid(palette::css::BLACK.with_alpha(0.5)),
 
     /// Controls whether the view's text can be selected.
     ///

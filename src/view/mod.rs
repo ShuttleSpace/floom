@@ -53,6 +53,9 @@ pub mod tuple;
 pub use id::{ViewId, process_pending_scope_reparents};
 pub use into_iter::*;
 pub use state::*;
+/// Custom-layout hooks for views that attach their own taffy measure/finalize
+/// functions (used by satellite widgets such as floem-editor).
+pub use storage::{FinalizeFn, LayoutNodeCx, LayoutTree, MeasureCx, MeasureFn};
 pub(crate) use storage::*;
 pub use tuple::*;
 

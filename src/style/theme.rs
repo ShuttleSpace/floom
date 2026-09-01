@@ -4,7 +4,6 @@ use super::unit::{DurationUnitExt, UnitExt};
 use super::*;
 use crate::style::Selectable;
 use crate::view::View;
-use crate::views::editor::SelectionColor;
 use crate::views::resizable::{ResizableClass, ResizableHandleClass};
 use crate::{
     AnyView, prop, style_class, style_debug_group,

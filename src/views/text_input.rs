@@ -231,7 +231,7 @@ pub enum TextDirection {
 /// ### Reactivity
 /// The view is reactive and will track updates on buffer signal.
 /// ### Info
-/// For more advanced editing see [TextEditor](super::text_editor::TextEditor).
+/// For more advanced editing see the `floem-editor` satellite crate.
 #[deprecated(note = "use `TextInput::new(buffer)` instead")]
 pub fn text_input(buffer: RwSignal<String>) -> TextInput {
     TextInput::new(buffer)

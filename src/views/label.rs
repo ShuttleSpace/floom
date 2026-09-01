@@ -8,6 +8,7 @@ use crate::{
     prop_extractor,
     style::{
         ContextValue, CustomStylable, CustomStyle, ExprStyle, FontProps, LineHeight, Selectable,
+        SelectionColor,
         SelectionCornerRadius, SelectionStyle, Style, TextAlignProp, TextColor, TextOverflow,
         TextOverflowProp,
     },
@@ -17,7 +18,6 @@ use crate::{
         WordBreakStrength,
     },
     view::{LayoutNodeCx, View},
-    views::editor::SelectionColor,
 };
 use floem_reactive::UpdaterEffect;
 use floem_renderer::Renderer;

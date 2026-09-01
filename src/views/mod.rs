@@ -148,15 +148,6 @@ pub use img::*;
 mod button;
 pub use button::*;
 
-#[cfg(feature = "editor")]
-pub mod editor;
-
-#[cfg(feature = "editor")]
-pub mod text_editor;
-
-#[cfg(feature = "editor")]
-pub use text_editor::*;
-
 pub mod dropdown;
 
 pub mod slider;

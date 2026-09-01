@@ -57,7 +57,7 @@ Inspired by [Xilem](https://github.com/linebender/xilem), [Leptos](https://githu
 
 ## Ecosystem
 
-Design-system widgets live in the separate **flome-ui** project. The rich text/code editor will live in **floem-editor**. Neither is part of the floem 1.0 core guarantee — see [docs/ecosystem.md](docs/ecosystem.md).
+Design-system widgets live in the separate **flome-ui** project. The rich text/code editor lives in **floem-editor**. Neither is part of the floem 1.0 core guarantee — see [docs/ecosystem.md](docs/ecosystem.md).
 
 Backend authors can experiment with the public but unstable [`floem::embedder`](docs/embedder.md) API for integrating Floem with platform backends other than the default winit desktop path. Ordinary applications should continue to use `floem::launch(...)`.
 
