@@ -159,11 +159,11 @@ impl ElementArena {
 }
 ```
 
-- [ ] **Step 1: Write insert/get/remove/stale-ID tests.**
-- [ ] **Step 2: Implement the arena using the repository's preferred slot/generation mechanism.**
-- [ ] **Step 3: Add benchmarks for 1k, 10k, and 100k elements.**
-- [ ] **Step 4: Verify no per-element heap allocation is introduced by default.**
-- [ ] **Step 5: Commit.**
+- [x] **Step 1: Write insert/get/remove/stale-ID tests.**
+- [x] **Step 2: Implement the arena using the repository's preferred slot/generation mechanism.**
+- [x] **Step 3: Add benchmarks for 1k, 10k, and 100k elements.**
+- [x] **Step 4: Verify no per-element heap allocation is introduced by default.**
+- [x] **Step 5: Commit.**
 
 ## Task 2.2: Implement `DirtyFlags` and invalidation propagation
 
