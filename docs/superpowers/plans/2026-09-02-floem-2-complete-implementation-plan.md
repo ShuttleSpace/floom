@@ -453,10 +453,10 @@ enum PlatformEvent { ... }
 struct PlatformCapabilities { ... }
 ```
 
-- [ ] **Step 1: Write a fake platform test harness.**
-- [ ] **Step 2: Implement window/surface/event/lifecycle/display contracts.**
-- [ ] **Step 3: Verify no concrete platform crate leaks into core.**
-- [ ] **Step 4: Commit.**
+- [x] **Step 1: Write a fake platform test harness.**
+- [x] **Step 2: Implement window/surface/event/lifecycle/display contracts.**
+- [x] **Step 3: Verify no concrete platform crate leaks into core.**
+- [x] **Step 4: Commit.**
 
 ## Task 7.2: Migrate desktop backend
 
@@ -465,11 +465,11 @@ struct PlatformCapabilities { ... }
 - Modify: existing Winit integration where present
 - Test: desktop window/event tests
 
-- [ ] **Step 1: Map existing window lifecycle to the new ABI.**
-- [ ] **Step 2: Map pointer/keyboard/display events.**
-- [ ] **Step 3: Add clipboard and IME service adapters.**
-- [ ] **Step 4: Run macOS/Windows/Linux smoke tests.**
-- [ ] **Step 5: Commit.**
+- [x] **Step 1: Map existing window lifecycle to the new ABI.**
+- [x] **Step 2: Map pointer/keyboard/display events.**
+- [x] **Step 3: Add clipboard and IME service adapters.**
+- [x] **Step 4: Run macOS/Windows/Linux smoke tests.**
+- [x] **Step 5: Commit.**
 
 ## Task 7.3: Create independent Android, iOS, and Harmony platform crates
 
@@ -479,11 +479,11 @@ struct PlatformCapabilities { ... }
 - Create: `platform/floem-platform-harmony`
 - Test: per-platform lifecycle/input/display contract tests
 
-- [ ] **Step 1: Implement lifecycle surface contracts.**
-- [ ] **Step 2: Implement input/display/capability reporting.**
-- [ ] **Step 3: Implement IME/focus bridges.**
-- [ ] **Step 4: Implement accessibility bridge stubs with explicit unsupported capability states.**
-- [ ] **Step 5: Commit each platform separately.**
+- [x] **Step 1: Implement lifecycle surface contracts.**
+- [x] **Step 2: Implement input/display/capability reporting.**
+- [x] **Step 3: Implement IME/focus bridges.**
+- [x] **Step 4: Implement accessibility bridge stubs with explicit unsupported capability states.**
+- [x] **Step 5: Commit each platform separately.**
 
 ## Task 7.4: Implement Web platform
 
@@ -491,10 +491,10 @@ struct PlatformCapabilities { ... }
 - Create: `platform/floem-platform-web`
 - Test: WASM/browser smoke tests
 
-- [ ] **Step 1: Implement event/frame clock/display abstraction.**
-- [ ] **Step 2: Implement WebGPU target detection and fallback capability reporting.**
-- [ ] **Step 3: Implement DOM/semantic bridge hooks.**
-- [ ] **Step 4: Commit.**
+- [x] **Step 1: Implement event/frame clock/display abstraction.**
+- [x] **Step 2: Implement WebGPU target detection and fallback capability reporting.**
+- [x] **Step 3: Implement DOM/semantic bridge hooks.**
+- [x] **Step 4: Commit.**
 
 ## Task 7.5: Implement Embedded platform baseline
 
@@ -502,10 +502,10 @@ struct PlatformCapabilities { ... }
 - Create: `platform/floem-platform-embedded`
 - Test: headless DRM/framebuffer simulation
 
-- [ ] **Step 1: Define minimal surface/input/frame-clock contract.**
-- [ ] **Step 2: Implement a Linux DRM/KMS or framebuffer-compatible adapter behind feature gates.**
-- [ ] **Step 3: Validate with software renderer first.**
-- [ ] **Step 4: Commit.**
+- [x] **Step 1: Define minimal surface/input/frame-clock contract.**
+- [x] **Step 2: Implement a Linux DRM/KMS or framebuffer-compatible adapter behind feature gates.**
+- [x] **Step 3: Validate with software renderer first.**
+- [x] **Step 4: Commit.**
 
 ---
 

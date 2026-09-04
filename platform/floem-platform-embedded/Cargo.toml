@@ -1,0 +1,17 @@
+[package]
+name = "floem-platform-embedded"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Embedded / DRM-framebuffer platform adapter for Floem 2.0"
+rust-version.workspace = true
+
+[features]
+default = []
+# Real DRM/KMS backend is feature-gated; default path is headless framebuffer sim.
+drm = []
+
+[dependencies]
+floem-platform = { path = "../floem-platform", version = "0.2.0" }
+floem-types = { path = "../../crates/floem-types", version = "0.2.0" }

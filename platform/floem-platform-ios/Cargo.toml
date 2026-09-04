@@ -1,0 +1,12 @@
+[package]
+name = "floem-platform-ios"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "iOS platform adapter for Floem 2.0"
+rust-version.workspace = true
+
+[dependencies]
+floem-platform = { path = "../floem-platform", version = "0.2.0" }
+floem-types = { path = "../../crates/floem-types", version = "0.2.0" }

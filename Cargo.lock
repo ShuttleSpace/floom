@@ -1983,6 +1983,62 @@ dependencies = [
 ]
 
 [[package]]
+name = "floem-platform"
+version = "0.2.0"
+dependencies = [
+ "bitflags 2.11.0",
+ "floem-types",
+]
+
+[[package]]
+name = "floem-platform-android"
+version = "0.2.0"
+dependencies = [
+ "floem-platform",
+ "floem-types",
+]
+
+[[package]]
+name = "floem-platform-desktop"
+version = "0.2.0"
+dependencies = [
+ "floem-platform",
+ "floem-types",
+]
+
+[[package]]
+name = "floem-platform-embedded"
+version = "0.2.0"
+dependencies = [
+ "floem-platform",
+ "floem-types",
+]
+
+[[package]]
+name = "floem-platform-harmony"
+version = "0.2.0"
+dependencies = [
+ "floem-platform",
+ "floem-types",
+]
+
+[[package]]
+name = "floem-platform-ios"
+version = "0.2.0"
+dependencies = [
+ "floem-platform",
+ "floem-types",
+]
+
+[[package]]
+name = "floem-platform-web"
+version = "0.2.0"
+dependencies = [
+ "floem-platform",
+ "floem-types",
+]
+
+[[package]]
 name = "floem-renderer"
 version = "0.2.0"
 dependencies = [

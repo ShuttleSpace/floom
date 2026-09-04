@@ -81,6 +81,7 @@ WIDGET_HINTS = {"floem-widgets", "floem_widgets"}
 FUTURE = [
     ("floem-types", PLATFORM_HINTS | GPU_HINTS, "types must stay platform/GPU free"),
     ("floem-scene", PLATFORM_HINTS | {"winit", "floem-winit"}, "scene must not depend on OS windowing"),
+    ("floem-platform", PLATFORM_HINTS | GPU_HINTS, "platform ABI must stay free of concrete OS/GPU crates"),
 ]
 
 failures = []

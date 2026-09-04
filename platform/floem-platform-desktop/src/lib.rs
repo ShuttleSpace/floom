@@ -1,0 +1,256 @@
+//! Desktop platform adapter.
+//!
+//! Maps Winit-style window / pointer / keyboard / IME lifecycle onto the
+//! `floem-platform` ABI without pulling Winit into `floem-platform` itself.
+//! Real `floem-winit` wiring stays in the app/runtime layer; this crate owns
+//! the ABI-facing desktop services (clipboard + IME stubs included).
+
+use std::collections::HashMap;
+use std::time::Instant;
+
+use floem_platform::{
+    Clipboard, Ime, KeyCode, Platform, PlatformCapabilities, PlatformEvent, PointerButton,
+    SurfaceConfig, Window, WindowConfig, WindowState,
+};
+use floem_types::{DisplayInfo, PlatformId, Point, ScaleFactor, Size, SurfaceId, WindowId};
+
+/// Logical desktop input sample (Winit-equivalent, OS-handle free).
+#[derive(Debug, Clone, PartialEq)]
+pub enum DesktopInput {
+    PointerMoved { position: Point },
+    PointerButton {
+        position: Point,
+        button: PointerButton,
+        pressed: bool,
+    },
+    Key { code: KeyCode, pressed: bool },
+    ImePreedit { text: String },
+    ImeCommit { text: String },
+    Focused(bool),
+    Resized(Size),
+    CloseRequested,
+    Redraw,
+}
+
+#[derive(Debug)]
+struct DesktopSurface {
+    id: SurfaceId,
+    size: Size,
+}
+
+#[derive(Debug)]
+struct DesktopWindow {
+    id: WindowId,
+    title: String,
+    size: Size,
+    state: WindowState,
+    surface: Option<DesktopSurface>,
+    next_surface: u32,
+    scale: ScaleFactor,
+}
+
+impl Window for DesktopWindow {
+    fn id(&self) -> WindowId {
+        self.id
+    }
+
+    fn title(&self) -> &str {
+        &self.title
+    }
+
+    fn size(&self) -> Size {
+        self.size
+    }
+
+    fn state(&self) -> WindowState {
+        self.state
+    }
+
+    fn set_title(&mut self, title: &str) {
+        self.title = title.to_string();
+    }
+
+    fn request_redraw(&mut self) {}
+
+    fn surface_id(&self) -> Option<SurfaceId> {
+        self.surface.as_ref().map(|s| s.id)
+    }
+
+    fn create_surface(&mut self, config: SurfaceConfig) -> SurfaceId {
+        let id = SurfaceId::new(self.next_surface, 1);
+        self.next_surface += 1;
+        self.surface = Some(DesktopSurface {
+            id,
+            size: config.size,
+        });
+        id
+    }
+
+    fn display_info(&self) -> DisplayInfo {
+        DisplayInfo {
+            logical_size: self.size,
+            scale_factor: self.scale,
+        }
+    }
+}
+
+/// Desktop [`Platform`] with clipboard + IME.
+#[derive(Debug)]
+pub struct DesktopPlatform {
+    id: PlatformId,
+    windows: HashMap<u32, DesktopWindow>,
+    next_window: u32,
+    events: Vec<PlatformEvent>,
+    clipboard: String,
+    started: Instant,
+    ime_enabled: HashMap<u32, bool>,
+}
+
+impl Default for DesktopPlatform {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl DesktopPlatform {
+    pub fn new() -> Self {
+        Self {
+            id: PlatformId::new(2, 1),
+            windows: HashMap::new(),
+            next_window: 0,
+            events: Vec::new(),
+            clipboard: String::new(),
+            started: Instant::now(),
+            ime_enabled: HashMap::new(),
+        }
+    }
+
+    /// Inject a Winit-mapped input event for `window`.
+    pub fn dispatch_input(&mut self, window: WindowId, input: DesktopInput) {
+        let event = match input {
+            DesktopInput::PointerMoved { position } => PlatformEvent::PointerMoved {
+                window,
+                position,
+            },
+            DesktopInput::PointerButton {
+                position,
+                button,
+                pressed,
+            } => PlatformEvent::PointerButton {
+                window,
+                position,
+                button,
+                pressed,
+            },
+            DesktopInput::Key { code, pressed } => PlatformEvent::Key {
+                window,
+                code,
+                pressed,
+            },
+            DesktopInput::ImePreedit { text } => PlatformEvent::ImePreedit { window, text },
+            DesktopInput::ImeCommit { text } => PlatformEvent::ImeCommit { window, text },
+            DesktopInput::Focused(focused) => PlatformEvent::WindowFocused { window, focused },
+            DesktopInput::Resized(size) => {
+                if let Some(w) = self.windows.get_mut(&window.index()) {
+                    if w.id == window {
+                        w.size = size;
+                        if let Some(s) = w.surface.as_mut() {
+                            s.size = size;
+                        }
+                    }
+                }
+                PlatformEvent::WindowResized { window, size }
+            }
+            DesktopInput::CloseRequested => PlatformEvent::WindowClosed { window },
+            DesktopInput::Redraw => PlatformEvent::RedrawRequested { window },
+        };
+        self.events.push(event);
+    }
+
+    pub fn ime_is_enabled(&self, window: WindowId) -> bool {
+        self.ime_enabled.get(&window.index()).copied().unwrap_or(false)
+    }
+}
+
+impl Platform for DesktopPlatform {
+    fn id(&self) -> PlatformId {
+        self.id
+    }
+
+    fn capabilities(&self) -> PlatformCapabilities {
+        PlatformCapabilities::desktop_default()
+    }
+
+    fn create_window(&mut self, config: WindowConfig) -> WindowId {
+        let index = self.next_window;
+        self.next_window += 1;
+        let id = WindowId::new(index, 1);
+        let mut window = DesktopWindow {
+            id,
+            title: config.title,
+            size: config.size,
+            state: WindowState::Normal,
+            surface: None,
+            next_surface: 0,
+            scale: ScaleFactor::new(1.0),
+        };
+        let surface = window.create_surface(SurfaceConfig {
+            size: config.size,
+            transparent: false,
+        });
+        self.events.push(PlatformEvent::WindowCreated {
+            window: id,
+            surface,
+            size: config.size,
+        });
+        self.windows.insert(index, window);
+        id
+    }
+
+    fn window(&self, id: WindowId) -> Option<&dyn Window> {
+        self.windows
+            .get(&id.index())
+            .filter(|w| w.id == id)
+            .map(|w| w as &dyn Window)
+    }
+
+    fn window_mut(&mut self, id: WindowId) -> Option<&mut dyn Window> {
+        let w = self.windows.get_mut(&id.index())?;
+        if w.id != id {
+            return None;
+        }
+        Some(w as &mut dyn Window)
+    }
+
+    fn poll_events(&mut self, out: &mut Vec<PlatformEvent>) {
+        out.append(&mut self.events);
+    }
+
+    fn request_frame(&mut self, window: WindowId) {
+        self.events
+            .push(PlatformEvent::RedrawRequested { window });
+    }
+
+    fn now_secs(&self) -> f64 {
+        self.started.elapsed().as_secs_f64()
+    }
+}
+
+impl Clipboard for DesktopPlatform {
+    fn get_text(&mut self) -> Option<String> {
+        Some(self.clipboard.clone())
+    }
+
+    fn set_text(&mut self, text: &str) -> bool {
+        self.clipboard = text.to_string();
+        true
+    }
+}
+
+impl Ime for DesktopPlatform {
+    fn set_enabled(&mut self, window: WindowId, enabled: bool) {
+        self.ime_enabled.insert(window.index(), enabled);
+    }
+
+    fn set_cursor_area(&mut self, _window: WindowId, _origin: Point, _size: Size) {}
+}

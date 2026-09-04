@@ -1,0 +1,17 @@
+[package]
+name = "floem-platform-web"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Web/WASM platform adapter for Floem 2.0"
+rust-version.workspace = true
+
+[features]
+default = []
+# Enable when a WASM navigator.gpu probe is linked.
+webgpu-probe = []
+
+[dependencies]
+floem-platform = { path = "../floem-platform", version = "0.2.0" }
+floem-types = { path = "../../crates/floem-types", version = "0.2.0" }
