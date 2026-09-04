@@ -266,11 +266,11 @@ pub fn spawn(...);
 pub fn ui_spawn(...);
 ```
 
-- [ ] **Step 1: Write lifecycle/cancellation tests.**
-- [ ] **Step 2: Implement executor abstraction.**
-- [ ] **Step 3: Bind task lifetime to Scope.**
-- [ ] **Step 4: Add WASM/no-runtime executor test adapter.**
-- [ ] **Step 5: Commit.**
+- [x] **Step 1: Write lifecycle/cancellation tests.**
+- [x] **Step 2: Implement executor abstraction.**
+- [x] **Step 3: Bind task lifetime to Scope.**
+- [x] **Step 4: Add WASM/no-runtime executor test adapter.**
+- [x] **Step 5: Commit.**
 
 ---
 

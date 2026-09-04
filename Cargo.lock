@@ -2003,6 +2003,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "floem-task"
+version = "0.2.0"
+dependencies = [
+ "floem_reactive",
+]
+
+[[package]]
 name = "floem-test"
 version = "0.2.0"
 dependencies = [
