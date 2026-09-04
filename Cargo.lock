@@ -1976,6 +1976,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "floem-runtime-core"
+version = "0.2.0"
+dependencies = [
+ "floem-types",
+]
+
+[[package]]
 name = "floem-test"
 version = "0.2.0"
 dependencies = [

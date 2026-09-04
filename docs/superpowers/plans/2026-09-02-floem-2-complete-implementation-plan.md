@@ -111,11 +111,11 @@
 - Consumes: existing `slotmap`/ID approach where applicable
 - Produces: generation-safe `ElementId` and conversion helpers for legacy `ViewId`.
 
-- [ ] **Step 1: Write tests for stale-ID rejection.**
-- [ ] **Step 2: Implement generation semantics.**
-- [ ] **Step 3: Add compatibility conversion.**
-- [ ] **Step 4: Run focused tests.**
-- [ ] **Step 5: Commit.**
+- [x] **Step 1: Write tests for stale-ID rejection.**
+- [x] **Step 2: Implement generation semantics.**
+- [x] **Step 3: Add compatibility conversion.** (skipped — Policy A: no `ViewId` shim; see decision doc)
+- [x] **Step 4: Run focused tests.**
+- [x] **Step 5: Commit.**
 
 ## Task 1.3: Define core Widget/Element contracts
 
