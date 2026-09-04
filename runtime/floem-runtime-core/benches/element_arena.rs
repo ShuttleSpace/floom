@@ -3,7 +3,7 @@ use std::time::Duration;
 
 use criterion::{BenchmarkId, Criterion, criterion_group, criterion_main};
 use floem_core::{Element, ElementKind};
-use floem_runtime_core::{DirtyFlags, DirtySet, ElementArena};
+use floem_runtime_core::{DirtyFlags, DirtySet, ElementArena, ElementTree};
 use floem_types::ElementId;
 
 fn bench_arena(c: &mut Criterion) {
@@ -80,5 +80,46 @@ fn bench_dirty(c: &mut Criterion) {
     group.finish();
 }
 
-criterion_group!(benches, bench_arena, bench_dirty);
+fn bench_tree(c: &mut Criterion) {
+    let mut group = c.benchmark_group("tree_mutation");
+    group.measurement_time(Duration::from_secs(5));
+
+    group.bench_function("append_1k_children", |b| {
+        b.iter(|| {
+            let mut arena = ElementArena::new();
+            let mut tree = ElementTree::new();
+            let root = arena.insert_primitive();
+            for _ in 0..1_000 {
+                let child = arena.insert_primitive();
+                black_box(tree.append_child(&mut arena, root, child));
+            }
+            black_box(tree.children(root).len());
+        });
+    });
+
+    group.bench_function("reparent_1k", |b| {
+        let mut arena = ElementArena::new();
+        let mut tree = ElementTree::new();
+        let parent_a = arena.insert_primitive();
+        let parent_b = arena.insert_primitive();
+        let mut kids = Vec::with_capacity(1_000);
+        for _ in 0..1_000 {
+            let child = arena.insert_primitive();
+            tree.append_child(&mut arena, parent_a, child);
+            kids.push(child);
+        }
+        b.iter(|| {
+            for &child in &kids {
+                black_box(tree.append_child(&mut arena, parent_b, child));
+            }
+            for &child in &kids {
+                black_box(tree.append_child(&mut arena, parent_a, child));
+            }
+        });
+    });
+
+    group.finish();
+}
+
+criterion_group!(benches, bench_arena, bench_dirty, bench_tree);
 criterion_main!(benches);

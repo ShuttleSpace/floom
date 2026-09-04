@@ -1990,6 +1990,7 @@ dependencies = [
  "criterion",
  "floem-core",
  "floem-types",
+ "smallvec",
 ]
 
 [[package]]

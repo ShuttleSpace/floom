@@ -200,11 +200,11 @@ pub fn detach(id: ElementId);
 pub fn move_child(parent: ElementId, id: ElementId, index: usize);
 ```
 
-- [ ] **Step 1: Write tests for append, insert, detach, reorder, and subtree traversal.**
-- [ ] **Step 2: Implement tree operations against `ElementArena`.**
-- [ ] **Step 3: Add consistency assertions in debug builds.**
-- [ ] **Step 4: Benchmark tree mutation.**
-- [ ] **Step 5: Commit.**
+- [x] **Step 1: Write tests for append, insert, detach, reorder, and subtree traversal.**
+- [x] **Step 2: Implement tree operations against `ElementArena`.**
+- [x] **Step 3: Add consistency assertions in debug builds.**
+- [x] **Step 4: Benchmark tree mutation.**
+- [x] **Step 5: Commit.**
 
 ---
 

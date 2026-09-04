@@ -5,9 +5,11 @@
 mod arena;
 mod dirty;
 mod id;
+mod tree;
 
 pub use arena::ElementArena;
 pub use dirty::{DirtyFlags, DirtySet, invalidate, propagate_layout};
 pub use floem_types::ElementId;
 pub use id::{IdAllocator, IdSlot};
+pub use tree::{ElementTree, append_child, detach, insert_child, move_child};
 
