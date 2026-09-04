@@ -129,11 +129,11 @@
 **Interfaces:**
 - Produces: minimal `Widget`, `Element`, `CreateContext`, `UpdateContext`, `EventContext`, `PaintContext`, `SemanticsContext` contracts.
 
-- [ ] **Step 1: Write contract compilation tests.**
-- [ ] **Step 2: Implement minimal traits with no renderer/platform dependency.**
-- [ ] **Step 3: Add an example primitive widget.**
-- [ ] **Step 4: Run tests.**
-- [ ] **Step 5: Commit.**
+- [x] **Step 1: Write contract compilation tests.**
+- [x] **Step 2: Implement minimal traits with no renderer/platform dependency.**
+- [x] **Step 3: Add an example primitive widget.**
+- [x] **Step 4: Run tests.**
+- [x] **Step 5: Commit.**
 
 ---
 

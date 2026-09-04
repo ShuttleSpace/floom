@@ -1937,6 +1937,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "floem-core"
+version = "0.2.0"
+dependencies = [
+ "floem-types",
+]
+
+[[package]]
 name = "floem-editor"
 version = "0.1.0"
 dependencies = [
