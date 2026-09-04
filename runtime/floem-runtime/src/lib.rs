@@ -1,5 +1,11 @@
 //! Application frame runtime: mount widgets, dispatch events, tick frames.
 
+mod event;
+
+pub use event::{
+    EventPhase, EventRouter, Hit, HitRegion, HitTester, PointerCapture, RouteStop,
+};
+
 use std::cell::RefCell;
 use std::rc::Rc;
 use std::time::Instant;

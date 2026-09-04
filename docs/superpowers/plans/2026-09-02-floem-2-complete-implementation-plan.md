@@ -595,10 +595,10 @@ struct PlatformCapabilities { ... }
 - Create: `runtime/floem-runtime/src/event.rs`
 - Test: bubbling/capture/hit-test tests
 
-- [ ] **Step 1: Write event target selection tests.**
-- [ ] **Step 2: Implement pointer routing and pointer capture.**
-- [ ] **Step 3: Integrate native graph hit regions.**
-- [ ] **Step 4: Commit.**
+- [x] **Step 1: Write event target selection tests.**
+- [x] **Step 2: Implement pointer routing and pointer capture.**
+- [x] **Step 3: Integrate native graph hit regions.**
+- [x] **Step 4: Commit.**
 
 ## Task 11.2: Implement FocusManager
 
@@ -606,10 +606,10 @@ struct PlatformCapabilities { ... }
 - Create: `framework/floem-focus/src/lib.rs`
 - Test: focus traversal and scope tests
 
-- [ ] **Step 1: Write keyboard/tab/shift-tab tests.**
-- [ ] **Step 2: Implement focus scopes and traversal policy.**
-- [ ] **Step 3: Integrate platform focus.**
-- [ ] **Step 4: Commit.**
+- [x] **Step 1: Write keyboard/tab/shift-tab tests.**
+- [x] **Step 2: Implement focus scopes and traversal policy.**
+- [x] **Step 3: Integrate platform focus.**
+- [x] **Step 4: Commit.**
 
 ## Task 11.3: Implement Gesture Arena
 
@@ -617,10 +617,10 @@ struct PlatformCapabilities { ... }
 - Create: `framework/floem-gesture/src/lib.rs`
 - Test: tap/drag/scroll/scale conflict tests
 
-- [ ] **Step 1: Write recognizer competition tests.**
-- [ ] **Step 2: Implement arena ownership/cancellation.**
-- [ ] **Step 3: Integrate Scroll and Native View interaction.**
-- [ ] **Step 4: Commit.**
+- [x] **Step 1: Write recognizer competition tests.**
+- [x] **Step 2: Implement arena ownership/cancellation.**
+- [x] **Step 3: Integrate Scroll and Native View interaction.**
+- [x] **Step 4: Commit.**
 
 ## Task 11.4: Implement animation scheduler
 
@@ -628,11 +628,11 @@ struct PlatformCapabilities { ... }
 - Create: `framework/floem-animation/src/lib.rs`
 - Test: tween/spring/keyframe tests
 
-- [ ] **Step 1: Write deterministic animation tests with a fake clock.**
-- [ ] **Step 2: Implement platform-frame-driven ticking.**
-- [ ] **Step 3: Add compositor-only transform/opacity path.**
-- [ ] **Step 4: Benchmark 60/120Hz scenarios.**
-- [ ] **Step 5: Commit.**
+- [x] **Step 1: Write deterministic animation tests with a fake clock.**
+- [x] **Step 2: Implement platform-frame-driven ticking.**
+- [x] **Step 3: Add compositor-only transform/opacity path.**
+- [x] **Step 4: Benchmark 60/120Hz scenarios.**
+- [x] **Step 5: Commit.**
 
 ## Task 11.5: Implement Overlay system
 
@@ -640,10 +640,10 @@ struct PlatformCapabilities { ... }
 - Create: `framework/floem-overlay/src/lib.rs`
 - Test: modal/focus/z-order tests
 
-- [ ] **Step 1: Write dialog/popup/bottom-sheet tests.**
-- [ ] **Step 2: Implement overlay tree and hit-testing priority.**
-- [ ] **Step 3: Integrate animation and focus.**
-- [ ] **Step 4: Commit.**
+- [x] **Step 1: Write dialog/popup/bottom-sheet tests.**
+- [x] **Step 2: Implement overlay tree and hit-testing priority.**
+- [x] **Step 3: Integrate animation and focus.**
+- [x] **Step 4: Commit.**
 
 ---
 

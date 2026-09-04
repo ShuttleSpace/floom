@@ -1937,6 +1937,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "floem-animation"
+version = "0.2.0"
+dependencies = [
+ "criterion",
+ "floem-types",
+]
+
+[[package]]
 name = "floem-core"
 version = "0.2.0"
 dependencies = [
@@ -1983,6 +1991,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "floem-focus"
+version = "0.2.0"
+dependencies = [
+ "floem-types",
+]
+
+[[package]]
+name = "floem-gesture"
+version = "0.2.0"
+dependencies = [
+ "floem-types",
+]
+
+[[package]]
 name = "floem-ios-example"
 version = "0.1.0"
 dependencies = [
@@ -1996,6 +2018,15 @@ dependencies = [
  "criterion",
  "floem-types",
  "taffy",
+]
+
+[[package]]
+name = "floem-overlay"
+version = "0.2.0"
+dependencies = [
+ "floem-animation",
+ "floem-focus",
+ "floem-types",
 ]
 
 [[package]]
