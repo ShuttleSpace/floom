@@ -1985,6 +1985,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "floem-types"
+version = "0.2.0"
+
+[[package]]
 name = "floem-vger"
 version = "0.3.2"
 source = "git+https://github.com/lapce/vger-rs?rev=54ab8135d9d870a4ac2b84fc6b9846b3b03ec919#54ab8135d9d870a4ac2b84fc6b9846b3b03ec919"

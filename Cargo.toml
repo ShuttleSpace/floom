@@ -2,6 +2,7 @@
 resolver = "3"
 exclude = ["platform-compat"]
 members = [
+  "crates/floem-types",
   "renderer",
   "skia",
   "vello",
@@ -14,6 +15,7 @@ members = [
 ]
 default-members = [
   ".",
+  "crates/floem-types",
   "renderer",
   "skia",
   "vello",

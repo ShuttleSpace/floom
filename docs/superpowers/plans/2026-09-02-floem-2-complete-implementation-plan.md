@@ -94,11 +94,11 @@
 - Consumes: no Floem runtime dependencies
 - Produces: `Point`, `Size`, `Rect`, `Insets`, `Constraints`, `Transform`, `Color`, `ScaleFactor`, `DisplayInfo`, `WindowId`, `SurfaceId`, `ElementId`, `SceneNodeId`, `ResourceId`, `NativeViewId`, `PlatformId`.
 
-- [ ] **Step 1: Write compile tests proving the crate builds without platform/GPU dependencies.**
-- [ ] **Step 2: Implement the value types and conversions from existing Floem types.**
-- [ ] **Step 3: Add size/layout tests and ID generation tests.**
-- [ ] **Step 4: Add dependency boundary validation.**
-- [ ] **Step 5: Commit.**
+- [x] **Step 1: Write compile tests proving the crate builds without platform/GPU dependencies.**
+- [x] **Step 2: Implement the value types and conversions from existing Floem types.**
+- [x] **Step 3: Add size/layout tests and ID generation tests.**
+- [x] **Step 4: Add dependency boundary validation.**
+- [x] **Step 5: Commit.**
 
 ## Task 1.2: Introduce `ElementId` with generation safety
 
