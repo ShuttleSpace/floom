@@ -343,11 +343,11 @@ impl Scene {
 }
 ```
 
-- [ ] **Step 1: Write stable-ID and dirty-update tests.**
-- [ ] **Step 2: Implement retained Scene nodes.**
-- [ ] **Step 3: Add damage tracking.**
-- [ ] **Step 4: Confirm the crate has no OS/windowing dependency.**
-- [ ] **Step 5: Commit.**
+- [x] **Step 1: Write stable-ID and dirty-update tests.**
+- [x] **Step 2: Implement retained Scene nodes.**
+- [x] **Step 3: Add damage tracking.**
+- [x] **Step 4: Confirm the crate has no OS/windowing dependency.**
+- [x] **Step 5: Commit.**
 
 ## Task 5.2: Implement resource registry
 
@@ -363,10 +363,10 @@ pub fn retain(id: ResourceId);
 pub fn release(id: ResourceId);
 ```
 
-- [ ] **Step 1: Write shared-resource tests.**
-- [ ] **Step 2: Implement ref-count/usage tracking.**
-- [ ] **Step 3: Add budget/eviction hooks.**
-- [ ] **Step 4: Commit.**
+- [x] **Step 1: Write shared-resource tests.**
+- [x] **Step 2: Implement ref-count/usage tracking.**
+- [x] **Step 3: Add budget/eviction hooks.**
+- [x] **Step 4: Commit.**
 
 ---
 
