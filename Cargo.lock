@@ -1991,8 +1991,15 @@ dependencies = [
  "floem-core",
  "floem-types",
  "floem_reactive",
- "serial_test",
  "smallvec",
+]
+
+[[package]]
+name = "floem-store"
+version = "0.2.0"
+dependencies = [
+ "criterion",
+ "floem_reactive",
 ]
 
 [[package]]

@@ -247,11 +247,11 @@ impl<T> Store<T> {
 }
 ```
 
-- [ ] **Step 1: Write selective-subscription tests.**
-- [ ] **Step 2: Implement selectors on the existing reactive graph.**
-- [ ] **Step 3: Verify unrelated selectors are not invalidated.**
-- [ ] **Step 4: Benchmark selector overhead.**
-- [ ] **Step 5: Commit.**
+- [x] **Step 1: Write selective-subscription tests.**
+- [x] **Step 2: Implement selectors on the existing reactive graph.**
+- [x] **Step 3: Verify unrelated selectors are not invalidated.**
+- [x] **Step 4: Benchmark selector overhead.**
+- [x] **Step 5: Commit.**
 
 ## Task 3.3: Add Resource and Task primitives
 
