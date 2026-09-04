@@ -289,11 +289,11 @@ enum Priority { Input, State, Animation, Layout, Paint, Accessibility, Idle }
 fn schedule(priority: Priority, task: TaskId);
 ```
 
-- [ ] **Step 1: Write ordering tests.**
-- [ ] **Step 2: Implement queues and coalescing.**
-- [ ] **Step 3: Ensure idle tasks yield to frame-critical work.**
-- [ ] **Step 4: Add frame-budget tests.**
-- [ ] **Step 5: Commit.**
+- [x] **Step 1: Write ordering tests.**
+- [x] **Step 2: Implement queues and coalescing.**
+- [x] **Step 3: Ensure idle tasks yield to frame-critical work.**
+- [x] **Step 4: Add frame-budget tests.**
+- [x] **Step 5: Commit.**
 
 ## Task 4.2: Build `floem-runtime`
 
