@@ -526,11 +526,11 @@ struct PlatformCapabilities { ... }
 - Create: `text/floem-text/src/lib.rs`
 - Test: shaping/wrapping/selection tests
 
-- [ ] **Step 1: Write Unicode, bidi, fallback, and line-breaking tests.**
-- [ ] **Step 2: Wrap the current text engine behind a neutral API.**
-- [ ] **Step 3: Emit renderer-neutral glyph runs.**
-- [ ] **Step 4: Benchmark shaping/cache behavior.**
-- [ ] **Step 5: Commit.**
+- [x] **Step 1: Write Unicode, bidi, fallback, and line-breaking tests.**
+- [x] **Step 2: Wrap the current text engine behind a neutral API.**
+- [x] **Step 3: Emit renderer-neutral glyph runs.**
+- [x] **Step 4: Benchmark shaping/cache behavior.**
+- [x] **Step 5: Commit.**
 
 ## Task 9.2: Build shared editing model
 
@@ -540,10 +540,10 @@ struct PlatformCapabilities { ... }
 - Create: `text/floem-editor/src/undo.rs`
 - Test: editing semantics
 
-- [ ] **Step 1: Write cursor/selection/undo tests.**
-- [ ] **Step 2: Implement document transactions.**
-- [ ] **Step 3: Add IME composition hooks.**
-- [ ] **Step 4: Commit.**
+- [x] **Step 1: Write cursor/selection/undo tests.**
+- [x] **Step 2: Implement document transactions.**
+- [x] **Step 3: Add IME composition hooks.**
+- [x] **Step 4: Commit.**
 
 ---
 

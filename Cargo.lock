@@ -1408,7 +1408,7 @@ name = "custom_keymap"
 version = "0.1.0"
 dependencies = [
  "floem",
- "floem-editor",
+ "floem-editor 0.1.0",
 ]
 
 [[package]]
@@ -1962,6 +1962,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "floem-editor"
+version = "0.2.0"
+dependencies = [
+ "lapce-xi-rope",
+]
+
+[[package]]
 name = "floem-editor-core"
 version = "0.1.0"
 dependencies = [
@@ -2132,6 +2139,16 @@ dependencies = [
  "floem",
  "serial_test",
  "ui-events",
+]
+
+[[package]]
+name = "floem-text"
+version = "0.2.0"
+dependencies = [
+ "criterion",
+ "floem-types",
+ "parley",
+ "rustc-hash 2.1.1",
 ]
 
 [[package]]
@@ -7795,7 +7812,7 @@ version = "0.1.0"
 dependencies = [
  "files",
  "floem",
- "floem-editor",
+ "floem-editor 0.1.0",
  "signpost",
  "strum",
 ]

@@ -1,0 +1,13 @@
+[package]
+name = "floem-editor"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Shared text editing model for Floem 2.0"
+rust-version.workspace = true
+
+[dependencies]
+lapce-xi-rope = { workspace = true }
+
+[dev-dependencies]
