@@ -226,11 +226,11 @@ pub fn bind(binding: ReactiveBinding) -> ReactiveBindingId;
 pub fn unbind(id: ReactiveBindingId);
 ```
 
-- [ ] **Step 1: Write a test where a Signal changes one Text property without rebuilding sibling elements.**
-- [ ] **Step 2: Implement the binding registry.**
-- [ ] **Step 3: Route invalidation to the exact `ElementId` and property.**
-- [ ] **Step 4: Measure update counts.**
-- [ ] **Step 5: Commit.**
+- [x] **Step 1: Write a test where a Signal changes one Text property without rebuilding sibling elements.**
+- [x] **Step 2: Implement the binding registry.**
+- [x] **Step 3: Route invalidation to the exact `ElementId` and property.**
+- [x] **Step 4: Measure update counts.**
+- [x] **Step 5: Commit.**
 
 ## Task 3.2: Add Store/Selector primitives
 
