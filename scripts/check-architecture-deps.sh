@@ -72,6 +72,8 @@ GPU_HINTS = {
 RENDERER_PACKAGES = {
     "floem_vger_renderer", "floem_vello_renderer", "floem_skia_renderer",
     "floem_tiny_skia_renderer", "floem_renderer",
+    "floem-renderer", "floem-renderer-vello", "floem-renderer-software",
+    "floem-renderer-skia",
 }
 WIDGET_HINTS = {"floem-widgets", "floem_widgets"}
 

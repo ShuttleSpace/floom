@@ -19,7 +19,7 @@ enum SlotState {
 }
 
 /// Retained scene with transactional updates and damage tracking.
-#[derive(Debug, Default)]
+#[derive(Debug, Clone, Default)]
 pub struct Scene {
     slots: Vec<SlotState>,
     nodes: Vec<Option<SceneNode>>,
@@ -52,6 +52,18 @@ impl Scene {
             return None;
         }
         self.nodes.get(id.index() as usize)?.as_ref()
+    }
+
+    /// Iterate live `(SceneNodeId, &SceneNode)` pairs in index order.
+    pub fn iter(&self) -> impl Iterator<Item = (Id, &SceneNode)> + '_ {
+        self.slots.iter().enumerate().filter_map(|(index, slot)| {
+            let SlotState::Live { generation } = slot else {
+                return None;
+            };
+            let id = Id::new(index as u32, *generation);
+            let node = self.nodes.get(index)?.as_ref()?;
+            Some((id, node))
+        })
     }
 
     pub fn contains(&self, id: Id) -> bool {

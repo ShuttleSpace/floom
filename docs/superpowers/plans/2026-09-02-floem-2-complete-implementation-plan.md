@@ -387,10 +387,10 @@ struct FrameInfo;
 struct DamageRegion;
 ```
 
-- [ ] **Step 1: Write compile-only backend contract tests.**
-- [ ] **Step 2: Implement renderer-neutral types.**
-- [ ] **Step 3: Prove a fake renderer can consume a Scene without widgets.**
-- [ ] **Step 4: Commit.**
+- [x] **Step 1: Write compile-only backend contract tests.**
+- [x] **Step 2: Implement renderer-neutral types.**
+- [x] **Step 3: Prove a fake renderer can consume a Scene without widgets.**
+- [x] **Step 4: Commit.**
 
 ## Task 6.2: Adapt existing Vello renderer
 
@@ -403,11 +403,11 @@ struct DamageRegion;
 - Consumes: `Scene`, `RenderTarget`, `DamageRegion`.
 - Produces: Vello/WGPU frame submission.
 
-- [ ] **Step 1: Wrap current Vello drawing path behind the new ABI.**
-- [ ] **Step 2: Add rect/image/text fast-path tests.**
-- [ ] **Step 3: Add resource cache instrumentation.**
-- [ ] **Step 4: Benchmark full-frame and partial-damage paths.**
-- [ ] **Step 5: Commit.**
+- [x] **Step 1: Wrap current Vello drawing path behind the new ABI.** (recording adapter under `render/floem-renderer-vello`; GPU submit remains in legacy `floem_vello_renderer` until paint migration)
+- [x] **Step 2: Add rect/image/text fast-path tests.**
+- [x] **Step 3: Add resource cache instrumentation.**
+- [x] **Step 4: Benchmark full-frame and partial-damage paths.**
+- [x] **Step 5: Commit.**
 
 ## Task 6.3: Adapt Skia and software backends
 
@@ -416,10 +416,10 @@ struct DamageRegion;
 - Modify: existing tiny/software renderer crate
 - Test: backend compatibility matrix
 
-- [ ] **Step 1: Implement renderer ABI adapters.**
-- [ ] **Step 2: Run identical Scene snapshots through both backends.**
-- [ ] **Step 3: Add software-headless snapshot tests.**
-- [ ] **Step 4: Commit.**
+- [x] **Step 1: Implement renderer ABI adapters.** (`render/floem-renderer-skia`, `render/floem-renderer-software`)
+- [x] **Step 2: Run identical Scene snapshots through both backends.**
+- [x] **Step 3: Add software-headless snapshot tests.**
+- [x] **Step 4: Commit.**
 
 ## Task 6.4: Implement render-thread Scene handoff
 
@@ -428,10 +428,10 @@ struct DamageRegion;
 - Create: `renderer/floem-renderer/src/frame_queue.rs`
 - Test: `runtime/floem-runtime/tests/render_handoff.rs`
 
-- [ ] **Step 1: Write a test proving render work can consume an immutable Scene snapshot.**
-- [ ] **Step 2: Implement single-producer/single-consumer or bounded queue appropriate to the target platform.**
-- [ ] **Step 3: Instrument queue wait and frame latency.**
-- [ ] **Step 4: Commit.**
+- [x] **Step 1: Write a test proving render work can consume an immutable Scene snapshot.**
+- [x] **Step 2: Implement single-producer/single-consumer or bounded queue appropriate to the target platform.**
+- [x] **Step 3: Instrument queue wait and frame latency.**
+- [x] **Step 4: Commit.**
 
 ---
 

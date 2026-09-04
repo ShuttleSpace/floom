@@ -1,0 +1,15 @@
+[package]
+name = "floem-renderer-software"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Software/CPU Scene renderer adapter for Floem 2.0"
+rust-version.workspace = true
+
+[dependencies]
+floem-renderer = { path = "../floem-renderer", version = "0.2.0" }
+floem-scene = { path = "../../scene/floem-scene", version = "0.2.0" }
+floem-types = { path = "../../crates/floem-types", version = "0.2.0" }
+
+[dev-dependencies]

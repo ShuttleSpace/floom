@@ -1,0 +1,17 @@
+[package]
+name = "floem-renderer-skia"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Skia Scene adapter for Floem 2.0 Renderer ABI (recording layer)"
+rust-version.workspace = true
+
+[dependencies]
+floem-renderer = { path = "../floem-renderer", version = "0.2.0" }
+floem-scene = { path = "../../scene/floem-scene", version = "0.2.0" }
+floem-types = { path = "../../crates/floem-types", version = "0.2.0" }
+
+[dev-dependencies]
+floem-renderer-software = { path = "../floem-renderer-software", version = "0.2.0" }
+

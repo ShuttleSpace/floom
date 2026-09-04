@@ -1,0 +1,17 @@
+[package]
+name = "floem-renderer"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Renderer ABI for Floem 2.0 (backend-neutral)"
+rust-version.workspace = true
+
+# Lives under `render/` so it does not collide with the legacy `renderer/`
+# (`floem_renderer`) crate path.
+
+[dependencies]
+floem-types = { path = "../../crates/floem-types", version = "0.2.0" }
+floem-scene = { path = "../../scene/floem-scene", version = "0.2.0" }
+
+[dev-dependencies]

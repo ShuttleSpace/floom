@@ -1983,6 +1983,43 @@ dependencies = [
 ]
 
 [[package]]
+name = "floem-renderer"
+version = "0.2.0"
+dependencies = [
+ "floem-scene",
+ "floem-types",
+]
+
+[[package]]
+name = "floem-renderer-skia"
+version = "0.2.0"
+dependencies = [
+ "floem-renderer",
+ "floem-renderer-software",
+ "floem-scene",
+ "floem-types",
+]
+
+[[package]]
+name = "floem-renderer-software"
+version = "0.2.0"
+dependencies = [
+ "floem-renderer",
+ "floem-scene",
+ "floem-types",
+]
+
+[[package]]
+name = "floem-renderer-vello"
+version = "0.2.0"
+dependencies = [
+ "criterion",
+ "floem-renderer",
+ "floem-scene",
+ "floem-types",
+]
+
+[[package]]
 name = "floem-runtime"
 version = "0.2.0"
 dependencies = [
