@@ -8,6 +8,7 @@ description = "Retained element runtime primitives for Floem 2.0"
 rust-version.workspace = true
 
 [dependencies]
+bitflags = "2.9"
 floem-types = { path = "../../crates/floem-types", version = "0.2.0" }
 floem-core = { path = "../../crates/floem-core", version = "0.2.0" }
 

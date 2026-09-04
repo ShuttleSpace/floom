@@ -1986,6 +1986,7 @@ dependencies = [
 name = "floem-runtime-core"
 version = "0.2.0"
 dependencies = [
+ "bitflags 2.11.0",
  "criterion",
  "floem-core",
  "floem-types",

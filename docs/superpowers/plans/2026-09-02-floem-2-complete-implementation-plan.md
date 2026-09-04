@@ -179,11 +179,11 @@ pub fn invalidate(id: ElementId, flags: DirtyFlags);
 pub fn propagate_layout(id: ElementId);
 ```
 
-- [ ] **Step 1: Write tests for property-specific invalidation.**
-- [ ] **Step 2: Implement bitflags.**
-- [ ] **Step 3: Implement parent propagation for layout/children changes.**
-- [ ] **Step 4: Benchmark dirty marking versus whole-tree scanning.**
-- [ ] **Step 5: Commit.**
+- [x] **Step 1: Write tests for property-specific invalidation.**
+- [x] **Step 2: Implement bitflags.**
+- [x] **Step 3: Implement parent propagation for layout/children changes.**
+- [x] **Step 4: Benchmark dirty marking versus whole-tree scanning.**
+- [x] **Step 5: Commit.**
 
 ## Task 2.3: Build the persistent element tree
 
