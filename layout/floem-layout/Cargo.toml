@@ -1,0 +1,19 @@
+[package]
+name = "floem-layout"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Backend-neutral layout API for Floem 2.0 (Taffy adapter)"
+rust-version.workspace = true
+
+[dependencies]
+floem-types = { path = "../../crates/floem-types", version = "0.2.0" }
+taffy = { version = "0.9.2", default-features = false, features = ["std", "flexbox", "grid", "block_layout", "taffy_tree"] }
+
+[dev-dependencies]
+criterion = { version = "0.8.1", features = ["html_reports"] }
+
+[[bench]]
+name = "incremental"
+harness = false

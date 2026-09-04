@@ -556,11 +556,11 @@ struct PlatformCapabilities { ... }
 - Create: `layout/floem-layout/src/taffy_adapter.rs`
 - Test: flex/grid/stack/measure tests
 
-- [ ] **Step 1: Write layout contract tests.**
-- [ ] **Step 2: Implement Taffy adapter.**
-- [ ] **Step 3: Ensure Taffy node IDs do not leak to public API.**
-- [ ] **Step 4: Benchmark incremental subtree layout.**
-- [ ] **Step 5: Commit.**
+- [x] **Step 1: Write layout contract tests.**
+- [x] **Step 2: Implement Taffy adapter.**
+- [x] **Step 3: Ensure Taffy node IDs do not leak to public API.**
+- [x] **Step 4: Benchmark incremental subtree layout.**
+- [x] **Step 5: Commit.**
 
 ## Task 10.2: Implement Style and selector state
 
@@ -568,11 +568,11 @@ struct PlatformCapabilities { ... }
 - Create: `layout/floem-style/src/lib.rs`
 - Test: state selector/inheritance/token tests
 
-- [ ] **Step 1: Write tests for normal/hover/pressed/focused/disabled/selected.**
-- [ ] **Step 2: Implement style property storage and precedence.**
-- [ ] **Step 3: Implement inherited typography properties only.**
-- [ ] **Step 4: Benchmark style invalidation.**
-- [ ] **Step 5: Commit.**
+- [x] **Step 1: Write tests for normal/hover/pressed/focused/disabled/selected.**
+- [x] **Step 2: Implement style property storage and precedence.**
+- [x] **Step 3: Implement inherited typography properties only.**
+- [x] **Step 4: Benchmark style invalidation.**
+- [x] **Step 5: Commit.**
 
 ## Task 10.3: Implement Theme and tokens
 
@@ -580,10 +580,10 @@ struct PlatformCapabilities { ... }
 - Create: `framework/floem-theme/src/lib.rs`
 - Test: light/dark/dynamic token tests
 
-- [ ] **Step 1: Define color/typography/spacing/radius/elevation/motion token structs.**
-- [ ] **Step 2: Implement theme propagation.**
-- [ ] **Step 3: Add platform-adaptive token hooks.**
-- [ ] **Step 4: Commit.**
+- [x] **Step 1: Define color/typography/spacing/radius/elevation/motion token structs.**
+- [x] **Step 2: Implement theme propagation.**
+- [x] **Step 3: Add platform-adaptive token hooks.**
+- [x] **Step 4: Commit.**
 
 ---
 

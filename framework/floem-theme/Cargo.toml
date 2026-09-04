@@ -1,0 +1,13 @@
+[package]
+name = "floem-theme"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Theme tokens for Floem 2.0"
+rust-version.workspace = true
+
+[dependencies]
+floem-types = { path = "../../crates/floem-types", version = "0.2.0" }
+
+[dev-dependencies]

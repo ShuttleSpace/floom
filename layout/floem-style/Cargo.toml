@@ -1,0 +1,14 @@
+[package]
+name = "floem-style"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Style properties and selectors for Floem 2.0"
+rust-version.workspace = true
+
+[dependencies]
+floem-types = { path = "../../crates/floem-types", version = "0.2.0" }
+bitflags = "2.9"
+
+[dev-dependencies]

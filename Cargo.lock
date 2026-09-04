@@ -1990,6 +1990,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "floem-layout"
+version = "0.2.0"
+dependencies = [
+ "criterion",
+ "floem-types",
+ "taffy",
+]
+
+[[package]]
 name = "floem-platform"
 version = "0.2.0"
 dependencies = [
@@ -2126,6 +2135,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "floem-style"
+version = "0.2.0"
+dependencies = [
+ "bitflags 2.11.0",
+ "floem-types",
+]
+
+[[package]]
 name = "floem-task"
 version = "0.2.0"
 dependencies = [
@@ -2149,6 +2166,13 @@ dependencies = [
  "floem-types",
  "parley",
  "rustc-hash 2.1.1",
+]
+
+[[package]]
+name = "floem-theme"
+version = "0.2.0"
+dependencies = [
+ "floem-types",
 ]
 
 [[package]]
