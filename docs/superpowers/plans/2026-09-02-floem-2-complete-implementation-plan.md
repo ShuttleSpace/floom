@@ -313,11 +313,11 @@ impl Runtime {
 }
 ```
 
-- [ ] **Step 1: Write a Counter test.**
-- [ ] **Step 2: Implement mount/event/tick plumbing.**
-- [ ] **Step 3: Ensure a local state update does not rebuild unrelated elements.**
-- [ ] **Step 4: Add frame instrumentation hooks.**
-- [ ] **Step 5: Commit.**
+- [x] **Step 1: Write a Counter test.**
+- [x] **Step 2: Implement mount/event/tick plumbing.**
+- [x] **Step 3: Ensure a local state update does not rebuild unrelated elements.**
+- [x] **Step 4: Add frame instrumentation hooks.**
+- [x] **Step 5: Commit.**
 
 ---
 

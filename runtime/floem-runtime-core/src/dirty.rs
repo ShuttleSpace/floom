@@ -24,6 +24,8 @@ bitflags! {
 #[derive(Debug, Default)]
 pub struct DirtySet {
     flags: Vec<DirtyFlags>,
+    /// Elements that have become dirty since the last [`Self::drain_pending`].
+    pending: Vec<ElementId>,
 }
 
 impl DirtySet {
@@ -61,8 +63,17 @@ impl DirtySet {
             return false;
         }
         self.ensure_index(id.index() as usize);
+        let was_clean = self.flags[id.index() as usize].is_empty();
         self.flags[id.index() as usize].insert(flags);
+        if was_clean {
+            self.pending.push(id);
+        }
         true
+    }
+
+    /// Take the list of newly dirtied element ids (does not clear flags).
+    pub fn drain_pending(&mut self) -> Vec<ElementId> {
+        std::mem::take(&mut self.pending)
     }
 
     /// Mark layout dirty on `id` and walk parents via `Element::parent`.

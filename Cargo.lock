@@ -1983,6 +1983,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "floem-runtime"
+version = "0.2.0"
+dependencies = [
+ "floem-core",
+ "floem-runtime-core",
+ "floem-scheduler",
+ "floem-types",
+ "floem_reactive",
+]
+
+[[package]]
 name = "floem-runtime-core"
 version = "0.2.0"
 dependencies = [
