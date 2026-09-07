@@ -2021,6 +2021,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "floem-native"
+version = "0.2.0"
+dependencies = [
+ "criterion",
+ "floem-types",
+ "floem-virtual",
+]
+
+[[package]]
 name = "floem-overlay"
 version = "0.2.0"
 dependencies = [
@@ -2220,6 +2229,14 @@ dependencies = [
  "linebender_resource_handle",
  "rect_packer",
  "wgpu",
+]
+
+[[package]]
+name = "floem-virtual"
+version = "0.2.0"
+dependencies = [
+ "criterion",
+ "floem-types",
 ]
 
 [[package]]

@@ -655,12 +655,12 @@ struct PlatformCapabilities { ... }
 - Create: `layout/floem-virtual/src/lib.rs`
 - Test: 1k/10k/100k item range tests
 
-- [ ] **Step 1: Write viewport/range/key reuse tests.**
-- [ ] **Step 2: Implement visible range calculation.**
-- [ ] **Step 3: Implement stable-key element reuse.**
-- [ ] **Step 4: Add overscan controls.**
-- [ ] **Step 5: Benchmark CPU/RAM/scrolling.**
-- [ ] **Step 6: Commit.**
+- [x] **Step 1: Write viewport/range/key reuse tests.**
+- [x] **Step 2: Implement visible range calculation.**
+- [x] **Step 3: Implement stable-key element reuse.**
+- [x] **Step 4: Add overscan controls.**
+- [x] **Step 5: Benchmark CPU/RAM/scrolling.**
+- [x] **Step 6: Commit.**
 
 ## Task 12.2: Native view pooling
 
@@ -668,10 +668,10 @@ struct PlatformCapabilities { ... }
 - Create: `native/floem-native/src/pool.rs`
 - Test: reuse/lifecycle tests
 
-- [ ] **Step 1: Write native slot reuse tests.**
-- [ ] **Step 2: Implement pool and attach/detach lifecycle.**
-- [ ] **Step 3: Benchmark 10k virtualized rows with native placeholders.**
-- [ ] **Step 4: Commit.**
+- [x] **Step 1: Write native slot reuse tests.**
+- [x] **Step 2: Implement pool and attach/detach lifecycle.**
+- [x] **Step 3: Benchmark 10k virtualized rows with native placeholders.**
+- [x] **Step 4: Commit.**
 
 ---
 
