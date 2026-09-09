@@ -683,10 +683,10 @@ struct PlatformCapabilities { ... }
 - Create: `framework/floem-accessibility/src/lib.rs`
 - Test: semantics tree tests
 
-- [ ] **Step 1: Define semantics node schema.**
-- [ ] **Step 2: Write role/label/value/action tests.**
-- [ ] **Step 3: Connect Element dirty semantics updates.**
-- [ ] **Step 4: Commit.**
+- [x] **Step 1: Define semantics node schema.**
+- [x] **Step 2: Write role/label/value/action tests.**
+- [x] **Step 3: Connect Element dirty semantics updates.**
+- [x] **Step 4: Commit.**
 
 ## Task 13.2: Platform accessibility adapters
 
@@ -694,11 +694,15 @@ struct PlatformCapabilities { ... }
 - Modify: each platform backend with accessibility adapter modules
 - Test: at least one desktop and one mobile target in CI/device testing
 
-- [ ] **Step 1: Implement desktop adapter.**
-- [ ] **Step 2: Implement Android/iOS adapters.**
-- [ ] **Step 3: Add Harmony/Web adapters or explicit capability-limited implementations.**
+- [x] **Step 1: Implement desktop adapter.**
+- [x] **Step 2: Implement Android/iOS adapters.**
+- [x] **Step 3: Add Harmony/Web adapters or explicit capability-limited implementations.**
 - [ ] **Step 4: Test native subtree integration.**
-- [ ] **Step 5: Commit per platform.**
+- [x] **Step 5: Commit per platform.**
+
+> Note (Step 4): host-side adapter tests cover diff application and action
+> dispatch. Device/CI testing of a *native* a11y subtree still needs an OS
+> bridge, which no backend wires yet.
 
 ## Task 13.3: IME abstraction
 
@@ -707,10 +711,14 @@ struct PlatformCapabilities { ... }
 - Modify: platform backends
 - Test: composition/selection/candidate tests
 
-- [ ] **Step 1: Write fake-IME tests.**
-- [ ] **Step 2: Implement platform-neutral IME state.**
+- [x] **Step 1: Write fake-IME tests.**
+- [x] **Step 2: Implement platform-neutral IME state.**
 - [ ] **Step 3: Bridge native text inputs and WebView.**
-- [ ] **Step 4: Commit.**
+- [x] **Step 4: Commit.**
+
+> Note (Step 3): `floem-ime` is the platform-neutral state machine. Bridging it
+> to concrete OS text inputs / WebView is deferred to the platform backends
+> (see `floem_platform::Ime`).
 
 ---
 

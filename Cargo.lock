@@ -1928,6 +1928,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "floem-accessibility"
+version = "0.2.0"
+dependencies = [
+ "bitflags 2.11.0",
+ "criterion",
+ "floem-types",
+]
+
+[[package]]
 name = "floem-android-example"
 version = "0.1.0"
 dependencies = [
@@ -2005,6 +2014,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "floem-ime"
+version = "0.2.0"
+
+[[package]]
 name = "floem-ios-example"
 version = "0.1.0"
 dependencies = [
@@ -2050,6 +2063,7 @@ dependencies = [
 name = "floem-platform-android"
 version = "0.2.0"
 dependencies = [
+ "floem-accessibility",
  "floem-platform",
  "floem-types",
 ]
@@ -2058,6 +2072,7 @@ dependencies = [
 name = "floem-platform-desktop"
 version = "0.2.0"
 dependencies = [
+ "floem-accessibility",
  "floem-platform",
  "floem-types",
 ]
@@ -2066,6 +2081,7 @@ dependencies = [
 name = "floem-platform-embedded"
 version = "0.2.0"
 dependencies = [
+ "floem-accessibility",
  "floem-platform",
  "floem-types",
 ]
@@ -2074,6 +2090,7 @@ dependencies = [
 name = "floem-platform-harmony"
 version = "0.2.0"
 dependencies = [
+ "floem-accessibility",
  "floem-platform",
  "floem-types",
 ]
@@ -2082,6 +2099,7 @@ dependencies = [
 name = "floem-platform-ios"
 version = "0.2.0"
 dependencies = [
+ "floem-accessibility",
  "floem-platform",
  "floem-types",
 ]
@@ -2090,6 +2108,7 @@ dependencies = [
 name = "floem-platform-web"
 version = "0.2.0"
 dependencies = [
+ "floem-accessibility",
  "floem-platform",
  "floem-types",
 ]
