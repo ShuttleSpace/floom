@@ -13,5 +13,6 @@ default = []
 webgpu-probe = []
 
 [dependencies]
+floem-accessibility = { path = "../../framework/floem-accessibility", version = "0.2.0" }
 floem-platform = { path = "../floem-platform", version = "0.2.0" }
 floem-types = { path = "../../crates/floem-types", version = "0.2.0" }

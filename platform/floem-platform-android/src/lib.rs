@@ -1,6 +1,9 @@
 //! Android platform adapter (independent crate; not an alias of Harmony).
 //!
-//! Accessibility is explicitly unsupported until a native bridge lands.
+//! Accessibility is capability-limited: the adapter retains the semantics tree
+//! but no native bridge is wired, so actions cannot reach the OS.
+
+pub mod accessibility;
 
 use floem_platform::{HostPlatform, PlatformCapabilities};
 use floem_types::PlatformId;

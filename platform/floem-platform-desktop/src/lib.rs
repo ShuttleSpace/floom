@@ -5,6 +5,8 @@
 //! Real `floem-winit` wiring stays in the app/runtime layer; this crate owns
 //! the ABI-facing desktop services (clipboard + IME stubs included).
 
+pub mod accessibility;
+
 use std::collections::HashMap;
 use std::time::Instant;
 

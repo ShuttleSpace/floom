@@ -1,5 +1,7 @@
 //! HarmonyOS platform adapter — **independent** of Android (no shared alias).
 
+pub mod accessibility;
+
 use floem_platform::{Capability, HostPlatform, PlatformCapabilities};
 use floem_types::PlatformId;
 

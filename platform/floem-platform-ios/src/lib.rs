@@ -1,5 +1,7 @@
 //! iOS platform adapter.
 
+pub mod accessibility;
+
 use floem_platform::{HostPlatform, PlatformCapabilities};
 use floem_types::PlatformId;
 

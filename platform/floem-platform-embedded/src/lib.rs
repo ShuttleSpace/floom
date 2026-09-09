@@ -1,5 +1,7 @@
 //! Embedded platform: headless framebuffer simulation (+ optional DRM feature).
 
+pub mod accessibility;
+
 use floem_platform::{
     Capability, HostPlatform, Platform, PlatformCapabilities, PlatformEvent, Window,
     WindowConfig,

@@ -8,6 +8,7 @@ description = "Desktop platform adapter for Floem 2.0 (Winit lifecycle mapping)"
 rust-version.workspace = true
 
 [dependencies]
+floem-accessibility = { path = "../../framework/floem-accessibility", version = "0.2.0" }
 floem-platform = { path = "../floem-platform", version = "0.2.0" }
 floem-types = { path = "../../crates/floem-types", version = "0.2.0" }
 
