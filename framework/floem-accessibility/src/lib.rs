@@ -1,0 +1,22 @@
+//! Semantics tree and accessibility adapter ABI for Floem 2.0.
+//!
+//! Widgets describe their accessibility semantics through a retained
+//! [`SemanticsTree`] keyed by [`ElementId`]. The runtime's `SEMANTICS` dirty
+//! flag routes into [`SemanticsTree::mark_semantics_dirty`]; the frame loop
+//! drains [`SemanticsTree::collect_updates`] into a [`SemanticsDiff`] that
+//! platform adapters ([`AccessibilityAdapter`]) translate to OS a11y APIs.
+//!
+//! This crate is deliberately OS-free: it depends only on `floem-types`, so
+//! platform backends can depend on it without creating a dependency cycle.
+
+mod adapter;
+mod semantics;
+
+pub use adapter::{
+    AccessibilityAdapter, AccessibilityCapabilities, AccessibilityFrame,
+    CapabilityLimitedAccessibilityAdapter,
+};
+pub use semantics::{
+    SemanticsAction, SemanticsContext, SemanticsDiff, SemanticsNode, SemanticsRole,
+    SemanticsState, SemanticsTree,
+};
