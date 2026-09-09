@@ -297,13 +297,24 @@ cargo install cargo-ndk
 # 4. Type-check the library for Android (fast, no APK needed)
 CARGO_BUILD_JOBS=4 cargo check -p floem --target aarch64-linux-android
 
-# 5. Build the example APK shared lib
+# 5. Build the example shared lib AND package it into an APK
 cd examples/android
-cargo ndk -t arm64-v8a -o ../app/src/main/jniLibs build --release
+scripts/build-apk.sh -t arm64-v8a          # -> target/android/*.apk
 ```
 
-> `cargo-apk`/`cargo-ndk` are not required for the type-check above; only step 5
-> needs them to produce a deployable `.so`.
+> **Two things step 5 used to get wrong.** (a) `cargo ndk` never produces an
+> APK — it only cross-compiles and copies `*.so` into a `jniLibs/<abi>/`
+> layout; APK creation was `cargo-apk`'s job (now unmaintained). (b) The
+> example crate was **bin-only**, so no `.so` was produced at all:
+> `native-activity` loads the library named by `android.app.lib_name`, so the
+> Android entry point must be a `cdylib`. `examples/android/Cargo.toml` now
+> declares `[lib] crate-type = ["cdylib"]` and `android_main` + the JNI
+> bridges live in `src/lib.rs`.
+>
+> `scripts/build-apk.sh` does the packaging with SDK build-tools only
+> (`aapt2 link` → bundle `lib/` uncompressed → `zipalign -P 16` →
+> `apksigner` with an auto-created debug keystore). No Gradle/AGP needed.
+> `cargo-apk`/`cargo-ndk` are not required for the type-check above.
 
 ## Known gaps / remaining work
 
@@ -341,7 +352,11 @@ cargo ndk -t arm64-v8a -o ../app/src/main/jniLibs build --release
    Java file to enable file-dialog results. Selected `content://` URIs are
    returned as `FileInfo.path` entries (not filesystem paths).
 5. **`cargo ndk` APK build + device run** is unverified in CI here (no
-   `cargo-ndk` in this environment); the example is provided as a template.
+   `cargo-ndk`, no NDK, no Android rustup target in this environment); the
+   example is provided as a template. The **packaging** half
+   (`aapt2`/`zipalign`/sign) *is* verified: `scripts/build-apk.sh --skip-build`
+   produces a well-formed, page-aligned APK (checked with `aapt2 dump badging`
+   + `zipalign -c`). The **Rust** half still needs an NDK.
 6. **Drag & Drop — resolved by design, not a gap.** The `drag_drop` capability
    stays `false` on Android because the winit-android backend emits no
    `DragDropped`/`DragEntered`/`DragMoved`/`DragLeft` events and Android has no
@@ -351,13 +366,14 @@ cargo ndk -t arm64-v8a -o ../app/src/main/jniLibs build --release
    The only Android-relevant way to *receive* a file is an `Intent`/SAF, already
    covered by `open_external` / `file_dialog`.
 
-> **Example `cargo check` caveat:** `cargo check -p floem-android-example
-> --target aarch64-linux-android` reports `main function not found`. This is
-> expected — with `android-activity`'s `native-activity` feature the `main`
-> symbol is supplied by native-activity's C glue **at link time**, which
-> `cargo check` (compile-only) does not perform. The `android_main` entry body
-> type-checks fine; build the real artifact with `cargo ndk` (step 5 above),
-> which links native-activity's `main` and succeeds.
+> **Example `cargo check` caveat (historical):** the example used to be
+> bin-only, and `cargo check -p floem-android-example --target
+> aarch64-linux-android` reported `main function not found`, because with
+> `android-activity`'s `native-activity` feature the `main` symbol is supplied
+> by native-activity's C glue **at link time**. The crate is now a `cdylib`
+> lib target (`src/lib.rs`) plus a host-only placeholder bin (`src/main.rs`),
+> so `cargo check -p floem-android-example --target aarch64-linux-android`
+> exercises `android_main` and the JNI bridges without needing the link step.
 
 ## Verification checklist
 

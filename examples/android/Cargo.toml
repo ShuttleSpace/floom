@@ -5,6 +5,15 @@ edition = "2021"
 publish = false
 license = "MIT"
 
+# `native-activity` loads a *shared library* named by the manifest's
+# `android.app.lib_name` meta-data (`floem_android_example`). A bin-only crate
+# produces an executable and `cargo ndk` would copy nothing into `jniLibs/`,
+# so the Android entry point must live in a `cdylib` lib target.
+[lib]
+name = "floem_android_example"
+path = "src/lib.rs"
+crate-type = ["cdylib"]
+
 [dependencies]
 floem = { path = "../.." }
 
