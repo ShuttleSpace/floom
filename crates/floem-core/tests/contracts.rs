@@ -44,24 +44,31 @@ impl EventContext for TestEventCx {
 
 struct TestPaintCx {
     fills: Vec<Rect>,
+    colors: Vec<Color>,
     bounds: Rect,
 }
 
 impl PaintContext for TestPaintCx {
-    fn fill_rect(&mut self, rect: Rect) {
-        self.fills.push(rect);
-    }
-
     fn bounds(&self) -> Rect {
         self.bounds
+    }
+
+    fn fill_rect(&mut self, rect: Rect, color: Color) {
+        self.fills.push(rect);
+        self.colors.push(color);
     }
 }
 
 struct TestSemanticsCx {
     label: Option<String>,
+    bounds: Rect,
 }
 
 impl SemanticsContext for TestSemanticsCx {
+    fn bounds(&self) -> Rect {
+        self.bounds
+    }
+
     fn set_label(&mut self, label: &str) {
         self.label = Some(label.to_string());
     }
@@ -91,11 +98,13 @@ impl Widget for ColorRect {
 
     fn paint(&self, cx: &mut dyn PaintContext, _id: ElementId) {
         let origin = cx.bounds().origin();
-        cx.fill_rect(Rect::from_origin_size(origin, self.size));
+        cx.fill_rect(Rect::from_origin_size(origin, self.size), self.color);
     }
 
     fn semantics(&self, cx: &mut dyn SemanticsContext, _id: ElementId) {
         cx.set_label("color-rect");
+        let bounds = cx.bounds();
+        cx.set_bounds(bounds);
     }
 }
 
@@ -118,15 +127,21 @@ fn color_rect_widget_lifecycle() {
     widget.update(&mut update, id);
     assert_eq!(update.dirty.into_inner(), vec![id]);
 
+    let paint_bounds = Rect::from_origin_size(Point::ZERO, Size::new(100.0, 100.0));
     let mut paint = TestPaintCx {
         fills: Vec::new(),
-        bounds: Rect::from_origin_size(Point::ZERO, Size::new(100.0, 100.0)),
+        colors: Vec::new(),
+        bounds: paint_bounds,
     };
     widget.paint(&mut paint, id);
     assert_eq!(paint.fills.len(), 1);
     assert_eq!(paint.fills[0].width(), 20.0);
+    assert_eq!(paint.colors, vec![Color::rgb(255, 0, 0)]);
 
-    let mut sem = TestSemanticsCx { label: None };
+    let mut sem = TestSemanticsCx {
+        label: None,
+        bounds: paint_bounds,
+    };
     widget.semantics(&mut sem, id);
     assert_eq!(sem.label.as_deref(), Some("color-rect"));
 

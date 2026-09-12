@@ -730,10 +730,16 @@ struct PlatformCapabilities { ... }
 - Create: `widgets/floem-widgets/src/primitives.rs`
 - Test: primitive snapshots
 
-- [ ] **Step 1: Implement Text, Icon, Image, Container, Spacer, Divider.**
-- [ ] **Step 2: Add scene snapshots.**
-- [ ] **Step 3: Add semantics snapshots.**
-- [ ] **Step 4: Commit.**
+- [x] **Step 1: Implement Text, Icon, Image, Container, Spacer, Divider.**
+- [x] **Step 2: Add scene snapshots.**
+- [x] **Step 3: Add semantics snapshots.**
+- [x] **Step 4: Commit.**
+
+> Note: the primitives record through `floem_core::PaintContext`, which was
+> extended in this task (it had no colour and no text/image op at all). See
+> `docs/superpowers/decisions/2026-09-12-widget-paint-context-extension.md`.
+> Snapshots are inline textual snapshots in `widgets/floem-widgets/tests`,
+> produced by `floem_widgets::testkit` — no external snapshot crate is used.
 
 ## Task 14.2: Interactive controls
 

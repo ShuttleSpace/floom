@@ -75,7 +75,9 @@ RENDERER_PACKAGES = {
     "floem-renderer", "floem-renderer-vello", "floem-renderer-software",
     "floem-renderer-skia",
 }
-WIDGET_HINTS = {"floem-widgets", "floem_widgets"}
+WIDGET_HINTS = {"floem-widgets", "floem-widgets-data", "floem-widgets-media"}
+# Legacy underscore spelling still referenced by pre-2.0 crates.
+WIDGET_ALIASES = {"floem_widgets"}
 
 # Crates that do not exist yet — checked when present
 FUTURE = [
@@ -104,7 +106,7 @@ for r in RENDERER_PACKAGES:
     if r not in packages:
         continue
     deps = pkg_deps(r)
-    bad = deps & WIDGET_HINTS
+    bad = deps & (WIDGET_HINTS | WIDGET_ALIASES)
     # Also forbid depending on the monolith once widgets live elsewhere;
     # today renderers correctly do not depend on `floem`.
     if "floem" in deps and r != "floem":
@@ -113,15 +115,21 @@ for r in RENDERER_PACKAGES:
     if bad:
         failures.append(f"FORBIDDEN {r} → {sorted(bad)}")
 
-# --- Widget crates must not depend on concrete renderer backends ---
-for w in list(WIDGET_HINTS):
+# --- Widget crates must not depend on concrete renderer backends or OS crates ---
+for w in sorted(WIDGET_HINTS):
     if w not in packages:
         notes.append(f"SKIP {w}: not in workspace yet")
         continue
     deps = pkg_deps(w)
-    bad = deps & (RENDERER_PACKAGES - {"floem_renderer"})  # abstract trait crate OK later
-    if bad:
-        failures.append(f"FORBIDDEN {w} → concrete renderer {sorted(bad)}")
+    # Abstract trait crate OK later; concrete backends are not.
+    bad_renderer = deps & (RENDERER_PACKAGES - {"floem_renderer"})
+    bad_platform = deps & PLATFORM_HINTS
+    if bad_renderer:
+        failures.append(f"FORBIDDEN {w} → concrete renderer {sorted(bad_renderer)}")
+    if bad_platform:
+        failures.append(f"FORBIDDEN {w} → platform/windowing {sorted(bad_platform)}")
+    if not bad_renderer and not bad_platform:
+        notes.append(f"OK {w}: no concrete renderer or platform dependency")
 
 # --- Legacy allowlist: monolithic floem mixes concerns ---
 LEGACY_ALLOW = {

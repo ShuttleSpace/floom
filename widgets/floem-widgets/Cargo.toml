@@ -1,0 +1,16 @@
+[package]
+name = "floem-widgets"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Tier-0 primitive widgets for Floem 2.0 (renderer- and OS-free)"
+rust-version.workspace = true
+
+[dependencies]
+floem-core = { path = "../../crates/floem-core", version = "0.2.0" }
+floem-types = { path = "../../crates/floem-types", version = "0.2.0" }
+floem-scene = { path = "../../scene/floem-scene", version = "0.2.0" }
+floem-accessibility = { path = "../../framework/floem-accessibility", version = "0.2.0" }
+
+[dev-dependencies]

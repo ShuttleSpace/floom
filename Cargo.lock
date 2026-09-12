@@ -2259,6 +2259,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "floem-widgets"
+version = "0.2.0"
+dependencies = [
+ "floem-accessibility",
+ "floem-core",
+ "floem-scene",
+ "floem-types",
+]
+
+[[package]]
 name = "floem-winit"
 version = "25.10.0"
 dependencies = [
