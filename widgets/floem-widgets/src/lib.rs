@@ -11,9 +11,16 @@
 
 #![forbid(unsafe_code)]
 
+pub mod controls;
 pub mod primitives;
 pub mod testkit;
+mod widget_any;
 
+pub use widget_any::WidgetAny;
+
+pub use controls::{
+    Button, Checkbox, InteractionState, Progress, Radio, Select, Slider, Switch, TextField,
+};
 pub use primitives::{
     Axis, Container, Divider, Icon, Image, ImageFit, SemanticsHint, Spacer, Text,
 };

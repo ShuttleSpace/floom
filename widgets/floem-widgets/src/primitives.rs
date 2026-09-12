@@ -9,7 +9,7 @@
 //! bumps an internal revision, and the next [`Widget::update`] marks the
 //! element dirty exactly once until the change has been painted.
 
-use floem_accessibility::SemanticsRole;
+use floem_accessibility::{SemanticsRole, SemanticsState};
 use floem_core::{
     Color, CreateContext, ElementId, PaintContext, Point, Rect, ResourceId, SemanticsContext, Size,
     UpdateContext, Widget,
@@ -47,6 +47,7 @@ pub enum ImageFit {
 pub struct SemanticsHint {
     pub role: SemanticsRole,
     pub label: Option<String>,
+    pub state: SemanticsState,
 }
 
 impl SemanticsHint {
@@ -55,6 +56,7 @@ impl SemanticsHint {
         Self {
             role: SemanticsRole::None,
             label: None,
+            state: SemanticsState::empty(),
         }
     }
 
@@ -62,7 +64,14 @@ impl SemanticsHint {
         Self {
             role,
             label: Some(label.into()),
+            state: SemanticsState::empty(),
         }
+    }
+
+    /// Attaches accessibility state (`CHECKED`, `DISABLED`, `FOCUSED`, …).
+    pub fn with_state(mut self, state: SemanticsState) -> Self {
+        self.state = self.state.union(state);
+        self
     }
 }
 
@@ -77,7 +86,7 @@ impl Default for SemanticsHint {
 /// Starts "unpainted" so the first [`Widget::update`] after creation marks the
 /// element dirty.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-struct Revision {
+pub(crate) struct Revision {
     current: u64,
     painted: u64,
 }
@@ -93,12 +102,12 @@ impl Default for Revision {
 
 impl Revision {
     /// Call from every mutating builder.
-    fn bump(&mut self) {
+    pub(crate) fn bump(&mut self) {
         self.current = self.current.wrapping_add(1);
     }
 
     /// Marks `id` dirty at most once per batch of mutations.
-    fn sync(&mut self, cx: &mut dyn UpdateContext, id: ElementId) -> bool {
+    pub(crate) fn sync(&mut self, cx: &mut dyn UpdateContext, id: ElementId) -> bool {
         if self.painted == self.current {
             return false;
         }
@@ -108,7 +117,7 @@ impl Revision {
     }
 }
 
-fn emit_semantics(hint: SemanticsHint, cx: &mut dyn SemanticsContext) {
+pub(crate) fn emit_semantics(hint: SemanticsHint, cx: &mut dyn SemanticsContext) {
     if hint.role == SemanticsRole::None && hint.label.is_none() {
         return;
     }
@@ -203,6 +212,10 @@ impl Widget for Text {
         if self.content.is_empty() || self.size <= 0.0 {
             return;
         }
+        // Nothing to draw when layout gave us no space.
+        if cx.bounds().width() <= 0.0 || cx.bounds().height() <= 0.0 {
+            return;
+        }
         let origin = cx.bounds().origin();
         cx.fill_text(origin, &self.content, self.size, self.color);
     }
@@ -285,6 +298,9 @@ impl Widget for Icon {
 
     fn paint(&self, cx: &mut dyn PaintContext, _id: ElementId) {
         if self.size <= 0.0 {
+            return;
+        }
+        if cx.bounds().width() <= 0.0 || cx.bounds().height() <= 0.0 {
             return;
         }
         let mut buf = [0u8; 4];
@@ -386,6 +402,7 @@ impl Image {
             _ => SemanticsHint {
                 role: SemanticsRole::Image,
                 label: None,
+                state: SemanticsState::empty(),
             },
         }
     }

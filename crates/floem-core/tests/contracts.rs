@@ -1,9 +1,10 @@
 //! Contract compilation and primitive widget smoke tests.
 
 use floem_core::{
-    Color, CreateContext, Element, ElementId, ElementKind, EventContext, PaintContext, Point,
+    Color, CreateContext, Element, ElementId, ElementKind, Event, EventContext, PaintContext, Point,
     Rect, SemanticsContext, Size, UpdateContext, Widget,
 };
+use floem_types::{Modifiers, PointerEvent};
 use std::cell::RefCell;
 
 struct TestCreateCx {
@@ -30,6 +31,20 @@ impl UpdateContext for TestUpdateCx {
 
 struct TestEventCx {
     target: ElementId,
+    bounds: Rect,
+    event: Event,
+    focus_requests: Vec<ElementId>,
+}
+
+impl TestEventCx {
+    fn pointer(target: ElementId, event: PointerEvent) -> Self {
+        Self {
+            target,
+            bounds: Rect::ZERO,
+            event: Event::Pointer(event),
+            focus_requests: Vec::new(),
+        }
+    }
 }
 
 impl EventContext for TestEventCx {
@@ -37,8 +52,23 @@ impl EventContext for TestEventCx {
         self.target
     }
 
+    fn bounds(&self) -> Rect {
+        self.bounds
+    }
+
     fn cursor_position(&self) -> Option<Point> {
-        None
+        match self.event {
+            Event::Pointer(p) => Some(p.position),
+            _ => None,
+        }
+    }
+
+    fn event(&self) -> Event {
+        self.event
+    }
+
+    fn request_focus(&mut self, id: ElementId) {
+        self.focus_requests.push(id);
     }
 }
 
@@ -145,6 +175,16 @@ fn color_rect_widget_lifecycle() {
     widget.semantics(&mut sem, id);
     assert_eq!(sem.label.as_deref(), Some("color-rect"));
 
-    let mut event = TestEventCx { target: id };
+    let mut event = TestEventCx::pointer(id, PointerEvent::primary_down(Point::ZERO));
     assert!(!widget.event(&mut event, id));
+
+    let pressed = PointerEvent::primary_down(Point::ZERO).with_modifiers(Modifiers::SHIFT);
+    let mut event = TestEventCx::pointer(id, pressed);
+    assert_eq!(event.cursor_position(), Some(Point::ZERO));
+    event.request_focus(id);
+    assert_eq!(event.focus_requests, vec![id]);
+    match event.event() {
+        Event::Pointer(p) => assert!(p.modifiers.contains(Modifiers::SHIFT)),
+        other => panic!("expected pointer event, got {other:?}"),
+    }
 }

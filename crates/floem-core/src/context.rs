@@ -1,6 +1,6 @@
 //! Context objects passed into widget lifecycle methods.
 
-use floem_types::{Color, ElementId, Point, Rect, ResourceId, Size};
+use floem_types::{Color, ElementId, Event, Point, Rect, ResourceId, Size};
 
 /// Context available while creating an element from a widget.
 pub trait CreateContext {
@@ -12,10 +12,26 @@ pub trait UpdateContext {
     fn mark_dirty(&mut self, id: ElementId);
 }
 
-/// Pointer/keyboard routing context (payload-agnostic for now).
+/// Pointer/keyboard routing context.
 pub trait EventContext {
     fn target(&self) -> ElementId;
+    /// Layout bounds of the element receiving the event.
+    ///
+    /// Required so controls can turn a pointer position into a value without
+    /// caching their own geometry.
+    fn bounds(&self) -> Rect;
     fn cursor_position(&self) -> Option<Point>;
+    /// The event currently being dispatched.
+    ///
+    /// Required rather than optional: this context only exists *during*
+    /// dispatch, so there is always a payload.
+    fn event(&self) -> Event;
+    /// Asks the host to move keyboard focus to `id`.
+    ///
+    /// Defaults to a no-op for hosts without a focus manager.
+    fn request_focus(&mut self, id: ElementId) {
+        let _ = id;
+    }
 }
 
 /// Paint recording context — emits geometry only; no GPU types.

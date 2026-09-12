@@ -1954,6 +1954,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "floem-app"
+version = "0.2.0"
+dependencies = [
+ "floem-accessibility",
+ "floem-core",
+ "floem-focus",
+ "floem-layout",
+ "floem-runtime",
+ "floem-runtime-core",
+ "floem-scene",
+ "floem-types",
+ "floem-widgets",
+]
+
+[[package]]
 name = "floem-core"
 version = "0.2.0"
 dependencies = [
@@ -2486,6 +2501,17 @@ dependencies = [
  "x11-dl",
  "x11rb",
  "xkbcommon-dl",
+]
+
+[[package]]
+name = "floem2-counter"
+version = "0.2.0"
+dependencies = [
+ "floem-app",
+ "floem-core",
+ "floem-layout",
+ "floem-types",
+ "floem-widgets",
 ]
 
 [[package]]

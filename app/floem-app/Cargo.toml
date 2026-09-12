@@ -1,0 +1,21 @@
+[package]
+name = "floem-app"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Headless app shell that hosts a Floem 2.0 widget tree"
+rust-version.workspace = true
+
+[dependencies]
+floem-core = { path = "../../crates/floem-core", version = "0.2.0" }
+floem-types = { path = "../../crates/floem-types", version = "0.2.0" }
+floem-scene = { path = "../../scene/floem-scene", version = "0.2.0" }
+floem-accessibility = { path = "../../framework/floem-accessibility", version = "0.2.0" }
+floem-layout = { path = "../../layout/floem-layout", version = "0.2.0" }
+floem-runtime-core = { path = "../../runtime/floem-runtime-core", version = "0.2.0" }
+floem-runtime = { path = "../../runtime/floem-runtime", version = "0.2.0" }
+floem-focus = { path = "../../framework/floem-focus", version = "0.2.0" }
+floem-widgets = { path = "../../widgets/floem-widgets", version = "0.2.0" }
+
+[dev-dependencies]

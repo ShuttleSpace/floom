@@ -747,12 +747,23 @@ struct PlatformCapabilities { ... }
 - Create: `widgets/floem-widgets/src/controls.rs`
 - Test: interaction/snapshot tests
 
-- [ ] **Step 1: Implement Button.**
-- [ ] **Step 2: Implement TextField.**
-- [ ] **Step 3: Implement Checkbox/Radio/Switch.**
-- [ ] **Step 4: Implement Slider/Progress/Select.**
-- [ ] **Step 5: Add state variants and accessibility.**
-- [ ] **Step 6: Commit.**
+- [x] **Step 1: Implement Button.**
+- [x] **Step 2: Implement TextField.**
+- [x] **Step 3: Implement Checkbox/Radio/Switch.**
+- [x] **Step 4: Implement Slider/Progress/Select.**
+- [x] **Step 5: Add state variants and accessibility.**
+- [x] **Step 6: Commit.**
+
+> Notes:
+> - `EventContext` was payload-free, so `floem-types` gained `event.rs`
+>   (`PointerEvent` / `ScrollEvent` / `KeyEvent` / `Modifiers` / `Event`) and
+>   `EventContext` gained `event()`, `bounds()` and `request_focus()`. Without
+>   these no control can observe a click or convert a pointer position into a
+>   value. See `docs/superpowers/decisions/2026-09-12-widget-paint-context-extension.md`.
+> - `Select` renders its option list *inside* its own bounds; escaping the
+>   parent's clip needs the `floem-overlay` integration (Phase 16 area).
+> - `TextField` handles editing keys directly. IME composition still needs the
+>   `floem-ime` bridge (Phase 13.3 Step 3, already deferred).
 
 ## Task 14.3: Navigation/layout widgets
 

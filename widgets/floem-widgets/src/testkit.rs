@@ -6,10 +6,11 @@
 //! op into a real [`Scene`], which proves the widget output can be retained.
 
 use floem_core::{
-    Color, CreateContext, ElementId, PaintContext, Point, Rect, ResourceId, SemanticsContext, Size,
-    UpdateContext, Widget,
+    Color, CreateContext, ElementId, Event, EventContext, PaintContext, Point, Rect, ResourceId,
+    SemanticsContext, Size, UpdateContext, Widget,
 };
 use floem_scene::{Resource, ResourceKind, ResourceRegistry, Scene, SceneNode};
+use floem_types::PointerEvent;
 
 /// A renderer-neutral record of a single paint operation.
 #[derive(Debug, Clone, PartialEq)]
@@ -316,6 +317,67 @@ impl RecordingUpdateContext {
 impl UpdateContext for RecordingUpdateContext {
     fn mark_dirty(&mut self, id: ElementId) {
         self.dirty.push(id);
+    }
+}
+
+/// Dispatches `event` at `widget` inside `bounds`.
+///
+/// Returns `true` when the widget consumed the event.
+pub fn dispatch(widget: &mut dyn Widget, id: ElementId, bounds: Rect, event: Event) -> bool {
+    let mut cx = TestEventContext::new(id, bounds, event);
+    widget.event(&mut cx, id)
+}
+
+/// Minimal [`EventContext`] for driving widgets directly in tests.
+pub struct TestEventContext {
+    target: ElementId,
+    bounds: Rect,
+    event: Event,
+    /// Every id passed to [`EventContext::request_focus`], in order.
+    pub focus_requests: Vec<ElementId>,
+}
+
+impl TestEventContext {
+    pub fn new(target: ElementId, bounds: Rect, event: Event) -> Self {
+        Self {
+            target,
+            bounds,
+            event,
+            focus_requests: Vec::new(),
+        }
+    }
+
+    pub fn pointer(target: ElementId, bounds: Rect, pointer: PointerEvent) -> Self {
+        Self::new(target, bounds, Event::Pointer(pointer))
+    }
+
+    pub fn focus_requests(&self) -> &[ElementId] {
+        &self.focus_requests
+    }
+}
+
+impl EventContext for TestEventContext {
+    fn target(&self) -> ElementId {
+        self.target
+    }
+
+    fn bounds(&self) -> Rect {
+        self.bounds
+    }
+
+    fn cursor_position(&self) -> Option<Point> {
+        match self.event {
+            Event::Pointer(pointer) => Some(pointer.position),
+            _ => None,
+        }
+    }
+
+    fn event(&self) -> Event {
+        self.event
+    }
+
+    fn request_focus(&mut self, id: ElementId) {
+        self.focus_requests.push(id);
     }
 }
 
