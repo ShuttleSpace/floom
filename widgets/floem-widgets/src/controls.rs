@@ -29,6 +29,13 @@ const INDICATOR_LABEL_GAP: f32 = 6.0;
 const INDICATOR_SIDE: f32 = 16.0;
 /// Switch track width; its height is half of this.
 const SWITCH_TRACK_WIDTH: f32 = 40.0;
+/// Minimum intrinsic width of a TextField, so an empty input (no value, no
+/// placeholder) is still visible and clickable instead of collapsing to the
+/// 8px padding.
+const TEXTFIELD_MIN_WIDTH: f32 = 120.0;
+/// Horizontal padding between a Select's edge and its label (each side);
+/// matches the offset `draw_centered_text` applies.
+const SELECT_PADDING: f32 = 8.0;
 
 /// Intrinsic width of a label at the controls' shared font size.
 ///
@@ -40,6 +47,13 @@ fn label_width(label: &str) -> f32 {
     } else {
         floem_text::measure_text(label, LABEL_FONT_SIZE, f64::INFINITY).width as f32
     }
+}
+
+/// Line height at the controls' shared font size, measured from a reference
+/// glyph so it is well-defined even for empty strings (an empty text field
+/// still needs a row tall enough to type into).
+fn line_height() -> f32 {
+    floem_text::measure_text(" ", LABEL_FONT_SIZE, f64::INFINITY).height as f32
 }
 
 /// Intrinsic height of a label at the controls' shared font size.
@@ -531,6 +545,23 @@ impl Widget for TextField {
 
     fn update(&mut self, cx: &mut dyn UpdateContext, id: ElementId) {
         self.revision.sync(cx, id);
+    }
+
+    /// Intrinsic size: the shown text (value, else placeholder) plus the
+    /// padding paint applies, floored at [`TEXTFIELD_MIN_WIDTH`] so an empty
+    /// input stays usable. Height rests on the line height even when both
+    /// value and placeholder are empty.
+    fn layout_request(&self) -> Option<floem_core::LayoutRequest> {
+        let shown = if self.value.is_empty() {
+            &self.placeholder
+        } else {
+            &self.value
+        };
+        Some(
+            floem_core::LayoutRequest::new()
+                .width((label_width(shown) + BUTTON_PADDING * 2.0).max(TEXTFIELD_MIN_WIDTH))
+                .height(line_height() + BUTTON_VERTICAL_PADDING * 2.0),
+        )
     }
 
     fn event(&mut self, cx: &mut dyn EventContext, id: ElementId) -> bool {
@@ -1619,6 +1650,24 @@ impl Widget for Select {
 
     fn update(&mut self, cx: &mut dyn UpdateContext, id: ElementId) {
         self.revision.sync(cx, id);
+    }
+
+    /// Intrinsic size of the *closed* control: the widest label (selected or
+    /// option) plus the paint padding, one [`Select::row_height`] tall. The
+    /// open option list paints below the bounds and deliberately does not
+    /// contribute to the intrinsic extent.
+    fn layout_request(&self) -> Option<floem_core::LayoutRequest> {
+        let widest = self
+            .options
+            .iter()
+            .map(|option| label_width(option))
+            .chain(std::iter::once(label_width(self.selected_label())))
+            .fold(0.0_f32, f32::max);
+        Some(
+            floem_core::LayoutRequest::new()
+                .width(widest + SELECT_PADDING * 2.0)
+                .height(self.row_height as f32),
+        )
     }
 
     fn event(&mut self, cx: &mut dyn EventContext, id: ElementId) -> bool {

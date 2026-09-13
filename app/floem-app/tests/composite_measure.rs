@@ -8,7 +8,7 @@
 use floem_app::{NodeId, WidgetHost};
 use floem_layout::LayoutStyle;
 use floem_types::Size;
-use floem_widgets::controls::{Button, Checkbox, Switch};
+use floem_widgets::controls::{Button, Checkbox, Select, Switch, TextField};
 
 fn node_bounds(host: &WidgetHost, node: NodeId) -> floem_types::Rect {
     host.bounds(node)
@@ -117,5 +117,85 @@ fn checkbox_includes_indicator_and_label_extent() {
     assert!(
         (switch_bounds.height() - 20.0).abs() < 1.5,
         "switch height = track height, got {switch_bounds:?}"
+    );
+}
+
+/// A text field's intrinsic width covers the shown text plus padding, never
+/// below the 120px minimum so an empty input stays usable; the height rests
+/// on the line height even with no value and no placeholder.
+#[test]
+fn textfield_keeps_a_minimum_width_and_measures_its_text() {
+    let mut host = WidgetHost::new();
+    host.set_size(Size::new(400.0, 200.0));
+    let root = host.mount_root(
+        LayoutStyle {
+            align_items: floem_layout::AlignItems::Start,
+            ..LayoutStyle::default()
+        },
+        floem_widgets::Container::new(),
+    );
+    // Empty field: floored at the minimum width.
+    let empty = host.mount(root, LayoutStyle::default(), TextField::new());
+    // A long value grows past the minimum.
+    let long_value = "a reasonably long piece of typed text";
+    let filled = host.mount(
+        root,
+        LayoutStyle::default(),
+        TextField::new().value(long_value),
+    );
+    host.frame();
+
+    let empty_bounds = node_bounds(&host, empty);
+    assert!(
+        (empty_bounds.width() - 120.0).abs() < 1.5,
+        "empty field floored at 120px, got {empty_bounds:?}"
+    );
+    assert!(
+        empty_bounds.height() >= 20.0,
+        "empty field still has a text row's height, got {empty_bounds:?}"
+    );
+
+    let filled_bounds = node_bounds(&host, filled);
+    let measured = floem_text::measure_text(long_value, 14.0, f64::INFINITY);
+    assert!(
+        (filled_bounds.width() - (measured.width + 16.0)).abs() < 1.5,
+        "filled field = text + 2x8 padding, got {filled_bounds:?} (text {})",
+        measured.width
+    );
+    assert!(
+        filled_bounds.width() > empty_bounds.width(),
+        "typed text widens the field past the minimum"
+    );
+}
+
+/// A select sizes its closed control from the widest label (option or
+/// selection) plus padding, one row_height tall.
+#[test]
+fn select_sizes_from_the_widest_label() {
+    let mut host = WidgetHost::new();
+    host.set_size(Size::new(400.0, 200.0));
+    let root = host.mount_root(
+        LayoutStyle {
+            align_items: floem_layout::AlignItems::Start,
+            ..LayoutStyle::default()
+        },
+        floem_widgets::Container::new(),
+    );
+    let select = host.mount(
+        root,
+        LayoutStyle::default(),
+        Select::new(["Alpha", "Beta Gamma Delta Epsilon"]).selected(0),
+    );
+    host.frame();
+
+    let bounds = node_bounds(&host, select);
+    let widest = floem_text::measure_text("Beta Gamma Delta Epsilon", 14.0, f64::INFINITY);
+    assert!(
+        (bounds.width() - (widest.width + 16.0)).abs() < 1.5,
+        "select width = widest option + 2x8 padding, got {bounds:?}"
+    );
+    assert!(
+        (bounds.height() - 22.0).abs() < 1.5,
+        "select height = row_height, got {bounds:?}"
     );
 }
