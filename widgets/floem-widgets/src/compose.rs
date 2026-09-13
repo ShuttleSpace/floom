@@ -739,6 +739,439 @@ impl Widget for Tabs {
     }
 }
 
+// ---------------------------------------------------------------------------
+// Grid
+// ---------------------------------------------------------------------------
+
+/// A data-driven grid: rows of `columns` keyed cells.
+///
+/// Where [`List`] mirrors a one-dimensional collection, `Grid` chunks the same
+/// collection into fixed-size rows and lays each row out as a [`Stack`] along
+/// the horizontal axis. Row keys are a fingerprint of the item keys they hold,
+/// so inserting or removing an item remounts only the rows whose membership
+/// actually changed — every other row keeps its widgets.
+pub struct Grid<T> {
+    columns: usize,
+    column_gap: f32,
+    row_gap: f32,
+    items: Vec<T>,
+    key_of: Arc<dyn Fn(&T) -> u64 + Send + Sync>,
+    build_item: Arc<dyn Fn(T) -> Box<dyn WidgetAny> + Send + Sync>,
+    item_layout: LayoutRequest,
+    dirty: bool,
+}
+
+impl<T: std::fmt::Debug> std::fmt::Debug for Grid<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Grid")
+            .field("columns", &self.columns)
+            .field("len", &self.items.len())
+            .finish()
+    }
+}
+
+impl<T: Clone + Send + Sync + 'static> Grid<T> {
+    /// Builds a grid with `columns` cells per row from `items`.
+    pub fn new(
+        columns: usize,
+        items: Vec<T>,
+        key_of: impl Fn(&T) -> u64 + Send + Sync + 'static,
+        build_item: impl Fn(T) -> Box<dyn WidgetAny> + Send + Sync + 'static,
+    ) -> Self {
+        Self {
+            columns: columns.max(1),
+            column_gap: 0.0,
+            row_gap: 0.0,
+            items,
+            key_of: Arc::new(key_of),
+            build_item: Arc::new(build_item),
+            item_layout: LayoutRequest::new(),
+            dirty: false,
+        }
+    }
+
+    /// Sets the horizontal (between columns) and vertical (between rows) gaps.
+    pub fn gap(mut self, column_gap: f32, row_gap: f32) -> Self {
+        self.column_gap = column_gap;
+        self.row_gap = row_gap;
+        self
+    }
+
+    /// Layout applied to every cell (defaults to auto-sized).
+    pub fn item_layout(mut self, layout: LayoutRequest) -> Self {
+        self.item_layout = layout;
+        self
+    }
+
+    /// Replaces the backing collection; the next frame reconciles the diff.
+    pub fn set_items(&mut self, items: Vec<T>) {
+        self.items = items;
+        self.dirty = true;
+    }
+
+    pub fn columns(&self) -> usize {
+        self.columns
+    }
+
+    pub fn semantics_hint(&self) -> SemanticsHint {
+        SemanticsHint::decorative()
+    }
+}
+
+impl<T: Clone + Send + Sync + 'static> Widget for Grid<T> {
+    fn create(&self, cx: &mut dyn CreateContext) -> ElementId {
+        cx.alloc_child()
+    }
+
+    fn update(&mut self, cx: &mut dyn UpdateContext, id: ElementId) {
+        if self.dirty {
+            cx.mark_children_dirty(id);
+            self.dirty = false;
+        }
+    }
+
+    fn children(&self) -> Vec<Child> {
+        if self.items.is_empty() {
+            return Vec::new();
+        }
+        self.items
+            .chunks(self.columns)
+            .enumerate()
+            .map(|(row_index, row)| {
+                let mut row_stack = Stack::new(Axis::Horizontal).gap(self.column_gap);
+                // Fingerprint the row by the keys it holds, so a row whose
+                // membership changed remounts while untouched rows survive.
+                let mut fingerprint = 0x9E37_79B9_7F4A_7C15u64 ^ row_index as u64;
+                for item in row {
+                    let key = (self.key_of)(item);
+                    fingerprint ^= key;
+                    fingerprint = fingerprint.wrapping_mul(0x0000_0100_0000_01b3);
+                    let item = item.clone();
+                    let build = self.build_item.clone();
+                    row_stack = row_stack.child(Child::new(
+                        ChildKey::keyed(key),
+                        self.item_layout,
+                        move || (build)(item.clone()),
+                    ));
+                }
+                Child::new(
+                    ChildKey::keyed(fingerprint),
+                    LayoutRequest::new().stack(Axis::Horizontal, self.column_gap),
+                    move || Box::new(row_stack.clone()),
+                )
+            })
+            .collect()
+    }
+
+    fn layout_request(&self) -> Option<LayoutRequest> {
+        Some(LayoutRequest::new().stack(Axis::Vertical, self.row_gap))
+    }
+
+    fn paint(&self, _cx: &mut dyn PaintContext, _id: ElementId) {}
+
+    fn semantics(&self, cx: &mut dyn SemanticsContext, _id: ElementId) {
+        crate::primitives::emit_semantics(self.semantics_hint(), cx);
+    }
+}
+
+impl<T: Clone + Send + Sync + 'static> WidgetAny for Grid<T> {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
+    }
+
+    fn semantics_hint(&self) -> Option<floem_core::SemanticsHint> {
+        Some(<Self>::semantics_hint(self).into())
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Popup
+// ---------------------------------------------------------------------------
+
+/// A transient, non-modal layer anchored above its siblings.
+///
+/// [`Dialog`] is the modal sibling: it carries a scrim and a titled card.
+/// `Popup` is the lighter primitive for menus, tooltips and inline pickers — a
+/// togglable absolute layer whose content fills its parent, with no scrim of its
+/// own. Like every overlay composite it contributes no children while hidden.
+#[derive(Clone)]
+pub struct Popup {
+    present: bool,
+    last_present: bool,
+    label: Option<String>,
+    content: Option<Child>,
+}
+
+impl std::fmt::Debug for Popup {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Popup")
+            .field("present", &self.present)
+            .field("label", &self.label)
+            .finish()
+    }
+}
+
+impl Popup {
+    pub fn new() -> Self {
+        Self {
+            present: false,
+            last_present: true,
+            label: None,
+            content: None,
+        }
+    }
+
+    /// Sets the popup content (does not show it; call [`Popup::set_present`]).
+    pub fn content(mut self, child: Child) -> Self {
+        self.content = Some(child);
+        self
+    }
+
+    /// Sets the content with an explicit key and layout.
+    pub fn content_with(
+        mut self,
+        key: impl Into<ChildKey>,
+        layout: LayoutRequest,
+        build: impl Fn() -> Box<dyn WidgetAny> + Send + Sync + 'static,
+    ) -> Self {
+        self.content = Some(Child::new(key, layout, build));
+        self
+    }
+
+    /// A label published to assistive technology while the popup is shown.
+    pub fn label(mut self, label: impl Into<String>) -> Self {
+        self.label = Some(label.into());
+        self
+    }
+
+    /// Shows or hides the popup; the next frame reconciles.
+    pub fn set_present(&mut self, present: bool) {
+        self.present = present;
+    }
+
+    /// Hides the popup and drops its content.
+    pub fn dismiss(&mut self) {
+        self.content = None;
+        self.present = false;
+    }
+
+    pub fn semantics_hint(&self) -> SemanticsHint {
+        if self.present {
+            SemanticsHint {
+                role: SemanticsRole::Group,
+                label: self.label.clone(),
+                state: Default::default(),
+            }
+        } else {
+            SemanticsHint::decorative()
+        }
+    }
+}
+
+impl Default for Popup {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl Widget for Popup {
+    fn create(&self, cx: &mut dyn CreateContext) -> ElementId {
+        cx.alloc_child()
+    }
+
+    fn update(&mut self, cx: &mut dyn UpdateContext, id: ElementId) {
+        if self.present != self.last_present {
+            cx.mark_children_dirty(id);
+            self.last_present = self.present;
+        }
+    }
+
+    fn children(&self) -> Vec<Child> {
+        if !self.present {
+            return Vec::new();
+        }
+        let content = match &self.content {
+            Some(content) => content.clone(),
+            None => return Vec::new(),
+        };
+        let surface = Overlay::new().content_with(
+            ChildKey::index(0),
+            LayoutRequest::new().fill(),
+            move || content.build(),
+        );
+        vec![Child::new(
+            ChildKey::index(0),
+            LayoutRequest::new().absolute_fill(),
+            move || Box::new(surface.clone()),
+        )]
+    }
+
+    fn layout_request(&self) -> Option<LayoutRequest> {
+        Some(LayoutRequest::new().absolute_fill())
+    }
+
+    fn paint(&self, _cx: &mut dyn PaintContext, _id: ElementId) {}
+
+    fn semantics(&self, cx: &mut dyn SemanticsContext, _id: ElementId) {
+        crate::primitives::emit_semantics(self.semantics_hint(), cx);
+    }
+}
+
+// ---------------------------------------------------------------------------
+// BottomSheet
+// ---------------------------------------------------------------------------
+
+/// A modal sheet anchored to the bottom edge, spanning the width.
+///
+/// Structurally a [`Dialog`] that is pinned bottom instead of centred: an
+/// absolute scrim, a bottom-aligned column, and a sheet holding the title and
+/// body. `height` sets the sheet's height; it stretches to the full width.
+#[derive(Clone)]
+pub struct BottomSheet {
+    present: bool,
+    last_present: bool,
+    title: String,
+    height: f32,
+    body: Option<Child>,
+}
+
+impl std::fmt::Debug for BottomSheet {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("BottomSheet")
+            .field("present", &self.present)
+            .field("height", &self.height)
+            .finish()
+    }
+}
+
+impl BottomSheet {
+    pub fn new() -> Self {
+        Self {
+            present: false,
+            last_present: true,
+            title: String::new(),
+            height: 200.0,
+            body: None,
+        }
+    }
+
+    /// The text shown at the top of the sheet.
+    pub fn title(mut self, title: impl Into<String>) -> Self {
+        self.title = title.into();
+        self
+    }
+
+    /// The sheet's height in logical pixels.
+    pub fn height(mut self, height: f32) -> Self {
+        self.height = height;
+        self
+    }
+
+    /// The sheet body (any widget subtree).
+    pub fn body(mut self, body: Child) -> Self {
+        self.body = Some(body);
+        self
+    }
+
+    /// The sheet body built lazily with an explicit key and layout.
+    pub fn body_with(
+        mut self,
+        key: impl Into<ChildKey>,
+        layout: LayoutRequest,
+        build: impl Fn() -> Box<dyn WidgetAny> + Send + Sync + 'static,
+    ) -> Self {
+        self.body = Some(Child::new(key, layout, build));
+        self
+    }
+
+    /// Shows or hides the sheet; the next frame reconciles.
+    pub fn set_present(&mut self, present: bool) {
+        self.present = present;
+    }
+
+    pub fn semantics_hint(&self) -> SemanticsHint {
+        if self.present {
+            SemanticsHint::labeled(SemanticsRole::Dialog, self.title.clone())
+        } else {
+            SemanticsHint::decorative()
+        }
+    }
+}
+
+impl Default for BottomSheet {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl Widget for BottomSheet {
+    fn create(&self, cx: &mut dyn CreateContext) -> ElementId {
+        cx.alloc_child()
+    }
+
+    fn update(&mut self, cx: &mut dyn UpdateContext, id: ElementId) {
+        if self.present != self.last_present {
+            cx.mark_children_dirty(id);
+            self.last_present = self.present;
+        }
+    }
+
+    fn children(&self) -> Vec<Child> {
+        if !self.present {
+            return Vec::new();
+        }
+        let title = self.title.clone();
+        let height = self.height;
+        let body = self.body.clone().unwrap_or_else(|| {
+            Child::new(ChildKey::index(1), LayoutRequest::new(), || {
+                Box::new(Text::new("(empty)"))
+            })
+        });
+        let sheet = Stack::new(Axis::Vertical)
+            .gap(8.0)
+            .child(Child::new(
+                ChildKey::index(0),
+                LayoutRequest::new(),
+                move || Box::new(Text::new(title.clone())),
+            ))
+            .child(body);
+        // The sheet takes the bottom of a bottom-aligned column: fixed height,
+        // full width (cross-axis stretch).
+        let sheet_child = Child::new(
+            ChildKey::index(0),
+            LayoutRequest::new().height(height),
+            move || Box::new(sheet.clone()),
+        );
+        let column = Stack::new(Axis::Vertical)
+            .align(Align::End, Align::Stretch)
+            .child(sheet_child);
+        let overlay = Overlay::new().content_with(
+            ChildKey::index(0),
+            LayoutRequest::new().fill(),
+            move || Box::new(column.clone()),
+        );
+        vec![Child::new(
+            ChildKey::index(0),
+            LayoutRequest::new().absolute_fill(),
+            move || Box::new(overlay.clone()),
+        )]
+    }
+
+    fn layout_request(&self) -> Option<LayoutRequest> {
+        Some(LayoutRequest::new().absolute_fill())
+    }
+
+    fn paint(&self, _cx: &mut dyn PaintContext, _id: ElementId) {}
+
+    fn semantics(&self, cx: &mut dyn SemanticsContext, _id: ElementId) {
+        crate::primitives::emit_semantics(self.semantics_hint(), cx);
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -848,5 +1281,65 @@ mod tests {
             .layout_request()
             .expect("tabs declare a vertical stack");
         assert_eq!(req.axis, Some(Axis::Vertical));
+    }
+
+    #[test]
+    fn grid_chunks_items_into_rows() {
+        let grid = Grid::<u32>::new(
+            2,
+            vec![1, 2, 3, 4, 5],
+            |item: &u32| *item as u64,
+            |item: u32| Box::new(Text::new(item.to_string())),
+        );
+        let rows = grid.children();
+        assert_eq!(rows.len(), 3, "5 items over 2 columns => 3 rows");
+        let req = grid.layout_request().expect("grid stacks rows vertically");
+        assert_eq!(req.axis, Some(Axis::Vertical));
+    }
+
+    #[test]
+    fn grid_rows_remount_only_when_membership_changes() {
+        let mut grid = Grid::<u32>::new(
+            2,
+            vec![1, 2, 3, 4],
+            |item: &u32| *item as u64,
+            |item: u32| Box::new(Text::new(item.to_string())),
+        );
+        let before: Vec<_> = grid.children().iter().map(|c| c.key).collect();
+        // Append a full new row: earlier rows keep their fingerprints.
+        grid.set_items(vec![1, 2, 3, 4, 5, 6]);
+        let after: Vec<_> = grid.children().iter().map(|c| c.key).collect();
+        assert_eq!(before[..2], after[..2], "untouched rows keep their keys");
+        assert_eq!(after.len(), 3);
+    }
+
+    #[test]
+    fn popup_is_empty_until_shown() {
+        let popup =
+            Popup::new().content(Child::new(ChildKey::index(0), LayoutRequest::new(), || {
+                Box::new(Text::new("menu"))
+            }));
+        assert_eq!(popup.children().len(), 0, "hidden popup mounts nothing");
+        let mut shown = popup;
+        shown.set_present(true);
+        assert_eq!(shown.children().len(), 1, "shown popup mounts its layer");
+        assert_eq!(
+            shown.layout_request().unwrap().position,
+            Some(Position::Absolute)
+        );
+    }
+
+    #[test]
+    fn bottom_sheet_mounts_a_bottom_aligned_surface() {
+        let sheet = BottomSheet::new()
+            .title("Share")
+            .height(180.0)
+            .body(Child::new(ChildKey::index(0), LayoutRequest::new(), || {
+                Box::new(Text::new("body"))
+            }));
+        assert_eq!(sheet.children().len(), 0, "hidden sheet mounts nothing");
+        let mut shown = sheet;
+        shown.set_present(true);
+        assert_eq!(shown.children().len(), 1, "shown sheet mounts its layer");
     }
 }

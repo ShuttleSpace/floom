@@ -12,7 +12,20 @@ use floem_app::{NodeId, WidgetHost};
 use floem_core::{Axis, Child, ChildKey, LayoutRequest, Point, Size};
 use floem_layout::LayoutStyle;
 use floem_types::PointerEvent;
-use floem_widgets::{Button, Conditional, Dialog, List, Stack, Tabs, Text};
+use floem_widgets::{
+    BottomSheet, Button, Conditional, Dialog, Grid, List, NavigationBar, NavigationDrawer, Popup,
+    Stack, Tabs, Text,
+};
+
+/// Stable FNV-1a key for the string items used by the list/grid tests.
+fn key_of(s: &String) -> u64 {
+    let mut h = 0xcbf2_9ce4_8422_2325u64;
+    for byte in s.bytes() {
+        h ^= byte as u64;
+        h = h.wrapping_mul(0x0000_0100_0000_01b3);
+    }
+    h
+}
 
 fn host_viewport() -> WidgetHost {
     let mut host = WidgetHost::new();
@@ -195,6 +208,132 @@ fn tabs_swap_the_active_panel_on_click() {
     );
     // Live widget count is unchanged by a swap (bar + 2 buttons + panel).
     assert_eq!(host.frame().painted, 5);
+}
+
+#[test]
+fn grid_mounts_rows_and_reconciles_on_diff() {
+    let mut host = host_viewport();
+    let grid = Grid::<String>::new(
+        2,
+        vec!["a".into(), "b".into(), "c".into()],
+        key_of,
+        |s: String| Box::new(Text::new(s)),
+    );
+    let id = host.mount_root(LayoutStyle::default(), grid);
+    // grid + row(a,b) + row(c) + 3 cells
+    assert_eq!(host.frame().painted, 6, "two rows over three cells");
+
+    // Adding one cell grows only the affected row: 2 rows, 4 cells.
+    host.widget_mut::<Grid<String>>(id)
+        .expect("grid node")
+        .set_items(vec!["a".into(), "b".into(), "c".into(), "d".into()]);
+    assert_eq!(host.frame().painted, 7, "second row gained a cell");
+
+    // Shrinking to a single row unmounts the other row's whole subtree.
+    host.widget_mut::<Grid<String>>(id)
+        .expect("grid node")
+        .set_items(vec!["a".into(), "b".into()]);
+    assert_eq!(host.frame().painted, 4, "one row + two cells + grid");
+}
+
+#[test]
+fn popup_mounts_and_dismisses_its_layer() {
+    let mut host = host_viewport();
+    let popup = Popup::new().label("menu").content(Child::new(
+        ChildKey::index(0),
+        LayoutRequest::new(),
+        || Box::new(Text::new("item")),
+    ));
+    let id = host.mount_root(LayoutStyle::default(), popup);
+    assert_eq!(host.frame().painted, 1, "hidden popup is alone");
+
+    host.widget_mut::<Popup>(id)
+        .expect("popup node")
+        .set_present(true);
+    // popup + overlay layer + content
+    assert_eq!(host.frame().painted, 3, "popup layer mounted");
+
+    host.widget_mut::<Popup>(id).expect("popup node").dismiss();
+    assert_eq!(host.frame().painted, 1, "popup layer unmounted");
+}
+
+#[test]
+fn bottom_sheet_mounts_a_bottom_layer_when_shown() {
+    let mut host = host_viewport();
+    let sheet = BottomSheet::new()
+        .title("Share")
+        .height(160.0)
+        .body(Child::new(ChildKey::index(0), LayoutRequest::new(), || {
+            Box::new(Text::new("body"))
+        }));
+    let id = host.mount_root(LayoutStyle::default(), sheet);
+    assert_eq!(host.frame().painted, 1, "hidden sheet is alone");
+
+    host.widget_mut::<BottomSheet>(id)
+        .expect("sheet node")
+        .set_present(true);
+    // sheet + overlay + bottom column + card + title + body
+    assert_eq!(host.frame().painted, 6, "sheet layer fully mounted");
+
+    host.widget_mut::<BottomSheet>(id)
+        .expect("sheet node")
+        .set_present(false);
+    assert_eq!(host.frame().painted, 1, "sheet layer fully unmounted");
+}
+
+#[test]
+fn navigation_bar_swaps_the_highlight_on_click() {
+    let mut host = host_viewport();
+    let bar = NavigationBar::new()
+        .destination("Home")
+        .destination("Search");
+    let id = host.mount_root(LayoutStyle::default(), bar);
+    assert_eq!(host.frame().painted, 3, "bar + two destinations");
+
+    let selection = host
+        .widget::<NavigationBar>(id)
+        .expect("bar node")
+        .selection();
+    assert_eq!(selection.load(Ordering::SeqCst), 0);
+
+    let labels = semantics_labels(&host);
+    assert!(labels.iter().any(|l| l == "● Home"), "first is highlighted");
+
+    let search = find_button(&host, "Search");
+    assert!(click(&mut host, search), "destination must be hittable");
+    host.frame();
+    assert_eq!(
+        selection.load(Ordering::SeqCst),
+        1,
+        "clicking a destination flips selection"
+    );
+    assert!(
+        semantics_labels(&host).iter().any(|l| l == "● Search"),
+        "highlight moved to the new destination"
+    );
+    assert_eq!(host.frame().painted, 3, "still bar + two destinations");
+}
+
+#[test]
+fn navigation_drawer_mounts_and_dismisses() {
+    let mut host = host_viewport();
+    let drawer = NavigationDrawer::new()
+        .header("Menu")
+        .destination("Home")
+        .destination("Settings");
+    let id = host.mount_root(LayoutStyle::default(), drawer);
+    assert_eq!(host.frame().painted, 1, "hidden drawer is alone");
+
+    host.widget_mut::<NavigationDrawer>(id)
+        .expect("drawer node")
+        .set_present(true);
+    // drawer + overlay + column + panel + header + two destinations
+    assert_eq!(host.frame().painted, 7, "drawer panel fully mounted");
+
+    host.widget_mut::<NavigationDrawer>(id)
+        .expect("drawer node")
+        .set_present(false);
+    assert_eq!(host.frame().painted, 1, "drawer panel fully unmounted");
 }
 
 /// Walks the published semantics tree collecting every non-empty label.

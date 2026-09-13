@@ -13,6 +13,7 @@
 
 pub mod compose;
 pub mod controls;
+pub mod navigation;
 pub mod primitives;
 pub mod testkit;
 mod widget_any;
@@ -21,10 +22,11 @@ mod widget_any;
 /// here so existing importers keep working.
 pub use floem_core::WidgetAny;
 
-pub use compose::{Conditional, Dialog, List, Overlay, Stack, Tabs};
+pub use compose::{BottomSheet, Conditional, Dialog, Grid, List, Overlay, Popup, Stack, Tabs};
 pub use controls::{
     Button, Checkbox, InteractionState, Progress, Radio, Select, Slider, Switch, TextField,
 };
+pub use navigation::{NavDestination, NavigationBar, NavigationDrawer, NavigationRail};
 pub use primitives::{
     Axis, Container, Divider, Icon, Image, ImageFit, SemanticsHint, Spacer, Text,
 };

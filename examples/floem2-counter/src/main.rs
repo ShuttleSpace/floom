@@ -5,7 +5,8 @@
 //! exercises every component from Phase 14.3:
 //!
 //! ```text
-//! Stack → List / Conditional / Overlay+Dialog / Tabs
+//! Stack → List / Grid / Conditional / Overlay+Dialog / Popup / BottomSheet
+//!       → Tabs / NavigationBar
 //! ```
 //!
 //! The interesting part is the *reconciliation*: mutating a composite via
@@ -20,7 +21,9 @@ use floem_app::{NodeId, WidgetHost};
 use floem_core::{Axis, Child, ChildKey, LayoutRequest, Point, Size, WidgetAny};
 use floem_layout::LayoutStyle;
 use floem_types::PointerEvent;
-use floem_widgets::{Button, Conditional, Dialog, List, Stack, Tabs, Text};
+use floem_widgets::{
+    BottomSheet, Button, Conditional, Dialog, Grid, List, NavigationBar, Stack, Tabs, Text,
+};
 
 /// Stable items backing the demo [`List`].
 fn item_key(s: &String) -> u64 {
@@ -58,15 +61,19 @@ fn main() {
         "Bravo".to_string(),
         "Charlie".to_string(),
     ];
+    let grid_cells = vec![
+        "red".to_string(),
+        "green".to_string(),
+        "blue".to_string(),
+        "gold".to_string(),
+    ];
 
     // Root is a single vertical `Stack`; every other component is a child of it,
     // described by builders so the host owns the live widgets.
     let root = Stack::new(Axis::Vertical).gap(8.0);
-    let root = root.child(Child::new(
-        ChildKey::index(0),
-        LayoutRequest::new(),
-        || Box::new(Text::new("Count: 0")),
-    ));
+    let root = root.child(Child::new(ChildKey::index(0), LayoutRequest::new(), || {
+        Box::new(Text::new("Count: 0"))
+    }));
     let root = root.child(Child::new(ChildKey::index(1), LayoutRequest::new(), {
         let items = initial_items.clone();
         move || {
@@ -78,30 +85,60 @@ fn main() {
             ))
         }
     }));
-    let root = root.child(Child::new(
-        ChildKey::index(2),
-        LayoutRequest::new(),
-        || {
-            Box::new(
-                Conditional::new(false).show(Child::new(
-                    ChildKey::index(0),
-                    LayoutRequest::new(),
-                    || Box::new(Text::new("Note: the counter is positive")),
-                )),
-            )
-        },
-    ));
+    let root = root.child(Child::new(ChildKey::index(2), LayoutRequest::new(), || {
+        Box::new(Conditional::new(false).show(Child::new(
+            ChildKey::index(0),
+            LayoutRequest::new(),
+            || Box::new(Text::new("Note: the counter is positive")),
+        )))
+    }));
     let root = root.child(Child::new(ChildKey::index(3), LayoutRequest::new(), {
         let body = Child::new(ChildKey::index(0), LayoutRequest::new(), || {
-            Box::new(Text::new("Dialog body — covers the screen until dismissed."))
+            Box::new(Text::new(
+                "Dialog body — covers the screen until dismissed.",
+            ))
         });
         move || Box::new(Dialog::new().title("Hello").body(body.clone()))
     }));
-    let root = root.child(Child::new(
-        ChildKey::index(4),
-        LayoutRequest::new(),
-        || Box::new(make_tabs()),
-    ));
+    let root = root.child(Child::new(ChildKey::index(4), LayoutRequest::new(), || {
+        Box::new(make_tabs())
+    }));
+    // A keyed 2-column grid: rows are fingerprinted, so appending a cell only
+    // rebuilds the row it lands in.
+    let root = root.child(Child::new(ChildKey::index(5), LayoutRequest::new(), {
+        let cells = grid_cells.clone();
+        move || {
+            Box::new(Grid::<String>::new(
+                2,
+                cells.clone(),
+                item_key,
+                |s: String| Box::new(Text::new(s)),
+            ))
+        }
+    }));
+    // A bottom navigation bar of selectable destinations.
+    let root = root.child(Child::new(ChildKey::index(6), LayoutRequest::new(), || {
+        Box::new(
+            NavigationBar::new()
+                .destination("Home")
+                .destination("Search")
+                .destination("Profile"),
+        )
+    }));
+    // A modal sheet pinned to the bottom edge.
+    let root = root.child(Child::new(ChildKey::index(7), LayoutRequest::new(), {
+        let body = Child::new(ChildKey::index(0), LayoutRequest::new(), || {
+            Box::new(Text::new("Sheet body — dismiss to keep exploring."))
+        });
+        move || {
+            Box::new(
+                BottomSheet::new()
+                    .title("Share")
+                    .height(160.0)
+                    .body(body.clone()),
+            )
+        }
+    }));
 
     let _root = host.mount_root(LayoutStyle::default(), root);
 
@@ -112,8 +149,15 @@ fn main() {
     let cond_id = find_node::<Conditional>(&host);
     let dialog_id = find_node::<Dialog>(&host);
     let tabs_id = find_node::<Tabs>(&host);
+    let grid_id = find_node::<Grid<String>>(&host);
+    let nav_id = find_node::<NavigationBar>(&host);
+    let sheet_id = find_node::<BottomSheet>(&host);
 
-    println!("viewport      : {}x{}", host.bounds(host.root().unwrap()).width() as u32, host.bounds(host.root().unwrap()).height() as u32);
+    println!(
+        "viewport      : {}x{}",
+        host.bounds(host.root().unwrap()).width() as u32,
+        host.bounds(host.root().unwrap()).height() as u32
+    );
     println!("initial frame : {} live widgets\n", mounted.painted);
 
     // 1) Increment the counter label — a leaf repaint, no reconciliation.
@@ -122,7 +166,10 @@ fn main() {
         .expect("counter label")
         .set_content("Count: 1".to_string());
     host.frame();
-    println!("[counter] set to 1 — repaint only ({})", host.frame().painted);
+    println!(
+        "[counter] set to 1 — repaint only ({})",
+        host.frame().painted
+    );
 
     // 2) Append a list row — the reconciler mounts exactly one new row and keeps
     //    the three existing rows alive (their `ChildKey` is unchanged).
@@ -186,6 +233,49 @@ fn main() {
         host.frame().painted
     );
 
+    // 7) Append a grid cell — only the row it lands in is rebuilt.
+    let mut cells = grid_cells;
+    cells.push("plum".to_string());
+    host.widget_mut::<Grid<String>>(grid_id)
+        .expect("grid")
+        .set_items(cells);
+    host.frame();
+    println!(
+        "[grid] appended 'plum' — live widgets now {}",
+        host.frame().painted
+    );
+
+    // 8) Select a destination on the navigation bar by clicking it.
+    let dest = find_button(&host, "Profile");
+    let bounds = host.bounds(dest);
+    let centre = Point::new(
+        bounds.x0 + bounds.width() / 2.0,
+        bounds.y0 + bounds.height() / 2.0,
+    );
+    host.dispatch(PointerEvent::primary_down(centre).into());
+    host.dispatch(PointerEvent::primary_up(centre).into());
+    host.frame();
+    let selected = host
+        .widget::<NavigationBar>(nav_id)
+        .expect("navigation bar")
+        .selected();
+    println!("[nav] clicked 'Profile' — selected destination is now {selected}");
+
+    // 9) Open the bottom sheet, then dismiss it.
+    host.widget_mut::<BottomSheet>(sheet_id)
+        .expect("sheet")
+        .set_present(true);
+    host.frame();
+    println!("[sheet] opened — live widgets now {}", host.frame().painted);
+    host.widget_mut::<BottomSheet>(sheet_id)
+        .expect("sheet")
+        .set_present(false);
+    host.frame();
+    println!(
+        "[sheet] dismissed — live widgets back to {}",
+        host.frame().painted
+    );
+
     // The semantics tree reflects the surviving structure.
     let tree = host.semantics();
     println!("\nsemantics tree : {} published nodes", tree.node_count());
@@ -227,4 +317,3 @@ fn find_button(host: &WidgetHost, label: &str) -> NodeId {
     }
     panic!("no button labelled {label:?}");
 }
-

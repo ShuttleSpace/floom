@@ -118,4 +118,9 @@ impl_widget_any!(
     crate::compose::Overlay,
     crate::compose::Dialog,
     crate::compose::Tabs,
+    crate::compose::Popup,
+    crate::compose::BottomSheet,
+    crate::navigation::NavigationBar,
+    crate::navigation::NavigationRail,
+    crate::navigation::NavigationDrawer,
 );

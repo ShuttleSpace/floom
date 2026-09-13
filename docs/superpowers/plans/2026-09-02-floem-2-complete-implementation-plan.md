@@ -768,13 +768,27 @@ struct PlatformCapabilities { ... }
 ## Task 14.3: Navigation/layout widgets
 
 **Files:**
-- Create: `widgets/floem-widgets/src/navigation.rs`
-- Test: layout/navigation tests
+- Create: `widgets/floem-widgets/src/compose.rs` (structural composites) and
+  `widgets/floem-widgets/src/navigation.rs` (navigation chrome)
+- Test: `app/floem-app/tests/reconcile.rs` + per-module unit tests
 
-- [ ] **Step 1: Implement List/Grid/Stack/Tabs.**
-- [ ] **Step 2: Implement NavigationBar/NavigationRail/Drawer.**
-- [ ] **Step 3: Implement Dialog/Popup/BottomSheet.**
-- [ ] **Step 4: Commit.**
+- [x] **Step 1: Implement List/Grid/Stack/Tabs.**
+- [x] **Step 2: Implement NavigationBar/NavigationRail/Drawer.**
+- [x] **Step 3: Implement Dialog/Popup/BottomSheet.**
+- [x] **Step 4: Commit.**
+
+> Notes:
+> - The plan's single `navigation.rs` landed split: `compose.rs` holds the
+>   structural composites (Stack/List/Grid/Conditional/Overlay/Dialog/Popup/
+>   BottomSheet/Tabs) and `navigation.rs` holds the navigation chrome
+>   (NavigationBar/NavigationRail/NavigationDrawer). `Conditional` and `Overlay`
+>   were added because the overlay-backed widgets build on them.
+> - The `WidgetHost` reconciliation coordinator (`app/floem-app`) diffs each
+>   composite's `children()` by `ChildKey`; a composite flags a change from
+>   `Widget::update` via `mark_children_dirty`. Its layout lowering now combines
+>   a slot's flex-item intent with the widget's own container intent, and
+>   `reconcile` no longer wipes imperatively-mounted (`host.mount`) children.
+> - Demo: `examples/floem2-counter` drives every composite end-to-end.
 
 ## Task 14.4: Forms
 
