@@ -21,6 +21,7 @@ pub use image_codec::{DecodedImage, decode_image};
 pub use runner::{AppRunner, RunStats};
 
 use std::collections::{HashMap, HashSet};
+use std::sync::{Arc, Mutex};
 
 use floem_accessibility::{SemanticsNode, SemanticsTree};
 use floem_core::{
@@ -30,7 +31,7 @@ use floem_core::{
 use floem_focus::{FocusDirection, FocusManager, FocusScopeId};
 use floem_layout::{
     AlignItems as LAlign, FlexDirection, JustifyContent, LayoutEngine, LayoutNode, LayoutStyle,
-    Position as LPosition,
+    MeasureFn, Position as LPosition,
 };
 use floem_runtime::{EventRouter, Hit, HitRegion, RouteStop};
 use floem_runtime_core::IdAllocator;
@@ -77,6 +78,23 @@ struct Node {
     /// Unmounted but not yet removed from the vector; skipped by every pass so
     /// its `NodeId` stays valid for live nodes.
     dead: bool,
+    /// Scene nodes this widget painted last frame. Painting reuses them
+    /// positionally via `Scene::upsert` (so unchanged payloads produce no
+    /// damage), and leftovers are retired.
+    scene_nodes: Vec<SceneNodeId>,
+    /// Set for `Text` leaves whose width/height is not pinned: they size
+    /// themselves through a taffy measure callback reading this shared state,
+    /// so extent changes (content edit, container reflow) re-measure instead
+    /// of freezing the mount-time measurement.
+    text_measure: Option<Arc<Mutex<TextMeasure>>>,
+}
+
+/// Live measure inputs for a text leaf, shared between the widget (updated on
+/// content change) and the layout engine's measure closure.
+#[derive(Debug)]
+struct TextMeasure {
+    text: String,
+    font_size: f32,
 }
 
 /// Owns and drives a widget tree.
@@ -93,8 +111,9 @@ pub struct WidgetHost {
     glyph_cache: HashMap<(String, u32), ResourceId>,
     /// Parley-backed shaper that produces the runs stored in `resources`.
     shaper: TextShaper,
-    /// Scene nodes produced by the current frame, retired on the next one.
-    painted_nodes: Vec<SceneNodeId>,
+    /// Scene nodes orphaned by unmounts that happened outside a paint pass;
+    /// retired at the start of the next paint (inside its transaction).
+    pending_scene_removals: Vec<SceneNodeId>,
     semantics: SemanticsTree,
     focus: FocusManager,
     scope: FocusScopeId,
@@ -273,6 +292,43 @@ fn apply_self_layout(mut base: LayoutStyle, req: Option<&LayoutRequest>) -> Layo
     base
 }
 
+/// [`apply_self_layout`] plus text-measure resolution.
+///
+/// A bare `Text` whose width/height is not pinned by the mount style or a
+/// parent slot sizes itself through a taffy measure callback instead of a
+/// frozen extent: the dims the widget's own `layout_request` would fill are
+/// cleared (left `auto`) and a shared [`TextMeasure`] handle is returned for
+/// the leaf's measure closure. Pinned dims stay explicit and win as before.
+fn self_layout_with_text_measure(
+    base: LayoutStyle,
+    widget: &dyn WidgetAny,
+) -> (LayoutStyle, Option<Arc<Mutex<TextMeasure>>>) {
+    let req = widget.layout_request();
+    // Dims that are explicit before the widget's own request gets a say stay
+    // explicit — the measure fn must not fight a declared size.
+    let pinned_width = base.width.is_some();
+    let pinned_height = base.height.is_some();
+    let mut style = apply_self_layout(base, req.as_ref());
+
+    let Some(text) = widget.as_any().downcast_ref::<floem_widgets::Text>() else {
+        return (style, None);
+    };
+    if pinned_width && pinned_height {
+        return (style, None);
+    }
+    let state = Arc::new(Mutex::new(TextMeasure {
+        text: text.content().to_string(),
+        font_size: text.font_size(),
+    }));
+    if !pinned_width {
+        style.width = None;
+    }
+    if !pinned_height {
+        style.height = None;
+    }
+    (style, Some(state))
+}
+
 impl WidgetHost {
     pub fn new() -> Self {
         let mut focus = FocusManager::new();
@@ -287,7 +343,7 @@ impl WidgetHost {
             resources: ResourceRegistry::new(),
             glyph_cache: HashMap::new(),
             shaper: TextShaper::new(),
-            painted_nodes: Vec::new(),
+            pending_scene_removals: Vec::new(),
             semantics: SemanticsTree::new(),
             focus,
             scope,
@@ -338,16 +394,9 @@ impl WidgetHost {
         // Apply the widget's own container intent (flex axis, gap, absolute
         // position) on top of the supplied sizing. Composite children carry a
         // `parent_request` instead and are refreshed during reconciliation.
-        let style = match parent_request {
-            Some(req) => {
-                // The slot declares this child's flex-item behaviour (size, grow,
-                // position, self-alignment). Layer the widget's own container
-                // intent (its main axis, gap, child alignment) on top so a
-                // composite's `layout_request` is honoured even when mounted as a
-                // child of another composite.
-                apply_self_layout(request_to_style(&req), widget.layout_request().as_ref())
-            }
-            None => apply_self_layout(style, widget.layout_request().as_ref()),
+        let (style, text_measure) = match &parent_request {
+            Some(req) => self_layout_with_text_measure(request_to_style(req), widget.as_ref()),
+            None => self_layout_with_text_measure(style, widget.as_ref()),
         };
         let index = self.nodes.len();
         let id = {
@@ -356,7 +405,23 @@ impl WidgetHost {
             };
             widget.create(&mut cx)
         };
-        let layout_node = self.layout.new_leaf(style.clone());
+        let layout_node = match &text_measure {
+            Some(state) => {
+                let state = Arc::clone(state);
+                let measure: MeasureFn = Box::new(move |avail| {
+                    let m = state.lock().unwrap();
+                    if m.text.is_empty() || m.font_size <= 0.0 {
+                        return Size::ZERO;
+                    }
+                    // `avail.width` is the box this leaf actually landed in —
+                    // wrap against it; `f64::INFINITY` (unconstrained) falls
+                    // through to the unwrapped extent.
+                    floem_text::measure_text(&m.text, m.font_size, avail.width)
+                });
+                self.layout.new_leaf_with_measure(style.clone(), measure)
+            }
+            None => self.layout.new_leaf(style.clone()),
+        };
         let mut depth = 0;
         if let Some(parent) = parent {
             let parent_node = self.nodes[parent].layout_node;
@@ -400,6 +465,8 @@ impl WidgetHost {
             dirty: true,
             children_dirty: true,
             dead: false,
+            scene_nodes: Vec::new(),
+            text_measure,
         });
         self.layout_dirty = true;
         index
@@ -473,15 +540,31 @@ impl WidgetHost {
                 self.mount_child(parent_index, child)
             };
             // Refresh the child's style in case its own container intent changed.
-            let style = match self.nodes[node_idx].parent_request.as_ref() {
-                Some(req) => apply_self_layout(
-                    request_to_style(req),
-                    self.nodes[node_idx].widget.layout_request().as_ref(),
-                ),
-                None => apply_self_layout(
-                    self.nodes[node_idx].style.clone(),
-                    self.nodes[node_idx].widget.layout_request().as_ref(),
-                ),
+            // Measure-driven text leaves keep their auto dims: re-applying the
+            // widget's `layout_request` here would freeze the mount-time extent
+            // back into the style and defeat the measure callback.
+            let style = {
+                let node = &self.nodes[node_idx];
+                let mut style = match node.parent_request.as_ref() {
+                    Some(req) => apply_self_layout(
+                        request_to_style(req),
+                        node.widget.layout_request().as_ref(),
+                    ),
+                    None => {
+                        apply_self_layout(node.style.clone(), node.widget.layout_request().as_ref())
+                    }
+                };
+                if node.text_measure.is_some() {
+                    // The dims owned by the measure fn were stored as `None`;
+                    // anything the request just filled must be cleared again.
+                    if node.style.width.is_none() {
+                        style.width = None;
+                    }
+                    if node.style.height.is_none() {
+                        style.height = None;
+                    }
+                }
+                style
             };
             self.nodes[node_idx].style = style.clone();
             self.layout
@@ -548,6 +631,10 @@ impl WidgetHost {
             self.router.unparent(id);
             self.router.hits.remove(id);
             self.focus.unregister(id);
+            // Scene nodes die at the next paint (their removal needs the
+            // paint transaction); park them so nothing renders after now.
+            self.pending_scene_removals
+                .extend(self.nodes[i].scene_nodes.drain(..));
             self.nodes[i].dead = true;
         }
     }
@@ -612,6 +699,7 @@ impl WidgetHost {
     pub fn frame(&mut self) -> FrameStats {
         let mut stats = FrameStats::default();
 
+        let mut retext = Vec::new();
         for index in 0..self.nodes.len() {
             if self.nodes[index].dead {
                 continue;
@@ -626,7 +714,16 @@ impl WidgetHost {
             node.children_dirty |= cx.children_dirty;
             if cx.dirty {
                 stats.updated += 1;
+                // Measure-driven text leaves must be re-measured before layout
+                // when their content changed — otherwise the frozen extent
+                // (and the stale glyph resource) survive another frame.
+                if node.text_measure.is_some() {
+                    retext.push(index);
+                }
             }
+        }
+        for index in retext {
+            self.sync_text_measure(index);
         }
 
         // Build/mount/unmount composite subtrees before layout so newly added
@@ -644,6 +741,33 @@ impl WidgetHost {
 
         self.last_stats = stats;
         stats
+    }
+
+    /// Re-reads a text leaf's content into its measure state, invalidating
+    /// layout when anything changed. Called only for nodes whose `update()`
+    /// reported dirty, so the common static-text frame costs two string compares.
+    fn sync_text_measure(&mut self, index: usize) {
+        let Some(state) = &self.nodes[index].text_measure else {
+            return;
+        };
+        let Some(text) = self.nodes[index]
+            .widget
+            .as_any()
+            .downcast_ref::<floem_widgets::Text>()
+        else {
+            return;
+        };
+        let mut m = state.lock().unwrap();
+        if m.text != text.content() || m.font_size != text.font_size() {
+            m.text = text.content().to_string();
+            m.font_size = text.font_size();
+            drop(m);
+            // Taffy caches per-node layout and cannot observe the closure's
+            // inputs changing — the node must be told explicitly.
+            let layout_node = self.nodes[index].layout_node;
+            self.layout.mark_dirty(layout_node);
+            self.layout_dirty = true;
+        }
     }
 
     fn run_layout(&mut self) {
@@ -696,27 +820,52 @@ impl WidgetHost {
     }
 
     fn paint(&mut self, stats: &mut FrameStats) {
+        // Damage reflects exactly this frame's changes: `Scene::upsert` filters
+        // identical payloads, so an unchanged widget damages nothing and the
+        // region only covers what actually moved, grew or vanished.
+        self.scene.clear_damage();
         self.scene.begin_update();
-        // Retire last frame's scene nodes: painting allocates fresh ones, so
-        // without this the retained scene would grow every frame.
-        let stale = std::mem::take(&mut self.painted_nodes);
-        for id in stale {
+
+        // Retire scene nodes orphaned by unmounts that happened between paint
+        // passes (scene removal needs an active transaction).
+        let orphans = std::mem::take(&mut self.pending_scene_removals);
+        for id in orphans {
             self.scene.remove(id);
         }
+
         for index in 0..self.nodes.len() {
             if self.nodes[index].dead {
+                // Unmount already pends these; drain defensively so a dead
+                // node can never keep a phantom scene node alive.
+                for id in self.nodes[index].scene_nodes.drain(..) {
+                    self.scene.remove(id);
+                }
                 continue;
             }
-            let node = &self.nodes[index];
-            let mut cx = NodePaintContext {
-                scene: &mut self.scene,
-                resources: &mut self.resources,
-                glyphs: &mut self.glyph_cache,
-                shaper: &mut self.shaper,
-                painted: &mut self.painted_nodes,
-                bounds: node.bounds,
-            };
-            node.widget.paint(&mut cx, node.id);
+            let prev = std::mem::take(&mut self.nodes[index].scene_nodes);
+            let mut next = Vec::new();
+            let leftover;
+            {
+                let node = &self.nodes[index];
+                let mut cx = NodePaintContext {
+                    scene: &mut self.scene,
+                    resources: &mut self.resources,
+                    glyphs: &mut self.glyph_cache,
+                    shaper: &mut self.shaper,
+                    prev,
+                    used: 0,
+                    next: &mut next,
+                    bounds: node.bounds,
+                };
+                node.widget.paint(&mut cx, node.id);
+                let (painted, stale) = cx.finish();
+                next = painted;
+                leftover = stale;
+            }
+            for id in leftover {
+                self.scene.remove(id);
+            }
+            self.nodes[index].scene_nodes = next;
             stats.painted += 1;
         }
         self.scene.finish_update();
@@ -1000,15 +1149,23 @@ struct NodePaintContext<'a> {
     resources: &'a mut ResourceRegistry,
     glyphs: &'a mut HashMap<(String, u32), ResourceId>,
     shaper: &'a mut TextShaper,
-    painted: &'a mut Vec<SceneNodeId>,
+    /// Last frame's scene node ids for this widget. Painting reuses them
+    /// positionally: `upsert` on a match (no damage when the payload is
+    /// unchanged), `insert` once the previous nodes run out.
+    prev: Vec<SceneNodeId>,
+    used: usize,
+    /// Scene node ids painted this frame; written back to the node afterwards.
+    next: &'a mut Vec<SceneNodeId>,
     bounds: Rect,
 }
 
 impl NodePaintContext<'_> {
-    /// Inserts a scene node and records it for retirement next frame.
-    fn push(&mut self, node: floem_scene::SceneNode) {
-        let id = self.scene.insert(node);
-        self.painted.push(id);
+    /// Consumes the context: returns the ids painted this frame plus the
+    /// previous ids that were never reused (retired by the caller, which
+    /// damages their old bounds).
+    fn finish(self) -> (Vec<SceneNodeId>, Vec<SceneNodeId>) {
+        let leftover = self.prev[self.used..].to_vec();
+        (std::mem::take(self.next), leftover)
     }
 
     /// Interns a shaped glyph run, reusing the resource across frames.
@@ -1058,8 +1215,15 @@ impl PaintContext for NodePaintContext<'_> {
         if text.is_empty() || size <= 0.0 {
             return;
         }
+        // Shape within the laid-out box so wrapped text paints as wrapped:
+        // the measure callback sized this node against the same width.
+        let max_width = if self.bounds.width() > 0.0 {
+            self.bounds.width()
+        } else {
+            f64::INFINITY
+        };
         let options = TextLayoutOptions {
-            max_width: f64::INFINITY,
+            max_width,
             font_size: size,
             align: TextAlign::Start,
         };
@@ -1077,6 +1241,22 @@ impl PaintContext for NodePaintContext<'_> {
 
     fn draw_image(&mut self, bounds: Rect, image: ResourceId) {
         self.push(floem_scene::SceneNode::Image { bounds, image });
+    }
+}
+
+impl NodePaintContext<'_> {
+    /// Inserts a scene node — reusing the previous frame's slot when one is
+    /// available at this position, allocating a fresh one otherwise.
+    fn push(&mut self, node: floem_scene::SceneNode) {
+        let id = if self.used < self.prev.len() {
+            let id = self.prev[self.used];
+            self.used += 1;
+            self.scene.upsert(id, node);
+            id
+        } else {
+            self.scene.insert(node)
+        };
+        self.next.push(id);
     }
 }
 

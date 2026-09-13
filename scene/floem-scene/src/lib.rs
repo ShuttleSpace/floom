@@ -87,12 +87,20 @@ impl Scene {
         assert!(self.contains(id), "upsert of unknown or stale SceneNodeId");
 
         let index = id.index() as usize;
-        let old_hint = self.nodes.get(index).and_then(|n| n.as_ref().map(|o| o.bounds_hint()));
-        if let Some(hint) = old_hint {
-            if let Some(b) = hint {
-                self.tx_damage.union_rect(b);
-            } else {
-                self.tx_damage.mark_full_frame();
+        let old = self.nodes[index].take();
+        if let Some(old_node) = &old {
+            // Repainting the identical payload is not damage. This is what
+            // makes per-frame damage meaningful for a retained host that
+            // re-paints every widget: only bounds/payload *changes* dirty the
+            // region.
+            if *old_node == node {
+                self.nodes[index] = Some(node);
+                return;
+            }
+            match old_node.bounds_hint() {
+                Some(b) => self.tx_damage.union_rect(b),
+                // Groups (None hint) force a full frame.
+                None => self.tx_damage.mark_full_frame(),
             }
         }
         self.damage_node(&node);

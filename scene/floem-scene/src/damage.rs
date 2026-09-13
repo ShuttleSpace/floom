@@ -26,11 +26,7 @@ impl DamageRegion {
     }
 
     pub fn rects(&self) -> &[Rect] {
-        if self.full_frame {
-            &[]
-        } else {
-            &self.rects
-        }
+        if self.full_frame { &[] } else { &self.rects }
     }
 
     pub fn clear(&mut self) {

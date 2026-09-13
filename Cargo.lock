@@ -2179,7 +2179,10 @@ version = "0.2.0"
 dependencies = [
  "floem-renderer",
  "floem-scene",
+ "floem-text",
  "floem-types",
+ "peniko",
+ "swash",
 ]
 
 [[package]]
