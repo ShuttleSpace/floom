@@ -262,3 +262,69 @@ fn removed_slots_are_reused() {
     assert_eq!(eng.node_count(), before);
     assert!(eng.contains(b));
 }
+
+/// Measure nodes must re-measure under the space their parent actually gave
+/// them — not the root viewport captured once at compute time. Shrinking the
+/// fixed box that holds a text-like leaf must re-run the measure fn with the
+/// tighter width so the leaf can wrap (grow taller).
+#[test]
+fn measure_nodes_remeasure_under_per_node_constraints() {
+    use std::sync::Arc;
+    use std::sync::Mutex;
+
+    let mut eng = LayoutEngine::new();
+    let seen = Arc::new(Mutex::new(f64::NAN));
+
+    let measure_seen = seen.clone();
+    let measure: MeasureFn = Box::new(move |avail| {
+        *measure_seen.lock().unwrap() = avail.width;
+        // Fake "text": single line 100x20, wrapping to 60 tall under 50 wide.
+        let width = avail.width.min(100.0);
+        let height = if avail.width < 50.0 { 60.0 } else { 20.0 };
+        Size::new(width, height)
+    });
+
+    let text = eng.new_leaf_with_measure(LayoutStyle::default(), measure);
+    let holder = eng.new_with_children(
+        LayoutStyle {
+            width: Some(100.0),
+            height: Some(100.0),
+            ..LayoutStyle::column()
+        },
+        &[text],
+    );
+    let root = eng.new_with_children(LayoutStyle::default(), &[holder]);
+
+    eng.compute(root, Size::new(200.0, 200.0));
+    let wide = eng.layout(text).rect;
+    assert!(
+        (wide.height() - 20.0).abs() < 0.5,
+        "single line in a 100-wide box, got {}",
+        wide.height()
+    );
+    assert!(
+        (*seen.lock().unwrap() - 100.0).abs() < 0.5,
+        "measure saw the holder's box"
+    );
+
+    // Shrink the holder: same measure fn, tighter constraint, taller leaf.
+    eng.set_style(
+        holder,
+        LayoutStyle {
+            width: Some(40.0),
+            height: Some(100.0),
+            ..LayoutStyle::column()
+        },
+    );
+    eng.compute(root, Size::new(200.0, 200.0));
+    let narrow = eng.layout(text).rect;
+    assert!(
+        (narrow.height() - 60.0).abs() < 0.5,
+        "wrapped in the 40-wide box, got {}",
+        narrow.height()
+    );
+    assert!(
+        (*seen.lock().unwrap() - 40.0).abs() < 0.5,
+        "measure saw the new constraint"
+    );
+}

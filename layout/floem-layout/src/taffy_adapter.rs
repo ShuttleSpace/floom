@@ -253,6 +253,16 @@ impl LayoutEngine {
             .expect("set_style");
     }
 
+    /// Forces `node` to re-run its measure fn on the next compute, even if its
+    /// style and incoming available space are unchanged. This is how content
+    /// edits inside a measure closure (a text label's new string) invalidate
+    /// taffy's per-node layout cache — taffy cannot see the closure's inputs
+    /// change on its own.
+    pub fn mark_dirty(&mut self, node: LayoutNode) {
+        let id = self.nid(node);
+        self.tree.mark_dirty(id).expect("mark_dirty");
+    }
+
     pub fn add_child(&mut self, parent: LayoutNode, child: LayoutNode) {
         let p = self.nid(parent);
         let c = self.nid(child);
@@ -315,27 +325,40 @@ impl LayoutEngine {
             height: AvailableSpace::Definite(available.height as f32),
         };
 
-        // Collect measure results keyed by NodeId for the closure.
-        let measures: HashMap<NodeId, GeoSize> = self
+        // NodeId → measure fn, resolved once per compute. The closure below
+        // then calls each fn with the *per-node* available space taffy hands
+        // it, so a measure node re-measures under whatever box it actually
+        // landed in (a text label inside a half-width column wraps; the same
+        // label at the root does not). Precomputing results against the root
+        // available space — the previous behaviour — froze the first frame's
+        // constraints into every subsequent layout.
+        let measure_fns: HashMap<NodeId, &MeasureFn> = self
             .measure
             .iter()
-            .map(|(ln, f)| {
-                let nid = self.nid(*ln);
-                (nid, f(available))
-            })
+            .map(|(node, f)| (self.nid(*node), f))
             .collect();
 
         self.tree
-            .compute_layout_with_measure(id, avail, move |known, _avail, node_id, _ctx, _style| {
-                if let Some(size) = measures.get(&node_id) {
+            .compute_layout_with_measure(id, avail, |known, node_avail, node_id, _ctx, _style| {
+                let Some(f) = measure_fns.get(&node_id) else {
                     return taffy::Size {
-                        width: known.width.unwrap_or(size.width as f32),
-                        height: known.height.unwrap_or(size.height as f32),
+                        width: known.width.unwrap_or(0.0),
+                        height: known.height.unwrap_or(0.0),
                     };
-                }
+                };
+                let definite = |space: &AvailableSpace| match space {
+                    AvailableSpace::Definite(value) => *value as f64,
+                    // MinContent / MaxContent: let the measure fn decide with
+                    // an unbounded axis.
+                    _ => f64::INFINITY,
+                };
+                let size = f(GeoSize::new(
+                    definite(&node_avail.width),
+                    definite(&node_avail.height),
+                ));
                 taffy::Size {
-                    width: known.width.unwrap_or(0.0),
-                    height: known.height.unwrap_or(0.0),
+                    width: known.width.unwrap_or(size.width as f32),
+                    height: known.height.unwrap_or(size.height as f32),
                 }
             })
             .expect("compute_layout");
