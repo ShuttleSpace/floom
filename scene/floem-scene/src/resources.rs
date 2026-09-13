@@ -1,18 +1,33 @@
 //! Shared scene resources with ref-count tracking.
 
+use floem_text::GlyphRun;
 use floem_types::ResourceId;
 use std::collections::VecDeque;
 
 /// Kind of retained resource (renderer backends map these to GPU objects later).
-#[derive(Debug, Clone, PartialEq, Eq)]
+///
+/// Not `Eq`: a glyph run carries the font blob, whose identity is an opaque
+/// shared-data id — comparable, not hashable/equatable in the structural sense
+/// the other variants support.
+#[derive(Debug, Clone, PartialEq)]
 pub enum ResourceKind {
-    Image { width: u32, height: u32 },
-    GlyphRun { glyph_count: u32 },
-    Blob { bytes: usize },
+    Image {
+        width: u32,
+        height: u32,
+    },
+    /// Fully shaped text. The node referencing this resource only carries the
+    /// resource id; everything a renderer needs (font data, size, glyph ids and
+    /// positions) lives here.
+    GlyphRun {
+        runs: Vec<GlyphRun>,
+    },
+    Blob {
+        bytes: usize,
+    },
 }
 
 /// A registry-owned resource payload.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Resource {
     pub kind: ResourceKind,
 }
@@ -161,9 +176,14 @@ impl ResourceRegistry {
 }
 
 fn resource_cost(resource: &Resource) -> u64 {
-    match resource.kind {
-        ResourceKind::Image { width, height } => u64::from(width) * u64::from(height),
-        ResourceKind::GlyphRun { glyph_count } => u64::from(glyph_count) * 16,
-        ResourceKind::Blob { bytes } => bytes as u64,
+    match &resource.kind {
+        ResourceKind::Image { width, height } => u64::from(*width) * u64::from(*height),
+        // Same per-glyph accounting the `glyph_count` variant used before runs
+        // were retained (16 units per glyph, plus a fixed run overhead).
+        ResourceKind::GlyphRun { runs } => runs
+            .iter()
+            .map(|run| u64::from(run.glyphs.len() as u32) * 16 + 64)
+            .sum(),
+        ResourceKind::Blob { bytes } => *bytes as u64,
     }
 }

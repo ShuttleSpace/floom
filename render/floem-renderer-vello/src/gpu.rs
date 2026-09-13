@@ -33,7 +33,7 @@
 //! output — render correctly.
 
 use floem_renderer::{AttachedSurface, Presenter, SurfaceHandles};
-use floem_scene::{Scene, SceneNode};
+use floem_scene::{ResourceKind, ResourceRegistry, Scene, SceneNode};
 use floem_types::{Size, SurfaceId, WindowId};
 
 use vello::kurbo::{Affine, Rect as KurboRect};
@@ -54,6 +54,8 @@ pub struct GpuFrameStats {
     pub frames: u64,
     /// Rects encoded into the last frame.
     pub rects: u64,
+    /// Glyph runs (one per shaped text run) encoded into the last frame.
+    pub glyph_runs: u64,
     /// Nodes skipped because the GPU path has no pipeline for them yet.
     pub unsupported_nodes: u64,
 }
@@ -234,9 +236,10 @@ impl VelloGpuPresenter {
     /// a retained tree, so there is nothing to diff. `floem-scene`'s damage
     /// region is what the renderer would use to skip work; until partial
     /// rendering lands the whole list is re-encoded each frame.
-    fn encode(&mut self, scene: &Scene) -> (u64, u64) {
+    fn encode(&mut self, scene: &Scene, resources: &ResourceRegistry) -> (u64, u64, u64) {
         self.vello_scene.reset();
         let mut rects = 0;
+        let mut glyph_runs = 0;
         let mut unsupported = 0;
         for (_id, node) in scene.iter() {
             match node {
@@ -251,11 +254,48 @@ impl VelloGpuPresenter {
                     );
                     rects += 1;
                 }
+                SceneNode::Text {
+                    origin,
+                    glyphs,
+                    color,
+                    ..
+                } => {
+                    let Some(ResourceKind::GlyphRun { runs }) =
+                        resources.get(*glyphs).map(|r| &r.kind)
+                    else {
+                        // Dangling or wrong-kind id: skip rather than fail.
+                        continue;
+                    };
+                    for run in runs {
+                        if run.font.data.as_ref().is_empty() {
+                            continue;
+                        }
+                        // Parley positions glyphs relative to the run origin;
+                        // the scene node carries the text block origin. Vello
+                        // wants pixel-space glyph coordinates, so fold both
+                        // offsets into the transform and pass glyph positions
+                        // through untouched.
+                        let transform =
+                            Affine::translate((origin.x + run.origin.x, origin.y + run.origin.y));
+                        let glyphs = run.glyphs.iter().map(|g| vello::Glyph {
+                            id: g.id,
+                            x: g.x,
+                            y: g.y,
+                        });
+                        self.vello_scene
+                            .draw_glyphs(&run.font)
+                            .font_size(run.font_size)
+                            .transform(transform)
+                            .brush(PenikoColor::from_rgba8(color.r, color.g, color.b, color.a))
+                            .draw(Fill::NonZero, glyphs);
+                        glyph_runs += 1;
+                    }
+                }
                 SceneNode::Group { .. } => {}
-                SceneNode::Text { .. } | SceneNode::Image { .. } => unsupported += 1,
+                SceneNode::Image { .. } => unsupported += 1,
             }
         }
-        (rects, unsupported)
+        (rects, glyph_runs, unsupported)
     }
 }
 
@@ -310,8 +350,8 @@ impl Presenter for VelloGpuPresenter {
         self.reconfigure(physical);
     }
 
-    fn present(&mut self, scene: &Scene) {
-        let (rects, unsupported) = self.encode(scene);
+    fn present(&mut self, scene: &Scene, resources: &ResourceRegistry) {
+        let (rects, glyph_runs, unsupported) = self.encode(scene, resources);
         let Some(surface) = self.surface.as_mut() else {
             return;
         };
@@ -363,6 +403,7 @@ impl Presenter for VelloGpuPresenter {
 
         self.stats.frames += 1;
         self.stats.rects = rects;
+        self.stats.glyph_runs = glyph_runs;
         self.stats.unsupported_nodes = unsupported;
     }
 
@@ -426,7 +467,7 @@ mod tests {
             fill: floem_types::Color::rgb(1, 2, 3),
         });
         scene.finish_update();
-        presenter.present(&scene);
+        presenter.present(&scene, &ResourceRegistry::new());
         assert_eq!(presenter.frames_presented(), 0);
     }
 

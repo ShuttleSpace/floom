@@ -9,6 +9,8 @@ rust-version.workspace = true
 
 [dependencies]
 floem-types = { path = "../../crates/floem-types", version = "0.2.0" }
+floem-text = { path = "../../text/floem-text", version = "0.2.0" }
 smallvec = "1.15"
 
 [dev-dependencies]
+floem-text = { path = "../../text/floem-text", version = "0.2.0" }

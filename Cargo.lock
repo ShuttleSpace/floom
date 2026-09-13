@@ -1970,6 +1970,7 @@ dependencies = [
  "floem-runtime-core",
  "floem-scene",
  "floem-services",
+ "floem-text",
  "floem-types",
  "floem-widgets",
 ]
@@ -2219,6 +2220,7 @@ dependencies = [
 name = "floem-scene"
 version = "0.2.0"
 dependencies = [
+ "floem-text",
  "floem-types",
  "smallvec",
 ]
@@ -2270,6 +2272,7 @@ dependencies = [
  "criterion",
  "floem-types",
  "parley",
+ "peniko",
  "rustc-hash 2.1.1",
 ]
 

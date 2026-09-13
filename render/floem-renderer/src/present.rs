@@ -21,7 +21,7 @@
 //! the problem* (the handle is a raw pointer into another subsystem) and is
 //! confined to one place per backend rather than spread through the runner.
 
-use floem_scene::Scene;
+use floem_scene::{ResourceRegistry, Scene};
 use floem_types::{Size, SurfaceId, WindowId};
 
 use raw_window_handle::{RawDisplayHandle, RawWindowHandle};
@@ -95,7 +95,12 @@ pub trait Presenter {
     fn resize(&mut self, size: Size, scale: f64);
 
     /// Draw `scene` and make it visible.
-    fn present(&mut self, scene: &Scene);
+    ///
+    /// `resources` is the registry backing the scene: nodes reference glyph
+    /// runs and images by id, and resolving those payloads needs the table
+    /// that owns them. Backends that cannot use a resource kind (a CPU
+    /// renderer without text, say) skip them rather than fail the frame.
+    fn present(&mut self, scene: &Scene, resources: &ResourceRegistry);
 
     /// The surface is going away (window closed, display removed). Release the
     /// swap-chain but keep the device, so a later `attach` is cheap.

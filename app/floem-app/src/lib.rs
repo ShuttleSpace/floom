@@ -33,6 +33,7 @@ use floem_layout::{
 use floem_runtime::{EventRouter, Hit, HitRegion, RouteStop};
 use floem_runtime_core::IdAllocator;
 use floem_scene::{Resource, ResourceKind, ResourceRegistry, Scene, SceneNodeId};
+use floem_text::{TextAlign, TextLayoutOptions, TextShaper};
 use floem_types::ScrollEvent;
 use floem_widgets::WidgetAny;
 
@@ -85,8 +86,11 @@ pub struct WidgetHost {
     layout: LayoutEngine,
     scene: Scene,
     resources: ResourceRegistry,
-    /// Interned glyph runs, keyed by text, so frames reuse resources.
-    glyph_cache: HashMap<String, ResourceId>,
+    /// Interned glyph runs, keyed by (text, font size), so frames reuse
+    /// resources and shaping work across frames.
+    glyph_cache: HashMap<(String, u32), ResourceId>,
+    /// Parley-backed shaper that produces the runs stored in `resources`.
+    shaper: TextShaper,
     /// Scene nodes produced by the current frame, retired on the next one.
     painted_nodes: Vec<SceneNodeId>,
     semantics: SemanticsTree,
@@ -268,6 +272,7 @@ impl WidgetHost {
             scene: Scene::new(),
             resources: ResourceRegistry::new(),
             glyph_cache: HashMap::new(),
+            shaper: TextShaper::new(),
             painted_nodes: Vec::new(),
             semantics: SemanticsTree::new(),
             focus,
@@ -693,6 +698,7 @@ impl WidgetHost {
                 scene: &mut self.scene,
                 resources: &mut self.resources,
                 glyphs: &mut self.glyph_cache,
+                shaper: &mut self.shaper,
                 painted: &mut self.painted_nodes,
                 bounds: node.bounds,
             };
@@ -866,6 +872,14 @@ impl WidgetHost {
         &self.scene
     }
 
+    /// The resource registry backing the scene: glyph runs, images, blobs.
+    ///
+    /// Presenters receive both the scene and this table, so renderer backends
+    /// can resolve the payloads scene nodes reference by id.
+    pub fn resources(&self) -> &ResourceRegistry {
+        &self.resources
+    }
+
     pub fn semantics(&self) -> &SemanticsTree {
         &self.semantics
     }
@@ -933,7 +947,8 @@ impl UpdateContext for HostUpdateContext {
 struct NodePaintContext<'a> {
     scene: &'a mut Scene,
     resources: &'a mut ResourceRegistry,
-    glyphs: &'a mut HashMap<String, ResourceId>,
+    glyphs: &'a mut HashMap<(String, u32), ResourceId>,
+    shaper: &'a mut TextShaper,
     painted: &'a mut Vec<SceneNodeId>,
     bounds: Rect,
 }
@@ -945,17 +960,24 @@ impl NodePaintContext<'_> {
         self.painted.push(id);
     }
 
-    /// Interns `text` as a glyph run, reusing the resource across frames.
-    fn intern_glyphs(&mut self, text: &str) -> ResourceId {
-        if let Some(id) = self.glyphs.get(text) {
+    /// Interns a shaped glyph run, reusing the resource across frames.
+    ///
+    /// The cache key is (text, font size): the same string at two sizes has
+    /// different glyph ids and positions, so the size must be part of the key.
+    fn intern_glyphs(
+        &mut self,
+        text: &str,
+        font_size: f32,
+        runs: Vec<floem_text::GlyphRun>,
+    ) -> ResourceId {
+        let key = (text.to_string(), font_size.to_bits());
+        if let Some(id) = self.glyphs.get(&key) {
             return *id;
         }
         let id = self.resources.insert(Resource {
-            kind: ResourceKind::GlyphRun {
-                glyph_count: text.chars().count() as u32,
-            },
+            kind: ResourceKind::GlyphRun { runs },
         });
-        self.glyphs.insert(text.to_string(), id);
+        self.glyphs.insert(key, id);
         id
     }
 }
@@ -985,15 +1007,18 @@ impl PaintContext for NodePaintContext<'_> {
         if text.is_empty() || size <= 0.0 {
             return;
         }
-        let glyphs = self.intern_glyphs(text);
-        // Advance estimate only; `floem-text` owns real shaping.
-        let advance = Size::new(
-            text.chars().count() as f64 * f64::from(size) * 0.6,
-            f64::from(size) * 1.2,
-        );
+        let options = TextLayoutOptions {
+            max_width: f64::INFINITY,
+            font_size: size,
+            align: TextAlign::Start,
+        };
+        let laid = self.shaper.shape(text, &options);
+        let runs = laid.runs;
+        let laid_out_size = laid.size;
+        let glyphs = self.intern_glyphs(text, size, runs);
         self.push(floem_scene::SceneNode::Text {
             origin,
-            size: advance,
+            size: laid_out_size,
             glyphs,
             color,
         });

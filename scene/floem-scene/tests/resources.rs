@@ -45,3 +45,38 @@ fn budget_evicts_single_ref_resources() {
     assert!(reg.get(b).is_some());
     assert!(reg.eviction_count() >= 1);
 }
+
+/// A glyph run now carries the fully shaped runs (font blob + glyph ids and
+/// positions), and its registry cost accounts every glyph.
+#[test]
+fn glyph_run_resource_carries_shaped_runs() {
+    let mut shaper = floem_text::TextShaper::new();
+    let options = floem_text::TextLayoutOptions {
+        max_width: f64::INFINITY,
+        font_size: 16.0,
+        align: floem_text::TextAlign::Start,
+    };
+    let laid = shaper.shape("Hello", &options);
+    assert!(!laid.runs.is_empty(), "shaping produces at least one run");
+
+    let mut reg = ResourceRegistry::new();
+    let id = reg.insert(Resource {
+        kind: ResourceKind::GlyphRun {
+            runs: laid.runs.clone(),
+        },
+    });
+
+    let Some(ResourceKind::GlyphRun { runs }) = reg.get(id).map(|r| &r.kind) else {
+        panic!("glyph run resource does not round-trip");
+    };
+    assert_eq!(runs, &laid.runs);
+    let glyph_cost: u64 = laid
+        .runs
+        .iter()
+        .map(|run| run.glyphs.len() as u64 * 16 + 64)
+        .sum();
+    assert_eq!(reg.used_units(), glyph_cost);
+    assert!(reg.release(id));
+    assert!(reg.get(id).is_none());
+    assert_eq!(reg.used_units(), 0);
+}

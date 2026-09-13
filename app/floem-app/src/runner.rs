@@ -397,7 +397,7 @@ impl<R: Presenter> AppRunner<R> {
         let ready = self.presenter_ready;
         let frame_stats = host.frame();
         if ready {
-            presenter.present(host.scene());
+            presenter.present(host.scene(), host.resources());
             self.stats.frames += 1;
         }
         frame_stats

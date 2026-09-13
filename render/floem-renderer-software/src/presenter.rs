@@ -14,7 +14,7 @@
 //! assert on.
 
 use floem_renderer::{AttachedSurface, FrameInfo, Presenter, Renderer, SurfaceHandles};
-use floem_scene::Scene;
+use floem_scene::{ResourceRegistry, Scene};
 use floem_types::Size;
 
 use crate::SoftwareRenderer;
@@ -104,7 +104,10 @@ impl Presenter for SoftwarePresenter {
         }
     }
 
-    fn present(&mut self, scene: &Scene) {
+    fn present(&mut self, scene: &Scene, resources: &ResourceRegistry) {
+        // The CPU rasteriser paints rects only today; glyph-run and image
+        // resources are skipped (never fatal), so the registry is unused here.
+        let _ = resources;
         if !self.attached {
             return;
         }
@@ -171,7 +174,7 @@ mod tests {
     fn present_draws_into_the_buffer() {
         let mut presenter = SoftwarePresenter::new();
         presenter.attach(attached(Size::new(8.0, 8.0)));
-        presenter.present(&single_rect_scene());
+        presenter.present(&single_rect_scene(), &ResourceRegistry::new());
         assert_eq!(presenter.frames_presented(), 1);
         assert_eq!(presenter.pixel_rgba(1, 1), Some([200, 100, 50, 255]));
         assert_eq!(presenter.pixel_rgba(6, 6), Some([0, 0, 0, 0]));
@@ -180,7 +183,7 @@ mod tests {
     #[test]
     fn present_before_attach_is_a_noop() {
         let mut presenter = SoftwarePresenter::new();
-        presenter.present(&single_rect_scene());
+        presenter.present(&single_rect_scene(), &ResourceRegistry::new());
         assert_eq!(presenter.frames_presented(), 0);
     }
 
@@ -190,7 +193,7 @@ mod tests {
         presenter.attach(attached(Size::new(8.0, 8.0)));
         presenter.detach();
         assert!(!presenter.is_attached());
-        presenter.present(&single_rect_scene());
+        presenter.present(&single_rect_scene(), &ResourceRegistry::new());
         assert_eq!(presenter.frames_presented(), 0);
 
         presenter.resize(Size::new(100.0, 100.0), 1.0);
@@ -203,7 +206,7 @@ mod tests {
         presenter.attach(attached(Size::new(8.0, 8.0)));
         presenter.resize(Size::new(20.0, 10.0), 1.0);
         assert_eq!((presenter.width(), presenter.height()), (20, 10));
-        presenter.present(&single_rect_scene());
+        presenter.present(&single_rect_scene(), &ResourceRegistry::new());
         assert_eq!(presenter.pixel_rgba(1, 1), Some([200, 100, 50, 255]));
     }
 }

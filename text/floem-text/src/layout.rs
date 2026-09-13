@@ -52,9 +52,13 @@ pub struct Glyph {
 }
 
 /// Contiguous glyphs sharing font/size (one Parley glyph run).
+///
+/// Carries the font *data* itself, not a font index: renderers (vello, Skia)
+/// rasterise directly from the blob, so a glyph run is self-contained and no
+/// shared font table has to stay alive across the scene → renderer boundary.
 #[derive(Debug, Clone, PartialEq)]
 pub struct GlyphRun {
-    pub font_index: u32,
+    pub font: peniko::FontData,
     pub font_size: f32,
     pub origin: Point,
     pub glyphs: Vec<Glyph>,
@@ -155,7 +159,7 @@ impl TextShaper {
                     continue;
                 }
                 runs.push(GlyphRun {
-                    font_index: run.font().index as u32,
+                    font: run.font().clone(),
                     font_size: run.font_size(),
                     origin: Point::new(glyph_run.offset() as f64, metrics.baseline as f64),
                     glyphs,

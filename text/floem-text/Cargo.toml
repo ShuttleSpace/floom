@@ -9,6 +9,7 @@ rust-version.workspace = true
 
 [dependencies]
 floem-types = { path = "../../crates/floem-types", version = "0.2.0" }
+peniko = { workspace = true }
 parley = { workspace = true }
 rustc-hash.workspace = true
 
