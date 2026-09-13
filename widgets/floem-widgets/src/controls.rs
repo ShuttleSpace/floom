@@ -15,6 +15,42 @@ use floem_types::{PointerButton, PointerPhase};
 
 use crate::primitives::{Revision, SemanticsHint};
 
+/// Font size every tier-1 control paints its label with. Shared between
+/// `paint` and `layout_request` so the intrinsic size always matches what is
+/// drawn.
+const LABEL_FONT_SIZE: f32 = 14.0;
+/// Horizontal padding between a Button's edge and its label (each side).
+const BUTTON_PADDING: f32 = 8.0;
+/// Vertical padding around a Button's label (each side).
+const BUTTON_VERTICAL_PADDING: f32 = 4.0;
+/// Gap between a CheckBox/Radio/Switch indicator and its label.
+const INDICATOR_LABEL_GAP: f32 = 6.0;
+/// The indicator square's side (CheckBox box / Radio dot diameter).
+const INDICATOR_SIDE: f32 = 16.0;
+/// Switch track width; its height is half of this.
+const SWITCH_TRACK_WIDTH: f32 = 40.0;
+
+/// Intrinsic width of a label at the controls' shared font size.
+///
+/// Empty labels measure to zero, which keeps "no label" controls auto-sized
+/// instead of requesting a phantom extent.
+fn label_width(label: &str) -> f32 {
+    if label.is_empty() {
+        0.0
+    } else {
+        floem_text::measure_text(label, LABEL_FONT_SIZE, f64::INFINITY).width as f32
+    }
+}
+
+/// Intrinsic height of a label at the controls' shared font size.
+fn label_height(label: &str) -> f32 {
+    if label.is_empty() {
+        0.0
+    } else {
+        floem_text::measure_text(label, LABEL_FONT_SIZE, f64::INFINITY).height as f32
+    }
+}
+
 /// Shared hover/press/focus/disable state for interactive controls.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct InteractionState {
@@ -150,7 +186,7 @@ fn draw_centered_text(
         return;
     }
     let origin = Point::new(
-        bounds.x0 + 8.0,
+        bounds.x0 + f64::from(BUTTON_PADDING),
         bounds.y0 + (bounds.height() - f64::from(size)) / 2.0,
     );
     cx.fill_text(origin, text, size, color);
@@ -251,6 +287,20 @@ impl Widget for Button {
         self.revision.sync(cx, id);
     }
 
+    /// Intrinsic size: the label's measured extent plus the padding paint
+    /// applies. The host treats this as default sizing — an explicit mount
+    /// style still pins the button, while unpinned ones shrink-wrap.
+    fn layout_request(&self) -> Option<floem_core::LayoutRequest> {
+        if self.label.is_empty() {
+            return None;
+        }
+        Some(
+            floem_core::LayoutRequest::new()
+                .width(label_width(&self.label) + BUTTON_PADDING * 2.0)
+                .height(label_height(&self.label) + BUTTON_VERTICAL_PADDING * 2.0),
+        )
+    }
+
     fn event(&mut self, cx: &mut dyn EventContext, id: ElementId) -> bool {
         match track_pointer(&mut self.state, cx, id) {
             Press::Activate => {
@@ -293,7 +343,7 @@ impl Widget for Button {
         } else {
             self.text_color
         };
-        draw_centered_text(cx, bounds, &self.label, 14.0, color);
+        draw_centered_text(cx, bounds, &self.label, LABEL_FONT_SIZE, color);
     }
 
     fn semantics(&self, cx: &mut dyn SemanticsContext, _id: ElementId) {
@@ -659,6 +709,20 @@ impl Widget for Checkbox {
         self.revision.sync(cx, id);
     }
 
+    /// Intrinsic size: indicator square + gap + label extent. The requested
+    /// height keeps the box at its full 16px side (paint shrinks it to fit
+    /// shorter bounds).
+    fn layout_request(&self) -> Option<floem_core::LayoutRequest> {
+        if self.label.is_empty() {
+            return None;
+        }
+        Some(
+            floem_core::LayoutRequest::new()
+                .width(INDICATOR_SIDE + INDICATOR_LABEL_GAP + label_width(&self.label))
+                .height(INDICATOR_SIDE.max(label_height(&self.label))),
+        )
+    }
+
     fn event(&mut self, cx: &mut dyn EventContext, id: ElementId) -> bool {
         match track_pointer(&mut self.state, cx, id) {
             Press::Activate => {
@@ -703,7 +767,7 @@ impl Widget for Checkbox {
             cx.fill_text(origin, check, box_rect.height() as f32, Color::WHITE);
         }
         let label_origin = Point::new(box_rect.x1 + 6.0, bounds.y0);
-        cx.fill_text(label_origin, &self.label, 14.0, Color::BLACK);
+        cx.fill_text(label_origin, &self.label, LABEL_FONT_SIZE, Color::BLACK);
     }
 
     fn semantics(&self, cx: &mut dyn SemanticsContext, _id: ElementId) {
@@ -803,6 +867,19 @@ impl Widget for Radio {
         self.revision.sync(cx, id);
     }
 
+    /// Intrinsic size: indicator circle + gap + label extent (same geometry
+    /// as [`Checkbox`]).
+    fn layout_request(&self) -> Option<floem_core::LayoutRequest> {
+        if self.label.is_empty() {
+            return None;
+        }
+        Some(
+            floem_core::LayoutRequest::new()
+                .width(INDICATOR_SIDE + INDICATOR_LABEL_GAP + label_width(&self.label))
+                .height(INDICATOR_SIDE.max(label_height(&self.label))),
+        )
+    }
+
     fn event(&mut self, cx: &mut dyn EventContext, id: ElementId) -> bool {
         match track_pointer(&mut self.state, cx, id) {
             Press::Activate => {
@@ -858,7 +935,7 @@ impl Widget for Radio {
             );
         }
         let label_origin = Point::new(outer.x1 + 6.0, bounds.y0);
-        cx.fill_text(label_origin, &self.label, 14.0, Color::BLACK);
+        cx.fill_text(label_origin, &self.label, LABEL_FONT_SIZE, Color::BLACK);
     }
 
     fn semantics(&self, cx: &mut dyn SemanticsContext, _id: ElementId) {
@@ -999,6 +1076,25 @@ impl Widget for Switch {
         self.revision.sync(cx, id);
     }
 
+    /// Intrinsic size: track (width × width/2) + gap + label extent; the
+    /// height also fits the label so the track never clips it.
+    fn layout_request(&self) -> Option<floem_core::LayoutRequest> {
+        if self.label.is_empty() {
+            return None;
+        }
+        let track_w = if self.track_width > 0.0 {
+            self.track_width as f32
+        } else {
+            SWITCH_TRACK_WIDTH
+        };
+        let track_h = track_w * 0.5;
+        Some(
+            floem_core::LayoutRequest::new()
+                .width(track_w + INDICATOR_LABEL_GAP + label_width(&self.label))
+                .height(track_h.max(label_height(&self.label))),
+        )
+    }
+
     fn event(&mut self, cx: &mut dyn EventContext, id: ElementId) -> bool {
         match track_pointer(&mut self.state, cx, id) {
             Press::Activate => {
@@ -1044,7 +1140,7 @@ impl Widget for Switch {
         cx.fill_rounded_rect(track, track.height() as f32 / 2.0, track_color);
         cx.fill_rounded_rect(knob, knob.height() as f32 / 2.0, Color::WHITE);
         let label_origin = Point::new(track.x1 + 6.0, bounds.y0);
-        cx.fill_text(label_origin, &self.label, 14.0, Color::BLACK);
+        cx.fill_text(label_origin, &self.label, LABEL_FONT_SIZE, Color::BLACK);
     }
 
     fn semantics(&self, cx: &mut dyn SemanticsContext, _id: ElementId) {

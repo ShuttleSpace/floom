@@ -71,8 +71,14 @@ fn a_click_reaches_a_button() {
 
     let mut platform = FakePlatform::new();
     let mut host = WidgetHost::new();
+    // Pinned to the window: this test exercises click routing, not the
+    // button's intrinsic (label-fitting) size.
     host.mount_root(
-        LayoutStyle::default(),
+        LayoutStyle {
+            width: Some(64.0),
+            height: Some(48.0),
+            ..LayoutStyle::default()
+        },
         Button::new("Go").on_click(move || flag.store(true, Ordering::SeqCst)),
     );
     let mut runner = AppRunner::new(host, SoftwarePresenter::new());
@@ -242,8 +248,9 @@ mod boundary {
         let win = platform.create_window(small_window());
         settle(&mut platform, &mut runner);
 
-        // Click the top half ("boom").
-        platform.inject_pointer_click(win, Point::new(32.0, 12.0));
+        // Click the top half ("boom"). The buttons are label-sized now, so
+        // aim well inside their shared width.
+        platform.inject_pointer_click(win, Point::new(16.0, 12.0));
         settle(&mut platform, &mut runner);
 
         assert!(
@@ -257,7 +264,7 @@ mod boundary {
         assert_eq!(runner.stats().errors_caught, 1);
 
         // The runner is still alive: click the bottom half ("ok").
-        platform.inject_pointer_click(win, Point::new(32.0, 36.0));
+        platform.inject_pointer_click(win, Point::new(16.0, 36.0));
         settle(&mut platform, &mut runner);
         assert!(
             worked.load(Ordering::SeqCst),
@@ -276,7 +283,11 @@ mod boundary {
         let mut platform = FakePlatform::new();
         let mut host = WidgetHost::new();
         host.mount_root(
-            LayoutStyle::default(),
+            LayoutStyle {
+                width: Some(64.0),
+                height: Some(48.0),
+                ..LayoutStyle::default()
+            },
             Button::new("boom").on_click(|| panic!("unhandled")),
         );
         let mut runner = AppRunner::new(host, SoftwarePresenter::new());
