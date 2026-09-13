@@ -39,6 +39,12 @@ type Clip = (u32, u32, u32, u32);
 /// and can never alias a different font.
 type GlyphCacheKey = (usize, u32, u32, u32);
 
+/// Default ceiling on cached glyph masks. UI text repeats a small working set
+/// of glyphs, but dynamic content (scrolling document text, many font sizes)
+/// can grow the set without bound — the cache evicts least-recently-used
+/// entries beyond this, trading a re-rasterisation for a bounded footprint.
+const GLYPH_CACHE_LIMIT: usize = 4096;
+
 /// Software renderer backend implementing the Floem 2.0 [`Renderer`] ABI.
 pub struct SoftwareRenderer {
     width: u32,
@@ -62,10 +68,16 @@ pub struct SoftwareRenderer {
     needs_full_clear: bool,
     /// Rasterised alpha masks, keyed by (font, size, glyph id). Each entry
     /// holds a clone of the font's `FontData` so the key's byte pointer stays
-    /// valid and unique for as long as the entry lives. UI glyphs repeat
+    /// valid and unique for as long as the entry lives, plus the logical
+    /// clock stamp of its most recent use — the LRU order. UI glyphs repeat
     /// massively across frames and nodes — without this every frame pays a
     /// full outline-to-mask pass per visible glyph.
-    glyph_cache: HashMap<GlyphCacheKey, (peniko::Blob<u8>, std::sync::Arc<GlyphMask>)>,
+    glyph_cache: HashMap<GlyphCacheKey, (peniko::Blob<u8>, std::sync::Arc<GlyphMask>, u64)>,
+    /// Maximum number of cached masks; the least-recently-used entries are
+    /// evicted beyond it.
+    glyph_cache_limit: usize,
+    /// Monotonic access clock feeding the LRU order.
+    glyph_cache_clock: u64,
 }
 
 impl SoftwareRenderer {
@@ -84,6 +96,8 @@ impl SoftwareRenderer {
             glyph_cache_misses: 0,
             needs_full_clear: true,
             glyph_cache: HashMap::new(),
+            glyph_cache_limit: GLYPH_CACHE_LIMIT,
+            glyph_cache_clock: 0,
         }
     }
 
@@ -96,10 +110,37 @@ impl SoftwareRenderer {
         self.glyph_cache.len()
     }
 
+    /// The configured ceiling on cached glyph masks.
+    pub fn glyph_cache_limit(&self) -> usize {
+        self.glyph_cache_limit
+    }
+
+    /// Changes the cache ceiling, evicting least-recently-used entries until
+    /// the cache fits. A limit of zero is clamped to one: the cache always
+    /// holds the most recently used mask.
+    pub fn set_glyph_cache_limit(&mut self, limit: usize) {
+        self.glyph_cache_limit = limit.max(1);
+        while self.glyph_cache.len() > self.glyph_cache_limit {
+            self.evict_glyph_cache_one();
+        }
+    }
+
     /// Drops all cached glyph masks (e.g. under memory pressure). The next
     /// frame re-rasterises on demand.
     pub fn clear_glyph_cache(&mut self) {
         self.glyph_cache.clear();
+    }
+
+    /// Evicts the single least-recently-used mask.
+    fn evict_glyph_cache_one(&mut self) {
+        let oldest = self
+            .glyph_cache
+            .iter()
+            .min_by_key(|(_, value)| value.2)
+            .map(|(key, _)| *key);
+        if let Some(key) = oldest {
+            self.glyph_cache.remove(&key);
+        }
     }
 
     pub fn pixel_rgba(&self, x: u32, y: u32) -> Option<[u8; 4]> {
@@ -255,28 +296,35 @@ impl SoftwareRenderer {
                     run.font_size.to_bits(),
                     glyph.id,
                 );
-                let mask = match self.glyph_cache.get(&cache_key) {
-                    Some((_, mask)) => {
-                        self.glyph_cache_hits += 1;
-                        std::sync::Arc::clone(mask)
+                let mask = if let Some((_, mask, stamp)) = self.glyph_cache.get_mut(&cache_key) {
+                    self.glyph_cache_clock += 1;
+                    *stamp = self.glyph_cache_clock;
+                    self.glyph_cache_hits += 1;
+                    std::sync::Arc::clone(mask)
+                } else {
+                    self.glyph_cache_misses += 1;
+                    let Some(mask) = rasterize_glyph(font_ref, run.font_size, glyph.id) else {
+                        // Colour glyphs (emoji) have no alpha-mask form;
+                        // not cached, retried (and skipped) each frame.
+                        continue;
+                    };
+                    let mask = std::sync::Arc::new(mask);
+                    // The FontData clone pins the font bytes, so the
+                    // key's pointer stays valid and un-aliasable while
+                    // the entry lives.
+                    if self.glyph_cache.len() >= self.glyph_cache_limit {
+                        self.evict_glyph_cache_one();
                     }
-                    None => {
-                        self.glyph_cache_misses += 1;
-                        let Some(mask) = rasterize_glyph(font_ref, run.font_size, glyph.id) else {
-                            // Colour glyphs (emoji) have no alpha-mask form;
-                            // not cached, retried (and skipped) each frame.
-                            continue;
-                        };
-                        let mask = std::sync::Arc::new(mask);
-                        // The FontData clone pins the font bytes, so the
-                        // key's pointer stays valid and un-aliasable while
-                        // the entry lives.
-                        self.glyph_cache.insert(
-                            cache_key,
-                            (run.font.data.clone(), std::sync::Arc::clone(&mask)),
-                        );
-                        mask
-                    }
+                    self.glyph_cache_clock += 1;
+                    self.glyph_cache.insert(
+                        cache_key,
+                        (
+                            run.font.data.clone(),
+                            std::sync::Arc::clone(&mask),
+                            self.glyph_cache_clock,
+                        ),
+                    );
+                    mask
                 };
                 // swash placement: left is origin→image-left; top is
                 // image-top→baseline (y-down), so the image's top-left lands
@@ -523,7 +571,6 @@ mod tests {
     use floem_renderer::{FrameInfo, render_once};
     use floem_scene::{Point, SceneNode, Size};
     use floem_types::Color;
-    use std::collections::HashMap;
 
     #[test]
     fn software_draws_rect_pixels() {
@@ -879,5 +926,90 @@ mod tests {
             sw.glyph_cache_misses > misses_first,
             "a new size rasterises fresh masks"
         );
+    }
+
+    /// Beyond the cache limit the least-recently-used masks are evicted: the
+    /// cache never grows past the ceiling, a long-untouched size must
+    /// re-rasterise when it comes back, and the most recently used size is
+    /// still served from the cache.
+    #[test]
+    fn glyph_cache_evicts_least_recently_used() {
+        use floem_text::{TextAlign, TextLayoutOptions};
+
+        // Shape every size exactly once and reuse those runs across frames:
+        // each shape() call allocates fresh font bytes, which are part of
+        // the cache key — only same-byte glyphs can ever hit the cache.
+        let sizes = [10.0, 12.0, 14.0, 16.0, 18.0];
+        let shaped: std::collections::HashMap<u32, Vec<floem_text::GlyphRun>> = sizes
+            .iter()
+            .map(|&size| {
+                let mut shaper = floem_text::TextShaper::new();
+                let laid = shaper.shape(
+                    "HI",
+                    &TextLayoutOptions {
+                        max_width: f64::INFINITY,
+                        font_size: size,
+                        align: TextAlign::Start,
+                    },
+                );
+                (size.to_bits(), laid.runs.clone())
+            })
+            .collect();
+        let make_scene = |runs: &[floem_text::GlyphRun]| {
+            let mut registry = ResourceRegistry::new();
+            let glyphs = registry.insert(floem_scene::Resource {
+                kind: ResourceKind::GlyphRun {
+                    runs: runs.to_vec(),
+                },
+            });
+            let mut scene = Scene::new();
+            scene.begin_update();
+            let _ = scene.insert(SceneNode::Text {
+                origin: Point::new(2.0, 2.0),
+                size: Size::new(90.0, 30.0),
+                glyphs,
+                color: Color::rgb(255, 255, 255),
+            });
+            scene.finish_update();
+            (scene, registry)
+        };
+
+        let mut sw = SoftwareRenderer::new(96, 40);
+        sw.set_glyph_cache_limit(4);
+        assert_eq!(sw.glyph_cache_limit(), 4);
+
+        // Five sizes x two glyphs = ten distinct masks through a 4-slot cache.
+        for size in sizes {
+            let (scene, registry) = make_scene(&shaped[&size.to_bits()]);
+            sw.render_scene_with_resources(&scene, scene.damage(), &registry);
+            sw.end_frame();
+            assert!(
+                sw.glyph_cache_entries() <= 4,
+                "cache stays within the limit, got {}",
+                sw.glyph_cache_entries()
+            );
+        }
+
+        // The oldest size was evicted long ago: coming back re-rasterises.
+        let misses_before = sw.glyph_cache_misses;
+        let (scene, registry) = make_scene(&shaped[&10.0f32.to_bits()]);
+        sw.render_scene_with_resources(&scene, scene.damage(), &registry);
+        sw.end_frame();
+        assert!(
+            sw.glyph_cache_misses > misses_before,
+            "evicted size re-rasterises on its return"
+        );
+
+        // The most recent size is still warm: no new rasterisation.
+        let misses_before = sw.glyph_cache_misses;
+        let hits_before = sw.glyph_cache_hits;
+        let (scene, registry) = make_scene(&shaped[&18.0f32.to_bits()]);
+        sw.render_scene_with_resources(&scene, scene.damage(), &registry);
+        sw.end_frame();
+        assert_eq!(
+            sw.glyph_cache_misses, misses_before,
+            "recent size stays cached"
+        );
+        assert!(sw.glyph_cache_hits > hits_before, "served from the cache");
     }
 }
