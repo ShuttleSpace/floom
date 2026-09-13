@@ -1,8 +1,8 @@
 use std::hint::black_box;
 use std::time::Duration;
 
-use criterion::{criterion_group, criterion_main, Criterion};
-use floem_renderer::{render_once, FrameInfo};
+use criterion::{Criterion, criterion_group, criterion_main};
+use floem_renderer::{FrameInfo, render_once};
 use floem_renderer_vello::VelloRendererAdapter;
 use floem_scene::{Color, Point, Rect, Scene, SceneNode, Size};
 

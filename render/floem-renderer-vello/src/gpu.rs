@@ -28,14 +28,25 @@
 //! ## Not yet implemented
 //!
 //! Nothing: rects, shaped text and images all render. Text goes through the
-//! glyph-run resource (see `floem-text`); images are re-uploaded from their
-//! decoded RGBA8 resource every frame — there is no texture cache yet, which
-//! is fine for UI-sized images and the obvious next optimisation if that
-//! changes.
+//! glyph-run resource (see `floem-text`); image uploads are cached per
+//! resource id (see "Image texture caching" below).
+
+//! ## Image texture caching
+//!
+//! Vello keeps its own GPU-side image atlas keyed by `ImageData`'s blob id —
+//! and `Blob::new` mints a *fresh* id on every call. Building the
+//! [`ImageBrush`] per frame (as this used to do) therefore defeats vello's
+//! atlas: every frame looked like a brand-new image and re-uploaded the full
+//! bitmap. The presenter now caches one `ImageBrush` per image resource
+//! (keyed by the resource's generational id) and reuses it across frames, so
+//! pixels upload once per registration, not once per frame. Cached entries not
+//! referenced by the current frame are pruned, so evicted/replaced resources
+//! never leak.
 
 use floem_renderer::{AttachedSurface, Presenter, SurfaceHandles};
 use floem_scene::{ResourceKind, ResourceRegistry, Scene, SceneNode};
 use floem_types::{Size, SurfaceId, WindowId};
+use std::collections::{HashMap, HashSet};
 
 use vello::kurbo::{Affine, Rect as KurboRect, RoundedRect as KurboRoundedRect};
 use vello::peniko::{
@@ -65,6 +76,11 @@ pub struct GpuFrameStats {
     /// Nodes skipped: only nodes with a dangling / wrong-kind resource id land
     /// here now that rect, text and image all have pipelines.
     pub unsupported_nodes: u64,
+    /// Frames where an image node reused a cached GPU texture.
+    pub texture_cache_hits: u64,
+    /// Image textures uploaded (first sighting of a resource id, or re-encode
+    /// after eviction).
+    pub texture_cache_misses: u64,
 }
 
 /// Vello + wgpu [`Presenter`].
@@ -82,6 +98,10 @@ pub struct VelloGpuPresenter {
     stats: GpuFrameStats,
     window: Option<WindowId>,
     surface_id: Option<SurfaceId>,
+    /// Cached `ImageBrush` per image resource, keyed by `ResourceId::raw()`.
+    /// The brush holds an `Arc` to the registry's pixels, so building it once
+    /// shares bytes with the scene layer and uploads once to vello's atlas.
+    image_cache: HashMap<u64, ImageBrush>,
 }
 
 impl std::fmt::Debug for VelloGpuPresenter {
@@ -136,6 +156,7 @@ impl VelloGpuPresenter {
             stats: GpuFrameStats::default(),
             window: None,
             surface_id: None,
+            image_cache: HashMap::new(),
         })
     }
 
@@ -243,12 +264,19 @@ impl VelloGpuPresenter {
     /// a retained tree, so there is nothing to diff. `floem-scene`'s damage
     /// region is what the renderer would use to skip work; until partial
     /// rendering lands the whole list is re-encoded each frame.
-    fn encode(&mut self, scene: &Scene, resources: &ResourceRegistry) -> (u64, u64, u64, u64) {
+    fn encode(
+        &mut self,
+        scene: &Scene,
+        resources: &ResourceRegistry,
+    ) -> (u64, u64, u64, u64, u64, u64) {
         self.vello_scene.reset();
         let mut rects = 0;
         let mut glyph_runs = 0;
         let mut images = 0;
         let mut unsupported = 0;
+        let mut cache_hits = 0;
+        let mut cache_misses = 0;
+        let mut used_images: HashSet<u64> = HashSet::new();
         for (_id, node) in scene.iter() {
             match node {
                 SceneNode::Rect {
@@ -323,34 +351,59 @@ impl VelloGpuPresenter {
                     {
                         continue;
                     }
-                    // Vello draws the image at its natural pixel size; scale
-                    // and translate it onto the node's resolved bounds. The
-                    // registry owns premultiplied RGBA8, which is exactly what
-                    // `ImageData` expects — the bytes are shared, not copied.
-                    let data = ImageData {
-                        data: Blob::new(std::sync::Arc::new(pixels.clone())),
-                        format: ImageFormat::Rgba8,
-                        alpha_type: ImageAlphaType::AlphaPremultiplied,
-                        width: *width,
-                        height: *height,
+                    // Texture cache: one ImageBrush per resource id. The
+                    // brush's Blob shares the registry's `Arc<[u8]>` and keeps
+                    // a stable id, which is what vello's atlas keys on —
+                    // rebuilding it per frame would re-upload every frame.
+                    let key = image.raw();
+                    used_images.insert(key);
+                    let brush = match self.image_cache.entry(key) {
+                        std::collections::hash_map::Entry::Occupied(entry) => {
+                            cache_hits += 1;
+                            entry.into_mut()
+                        }
+                        std::collections::hash_map::Entry::Vacant(entry) => {
+                            cache_misses += 1;
+                            // One Arc clone, no pixel bytes copied: the Blob
+                            // shares ownership with the registry. The extra
+                            // Arc layer exists because `Blob` wants an
+                            // `Arc<dyn AsRef<[u8]>>` and an unsized pointee
+                            // cannot coerce directly — this happens once per
+                            // registration (cache miss), not per frame.
+                            let shared = std::sync::Arc::new(std::sync::Arc::clone(pixels));
+                            entry.insert(ImageBrush {
+                                image: ImageData {
+                                    data: Blob::new(shared),
+                                    format: ImageFormat::Rgba8,
+                                    alpha_type: ImageAlphaType::AlphaPremultiplied,
+                                    width: *width,
+                                    height: *height,
+                                },
+                                sampler: ImageSampler::default(),
+                            })
+                        }
                     };
                     let sx = bounds.width() / f64::from(*width);
                     let sy = bounds.height() / f64::from(*height);
                     let transform = Affine::translate((bounds.x0, bounds.y0))
                         * Affine::scale_non_uniform(sx, sy);
-                    self.vello_scene.draw_image(
-                        &ImageBrush {
-                            image: data,
-                            sampler: ImageSampler::default(),
-                        },
-                        transform,
-                    );
+                    self.vello_scene.draw_image(&*brush, transform);
                     images += 1;
                 }
                 SceneNode::Group { .. } => {}
             }
         }
-        (rects, glyph_runs, images, unsupported)
+        // Prune brushes the scene no longer references. The key includes the
+        // generation, so a re-registered slot is a fresh entry by construction.
+        self.image_cache.retain(|key, _| used_images.contains(key));
+        (
+            rects,
+            glyph_runs,
+            images,
+            unsupported,
+            cache_hits,
+            cache_misses,
+        )
     }
 }
 
@@ -406,13 +459,16 @@ impl Presenter for VelloGpuPresenter {
     }
 
     fn present(&mut self, scene: &Scene, resources: &ResourceRegistry) {
-        let (rects, glyph_runs, images, unsupported) = self.encode(scene, resources);
+        let (rects, glyph_runs, images, unsupported, cache_hits, cache_misses) =
+            self.encode(scene, resources);
         // Encode stats are final whether or not a surface was attached — the
         // encoding work (and any skipped nodes) happened either way.
         self.stats.rects = rects;
         self.stats.glyph_runs = glyph_runs;
         self.stats.images = images;
         self.stats.unsupported_nodes = unsupported;
+        self.stats.texture_cache_hits = cache_hits;
+        self.stats.texture_cache_misses = cache_misses;
         let Some(surface) = self.surface.as_mut() else {
             return;
         };
@@ -592,6 +648,118 @@ mod tests {
         assert_eq!(stats.rects, 0);
         assert_eq!(stats.unsupported_nodes, 0);
         assert_eq!(presenter.frames_presented(), 0, "nothing was presented");
+    }
+
+    /// The same image resource presented across frames must hit the texture
+    /// cache from the second frame on — one upload per registration, not one
+    /// per frame.
+    #[test]
+    fn repeated_frames_hit_the_texture_cache() {
+        let Some(mut presenter) = presenter() else {
+            return;
+        };
+        let mut registry = ResourceRegistry::new();
+        let img = registry.insert(floem_scene::Resource {
+            kind: ResourceKind::Image {
+                width: 4,
+                height: 4,
+                pixels: std::sync::Arc::from(vec![7u8; 64].into_boxed_slice()),
+            },
+        });
+        let mut scene = Scene::new();
+        scene.begin_update();
+        let _ = scene.insert(SceneNode::Image {
+            bounds: floem_types::Rect::from_origin_size(
+                floem_types::Point::new(0.0, 0.0),
+                Size::new(8.0, 8.0),
+            ),
+            image: img,
+        });
+        scene.finish_update();
+
+        presenter.present(&scene, &registry);
+        assert_eq!(presenter.stats().texture_cache_misses, 1, "first upload");
+        assert_eq!(presenter.stats().texture_cache_hits, 0);
+
+        presenter.present(&scene, &registry);
+        let stats = presenter.stats();
+        assert_eq!(stats.images, 1, "still encoded every frame");
+        assert_eq!(stats.texture_cache_hits, 1, "second frame reuses it");
+        assert_eq!(
+            stats.texture_cache_misses, 0,
+            "per-frame stats, not cumulative: no new upload"
+        );
+    }
+
+    /// Two distinct image resources each get their own cached texture; a
+    /// resource id the scene stops referencing gets pruned (a re-encounter
+    /// after pruning re-uploads, never serves a stale generation).
+    #[test]
+    fn distinct_images_cache_independently_and_unreferenced_entries_prune() {
+        let Some(mut presenter) = presenter() else {
+            return;
+        };
+        let mut registry = ResourceRegistry::new();
+        let img_a = registry.insert(floem_scene::Resource {
+            kind: ResourceKind::Image {
+                width: 2,
+                height: 2,
+                pixels: std::sync::Arc::from(vec![1u8; 16].into_boxed_slice()),
+            },
+        });
+        let img_b = registry.insert(floem_scene::Resource {
+            kind: ResourceKind::Image {
+                width: 3,
+                height: 2,
+                pixels: std::sync::Arc::from(vec![2u8; 24].into_boxed_slice()),
+            },
+        });
+
+        let mut both = Scene::new();
+        both.begin_update();
+        for image in [img_a, img_b] {
+            let _ = both.insert(SceneNode::Image {
+                bounds: floem_types::Rect::from_origin_size(
+                    floem_types::Point::new(0.0, 0.0),
+                    Size::new(6.0, 4.0),
+                ),
+                image,
+            });
+        }
+        both.finish_update();
+
+        presenter.present(&both, &registry);
+        let s = presenter.stats();
+        assert_eq!(s.images, 2);
+        assert_eq!(s.texture_cache_misses, 2, "two distinct uploads");
+
+        presenter.present(&both, &registry);
+        let s = presenter.stats();
+        assert_eq!(s.texture_cache_hits, 2, "both cached");
+
+        // Scene referencing only img_b: img_a's brush must be pruned.
+        let mut only_b = Scene::new();
+        only_b.begin_update();
+        let _ = only_b.insert(SceneNode::Image {
+            bounds: floem_types::Rect::from_origin_size(
+                floem_types::Point::new(0.0, 0.0),
+                Size::new(6.0, 4.0),
+            ),
+            image: img_b,
+        });
+        only_b.finish_update();
+
+        presenter.present(&only_b, &registry);
+        let s = presenter.stats();
+        assert_eq!(s.images, 1);
+        assert_eq!(s.texture_cache_hits, 1, "img_b still cached");
+        assert_eq!(s.texture_cache_misses, 0);
+
+        // img_a returns to the scene: its brush was pruned, so it re-uploads.
+        presenter.present(&both, &registry);
+        let s = presenter.stats();
+        assert_eq!(s.texture_cache_misses, 1, "pruned img_a re-uploads once");
+        assert_eq!(s.texture_cache_hits, 1, "img_b still a hit");
     }
 
     #[test]
