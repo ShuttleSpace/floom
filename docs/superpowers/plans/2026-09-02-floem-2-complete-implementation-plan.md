@@ -825,11 +825,11 @@ struct PlatformCapabilities { ... }
 - Create: `framework/floem-navigation/src/lib.rs`
 - Test: route/deep-link/restoration tests
 
-- [ ] **Step 1: Write typed-route tests.**
-- [ ] **Step 2: Implement Router state and Navigator stack.**
-- [ ] **Step 3: Add URL/deep-link parser boundary.**
-- [ ] **Step 4: Add stack/tab/split containers.**
-- [ ] **Step 5: Commit.**
+- [x] **Step 1: Write typed-route tests.**
+- [x] **Step 2: Implement Router state and Navigator stack.**
+- [x] **Step 3: Add URL/deep-link parser boundary.**
+- [x] **Step 4: Add stack/tab/split containers.**
+- [x] **Step 5: Commit.**
 
 ## Task 15.2: Persistence and restoration
 
@@ -837,11 +837,11 @@ struct PlatformCapabilities { ... }
 - Create: `framework/floem-persistence/src/lib.rs`
 - Test: key-value/restoration tests
 
-- [ ] **Step 1: Define backend traits.**
-- [ ] **Step 2: Implement in-memory and file-based reference providers.**
-- [ ] **Step 3: Add restoration snapshots.**
-- [ ] **Step 4: Connect platform storage providers.**
-- [ ] **Step 5: Commit.**
+- [x] **Step 1: Define backend traits.**
+- [x] **Step 2: Implement in-memory and file-based reference providers.**
+- [x] **Step 3: Add restoration snapshots.**
+- [x] **Step 4: Connect platform storage providers.**
+- [x] **Step 5: Commit.**
 
 ## Task 15.3: Service scopes / DI
 
@@ -849,10 +849,10 @@ struct PlatformCapabilities { ... }
 - Create: `framework/floem-services/src/lib.rs`
 - Test: scope lifetime tests
 
-- [ ] **Step 1: Write service registration/resolution tests.**
-- [ ] **Step 2: Implement scoped service registry with typed-first APIs.**
-- [ ] **Step 3: Verify disposal with Scope lifetime.**
-- [ ] **Step 4: Commit.**
+- [x] **Step 1: Write service registration/resolution tests.**
+- [x] **Step 2: Implement scoped service registry with typed-first APIs.**
+- [x] **Step 3: Verify disposal with Scope lifetime.**
+- [x] **Step 4: Commit.**
 
 ## Task 15.4: ErrorBoundary
 
@@ -860,10 +860,10 @@ struct PlatformCapabilities { ... }
 - Create: `framework/floem-error/src/lib.rs`
 - Test: recoverable/fatal boundary tests
 
-- [ ] **Step 1: Write fallback rendering tests.**
-- [ ] **Step 2: Implement error capture around recoverable application callbacks.**
-- [ ] **Step 3: Preserve diagnostic context in debug builds.**
-- [ ] **Step 4: Commit.**
+- [x] **Step 1: Write fallback rendering tests.**
+- [x] **Step 2: Implement error capture around recoverable application callbacks.**
+- [x] **Step 3: Preserve diagnostic context in debug builds.**
+- [x] **Step 4: Commit.**
 
 ---
 

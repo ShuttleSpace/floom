@@ -2019,6 +2019,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "floem-error"
+version = "0.2.0"
+
+[[package]]
 name = "floem-focus"
 version = "0.2.0"
 dependencies = [
@@ -2066,6 +2070,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "floem-navigation"
+version = "0.2.0"
+
+[[package]]
 name = "floem-overlay"
 version = "0.2.0"
 dependencies = [
@@ -2073,6 +2081,10 @@ dependencies = [
  "floem-focus",
  "floem-types",
 ]
+
+[[package]]
+name = "floem-persistence"
+version = "0.2.0"
 
 [[package]]
 name = "floem-platform"
@@ -2211,6 +2223,10 @@ dependencies = [
 
 [[package]]
 name = "floem-scheduler"
+version = "0.2.0"
+
+[[package]]
+name = "floem-services"
 version = "0.2.0"
 
 [[package]]
