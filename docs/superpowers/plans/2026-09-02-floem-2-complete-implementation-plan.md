@@ -794,12 +794,26 @@ struct PlatformCapabilities { ... }
 
 **Files:**
 - Create: `framework/floem-forms/src/lib.rs`
-- Test: validation/form-state tests
+- Test: validation/form-state tests + `app/floem-app/tests/forms.rs`
 
-- [ ] **Step 1: Define FormController state.**
-- [ ] **Step 2: Implement validators and async validation.**
-- [ ] **Step 3: Integrate TextField/Select/Switch.**
-- [ ] **Step 4: Commit.**
+- [x] **Step 1: Define FormController state.**
+- [x] **Step 2: Implement validators and async validation.**
+- [x] **Step 3: Integrate TextField/Select/Switch.**
+- [x] **Step 4: Commit.**
+
+> Notes:
+> - `floem-forms` is deliberately **widget-free**: the architecture puts
+>   `framework/` *below* `widgets/`, so the crate models a form as plain data
+>   and exposes a closure-based `FieldBinding<C>` seam. The widgets layer (here,
+>   `app/floem-app/tests/forms.rs`) supplies the binding for `TextField` /
+>   `Switch` / `Select` and drives the controller end-to-end. `floem-forms`
+>   therefore adds no dependency edges.
+> - Async validation models the server-round-trip race: `begin_validation`
+>   mints a generation-stamped `ValidationTicket` and `complete` applies a
+>   result only while its ticket is current, so a slow reply for an old value is
+>   dropped rather than overwriting the new verdict. No runtime is required to
+>   test it.
+> - 10 crate unit tests + 1 cross-layer integration test.
 
 ---
 

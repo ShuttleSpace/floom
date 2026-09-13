@@ -1960,6 +1960,7 @@ dependencies = [
  "floem-accessibility",
  "floem-core",
  "floem-focus",
+ "floem-forms",
  "floem-layout",
  "floem-runtime",
  "floem-runtime-core",
@@ -2020,6 +2021,10 @@ version = "0.2.0"
 dependencies = [
  "floem-types",
 ]
+
+[[package]]
+name = "floem-forms"
+version = "0.2.0"
 
 [[package]]
 name = "floem-gesture"

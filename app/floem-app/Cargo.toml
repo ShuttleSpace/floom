@@ -19,3 +19,4 @@ floem-focus = { path = "../../framework/floem-focus", version = "0.2.0" }
 floem-widgets = { path = "../../widgets/floem-widgets", version = "0.2.0" }
 
 [dev-dependencies]
+floem-forms = { path = "../../framework/floem-forms", version = "0.2.0" }

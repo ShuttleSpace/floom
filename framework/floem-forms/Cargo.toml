@@ -1,0 +1,10 @@
+[package]
+name = "floem-forms"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Form controller state and validation for Floem 2.0"
+rust-version.workspace = true
+
+[dependencies]
