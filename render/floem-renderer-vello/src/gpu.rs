@@ -27,17 +27,21 @@
 //!
 //! ## Not yet implemented
 //!
-//! `SceneNode::Text` and `SceneNode::Image` are counted and skipped: they need
-//! the glyph/image resource pipeline (atlas uploads) that lives with the text
-//! stack, not with surface presentation. Rects — the whole of the current paint
-//! output — render correctly.
+//! Nothing: rects, shaped text and images all render. Text goes through the
+//! glyph-run resource (see `floem-text`); images are re-uploaded from their
+//! decoded RGBA8 resource every frame — there is no texture cache yet, which
+//! is fine for UI-sized images and the obvious next optimisation if that
+//! changes.
 
 use floem_renderer::{AttachedSurface, Presenter, SurfaceHandles};
 use floem_scene::{ResourceKind, ResourceRegistry, Scene, SceneNode};
 use floem_types::{Size, SurfaceId, WindowId};
 
 use vello::kurbo::{Affine, Rect as KurboRect};
-use vello::peniko::{Color as PenikoColor, Fill};
+use vello::peniko::{
+    Blob, Color as PenikoColor, Fill, ImageAlphaType, ImageBrush, ImageData, ImageFormat,
+    ImageSampler,
+};
 use vello::util::RenderSurface;
 use vello::wgpu;
 use vello::wgpu::util::TextureBlitter;
@@ -56,7 +60,10 @@ pub struct GpuFrameStats {
     pub rects: u64,
     /// Glyph runs (one per shaped text run) encoded into the last frame.
     pub glyph_runs: u64,
-    /// Nodes skipped because the GPU path has no pipeline for them yet.
+    /// Images encoded into the last frame.
+    pub images: u64,
+    /// Nodes skipped: only nodes with a dangling / wrong-kind resource id land
+    /// here now that rect, text and image all have pipelines.
     pub unsupported_nodes: u64,
 }
 
@@ -236,10 +243,11 @@ impl VelloGpuPresenter {
     /// a retained tree, so there is nothing to diff. `floem-scene`'s damage
     /// region is what the renderer would use to skip work; until partial
     /// rendering lands the whole list is re-encoded each frame.
-    fn encode(&mut self, scene: &Scene, resources: &ResourceRegistry) -> (u64, u64, u64) {
+    fn encode(&mut self, scene: &Scene, resources: &ResourceRegistry) -> (u64, u64, u64, u64) {
         self.vello_scene.reset();
         let mut rects = 0;
         let mut glyph_runs = 0;
+        let mut images = 0;
         let mut unsupported = 0;
         for (_id, node) in scene.iter() {
             match node {
@@ -291,11 +299,52 @@ impl VelloGpuPresenter {
                         glyph_runs += 1;
                     }
                 }
+                SceneNode::Image { bounds, image } => {
+                    let Some(ResourceKind::Image {
+                        width,
+                        height,
+                        pixels,
+                    }) = resources.get(*image).map(|r| &r.kind)
+                    else {
+                        // Dangling or wrong-kind id: skip rather than fail.
+                        unsupported += 1;
+                        continue;
+                    };
+                    if bounds.width() <= 0.0
+                        || bounds.height() <= 0.0
+                        || *width == 0
+                        || *height == 0
+                    {
+                        continue;
+                    }
+                    // Vello draws the image at its natural pixel size; scale
+                    // and translate it onto the node's resolved bounds. The
+                    // registry owns premultiplied RGBA8, which is exactly what
+                    // `ImageData` expects — the bytes are shared, not copied.
+                    let data = ImageData {
+                        data: Blob::new(std::sync::Arc::new(pixels.clone())),
+                        format: ImageFormat::Rgba8,
+                        alpha_type: ImageAlphaType::AlphaPremultiplied,
+                        width: *width,
+                        height: *height,
+                    };
+                    let sx = bounds.width() / f64::from(*width);
+                    let sy = bounds.height() / f64::from(*height);
+                    let transform = Affine::translate((bounds.x0, bounds.y0))
+                        * Affine::scale_non_uniform(sx, sy);
+                    self.vello_scene.draw_image(
+                        &ImageBrush {
+                            image: data,
+                            sampler: ImageSampler::default(),
+                        },
+                        transform,
+                    );
+                    images += 1;
+                }
                 SceneNode::Group { .. } => {}
-                SceneNode::Image { .. } => unsupported += 1,
             }
         }
-        (rects, glyph_runs, unsupported)
+        (rects, glyph_runs, images, unsupported)
     }
 }
 
@@ -351,7 +400,13 @@ impl Presenter for VelloGpuPresenter {
     }
 
     fn present(&mut self, scene: &Scene, resources: &ResourceRegistry) {
-        let (rects, glyph_runs, unsupported) = self.encode(scene, resources);
+        let (rects, glyph_runs, images, unsupported) = self.encode(scene, resources);
+        // Encode stats are final whether or not a surface was attached — the
+        // encoding work (and any skipped nodes) happened either way.
+        self.stats.rects = rects;
+        self.stats.glyph_runs = glyph_runs;
+        self.stats.images = images;
+        self.stats.unsupported_nodes = unsupported;
         let Some(surface) = self.surface.as_mut() else {
             return;
         };
@@ -402,9 +457,6 @@ impl Presenter for VelloGpuPresenter {
         frame.present();
 
         self.stats.frames += 1;
-        self.stats.rects = rects;
-        self.stats.glyph_runs = glyph_runs;
-        self.stats.unsupported_nodes = unsupported;
     }
 
     fn detach(&mut self) {
@@ -499,5 +551,65 @@ mod tests {
         surface.size = Size::new(0.0, 0.0);
         assert_eq!(surface.physical_size(), (0, 0));
         assert!(!presenter.attach(surface));
+    }
+
+    #[test]
+    fn image_nodes_encode_their_resource() {
+        let Some(mut presenter) = presenter() else {
+            return;
+        };
+        let mut registry = ResourceRegistry::new();
+        let img = registry.insert(floem_scene::Resource {
+            kind: ResourceKind::Image {
+                width: 2,
+                height: 2,
+                pixels: std::sync::Arc::from(vec![255u8; 16].into_boxed_slice()),
+            },
+        });
+        let mut scene = Scene::new();
+        scene.begin_update();
+        let _ = scene.insert(SceneNode::Image {
+            bounds: floem_types::Rect::from_origin_size(
+                floem_types::Point::new(1.0, 2.0),
+                Size::new(8.0, 4.0),
+            ),
+            image: img,
+        });
+        scene.finish_update();
+
+        // No surface attached: encoding still happens (and is counted), only
+        // the swap-chain present is skipped.
+        presenter.present(&scene, &registry);
+        let stats = presenter.stats();
+        assert_eq!(stats.images, 1, "the image node encoded");
+        assert_eq!(stats.rects, 0);
+        assert_eq!(stats.unsupported_nodes, 0);
+        assert_eq!(presenter.frames_presented(), 0, "nothing was presented");
+    }
+
+    #[test]
+    fn dangling_image_resource_is_counted_unsupported() {
+        let Some(mut presenter) = presenter() else {
+            return;
+        };
+        let mut scene = Scene::new();
+        scene.begin_update();
+        // A resource id that resolves to nothing (empty registry).
+        let _ = scene.insert(SceneNode::Image {
+            bounds: floem_types::Rect::from_origin_size(
+                floem_types::Point::new(0.0, 0.0),
+                Size::new(8.0, 4.0),
+            ),
+            image: floem_types::ResourceId::new(99, 1),
+        });
+        scene.finish_update();
+
+        presenter.present(&scene, &ResourceRegistry::new());
+        let stats = presenter.stats();
+        assert_eq!(stats.images, 0);
+        assert_eq!(
+            stats.unsupported_nodes, 1,
+            "dangling id is skipped + counted"
+        );
     }
 }

@@ -22,6 +22,7 @@ fn shared_resource_survives_one_release() {
         kind: ResourceKind::Image {
             width: 10,
             height: 10,
+            pixels: std::sync::Arc::from(vec![0u8; 10 * 10 * 4].into_boxed_slice()),
         },
     });
     reg.retain(id);
@@ -78,5 +79,35 @@ fn glyph_run_resource_carries_shaped_runs() {
     assert_eq!(reg.used_units(), glyph_cost);
     assert!(reg.release(id));
     assert!(reg.get(id).is_none());
+    assert_eq!(reg.used_units(), 0);
+}
+
+/// An image resource round-trips its decoded pixels, and its cost is one unit
+/// per pixel (the budget currency for images).
+#[test]
+fn image_resource_carries_decoded_pixels() {
+    let mut reg = ResourceRegistry::new();
+    let pixels: std::sync::Arc<[u8]> =
+        std::sync::Arc::from(vec![7u8; 4 * 3 * 4].into_boxed_slice());
+    let id = reg.insert(Resource {
+        kind: ResourceKind::Image {
+            width: 4,
+            height: 3,
+            pixels: pixels.clone(),
+        },
+    });
+
+    let Some(ResourceKind::Image {
+        width,
+        height,
+        pixels: got,
+    }) = reg.get(id).map(|r| &r.kind)
+    else {
+        panic!("image resource does not round-trip");
+    };
+    assert_eq!((*width, *height), (4, 3));
+    assert_eq!(got.as_ref(), pixels.as_ref());
+    assert_eq!(reg.used_units(), 4 * 3);
+    assert!(reg.release(id));
     assert_eq!(reg.used_units(), 0);
 }

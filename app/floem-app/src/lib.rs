@@ -892,6 +892,32 @@ impl WidgetHost {
         &self.resources
     }
 
+    /// Registers decoded image pixels and returns the resource id a
+    /// [`floem_widgets::Image`] widget renders from.
+    ///
+    /// `pixels` must be RGBA8 **premultiplied**, row-major, `width * height * 4`
+    /// bytes — the format the GPU path uploads verbatim and the software path
+    /// documents. Returns `None` (without touching the registry) when the buffer
+    /// does not match the declared extent, so a producer bug fails loudly at
+    /// registration instead of corrupting a GPU upload later.
+    pub fn register_image(
+        &mut self,
+        width: u32,
+        height: u32,
+        pixels: Vec<u8>,
+    ) -> Option<ResourceId> {
+        if pixels.len() != width as usize * height as usize * 4 {
+            return None;
+        }
+        Some(self.resources.insert(Resource {
+            kind: ResourceKind::Image {
+                width,
+                height,
+                pixels: std::sync::Arc::from(pixels.into_boxed_slice()),
+            },
+        }))
+    }
+
     pub fn semantics(&self) -> &SemanticsTree {
         &self.semantics
     }

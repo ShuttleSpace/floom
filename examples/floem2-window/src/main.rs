@@ -31,7 +31,7 @@ use floem_platform::WindowConfig;
 use floem_platform_desktop::winit_backend::{WinitApp, WinitPlatform, run};
 use floem_renderer_vello::VelloGpuPresenter;
 use floem_types::Size;
-use floem_widgets::{Button, Stack, Text};
+use floem_widgets::{Button, Image, Stack, Text};
 
 /// The application: an [`AppRunner`] plus the counter's UI state.
 ///
@@ -94,6 +94,19 @@ impl WindowApp {
 fn main() {
     let mut host = WidgetHost::new();
 
+    // A synthetic 64×32 gradient so the GPU image path is exercised every
+    // frame. Pixels are premultiplied RGBA8 — fully opaque here, so the
+    // premultiplication is a no-op.
+    let mut pixels = Vec::with_capacity(64 * 32 * 4);
+    for y in 0..32u8 {
+        for x in 0..64u8 {
+            pixels.extend_from_slice(&[x * 4, y * 8, 128, 255]);
+        }
+    }
+    let picture = host
+        .register_image(64, 32, pixels)
+        .expect("gradient pixel count matches its extent");
+
     // A minimal counter: a text label and a fixed-size button. The button only
     // bumps a shared atomic; the label text is rewritten from the frame hook
     // (`WindowApp::sync_label`), which is how state reaches an immutable-text
@@ -110,6 +123,9 @@ fn main() {
         // its measured intrinsic size and the host applies it as the default.
         .push_layout(LayoutRequest::new(), || {
             Box::new(Text::new("clicked 0 times").size(20.0))
+        })
+        .push_layout(LayoutRequest::new().width(128.0).height(64.0), move || {
+            Box::new(Image::new(picture).intrinsic_size(Size::new(64.0, 32.0)))
         })
         .push_layout(LayoutRequest::new().width(160.0).height(40.0), move || {
             let flag = flag.clone();

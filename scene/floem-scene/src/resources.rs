@@ -11,9 +11,12 @@ use std::collections::VecDeque;
 /// the other variants support.
 #[derive(Debug, Clone, PartialEq)]
 pub enum ResourceKind {
+    /// Decoded pixels, RGBA8 **premultiplied** (one `Vec` row-major, 4 bytes
+    /// per pixel), shared via `Arc` so a frame never copies a full bitmap.
     Image {
         width: u32,
         height: u32,
+        pixels: std::sync::Arc<[u8]>,
     },
     /// Fully shaped text. The node referencing this resource only carries the
     /// resource id; everything a renderer needs (font data, size, glyph ids and
@@ -177,7 +180,9 @@ impl ResourceRegistry {
 
 fn resource_cost(resource: &Resource) -> u64 {
     match &resource.kind {
-        ResourceKind::Image { width, height } => u64::from(*width) * u64::from(*height),
+        // One unit per pixel — the budget currency for images, independent of
+        // how many bytes the pixels happen to occupy.
+        ResourceKind::Image { width, height, .. } => u64::from(*width) * u64::from(*height),
         // Same per-glyph accounting the `glyph_count` variant used before runs
         // were retained (16 units per glyph, plus a fixed run overhead).
         ResourceKind::GlyphRun { runs } => runs
