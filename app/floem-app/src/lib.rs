@@ -14,6 +14,10 @@
 
 #![forbid(unsafe_code)]
 
+pub mod runner;
+
+pub use runner::{AppRunner, RunStats};
+
 use std::collections::{HashMap, HashSet};
 
 use floem_accessibility::{SemanticsNode, SemanticsTree};
@@ -636,17 +640,22 @@ impl WidgetHost {
         // axis) on top. Without the fill, a `<Container>` root would shrink-wrap
         // its content and `justify_content` would have no free space to
         // distribute.
+        //
+        // The fill is deliberately *not* written back into `nodes[root].style`:
+        // caching it would freeze the first frame's viewport into the stored
+        // style (`width.is_none()` would stop holding) and later resizes could
+        // never propagate. The stored style keeps whatever the app set; the
+        // viewport fill is a per-pass override.
         let mut root_style = self.nodes[root].style.clone();
+        if let Some(req) = self.nodes[root].widget.layout_request() {
+            root_style = apply_self_layout(root_style, Some(&req));
+        }
         if root_style.width.is_none() {
             root_style.width = Some(self.size.width as f32);
         }
         if root_style.height.is_none() {
             root_style.height = Some(self.size.height as f32);
         }
-        if let Some(req) = self.nodes[root].widget.layout_request() {
-            root_style = apply_self_layout(root_style, Some(&req));
-        }
-        self.nodes[root].style = root_style.clone();
         self.layout.set_style(root_node, root_style);
         self.layout.compute(root_node, self.size);
         for index in 0..self.nodes.len() {

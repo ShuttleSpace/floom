@@ -145,12 +145,14 @@ impl HostPlatform {
             position,
             button: crate::PointerButton::Primary,
             pressed: true,
+            modifiers: floem_types::Modifiers::NONE,
         });
         self.events.push(PlatformEvent::PointerButton {
             window,
             position,
             button: crate::PointerButton::Primary,
             pressed: false,
+            modifiers: floem_types::Modifiers::NONE,
         });
     }
 
@@ -217,8 +219,7 @@ impl Platform for HostPlatform {
     }
 
     fn request_frame(&mut self, window: WindowId) {
-        self.events
-            .push(PlatformEvent::RedrawRequested { window });
+        self.events.push(PlatformEvent::RedrawRequested { window });
     }
 
     fn now_secs(&self) -> f64 {

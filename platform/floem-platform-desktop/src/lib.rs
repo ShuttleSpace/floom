@@ -7,27 +7,57 @@
 
 pub mod accessibility;
 
+#[cfg(feature = "winit")]
+pub mod winit_backend;
+
+#[cfg(feature = "winit")]
+pub mod winit_input;
+
+#[cfg(feature = "winit")]
+pub use winit_backend::{WinitApp, WinitPlatform, run};
+
 use std::collections::HashMap;
 use std::time::Instant;
 
 use floem_platform::{
-    Clipboard, Ime, KeyCode, Platform, PlatformCapabilities, PlatformEvent, PointerButton,
-    SurfaceConfig, Window, WindowConfig, WindowState,
+    Clipboard, Ime, KeyCode, Modifiers, Platform, PlatformCapabilities, PlatformEvent,
+    PointerButton, SurfaceConfig, Window, WindowConfig, WindowState,
 };
 use floem_types::{DisplayInfo, PlatformId, Point, ScaleFactor, Size, SurfaceId, WindowId};
 
 /// Logical desktop input sample (Winit-equivalent, OS-handle free).
 #[derive(Debug, Clone, PartialEq)]
 pub enum DesktopInput {
-    PointerMoved { position: Point },
+    PointerMoved {
+        position: Point,
+        modifiers: Modifiers,
+    },
     PointerButton {
         position: Point,
         button: PointerButton,
         pressed: bool,
+        modifiers: Modifiers,
     },
-    Key { code: KeyCode, pressed: bool },
-    ImePreedit { text: String },
-    ImeCommit { text: String },
+    Scroll {
+        position: Point,
+        delta_x: f64,
+        delta_y: f64,
+        modifiers: Modifiers,
+    },
+    Key {
+        code: KeyCode,
+        pressed: bool,
+        /// Auto-repeat from a held key.
+        repeat: bool,
+        modifiers: Modifiers,
+    },
+    ModifiersChanged(Modifiers),
+    ImePreedit {
+        text: String,
+    },
+    ImeCommit {
+        text: String,
+    },
     Focused(bool),
     Resized(Size),
     CloseRequested,
@@ -130,25 +160,53 @@ impl DesktopPlatform {
     /// Inject a Winit-mapped input event for `window`.
     pub fn dispatch_input(&mut self, window: WindowId, input: DesktopInput) {
         let event = match input {
-            DesktopInput::PointerMoved { position } => PlatformEvent::PointerMoved {
+            DesktopInput::PointerMoved {
+                position,
+                modifiers,
+            } => PlatformEvent::PointerMoved {
                 window,
                 position,
+                modifiers,
             },
             DesktopInput::PointerButton {
                 position,
                 button,
                 pressed,
+                modifiers,
             } => PlatformEvent::PointerButton {
                 window,
                 position,
                 button,
                 pressed,
+                modifiers,
             },
-            DesktopInput::Key { code, pressed } => PlatformEvent::Key {
+            DesktopInput::Scroll {
+                position,
+                delta_x,
+                delta_y,
+                modifiers,
+            } => PlatformEvent::Scroll {
+                window,
+                position,
+                delta_x,
+                delta_y,
+                modifiers,
+            },
+            DesktopInput::Key {
+                code,
+                pressed,
+                repeat,
+                modifiers,
+            } => PlatformEvent::Key {
                 window,
                 code,
                 pressed,
+                repeat,
+                modifiers,
             },
+            DesktopInput::ModifiersChanged(modifiers) => {
+                PlatformEvent::ModifiersChanged { window, modifiers }
+            }
             DesktopInput::ImePreedit { text } => PlatformEvent::ImePreedit { window, text },
             DesktopInput::ImeCommit { text } => PlatformEvent::ImeCommit { window, text },
             DesktopInput::Focused(focused) => PlatformEvent::WindowFocused { window, focused },
@@ -170,7 +228,10 @@ impl DesktopPlatform {
     }
 
     pub fn ime_is_enabled(&self, window: WindowId) -> bool {
-        self.ime_enabled.get(&window.index()).copied().unwrap_or(false)
+        self.ime_enabled
+            .get(&window.index())
+            .copied()
+            .unwrap_or(false)
     }
 }
 
@@ -229,8 +290,7 @@ impl Platform for DesktopPlatform {
     }
 
     fn request_frame(&mut self, window: WindowId) {
-        self.events
-            .push(PlatformEvent::RedrawRequested { window });
+        self.events.push(PlatformEvent::RedrawRequested { window });
     }
 
     fn now_secs(&self) -> f64 {

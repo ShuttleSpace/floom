@@ -3,10 +3,12 @@
 //! Concrete GPU backends live in separate crates and must not pull widgets.
 
 mod frame_queue;
+mod present;
 
 pub use floem_scene::{DamageRegion, Scene, SceneNode};
 pub use floem_types::{Color, Point, Rect, ResourceId, SceneNodeId, Size};
 pub use frame_queue::{FrameHandoffStats, SceneFrameQueue, SceneSnapshot};
+pub use present::{AttachedSurface, Presenter, SurfaceHandles};
 
 use floem_scene::Scene as SceneGraph;
 use floem_types::{SurfaceId, WindowId};

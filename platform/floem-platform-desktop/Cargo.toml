@@ -7,9 +7,18 @@ repository.workspace = true
 description = "Desktop platform adapter for Floem 2.0 (Winit lifecycle mapping)"
 rust-version.workspace = true
 
+[features]
+default = []
+# The real OS window + event loop. Off by default so the adapter (and the rest
+# of the headless workspace build) stays free of winit unless an app asks for a
+# window. `winit::raw_window_handle` is used for the surface handles, so no
+# separate handle dependency is declared here.
+winit = ["dep:winit"]
+
 [dependencies]
 floem-accessibility = { path = "../../framework/floem-accessibility", version = "0.2.0" }
 floem-platform = { path = "../floem-platform", version = "0.2.0" }
 floem-types = { path = "../../crates/floem-types", version = "0.2.0" }
+winit = { workspace = true, optional = true }
 
 [dev-dependencies]

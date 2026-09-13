@@ -2,7 +2,7 @@
 
 use floem_types::{DisplayInfo, Size, SurfaceId, WindowId};
 
-use crate::surface::SurfaceConfig;
+use crate::surface::{SurfaceConfig, SurfaceTarget};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub enum WindowState {
@@ -40,4 +40,14 @@ pub trait Window {
     fn surface_id(&self) -> Option<SurfaceId>;
     fn create_surface(&mut self, config: SurfaceConfig) -> SurfaceId;
     fn display_info(&self) -> DisplayInfo;
+
+    /// Native handles for the window's current surface, if it has one and the
+    /// backend can expose them.
+    ///
+    /// A renderer backend calls this when it needs to build a swap-chain. It
+    /// returns `None` for headless/in-memory backends, which is how the app
+    /// runner falls back to an offscreen presenter.
+    fn surface_target(&self) -> Option<SurfaceTarget> {
+        None
+    }
 }

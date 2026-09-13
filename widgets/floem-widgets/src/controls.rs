@@ -160,6 +160,13 @@ fn draw_centered_text(
 // Button
 // ---------------------------------------------------------------------------
 
+/// A UI callback.
+///
+/// Deliberately *not* `Send + Sync`: input dispatch happens on one thread, and
+/// keeping the bound off lets callbacks capture `Rc`/`Cell` handles. Widgets
+/// that carry callbacks can still live inside composites — construct the
+/// widget inside the builder closure (builders are replayable `Fn`s) rather
+/// than capturing a pre-built one.
 pub type Callback = Box<dyn Fn()>;
 
 /// A clickable action surface.

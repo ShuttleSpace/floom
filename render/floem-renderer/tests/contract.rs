@@ -1,6 +1,4 @@
-use floem_renderer::{
-    FrameInfo, Renderer, render_once,
-};
+use floem_renderer::{FrameInfo, Renderer, render_once};
 use floem_scene::{Color, DamageRegion, Point, Rect, Scene, SceneNode, Size};
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -59,7 +57,10 @@ fn fake_renderer_consumes_scene_without_widgets() {
 
     render_once(&mut fake, &FrameInfo::software(100, 100, 1), &scene);
 
-    assert_eq!(ops.borrow().as_slice(), &["begin", "scene", "rect", "rect", "end"]);
+    assert_eq!(
+        ops.borrow().as_slice(),
+        &["begin", "scene", "rect", "rect", "end"]
+    );
     assert_eq!(rects.borrow().len(), 2);
 }
 

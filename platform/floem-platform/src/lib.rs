@@ -6,14 +6,16 @@
 mod capabilities;
 mod event;
 mod fake;
+mod keymap;
 mod surface;
 mod window;
 
 pub use capabilities::{Capability, PlatformCapabilities};
-pub use event::{KeyCode, PlatformEvent, PointerButton};
+pub use event::{PlatformEvent, PointerButton};
 pub use fake::{FakePlatform, HostPlatform};
-pub use floem_types::{DisplayInfo, Point, ScaleFactor, Size, SurfaceId, WindowId};
-pub use surface::{Surface, SurfaceConfig};
+pub use floem_types::{DisplayInfo, Modifiers, Point, ScaleFactor, Size, SurfaceId, WindowId};
+pub use keymap::KeyCode;
+pub use surface::{Surface, SurfaceConfig, SurfaceTarget};
 pub use window::{Window, WindowConfig, WindowState};
 
 use floem_types::PlatformId;

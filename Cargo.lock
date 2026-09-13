@@ -1962,6 +1962,9 @@ dependencies = [
  "floem-focus",
  "floem-forms",
  "floem-layout",
+ "floem-platform",
+ "floem-renderer",
+ "floem-renderer-software",
  "floem-runtime",
  "floem-runtime-core",
  "floem-scene",
@@ -2077,6 +2080,7 @@ version = "0.2.0"
 dependencies = [
  "bitflags 2.11.0",
  "floem-types",
+ "raw-window-handle",
 ]
 
 [[package]]
@@ -2095,6 +2099,7 @@ dependencies = [
  "floem-accessibility",
  "floem-platform",
  "floem-types",
+ "floem-winit",
 ]
 
 [[package]]
@@ -2139,6 +2144,7 @@ version = "0.2.0"
 dependencies = [
  "floem-scene",
  "floem-types",
+ "raw-window-handle",
 ]
 
 [[package]]
@@ -2168,6 +2174,8 @@ dependencies = [
  "floem-renderer",
  "floem-scene",
  "floem-types",
+ "pollster",
+ "vello",
 ]
 
 [[package]]
@@ -2515,6 +2523,20 @@ dependencies = [
  "floem-app",
  "floem-core",
  "floem-layout",
+ "floem-types",
+ "floem-widgets",
+]
+
+[[package]]
+name = "floem2-window"
+version = "0.2.0"
+dependencies = [
+ "floem-app",
+ "floem-core",
+ "floem-layout",
+ "floem-platform",
+ "floem-platform-desktop",
+ "floem-renderer-vello",
  "floem-types",
  "floem-widgets",
 ]

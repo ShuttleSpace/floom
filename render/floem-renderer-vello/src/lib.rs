@@ -1,8 +1,18 @@
 //! Vello-oriented Scene adapter.
 //!
-//! Records Scene draw ops into an intermediate command list. Full WGPU/Vello
-//! submission continues to live in the legacy `floem_vello_renderer` until the
-//! paint path is fully migrated; this crate freezes the ABI boundary.
+//! Two layers live here:
+//!
+//! * [`VelloRendererAdapter`] — a dependency-free recorder that turns a
+//!   [`Scene`] into a [`VelloCommand`] list. It freezes the ABI boundary and is
+//!   what the default build compiles.
+//! * [`VelloGpuPresenter`] (feature `gpu`) — the real thing: a wgpu
+//!   swap-chain driven by vello, which is what actually puts pixels in a window.
+
+#[cfg(feature = "gpu")]
+mod gpu;
+
+#[cfg(feature = "gpu")]
+pub use gpu::{GpuFrameStats, VelloGpuPresenter};
 
 use floem_renderer::{FrameInfo, Renderer};
 use floem_scene::{DamageRegion, Scene, SceneNode};
@@ -56,7 +66,8 @@ impl Renderer for VelloRendererAdapter {
                     });
                 }
                 SceneNode::Image { bounds, .. } => {
-                    self.commands.push(VelloCommand::DrawImage { bounds: *bounds });
+                    self.commands
+                        .push(VelloCommand::DrawImage { bounds: *bounds });
                 }
                 SceneNode::Text { origin, size, .. } => {
                     self.commands.push(VelloCommand::DrawGlyphs {

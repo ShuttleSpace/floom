@@ -1,5 +1,5 @@
 use floem_platform::{
-    Capability, Clipboard, Ime, Platform, PlatformEvent, PointerButton, WindowConfig,
+    Capability, Clipboard, Ime, Modifiers, Platform, PlatformEvent, PointerButton, WindowConfig,
 };
 use floem_platform_desktop::{DesktopInput, DesktopPlatform};
 use floem_types::{Point, Size};
@@ -22,17 +22,29 @@ fn desktop_window_and_input_mapping() {
             position: Point::new(10.0, 20.0),
             button: PointerButton::Primary,
             pressed: true,
+            modifiers: Modifiers::NONE,
         },
     );
     p.dispatch_input(win, DesktopInput::Resized(Size::new(1024.0, 768.0)));
-    p.dispatch_input(win, DesktopInput::ImeCommit {
-        text: "你好".into(),
-    });
+    p.dispatch_input(
+        win,
+        DesktopInput::ImeCommit {
+            text: "你好".into(),
+        },
+    );
 
     let mut events = Vec::new();
     p.poll_events(&mut events);
-    assert!(events.iter().any(|e| matches!(e, PlatformEvent::WindowCreated { .. })));
-    assert!(events.iter().any(|e| matches!(e, PlatformEvent::PointerButton { pressed: true, .. })));
+    assert!(
+        events
+            .iter()
+            .any(|e| matches!(e, PlatformEvent::WindowCreated { .. }))
+    );
+    assert!(
+        events
+            .iter()
+            .any(|e| matches!(e, PlatformEvent::PointerButton { pressed: true, .. }))
+    );
     assert!(events.iter().any(|e| matches!(
         e,
         PlatformEvent::WindowResized { size, .. } if *size == Size::new(1024.0, 768.0)

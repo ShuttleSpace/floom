@@ -1,5 +1,9 @@
 //! CPU rasterizer adapter: fills scene rects into an RGBA8 buffer.
 
+mod presenter;
+
+pub use presenter::SoftwarePresenter;
+
 use floem_renderer::{FrameInfo, RenderTarget, Renderer};
 use floem_scene::{DamageRegion, Scene, SceneNode};
 use floem_types::Color;

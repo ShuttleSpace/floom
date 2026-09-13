@@ -2,8 +2,8 @@ use std::cell::Cell;
 use std::rc::Rc;
 
 use floem_accessibility::{
-    AccessibilityAdapter, AccessibilityCapabilities, SemanticsAction, SemanticsDiff,
-    SemanticsNode, SemanticsRole,
+    AccessibilityAdapter, AccessibilityCapabilities, SemanticsAction, SemanticsDiff, SemanticsNode,
+    SemanticsRole,
 };
 use floem_platform_desktop::accessibility::DesktopAccessibilityAdapter;
 use floem_types::ElementId;
@@ -31,8 +31,16 @@ fn applies_diff_into_retained_frame() {
     );
 
     // Desktop is the reference target and advertises the full profile.
-    assert!(adapter.capabilities().contains(AccessibilityCapabilities::NATIVE_BRIDGE));
-    assert!(adapter.capabilities().contains(AccessibilityCapabilities::SCREEN_READER));
+    assert!(
+        adapter
+            .capabilities()
+            .contains(AccessibilityCapabilities::NATIVE_BRIDGE)
+    );
+    assert!(
+        adapter
+            .capabilities()
+            .contains(AccessibilityCapabilities::SCREEN_READER)
+    );
 }
 
 #[test]
@@ -61,8 +69,7 @@ fn performs_only_registered_actions() {
     assert!(adapter.perform_action(checkbox, SemanticsAction::Activate));
     assert!(toggled.get());
 
-    assert!(adapter
-        .perform_action(checkbox, SemanticsAction::SetValue("off".to_string())));
+    assert!(adapter.perform_action(checkbox, SemanticsAction::SetValue("off".to_string())));
     assert!(!toggled.get());
 
     assert!(!adapter.perform_action(checkbox, SemanticsAction::Increase));
@@ -78,7 +85,8 @@ fn removal_drops_node_and_its_handler() {
 
     adapter.register_handler(node, Box::new(|_| true));
     let mut diff = SemanticsDiff::default();
-    diff.added.push((node, SemanticsNode::new(SemanticsRole::Button)));
+    diff.added
+        .push((node, SemanticsNode::new(SemanticsRole::Button)));
     adapter.update(&diff);
     assert_eq!(adapter.node_count(), 1);
 

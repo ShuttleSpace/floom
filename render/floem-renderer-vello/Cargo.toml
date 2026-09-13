@@ -4,13 +4,24 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
-description = "Vello Scene adapter for Floem 2.0 Renderer ABI (recording layer)"
+description = "Vello Scene adapter for Floem 2.0 Renderer ABI (recording layer + WGPU presenter)"
 rust-version.workspace = true
+
+[features]
+default = []
+# The real GPU presentation path (wgpu swap-chain + vello rasterisation).
+# Off by default: it pulls a GPU stack, and the recorder above is enough for
+# headless builds, tests and benchmarks.
+# `vello` re-exports its own `wgpu`, so no separate wgpu dependency is declared
+# and the two can never drift out of sync.
+gpu = ["dep:vello", "dep:pollster"]
 
 [dependencies]
 floem-renderer = { path = "../floem-renderer", version = "0.2.0" }
 floem-scene = { path = "../../scene/floem-scene", version = "0.2.0" }
 floem-types = { path = "../../crates/floem-types", version = "0.2.0" }
+vello = { version = "0.7.0", optional = true }
+pollster = { version = "0.4.0", optional = true }
 
 [dev-dependencies]
 criterion = { version = "0.8.1", features = ["html_reports"] }

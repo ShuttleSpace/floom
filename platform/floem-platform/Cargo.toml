@@ -10,5 +10,7 @@ rust-version.workspace = true
 [dependencies]
 floem-types = { path = "../../crates/floem-types", version = "0.2.0" }
 bitflags = "2.9"
+# Handle descriptors only — no windowing or GPU library. See `src/surface.rs`.
+raw-window-handle = { workspace = true }
 
 [dev-dependencies]
