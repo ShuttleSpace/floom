@@ -28,9 +28,16 @@ pub use presenter::SoftwarePresenter;
 use floem_renderer::{FrameInfo, RenderTarget, Renderer};
 use floem_scene::{DamageRegion, Rect, ResourceKind, ResourceRegistry, Scene, SceneNode};
 use floem_types::Color;
+use std::collections::HashMap;
 
 /// Pixel-space clip region: `(x0, y0, x1, y1)`, exclusive right/bottom.
 type Clip = (u32, u32, u32, u32);
+
+/// Cache key for one rasterised glyph: (font-bytes pointer, font collection
+/// index, font size bits, glyph id). The cached entry keeps a clone of the
+/// font data alive, so the pointer cannot be recycled while the entry exists
+/// and can never alias a different font.
+type GlyphCacheKey = (usize, u32, u32, u32);
 
 /// Software renderer backend implementing the Floem 2.0 [`Renderer`] ABI.
 pub struct SoftwareRenderer {
@@ -45,9 +52,20 @@ pub struct SoftwareRenderer {
     pub images_drawn: u64,
     /// Frames skipped because the damage region was empty.
     pub damage_skips: u64,
+    /// Glyph rasterisations served from the bitmap cache.
+    pub glyph_cache_hits: u64,
+    /// Glyph rasterisations that had to run swash (first sighting, or after
+    /// a cache clear).
+    pub glyph_cache_misses: u64,
     /// Set after (re)creation/resize: the next render must clear everything,
     /// since the buffer content cannot be trusted.
     needs_full_clear: bool,
+    /// Rasterised alpha masks, keyed by (font, size, glyph id). Each entry
+    /// holds a clone of the font's `FontData` so the key's byte pointer stays
+    /// valid and unique for as long as the entry lives. UI glyphs repeat
+    /// massively across frames and nodes — without this every frame pays a
+    /// full outline-to-mask pass per visible glyph.
+    glyph_cache: HashMap<GlyphCacheKey, (peniko::Blob<u8>, std::sync::Arc<GlyphMask>)>,
 }
 
 impl SoftwareRenderer {
@@ -62,12 +80,26 @@ impl SoftwareRenderer {
             glyphs_drawn: 0,
             images_drawn: 0,
             damage_skips: 0,
+            glyph_cache_hits: 0,
+            glyph_cache_misses: 0,
             needs_full_clear: true,
+            glyph_cache: HashMap::new(),
         }
     }
 
     pub fn pixels(&self) -> &[u8] {
         &self.pixels
+    }
+
+    /// Number of glyph masks currently cached.
+    pub fn glyph_cache_entries(&self) -> usize {
+        self.glyph_cache.len()
+    }
+
+    /// Drops all cached glyph masks (e.g. under memory pressure). The next
+    /// frame re-rasterises on demand.
+    pub fn clear_glyph_cache(&mut self) {
+        self.glyph_cache.clear();
     }
 
     pub fn pixel_rgba(&self, x: u32, y: u32) -> Option<[u8; 4]> {
@@ -215,8 +247,36 @@ impl SoftwareRenderer {
             let bx = origin.x as f32 + run.origin.x as f32;
             let by = origin.y as f32 + run.origin.y as f32;
             for glyph in &run.glyphs {
-                let Some(mask) = rasterize_glyph(font_ref, run.font_size, glyph.id) else {
-                    continue;
+                // Cache lookup/insert must finish before the buffer is
+                // borrowed mutably, so clone the (cheap Arc) mask out first.
+                let cache_key: GlyphCacheKey = (
+                    run.font.data.as_ref().as_ptr() as usize,
+                    run.font.index,
+                    run.font_size.to_bits(),
+                    glyph.id,
+                );
+                let mask = match self.glyph_cache.get(&cache_key) {
+                    Some((_, mask)) => {
+                        self.glyph_cache_hits += 1;
+                        std::sync::Arc::clone(mask)
+                    }
+                    None => {
+                        self.glyph_cache_misses += 1;
+                        let Some(mask) = rasterize_glyph(font_ref, run.font_size, glyph.id) else {
+                            // Colour glyphs (emoji) have no alpha-mask form;
+                            // not cached, retried (and skipped) each frame.
+                            continue;
+                        };
+                        let mask = std::sync::Arc::new(mask);
+                        // The FontData clone pins the font bytes, so the
+                        // key's pointer stays valid and un-aliasable while
+                        // the entry lives.
+                        self.glyph_cache.insert(
+                            cache_key,
+                            (run.font.data.clone(), std::sync::Arc::clone(&mask)),
+                        );
+                        mask
+                    }
                 };
                 // swash placement: left is origin→image-left; top is
                 // image-top→baseline (y-down), so the image's top-left lands
@@ -463,6 +523,7 @@ mod tests {
     use floem_renderer::{FrameInfo, render_once};
     use floem_scene::{Point, SceneNode, Size};
     use floem_types::Color;
+    use std::collections::HashMap;
 
     #[test]
     fn software_draws_rect_pixels() {
@@ -753,5 +814,70 @@ mod tests {
         sw.render_scene(&scene, &DamageRegion::new());
         assert_eq!(sw.damage_skips, 1, "empty damage skipped the repaint");
         assert_eq!(sw.pixel_rgba(1, 1), Some([255, 0, 0, 255]));
+    }
+
+    /// Same glyph at the same size across frames rasterises once: the second
+    /// paint serves every mask from the cache, and the drawn ink is
+    /// identical. A different font size is a different cache entry.
+    #[test]
+    fn glyph_masks_are_cached_across_frames() {
+        use floem_text::{TextAlign, TextLayoutOptions};
+
+        let shape = |size: f32| {
+            let mut shaper = floem_text::TextShaper::new();
+            shaper.shape(
+                "HI",
+                &TextLayoutOptions {
+                    max_width: f64::INFINITY,
+                    font_size: size,
+                    align: TextAlign::Start,
+                },
+            )
+        };
+
+        let make_scene = |runs| {
+            let mut registry = ResourceRegistry::new();
+            let glyphs = registry.insert(floem_scene::Resource {
+                kind: ResourceKind::GlyphRun { runs },
+            });
+            let mut scene = Scene::new();
+            scene.begin_update();
+            let _ = scene.insert(SceneNode::Text {
+                origin: Point::new(2.0, 2.0),
+                size: Size::new(90.0, 30.0),
+                glyphs,
+                color: Color::rgb(255, 255, 255),
+            });
+            scene.finish_update();
+            (scene, registry)
+        };
+
+        let mut sw = SoftwareRenderer::new(96, 40);
+
+        let (scene, registry) = make_scene(shape(24.0).runs);
+        sw.render_scene_with_resources(&scene, scene.damage(), &registry);
+        sw.end_frame();
+        let ink_first = sw.pixel_rgba(10, 12);
+        let misses_first = sw.glyph_cache_misses;
+        assert!(misses_first > 0, "first paint rasterises (and caches)");
+        assert_eq!(sw.glyph_cache_hits, 0);
+        assert_eq!(sw.glyph_cache_entries(), misses_first as usize);
+
+        // Second frame, same glyphs: every mask comes from the cache and the
+        // ink lands in exactly the same place.
+        sw.render_scene_with_resources(&scene, scene.damage(), &registry);
+        sw.end_frame();
+        assert_eq!(sw.glyph_cache_hits, misses_first, "all masks cached");
+        assert_eq!(sw.glyph_cache_misses, misses_first, "no new rasterising");
+        assert_eq!(sw.pixel_rgba(10, 12), ink_first, "identical output");
+
+        // Same glyph at a different size: new cache entries, not the old ones.
+        let (scene, registry) = make_scene(shape(32.0).runs);
+        sw.render_scene_with_resources(&scene, scene.damage(), &registry);
+        sw.end_frame();
+        assert!(
+            sw.glyph_cache_misses > misses_first,
+            "a new size rasterises fresh masks"
+        );
     }
 }

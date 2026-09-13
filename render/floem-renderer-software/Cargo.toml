@@ -14,7 +14,7 @@ floem-types = { path = "../../crates/floem-types", version = "0.2.0" }
 # CPU glyph rasterisation for the software text path (same engine vger and
 # tiny-skia use on their cache misses).
 swash.workspace = true
+peniko.workspace = true
 
 [dev-dependencies]
 floem-text = { path = "../../text/floem-text", version = "0.2.0" }
-peniko.workspace = true
