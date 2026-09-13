@@ -105,16 +105,16 @@ impl Presenter for SoftwarePresenter {
     }
 
     fn present(&mut self, scene: &Scene, resources: &ResourceRegistry) {
-        // The CPU rasteriser paints rects only today; glyph-run and image
-        // resources are skipped (never fatal), so the registry is unused here.
-        let _ = resources;
         if !self.attached {
             return;
         }
         self.frames += 1;
         let info = FrameInfo::software(self.width, self.height, self.frames);
         self.renderer.begin_frame(&info);
-        self.renderer.render_scene(scene, scene.damage());
+        // The registry drives text (glyph-run rasterisation) and image blits;
+        // the renderer itself is damage-aware, so an unchanged frame skips.
+        self.renderer
+            .render_scene_with_resources(scene, scene.damage(), resources);
         self.renderer.end_frame();
     }
 

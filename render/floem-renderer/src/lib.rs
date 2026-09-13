@@ -5,7 +5,7 @@
 mod frame_queue;
 mod present;
 
-pub use floem_scene::{DamageRegion, Scene, SceneNode};
+pub use floem_scene::{DamageRegion, ResourceRegistry, Scene, SceneNode};
 pub use floem_types::{Color, Point, Rect, ResourceId, SceneNodeId, Size};
 pub use frame_queue::{FrameHandoffStats, SceneFrameQueue, SceneSnapshot};
 pub use present::{AttachedSurface, Presenter, SurfaceHandles};
@@ -56,6 +56,20 @@ pub trait Renderer {
 
     /// Consume a retained scene (and optional damage) into the current frame.
     fn render_scene(&mut self, scene: &SceneGraph, damage: &DamageRegion);
+
+    /// Like [`Renderer::render_scene`], with access to the scene's resource
+    /// registry (glyph runs, image pixels). Backends that can render those
+    /// nodes override this; the default ignores the registry, so text and
+    /// image nodes are simply skipped rather than fatal.
+    fn render_scene_with_resources(
+        &mut self,
+        scene: &SceneGraph,
+        damage: &DamageRegion,
+        resources: &ResourceRegistry,
+    ) {
+        let _ = resources;
+        self.render_scene(scene, damage);
+    }
 
     /// Finish and present/submit the frame.
     fn end_frame(&mut self);
