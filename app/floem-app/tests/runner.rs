@@ -12,7 +12,7 @@ use floem_layout::LayoutStyle;
 use floem_platform::{FakePlatform, KeyCode, Platform, PlatformEvent, WindowConfig};
 use floem_renderer_software::SoftwarePresenter;
 use floem_types::{Color, Point, Size};
-use floem_widgets::{Button, Container};
+use floem_widgets::{Button, Container, Stack};
 
 /// A tiny window (64×48 logical, scale 1) so pixel arithmetic stays trivial.
 fn small_window() -> WindowConfig {
@@ -195,4 +195,189 @@ fn keyboard_ime_and_suspend_flow_through() {
     platform.resume();
     settle(&mut platform, &mut runner);
     assert!(runner.presenter_ready(), "resume re-attaches the surface");
+}
+
+// ---------------------------------------------------------------------------
+// Error boundary integration
+// ---------------------------------------------------------------------------
+
+mod boundary {
+    use super::*;
+    use floem_error::ErrorBoundary;
+
+    #[test]
+    fn a_panicking_button_callback_becomes_a_report_not_a_crash() {
+        // One button panics, one works — the app must survive the first and
+        // the second still functions afterwards.
+        let worked = Arc::new(AtomicBool::new(false));
+        let worked_flag = worked.clone();
+
+        let mut platform = FakePlatform::new();
+        let mut host = WidgetHost::new();
+        host.mount_root(
+            LayoutStyle::default(),
+            Stack::new(floem_core::Axis::Vertical)
+                .push_layout(
+                    floem_core::LayoutRequest::new().height(24.0).grow(1.0),
+                    || {
+                        Box::new(Button::new("boom").on_click(|| {
+                            panic!("view blew up");
+                        })) as Box<dyn floem_core::WidgetAny>
+                    },
+                )
+                .push_layout(
+                    floem_core::LayoutRequest::new().height(24.0).grow(1.0),
+                    move || {
+                        let flag = worked_flag.clone();
+                        Box::new(Button::new("ok").on_click(move || {
+                            flag.store(true, Ordering::SeqCst);
+                        })) as Box<dyn floem_core::WidgetAny>
+                    },
+                ),
+        );
+        let boundary = ErrorBoundary::new();
+        let mut runner =
+            AppRunner::new(host, SoftwarePresenter::new()).with_error_boundary(boundary.clone());
+
+        let win = platform.create_window(small_window());
+        settle(&mut platform, &mut runner);
+
+        // Click the top half ("boom").
+        platform.inject_pointer_click(win, Point::new(32.0, 12.0));
+        settle(&mut platform, &mut runner);
+
+        assert!(
+            !worked.load(Ordering::SeqCst),
+            "sanity: the ok button was not the one clicked"
+        );
+        let reports = boundary.reports();
+        assert_eq!(reports.len(), 1, "exactly one report: {:?}", reports);
+        assert_eq!(reports[0].message, "view blew up");
+        assert_eq!(reports[0].context, "pointer button");
+        assert_eq!(runner.stats().errors_caught, 1);
+
+        // The runner is still alive: click the bottom half ("ok").
+        platform.inject_pointer_click(win, Point::new(32.0, 36.0));
+        settle(&mut platform, &mut runner);
+        assert!(
+            worked.load(Ordering::SeqCst),
+            "the app kept working after the caught panic"
+        );
+        assert_eq!(boundary.reports().len(), 1, "no new failures");
+    }
+
+    #[test]
+    fn without_a_boundary_a_panic_propagates() {
+        // Documents the default: no boundary, no catching. We cannot let the
+        // panic escape the test, so drive `handle` under catch_unwind and
+        // verify the stats never see a caught error.
+        use std::panic::{AssertUnwindSafe, catch_unwind};
+
+        let mut platform = FakePlatform::new();
+        let mut host = WidgetHost::new();
+        host.mount_root(
+            LayoutStyle::default(),
+            Button::new("boom").on_click(|| panic!("unhandled")),
+        );
+        let mut runner = AppRunner::new(host, SoftwarePresenter::new());
+        let win = platform.create_window(small_window());
+        settle(&mut platform, &mut runner);
+
+        let result = catch_unwind(AssertUnwindSafe(|| {
+            platform.inject_pointer_click(win, Point::new(32.0, 24.0));
+            settle(&mut platform, &mut runner);
+        }));
+        assert!(result.is_err(), "the panic propagated out of the runner");
+        assert_eq!(runner.stats().errors_caught, 0);
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Service scopes
+// ---------------------------------------------------------------------------
+
+mod services {
+    use super::*;
+    use floem_services::Scope;
+    use std::cell::RefCell;
+    use std::rc::Rc;
+
+    struct Session {
+        user: &'static str,
+    }
+
+    /// Disposal writes into a shared flag; `Rc`/`RefCell` are fine here
+    /// because service disposal runs on the UI thread by design.
+    struct DisposalLog(Rc<RefCell<Vec<&'static str>>>);
+
+    #[test]
+    fn app_services_resolve_and_outlive_windows() {
+        let mut platform = FakePlatform::new();
+        let mut host = WidgetHost::new();
+        host.mount_root(LayoutStyle::default(), Container::new());
+        let mut runner = AppRunner::new(host, SoftwarePresenter::new());
+
+        runner.services().provide(Session { user: "app-level" });
+
+        let win = platform.create_window(small_window());
+        settle(&mut platform, &mut runner);
+
+        // The window scope resolves through the parent chain without a local
+        // registration (window_scope, not the bare own-registry).
+        assert!(runner.window_scope(win).get::<Session>().is_some());
+
+        // Closing the window must NOT dispose app-scoped services.
+        platform.push_event(PlatformEvent::WindowClosed { window: win });
+        settle(&mut platform, &mut runner);
+        assert!(runner.services().get::<Session>().is_some());
+    }
+
+    #[test]
+    fn window_scoped_services_dispose_when_the_window_closes() {
+        let mut platform = FakePlatform::new();
+        let mut host = WidgetHost::new();
+        host.mount_root(LayoutStyle::default(), Container::new());
+        let mut runner = AppRunner::new(host, SoftwarePresenter::new());
+
+        let win = platform.create_window(small_window());
+        settle(&mut platform, &mut runner);
+
+        let log = Rc::new(RefCell::new(Vec::new()));
+        let log_flag = log.clone();
+        runner.window_scope(win).services().provide_with_disposal(
+            Session {
+                user: "window-only",
+            },
+            Some(move |_| log_flag.borrow_mut().push("session disposed")),
+        );
+
+        platform.push_event(PlatformEvent::WindowClosed { window: win });
+        settle(&mut platform, &mut runner);
+
+        assert_eq!(
+            *log.borrow(),
+            vec!["session disposed"],
+            "closing the window disposed its scope"
+        );
+    }
+
+    #[test]
+    fn child_scopes_compose_for_route_level_state() {
+        // The app composes deeper scopes itself (a route, a dialog); this
+        // pins the pattern the runner's window scopes follow.
+        let root = Scope::root();
+        root.services().provide(Session { user: "ada" });
+
+        let route = Scope::child(root.services());
+        route
+            .services()
+            .provide(DisposalLog(Rc::new(RefCell::new(Vec::new()))));
+
+        assert_eq!(route.require::<Session>().user, "ada", "parent resolves");
+        assert!(route.get::<DisposalLog>().is_some());
+        assert!(
+            root.services().get::<DisposalLog>().is_none(),
+            "no leak upward"
+        );
+    }
 }

@@ -1959,6 +1959,7 @@ version = "0.2.0"
 dependencies = [
  "floem-accessibility",
  "floem-core",
+ "floem-error",
  "floem-focus",
  "floem-forms",
  "floem-layout",
@@ -1968,6 +1969,7 @@ dependencies = [
  "floem-runtime",
  "floem-runtime-core",
  "floem-scene",
+ "floem-services",
  "floem-types",
  "floem-widgets",
 ]
@@ -2308,6 +2310,7 @@ version = "0.2.0"
 dependencies = [
  "floem-accessibility",
  "floem-core",
+ "floem-navigation",
  "floem-scene",
  "floem-types",
 ]

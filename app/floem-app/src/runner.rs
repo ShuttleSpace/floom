@@ -33,8 +33,10 @@
 
 use std::collections::HashMap;
 
+use floem_error::{ErrorBoundary, Outcome};
 use floem_platform::{Platform, PlatformEvent, SurfaceTarget};
 use floem_renderer::{AttachedSurface, Presenter, SurfaceHandles};
+use floem_services::{Scope, Services};
 use floem_types::{
     Event, Key, KeyEvent, KeyPhase, Modifiers, PointerEvent, PointerKind, PointerPhase,
     ScrollEvent, Size, SurfaceId, WindowId,
@@ -55,6 +57,8 @@ pub struct RunStats {
     pub windows_closed: u64,
     /// Redraws the runner asked the platform for.
     pub redraws_requested: u64,
+    /// Failures the error boundary caught and downgraded to a fallback.
+    pub errors_caught: u64,
 }
 
 /// Per-window bookkeeping the runner needs across events.
@@ -66,6 +70,11 @@ struct WindowRecord {
 }
 
 /// Connects a platform, a widget host and a presenter.
+///
+/// The runner is also the app shell: it owns the app-scoped service registry
+/// (with a child scope per window) and, optionally, the [`ErrorBoundary`] that
+/// turns a panicking widget callback into a recorded report instead of a dead
+/// process.
 pub struct AppRunner<R: Presenter> {
     host: WidgetHost,
     presenter: R,
@@ -76,6 +85,12 @@ pub struct AppRunner<R: Presenter> {
     modifiers: Modifiers,
     stats: RunStats,
     presenter_ready: bool,
+    /// App-scoped services; outlives every window.
+    scope: Scope,
+    /// One child scope per live window, disposed when the window closes.
+    window_scopes: HashMap<u32, Scope>,
+    /// Optional boundary over widget callbacks (see [`Self::with_error_boundary`]).
+    boundary: Option<ErrorBoundary>,
 }
 
 impl<R: Presenter> AppRunner<R> {
@@ -90,7 +105,46 @@ impl<R: Presenter> AppRunner<R> {
             modifiers: Modifiers::NONE,
             stats: RunStats::default(),
             presenter_ready: false,
+            scope: Scope::root(),
+            window_scopes: HashMap::new(),
+            boundary: None,
         }
+    }
+
+    /// Install an error boundary over widget callbacks.
+    ///
+    /// Without one, a panicking `on_click` (or any widget event handler)
+    /// unwinds through the event loop and kills the process. With one, the
+    /// panic is captured into a [`floem_error::Report`] — classified by the
+    /// app's classifier; a *fatal* verdict still re-raises — and the runner
+    /// keeps going. Read reports back via [`Self::boundary`].
+    pub fn with_error_boundary(mut self, boundary: ErrorBoundary) -> Self {
+        self.boundary = Some(boundary);
+        self
+    }
+
+    /// The installed boundary, if any (for reading or clearing reports).
+    pub fn boundary(&self) -> Option<&ErrorBoundary> {
+        self.boundary.as_ref()
+    }
+
+    /// The app-scoped service registry. Services registered here resolve from
+    /// every window scope and live for the runner's lifetime.
+    pub fn services(&self) -> &Services {
+        self.scope.services()
+    }
+
+    /// The window-scoped service registry: a child of [`Self::services`],
+    /// created lazily and disposed when the window closes.
+    ///
+    /// Returns the whole [`Scope`], not just its own registry: resolution via
+    /// [`Scope::get`] falls back through the parent chain, while provisioning
+    /// goes through [`Scope::services`]. Route/dialog-level scoping belongs to
+    /// the app (see [`Scope::child`]).
+    pub fn window_scope(&mut self, window: WindowId) -> &Scope {
+        self.window_scopes
+            .entry(window.index())
+            .or_insert_with(|| Scope::child(self.scope.services()))
     }
 
     pub fn host(&self) -> &WidgetHost {
@@ -167,6 +221,10 @@ impl<R: Presenter> AppRunner<R> {
                     self.order.push(window);
                 }
                 self.primary.get_or_insert(window);
+                // Window-scoped services live from creation to close.
+                self.window_scopes
+                    .entry(window.index())
+                    .or_insert_with(|| Scope::child(self.scope.services()));
                 // The widget tree lays out in logical pixels; the window's
                 // logical size *is* the host's viewport.
                 self.host.set_size(size);
@@ -188,6 +246,10 @@ impl<R: Presenter> AppRunner<R> {
             PlatformEvent::WindowClosed { window } => {
                 self.windows.remove(&window.index());
                 self.order.retain(|w| *w != window);
+                // Dropping the scope disposes the window's own services
+                // (children of the app scope; the app scope itself outlives
+                // every window).
+                self.window_scopes.remove(&window.index());
                 self.stats.windows_closed += 1;
                 if self.primary == Some(window) {
                     self.presenter.detach();
@@ -214,6 +276,7 @@ impl<R: Presenter> AppRunner<R> {
                     PointerEvent::hover(position)
                         .with_modifiers(modifiers)
                         .into(),
+                    "pointer move",
                 );
                 self.request_repaint(platform, window);
             }
@@ -239,6 +302,7 @@ impl<R: Presenter> AppRunner<R> {
                         click_count: 1,
                     }
                     .into(),
+                    "pointer button",
                 );
                 self.request_repaint(platform, window);
             }
@@ -249,12 +313,15 @@ impl<R: Presenter> AppRunner<R> {
                 delta_y,
                 modifiers,
             } => {
-                self.dispatch(Event::Scroll(ScrollEvent {
-                    delta_x,
-                    delta_y,
-                    position,
-                    modifiers,
-                }));
+                self.dispatch(
+                    Event::Scroll(ScrollEvent {
+                        delta_x,
+                        delta_y,
+                        position,
+                        modifiers,
+                    }),
+                    "scroll",
+                );
                 self.request_repaint(platform, window);
             }
             PlatformEvent::Key {
@@ -277,6 +344,7 @@ impl<R: Presenter> AppRunner<R> {
                             modifiers,
                         }
                         .into(),
+                        "keyboard",
                     );
                     self.request_repaint(platform, window);
                 }
@@ -287,7 +355,7 @@ impl<R: Presenter> AppRunner<R> {
                 // `KeyEvent::is_text_input` describes, so a text field consumes
                 // it through the same path it uses for ordinary typing.
                 for ch in text.chars() {
-                    self.dispatch(KeyEvent::down(Key::Char(ch)).into());
+                    self.dispatch(KeyEvent::down(Key::Char(ch)).into(), "ime commit");
                 }
                 self.request_repaint(platform, window);
             }
@@ -335,8 +403,26 @@ impl<R: Presenter> AppRunner<R> {
         frame_stats
     }
 
-    fn dispatch(&mut self, event: floem_types::Event) {
-        self.host.dispatch(event);
+    /// Dispatch one input event into the widget tree.
+    ///
+    /// With an error boundary installed (see [`Self::with_error_boundary`]) the
+    /// dispatch runs inside `boundary.capture`, so a panicking widget callback
+    /// becomes a recorded report + fallback instead of an unwind through the
+    /// event loop. The boundary's own classifier decides recoverable vs fatal;
+    /// a fatal verdict re-raises from inside `capture`.
+    fn dispatch(&mut self, event: floem_types::Event, context: &str) {
+        if let Some(boundary) = self.boundary.clone() {
+            let host = &mut self.host;
+            let outcome = boundary.in_(context.to_string()).capture(move || {
+                host.dispatch(event);
+                Ok(())
+            });
+            if outcome == Outcome::Fallback {
+                self.stats.errors_caught += 1;
+            }
+        } else {
+            self.host.dispatch(event);
+        }
         self.stats.input_dispatched += 1;
     }
 

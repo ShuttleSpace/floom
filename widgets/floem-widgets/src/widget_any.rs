@@ -114,6 +114,7 @@ impl_widget_any!(
     crate::controls::Progress,
     crate::controls::Select,
     crate::compose::Stack,
+    crate::nav::NavHost,
     crate::compose::Conditional,
     crate::compose::Overlay,
     crate::compose::Dialog,

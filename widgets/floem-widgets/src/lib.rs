@@ -13,6 +13,7 @@
 
 pub mod compose;
 pub mod controls;
+pub mod nav;
 pub mod navigation;
 pub mod primitives;
 pub mod testkit;
@@ -26,6 +27,7 @@ pub use compose::{BottomSheet, Conditional, Dialog, Grid, List, Overlay, Popup, 
 pub use controls::{
     Button, Checkbox, InteractionState, Progress, Radio, Select, Slider, Switch, TextField,
 };
+pub use nav::{NavHandle, NavHost};
 pub use navigation::{NavDestination, NavigationBar, NavigationDrawer, NavigationRail};
 pub use primitives::{
     Axis, Container, Divider, Icon, Image, ImageFit, SemanticsHint, Spacer, Text,

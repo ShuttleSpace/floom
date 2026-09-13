@@ -16,6 +16,8 @@ floem-layout = { path = "../../layout/floem-layout", version = "0.2.0" }
 floem-runtime-core = { path = "../../runtime/floem-runtime-core", version = "0.2.0" }
 floem-runtime = { path = "../../runtime/floem-runtime", version = "0.2.0" }
 floem-focus = { path = "../../framework/floem-focus", version = "0.2.0" }
+floem-services = { path = "../../framework/floem-services", version = "0.2.0" }
+floem-error = { path = "../../framework/floem-error", version = "0.2.0" }
 floem-widgets = { path = "../../widgets/floem-widgets", version = "0.2.0" }
 # The wiring layer: the app is the top of the layering, so it is the one crate
 # allowed to name both the platform ABI and the renderer ABI.
