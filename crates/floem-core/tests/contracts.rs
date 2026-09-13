@@ -1,11 +1,15 @@
 //! Contract compilation and primitive widget smoke tests.
 
 use floem_core::{
-    Color, CreateContext, Element, ElementId, ElementKind, Event, EventContext, PaintContext, Point,
-    Rect, SemanticsContext, Size, UpdateContext, Widget,
+    Axis, Child, ChildKey, Color, CreateContext, Element, ElementId, ElementKind, Event,
+    EventContext, LayoutRequest, PaintContext, Point, Rect, SemanticsContext, SemanticsHint, Size,
+    UpdateContext, Widget, WidgetAny,
 };
 use floem_types::{Modifiers, PointerEvent};
+use std::any::Any;
 use std::cell::RefCell;
+use std::sync::Arc;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 struct TestCreateCx {
     next: u32,
@@ -21,11 +25,25 @@ impl CreateContext for TestCreateCx {
 
 struct TestUpdateCx {
     dirty: RefCell<Vec<ElementId>>,
+    children_dirty: RefCell<Vec<ElementId>>,
+}
+
+impl TestUpdateCx {
+    fn new() -> Self {
+        Self {
+            dirty: RefCell::new(Vec::new()),
+            children_dirty: RefCell::new(Vec::new()),
+        }
+    }
 }
 
 impl UpdateContext for TestUpdateCx {
     fn mark_dirty(&mut self, id: ElementId) {
         self.dirty.borrow_mut().push(id);
+    }
+
+    fn mark_children_dirty(&mut self, id: ElementId) {
+        self.children_dirty.borrow_mut().push(id);
     }
 }
 
@@ -151,9 +169,7 @@ fn color_rect_widget_lifecycle() {
     let element = Element::new(id, ElementKind::Primitive);
     assert_eq!(element.id, id);
 
-    let mut update = TestUpdateCx {
-        dirty: RefCell::new(Vec::new()),
-    };
+    let mut update = TestUpdateCx::new();
     widget.update(&mut update, id);
     assert_eq!(update.dirty.into_inner(), vec![id]);
 
@@ -187,4 +203,172 @@ fn color_rect_widget_lifecycle() {
         Event::Pointer(p) => assert!(p.modifiers.contains(Modifiers::SHIFT)),
         other => panic!("expected pointer event, got {other:?}"),
     }
+}
+// --- composition -----------------------------------------------------------
+
+/// Minimal child widget.
+struct Row {
+    label: String,
+}
+
+impl Widget for Row {
+    fn create(&self, cx: &mut dyn CreateContext) -> ElementId {
+        cx.alloc_child()
+    }
+
+    fn update(&mut self, _cx: &mut dyn UpdateContext, _id: ElementId) {}
+}
+
+impl WidgetAny for Row {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
+    }
+
+    fn semantics_hint(&self) -> Option<SemanticsHint> {
+        Some(SemanticsHint::decorative())
+    }
+}
+
+/// A composite whose child list grows over time.
+struct DynamicList {
+    rows: Vec<String>,
+    /// Bumped every time a child slot is actually constructed.
+    builds: Arc<AtomicUsize>,
+    structure_changed: bool,
+}
+
+impl DynamicList {
+    fn new(rows: &[&str]) -> Self {
+        Self {
+            rows: rows.iter().map(|row| row.to_string()).collect(),
+            builds: Arc::new(AtomicUsize::new(0)),
+            structure_changed: true,
+        }
+    }
+}
+
+impl Widget for DynamicList {
+    fn create(&self, cx: &mut dyn CreateContext) -> ElementId {
+        cx.alloc_child()
+    }
+
+    fn update(&mut self, cx: &mut dyn UpdateContext, id: ElementId) {
+        if self.structure_changed {
+            self.structure_changed = false;
+            cx.mark_children_dirty(id);
+        }
+    }
+
+    fn children(&self) -> Vec<Child> {
+        self.rows
+            .iter()
+            .map(|row| {
+                let label = row.clone();
+                let builds = self.builds.clone();
+                Child::new(row.as_str(), LayoutRequest::new().height(24.0), move || {
+                    builds.fetch_add(1, Ordering::Relaxed);
+                    Box::new(Row {
+                        label: label.clone(),
+                    })
+                })
+            })
+            .collect()
+    }
+}
+
+#[test]
+fn leaf_widgets_declare_no_children() {
+    let widget = ColorRect {
+        color: Color::rgb(0, 0, 0),
+        size: Size::new(1.0, 1.0),
+    };
+    assert!(widget.children().is_empty());
+}
+
+#[test]
+fn layout_request_is_engine_neutral() {
+    let request = LayoutRequest::panel(Axis::Vertical, 8.0);
+    assert_eq!(request.flex_grow, Some(1.0));
+    assert_eq!(request.axis, Some(Axis::Vertical));
+    assert_eq!(request.gap, Some(8.0));
+    assert_eq!(Axis::Vertical.cross(), Axis::Horizontal);
+
+    // "Unspecified" stays distinguishable from "zero": that distinction is why
+    // every field is optional, and losing it would make the default opaque.
+    let bare = LayoutRequest::new();
+    assert_eq!(bare.gap, None);
+    assert_eq!(bare.axis, None);
+    assert_eq!(bare.grow(0.0).flex_grow, Some(0.0));
+}
+
+#[test]
+fn child_keys_decide_whether_identity_survives_a_reorder() {
+    // Positional keys: identity follows the slot.
+    assert_eq!(ChildKey::index(3), ChildKey::from(3usize));
+    assert_ne!(ChildKey::index(3), ChildKey::index(4));
+
+    // Named keys: identity follows the item, so inserting earlier does not
+    // invalidate it. Stable across calls, unlike a random seed.
+    assert_eq!(ChildKey::from("alpha"), ChildKey::from("alpha"));
+    assert_ne!(ChildKey::from("alpha"), ChildKey::from("beta"));
+    assert_ne!(
+        ChildKey::from("alpha"),
+        ChildKey::index(0),
+        "named and positional keys must not share a range"
+    );
+}
+
+#[test]
+fn mark_children_dirty_is_distinct_from_a_repaint() {
+    let mut widget = DynamicList::new(&["one"]);
+    let id = ElementId::new(42, 1);
+    let mut cx = TestUpdateCx::new();
+    widget.update(&mut cx, id);
+
+    assert!(
+        cx.dirty.borrow().is_empty(),
+        "a structure change must not masquerade as a repaint"
+    );
+    assert_eq!(cx.children_dirty.borrow().as_slice(), &[id]);
+
+    // A second update without a structure change asks for nothing.
+    let mut cx = TestUpdateCx::new();
+    widget.update(&mut cx, id);
+    assert!(cx.children_dirty.borrow().is_empty());
+}
+
+#[test]
+fn child_keys_are_stable_across_requests() {
+    let widget = DynamicList::new(&["one", "two"]);
+    let first: Vec<ChildKey> = widget.children().iter().map(|child| child.key).collect();
+    let second: Vec<ChildKey> = widget.children().iter().map(|child| child.key).collect();
+    assert_eq!(first, second, "the same rows must yield the same keys");
+    assert_eq!(first.len(), 2);
+}
+
+#[test]
+fn child_builders_are_deferred() {
+    let widget = DynamicList::new(&["one", "two"]);
+    let children = widget.children();
+    assert_eq!(
+        widget.builds.load(Ordering::Relaxed),
+        0,
+        "declaring a child builds nothing"
+    );
+
+    let _first = children[0].build();
+    assert_eq!(widget.builds.load(Ordering::Relaxed), 1);
+
+    // Re-declaring is free; only building costs.
+    let again = widget.children();
+    assert_eq!(again.len(), 2);
+    assert_eq!(
+        widget.builds.load(Ordering::Relaxed),
+        1,
+        "re-declaration must not rebuild"
+    );
 }

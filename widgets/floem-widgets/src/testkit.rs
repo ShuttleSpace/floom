@@ -318,6 +318,11 @@ impl UpdateContext for RecordingUpdateContext {
     fn mark_dirty(&mut self, id: ElementId) {
         self.dirty.push(id);
     }
+
+    fn mark_children_dirty(&mut self, _id: ElementId) {
+        // The test kit records structure changes separately if a test needs them;
+        // the default pass-through keeps existing widget tests unaffected.
+    }
 }
 
 /// Dispatches `event` at `widget` inside `bounds`.

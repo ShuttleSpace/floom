@@ -3,6 +3,6 @@
 mod taffy_adapter;
 
 pub use taffy_adapter::{
-    AlignItems, FlexDirection, JustifyContent, LayoutEngine, LayoutNode, LayoutOutput, LayoutStyle,
-    MeasureFn,
+    AbsoluteInset, AlignItems, FlexDirection, JustifyContent, LayoutEngine, LayoutNode,
+    LayoutOutput, LayoutStyle, MeasureFn, Position,
 };

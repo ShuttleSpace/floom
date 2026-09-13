@@ -1,43 +1,87 @@
 //! Opt-in downcasting for widgets stored behind a trait object.
 //!
-//! A retained host owns its widgets as `Box<dyn Widget>`, which erases the
-//! concrete type — but an application still needs to read a `Slider`'s value or
-//! push a new string into a `Text`. Rust cannot downcast without `Any`, and
-//! `Widget` itself stays free of that machinery so third-party implementations
-//! do not have to opt in.
-//!
-//! Widgets that are meant to live in a type-erased tree implement
-//! [`WidgetAny`] once (via the macro below); the host stores that object
-//! instead, and — because `Widget` is a supertrait — can still call every
-//! `Widget` method on it.
+//! `WidgetAny` itself now lives in `floem-core` (it is the type-erasure
+//! contract, not widget-specific). This module implements it for every shipped
+//! widget and bridges the crate's accessibility vocabulary
+//! ([`crate::primitives::SemanticsHint`], which names `floem-accessibility`
+//! types) into the engine-neutral [`floem_core::SemanticsHint`] that `floem-core`
+//! owns. The host lowers that neutral hint into the concrete accessibility
+//! schema when it builds the semantics tree.
 
 use std::any::Any;
 
-use floem_core::Widget;
+use floem_accessibility::SemanticsState as A11yState;
+use floem_core::{
+    SemanticsHint as CoreHint, SemanticsRole as CoreRole, SemanticsState as CoreState,
+};
 
 use crate::primitives::SemanticsHint;
 
-/// A widget that can be recovered from a trait object.
-pub trait WidgetAny: Widget {
-    fn as_any(&self) -> &dyn Any;
-    fn as_any_mut(&mut self) -> &mut dyn Any;
+fn to_core_role(role: floem_accessibility::SemanticsRole) -> CoreRole {
+    use floem_accessibility::SemanticsRole as A;
+    match role {
+        A::None => CoreRole::None,
+        A::Button => CoreRole::Button,
+        A::CheckBox => CoreRole::CheckBox,
+        A::Radio => CoreRole::Radio,
+        A::Switch => CoreRole::Switch,
+        A::Slider => CoreRole::Slider,
+        A::TextField => CoreRole::TextField,
+        A::TextView => CoreRole::TextView,
+        A::Image => CoreRole::Image,
+        A::ImageButton => CoreRole::ImageButton,
+        A::Link => CoreRole::Link,
+        A::Heading => CoreRole::Heading,
+        A::StaticText => CoreRole::StaticText,
+        A::List => CoreRole::List,
+        A::ListItem => CoreRole::ListItem,
+        A::Group => CoreRole::Group,
+        A::Scrollable => CoreRole::Scrollable,
+        A::ProgressBar => CoreRole::ProgressBar,
+        A::Tab => CoreRole::Tab,
+        A::TabBar => CoreRole::TabBar,
+        A::Dialog => CoreRole::Dialog,
+        A::MenuItem => CoreRole::MenuItem,
+        A::Custom(v) => CoreRole::Custom(v),
+    }
+}
 
-    /// The accessibility description of this widget.
-    ///
-    /// This exists because [`SemanticsContext`] carries only a label: a host
-    /// holding `dyn Widget` has no other way to learn a widget's role or state
-    /// without `floem-core` growing a dependency on `floem-accessibility`
-    /// (which would invert the framework's layering). Returning the hint here
-    /// is how roles reach the retained semantics tree today.
-    ///
-    /// [`SemanticsContext`]: floem_core::SemanticsContext
-    fn semantics_hint(&self) -> Option<SemanticsHint>;
+fn to_core_state(state: A11yState) -> CoreState {
+    let mut out = CoreState::empty();
+    let mut add = |flag: A11yState, core: CoreState| {
+        if state.contains(flag) {
+            out = out.union(core);
+        }
+    };
+    use CoreState as C;
+    add(A11yState::SELECTED, C::SELECTED);
+    add(A11yState::CHECKED, C::CHECKED);
+    add(A11yState::DISABLED, C::DISABLED);
+    add(A11yState::HIDDEN, C::HIDDEN);
+    add(A11yState::FOCUSED, C::FOCUSED);
+    add(A11yState::EXPANDED, C::EXPANDED);
+    add(A11yState::COLLAPSED, C::COLLAPSED);
+    add(A11yState::ENABLED, C::ENABLED);
+    add(A11yState::FOCUSABLE, C::FOCUSABLE);
+    add(A11yState::SCROLLABLE, C::SCROLLABLE);
+    add(A11yState::LIVE, C::LIVE);
+    out
+}
+
+impl From<SemanticsHint> for CoreHint {
+    fn from(h: SemanticsHint) -> Self {
+        CoreHint {
+            role: to_core_role(h.role),
+            label: h.label,
+            state: to_core_state(h.state),
+        }
+    }
 }
 
 macro_rules! impl_widget_any {
     ($($ty:ty),* $(,)?) => {
         $(
-            impl WidgetAny for $ty {
+            impl floem_core::WidgetAny for $ty {
                 fn as_any(&self) -> &dyn Any {
                     self
                 }
@@ -46,8 +90,8 @@ macro_rules! impl_widget_any {
                     self
                 }
 
-                fn semantics_hint(&self) -> Option<SemanticsHint> {
-                    Some(<$ty>::semantics_hint(self))
+                fn semantics_hint(&self) -> Option<CoreHint> {
+                    Some(<$ty>::semantics_hint(self).into())
                 }
             }
         )*
@@ -69,4 +113,9 @@ impl_widget_any!(
     crate::controls::Slider,
     crate::controls::Progress,
     crate::controls::Select,
+    crate::compose::Stack,
+    crate::compose::Conditional,
+    crate::compose::Overlay,
+    crate::compose::Dialog,
+    crate::compose::Tabs,
 );

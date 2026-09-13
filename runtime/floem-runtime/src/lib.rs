@@ -2,9 +2,7 @@
 
 mod event;
 
-pub use event::{
-    EventPhase, EventRouter, Hit, HitRegion, HitTester, PointerCapture, RouteStop,
-};
+pub use event::{EventPhase, EventRouter, Hit, HitRegion, HitTester, PointerCapture, RouteStop};
 
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -21,8 +19,14 @@ use floem_types::{ElementId, Point};
 /// Minimal input events for the new runtime path.
 #[derive(Debug, Clone)]
 pub enum Event {
-    PointerClick { target: ElementId, position: Point },
-    Custom { target: ElementId, name: &'static str },
+    PointerClick {
+        target: ElementId,
+        position: Point,
+    },
+    Custom {
+        target: ElementId,
+        name: &'static str,
+    },
 }
 
 /// Per-frame instrumentation counters.

@@ -11,13 +11,17 @@
 
 #![forbid(unsafe_code)]
 
+pub mod compose;
 pub mod controls;
 pub mod primitives;
 pub mod testkit;
 mod widget_any;
 
-pub use widget_any::WidgetAny;
+/// `WidgetAny` lives in `floem-core` (the type-erasure contract); re-exported
+/// here so existing importers keep working.
+pub use floem_core::WidgetAny;
 
+pub use compose::{Conditional, Dialog, List, Overlay, Stack, Tabs};
 pub use controls::{
     Button, Checkbox, InteractionState, Progress, Radio, Select, Slider, Switch, TextField,
 };

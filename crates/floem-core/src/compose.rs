@@ -1,0 +1,255 @@
+//! Composite widget composition.
+//!
+//! `floem-core` deliberately does not depend on a layout engine, so this module
+//! expresses *intent* in vocabulary any engine understands (axis, alignment,
+//! grow) rather than in engine types. [`crate::Widget::children`] hands these
+//! to whichever layer owns the tree; that layer lowers each
+//! [`LayoutRequest`] into whatever its concrete engine wants.
+//!
+//! Nothing here allocates identities: children are returned fresh on each call
+//! and diffed by [`ChildKey`], so a composite never gives away ownership of its
+//! own state.
+
+use std::sync::Arc;
+
+use crate::WidgetAny;
+
+/// Main axis along which a box lays out its own children.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+pub enum Axis {
+    #[default]
+    Horizontal,
+    Vertical,
+}
+
+impl Axis {
+    /// The axis a size describes: the other one from `self`.
+    pub const fn cross(self) -> Self {
+        match self {
+            Self::Horizontal => Self::Vertical,
+            Self::Vertical => Self::Horizontal,
+        }
+    }
+}
+
+/// Alignment along one axis.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+pub enum Align {
+    /// Occupy the full cross size (the flex `stretch` default).
+    #[default]
+    Stretch,
+    Start,
+    Center,
+    End,
+}
+
+/// Whether a box participates in its parent's flow.
+///
+/// Engine-neutral: the lowering layer maps this onto its concrete value
+/// (CSS `position`, etc.). `Absolute` escapes the flow so overlays (dialogs,
+/// drawers) can cover ancestor content instead of sitting as one more sibling.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+pub enum Position {
+    #[default]
+    Relative,
+    Absolute,
+}
+
+/// Offsets of an absolutely positioned box from its containing block.
+///
+/// `None` on a side means "auto": the layer resolves it from the box's own
+/// size. Mirrors the engine's absolute-inset vocabulary without depending on it.
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
+pub struct Inset {
+    pub left: Option<f32>,
+    pub top: Option<f32>,
+    pub right: Option<f32>,
+    pub bottom: Option<f32>,
+}
+
+impl Inset {
+    pub const ZERO: Self = Self {
+        left: Some(0.0),
+        top: Some(0.0),
+        right: Some(0.0),
+        bottom: Some(0.0),
+    };
+
+    /// Fills the containing block on every side.
+    pub const fn fill() -> Self {
+        Self::ZERO
+    }
+}
+
+/// Engine-neutral layout intent for one node.
+///
+/// Every field is optional so that "unspecified" stays distinguishable from
+/// "deliberately zero"; the layer lowering this decides the defaults.
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
+pub struct LayoutRequest {
+    pub width: Option<f32>,
+    pub height: Option<f32>,
+    /// Fraction of leftover space this box claims along the parent's main axis.
+    pub flex_grow: Option<f32>,
+    /// Direction this box lays out *its own* children in.
+    pub axis: Option<Axis>,
+    pub gap: Option<f32>,
+    pub main_align: Option<Align>,
+    pub cross_align: Option<Align>,
+    /// Flow participation; `Absolute` removes the box from its parent's flow.
+    pub position: Option<Position>,
+    /// Offsets when `position` is `Absolute`; `None` sides resolve to auto.
+    pub inset: Option<Inset>,
+}
+
+impl LayoutRequest {
+    pub const fn new() -> Self {
+        Self {
+            width: None,
+            height: None,
+            flex_grow: None,
+            axis: None,
+            gap: None,
+            main_align: None,
+            cross_align: None,
+            position: None,
+            inset: None,
+        }
+    }
+
+    pub const fn width(mut self, width: f32) -> Self {
+        self.width = Some(width);
+        self
+    }
+
+    pub const fn height(mut self, height: f32) -> Self {
+        self.height = Some(height);
+        self
+    }
+
+    /// Grow to fill leftover space on the parent's main axis.
+    pub const fn grow(mut self, grow: f32) -> Self {
+        self.flex_grow = Some(grow);
+        self
+    }
+
+    pub const fn fill(self) -> Self {
+        self.grow(1.0)
+    }
+
+    /// Lay this box's own children out along `axis`, `gap` apart.
+    pub const fn stack(mut self, axis: Axis, gap: f32) -> Self {
+        self.axis = Some(axis);
+        self.gap = Some(gap);
+        self
+    }
+
+    pub const fn main_align(mut self, align: Align) -> Self {
+        self.main_align = Some(align);
+        self
+    }
+
+    pub const fn cross_align(mut self, align: Align) -> Self {
+        self.cross_align = Some(align);
+        self
+    }
+
+    /// Remove this box from its parent's flow and anchor it to every side of
+    /// the containing block (a covering overlay).
+    pub const fn absolute_fill(mut self) -> Self {
+        self.position = Some(Position::Absolute);
+        self.inset = Some(Inset::fill());
+        self
+    }
+
+    /// Fill everything the parent gives and centre what it contains.
+    pub fn panel(axis: Axis, gap: f32) -> Self {
+        Self::new().fill().stack(axis, gap)
+    }
+}
+
+/// Stable identity for a child slot across [`crate::Widget::children`] calls.
+///
+/// The reconciler reuses a mounted child when the key at a position still
+/// matches, so keys decide whether state survives an update. Positional keys
+/// (`ChildKey::index`) are the default: good enough unless items are inserted
+/// in the middle of a list.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct ChildKey(u64);
+
+impl ChildKey {
+    /// Keyed by position. Reordering reuses slots, so state follows position.
+    pub const fn index(index: usize) -> Self {
+        Self(index as u64)
+    }
+
+    /// Keyed by a caller-supplied id, so state follows the item rather than the
+    /// slot. `raw` is mixed with a tag to keep numeric ids from colliding with
+    /// positional keys.
+    pub const fn keyed(raw: u64) -> Self {
+        Self(raw | (1u64 << 63))
+    }
+}
+
+impl From<usize> for ChildKey {
+    fn from(index: usize) -> Self {
+        Self::index(index)
+    }
+}
+
+impl From<&str> for ChildKey {
+    fn from(value: &str) -> Self {
+        // FNV-1a: stable across runs, unlike `DefaultHasher`.
+        let mut hash: u64 = 0xcbf2_9ce4_8422_2325;
+        for byte in value.as_bytes() {
+            hash ^= *byte as u64;
+            hash = hash.wrapping_mul(0x0000_0100_0000_01b3);
+        }
+        Self::keyed(hash)
+    }
+}
+
+/// Deferred construction of a child widget.
+///
+/// Children are rebuilt rather than kept, so a composite keeps only builders
+/// and never hands out ownership of the widgets behind them. The builder yields
+/// a `Box<dyn WidgetAny>` — the same type-erased object the host stores — so a
+/// `Widget::children` slot plugs directly into the retained tree.
+pub type ChildBuilder = Arc<dyn Fn() -> Box<dyn WidgetAny> + Send + Sync>;
+
+/// One child slot declared by a composite widget.
+#[derive(Clone)]
+pub struct Child {
+    pub key: ChildKey,
+    pub layout: LayoutRequest,
+    pub build: ChildBuilder,
+}
+
+impl Child {
+    pub fn new(
+        key: impl Into<ChildKey>,
+        layout: LayoutRequest,
+        build: impl Fn() -> Box<dyn WidgetAny> + Send + Sync + 'static,
+    ) -> Self {
+        Self {
+            key: key.into(),
+            layout,
+            build: Arc::new(build),
+        }
+    }
+
+    /// Builds the child. Called by whoever owns the tree; only when the key at
+    /// this position is new, so surviving children keep their state.
+    pub fn build(&self) -> Box<dyn WidgetAny> {
+        (self.build)()
+    }
+}
+
+impl std::fmt::Debug for Child {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Child")
+            .field("key", &self.key)
+            .field("layout", &self.layout)
+            .finish_non_exhaustive()
+    }
+}

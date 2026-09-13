@@ -52,3 +52,45 @@ fn platform_focus_sync() {
 fn unused_scope_id_type() {
     let _ = FocusScopeId(0);
 }
+
+#[test]
+fn unregistered_nodes_leave_the_traversal_order() {
+    let mut fm = FocusManager::new();
+    let scope = fm.create_scope(None);
+    fm.register(scope, eid(1));
+    fm.register(scope, eid(2));
+    fm.register(scope, eid(3));
+
+    fm.unregister(eid(2));
+
+    assert!(!fm.is_registered(eid(2)));
+    assert_eq!(fm.tab(), Some(eid(1)));
+    // Skips the removed node instead of stalling on an empty slot.
+    assert_eq!(fm.tab(), Some(eid(3)));
+    assert_eq!(fm.tab(), Some(eid(1)));
+}
+
+#[test]
+fn unregistering_the_focused_node_clears_focus() {
+    let mut fm = FocusManager::new();
+    let scope = fm.create_scope(None);
+    fm.register(scope, eid(1));
+    fm.register(scope, eid(2));
+    fm.focus(eid(2));
+    assert_eq!(fm.focused(), Some(eid(2)));
+
+    fm.unregister(eid(2));
+
+    assert_eq!(fm.focused(), None, "focus must not outlive its node");
+    assert_eq!(fm.platform_focused, None);
+}
+
+#[test]
+fn registering_twice_does_not_duplicate() {
+    let mut fm = FocusManager::new();
+    let scope = fm.create_scope(None);
+    fm.register(scope, eid(1));
+    fm.register(scope, eid(1));
+    assert_eq!(fm.tab(), Some(eid(1)));
+    assert_eq!(fm.tab(), Some(eid(1)), "one visit per node per cycle");
+}

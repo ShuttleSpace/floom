@@ -10,6 +10,11 @@ pub trait CreateContext {
 /// Context available during reactive/property updates.
 pub trait UpdateContext {
     fn mark_dirty(&mut self, id: ElementId);
+    /// The children declared by `id` changed; rebuild that subtree.
+    ///
+    /// Requires [`crate::Widget::children`] to be consulted again, so it is
+    /// strictly more expensive than a repaint. See [`crate::compose`].
+    fn mark_children_dirty(&mut self, id: ElementId);
 }
 
 /// Pointer/keyboard routing context.

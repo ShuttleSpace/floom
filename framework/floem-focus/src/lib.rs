@@ -52,7 +52,29 @@ impl FocusManager {
     }
 
     pub fn register(&mut self, scope: FocusScopeId, id: ElementId) {
-        self.scopes[scope.0 as usize].order.push(id);
+        let order = &mut self.scopes[scope.0 as usize].order;
+        if !order.contains(&id) {
+            order.push(id);
+        }
+    }
+
+    /// Drops `id` from traversal order in every scope.
+    ///
+    /// Unmounting a widget without this leaves the traversal order holding ids
+    /// that no longer exist, so Tab would focus nothing and lose its place.
+    pub fn unregister(&mut self, id: ElementId) {
+        for scope in &mut self.scopes {
+            scope.order.retain(|existing| *existing != id);
+        }
+        if self.focused == Some(id) {
+            self.focused = None;
+            self.platform_focused = None;
+        }
+    }
+
+    /// Whether `id` is still in the traversal order of any scope.
+    pub fn is_registered(&self, id: ElementId) -> bool {
+        self.scopes.iter().any(|scope| scope.order.contains(&id))
     }
 
     pub fn focused(&self) -> Option<ElementId> {

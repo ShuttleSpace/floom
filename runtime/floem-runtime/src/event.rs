@@ -98,6 +98,17 @@ impl PointerCapture {
     pub fn get(&self) -> Option<ElementId> {
         self.captured
     }
+
+    /// Drops the capture only if it belongs to `id`.
+    ///
+    /// A widget can be unmounted mid-drag (its row disappears from a list).
+    /// Without this the capture pins every later pointer event to an element
+    /// that no longer exists, and the UI stops responding to input.
+    pub fn release_if(&mut self, id: ElementId) {
+        if self.captured == Some(id) {
+            self.captured = None;
+        }
+    }
 }
 
 /// Builds capture → target → bubble routes given parent links.
@@ -118,6 +129,15 @@ impl EventRouter {
         self.parents.insert(child, parent);
     }
 
+    /// Removes the child → parent link for `id`, if any.
+    ///
+    /// Required when unmounting: a stale link would keep the removed element
+    /// in every bubble route derived from its old ancestors.
+    pub fn unparent(&mut self, id: ElementId) {
+        self.parents.remove(&id);
+        self.capture.release_if(id);
+    }
+
     pub fn ancestors(&self, id: ElementId) -> Vec<ElementId> {
         let mut out = Vec::new();
         let mut cur = id;
@@ -132,10 +152,7 @@ impl EventRouter {
     pub fn resolve_target(&self, point: Point) -> Option<Hit> {
         if let Some(id) = self.capture.get() {
             let native = self.hits.regions.get(&id).and_then(|r| r.native);
-            return Some(Hit {
-                target: id,
-                native,
-            });
+            return Some(Hit { target: id, native });
         }
         self.hits.hit_test(point)
     }
