@@ -8,6 +8,7 @@ fn stable_id_survives_upsert() {
     let id = scene.insert(SceneNode::Rect {
         bounds: Rect::from_origin_size(Point::ZERO, Size::new(10.0, 10.0)),
         fill: Color::BLACK,
+        radius: 0.0,
     });
     scene.finish_update();
 
@@ -17,6 +18,7 @@ fn stable_id_survives_upsert() {
         SceneNode::Rect {
             bounds: Rect::from_origin_size(Point::new(1.0, 1.0), Size::new(10.0, 10.0)),
             fill: Color::WHITE,
+            radius: 0.0,
         },
     );
     scene.finish_update();
@@ -32,6 +34,7 @@ fn remove_invalidates_id_and_reuses_index() {
     let id = scene.insert(SceneNode::Rect {
         bounds: Rect::from_origin_size(Point::ZERO, Size::new(5.0, 5.0)),
         fill: Color::BLACK,
+        radius: 0.0,
     });
     scene.finish_update();
 
@@ -44,6 +47,7 @@ fn remove_invalidates_id_and_reuses_index() {
     let id2 = scene.insert(SceneNode::Rect {
         bounds: Rect::from_origin_size(Point::ZERO, Size::new(1.0, 1.0)),
         fill: Color::WHITE,
+        radius: 0.0,
     });
     scene.finish_update();
     assert_eq!(id2.index(), id.index());
@@ -58,6 +62,7 @@ fn damage_tracks_rect_updates() {
     let id = scene.insert(SceneNode::Rect {
         bounds: Rect::from_origin_size(Point::ZERO, Size::new(10.0, 10.0)),
         fill: Color::BLACK,
+        radius: 0.0,
     });
     scene.finish_update();
     assert!(!scene.damage().is_empty());
@@ -70,6 +75,7 @@ fn damage_tracks_rect_updates() {
         SceneNode::Rect {
             bounds: Rect::from_origin_size(Point::new(2.0, 2.0), Size::new(10.0, 10.0)),
             fill: Color::BLACK,
+            radius: 0.0,
         },
     );
     scene.finish_update();

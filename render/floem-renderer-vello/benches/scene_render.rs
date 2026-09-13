@@ -1,8 +1,8 @@
 use std::hint::black_box;
 use std::time::Duration;
 
-use criterion::{Criterion, criterion_group, criterion_main};
-use floem_renderer::{FrameInfo, render_once};
+use criterion::{criterion_group, criterion_main, Criterion};
+use floem_renderer::{render_once, FrameInfo};
 use floem_renderer_vello::VelloRendererAdapter;
 use floem_scene::{Color, Point, Rect, Scene, SceneNode, Size};
 
@@ -16,6 +16,7 @@ fn build_scene(n: usize) -> Scene {
                 Size::new(4.0, 4.0),
             ),
             fill: Color::BLACK,
+            radius: 0.0,
         });
     }
     scene.finish_update();
@@ -49,6 +50,7 @@ fn bench_scene_render(c: &mut Criterion) {
             SceneNode::Rect {
                 bounds: Rect::from_origin_size(Point::ZERO, Size::new(4.0, 4.0)),
                 fill: Color::WHITE,
+                radius: 0.0,
             },
         );
     }

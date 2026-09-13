@@ -79,7 +79,7 @@ impl Renderer for SoftwareRenderer {
 
     fn render_scene(&mut self, scene: &Scene, _damage: &DamageRegion) {
         for (_id, node) in scene.iter() {
-            if let SceneNode::Rect { bounds, fill } = node {
+            if let SceneNode::Rect { bounds, fill, .. } = node {
                 self.fill_rect(
                     bounds.x0.floor() as i32,
                     bounds.y0.floor() as i32,
@@ -99,7 +99,7 @@ impl Renderer for SoftwareRenderer {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use floem_renderer::{FrameInfo, render_once};
+    use floem_renderer::{render_once, FrameInfo};
     use floem_scene::{Point, Rect, SceneNode, Size};
     use floem_types::Color;
 
@@ -110,6 +110,7 @@ mod tests {
         let _ = scene.insert(SceneNode::Rect {
             bounds: Rect::from_origin_size(Point::new(2.0, 2.0), Size::new(3.0, 3.0)),
             fill: Color::rgb(10, 20, 30),
+            radius: 0.0,
         });
         scene.finish_update();
 

@@ -37,7 +37,7 @@ use floem_renderer::{AttachedSurface, Presenter, SurfaceHandles};
 use floem_scene::{ResourceKind, ResourceRegistry, Scene, SceneNode};
 use floem_types::{Size, SurfaceId, WindowId};
 
-use vello::kurbo::{Affine, Rect as KurboRect};
+use vello::kurbo::{Affine, Rect as KurboRect, RoundedRect as KurboRoundedRect};
 use vello::peniko::{
     Blob, Color as PenikoColor, Fill, ImageAlphaType, ImageBrush, ImageData, ImageFormat,
     ImageSampler,
@@ -251,14 +251,20 @@ impl VelloGpuPresenter {
         let mut unsupported = 0;
         for (_id, node) in scene.iter() {
             match node {
-                SceneNode::Rect { bounds, fill } => {
+                SceneNode::Rect {
+                    bounds,
+                    fill,
+                    radius,
+                } => {
                     let rect = KurboRect::new(bounds.x0, bounds.y0, bounds.x1, bounds.y1);
+                    // One fill for both shapes: a zero radius is a plain rect.
+                    let shape = KurboRoundedRect::from_rect(rect, f64::from(radius.max(0.0)));
                     self.vello_scene.fill(
                         Fill::NonZero,
                         Affine::IDENTITY,
                         PenikoColor::from_rgba8(fill.r, fill.g, fill.b, fill.a),
                         None,
-                        &rect,
+                        &shape,
                     );
                     rects += 1;
                 }
@@ -517,6 +523,7 @@ mod tests {
                 Size::new(4.0, 4.0),
             ),
             fill: floem_types::Color::rgb(1, 2, 3),
+            radius: 0.0,
         });
         scene.finish_update();
         presenter.present(&scene, &ResourceRegistry::new());

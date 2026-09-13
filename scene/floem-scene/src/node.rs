@@ -12,6 +12,11 @@ pub enum SceneNode {
     Rect {
         bounds: Rect,
         fill: Color,
+        /// Corner radius in logical px; `0.0` is a plain right-angle rect.
+        /// A single node rather than a separate variant: rounded corners are
+        /// the same fill, just a different shape, and every painter wants a
+        /// uniform path for the common case.
+        radius: f32,
     },
     Image {
         bounds: Rect,
@@ -31,9 +36,7 @@ impl SceneNode {
             SceneNode::Group { .. } => None,
             SceneNode::Rect { bounds, .. } => Some(*bounds),
             SceneNode::Image { bounds, .. } => Some(*bounds),
-            SceneNode::Text { origin, size, .. } => {
-                Some(Rect::from_origin_size(*origin, *size))
-            }
+            SceneNode::Text { origin, size, .. } => Some(Rect::from_origin_size(*origin, *size)),
         }
     }
 }

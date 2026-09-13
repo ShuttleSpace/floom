@@ -159,6 +159,7 @@ impl PaintContext for SceneRecorder {
         self.scene.insert(SceneNode::Rect {
             bounds: rect,
             fill: color,
+            radius: 0.0,
         });
         self.ops.push(PaintOp::Rect {
             bounds: rect,
@@ -167,11 +168,10 @@ impl PaintContext for SceneRecorder {
     }
 
     fn fill_rounded_rect(&mut self, rect: Rect, radius: f32, color: Color) {
-        // The retained scene has no rounded-rect node yet; record the filled
-        // rect and keep the radius in the op list for snapshotting.
         self.scene.insert(SceneNode::Rect {
             bounds: rect,
             fill: color,
+            radius: radius.max(0.0),
         });
         self.ops.push(PaintOp::RoundedRect {
             bounds: rect,

@@ -110,8 +110,8 @@ impl Default for WidgetHost {
 // --- layout intent lowering ------------------------------------------------
 
 fn to_a11y_role(role: SemanticsRole) -> floem_accessibility::SemanticsRole {
-    use SemanticsRole as C;
     use floem_accessibility::SemanticsRole as A;
+    use SemanticsRole as C;
     match role {
         C::None => A::None,
         C::Button => A::Button,
@@ -1029,15 +1029,15 @@ impl PaintContext for NodePaintContext<'_> {
         self.push(floem_scene::SceneNode::Rect {
             bounds: rect,
             fill: color,
+            radius: 0.0,
         });
     }
 
-    fn fill_rounded_rect(&mut self, rect: Rect, _radius: f32, color: floem_types::Color) {
-        // No rounded-rect node in the retained scene yet; the radius is carried
-        // alongside so backends can lower it once the node exists.
+    fn fill_rounded_rect(&mut self, rect: Rect, radius: f32, color: floem_types::Color) {
         self.push(floem_scene::SceneNode::Rect {
             bounds: rect,
             fill: color,
+            radius: radius.max(0.0),
         });
     }
 

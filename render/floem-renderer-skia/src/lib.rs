@@ -25,18 +25,16 @@ impl Renderer for SkiaRendererAdapter {
     fn render_scene(&mut self, scene: &Scene, _damage: &DamageRegion) {
         for (_id, node) in scene.iter() {
             match node {
-                SceneNode::Rect { bounds, fill } => self.commands.push(SkiaCommand::FillRect {
+                SceneNode::Rect { bounds, fill, .. } => self.commands.push(SkiaCommand::FillRect {
                     bounds: *bounds,
                     color: *fill,
                 }),
-                SceneNode::Image { bounds, .. } => {
-                    self.commands.push(SkiaCommand::DrawImage { bounds: *bounds })
-                }
-                SceneNode::Text { origin, size, .. } => {
-                    self.commands.push(SkiaCommand::DrawText {
-                        bounds: Rect::from_origin_size(*origin, *size),
-                    })
-                }
+                SceneNode::Image { bounds, .. } => self
+                    .commands
+                    .push(SkiaCommand::DrawImage { bounds: *bounds }),
+                SceneNode::Text { origin, size, .. } => self.commands.push(SkiaCommand::DrawText {
+                    bounds: Rect::from_origin_size(*origin, *size),
+                }),
                 SceneNode::Group { .. } => {}
             }
         }
@@ -50,7 +48,7 @@ impl Renderer for SkiaRendererAdapter {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use floem_renderer::{FrameInfo, render_once};
+    use floem_renderer::{render_once, FrameInfo};
     use floem_renderer_software::SoftwareRenderer;
     use floem_scene::{Point, SceneNode, Size};
     use floem_types::Color;
@@ -62,6 +60,7 @@ mod tests {
         let _ = scene.insert(SceneNode::Rect {
             bounds: Rect::from_origin_size(Point::new(1.0, 1.0), Size::new(2.0, 2.0)),
             fill: Color::rgb(1, 2, 3),
+            radius: 0.0,
         });
         scene.finish_update();
 

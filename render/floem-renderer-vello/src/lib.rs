@@ -21,9 +21,18 @@ use floem_types::{Color, Rect};
 /// Recorded draw command (Vello backend consumes this later).
 #[derive(Debug, Clone, PartialEq)]
 pub enum VelloCommand {
-    FillRect { bounds: Rect, color: Color },
-    DrawImage { bounds: Rect },
-    DrawGlyphs { bounds: Rect },
+    FillRect {
+        bounds: Rect,
+        color: Color,
+        /// Corner radius in logical px; `0.0` is a plain right-angle rect.
+        radius: f32,
+    },
+    DrawImage {
+        bounds: Rect,
+    },
+    DrawGlyphs {
+        bounds: Rect,
+    },
 }
 
 #[derive(Debug, Default)]
@@ -59,10 +68,15 @@ impl Renderer for VelloRendererAdapter {
         self.cache_misses += 1;
         for (_id, node) in scene.iter() {
             match node {
-                SceneNode::Rect { bounds, fill } => {
+                SceneNode::Rect {
+                    bounds,
+                    fill,
+                    radius,
+                } => {
                     self.commands.push(VelloCommand::FillRect {
                         bounds: *bounds,
                         color: *fill,
+                        radius: radius.max(0.0),
                     });
                 }
                 SceneNode::Image { bounds, .. } => {
@@ -92,7 +106,7 @@ impl Renderer for VelloRendererAdapter {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use floem_renderer::{FrameInfo, render_once};
+    use floem_renderer::{render_once, FrameInfo};
     use floem_scene::{Point, SceneNode, Size};
     use floem_types::Color;
 
@@ -103,6 +117,7 @@ mod tests {
         let _ = scene.insert(SceneNode::Rect {
             bounds: Rect::from_origin_size(Point::ZERO, Size::new(10.0, 10.0)),
             fill: Color::BLACK,
+            radius: 0.0,
         });
         let _ = scene.insert(SceneNode::Image {
             bounds: Rect::from_origin_size(Point::ZERO, Size::new(8.0, 8.0)),
@@ -132,6 +147,7 @@ mod tests {
         let _ = scene.insert(SceneNode::Rect {
             bounds: Rect::from_origin_size(Point::ZERO, Size::new(1.0, 1.0)),
             fill: Color::BLACK,
+            radius: 0.0,
         });
         scene.finish_update();
 
@@ -140,5 +156,37 @@ mod tests {
         scene.clear_damage();
         render_once(&mut vello, &FrameInfo::software(8, 8, 2), &scene);
         assert!(vello.cache_hits >= 1);
+    }
+
+    /// The adapter forwards the corner radius verbatim so the GPU presenter
+    /// can shape corners from the command list alone.
+    #[test]
+    fn fill_rect_commands_carry_their_radius() {
+        let mut scene = Scene::new();
+        scene.begin_update();
+        let _ = scene.insert(SceneNode::Rect {
+            bounds: Rect::from_origin_size(Point::ZERO, Size::new(10.0, 10.0)),
+            fill: Color::BLACK,
+            radius: 6.0,
+        });
+        let _ = scene.insert(SceneNode::Rect {
+            bounds: Rect::from_origin_size(Point::new(0.0, 20.0), Size::new(10.0, 10.0)),
+            fill: Color::BLACK,
+            radius: -3.0, // clamped to 0 at the adapter boundary
+        });
+        scene.finish_update();
+
+        let mut vello = VelloRendererAdapter::new();
+        render_once(&mut vello, &FrameInfo::software(32, 32, 1), &scene);
+        let [a, b] = vello.commands.as_slice() else {
+            panic!("expected exactly two commands");
+        };
+        let (VelloCommand::FillRect { radius: ra, .. }, VelloCommand::FillRect { radius: rb, .. }) =
+            (a, b)
+        else {
+            panic!("expected fill-rect commands, got {a:?} / {b:?}");
+        };
+        assert_eq!(*ra, 6.0);
+        assert_eq!(*rb, 0.0, "negative radius is clamped");
     }
 }
