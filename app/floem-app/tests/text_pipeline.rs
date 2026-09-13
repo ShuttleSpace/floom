@@ -104,3 +104,53 @@ fn different_font_sizes_get_different_resources() {
         assert!(!glyph_runs(&host, *id).is_empty());
     }
 }
+
+// --- intrinsic sizing -------------------------------------------------------
+
+/// A composite child with no explicit extent used to collapse to zero bounds
+/// (the layout engine cannot measure text on its own), so `Text::paint`
+/// early-returned and nothing reached the scene. With `Text::layout_request`
+/// reporting the measured extent, the rows shrink-wrap their content.
+#[test]
+fn stack_child_text_sizes_itself_without_explicit_extent() {
+    let stack = floem_widgets::Stack::new(floem_core::Axis::Vertical)
+        .push(|| Box::new(Text::new("auto sized row")) as Box<dyn floem_core::WidgetAny>)
+        .push(|| Box::new(Text::new("second row").size(20.0)) as Box<dyn floem_core::WidgetAny>);
+    let mut host = WidgetHost::new();
+    host.mount_root(LayoutStyle::default(), stack);
+    host.frame();
+
+    let mut text_nodes = 0;
+    for (_id, node) in host.scene().iter() {
+        if let SceneNode::Text { size, .. } = node {
+            text_nodes += 1;
+            assert!(
+                size.width > 0.0 && size.height > 0.0,
+                "painted text must have a real extent, got {size:?}"
+            );
+        }
+    }
+    assert_eq!(
+        text_nodes, 2,
+        "both rows paint text now that they have bounds"
+    );
+}
+
+/// The intrinsic size is a *default*: explicit sizing in the mount style is
+/// never overridden by the measurement.
+#[test]
+fn explicit_sizing_still_beats_intrinsic() {
+    let mut host = WidgetHost::new();
+    host.set_size(floem_core::Size::new(240.0, 160.0));
+    let root = host.mount_root(LayoutStyle::default(), floem_widgets::Container::new());
+    let label = host.mount(
+        root,
+        fixed(200.0, 24.0),
+        Text::new("this text is definitely wider than 200px at 14pt"),
+    );
+    host.frame();
+
+    let bounds = host.bounds(label);
+    assert_eq!(bounds.width(), 200.0, "explicit width wins");
+    assert_eq!(bounds.height(), 24.0, "explicit height wins");
+}

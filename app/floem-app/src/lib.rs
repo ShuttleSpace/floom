@@ -223,9 +223,21 @@ fn request_to_style(req: &LayoutRequest) -> LayoutStyle {
 }
 
 /// Applies a widget's own container intent ([`Widget::layout_request`]) on top of
-/// a base style, without touching the base's sizing unless the intent carries it.
+/// a base style.
+///
+/// Sizing is *fill-in, never override*: a request may supply an intrinsic
+/// width/height (e.g. a `Text` reporting its measured extent), but only when
+/// the base style leaves that dimension unspecified — explicit sizing in the
+/// mount style always wins. Container intent (axis, gap, alignment, position)
+/// applies on top as before.
 fn apply_self_layout(mut base: LayoutStyle, req: Option<&LayoutRequest>) -> LayoutStyle {
     if let Some(req) = req {
+        if base.width.is_none() {
+            base.width = req.width;
+        }
+        if base.height.is_none() {
+            base.height = req.height;
+        }
         if let Some(axis) = req.axis {
             base.flex_direction = match axis {
                 Axis::Horizontal => FlexDirection::Row,

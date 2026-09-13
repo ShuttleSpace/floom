@@ -2315,6 +2315,7 @@ dependencies = [
  "floem-core",
  "floem-navigation",
  "floem-scene",
+ "floem-text",
  "floem-types",
 ]
 

@@ -11,8 +11,8 @@
 
 use floem_accessibility::{SemanticsRole, SemanticsState};
 use floem_core::{
-    Color, CreateContext, ElementId, PaintContext, Point, Rect, ResourceId, SemanticsContext, Size,
-    UpdateContext, Widget,
+    Color, CreateContext, ElementId, LayoutRequest, PaintContext, Point, Rect, ResourceId,
+    SemanticsContext, Size, UpdateContext, Widget,
 };
 use floem_types::Insets;
 
@@ -206,6 +206,26 @@ impl Widget for Text {
 
     fn update(&mut self, cx: &mut dyn UpdateContext, id: ElementId) {
         self.revision.sync(cx, id);
+    }
+
+    /// Intrinsic size: the laid-out extent of the content at this font size.
+    ///
+    /// The host applies this as the *default* sizing — an explicit width or
+    /// height in the mount style still wins, so `fixed(160, 20)` labels keep
+    /// their slot while unwrapped children shrink-wrap their text.
+    fn layout_request(&self) -> Option<LayoutRequest> {
+        if self.content.is_empty() || self.size <= 0.0 {
+            return None;
+        }
+        let measured = floem_text::measure_text(&self.content, self.size, f64::INFINITY);
+        if measured.width <= 0.0 || measured.height <= 0.0 {
+            return None;
+        }
+        Some(
+            LayoutRequest::new()
+                .width(measured.width as f32)
+                .height(measured.height as f32),
+        )
     }
 
     fn paint(&self, cx: &mut dyn PaintContext, _id: ElementId) {

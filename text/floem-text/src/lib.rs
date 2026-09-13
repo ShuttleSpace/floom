@@ -5,8 +5,10 @@
 
 mod cache;
 mod layout;
+mod measure;
 
 pub use cache::LayoutCache;
 pub use layout::{
     Glyph, GlyphRun, LaidOutText, LineMetrics, TextAlign, TextLayoutOptions, TextShaper,
 };
+pub use measure::measure_text;

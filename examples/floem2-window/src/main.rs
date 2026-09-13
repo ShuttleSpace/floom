@@ -106,10 +106,9 @@ fn main() {
     let flag = clicked.clone();
     let root = Stack::new(Axis::Vertical)
         .gap(16.0)
-        // Text has no intrinsic size in the layout engine yet (no text
-        // measurement), so children need an explicit extent to get non-zero
-        // bounds — otherwise `Text::paint` skips and nothing reaches the GPU.
-        .push_layout(LayoutRequest::new().height(28.0), || {
+        // The label needs no explicit extent: `Text::layout_request` reports
+        // its measured intrinsic size and the host applies it as the default.
+        .push_layout(LayoutRequest::new(), || {
             Box::new(Text::new("clicked 0 times").size(20.0))
         })
         .push_layout(LayoutRequest::new().width(160.0).height(40.0), move || {
