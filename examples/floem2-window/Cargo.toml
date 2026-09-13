@@ -14,6 +14,7 @@ default = []
 real = [
     "dep:floem-platform-desktop",
     "dep:floem-renderer-vello",
+    "dep:image",
     "floem-platform-desktop/winit",
     "floem-renderer-vello/gpu",
 ]
@@ -27,6 +28,8 @@ floem-types = { path = "../../crates/floem-types", version = "0.2.0" }
 floem-widgets = { path = "../../widgets/floem-widgets", version = "0.2.0" }
 floem-platform-desktop = { path = "../../platform/floem-platform-desktop", version = "0.2.0", optional = true }
 floem-renderer-vello = { path = "../../render/floem-renderer-vello", version = "0.2.0", optional = true }
+# PNG encode for the self-generated gradient (decode happens in floem-app).
+image = { workspace = true, features = ["png"], optional = true }
 
 [[bin]]
 name = "floem2-window"

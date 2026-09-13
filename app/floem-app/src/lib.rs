@@ -14,8 +14,10 @@
 
 #![forbid(unsafe_code)]
 
+pub mod image_codec;
 pub mod runner;
 
+pub use image_codec::{DecodedImage, decode_image};
 pub use runner::{AppRunner, RunStats};
 
 use std::collections::{HashMap, HashSet};
@@ -110,8 +112,8 @@ impl Default for WidgetHost {
 // --- layout intent lowering ------------------------------------------------
 
 fn to_a11y_role(role: SemanticsRole) -> floem_accessibility::SemanticsRole {
-    use floem_accessibility::SemanticsRole as A;
     use SemanticsRole as C;
+    use floem_accessibility::SemanticsRole as A;
     match role {
         C::None => A::None,
         C::Button => A::Button,
@@ -916,6 +918,17 @@ impl WidgetHost {
                 pixels: std::sync::Arc::from(pixels.into_boxed_slice()),
             },
         }))
+    }
+
+    /// Decodes encoded image bytes (PNG, JPEG, …) and registers the pixels.
+    ///
+    /// A convenience over [`decode_image`](image_codec::decode_image) +
+    /// [`Self::register_image`]: the decoder owns the straight→premultiplied
+    /// alpha conversion, so callers pass raw file bytes and get a resource id.
+    /// Returns `None` when the bytes do not decode.
+    pub fn register_image_decoded(&mut self, bytes: &[u8]) -> Option<ResourceId> {
+        let decoded = image_codec::decode_image(bytes)?;
+        self.register_image(decoded.width, decoded.height, decoded.pixels)
     }
 
     pub fn semantics(&self) -> &SemanticsTree {

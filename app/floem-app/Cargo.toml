@@ -24,6 +24,9 @@ floem-text = { path = "../../text/floem-text", version = "0.2.0" }
 # allowed to name both the platform ABI and the renderer ABI.
 floem-platform = { path = "../../platform/floem-platform", version = "0.2.0" }
 floem-renderer = { path = "../../render/floem-renderer", version = "0.2.0" }
+# Image decoding for `register_image_decoded`: PNG + JPEG decode the formats
+# UI layers actually load; more formats can be opted into via features.
+image = { workspace = true, features = ["png", "jpeg"] }
 
 [dev-dependencies]
 floem-forms = { path = "../../framework/floem-forms", version = "0.2.0" }

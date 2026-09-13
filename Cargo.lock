@@ -1973,6 +1973,7 @@ dependencies = [
  "floem-text",
  "floem-types",
  "floem-widgets",
+ "image 0.25.9",
 ]
 
 [[package]]
@@ -2562,6 +2563,7 @@ dependencies = [
  "floem-renderer-vello",
  "floem-types",
  "floem-widgets",
+ "image 0.25.9",
 ]
 
 [[package]]

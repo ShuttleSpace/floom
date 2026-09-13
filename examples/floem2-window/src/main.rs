@@ -94,18 +94,28 @@ impl WindowApp {
 fn main() {
     let mut host = WidgetHost::new();
 
-    // A synthetic 64×32 gradient so the GPU image path is exercised every
-    // frame. Pixels are premultiplied RGBA8 — fully opaque here, so the
-    // premultiplication is a no-op.
+    // A synthetic 64×32 gradient, exercised through the *full* image pipeline:
+    // premultiplied RGBA8 → PNG encode → decode (`register_image_decoded` →
+    // premultiply → registry). Pixels are fully opaque, so the premultiply is
+    // a no-op and the on-screen gradient is byte-identical to the source.
     let mut pixels = Vec::with_capacity(64 * 32 * 4);
     for y in 0..32u8 {
         for x in 0..64u8 {
             pixels.extend_from_slice(&[x * 4, y * 8, 128, 255]);
         }
     }
+    let png = {
+        let (width, height) = (64u32, 32u32);
+        let img = image::RgbaImage::from_raw(width, height, pixels.clone())
+            .expect("gradient buffer matches its extent");
+        let mut buf = std::io::Cursor::new(Vec::new());
+        img.write_to(&mut buf, image::ImageFormat::Png)
+            .expect("PNG encode");
+        buf.into_inner()
+    };
     let picture = host
-        .register_image(64, 32, pixels)
-        .expect("gradient pixel count matches its extent");
+        .register_image_decoded(&png)
+        .expect("self-encoded PNG decodes");
 
     // A minimal counter: a text label and a fixed-size button. The button only
     // bumps a shared atomic; the label text is rewritten from the frame hook
