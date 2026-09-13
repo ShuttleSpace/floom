@@ -81,6 +81,9 @@ pub struct GpuFrameStats {
     /// Image textures uploaded (first sighting of a resource id, or re-encode
     /// after eviction).
     pub texture_cache_misses: u64,
+    /// Present calls skipped because the scene reported no damage since the
+    /// last presented frame (and no attach/resize made the screen stale).
+    pub present_skips: u64,
 }
 
 /// Vello + wgpu [`Presenter`].
@@ -102,6 +105,10 @@ pub struct VelloGpuPresenter {
     /// The brush holds an `Arc` to the registry's pixels, so building it once
     /// shares bytes with the scene layer and uploads once to vello's atlas.
     image_cache: HashMap<u64, ImageBrush>,
+    /// Set by attach/resize: the swap-chain's content is undefined (or stale),
+    /// so the next present must run even if the scene reports no damage.
+    /// Cleared once a frame has actually been presented.
+    needs_present: bool,
 }
 
 impl std::fmt::Debug for VelloGpuPresenter {
@@ -157,6 +164,7 @@ impl VelloGpuPresenter {
             window: None,
             surface_id: None,
             image_cache: HashMap::new(),
+            needs_present: true,
         })
     }
 
@@ -260,10 +268,10 @@ impl VelloGpuPresenter {
 
     /// Translate the retained Floem scene into a vello scene.
     ///
-    /// Rebuilt from scratch every frame: vello's `Scene` is a command list, not
-    /// a retained tree, so there is nothing to diff. `floem-scene`'s damage
-    /// region is what the renderer would use to skip work; until partial
-    /// rendering lands the whole list is re-encoded each frame.
+    /// Rebuilt from scratch every presented frame: vello's `Scene` is a
+    /// command list, not a retained tree, so there is nothing to diff. Frames
+    /// with empty damage never reach here — `present` skips them entirely
+    /// before encoding.
     fn encode(
         &mut self,
         scene: &Scene,
@@ -451,6 +459,9 @@ impl Presenter for VelloGpuPresenter {
     fn resize(&mut self, size: Size, scale: f64) {
         self.size = size;
         self.scale = if scale > 0.0 { scale } else { 1.0 };
+        // Even a no-op resize may follow a period where the surface was
+        // occluded/invalidated; re-present the next frame to be safe.
+        self.needs_present = true;
         let physical = (
             (size.width.max(0.0) * self.scale).ceil() as u32,
             (size.height.max(0.0) * self.scale).ceil() as u32,
@@ -459,6 +470,26 @@ impl Presenter for VelloGpuPresenter {
     }
 
     fn present(&mut self, scene: &Scene, resources: &ResourceRegistry) {
+        // Damage-driven frame skip: when the scene reports nothing changed
+        // since the last presented frame and no attach/resize made the screen
+        // stale, re-encoding the command list and re-running the compute
+        // rasterisation would draw exactly the same pixels. Note the scene's
+        // damage is the *producer's* contract — the host resets it each paint,
+        // so an unchanged tree genuinely arrives empty here.
+        if !self.needs_present && scene.damage().is_empty() {
+            self.stats.present_skips += 1;
+            self.stats.rects = 0;
+            self.stats.glyph_runs = 0;
+            self.stats.images = 0;
+            self.stats.unsupported_nodes = 0;
+            self.stats.texture_cache_hits = 0;
+            self.stats.texture_cache_misses = 0;
+            return;
+        }
+        // Any non-skipped present refreshes the screen (or would, with a
+        // surface): the "stale screen" reason to present is consumed.
+        self.needs_present = false;
+
         let (rects, glyph_runs, images, unsupported, cache_hits, cache_misses) =
             self.encode(scene, resources);
         // Encode stats are final whether or not a surface was attached — the
@@ -785,6 +816,63 @@ mod tests {
         assert_eq!(
             stats.unsupported_nodes, 1,
             "dangling id is skipped + counted"
+        );
+    }
+
+    /// A present whose scene reports no damage (and no attach/resize made the
+    /// screen stale) must not re-encode: the per-frame stats read zero and the
+    /// skip is counted. A resize re-arms presenting.
+    #[test]
+    fn empty_damage_skips_present_until_resize() {
+        let Some(mut presenter) = presenter() else {
+            return;
+        };
+        let mut registry = ResourceRegistry::new();
+        let img = registry.insert(floem_scene::Resource {
+            kind: ResourceKind::Image {
+                width: 2,
+                height: 2,
+                pixels: std::sync::Arc::from(vec![9u8; 16].into_boxed_slice()),
+            },
+        });
+        let mut scene = Scene::new();
+        scene.begin_update();
+        let _ = scene.insert(SceneNode::Image {
+            bounds: floem_types::Rect::from_origin_size(
+                floem_types::Point::new(0.0, 0.0),
+                Size::new(6.0, 6.0),
+            ),
+            image: img,
+        });
+        scene.finish_update();
+
+        // First present: there is damage, the image encodes (and uploads).
+        presenter.present(&scene, &registry);
+        let stats = presenter.stats();
+        assert_eq!(stats.images, 1);
+        assert_eq!(stats.present_skips, 0);
+
+        // Same scene, damage cleared: the presenter has nothing new to draw.
+        scene.clear_damage();
+        presenter.present(&scene, &registry);
+        let stats = presenter.stats();
+        assert_eq!(stats.present_skips, 1, "unchanged scene skipped");
+        assert_eq!(
+            stats.images, 0,
+            "a skipped frame encoded nothing (per-frame stats)"
+        );
+        assert_eq!(presenter.frames_presented(), 0, "headless: still no frame");
+
+        // Resize marks the screen stale: the next present must run even with
+        // empty damage.
+        presenter.resize(Size::new(64.0, 48.0), 1.0);
+        presenter.present(&scene, &registry);
+        let stats = presenter.stats();
+        assert_eq!(stats.present_skips, 1, "no extra skip after resize");
+        assert_eq!(stats.images, 1, "re-encoded after resize");
+        assert_eq!(
+            stats.texture_cache_hits, 1,
+            "re-encode reuses the cached texture"
         );
     }
 }
