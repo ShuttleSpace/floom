@@ -100,6 +100,22 @@ pub struct GpuFrameStats {
     /// Scene nodes freshly encoded into vello commands this frame (their
     /// payload changed, or the node is new).
     pub fragments_encoded: u64,
+    /// Pixels vello rasterised this frame. With a real surface and partial
+    /// damage this is the damaged area, not the whole screen.
+    pub rasterized_pixels: u64,
+    /// Frames that rasterised only the damaged region instead of the whole
+    /// target (1 when partial, 0 when full-frame).
+    pub partial_rasterizations: u64,
+}
+
+/// Scratch texture for partial rasterisation: vello has no scissor, so a
+/// damaged region is rendered into a texture the size of that region and
+/// copied back into the persistent target at the region's origin.
+struct ScratchTarget {
+    texture: wgpu::Texture,
+    view: wgpu::TextureView,
+    width: u32,
+    height: u32,
 }
 
 /// What encoding one scene node produced: the draw commands land in a
@@ -138,7 +154,7 @@ struct SceneFragment {
 /// and any field change (bounds, colour, resource id — which carries a
 /// generation) flips the hash.
 fn node_fingerprint(node: &SceneNode) -> u64 {
-    use std::hash::{Hash, Hasher};
+    use std::hash::Hasher;
     let mut hasher = std::collections::hash_map::DefaultHasher::new();
     match node {
         SceneNode::Group {
@@ -234,6 +250,9 @@ pub struct VelloGpuPresenter {
     /// so the next present must run even if the scene reports no damage.
     /// Cleared once a frame has actually been presented.
     needs_present: bool,
+    /// Scratch texture for partial rasterisation, grown on demand and reused
+    /// across frames (a damaged region rarely keeps the same size).
+    scratch: Option<ScratchTarget>,
 }
 
 impl std::fmt::Debug for VelloGpuPresenter {
@@ -291,6 +310,7 @@ impl VelloGpuPresenter {
             image_cache: HashMap::new(),
             fragments: HashMap::new(),
             needs_present: true,
+            scratch: None,
         })
     }
 
@@ -359,6 +379,13 @@ impl VelloGpuPresenter {
         surface.configure(&self.device, &config);
 
         let (target_texture, target_view) = create_target(&self.device, width, height);
+        let (scratch_texture, scratch_view) = create_scratch(&self.device, width, height);
+        self.scratch = Some(ScratchTarget {
+            texture: scratch_texture,
+            view: scratch_view,
+            width,
+            height,
+        });
         let blitter = TextureBlitter::new(&self.device, format);
 
         self.surface = Some(RenderSurface {
@@ -385,8 +412,15 @@ impl VelloGpuPresenter {
             return;
         }
         let (target_texture, target_view) = create_target(&self.device, width, height);
+        let (scratch_texture, scratch_view) = create_scratch(&self.device, width, height);
         surface.target_texture = target_texture;
         surface.target_view = target_view;
+        self.scratch = Some(ScratchTarget {
+            texture: scratch_texture,
+            view: scratch_view,
+            width,
+            height,
+        });
         surface.config.width = width;
         surface.config.height = height;
         surface.surface.configure(&self.device, &surface.config);
@@ -400,8 +434,16 @@ impl VelloGpuPresenter {
     /// encoding only for that widget. Fragments the scene no longer holds are
     /// pruned. Frames with empty damage never reach here — `present` skips
     /// them entirely before encoding.
-    fn encode(&mut self, scene: &Scene, resources: &ResourceRegistry) -> GpuFrameStats {
+    fn encode(
+        &mut self,
+        scene: &Scene,
+        resources: &ResourceRegistry,
+        offset: (f64, f64),
+    ) -> GpuFrameStats {
         self.vello_scene.reset();
+        // When only a region is rasterised the scene is composed shifted, so
+        // the region's top-left becomes the scratch texture's origin.
+        let shift = Affine::translate((-offset.0, -offset.1));
         let mut totals = GpuFrameStats {
             present_skips: 0,
             ..GpuFrameStats::default()
@@ -416,7 +458,7 @@ impl VelloGpuPresenter {
                     // Unchanged node: append its cached commands and report
                     // its draws (a reused image is a texture-cache hit — the
                     // pixels are already resident).
-                    self.vello_scene.append(&cached.scene, None);
+                    self.vello_scene.append(&cached.scene, Some(shift));
                     totals.rects += cached.stats.rects;
                     totals.glyph_runs += cached.stats.glyph_runs;
                     totals.images += cached.stats.images;
@@ -449,7 +491,8 @@ impl VelloGpuPresenter {
                     stats,
                 },
             );
-            self.vello_scene.append(&self.fragments[&key].scene, None);
+            self.vello_scene
+                .append(&self.fragments[&key].scene, Some(shift));
         }
         // Prune fragments the scene no longer holds (and brushes nothing
         // re-encoded this frame references). The keys include generations, so
@@ -587,6 +630,70 @@ impl VelloGpuPresenter {
     pub fn fragment_count(&self) -> usize {
         self.fragments.len()
     }
+
+    /// The damaged region in physical pixels, or `None` when the whole target
+    /// must be rasterised (full-frame damage, or damage covering nearly all
+    /// of it — at that point a region render plus a copy is not cheaper).
+    ///
+    /// `damage` is in logical pixels; `scale` converts it to the target's
+    /// physical grid. The rect is padded by one pixel on each side so an
+    /// anti-aliased edge that straddles the reported bounds is still
+    /// repainted.
+    fn damage_region(
+        damage: &floem_scene::DamageRegion,
+        width: u32,
+        height: u32,
+        scale: f64,
+    ) -> Option<(u32, u32, u32, u32)> {
+        if width == 0 || height == 0 || damage.is_empty() || damage.is_full_frame() {
+            return None;
+        }
+        let mut x0 = f64::INFINITY;
+        let mut y0 = f64::INFINITY;
+        let mut x1 = f64::NEG_INFINITY;
+        let mut y1 = f64::NEG_INFINITY;
+        for rect in damage.rects() {
+            x0 = x0.min(rect.x0);
+            y0 = y0.min(rect.y0);
+            x1 = x1.max(rect.x1);
+            y1 = y1.max(rect.y1);
+        }
+        if !(x1 > x0) || !(y1 > y0) {
+            return None;
+        }
+        let px0 = (x0 * scale).floor() - 1.0;
+        let py0 = (y0 * scale).floor() - 1.0;
+        let px1 = (x1 * scale).ceil() + 1.0;
+        let py1 = (y1 * scale).ceil() + 1.0;
+        let x = px0.max(0.0) as u32;
+        let y = py0.max(0.0) as u32;
+        let right = (px1.ceil() as i64).clamp(0, width as i64) as u32;
+        let bottom = (py1.ceil() as i64).clamp(0, height as i64) as u32;
+        if right <= x || bottom <= y {
+            return None;
+        }
+        let (w, h) = (right - x, bottom - y);
+        // Partial rasterisation only pays off below ~3/4 of the target.
+        if u64::from(w) * u64::from(h) * 4 >= u64::from(width) * u64::from(height) * 3 {
+            return None;
+        }
+        Some((x, y, w, h))
+    }
+
+    /// The scratch view, provided it can hold a `width x height` region.
+    ///
+    /// The scratch texture is allocated once per target size (see
+    /// `build_surface`/`reconfigure`) rather than per region: a region changes
+    /// size almost every frame, and reallocating a GPU texture each time would
+    /// cost more than the rasterisation it saves. Vello writes only the
+    /// `width x height` area it is given, and the copy reads exactly that back.
+    fn scratch_for(&self, width: u32, height: u32) -> Option<wgpu::TextureView> {
+        let scratch = self.scratch.as_ref()?;
+        if width > scratch.width || height > scratch.height {
+            return None;
+        }
+        Some(scratch.view.clone())
+    }
 }
 
 fn create_target(
@@ -604,7 +711,34 @@ fn create_target(
         mip_level_count: 1,
         sample_count: 1,
         dimension: wgpu::TextureDimension::D2,
-        usage: TextureUsages::STORAGE_BINDING | TextureUsages::TEXTURE_BINDING,
+        usage: TextureUsages::STORAGE_BINDING
+            | TextureUsages::TEXTURE_BINDING
+            | TextureUsages::COPY_DST,
+        format: TextureFormat::Rgba8Unorm,
+        view_formats: &[],
+    });
+    let view = texture.create_view(&TextureViewDescriptor::default());
+    (texture, view)
+}
+
+fn create_scratch(
+    device: &wgpu::Device,
+    width: u32,
+    height: u32,
+) -> (wgpu::Texture, wgpu::TextureView) {
+    let texture = device.create_texture(&wgpu::TextureDescriptor {
+        label: Some("floem-vello-scratch"),
+        size: wgpu::Extent3d {
+            width,
+            height,
+            depth_or_array_layers: 1,
+        },
+        mip_level_count: 1,
+        sample_count: 1,
+        dimension: wgpu::TextureDimension::D2,
+        // Storage: vello renders into it. Copy src: it is copied back into
+        // the persistent target.
+        usage: TextureUsages::STORAGE_BINDING | TextureUsages::COPY_SRC,
         format: TextureFormat::Rgba8Unorm,
         view_formats: &[],
     });
@@ -660,13 +794,38 @@ impl Presenter for VelloGpuPresenter {
             self.stats.texture_cache_misses = 0;
             self.stats.fragments_reused = 0;
             self.stats.fragments_encoded = 0;
+            self.stats.rasterized_pixels = 0;
+            self.stats.partial_rasterizations = 0;
             return;
         }
         // Any non-skipped present refreshes the screen (or would, with a
-        // surface): the "stale screen" reason to present is consumed.
+        // surface): the "stale screen" reason to present is consumed. It also
+        // decides the rasterisation area — after an attach/resize the target
+        // is a brand-new texture with undefined content, so only a full-frame
+        // rasterisation can fill it.
+        let stale_screen = self.needs_present;
         self.needs_present = false;
 
-        let encoded = self.encode(scene, resources);
+        // Physical extent of the target, whether or not a surface is attached.
+        let (pw, ph) = match self.surface.as_ref() {
+            Some(surface) => (surface.config.width, surface.config.height),
+            None => (
+                (self.size.width.max(0.0) * self.scale).ceil() as u32,
+                (self.size.height.max(0.0) * self.scale).ceil() as u32,
+            ),
+        };
+        let region = if stale_screen {
+            None
+        } else {
+            Self::damage_region(scene.damage(), pw, ph, self.scale)
+        };
+        let offset = region.map_or((0.0, 0.0), |(x, y, _, _)| (f64::from(x), f64::from(y)));
+        let encoded = self.encode(scene, resources, offset);
+        self.stats.rasterized_pixels = match region {
+            Some((_, _, w, h)) => u64::from(w) * u64::from(h),
+            None => u64::from(pw) * u64::from(ph),
+        };
+        self.stats.partial_rasterizations = u64::from(region.is_some());
         // Encode stats are final whether or not a surface was attached — the
         // encoding work (and any skipped nodes) happened either way.
         self.stats.rects = encoded.rects;
@@ -677,6 +836,20 @@ impl Presenter for VelloGpuPresenter {
         self.stats.texture_cache_misses = encoded.texture_cache_misses;
         self.stats.fragments_reused = encoded.fragments_reused;
         self.stats.fragments_encoded = encoded.fragments_encoded;
+        // Prepare the scratch view up front: both it and the surface live on
+        // `self`, and the surface is borrowed mutably below.
+        let scratch = if self.surface.is_some() {
+            match region {
+                Some((_, _, w, h)) => match self.scratch_for(w, h) {
+                    Some(view) => Some(view),
+                    None => return,
+                },
+                None => None,
+            }
+        } else {
+            None
+        };
+
         let Some(surface) = self.surface.as_mut() else {
             return;
         };
@@ -692,24 +865,78 @@ impl Presenter for VelloGpuPresenter {
             Err(_) => return,
         };
 
-        let params = RenderParams {
-            base_color: PenikoColor::TRANSPARENT,
-            width: surface.config.width,
-            height: surface.config.height,
-            antialiasing_method: AaConfig::Msaa16,
-        };
-        if self
-            .renderer
-            .render_to_texture(
-                &self.device,
-                &self.queue,
-                &self.vello_scene,
-                &surface.target_view,
-                &params,
-            )
-            .is_err()
-        {
-            return;
+        match scratch {
+            // Partial frame: rasterise only the damaged region into the
+            // scratch texture (already composed shifted, so the region's
+            // origin is the texture's origin), then copy it into the
+            // persistent target. Everything outside the region keeps the
+            // pixels the last frame left there.
+            Some(view) => {
+                let (rx, ry, w, h) = region.expect("a partial frame always carries its region");
+                let params = RenderParams {
+                    base_color: PenikoColor::TRANSPARENT,
+                    width: w,
+                    height: h,
+                    antialiasing_method: AaConfig::Msaa16,
+                };
+                if self
+                    .renderer
+                    .render_to_texture(&self.device, &self.queue, &self.vello_scene, &view, &params)
+                    .is_err()
+                {
+                    return;
+                }
+                let Some(scratch_texture) = self.scratch.as_ref().map(|s| &s.texture) else {
+                    return;
+                };
+                let mut encoder =
+                    self.device
+                        .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                            label: Some("floem damage copy"),
+                        });
+                encoder.copy_texture_to_texture(
+                    wgpu::TexelCopyTextureInfo {
+                        texture: scratch_texture,
+                        mip_level: 0,
+                        origin: wgpu::Origin3d::ZERO,
+                        aspect: wgpu::TextureAspect::All,
+                    },
+                    wgpu::TexelCopyTextureInfo {
+                        texture: &surface.target_texture,
+                        mip_level: 0,
+                        origin: wgpu::Origin3d { x: rx, y: ry, z: 0 },
+                        aspect: wgpu::TextureAspect::All,
+                    },
+                    wgpu::Extent3d {
+                        width: w,
+                        height: h,
+                        depth_or_array_layers: 1,
+                    },
+                );
+                self.queue.submit([encoder.finish()]);
+            }
+            // Full frame: rasterise straight into the target, as before.
+            None => {
+                let params = RenderParams {
+                    base_color: PenikoColor::TRANSPARENT,
+                    width: surface.config.width,
+                    height: surface.config.height,
+                    antialiasing_method: AaConfig::Msaa16,
+                };
+                if self
+                    .renderer
+                    .render_to_texture(
+                        &self.device,
+                        &self.queue,
+                        &self.vello_scene,
+                        &surface.target_view,
+                        &params,
+                    )
+                    .is_err()
+                {
+                    return;
+                }
+            }
         }
 
         let mut encoder = self
@@ -1079,6 +1306,82 @@ mod tests {
             2,
             "the removed node's fragment is gone"
         );
+    }
+
+    /// A damaged frame rasterises just that region; a frame that follows an
+    /// attach/resize rasterises everything, because the target texture is new
+    /// and its content is undefined.
+    #[test]
+    fn damaged_frames_rasterize_only_the_damaged_region() {
+        let Some(mut presenter) = presenter() else {
+            return;
+        };
+        presenter.resize(Size::new(64.0, 48.0), 1.0);
+        let mut scene = Scene::new();
+        scene.begin_update();
+        let id = scene.alloc_id();
+        scene.upsert(id, rect_node(0.0));
+        scene.finish_update();
+
+        // Stale screen: full-frame rasterisation regardless of the damage.
+        presenter.present(&scene, &ResourceRegistry::new());
+        let stats = presenter.stats();
+        assert_eq!(
+            stats.partial_rasterizations, 0,
+            "a new target must be filled completely"
+        );
+        assert_eq!(stats.rasterized_pixels, 64 * 48);
+
+        // Move the rect: the damage is its old and new bounds, a few pixels.
+        scene.begin_update();
+        scene.upsert(id, rect_node(1.0));
+        scene.finish_update();
+        presenter.present(&scene, &ResourceRegistry::new());
+        let stats = presenter.stats();
+        assert_eq!(
+            stats.partial_rasterizations, 1,
+            "a damaged frame rasterises a region"
+        );
+        assert!(
+            stats.rasterized_pixels > 0 && stats.rasterized_pixels < 64 * 48,
+            "far less than the whole screen, got {}",
+            stats.rasterized_pixels
+        );
+    }
+
+    /// Full-frame damage (a group node reports no bounds, so its change marks
+    /// the whole frame) forces a full rasterisation.
+    #[test]
+    fn full_frame_damage_rasterizes_the_whole_target() {
+        let Some(mut presenter) = presenter() else {
+            return;
+        };
+        presenter.resize(Size::new(64.0, 48.0), 1.0);
+        let mut scene = Scene::new();
+        scene.begin_update();
+        let id = scene.alloc_id();
+        scene.upsert(id, rect_node(0.0));
+        scene.finish_update();
+        presenter.present(&scene, &ResourceRegistry::new());
+
+        // A group node has no bounds hint: changing it marks the full frame.
+        scene.begin_update();
+        let group = scene.alloc_id();
+        scene.upsert(
+            group,
+            SceneNode::Group {
+                children: Default::default(),
+                transform: floem_types::Transform::IDENTITY,
+            },
+        );
+        scene.finish_update();
+        presenter.present(&scene, &ResourceRegistry::new());
+        let stats = presenter.stats();
+        assert_eq!(
+            stats.partial_rasterizations, 0,
+            "full-frame damage is not partial"
+        );
+        assert_eq!(stats.rasterized_pixels, 64 * 48);
     }
 
     fn rect_node(x: f64) -> SceneNode {
