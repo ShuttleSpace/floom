@@ -63,6 +63,8 @@ pub struct SoftwareRenderer {
     /// Glyph rasterisations that had to run swash (first sighting, or after
     /// a cache clear).
     pub glyph_cache_misses: u64,
+    /// Scene nodes culled because their bounds miss every damaged rect.
+    pub nodes_skipped: u64,
     /// Set after (re)creation/resize: the next render must clear everything,
     /// since the buffer content cannot be trusted.
     needs_full_clear: bool,
@@ -92,6 +94,7 @@ impl SoftwareRenderer {
             glyphs_drawn: 0,
             images_drawn: 0,
             damage_skips: 0,
+            nodes_skipped: 0,
             glyph_cache_hits: 0,
             glyph_cache_misses: 0,
             needs_full_clear: true,
@@ -411,7 +414,15 @@ impl SoftwareRenderer {
         self.images_drawn += 1;
     }
 
-    /// Redraws every node, clipped to `region` (`None` = whole buffer).
+    /// Redraws the nodes that touch `region` (`None` = whole buffer), clipped
+    /// to it.
+    ///
+    /// Partial redraw still repaints whatever overlapped the damage — the
+    /// buffer there was cleared — but a node whose bounds miss every damaged
+    /// rect cannot have contributed a single pixel to it, so it is culled
+    /// before any per-pixel work. That is what keeps a large scene cheap when
+    /// only a small area changes: the walk is still O(nodes), the rasterising
+    /// is not.
     fn draw_all(
         &mut self,
         scene: &Scene,
@@ -420,6 +431,14 @@ impl SoftwareRenderer {
     ) {
         let clip = self.clip_region(region);
         for (_id, node) in scene.iter() {
+            // Groups report no bounds (they force a full frame), so they are
+            // never culled — only nodes with a known box are.
+            if let Some(bounds) = node.bounds_hint() {
+                if !hits_clip(bounds, clip) {
+                    self.nodes_skipped += 1;
+                    continue;
+                }
+            }
             match node {
                 SceneNode::Rect {
                     bounds,
@@ -494,6 +513,20 @@ impl SoftwareRenderer {
             self.draw_all(scene, resources, Some(*region));
         }
     }
+}
+
+/// True when `bounds` (logical space) overlaps `clip` (pixel space) at all.
+///
+/// Node bounds are inclusive-exclusive rects that may start negative or run
+/// past the buffer, so both sides are compared in floating point before any
+/// clamping: `ceil` on the upper edge keeps a node that merely grazes the
+/// region, which matters for the anti-aliased boundary pixel.
+fn hits_clip(bounds: Rect, clip: Clip) -> bool {
+    let (cx0, cy0, cx1, cy1) = clip;
+    bounds.x1.ceil() > f64::from(cx0)
+        && bounds.x0.floor() < f64::from(cx1)
+        && bounds.y1.ceil() > f64::from(cy0)
+        && bounds.y0.floor() < f64::from(cy1)
 }
 
 struct GlyphMask {
@@ -926,6 +959,52 @@ mod tests {
             sw.glyph_cache_misses > misses_first,
             "a new size rasterises fresh masks"
         );
+    }
+
+    /// Partial redraw culls whole nodes: a node whose bounds miss every
+    /// damaged rect is not rasterised at all, while its pixels (outside the
+    /// damage) survive exactly as the previous frame left them.
+    #[test]
+    fn damage_culls_nodes_that_miss_it() {
+        // Two far-apart rects: a red one on the left, a blue one on the right.
+        let mut scene = Scene::new();
+        scene.begin_update();
+        let _ = scene.insert(SceneNode::Rect {
+            bounds: Rect::from_origin_size(Point::new(1.0, 1.0), Size::new(3.0, 3.0)),
+            fill: Color::rgb(200, 0, 0),
+            radius: 0.0,
+        });
+        let _ = scene.insert(SceneNode::Rect {
+            bounds: Rect::from_origin_size(Point::new(8.0, 1.0), Size::new(3.0, 3.0)),
+            fill: Color::rgb(0, 0, 200),
+            radius: 0.0,
+        });
+        scene.finish_update();
+
+        let mut sw = SoftwareRenderer::new(12, 6);
+        render_once(&mut sw, &FrameInfo::software(12, 6, 1), &scene);
+        assert_eq!(sw.pixel_rgba(2, 2), Some([200, 0, 0, 255]));
+        assert_eq!(sw.pixel_rgba(9, 2), Some([0, 0, 200, 255]));
+        assert_eq!(sw.nodes_skipped, 0, "a full frame culls nothing");
+
+        // Damage only the left side: the right-hand node misses it entirely.
+        let mut damage = DamageRegion::new();
+        damage.union_rect(Rect::from_origin_size(
+            Point::new(0.0, 0.0),
+            Size::new(5.0, 5.0),
+        ));
+        let skipped_before = sw.nodes_skipped;
+        sw.render_scene(&scene, &damage);
+        sw.end_frame();
+
+        assert_eq!(
+            sw.nodes_skipped - skipped_before,
+            1,
+            "the off-damage node is culled"
+        );
+        // Inside the damage: still repainted. Outside: untouched.
+        assert_eq!(sw.pixel_rgba(2, 2), Some([200, 0, 0, 255]));
+        assert_eq!(sw.pixel_rgba(9, 2), Some([0, 0, 200, 255]));
     }
 
     /// Beyond the cache limit the least-recently-used masks are evicted: the
