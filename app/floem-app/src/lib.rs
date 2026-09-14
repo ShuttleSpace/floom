@@ -119,6 +119,13 @@ pub struct WidgetHost {
     scope: FocusScopeId,
     size: Size,
     layout_dirty: bool,
+    /// A widget was borrowed mutably since the last frame, i.e. something
+    /// outside the frame loop touched the tree (an app callback, a service, a
+    /// timer). `widget_mut` is the only door into a mounted widget, so this is
+    /// the framework's one signal that content may have changed without a
+    /// platform event to announce it — it is what lets the runner ask for the
+    /// next frame instead of waiting for input.
+    content_dirty: bool,
     last_stats: FrameStats,
 }
 
@@ -349,6 +356,7 @@ impl WidgetHost {
             scope,
             size: Size::new(800.0, 600.0),
             layout_dirty: true,
+            content_dirty: false,
             last_stats: FrameStats::default(),
         }
     }
@@ -640,12 +648,34 @@ impl WidgetHost {
     }
 
     /// Mutably borrows the concrete widget behind `node`.
+    ///
+    /// Borrowing marks the tree dirty: the caller is about to reach a widget
+    /// the frame loop cannot see into, so the next frame has to be scheduled
+    /// even without a platform event. The mark is conservative — a borrow that
+    /// ends up changing nothing costs one extra settling frame, and the frame
+    /// loop clears it once it has run.
     pub fn widget_mut<T: WidgetAny + 'static>(&mut self, node: NodeId) -> Option<&mut T> {
-        self.nodes
+        let widget = self
+            .nodes
             .get_mut(node.0)?
             .widget
             .as_any_mut()
-            .downcast_mut::<T>()
+            .downcast_mut::<T>()?;
+        self.content_dirty = true;
+        Some(widget)
+    }
+
+    /// Whether another frame is needed: content changed outside the frame loop,
+    /// or the last frame left work behind (a re-layout, unmounts that still owe
+    /// the scene a node removal, or a scene that is still visibly changing).
+    ///
+    /// The frame loop drains all of these, so this settles to `false` once the
+    /// tree stops moving — that is what makes content-driven redraw terminate.
+    pub fn needs_frame(&self) -> bool {
+        self.content_dirty
+            || self.layout_dirty
+            || !self.pending_scene_removals.is_empty()
+            || !self.scene.damage().is_empty()
     }
 
     pub fn node_id(&self, node: NodeId) -> ElementId {
@@ -738,6 +768,11 @@ impl WidgetHost {
 
         self.paint(&mut stats);
         self.collect_semantics();
+
+        // Everything the frame loop can observe has been consumed: the scene
+        // carries this frame's changes, layout ran if it was marked, and any
+        // out-of-band edits have been folded into the paint above.
+        self.content_dirty = false;
 
         self.last_stats = stats;
         stats

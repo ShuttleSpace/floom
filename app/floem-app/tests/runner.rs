@@ -12,7 +12,7 @@ use floem_layout::LayoutStyle;
 use floem_platform::{FakePlatform, KeyCode, Platform, PlatformEvent, WindowConfig};
 use floem_renderer_software::SoftwarePresenter;
 use floem_types::{Color, Point, Size};
-use floem_widgets::{Button, Container, Stack};
+use floem_widgets::{Button, Container, Stack, Text};
 
 /// A tiny window (64×48 logical, scale 1) so pixel arithmetic stays trivial.
 fn small_window() -> WindowConfig {
@@ -21,6 +21,60 @@ fn small_window() -> WindowConfig {
         size: Size::new(64.0, 48.0),
         resizable: true,
     }
+}
+
+/// Content changed outside the frame loop still reaches the screen, and stops
+/// asking for frames once the tree settles.
+///
+/// This is the gap a static window exposes: nothing in the platform queue
+/// announces "someone edited a widget", so without a way to ask for a frame the
+/// edit would sit there until the next unrelated event.
+#[test]
+fn content_edited_outside_the_frame_loop_drives_frames_until_it_settles() {
+    let mut platform = FakePlatform::new();
+    let mut host = WidgetHost::new();
+    let label = host.mount_root(LayoutStyle::default(), Text::new("before"));
+    let mut runner = AppRunner::new(host, SoftwarePresenter::new());
+
+    platform.create_window(small_window());
+    settle(&mut platform, &mut runner);
+    let settled_frames = runner.stats().frames;
+    assert!(settled_frames >= 1, "the first frame painted");
+
+    // An app callback rewrites the text: no platform event of its own.
+    if let Some(text) = runner.host_mut().widget_mut::<Text>(label) {
+        text.set_content("after");
+    }
+    assert!(
+        runner.host().needs_frame(),
+        "borrowing a widget mutably marks the tree dirty"
+    );
+    runner.request_frame(&mut platform);
+    settle(&mut platform, &mut runner);
+    assert!(
+        runner.stats().frames > settled_frames,
+        "the edited content reached the screen"
+    );
+
+    // A cascade keeps asking (the re-measured text re-lays-out and repaints),
+    // but a tree that stopped changing stops asking.
+    let after_edit = runner.stats().frames;
+    for _ in 0..8 {
+        runner.pump(&mut platform);
+    }
+    assert_eq!(
+        runner.stats().frames,
+        after_edit,
+        "a settled tree stops requesting frames"
+    );
+    assert!(
+        !runner.host().needs_frame(),
+        "nothing left to do after the cascade settled"
+    );
+    assert!(
+        runner.stats().auto_redraws >= 1,
+        "the frame loop asked for at least one frame on its own"
+    );
 }
 
 /// Pumps a few times so the queue drains and the requested frame is presented.

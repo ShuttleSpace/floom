@@ -27,7 +27,7 @@ use std::sync::atomic::{AtomicI32, Ordering};
 use floem_app::{AppRunner, NodeId, WidgetHost};
 use floem_core::{Axis, LayoutRequest};
 use floem_layout::LayoutStyle;
-use floem_platform::{Platform, WindowConfig};
+use floem_platform::WindowConfig;
 use floem_platform_desktop::winit_backend::{WinitApp, WinitPlatform, run};
 use floem_renderer_vello::VelloGpuPresenter;
 use floem_types::Size;
@@ -69,9 +69,7 @@ impl WinitApp for WindowApp {
         // damage region, which is what exercises damage-driven skipping and
         // partial rasterisation. Without this the loop would block after the
         // first frame (nothing else changes on its own).
-        if let Some(window) = self.runner.primary_window() {
-            platform.request_frame(window);
-        }
+        self.runner.request_frame(platform);
     }
 }
 

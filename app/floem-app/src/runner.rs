@@ -57,6 +57,10 @@ pub struct RunStats {
     pub windows_closed: u64,
     /// Redraws the runner asked the platform for.
     pub redraws_requested: u64,
+    /// Of those, the ones asked for by the frame loop itself because the scene
+    /// was still changing (a cascade: new text → re-measure → re-layout → new
+    /// paint). Content-driven redraw settles to zero on a static tree.
+    pub auto_redraws: u64,
     /// Failures the error boundary caught and downgraded to a fallback.
     pub errors_caught: u64,
 }
@@ -370,6 +374,15 @@ impl<R: Presenter> AppRunner<R> {
                     self.attach(platform, window);
                 }
                 let _ = self.render();
+                // One frame is often not the whole answer: painting can dirty
+                // layout (a re-measured text leaf), and unmounts can owe the
+                // scene a node removal. Keep asking while there is work left,
+                // which lets a cascade settle across frames instead of
+                // stopping halfway — and stops on its own once it has.
+                if self.host.needs_frame() {
+                    self.request_repaint(platform, window);
+                    self.stats.auto_redraws += 1;
+                }
             }
             PlatformEvent::Suspended => {
                 // The OS is taking the surface away (Android pause, display
@@ -424,6 +437,19 @@ impl<R: Presenter> AppRunner<R> {
             self.host.dispatch(event);
         }
         self.stats.input_dispatched += 1;
+    }
+
+    /// Schedules a frame on the primary window.
+    ///
+    /// This is the door for anything that changes the tree outside the frame
+    /// loop — a background service, a timer, a callback from another thread —
+    /// and has no platform event of its own to wake the loop. Frames requested
+    /// this way still settle: the loop stops asking once the tree stops
+    /// changing (see the `RedrawRequested` arm).
+    pub fn request_frame<P: Platform>(&mut self, platform: &mut P) {
+        if let Some(window) = self.primary {
+            self.request_repaint(platform, window);
+        }
     }
 
     /// Schedules a repaint after something visual may have changed.
