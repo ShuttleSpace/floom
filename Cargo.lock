@@ -1908,6 +1908,7 @@ dependencies = [
  "sha2",
  "slotmap",
  "smallvec",
+ "strum",
  "sys-locale",
  "taffy",
  "tgui-winit-ohos",
