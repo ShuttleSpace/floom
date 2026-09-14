@@ -1676,21 +1676,79 @@ impl Select {
         self
     }
 
-    /// Chooses an option; no-op when out of range.
+    /// Chooses an option and closes the list; no-op when out of range.
     pub fn select(&mut self, index: usize) -> bool {
+        self.choose(index, false)
+    }
+
+    /// Chooses an option, optionally keeping the list open (keyboard
+    /// navigation moves through options without dismissing the popup).
+    ///
+    /// Returns whether the event was handled — re-picking the selected option
+    /// still counts, because it closes the list.
+    fn choose(&mut self, index: usize, keep_open: bool) -> bool {
         if index >= self.options.len() {
             return false;
         }
         let changed = self.selected != Some(index);
         self.selected = Some(index);
-        self.open = false;
-        if changed {
+        // Closing is a visible change of its own: without bumping here,
+        // re-picking the current option would leave the open list painted.
+        let closed = self.open && !keep_open;
+        self.open = keep_open;
+        if changed || closed {
             self.revision.bump();
+        }
+        if changed {
             if let Some(callback) = &self.on_change {
                 callback(index);
             }
         }
-        changed
+        true
+    }
+
+    /// Moves the selection by `delta` without closing the list. From nothing
+    /// selected, either direction lands on the end it is heading for.
+    fn move_selection(&mut self, delta: isize) -> bool {
+        let len = self.options.len();
+        if len == 0 {
+            return false;
+        }
+        let next = match self.selected {
+            Some(index) => (index as isize + delta).clamp(0, len as isize - 1) as usize,
+            None if delta > 0 => 0,
+            None => len - 1,
+        };
+        self.choose(next, true)
+    }
+
+    /// Keyboard control for the focused select: open/close, walk the options,
+    /// jump to either end. The pointer can already do all of this; a keyboard
+    /// (or assistive technology) could not.
+    fn key_event(&mut self, key: &KeyEvent) -> bool {
+        if !self.state.focused || key.phase == KeyPhase::Up {
+            return false;
+        }
+        match key.key {
+            Key::Named(NamedKey::Enter) | Key::Char(' ') => {
+                self.open = !self.open;
+                self.revision.bump();
+                true
+            }
+            Key::Named(NamedKey::Escape) => {
+                if !self.open {
+                    return false;
+                }
+                self.open = false;
+                self.revision.bump();
+                true
+            }
+            Key::Named(NamedKey::ArrowDown) => self.move_selection(1),
+            Key::Named(NamedKey::ArrowUp) => self.move_selection(-1),
+            Key::Named(NamedKey::Home) => self.choose(0, true),
+            Key::Named(NamedKey::End) => self.choose(self.options.len().saturating_sub(1), true),
+            _ => false,
+        }
     }
 
     /// Index of the row at `y`, if the list is open and the point is inside it.
@@ -1743,12 +1801,15 @@ impl Widget for Select {
     }
 
     fn event(&mut self, cx: &mut dyn EventContext, id: ElementId) -> bool {
-        let Event::Pointer(pointer) = cx.event() else {
-            return false;
-        };
         if self.state.disabled {
             return false;
         }
+        let Event::Pointer(pointer) = cx.event() else {
+            return match cx.event() {
+                Event::Key(key) => self.key_event(&key),
+                _ => false,
+            };
+        };
         match pointer.phase {
             PointerPhase::Enter | PointerPhase::Move => {
                 self.state.hovered = true;

@@ -10,7 +10,8 @@ use floem_widgets::controls::{
     Button, Checkbox, Progress, Radio, Select, Slider, Switch, TextField,
 };
 use floem_widgets::testkit::{
-    AllocatingCreateContext, TestEventContext, dispatch, paint_snapshot, semantics_snapshot,
+    AllocatingCreateContext, RecordingUpdateContext, TestEventContext, dispatch, paint_snapshot,
+    semantics_snapshot,
 };
 
 const ROW: Rect = Rect {
@@ -462,6 +463,114 @@ fn select_reports_selected_label() {
     assert_eq!(select.selected_label(), "Green");
     let empty = Select::new(["Red"]);
     assert_eq!(empty.selected_label(), "\u{2014}");
+}
+
+#[test]
+fn select_is_drivable_from_the_keyboard() {
+    let selected = Rc::new(Cell::new(None::<usize>));
+    let sink = selected.clone();
+    let mut select = Select::new(["Red", "Green", "Blue"]).on_change(move |index| {
+        sink.set(Some(index));
+    });
+    let id = allocate(&select);
+    select.set_focused(true);
+
+    fn key(select: &mut Select, id: ElementId, named: NamedKey) -> bool {
+        dispatch(select, id, ROW, KeyEvent::down(Key::Named(named)).into())
+    }
+
+    // Enter and Space both toggle the list.
+    assert!(!select.is_open());
+    assert!(key(&mut select, id, NamedKey::Enter));
+    assert!(select.is_open(), "enter opens the list");
+    assert!(key(&mut select, id, NamedKey::Enter));
+    assert!(!select.is_open(), "enter closes it again");
+
+    assert!(dispatch(
+        &mut select,
+        id,
+        ROW,
+        KeyEvent::down(Key::Char(' ')).into()
+    ));
+    assert!(select.is_open(), "space opens the list too");
+
+    // Walking down picks as it goes without dismissing the popup.
+    assert!(key(&mut select, id, NamedKey::ArrowDown));
+    assert_eq!(select.selected_index(), Some(0));
+    assert_eq!(selected.get(), Some(0));
+    assert!(select.is_open(), "arrows keep the list open");
+
+    assert!(key(&mut select, id, NamedKey::ArrowDown));
+    assert_eq!(select.selected_index(), Some(1));
+    assert_eq!(selected.get(), Some(1));
+
+    assert!(key(&mut select, id, NamedKey::ArrowUp));
+    assert_eq!(select.selected_index(), Some(0));
+    assert_eq!(selected.get(), Some(0));
+
+    // The ends clamp instead of wrapping.
+    assert!(key(&mut select, id, NamedKey::ArrowUp));
+    assert_eq!(select.selected_index(), Some(0));
+    assert!(key(&mut select, id, NamedKey::End));
+    assert_eq!(select.selected_index(), Some(2));
+    assert!(key(&mut select, id, NamedKey::ArrowDown));
+    assert_eq!(select.selected_index(), Some(2), "the last row clamps");
+    assert!(key(&mut select, id, NamedKey::Home));
+    assert_eq!(select.selected_index(), Some(0));
+
+    // Escape closes without touching the choice; once closed it is not ours.
+    assert!(key(&mut select, id, NamedKey::Escape));
+    assert!(!select.is_open());
+    assert_eq!(select.selected_index(), Some(0));
+    assert!(
+        !key(&mut select, id, NamedKey::Escape),
+        "escape with no list open is left to the window"
+    );
+
+    // A key release, an unfocused select and a key we do not handle all pass
+    // through instead of being swallowed.
+    assert!(!dispatch(
+        &mut select,
+        id,
+        ROW,
+        KeyEvent::up(Key::Named(NamedKey::ArrowDown)).into()
+    ));
+    assert!(!key(&mut select, id, NamedKey::Tab));
+    select.set_focused(false);
+    assert!(!key(&mut select, id, NamedKey::ArrowDown));
+    assert_eq!(select.selected_index(), Some(0));
+}
+
+#[test]
+fn select_repicking_the_open_row_dismisses_it() {
+    let mut select = Select::new(["Red", "Green"]).selected(0);
+    let id = allocate(&select);
+
+    fire_down_up(&mut select, id, Point::new(10.0, 5.0));
+    assert!(select.is_open());
+
+    // Drain the invalidation the opening already reported.
+    let mut settled = RecordingUpdateContext::new();
+    select.update(&mut settled, id);
+
+    // Clicking the row that is already chosen reports no new value, but the
+    // popup still has to go away — and dismissing it is a repaint of its own,
+    // or the list would stay on screen behind a closed header.
+    let row_y = 22.0 + 10.0;
+    assert!(fire_down_up(&mut select, id, Point::new(10.0, row_y)));
+    assert_eq!(select.selected_index(), Some(0));
+    assert!(
+        !select.is_open(),
+        "re-picking the current option still closes the list"
+    );
+
+    let mut update = RecordingUpdateContext::new();
+    select.update(&mut update, id);
+    assert_eq!(
+        update.dirty_count(),
+        1,
+        "closing alone has to invalidate the widget"
+    );
 }
 
 // --- shared behaviour ------------------------------------------------------
