@@ -354,6 +354,9 @@ localization = ["dep:fluent-bundle", "dep:unic-langid", "dep:sys-locale", "dep:o
 criterion = { version = "0.8.1", features = ["html_reports"] }
 floem_renderer = { path = "renderer" }
 peniko = { workspace = true }
+# Doc examples in `views::dropdown` show the enum-driven dropdown workflow,
+# which is the one place the docs ask users to reach for `strum`.
+strum = { workspace = true }
 
 [[bench]]
 name = "event_dispatch"

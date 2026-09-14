@@ -38,8 +38,14 @@ fn capabilities_winit_default_reports_desktop_features() {
     assert!(caps.ime);
     assert!(caps.gpu_surface);
     assert!(caps.software_surface);
-    // No real accessibility / safe-area / virtual-keyboard yet on desktop.
+    // Accessibility is wired up on the three desktop platforms (the backend
+    // publishes a semantics tree there); everywhere else it is still advertised
+    // as unsupported. Mirrors `BackendCapabilities::winit_default`.
+    #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
+    assert!(caps.accessibility);
+    #[cfg(not(any(target_os = "macos", target_os = "linux", target_os = "windows")))]
     assert!(!caps.accessibility);
+    // No safe-area / virtual-keyboard yet on desktop.
     assert!(!caps.safe_area);
     assert!(!caps.virtual_keyboard);
     assert!(!caps.open_external);
