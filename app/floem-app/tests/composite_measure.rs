@@ -8,7 +8,8 @@
 use floem_app::{NodeId, WidgetHost};
 use floem_layout::LayoutStyle;
 use floem_types::Size;
-use floem_widgets::controls::{Button, Checkbox, Select, Switch, TextField};
+use floem_widgets::controls::{Button, Checkbox, Progress, Select, Slider, Switch, TextField};
+use floem_widgets::primitives::{Divider, Icon, Image, Spacer};
 
 fn node_bounds(host: &WidgetHost, node: NodeId) -> floem_types::Rect {
     host.bounds(node)
@@ -197,5 +198,99 @@ fn select_sizes_from_the_widest_label() {
     assert!(
         (bounds.height() - 22.0).abs() < 1.5,
         "select height = row_height, got {bounds:?}"
+    );
+}
+
+/// Slider and Progress have no text to measure: their intrinsic extents come
+/// from the geometry they paint (the 16px thumb) or from a convention (an 8px
+/// bar of default length).
+#[test]
+fn slider_and_progress_report_their_painted_geometry() {
+    let mut host = WidgetHost::new();
+    host.set_size(Size::new(400.0, 200.0));
+    let root = host.mount_root(
+        LayoutStyle {
+            align_items: floem_layout::AlignItems::Start,
+            ..LayoutStyle::default()
+        },
+        floem_widgets::Container::new(),
+    );
+    let slider = host.mount(root, LayoutStyle::default(), Slider::new(0.5, 0.0, 1.0));
+    let progress = host.mount(root, LayoutStyle::default(), Progress::determinate(0.5));
+    host.frame();
+
+    let slider_bounds = node_bounds(&host, slider);
+    assert!(
+        (slider_bounds.height() - 16.0).abs() < 1.5,
+        "slider height = thumb diameter, got {slider_bounds:?}"
+    );
+    assert!(
+        slider_bounds.width() > 100.0,
+        "slider has a usable track, got {slider_bounds:?}"
+    );
+
+    let progress_bounds = node_bounds(&host, progress);
+    assert!(
+        (progress_bounds.height() - 8.0).abs() < 1.5,
+        "progress height = bar height, got {progress_bounds:?}"
+    );
+    assert!(progress_bounds.width() > 100.0, "progress has a length");
+}
+
+/// An icon box is square and sized from its glyph; an image reports the
+/// intrinsic size its producer declared; a divider declares its thickness on
+/// its own axis only; a spacer reports its extent along its axis.
+#[test]
+fn icon_image_divider_and_spacer_report_their_extents() {
+    let mut host = WidgetHost::new();
+    host.set_size(Size::new(400.0, 200.0));
+    let root = host.mount_root(
+        LayoutStyle {
+            align_items: floem_layout::AlignItems::Start,
+            ..LayoutStyle::default()
+        },
+        floem_widgets::Container::new(),
+    );
+    let icon = host.mount(root, LayoutStyle::default(), Icon::new('★').size(24.0));
+    let image = host.mount(
+        root,
+        LayoutStyle::default(),
+        Image::new(floem_types::ResourceId::new(1, 1))
+            .intrinsic_size(floem_types::Size::new(32.0, 18.0)),
+    );
+    let divider = host.mount(root, LayoutStyle::default(), Divider::new());
+    let spacer = host.mount(
+        root,
+        LayoutStyle::default(),
+        Spacer::new(12.0).axis(floem_widgets::Axis::Horizontal),
+    );
+    host.frame();
+
+    let icon_bounds = node_bounds(&host, icon);
+    assert!(
+        icon_bounds.width() > 8.0 && icon_bounds.height() > 8.0,
+        "icon measured its glyph, got {icon_bounds:?}"
+    );
+    assert!(
+        (icon_bounds.width() - icon_bounds.height()).abs() < 1.5,
+        "icon box is square, got {icon_bounds:?}"
+    );
+
+    let image_bounds = node_bounds(&host, image);
+    assert!(
+        (image_bounds.width() - 32.0).abs() < 1.5 && (image_bounds.height() - 18.0).abs() < 1.5,
+        "image reports its declared intrinsic size, got {image_bounds:?}"
+    );
+
+    let divider_bounds = node_bounds(&host, divider);
+    assert!(
+        divider_bounds.height() > 0.0 && divider_bounds.height() <= 2.0,
+        "horizontal divider is as thick as its rule, got {divider_bounds:?}"
+    );
+
+    let spacer_bounds = node_bounds(&host, spacer);
+    assert!(
+        (spacer_bounds.width() - 12.0).abs() < 1.5,
+        "spacer reports its extent on its axis, got {spacer_bounds:?}"
     );
 }

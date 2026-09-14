@@ -316,6 +316,23 @@ impl Widget for Icon {
         self.revision.sync(cx, id);
     }
 
+    /// Intrinsic size: the glyph's advance/extent at the icon's font size.
+    /// Icons are square by convention (font icons are designed on a square
+    /// em box), so the box takes the larger of the two measured extents.
+    fn layout_request(&self) -> Option<LayoutRequest> {
+        if self.size <= 0.0 {
+            return None;
+        }
+        let mut buf = [0u8; 4];
+        let glyph = self.glyph.encode_utf8(&mut buf);
+        let measured = floem_text::measure_text(glyph, self.size, f64::INFINITY);
+        if measured.width <= 0.0 || measured.height <= 0.0 {
+            return None;
+        }
+        let side = measured.width.max(measured.height) as f32;
+        Some(LayoutRequest::new().width(side).height(side))
+    }
+
     fn paint(&self, cx: &mut dyn PaintContext, _id: ElementId) {
         if self.size <= 0.0 {
             return;
@@ -435,6 +452,22 @@ impl Widget for Image {
 
     fn update(&mut self, cx: &mut dyn UpdateContext, id: ElementId) {
         self.revision.sync(cx, id);
+    }
+
+    /// Intrinsic size: whatever the producer declared for the resource
+    /// ([`Image::intrinsic_size`]). Without it there is nothing to report —
+    /// the renderer only ever sees pixels through the resource registry, so
+    /// the box stays under the caller's control (`None` here means "no
+    /// opinion", not "zero").
+    fn layout_request(&self) -> Option<LayoutRequest> {
+        if self.intrinsic.width <= 0.0 || self.intrinsic.height <= 0.0 {
+            return None;
+        }
+        Some(
+            LayoutRequest::new()
+                .width(self.intrinsic.width as f32)
+                .height(self.intrinsic.height as f32),
+        )
     }
 
     fn paint(&self, cx: &mut dyn PaintContext, _id: ElementId) {
@@ -601,6 +634,21 @@ impl Widget for Spacer {
         self.revision.sync(cx, id);
     }
 
+    /// Intrinsic size: the spacer's extent along its axis. A flexible spacer
+    /// ([`Spacer::flexible`]) stores `INFINITY`, which the layout layer
+    /// understands as "absorb the free space" — express it as `grow`, the
+    /// same thing a flex child would say.
+    fn layout_request(&self) -> Option<LayoutRequest> {
+        if self.is_flexible() {
+            return Some(LayoutRequest::new().grow(1.0));
+        }
+        let extent = self.extent.max(0.0) as f32;
+        Some(match self.axis {
+            Axis::Horizontal => LayoutRequest::new().width(extent),
+            Axis::Vertical => LayoutRequest::new().height(extent),
+        })
+    }
+
     fn paint(&self, _cx: &mut dyn PaintContext, _id: ElementId) {}
 
     fn semantics(&self, _cx: &mut dyn SemanticsContext, _id: ElementId) {}
@@ -699,6 +747,17 @@ impl Widget for Divider {
 
     fn update(&mut self, cx: &mut dyn UpdateContext, id: ElementId) {
         self.revision.sync(cx, id);
+    }
+
+    /// Intrinsic size: the rule's thickness on its own axis. The *other* axis
+    /// is deliberately unspecified — a rule spans its container, so stating
+    /// no extent there leaves the cross-axis stretch free to fill it.
+    fn layout_request(&self) -> Option<LayoutRequest> {
+        let thickness = self.thickness.max(0.0) as f32;
+        Some(match self.axis {
+            Axis::Horizontal => LayoutRequest::new().height(thickness),
+            Axis::Vertical => LayoutRequest::new().width(thickness),
+        })
     }
 
     fn paint(&self, cx: &mut dyn PaintContext, _id: ElementId) {

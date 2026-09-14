@@ -36,6 +36,16 @@ const TEXTFIELD_MIN_WIDTH: f32 = 120.0;
 /// Horizontal padding between a Select's edge and its label (each side);
 /// matches the offset `draw_centered_text` applies.
 const SELECT_PADDING: f32 = 8.0;
+/// Slider thumb diameter (and therefore the slider's intrinsic height — the
+/// thumb is the tallest thing it paints).
+const SLIDER_THUMB: f32 = 16.0;
+/// Default track length for a Slider that was given no explicit width.
+const SLIDER_TRACK_WIDTH: f32 = 160.0;
+/// Progress bar height: the bar paints its whole box, so its intrinsic size
+/// is a convention rather than a measurement.
+const PROGRESS_HEIGHT: f32 = 8.0;
+/// Default Progress bar length when no explicit width is given.
+const PROGRESS_WIDTH: f32 = 160.0;
 
 /// Intrinsic width of a label at the controls' shared font size.
 ///
@@ -1309,6 +1319,18 @@ impl Widget for Slider {
         self.revision.sync(cx, id);
     }
 
+    /// Intrinsic size: the thumb's diameter tall (it is the tallest thing the
+    /// slider paints) and a default track length wide — a track is
+    /// meaningless at zero width, and callers who want it to fill their
+    /// container pin the width explicitly.
+    fn layout_request(&self) -> Option<floem_core::LayoutRequest> {
+        Some(
+            floem_core::LayoutRequest::new()
+                .width(SLIDER_TRACK_WIDTH)
+                .height(SLIDER_THUMB),
+        )
+    }
+
     fn event(&mut self, cx: &mut dyn EventContext, id: ElementId) -> bool {
         let Event::Pointer(pointer) = cx.event() else {
             return false;
@@ -1480,6 +1502,16 @@ impl Widget for Progress {
 
     fn update(&mut self, cx: &mut dyn UpdateContext, id: ElementId) {
         self.revision.sync(cx, id);
+    }
+
+    /// Intrinsic size: the bar fills its box, so its extent is a convention —
+    /// a thin bar of default length. A pinned style still wins.
+    fn layout_request(&self) -> Option<floem_core::LayoutRequest> {
+        Some(
+            floem_core::LayoutRequest::new()
+                .width(PROGRESS_WIDTH)
+                .height(PROGRESS_HEIGHT),
+        )
     }
 
     fn paint(&self, cx: &mut dyn PaintContext, _id: ElementId) {
