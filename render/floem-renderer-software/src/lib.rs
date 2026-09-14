@@ -45,6 +45,13 @@ type GlyphCacheKey = (usize, u32, u32, u32);
 /// entries beyond this, trading a re-rasterisation for a bounded footprint.
 const GLYPH_CACHE_LIMIT: usize = 4096;
 
+/// Default ceiling on the mask *bytes* the cache holds. Masks vary wildly in
+/// size — a 10px glyph is tens of bytes, a 96px one is tens of kilobytes — so
+/// an entry count alone says nothing about the memory actually retained. This
+/// is the real budget; the entry ceiling above is a backstop against a
+/// pathological pile of tiny glyphs.
+const GLYPH_CACHE_BYTES: usize = 4 * 1024 * 1024;
+
 /// Software renderer backend implementing the Floem 2.0 [`Renderer`] ABI.
 pub struct SoftwareRenderer {
     width: u32,
@@ -75,9 +82,13 @@ pub struct SoftwareRenderer {
     /// massively across frames and nodes — without this every frame pays a
     /// full outline-to-mask pass per visible glyph.
     glyph_cache: HashMap<GlyphCacheKey, (peniko::Blob<u8>, std::sync::Arc<GlyphMask>, u64)>,
+    /// Mask bytes currently held by `glyph_cache` (sum of every entry's mask).
+    glyph_cache_bytes: usize,
     /// Maximum number of cached masks; the least-recently-used entries are
     /// evicted beyond it.
     glyph_cache_limit: usize,
+    /// Ceiling on retained mask bytes; see [`GLYPH_CACHE_BYTES`].
+    glyph_cache_byte_limit: usize,
     /// Monotonic access clock feeding the LRU order.
     glyph_cache_clock: u64,
 }
@@ -100,6 +111,8 @@ impl SoftwareRenderer {
             needs_full_clear: true,
             glyph_cache: HashMap::new(),
             glyph_cache_limit: GLYPH_CACHE_LIMIT,
+            glyph_cache_bytes: 0,
+            glyph_cache_byte_limit: GLYPH_CACHE_BYTES,
             glyph_cache_clock: 0,
         }
     }
@@ -118,6 +131,16 @@ impl SoftwareRenderer {
         self.glyph_cache_limit
     }
 
+    /// Mask bytes currently held by the cache.
+    pub fn glyph_cache_bytes(&self) -> usize {
+        self.glyph_cache_bytes
+    }
+
+    /// The configured ceiling on cached mask bytes.
+    pub fn glyph_cache_byte_limit(&self) -> usize {
+        self.glyph_cache_byte_limit
+    }
+
     /// Changes the cache ceiling, evicting least-recently-used entries until
     /// the cache fits. A limit of zero is clamped to one: the cache always
     /// holds the most recently used mask.
@@ -128,22 +151,50 @@ impl SoftwareRenderer {
         }
     }
 
+    /// Changes the byte budget, evicting least-recently-used entries until the
+    /// cache fits. A mask costs its own bytes, so the budget is floored at
+    /// what a single large glyph needs — below that the cache could not hold
+    /// anything and every frame would re-rasterise everything.
+    pub fn set_glyph_cache_byte_limit(&mut self, limit: usize) {
+        self.glyph_cache_byte_limit = limit.max(64 * 1024);
+        while self.glyph_cache_bytes > self.glyph_cache_byte_limit {
+            self.evict_glyph_cache_one();
+        }
+    }
+
     /// Drops all cached glyph masks (e.g. under memory pressure). The next
     /// frame re-rasterises on demand.
     pub fn clear_glyph_cache(&mut self) {
         self.glyph_cache.clear();
+        self.glyph_cache_bytes = 0;
     }
 
-    /// Evicts the single least-recently-used mask.
+    /// Evicts the single least-recently-used mask, releasing its bytes from the
+    /// budget. No-op on an empty cache.
     fn evict_glyph_cache_one(&mut self) {
         let oldest = self
             .glyph_cache
             .iter()
             .min_by_key(|(_, value)| value.2)
-            .map(|(key, _)| *key);
-        if let Some(key) = oldest {
+            .map(|(key, value)| (*key, value.1.data.len()));
+        if let Some((key, bytes)) = oldest {
             self.glyph_cache.remove(&key);
+            self.glyph_cache_bytes = self.glyph_cache_bytes.saturating_sub(bytes);
         }
+    }
+
+    /// Makes room for a mask of `bytes`, then charges it to the budget.
+    ///
+    /// Both ceilings apply: the byte budget is what bounds memory, the entry
+    /// count is a backstop against a pathological pile of tiny glyphs.
+    fn admit_glyph_cache_entry(&mut self, bytes: usize) {
+        while (self.glyph_cache_bytes + bytes > self.glyph_cache_byte_limit
+            || self.glyph_cache.len() >= self.glyph_cache_limit)
+            && !self.glyph_cache.is_empty()
+        {
+            self.evict_glyph_cache_one();
+        }
+        self.glyph_cache_bytes += bytes;
     }
 
     pub fn pixel_rgba(&self, x: u32, y: u32) -> Option<[u8; 4]> {
@@ -315,9 +366,7 @@ impl SoftwareRenderer {
                     // The FontData clone pins the font bytes, so the
                     // key's pointer stays valid and un-aliasable while
                     // the entry lives.
-                    if self.glyph_cache.len() >= self.glyph_cache_limit {
-                        self.evict_glyph_cache_one();
-                    }
+                    self.admit_glyph_cache_entry(mask.data.len());
                     self.glyph_cache_clock += 1;
                     self.glyph_cache.insert(
                         cache_key,
@@ -1005,6 +1054,90 @@ mod tests {
         // Inside the damage: still repainted. Outside: untouched.
         assert_eq!(sw.pixel_rgba(2, 2), Some([200, 0, 0, 255]));
         assert_eq!(sw.pixel_rgba(9, 2), Some([0, 0, 200, 255]));
+    }
+
+    /// Renders one frame of `runs` at the given box, the way the app layer
+    /// would: a text scene node pointing at a glyph-run resource.
+    fn draw_text_frame(sw: &mut SoftwareRenderer, runs: &[floem_text::GlyphRun]) {
+        let mut registry = ResourceRegistry::new();
+        let glyphs = registry.insert(floem_scene::Resource {
+            kind: ResourceKind::GlyphRun {
+                runs: runs.to_vec(),
+            },
+        });
+        let mut scene = Scene::new();
+        scene.begin_update();
+        let _ = scene.insert(SceneNode::Text {
+            origin: Point::new(2.0, 2.0),
+            size: Size::new(240.0, 120.0),
+            glyphs,
+            color: Color::rgb(255, 255, 255),
+        });
+        scene.finish_update();
+        sw.render_scene_with_resources(&scene, scene.damage(), &registry);
+        sw.end_frame();
+    }
+
+    /// The byte budget — not the entry count — is what bounds retained memory:
+    /// a 24px glyph costs tens of bytes, a 120px one tens of kilobytes, so a
+    /// fixed number of entries says nothing about how much is held.
+    #[test]
+    fn glyph_cache_byte_budget_bounds_retained_memory() {
+        use floem_text::{TextAlign, TextLayoutOptions};
+
+        let sizes = [24.0, 48.0, 72.0, 96.0, 120.0];
+        // Shape once per size and reuse: each `shape()` allocates fresh font
+        // bytes, which are part of the cache key.
+        let shaped: std::collections::HashMap<u32, Vec<floem_text::GlyphRun>> = sizes
+            .iter()
+            .map(|&size| {
+                let mut shaper = floem_text::TextShaper::new();
+                let laid = shaper.shape(
+                    "MM",
+                    &TextLayoutOptions {
+                        max_width: f64::INFINITY,
+                        font_size: size,
+                        align: TextAlign::Start,
+                    },
+                );
+                (size.to_bits(), laid.runs.clone())
+            })
+            .collect();
+
+        let mut sw = SoftwareRenderer::new(256, 128);
+        sw.set_glyph_cache_byte_limit(64 * 1024);
+        assert_eq!(sw.glyph_cache_byte_limit(), 64 * 1024);
+
+        // One large glyph shows the granularity the budget can be overshot by:
+        // a single entry is never split.
+        draw_text_frame(&mut sw, &shaped[&96.0f32.to_bits()]);
+        let biggest = sw.glyph_cache_bytes();
+        assert!(biggest > 0, "a rasterised mask costs bytes");
+
+        // Ten distinct masks through a budget that holds a few large ones:
+        // bytes stay bounded instead of growing with every new size.
+        for size in sizes {
+            draw_text_frame(&mut sw, &shaped[&size.to_bits()]);
+            assert!(
+                sw.glyph_cache_bytes() <= 64 * 1024 + biggest,
+                "bytes stay bounded by the budget, got {}",
+                sw.glyph_cache_bytes()
+            );
+        }
+        assert!(
+            sw.glyph_cache_entries() < sizes.len() * 2,
+            "large glyphs are evicted rather than all retained, got {} entries",
+            sw.glyph_cache_entries()
+        );
+        assert!(
+            sw.glyph_cache_hits > 0,
+            "what does fit is still served from the cache"
+        );
+
+        // Clearing releases the budget, not just the entries.
+        sw.clear_glyph_cache();
+        assert_eq!(sw.glyph_cache_entries(), 0);
+        assert_eq!(sw.glyph_cache_bytes(), 0, "clearing releases the budget");
     }
 
     /// Beyond the cache limit the least-recently-used masks are evicted: the
