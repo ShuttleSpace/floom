@@ -43,6 +43,16 @@
 //! referenced by the current frame are pruned, so evicted/replaced resources
 //! never leak.
 
+//! ## Incremental encode
+//!
+//! Vello's `Scene` is a command list, so there is no retained tree to diff —
+//! but there is something better to cache. Each scene node's commands are
+//! encoded into its own fragment keyed by the node's (stable) id, and reused
+//! wholesale while the node's payload hash is unchanged: a frame where one
+//! widget moved re-encodes that one widget and appends the rest. Fragments
+//! also pin the image brushes their commands were built from, so a reused
+//! fragment never has its texture evicted from under it.
+
 use floem_renderer::{AttachedSurface, Presenter, SurfaceHandles};
 use floem_scene::{ResourceKind, ResourceRegistry, Scene, SceneNode};
 use floem_types::{Size, SurfaceId, WindowId};
@@ -84,6 +94,116 @@ pub struct GpuFrameStats {
     /// Present calls skipped because the scene reported no damage since the
     /// last presented frame (and no attach/resize made the screen stale).
     pub present_skips: u64,
+    /// Scene nodes drawn by appending a cached, unchanged vello fragment
+    /// instead of re-encoding the node's commands.
+    pub fragments_reused: u64,
+    /// Scene nodes freshly encoded into vello commands this frame (their
+    /// payload changed, or the node is new).
+    pub fragments_encoded: u64,
+}
+
+/// What encoding one scene node produced: the draw commands land in a
+/// fragment scene, the counters feed the per-frame stats.
+#[derive(Debug, Clone, Default)]
+struct NodeEncodeStats {
+    rects: u64,
+    glyph_runs: u64,
+    images: u64,
+    unsupported: u64,
+    cache_hits: u64,
+    cache_misses: u64,
+    /// Image resources this fragment's commands still reference. A reused
+    /// fragment keeps those brushes alive for exactly as long as the
+    /// fragment does — the alternative (re-deriving usage from the frames
+    /// that happened to re-encode) would evict a brush a live fragment is
+    /// still built from.
+    image_keys: Vec<u64>,
+}
+
+/// A cached translation of one scene node into vello commands.
+///
+/// Vello's `Scene` is a command list, but a cheap one to *append*: an
+/// unchanged node's commands are reused wholesale instead of re-encoded, so a
+/// frame with one moving widget pays encoding only for that widget. The
+/// counters let a reused fragment still report its draws (and texture reuse)
+/// in the per-frame stats.
+struct SceneFragment {
+    fingerprint: u64,
+    scene: VelloScene,
+    stats: NodeEncodeStats,
+}
+
+/// A payload hash distinguishing "this node's draws would be identical" from
+/// "re-encode". Field bits, not `PartialEq`: two equal payloads hash equal,
+/// and any field change (bounds, colour, resource id — which carries a
+/// generation) flips the hash.
+fn node_fingerprint(node: &SceneNode) -> u64 {
+    use std::hash::{Hash, Hasher};
+    let mut hasher = std::collections::hash_map::DefaultHasher::new();
+    match node {
+        SceneNode::Group {
+            children,
+            transform,
+        } => {
+            hasher.write_u8(0);
+            for child in children {
+                hasher.write_u64(child.raw());
+            }
+            for v in [
+                transform.a,
+                transform.b,
+                transform.c,
+                transform.d,
+                transform.e,
+                transform.f,
+            ] {
+                hasher.write_u64(v.to_bits());
+            }
+        }
+        SceneNode::Rect {
+            bounds,
+            fill,
+            radius,
+        } => {
+            hasher.write_u8(1);
+            for v in [bounds.x0, bounds.y0, bounds.x1, bounds.y1] {
+                hasher.write_u64(v.to_bits());
+            }
+            hasher.write_u32(
+                u32::from(fill.r) << 24
+                    | u32::from(fill.g) << 16
+                    | u32::from(fill.b) << 8
+                    | u32::from(fill.a),
+            );
+            hasher.write_u32(radius.to_bits());
+        }
+        SceneNode::Image { bounds, image } => {
+            hasher.write_u8(2);
+            for v in [bounds.x0, bounds.y0, bounds.x1, bounds.y1] {
+                hasher.write_u64(v.to_bits());
+            }
+            hasher.write_u64(image.raw());
+        }
+        SceneNode::Text {
+            origin,
+            size,
+            glyphs,
+            color,
+        } => {
+            hasher.write_u8(3);
+            for v in [origin.x, origin.y, size.width, size.height] {
+                hasher.write_u64(v.to_bits());
+            }
+            hasher.write_u64(glyphs.raw());
+            hasher.write_u32(
+                u32::from(color.r) << 24
+                    | u32::from(color.g) << 16
+                    | u32::from(color.b) << 8
+                    | u32::from(color.a),
+            );
+        }
+    }
+    hasher.finish()
 }
 
 /// Vello + wgpu [`Presenter`].
@@ -105,6 +225,11 @@ pub struct VelloGpuPresenter {
     /// The brush holds an `Arc` to the registry's pixels, so building it once
     /// shares bytes with the scene layer and uploads once to vello's atlas.
     image_cache: HashMap<u64, ImageBrush>,
+    /// Cached vello command fragments per scene node, keyed by
+    /// `SceneNodeId::raw()` (stable across frames — index + generation).
+    /// Unchanged nodes are appended, not re-encoded; entries the scene no
+    /// longer holds are pruned each frame.
+    fragments: HashMap<u64, SceneFragment>,
     /// Set by attach/resize: the swap-chain's content is undefined (or stale),
     /// so the next present must run even if the scene reports no damage.
     /// Cleared once a frame has actually been presented.
@@ -164,6 +289,7 @@ impl VelloGpuPresenter {
             window: None,
             surface_id: None,
             image_cache: HashMap::new(),
+            fragments: HashMap::new(),
             needs_present: true,
         })
     }
@@ -266,152 +392,200 @@ impl VelloGpuPresenter {
         surface.surface.configure(&self.device, &surface.config);
     }
 
-    /// Translate the retained Floem scene into a vello scene.
+    /// Translate the retained Floem scene into a vello scene, incrementally.
     ///
-    /// Rebuilt from scratch every presented frame: vello's `Scene` is a
-    /// command list, not a retained tree, so there is nothing to diff. Frames
-    /// with empty damage never reach here — `present` skips them entirely
-    /// before encoding.
-    fn encode(
-        &mut self,
-        scene: &Scene,
-        resources: &ResourceRegistry,
-    ) -> (u64, u64, u64, u64, u64, u64) {
+    /// Each node's commands live in a cached [`SceneFragment`] keyed by the
+    /// node's stable id: a node whose payload hash is unchanged is *appended*
+    /// to the frame, not re-encoded, so a frame where one widget moved pays
+    /// encoding only for that widget. Fragments the scene no longer holds are
+    /// pruned. Frames with empty damage never reach here — `present` skips
+    /// them entirely before encoding.
+    fn encode(&mut self, scene: &Scene, resources: &ResourceRegistry) -> GpuFrameStats {
         self.vello_scene.reset();
-        let mut rects = 0;
-        let mut glyph_runs = 0;
-        let mut images = 0;
-        let mut unsupported = 0;
-        let mut cache_hits = 0;
-        let mut cache_misses = 0;
+        let mut totals = GpuFrameStats {
+            present_skips: 0,
+            ..GpuFrameStats::default()
+        };
+        let mut used_fragments: HashSet<u64> = HashSet::new();
         let mut used_images: HashSet<u64> = HashSet::new();
-        for (_id, node) in scene.iter() {
-            match node {
-                SceneNode::Rect {
-                    bounds,
-                    fill,
-                    radius,
-                } => {
-                    let rect = KurboRect::new(bounds.x0, bounds.y0, bounds.x1, bounds.y1);
-                    // One fill for both shapes: a zero radius is a plain rect.
-                    let shape = KurboRoundedRect::from_rect(rect, f64::from(radius.max(0.0)));
-                    self.vello_scene.fill(
-                        Fill::NonZero,
-                        Affine::IDENTITY,
-                        PenikoColor::from_rgba8(fill.r, fill.g, fill.b, fill.a),
-                        None,
-                        &shape,
-                    );
-                    rects += 1;
-                }
-                SceneNode::Text {
-                    origin,
-                    glyphs,
-                    color,
-                    ..
-                } => {
-                    let Some(ResourceKind::GlyphRun { runs }) =
-                        resources.get(*glyphs).map(|r| &r.kind)
-                    else {
-                        // Dangling or wrong-kind id: skip rather than fail.
-                        continue;
-                    };
-                    for run in runs {
-                        if run.font.data.as_ref().is_empty() {
-                            continue;
-                        }
-                        // Parley positions glyphs relative to the run origin;
-                        // the scene node carries the text block origin. Vello
-                        // wants pixel-space glyph coordinates, so fold both
-                        // offsets into the transform and pass glyph positions
-                        // through untouched.
-                        let transform =
-                            Affine::translate((origin.x + run.origin.x, origin.y + run.origin.y));
-                        let glyphs = run.glyphs.iter().map(|g| vello::Glyph {
-                            id: g.id,
-                            x: g.x,
-                            y: g.y,
-                        });
-                        self.vello_scene
-                            .draw_glyphs(&run.font)
-                            .font_size(run.font_size)
-                            .transform(transform)
-                            .brush(PenikoColor::from_rgba8(color.r, color.g, color.b, color.a))
-                            .draw(Fill::NonZero, glyphs);
-                        glyph_runs += 1;
+        for (id, node) in scene.iter() {
+            let fingerprint = node_fingerprint(node);
+            let key = id.raw();
+            if let Some(cached) = self.fragments.get_mut(&key) {
+                if cached.fingerprint == fingerprint {
+                    // Unchanged node: append its cached commands and report
+                    // its draws (a reused image is a texture-cache hit — the
+                    // pixels are already resident).
+                    self.vello_scene.append(&cached.scene, None);
+                    totals.rects += cached.stats.rects;
+                    totals.glyph_runs += cached.stats.glyph_runs;
+                    totals.images += cached.stats.images;
+                    totals.unsupported_nodes += cached.stats.unsupported;
+                    totals.texture_cache_hits += cached.stats.images;
+                    totals.fragments_reused += 1;
+                    for key in cached.stats.image_keys.iter().copied() {
+                        used_images.insert(key);
                     }
+                    used_fragments.insert(key);
+                    continue;
                 }
-                SceneNode::Image { bounds, image } => {
-                    let Some(ResourceKind::Image {
-                        width,
-                        height,
-                        pixels,
-                    }) = resources.get(*image).map(|r| &r.kind)
-                    else {
-                        // Dangling or wrong-kind id: skip rather than fail.
-                        unsupported += 1;
-                        continue;
-                    };
-                    if bounds.width() <= 0.0
-                        || bounds.height() <= 0.0
-                        || *width == 0
-                        || *height == 0
-                    {
-                        continue;
-                    }
-                    // Texture cache: one ImageBrush per resource id. The
-                    // brush's Blob shares the registry's `Arc<[u8]>` and keeps
-                    // a stable id, which is what vello's atlas keys on —
-                    // rebuilding it per frame would re-upload every frame.
-                    let key = image.raw();
-                    used_images.insert(key);
-                    let brush = match self.image_cache.entry(key) {
-                        std::collections::hash_map::Entry::Occupied(entry) => {
-                            cache_hits += 1;
-                            entry.into_mut()
-                        }
-                        std::collections::hash_map::Entry::Vacant(entry) => {
-                            cache_misses += 1;
-                            // One Arc clone, no pixel bytes copied: the Blob
-                            // shares ownership with the registry. The extra
-                            // Arc layer exists because `Blob` wants an
-                            // `Arc<dyn AsRef<[u8]>>` and an unsized pointee
-                            // cannot coerce directly — this happens once per
-                            // registration (cache miss), not per frame.
-                            let shared = std::sync::Arc::new(std::sync::Arc::clone(pixels));
-                            entry.insert(ImageBrush {
-                                image: ImageData {
-                                    data: Blob::new(shared),
-                                    format: ImageFormat::Rgba8,
-                                    alpha_type: ImageAlphaType::AlphaPremultiplied,
-                                    width: *width,
-                                    height: *height,
-                                },
-                                sampler: ImageSampler::default(),
-                            })
-                        }
-                    };
-                    let sx = bounds.width() / f64::from(*width);
-                    let sy = bounds.height() / f64::from(*height);
-                    let transform = Affine::translate((bounds.x0, bounds.y0))
-                        * Affine::scale_non_uniform(sx, sy);
-                    self.vello_scene.draw_image(&*brush, transform);
-                    images += 1;
-                }
-                SceneNode::Group { .. } => {}
             }
+            let mut fragment_scene = VelloScene::new();
+            let stats = self.encode_node(&mut fragment_scene, node, resources, &mut used_images);
+            // Accumulate before the stats move into the fragment.
+            totals.rects += stats.rects;
+            totals.glyph_runs += stats.glyph_runs;
+            totals.images += stats.images;
+            totals.unsupported_nodes += stats.unsupported;
+            totals.texture_cache_hits += stats.cache_hits;
+            totals.texture_cache_misses += stats.cache_misses;
+            totals.fragments_encoded += 1;
+            used_fragments.insert(key);
+            self.fragments.insert(
+                key,
+                SceneFragment {
+                    fingerprint,
+                    scene: fragment_scene,
+                    stats,
+                },
+            );
+            self.vello_scene.append(&self.fragments[&key].scene, None);
         }
-        // Prune brushes the scene no longer references. The key includes the
-        // generation, so a re-registered slot is a fresh entry by construction.
+        // Prune fragments the scene no longer holds (and brushes nothing
+        // re-encoded this frame references). The keys include generations, so
+        // a re-created node or re-registered slot is a fresh entry by
+        // construction.
+        self.fragments.retain(|key, _| used_fragments.contains(key));
         self.image_cache.retain(|key, _| used_images.contains(key));
-        (
-            rects,
-            glyph_runs,
-            images,
-            unsupported,
-            cache_hits,
-            cache_misses,
-        )
+        totals
+    }
+
+    /// Encodes one scene node's draws into `target`, updating the image
+    /// texture cache. Pure per-node work — no frame state.
+    fn encode_node(
+        &mut self,
+        target: &mut VelloScene,
+        node: &SceneNode,
+        resources: &ResourceRegistry,
+        used_images: &mut HashSet<u64>,
+    ) -> NodeEncodeStats {
+        let mut stats = NodeEncodeStats::default();
+        match node {
+            SceneNode::Rect {
+                bounds,
+                fill,
+                radius,
+            } => {
+                let rect = KurboRect::new(bounds.x0, bounds.y0, bounds.x1, bounds.y1);
+                // One fill for both shapes: a zero radius is a plain rect.
+                let shape = KurboRoundedRect::from_rect(rect, f64::from(radius.max(0.0)));
+                target.fill(
+                    Fill::NonZero,
+                    Affine::IDENTITY,
+                    PenikoColor::from_rgba8(fill.r, fill.g, fill.b, fill.a),
+                    None,
+                    &shape,
+                );
+                stats.rects += 1;
+            }
+            SceneNode::Text {
+                origin,
+                glyphs,
+                color,
+                ..
+            } => {
+                let Some(ResourceKind::GlyphRun { runs }) = resources.get(*glyphs).map(|r| &r.kind)
+                else {
+                    // Dangling or wrong-kind id: skip rather than fail.
+                    return stats;
+                };
+                for run in runs {
+                    if run.font.data.as_ref().is_empty() {
+                        continue;
+                    }
+                    // Parley positions glyphs relative to the run origin;
+                    // the scene node carries the text block origin. Vello
+                    // wants pixel-space glyph coordinates, so fold both
+                    // offsets into the transform and pass glyph positions
+                    // through untouched.
+                    let transform =
+                        Affine::translate((origin.x + run.origin.x, origin.y + run.origin.y));
+                    let glyphs = run.glyphs.iter().map(|g| vello::Glyph {
+                        id: g.id,
+                        x: g.x,
+                        y: g.y,
+                    });
+                    target
+                        .draw_glyphs(&run.font)
+                        .font_size(run.font_size)
+                        .transform(transform)
+                        .brush(PenikoColor::from_rgba8(color.r, color.g, color.b, color.a))
+                        .draw(Fill::NonZero, glyphs);
+                    stats.glyph_runs += 1;
+                }
+            }
+            SceneNode::Image { bounds, image } => {
+                let Some(ResourceKind::Image {
+                    width,
+                    height,
+                    pixels,
+                }) = resources.get(*image).map(|r| &r.kind)
+                else {
+                    // Dangling or wrong-kind id: skip rather than fail.
+                    stats.unsupported += 1;
+                    return stats;
+                };
+                if bounds.width() <= 0.0 || bounds.height() <= 0.0 || *width == 0 || *height == 0 {
+                    return stats;
+                }
+                // Texture cache: one ImageBrush per resource id. The
+                // brush's Blob shares the registry's `Arc<[u8]>` and keeps
+                // a stable id, which is what vello's atlas keys on —
+                // rebuilding it per frame would re-upload every frame.
+                let key = image.raw();
+                used_images.insert(key);
+                stats.image_keys.push(key);
+                let brush = match self.image_cache.entry(key) {
+                    std::collections::hash_map::Entry::Occupied(entry) => {
+                        stats.cache_hits += 1;
+                        entry.into_mut()
+                    }
+                    std::collections::hash_map::Entry::Vacant(entry) => {
+                        stats.cache_misses += 1;
+                        // One Arc clone, no pixel bytes copied: the Blob
+                        // shares ownership with the registry. The extra
+                        // Arc layer exists because `Blob` wants an
+                        // `Arc<dyn AsRef<[u8]>>` and an unsized pointee
+                        // cannot coerce directly — this happens once per
+                        // registration (cache miss), not per frame.
+                        let shared = std::sync::Arc::new(std::sync::Arc::clone(pixels));
+                        entry.insert(ImageBrush {
+                            image: ImageData {
+                                data: Blob::new(shared),
+                                format: ImageFormat::Rgba8,
+                                alpha_type: ImageAlphaType::AlphaPremultiplied,
+                                width: *width,
+                                height: *height,
+                            },
+                            sampler: ImageSampler::default(),
+                        })
+                    }
+                };
+                let sx = bounds.width() / f64::from(*width);
+                let sy = bounds.height() / f64::from(*height);
+                let transform =
+                    Affine::translate((bounds.x0, bounds.y0)) * Affine::scale_non_uniform(sx, sy);
+                target.draw_image(&*brush, transform);
+                stats.images += 1;
+            }
+            SceneNode::Group { .. } => {}
+        }
+        stats
+    }
+
+    /// Number of cached node fragments (diagnostics: the working set size).
+    pub fn fragment_count(&self) -> usize {
+        self.fragments.len()
     }
 }
 
@@ -484,22 +658,25 @@ impl Presenter for VelloGpuPresenter {
             self.stats.unsupported_nodes = 0;
             self.stats.texture_cache_hits = 0;
             self.stats.texture_cache_misses = 0;
+            self.stats.fragments_reused = 0;
+            self.stats.fragments_encoded = 0;
             return;
         }
         // Any non-skipped present refreshes the screen (or would, with a
         // surface): the "stale screen" reason to present is consumed.
         self.needs_present = false;
 
-        let (rects, glyph_runs, images, unsupported, cache_hits, cache_misses) =
-            self.encode(scene, resources);
+        let encoded = self.encode(scene, resources);
         // Encode stats are final whether or not a surface was attached — the
         // encoding work (and any skipped nodes) happened either way.
-        self.stats.rects = rects;
-        self.stats.glyph_runs = glyph_runs;
-        self.stats.images = images;
-        self.stats.unsupported_nodes = unsupported;
-        self.stats.texture_cache_hits = cache_hits;
-        self.stats.texture_cache_misses = cache_misses;
+        self.stats.rects = encoded.rects;
+        self.stats.glyph_runs = encoded.glyph_runs;
+        self.stats.images = encoded.images;
+        self.stats.unsupported_nodes = encoded.unsupported_nodes;
+        self.stats.texture_cache_hits = encoded.texture_cache_hits;
+        self.stats.texture_cache_misses = encoded.texture_cache_misses;
+        self.stats.fragments_reused = encoded.fragments_reused;
+        self.stats.fragments_encoded = encoded.fragments_encoded;
         let Some(surface) = self.surface.as_mut() else {
             return;
         };
@@ -822,6 +999,99 @@ mod tests {
     /// A present whose scene reports no damage (and no attach/resize made the
     /// screen stale) must not re-encode: the per-frame stats read zero and the
     /// skip is counted. A resize re-arms presenting.
+    /// An unchanged scene encodes once: the second present appends every
+    /// cached fragment instead of re-encoding it, while still reporting the
+    /// same draws.
+    #[test]
+    fn unchanged_scene_reuses_cached_fragments() {
+        let Some(mut presenter) = presenter() else {
+            return;
+        };
+        let mut scene = Scene::new();
+        scene.begin_update();
+        let id = scene.alloc_id();
+        scene.upsert(id, rect_node(0.0));
+        let second = scene.alloc_id();
+        scene.upsert(second, rect_node(1.0));
+        scene.finish_update();
+
+        presenter.present(&scene, &ResourceRegistry::new());
+        let first = presenter.stats();
+        assert_eq!(first.fragments_encoded, 2, "both nodes encoded");
+        assert_eq!(first.fragments_reused, 0);
+        assert_eq!(first.rects, 2);
+
+        // Re-present the identical tree (a resize re-arms presenting even
+        // with empty damage).
+        presenter.resize(Size::new(64.0, 48.0), 1.0);
+        presenter.present(&scene, &ResourceRegistry::new());
+        let stats = presenter.stats();
+        assert_eq!(stats.fragments_reused, 2, "every fragment reused");
+        assert_eq!(
+            stats.fragments_encoded, 0,
+            "nothing was re-encoded (per-frame stats)"
+        );
+        assert_eq!(stats.rects, 2, "the draws are still reported");
+        assert_eq!(presenter.fragment_count(), 2, "two cached fragments");
+    }
+
+    /// Changing one node re-encodes only that node's fragment; removing one
+    /// prunes it from the cache on the same frame.
+    #[test]
+    fn only_the_changed_node_is_reencoded() {
+        let Some(mut presenter) = presenter() else {
+            return;
+        };
+        let mut scene = Scene::new();
+        scene.begin_update();
+        let moved = scene.alloc_id();
+        scene.upsert(moved, rect_node(0.0));
+        let steady = scene.alloc_id();
+        scene.upsert(steady, rect_node(1.0));
+        let doomed = scene.alloc_id();
+        scene.upsert(doomed, rect_node(2.0));
+        scene.finish_update();
+
+        presenter.present(&scene, &ResourceRegistry::new());
+        assert_eq!(presenter.stats().fragments_encoded, 3);
+
+        // Move one node: that node re-encodes, the other two are appended.
+        presenter.resize(Size::new(64.0, 48.0), 1.0);
+        scene.begin_update();
+        scene.upsert(moved, rect_node(7.0));
+        scene.finish_update();
+        presenter.present(&scene, &ResourceRegistry::new());
+        let stats = presenter.stats();
+        assert_eq!(stats.fragments_encoded, 1, "only the moved node re-encodes");
+        assert_eq!(stats.fragments_reused, 2, "the rest are cached");
+        assert_eq!(stats.rects, 3, "all three still drawn");
+
+        // Drop a node: its fragment is pruned in the same frame.
+        presenter.resize(Size::new(64.0, 48.0), 1.0);
+        scene.begin_update();
+        scene.remove(doomed);
+        scene.finish_update();
+        presenter.present(&scene, &ResourceRegistry::new());
+        let stats = presenter.stats();
+        assert_eq!(stats.rects, 2, "two nodes left");
+        assert_eq!(
+            presenter.fragment_count(),
+            2,
+            "the removed node's fragment is gone"
+        );
+    }
+
+    fn rect_node(x: f64) -> SceneNode {
+        SceneNode::Rect {
+            bounds: floem_types::Rect::from_origin_size(
+                floem_types::Point::new(x, 0.0),
+                Size::new(4.0, 4.0),
+            ),
+            fill: floem_types::Color::rgb(1, 2, 3),
+            radius: 0.0,
+        }
+    }
+
     #[test]
     fn empty_damage_skips_present_until_resize() {
         let Some(mut presenter) = presenter() else {
