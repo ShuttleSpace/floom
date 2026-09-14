@@ -1285,6 +1285,43 @@ impl Slider {
         }
     }
 
+    /// How far one arrow key moves the value: the configured step, or a
+    /// hundredth of the range on a continuous slider (which has no step to
+    /// quantize to, but still needs a sensible key granularity).
+    fn key_step(&self) -> f64 {
+        match self.step {
+            Some(step) if step > 0.0 => step,
+            _ => (self.max - self.min) / 100.0,
+        }
+    }
+
+    /// Keyboard control for the focused slider — the pointer's equivalent for
+    /// anyone not using one, and the only way in for assistive technology.
+    fn key_event(&mut self, key: &KeyEvent) -> bool {
+        if !self.state.focused || key.phase == KeyPhase::Up {
+            return false;
+        }
+        let step = self.key_step();
+        match key.key {
+            Key::Named(NamedKey::ArrowRight) | Key::Named(NamedKey::ArrowUp) => {
+                self.set_value(self.value + step)
+            }
+            Key::Named(NamedKey::ArrowLeft) | Key::Named(NamedKey::ArrowDown) => {
+                self.set_value(self.value - step)
+            }
+            // A page is ten arrow steps: enough to cross a long range quickly
+            // without losing the fine control the arrows give.
+            Key::Named(NamedKey::PageUp) => self.set_value(self.value + step * 10.0),
+            Key::Named(NamedKey::PageDown) => self.set_value(self.value - step * 10.0),
+            Key::Named(NamedKey::Home) => self.set_value(self.min),
+            Key::Named(NamedKey::End) => self.set_value(self.max),
+            _ => return false,
+        }
+        // Consumed even when the value did not move (already at an end):
+        // swallowing the key is what keeps it from scrolling the page behind.
+        true
+    }
+
     /// Normalized position of the thumb within the track (0..1).
     pub fn fraction(&self) -> f64 {
         let span = self.max - self.min;
@@ -1332,12 +1369,15 @@ impl Widget for Slider {
     }
 
     fn event(&mut self, cx: &mut dyn EventContext, id: ElementId) -> bool {
-        let Event::Pointer(pointer) = cx.event() else {
-            return false;
-        };
         if self.state.disabled {
             return false;
         }
+        let Event::Pointer(pointer) = cx.event() else {
+            return match cx.event() {
+                Event::Key(key) => self.key_event(&key),
+                _ => false,
+            };
+        };
         match pointer.phase {
             PointerPhase::Enter | PointerPhase::Move => {
                 self.state.hovered = true;

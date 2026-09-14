@@ -343,6 +343,75 @@ fn slider_drag_follows_the_pointer() {
     assert!((slider.value() - 8.0).abs() < 1e-9);
 }
 
+#[test]
+fn slider_is_drivable_from_the_keyboard() {
+    let changes = Rc::new(Cell::new(0));
+    let counter = changes.clone();
+    let mut slider = Slider::new(50.0, 0.0, 100.0)
+        .step(5.0)
+        .on_change(move |_| counter.set(counter.get() + 1));
+    slider.set_focused(true);
+    let id = allocate(&slider);
+
+    fn key(slider: &mut Slider, id: ElementId, named: NamedKey) -> bool {
+        dispatch(slider, id, ROW, KeyEvent::down(Key::Named(named)).into())
+    }
+
+    assert!(key(&mut slider, id, NamedKey::ArrowRight));
+    assert_eq!(slider.value(), 55.0, "one step up");
+    assert!(key(&mut slider, id, NamedKey::ArrowLeft));
+    assert_eq!(slider.value(), 50.0, "one step down");
+    assert!(key(&mut slider, id, NamedKey::PageUp));
+    assert_eq!(slider.value(), 100.0, "a page is ten steps, clamped to max");
+    assert!(key(&mut slider, id, NamedKey::PageDown));
+    assert_eq!(slider.value(), 50.0);
+    assert!(key(&mut slider, id, NamedKey::End));
+    assert_eq!(slider.value(), 100.0);
+    assert!(key(&mut slider, id, NamedKey::Home));
+    assert_eq!(slider.value(), 0.0);
+    assert_eq!(changes.get(), 6, "every value change notifies");
+
+    // At an end the key is still consumed, so it cannot scroll the page behind.
+    assert!(
+        key(&mut slider, id, NamedKey::ArrowLeft),
+        "consumed even at the minimum"
+    );
+    assert_eq!(slider.value(), 0.0);
+
+    // Unfocused (or a key release) leaves the value alone.
+    slider.set_focused(false);
+    assert!(!key(&mut slider, id, NamedKey::ArrowRight));
+    assert_eq!(slider.value(), 0.0);
+    slider.set_focused(true);
+    assert!(!dispatch(
+        &mut slider,
+        id,
+        ROW,
+        KeyEvent::up(Key::Named(NamedKey::ArrowRight)).into()
+    ));
+    assert_eq!(slider.value(), 0.0);
+}
+
+#[test]
+fn slider_without_a_step_still_has_a_key_granularity() {
+    let mut slider = Slider::new(50.0, 0.0, 200.0);
+    slider.set_focused(true);
+    let id = allocate(&slider);
+
+    // No step to quantize to: an arrow moves a hundredth of the range.
+    assert!(dispatch(
+        &mut slider,
+        id,
+        ROW,
+        KeyEvent::down(Key::Named(NamedKey::ArrowRight)).into()
+    ));
+    assert!(
+        (slider.value() - 52.0).abs() < 1e-9,
+        "got {}",
+        slider.value()
+    );
+}
+
 // --- Progress / Select -----------------------------------------------------
 
 #[test]
