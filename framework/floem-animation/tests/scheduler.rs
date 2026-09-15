@@ -1,6 +1,4 @@
-use floem_animation::{
-    AnimKind, AnimationScheduler, Clock, CompositorProp, FakeClock, Tween,
-};
+use floem_animation::{AnimKind, AnimationScheduler, Clock, CompositorProp, FakeClock, Tween};
 
 #[test]
 fn tween_deterministic_with_fake_clock() {
@@ -51,7 +49,10 @@ fn spring_and_keyframe() {
     );
     let s = sched.tick(0.25);
     assert_eq!(s.len(), 2);
-    let kf = s.iter().find(|x| matches!(x.compositor, Some(CompositorProp::TranslateX(_)))).unwrap();
+    let kf = s
+        .iter()
+        .find(|x| matches!(x.compositor, Some(CompositorProp::TranslateX(_))))
+        .unwrap();
     assert!((kf.value - 5.0).abs() < 1e-6);
 }
 
@@ -68,5 +69,8 @@ fn compositor_only_transform_opacity_path() {
         0.0,
     );
     let s = sched.tick(0.1);
-    assert!(matches!(s[0].compositor, Some(CompositorProp::TranslateY(_))));
+    assert!(matches!(
+        s[0].compositor,
+        Some(CompositorProp::TranslateY(_))
+    ));
 }

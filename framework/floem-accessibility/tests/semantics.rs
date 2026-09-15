@@ -1,6 +1,7 @@
 use floem_accessibility::{
-    AccessibilityAdapter, AccessibilityCapabilities, AccessibilityFrame, CapabilityLimitedAccessibilityAdapter,
-    SemanticsAction, SemanticsContext, SemanticsNode, SemanticsRole, SemanticsState, SemanticsTree,
+    AccessibilityAdapter, AccessibilityCapabilities, AccessibilityFrame,
+    CapabilityLimitedAccessibilityAdapter, SemanticsAction, SemanticsContext, SemanticsNode,
+    SemanticsRole, SemanticsState, SemanticsTree,
 };
 use floem_types::ElementId;
 
@@ -86,7 +87,10 @@ fn runtime_semantics_dirty_routes_into_diff() {
     let diff = tree.collect_updates();
     assert_eq!(diff.updated.len(), 1);
     assert_eq!(diff.updated[0].0, field);
-    assert!(diff.added.is_empty(), "existing node must not re-appear as added");
+    assert!(
+        diff.added.is_empty(),
+        "existing node must not re-appear as added"
+    );
 }
 
 #[test]
@@ -158,7 +162,10 @@ fn diff_reports_changed_ids_in_order() {
     let mut diff = tree.collect_updates();
 
     diff.removed.push(id(9));
-    assert_eq!(diff.changed_ids(), vec![diff.added[0].0, diff.added[1].0, id(9)]);
+    assert_eq!(
+        diff.changed_ids(),
+        vec![diff.added[0].0, diff.added[1].0, id(9)]
+    );
     assert!(!diff.is_empty());
 }
 
@@ -182,8 +189,16 @@ fn capability_limited_adapter_retains_frame_but_cannot_invoke() {
     );
 
     // The OS supports actions, but this backend has no bridge wired.
-    assert!(adapter.capabilities().contains(AccessibilityCapabilities::ACTION_INVOKE));
-    assert!(!adapter.capabilities().contains(AccessibilityCapabilities::NATIVE_BRIDGE));
+    assert!(
+        adapter
+            .capabilities()
+            .contains(AccessibilityCapabilities::ACTION_INVOKE)
+    );
+    assert!(
+        !adapter
+            .capabilities()
+            .contains(AccessibilityCapabilities::NATIVE_BRIDGE)
+    );
     assert!(!adapter.perform_action(button, SemanticsAction::Activate));
 
     tree.remove(button);

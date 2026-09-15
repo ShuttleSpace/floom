@@ -3,8 +3,7 @@
 pub mod accessibility;
 
 use floem_platform::{
-    Capability, HostPlatform, Platform, PlatformCapabilities, PlatformEvent, Window,
-    WindowConfig,
+    Capability, HostPlatform, Platform, PlatformCapabilities, PlatformEvent, Window, WindowConfig,
 };
 use floem_types::{PlatformId, Size};
 

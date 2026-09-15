@@ -17,6 +17,6 @@ pub use adapter::{
     CapabilityLimitedAccessibilityAdapter,
 };
 pub use semantics::{
-    SemanticsAction, SemanticsContext, SemanticsDiff, SemanticsNode, SemanticsRole,
-    SemanticsState, SemanticsTree,
+    SemanticsAction, SemanticsContext, SemanticsDiff, SemanticsNode, SemanticsRole, SemanticsState,
+    SemanticsTree,
 };

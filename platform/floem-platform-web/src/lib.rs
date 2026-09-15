@@ -58,7 +58,11 @@ mod tests {
 
         let mut events = Vec::new();
         p.poll_events(&mut events);
-        assert!(events.iter().any(|e| matches!(e, PlatformEvent::RedrawRequested { .. })));
+        assert!(
+            events
+                .iter()
+                .any(|e| matches!(e, PlatformEvent::RedrawRequested { .. }))
+        );
     }
 
     #[test]

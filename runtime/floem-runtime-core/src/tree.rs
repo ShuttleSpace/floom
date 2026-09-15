@@ -156,13 +156,21 @@ impl ElementTree {
     #[cfg(debug_assertions)]
     fn debug_consistent(&self, arena: &ElementArena, parent: ElementId, child: ElementId) -> bool {
         let parent_ok = arena.get(parent).is_some();
-        let child_ok = arena.get(child).map(|e| e.parent == Some(parent)).unwrap_or(false);
+        let child_ok = arena
+            .get(child)
+            .map(|e| e.parent == Some(parent))
+            .unwrap_or(false);
         let listed = self.children(parent).contains(&child);
         parent_ok && child_ok && listed
     }
 
     #[cfg(not(debug_assertions))]
-    fn debug_consistent(&self, _arena: &ElementArena, _parent: ElementId, _child: ElementId) -> bool {
+    fn debug_consistent(
+        &self,
+        _arena: &ElementArena,
+        _parent: ElementId,
+        _child: ElementId,
+    ) -> bool {
         true
     }
 }

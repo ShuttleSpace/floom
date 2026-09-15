@@ -161,7 +161,8 @@ impl SemanticsDiff {
 
     /// Every element touched by this diff, in added → updated → removed order.
     pub fn changed_ids(&self) -> Vec<ElementId> {
-        let mut ids = Vec::with_capacity(self.added.len() + self.updated.len() + self.removed.len());
+        let mut ids =
+            Vec::with_capacity(self.added.len() + self.updated.len() + self.removed.len());
         ids.extend(self.added.iter().map(|(id, _)| *id));
         ids.extend(self.updated.iter().map(|(id, _)| *id));
         ids.extend(self.removed.iter().copied());

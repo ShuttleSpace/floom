@@ -1,6 +1,6 @@
 //! Benchmark: native slot acquire/release churn for a 10k virtualized row set.
 
-use criterion::{criterion_group, criterion_main, Criterion};
+use criterion::{Criterion, criterion_group, criterion_main};
 use floem_native::NativeViewPool;
 
 fn bench_rows(c: &mut Criterion) {

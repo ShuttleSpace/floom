@@ -48,7 +48,7 @@ impl Renderer for SkiaRendererAdapter {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use floem_renderer::{render_once, FrameInfo};
+    use floem_renderer::{FrameInfo, render_once};
     use floem_renderer_software::SoftwareRenderer;
     use floem_scene::{Point, SceneNode, Size};
     use floem_types::Color;

@@ -126,10 +126,17 @@ fn materialized_key_set_is_stable_across_scroll() {
 
     step(&mut vp, 0.0, &mut pool, &mut next);
     let s0 = key_set(&vp);
-    assert_eq!(s0, (0..10).collect::<Vec<_>>(), "scroll 0 should show keys 0..9");
+    assert_eq!(
+        s0,
+        (0..10).collect::<Vec<_>>(),
+        "scroll 0 should show keys 0..9"
+    );
     step(&mut vp, 250.0, &mut pool, &mut next);
     step(&mut vp, 480.0, &mut pool, &mut next);
     step(&mut vp, 0.0, &mut pool, &mut next);
     let s1 = key_set(&vp);
-    assert_eq!(s0, s1, "materialized key set changed after scroll round-trip");
+    assert_eq!(
+        s0, s1,
+        "materialized key set changed after scroll round-trip"
+    );
 }

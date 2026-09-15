@@ -3,8 +3,8 @@
 //! Executors are abstracted so desktop, WASM, and tests can plug in without
 //! baking a concrete async runtime into framework core.
 
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 use floem_reactive::{RwSignal, Scope, SignalGet, SignalUpdate};
 
@@ -121,11 +121,7 @@ impl<T: 'static, E: 'static> Drop for Resource<T, E> {
 ///
 /// `loader` runs via `executor.spawn`. If cancelled before completion, the
 /// result is discarded and state stays at `Loading`.
-pub fn resource<T, E, F>(
-    parent: Scope,
-    executor: &dyn TaskExecutor,
-    loader: F,
-) -> Resource<T, E>
+pub fn resource<T, E, F>(parent: Scope, executor: &dyn TaskExecutor, loader: F) -> Resource<T, E>
 where
     T: Clone + 'static,
     E: Clone + 'static,
@@ -159,11 +155,8 @@ where
 }
 
 /// Refresh an existing ready/error resource; preserves last ready value while loading.
-pub fn refresh<T, E, F>(
-    resource: &Resource<T, E>,
-    executor: &dyn TaskExecutor,
-    loader: F,
-) where
+pub fn refresh<T, E, F>(resource: &Resource<T, E>, executor: &dyn TaskExecutor, loader: F)
+where
     T: Clone + 'static,
     E: Clone + 'static,
     F: FnOnce(CancelToken) -> Result<T, E> + 'static,

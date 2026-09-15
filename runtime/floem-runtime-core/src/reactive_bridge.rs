@@ -99,10 +99,7 @@ impl BindingRegistry {
     }
 
     pub fn binding_flags(&self, id: ReactiveBindingId) -> Option<DirtyFlags> {
-        self.bindings
-            .get(id.0 as usize)?
-            .as_ref()
-            .map(|b| b.flags)
+        self.bindings.get(id.0 as usize)?.as_ref().map(|b| b.flags)
     }
 
     fn alloc_slot(&mut self, live: LiveBinding) -> ReactiveBindingId {

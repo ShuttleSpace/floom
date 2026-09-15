@@ -53,12 +53,7 @@ impl DirtySet {
     }
 
     /// Mark `id` dirty. Returns `false` if the id is not live in `arena`.
-    pub fn invalidate(
-        &mut self,
-        arena: &ElementArena,
-        id: ElementId,
-        flags: DirtyFlags,
-    ) -> bool {
+    pub fn invalidate(&mut self, arena: &ElementArena, id: ElementId, flags: DirtyFlags) -> bool {
         if arena.get(id).is_none() {
             return false;
         }
@@ -93,7 +88,12 @@ impl DirtySet {
 }
 
 /// Free function alias matching the plan sketch.
-pub fn invalidate(set: &mut DirtySet, arena: &ElementArena, id: ElementId, flags: DirtyFlags) -> bool {
+pub fn invalidate(
+    set: &mut DirtySet,
+    arena: &ElementArena,
+    id: ElementId,
+    flags: DirtyFlags,
+) -> bool {
     set.invalidate(arena, id, flags)
 }
 

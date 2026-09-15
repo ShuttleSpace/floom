@@ -198,8 +198,7 @@ impl GestureArena {
             if r.id == id {
                 r.state = RecognizerState::Accepted;
                 self.owner = Some(id);
-            } else if r.state == RecognizerState::Competing
-                || r.state == RecognizerState::Possible
+            } else if r.state == RecognizerState::Competing || r.state == RecognizerState::Possible
             {
                 r.state = RecognizerState::Cancelled;
             }

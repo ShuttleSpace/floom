@@ -8,9 +8,7 @@ pub mod accessibility;
 use floem_platform::{HostPlatform, PlatformCapabilities};
 use floem_types::PlatformId;
 
-pub use floem_platform::{
-    Capability, Clipboard, Ime, Platform, PlatformEvent, WindowConfig,
-};
+pub use floem_platform::{Capability, Clipboard, Ime, Platform, PlatformEvent, WindowConfig};
 
 /// Build an Android-capability host (headless until NDK surface glue exists).
 pub fn android_platform() -> HostPlatform {
@@ -41,7 +39,11 @@ mod tests {
 
         let mut events = Vec::new();
         p.poll_events(&mut events);
-        assert!(events.iter().any(|e| matches!(e, PlatformEvent::WindowCreated { window, .. } if *window == win)));
+        assert!(
+            events.iter().any(
+                |e| matches!(e, PlatformEvent::WindowCreated { window, .. } if *window == win)
+            )
+        );
         assert!(events.iter().any(|e| matches!(e, PlatformEvent::Suspended)));
         assert!(events.iter().any(|e| matches!(e, PlatformEvent::Resumed)));
     }

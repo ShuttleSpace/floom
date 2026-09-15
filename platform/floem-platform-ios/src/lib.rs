@@ -35,9 +35,10 @@ mod tests {
 
         let mut events = Vec::new();
         p.poll_events(&mut events);
-        assert!(events.iter().any(|e| matches!(
-            e,
-            PlatformEvent::WindowFocused { focused: true, .. }
-        )));
+        assert!(
+            events
+                .iter()
+                .any(|e| matches!(e, PlatformEvent::WindowFocused { focused: true, .. }))
+        );
     }
 }
