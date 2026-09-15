@@ -486,6 +486,16 @@ impl WidgetHost {
         }
     }
 
+    /// Caps how many shaped-text results the paint path retains.
+    ///
+    /// Defaults to [`floem_text::DEFAULT_LAYOUT_CACHE_CAPACITY`]. Lower it for a
+    /// memory-tight target, raise it for a screen with very many labels; the
+    /// cache evicts least-recently-used entries once it is full, so the value
+    /// is a ceiling rather than a preallocation.
+    pub fn set_text_layout_cache_capacity(&mut self, capacity: usize) {
+        self.text_layout_cache.set_capacity(capacity);
+    }
+
     // --- tree construction -------------------------------------------------
 
     pub fn mount_root(&mut self, style: LayoutStyle, widget: impl WidgetAny + 'static) -> NodeId {

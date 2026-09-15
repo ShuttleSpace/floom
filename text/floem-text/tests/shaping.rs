@@ -65,3 +65,68 @@ fn layout_cache_hits() {
     assert_eq!(cache.hits(), 1);
     assert_eq!(cache.len(), 1);
 }
+
+#[test]
+fn layout_cache_stays_within_its_capacity() {
+    let mut shaper = TextShaper::new();
+    let mut cache = LayoutCache::with_capacity(4);
+    let opts = TextLayoutOptions::default();
+
+    for i in 0..20 {
+        let text = format!("label {i}");
+        cache.get_or_insert_with(&text, &opts, || shaper.shape(&text, &opts));
+        assert!(cache.len() <= 4, "cache grew past its cap: {}", cache.len());
+    }
+    assert_eq!(cache.len(), 4);
+    assert_eq!(cache.capacity(), 4);
+}
+
+#[test]
+fn layout_cache_evicts_least_recently_used() {
+    let mut shaper = TextShaper::new();
+    let mut cache = LayoutCache::with_capacity(2);
+    let opts = TextLayoutOptions::default();
+
+    let shape = |cache: &mut LayoutCache, text: &str, shaper: &mut TextShaper| {
+        cache.get_or_insert_with(text, &opts, || shaper.shape(text, &opts));
+    };
+
+    shape(&mut cache, "a", &mut shaper);
+    shape(&mut cache, "b", &mut shaper);
+    // Touch "a" so "b" becomes the least-recently-used entry.
+    shape(&mut cache, "a", &mut shaper);
+    shape(&mut cache, "c", &mut shaper);
+
+    assert_eq!(cache.len(), 2, "full, but not over");
+    // "b" should have been evicted; "a" and "c" remain cached.
+    let hits_before = cache.hits();
+    shape(&mut cache, "a", &mut shaper);
+    shape(&mut cache, "c", &mut shaper);
+    assert_eq!(cache.hits(), hits_before + 2, "a and c still cached");
+    let hits_before = cache.hits();
+    shape(&mut cache, "b", &mut shaper);
+    assert_eq!(cache.hits(), hits_before, "b was evicted, so it re-shaped");
+}
+
+#[test]
+fn shrinking_capacity_evicts_immediately() {
+    let mut shaper = TextShaper::new();
+    let mut cache = LayoutCache::with_capacity(8);
+    let opts = TextLayoutOptions::default();
+
+    for i in 0..8 {
+        let text = format!("row {i}");
+        cache.get_or_insert_with(&text, &opts, || shaper.shape(&text, &opts));
+    }
+    assert_eq!(cache.len(), 8);
+
+    cache.set_capacity(3);
+    assert_eq!(cache.len(), 3, "shrinking the cap trims on the spot");
+    assert_eq!(cache.capacity(), 3);
+}
+
+#[test]
+fn zero_capacity_is_clamped_to_one() {
+    let cache = LayoutCache::with_capacity(0);
+    assert_eq!(cache.capacity(), 1, "the cache must hold what it returns");
+}
