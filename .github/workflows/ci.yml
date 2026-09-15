@@ -2,6 +2,7 @@ on:
   push:
     branches:
       - main
+      - floem-2.0
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
 
@@ -12,6 +13,98 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # The 2.0 track lives in its own crate tree (crates/ runtime/ scene/ render/
+  # platform/ text/ layout/ native/ framework/ widgets/ app/ tooling/) and is
+  # scoped separately on purpose: a regression in the legacy v1 crates must not
+  # red the signal for work that never touches them, and vice versa. Every check
+  # below names those packages explicitly -- see FLOEM2_PACKAGES -- so the job
+  # neither depends on the workspace default members nor inherits v1's setup.
+  floem-2.0:
+    name: Floem 2.0 on ${{ matrix.os }}
+    if: github.event.pull_request.draft == false
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - macos-latest
+          - ubuntu-latest
+    runs-on: ${{ matrix.os }}
+    env:
+      # Every 2.0 crate, as one shell word each, so all three cargo steps below
+      # receive the whole track without naming it again. Adding a 2.0 crate means
+      # adding it here and nowhere else.
+      #
+      # Spelled `--package=NAME` rather than the shorter `-p NAME` on purpose:
+      # cargo-fmt takes `--package` as a variadic option and folds a following
+      # space-separated list into a single package spec, so with the short form
+      # "cargo fmt -p a -p b" looks up a package literally named " a -p b" and
+      # only ever works for one crate. The `=` form keeps each package one argv
+      # entry for cargo, cargo-fmt and the doc-test pass alike.
+      #
+      # The list is expanded unquoted, i.e. by shell word splitting -- bash is
+      # what GitHub runs `run:` with on both macOS and Ubuntu. Quoting it would
+      # pass the entire list as a single package argument.
+      FLOEM2_PACKAGES: >-
+        --package=floem-types --package=floem-core
+        --package=floem-runtime-core --package=floem-scheduler --package=floem-runtime
+        --package=floem-scene
+        --package=floem-renderer --package=floem-renderer-vello --package=floem-renderer-software --package=floem-renderer-skia
+        --package=floem-platform --package=floem-platform-desktop --package=floem-platform-android
+        --package=floem-platform-ios --package=floem-platform-harmony --package=floem-platform-web
+        --package=floem-platform-embedded
+        --package=floem-text --package=floem-editor --package=floem-ime
+        --package=floem-layout --package=floem-style --package=floem-virtual
+        --package=floem-native
+        --package=floem-accessibility --package=floem-theme --package=floem-focus --package=floem-gesture
+        --package=floem-animation --package=floem-overlay --package=floem-store --package=floem-task
+        --package=floem-forms --package=floem-navigation --package=floem-persistence --package=floem-services
+        --package=floem-error
+        --package=floem-widgets
+        --package=floem-app
+        --package=floem-testkit
+    steps:
+      - name: Free disk space on Ubuntu
+        if: startsWith(matrix.os, 'ubuntu')
+        run: |
+          df -h
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /opt/hostedtoolcache/CodeQL
+          df -h
+
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Update toolchain & add rustfmt
+        run: |
+          rustup update --no-self-update
+          rustup component add rustfmt
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: floem-2.0
+          save-if: ${{ github.event_name != 'merge_group' }}
+
+      - name: Fetch dependencies
+        run: cargo fetch
+
+      # Scoped rather than the repo-wide `--all` the fmt job runs: the 2.0 tree
+      # is kept rustfmt-clean on its own, so a formatting question about the
+      # legacy crates cannot red the 2.0 signal (and vice versa).
+      - name: Check formatting
+        run: cargo fmt $FLOEM2_PACKAGES --check
+
+      - name: Run tests
+        run: cargo test $FLOEM2_PACKAGES --no-fail-fast
+
+      - name: Run doc tests
+        run: cargo test $FLOEM2_PACKAGES --doc --no-fail-fast
+
+      - name: Check architecture dependency boundaries
+        run: ./scripts/check-architecture-deps.sh
+
   build:
     name: Rust on ${{ matrix.os }}
     if: github.event.pull_request.draft == false
