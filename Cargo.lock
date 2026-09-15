@@ -2319,6 +2319,7 @@ version = "0.2.0"
 dependencies = [
  "floem-accessibility",
  "floem-core",
+ "floem-ime",
  "floem-navigation",
  "floem-scene",
  "floem-text",

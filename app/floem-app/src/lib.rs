@@ -39,7 +39,7 @@ use floem_overlay::OverlayManager;
 use floem_runtime::{EventRouter, Hit, HitRegion, RouteStop};
 use floem_runtime_core::IdAllocator;
 use floem_scene::{Resource, ResourceKind, ResourceRegistry, Scene, SceneNodeId};
-use floem_text::{TextAlign, TextLayoutOptions, TextShaper};
+use floem_text::{LayoutCache, TextAlign, TextLayoutOptions, TextShaper};
 use floem_types::ScrollEvent;
 use floem_widgets::WidgetAny;
 
@@ -189,6 +189,11 @@ pub struct WidgetHost {
     glyph_cache: HashMap<(String, u32), ResourceId>,
     /// Parley-backed shaper that produces the runs stored in `resources`.
     shaper: TextShaper,
+    /// Shaped-text cache keyed by (text + layout options). `fill_text` reuses
+    /// shaped runs across frames instead of re-shaping on every repaint, which
+    /// also keeps `GlyphRun` font data stable so the glyph raster cache keeps
+    /// hitting.
+    text_layout_cache: LayoutCache,
     /// Scene nodes orphaned by unmounts that happened outside a paint pass;
     /// retired at the start of the next paint (inside its transaction).
     pending_scene_removals: Vec<SceneNodeId>,
@@ -206,6 +211,10 @@ pub struct WidgetHost {
     /// manager — because the opener and the content both need theirs *before*
     /// the overlay is opened, and only the host sees both.
     next_overlay_handle: u64,
+    /// Composition caret rectangle the focused text widget last reported via
+    /// [`EventContext::set_ime_cursor_area`]; `None` when nothing is composing.
+    /// The runner reads it after an IME event to anchor the OS popup.
+    ime_caret: Option<Rect>,
     size: Size,
     layout_dirty: bool,
     /// A widget was borrowed mutably since the last frame, i.e. something
@@ -439,6 +448,7 @@ impl WidgetHost {
             resources: ResourceRegistry::new(),
             glyph_cache: HashMap::new(),
             shaper: TextShaper::new(),
+            text_layout_cache: LayoutCache::new(),
             pending_scene_removals: Vec::new(),
             semantics: SemanticsTree::new(),
             focus,
@@ -447,6 +457,7 @@ impl WidgetHost {
             overlays: Vec::new(),
             overlay_commands: Vec::new(),
             next_overlay_handle: 0,
+            ime_caret: None,
             size: Size::new(800.0, 600.0),
             layout_dirty: true,
             content_dirty: false,
@@ -1253,6 +1264,7 @@ impl WidgetHost {
                 resources: &mut self.resources,
                 glyphs: &mut self.glyph_cache,
                 shaper: &mut self.shaper,
+                layout_cache: &mut self.text_layout_cache,
                 prev,
                 used: 0,
                 next: &mut next,
@@ -1342,7 +1354,13 @@ impl WidgetHost {
             // only sees the main tree, so overlay hits are resolved here first.
             Event::Pointer(pointer) => self.resolve_pointer(pointer.position),
             Event::Scroll(ScrollEvent { position, .. }) => self.resolve_pointer(position),
+            // Keyboard and IME both go to the focused widget: a composition is
+            // meaningless without a target text field.
             Event::Key(_) => self.focus.focused().map(|target| Hit {
+                target,
+                native: None,
+            }),
+            Event::Ime(_) => self.focus.focused().map(|target| Hit {
                 target,
                 native: None,
             }),
@@ -1365,7 +1383,7 @@ impl WidgetHost {
             if self.dispatch_at(
                 index,
                 stop,
-                event,
+                event.clone(),
                 &mut focus_requests,
                 &mut overlay_commands,
             ) {
@@ -1431,6 +1449,7 @@ impl WidgetHost {
             bounds: node.bounds,
             event,
             focus_requests,
+            ime_caret: &mut self.ime_caret,
             overlays: OverlayDispatch {
                 commands: overlay_commands,
                 next_handle: &mut self.next_overlay_handle,
@@ -1467,6 +1486,13 @@ impl WidgetHost {
 
     pub fn focused(&self) -> Option<ElementId> {
         self.focus.focused()
+    }
+
+    /// Composition caret rectangle the focused text widget last reported, or
+    /// `None` when nothing is composing. The runner reads this after an IME
+    /// event to anchor the OS input-method popup.
+    pub fn ime_caret_rect(&self) -> Option<Rect> {
+        self.ime_caret
     }
 
     pub fn set_focus(&mut self, id: ElementId) {
@@ -1632,6 +1658,7 @@ struct NodePaintContext<'a> {
     resources: &'a mut ResourceRegistry,
     glyphs: &'a mut HashMap<(String, u32), ResourceId>,
     shaper: &'a mut TextShaper,
+    layout_cache: &'a mut LayoutCache,
     /// Last frame's scene node ids for this widget. Painting reuses them
     /// positionally: `upsert` on a match (no damage when the payload is
     /// unchanged), `insert` once the previous nodes run out.
@@ -1710,9 +1737,17 @@ impl PaintContext for NodePaintContext<'_> {
             font_size: size,
             align: TextAlign::Start,
         };
-        let laid = self.shaper.shape(text, &options);
-        let runs = laid.runs;
-        let laid_out_size = laid.size;
+        // Reuse a previously shaped result when the text + layout options are
+        // unchanged: shaping is the expensive part (parse / script segmentation
+        // / glyph placement), and reusing the cached `GlyphRun`s keeps their
+        // font data stable so the downstream glyph raster cache keeps hitting.
+        let shaper = &mut *self.shaper;
+        let (runs, laid_out_size) = {
+            let laid = self
+                .layout_cache
+                .get_or_insert_with(text, &options, || shaper.shape(text, &options));
+            (laid.runs.clone(), laid.size)
+        };
         let glyphs = self.intern_glyphs(text, size, runs);
         self.push(floem_scene::SceneNode::Text {
             origin,
@@ -1768,6 +1803,8 @@ struct NodeEventContext<'a> {
     bounds: Rect,
     event: Event,
     focus_requests: &'a mut Vec<ElementId>,
+    /// Where the focused composing text widget wants the IME popup anchored.
+    ime_caret: &'a mut Option<Rect>,
     overlays: OverlayDispatch<'a>,
 }
 
@@ -1781,15 +1818,20 @@ impl EventContext for NodeEventContext<'_> {
     }
 
     fn cursor_position(&self) -> Option<Point> {
-        match self.event {
+        match &self.event {
             Event::Pointer(pointer) => Some(pointer.position),
             Event::Scroll(scroll) => Some(scroll.position),
             Event::Key(_) => None,
+            Event::Ime(_) => None,
         }
     }
 
     fn event(&self) -> Event {
-        self.event
+        self.event.clone()
+    }
+
+    fn set_ime_cursor_area(&mut self, area: Option<Rect>) {
+        *self.ime_caret = area;
     }
 
     fn request_focus(&mut self, id: ElementId) {

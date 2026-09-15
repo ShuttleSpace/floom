@@ -12,7 +12,8 @@ use floem_core::{
     OverlayHandle, OverlayKind, OverlayRequest, PaintContext, Point, Rect, SemanticsContext, Size,
     UpdateContext, Widget, WidgetAny,
 };
-use floem_types::{PointerButton, PointerPhase};
+use floem_ime::{CompositionState, ImeEvent, ImeState};
+use floem_types::{ImeUpdate, PointerButton, PointerPhase};
 
 use crate::primitives::{Revision, SemanticsHint};
 
@@ -388,8 +389,12 @@ pub type TextCallback = Box<dyn Fn(&str)>;
 
 /// Single-line text input.
 ///
-/// IME composition is deliberately not handled here — `floem-ime` owns that
-/// state machine; wiring it to host text inputs is tracked separately.
+/// IME composition is owned here via [`ImeState`]: the host routes
+/// [`Event::Ime`] updates to the focused field, which feeds them to that
+/// state machine and renders the preedit inline. Committed text arrives
+/// through the ordinary text-input key path (the runner turns an OS
+/// `ImeCommit` into one character key-down per scalar), so the preedit must
+/// be cleared the moment a composition finalizes.
 pub struct TextField {
     value: String,
     placeholder: String,
@@ -399,6 +404,12 @@ pub struct TextField {
     on_submit: Option<TextCallback>,
     state: InteractionState,
     revision: Revision,
+    /// Live IME composition state (`floem-ime`). Empty / `Inactive` when no
+    /// composition is in flight.
+    ime: ImeState,
+    /// Last composition caret rectangle reported to the host, in logical
+    /// window pixels; `None` when nothing is composing.
+    ime_caret: Option<Rect>,
 }
 
 impl std::fmt::Debug for TextField {
@@ -421,6 +432,8 @@ impl TextField {
             on_submit: None,
             state: InteractionState::default(),
             revision: Revision::default(),
+            ime: ImeState::new(),
+            ime_caret: None,
         }
     }
 
@@ -461,6 +474,22 @@ impl TextField {
         self.caret
     }
 
+    /// The in-progress composition text, empty when nothing is composing.
+    pub fn preedit(&self) -> &str {
+        &self.ime.preedit
+    }
+
+    /// Whether an IME composition is currently open.
+    pub fn is_composing(&self) -> bool {
+        self.ime.is_composing()
+    }
+
+    /// The composition caret rectangle last reported to the host, in logical
+    /// window pixels (where the OS input-method popup should anchor).
+    pub fn ime_caret_rect(&self) -> Option<Rect> {
+        self.ime_caret
+    }
+
     pub fn interaction(&self) -> InteractionState {
         self.state
     }
@@ -488,6 +517,70 @@ impl TextField {
             .nth(self.caret)
             .map(|(index, _)| index)
             .unwrap_or(self.value.len())
+    }
+
+    /// On-screen rectangle of the composition caret (where the OS IME popup
+    /// should anchor), in logical window pixels. Includes the preedit width
+    /// when composing, so the popup sits just past the last candidate glyph.
+    fn caret_rect(&self, bounds: Rect) -> Rect {
+        let prefix = &self.value[..self.byte_caret()];
+        let mut width = floem_text::measure_text(prefix, LABEL_FONT_SIZE, f64::INFINITY).width;
+        if self.ime.is_composing() {
+            width +=
+                floem_text::measure_text(&self.ime.preedit, LABEL_FONT_SIZE, f64::INFINITY).width;
+        }
+        let x = bounds.x0 + f64::from(BUTTON_PADDING) + width;
+        let top = bounds.y0 + (bounds.height() - f64::from(LABEL_FONT_SIZE)) / 2.0;
+        Rect::from_origin_size(
+            Point::new(x, top),
+            Size::new(1.0, f64::from(LABEL_FONT_SIZE)),
+        )
+    }
+
+    /// Keeps the IME state machine's committed-buffer caret in sync with the
+    /// field's caret, and clears any lingering composition so the next insert
+    /// starts clean. Called after every value/caret mutation.
+    fn sync_ime_caret(&mut self) {
+        self.ime.caret = self.byte_caret();
+        self.ime.composition = CompositionState::Inactive;
+        self.ime.preedit.clear();
+        self.ime.preedit_caret = 0;
+        self.ime.preedit_selection = None;
+    }
+
+    /// Applies an IME update from the host, handing it to the state machine.
+    ///
+    /// While a composition is open the caret rectangle is reported back to the
+    /// host so the runner can anchor the OS popup; once it ends the area is
+    /// cleared.
+    fn apply_ime(&mut self, update: ImeUpdate, cx: &mut dyn EventContext) -> bool {
+        let event = match update {
+            ImeUpdate::OpenChanged(open) => ImeEvent::OpenChanged(open),
+            ImeUpdate::Preedit {
+                text,
+                caret,
+                selection,
+            } => ImeEvent::Preedit {
+                text,
+                caret,
+                selection,
+            },
+        };
+        let result = self.ime.apply(event);
+        if result.is_noop() {
+            // Reached the field and matched its current state: still handled.
+            return true;
+        }
+        self.revision.bump();
+        if self.ime.is_composing() {
+            let rect = self.caret_rect(cx.bounds());
+            self.ime_caret = Some(rect);
+            cx.set_ime_cursor_area(Some(rect));
+        } else {
+            self.ime_caret = None;
+            cx.set_ime_cursor_area(None);
+        }
+        true
     }
 
     fn insert(&mut self, ch: char) {
@@ -587,6 +680,11 @@ impl Widget for TextField {
                 return true;
             }
         }
+        // IME composition updates are delivered to the focused field; they are
+        // not keyboard events and must be handled before the key path.
+        if let Event::Ime(update) = cx.event() {
+            return self.apply_ime(update, cx);
+        }
         let Event::Key(key) = cx.event() else {
             return false;
         };
@@ -594,9 +692,23 @@ impl Widget for TextField {
             return false;
         }
         match key.key {
-            Key::Char(ch) if key.is_text_input() => self.insert(ch),
-            Key::Named(NamedKey::Backspace) => self.erase_before(),
-            Key::Named(NamedKey::Delete) => self.erase_after(),
+            Key::Char(ch) if key.is_text_input() => {
+                // The OS finalized a composition as simulated keys; drop the
+                // stale preedit first so the committed text replaces it.
+                if self.ime.is_composing() {
+                    self.ime.cancel();
+                }
+                self.insert(ch);
+                self.sync_ime_caret();
+            }
+            Key::Named(NamedKey::Backspace) => {
+                self.erase_before();
+                self.sync_ime_caret();
+            }
+            Key::Named(NamedKey::Delete) => {
+                self.erase_after();
+                self.sync_ime_caret();
+            }
             Key::Named(NamedKey::ArrowLeft) => self.move_caret(-1),
             Key::Named(NamedKey::ArrowRight) => self.move_caret(1),
             Key::Named(NamedKey::Home) => self.move_caret(-(self.value.chars().count() as isize)),
@@ -617,12 +729,6 @@ impl Widget for TextField {
         if bounds.width() <= 0.0 || bounds.height() <= 0.0 {
             return;
         }
-        let border = if self.state.focused {
-            self.state.hovered
-        } else {
-            false
-        };
-        let _ = border;
         let fill = resolved_color(
             Color::WHITE,
             Color::WHITE,
@@ -630,17 +736,54 @@ impl Widget for TextField {
             self.state,
         );
         cx.fill_rect(bounds, fill);
-        let shown = if self.value.is_empty() {
-            &self.placeholder
+
+        let pad = f64::from(BUTTON_PADDING);
+        let size = f64::from(LABEL_FONT_SIZE);
+        let origin_y = bounds.y0 + (bounds.height() - size) / 2.0;
+
+        // Empty and not composing: show the placeholder, dimmed.
+        if self.value.is_empty() && !self.ime.is_composing() {
+            if !self.placeholder.is_empty() {
+                let color = Color::rgb(0x9A, 0xA5, 0xB1);
+                cx.fill_text(
+                    Point::new(bounds.x0 + pad, origin_y),
+                    &self.placeholder,
+                    LABEL_FONT_SIZE,
+                    color,
+                );
+            }
+            return;
+        }
+
+        // Draw the committed text split at the caret, with the in-progress
+        // composition inserted at the caret and underlined as provisional.
+        let left = &self.value[..self.byte_caret()];
+        let right = &self.value[self.byte_caret()..];
+        let preedit = if self.ime.is_composing() {
+            self.ime.preedit.clone()
         } else {
-            &self.value
+            String::new()
         };
-        let color = if self.value.is_empty() {
-            Color::rgb(0x9A, 0xA5, 0xB1)
-        } else {
-            Color::BLACK
-        };
-        draw_centered_text(cx, bounds, shown, 14.0, color);
+
+        let committed = Color::BLACK;
+        let mut x = bounds.x0 + pad;
+        if !left.is_empty() {
+            cx.fill_text(Point::new(x, origin_y), left, LABEL_FONT_SIZE, committed);
+            x += floem_text::measure_text(left, LABEL_FONT_SIZE, f64::INFINITY).width;
+        }
+        if !preedit.is_empty() {
+            let accent = Color::rgb(0x2B, 0x6C, 0xB0);
+            cx.fill_text(Point::new(x, origin_y), &preedit, LABEL_FONT_SIZE, accent);
+            let width = floem_text::measure_text(&preedit, LABEL_FONT_SIZE, f64::INFINITY).width;
+            // Underline the composition so it reads as provisional text.
+            let underline =
+                Rect::from_origin_size(Point::new(x, origin_y + size - 1.0), Size::new(width, 1.0));
+            cx.fill_rect(underline, accent);
+            x += width;
+        }
+        if !right.is_empty() {
+            cx.fill_text(Point::new(x, origin_y), right, LABEL_FONT_SIZE, committed);
+        }
     }
 
     fn semantics(&self, cx: &mut dyn SemanticsContext, _id: ElementId) {

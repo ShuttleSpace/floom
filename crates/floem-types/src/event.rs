@@ -242,12 +242,37 @@ impl KeyEvent {
     }
 }
 
+/// A platform-neutral IME (input-method) update delivered to a focused text
+/// widget.
+///
+/// `floem-ime` owns the state machine; this is the wire payload the platform
+/// and widgets agree on. It lives in `floem-types` (rather than referencing
+/// `floem-ime` directly) precisely so `floem-types` can stay dependency-free —
+/// the widget layer maps an `ImeUpdate` into a `floem_ime::ImeEvent` and feeds
+/// it to its own [`floem_ime::ImeState`].
+///
+/// [`floem_ime::ImeState`]: https://docs.rs/floem-ime
+#[derive(Debug, Clone, PartialEq)]
+pub enum ImeUpdate {
+    /// The IME composition panel opened (`true`) or closed (`false`).
+    OpenChanged(bool),
+    /// The in-progress composition text changed. `caret` and `selection` are
+    /// byte offsets, clamped to UTF-8 character boundaries by the consumer.
+    Preedit {
+        text: String,
+        caret: usize,
+        selection: Option<(usize, usize)>,
+    },
+}
+
 /// Top-level input event payload delivered to widgets.
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Event {
     Pointer(PointerEvent),
     Key(KeyEvent),
     Scroll(ScrollEvent),
+    /// An input-method composition update for the focused text widget.
+    Ime(ImeUpdate),
 }
 
 impl From<PointerEvent> for Event {
@@ -259,6 +284,12 @@ impl From<PointerEvent> for Event {
 impl From<KeyEvent> for Event {
     fn from(value: KeyEvent) -> Self {
         Event::Key(value)
+    }
+}
+
+impl From<ImeUpdate> for Event {
+    fn from(value: ImeUpdate) -> Self {
+        Event::Ime(value)
     }
 }
 

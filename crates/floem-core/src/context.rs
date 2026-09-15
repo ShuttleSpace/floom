@@ -63,6 +63,17 @@ pub trait EventContext {
         let _ = handle;
         false
     }
+
+    /// Reports the on-screen rectangle the IME composition caret occupies, so
+    /// the runner can anchor the OS input-method popup above the right glyph.
+    ///
+    /// `Some(rect)` while a composition is open; `None` once it ends (or if the
+    /// widget is not a text input). Defaults to a no-op for hosts that do not
+    /// surface composition geometry — the runner only reads it on IME events
+    /// and falls back to no caret-area handshake.
+    fn set_ime_cursor_area(&mut self, area: Option<Rect>) {
+        let _ = area;
+    }
 }
 
 /// Paint recording context — emits geometry only; no GPU types.

@@ -100,6 +100,9 @@ pub struct HostPlatform {
     clipboard: String,
     started: Instant,
     ime_enabled: HashMap<u32, bool>,
+    /// Last caret rectangle reported to the IME bridge (`set_cursor_area`),
+    /// kept so tests can assert the runner's caret-area handshake fired.
+    ime_cursor_area: Option<(Point, Size)>,
 }
 
 /// Alias kept for existing contract tests.
@@ -122,6 +125,7 @@ impl HostPlatform {
             clipboard: String::new(),
             started: Instant::now(),
             ime_enabled: HashMap::new(),
+            ime_cursor_area: None,
         }
     }
 
@@ -162,6 +166,12 @@ impl HostPlatform {
 
     pub fn resume(&mut self) {
         self.events.push(PlatformEvent::Resumed);
+    }
+
+    /// The last caret rectangle the IME bridge was told about (`set_cursor_area`),
+    /// or `None` if no caret-area handshake has happened yet.
+    pub fn ime_cursor_area(&self) -> Option<(Point, Size)> {
+        self.ime_cursor_area
     }
 }
 
@@ -225,6 +235,10 @@ impl Platform for HostPlatform {
     fn now_secs(&self) -> f64 {
         self.started.elapsed().as_secs_f64()
     }
+
+    fn ime(&mut self, _window: WindowId) -> Option<&mut dyn Ime> {
+        Some(self)
+    }
 }
 
 impl Clipboard for HostPlatform {
@@ -252,5 +266,9 @@ impl Ime for HostPlatform {
         }
     }
 
-    fn set_cursor_area(&mut self, _window: WindowId, _origin: Point, _size: Size) {}
+    fn set_cursor_area(&mut self, _window: WindowId, origin: Point, size: Size) {
+        if self.caps.supports(Capability::IME) {
+            self.ime_cursor_area = Some((origin, size));
+        }
+    }
 }

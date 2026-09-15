@@ -9,10 +9,12 @@ use std::cell::RefCell;
 
 use floem_types::Size;
 
+use crate::LayoutCache;
 use crate::layout::{TextAlign, TextLayoutOptions, TextShaper};
 
 thread_local! {
     static SHAPER: RefCell<TextShaper> = RefCell::new(TextShaper::new());
+    static LAYOUT_CACHE: RefCell<LayoutCache> = RefCell::new(LayoutCache::new());
 }
 
 /// Measures `text` laid out with the default font stack at `font_size`.
@@ -33,7 +35,18 @@ pub fn measure_text(text: &str, font_size: f32, max_width: f64) -> Size {
         font_size,
         align: TextAlign::Start,
     };
-    SHAPER.with(|shaper| shaper.borrow_mut().shape(text, &options).size)
+    // Cache the shaped result by (text + options): the layout engine re-runs a
+    // text leaf's measure callback whenever its container reflows, not only when
+    // the string itself changes, so identical measures would otherwise re-shape
+    // every reflow. Hit results reuse the same `GlyphRun`s (stable font data).
+    LAYOUT_CACHE.with(|cache| {
+        let mut cache = cache.borrow_mut();
+        cache
+            .get_or_insert_with(text, &options, || {
+                SHAPER.with(|shaper| shaper.borrow_mut().shape(text, &options))
+            })
+            .size
+    })
 }
 
 #[cfg(test)]
@@ -87,5 +100,19 @@ mod tests {
         let a = measure_text("measure", 14.0, f64::INFINITY);
         let b = measure_text("measure", 14.0, f64::INFINITY);
         assert_eq!(a, b, "same input, same measured extent");
+    }
+
+    #[test]
+    fn repeated_identical_measure_hits_layout_cache() {
+        // The second identical measure must hit the shared `LayoutCache` rather
+        // than re-shaping: the measurable win of routing measure through it.
+        LAYOUT_CACHE.with(|c| c.borrow_mut().clear());
+        let _ = measure_text("cached measure", 14.0, f64::INFINITY);
+        let _ = measure_text("cached measure", 14.0, f64::INFINITY);
+        assert_eq!(
+            LAYOUT_CACHE.with(|c| c.borrow().hits()),
+            1,
+            "second identical measure should hit the layout cache"
+        );
     }
 }

@@ -468,14 +468,14 @@ impl EventContext for TestEventContext {
     }
 
     fn cursor_position(&self) -> Option<Point> {
-        match self.event {
+        match &self.event {
             Event::Pointer(pointer) => Some(pointer.position),
             _ => None,
         }
     }
 
     fn event(&self) -> Event {
-        self.event
+        self.event.clone()
     }
 
     fn request_focus(&mut self, id: ElementId) {

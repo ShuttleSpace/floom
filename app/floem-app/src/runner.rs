@@ -38,8 +38,8 @@ use floem_platform::{Platform, PlatformEvent, SurfaceTarget};
 use floem_renderer::{AttachedSurface, Presenter, SurfaceHandles};
 use floem_services::{Scope, Services};
 use floem_types::{
-    Event, Key, KeyEvent, KeyPhase, Modifiers, PointerEvent, PointerKind, PointerPhase,
-    ScrollEvent, Size, SurfaceId, WindowId,
+    Event, ImeUpdate, Key, KeyEvent, KeyPhase, Modifiers, Point, PointerEvent, PointerKind,
+    PointerPhase, Rect, ScrollEvent, Size, SurfaceId, WindowId,
 };
 
 use crate::{FrameStats, WidgetHost};
@@ -361,11 +361,26 @@ impl<R: Presenter> AppRunner<R> {
                 for ch in text.chars() {
                     self.dispatch(KeyEvent::down(Key::Char(ch)).into(), "ime commit");
                 }
+                // The composition just finalized, so dismiss any IME popup the
+                // platform is showing.
+                self.push_ime_cursor_area(platform, window, None);
                 self.request_repaint(platform, window);
             }
-            PlatformEvent::ImePreedit { .. } => {
-                // Composition state is not surfaced to widgets yet; it is the
-                // `floem-ime` bridge's job (Phase 13.3 Step 3).
+            PlatformEvent::ImePreedit { window, text } => {
+                // Surface the in-progress composition to the focused text
+                // widget, which owns the IME state machine and renders the
+                // preedit. The caret rectangle it reports back anchors the OS
+                // input-method popup above the right glyph.
+                self.dispatch(
+                    Event::Ime(ImeUpdate::Preedit {
+                        text: text.clone(),
+                        caret: text.len(),
+                        selection: None,
+                    }),
+                    "ime preedit",
+                );
+                self.push_ime_cursor_area(platform, window, self.host.ime_caret_rect());
+                self.request_repaint(platform, window);
             }
             PlatformEvent::RedrawRequested { window } => {
                 // A resize or a resume between the request and its delivery can
@@ -461,6 +476,28 @@ impl<R: Presenter> AppRunner<R> {
         if self.windows.contains_key(&window.index()) {
             platform.request_frame(window);
             self.stats.redraws_requested += 1;
+        }
+    }
+
+    /// Hands the focused text widget's composition caret rect to the platform's
+    /// IME bridge, so the native input-method popup sits above the right glyph.
+    /// `None` dismisses any area the platform is currently showing (the
+    /// composition ended).
+    fn push_ime_cursor_area<P: Platform>(
+        &mut self,
+        platform: &mut P,
+        window: WindowId,
+        area: Option<Rect>,
+    ) {
+        if let Some(ime) = platform.ime(window) {
+            match area {
+                Some(rect) => ime.set_cursor_area(
+                    window,
+                    Point::new(rect.x0, rect.y0),
+                    Size::new(rect.width(), rect.height()),
+                ),
+                None => ime.set_cursor_area(window, Point::new(0.0, 0.0), Size::new(0.0, 0.0)),
+            }
         }
     }
 

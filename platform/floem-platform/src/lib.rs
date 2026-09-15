@@ -31,6 +31,17 @@ pub trait Platform {
     fn request_frame(&mut self, window: WindowId);
     /// Optional frame clock reading (seconds since start).
     fn now_secs(&self) -> f64;
+
+    /// Access the IME bridge for `window`, if the platform exposes one.
+    ///
+    /// Returns `None` for backends without input-method support, in which
+    /// case the runner skips the caret-area handshake. The platform itself
+    /// implements [`Ime`] (it owns the native text-input surface); this method
+    /// is the door the runner uses to reach it without naming a concrete
+    /// backend type.
+    fn ime(&mut self, _window: WindowId) -> Option<&mut dyn Ime> {
+        None
+    }
 }
 
 /// Clipboard service (capability-gated).

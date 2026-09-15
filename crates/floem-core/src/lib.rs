@@ -14,9 +14,9 @@ pub use compose::{Align, Axis, Child, ChildBuilder, ChildKey, Inset, LayoutReque
 pub use context::{CreateContext, EventContext, PaintContext, SemanticsContext, UpdateContext};
 pub use element::{Element, ElementKind};
 pub use floem_types::{
-    Color, ElementId, Event, Key, KeyEvent, KeyPhase, Modifiers, NamedKey, OverlayHandle,
-    OverlayKind, Point, PointerButton, PointerEvent, PointerKind, PointerPhase, Rect, ResourceId,
-    ScrollEvent, Size,
+    Color, ElementId, Event, ImeUpdate, Key, KeyEvent, KeyPhase, Modifiers, NamedKey,
+    OverlayHandle, OverlayKind, Point, PointerButton, PointerEvent, PointerKind, PointerPhase,
+    Rect, ResourceId, ScrollEvent, Size,
 };
 pub use overlay::OverlayRequest;
 pub use semantics::{SemanticsHint, SemanticsRole, SemanticsState};

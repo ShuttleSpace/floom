@@ -117,10 +117,7 @@ fn clamp_offset(mut offset: usize, text: &str) -> usize {
     offset
 }
 
-fn clamp_selection(
-    selection: Option<(usize, usize)>,
-    text: &str,
-) -> Option<(usize, usize)> {
+fn clamp_selection(selection: Option<(usize, usize)>, text: &str) -> Option<(usize, usize)> {
     selection.map(|(anchor, caret)| (clamp_offset(anchor, text), clamp_offset(caret, text)))
 }
 

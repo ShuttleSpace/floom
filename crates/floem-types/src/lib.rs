@@ -14,8 +14,8 @@ mod overlay;
 pub use color::Color;
 pub use display::{DisplayInfo, ScaleFactor};
 pub use event::{
-    Event, Key, KeyEvent, KeyPhase, Modifiers, NamedKey, PointerButton, PointerEvent, PointerKind,
-    PointerPhase, ScrollEvent,
+    Event, ImeUpdate, Key, KeyEvent, KeyPhase, Modifiers, NamedKey, PointerButton, PointerEvent,
+    PointerKind, PointerPhase, ScrollEvent,
 };
 pub use geometry::{Constraints, Insets, Point, Rect, Size, Transform};
 pub use ids::{ElementId, NativeViewId, PlatformId, ResourceId, SceneNodeId, SurfaceId, WindowId};
