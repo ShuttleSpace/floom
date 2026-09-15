@@ -85,10 +85,10 @@
 ## Task 1.1: Introduce `floem-types`
 
 **Files:**
-- Create: `crates/floem-types/Cargo.toml`
-- Create: `crates/floem-types/src/lib.rs`
+- Create: `foundation/floem-types/Cargo.toml`
+- Create: `foundation/floem-types/src/lib.rs`
 - Modify: workspace `Cargo.toml`
-- Test: `crates/floem-types/src/lib.rs`
+- Test: `foundation/floem-types/src/lib.rs`
 
 **Interfaces:**
 - Consumes: no Floem runtime dependencies
@@ -103,7 +103,7 @@
 ## Task 1.2: Introduce `ElementId` with generation safety
 
 **Files:**
-- Modify: `crates/floem-types/src/lib.rs`
+- Modify: `foundation/floem-types/src/lib.rs`
 - Create: `runtime/floem-runtime-core/src/id.rs`
 - Test: `runtime/floem-runtime-core/src/id_tests.rs`
 
@@ -120,11 +120,11 @@
 ## Task 1.3: Define core Widget/Element contracts
 
 **Files:**
-- Create: `crates/floem-core/Cargo.toml`
-- Create: `crates/floem-core/src/widget.rs`
-- Create: `crates/floem-core/src/element.rs`
-- Create: `crates/floem-core/src/context.rs`
-- Test: `crates/floem-core/tests/contracts.rs`
+- Create: `foundation/floem-core/Cargo.toml`
+- Create: `foundation/floem-core/src/widget.rs`
+- Create: `foundation/floem-core/src/element.rs`
+- Create: `foundation/floem-core/src/context.rs`
+- Test: `foundation/floem-core/tests/contracts.rs`
 
 **Interfaces:**
 - Produces: minimal `Widget`, `Element`, `CreateContext`, `UpdateContext`, `EventContext`, `PaintContext`, `SemanticsContext` contracts.

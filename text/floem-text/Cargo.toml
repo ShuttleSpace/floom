@@ -8,7 +8,7 @@ description = "Renderer-neutral text layout and shaping for Floem 2.0"
 rust-version.workspace = true
 
 [dependencies]
-floem-types = { path = "../../crates/floem-types", version = "0.2.0" }
+floem-types = { path = "../../foundation/floem-types", version = "0.2.0" }
 peniko = { workspace = true }
 parley = { workspace = true }
 rustc-hash.workspace = true

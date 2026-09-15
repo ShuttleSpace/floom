@@ -2,8 +2,8 @@
 resolver = "3"
 exclude = ["platform-compat"]
 members = [
-  "crates/floem-types",
-  "crates/floem-core",
+  "foundation/floem-types",
+  "foundation/floem-core",
   "runtime/floem-runtime-core",
   "runtime/floem-scheduler",
   "runtime/floem-runtime",
@@ -54,8 +54,8 @@ members = [
 ]
 default-members = [
   ".",
-  "crates/floem-types",
-  "crates/floem-core",
+  "foundation/floem-types",
+  "foundation/floem-core",
   "runtime/floem-runtime-core",
   "runtime/floem-scheduler",
   "runtime/floem-runtime",

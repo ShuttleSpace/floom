@@ -19,7 +19,7 @@ primitive:
 
 ## Decision
 
-Extend `crates/floem-core/src/context.rs` in place:
+Extend `foundation/floem-core/src/context.rs` in place:
 
 - `PaintContext::fill_rect(rect, color)` — rect ops now carry colour.
 - `PaintContext::fill_rounded_rect(rect, radius, color)` — **default impl**
@@ -50,7 +50,7 @@ keep this change reviewable.
 
 ## Consequences
 
-- `crates/floem-core/tests/contracts.rs` updated for the new signatures.
+- `foundation/floem-core/tests/contracts.rs` updated for the new signatures.
 - `scripts/check-architecture-deps.sh` was silently skipping the new widgets
   crate: `WIDGET_HINTS` only contained the legacy underscore spelling
   `floem_widgets`. Fixed to cover `floem-widgets` (plus future

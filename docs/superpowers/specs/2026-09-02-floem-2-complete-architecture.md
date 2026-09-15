@@ -235,6 +235,8 @@ floem/
 │   ├── floem-widgets
 │   ├── floem-widgets-data
 │   └── floem-widgets-media
+├── app/
+│   └── floem-app
 ├── design-systems/
 │   ├── floem-material
 │   ├── floem-cupertino
@@ -255,7 +257,16 @@ floem/
     └── floem-hot-reload
 ```
 
-The exact directory layout may be adapted to the existing Floem repository; the dependency directions below are normative.
+`app/` was missing from this topology and is added here: nothing else in the
+tree can host a widget tree, and the shell (added 2026-09-12, see
+`docs/superpowers/decisions/2026-09-12-headless-app-shell.md`) is the top of the
+layering.
+
+The exact directory layout may be adapted to the existing Floem repository; the dependency directions below are normative. Which adaptations this repository has
+actually made — and why each one stands — is recorded in
+`docs/superpowers/decisions/2026-09-15-workspace-topology.md`. The dependency
+directions are enforced by `scripts/check-architecture-deps.sh`, whose layer
+table is the authoritative answer to "may crate A depend on crate B?".
 
 ---
 

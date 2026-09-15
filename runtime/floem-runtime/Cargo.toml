@@ -8,8 +8,8 @@ description = "Frame runtime integrating widgets, arena, and scheduler for Floem
 rust-version.workspace = true
 
 [dependencies]
-floem-types = { path = "../../crates/floem-types", version = "0.2.0" }
-floem-core = { path = "../../crates/floem-core", version = "0.2.0" }
+floem-types = { path = "../../foundation/floem-types", version = "0.2.0" }
+floem-core = { path = "../../foundation/floem-core", version = "0.2.0" }
 floem-runtime-core = { path = "../floem-runtime-core", version = "0.2.0" }
 floem-scheduler = { path = "../floem-scheduler", version = "0.2.0" }
 floem_reactive = { path = "../../reactive", version = "0.2.0" }

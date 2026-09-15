@@ -9,8 +9,8 @@ rust-version.workspace = true
 
 [dependencies]
 floem-app = { path = "../../app/floem-app", version = "0.2.0" }
-floem-core = { path = "../../crates/floem-core", version = "0.2.0" }
-floem-types = { path = "../../crates/floem-types", version = "0.2.0" }
+floem-core = { path = "../../foundation/floem-core", version = "0.2.0" }
+floem-types = { path = "../../foundation/floem-types", version = "0.2.0" }
 floem-layout = { path = "../../layout/floem-layout", version = "0.2.0" }
 floem-scene = { path = "../../scene/floem-scene", version = "0.2.0" }
 # A harness has to own the same two edges the app shell does: it delivers the

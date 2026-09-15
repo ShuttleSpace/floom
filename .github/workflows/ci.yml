@@ -13,7 +13,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # The 2.0 track lives in its own crate tree (crates/ runtime/ scene/ render/
+  # The 2.0 track lives in its own crate tree (foundation/ runtime/ scene/ render/
   # platform/ text/ layout/ native/ framework/ widgets/ app/ tooling/) and is
   # scoped separately on purpose: a regression in the legacy v1 crates must not
   # red the signal for work that never touches them, and vice versa. Every check

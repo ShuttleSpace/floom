@@ -8,6 +8,6 @@ description = "Overlay / modal / popup system for Floem 2.0"
 rust-version.workspace = true
 
 [dependencies]
-floem-types = { path = "../../crates/floem-types", version = "0.2.0" }
+floem-types = { path = "../../foundation/floem-types", version = "0.2.0" }
 floem-focus = { path = "../floem-focus", version = "0.2.0" }
 floem-animation = { path = "../floem-animation", version = "0.2.0" }

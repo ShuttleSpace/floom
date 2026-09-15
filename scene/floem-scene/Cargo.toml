@@ -8,7 +8,7 @@ description = "Retained scene graph for Floem 2.0 (renderer- and OS-independent)
 rust-version.workspace = true
 
 [dependencies]
-floem-types = { path = "../../crates/floem-types", version = "0.2.0" }
+floem-types = { path = "../../foundation/floem-types", version = "0.2.0" }
 floem-text = { path = "../../text/floem-text", version = "0.2.0" }
 smallvec = "1.15"
 

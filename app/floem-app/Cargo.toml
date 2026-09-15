@@ -8,8 +8,8 @@ description = "Headless app shell that hosts a Floem 2.0 widget tree"
 rust-version.workspace = true
 
 [dependencies]
-floem-core = { path = "../../crates/floem-core", version = "0.2.0" }
-floem-types = { path = "../../crates/floem-types", version = "0.2.0" }
+floem-core = { path = "../../foundation/floem-core", version = "0.2.0" }
+floem-types = { path = "../../foundation/floem-types", version = "0.2.0" }
 floem-scene = { path = "../../scene/floem-scene", version = "0.2.0" }
 floem-accessibility = { path = "../../framework/floem-accessibility", version = "0.2.0" }
 floem-layout = { path = "../../layout/floem-layout", version = "0.2.0" }

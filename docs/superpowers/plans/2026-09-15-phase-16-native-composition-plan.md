@@ -34,7 +34,7 @@ down as *cases*, not as prose about what "should" work.
 
 | Piece | Where | State |
 | --- | --- | --- |
-| `NativeViewId` | `crates/floem-types/src/ids.rs` | done |
+| `NativeViewId` | `foundation/floem-types/src/ids.rs` | done |
 | `NativeSlot` (id + generation), `NativeViewPool<K>` | `native/floem-native/src/pool.rs` | done (Phase 12.2 precursor) |
 | `Capability::NATIVE_VIEW` | `platform/floem-platform/src/capabilities.rs` | flag exists (`1 << 10`); set by `web_default` only, **not** by `desktop_default` |
 | `SurfaceTarget` (raw-window-handle pair, size, scale) | `platform/floem-platform/src/surface.rs` | done |
@@ -192,7 +192,7 @@ slot is reused without re-binding.
 
 - Modify: `app/floem-app/src/lib.rs` (participant registry, frame diff, paint
   order, hit-test subtraction, focus yield)
-- Modify: `crates/floem-core` (`UpdateContext`/`EventContext` native door)
+- Modify: `foundation/floem-core` (`UpdateContext`/`EventContext` native door)
 - Modify: `widgets/floem-widgets` (a `NativeSurface` composite widget holding
   `Surface`-style bookkeeping: present / last_present / slot / in_tree)
 - Modify: `platform/floem-platform/src/capabilities.rs` (`desktop_default` gains

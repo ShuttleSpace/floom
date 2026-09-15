@@ -10,7 +10,7 @@ rust-version.workspace = true
 [dependencies]
 floem-renderer = { path = "../floem-renderer", version = "0.2.0" }
 floem-scene = { path = "../../scene/floem-scene", version = "0.2.0" }
-floem-types = { path = "../../crates/floem-types", version = "0.2.0" }
+floem-types = { path = "../../foundation/floem-types", version = "0.2.0" }
 # CPU glyph rasterisation for the software text path (same engine vger and
 # tiny-skia use on their cache misses).
 swash.workspace = true
