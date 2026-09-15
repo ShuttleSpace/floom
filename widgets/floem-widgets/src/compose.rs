@@ -23,8 +23,9 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 use floem_accessibility::SemanticsRole;
 use floem_core::{
-    Align, Axis, Child, ChildKey, CreateContext, ElementId, LayoutRequest, PaintContext,
-    SemanticsContext, UpdateContext, Widget, WidgetAny,
+    Align, Axis, Child, ChildKey, CreateContext, ElementId, LayoutRequest, OverlayHandle,
+    OverlayKind, OverlayRequest, PaintContext, Rect, SemanticsContext, UpdateContext, Widget,
+    WidgetAny,
 };
 
 use crate::controls::Button;
@@ -235,6 +236,127 @@ impl Widget for Conditional {
 }
 
 // ---------------------------------------------------------------------------
+// Overlay-backed surface plumbing
+// ---------------------------------------------------------------------------
+
+/// Bookkeeping shared by the composites whose surface belongs *above* the tree.
+///
+/// These widgets are driven by state — an app flips `present` — so there is no
+/// event to react to and the request has to be made from [`Widget::update`].
+/// Two outcomes are possible. The host mounts the surface on its overlay stack,
+/// which is the normal case and the only one that escapes the parent's clip. Or
+/// the host has no overlay support and refuses, in which case the composite
+/// falls back to mounting the same surface in-tree — what a headless embedder
+/// gets, and what these widgets did before overlays existed.
+#[derive(Clone)]
+struct Surface {
+    present: bool,
+    last_present: bool,
+    /// The ticket the host issued, while the surface sits on its overlay stack.
+    handle: Option<OverlayHandle>,
+    /// True while the surface is mounted in-tree rather than on the stack.
+    in_tree: bool,
+}
+
+impl Surface {
+    fn new(present: bool) -> Self {
+        Self {
+            present,
+            // "Not yet seen": the first `update` always acts on whatever the
+            // widget currently is. Starting it at `!present` instead would lose
+            // a transition made before the first update — a nested composite is
+            // only mounted by the reconciler *after* the update pass that would
+            // have run it, so `set_present(true)` in between would be swallowed
+            // and the surface would never open.
+            last_present: false,
+            handle: None,
+            in_tree: true,
+        }
+    }
+
+    /// Whether the surface should be visible at all.
+    fn is_shown(&self) -> bool {
+        self.present
+    }
+
+    /// Whether the surface is currently mounted as in-tree children, i.e. the
+    /// host refused the overlay (or never had one).
+    fn takes_children_in_tree(&self) -> bool {
+        self.present && self.in_tree
+    }
+
+    fn set_present(&mut self, present: bool) {
+        self.present = present;
+    }
+
+    /// Opens or closes this surface's host overlay so it matches `present`.
+    ///
+    /// `build` runs only while the surface is coming up, and turns the node's
+    /// own box plus the host viewport into the request to place — or `None` when
+    /// there is nothing to put in an overlay after all (a `Popup` with no
+    /// content), in which case nothing is mounted anywhere.
+    fn reconcile(
+        &mut self,
+        cx: &mut dyn UpdateContext,
+        id: ElementId,
+        build: impl FnOnce(Rect, Rect) -> Option<OverlayRequest>,
+    ) {
+        if self.present == self.last_present {
+            return;
+        }
+        let opening = self.present;
+        self.last_present = self.present;
+        if opening {
+            let opened = match build(cx.bounds(), cx.viewport()) {
+                Some(request) => cx.open_overlay(request),
+                None => false,
+            };
+            self.in_tree = !opened;
+        } else {
+            if let Some(handle) = self.handle.take() {
+                cx.close_overlay(handle);
+            }
+            self.in_tree = false;
+        }
+        // Both outcomes change which subtree exists: taking the host overlay
+        // means the in-tree children must go, and a refusal means the in-tree
+        // children must come back.
+        cx.mark_children_dirty(id);
+        cx.mark_dirty(id);
+    }
+
+    /// Records the handle the host issued for this surface's overlay.
+    fn opened(&mut self, handle: OverlayHandle) {
+        self.handle = Some(handle);
+    }
+
+    /// The overlay carrying this surface came down — because the widget asked it
+    /// to, or because the host dismissed it. Reports whether this surface was
+    /// the one that closed.
+    ///
+    /// `present` is cleared as well: a dismissal the widget did not ask for
+    /// (clicking outside a popup) has to leave the widget's own state matching
+    /// what the user sees, or the next `update` would believe the surface is
+    /// still up and never reopen it.
+    fn closed(&mut self, handle: OverlayHandle) -> bool {
+        if self.handle != Some(handle) {
+            return false;
+        }
+        self.handle = None;
+        self.present = false;
+        self.last_present = false;
+        true
+    }
+}
+
+/// The fallback content for a body that was never supplied.
+fn empty_body() -> Child {
+    Child::new(ChildKey::index(1), LayoutRequest::new(), || {
+        Box::new(Text::new("(empty)"))
+    })
+}
+
+// ---------------------------------------------------------------------------
 // Overlay
 // ---------------------------------------------------------------------------
 
@@ -243,6 +365,12 @@ impl Widget for Conditional {
 /// Use it for modals, drawers and toasts: the child escapes the parent's flow
 /// and spans the containing block. Toggling the content mounts/unmounts just
 /// the layer, leaving the rest of the tree untouched.
+///
+/// This is a *layout* primitive, not a host overlay: the layer is clipped by
+/// whatever contains it. [`Dialog`], [`Popup`] and [`BottomSheet`] are the
+/// composites that hand their surface to the host instead (and fall back to
+/// building on this layer when the host has no overlays), which is the
+/// difference between "inside this box" and "above everything".
 #[derive(Clone)]
 pub struct Overlay {
     present: bool,
@@ -262,7 +390,7 @@ impl Overlay {
     pub fn new() -> Self {
         Self {
             present: false,
-            last_present: true,
+            last_present: false,
             child: None,
         }
     }
@@ -296,6 +424,11 @@ impl Overlay {
     pub fn dismiss(&mut self) {
         self.child = None;
         self.present = false;
+    }
+
+    /// Whether the layer is up.
+    pub fn is_present(&self) -> bool {
+        self.present
     }
 
     pub fn semantics_hint(&self) -> SemanticsHint {
@@ -343,16 +476,16 @@ impl Widget for Overlay {
 // Dialog
 // ---------------------------------------------------------------------------
 
-/// A modal dialog: a centred card rendered above an [`Overlay`] scrim.
+/// A modal dialog: a centred card rendered above the tree.
 ///
-/// `present` toggles it; while hidden it contributes no children, so the rest of
-/// the tree lays out exactly as if it were not there. The card is rebuilt fresh
-/// on each `children()` call, so dismissing and reopening preserves nothing
-/// stale — the host simply mounts and later unmounts the surface.
+/// `present` toggles it; while hidden it contributes nothing, so the rest of the
+/// tree lays out exactly as if it were not there. Showing it hands the card to
+/// the host as a modal overlay, which is what makes it cover the window rather
+/// than the box it happens to be declared in — a dialog declared inside a
+/// scrolling list is still centred on the screen and still owns the keyboard.
 #[derive(Clone)]
 pub struct Dialog {
-    present: bool,
-    last_present: bool,
+    surface: Surface,
     title: String,
     body: Option<Child>,
 }
@@ -360,7 +493,7 @@ pub struct Dialog {
 impl std::fmt::Debug for Dialog {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Dialog")
-            .field("present", &self.present)
+            .field("present", &self.surface.present)
             .finish()
     }
 }
@@ -368,8 +501,7 @@ impl std::fmt::Debug for Dialog {
 impl Dialog {
     pub fn new() -> Self {
         Self {
-            present: false,
-            last_present: true,
+            surface: Surface::new(false),
             title: String::new(),
             body: None,
         }
@@ -400,11 +532,33 @@ impl Dialog {
 
     /// Shows or hides the dialog; the next frame reconciles.
     pub fn set_present(&mut self, present: bool) {
-        self.present = present;
+        self.surface.set_present(present);
+    }
+
+    /// Whether the dialog is up.
+    pub fn is_present(&self) -> bool {
+        self.surface.is_shown()
+    }
+
+    /// The card: a centred, vertically stacked [`Stack`] holding the title and
+    /// the body. Built fresh on demand so each mount yields new builders; the
+    /// host reuses nodes by key and only mounts/unmounts on `present`.
+    fn card(&self) -> Stack {
+        let title = self.title.clone();
+        let body = self.body.clone().unwrap_or_else(empty_body);
+        Stack::new(Axis::Vertical)
+            .gap(8.0)
+            .align(Align::Center, Align::Center)
+            .child(Child::new(
+                ChildKey::index(0),
+                LayoutRequest::new(),
+                move || Box::new(Text::new(title.clone())),
+            ))
+            .child(body)
     }
 
     pub fn semantics_hint(&self) -> SemanticsHint {
-        if self.present {
+        if self.surface.is_shown() {
             SemanticsHint::labeled(SemanticsRole::Dialog, self.title.clone())
         } else {
             SemanticsHint::decorative()
@@ -424,34 +578,26 @@ impl Widget for Dialog {
     }
 
     fn update(&mut self, cx: &mut dyn UpdateContext, id: ElementId) {
-        if self.present != self.last_present {
-            cx.mark_children_dirty(id);
-            self.last_present = self.present;
-        }
+        let card = self.card();
+        // A dialog covers the window, not its own box, so it is sized from the
+        // viewport the host reports rather than from `bounds`.
+        self.surface.reconcile(cx, id, move |_bounds, viewport| {
+            Some(OverlayRequest::new(
+                OverlayKind::Dialog,
+                true,
+                viewport,
+                move |_handle| Box::new(card),
+            ))
+        });
     }
 
     fn children(&self) -> Vec<Child> {
-        if !self.present {
+        if !self.surface.takes_children_in_tree() {
             return Vec::new();
         }
-        let title = self.title.clone();
-        let body = self.body.clone().unwrap_or_else(|| {
-            Child::new(ChildKey::index(1), LayoutRequest::new(), || {
-                Box::new(Text::new("(empty)"))
-            })
-        });
-        // The card: a centred, vertically stacked `Stack` holding the title and
-        // the body. Built here so each `children()` call yields fresh builders;
-        // the host reuses nodes by key and only mounts/unmounts on `present`.
-        let card = Stack::new(Axis::Vertical)
-            .gap(8.0)
-            .align(Align::Center, Align::Center)
-            .child(Child::new(
-                ChildKey::index(0),
-                LayoutRequest::new(),
-                move || Box::new(Text::new(title.clone())),
-            ))
-            .child(body);
+        // The host refused the overlay (or has none at all), so fall back to the
+        // in-tree layer this widget used before it could escape its parent.
+        let card = self.card();
         let surface =
             Overlay::new().content_with(ChildKey::index(0), LayoutRequest::new(), move || {
                 Box::new(card.clone())
@@ -465,6 +611,23 @@ impl Widget for Dialog {
 
     fn layout_request(&self) -> Option<LayoutRequest> {
         Some(LayoutRequest::new().absolute_fill())
+    }
+
+    fn overlay_opened(&mut self, cx: &mut dyn UpdateContext, id: ElementId, handle: OverlayHandle) {
+        self.surface.opened(handle);
+        cx.mark_dirty(id);
+    }
+
+    fn overlay_closed(
+        &mut self,
+        cx: &mut dyn UpdateContext,
+        id: ElementId,
+        handle: OverlayHandle,
+        _content: Box<dyn WidgetAny>,
+    ) {
+        if self.surface.closed(handle) {
+            cx.mark_dirty(id);
+        }
     }
 
     fn paint(&self, _cx: &mut dyn PaintContext, _id: ElementId) {}
@@ -894,14 +1057,15 @@ impl<T: Clone + Send + Sync + 'static> WidgetAny for Grid<T> {
 
 /// A transient, non-modal layer anchored above its siblings.
 ///
-/// [`Dialog`] is the modal sibling: it carries a scrim and a titled card.
-/// `Popup` is the lighter primitive for menus, tooltips and inline pickers — a
-/// togglable absolute layer whose content fills its parent, with no scrim of its
-/// own. Like every overlay composite it contributes no children while hidden.
+/// [`Dialog`] is the modal sibling: it carries a titled card and owns the
+/// keyboard. `Popup` is the lighter primitive for menus, tooltips and inline
+/// pickers — a togglable layer whose content fills the control's box, with no
+/// scrim of its own. It is non-modal, so a click that lands beside it reaches
+/// whatever is underneath, and the host dismisses it on that click. Like every
+/// overlay composite it contributes nothing while hidden.
 #[derive(Clone)]
 pub struct Popup {
-    present: bool,
-    last_present: bool,
+    surface: Surface,
     label: Option<String>,
     content: Option<Child>,
 }
@@ -909,7 +1073,7 @@ pub struct Popup {
 impl std::fmt::Debug for Popup {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Popup")
-            .field("present", &self.present)
+            .field("present", &self.surface.present)
             .field("label", &self.label)
             .finish()
     }
@@ -918,8 +1082,7 @@ impl std::fmt::Debug for Popup {
 impl Popup {
     pub fn new() -> Self {
         Self {
-            present: false,
-            last_present: true,
+            surface: Surface::new(false),
             label: None,
             content: None,
         }
@@ -950,17 +1113,22 @@ impl Popup {
 
     /// Shows or hides the popup; the next frame reconciles.
     pub fn set_present(&mut self, present: bool) {
-        self.present = present;
+        self.surface.set_present(present);
     }
 
     /// Hides the popup and drops its content.
     pub fn dismiss(&mut self) {
         self.content = None;
-        self.present = false;
+        self.surface.set_present(false);
+    }
+
+    /// Whether the popup is up.
+    pub fn is_present(&self) -> bool {
+        self.surface.is_shown()
     }
 
     pub fn semantics_hint(&self) -> SemanticsHint {
-        if self.present {
+        if self.surface.is_shown() {
             SemanticsHint {
                 role: SemanticsRole::Group,
                 label: self.label.clone(),
@@ -984,20 +1152,29 @@ impl Widget for Popup {
     }
 
     fn update(&mut self, cx: &mut dyn UpdateContext, id: ElementId) {
-        if self.present != self.last_present {
-            cx.mark_children_dirty(id);
-            self.last_present = self.present;
-        }
+        let content = self.content.clone();
+        // A popup is anchored to the control that owns it, so unlike a dialog it
+        // takes its own box as the rect the content is laid out against.
+        self.surface.reconcile(cx, id, move |bounds, _viewport| {
+            let content = content.clone()?;
+            Some(OverlayRequest::new(
+                OverlayKind::Popup,
+                false,
+                bounds,
+                move |_handle| content.build(),
+            ))
+        });
     }
 
     fn children(&self) -> Vec<Child> {
-        if !self.present {
+        if !self.surface.takes_children_in_tree() {
             return Vec::new();
         }
         let content = match &self.content {
             Some(content) => content.clone(),
             None => return Vec::new(),
         };
+        // No host overlay: fall back to an in-tree layer, as before.
         let surface = Overlay::new().content_with(
             ChildKey::index(0),
             LayoutRequest::new().fill(),
@@ -1014,6 +1191,23 @@ impl Widget for Popup {
         Some(LayoutRequest::new().absolute_fill())
     }
 
+    fn overlay_opened(&mut self, cx: &mut dyn UpdateContext, id: ElementId, handle: OverlayHandle) {
+        self.surface.opened(handle);
+        cx.mark_dirty(id);
+    }
+
+    fn overlay_closed(
+        &mut self,
+        cx: &mut dyn UpdateContext,
+        id: ElementId,
+        handle: OverlayHandle,
+        _content: Box<dyn WidgetAny>,
+    ) {
+        if self.surface.closed(handle) {
+            cx.mark_dirty(id);
+        }
+    }
+
     fn paint(&self, _cx: &mut dyn PaintContext, _id: ElementId) {}
 
     fn semantics(&self, cx: &mut dyn SemanticsContext, _id: ElementId) {
@@ -1027,13 +1221,14 @@ impl Widget for Popup {
 
 /// A modal sheet anchored to the bottom edge, spanning the width.
 ///
-/// Structurally a [`Dialog`] that is pinned bottom instead of centred: an
-/// absolute scrim, a bottom-aligned column, and a sheet holding the title and
-/// body. `height` sets the sheet's height; it stretches to the full width.
+/// Structurally a [`Dialog`] that is pinned bottom instead of centred: a
+/// bottom-aligned column over the whole window, holding a sheet with the title
+/// and body. `height` sets the sheet's height; it stretches to the full width.
+/// Being modal it owns the keyboard while it is up, and escapes its parent's
+/// clip because the column is a host overlay.
 #[derive(Clone)]
 pub struct BottomSheet {
-    present: bool,
-    last_present: bool,
+    surface: Surface,
     title: String,
     height: f32,
     body: Option<Child>,
@@ -1042,7 +1237,7 @@ pub struct BottomSheet {
 impl std::fmt::Debug for BottomSheet {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("BottomSheet")
-            .field("present", &self.present)
+            .field("present", &self.surface.present)
             .field("height", &self.height)
             .finish()
     }
@@ -1051,8 +1246,7 @@ impl std::fmt::Debug for BottomSheet {
 impl BottomSheet {
     pub fn new() -> Self {
         Self {
-            present: false,
-            last_present: true,
+            surface: Surface::new(false),
             title: String::new(),
             height: 200.0,
             body: None,
@@ -1090,11 +1284,40 @@ impl BottomSheet {
 
     /// Shows or hides the sheet; the next frame reconciles.
     pub fn set_present(&mut self, present: bool) {
-        self.present = present;
+        self.surface.set_present(present);
+    }
+
+    /// Whether the sheet is up.
+    pub fn is_present(&self) -> bool {
+        self.surface.is_shown()
+    }
+
+    /// The bottom-aligned column: a fixed-height sheet (full width) pinned to
+    /// the bottom edge of the box it is given.
+    fn column(&self) -> Stack {
+        let title = self.title.clone();
+        let height = self.height;
+        let body = self.body.clone().unwrap_or_else(empty_body);
+        let sheet = Stack::new(Axis::Vertical)
+            .gap(8.0)
+            .child(Child::new(
+                ChildKey::index(0),
+                LayoutRequest::new(),
+                move || Box::new(Text::new(title.clone())),
+            ))
+            .child(body);
+        let sheet_child = Child::new(
+            ChildKey::index(0),
+            LayoutRequest::new().height(height),
+            move || Box::new(sheet.clone()),
+        );
+        Stack::new(Axis::Vertical)
+            .align(Align::End, Align::Stretch)
+            .child(sheet_child)
     }
 
     pub fn semantics_hint(&self) -> SemanticsHint {
-        if self.present {
+        if self.surface.is_shown() {
             SemanticsHint::labeled(SemanticsRole::Dialog, self.title.clone())
         } else {
             SemanticsHint::decorative()
@@ -1114,42 +1337,26 @@ impl Widget for BottomSheet {
     }
 
     fn update(&mut self, cx: &mut dyn UpdateContext, id: ElementId) {
-        if self.present != self.last_present {
-            cx.mark_children_dirty(id);
-            self.last_present = self.present;
-        }
+        let column = self.column();
+        // A sheet is pinned to the bottom of the *window*, not of the box it was
+        // declared in, so it is sized from the host viewport.
+        self.surface.reconcile(cx, id, move |_bounds, viewport| {
+            Some(OverlayRequest::new(
+                OverlayKind::BottomSheet,
+                true,
+                viewport,
+                move |_handle| Box::new(column),
+            ))
+        });
     }
 
     fn children(&self) -> Vec<Child> {
-        if !self.present {
+        if !self.surface.takes_children_in_tree() {
             return Vec::new();
         }
-        let title = self.title.clone();
-        let height = self.height;
-        let body = self.body.clone().unwrap_or_else(|| {
-            Child::new(ChildKey::index(1), LayoutRequest::new(), || {
-                Box::new(Text::new("(empty)"))
-            })
-        });
-        let sheet = Stack::new(Axis::Vertical)
-            .gap(8.0)
-            .child(Child::new(
-                ChildKey::index(0),
-                LayoutRequest::new(),
-                move || Box::new(Text::new(title.clone())),
-            ))
-            .child(body);
-        // The sheet takes the bottom of a bottom-aligned column: fixed height,
-        // full width (cross-axis stretch).
-        let sheet_child = Child::new(
-            ChildKey::index(0),
-            LayoutRequest::new().height(height),
-            move || Box::new(sheet.clone()),
-        );
-        let column = Stack::new(Axis::Vertical)
-            .align(Align::End, Align::Stretch)
-            .child(sheet_child);
-        let overlay = Overlay::new().content_with(
+        let column = self.column();
+        // No host overlay: fall back to an in-tree layer, as before.
+        let surface = Overlay::new().content_with(
             ChildKey::index(0),
             LayoutRequest::new().fill(),
             move || Box::new(column.clone()),
@@ -1157,12 +1364,29 @@ impl Widget for BottomSheet {
         vec![Child::new(
             ChildKey::index(0),
             LayoutRequest::new().absolute_fill(),
-            move || Box::new(overlay.clone()),
+            move || Box::new(surface.clone()),
         )]
     }
 
     fn layout_request(&self) -> Option<LayoutRequest> {
         Some(LayoutRequest::new().absolute_fill())
+    }
+
+    fn overlay_opened(&mut self, cx: &mut dyn UpdateContext, id: ElementId, handle: OverlayHandle) {
+        self.surface.opened(handle);
+        cx.mark_dirty(id);
+    }
+
+    fn overlay_closed(
+        &mut self,
+        cx: &mut dyn UpdateContext,
+        id: ElementId,
+        handle: OverlayHandle,
+        _content: Box<dyn WidgetAny>,
+    ) {
+        if self.surface.closed(handle) {
+            cx.mark_dirty(id);
+        }
     }
 
     fn paint(&self, _cx: &mut dyn PaintContext, _id: ElementId) {}

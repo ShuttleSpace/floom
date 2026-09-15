@@ -6,10 +6,11 @@
 //! widgets via [`FrameStats::painted`], which the host increments once per
 //! non-dead node.
 
-use std::sync::atomic::Ordering;
+use std::sync::Arc;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 use floem_app::{NodeId, WidgetHost};
-use floem_core::{Axis, Child, ChildKey, LayoutRequest, Point, Size};
+use floem_core::{Axis, Child, ChildKey, LayoutRequest, Point, Size, WidgetAny};
 use floem_layout::LayoutStyle;
 use floem_types::PointerEvent;
 use floem_widgets::{
@@ -42,6 +43,17 @@ fn click(host: &mut WidgetHost, node: NodeId) -> bool {
     let down = host.dispatch(PointerEvent::primary_down(centre).into());
     let up = host.dispatch(PointerEvent::primary_up(centre).into());
     down && up
+}
+
+/// First mounted node holding a widget of type `T`, in mount order.
+fn find_widget<T: WidgetAny + 'static>(host: &WidgetHost) -> Option<NodeId> {
+    for index in 0..host.node_count() {
+        let node = host.node_at(index)?;
+        if host.widget::<T>(node).is_some() {
+            return Some(node);
+        }
+    }
+    None
 }
 
 fn find_button(host: &WidgetHost, label: &str) -> NodeId {
@@ -127,7 +139,7 @@ fn conditional_toggles_its_subtree() {
 }
 
 #[test]
-fn dialog_mounts_a_full_overlay_subtree_when_shown() {
+fn dialog_hands_its_surface_to_a_host_overlay() {
     let mut host = host_viewport();
     let dialog = Dialog::new().title("Hello").body(Child::new(
         ChildKey::index(0),
@@ -137,19 +149,90 @@ fn dialog_mounts_a_full_overlay_subtree_when_shown() {
     let id = host.mount_root(LayoutStyle::default(), dialog);
     let stats = host.frame();
     assert_eq!(stats.painted, 1, "hidden dialog is alone");
+    assert_eq!(
+        host.overlay_count(),
+        0,
+        "and nothing is stacked above the tree"
+    );
 
     host.widget_mut::<Dialog>(id)
         .expect("dialog node")
         .set_present(true);
     let stats = host.frame();
-    // dialog + overlay + card stack + title text + body text
-    assert_eq!(stats.painted, 5, "dialog surface fully mounted");
+    // The card is no longer an in-tree subtree: it moved onto the host's overlay
+    // stack, which is what lets it cover the window instead of the box it was
+    // declared in.
+    assert_eq!(
+        host.overlay_count(),
+        1,
+        "the dialog surface is a host overlay"
+    );
+    // dialog node + card stack + title text + body text
+    assert_eq!(stats.painted, 4, "dialog surface mounted as an overlay");
 
     host.widget_mut::<Dialog>(id)
         .expect("dialog node")
         .set_present(false);
-    let stats = host.frame();
-    assert_eq!(stats.painted, 1, "dialog surface fully unmounted");
+    host.frame();
+    assert_eq!(host.overlay_count(), 0, "closing takes it off the stack");
+    assert_eq!(host.frame().painted, 1, "dialog surface fully unmounted");
+}
+
+/// The point of routing a `Dialog` through the host is that it stops being
+/// confined to the box it was declared in. This mounts one inside a small
+/// parent, then clicks the centred card's button — a point far outside that
+/// parent, which an in-tree surface could never have reached.
+#[test]
+fn dialog_escapes_the_box_it_was_declared_in() {
+    // `Arc`/`AtomicUsize` rather than `Rc`/`Cell`: a `Child` builder must be
+    // `Send + Sync` because the host may move a subtree between threads.
+    let clicked = Arc::new(AtomicUsize::new(0));
+    let sink = clicked.clone();
+
+    let mut host = host_viewport();
+    // A deliberately tiny parent in the top-left corner: anything laid out
+    // inside it is nowhere near the viewport centre.
+    let parent = Stack::new(Axis::Vertical).child(Child::new(
+        ChildKey::index(0),
+        LayoutRequest::new().width(40.0).height(40.0),
+        move || {
+            let sink = sink.clone();
+            Box::new(Dialog::new().title("Hi").body(Child::new(
+                ChildKey::index(0),
+                LayoutRequest::new(),
+                move || {
+                    let sink = sink.clone();
+                    Box::new(Button::new("ok").on_click(move || {
+                        sink.fetch_add(1, Ordering::SeqCst);
+                    }))
+                },
+            )))
+        },
+    ));
+    host.mount_root(LayoutStyle::default(), parent);
+    host.frame();
+
+    let dialog = find_widget::<Dialog>(&host).expect("the dialog mounted inside the parent");
+    host.widget_mut::<Dialog>(dialog)
+        .expect("dialog node")
+        .set_present(true);
+    host.frame();
+    assert_eq!(
+        host.overlay_count(),
+        1,
+        "the dialog went onto the overlay stack"
+    );
+
+    // The card is centred on the *window*, so its button sits around the middle
+    // of the 240x320 viewport — well clear of the 40x40 declaration box.
+    let ok = find_button(&host, "ok");
+    let bounds = host.bounds(ok);
+    assert!(
+        bounds.y0 > 40.0,
+        "the card must be laid out against the viewport, not the parent: {bounds:?}"
+    );
+    assert!(click(&mut host, ok), "the overlay button takes the click");
+    assert_eq!(clicked.load(Ordering::SeqCst), 1, "and its handler ran");
 }
 
 #[test]
@@ -246,14 +329,23 @@ fn popup_mounts_and_dismisses_its_layer() {
     ));
     let id = host.mount_root(LayoutStyle::default(), popup);
     assert_eq!(host.frame().painted, 1, "hidden popup is alone");
+    assert_eq!(
+        host.overlay_count(),
+        0,
+        "and nothing is stacked above the tree"
+    );
 
     host.widget_mut::<Popup>(id)
         .expect("popup node")
         .set_present(true);
-    // popup + overlay layer + content
-    assert_eq!(host.frame().painted, 3, "popup layer mounted");
+    host.frame();
+    assert_eq!(host.overlay_count(), 1, "the popup layer is a host overlay");
+    // popup node + content
+    assert_eq!(host.frame().painted, 2, "popup layer mounted");
 
     host.widget_mut::<Popup>(id).expect("popup node").dismiss();
+    host.frame();
+    assert_eq!(host.overlay_count(), 0, "dismissing takes it off the stack");
     assert_eq!(host.frame().painted, 1, "popup layer unmounted");
 }
 
@@ -268,16 +360,25 @@ fn bottom_sheet_mounts_a_bottom_layer_when_shown() {
         }));
     let id = host.mount_root(LayoutStyle::default(), sheet);
     assert_eq!(host.frame().painted, 1, "hidden sheet is alone");
+    assert_eq!(
+        host.overlay_count(),
+        0,
+        "and nothing is stacked above the tree"
+    );
 
     host.widget_mut::<BottomSheet>(id)
         .expect("sheet node")
         .set_present(true);
-    // sheet + overlay + bottom column + card + title + body
-    assert_eq!(host.frame().painted, 6, "sheet layer fully mounted");
+    host.frame();
+    assert_eq!(host.overlay_count(), 1, "the sheet is a host overlay");
+    // sheet node + bottom column + card + title + body
+    assert_eq!(host.frame().painted, 5, "sheet layer fully mounted");
 
     host.widget_mut::<BottomSheet>(id)
         .expect("sheet node")
         .set_present(false);
+    host.frame();
+    assert_eq!(host.overlay_count(), 0, "closing takes it off the stack");
     assert_eq!(host.frame().painted, 1, "sheet layer fully unmounted");
 }
 

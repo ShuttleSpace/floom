@@ -8,6 +8,11 @@ pub trait CreateContext {
 }
 
 /// Context available during reactive/property updates.
+///
+/// Carries the same overlay door as [`EventContext`] because a composite can be
+/// driven by state rather than by an event: a `Dialog` sees `present` flip in
+/// [`crate::Widget::update`], where there is no pointer or key to react to, and
+/// still has to be able to ask the host to mount its surface.
 pub trait UpdateContext {
     fn mark_dirty(&mut self, id: ElementId);
     /// The children declared by `id` changed; rebuild that subtree.
@@ -15,6 +20,46 @@ pub trait UpdateContext {
     /// Requires [`crate::Widget::children`] to be consulted again, so it is
     /// strictly more expensive than a repaint. See [`crate::compose`].
     fn mark_children_dirty(&mut self, id: ElementId);
+
+    /// Layout box of the node being updated, in viewport coordinates.
+    ///
+    /// This is the *previous* frame's box — a widget is updated before layout
+    /// runs — which is exactly right for anchoring an overlay to a control that
+    /// already exists (`Select`'s list has nowhere to go otherwise). Defaults to
+    /// an empty rect for update contexts that carry no geometry.
+    fn bounds(&self) -> Rect {
+        Rect::ZERO
+    }
+
+    /// The host viewport, for a composite whose overlay spans the whole window
+    /// (a modal dialog's scrim, a bottom sheet's column).
+    ///
+    /// Defaults to an empty rect, which a caller should read as "no viewport
+    /// knowledge" and not as a zero-sized window.
+    fn viewport(&self) -> Rect {
+        Rect::ZERO
+    }
+
+    /// Asks the host to place `request.content` above the whole tree.
+    ///
+    /// The state-driven twin of [`EventContext::open_overlay`]; the same rules
+    /// apply. Returns `false` when the host has no overlay support, and a
+    /// composite must have a fallback for that — otherwise flipping `present`
+    /// on a headless host would mount nothing at all.
+    fn open_overlay(&mut self, request: crate::OverlayRequest) -> bool {
+        let _ = request;
+        false
+    }
+
+    /// Asks the host to close the overlay identified by `handle`.
+    ///
+    /// Returns whether the handle named an open overlay; `false` covers both
+    /// "no such overlay" and "host has no overlays", which a caller treats the
+    /// same way — the reference it held is dead either way.
+    fn close_overlay(&mut self, handle: crate::OverlayHandle) -> bool {
+        let _ = handle;
+        false
+    }
 }
 
 /// Pointer/keyboard routing context.

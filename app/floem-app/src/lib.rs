@@ -548,16 +548,17 @@ impl WidgetHost {
         if let Some(owner) = owner {
             if let Some(owner_index) = self.index_of(owner) {
                 let owner_id = self.nodes[owner_index].id;
-                let mut cx = HostUpdateContext {
-                    dirty: false,
-                    children_dirty: false,
-                };
+                let mut cx = HostUpdateContext::callback(
+                    self.nodes[owner_index].bounds,
+                    Rect::from_origin_size(Point::ZERO, self.size),
+                );
                 self.nodes[owner_index]
                     .widget
                     .overlay_opened(&mut cx, owner_id, handle);
                 let HostUpdateContext {
                     dirty,
                     children_dirty,
+                    ..
                 } = cx;
                 if children_dirty {
                     self.nodes[owner_index].children_dirty = true;
@@ -595,16 +596,17 @@ impl WidgetHost {
         if let Some(owner) = slot.owner {
             if let Some(index) = self.index_of(owner) {
                 let owner_id = self.nodes[index].id;
-                let mut cx = HostUpdateContext {
-                    dirty: false,
-                    children_dirty: false,
-                };
+                let mut cx = HostUpdateContext::callback(
+                    self.nodes[index].bounds,
+                    Rect::from_origin_size(Point::ZERO, self.size),
+                );
                 self.nodes[index]
                     .widget
                     .overlay_closed(&mut cx, owner_id, id, content);
                 let HostUpdateContext {
                     dirty,
                     children_dirty,
+                    ..
                 } = cx;
                 if children_dirty {
                     self.nodes[index].children_dirty = true;
@@ -655,7 +657,16 @@ impl WidgetHost {
             .map(|s| (s.node, s.bounds, s.id))
             .collect();
         for (index, bounds, id) in slots {
-            let mut style = LayoutStyle::default();
+            // Start from the node's own style and container intent, exactly as
+            // `run_layout` does for the root. An overlay root is usually a
+            // composite — a dialog's centred card, a sheet's bottom-aligned
+            // column — whose axis and alignment come from its `LayoutRequest`;
+            // laying it out from a bare default style would drop those and leave
+            // its children stacked in the corner.
+            let mut style = self.nodes[index].style.clone();
+            if let Some(req) = self.nodes[index].widget.layout_request() {
+                style = apply_self_layout(style, Some(&req));
+            }
             style.width = Some(bounds.width() as f32);
             style.height = Some(bounds.height() as f32);
             self.layout.set_style(self.nodes[index].layout_node, style);
@@ -1075,6 +1086,13 @@ impl WidgetHost {
         let mut stats = FrameStats::default();
 
         let mut retext = Vec::new();
+        let viewport = Rect::from_origin_size(Point::ZERO, self.size);
+        // Overlay requests a widget makes from `update` — a composite flipping
+        // `present` on a state change, with no event to react to — are queued
+        // here and drained once the whole tree has had its turn, for exactly the
+        // reason the event path queues them: opening one mounts a subtree and
+        // needs the host to itself while the asking widget is borrowed out of it.
+        let mut overlay_commands: Vec<OverlayCommand> = Vec::new();
         for index in 0..self.nodes.len() {
             if self.nodes[index].dead {
                 continue;
@@ -1083,6 +1101,13 @@ impl WidgetHost {
             let mut cx = HostUpdateContext {
                 dirty: false,
                 children_dirty: false,
+                bounds: node.bounds,
+                viewport,
+                overlays: Some(UpdateOverlaySink {
+                    commands: &mut overlay_commands,
+                    next_handle: &mut self.next_overlay_handle,
+                    owner: node.id,
+                }),
             };
             node.widget.update(&mut cx, node.id);
             node.dirty = cx.dirty;
@@ -1097,6 +1122,10 @@ impl WidgetHost {
                 }
             }
         }
+        // Drained *before* `reconcile_all`: a composite that just handed its
+        // surface to a host overlay must have its in-tree children dropped in
+        // the same frame, or the tree would paint the surface twice.
+        self.drain_overlay_commands(overlay_commands);
         for index in retext {
             self.sync_text_measure(index);
         }
@@ -1638,18 +1667,89 @@ impl CreateContext for HostCreateContext<'_> {
     }
 }
 
-struct HostUpdateContext {
-    dirty: bool,
-    children_dirty: bool,
+/// Where a widget's overlay request goes when it is made from `update` rather
+/// than from an event.
+///
+/// Same shape as [`OverlayDispatch`] — the event-time twin — but the owner is
+/// the node being updated rather than a route stop, and the sink is optional so
+/// the `overlay_opened`/`overlay_closed` callbacks cannot re-enter the drain
+/// that is currently running them.
+struct UpdateOverlaySink<'a> {
+    commands: &'a mut Vec<OverlayCommand>,
+    next_handle: &'a mut u64,
+    owner: ElementId,
 }
 
-impl UpdateContext for HostUpdateContext {
+struct HostUpdateContext<'a> {
+    dirty: bool,
+    children_dirty: bool,
+    /// The updating node's box (from the previous frame — `update` runs before
+    /// layout), so a composite can anchor an overlay to itself.
+    bounds: Rect,
+    /// The host viewport, for a composite whose overlay spans the window.
+    viewport: Rect,
+    overlays: Option<UpdateOverlaySink<'a>>,
+}
+
+impl HostUpdateContext<'_> {
+    /// A context for the overlay callbacks: geometry only, no overlay door.
+    fn callback(bounds: Rect, viewport: Rect) -> Self {
+        Self {
+            dirty: false,
+            children_dirty: false,
+            bounds,
+            viewport,
+            overlays: None,
+        }
+    }
+}
+
+impl UpdateContext for HostUpdateContext<'_> {
     fn mark_dirty(&mut self, _id: ElementId) {
         self.dirty = true;
     }
 
     fn mark_children_dirty(&mut self, _id: ElementId) {
         self.children_dirty = true;
+    }
+
+    fn bounds(&self) -> Rect {
+        self.bounds
+    }
+
+    fn viewport(&self) -> Rect {
+        self.viewport
+    }
+
+    fn open_overlay(&mut self, request: OverlayRequest) -> bool {
+        let Some(sink) = self.overlays.as_mut() else {
+            // No door here: the caller is a lifecycle callback, and letting it
+            // open an overlay would re-enter the drain that is invoking it.
+            return false;
+        };
+        // Mint and build now, exactly as the event path does, so the queued
+        // request is complete and the content already holds its own handle.
+        let handle = OverlayHandle::new(*sink.next_handle);
+        *sink.next_handle += 1;
+        let owner = sink.owner;
+        let content = (request.content)(handle);
+        sink.commands.push(OverlayCommand::Open {
+            handle,
+            owner,
+            kind: request.kind,
+            modal: request.modal,
+            bounds: request.bounds,
+            content,
+        });
+        true
+    }
+
+    fn close_overlay(&mut self, handle: OverlayHandle) -> bool {
+        let Some(sink) = self.overlays.as_mut() else {
+            return false;
+        };
+        sink.commands.push(OverlayCommand::Close(handle));
+        true
     }
 }
 
