@@ -271,7 +271,7 @@ fn typing_reaches_the_focused_text_field() {
 }
 
 #[test]
-fn a_click_opens_a_select_and_the_keyboard_chooses() {
+fn a_select_popup_escapes_its_header_and_takes_clicks() {
     let chosen = Rc::new(Cell::new(None::<usize>));
     let sink = chosen.clone();
     let (mut harness, select) = Harness::with(
@@ -280,29 +280,72 @@ fn a_click_opens_a_select_and_the_keyboard_chooses() {
     );
     assert!(!harness.widget::<Select>(select).is_open());
 
-    // Click the header (above the first row): it opens, and took focus doing so.
+    // Click the header: the list opens as an overlay and focus moves into it,
+    // so the keyboard belongs to the list for as long as it is up.
     harness.press(Point::new(100.0, 8.0));
-    harness.release(Point::new(100.0, 8.0));
+    assert!(
+        harness.release(Point::new(100.0, 8.0)),
+        "opening the list repainted"
+    );
     assert!(
         harness.widget::<Select>(select).is_open(),
         "the click opened the list"
     );
-    assert!(harness.is_focused(select), "the click focused the select");
+    assert_eq!(
+        harness.runner.host().overlay_count(),
+        1,
+        "the list is a real overlay, not paint inside the header"
+    );
+    assert!(
+        !harness.is_focused(select),
+        "focus went into the list, which now owns the keyboard"
+    );
 
-    // Arrows walk the options without dismissing the popup.
-    assert!(harness.key(KeyCode::ARROW_DOWN));
-    assert_eq!(harness.widget::<Select>(select).selected_index(), Some(0));
-    assert_eq!(chosen.get(), Some(0), "the app's callback saw the choice");
-    assert!(harness.widget::<Select>(select).is_open());
+    // The third row sits at y≈87 — well below the control's own 32px box, and
+    // below whatever else the window might be showing. This click is the point
+    // of the whole change: as raw paint ops the rows could never be hit, so a
+    // mouse could open the list but never use it.
+    harness.press(Point::new(100.0, 87.0));
+    assert!(
+        harness.release(Point::new(100.0, 87.0)),
+        "choosing repainted"
+    );
 
-    assert!(harness.key(KeyCode::ARROW_DOWN));
+    assert_eq!(
+        harness.widget::<Select>(select).selected_index(),
+        Some(2),
+        "the click landed on the row under the pointer"
+    );
+    assert_eq!(harness.widget::<Select>(select).selected_label(), "Blue");
+    assert_eq!(chosen.get(), Some(2), "the app's callback saw the choice");
+    assert!(
+        !harness.widget::<Select>(select).is_open(),
+        "choosing took the list down"
+    );
+    assert_eq!(harness.runner.host().overlay_count(), 0);
+    assert!(
+        harness.is_focused(select),
+        "and focus came back to the control"
+    );
+
+    // Closed again, the arrow keys move the selection directly.
+    assert!(harness.key(KeyCode::ARROW_UP));
     assert_eq!(harness.widget::<Select>(select).selected_index(), Some(1));
     assert_eq!(chosen.get(), Some(1));
 
-    // Escape closes without disturbing the choice.
+    // Reopen and dismiss without choosing: the selection survives and focus
+    // still returns to the control.
+    harness.press(Point::new(100.0, 8.0));
+    harness.release(Point::new(100.0, 8.0));
+    assert!(harness.widget::<Select>(select).is_open());
     assert!(harness.key(KeyCode::ESCAPE));
-    assert!(!harness.widget::<Select>(select).is_open());
+    assert!(
+        !harness.widget::<Select>(select).is_open(),
+        "escape dismissed it"
+    );
     assert_eq!(harness.widget::<Select>(select).selected_index(), Some(1));
+    assert_eq!(harness.runner.host().overlay_count(), 0);
+    assert!(harness.is_focused(select));
 
     harness.settles();
 }

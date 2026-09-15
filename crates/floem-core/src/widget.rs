@@ -38,4 +38,44 @@ pub trait Widget {
     fn semantics(&self, cx: &mut dyn SemanticsContext, id: ElementId) {
         let _ = (cx, id);
     }
+    /// An overlay this widget asked for is now open, under `handle`.
+    ///
+    /// The opener needs the handle to close its own overlay — a `Select` whose
+    /// header is clicked again, a dialog whose owner is torn down — and it
+    /// cannot get it from [`EventContext::open_overlay`], because the overlay
+    /// only opens once the event that requested it has finished dispatching.
+    /// The content does not need this call: it is built by the request's
+    /// content factory, which is handed the handle directly.
+    ///
+    /// [`EventContext::open_overlay`]: crate::EventContext::open_overlay
+    fn overlay_opened(
+        &mut self,
+        cx: &mut dyn UpdateContext,
+        id: ElementId,
+        handle: crate::OverlayHandle,
+    ) {
+        let _ = (cx, id, handle);
+    }
+    /// An overlay this widget opened has closed; `content` is its content,
+    /// handed back so the opener can read whatever it accumulated.
+    ///
+    /// This is how an overlay reports a result. The content — a popup list, a
+    /// dialog's form — owns the outcome because it is the thing the user acted
+    /// on, and the opener owns the consequence because it owns the state being
+    /// changed. The host pairs them back up: it remembers which widget asked
+    /// for each overlay, and when that overlay closes it returns the content
+    /// box to the asker.
+    ///
+    /// Always called, whether the overlay was closed by the content itself, by
+    /// the opener, or because the host took it down — a widget that cached a
+    /// handle must clear it here or it will believe a stale popup is still up.
+    fn overlay_closed(
+        &mut self,
+        cx: &mut dyn UpdateContext,
+        id: ElementId,
+        handle: crate::OverlayHandle,
+        content: Box<dyn crate::WidgetAny>,
+    ) {
+        let _ = (cx, id, handle, content);
+    }
 }

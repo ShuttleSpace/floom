@@ -9,6 +9,7 @@ mod display;
 mod event;
 mod geometry;
 mod ids;
+mod overlay;
 
 pub use color::Color;
 pub use display::{DisplayInfo, ScaleFactor};
@@ -17,9 +18,8 @@ pub use event::{
     PointerPhase, ScrollEvent,
 };
 pub use geometry::{Constraints, Insets, Point, Rect, Size, Transform};
-pub use ids::{
-    ElementId, NativeViewId, PlatformId, ResourceId, SceneNodeId, SurfaceId, WindowId,
-};
+pub use ids::{ElementId, NativeViewId, PlatformId, ResourceId, SceneNodeId, SurfaceId, WindowId};
+pub use overlay::{OverlayHandle, OverlayKind};
 
 #[cfg(test)]
 mod dependency_boundary_tests {

@@ -37,6 +37,32 @@ pub trait EventContext {
     fn request_focus(&mut self, id: ElementId) {
         let _ = id;
     }
+
+    /// Asks the host to place `request.content` above the whole tree.
+    ///
+    /// Returns whether a host accepted it. A widget must check: hosts without
+    /// overlay support (a unit-test context, a headless embedder that only
+    /// wants the main tree) return `false`, and a control that ignored that
+    /// would report a popup as open that nothing is going to paint.
+    ///
+    /// The overlay opens *after* the current event finishes dispatching, so the
+    /// content is not mounted — and its handle is not yet valid for anything
+    /// except passing back to [`EventContext::close_overlay`] — until the host
+    /// has drained its command queue.
+    fn open_overlay(&mut self, request: crate::OverlayRequest) -> bool {
+        let _ = request;
+        false
+    }
+
+    /// Asks the host to close the overlay identified by `handle`.
+    ///
+    /// Returns whether the handle named an open overlay. Defaults to `false`,
+    /// so a widget can treat "not a host that knows this overlay" the same as
+    /// "already closed" and drop its own reference either way.
+    fn close_overlay(&mut self, handle: crate::OverlayHandle) -> bool {
+        let _ = handle;
+        false
+    }
 }
 
 /// Paint recording context — emits geometry only; no GPU types.

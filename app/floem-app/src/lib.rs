@@ -20,20 +20,22 @@ pub mod runner;
 pub use image_codec::{DecodedImage, decode_image};
 pub use runner::{AppRunner, RunStats};
 
+use std::any::Any;
 use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, Mutex};
 
 use floem_accessibility::{SemanticsNode, SemanticsTree};
 use floem_core::{
     Align, Axis, Child, ChildKey, CreateContext, ElementId, Event, EventContext, LayoutRequest,
-    PaintContext, Point, Position, Rect, ResourceId, SemanticsRole, Size, UpdateContext,
+    OverlayHandle, OverlayKind, OverlayRequest, PaintContext, Point, Position, Rect, ResourceId,
+    SemanticsHint, SemanticsRole, Size, UpdateContext,
 };
 use floem_focus::{FocusDirection, FocusManager, FocusScopeId};
 use floem_layout::{
     AlignItems as LAlign, FlexDirection, JustifyContent, LayoutEngine, LayoutNode, LayoutStyle,
     MeasureFn, Position as LPosition,
 };
-use floem_overlay::{OverlayId, OverlayKind, OverlayManager};
+use floem_overlay::OverlayManager;
 use floem_runtime::{EventRouter, Hit, HitRegion, RouteStop};
 use floem_runtime_core::IdAllocator;
 use floem_scene::{Resource, ResourceKind, ResourceRegistry, Scene, SceneNodeId};
@@ -106,13 +108,71 @@ struct TextMeasure {
 /// A mounted overlay: an independent widget subtree painted above the main
 /// tree, laid out against the viewport at `bounds`, with hit/focus priority.
 struct OverlaySlot {
-    id: OverlayId,
+    id: OverlayHandle,
     /// Index into `nodes` of the overlay's root widget.
     node: usize,
     /// Viewport-relative rect the content is positioned and hit-tested against.
     bounds: Rect,
     /// Focus before the overlay opened, restored when it closes.
     previous_focus: Option<ElementId>,
+    /// The widget that asked for this overlay, if any. Its content is handed
+    /// back to this node through [`floem_core::Widget::overlay_closed`] when
+    /// the overlay comes down, which is how an opener learns the result of a
+    /// popup it does not own the events for.
+    owner: Option<ElementId>,
+}
+
+/// What a widget asked the host to do with an overlay during an event.
+///
+/// Queued rather than applied inline: opening an overlay mounts a subtree and
+/// mutates the host, and the widget asking for it is borrowed out of that same
+/// host for the duration of the event. The queue lets the request outlive the
+/// borrow and is drained once the event has finished dispatching.
+enum OverlayCommand {
+    Open {
+        /// Minted during dispatch, and already in the content's hands.
+        handle: OverlayHandle,
+        /// Who asked — receives `overlay_closed` when this overlay comes down.
+        owner: ElementId,
+        kind: OverlayKind,
+        modal: bool,
+        bounds: Rect,
+        /// Already built, with its handle: the content factory ran while the
+        /// event was still dispatching.
+        content: Box<dyn WidgetAny>,
+    },
+    Close(OverlayHandle),
+}
+
+/// The tombstone left behind in a node whose widget was handed back to an
+/// overlay's opener.
+///
+/// Unmounting leaves dead nodes in the vector so live `NodeId`s stay valid, and
+/// a `Node` must keep *some* widget; this stands in for one that has been given
+/// away. Nothing ever reaches it — `dead` short-circuits every pass that walks
+/// the tree.
+struct Retired;
+
+impl floem_core::Widget for Retired {
+    fn create(&self, cx: &mut dyn CreateContext) -> ElementId {
+        cx.alloc_child()
+    }
+
+    fn update(&mut self, _cx: &mut dyn UpdateContext, _id: ElementId) {}
+}
+
+impl WidgetAny for Retired {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
+    }
+
+    fn semantics_hint(&self) -> Option<SemanticsHint> {
+        None
+    }
 }
 
 /// Owns and drives a widget tree.
@@ -139,6 +199,13 @@ pub struct WidgetHost {
     overlay: OverlayManager,
     /// Mounted overlay subtrees, parallel to `overlay`'s entry order.
     overlays: Vec<OverlaySlot>,
+    /// Overlay requests widgets made during the event being dispatched; drained
+    /// by [`WidgetHost::dispatch`] once every widget has had its turn.
+    overlay_commands: Vec<OverlayCommand>,
+    /// Next overlay handle to mint. Handles are issued by the host — not by the
+    /// manager — because the opener and the content both need theirs *before*
+    /// the overlay is opened, and only the host sees both.
+    next_overlay_handle: u64,
     size: Size,
     layout_dirty: bool,
     /// A widget was borrowed mutably since the last frame, i.e. something
@@ -378,6 +445,8 @@ impl WidgetHost {
             scope,
             overlay: OverlayManager::new(),
             overlays: Vec::new(),
+            overlay_commands: Vec::new(),
+            next_overlay_handle: 0,
             size: Size::new(800.0, 600.0),
             layout_dirty: true,
             content_dirty: false,
@@ -413,21 +482,47 @@ impl WidgetHost {
     /// hit-test priority — a modal overlay also swallows clicks that fall
     /// outside its content (the scrim). Focus moves into the content on open
     /// and is restored to whatever held it before on close.
+    ///
+    /// This is the host-side door, for an embedder mounting a dialog by hand.
+    /// A widget asks through [`EventContext::open_overlay`] instead.
+    ///
+    /// [`EventContext::open_overlay`]: floem_core::EventContext::open_overlay
     pub fn open_overlay(
         &mut self,
         kind: OverlayKind,
         modal: bool,
         bounds: Rect,
         content: impl WidgetAny + 'static,
-    ) -> OverlayId {
-        let index = self.push(None, LayoutStyle::default(), None, Box::new(content));
+    ) -> OverlayHandle {
+        let handle = OverlayHandle::new(self.next_overlay_handle);
+        self.next_overlay_handle += 1;
+        self.open_overlay_content(handle, None, kind, modal, bounds, Box::new(content))
+    }
+
+    /// Mounts a finished overlay content box under a handle the caller minted.
+    ///
+    /// The handle arrives from above rather than being made here because the
+    /// content already has it: a widget's request builds its content with the
+    /// handle in hand, and the overlay must be registered under that same one
+    /// or the content's `close_overlay` would name an overlay that does not
+    /// exist.
+    fn open_overlay_content(
+        &mut self,
+        handle: OverlayHandle,
+        owner: Option<ElementId>,
+        kind: OverlayKind,
+        modal: bool,
+        bounds: Rect,
+        content: Box<dyn WidgetAny>,
+    ) -> OverlayHandle {
+        let index = self.push(None, LayoutStyle::default(), None, content);
         self.nodes[index].is_overlay = true;
         // Reconcile the content immediately so a composite (e.g. a popup list)
         // mounts its children before this frame's layout pass.
         self.reconcile_subtree(index);
         let id = self
             .overlay
-            .push(kind, self.nodes[index].id, bounds, modal, 0.0);
+            .push(handle, kind, self.nodes[index].id, bounds, modal, 0.0);
         let previous_focus = self.focus.focused();
         self.set_focus(self.nodes[index].id);
         self.overlays.push(OverlaySlot {
@@ -435,13 +530,40 @@ impl WidgetHost {
             node: index,
             bounds,
             previous_focus,
+            owner,
         });
+        // Tell the opener which handle it got. It is the only chance: the
+        // request went into a queue and `open_overlay` could only answer "yes".
+        if let Some(owner) = owner {
+            if let Some(owner_index) = self.index_of(owner) {
+                let owner_id = self.nodes[owner_index].id;
+                let mut cx = HostUpdateContext {
+                    dirty: false,
+                    children_dirty: false,
+                };
+                self.nodes[owner_index]
+                    .widget
+                    .overlay_opened(&mut cx, owner_id, handle);
+                let HostUpdateContext {
+                    dirty,
+                    children_dirty,
+                } = cx;
+                if children_dirty {
+                    self.nodes[owner_index].children_dirty = true;
+                }
+                if dirty {
+                    self.nodes[owner_index].dirty = true;
+                }
+            }
+        }
+        self.content_dirty = true;
         id
     }
 
     /// Closes and unmounts the overlay `id`, restoring focus to whatever held it
-    /// before the overlay opened.
-    pub fn close_overlay(&mut self, id: OverlayId) {
+    /// before the overlay opened and handing the content back to whoever opened
+    /// it.
+    pub fn close_overlay(&mut self, id: OverlayHandle) {
         let Some(pos) = self.overlays.iter().position(|o| o.id == id) else {
             return;
         };
@@ -453,8 +575,36 @@ impl WidgetHost {
                 self.focus.blur();
             }
         }
+        // Take the content out before unmounting: the opener is about to be
+        // given it, and a dead node holding the only box would strand it.
+        let content = std::mem::replace(&mut self.nodes[slot.node].widget, Box::new(Retired));
         self.unmount_subtree(slot.node);
         self.overlay.remove(id);
+
+        if let Some(owner) = slot.owner {
+            if let Some(index) = self.index_of(owner) {
+                let owner_id = self.nodes[index].id;
+                let mut cx = HostUpdateContext {
+                    dirty: false,
+                    children_dirty: false,
+                };
+                self.nodes[index]
+                    .widget
+                    .overlay_closed(&mut cx, owner_id, id, content);
+                let HostUpdateContext {
+                    dirty,
+                    children_dirty,
+                } = cx;
+                if children_dirty {
+                    self.nodes[index].children_dirty = true;
+                    self.reconcile_subtree(index);
+                }
+                if dirty {
+                    self.nodes[index].dirty = true;
+                }
+                self.content_dirty = true;
+            }
+        }
     }
 
     /// Number of overlays currently open.
@@ -463,11 +613,11 @@ impl WidgetHost {
     }
 
     /// Whether `id` is still an open overlay.
-    pub fn has_overlay(&self, id: OverlayId) -> bool {
+    pub fn has_overlay(&self, id: OverlayHandle) -> bool {
         self.overlays.iter().any(|o| o.id == id)
     }
 
-    fn overlay_node(&self, id: OverlayId) -> Option<usize> {
+    fn overlay_node(&self, id: OverlayHandle) -> Option<usize> {
         self.overlays.iter().find(|o| o.id == id).map(|o| o.node)
     }
 
@@ -488,7 +638,7 @@ impl WidgetHost {
     /// z above the main tree so overlays always win a contest.
     fn layout_overlays(&mut self) {
         const OVERLAY_Z_BASE: i32 = 1_000_000_000;
-        let slots: Vec<(usize, Rect, OverlayId)> = self
+        let slots: Vec<(usize, Rect, OverlayHandle)> = self
             .overlays
             .iter()
             .map(|s| (s.node, s.bounds, s.id))
@@ -1203,6 +1353,7 @@ impl WidgetHost {
         let route = self.router.route(hit.target);
         let mut handled = false;
         let mut focus_requests: Vec<ElementId> = Vec::new();
+        let mut overlay_commands: Vec<OverlayCommand> = Vec::new();
 
         for stop in route {
             let Some(index) = self.index_of(stop.id) else {
@@ -1211,7 +1362,13 @@ impl WidgetHost {
             if self.nodes[index].dead {
                 continue;
             }
-            if self.dispatch_at(index, stop, event, &mut focus_requests) {
+            if self.dispatch_at(
+                index,
+                stop,
+                event,
+                &mut focus_requests,
+                &mut overlay_commands,
+            ) {
                 handled = true;
                 break;
             }
@@ -1220,7 +1377,44 @@ impl WidgetHost {
         for id in focus_requests {
             self.set_focus(id);
         }
+        // Overlay work happens after the event, never inside it: opening one
+        // mounts a subtree, which needs the whole host mutably while the widget
+        // that asked for it is still borrowed out of that host.
+        self.drain_overlay_commands(overlay_commands);
         handled
+    }
+
+    /// Applies overlay requests collected during a dispatch.
+    fn drain_overlay_commands(&mut self, commands: Vec<OverlayCommand>) {
+        // A command can open an overlay whose content immediately asks to close
+        // it (or vice versa), so this loops until the queue stops growing rather
+        // than draining once.
+        let mut pending = commands;
+        while !pending.is_empty() {
+            for command in pending.drain(..) {
+                match command {
+                    OverlayCommand::Open {
+                        handle,
+                        owner,
+                        kind,
+                        modal,
+                        bounds,
+                        content,
+                    } => {
+                        self.open_overlay_content(
+                            handle,
+                            Some(owner),
+                            kind,
+                            modal,
+                            bounds,
+                            content,
+                        );
+                    }
+                    OverlayCommand::Close(handle) => self.close_overlay(handle),
+                }
+            }
+            pending = std::mem::take(&mut self.overlay_commands);
+        }
     }
 
     fn dispatch_at(
@@ -1229,6 +1423,7 @@ impl WidgetHost {
         stop: RouteStop,
         event: Event,
         focus_requests: &mut Vec<ElementId>,
+        overlay_commands: &mut Vec<OverlayCommand>,
     ) -> bool {
         let node = &mut self.nodes[index];
         let mut cx = NodeEventContext {
@@ -1236,6 +1431,11 @@ impl WidgetHost {
             bounds: node.bounds,
             event,
             focus_requests,
+            overlays: OverlayDispatch {
+                commands: overlay_commands,
+                next_handle: &mut self.next_overlay_handle,
+                owner: stop.id,
+            },
         };
         node.widget.event(&mut cx, stop.id)
     }
@@ -1543,11 +1743,32 @@ impl NodePaintContext<'_> {
     }
 }
 
+/// The overlay half of a dispatch: where requests go, who is asking, and the
+/// counter that mints their handles.
+struct OverlayDispatch<'a> {
+    commands: &'a mut Vec<OverlayCommand>,
+    next_handle: &'a mut u64,
+    owner: ElementId,
+}
+
+impl OverlayDispatch<'_> {
+    /// Reserves the next handle. Reserving up front (rather than letting the
+    /// manager hand one back later) is what lets the content factory receive
+    /// its handle synchronously, and therefore lets the content close itself
+    /// without reaching back into the opener.
+    fn mint(&mut self) -> OverlayHandle {
+        let handle = OverlayHandle::new(*self.next_handle);
+        *self.next_handle += 1;
+        handle
+    }
+}
+
 struct NodeEventContext<'a> {
     target: ElementId,
     bounds: Rect,
     event: Event,
     focus_requests: &'a mut Vec<ElementId>,
+    overlays: OverlayDispatch<'a>,
 }
 
 impl EventContext for NodeEventContext<'_> {
@@ -1573,5 +1794,29 @@ impl EventContext for NodeEventContext<'_> {
 
     fn request_focus(&mut self, id: ElementId) {
         self.focus_requests.push(id);
+    }
+
+    fn open_overlay(&mut self, request: OverlayRequest) -> bool {
+        let handle = self.overlays.mint();
+        let owner = self.overlays.owner;
+        // Mint the handle and build the content now, so the request that lands
+        // in the queue is complete and the content already knows how to close
+        // itself. Nothing is mounted yet — the host does that once the event is
+        // over and it can borrow itself again.
+        let content = (request.content)(handle);
+        self.overlays.commands.push(OverlayCommand::Open {
+            handle,
+            owner,
+            kind: request.kind,
+            modal: request.modal,
+            bounds: request.bounds,
+            content,
+        });
+        true
+    }
+
+    fn close_overlay(&mut self, handle: OverlayHandle) -> bool {
+        self.overlays.commands.push(OverlayCommand::Close(handle));
+        true
     }
 }

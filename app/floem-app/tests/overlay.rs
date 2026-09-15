@@ -16,7 +16,7 @@ use std::rc::Rc;
 use floem_app::{AppRunner, WidgetHost};
 use floem_core::WidgetAny;
 use floem_layout::LayoutStyle;
-use floem_overlay::{OverlayId, OverlayKind};
+use floem_overlay::{OverlayHandle, OverlayKind};
 use floem_platform::{FakePlatform, KeyCode, Platform, PlatformEvent, PointerButton, WindowConfig};
 use floem_renderer_software::SoftwarePresenter;
 use floem_types::{Modifiers, Point, Rect, Size, WindowId};
@@ -66,7 +66,7 @@ impl Harness {
         modal: bool,
         bounds: Rect,
         content: impl WidgetAny + 'static,
-    ) -> OverlayId {
+    ) -> OverlayHandle {
         let id = self
             .runner
             .host_mut()

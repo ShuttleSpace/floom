@@ -9,7 +9,8 @@
 use floem_accessibility::{SemanticsRole, SemanticsState};
 use floem_core::{
     Color, CreateContext, ElementId, Event, EventContext, Key, KeyEvent, KeyPhase, NamedKey,
-    PaintContext, Point, Rect, SemanticsContext, UpdateContext, Widget,
+    OverlayHandle, OverlayKind, OverlayRequest, PaintContext, Point, Rect, SemanticsContext, Size,
+    UpdateContext, Widget, WidgetAny,
 };
 use floem_types::{PointerButton, PointerPhase};
 
@@ -46,6 +47,10 @@ const SLIDER_TRACK_WIDTH: f32 = 160.0;
 const PROGRESS_HEIGHT: f32 = 8.0;
 /// Default Progress bar length when no explicit width is given.
 const PROGRESS_WIDTH: f32 = 160.0;
+/// Panel behind an open Select's option list.
+const SELECT_LIST_BACKGROUND: Color = Color::rgb(0xED, 0xF2, 0xF7);
+/// Band drawn behind the row a Select popup has its highlight on.
+const SELECT_ROW_HIGHLIGHT: Color = Color::rgb(0xD6, 0xE4, 0xF0);
 
 /// Intrinsic width of a label at the controls' shared font size.
 ///
@@ -1589,19 +1594,231 @@ impl Widget for Progress {
 
 pub type IndexCallback = Box<dyn Fn(usize)>;
 
+/// The open option list, mounted as an overlay rather than painted under the
+/// Select's own bounds.
+///
+/// The inline version could never be clicked. A click is routed by hit-testing
+/// the tree, and the rows were raw paint ops inside the Select's own node —
+/// which is one row tall — so every point below the header landed somewhere
+/// else entirely. Layering it as an overlay fixes both halves at once: the
+/// rows become real nodes that hit-test, and the overlay paints after the main
+/// tree so it escapes its parent's clip instead of being cut off by it.
+///
+/// The popup owns the highlight while it is up — the arrow keys belong to it,
+/// not to the Select, because it is what the host gave focus to — and reports
+/// the row the user picked back to the opening Select through
+/// [`Select::overlay_closed`]. `None` means it was dismissed without choosing.
+pub struct SelectPopup {
+    options: Vec<String>,
+    /// Row the pointer is over or the arrow keys last moved to.
+    highlight: usize,
+    row_height: f64,
+    /// Set once the user picks a row; `None` means dismissed.
+    chosen: Option<usize>,
+    /// Handed in by the content factory so the popup can take itself down
+    /// without reaching back into the Select that opened it.
+    handle: Option<OverlayHandle>,
+}
+
+impl std::fmt::Debug for SelectPopup {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("SelectPopup")
+            .field("options", &self.options)
+            .field("highlight", &self.highlight)
+            .field("chosen", &self.chosen)
+            .finish_non_exhaustive()
+    }
+}
+
+impl SelectPopup {
+    /// Builds the list, highlighting `selected` so the keyboard continues from
+    /// where the Select left off.
+    pub fn new(
+        options: Vec<String>,
+        selected: Option<usize>,
+        row_height: f64,
+        handle: OverlayHandle,
+    ) -> Self {
+        Self {
+            highlight: selected.unwrap_or(0),
+            options,
+            row_height,
+            chosen: None,
+            handle: Some(handle),
+        }
+    }
+
+    pub fn options(&self) -> &[String] {
+        &self.options
+    }
+
+    /// The row the user picked, if they picked one rather than dismissing.
+    pub fn chosen(&self) -> Option<usize> {
+        self.chosen
+    }
+
+    pub fn highlight(&self) -> usize {
+        self.highlight
+    }
+
+    /// Row whose band contains `y` within `bounds`, if any.
+    pub fn row_at(&self, bounds: Rect, y: f64) -> Option<usize> {
+        if self.options.is_empty() || self.row_height <= 0.0 {
+            return None;
+        }
+        let offset = y - bounds.y0;
+        if offset < 0.0 {
+            return None;
+        }
+        let index = (offset / self.row_height) as usize;
+        (index < self.options.len()).then_some(index)
+    }
+
+    fn commit(&mut self, cx: &mut dyn EventContext, chosen: Option<usize>) {
+        self.chosen = chosen;
+        if let Some(handle) = self.handle.take() {
+            cx.close_overlay(handle);
+        }
+    }
+
+    fn move_highlight(&mut self, to: usize) -> bool {
+        if self.options.is_empty() {
+            return false;
+        }
+        let next = to.min(self.options.len() - 1);
+        let moved = next != self.highlight;
+        self.highlight = next;
+        moved
+    }
+
+    /// The list describes itself by the row under the highlight, which is what
+    /// a screen reader should read out as the user walks it.
+    pub fn semantics_hint(&self) -> SemanticsHint {
+        let label = self
+            .options
+            .get(self.highlight)
+            .cloned()
+            .unwrap_or_default();
+        SemanticsHint::labeled(SemanticsRole::List, label)
+            .with_state(SemanticsState::EXPANDED | SemanticsState::FOCUSED)
+    }
+}
+
+impl Widget for SelectPopup {
+    fn create(&self, cx: &mut dyn CreateContext) -> ElementId {
+        cx.alloc_child()
+    }
+
+    fn update(&mut self, _cx: &mut dyn UpdateContext, _id: ElementId) {}
+
+    fn event(&mut self, cx: &mut dyn EventContext, _id: ElementId) -> bool {
+        match cx.event() {
+            Event::Pointer(pointer) => match pointer.phase {
+                PointerPhase::Move | PointerPhase::Enter => {
+                    // Hovering is not a change worth reporting: the highlight
+                    // follows the pointer, and the host repaints the frame
+                    // either way.
+                    if let Some(index) = self.row_at(cx.bounds(), pointer.position.y) {
+                        self.highlight = index;
+                    }
+                    false
+                }
+                PointerPhase::Down if pointer.button == Some(PointerButton::Primary) => true,
+                PointerPhase::Up if pointer.button == Some(PointerButton::Primary) => {
+                    let row = self.row_at(cx.bounds(), pointer.position.y);
+                    let picked = row.or(Some(self.highlight));
+                    self.commit(cx, picked);
+                    true
+                }
+                _ => false,
+            },
+            Event::Key(key) => {
+                if key.phase == KeyPhase::Up {
+                    return false;
+                }
+                match key.key {
+                    Key::Named(NamedKey::ArrowDown) => {
+                        let next = self.highlight + 1;
+                        self.move_highlight(next);
+                        true
+                    }
+                    Key::Named(NamedKey::ArrowUp) => {
+                        let next = self.highlight.saturating_sub(1);
+                        self.move_highlight(next);
+                        true
+                    }
+                    Key::Named(NamedKey::Home) => {
+                        self.move_highlight(0);
+                        true
+                    }
+                    Key::Named(NamedKey::End) => {
+                        let last = self.options.len().saturating_sub(1);
+                        self.move_highlight(last);
+                        true
+                    }
+                    Key::Named(NamedKey::Enter) | Key::Char(' ') => {
+                        let picked = Some(self.highlight);
+                        self.commit(cx, picked);
+                        true
+                    }
+                    Key::Named(NamedKey::Escape) => {
+                        self.commit(cx, None);
+                        true
+                    }
+                    _ => false,
+                }
+            }
+            _ => false,
+        }
+    }
+
+    fn paint(&self, cx: &mut dyn PaintContext, _id: ElementId) {
+        let bounds = cx.bounds();
+        if bounds.width() <= 0.0 || bounds.height() <= 0.0 {
+            return;
+        }
+        cx.fill_rect(bounds, SELECT_LIST_BACKGROUND);
+        for (index, option) in self.options.iter().enumerate() {
+            let row = Rect {
+                x0: bounds.x0,
+                y0: bounds.y0 + index as f64 * self.row_height,
+                x1: bounds.x1,
+                y1: bounds.y0 + (index + 1) as f64 * self.row_height,
+            };
+            if index == self.highlight {
+                cx.fill_rect(row, SELECT_ROW_HIGHLIGHT);
+            }
+            cx.fill_text(
+                Point::new(row.x0 + f64::from(SELECT_PADDING), row.y0 + 3.0),
+                option,
+                LABEL_FONT_SIZE,
+                Color::BLACK,
+            );
+        }
+    }
+
+    fn semantics(&self, cx: &mut dyn SemanticsContext, _id: ElementId) {
+        crate::primitives::emit_semantics(self.semantics_hint(), cx);
+    }
+}
+
 /// A single-choice selector.
 ///
-/// The option list currently paints **inside** the control's own bounds — real
-/// popup layering (escaping the parent's clip) needs the `floem-overlay`
-/// integration, which is a later task.
+/// Choosing opens [`SelectPopup`] as an overlay, so the list escapes the
+/// control's own box instead of being painted inside it — see that type for
+/// why an inline list could not be clicked.
 pub struct Select {
     options: Vec<String>,
     selected: Option<usize>,
-    open: bool,
     row_height: f64,
     on_change: Option<IndexCallback>,
     state: InteractionState,
     revision: Revision,
+    /// The open popup, if any. This *is* the open/closed state: it is set when
+    /// the host confirms the overlay opened and cleared from
+    /// [`Widget::overlay_closed`], so the control can never believe a list is
+    /// up that nothing is painting.
+    popup: Option<OverlayHandle>,
 }
 
 impl std::fmt::Debug for Select {
@@ -1609,7 +1826,7 @@ impl std::fmt::Debug for Select {
         f.debug_struct("Select")
             .field("options", &self.options)
             .field("selected", &self.selected)
-            .field("open", &self.open)
+            .field("popup", &self.popup)
             .finish_non_exhaustive()
     }
 }
@@ -1619,11 +1836,11 @@ impl Select {
         Self {
             options: options.into_iter().map(Into::into).collect(),
             selected: None,
-            open: false,
             row_height: 22.0,
             on_change: None,
             state: InteractionState::default(),
             revision: Revision::default(),
+            popup: None,
         }
     }
 
@@ -1654,7 +1871,7 @@ impl Select {
     }
 
     pub fn is_open(&self) -> bool {
-        self.open
+        self.popup.is_some()
     }
 
     pub fn selected_label(&self) -> &str {
@@ -1676,29 +1893,28 @@ impl Select {
         self
     }
 
-    /// Chooses an option and closes the list; no-op when out of range.
-    pub fn select(&mut self, index: usize) -> bool {
-        self.choose(index, false)
+    /// The open popup's handle, for a caller that wants to close it from
+    /// outside the control.
+    pub fn popup_handle(&self) -> Option<OverlayHandle> {
+        self.popup
     }
 
-    /// Chooses an option, optionally keeping the list open (keyboard
-    /// navigation moves through options without dismissing the popup).
+    /// Chooses an option and closes the list; no-op when out of range.
+    pub fn select(&mut self, index: usize) -> bool {
+        self.choose(index)
+    }
+
+    /// Chooses an option.
     ///
     /// Returns whether the event was handled — re-picking the selected option
     /// still counts, because it closes the list.
-    fn choose(&mut self, index: usize, keep_open: bool) -> bool {
+    fn choose(&mut self, index: usize) -> bool {
         if index >= self.options.len() {
             return false;
         }
         let changed = self.selected != Some(index);
         self.selected = Some(index);
-        // Closing is a visible change of its own: without bumping here,
-        // re-picking the current option would leave the open list painted.
-        let closed = self.open && !keep_open;
-        self.open = keep_open;
-        if changed || closed {
-            self.revision.bump();
-        }
+        self.revision.bump();
         if changed {
             if let Some(callback) = &self.on_change {
                 callback(index);
@@ -1707,8 +1923,8 @@ impl Select {
         true
     }
 
-    /// Moves the selection by `delta` without closing the list. From nothing
-    /// selected, either direction lands on the end it is heading for.
+    /// Moves the selection by `delta`. From nothing selected, either direction
+    /// lands on the end it is heading for.
     fn move_selection(&mut self, delta: isize) -> bool {
         let len = self.options.len();
         if len == 0 {
@@ -1719,53 +1935,85 @@ impl Select {
             None if delta > 0 => 0,
             None => len - 1,
         };
-        self.choose(next, true)
+        self.choose(next)
     }
 
-    /// Keyboard control for the focused select: open/close, walk the options,
-    /// jump to either end. The pointer can already do all of this; a keyboard
-    /// (or assistive technology) could not.
-    fn key_event(&mut self, key: &KeyEvent) -> bool {
+    /// Opens the option list as an overlay anchored just below the control.
+    ///
+    /// The rect is a guess, and deliberately so: the host lays the content out
+    /// against it, so the only thing the Select has to get right is how tall
+    /// the list is and where its top-left corner goes. Asking the host to
+    /// measure first would mean opening the overlay to find out whether it
+    /// should be opened.
+    pub fn open_popup(&mut self, cx: &mut dyn EventContext) -> bool {
+        if self.is_open() || self.options.is_empty() {
+            return false;
+        }
+        let bounds = cx.bounds();
+        let rect = Rect::from_origin_size(
+            Point::new(bounds.x0, bounds.y1),
+            Size::new(bounds.width(), self.row_height * self.options.len() as f64),
+        );
+        let options = self.options.clone();
+        let selected = self.selected;
+        let row_height = self.row_height;
+        let opened = cx.open_overlay(OverlayRequest::new(
+            OverlayKind::Popup,
+            false,
+            rect,
+            move |handle| Box::new(SelectPopup::new(options, selected, row_height, handle)),
+        ));
+        if opened {
+            self.revision.bump();
+        }
+        opened
+    }
+
+    /// Closes the open list without choosing anything.
+    pub fn close_popup(&mut self, cx: &mut dyn EventContext) -> bool {
+        match self.popup.take() {
+            Some(handle) => {
+                cx.close_overlay(handle);
+                self.revision.bump();
+                true
+            }
+            None => false,
+        }
+    }
+
+    fn toggle_popup(&mut self, cx: &mut dyn EventContext) -> bool {
+        if self.is_open() {
+            self.close_popup(cx)
+        } else {
+            self.open_popup(cx)
+        }
+    }
+
+    /// Keyboard control for the focused, *closed* select: open the list, walk
+    /// the selection, jump to either end.
+    ///
+    /// Once the list is open the keyboard belongs to [`SelectPopup`] — focus
+    /// moved into the overlay when it opened — so navigation while open is the
+    /// popup's business, and picking a row there is what changes the selection.
+    fn key_event(&mut self, cx: &mut dyn EventContext, key: &KeyEvent) -> bool {
         if !self.state.focused || key.phase == KeyPhase::Up {
             return false;
         }
         match key.key {
-            Key::Named(NamedKey::Enter) | Key::Char(' ') => {
-                self.open = !self.open;
-                self.revision.bump();
-                true
-            }
-            Key::Named(NamedKey::Escape) => {
-                if !self.open {
-                    return false;
-                }
-                self.open = false;
-                self.revision.bump();
-                true
-            }
+            Key::Named(NamedKey::Enter) | Key::Char(' ') => self.toggle_popup(cx),
+            Key::Named(NamedKey::Escape) => self.close_popup(cx),
+            _ if self.is_open() => false,
             Key::Named(NamedKey::ArrowDown) => self.move_selection(1),
             Key::Named(NamedKey::ArrowUp) => self.move_selection(-1),
-            Key::Named(NamedKey::Home) => self.choose(0, true),
-            Key::Named(NamedKey::End) => self.choose(self.options.len().saturating_sub(1), true),
+            Key::Named(NamedKey::Home) => self.choose(0),
+            Key::Named(NamedKey::End) => self.choose(self.options.len().saturating_sub(1)),
             _ => false,
         }
     }
 
-    /// Index of the row at `y`, if the list is open and the point is inside it.
-    pub fn row_at(&self, bounds: Rect, y: f64) -> Option<usize> {
-        if !self.open {
-            return None;
-        }
-        if y < bounds.y0 + self.row_height {
-            return None;
-        }
-        let index = ((y - bounds.y0 - self.row_height) / self.row_height) as usize;
-        self.options.get(index).map(|_| index)
-    }
-
     pub fn semantics_hint(&self) -> SemanticsHint {
         let mut state = self.state.to_semantics();
-        if self.open {
+        if self.is_open() {
             state |= SemanticsState::EXPANDED;
         }
         SemanticsHint::labeled(SemanticsRole::List, self.selected_label().to_string())
@@ -1784,8 +2032,9 @@ impl Widget for Select {
 
     /// Intrinsic size of the *closed* control: the widest label (selected or
     /// option) plus the paint padding, one [`Select::row_height`] tall. The
-    /// open option list paints below the bounds and deliberately does not
-    /// contribute to the intrinsic extent.
+    /// open list is an overlay sized from this box, so it deliberately does not
+    /// contribute to the intrinsic extent — otherwise the control would grow a
+    /// list-height hole in its parent's flow every time it opened.
     fn layout_request(&self) -> Option<floem_core::LayoutRequest> {
         let widest = self
             .options
@@ -1806,7 +2055,7 @@ impl Widget for Select {
         }
         let Event::Pointer(pointer) = cx.event() else {
             return match cx.event() {
-                Event::Key(key) => self.key_event(&key),
+                Event::Key(key) => self.key_event(cx, &key),
                 _ => false,
             };
         };
@@ -1825,18 +2074,42 @@ impl Widget for Select {
                 false
             }
             PointerPhase::Up if pointer.button == Some(PointerButton::Primary) => {
-                if let Some(index) = self.row_at(cx.bounds(), pointer.position.y) {
-                    self.select(index);
-                    return true;
-                }
-                let was_open = self.open;
-                self.open = !self.open;
-                self.revision.bump();
-                let _ = was_open;
-                true
+                // Only the header can be hit: the list is an overlay with its
+                // own nodes, so a click below it never reaches the Select.
+                self.toggle_popup(cx)
             }
             _ => false,
         }
+    }
+
+    /// The open list came down. If it carries a chosen row, that is the new
+    /// selection; either way the control stops believing a popup is up.
+    fn overlay_closed(
+        &mut self,
+        cx: &mut dyn UpdateContext,
+        id: ElementId,
+        handle: OverlayHandle,
+        content: Box<dyn WidgetAny>,
+    ) {
+        if self.popup != Some(handle) {
+            return;
+        }
+        self.popup = None;
+        let chosen = content
+            .as_any()
+            .downcast_ref::<SelectPopup>()
+            .and_then(SelectPopup::chosen);
+        if let Some(index) = chosen {
+            self.choose(index);
+        }
+        self.revision.bump();
+        cx.mark_dirty(id);
+    }
+
+    fn overlay_opened(&mut self, cx: &mut dyn UpdateContext, id: ElementId, handle: OverlayHandle) {
+        self.popup = Some(handle);
+        self.revision.bump();
+        cx.mark_dirty(id);
     }
 
     fn paint(&self, cx: &mut dyn PaintContext, _id: ElementId) {
@@ -1847,36 +2120,25 @@ impl Widget for Select {
         let (darker, lighter) = emphasis(Color::WHITE);
         cx.fill_rect(
             bounds,
-            resolved_color(Color::WHITE, darker, lighter, self.state),
-        );
-        draw_centered_text(cx, bounds, self.selected_label(), 14.0, Color::BLACK);
-
-        if self.open {
-            let list_top = bounds.y0 + self.row_height;
-            cx.fill_rect(
-                Rect {
-                    x0: bounds.x0,
-                    y0: list_top,
-                    x1: bounds.x1,
-                    y1: list_top + self.row_height * self.options.len() as f64,
+            resolved_color(
+                Color::WHITE,
+                darker,
+                lighter,
+                InteractionState {
+                    // An open list is a pressed control: the header stays lit
+                    // for as long as the popup is up.
+                    pressed: self.state.pressed || self.is_open(),
+                    ..self.state
                 },
-                Color::rgb(0xED, 0xF2, 0xF7),
-            );
-            for (index, option) in self.options.iter().enumerate() {
-                let row = Rect {
-                    x0: bounds.x0,
-                    y0: list_top + index as f64 * self.row_height,
-                    x1: bounds.x1,
-                    y1: list_top + (index + 1) as f64 * self.row_height,
-                };
-                let selected_row = self.selected == Some(index);
-                if selected_row {
-                    cx.fill_rect(row, Color::rgb(0xD6, 0xE4, 0xF0));
-                }
-                let origin = Point::new(row.x0 + 8.0, row.y0 + 3.0);
-                cx.fill_text(origin, option, 14.0, Color::BLACK);
-            }
-        }
+            ),
+        );
+        draw_centered_text(
+            cx,
+            bounds,
+            self.selected_label(),
+            LABEL_FONT_SIZE,
+            Color::BLACK,
+        );
     }
 
     fn semantics(&self, cx: &mut dyn SemanticsContext, _id: ElementId) {

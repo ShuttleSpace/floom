@@ -291,9 +291,11 @@ mod tests {
         assert!(KeyEvent::down(Key::Char('a')).is_text_input());
         assert!(!KeyEvent::up(Key::Char('a')).is_text_input());
         assert!(!KeyEvent::down(Key::Named(NamedKey::Enter)).is_text_input());
-        assert!(!KeyEvent::down(Key::Char('a'))
-            .with_modifiers(Modifiers::CONTROL)
-            .is_text_input());
+        assert!(
+            !KeyEvent::down(Key::Char('a'))
+                .with_modifiers(Modifiers::CONTROL)
+                .is_text_input()
+        );
     }
 
     #[test]

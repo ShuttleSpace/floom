@@ -4,19 +4,11 @@ use floem_animation::{AnimKind, AnimationScheduler, CompositorProp, Tween};
 use floem_focus::{FocusManager, FocusScopeId};
 use floem_types::{ElementId, Point, Rect, Size};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct OverlayId(pub u32);
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum OverlayKind {
-    Dialog,
-    Popup,
-    BottomSheet,
-}
+pub use floem_types::{OverlayHandle, OverlayKind};
 
 #[derive(Debug, Clone)]
 pub struct OverlayEntry {
-    pub id: OverlayId,
+    pub id: OverlayHandle,
     pub kind: OverlayKind,
     pub host: ElementId,
     pub bounds: Rect,
@@ -29,7 +21,6 @@ pub struct OverlayEntry {
 /// Manages stacked overlays above the main tree.
 #[derive(Debug)]
 pub struct OverlayManager {
-    next_id: u32,
     entries: Vec<OverlayEntry>,
     pub focus: FocusManager,
     pub anim: AnimationScheduler,
@@ -44,23 +35,26 @@ impl Default for OverlayManager {
 impl OverlayManager {
     pub fn new() -> Self {
         Self {
-            next_id: 0,
             entries: Vec::new(),
             focus: FocusManager::new(),
             anim: AnimationScheduler::new(),
         }
     }
 
+    /// Registers an overlay under a handle the caller already issued.
+    ///
+    /// The handle is passed in rather than minted here because the *host* hands
+    /// it out: it is the host that must tell the opener and the content which
+    /// overlay they got before this stack has been touched.
     pub fn push(
         &mut self,
+        id: OverlayHandle,
         kind: OverlayKind,
         host: ElementId,
         bounds: Rect,
         modal: bool,
         now_secs: f64,
-    ) -> OverlayId {
-        let id = OverlayId(self.next_id);
-        self.next_id += 1;
+    ) -> OverlayHandle {
         let z = self.entries.iter().map(|e| e.z).max().unwrap_or(0) + 1;
         let scope = self.focus.create_scope(None);
         self.focus.set_active_scope(scope);
@@ -109,7 +103,7 @@ impl OverlayManager {
     /// control can close its own popup without disturbing overlays opened on
     /// top of it. The focus scope of whatever remains on top is restored, or
     /// the manager blurs when the stack empties.
-    pub fn remove(&mut self, id: OverlayId) -> Option<OverlayEntry> {
+    pub fn remove(&mut self, id: OverlayHandle) -> Option<OverlayEntry> {
         let pos = self.entries.iter().position(|e| e.id == id)?;
         let entry = self.entries.remove(pos);
         if let Some(top) = self.entries.last() {
@@ -123,7 +117,7 @@ impl OverlayManager {
 
     /// Refreshes an overlay's hit bounds after layout discovers the content is
     /// a different size than the opener guessed.
-    pub fn set_bounds(&mut self, id: OverlayId, bounds: Rect) {
+    pub fn set_bounds(&mut self, id: OverlayHandle, bounds: Rect) {
         if let Some(entry) = self.entries.iter_mut().find(|e| e.id == id) {
             entry.bounds = bounds;
         }
@@ -142,7 +136,7 @@ impl OverlayManager {
     }
 
     /// Hit-test overlays front-to-back; modal blocks passes-through.
-    pub fn hit_test(&self, point: Point) -> Option<OverlayId> {
+    pub fn hit_test(&self, point: Point) -> Option<OverlayHandle> {
         for e in self.entries.iter().rev() {
             if e.bounds.contains(point) {
                 return Some(e.id);

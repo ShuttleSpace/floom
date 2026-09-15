@@ -113,6 +113,7 @@ impl_widget_any!(
     crate::controls::Slider,
     crate::controls::Progress,
     crate::controls::Select,
+    crate::controls::SelectPopup,
     crate::compose::Stack,
     crate::nav::NavHost,
     crate::compose::Conditional,

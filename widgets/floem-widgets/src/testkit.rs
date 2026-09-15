@@ -5,9 +5,11 @@
 //! without a renderer or a window. The paint recorder additionally lowers every
 //! op into a real [`Scene`], which proves the widget output can be retained.
 
+use std::any::Any;
+
 use floem_core::{
-    Color, CreateContext, ElementId, Event, EventContext, PaintContext, Point, Rect, ResourceId,
-    SemanticsContext, Size, UpdateContext, Widget,
+    Color, CreateContext, ElementId, Event, EventContext, OverlayHandle, OverlayKind, PaintContext,
+    Point, Rect, ResourceId, SemanticsContext, Size, UpdateContext, Widget, WidgetAny,
 };
 use floem_scene::{Resource, ResourceKind, ResourceRegistry, Scene, SceneNode};
 use floem_types::PointerEvent;
@@ -341,6 +343,33 @@ pub struct TestEventContext {
     event: Event,
     /// Every id passed to [`EventContext::request_focus`], in order.
     pub focus_requests: Vec<ElementId>,
+    overlays: Vec<OverlayCall>,
+    /// Mimics the host's handle counter, so a widget that stores the handle it
+    /// was given can be driven through a realistic open/close cycle.
+    next_handle: u64,
+}
+
+/// An overlay command a widget issued while an event was dispatched.
+pub enum OverlayCall {
+    Open {
+        handle: OverlayHandle,
+        kind: OverlayKind,
+        modal: bool,
+        bounds: Rect,
+        /// Already built, exactly as the real host builds it: the content
+        /// factory ran with the handle above.
+        content: Box<dyn WidgetAny>,
+    },
+    Close(OverlayHandle),
+}
+
+impl OverlayCall {
+    pub fn handle(&self) -> OverlayHandle {
+        match self {
+            OverlayCall::Open { handle, .. } => *handle,
+            OverlayCall::Close(handle) => *handle,
+        }
+    }
 }
 
 impl TestEventContext {
@@ -350,6 +379,8 @@ impl TestEventContext {
             bounds,
             event,
             focus_requests: Vec::new(),
+            overlays: Vec::new(),
+            next_handle: 0,
         }
     }
 
@@ -359,6 +390,71 @@ impl TestEventContext {
 
     pub fn focus_requests(&self) -> &[ElementId] {
         &self.focus_requests
+    }
+
+    /// Overlay commands issued during this dispatch, in order.
+    pub fn overlay_calls(&self) -> &[OverlayCall] {
+        &self.overlays
+    }
+
+    /// The most recent overlay a widget asked to open.
+    pub fn last_open(&self) -> Option<&OverlayCall> {
+        self.overlays
+            .iter()
+            .rev()
+            .find(|call| matches!(call, OverlayCall::Open { .. }))
+    }
+
+    /// Hands the last opened content out of the recorder, so a test can drive
+    /// it and then return it through `Widget::overlay_closed` the way the host
+    /// would.
+    pub fn take_content(&mut self) -> Option<Box<dyn WidgetAny>> {
+        let index = self
+            .overlays
+            .iter()
+            .rposition(|call| matches!(call, OverlayCall::Open { .. }))?;
+        match &mut self.overlays[index] {
+            OverlayCall::Open { content, .. } => {
+                Some(std::mem::replace(content, Box::new(NoContent)))
+            }
+            OverlayCall::Close(_) => None,
+        }
+    }
+
+    /// Handles a widget asked the host to close.
+    pub fn closed_handles(&self) -> Vec<OverlayHandle> {
+        self.overlays
+            .iter()
+            .filter_map(|call| match call {
+                OverlayCall::Close(handle) => Some(*handle),
+                OverlayCall::Open { .. } => None,
+            })
+            .collect()
+    }
+}
+
+/// Stands in for content a test has taken ownership of.
+struct NoContent;
+
+impl floem_core::Widget for NoContent {
+    fn create(&self, cx: &mut dyn CreateContext) -> ElementId {
+        cx.alloc_child()
+    }
+
+    fn update(&mut self, _cx: &mut dyn UpdateContext, _id: ElementId) {}
+}
+
+impl WidgetAny for NoContent {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
+    }
+
+    fn semantics_hint(&self) -> Option<floem_core::SemanticsHint> {
+        None
     }
 }
 
@@ -384,6 +480,25 @@ impl EventContext for TestEventContext {
 
     fn request_focus(&mut self, id: ElementId) {
         self.focus_requests.push(id);
+    }
+
+    fn open_overlay(&mut self, request: floem_core::OverlayRequest) -> bool {
+        let handle = OverlayHandle::new(self.next_handle);
+        self.next_handle += 1;
+        let content = (request.content)(handle);
+        self.overlays.push(OverlayCall::Open {
+            handle,
+            kind: request.kind,
+            modal: request.modal,
+            bounds: request.bounds,
+            content,
+        });
+        true
+    }
+
+    fn close_overlay(&mut self, handle: OverlayHandle) -> bool {
+        self.overlays.push(OverlayCall::Close(handle));
+        true
     }
 }
 
