@@ -20,6 +20,13 @@ pub enum OverlayKind {
     Dialog,
     /// A partial-height surface anchored to an edge of the window.
     BottomSheet,
+    /// A modal panel that slides in from the window's leading edge.
+    ///
+    /// Distinct from a [`Self::BottomSheet`] only in which way it enters and
+    /// how it is anchored; it is the same "covers the window, owns the
+    /// keyboard, retreats on dismissal" contract, which is why it is a kind
+    /// here rather than a flag on the sheet.
+    Drawer,
 }
 
 /// An opaque ticket for one open overlay.

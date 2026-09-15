@@ -349,6 +349,50 @@ fn popup_mounts_and_dismisses_its_layer() {
     assert_eq!(host.frame().painted, 1, "popup layer unmounted");
 }
 
+/// A press outside a non-modal overlay is the host's light dismiss, and it runs
+/// the ordinary close path rather than just dropping the entry: the opener's
+/// `overlay_closed` fires, so the popup clears the `present` that put it there.
+/// Skipping that would leave the opener believing its menu is still up, and the
+/// next `set_present(true)` would then be a no-op.
+#[test]
+fn an_outside_press_dismisses_a_popup_and_clears_its_present() {
+    let mut host = host_viewport();
+    // The popup anchors its overlay to its own box, so it needs a parent
+    // smaller than the viewport for "outside" to mean anything.
+    let parent = Stack::new(Axis::Vertical).child(Child::new(
+        ChildKey::index(0),
+        LayoutRequest::new().width(80.0).height(40.0),
+        || {
+            Box::new(Popup::new().label("menu").content(Child::new(
+                ChildKey::index(0),
+                LayoutRequest::new(),
+                || Box::new(Text::new("item")),
+            )))
+        },
+    ));
+    host.mount_root(LayoutStyle::default(), parent);
+    host.frame();
+
+    let popup = find_widget::<Popup>(&host).expect("popup mounted");
+    host.widget_mut::<Popup>(popup)
+        .expect("popup node")
+        .set_present(true);
+    host.frame();
+    assert_eq!(host.overlay_count(), 1, "the popup is up");
+
+    // Far from the popup's 80 x 40 box in the corner.
+    let away = Point::new(200.0, 300.0);
+    host.dispatch(PointerEvent::primary_down(away).into());
+    assert_eq!(host.overlay_count(), 0, "the outside press dismissed it");
+    assert!(
+        !host
+            .widget::<Popup>(popup)
+            .expect("popup node")
+            .is_present(),
+        "the opener was told, so it no longer believes the menu is open"
+    );
+}
+
 #[test]
 fn bottom_sheet_mounts_a_bottom_layer_when_shown() {
     let mut host = host_viewport();
@@ -415,8 +459,11 @@ fn navigation_bar_swaps_the_highlight_on_click() {
     assert_eq!(host.frame().painted, 3, "still bar + two destinations");
 }
 
+/// A drawer is a modal panel, so its surface belongs above the tree for exactly
+/// the reason a dialog's does: it covers the *window*, not whichever box it
+/// happened to be declared in.
 #[test]
-fn navigation_drawer_mounts_and_dismisses() {
+fn navigation_drawer_mounts_its_panel_as_a_host_overlay() {
     let mut host = host_viewport();
     let drawer = NavigationDrawer::new()
         .header("Menu")
@@ -424,16 +471,32 @@ fn navigation_drawer_mounts_and_dismisses() {
         .destination("Settings");
     let id = host.mount_root(LayoutStyle::default(), drawer);
     assert_eq!(host.frame().painted, 1, "hidden drawer is alone");
+    assert_eq!(
+        host.overlay_count(),
+        0,
+        "and nothing is stacked above the tree"
+    );
 
     host.widget_mut::<NavigationDrawer>(id)
         .expect("drawer node")
         .set_present(true);
-    // drawer + overlay + column + panel + header + two destinations
-    assert_eq!(host.frame().painted, 7, "drawer panel fully mounted");
+    assert!(
+        host.widget::<NavigationDrawer>(id)
+            .expect("drawer node")
+            .is_present(),
+        "the widget reports itself present right away"
+    );
+    host.frame();
+    assert_eq!(host.overlay_count(), 1, "the panel is a host overlay now");
+    // drawer node + column + panel + header + two destinations: the in-tree
+    // `Overlay` layer the fallback used is gone, so there is one node fewer.
+    assert_eq!(host.frame().painted, 6, "drawer panel fully mounted");
 
     host.widget_mut::<NavigationDrawer>(id)
         .expect("drawer node")
         .set_present(false);
+    host.frame();
+    assert_eq!(host.overlay_count(), 0, "closing takes it off the stack");
     assert_eq!(host.frame().painted, 1, "drawer panel fully unmounted");
 }
 

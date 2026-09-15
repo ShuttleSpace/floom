@@ -27,15 +27,15 @@ use std::sync::{Arc, Mutex};
 use floem_accessibility::{SemanticsNode, SemanticsTree};
 use floem_core::{
     Align, Axis, Child, ChildKey, CreateContext, ElementId, Event, EventContext, LayoutRequest,
-    OverlayHandle, OverlayKind, OverlayRequest, PaintContext, Point, Position, Rect, ResourceId,
-    SemanticsHint, SemanticsRole, Size, UpdateContext,
+    OverlayHandle, OverlayKind, OverlayRequest, PaintContext, Point, PointerPhase, Position, Rect,
+    ResourceId, SemanticsHint, SemanticsRole, Size, UpdateContext,
 };
 use floem_focus::{FocusDirection, FocusManager, FocusScopeId};
 use floem_layout::{
     AlignItems as LAlign, FlexDirection, JustifyContent, LayoutEngine, LayoutNode, LayoutStyle,
     MeasureFn, Position as LPosition,
 };
-use floem_overlay::OverlayManager;
+use floem_overlay::{CompositorProp, OverlayManager};
 use floem_runtime::{EventRouter, Hit, HitRegion, RouteStop};
 use floem_runtime_core::IdAllocator;
 use floem_scene::{Resource, ResourceKind, ResourceRegistry, Scene, SceneNodeId};
@@ -96,6 +96,13 @@ struct Node {
     /// of freezing the mount-time measurement.
     text_measure: Option<Arc<Mutex<TextMeasure>>>,
 }
+
+/// How far [`WidgetHost::frame`] advances the animation clock.
+///
+/// A nominal 60 Hz step, not measured elapsed time: an entry animation is
+/// measured in frames, and a wall-clock delta would make it fast on an idle
+/// loop and slow under load — and untestable either way.
+pub const NOMINAL_FRAME_SECS: f64 = 1.0 / 60.0;
 
 /// Live measure inputs for a text leaf, shared between the widget (updated on
 /// content change) and the layout engine's measure closure.
@@ -215,6 +222,18 @@ pub struct WidgetHost {
     /// [`EventContext::set_ime_cursor_area`]; `None` when nothing is composing.
     /// The runner reads it after an IME event to anchor the OS popup.
     ime_caret: Option<Rect>,
+    /// The host's animation clock, in seconds since the first frame.
+    ///
+    /// Advanced a nominal frame at a time by [`WidgetHost::frame`] rather than
+    /// read off the wall clock: an entry animation is a *frame* animation, and
+    /// driving it from elapsed time would make it depend on how fast the loop
+    /// happens to be running and leave it untestable. An embedder that knows
+    /// its real frame delta can advance it itself through
+    /// [`WidgetHost::tick_animations`].
+    anim_clock: f64,
+    /// Whether any overlay is still playing its entry animation, i.e. whether
+    /// the frame loop owes another frame for no other reason.
+    overlay_animating: bool,
     size: Size,
     layout_dirty: bool,
     /// A widget was borrowed mutably since the last frame, i.e. something
@@ -458,6 +477,8 @@ impl WidgetHost {
             overlay_commands: Vec::new(),
             next_overlay_handle: 0,
             ime_caret: None,
+            anim_clock: 0.0,
+            overlay_animating: false,
             size: Size::new(800.0, 600.0),
             layout_dirty: true,
             content_dirty: false,
@@ -531,9 +552,13 @@ impl WidgetHost {
         // Reconcile the content immediately so a composite (e.g. a popup list)
         // mounts its children before this frame's layout pass.
         self.reconcile_subtree(index);
+        // The entry animation starts on the host's clock, so an overlay opened
+        // mid-frame and one opened from an event both begin from the same
+        // reference the ticker advances.
+        let now = self.anim_clock;
         let id = self
             .overlay
-            .push(handle, kind, self.nodes[index].id, bounds, modal, 0.0);
+            .push(handle, kind, self.nodes[index].id, bounds, modal, now);
         let previous_focus = self.focus.focused();
         self.set_focus(self.nodes[index].id);
         self.overlays.push(OverlaySlot {
@@ -1030,8 +1055,35 @@ impl WidgetHost {
     pub fn needs_frame(&self) -> bool {
         self.content_dirty
             || self.layout_dirty
+            || self.overlay_animating
             || !self.pending_scene_removals.is_empty()
             || !self.scene.damage().is_empty()
+    }
+
+    /// Advances the animation clock by `dt_secs` and re-samples every running
+    /// overlay entry animation. Returns whether anything is still running.
+    ///
+    /// [`WidgetHost::frame`] calls this with a nominal frame step, which is
+    /// what makes an entry animation deterministic and finite: 0.15 s at 60 Hz
+    /// is nine frames, and the tenth finds nothing left to do. An embedder that
+    /// measures its own frame delta (or a test that wants to jump to a specific
+    /// point of the animation) can call it directly instead — the delta is
+    /// relative, so repeated calls accumulate.
+    pub fn tick_animations(&mut self, dt_secs: f64) -> bool {
+        self.anim_clock += dt_secs.max(0.0);
+        let animating = self.overlay.tick_animations(self.anim_clock);
+        self.overlay_animating = animating;
+        animating
+    }
+
+    /// The host's animation clock, in seconds since the first frame.
+    pub fn anim_clock(&self) -> f64 {
+        self.anim_clock
+    }
+
+    /// Whether any overlay is still playing its entry animation.
+    pub fn overlay_animating(&self) -> bool {
+        self.overlay_animating
     }
 
     pub fn node_id(&self, node: NodeId) -> ElementId {
@@ -1084,6 +1136,12 @@ impl WidgetHost {
     /// Runs one full frame: update → layout → paint → semantics.
     pub fn frame(&mut self) -> FrameStats {
         let mut stats = FrameStats::default();
+
+        // Advance the overlay animations first so update, layout and paint all
+        // see the same sampled value — and so an overlay that opened since the
+        // last frame is already a step into its entry rather than a frame of
+        // nothing.
+        self.tick_animations(NOMINAL_FRAME_SECS);
 
         let mut retext = Vec::new();
         let viewport = Rect::from_origin_size(Point::ZERO, self.size);
@@ -1262,19 +1320,21 @@ impl WidgetHost {
                 }
                 continue;
             }
-            self.paint_node(index, stats);
+            self.paint_node(index, None, stats);
         }
 
         // Overlays paint last, so their content sits above everything beneath
-        // it in z — this is what lets a popup escape its parent's clip.
-        let overlay_nodes: Vec<usize> = self
-            .overlays
-            .iter()
-            .map(|s| s.node)
-            .filter(|&node| !self.nodes[node].dead)
-            .collect();
-        for node in overlay_nodes {
-            self.paint_overlay_subtree(node, stats);
+        // it in z — this is what lets a popup escape its parent's clip. Each
+        // carries the value its entry animation sampled this frame, which the
+        // paint context folds into every node it writes.
+        let mut overlay_nodes: Vec<(usize, Option<CompositorProp>)> = Vec::new();
+        for slot in &self.overlays {
+            if !self.nodes[slot.node].dead {
+                overlay_nodes.push((slot.node, self.overlay.composite(slot.id)));
+            }
+        }
+        for (node, composite) in overlay_nodes {
+            self.paint_overlay_subtree(node, composite, stats);
         }
         self.scene.finish_update();
     }
@@ -1282,7 +1342,12 @@ impl WidgetHost {
     /// Paints one node into the scene, reusing its previous frame's scene nodes
     /// positionally (so unchanged payloads produce no damage) and retiring the
     /// ones it no longer produces.
-    fn paint_node(&mut self, index: usize, stats: &mut FrameStats) {
+    fn paint_node(
+        &mut self,
+        index: usize,
+        composite: Option<CompositorProp>,
+        stats: &mut FrameStats,
+    ) {
         let prev = std::mem::take(&mut self.nodes[index].scene_nodes);
         let mut next = Vec::new();
         let leftover;
@@ -1294,6 +1359,7 @@ impl WidgetHost {
                 glyphs: &mut self.glyph_cache,
                 shaper: &mut self.shaper,
                 layout_cache: &mut self.text_layout_cache,
+                composite,
                 prev,
                 used: 0,
                 next: &mut next,
@@ -1311,15 +1377,21 @@ impl WidgetHost {
         stats.painted += 1;
     }
 
-    /// Pre-order paint of an overlay subtree (parent before its children).
-    fn paint_overlay_subtree(&mut self, index: usize, stats: &mut FrameStats) {
+    /// Pre-order paint of an overlay subtree (parent before its children),
+    /// applying the overlay's entry animation to every node it writes.
+    fn paint_overlay_subtree(
+        &mut self,
+        index: usize,
+        composite: Option<CompositorProp>,
+        stats: &mut FrameStats,
+    ) {
         if self.nodes[index].dead {
             return;
         }
-        self.paint_node(index, stats);
+        self.paint_node(index, composite, stats);
         let children = self.nodes[index].children.clone();
         for child in children {
-            self.paint_overlay_subtree(child, stats);
+            self.paint_overlay_subtree(child, composite, stats);
         }
     }
 
@@ -1377,6 +1449,16 @@ impl WidgetHost {
     /// Routes `event` to the widget under the pointer (or the focused widget
     /// for key events) and returns whether any widget consumed it.
     pub fn dispatch(&mut self, event: Event) -> bool {
+        // A press that misses the topmost overlay takes it down — the light
+        // dismiss every menu and picker is expected to have. It is a host rule
+        // rather than a per-widget one because a widget cannot see a press that
+        // lands outside itself: the router never routes it there, so each popup
+        // would have to invent a scrim it does not otherwise want. Consuming
+        // the press is the point — the click that closes a menu must not also
+        // activate whatever was under it.
+        if self.dismiss_top_overlay_on_press(&event) {
+            return true;
+        }
         let target = match event {
             // Overlays win over the main tree, front-to-back; a modal overlay
             // also swallows clicks outside its content (the scrim). The router
@@ -1490,6 +1572,34 @@ impl WidgetHost {
 
     fn index_of(&self, id: ElementId) -> Option<usize> {
         self.nodes.iter().position(|node| node.id == id)
+    }
+
+    /// Takes the topmost overlay down when a press lands outside it and it is
+    /// not modal. Returns whether the press was consumed by the dismissal.
+    ///
+    /// Modal overlays are excluded on purpose: they exist to swallow the window,
+    /// and a press on the scrim is theirs to interpret — a dialog may
+    /// legitimately insist on being answered. Non-modal overlays are the ones
+    /// whose whole contract is "clicking away closes me", and the closure goes
+    /// through [`WidgetHost::close_overlay`], so the opener is told through
+    /// `overlay_closed` and can clear whatever state made it open in the first
+    /// place.
+    fn dismiss_top_overlay_on_press(&mut self, event: &Event) -> bool {
+        let Event::Pointer(pointer) = event else {
+            return false;
+        };
+        if !matches!(pointer.phase, PointerPhase::Down) {
+            return false;
+        }
+        let Some(top) = self.overlay.top() else {
+            return false;
+        };
+        let (id, modal, bounds) = (top.id, top.modal, top.bounds);
+        if modal || bounds.contains(pointer.position) {
+            return false;
+        }
+        self.close_overlay(id);
+        true
     }
 
     /// Resolves a pointer target, letting an open overlay take priority over the
@@ -1759,6 +1869,10 @@ struct NodePaintContext<'a> {
     glyphs: &'a mut HashMap<(String, u32), ResourceId>,
     shaper: &'a mut TextShaper,
     layout_cache: &'a mut LayoutCache,
+    /// The overlay entry animation this node is being painted under, if any.
+    /// Applied to every scene node the context writes, so a whole overlay
+    /// subtree fades or slides as one.
+    composite: Option<CompositorProp>,
     /// Last frame's scene node ids for this widget. Painting reuses them
     /// positionally: `upsert` on a match (no damage when the payload is
     /// unchanged), `insert` once the previous nodes run out.
@@ -1865,7 +1979,10 @@ impl PaintContext for NodePaintContext<'_> {
 impl NodePaintContext<'_> {
     /// Inserts a scene node — reusing the previous frame's slot when one is
     /// available at this position, allocating a fresh one otherwise.
-    fn push(&mut self, node: floem_scene::SceneNode) {
+    fn push(&mut self, mut node: floem_scene::SceneNode) {
+        if let Some(prop) = self.composite {
+            apply_composite(&mut node, prop);
+        }
         let id = if self.used < self.prev.len() {
             let id = self.prev[self.used];
             self.used += 1;
@@ -1875,6 +1992,53 @@ impl NodePaintContext<'_> {
             self.scene.insert(node)
         };
         self.next.push(id);
+    }
+}
+
+/// Folds an overlay's entry animation into a scene node about to be written.
+///
+/// The scene the host builds is flat — a widget paints rects, text and images
+/// with no group node above them — so both animations lower to a per-node edit:
+/// a fade scales each node's own alpha, a slide offsets its own box. Because
+/// the edit is per node, the sample changes every frame and `Scene::upsert`
+/// damages both the old and the new box, which is what makes the motion
+/// repaint without the host asking for a full frame.
+///
+/// Two things are deliberately *not* done. `Scale` is left alone: scaling a
+/// layout node-by-node about each node's own centre would pull the subtree
+/// apart, and scaling it about a shared origin needs the group node the host
+/// does not build. Images do not fade either, for the same structural reason —
+/// a scene image carries no tint, so there is nowhere to put the alpha.
+fn apply_composite(node: &mut floem_scene::SceneNode, prop: CompositorProp) {
+    match prop {
+        CompositorProp::Opacity(alpha) => {
+            let alpha = alpha.clamp(0.0, 1.0);
+            let scale = |c: u8| (c as f64 * alpha).round().clamp(0.0, 255.0) as u8;
+            match node {
+                floem_scene::SceneNode::Rect { fill, .. } => fill.a = scale(fill.a),
+                floem_scene::SceneNode::Text { color, .. } => color.a = scale(color.a),
+                _ => {}
+            }
+        }
+        CompositorProp::TranslateX(dx) => match node {
+            floem_scene::SceneNode::Rect { bounds, .. }
+            | floem_scene::SceneNode::Image { bounds, .. } => {
+                bounds.x0 += dx;
+                bounds.x1 += dx;
+            }
+            floem_scene::SceneNode::Text { origin, .. } => origin.x += dx,
+            _ => {}
+        },
+        CompositorProp::TranslateY(dy) => match node {
+            floem_scene::SceneNode::Rect { bounds, .. }
+            | floem_scene::SceneNode::Image { bounds, .. } => {
+                bounds.y0 += dy;
+                bounds.y1 += dy;
+            }
+            floem_scene::SceneNode::Text { origin, .. } => origin.y += dy,
+            _ => {}
+        },
+        CompositorProp::Scale(_) => {}
     }
 }
 

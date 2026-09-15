@@ -249,7 +249,7 @@ impl Widget for Conditional {
 /// falls back to mounting the same surface in-tree — what a headless embedder
 /// gets, and what these widgets did before overlays existed.
 #[derive(Clone)]
-struct Surface {
+pub(crate) struct Surface {
     present: bool,
     last_present: bool,
     /// The ticket the host issued, while the surface sits on its overlay stack.
@@ -259,7 +259,7 @@ struct Surface {
 }
 
 impl Surface {
-    fn new(present: bool) -> Self {
+    pub(crate) fn new(present: bool) -> Self {
         Self {
             present,
             // "Not yet seen": the first `update` always acts on whatever the
@@ -275,17 +275,17 @@ impl Surface {
     }
 
     /// Whether the surface should be visible at all.
-    fn is_shown(&self) -> bool {
+    pub(crate) fn is_shown(&self) -> bool {
         self.present
     }
 
     /// Whether the surface is currently mounted as in-tree children, i.e. the
     /// host refused the overlay (or never had one).
-    fn takes_children_in_tree(&self) -> bool {
+    pub(crate) fn takes_children_in_tree(&self) -> bool {
         self.present && self.in_tree
     }
 
-    fn set_present(&mut self, present: bool) {
+    pub(crate) fn set_present(&mut self, present: bool) {
         self.present = present;
     }
 
@@ -295,7 +295,7 @@ impl Surface {
     /// own box plus the host viewport into the request to place — or `None` when
     /// there is nothing to put in an overlay after all (a `Popup` with no
     /// content), in which case nothing is mounted anywhere.
-    fn reconcile(
+    pub(crate) fn reconcile(
         &mut self,
         cx: &mut dyn UpdateContext,
         id: ElementId,
@@ -326,7 +326,7 @@ impl Surface {
     }
 
     /// Records the handle the host issued for this surface's overlay.
-    fn opened(&mut self, handle: OverlayHandle) {
+    pub(crate) fn opened(&mut self, handle: OverlayHandle) {
         self.handle = Some(handle);
     }
 
@@ -338,7 +338,7 @@ impl Surface {
     /// (clicking outside a popup) has to leave the widget's own state matching
     /// what the user sees, or the next `update` would believe the surface is
     /// still up and never reopen it.
-    fn closed(&mut self, handle: OverlayHandle) -> bool {
+    pub(crate) fn closed(&mut self, handle: OverlayHandle) -> bool {
         if self.handle != Some(handle) {
             return false;
         }

@@ -16,11 +16,11 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 use floem_accessibility::{SemanticsRole, SemanticsState};
 use floem_core::{
-    Align, Axis, Child, ChildKey, CreateContext, ElementId, LayoutRequest, PaintContext,
-    SemanticsContext, UpdateContext, Widget,
+    Align, Axis, Child, ChildKey, CreateContext, ElementId, LayoutRequest, OverlayHandle,
+    OverlayKind, OverlayRequest, PaintContext, SemanticsContext, UpdateContext, Widget, WidgetAny,
 };
 
-use crate::compose::{Overlay, Stack};
+use crate::compose::{Overlay, Stack, Surface};
 use crate::controls::Button;
 use crate::primitives::{SemanticsHint, Text};
 
@@ -351,12 +351,15 @@ impl Widget for NavigationRail {
 /// A modal side panel: a header plus a vertical list of destinations.
 ///
 /// Hidden while `present` is false, so it contributes nothing to layout. When
-/// shown it covers its parent with an absolute scrim and slides a full-height
-/// panel in from the leading edge (via a start-aligned column).
+/// shown it covers the *window* — not the box it was declared in — with an
+/// absolute scrim and slides a full-height panel in from the leading edge (via
+/// a start-aligned column). Like the other modal composites it hands that
+/// surface to the host as an overlay, so a drawer declared inside a scrolled
+/// list still covers the screen; a host with no overlay support gets the same
+/// layer mounted in-tree.
 #[derive(Clone)]
 pub struct NavigationDrawer {
-    present: bool,
-    last_present: bool,
+    surface: Surface,
     header: Option<String>,
     width: f32,
     items: Vec<NavDestination>,
@@ -367,7 +370,7 @@ pub struct NavigationDrawer {
 impl std::fmt::Debug for NavigationDrawer {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("NavigationDrawer")
-            .field("present", &self.present)
+            .field("present", &self.surface.is_shown())
             .field("items", &self.items.len())
             .finish()
     }
@@ -376,8 +379,7 @@ impl std::fmt::Debug for NavigationDrawer {
 impl NavigationDrawer {
     pub fn new() -> Self {
         Self {
-            present: false,
-            last_present: false,
+            surface: Surface::new(false),
             header: None,
             width: 260.0,
             items: Vec::new(),
@@ -418,7 +420,12 @@ impl NavigationDrawer {
 
     /// Shows or hides the drawer; the next frame reconciles.
     pub fn set_present(&mut self, present: bool) {
-        self.present = present;
+        self.surface.set_present(present);
+    }
+
+    /// Whether the drawer is up.
+    pub fn is_present(&self) -> bool {
+        self.surface.is_shown()
     }
 
     pub fn selected(&self) -> usize {
@@ -435,7 +442,7 @@ impl NavigationDrawer {
     }
 
     pub fn semantics_hint(&self) -> SemanticsHint {
-        if self.present {
+        if self.surface.is_shown() {
             SemanticsHint::labeled(
                 SemanticsRole::Dialog,
                 self.header
@@ -446,32 +453,10 @@ impl NavigationDrawer {
             SemanticsHint::decorative()
         }
     }
-}
 
-impl Default for NavigationDrawer {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl Widget for NavigationDrawer {
-    fn create(&self, cx: &mut dyn CreateContext) -> ElementId {
-        cx.alloc_child()
-    }
-
-    fn update(&mut self, cx: &mut dyn UpdateContext, id: ElementId) {
-        let cur = self.current();
-        if self.present != self.last_present || cur != self.last_selected {
-            cx.mark_children_dirty(id);
-            self.last_present = self.present;
-            self.last_selected = cur;
-        }
-    }
-
-    fn children(&self) -> Vec<Child> {
-        if !self.present {
-            return Vec::new();
-        }
+    /// The drawer's content: a full-height, fixed-width panel pinned to the
+    /// leading edge of the box it is given.
+    fn column(&self) -> Stack {
         let cur = self.current();
         let width = self.width;
         let header = self.header.clone();
@@ -492,15 +477,54 @@ impl Widget for NavigationDrawer {
         ) {
             panel = panel.child(button);
         }
-        // Full-height, fixed-width panel pinned to the leading edge.
         let panel_child = Child::new(
             ChildKey::keyed(DRAWER_TAG),
             LayoutRequest::new().width(width).fill(),
             move || Box::new(panel.clone()),
         );
-        let column = Stack::new(Axis::Vertical)
+        Stack::new(Axis::Vertical)
             .align(Align::Start, Align::Stretch)
-            .child(panel_child);
+            .child(panel_child)
+    }
+}
+
+impl Default for NavigationDrawer {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl Widget for NavigationDrawer {
+    fn create(&self, cx: &mut dyn CreateContext) -> ElementId {
+        cx.alloc_child()
+    }
+
+    fn update(&mut self, cx: &mut dyn UpdateContext, id: ElementId) {
+        let cur = self.current();
+        if cur != self.last_selected {
+            cx.mark_children_dirty(id);
+            self.last_selected = cur;
+        }
+        let column = self.column();
+        // A drawer covers the window, not the box it was declared in, so it is
+        // sized from the host viewport — the same reason a sheet is.
+        self.surface.reconcile(cx, id, move |_bounds, viewport| {
+            Some(OverlayRequest::new(
+                OverlayKind::Drawer,
+                true,
+                viewport,
+                move |_handle| Box::new(column),
+            ))
+        });
+    }
+
+    fn children(&self) -> Vec<Child> {
+        if !self.surface.takes_children_in_tree() {
+            return Vec::new();
+        }
+        let cur = self.current();
+        let column = self.column();
+        // No host overlay: fall back to an in-tree layer, as before.
         let overlay = Overlay::new().content_with(
             ChildKey::index(0),
             LayoutRequest::new().fill(),
@@ -511,6 +535,23 @@ impl Widget for NavigationDrawer {
             LayoutRequest::new().absolute_fill(),
             move || Box::new(overlay.clone()),
         )]
+    }
+
+    fn overlay_opened(&mut self, cx: &mut dyn UpdateContext, id: ElementId, handle: OverlayHandle) {
+        self.surface.opened(handle);
+        cx.mark_dirty(id);
+    }
+
+    fn overlay_closed(
+        &mut self,
+        cx: &mut dyn UpdateContext,
+        id: ElementId,
+        handle: OverlayHandle,
+        _content: Box<dyn WidgetAny>,
+    ) {
+        if self.surface.closed(handle) {
+            cx.mark_dirty(id);
+        }
     }
 
     fn layout_request(&self) -> Option<LayoutRequest> {
