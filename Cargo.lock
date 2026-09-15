@@ -1964,6 +1964,7 @@ dependencies = [
  "floem-focus",
  "floem-forms",
  "floem-layout",
+ "floem-overlay",
  "floem-platform",
  "floem-renderer",
  "floem-renderer-software",

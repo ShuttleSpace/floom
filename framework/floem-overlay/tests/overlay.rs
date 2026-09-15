@@ -1,4 +1,4 @@
-use floem_overlay::{sheet_bounds, OverlayId, OverlayKind, OverlayManager};
+use floem_overlay::{OverlayId, OverlayKind, OverlayManager, sheet_bounds};
 use floem_types::{ElementId, Point, Rect, Size};
 
 fn eid(i: u32) -> ElementId {
@@ -98,4 +98,29 @@ fn animation_ticks_on_overlay() {
     assert!(!om.anim.is_empty());
     om.tick_animations(0.2);
     assert!(om.anim.is_empty());
+}
+
+#[test]
+fn remove_drops_a_specific_overlay_not_just_the_top() {
+    let mut om = OverlayManager::new();
+    let a = om.push(
+        OverlayKind::Popup,
+        eid(1),
+        Rect::from_origin_size(Point::ZERO, Size::new(10.0, 10.0)),
+        false,
+        0.0,
+    );
+    let b = om.push(
+        OverlayKind::Dialog,
+        eid(2),
+        Rect::from_origin_size(Point::ZERO, Size::new(10.0, 10.0)),
+        true,
+        0.0,
+    );
+    assert_eq!(om.len(), 2);
+    // Drop the bottom overlay; the top one stays and keeps focus.
+    assert!(om.remove(a).is_some());
+    assert_eq!(om.len(), 1);
+    assert_eq!(om.top().unwrap().id, b);
+    assert_eq!(om.focus.focused(), Some(eid(2)));
 }

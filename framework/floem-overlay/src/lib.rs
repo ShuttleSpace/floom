@@ -105,6 +105,30 @@ impl OverlayManager {
         Some(entry)
     }
 
+    /// Removes a *specific* overlay by id (not just the top of the stack), so a
+    /// control can close its own popup without disturbing overlays opened on
+    /// top of it. The focus scope of whatever remains on top is restored, or
+    /// the manager blurs when the stack empties.
+    pub fn remove(&mut self, id: OverlayId) -> Option<OverlayEntry> {
+        let pos = self.entries.iter().position(|e| e.id == id)?;
+        let entry = self.entries.remove(pos);
+        if let Some(top) = self.entries.last() {
+            self.focus.set_active_scope(top.focus_scope);
+            self.focus.focus(top.host);
+        } else {
+            self.focus.blur();
+        }
+        Some(entry)
+    }
+
+    /// Refreshes an overlay's hit bounds after layout discovers the content is
+    /// a different size than the opener guessed.
+    pub fn set_bounds(&mut self, id: OverlayId, bounds: Rect) {
+        if let Some(entry) = self.entries.iter_mut().find(|e| e.id == id) {
+            entry.bounds = bounds;
+        }
+    }
+
     pub fn len(&self) -> usize {
         self.entries.len()
     }
@@ -138,5 +162,8 @@ impl OverlayManager {
 
 /// Helper for tests constructing overlay bounds.
 pub fn sheet_bounds(width: f64, height: f64) -> Rect {
-    Rect::from_origin_size(Point::new(0.0, height * 0.4), Size::new(width, height * 0.6))
+    Rect::from_origin_size(
+        Point::new(0.0, height * 0.4),
+        Size::new(width, height * 0.6),
+    )
 }

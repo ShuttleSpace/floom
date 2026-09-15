@@ -33,6 +33,7 @@ use floem_layout::{
     AlignItems as LAlign, FlexDirection, JustifyContent, LayoutEngine, LayoutNode, LayoutStyle,
     MeasureFn, Position as LPosition,
 };
+use floem_overlay::{OverlayId, OverlayKind, OverlayManager};
 use floem_runtime::{EventRouter, Hit, HitRegion, RouteStop};
 use floem_runtime_core::IdAllocator;
 use floem_scene::{Resource, ResourceKind, ResourceRegistry, Scene, SceneNodeId};
@@ -78,6 +79,11 @@ struct Node {
     /// Unmounted but not yet removed from the vector; skipped by every pass so
     /// its `NodeId` stays valid for live nodes.
     dead: bool,
+    /// True for the root of an overlay subtree: painted last (above the main
+    /// tree), laid out independently against the viewport, and given hit/focus
+    /// priority so its content escapes the parent's clip and can actually be
+    /// clicked. Its descendants inherit this by ancestry, not by this flag.
+    is_overlay: bool,
     /// Scene nodes this widget painted last frame. Painting reuses them
     /// positionally via `Scene::upsert` (so unchanged payloads produce no
     /// damage), and leftovers are retired.
@@ -95,6 +101,18 @@ struct Node {
 struct TextMeasure {
     text: String,
     font_size: f32,
+}
+
+/// A mounted overlay: an independent widget subtree painted above the main
+/// tree, laid out against the viewport at `bounds`, with hit/focus priority.
+struct OverlaySlot {
+    id: OverlayId,
+    /// Index into `nodes` of the overlay's root widget.
+    node: usize,
+    /// Viewport-relative rect the content is positioned and hit-tested against.
+    bounds: Rect,
+    /// Focus before the overlay opened, restored when it closes.
+    previous_focus: Option<ElementId>,
 }
 
 /// Owns and drives a widget tree.
@@ -117,6 +135,10 @@ pub struct WidgetHost {
     semantics: SemanticsTree,
     focus: FocusManager,
     scope: FocusScopeId,
+    /// Stacked overlays (popups, dialogs, sheets) painted above the main tree.
+    overlay: OverlayManager,
+    /// Mounted overlay subtrees, parallel to `overlay`'s entry order.
+    overlays: Vec<OverlaySlot>,
     size: Size,
     layout_dirty: bool,
     /// A widget was borrowed mutably since the last frame, i.e. something
@@ -354,6 +376,8 @@ impl WidgetHost {
             semantics: SemanticsTree::new(),
             focus,
             scope,
+            overlay: OverlayManager::new(),
+            overlays: Vec::new(),
             size: Size::new(800.0, 600.0),
             layout_dirty: true,
             content_dirty: false,
@@ -377,6 +401,165 @@ impl WidgetHost {
     ) -> NodeId {
         assert!(parent.0 < self.nodes.len(), "unknown parent node");
         NodeId(self.push(Some(parent.0), style, None, Box::new(widget)))
+    }
+
+    // --- overlays ----------------------------------------------------------
+
+    /// Opens `content` as an overlay above the main tree, escaping its parent's
+    /// clip so popups, dialogs and sheets can actually be seen and clicked.
+    ///
+    /// The content is laid out independently against the viewport at `bounds`,
+    /// painted after (and therefore on top of) every main-tree node, and given
+    /// hit-test priority — a modal overlay also swallows clicks that fall
+    /// outside its content (the scrim). Focus moves into the content on open
+    /// and is restored to whatever held it before on close.
+    pub fn open_overlay(
+        &mut self,
+        kind: OverlayKind,
+        modal: bool,
+        bounds: Rect,
+        content: impl WidgetAny + 'static,
+    ) -> OverlayId {
+        let index = self.push(None, LayoutStyle::default(), None, Box::new(content));
+        self.nodes[index].is_overlay = true;
+        // Reconcile the content immediately so a composite (e.g. a popup list)
+        // mounts its children before this frame's layout pass.
+        self.reconcile_subtree(index);
+        let id = self
+            .overlay
+            .push(kind, self.nodes[index].id, bounds, modal, 0.0);
+        let previous_focus = self.focus.focused();
+        self.set_focus(self.nodes[index].id);
+        self.overlays.push(OverlaySlot {
+            id,
+            node: index,
+            bounds,
+            previous_focus,
+        });
+        id
+    }
+
+    /// Closes and unmounts the overlay `id`, restoring focus to whatever held it
+    /// before the overlay opened.
+    pub fn close_overlay(&mut self, id: OverlayId) {
+        let Some(pos) = self.overlays.iter().position(|o| o.id == id) else {
+            return;
+        };
+        let slot = self.overlays.remove(pos);
+        match slot.previous_focus {
+            Some(focused) => self.set_focus(focused),
+            None => {
+                self.clear_focus_flag(self.nodes[slot.node].id);
+                self.focus.blur();
+            }
+        }
+        self.unmount_subtree(slot.node);
+        self.overlay.remove(id);
+    }
+
+    /// Number of overlays currently open.
+    pub fn overlay_count(&self) -> usize {
+        self.overlays.len()
+    }
+
+    /// Whether `id` is still an open overlay.
+    pub fn has_overlay(&self, id: OverlayId) -> bool {
+        self.overlays.iter().any(|o| o.id == id)
+    }
+
+    fn overlay_node(&self, id: OverlayId) -> Option<usize> {
+        self.overlays.iter().find(|o| o.id == id).map(|o| o.node)
+    }
+
+    /// True when `index` sits under an overlay root (by ancestry), so the main
+    /// paint/layout passes should leave it to the overlay-specific ones.
+    fn is_in_overlay(&self, mut index: usize) -> bool {
+        while let Some(parent) = self.nodes[index].parent {
+            if self.nodes[parent].is_overlay {
+                return true;
+            }
+            index = parent;
+        }
+        false
+    }
+
+    /// Lays out every open overlay independently against the viewport and
+    /// positions the result at its `bounds` origin, writing hit regions with a
+    /// z above the main tree so overlays always win a contest.
+    fn layout_overlays(&mut self) {
+        const OVERLAY_Z_BASE: i32 = 1_000_000_000;
+        let slots: Vec<(usize, Rect, OverlayId)> = self
+            .overlays
+            .iter()
+            .map(|s| (s.node, s.bounds, s.id))
+            .collect();
+        for (index, bounds, id) in slots {
+            let mut style = LayoutStyle::default();
+            style.width = Some(bounds.width() as f32);
+            style.height = Some(bounds.height() as f32);
+            self.layout.set_style(self.nodes[index].layout_node, style);
+            self.layout
+                .compute(self.nodes[index].layout_node, bounds.size());
+            self.translate_subtree(index, bounds.x0, bounds.y0, OVERLAY_Z_BASE);
+            self.overlay.set_bounds(id, self.nodes[index].bounds);
+        }
+    }
+
+    /// Walks a subtree, offsetting every node's `bounds` by `(dx, dy)` (the
+    /// overlay's viewport origin) and registering a high-z hit region so it
+    /// participates in hit-testing on top of the main tree.
+    fn translate_subtree(&mut self, root: usize, dx: f64, dy: f64, z_base: i32) {
+        let mut stack = vec![root];
+        while let Some(index) = stack.pop() {
+            if self.nodes[index].dead {
+                continue;
+            }
+            for &child in &self.nodes[index].children {
+                if !self.nodes[child].dead {
+                    stack.push(child);
+                }
+            }
+            let out = self.layout.layout(self.nodes[index].layout_node);
+            let r = out.rect;
+            let bounds = Rect::from_origin_size(Point::new(r.x0 + dx, r.y0 + dy), r.size());
+            self.nodes[index].bounds = bounds;
+            let z = z_base + (self.nodes.len() as i32 - index as i32);
+            self.router.hits.set_region(
+                self.nodes[index].id,
+                HitRegion {
+                    bounds,
+                    native: None,
+                    z,
+                },
+            );
+        }
+    }
+
+    /// Deepest overlay node containing `point`, so a click inside an overlay
+    /// lands on the right child rather than the overlay root.
+    fn hit_test_overlay_subtree(&self, root: usize, point: Point) -> Option<ElementId> {
+        let mut best: Option<(usize, u32)> = None;
+        let mut stack = vec![root];
+        while let Some(index) = stack.pop() {
+            if self.nodes[index].dead {
+                continue;
+            }
+            for &child in &self.nodes[index].children {
+                if !self.nodes[child].dead {
+                    stack.push(child);
+                }
+            }
+            if self.nodes[index].bounds.contains(point) {
+                match best {
+                    None => best = Some((index, self.nodes[index].depth)),
+                    Some((_, depth)) if self.nodes[index].depth >= depth => {
+                        best = Some((index, self.nodes[index].depth))
+                    }
+                    _ => {}
+                }
+            }
+        }
+        best.map(|(index, _)| self.nodes[index].id)
     }
 
     /// Builds and mounts one composite child, applying `parent_request` (the
@@ -473,6 +656,7 @@ impl WidgetHost {
             dirty: true,
             children_dirty: true,
             dead: false,
+            is_overlay: false,
             scene_nodes: Vec::new(),
             text_measure,
         });
@@ -764,6 +948,8 @@ impl WidgetHost {
             self.run_layout();
             self.layout_dirty = false;
         }
+        // Overlays lay out against the viewport independently of the main tree.
+        self.layout_overlays();
         stats.layout_nodes = self.layout.node_count();
 
         self.paint(&mut stats);
@@ -840,6 +1026,11 @@ impl WidgetHost {
             if self.nodes[index].dead {
                 continue;
             }
+            // Overlays are laid out (and positioned) separately, against the
+            // viewport, so the main-tree pass must not also size them.
+            if self.nodes[index].is_overlay || self.is_in_overlay(index) {
+                continue;
+            }
             let output = self.layout.layout(self.nodes[index].layout_node);
             self.nodes[index].bounds = output.rect;
             let z = self.nodes[index].depth as i32 * 1_000_000 + index as i32;
@@ -869,6 +1060,10 @@ impl WidgetHost {
         }
 
         for index in 0..self.nodes.len() {
+            // Overlay subtrees are painted afterwards, on top of the main tree.
+            if self.nodes[index].is_overlay || self.is_in_overlay(index) {
+                continue;
+            }
             if self.nodes[index].dead {
                 // Unmount already pends these; drain defensively so a dead
                 // node can never keep a phantom scene node alive.
@@ -877,33 +1072,64 @@ impl WidgetHost {
                 }
                 continue;
             }
-            let prev = std::mem::take(&mut self.nodes[index].scene_nodes);
-            let mut next = Vec::new();
-            let leftover;
-            {
-                let node = &self.nodes[index];
-                let mut cx = NodePaintContext {
-                    scene: &mut self.scene,
-                    resources: &mut self.resources,
-                    glyphs: &mut self.glyph_cache,
-                    shaper: &mut self.shaper,
-                    prev,
-                    used: 0,
-                    next: &mut next,
-                    bounds: node.bounds,
-                };
-                node.widget.paint(&mut cx, node.id);
-                let (painted, stale) = cx.finish();
-                next = painted;
-                leftover = stale;
-            }
-            for id in leftover {
-                self.scene.remove(id);
-            }
-            self.nodes[index].scene_nodes = next;
-            stats.painted += 1;
+            self.paint_node(index, stats);
+        }
+
+        // Overlays paint last, so their content sits above everything beneath
+        // it in z — this is what lets a popup escape its parent's clip.
+        let overlay_nodes: Vec<usize> = self
+            .overlays
+            .iter()
+            .map(|s| s.node)
+            .filter(|&node| !self.nodes[node].dead)
+            .collect();
+        for node in overlay_nodes {
+            self.paint_overlay_subtree(node, stats);
         }
         self.scene.finish_update();
+    }
+
+    /// Paints one node into the scene, reusing its previous frame's scene nodes
+    /// positionally (so unchanged payloads produce no damage) and retiring the
+    /// ones it no longer produces.
+    fn paint_node(&mut self, index: usize, stats: &mut FrameStats) {
+        let prev = std::mem::take(&mut self.nodes[index].scene_nodes);
+        let mut next = Vec::new();
+        let leftover;
+        {
+            let node = &self.nodes[index];
+            let mut cx = NodePaintContext {
+                scene: &mut self.scene,
+                resources: &mut self.resources,
+                glyphs: &mut self.glyph_cache,
+                shaper: &mut self.shaper,
+                prev,
+                used: 0,
+                next: &mut next,
+                bounds: node.bounds,
+            };
+            node.widget.paint(&mut cx, node.id);
+            let (painted, stale) = cx.finish();
+            next = painted;
+            leftover = stale;
+        }
+        for id in leftover {
+            self.scene.remove(id);
+        }
+        self.nodes[index].scene_nodes = next;
+        stats.painted += 1;
+    }
+
+    /// Pre-order paint of an overlay subtree (parent before its children).
+    fn paint_overlay_subtree(&mut self, index: usize, stats: &mut FrameStats) {
+        if self.nodes[index].dead {
+            return;
+        }
+        self.paint_node(index, stats);
+        let children = self.nodes[index].children.clone();
+        for child in children {
+            self.paint_overlay_subtree(child, stats);
+        }
     }
 
     fn collect_semantics(&mut self) {
@@ -961,8 +1187,11 @@ impl WidgetHost {
     /// for key events) and returns whether any widget consumed it.
     pub fn dispatch(&mut self, event: Event) -> bool {
         let target = match event {
-            Event::Pointer(pointer) => self.router.resolve_target(pointer.position),
-            Event::Scroll(ScrollEvent { position, .. }) => self.router.resolve_target(position),
+            // Overlays win over the main tree, front-to-back; a modal overlay
+            // also swallows clicks outside its content (the scrim). The router
+            // only sees the main tree, so overlay hits are resolved here first.
+            Event::Pointer(pointer) => self.resolve_pointer(pointer.position),
+            Event::Scroll(ScrollEvent { position, .. }) => self.resolve_pointer(position),
             Event::Key(_) => self.focus.focused().map(|target| Hit {
                 target,
                 native: None,
@@ -1013,6 +1242,25 @@ impl WidgetHost {
 
     fn index_of(&self, id: ElementId) -> Option<usize> {
         self.nodes.iter().position(|node| node.id == id)
+    }
+
+    /// Resolves a pointer target, letting an open overlay take priority over the
+    /// main tree. A modal overlay returns its id even for points outside its
+    /// content (the scrim), and a hit there falls through to the overlay root
+    /// so the overlay can absorb or act on the dismissal.
+    fn resolve_pointer(&self, point: Point) -> Option<Hit> {
+        if let Some(overlay_id) = self.overlay.hit_test(point) {
+            if let Some(node) = self.overlay_node(overlay_id) {
+                let target = self
+                    .hit_test_overlay_subtree(node, point)
+                    .unwrap_or(self.nodes[node].id);
+                return Some(Hit {
+                    target,
+                    native: None,
+                });
+            }
+        }
+        self.router.resolve_target(point)
     }
 
     // --- focus -------------------------------------------------------------
