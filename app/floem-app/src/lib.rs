@@ -1100,6 +1100,41 @@ impl WidgetHost {
         (index < self.nodes.len()).then_some(NodeId(index))
     }
 
+    /// The mounted node holding `id` — the inverse of [`Self::node_id`].
+    pub fn node_for(&self, id: ElementId) -> Option<NodeId> {
+        self.index_of(id).map(NodeId)
+    }
+
+    /// Whether `node` is still part of the tree.
+    ///
+    /// Unmounting does not free the slot — live `NodeId`s have to stay valid —
+    /// so the slot keeps its widget and its box and only stops being walked.
+    /// Anything that *searches* the tree therefore has to ask, or it will find
+    /// a subtree that is no longer on screen.
+    pub fn is_mounted(&self, node: NodeId) -> bool {
+        self.nodes.get(node.0).is_some_and(|node| !node.dead)
+    }
+
+    /// Whether `node` still publishes `SemanticsHint` — mounted *and* its
+    /// widget declares something. The pair is the common question, and getting
+    /// it wrong is how a search ends up matching a retired node.
+    pub fn live_semantics_hint(&self, node: NodeId) -> Option<SemanticsHint> {
+        self.is_mounted(node)
+            .then(|| self.semantics_hint(node))
+            .flatten()
+    }
+
+    /// What this node announces to assistive technology, exactly as its widget
+    /// declares it; `None` when the widget publishes nothing.
+    ///
+    /// [`Self::semantics`] is the lowered, hierarchy-aware tree that goes out
+    /// to the platform. This is the raw declaration behind one of its entries —
+    /// which is what a caller resolving a node by label or role wants, since it
+    /// answers for the *widget* rather than for the tree's grouping of it.
+    pub fn semantics_hint(&self, node: NodeId) -> Option<SemanticsHint> {
+        self.nodes.get(node.0)?.widget.semantics_hint()
+    }
+
     pub fn bounds(&self, node: NodeId) -> Rect {
         self.nodes[node.0].bounds
     }

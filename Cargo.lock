@@ -1972,6 +1972,7 @@ dependencies = [
  "floem-runtime-core",
  "floem-scene",
  "floem-services",
+ "floem-testkit",
  "floem-text",
  "floem-types",
  "floem-widgets",
@@ -2269,6 +2270,20 @@ dependencies = [
  "floem",
  "serial_test",
  "ui-events",
+]
+
+[[package]]
+name = "floem-testkit"
+version = "0.2.0"
+dependencies = [
+ "floem-app",
+ "floem-core",
+ "floem-layout",
+ "floem-platform",
+ "floem-renderer-software",
+ "floem-scene",
+ "floem-types",
+ "floem-widgets",
 ]
 
 [[package]]
