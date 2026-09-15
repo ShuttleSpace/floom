@@ -36,29 +36,81 @@ import json, sys
 from pathlib import Path
 
 meta = json.loads(Path(sys.argv[1]).read_text())
-packages = {p["name"]: p for p in meta["packages"]}
 resolve = meta.get("resolve")
 nodes = {n["id"]: n for n in resolve["nodes"]} if resolve else {}
+
+
+def norm(name: str) -> str:
+    """Cargo's resolve graph spells dependencies the way the *lib target* is
+    spelled — `floem_core`, not `floem-core` — while manifests and this script
+    use hyphens. Comparing the two without normalising makes every set
+    intersection below empty, i.e. the check reports PASS while checking
+    nothing. Everything is compared normalised.
+    """
+    return name.replace("-", "_")
+
+
+packages = {norm(p["name"]): p for p in meta["packages"]}
 
 # Map package id → name for resolve nodes
 id_to_name = {}
 for p in meta["packages"]:
     id_to_name[p["id"]] = p["name"]
 
+# Package ids of this workspace's own members. Names are not unique in the
+# resolve graph — a same-named crate outside the repo (a sibling checkout pulled
+# in by a path dependency) can shadow ours, and "first node whose name matches"
+# then checks the wrong crate. Always resolve within the workspace first.
+workspace_members = set(meta.get("workspace_members", []))
+
+
+def resolve_node(name: str):
+    """The resolve node for a *workspace member* named `name`, if there is one."""
+    wanted = norm(name)
+    for nid, node in nodes.items():
+        if nid in workspace_members and norm(id_to_name.get(nid, "")) == wanted:
+            return node
+    for nid, node in nodes.items():
+        if norm(id_to_name.get(nid, "")) == wanted:
+            return node
+    return None
+
+
 def pkg_deps(name: str) -> set[str]:
     """Direct dependency package names for a workspace package."""
+    name = norm(name)
     p = packages.get(name)
     if not p:
         return set()
     # Prefer resolve graph when available
-    for nid, node in nodes.items():
-        if id_to_name.get(nid) == name or nid.startswith(name + " "):
-            deps = set()
-            for dep in node.get("deps", []):
-                deps.add(dep["name"])
-            return deps
+    node = resolve_node(name)
+    if node is not None:
+        return {norm(dep["name"]) for dep in node.get("deps", [])}
     # Fallback: manifest deps (names only)
-    return {d["name"] for d in p.get("dependencies", []) if d.get("kind") in (None, "normal", "build")}
+    return {norm(d["name"]) for d in p.get("dependencies", [])
+            if d.get("kind") in (None, "normal", "build")}
+
+
+def shipped_deps(name: str) -> set[str]:
+    name = norm(name)
+    """Like `pkg_deps`, but without dev-dependencies.
+
+    Layering is a property of what a crate *ships*: a test-only dependency does
+    not make the crate's architecture depend on the thing it tests with. The app
+    dev-depending on `floem-testkit` while `floem-testkit` depends on the app is
+    the normal shape of an integration harness, not an upward edge.
+    """
+    node = resolve_node(name)
+    if node is not None:
+        deps = set()
+        for dep in node.get("deps", []):
+            kinds = {k.get("kind") for k in dep.get("dep_kinds", [])}
+            if kinds and kinds <= {"dev"}:
+                continue
+            deps.add(norm(dep["name"]))
+        return deps
+    return {norm(d["name"]) for d in packages[name].get("dependencies", [])
+            if d.get("kind") in (None, "normal", "build")}
 
 PLATFORM_HINTS = {
     "winit", "floem-winit", "floem-winit-core", "tgui-winit-ohos",
@@ -88,6 +140,15 @@ FUTURE = [
 
 failures = []
 notes = []
+
+# Every name set is compared against resolve-graph names, so normalise them all
+# once here — see `norm`.
+PLATFORM_HINTS = {norm(x) for x in PLATFORM_HINTS}
+GPU_HINTS = {norm(x) for x in GPU_HINTS}
+RENDERER_PACKAGES = {norm(x) for x in RENDERER_PACKAGES}
+WIDGET_HINTS = {norm(x) for x in WIDGET_HINTS}
+WIDGET_ALIASES = {norm(x) for x in WIDGET_ALIASES}
+FUTURE = [(crate, {norm(x) for x in banned}, msg) for crate, banned, msg in FUTURE]
 
 # --- Future crate rules ---
 for crate, banned, msg in FUTURE:
@@ -130,6 +191,95 @@ for w in sorted(WIDGET_HINTS):
         failures.append(f"FORBIDDEN {w} → platform/windowing {sorted(bad_platform)}")
     if not bad_renderer and not bad_platform:
         notes.append(f"OK {w}: no concrete renderer or platform dependency")
+
+# --- Layer order: no crate may depend on a crate above it ---
+#
+# The spec's §6 dependency flow (types → core → runtime → layout/text/scene →
+# ABI → backends), instantiated for the crates that exist today. §5 explicitly
+# allows the *directory* layout to be adapted; the dependency directions are the
+# normative part, and this is where they become mechanically checkable.
+#
+# `floem-accessibility` sits at L3 rather than with the rest of `framework/`
+# because the platform backends depend on it to publish semantics: it is a
+# neutral schema crate that happens to live under framework/.
+LAYERS: dict[str, int] = {}
+for _names, _level in [
+    (["floem-types"], 0),
+    (["floem-core"], 1),
+    (["floem-runtime-core", "floem-runtime", "floem-scheduler"], 2),
+    (
+        [
+            "floem-layout", "floem-style", "floem-text", "floem-scene",
+            "floem-virtual", "floem-accessibility",
+        ],
+        3,
+    ),
+    (
+        [
+            "floem-renderer", "floem-renderer-software", "floem-renderer-vello",
+            "floem-renderer-skia",
+            "floem-platform", "floem-platform-desktop", "floem-platform-android",
+            "floem-platform-ios", "floem-platform-harmony", "floem-platform-web",
+            "floem-platform-embedded",
+            "floem-native",
+        ],
+        4,
+    ),
+    (
+        [
+            "floem-animation", "floem-focus", "floem-gesture", "floem-overlay",
+            "floem-theme", "floem-store", "floem-task", "floem-forms",
+            "floem-navigation", "floem-persistence", "floem-services",
+            "floem-error", "floem-ime", "floem-editor",
+        ],
+        5,
+    ),
+    (["floem-widgets"], 6),
+    (["floem-app"], 7),
+    (["floem-testkit"], 8),
+]:
+    for _n in _names:
+        LAYERS[_n] = _level
+
+# Upward edges that exist, are understood, and are not to be "fixed" blindly.
+# Each entry needs a reason; an entry without one is a bug waiting to happen.
+UPWARD_ALLOW: dict[tuple[str, str], str] = {}
+LAYERS = {norm(k): v for k, v in LAYERS.items()}
+UPWARD_ALLOW = {(norm(a), norm(b)): why for (a, b), why in UPWARD_ALLOW.items()}
+
+for crate, level in sorted(LAYERS.items()):
+    if crate not in packages:
+        notes.append(f"SKIP layer check {crate}: not in workspace yet")
+        continue
+    bad = []
+    for dep in sorted(shipped_deps(crate)):
+        dep_level = LAYERS.get(dep)
+        if dep_level is None or dep_level <= level:
+            continue
+        if (crate, dep) in UPWARD_ALLOW:
+            notes.append(
+                f"ALLOWLIST {crate}(L{level}) → {dep}(L{dep_level}): "
+                f"{UPWARD_ALLOW[(crate, dep)]}"
+            )
+            continue
+        bad.append(f"{dep}(L{dep_level})")
+    if bad:
+        failures.append(f"UPWARD {crate}(L{level}) → {', '.join(bad)}")
+    else:
+        notes.append(f"OK {crate}(L{level}): no dependency on a higher layer")
+
+# Crates outside the layer table that a 2.0 crate still depends on: the legacy
+# reactive graph. Reported, not failed — see the topology decision doc.
+LEGACY_DEPS = {norm(x) for x in ("floem_reactive",)}
+reach = sorted(
+    {d for c in LAYERS if c in packages for d in shipped_deps(c)} & LEGACY_DEPS
+)
+if reach:
+    users = sorted(c for c in LAYERS if c in packages and shipped_deps(c) & LEGACY_DEPS)
+    notes.append(
+        f"NOTE legacy dependency: {', '.join(users)} still depend on "
+        f"{', '.join(reach)} (the v1 reactive crate, not a 2.0 layer)"
+    )
 
 # --- Legacy allowlist: monolithic floem mixes concerns ---
 LEGACY_ALLOW = {
