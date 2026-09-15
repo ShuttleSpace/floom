@@ -1,0 +1,34 @@
+[package]
+name = "floem2-probe"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+description = "Device-verification probe: in one window, every control the on-screen cases need"
+
+# The real-window stack pulls in winit and wgpu. Everything is optional so the
+# default workspace build (and CI) stays dependency-light; `--features real`
+# activates the full desktop stack.
+[features]
+default = []
+real = [
+    "dep:floem-platform-desktop",
+    "dep:floem-renderer-vello",
+    "floem-platform-desktop/winit",
+    "floem-renderer-vello/gpu",
+]
+
+[dependencies]
+floem-app = { path = "../../app/floem-app", version = "0.2.0" }
+floem-core = { path = "../../crates/floem-core", version = "0.2.0" }
+floem-layout = { path = "../../layout/floem-layout", version = "0.2.0" }
+floem-platform = { path = "../../platform/floem-platform", version = "0.2.0" }
+floem-types = { path = "../../crates/floem-types", version = "0.2.0" }
+floem-widgets = { path = "../../widgets/floem-widgets", version = "0.2.0" }
+floem-platform-desktop = { path = "../../platform/floem-platform-desktop", version = "0.2.0", optional = true }
+floem-renderer-vello = { path = "../../render/floem-renderer-vello", version = "0.2.0", optional = true }
+
+[[bin]]
+name = "floem2-probe"
+path = "src/main.rs"
+required-features = ["real"]

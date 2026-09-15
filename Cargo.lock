@@ -2573,6 +2573,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "floem2-probe"
+version = "0.2.0"
+dependencies = [
+ "floem-app",
+ "floem-core",
+ "floem-layout",
+ "floem-platform",
+ "floem-platform-desktop",
+ "floem-renderer-vello",
+ "floem-types",
+ "floem-widgets",
+]
+
+[[package]]
 name = "floem2-window"
 version = "0.2.0"
 dependencies = [
