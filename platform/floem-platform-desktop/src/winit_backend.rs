@@ -507,7 +507,9 @@ impl Platform for WinitPlatform {
     }
 
     fn capabilities(&self) -> PlatformCapabilities {
-        PlatformCapabilities::desktop_default()
+        // See `DesktopPlatform::capabilities` — no bridge yet, and one place
+        // decides the flag.
+        crate::native::desktop_capabilities(false)
     }
 
     /// Queue a window request; it is realised on the next event-loop callback.

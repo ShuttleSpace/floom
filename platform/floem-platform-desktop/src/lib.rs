@@ -7,6 +7,8 @@
 
 pub mod accessibility;
 
+pub mod native;
+
 #[cfg(feature = "winit")]
 pub mod winit_backend;
 
@@ -15,6 +17,11 @@ pub mod winit_input;
 
 #[cfg(feature = "winit")]
 pub use winit_backend::{WinitApp, WinitPlatform, run};
+
+pub use native::{
+    DesktopNativeBridge, NativeViewHost, ViewPlacement, desktop_capabilities, mirror_device,
+    to_view_placement,
+};
 
 use std::collections::HashMap;
 use std::time::Instant;
@@ -241,7 +248,12 @@ impl Platform for DesktopPlatform {
     }
 
     fn capabilities(&self) -> PlatformCapabilities {
-        PlatformCapabilities::desktop_default()
+        // No native-view bridge is installed on this platform yet, so the flag
+        // stays off — advertising it would make every `NativeSurface` mount fail
+        // with "no supported mode". `native::desktop_capabilities` is the single
+        // place the flag is derived from the bridge's presence, so step 7's OS
+        // half flips this one argument and nothing else.
+        desktop_capabilities(false)
     }
 
     fn create_window(&mut self, config: WindowConfig) -> WindowId {

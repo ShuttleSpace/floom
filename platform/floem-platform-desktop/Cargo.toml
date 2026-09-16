@@ -17,6 +17,10 @@ winit = ["dep:winit"]
 
 [dependencies]
 floem-accessibility = { path = "../../framework/floem-accessibility", version = "0.2.0" }
+# Same layer (L4), so the architecture gate permits this edge: the desktop
+# backend implements the native-view provider ABI, and `floem-native` stays a
+# leaf that knows nothing about an OS.
+floem-native = { path = "../../native/floem-native", version = "0.2.0" }
 floem-platform = { path = "../floem-platform", version = "0.2.0" }
 floem-types = { path = "../../foundation/floem-types", version = "0.2.0" }
 winit = { workspace = true, optional = true }
