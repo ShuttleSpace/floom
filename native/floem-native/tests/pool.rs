@@ -19,7 +19,12 @@ fn release_then_acquire_other_key_recycles_slot() {
     assert_eq!(pool.live_count(), 0);
     assert_eq!(pool.free_count(), 1);
     let s2 = pool.acquire(2);
-    assert_eq!(s2, s1, "freed slot should be reused for a new key");
+    assert_eq!(s2.id, s1.id, "freed slot should be reused for a new key");
+    assert_eq!(
+        s2.generation,
+        s1.generation + 1,
+        "a recycled slot must be distinguishable from the one whose handle was destroyed"
+    );
     assert_eq!(pool.live_count(), 1);
     assert_eq!(pool.free_count(), 0);
 }
@@ -31,10 +36,38 @@ fn bump_generation_changes_live_slot_only() {
     let bumped = pool.bump_generation(&7).unwrap();
     assert_eq!(bumped.id, s1.id);
     assert_eq!(bumped.generation, s1.generation + 1);
-    // Releasing and re-acquiring keeps the bumped generation (slot reused as-is).
+    // Recycling bumps again on top of the manual bump: every rebind gets a
+    // generation no previous holder of this id has seen.
     pool.release(&7);
     let s2 = pool.acquire(7);
-    assert_eq!(s2, bumped);
+    assert_eq!(s2.id, bumped.id);
+    assert_eq!(s2.generation, bumped.generation + 1);
+}
+
+#[test]
+fn every_recycle_of_the_same_id_gets_a_fresh_generation() {
+    // The 16.2 case: scrolling 1k rows through a 10-row viewport reuses the
+    // same handful of ids over and over. A backend told "slot id 3, generation
+    // 1" twice cannot tell the second row from the first, and would keep
+    // drawing the destroyed view.
+    let mut pool: NativeViewPool<usize> = NativeViewPool::new();
+    let mut ids = Vec::new();
+    let mut generations = Vec::new();
+    for key in 0..50 {
+        let slot = pool.acquire(key);
+        ids.push(slot.id);
+        generations.push(slot.generation);
+        pool.release(&key);
+    }
+    assert!(
+        ids.windows(2).all(|w| w[0] == w[1]),
+        "with one row live at a time every acquire should reuse one id"
+    );
+    assert_eq!(
+        generations,
+        (1..=50u32).collect::<Vec<_>>(),
+        "each recycle must bump the generation"
+    );
 }
 
 #[test]

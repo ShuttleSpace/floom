@@ -49,20 +49,40 @@ impl<K: Clone + Eq + Hash> NativeViewPool<K> {
 
     /// Live slot for `key`. Mints a fresh slot (reusing a freed one if present)
     /// when the key is not already live.
+    ///
+    /// A **reused** slot always comes back with a bumped generation. That is
+    /// the whole point of the generation: the previous holder's native handle
+    /// has been destroyed, so the backend must bind a new one, and it can only
+    /// tell "recycled" from "still mine" by the generation. Reusing a slot at
+    /// the same generation hands the backend a name that still refers to a dead
+    /// view.
     pub fn acquire(&mut self, key: K) -> NativeSlot {
         if let Some(&slot) = self.live.get(&key) {
             return slot;
         }
-        let slot = self.free.pop().unwrap_or_else(|| {
-            let idx = self.next_index;
-            self.next_index += 1;
-            NativeSlot {
-                id: NativeViewId::new(idx, 1),
-                generation: 1,
+        let slot = match self.free.pop() {
+            Some(recycled) => NativeSlot {
+                id: recycled.id,
+                generation: Self::next_generation(recycled.generation),
+            },
+            None => {
+                let idx = self.next_index;
+                self.next_index += 1;
+                NativeSlot {
+                    id: NativeViewId::new(idx, 1),
+                    generation: 1,
+                }
             }
-        });
+        };
         self.live.insert(key, slot);
         slot
+    }
+
+    fn next_generation(generation: u32) -> u32 {
+        match generation.wrapping_add(1) {
+            0 => 1,
+            next => next,
+        }
     }
 
     /// Release the slot bound to `key` back to the free list (e.g. its item
@@ -79,10 +99,7 @@ impl<K: Clone + Eq + Hash> NativeViewPool<K> {
     /// Bump the generation of a live slot, signalling the platform to re-bind it.
     pub fn bump_generation(&mut self, key: &K) -> Option<NativeSlot> {
         let slot = self.live.get_mut(key)?;
-        slot.generation = slot.generation.wrapping_add(1);
-        if slot.generation == 0 {
-            slot.generation = 1;
-        }
+        slot.generation = Self::next_generation(slot.generation);
         Some(*slot)
     }
 
