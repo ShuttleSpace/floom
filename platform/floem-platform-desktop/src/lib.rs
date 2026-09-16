@@ -9,6 +9,9 @@ pub mod accessibility;
 
 pub mod native;
 
+#[cfg(target_os = "macos")]
+pub mod native_appkit;
+
 #[cfg(feature = "winit")]
 pub mod winit_backend;
 
@@ -18,9 +21,14 @@ pub mod winit_input;
 #[cfg(feature = "winit")]
 pub use winit_backend::{WinitApp, WinitPlatform, run};
 
+#[cfg(target_os = "macos")]
+pub use native_appkit::{
+    MacNativeViewHost, NativeParent, NativeViewUnavailable, ViewFactory, ViewFrame,
+};
+
 pub use native::{
-    DesktopNativeBridge, NativeViewHost, ViewPlacement, desktop_capabilities, mirror_device,
-    to_view_placement,
+    DesktopNativeBridge, NativeViewHost, Origin, ViewFrames, ViewPlacement, desktop_capabilities,
+    device_to_points, mirror_device, os_frame, split_placement, to_view_placement,
 };
 
 use std::collections::HashMap;

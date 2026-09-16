@@ -38,13 +38,13 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use floem_app::{AppRunner, NodeId, WidgetHost};
 use floem_core::{Axis, Child, ChildKey, LayoutRequest};
 use floem_layout::LayoutStyle;
-use floem_platform::WindowConfig;
+use floem_platform::{Capability, Platform, WindowConfig};
 use floem_platform_desktop::winit_backend::{WinitApp, WinitPlatform, run};
 use floem_renderer_vello::VelloGpuPresenter;
-use floem_types::Size;
+use floem_types::{NativeViewKind, Size, WindowId};
 use floem_widgets::{
-    BottomSheet, Button, Dialog, NavDestination, NavigationDrawer, Popup, Select, Stack, Text,
-    TextField,
+    BottomSheet, Button, Dialog, NativeSurface, NavDestination, NavigationDrawer, Popup, Select,
+    Stack, Text, TextField,
 };
 
 /// Which surface the last click asked for. Buttons write, the frame hook reads.
@@ -74,6 +74,16 @@ struct ProbeApp {
     surfaces: Option<Surfaces>,
     status: Option<NodeId>,
     frames: u32,
+    /// The window's content view, once a native-view provider has been
+    /// installed. Kept so the *OS* can be asked where the participant landed:
+    /// asking the bridge would return the bridge's own story, which is the one
+    /// answer a device check is not allowed to trust.
+    #[cfg(target_os = "macos")]
+    parent: Option<floem_platform_desktop::NativeParent>,
+    /// The view tree as last printed, so a *change* is what triggers the next
+    /// line rather than a frame count that depends on how the loop is batched.
+    #[cfg(target_os = "macos")]
+    reported: Option<Vec<floem_platform_desktop::ViewFrame>>,
 }
 
 /// The four surfaces, by node. Resolved once, then held: the nodes stay put for
@@ -87,6 +97,38 @@ struct Surfaces {
 }
 
 impl WinitApp for ProbeApp {
+    /// Native composition is installed here, and this is the only hook that can
+    /// do it: the provider needs the window's content view, and the window does
+    /// not exist until the OS has created it.
+    ///
+    /// Installing a provider is also what flips `Capability::NATIVE_VIEW` in
+    /// `Platform::capabilities`, which is why the two are done together and the
+    /// result is printed: a window that mounts nothing looks exactly like a
+    /// window that works, and this is the line that tells them apart.
+    fn window_created(&mut self, platform: &mut WinitPlatform, window: WindowId) {
+        #[cfg(target_os = "macos")]
+        {
+            match platform.native_view_provider(window) {
+                Ok(provider) => {
+                    self.runner.host_mut().set_native_provider(provider);
+                    self.parent = platform.native_view_parent(window).ok();
+                    eprintln!(
+                        "probe: native views installed, NATIVE_VIEW {}",
+                        platform.capabilities().supports(Capability::NATIVE_VIEW)
+                    );
+                }
+                Err(err) => eprintln!("probe: no native views ({err})"),
+            }
+        }
+        #[cfg(not(target_os = "macos"))]
+        {
+            // No provider on this platform yet, so `NATIVE_VIEW` stays off and
+            // the participant is refused — which is the honest outcome and the
+            // same code path as a macOS session whose install failed.
+            let _ = (platform, window);
+        }
+    }
+
     fn events(&mut self, platform: &mut WinitPlatform) {
         self.runner.pump(platform);
         self.sync();
@@ -122,6 +164,8 @@ impl ProbeApp {
             }
         };
 
+        self.report_native_tree();
+
         let want = self.request.load(Ordering::SeqCst);
         if want != self.applied {
             let host = self.runner.host_mut();
@@ -154,6 +198,73 @@ impl ProbeApp {
             text.set_content(format!("status: showing {}", name_of(self.applied)));
         }
     }
+
+    /// Prints the OS's own view tree under the window, whenever it changes.
+    ///
+    /// The left-hand side of D1's assertion: the framework computes where a
+    /// participant goes, and this is what the OS ended up with. A device check
+    /// reads them against each other, so what matters is that these numbers come
+    /// from `NSView::frame` and not from our own bookkeeping.
+    #[cfg(target_os = "macos")]
+    fn report_native_tree(&mut self) {
+        let Some(parent) = self.parent.as_ref() else {
+            return;
+        };
+        let subviews = parent.subview_frames();
+        if self.reported.as_ref() == Some(&subviews) {
+            return;
+        }
+        let (width, height) = parent.extent();
+        eprintln!(
+            "probe: content view {width}x{height} points, flipped {}",
+            parent.is_flipped()
+        );
+        for (index, view) in subviews.iter().enumerate() {
+            eprintln!(
+                "probe:   native view {index}: frame {:?} points, hidden {}, children {}",
+                view.frame, view.hidden, view.children
+            );
+        }
+        // The right-hand side of the same assertion. Printed next to the frames
+        // above on purpose: the seam case is a claim about *agreement* between
+        // these two, so seeing one without the other is not evidence.
+        for (slot, state) in self.runner.host().participant_states() {
+            eprintln!(
+                "probe:   framework state: slot {} gen {} rect ({}, {})..({}, {}) scale {} visible {}",
+                slot.id.index(),
+                slot.generation,
+                state.rect.x0,
+                state.rect.y0,
+                state.rect.x1,
+                state.rect.y1,
+                state.scale,
+                state.visible,
+            );
+            // The same box in the units the line above does *not* use, so the
+            // two halves of the assertion can be compared without arithmetic.
+            // `points` is what an AppKit frame has to say to land on the device
+            // rect the provider was handed, and it is what `NSView::frame`
+            // reported above: agreeing is the claim, and a shell script can
+            // check it where eyes cannot.
+            let device = state.device_rect();
+            let scale = state.scale;
+            let points = (
+                device.x as f64 / scale,
+                device.y as f64 / scale,
+                device.width as f64 / scale,
+                device.height as f64 / scale,
+            );
+            eprintln!(
+                "probe:   framework expects: frame {points:?} points = ({}, {}, {}, {}) device pixels",
+                device.x, device.y, device.width, device.height,
+            );
+        }
+        self.reported = Some(subviews);
+    }
+
+    /// Without an OS handle there is nothing to ask the OS.
+    #[cfg(not(target_os = "macos"))]
+    fn report_native_tree(&mut self) {}
 }
 
 fn main() {
@@ -259,6 +370,19 @@ fn main() {
                     }),
             )
         })
+        // The native participant (Phase 16). On macOS this is a real `NSView`
+        // under the window's content view; elsewhere the request is refused and
+        // the surface falls back in-tree, which is the honest outcome and the
+        // same path a macOS session takes when no provider was installed.
+        //
+        // Placed between two framework boxes on purpose: the seam case (D1) is
+        // about whether the participant's edges agree with the pixels the scene
+        // painted next to it, so there has to be something next to it.
+        .push(|| Box::new(Text::new("native surface below").size(13.0)))
+        .push_layout(LayoutRequest::new().width(200.0).height(80.0), || {
+            Box::new(NativeSurface::new(NativeViewKind::Video).size(200.0, 80.0))
+        })
+        .push(|| Box::new(Text::new("native surface above").size(13.0)))
         .push(|| {
             Box::new(Dialog::new().title("modal dialog").body(Child::new(
                 ChildKey::index(0),
@@ -305,6 +429,10 @@ fn main() {
         surfaces: None,
         status: None,
         frames: 0,
+        #[cfg(target_os = "macos")]
+        parent: None,
+        #[cfg(target_os = "macos")]
+        reported: None,
     };
 
     let windows = vec![WindowConfig {

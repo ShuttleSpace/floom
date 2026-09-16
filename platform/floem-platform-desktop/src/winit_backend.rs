@@ -188,6 +188,17 @@ pub struct WinitPlatform {
     clipboard: String,
     started: Instant,
     ime_enabled: HashMap<u32, bool>,
+    /// The platform capabilities to report once a native-view provider has been
+    /// handed out, and `None` until then.
+    ///
+    /// Stored rather than recomputed from a bool, so that the flag has exactly
+    /// one source: the bridge's own
+    /// [`DesktopNativeBridge::platform_capabilities`](crate::DesktopNativeBridge::platform_capabilities).
+    /// The distinction matters because advertising
+    /// [`Capability::NATIVE_VIEW`](floem_platform::Capability::NATIVE_VIEW) makes
+    /// every `NativeSurface` mount try to composite, so a session that never
+    /// built a bridge must not advertise it.
+    native_caps: Option<PlatformCapabilities>,
 }
 
 impl std::fmt::Debug for WinitPlatform {
@@ -218,7 +229,86 @@ impl WinitPlatform {
             clipboard: String::new(),
             started: Instant::now(),
             ime_enabled: HashMap::new(),
+            native_caps: None,
         }
+    }
+
+    /// Build the native-view provider over `window`'s content view.
+    ///
+    /// The caller installs it — `WidgetHost::set_native_provider` — because the
+    /// provider is the app's to own: this crate knows how to make an AppKit one
+    /// and nothing above it needs to know that AppKit was involved. Handing one
+    /// out is what flips [`Platform::capabilities`](floem_platform::Platform::capabilities)
+    /// to advertising [`Capability::NATIVE_VIEW`], which is why the flag is set
+    /// here and not at construction.
+    ///
+    /// Calling this twice for one window builds a second set of views over the
+    /// same parent rather than returning the first; a caller that installs both
+    /// has asked for two providers, and refusing the second would be the
+    /// surprising behaviour.
+    #[cfg(target_os = "macos")]
+    pub fn native_view_provider(
+        &mut self,
+        window: WindowId,
+    ) -> Result<
+        Box<dyn floem_native::NativeViewProvider>,
+        crate::native_appkit::NativeViewUnavailable,
+    > {
+        use objc2::MainThreadMarker;
+
+        use crate::DesktopNativeBridge;
+        use crate::native_appkit::{MacNativeViewHost, NativeViewUnavailable};
+
+        let parent = self.native_view_parent(window)?;
+        let mtm = MainThreadMarker::new().ok_or(NativeViewUnavailable::NotMainThread)?;
+
+        let bridge = DesktopNativeBridge::over(MacNativeViewHost::new(parent, mtm));
+        self.native_caps = Some(bridge.platform_capabilities());
+        Ok(Box::new(bridge))
+    }
+
+    /// The view participants would be added to, for `window`.
+    ///
+    /// Public as well as used by [`Self::native_view_provider`], because a
+    /// device check has to be able to ask the *OS* where a participant landed,
+    /// and the OS's answer starts at this view's tree. Going through the bridge
+    /// instead would return the bridge's own story, which is the one thing the
+    /// check is not allowed to trust.
+    #[cfg(target_os = "macos")]
+    pub fn native_view_parent(
+        &self,
+        window: WindowId,
+    ) -> Result<crate::native_appkit::NativeParent, crate::native_appkit::NativeViewUnavailable>
+    {
+        use objc2::rc::Retained;
+        use objc2_app_kit::NSView;
+        use winit::raw_window_handle::RawWindowHandle;
+
+        use crate::native_appkit::{NativeParent, NativeViewUnavailable};
+
+        let adapter = self
+            .windows
+            .get(&window.index())
+            .filter(|w| w.id == window)
+            .ok_or(NativeViewUnavailable::UnknownWindow)?;
+        let handle = adapter
+            .native
+            .window_handle()
+            .map_err(|_| NativeViewUnavailable::NoNativeHandle)?;
+        let RawWindowHandle::AppKit(handle) = handle.as_raw() else {
+            return Err(NativeViewUnavailable::NotAppKit);
+        };
+        // SAFETY: the view pointer comes from the window winit owns and that we
+        // just looked up, so it is live; `retain` takes our own reference to it,
+        // which is what makes holding it past this call sound.
+        let parent = unsafe { Retained::retain(handle.ns_view.as_ptr().cast::<NSView>()) }
+            .ok_or(NativeViewUnavailable::NoNativeHandle)?;
+        Ok(NativeParent::from_retained(parent))
+    }
+
+    /// Whether a native-view provider has been built for this session.
+    pub fn has_native_views(&self) -> bool {
+        self.native_caps.is_some()
     }
 
     pub fn ime_is_enabled(&self, window: WindowId) -> bool {
@@ -507,9 +597,12 @@ impl Platform for WinitPlatform {
     }
 
     fn capabilities(&self) -> PlatformCapabilities {
-        // See `DesktopPlatform::capabilities` — no bridge yet, and one place
-        // decides the flag.
-        crate::native::desktop_capabilities(false)
+        // The bridge's own answer once one exists, and `DesktopPlatform`'s
+        // no-bridge answer until then. Both come from `desktop_capabilities`, so
+        // the flag is derived in exactly one place — this is the call site that
+        // can know whether a bridge was built.
+        self.native_caps
+            .unwrap_or_else(|| crate::native::desktop_capabilities(false))
     }
 
     /// Queue a window request; it is realised on the next event-loop callback.

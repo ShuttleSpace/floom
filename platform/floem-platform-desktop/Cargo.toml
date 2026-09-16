@@ -25,4 +25,29 @@ floem-platform = { path = "../floem-platform", version = "0.2.0" }
 floem-types = { path = "../../foundation/floem-types", version = "0.2.0" }
 winit = { workspace = true, optional = true }
 
+# The native-view host (Phase 16, task 16.2, step 7). AppKit is reached through
+# `objc2`, at the versions the workspace already pins for the legacy crate and
+# for `floem-winit-appkit` — no new major, no second runtime. Not inheritable
+# from `[workspace.dependencies]`, which does not carry them; the versions here
+# are the same numbers and the lock file keeps them aligned.
+#
+# `NSResponder` is here for the first-responder type in the focus path and
+# `NSWindow` for `makeFirstResponder:` and the backing scale factor, so both are
+# load-bearing rather than transitive.
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2 = { version = "0.6", default-features = false, features = ["std"] }
+objc2-app-kit = { version = "0.3", default-features = false, features = [
+    "std",
+    "objc2-core-foundation",
+    "NSView",
+    "NSResponder",
+    "NSWindow",
+] }
+objc2-foundation = { version = "0.3", default-features = false, features = [
+    "std",
+    "objc2-core-foundation",
+    "NSGeometry",
+    "NSObject",
+] }
+
 [dev-dependencies]

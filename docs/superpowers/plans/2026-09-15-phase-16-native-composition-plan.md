@@ -221,49 +221,79 @@ findings worth carrying forward:
   meant for whatever was painted where it used to be. Withdrawing the *native*
   claim is not enough — the node is still a widget, and a deep node's region
   outranks a shallow one's. Off-screen participants now have no region at all.
-- **Step 7's headless half is done (`6829445`).** `floem-platform-desktop/src/native.rs`
-  holds the `NativeState` → `ViewPlacement` translation and the
-  `NativeViewProvider` impl over a `NativeViewHost` trait, 12 tests. What is
-  left of step 7 is the OS half: six trait methods per platform. Both
-  `Platform::capabilities` impls now return `desktop_capabilities(false)`, so
-  `NATIVE_VIEW` stays off until a bridge is installed — see below.
+- **Step 7's macOS half is done (`6829445` for the translation layer, then the
+  AppKit host).** `floem-platform-desktop/src/native.rs` holds the
+  `NativeState` → `ViewPlacement` translation and the `NativeViewProvider` impl
+  over a `NativeViewHost` trait; `native_appkit.rs` holds the AppKit
+  `NativeViewHost`, and `WinitPlatform::native_view_provider` builds one from
+  winit's `RawWindowHandle::AppKit`'s `ns_view`. What is left of step 7 is the
+  Win32 and
+  X11 trait impls.
 
 **Step 7: what landed, and what is left.** The bridge is the only part of 16.2
-that needs an OS. It split into a translation layer that needs no window and six
-OS calls, and the first half is in (`6829445`), so the arithmetic is written and
-pinned before anything device-gated depends on it:
+that needs an OS, and it split into a translation layer that needs no window and
+six OS calls behind a trait. Both halves are now in for macOS, in three commits
+that are worth reading in order, because the second and third changed what the
+first assumed:
 
 1. **Done.** `floem-platform-desktop` gains `floem-native` (same layer, L4, so
    the architecture gate permits it; verified the gate *sees* the edge by moving
    `floem-native` to L5, which fails `UPWARD floem_platform_desktop(L4) →
    floem_native(L5)`). `DesktopNativeBridge` implements `NativeViewProvider`
-   over a `NativeViewHost` trait. What is left is the trait impls — macOS:
-   `objc2-app-kit`'s `NSView` added with `addSubview:` to the `ns_view` out of
-   winit's `RawWindowHandle::AppKit` (the workspace already pins `objc2 0.6` /
-   `objc2-app-kit 0.3` for the legacy crate, so no new major). Windows: a child
-   `HWND` with `CreateWindowExW` and `SetWindowPos`. Linux: X11 subwindow, or
-   nothing at all on Wayland (D5 is the case that says so).
-2. **Done, and sharper than the recipe had it.** AppKit's origin is bottom-left
-   with `isFlipped == false`, so `y_os = parent_height - (y + height)`, and the
-   height must come from the *parent view* — identical to the window for a
-   participant added straight to the content view, different the moment one goes
-   into a container. The part that would have been written wrong: the mirror
-   goes **after** `to_device`, not before. Snapping rounds each edge
-   independently, so mirror-then-snap and snap-then-mirror disagree — at 2x, a
-   participant at logical `y 0.75..1.25` of a 10-unit parent is on device row 2
-   (`y_os = 17`) but lands on `y_os = 18` if the mirror goes first. One pixel,
-   and it is one pixel *of disagreement with the framework*, which is what a
-   seam is. `mirror_device` is an involution, so D1's assertion is exactly
-   `mirror_device(frame, parent_device_height) == state.device_rect()`.
-3. **Done, with one change.** `desktop_default` does not gain the flag;
-   `desktop_capabilities(native_view)` decides it, and both
-   `Platform::capabilities` impls call it with `false`. The flag is a promise in
-   both directions — advertising it with no provider fails every
-   `NativeSurface` mount with "no mode this participant accepts", and installing
-   a provider without it makes widgets refuse to try — so deriving it from the
-   bridge's presence is the only arrangement where the two cannot drift. A test
-   pins that the flag is the *only* difference from `desktop_default`. **The OS
-   half flips this one argument and touches nothing else.**
+   over a `NativeViewHost` trait.
+2. **Done, and the origin turned out not to be a platform fact.**
+   `to_view_placement` deliberately does *not* mirror: it returns the framework's
+   own top-left device rects, and `os_frame(rect, parent, scale, origin)` is the
+   one place the convention is applied. Two reasons, and the second is the one
+   that would have been missed:
+   - `ViewPlacement` is what a backend consumes, and a top-left backend (Win32,
+     X11) should place it unread. Mirroring in the shared layer would have handed
+     every future backend AppKit's convention and made the module's own docs
+     false.
+   - `NSView::isFlipped` is **per-view**, and winit's content view already
+     overrides it to `true`. So on a floem 2.0 window the correct answer is
+     `Origin::TopLeft` and no flip happens at all; on a bare `NSView` it is
+     `Origin::BottomLeft`. The AppKit host asks the parent (`parent.isFlipped()`)
+     rather than assuming, and a backend that hardcoded "macOS means bottom-left"
+     would place every participant mirrored about the parent's centre — a bug
+     that only shows up under a non-winit parent.
+   The mirror itself still has to go **after** `to_device`, not before, and
+   `os_frame` only accepts a `DeviceRect` so that the wrong order is unreachable
+   rather than merely discouraged. A test pins the case at both scales; D1's
+   assertion is the involution that falls out of it, `mirror_device(frame,
+   parent_device_height) == state.device_rect()`, which is checkable without
+   eyes once a window exists.
+3. **Done, and this is where the crop question was finally cashed in.** The
+   `clip` channel from the 16.2 rework is not a rect the OS is handed; a crop of
+   a view you do not own has to be a *second* view. `split_placement` turns
+   `{frame, crop}` into a container (the crop) and a content rect (the participant
+   offset inside it), and the AppKit host makes the container `isFlipped` so the
+   content's frame is a plain subtraction in the framework's own convention.
+   That is what makes `ClipSupport::Platform` true rather than aspirational, and
+   it is why a clipped participant on macOS is cropped rather than hidden. Two
+   alternatives were rejected on the way: shrinking the participant's frame
+   rescales its content (the D6 bug), and moving its `bounds` origin scrolls it
+   (which is a crop of the *page*, not of the view, and destroys the
+   participant's own scroll position).
+4. **Done, and the flag has exactly one source.** `WinitPlatform::capabilities`
+   answers with the bridge's own `platform_capabilities()` once
+   `native_view_provider` has built one, and with `desktop_capabilities(false)`
+   before that. The flag stays a promise in both directions — advertising it with
+   no provider fails every `NativeSurface` mount with "no mode this participant
+   accepts", and installing a provider without it makes widgets refuse to try at
+   all — so it is derived in one place and stored, never set by hand. The
+   remaining gap is honest and device-side: a caller who builds a provider and
+   throws it away leaves the flag on, which no amount of local bookkeeping fixes
+   without threading the app's host into the platform.
+
+The input mode had to travel with the placement rather than in a call of its own.
+On AppKit, "does this participant take the pointer" *is* part of how it is
+placed: the container answers `hitTest:` with `nil` when it does not, so the
+click reaches the framework's surface underneath. Folding it into
+`ViewPlacement` also puts it under the bridge's existing memo for free, which a
+separate `set_view_input` call would not be — that one would have to fire on the
+first placement as well, and the first placement is the one that is easiest to
+miss.
 
 Three things the translation layer had to decide, each with a test that fails if
 it is undone, and each of which the recipe did not anticipate:
@@ -285,6 +315,25 @@ it is undone, and each of which the recipe did not anticipate:
 D1–D3 become checkable without eyes through that first item: ask the provider
 for the `NSView`'s frame and compare it to `state.device_rect()`.
 
+**The first real window found the bug that no headless test could.** An `NSView`
+frame is in *points*, so `os_frame` divides the device rect by the window's
+`backingScaleFactor` — and on a 2x display the probe's view came out exactly half
+sized while the framework's own content was drawn correctly. The AppKit host was
+not the problem: the density it divided by was right, and the device rect it was
+handed had never been scaled, because `AppRunner::handle` read each window's
+scale factor at creation and handed the host only the size. `WidgetHost::scale`
+stayed at its 1.0 default, and `to_device` — the one place logical becomes
+device — multiplied by one. Fixed in the runner on both paths. The second path is
+the one worth naming: the ABI has **no scale event**, so a window dragged to a
+display of a different density announces itself as a plain `WindowResized`, and
+the scale has to be re-read off the window rather than taken from the record
+(which only ever saw the display the window was born on). Two tests pin it — the
+runner keeps the density the window was born with, and a participant's
+`device_rect` doubles while its `rect` does not. A device-side claim this strong
+is worth repeating: *the framework lays out in logical units and places
+participants in device pixels, so every path that changes the density must reach
+the host.*
+
 **Files**
 
 - Modify: `app/floem-app/src/lib.rs` (participant registry, frame diff, paint
@@ -298,7 +347,21 @@ for the `NSView`'s frame and compare it to `state.device_rect()`.
 - Add: `platform/floem-platform-desktop/src/native.rs` (`6829445` — the
   `NativeState` → `ViewPlacement` translation, `NativeViewHost`,
   `DesktopNativeBridge`)
+- Add: `platform/floem-platform-desktop/src/native_appkit.rs` (the AppKit
+  `NativeViewHost`: `Container` + `MacNativeViewHost` + `NativeParent`, macOS only)
+- Modify: `platform/floem-platform-desktop/src/winit_backend.rs`
+  (`native_view_provider`, `native_view_parent`, the stored `native_caps`)
+- Modify: `app/floem-app/src/runner.rs` (push the window's scale factor to the
+  host on creation *and* on the resize a display change arrives as)
+- Modify: `platform/floem-platform/src/fake.rs` (the fake window carries a scale,
+  so a Retina boot is testable without a Retina display)
+- Modify: `tooling/floem-testkit` (`TestApp::window`)
 - Test: `app/floem-app/tests/native.rs` (testkit)
+- Test: `platform/floem-platform-desktop/tests/winit_capabilities.rs` (a session
+  that never built a bridge does not advertise `NATIVE_VIEW`)
+- Example: `examples/floem2-probe` (installs the provider over a real window and
+  dumps both the OS subview tree and the framework's participant states — the
+  device half of D1–D3, run by hand)
 
 **Steps**
 
