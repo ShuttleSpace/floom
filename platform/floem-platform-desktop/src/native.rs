@@ -286,11 +286,6 @@ impl<H: NativeViewHost> DesktopNativeBridge<H> {
     pub fn host_mut(&mut self) -> &mut H {
         &mut self.host
     }
-
-    /// Unwrap the host, dropping the placement memo.
-    pub fn into_host(self) -> H {
-        self.host
-    }
 }
 
 impl<H: NativeViewHost> NativeViewProvider for DesktopNativeBridge<H> {
