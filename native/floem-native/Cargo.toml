@@ -4,7 +4,7 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
-description = "Native composition participant pool for Floem 2.0 (Phase 12.2 precursor)"
+description = "Native composition for Floem 2.0: participant slot pool, provider ABI, lifecycle controller"
 rust-version.workspace = true
 
 [dependencies]
