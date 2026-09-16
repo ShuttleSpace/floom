@@ -23,7 +23,8 @@ pub struct RouteStop {
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct HitRegion {
     pub bounds: Rect,
-    /// When set, native compositor participants win over sibling Floem hits.
+    /// When set, the region belongs to a native compositor participant that
+    /// takes the pointer itself, so it beats every framework hit.
     pub native: Option<NativeViewId>,
     pub z: i32,
 }
@@ -63,10 +64,14 @@ impl HitTester {
             match best {
                 None => best = Some((id, *region)),
                 Some((_, prev)) => {
-                    // Native regions beat same-z non-native; then higher z.
-                    let native_boost = |r: &HitRegion| if r.native.is_some() { 1 } else { 0 };
-                    let better = region.z > prev.z
-                        || (region.z == prev.z && native_boost(region) > native_boost(&prev));
+                    // A native participant wins outright, not merely at equal
+                    // z. In Overlay mode it is a sibling view stacked above the
+                    // framework's *whole* surface, so no framework node can be
+                    // in front of it — including one mounted later and
+                    // therefore higher in paint order. z still decides between
+                    // two framework nodes and between two participants.
+                    let better =
+                        (region.native.is_some(), region.z) > (prev.native.is_some(), prev.z);
                     if better {
                         best = Some((id, *region));
                     }

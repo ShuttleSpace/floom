@@ -55,6 +55,60 @@ fn native_region_wins_same_z() {
     assert!(hit.native.is_some());
 }
 
+/// A participant beats even a framework node painted after it.
+///
+/// In Overlay mode the participant is a sibling view stacked above the whole
+/// scene, so a widget mounted later cannot be in front of it no matter what
+/// paint order says. Deciding this by z alone is what makes a click on a map
+/// land on the button that happens to be mounted later.
+#[test]
+fn native_region_wins_over_a_higher_framework_z() {
+    let mut router = EventRouter::new();
+    let bounds = Rect::from_origin_size(Point::ZERO, floem_types::Size::new(50.0, 50.0));
+    router.hits.set_region(
+        eid(1),
+        HitRegion {
+            bounds,
+            native: Some(NativeViewId::new(1, 1)),
+            z: 5,
+        },
+    );
+    router.hits.set_region(
+        eid(2),
+        HitRegion {
+            bounds,
+            native: None,
+            z: 9,
+        },
+    );
+    let hit = router.hits.hit_test(Point::new(10.0, 10.0)).unwrap();
+    assert_eq!(
+        hit.target,
+        eid(1),
+        "the participant wins despite the framework node's higher z"
+    );
+    assert!(hit.native.is_some());
+}
+
+/// ...but z still orders two participants against each other.
+#[test]
+fn z_still_orders_two_native_regions() {
+    let mut router = EventRouter::new();
+    let bounds = Rect::from_origin_size(Point::ZERO, floem_types::Size::new(50.0, 50.0));
+    for (id, z) in [(1, 5), (2, 9)] {
+        router.hits.set_region(
+            eid(id),
+            HitRegion {
+                bounds,
+                native: Some(NativeViewId::new(id as u32, 1)),
+                z,
+            },
+        );
+    }
+    let hit = router.hits.hit_test(Point::new(10.0, 10.0)).unwrap();
+    assert_eq!(hit.target, eid(2), "the front-most participant wins");
+}
+
 #[test]
 fn capture_bubble_route_order() {
     let mut router = EventRouter::new();
