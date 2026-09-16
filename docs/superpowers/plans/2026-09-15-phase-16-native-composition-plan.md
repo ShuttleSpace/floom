@@ -120,6 +120,11 @@ platform backend without dragging in the framework.
 
 ## Task 16.1 — Define the Native ABI *(headless, shippable now)*
 
+**Status: done, `d25bf07`** — 30 tests. One deviation: the three shared enums
+ended up in `foundation/floem-types/src/native.rs` rather than in `abi.rs`,
+because a widget at L6 asks for a participant and a provider at L4 implements
+one, and neither crate may depend on the other's.
+
 **Files**
 
 - Modify: `native/floem-native/src/lib.rs`, `native/floem-native/Cargo.toml`
@@ -187,6 +192,29 @@ slot is reused without re-binding.
 ---
 
 ## Task 16.2 — Overlay composition *(headless half + device half)*
+
+**Status: steps 1–6 and 8 done, `dab2547`** (+ `6773950`, the hit-test rule
+they depend on). `app/floem-app/tests/native.rs`, 16 tests. Deviations and
+findings worth carrying forward:
+
+- The native door is answered **inline**, not queued like the overlay door: a
+  participant only touches fields disjoint from the node being updated, so a
+  widget can learn within the same frame whether it got a view or must draw a
+  fallback. Queueing would have made `NativeSurface` swallow its own refusal.
+- Host-minted slot keys had to be a separate namespace from caller keys
+  (`SlotKey::{Caller,Minted}`). A list numbering rows from 0 collided with the
+  host's counter and the second participant silently never appeared.
+- Step 4's "the participant wins" turned out to need a `HitTester` change too,
+  not just a host change: native regions now beat framework regions outright,
+  because in Overlay mode the participant is stacked above the *whole* scene.
+- **Open question (unsettled):** `NativeState` has no clip channel, so a
+  participant clipped by an ancestor is reported as the intersection of its box
+  with the clips. A provider that cannot clip at the OS level will shrink its
+  content instead of cropping it. Either the ABI grows a clip rect or
+  Overlay-mode providers clip themselves; D6 is where this shows.
+- Step 7 (the desktop bridge) is untouched, and `desktop_default` still does
+  **not** set `Capability::NATIVE_VIEW` — correctly, since there is no desktop
+  provider yet.
 
 **Files**
 
