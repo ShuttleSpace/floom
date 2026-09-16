@@ -53,7 +53,10 @@
 //! also pin the image brushes their commands were built from, so a reused
 //! fragment never has its texture evicted from under it.
 
-use floem_renderer::{AttachedSurface, Presenter, SurfaceHandles};
+use floem_renderer::{
+    AttachedSurface, ExternalFrame, ExternalTextureCache, ExternalTextureStats, ImportDecision,
+    Presenter, SurfaceHandles,
+};
 use floem_scene::{ResourceKind, ResourceRegistry, Scene, SceneNode};
 use floem_types::{Size, SurfaceId, WindowId};
 use std::collections::{HashMap, HashSet};
@@ -106,6 +109,17 @@ pub struct GpuFrameStats {
     /// Frames that rasterised only the damaged region instead of the whole
     /// target (1 when partial, 0 when full-frame).
     pub partial_rasterizations: u64,
+    /// External textures seen for the first time. Cumulative: a resource id is
+    /// imported once and refreshed from then on.
+    pub external_imports: u64,
+    /// Refreshes of an external texture whose producer reported new contents.
+    pub external_refreshes: u64,
+    /// Frames a producer handed over that needed no work at all. For content
+    /// slower than the display refresh this is the normal case.
+    pub external_reuses: u64,
+    /// Bytes copied across for external textures. Zero when a producer keeps
+    /// its pixels on the GPU — that is the fast path, not a missing count.
+    pub external_bytes: u64,
 }
 
 /// Scratch texture for partial rasterisation: vello has no scissor, so a
@@ -241,6 +255,14 @@ pub struct VelloGpuPresenter {
     /// The brush holds an `Arc` to the registry's pixels, so building it once
     /// shares bytes with the scene layer and uploads once to vello's atlas.
     image_cache: HashMap<u64, ImageBrush>,
+    /// Brushes for textures whose pixels the framework does not own — a
+    /// `Texture`-mode participant's frames. Keyed by the same resource id the
+    /// participant's image node references, so the two caches are the same
+    /// lookup from `encode_node`'s point of view and a resource cannot be in
+    /// both.
+    external_brushes: HashMap<u64, ImageBrush>,
+    /// When each external texture's contents last changed.
+    external: ExternalTextureCache,
     /// Cached vello command fragments per scene node, keyed by
     /// `SceneNodeId::raw()` (stable across frames — index + generation).
     /// Unchanged nodes are appended, not re-encoded; entries the scene no
@@ -308,6 +330,8 @@ impl VelloGpuPresenter {
             window: None,
             surface_id: None,
             image_cache: HashMap::new(),
+            external_brushes: HashMap::new(),
+            external: ExternalTextureCache::new(),
             fragments: HashMap::new(),
             needs_present: true,
             scratch: None,
@@ -316,6 +340,84 @@ impl VelloGpuPresenter {
 
     pub fn stats(&self) -> GpuFrameStats {
         self.stats
+    }
+
+    /// Hands the presenter a frame of a texture the framework does not own —
+    /// a `Texture`-mode participant's contents.
+    ///
+    /// Call it once per produced frame, before the frame that draws it. The
+    /// answer is the whole point: content slower than the display refresh (a
+    /// 30 fps stream in a 60 fps app, a map that is not moving, a paused video)
+    /// answers [`ImportDecision::Unchanged`] and costs nothing at all.
+    ///
+    /// The resource id is the identity, not the frame, so a refresh keeps
+    /// everything keyed on it and costs one upload rather than a second
+    /// texture. Cached fragments that drew this resource are dropped, because
+    /// vello commands embed the brush they were built from: a reused fragment
+    /// would otherwise keep drawing the pixels it was built with, which is
+    /// exactly the "frozen video" bug of device case D8.
+    pub fn import_texture(&mut self, frame: ExternalFrame) -> ImportDecision {
+        let key = frame.resource.raw();
+        let (width, height) = (frame.width, frame.height);
+        let decision = self.external.import(&frame);
+        if !decision.is_upload() {
+            return decision;
+        }
+        if let Some(pixels) = frame.pixels {
+            // One Arc clone; the same shape the registry path uses, and for the
+            // same reason — `Blob` wants `Arc<dyn AsRef<[u8]>>`.
+            let shared = std::sync::Arc::new(pixels);
+            self.external_brushes.insert(
+                key,
+                ImageBrush {
+                    image: ImageData {
+                        data: Blob::new(shared),
+                        format: ImageFormat::Rgba8,
+                        alpha_type: ImageAlphaType::AlphaPremultiplied,
+                        width,
+                        height,
+                    },
+                    sampler: ImageSampler::default(),
+                },
+            );
+        }
+        self.fragments
+            .retain(|_, fragment| !fragment.stats.image_keys.contains(&key));
+        decision
+    }
+
+    /// Whether the presenter is holding this resource as an external texture.
+    pub fn has_external_texture(&self, resource: floem_types::ResourceId) -> bool {
+        self.external.contains(resource)
+    }
+
+    /// Drops external textures that are neither still being produced nor still
+    /// drawn by a cached node.
+    ///
+    /// Driven from the fragment table rather than from the encode loop, because
+    /// it has to run on *skipped* frames too: a producer going quiet is not
+    /// scene damage, so a frame the presenter has nothing to draw is precisely
+    /// when a texture most needs dropping. On a skipped frame the fragments are
+    /// the last encoded frame's, which is the current scene by definition —
+    /// nothing changed, or the frame would not have been skipped.
+    fn prune_external(&mut self) {
+        let referenced: HashSet<u64> = self
+            .fragments
+            .values()
+            .flat_map(|fragment| fragment.stats.image_keys.iter().copied())
+            .collect();
+        self.external.prune(&referenced);
+        let live: HashSet<u64> = self.external.live_keys().collect();
+        self.external_brushes.retain(|key, _| live.contains(key));
+    }
+
+    /// Cumulative external-texture counters: imports, refreshes, reuses, bytes.
+    ///
+    /// These are the numbers task 16.3 step 4 is decided with — bytes per frame
+    /// and imports per second are what say whether `Texture` mode is a fallback
+    /// or a default.
+    pub fn external_stats(&self) -> ExternalTextureStats {
+        self.external.stats()
     }
 
     pub fn is_attached(&self) -> bool {
@@ -568,6 +670,31 @@ impl VelloGpuPresenter {
                 }
             }
             SceneNode::Image { bounds, image } => {
+                if bounds.width() <= 0.0 || bounds.height() <= 0.0 {
+                    return stats;
+                }
+                let key = image.raw();
+                // An external texture has no pixels in the registry — they are
+                // the producer's — so it is resolved *before* the registry
+                // lookup rather than through it. This is what lets a
+                // `Texture`-mode participant be an ordinary scene node: it
+                // composites inside the scene and is occluded, clipped and
+                // transformed by the framework like anything else (D10).
+                if let Some((width, height)) = self.external.size(*image) {
+                    let brush = self.external_brushes.get(&key).cloned();
+                    if let Some(brush) = brush {
+                        used_images.insert(key);
+                        stats.image_keys.push(key);
+                        stats.cache_hits += 1;
+                        let sx = bounds.width() / f64::from(width);
+                        let sy = bounds.height() / f64::from(height);
+                        let transform = Affine::translate((bounds.x0, bounds.y0))
+                            * Affine::scale_non_uniform(sx, sy);
+                        target.draw_image(&brush, transform);
+                        stats.images += 1;
+                    }
+                    return stats;
+                }
                 let Some(ResourceKind::Image {
                     width,
                     height,
@@ -578,7 +705,7 @@ impl VelloGpuPresenter {
                     stats.unsupported += 1;
                     return stats;
                 };
-                if bounds.width() <= 0.0 || bounds.height() <= 0.0 || *width == 0 || *height == 0 {
+                if *width == 0 || *height == 0 {
                     return stats;
                 }
                 // Texture cache: one ImageBrush per resource id. The
@@ -778,6 +905,13 @@ impl Presenter for VelloGpuPresenter {
     }
 
     fn present(&mut self, scene: &Scene, resources: &ResourceRegistry) {
+        // Cumulative, and published before any early return: a skipped present
+        // has not made them stale.
+        let external = self.external.stats();
+        self.stats.external_imports = external.first_imports;
+        self.stats.external_refreshes = external.refreshes;
+        self.stats.external_reuses = external.reuses;
+        self.stats.external_bytes = external.bytes_uploaded;
         // Damage-driven frame skip: when the scene reports nothing changed
         // since the last presented frame and no attach/resize made the screen
         // stale, re-encoding the command list and re-running the compute
@@ -785,6 +919,7 @@ impl Presenter for VelloGpuPresenter {
         // damage is the *producer's* contract — the host resets it each paint,
         // so an unchanged tree genuinely arrives empty here.
         if !self.needs_present && scene.damage().is_empty() {
+            self.prune_external();
             self.stats.present_skips += 1;
             self.stats.rects = 0;
             self.stats.glyph_runs = 0;
@@ -821,6 +956,9 @@ impl Presenter for VelloGpuPresenter {
         };
         let offset = region.map_or((0.0, 0.0), |(x, y, _, _)| (f64::from(x), f64::from(y)));
         let encoded = self.encode(scene, resources, offset);
+        // After `encode`, the fragment table is this frame's scene — which is
+        // what says whether an external texture is still being drawn.
+        self.prune_external();
         self.stats.rasterized_pixels = match region {
             Some((_, _, w, h)) => u64::from(w) * u64::from(h),
             None => u64::from(pw) * u64::from(ph),
@@ -1447,5 +1585,177 @@ mod tests {
             stats.texture_cache_hits, 1,
             "re-encode reuses the cached texture"
         );
+    }
+
+    // --- external textures (16.3) ------------------------------------------
+
+    /// A scene whose only node draws `texture` — the shape a `Texture`-mode
+    /// participant has.
+    fn scene_drawing(texture: floem_types::ResourceId) -> Scene {
+        let mut scene = Scene::new();
+        scene.begin_update();
+        let _ = scene.insert(SceneNode::Image {
+            bounds: floem_types::Rect::from_origin_size(
+                floem_types::Point::new(0.0, 0.0),
+                Size::new(8.0, 8.0),
+            ),
+            image: texture,
+        });
+        scene.finish_update();
+        scene
+    }
+
+    /// A producer's frame: the pixels are the producer's, so the registry holds
+    /// no `Image` for this id at all.
+    fn external(texture: floem_types::ResourceId, sequence: u64) -> ExternalFrame {
+        ExternalFrame {
+            resource: texture,
+            sequence,
+            width: 2,
+            height: 2,
+            pixels: Some(std::sync::Arc::from(vec![255u8; 16].into_boxed_slice())),
+        }
+    }
+
+    /// The plan's step 2 in one test: an external texture is drawn as an
+    /// ordinary scene node, and re-imported only when its producer says the
+    /// contents changed.
+    ///
+    /// "An ordinary scene node" is the point. The framework drew it, so it can
+    /// be occluded, clipped and transformed — which is exactly what Overlay
+    /// mode cannot do (device case D10).
+    #[test]
+    fn an_external_texture_is_drawn_and_re_imported_only_when_it_changes() {
+        let Some(mut presenter) = presenter() else {
+            return;
+        };
+        let mut registry = ResourceRegistry::new();
+        // A placeholder with no pixels behind it: the participant's contents are
+        // the producer's, not the registry's.
+        let texture = registry.insert(floem_scene::Resource {
+            kind: ResourceKind::Blob { bytes: 0 },
+        });
+        let scene = scene_drawing(texture);
+
+        assert_eq!(
+            presenter.import_texture(external(texture, 1)),
+            ImportDecision::First
+        );
+        presenter.present(&scene, &registry);
+        let stats = presenter.stats();
+        assert_eq!(stats.images, 1, "drawn, not skipped");
+        assert_eq!(
+            stats.unsupported_nodes, 0,
+            "an external resource is not a dangling id"
+        );
+        assert_eq!(stats.external_imports, 1);
+        assert_eq!(stats.external_bytes, 16, "one upload's worth of pixels");
+
+        // Same sequence: the producer had nothing new, so nothing crosses.
+        assert_eq!(
+            presenter.import_texture(external(texture, 1)),
+            ImportDecision::Unchanged
+        );
+        presenter.present(&scene, &registry);
+        let stats = presenter.stats();
+        assert_eq!(stats.images, 1, "still drawn");
+        assert_eq!(stats.external_reuses, 1);
+        assert_eq!(stats.external_bytes, 16, "and nothing was re-uploaded");
+
+        // New contents: one refresh, same identity throughout.
+        assert_eq!(
+            presenter.import_texture(external(texture, 2)),
+            ImportDecision::Refresh
+        );
+        presenter.present(&scene, &registry);
+        let stats = presenter.stats();
+        assert_eq!(stats.external_refreshes, 1);
+        assert_eq!(stats.external_bytes, 32);
+        assert_eq!(
+            presenter.external_stats().first_imports,
+            1,
+            "three frames of content, one texture"
+        );
+    }
+
+    /// A refreshed texture must not be served out of a reused fragment.
+    ///
+    /// Vello commands embed the brush they were built from, so caching the
+    /// encode per node is exactly wrong for content that changes underneath an
+    /// unchanged node — the "content frozen at the pre-transform size" bug of
+    /// device case D8, arriving through the fragment cache instead of the
+    /// texture cache. `unchanged_scene_reuses_cached_fragments` is the other
+    /// half of this rule: nothing is invalidated when nothing changed.
+    #[test]
+    fn refreshing_a_texture_invalidates_the_fragment_that_drew_it() {
+        let Some(mut presenter) = presenter() else {
+            return;
+        };
+        let mut registry = ResourceRegistry::new();
+        let texture = registry.insert(floem_scene::Resource {
+            kind: ResourceKind::Blob { bytes: 0 },
+        });
+        let scene = scene_drawing(texture);
+
+        presenter.import_texture(external(texture, 1));
+        presenter.present(&scene, &registry);
+        assert_eq!(presenter.fragment_count(), 1, "the node was encoded");
+
+        // Unchanged: the fragment survives and is reused.
+        presenter.import_texture(external(texture, 1));
+        presenter.present(&scene, &registry);
+        assert_eq!(presenter.fragment_count(), 1);
+        assert_eq!(presenter.stats().fragments_reused, 1);
+
+        // New pixels: the cached commands have the old brush baked in.
+        presenter.import_texture(external(texture, 2));
+        assert_eq!(
+            presenter.fragment_count(),
+            0,
+            "the fragment that drew this texture was dropped"
+        );
+        presenter.present(&scene, &registry);
+        let stats = presenter.stats();
+        assert_eq!(stats.fragments_encoded, 1, "so it was encoded again");
+        assert_eq!(
+            stats.fragments_reused, 0,
+            "and not served from the cache with last frame's pixels"
+        );
+        assert_eq!(stats.images, 1);
+    }
+
+    /// A texture that is neither being produced any more nor drawn by the scene
+    /// is dropped — those are the two ways to stay alive.
+    ///
+    /// A removed node damages the scene, so the frame that drops it is an
+    /// ordinary encode: a node leaving the tree is what makes a texture stop
+    /// being referenced, and the producer stops with it.
+    #[test]
+    fn an_external_texture_is_pruned_when_its_producer_and_its_node_are_both_gone() {
+        let Some(mut presenter) = presenter() else {
+            return;
+        };
+        let mut registry = ResourceRegistry::new();
+        let texture = registry.insert(floem_scene::Resource {
+            kind: ResourceKind::Blob { bytes: 0 },
+        });
+        let scene = scene_drawing(texture);
+        presenter.import_texture(external(texture, 1));
+        presenter.present(&scene, &registry);
+        assert!(presenter.has_external_texture(texture));
+
+        // The node is gone, so the participant stopped producing: a frame that
+        // draws something else and imports nothing.
+        let mut without = Scene::new();
+        without.begin_update();
+        let _ = without.insert(rect_node(0.0));
+        without.finish_update();
+        presenter.present(&without, &registry);
+
+        assert!(
+            !presenter.has_external_texture(texture),
+            "neither producing nor drawn: the texture is gone"
+        );
+        assert_eq!(presenter.external_stats().evictions, 1);
     }
 }
