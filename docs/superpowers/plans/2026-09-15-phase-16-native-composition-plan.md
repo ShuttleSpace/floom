@@ -221,34 +221,69 @@ findings worth carrying forward:
   meant for whatever was painted where it used to be. Withdrawing the *native*
   claim is not enough — the node is still a widget, and a deep node's region
   outranks a shallow one's. Off-screen participants now have no region at all.
-- Step 7 (the desktop bridge) is untouched, and `desktop_default` still does
-  **not** set `Capability::NATIVE_VIEW` — correctly, since there is no desktop
-  provider yet.
+- **Step 7's headless half is done (`6829445`).** `floem-platform-desktop/src/native.rs`
+  holds the `NativeState` → `ViewPlacement` translation and the
+  `NativeViewProvider` impl over a `NativeViewHost` trait, 12 tests. What is
+  left of step 7 is the OS half: six trait methods per platform. Both
+  `Platform::capabilities` impls now return `desktop_capabilities(false)`, so
+  `NATIVE_VIEW` stays off until a bridge is installed — see below.
 
-**Step 7 recipe**, so the next session does not re-derive it. The bridge is the
-only part of 16.2 that needs an OS, and it needs three things wired in this
-order:
+**Step 7: what landed, and what is left.** The bridge is the only part of 16.2
+that needs an OS. It split into a translation layer that needs no window and six
+OS calls, and the first half is in (`6829445`), so the arithmetic is written and
+pinned before anything device-gated depends on it:
 
-1. `platform/floem-platform-desktop` gains `floem-native` (same layer, L4, so
-   the architecture gate permits it) and a `NativeViewProvider` impl that takes
-   the parent view from the window. macOS: `objc2-app-kit`'s `NSView` added with
-   `addSubview:` to the `ns_view` out of winit's
-   `RawWindowHandle::AppKit`; the workspace already pins `objc2 0.6` /
-   `objc2-app-kit 0.3` for the legacy crate, so no new major. Windows: a child
+1. **Done.** `floem-platform-desktop` gains `floem-native` (same layer, L4, so
+   the architecture gate permits it; verified the gate *sees* the edge by moving
+   `floem-native` to L5, which fails `UPWARD floem_platform_desktop(L4) →
+   floem_native(L5)`). `DesktopNativeBridge` implements `NativeViewProvider`
+   over a `NativeViewHost` trait. What is left is the trait impls — macOS:
+   `objc2-app-kit`'s `NSView` added with `addSubview:` to the `ns_view` out of
+   winit's `RawWindowHandle::AppKit` (the workspace already pins `objc2 0.6` /
+   `objc2-app-kit 0.3` for the legacy crate, so no new major). Windows: a child
    `HWND` with `CreateWindowExW` and `SetWindowPos`. Linux: X11 subwindow, or
    nothing at all on Wayland (D5 is the case that says so).
-2. **The coordinate flip is the thing that will be wrong first.** AppKit's
-   default origin is bottom-left and its `isFlipped` is `false`, while
-   `NativeState::rect` is top-left logical. `y_os = parent_height - (y +
-   height)`, and the height must come from the *parent view*, not the window,
-   for a participant inside a container. D1's "no seam at 1x and 2x" is exactly
-   this arithmetic plus `to_device`'s whole-pixel rounding.
-3. `desktop_default` gains `Capability::NATIVE_VIEW` only in the same commit,
-   so the capability flag and the provider cannot drift apart.
+2. **Done, and sharper than the recipe had it.** AppKit's origin is bottom-left
+   with `isFlipped == false`, so `y_os = parent_height - (y + height)`, and the
+   height must come from the *parent view* — identical to the window for a
+   participant added straight to the content view, different the moment one goes
+   into a container. The part that would have been written wrong: the mirror
+   goes **after** `to_device`, not before. Snapping rounds each edge
+   independently, so mirror-then-snap and snap-then-mirror disagree — at 2x, a
+   participant at logical `y 0.75..1.25` of a 10-unit parent is on device row 2
+   (`y_os = 17`) but lands on `y_os = 18` if the mirror goes first. One pixel,
+   and it is one pixel *of disagreement with the framework*, which is what a
+   seam is. `mirror_device` is an involution, so D1's assertion is exactly
+   `mirror_device(frame, parent_device_height) == state.device_rect()`.
+3. **Done, with one change.** `desktop_default` does not gain the flag;
+   `desktop_capabilities(native_view)` decides it, and both
+   `Platform::capabilities` impls call it with `false`. The flag is a promise in
+   both directions — advertising it with no provider fails every
+   `NativeSurface` mount with "no mode this participant accepts", and installing
+   a provider without it makes widgets refuse to try — so deriving it from the
+   bridge's presence is the only arrangement where the two cannot drift. A test
+   pins that the flag is the *only* difference from `desktop_default`. **The OS
+   half flips this one argument and touches nothing else.**
 
-D1–D3 then become checkable without eyes: the provider can be asked for the
-`NSView`'s frame and the assertion is `frame == state.device_rect()`, which is
-what "pixel-aligned, no seam" means.
+Three things the translation layer had to decide, each with a test that fails if
+it is undone, and each of which the recipe did not anticipate:
+
+- The memo that makes a repeated state free is keyed on the state **and the
+  parent extent**. A resize moves a top-left-pinned participant whose rect did
+  not change, so a memo keyed on the state alone swallows the re-placement the
+  resize made necessary.
+- `destroy` drops the memo and `create` need not. `rebind` destroys and
+  re-creates *the same slot at the same generation*, so only `destroy` is on
+  that path; a pool-recycled slot is a different key anyway. Keeping the memo
+  across a rebind suppresses the replacement's first placement — and because the
+  state is unchanged, the suppression is total.
+- A hidden participant is hidden where it stands, not moved: the rect in a
+  hidden state is not meaningful, and a hidden view with a nonsensical frame is
+  a rejected `SetWindowPos` on some platforms and a flash at the old position on
+  others.
+
+D1–D3 become checkable without eyes through that first item: ask the provider
+for the `NSView`'s frame and compare it to `state.device_rect()`.
 
 **Files**
 
@@ -257,8 +292,12 @@ what "pixel-aligned, no seam" means.
 - Modify: `foundation/floem-core` (`UpdateContext`/`EventContext` native door)
 - Modify: `widgets/floem-widgets` (a `NativeSurface` composite widget holding
   `Surface`-style bookkeeping: present / last_present / slot / in_tree)
-- Modify: `platform/floem-platform/src/capabilities.rs` (`desktop_default` gains
-  `NATIVE_VIEW` only once a desktop provider exists — see case D1)
+- Modify: `platform/floem-platform/src/capabilities.rs` (adds
+  `desktop_capabilities(native_view)`; `desktop_default` itself must **not** gain
+  `NATIVE_VIEW` — see case D1)
+- Add: `platform/floem-platform-desktop/src/native.rs` (`6829445` — the
+  `NativeState` → `ViewPlacement` translation, `NativeViewHost`,
+  `DesktopNativeBridge`)
 - Test: `app/floem-app/tests/native.rs` (testkit)
 
 **Steps**
@@ -292,10 +331,11 @@ what "pixel-aligned, no seam" means.
    with exactly one `destroy`+`create` pair per recycled slot. Test at 1k items
    with a 10-row viewport: live slot count stays ≤ 10, and `generation` bumps
    are observed exactly where recycling happened.
-7. **Desktop bridge (device half).** Implement `floem-platform-desktop`'s
-   provider: a child `NSView` (macOS) / child `HWND` (Windows) / X11 subwindow or
-   a Wayland texture fallback, placed above the surface.
-8. Commit the headless half separately from the bridge.
+7. **Desktop bridge.** The translation layer is in (`6829445`); what is left is
+   the `NativeViewHost` impls: a child `NSView` (macOS) / child `HWND` (Windows)
+   / X11 subwindow or a Wayland texture fallback, placed above the surface.
+8. Commit the headless half separately from the bridge. Done both times:
+   `dab2547` for the host side, `6829445` for step 7's translation layer.
 
 **Done when** steps 1–6 pass headlessly and each device case below has been run
 once with the outcome recorded in the device checklist.
