@@ -10,6 +10,8 @@
 //! the controller's job, and a fake that enforced its own lifecycle would hide
 //! exactly the bugs the controller is supposed to catch.
 
+use std::sync::{Arc, Mutex};
+
 use crate::abi::{
     NativeCapabilities, NativeCompositionMode, NativeError, NativeSnapshot, NativeState,
     NativeViewKind, NativeViewProvider,
@@ -67,6 +69,76 @@ impl NativeCommand {
     }
 }
 
+/// A handle to a fake provider's command stream.
+///
+/// Exists because the interesting tests hand the provider to something else —
+/// the host owns it — and then need to ask what it was told. A provider that
+/// can only be read back through `&self` would be unobservable from exactly the
+/// tests that matter most.
+#[derive(Debug, Clone, Default)]
+pub struct NativeCommandLog(Arc<Mutex<Vec<NativeCommand>>>);
+
+impl NativeCommandLog {
+    pub fn commands(&self) -> Vec<NativeCommand> {
+        self.0.lock().expect("command log poisoned").clone()
+    }
+
+    pub fn count(&self) -> usize {
+        self.0.lock().expect("command log poisoned").len()
+    }
+
+    pub fn creates(&self) -> usize {
+        self.count_where(|c| c.is_create())
+    }
+
+    pub fn destroys(&self) -> usize {
+        self.count_where(|c| c.is_destroy())
+    }
+
+    pub fn focuses(&self) -> usize {
+        self.count_where(|c| matches!(c, NativeCommand::Focus { .. }))
+    }
+
+    pub fn blurs(&self) -> usize {
+        self.count_where(|c| matches!(c, NativeCommand::Blur { .. }))
+    }
+
+    fn count_where(&self, predicate: impl Fn(&NativeCommand) -> bool) -> usize {
+        self.0
+            .lock()
+            .expect("command log poisoned")
+            .iter()
+            .filter(|c| predicate(c))
+            .count()
+    }
+
+    /// The `apply` commands, in order.
+    pub fn applied(&self) -> Vec<(NativeSlot, NativeState)> {
+        self.0
+            .lock()
+            .expect("command log poisoned")
+            .iter()
+            .filter_map(|c| match c {
+                NativeCommand::Apply { slot, state } => Some((*slot, *state)),
+                _ => None,
+            })
+            .collect()
+    }
+
+    /// Whether any recorded command satisfies `predicate`.
+    pub fn any(&self, predicate: impl Fn(&NativeCommand) -> bool) -> bool {
+        self.0
+            .lock()
+            .expect("command log poisoned")
+            .iter()
+            .any(|c| predicate(c))
+    }
+
+    pub fn clear(&self) {
+        self.0.lock().expect("command log poisoned").clear();
+    }
+}
+
 /// A provider that records commands and answers capability queries.
 ///
 /// Snapshots are synthesised rather than real: the fake mints a
@@ -76,6 +148,9 @@ impl NativeCommand {
 pub struct FakeNativeProvider {
     capabilities: NativeCapabilities,
     commands: Vec<NativeCommand>,
+    /// A second, shared copy of `commands` for a test that cannot read the
+    /// provider back — see [`NativeCommandLog`].
+    log: Option<NativeCommandLog>,
     /// When set, `create` fails with this error, so a test can exercise the
     /// path where a platform cannot produce a view at all.
     create_error: Option<NativeError>,
@@ -103,6 +178,7 @@ impl FakeNativeProvider {
         Self {
             capabilities,
             commands: Vec::new(),
+            log: None,
             create_error: None,
             next_snapshot: 1,
         }
@@ -117,6 +193,26 @@ impl FakeNativeProvider {
     /// Make the next (and subsequent) `create` calls fail.
     pub fn fail_create_with(&mut self, error: NativeError) {
         self.create_error = Some(error);
+    }
+
+    /// Start mirroring every command into a handle the test keeps.
+    ///
+    /// Call this *before* handing the provider to the host, which takes it by
+    /// value: afterwards the only way to ask what happened is the log.
+    pub fn watch(&mut self) -> NativeCommandLog {
+        let log = NativeCommandLog::default();
+        self.log = Some(log.clone());
+        log
+    }
+
+    fn record(&mut self, command: NativeCommand) {
+        if let Some(log) = &self.log {
+            log.0
+                .lock()
+                .expect("command log poisoned")
+                .push(command.clone());
+        }
+        self.commands.push(command);
     }
 
     pub fn commands(&self) -> &[NativeCommand] {
@@ -182,24 +278,24 @@ impl NativeViewProvider for FakeNativeProvider {
         if let Some(err) = &self.create_error {
             return Err(err.clone());
         }
-        self.commands.push(NativeCommand::Create { slot, kind });
+        self.record(NativeCommand::Create { slot, kind });
         Ok(())
     }
 
     fn destroy(&mut self, slot: NativeSlot) {
-        self.commands.push(NativeCommand::Destroy { slot });
+        self.record(NativeCommand::Destroy { slot });
     }
 
     fn apply(&mut self, slot: NativeSlot, state: NativeState) {
-        self.commands.push(NativeCommand::Apply { slot, state });
+        self.record(NativeCommand::Apply { slot, state });
     }
 
     fn focus(&mut self, slot: NativeSlot) {
-        self.commands.push(NativeCommand::Focus { slot });
+        self.record(NativeCommand::Focus { slot });
     }
 
     fn blur(&mut self, slot: NativeSlot) {
-        self.commands.push(NativeCommand::Blur { slot });
+        self.record(NativeCommand::Blur { slot });
     }
 
     fn snapshot(&mut self, slot: NativeSlot) -> Option<NativeSnapshot> {
@@ -207,11 +303,11 @@ impl NativeViewProvider for FakeNativeProvider {
             return None;
         }
         let snap = self.mint_snapshot();
-        self.commands.push(NativeCommand::Snapshot { slot });
+        self.record(NativeCommand::Snapshot { slot });
         Some(snap)
     }
 
     fn restore(&mut self, slot: NativeSlot) {
-        self.commands.push(NativeCommand::Restore { slot });
+        self.record(NativeCommand::Restore { slot });
     }
 }

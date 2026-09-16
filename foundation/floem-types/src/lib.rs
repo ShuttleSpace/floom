@@ -9,6 +9,7 @@ mod display;
 mod event;
 mod geometry;
 mod ids;
+mod native;
 mod overlay;
 
 pub use color::Color;
@@ -19,6 +20,7 @@ pub use event::{
 };
 pub use geometry::{Constraints, Insets, Point, Rect, Size, Transform};
 pub use ids::{ElementId, NativeViewId, PlatformId, ResourceId, SceneNodeId, SurfaceId, WindowId};
+pub use native::{InputMode, NativeCompositionMode, NativeViewKind};
 pub use overlay::{OverlayHandle, OverlayKind};
 
 #[cfg(test)]

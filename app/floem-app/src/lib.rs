@@ -27,13 +27,17 @@ use std::sync::{Arc, Mutex};
 use floem_accessibility::{SemanticsNode, SemanticsTree};
 use floem_core::{
     Align, Axis, Child, ChildKey, CreateContext, ElementId, Event, EventContext, LayoutRequest,
-    OverlayHandle, OverlayKind, OverlayRequest, PaintContext, Point, PointerPhase, Position, Rect,
-    ResourceId, SemanticsHint, SemanticsRole, Size, UpdateContext,
+    NativeGrant, NativeRequest, OverlayHandle, OverlayKind, OverlayRequest, PaintContext, Point,
+    PointerPhase, Position, Rect, ResourceId, SemanticsHint, SemanticsRole, Size, UpdateContext,
 };
 use floem_focus::{FocusDirection, FocusManager, FocusScopeId};
 use floem_layout::{
     AlignItems as LAlign, FlexDirection, JustifyContent, LayoutEngine, LayoutNode, LayoutStyle,
     MeasureFn, Position as LPosition,
+};
+use floem_native::{
+    InputMode, NativeCompositionMode, NativeSlot, NativeState, NativeViewController, NativeViewId,
+    NativeViewKind, NativeViewPool, NativeViewProvider,
 };
 use floem_overlay::{CompositorProp, OverlayManager};
 use floem_runtime::{EventRouter, Hit, HitRegion, RouteStop};
@@ -52,6 +56,13 @@ pub struct FrameStats {
     pub updated: usize,
     pub painted: usize,
     pub layout_nodes: usize,
+    /// Participants whose state changed this frame.
+    ///
+    /// Not scene damage: in Overlay mode a participant is a sibling above the
+    /// framework's surface, so moving it changes no pixels in the scene the
+    /// renderer drew. The compositor still owes a present, and a runner keying
+    /// its skip logic off `scene.damage()` alone would suppress it.
+    pub native_applied: usize,
 }
 
 struct Node {
@@ -90,6 +101,10 @@ struct Node {
     /// positionally via `Scene::upsert` (so unchanged payloads produce no
     /// damage), and leftovers are retired.
     scene_nodes: Vec<SceneNodeId>,
+    /// Set when a native participant is bound to this node. Its hit region
+    /// then resolves to the native view — which takes the pointer itself —
+    /// instead of to this widget. Cleared when the participant is retired.
+    native: Option<NativeViewId>,
     /// Set for `Text` leaves whose width/height is not pinned: they size
     /// themselves through a taffy measure callback reading this shared state,
     /// so extent changes (content edit, container reflow) re-measure instead
@@ -127,6 +142,64 @@ struct OverlaySlot {
     /// the overlay comes down, which is how an opener learns the result of a
     /// popup it does not own the events for.
     owner: Option<ElementId>,
+}
+
+/// Intersects two rects, yielding [`Rect::ZERO`] when they do not overlap.
+///
+/// `ZERO` rather than an inverted rect on purpose: an inverted rect is exactly
+/// what the participant contract rejects, so "clipped away" has to be
+/// representable without producing one.
+fn intersect(a: Rect, b: Rect) -> Rect {
+    let x0 = a.x0.max(b.x0);
+    let y0 = a.y0.max(b.y0);
+    let x1 = a.x1.min(b.x1);
+    let y1 = a.y1.min(b.y1);
+    if x1 <= x0 || y1 <= y0 {
+        Rect::ZERO
+    } else {
+        Rect { x0, y0, x1, y1 }
+    }
+}
+
+/// What a participant's slot is pooled under.
+///
+/// The two spaces are separate on purpose. A caller that numbers its rows from
+/// zero would otherwise collide with the host's own counter, and two
+/// participants that are on screen at the same time would be handed the same
+/// slot — the second `bind` then fails, and the second participant silently
+/// never appears.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+enum SlotKey {
+    /// The widget brought an identity: a virtualized row's key.
+    Caller(u64),
+    /// The widget had none, so the host minted one.
+    Minted(u64),
+}
+
+/// A live native participant: a node the host has handed to a provider.
+///
+/// The host owns this, not the widget, because a native view has to outlive the
+/// frame that created it, be re-bound when its slot is recycled for another
+/// row, and be destroyed exactly once. A widget holding one directly would leak
+/// it on every unmount — silently, because a leaked native view looks exactly
+/// like a working one until the device runs out of them.
+#[derive(Debug, Clone, Copy)]
+struct Participant {
+    /// Index into `nodes` of the node this participant occupies.
+    node: usize,
+    slot: NativeSlot,
+    /// The key the widget asked for. `0` means "I have no identity", and the
+    /// host mints one so two identity-less surfaces never share a slot.
+    requested_key: u64,
+    /// What the slot is actually pooled under.
+    key: SlotKey,
+    kind: NativeViewKind,
+    /// The mode the provider negotiated at bind time. Recorded rather than
+    /// assumed: on Wayland the answer is not the one that was asked for.
+    mode: NativeCompositionMode,
+    input: InputMode,
+    /// Last state pushed down. `None` until the first apply.
+    last: Option<NativeState>,
 }
 
 /// What a widget asked the host to do with an overlay during an event.
@@ -234,6 +307,35 @@ pub struct WidgetHost {
     /// Whether any overlay is still playing its entry animation, i.e. whether
     /// the frame loop owes another frame for no other reason.
     overlay_animating: bool,
+    /// Native composition. `None` means every participant request is refused,
+    /// which is the honest answer for a host with no OS bridge rather than a
+    /// participant that silently draws nothing.
+    native: Option<NativeViewController<Box<dyn NativeViewProvider>>>,
+    /// Live participants, in the order they were bound.
+    participants: Vec<Participant>,
+    /// Slots keyed by recycling key, so a row scrolling out of view hands its
+    /// slot to the row scrolling in instead of minting another.
+    native_pool: NativeViewPool<SlotKey>,
+    /// Identity minted for participants that did not bring one.
+    next_native_key: u64,
+    /// Device-pixel scale for participant rects. The host passes it down
+    /// because the logical→device boundary must be crossed exactly once, and a
+    /// provider cannot know it.
+    scale: f64,
+    /// The participant holding OS focus, if any. Exclusive: while one holds it
+    /// the framework suspends its own IME ownership, because two owners pushing
+    /// candidate-window geometry makes the candidate window jump.
+    native_focus: Option<NativeSlot>,
+    /// The framework element that had focus when a participant took it, so
+    /// focus can be handed back when the participant blurs. Without this a
+    /// focus round-trip through a native view drops the framework's focus
+    /// entirely and the next keystroke goes nowhere.
+    native_focus_return: Option<ElementId>,
+    /// Nodes whose `native` flag must be cleared and whose hit region must be
+    /// refreshed. Retiring a participant can happen while its node is borrowed
+    /// (a widget re-stating a changed request mid-`update`), so the tree write
+    /// is deferred to the next sync instead of done inline.
+    pending_native_clears: Vec<usize>,
     size: Size,
     layout_dirty: bool,
     /// A widget was borrowed mutably since the last frame, i.e. something
@@ -479,6 +581,14 @@ impl WidgetHost {
             ime_caret: None,
             anim_clock: 0.0,
             overlay_animating: false,
+            native: None,
+            participants: Vec::new(),
+            native_pool: NativeViewPool::new(),
+            next_native_key: 0,
+            scale: 1.0,
+            native_focus: None,
+            native_focus_return: None,
+            pending_native_clears: Vec::new(),
             size: Size::new(800.0, 600.0),
             layout_dirty: true,
             content_dirty: false,
@@ -512,6 +622,23 @@ impl WidgetHost {
     ) -> NodeId {
         assert!(parent.0 < self.nodes.len(), "unknown parent node");
         NodeId(self.push(Some(parent.0), style, None, Box::new(widget)))
+    }
+
+    /// Takes a subtree out of the tree.
+    ///
+    /// The counterpart of [`WidgetHost::mount`]: an embedder mounting nodes by
+    /// hand needs to undo it, and without this the only way to remove a node is
+    /// to be a composite and stop declaring it. Layout, hit-test, focus and
+    /// scene registrations all go with it.
+    pub fn unmount(&mut self, node: NodeId) {
+        if node.0 >= self.nodes.len() {
+            return;
+        }
+        self.unmount_subtree(node.0);
+        // A retired subtree is a change the frame loop has to be told about, or
+        // a runner keying off `needs_frame` would leave it on screen.
+        self.content_dirty = true;
+        self.layout_dirty = true;
     }
 
     // --- overlays ----------------------------------------------------------
@@ -864,6 +991,7 @@ impl WidgetHost {
             children_dirty: true,
             dead: false,
             is_overlay: false,
+            native: None,
             scene_nodes: Vec::new(),
             text_measure,
         });
@@ -1004,9 +1132,16 @@ impl WidgetHost {
         // Detach from the parent's child list *before* marking dead so the parent
         // does not keep routing to a removed slot.
         if let Some(parent) = self.nodes[index].parent {
-            if let Some(pos) = self.nodes[parent].children.iter().position(|&c| c == index) {
-                self.nodes[parent].children.remove(pos);
-                self.nodes[parent].child_keys.remove(pos);
+            let parent_node = &mut self.nodes[parent];
+            if let Some(pos) = parent_node.children.iter().position(|&c| c == index) {
+                parent_node.children.remove(pos);
+                // Only a node reconciled as a composite has a key per child;
+                // one that had children mounted into it imperatively (via
+                // `WidgetHost::mount`) has none, and blindly removing at `pos`
+                // panics on the mismatch.
+                if pos < parent_node.child_keys.len() {
+                    parent_node.child_keys.remove(pos);
+                }
             }
         }
 
@@ -1201,6 +1336,17 @@ impl WidgetHost {
                 continue;
             }
             let node = &mut self.nodes[index];
+            let native = match self.native.as_mut() {
+                Some(controller) => Some(NativeGrantSink {
+                    node: index,
+                    controller,
+                    participants: &mut self.participants,
+                    pool: &mut self.native_pool,
+                    next_key: &mut self.next_native_key,
+                    clears: &mut self.pending_native_clears,
+                }),
+                None => None,
+            };
             let mut cx = HostUpdateContext {
                 dirty: false,
                 children_dirty: false,
@@ -1211,6 +1357,7 @@ impl WidgetHost {
                     next_handle: &mut self.next_overlay_handle,
                     owner: node.id,
                 }),
+                native,
             };
             node.widget.update(&mut cx, node.id);
             node.dirty = cx.dirty;
@@ -1244,6 +1391,10 @@ impl WidgetHost {
         // Overlays lay out against the viewport independently of the main tree.
         self.layout_overlays();
         stats.layout_nodes = self.layout.node_count();
+
+        // Participants are positioned from the layout that just ran, and their
+        // hit regions depend on it, so this is the earliest it can happen.
+        self.sync_native(&mut stats);
 
         self.paint(&mut stats);
         self.collect_semantics();
@@ -1331,7 +1482,10 @@ impl WidgetHost {
                 self.nodes[index].id,
                 HitRegion {
                     bounds: output.rect,
-                    native: None,
+                    // A node with a participant resolves to the native view,
+                    // which takes the pointer itself. Set by the grant, read
+                    // back here so a relayout keeps it.
+                    native: self.nodes[index].native,
                     z,
                 },
             );
@@ -1524,6 +1678,20 @@ impl WidgetHost {
         let Some(hit) = target else {
             return false;
         };
+        // A capturing participant takes the pointer itself: it is a real OS
+        // view sitting above the framework's surface, so the framework has to
+        // *subtract* rather than add. Routing the event on as well is how a
+        // click on a map also activates the button behind it. Passthrough
+        // participants never reach here — they are not marked native, so the
+        // router resolves to the widget underneath and this is a no-op.
+        if hit.native.is_some() {
+            // Focus, unlike the pointer, is the framework's to give away: the
+            // native view cannot take it without a call.
+            if matches!(event, Event::Pointer(_)) {
+                self.yield_native_focus(hit.target);
+            }
+            return true;
+        }
         let route = self.router.route(hit.target);
         let mut handled = false;
         let mut focus_requests: Vec<ElementId> = Vec::new();
@@ -1666,6 +1834,295 @@ impl WidgetHost {
         self.router.resolve_target(point)
     }
 
+    // --- native composition ------------------------------------------------
+
+    /// Gives the host a provider for native participants.
+    ///
+    /// Without one every `NativeRequest` is refused. That is the honest answer:
+    /// a host that cannot composite must not hand out participants that draw
+    /// nothing, because a blank rectangle is indistinguishable from one that
+    /// was never asked for.
+    pub fn set_native_provider(&mut self, provider: impl NativeViewProvider + 'static) {
+        self.native = Some(NativeViewController::boxed(provider));
+    }
+
+    /// Takes the provider away, tearing every participant down first.
+    pub fn clear_native_provider(&mut self) {
+        let nodes: Vec<usize> = self.participants.iter().map(|p| p.node).collect();
+        for index in nodes {
+            self.retire_participant(index);
+        }
+        self.native = None;
+    }
+
+    pub fn has_native_provider(&self) -> bool {
+        self.native.is_some()
+    }
+
+    /// Live participants.
+    pub fn participant_count(&self) -> usize {
+        self.participants.len()
+    }
+
+    /// Slots currently bound.
+    pub fn participant_slots(&self) -> Vec<NativeSlot> {
+        self.participants.iter().map(|p| p.slot).collect()
+    }
+
+    /// The last state pushed down per participant.
+    pub fn participant_states(&self) -> Vec<(NativeSlot, NativeState)> {
+        self.participants
+            .iter()
+            .filter_map(|p| p.last.map(|state| (p.slot, state)))
+            .collect()
+    }
+
+    /// Slots the provider was told to create and never told to destroy. Should
+    /// be empty once the tree is torn down; anything left is a native view the
+    /// framework can no longer name.
+    pub fn unreleased_participants(&self) -> Vec<NativeSlot> {
+        match &self.native {
+            Some(controller) => controller.unreleased().collect(),
+            None => Vec::new(),
+        }
+    }
+
+    /// The participant holding OS focus, if any.
+    pub fn native_focused(&self) -> Option<NativeSlot> {
+        self.native_focus
+    }
+
+    /// Device-pixel scale handed to participants.
+    ///
+    /// A change does not dirty layout — logical geometry is unchanged — but it
+    /// does make every participant's stored state stale, so the next frame
+    /// re-applies them.
+    pub fn set_scale(&mut self, scale: f64) {
+        if scale.is_finite() && scale > 0.0 {
+            self.scale = scale;
+        }
+    }
+
+    pub fn scale(&self) -> f64 {
+        self.scale
+    }
+
+    /// Tears one participant down: destroy the view, release the slot back to
+    /// the pool, and drop the node's claim to the hit region.
+    fn retire_participant(&mut self, index: usize) {
+        let Some(position) = self.participants.iter().position(|p| p.node == index) else {
+            return;
+        };
+        let participant = self.participants.remove(position);
+        if let Some(controller) = self.native.as_mut() {
+            // A frozen participant is restored first by the controller, so the
+            // snapshot texture cannot outlive the view that owned it.
+            let _ = controller.destroy(participant.slot);
+        }
+        self.native_pool.release(&participant.key);
+        if self.native_focus == Some(participant.slot) {
+            self.native_focus = None;
+            // The participant that held focus is gone. Hand it back, but only
+            // to an element that is still mounted — a retiring row can take the
+            // element it displaced with it.
+            if let Some(previous) = self.native_focus_return.take() {
+                let alive = self
+                    .index_of(previous)
+                    .map_or(false, |index| !self.nodes[index].dead);
+                if alive && self.focus.focused().is_none() {
+                    self.set_focus(previous);
+                }
+            }
+        }
+        self.pending_native_clears.push(index);
+    }
+
+    /// Pushes each participant's desired state down, but only when it changed.
+    ///
+    /// The diff lives here rather than in the controller because this is the
+    /// only place that knows both the last state and the current frame's
+    /// geometry — and because "nothing changed" is a statement about frames,
+    /// not about individual calls.
+    fn sync_native(&mut self, stats: &mut FrameStats) {
+        // Nodes unmount by being marked dead, not by being removed, so this is
+        // the only place that can notice a participant's node is gone.
+        let dead: Vec<usize> = self
+            .participants
+            .iter()
+            .filter(|p| self.nodes.get(p.node).map_or(true, |node| node.dead))
+            .map(|p| p.node)
+            .collect();
+        for index in dead {
+            self.retire_participant(index);
+        }
+
+        let clears = std::mem::take(&mut self.pending_native_clears);
+        for index in clears {
+            if let Some(node) = self.nodes.get_mut(index) {
+                node.native = None;
+            }
+            self.refresh_hit_region(index);
+        }
+
+        if self.native.is_none() || self.participants.is_empty() {
+            return;
+        }
+
+        let viewport = Rect::from_origin_size(Point::ZERO, self.size);
+        // A modal overlay owns the screen. The participant stays bound and is
+        // hidden instead of being destroyed: it will be straight back when the
+        // modal closes, and recreating an OS view is the expensive part.
+        let modal_up = self.overlay.top().map_or(false, |top| top.modal);
+        let scale = self.scale;
+        let mut updates: Vec<(NativeSlot, NativeState)> = Vec::new();
+        for participant in &self.participants {
+            let node = &self.nodes[participant.node];
+            let rect = self.clip_rect(participant.node, node.bounds, viewport);
+            let visible = rect.width() > 0.0
+                && rect.height() > 0.0
+                && !modal_up
+                && !node.is_overlay
+                && !self.is_in_overlay(participant.node);
+            let state = NativeState {
+                rect,
+                scale,
+                visible,
+                // Paint order: a participant declared later sits above one
+                // declared earlier, which is what `z` means to a provider.
+                z: participant.node as u32,
+                input: participant.input,
+                mode: participant.mode,
+            };
+            if participant.last != Some(state) {
+                updates.push((participant.slot, state));
+            }
+        }
+
+        // Pushed in a scope of its own: recording what was applied needs `self`
+        // again, and the controller is borrowed out of `self`.
+        let mut applied: Vec<(NativeSlot, NativeState)> = Vec::new();
+        if let Some(controller) = self.native.as_mut() {
+            for (slot, state) in updates {
+                if controller.apply(slot, state).is_ok() {
+                    applied.push((slot, state));
+                }
+            }
+        }
+
+        for (slot, state) in applied {
+            let node = self
+                .participants
+                .iter_mut()
+                .find(|p| p.slot == slot)
+                .map(|participant| {
+                    participant.last = Some(state);
+                    participant.node
+                });
+            if let Some(index) = node {
+                // Only a capturing participant claims the hit region. A
+                // passthrough one is composited in the same place but does not
+                // take the pointer, so the widget underneath must keep
+                // receiving events — marking it native would silently swallow
+                // every click on the control the surface was drawn over.
+                self.nodes[index].native = match self
+                    .participants
+                    .iter()
+                    .find(|p| p.slot == slot)
+                    .map(|p| p.input)
+                {
+                    Some(InputMode::Capture) => Some(slot.id),
+                    _ => None,
+                };
+                self.refresh_hit_region(index);
+            }
+            stats.native_applied += 1;
+        }
+    }
+
+    fn refresh_hit_region(&mut self, index: usize) {
+        let Some(node) = self.nodes.get(index) else {
+            return;
+        };
+        if node.dead {
+            return;
+        }
+        let z = node.depth as i32 * 1_000_000 + index as i32;
+        self.router.hits.set_region(
+            node.id,
+            HitRegion {
+                bounds: node.bounds,
+                native: node.native,
+                z,
+            },
+        );
+    }
+
+    /// Intersects `rect` with the viewport and every ancestor's box.
+    ///
+    /// Ancestors stand in for clips. The widget layer has no overflow/clip API
+    /// yet, and a native view does not clip itself to anything — so without
+    /// this a participant in a scrolled container floats over content it should
+    /// be behind (device case D6). When a real clip API lands, this narrows to
+    /// the ancestors that actually clip.
+    fn clip_rect(&self, index: usize, rect: Rect, viewport: Rect) -> Rect {
+        let mut clipped = intersect(rect, viewport);
+        let mut parent = self.nodes[index].parent;
+        while let Some(parent_index) = parent {
+            clipped = intersect(clipped, self.nodes[parent_index].bounds);
+            parent = self.nodes[parent_index].parent;
+        }
+        clipped
+    }
+
+    /// Hands OS focus to `id`'s participant, or takes it back.
+    ///
+    /// Exclusive by construction: two owners of IME is a visible bug — the
+    /// candidate window jumps between the framework's caret and the native
+    /// field — so the framework yields rather than sharing (decision D4).
+    fn yield_native_focus(&mut self, id: ElementId) {
+        let slot = self
+            .index_of(id)
+            .and_then(|index| self.participants.iter().find(|p| p.node == index))
+            .map(|p| p.slot);
+        match (slot, self.native_focus) {
+            (Some(slot), current) if current == Some(slot) => {}
+            (Some(slot), _) => {
+                let Some(controller) = self.native.as_mut() else {
+                    return;
+                };
+                if controller.focus(slot).is_err() {
+                    // The provider cannot focus (or the slot is gone). Leaving
+                    // the framework focused is the right failure: a focus that
+                    // went nowhere at all is worse than one that did not move.
+                    return;
+                }
+                // Yielding means the framework lets go, not that it keeps a
+                // caret in reserve: `ime_caret_rect` is masked while native
+                // focus is held, and keys have no framework target at all.
+                if let Some(previous) = self.focus.focused() {
+                    self.clear_focus_flag(previous);
+                    self.native_focus_return = Some(previous);
+                }
+                self.focus.blur();
+                self.native_focus = Some(slot);
+            }
+            (None, Some(current)) => {
+                if let Some(controller) = self.native.as_mut() {
+                    let _ = controller.blur(current);
+                }
+                self.native_focus = None;
+                // Hand focus back, unless the caller has already named a new
+                // owner — in which case `set_focus` has just run and its choice
+                // wins over the element the participant displaced.
+                match self.native_focus_return.take() {
+                    Some(previous) if self.focus.focused().is_none() => self.set_focus(previous),
+                    _ => {}
+                }
+            }
+            (None, None) => {}
+        }
+    }
+
     // --- focus -------------------------------------------------------------
 
     pub fn focused(&self) -> Option<ElementId> {
@@ -1675,7 +2132,14 @@ impl WidgetHost {
     /// Composition caret rectangle the focused text widget last reported, or
     /// `None` when nothing is composing. The runner reads this after an IME
     /// event to anchor the OS input-method popup.
+    ///
+    /// `None` while a native participant holds focus: it owns the candidate
+    /// window now, and publishing a framework caret as well is what makes the
+    /// candidate window jump between two owners.
     pub fn ime_caret_rect(&self) -> Option<Rect> {
+        if self.native_focus.is_some() {
+            return None;
+        }
         self.ime_caret
     }
 
@@ -1685,6 +2149,7 @@ impl WidgetHost {
         }
         self.focus.focus(id);
         self.set_focus_flag(id, true);
+        self.yield_native_focus(id);
     }
 
     pub fn focus_next(&mut self) {
@@ -1844,6 +2309,84 @@ struct HostUpdateContext<'a> {
     /// The host viewport, for a composite whose overlay spans the window.
     viewport: Rect,
     overlays: Option<UpdateOverlaySink<'a>>,
+    /// The native door, present when the host has a provider.
+    native: Option<NativeGrantSink<'a>>,
+}
+
+/// The host-side half of [`UpdateContext::request_native`].
+///
+/// Every field it touches is disjoint from the node being updated, which is why
+/// a widget can be granted a participant in the middle of its own `update()`
+/// without the host having to queue the request and answer later. The
+/// alternative — queueing — would mean a widget could not know, within the
+/// frame it asked, whether it got a native view or has to draw a fallback.
+struct NativeGrantSink<'a> {
+    node: usize,
+    controller: &'a mut NativeViewController<Box<dyn NativeViewProvider>>,
+    participants: &'a mut Vec<Participant>,
+    pool: &'a mut NativeViewPool<SlotKey>,
+    next_key: &'a mut u64,
+    /// Nodes whose claim on the hit region must be dropped, deferred because
+    /// the tree is borrowed while `update` runs.
+    clears: &'a mut Vec<usize>,
+}
+
+impl NativeGrantSink<'_> {
+    fn grant(&mut self, request: &NativeRequest) -> NativeGrant {
+        if let Some(position) = self.participants.iter().position(|p| p.node == self.node) {
+            let existing = self.participants[position];
+            // Re-stating an unchanged request is the common case — `update`
+            // runs every frame — and must be free.
+            if existing.kind == request.kind
+                && existing.requested_key == request.key
+                && existing.input == request.input
+            {
+                return NativeGrant::Granted(existing.mode);
+            }
+            // A different key means a different row; a different kind means a
+            // different view. Either way the old one has to be destroyed
+            // before the new one is bound, or the provider is left holding two
+            // handles for one slot.
+            let _ = self.controller.destroy(existing.slot);
+            self.pool.release(&existing.key);
+            self.participants.remove(position);
+        }
+
+        let requested_key = request.key;
+        // Identity-less participants get a minted key so two of them can never
+        // share a slot. Rows that pass a real key share on purpose: that is
+        // what lets scrolling recycle a handful of views.
+        let key = if requested_key != 0 {
+            SlotKey::Caller(requested_key)
+        } else {
+            let minted = *self.next_key;
+            *self.next_key += 1;
+            SlotKey::Minted(minted)
+        };
+        let slot = self.pool.acquire(key);
+        match self.controller.bind(slot, request.kind, request.modes) {
+            Ok(mode) => {
+                self.participants.push(Participant {
+                    node: self.node,
+                    slot,
+                    requested_key,
+                    key,
+                    kind: request.kind,
+                    mode,
+                    input: request.input,
+                    last: None,
+                });
+                NativeGrant::Granted(mode)
+            }
+            // No acceptable mode: take the slot back rather than letting it
+            // leak into the free list's accounting.
+            Err(_) => {
+                self.pool.release(&key);
+                self.clears.push(self.node);
+                NativeGrant::Refused
+            }
+        }
+    }
 }
 
 impl HostUpdateContext<'_> {
@@ -1855,6 +2398,7 @@ impl HostUpdateContext<'_> {
             bounds,
             viewport,
             overlays: None,
+            native: None,
         }
     }
 }
@@ -1905,6 +2449,18 @@ impl UpdateContext for HostUpdateContext<'_> {
         };
         sink.commands.push(OverlayCommand::Close(handle));
         true
+    }
+
+    fn request_native(&mut self, request: &NativeRequest) -> NativeGrant {
+        // Answered inline rather than queued, unlike the overlay door. An
+        // overlay mounts a subtree and therefore needs the host to itself; a
+        // participant touches only fields disjoint from the node being updated,
+        // so a widget can find out — within the frame it asked — whether it got
+        // a native view or has to draw its own fallback.
+        match self.native.as_mut() {
+            Some(sink) => sink.grant(request),
+            None => NativeGrant::Refused,
+        }
     }
 }
 

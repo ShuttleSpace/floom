@@ -21,6 +21,9 @@ floem-services = { path = "../../framework/floem-services", version = "0.2.0" }
 floem-error = { path = "../../framework/floem-error", version = "0.2.0" }
 floem-widgets = { path = "../../widgets/floem-widgets", version = "0.2.0" }
 floem-text = { path = "../../text/floem-text", version = "0.2.0" }
+# Participant ABI: the app hosts native views, so it is where the controller
+# lives. The OS bridges themselves stay in the platform crates.
+floem-native = { path = "../../native/floem-native", version = "0.2.0" }
 # The wiring layer: the app is the top of the layering, so it is the one crate
 # allowed to name both the platform ABI and the renderer ABI.
 floem-platform = { path = "../../platform/floem-platform", version = "0.2.0" }

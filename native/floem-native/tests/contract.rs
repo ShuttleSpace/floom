@@ -449,7 +449,7 @@ fn a_participant_nobody_can_composite_is_refused_at_bind_time() {
 #[test]
 fn negotiation_falls_back_and_the_host_records_what_it_got() {
     let caps = NativeCapabilities {
-        modes: &[TEXTURE],
+        modes: TEXTURE_ONLY,
         snapshot: false,
         input: InputModes::ALL,
         focusable: true,
@@ -468,7 +468,7 @@ fn negotiation_falls_back_and_the_host_records_what_it_got() {
 #[test]
 fn applying_a_mode_the_provider_lacks_is_refused() {
     let caps = NativeCapabilities {
-        modes: &[TEXTURE],
+        modes: TEXTURE_ONLY,
         ..NativeCapabilities::default()
     };
     let mut c = NativeViewController::new(FakeNativeProvider::with_capabilities(caps));

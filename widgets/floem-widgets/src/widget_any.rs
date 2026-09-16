@@ -125,4 +125,5 @@ impl_widget_any!(
     crate::navigation::NavigationBar,
     crate::navigation::NavigationRail,
     crate::navigation::NavigationDrawer,
+    crate::native::NativeSurface,
 );

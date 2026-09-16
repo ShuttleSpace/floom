@@ -26,43 +26,11 @@ use floem_types::{Rect, ResourceId};
 
 use crate::pool::NativeSlot;
 
-/// How a participant is composited relative to the framework's own surface.
-///
-/// The order of the variants is *not* a strength order. Which of these is
-/// "best" is a property of the platform: X11 can raise a subwindow above a
-/// surface, Wayland has no subwindows at all, Windows child `HWND`s cannot be
-/// composited under D3D without airspace tricks, KMS has real hardware planes.
-/// A provider publishes what it can do and the host negotiates.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum NativeCompositionMode {
-    /// A sibling window/view stacked above the framework's surface.
-    ///
-    /// Cheap and always available, but it composes above the *whole* scene: it
-    /// can be occluded by another participant, never by framework-painted
-    /// content. See the D2 note in the Phase 16 plan.
-    Overlay,
-    /// Contents imported as a texture and drawn as a scene resource, so the
-    /// participant composites *inside* the scene and can be occluded, clipped
-    /// and transformed like anything else.
-    Texture,
-    /// A real compositor surface or hardware plane handed to the OS
-    /// compositor (`SurfaceControl`, `CALayer`, KMS plane).
-    Surface,
-    /// Rendered offscreen and blitted into the framework's surface.
-    Offscreen,
-}
-
-/// Whether a participant takes pointer input itself.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
-pub enum InputMode {
-    /// The native view does not want input; the framework routes hits as if the
-    /// participant were not there.
-    #[default]
-    Passthrough,
-    /// The native view takes OS input itself. The framework must *subtract*
-    /// the participant's rect from its own hit-test area rather than add to it.
-    Capture,
-}
+// The three nouns a widget, a host and a provider all have to say live in
+// `floem-types`: the widget layer sits above this crate and may not name
+// anything in it, so "I want a video composited as an overlay" has to be
+// spellable below both. Re-exported so callers of this crate keep one import.
+pub use floem_types::{InputMode, NativeCompositionMode, NativeViewKind};
 
 /// The set of [`InputMode`]s a provider can honour.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -151,22 +119,6 @@ impl Default for NativeCapabilities {
     fn default() -> Self {
         Self::NONE
     }
-}
-
-/// What kind of native view a participant wants.
-///
-/// Deliberately a tag rather than a typed handle: the framework names intent
-/// without knowing any concrete OS type, and a provider that has no opinion
-/// about maps can still answer `Custom("com.example.threed")`.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum NativeViewKind {
-    Map,
-    Video,
-    Web,
-    /// A native text field. Focusable participants of this kind are the D3 case:
-    /// the framework must yield IME ownership while one is composing.
-    TextInput,
-    Custom(&'static str),
 }
 
 /// Everything the host wants a participant to be, right now.

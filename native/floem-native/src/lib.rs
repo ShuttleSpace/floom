@@ -31,5 +31,5 @@ pub use abi::{
 pub use floem_types::{NativeViewId, Rect, ResourceId};
 
 pub use controller::NativeViewController;
-pub use fake::{FakeNativeProvider, NativeCommand};
+pub use fake::{FakeNativeProvider, NativeCommand, NativeCommandLog};
 pub use pool::{NativeSlot, NativeViewPool};

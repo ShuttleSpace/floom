@@ -60,6 +60,28 @@ pub trait UpdateContext {
         let _ = handle;
         false
     }
+
+    /// Asks the host to put a native view in this node's box.
+    ///
+    /// The state-driven twin of the overlay door: a widget states what it wants
+    /// every `update()` and the host decides, because the host is what owns the
+    /// participant's lifetime. A native view has to outlive the frame that
+    /// created it, be re-bound when its slot is recycled for another row, and
+    /// be destroyed exactly once — none of which a widget can arrange from
+    /// inside its own `update`.
+    ///
+    /// Re-stating the same request is free; a host that has already granted it
+    /// returns the same grant. Changing [`NativeRequest::key`] is how a
+    /// virtualized row asks for a different slot.
+    ///
+    /// [`NativeGrant::Refused`] means the host has no provider, or the provider
+    /// offers no mode this participant accepts. A caller must decide what to
+    /// draw instead: silently showing nothing is how a "supported" feature
+    /// becomes an empty rectangle on one platform.
+    fn request_native(&mut self, request: &crate::NativeRequest) -> crate::NativeGrant {
+        let _ = request;
+        crate::NativeGrant::Refused
+    }
 }
 
 /// Pointer/keyboard routing context.
