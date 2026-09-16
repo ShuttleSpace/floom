@@ -13,8 +13,8 @@
 use std::sync::{Arc, Mutex};
 
 use crate::abi::{
-    NativeCapabilities, NativeCompositionMode, NativeError, NativeSnapshot, NativeState,
-    NativeViewKind, NativeViewProvider,
+    ClipSupport, InputModes, NativeCapabilities, NativeCompositionMode, NativeError,
+    NativeSnapshot, NativeState, NativeViewKind, NativeViewProvider,
 };
 use crate::pool::NativeSlot;
 
@@ -159,7 +159,11 @@ pub struct FakeNativeProvider {
 
 impl FakeNativeProvider {
     /// A provider that can do everything: all four modes, snapshots, both input
-    /// modes, focusable.
+    /// modes, focusable, and cropping its own content.
+    ///
+    /// Cropping is declared as [`ClipSupport::Provider`] because that is the
+    /// interesting case for a test: the host sends a crop and the provider is
+    /// expected to honour it, so a test that forgets to send one fails.
     pub fn new() -> Self {
         Self::with_capabilities(NativeCapabilities {
             modes: &[
@@ -169,8 +173,9 @@ impl FakeNativeProvider {
                 NativeCompositionMode::Offscreen,
             ],
             snapshot: true,
-            input: crate::abi::InputModes::ALL,
+            input: InputModes::ALL,
             focusable: true,
+            clip: ClipSupport::Provider,
         })
     }
 
@@ -188,6 +193,22 @@ impl FakeNativeProvider {
     /// are no subwindows, or any backend before its bridge is written.
     pub fn incapable() -> Self {
         Self::with_capabilities(NativeCapabilities::NONE)
+    }
+
+    /// Change what this provider says about cropping.
+    ///
+    /// [`ClipSupport::Unsupported`] is the interesting one: a KMS plane, or any
+    /// backend whose view cannot be cropped by anyone, which forces the host to
+    /// find a mode it composites itself.
+    pub fn with_clip(mut self, clip: ClipSupport) -> Self {
+        self.capabilities.clip = clip;
+        self
+    }
+
+    /// A provider that can composite but cannot crop — the shape a plane-based
+    /// backend has, and the one that decides whether a host degrades correctly.
+    pub fn cannot_crop() -> Self {
+        Self::new().with_clip(ClipSupport::Unsupported)
     }
 
     /// Make the next (and subsequent) `create` calls fail.
@@ -234,6 +255,20 @@ impl FakeNativeProvider {
 
     pub fn destroys(&self) -> usize {
         self.commands.iter().filter(|c| c.is_destroy()).count()
+    }
+
+    pub fn focuses(&self) -> usize {
+        self.commands
+            .iter()
+            .filter(|c| matches!(c, NativeCommand::Focus { .. }))
+            .count()
+    }
+
+    pub fn blurs(&self) -> usize {
+        self.commands
+            .iter()
+            .filter(|c| matches!(c, NativeCommand::Blur { .. }))
+            .count()
     }
 
     /// The `apply` commands, as `(slot, state)` pairs.

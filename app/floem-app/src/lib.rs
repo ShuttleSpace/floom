@@ -63,6 +63,20 @@ pub struct FrameStats {
     /// renderer drew. The compositor still owes a present, and a runner keying
     /// its skip logic off `scene.damage()` alone would suppress it.
     pub native_applied: usize,
+    /// Participants that had to change composition mode because the provider
+    /// cannot crop and the participant landed under a clipping ancestor.
+    ///
+    /// Counted rather than logged: one of these per participant is normal for a
+    /// plane-based backend, and a *rising* number means participants are being
+    /// re-created repeatedly — the churn this is designed to avoid.
+    pub native_degraded: usize,
+    /// Participants hidden because they needed cropping, the provider cannot
+    /// crop, and no mode the framework composites was on offer.
+    ///
+    /// Non-zero is a visible gap on screen, and it is the honest answer: the
+    /// alternatives are drawing outside the participant's box (device case D6)
+    /// or rescaling its content, and both are silent.
+    pub native_clip_hidden: usize,
 }
 
 struct Node {
@@ -105,6 +119,16 @@ struct Node {
     /// then resolves to the native view — which takes the pointer itself —
     /// instead of to this widget. Cleared when the participant is retired.
     native: Option<NativeViewId>,
+    /// Set while this node's participant is bound but off screen — clipped
+    /// away by an ancestor, or hidden under a modal.
+    ///
+    /// Such a node must not be reachable by the pointer at all. Withdrawing its
+    /// *native* claim is not enough: the node is still a widget in the tree, and
+    /// a deep node's region outranks a shallow one's, so an invisible surface
+    /// would keep eating clicks meant for whatever is painted where it used to
+    /// be — with nothing on screen to explain it. `false` for every node that
+    /// is not a hidden participant.
+    native_hidden: bool,
     /// Set for `Text` leaves whose width/height is not pinned: they size
     /// themselves through a taffy measure callback reading this shared state,
     /// so extent changes (content edit, container reflow) re-measure instead
@@ -144,23 +168,6 @@ struct OverlaySlot {
     owner: Option<ElementId>,
 }
 
-/// Intersects two rects, yielding [`Rect::ZERO`] when they do not overlap.
-///
-/// `ZERO` rather than an inverted rect on purpose: an inverted rect is exactly
-/// what the participant contract rejects, so "clipped away" has to be
-/// representable without producing one.
-fn intersect(a: Rect, b: Rect) -> Rect {
-    let x0 = a.x0.max(b.x0);
-    let y0 = a.y0.max(b.y0);
-    let x1 = a.x1.min(b.x1);
-    let y1 = a.y1.min(b.y1);
-    if x1 <= x0 || y1 <= y0 {
-        Rect::ZERO
-    } else {
-        Rect { x0, y0, x1, y1 }
-    }
-}
-
 /// What a participant's slot is pooled under.
 ///
 /// The two spaces are separate on purpose. A caller that numbers its rows from
@@ -194,12 +201,24 @@ struct Participant {
     /// What the slot is actually pooled under.
     key: SlotKey,
     kind: NativeViewKind,
+    /// The modes the widget will accept, strongest first. Kept because it is
+    /// needed again after negotiation: a participant whose provider cannot crop
+    /// has to be re-negotiated into a mode the *framework* composites, and only
+    /// the caller knows which of those it will take.
+    modes: &'static [NativeCompositionMode],
     /// The mode the provider negotiated at bind time. Recorded rather than
     /// assumed: on Wayland the answer is not the one that was asked for.
     mode: NativeCompositionMode,
     input: InputMode,
     /// Last state pushed down. `None` until the first apply.
     last: Option<NativeState>,
+    /// Set when the participant needs cropping, its provider cannot crop, and
+    /// it will accept no mode the framework composites — so it is hidden.
+    ///
+    /// Remembered rather than re-derived so the decision costs one frame: a
+    /// per-frame re-negotiation of a participant that is hopeless cannot
+    /// succeed, and would hide it again every frame forever.
+    clip_starved: bool,
 }
 
 /// What a widget asked the host to do with an overlay during an event.
@@ -992,6 +1011,7 @@ impl WidgetHost {
             dead: false,
             is_overlay: false,
             native: None,
+            native_hidden: false,
             scene_nodes: Vec::new(),
             text_measure,
         });
@@ -1477,6 +1497,12 @@ impl WidgetHost {
             }
             let output = self.layout.layout(self.nodes[index].layout_node);
             self.nodes[index].bounds = output.rect;
+            // A participant that is off screen has no region at all, not just
+            // no native claim — see `Node::native_hidden`.
+            if self.nodes[index].native_hidden {
+                self.router.hits.remove(self.nodes[index].id);
+                continue;
+            }
             let z = self.nodes[index].depth as i32 * 1_000_000 + index as i32;
             self.router.hits.set_region(
                 self.nodes[index].id,
@@ -1960,6 +1986,7 @@ impl WidgetHost {
         for index in clears {
             if let Some(node) = self.nodes.get_mut(index) {
                 node.native = None;
+                node.native_hidden = false;
             }
             self.refresh_hit_region(index);
         }
@@ -1974,17 +2001,25 @@ impl WidgetHost {
         // modal closes, and recreating an OS view is the expensive part.
         let modal_up = self.overlay.top().map_or(false, |top| top.modal);
         let scale = self.scale;
+
+        self.reconcile_clipping(viewport, stats);
+
         let mut updates: Vec<(NativeSlot, NativeState)> = Vec::new();
         for participant in &self.participants {
             let node = &self.nodes[participant.node];
-            let rect = self.clip_rect(participant.node, node.bounds, viewport);
-            let visible = rect.width() > 0.0
-                && rect.height() > 0.0
+            let bounds = node.bounds;
+            let clip = self.clip(participant.node, bounds, viewport);
+            let covered = clip.map_or(bounds, |clip| bounds.intersect(clip));
+            let visible = !covered.is_empty()
+                && !participant.clip_starved
                 && !modal_up
                 && !node.is_overlay
                 && !self.is_in_overlay(participant.node);
             let state = NativeState {
-                rect,
+                // The placement, never the intersection: a provider that fitted
+                // its content to a clipped rect would rescale instead of crop.
+                rect: bounds,
+                clip,
                 scale,
                 visible,
                 // Paint order: a participant declared later sits above one
@@ -2010,32 +2045,94 @@ impl WidgetHost {
         }
 
         for (slot, state) in applied {
-            let node = self
-                .participants
-                .iter_mut()
-                .find(|p| p.slot == slot)
-                .map(|participant| {
-                    participant.last = Some(state);
-                    participant.node
-                });
-            if let Some(index) = node {
-                // Only a capturing participant claims the hit region. A
-                // passthrough one is composited in the same place but does not
-                // take the pointer, so the widget underneath must keep
-                // receiving events — marking it native would silently swallow
-                // every click on the control the surface was drawn over.
-                self.nodes[index].native = match self
-                    .participants
-                    .iter()
-                    .find(|p| p.slot == slot)
-                    .map(|p| p.input)
-                {
-                    Some(InputMode::Capture) => Some(slot.id),
+            let index = self.participants.iter().position(|p| p.slot == slot);
+            if let Some(position) = index {
+                self.participants[position].last = Some(state);
+                let node = self.participants[position].node;
+                // Only a capturing participant claims the hit region, and only
+                // while it is actually on screen. A passthrough one is
+                // composited in the same place but does not take the pointer, so
+                // the widget underneath must keep receiving events; and an
+                // off-screen participant must be out of reach entirely, or a
+                // click would land on a native surface that is not there.
+                self.nodes[node].native = match self.participants[position].input {
+                    InputMode::Capture if state.visible => Some(slot.id),
                     _ => None,
                 };
-                self.refresh_hit_region(index);
+                self.nodes[node].native_hidden = !state.visible;
+                self.refresh_hit_region(node);
             }
             stats.native_applied += 1;
+        }
+    }
+
+    /// Moves participants whose provider cannot crop out of the way of a clip
+    /// that would be honoured by rescaling, or hides them.
+    ///
+    /// This is the whole answer to "what does a host do when the platform
+    /// cannot crop": the geometry the host computes is right, the provider is
+    /// honest about what it can do, and the *mode* is what gives.
+    ///
+    /// - A provider that crops — itself ([`ClipSupport::Provider`]) or via its
+    ///   platform ([`ClipSupport::Platform`]) — needs none of this; it is sent
+    ///   the placement and the crop and does the right thing.
+    /// - A provider that cannot crop gets the participant re-negotiated into a
+    ///   mode whose pixels the *framework* owns, where cropping is free. That
+    ///   costs one destroy/create pair, once.
+    /// - If it will accept no such mode, the participant is hidden. Drawing it
+    ///   unclipped (device case D6) and rescaling it are both wrong and both
+    ///   silent; a gap is wrong and *visible*, and `native_clip_hidden` says so.
+    ///
+    /// The degradation is one-way for the lifetime of the participant. Putting
+    /// it back the moment the clip stops biting would destroy and re-create a
+    /// native view on every scrolled frame at the boundary.
+    fn reconcile_clipping(&mut self, viewport: Rect, stats: &mut FrameStats) {
+        let Some(caps) = self.native.as_ref().map(|c| c.capabilities()) else {
+            return;
+        };
+        if caps.can_crop() {
+            return;
+        }
+        for position in 0..self.participants.len() {
+            let participant = self.participants[position];
+            let bounds = self.nodes[participant.node].bounds;
+            let clip = self.clip(participant.node, bounds, viewport);
+            let needs_crop = clip.map_or(false, |clip| !clip.contains_rect(bounds));
+            if !needs_crop {
+                // Whole again: whatever was decided while it was clipped no
+                // longer applies, and the next clip gets a fresh decision.
+                self.participants[position].clip_starved = false;
+                continue;
+            }
+            if participant.mode.is_host_composited() || participant.clip_starved {
+                continue;
+            }
+            match caps.negotiate_croppable(participant.modes) {
+                Some(mode) => {
+                    let rebound = self.native.as_mut().and_then(|controller| {
+                        controller
+                            .rebind(participant.slot, participant.kind, &[mode])
+                            .ok()
+                    });
+                    match rebound {
+                        Some(mode) => {
+                            // The new view has never been told anything, so the
+                            // next state is pushed unconditionally.
+                            self.participants[position].mode = mode;
+                            self.participants[position].last = None;
+                            stats.native_degraded += 1;
+                        }
+                        None => {
+                            self.participants[position].clip_starved = true;
+                            stats.native_clip_hidden += 1;
+                        }
+                    }
+                }
+                None => {
+                    self.participants[position].clip_starved = true;
+                    stats.native_clip_hidden += 1;
+                }
+            }
         }
     }
 
@@ -2044,6 +2141,14 @@ impl WidgetHost {
             return;
         };
         if node.dead {
+            return;
+        }
+        if node.native_hidden {
+            // Off screen: out of reach entirely, not merely stripped of its
+            // native claim. A deep node's region outranks a shallow one's, so
+            // leaving it in place would keep eating clicks meant for whatever is
+            // actually painted there.
+            self.router.hits.remove(node.id);
             return;
         }
         let z = node.depth as i32 * 1_000_000 + index as i32;
@@ -2057,21 +2162,29 @@ impl WidgetHost {
         );
     }
 
-    /// Intersects `rect` with the viewport and every ancestor's box.
+    /// The crop `rect` is under, or `None` when nothing clips it.
     ///
     /// Ancestors stand in for clips. The widget layer has no overflow/clip API
     /// yet, and a native view does not clip itself to anything — so without
     /// this a participant in a scrolled container floats over content it should
     /// be behind (device case D6). When a real clip API lands, this narrows to
     /// the ancestors that actually clip.
-    fn clip_rect(&self, index: usize, rect: Rect, viewport: Rect) -> Rect {
-        let mut clipped = intersect(rect, viewport);
+    ///
+    /// `None` rather than a rect that happens to contain `rect`, because "no
+    /// one clips me" and "clipped to nothing" are different statements and only
+    /// the second one is a problem for a provider.
+    fn clip(&self, index: usize, rect: Rect, viewport: Rect) -> Option<Rect> {
+        let mut clipped = rect.intersect(viewport);
         let mut parent = self.nodes[index].parent;
         while let Some(parent_index) = parent {
-            clipped = intersect(clipped, self.nodes[parent_index].bounds);
+            clipped = clipped.intersect(self.nodes[parent_index].bounds);
             parent = self.nodes[parent_index].parent;
         }
-        clipped
+        if clipped.contains_rect(rect) {
+            None
+        } else {
+            Some(clipped)
+        }
     }
 
     /// Hands OS focus to `id`'s participant, or takes it back.
@@ -2372,9 +2485,11 @@ impl NativeGrantSink<'_> {
                     requested_key,
                     key,
                     kind: request.kind,
+                    modes: request.modes,
                     mode,
                     input: request.input,
                     last: None,
+                    clip_starved: false,
                 });
                 NativeGrant::Granted(mode)
             }

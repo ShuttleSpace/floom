@@ -22,8 +22,8 @@ pub mod fake;
 pub mod pool;
 
 pub use abi::{
-    DeviceRect, InputMode, InputModes, NativeCapabilities, NativeCompositionMode, NativeError,
-    NativeSnapshot, NativeState, NativeViewKind, NativeViewProvider, to_device,
+    ClipSupport, DeviceRect, InputMode, InputModes, NativeCapabilities, NativeCompositionMode,
+    NativeError, NativeSnapshot, NativeState, NativeViewKind, NativeViewProvider, to_device,
 };
 // Re-exported because they are part of the ABI's vocabulary: a provider
 // implementing `NativeViewProvider` needs them and should not have to guess

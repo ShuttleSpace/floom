@@ -101,6 +101,38 @@ impl Rect {
     pub fn contains(self, p: Point) -> bool {
         p.x >= self.x0 && p.x < self.x1 && p.y >= self.y0 && p.y < self.y1
     }
+
+    #[inline]
+    pub fn is_empty(self) -> bool {
+        self.x1 <= self.x0 || self.y1 <= self.y0
+    }
+
+    /// The overlap of two rects, or [`Rect::ZERO`] when they miss each other.
+    ///
+    /// Empty rather than inverted: an "intersection" that runs past its inputs
+    /// (`x1 < x0`) flows into a native view's geometry and comes out the other
+    /// side as a negative extent, which is a crash on one platform and a
+    /// zero-sized window on another.
+    #[inline]
+    pub fn intersect(self, other: Self) -> Self {
+        let x0 = self.x0.max(other.x0);
+        let y0 = self.y0.max(other.y0);
+        let x1 = self.x1.min(other.x1);
+        let y1 = self.y1.min(other.y1);
+        if x1 <= x0 || y1 <= y0 {
+            Self::ZERO
+        } else {
+            Self { x0, y0, x1, y1 }
+        }
+    }
+
+    /// Whether `other` lies entirely inside this rect. Used to skip a clip that
+    /// does not actually bite, so "nothing clips me" stays distinguishable from
+    /// "clipped to nothing".
+    #[inline]
+    pub fn contains_rect(self, other: Self) -> bool {
+        other.x0 >= self.x0 && other.y0 >= self.y0 && other.x1 <= self.x1 && other.y1 <= self.y1
+    }
 }
 
 /// Edge insets (top, right, bottom, left).

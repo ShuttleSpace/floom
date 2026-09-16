@@ -11,7 +11,7 @@
 //! (snapshot transitions) assertable without a single OS bridge existing.
 
 use floem_native::{
-    FakeNativeProvider, InputMode, InputModes, NativeCapabilities, NativeCommand,
+    ClipSupport, FakeNativeProvider, InputMode, InputModes, NativeCapabilities, NativeCommand,
     NativeCompositionMode, NativeError, NativeState, NativeViewController, NativeViewKind,
     NativeViewPool, Rect,
 };
@@ -29,6 +29,9 @@ fn rect(x0: f64, y0: f64, x1: f64, y1: f64) -> Rect {
 fn state(mode: NativeCompositionMode) -> NativeState {
     NativeState {
         rect: rect(0.0, 0.0, 100.0, 50.0),
+        // Nothing clips it: the placement and the visible region are the same,
+        // which is the common case and the one every other assertion assumes.
+        clip: None,
         scale: 2.0,
         visible: true,
         z: 0,
@@ -453,6 +456,7 @@ fn negotiation_falls_back_and_the_host_records_what_it_got() {
         snapshot: false,
         input: InputModes::ALL,
         focusable: true,
+        clip: ClipSupport::Provider,
     };
     let mut c = NativeViewController::new(FakeNativeProvider::with_capabilities(caps));
     let mut pool = slots();
@@ -553,4 +557,186 @@ fn a_boxed_provider_behaves_the_same_as_a_concrete_one() {
         Err(NativeError::NotBound(slot)),
         "the erased provider still enforces the lifecycle"
     );
+}
+
+// --- placement versus clipping ---------------------------------------------
+
+/// A state that needs cropping must never reach a provider that declared it
+/// cannot crop.
+///
+/// The provider would honour its rect by fitting its content into it, which
+/// rescales a map or a video instead of cropping it — a wrong frame that looks
+/// plausible. Refusing at the controller is what makes the invariant hold for
+/// every backend instead of for the ones that remembered.
+#[test]
+fn a_state_that_needs_cropping_never_reaches_a_provider_that_cannot_crop() {
+    let mut c = NativeViewController::new(FakeNativeProvider::cannot_crop());
+    let mut pool = slots();
+    let slot = pool.acquire(0);
+    c.bind(slot, NativeViewKind::Video, PREFER_OVERLAY).unwrap();
+
+    let mut s = state(OVERLAY);
+    s.clip = Some(rect(0.0, 0.0, 100.0, 20.0));
+
+    assert_eq!(
+        c.apply(slot, s),
+        Err(NativeError::UnsupportedClip(rect(0.0, 0.0, 100.0, 20.0)))
+    );
+    assert_eq!(
+        c.provider().applied().len(),
+        0,
+        "and nothing was applied on the way out"
+    );
+}
+
+/// A clip that contains the participant does not need cropping, so it is not a
+/// reason to refuse anything.
+#[test]
+fn a_clip_that_does_not_bite_is_allowed_even_without_cropping_support() {
+    let mut c = NativeViewController::new(FakeNativeProvider::cannot_crop());
+    let mut pool = slots();
+    let slot = pool.acquire(0);
+    c.bind(slot, NativeViewKind::Video, PREFER_OVERLAY).unwrap();
+
+    let mut s = state(OVERLAY);
+    s.clip = Some(rect(-10.0, -10.0, 500.0, 500.0));
+
+    assert_eq!(c.apply(slot, s), Ok(()));
+    assert_eq!(c.provider().applied().len(), 1);
+}
+
+/// The provider is told *where the view is* and *what part of it shows*, as two
+/// things. It is what lets a provider crop in place rather than rescale.
+#[test]
+fn a_cropping_provider_is_handed_placement_and_crop_separately() {
+    let mut c = NativeViewController::new(FakeNativeProvider::new());
+    let mut pool = slots();
+    let slot = pool.acquire(0);
+    c.bind(slot, NativeViewKind::Video, PREFER_OVERLAY).unwrap();
+
+    let mut s = state(OVERLAY);
+    s.clip = Some(rect(0.0, 30.0, 100.0, 50.0));
+    c.apply(slot, s).unwrap();
+
+    let (_, applied) = c.provider().applied()[0];
+    assert_eq!(
+        applied.rect,
+        rect(0.0, 0.0, 100.0, 50.0),
+        "the placement is still the whole view"
+    );
+    assert_eq!(applied.visible_rect(), rect(0.0, 30.0, 100.0, 50.0));
+    assert_ne!(
+        applied.visible_rect(),
+        applied.rect,
+        "and the crop is not the placement"
+    );
+}
+
+// --- rebinding -------------------------------------------------------------
+
+const OFFSCREEN: NativeCompositionMode = NativeCompositionMode::Offscreen;
+
+/// Changing a participant's composition mode replaces the view on the *same*
+/// slot.
+///
+/// The generation is deliberately left alone: this is the same participant, not
+/// a slot recycled for another row, and a provider keying per-slot resources
+/// has to be able to tell those two cases apart.
+#[test]
+fn rebinding_swaps_the_view_without_recycling_the_slot() {
+    let mut c = NativeViewController::new(FakeNativeProvider::new());
+    let mut pool = slots();
+    let slot = pool.acquire(0);
+    c.bind(slot, NativeViewKind::Video, PREFER_OVERLAY).unwrap();
+
+    let mode = c.rebind(slot, NativeViewKind::Video, &[OFFSCREEN]).unwrap();
+
+    assert_eq!(mode, OFFSCREEN);
+    assert_eq!(c.mode(slot), Some(OFFSCREEN));
+    assert_eq!(c.provider().creates(), 2, "a new view was created");
+    assert_eq!(c.provider().destroys(), 1, "and the old one destroyed");
+    assert_eq!(
+        c.unreleased().collect::<Vec<_>>(),
+        vec![slot],
+        "the pool's accounting still sees exactly one live view, on the same slot"
+    );
+    assert_eq!(
+        slot.generation, 1,
+        "and the generation is untouched: a bumped one means 'recycled for \
+         something else', which this is not"
+    );
+}
+
+/// Focus survives the swap. A native text field that had to be recomposited
+/// must not silently drop the keyboard — the IME goes with it.
+#[test]
+fn rebinding_keeps_focus_with_the_participant() {
+    let mut c = NativeViewController::new(FakeNativeProvider::new());
+    let mut pool = slots();
+    let slot = pool.acquire(0);
+    c.bind(slot, NativeViewKind::TextInput, PREFER_OVERLAY)
+        .unwrap();
+    c.focus(slot).unwrap();
+    assert_eq!(c.focused(), Some(slot));
+
+    c.rebind(slot, NativeViewKind::TextInput, &[OFFSCREEN])
+        .unwrap();
+
+    assert_eq!(c.focused(), Some(slot), "still the keyboard owner");
+    assert_eq!(
+        c.provider().focuses(),
+        2,
+        "the new view was handed focus, having never had it"
+    );
+}
+
+#[test]
+fn rebinding_a_slot_that_is_not_bound_is_refused() {
+    let mut c = NativeViewController::new(FakeNativeProvider::new());
+    let mut pool = slots();
+    let slot = pool.acquire(0);
+
+    assert_eq!(
+        c.rebind(slot, NativeViewKind::Video, PREFER_OVERLAY),
+        Err(NativeError::NotBound(slot))
+    );
+    assert_eq!(c.provider().creates(), 0);
+}
+
+/// A provider that cannot crop may still be *told* about a crop when the
+/// framework is the one drawing it.
+///
+/// `Texture` and `Offscreen` put the pixels in the framework's hands, so the
+/// crop is applied downstream of the provider. Refusing these would make the
+/// one fallback that works for a cropless backend impossible.
+#[test]
+fn a_cropless_provider_may_be_told_about_a_crop_it_does_not_apply() {
+    let mut c = NativeViewController::new(FakeNativeProvider::cannot_crop());
+    let mut pool = slots();
+    let slot = pool.acquire(0);
+    c.bind(slot, NativeViewKind::Video, &[OFFSCREEN]).unwrap();
+
+    let mut s = state(OFFSCREEN);
+    s.clip = Some(rect(0.0, 0.0, 100.0, 20.0));
+
+    assert_eq!(c.apply(slot, s), Ok(()));
+    assert_eq!(c.provider().applied().len(), 1);
+}
+
+/// And a hidden participant gets through whatever its mode: there is no visible
+/// region to get wrong, and a host has to be able to take a participant it
+/// cannot composite correctly off the screen.
+#[test]
+fn a_cropless_provider_can_be_told_to_hide_a_clipped_participant() {
+    let mut c = NativeViewController::new(FakeNativeProvider::cannot_crop());
+    let mut pool = slots();
+    let slot = pool.acquire(0);
+    c.bind(slot, NativeViewKind::Video, PREFER_OVERLAY).unwrap();
+
+    let mut s = state(OVERLAY);
+    s.clip = Some(rect(0.0, 0.0, 100.0, 20.0));
+    s.visible = false;
+
+    assert_eq!(c.apply(slot, s), Ok(()));
+    assert_eq!(c.provider().applied(), vec![(slot, s)]);
 }

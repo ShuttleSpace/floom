@@ -32,6 +32,38 @@ use crate::pool::NativeSlot;
 // spellable below both. Re-exported so callers of this crate keep one import.
 pub use floem_types::{InputMode, NativeCompositionMode, NativeViewKind};
 
+/// Whether a provider can crop a participant to a rect it does not own.
+///
+/// Cropping is a separate capability from compositing, and declaring it is what
+/// keeps a host from having to guess. The failure it prevents is that a
+/// participant placed in a clipping ancestor — a row in a scrolling list, a
+/// stream under a modal — is either drawn *outside* its box (X11 subwindows and
+/// Win32 child `HWND`s are clipped by their parent, but a KMS plane is not) or,
+/// worse, silently rescaled to fit, which looks plausible on a map and is
+/// obviously wrong on a video.
+///
+/// Conservative by default: a provider that has not thought about cropping is
+/// assumed not to do it, so the host degrades the composition instead of
+/// shipping a wrong frame.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+pub enum ClipSupport {
+    /// The platform clips a participant against its parent for free — an X11
+    /// subwindow, a Win32 child `HWND`, an Android view in a `ViewGroup`. The
+    /// host still sends the crop, but a provider that ignores it is correct.
+    Platform,
+    /// The provider must apply the crop itself: Wayland's
+    /// `wp_viewport.set_source`, iOS's `layer.contentsRect`, or a texture-mode
+    /// participant cropping its source rect before upload.
+    Provider,
+    /// The provider cannot crop at all: a KMS plane, or a view placed straight
+    /// into the window's compositor tree with no crop primitive. A host must
+    /// not hand such a provider a rect that needs cropping —
+    /// [`NativeCapabilities::negotiate_croppable`] is how it finds a mode whose
+    /// pixels it owns instead.
+    #[default]
+    Unsupported,
+}
+
 /// The set of [`InputMode`]s a provider can honour.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct InputModes {
@@ -84,6 +116,9 @@ pub struct NativeCapabilities {
     /// Whether participants can join the OS focus chain (and therefore take IME
     /// ownership).
     pub focusable: bool,
+    /// Whether a participant can be cropped to a rect it does not own. See
+    /// [`ClipSupport`].
+    pub clip: ClipSupport,
 }
 
 impl NativeCapabilities {
@@ -92,6 +127,7 @@ impl NativeCapabilities {
         snapshot: false,
         input: InputModes::NONE,
         focusable: false,
+        clip: ClipSupport::Unsupported,
     };
 
     pub fn supports(self, mode: NativeCompositionMode) -> bool {
@@ -101,6 +137,11 @@ impl NativeCapabilities {
     /// The provider's own first choice, if it has any modes at all.
     pub fn preferred(self) -> Option<NativeCompositionMode> {
         self.modes.first().copied()
+    }
+
+    /// Whether a rect that needs cropping can be handed to this provider at all.
+    pub fn can_crop(self) -> bool {
+        !matches!(self.clip, ClipSupport::Unsupported)
     }
 
     /// Pick the strongest mode both sides accept.
@@ -113,6 +154,25 @@ impl NativeCapabilities {
     pub fn negotiate(self, preferred: &[NativeCompositionMode]) -> Option<NativeCompositionMode> {
         preferred.iter().copied().find(|m| self.supports(*m))
     }
+
+    /// Pick a mode whose pixels the framework owns, so a crop is free.
+    ///
+    /// This is the fallback for [`ClipSupport::Unsupported`]: a participant the
+    /// platform will not crop for us must be handed to a path where *we* crop,
+    /// and the only two such modes are [`NativeCompositionMode::Texture`] and
+    /// [`NativeCompositionMode::Offscreen`]. Empty when neither side offers
+    /// one, which is the honest answer for a plane-based backend — the host
+    /// then hides the participant rather than letting it draw outside its box.
+    pub fn negotiate_croppable(
+        self,
+        preferred: &[NativeCompositionMode],
+    ) -> Option<NativeCompositionMode> {
+        preferred
+            .iter()
+            .copied()
+            .filter(|m| m.is_host_composited())
+            .find(|m| self.supports(*m))
+    }
 }
 
 impl Default for NativeCapabilities {
@@ -124,11 +184,33 @@ impl Default for NativeCapabilities {
 /// Everything the host wants a participant to be, right now.
 ///
 /// Absolute, not a delta: applying the same state twice is a no-op.
+///
+/// **Placement and clipping are two different things and are carried
+/// separately.** `rect` is where the view is; `clip` is how much of it shows.
+/// Folding them into one rect — pushing the *intersection* of the node box, its
+/// ancestors and the viewport — is the tempting simplification and it is wrong:
+/// a provider that honours its rect by fitting its content into it will
+/// **rescale** a map or a video instead of cropping it. That bug is invisible on
+/// a map (a smaller map looks like a map) and obvious on a video (a squashed
+/// face), which is exactly the kind of bug that survives a release.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct NativeState {
-    /// Logical rect, already clipped by the host against ancestor clips and the
-    /// viewport. Providers never walk a tree to work this out.
+    /// Where the participant is, in logical window coordinates. Never
+    /// intersected with anything: this is the box the layout gave it.
     pub rect: Rect,
+    /// The part of `rect` that may be shown, in the same coordinates.
+    ///
+    /// `None` means nothing clips this participant — an ancestor box and the
+    /// viewport already contain it — which is *not* the same statement as
+    /// "clipped to nothing".
+    ///
+    /// A non-`None` clip is a **crop, not a placement**: show
+    /// [`NativeState::visible_rect`] of the view *in place*, at full size. A
+    /// provider whose platform crops for it (see [`ClipSupport::Platform`]) may
+    /// ignore this; one that does not must crop its source, and one that cannot
+    /// (see [`ClipSupport::Unsupported`]) must never be handed a state that
+    /// needs it — [`crate::controller::NativeViewController::apply`] refuses.
+    pub clip: Option<Rect>,
     /// Device-pixel scale the rect should be snapped with. See [`to_device`].
     pub scale: f64,
     /// `false` when the participant is clipped away entirely or hidden under a
@@ -147,6 +229,27 @@ impl NativeState {
         to_device(self.rect, self.scale)
     }
 
+    /// The region of the window this participant may actually cover: `rect`
+    /// cropped by `clip`, in place and at the same size.
+    pub fn visible_rect(self) -> Rect {
+        match self.clip {
+            Some(clip) => self.rect.intersect(clip),
+            None => self.rect,
+        }
+    }
+
+    /// Whether honouring this state requires cropping.
+    ///
+    /// `false` for the common case — a participant nothing clips — and for a
+    /// clip that contains it, so a host that only needs to know whether the
+    /// provider can cope does not have to re-derive the geometry.
+    pub fn needs_crop(self) -> bool {
+        match self.clip {
+            Some(clip) => !clip.contains_rect(self.rect),
+            None => false,
+        }
+    }
+
     /// A participant is degenerate when either extent is negative; that is a
     /// host bug (a clip produced an inverted rect), and the controller rejects
     /// it rather than letting the provider clamp it silently to something the
@@ -154,6 +257,11 @@ impl NativeState {
     pub fn validate(&self) -> Result<(), NativeError> {
         if self.rect.width() < 0.0 || self.rect.height() < 0.0 {
             return Err(NativeError::InvalidRect(self.rect));
+        }
+        if let Some(clip) = self.clip {
+            if clip.width() < 0.0 || clip.height() < 0.0 {
+                return Err(NativeError::InvalidRect(clip));
+            }
         }
         if !self.scale.is_finite() || self.scale <= 0.0 {
             return Err(NativeError::InvalidScale(self.scale));
@@ -230,6 +338,15 @@ pub struct NativeSnapshot {
 pub enum NativeError {
     /// The provider cannot composite in this mode.
     UnsupportedMode(NativeCompositionMode),
+    /// A state that needs cropping was handed to a provider that declared it
+    /// cannot crop ([`ClipSupport::Unsupported`]).
+    ///
+    /// Refused rather than applied: the provider would draw its content outside
+    /// the box the host gave it, over framework content it should be under.
+    /// The host is expected to have re-negotiated into a mode it can crop (see
+    /// [`NativeCapabilities::negotiate_croppable`]) or hidden the participant
+    /// before this point, so this error means a host bug, not a platform limit.
+    UnsupportedClip(Rect),
     /// No mode the participant would accept is offered by the provider at all
     /// (or the participant asked for nothing). Surfaced at bind time, not as a
     /// blank region at paint time — this is Wayland's shape (D5).
@@ -262,6 +379,11 @@ impl fmt::Display for NativeError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::UnsupportedMode(mode) => write!(f, "provider cannot composite in {mode:?} mode"),
+            Self::UnsupportedClip(clip) => write!(
+                f,
+                "provider cannot crop, so it cannot be given a rect clipped to {:?}",
+                clip
+            ),
             Self::NoSupportedMode => {
                 write!(f, "provider offers no mode this participant accepts")
             }
@@ -346,7 +468,24 @@ mod tests {
             snapshot: true,
             input: InputModes::ALL,
             focusable: true,
+            clip: ClipSupport::Provider,
         }
+    }
+
+    fn state(rect: Rect) -> NativeState {
+        NativeState {
+            rect,
+            clip: None,
+            scale: 1.0,
+            visible: true,
+            z: 0,
+            input: InputMode::Passthrough,
+            mode: NativeCompositionMode::Overlay,
+        }
+    }
+
+    fn rect(x0: f64, y0: f64, x1: f64, y1: f64) -> Rect {
+        Rect { x0, y0, x1, y1 }
     }
 
     #[test]
@@ -445,19 +584,113 @@ mod tests {
 
     #[test]
     fn an_inverted_rect_is_rejected_by_the_state_not_silently_clamped() {
-        let s = NativeState {
-            rect: Rect {
-                x0: 10.0,
-                y0: 10.0,
-                x1: 5.0,
-                y1: 20.0,
-            },
-            scale: 1.0,
-            visible: true,
-            z: 0,
-            input: InputMode::Passthrough,
-            mode: NativeCompositionMode::Overlay,
-        };
+        let s = state(rect(10.0, 10.0, 5.0, 20.0));
         assert_eq!(s.validate(), Err(NativeError::InvalidRect(s.rect)));
+    }
+
+    #[test]
+    fn an_inverted_clip_is_rejected_too() {
+        let mut s = state(rect(0.0, 0.0, 10.0, 10.0));
+        s.clip = Some(rect(8.0, 0.0, 2.0, 10.0));
+        assert_eq!(
+            s.validate(),
+            Err(NativeError::InvalidRect(rect(8.0, 0.0, 2.0, 10.0)))
+        );
+    }
+
+    // --- placement versus clipping ------------------------------------------
+
+    #[test]
+    fn a_clip_crops_in_place_rather_than_moving_the_view() {
+        let mut s = state(rect(0.0, 0.0, 100.0, 50.0));
+        s.clip = Some(rect(0.0, 0.0, 100.0, 20.0));
+        assert_eq!(
+            s.rect,
+            rect(0.0, 0.0, 100.0, 50.0),
+            "the placement is untouched: a provider that fit its content to the \
+             visible rect would squash 50px of video into 20px"
+        );
+        assert_eq!(
+            s.visible_rect(),
+            rect(0.0, 0.0, 100.0, 20.0),
+            "the crop is reported separately, as a region of the same view"
+        );
+        assert!(s.needs_crop());
+    }
+
+    #[test]
+    fn no_clip_is_not_the_same_as_clipped_to_nothing() {
+        let mut unclipped = state(rect(0.0, 0.0, 100.0, 50.0));
+        unclipped.clip = None;
+        let clipped_away = state(Rect::ZERO);
+
+        assert!(!unclipped.needs_crop());
+        assert_eq!(unclipped.visible_rect(), unclipped.rect);
+        assert!(clipped_away.visible_rect().is_empty());
+    }
+
+    #[test]
+    fn a_clip_that_contains_the_view_needs_no_cropping() {
+        let mut s = state(rect(10.0, 10.0, 20.0, 20.0));
+        s.clip = Some(rect(0.0, 0.0, 100.0, 100.0));
+        assert!(
+            !s.needs_crop(),
+            "a clip that does not bite must not force a provider downgrade"
+        );
+        assert_eq!(s.visible_rect(), s.rect);
+    }
+
+    #[test]
+    fn croppable_negotiation_only_considers_modes_the_framework_composites() {
+        let c = caps(&[
+            NativeCompositionMode::Overlay,
+            NativeCompositionMode::Texture,
+            NativeCompositionMode::Offscreen,
+        ]);
+        assert_eq!(
+            c.negotiate_croppable(&[
+                NativeCompositionMode::Overlay,
+                NativeCompositionMode::Surface,
+                NativeCompositionMode::Offscreen,
+            ]),
+            Some(NativeCompositionMode::Offscreen),
+            "Overlay and Surface are shown by the OS, so neither can be cropped \
+             by the framework; Offscreen is"
+        );
+        assert_eq!(
+            NativeCapabilities {
+                clip: ClipSupport::Unsupported,
+                ..c
+            }
+            .negotiate_croppable(&[NativeCompositionMode::Overlay]),
+            None,
+            "and when the caller will accept nothing the framework composites, \
+             a host that cannot crop has no correct mode to offer"
+        );
+    }
+
+    #[test]
+    fn a_provider_that_has_not_declared_cropping_is_assumed_unable() {
+        let declared = NativeCapabilities {
+            modes: OVERLAY_ONLY,
+            snapshot: false,
+            input: InputModes::ALL,
+            focusable: false,
+            clip: ClipSupport::Unsupported,
+        };
+        assert!(!declared.can_crop());
+        assert!(
+            NativeCapabilities {
+                clip: ClipSupport::Platform,
+                ..declared
+            }
+            .can_crop()
+        );
+        assert_eq!(
+            NativeCapabilities::default().clip,
+            ClipSupport::Unsupported,
+            "the default must fail closed: a provider that has not thought about \
+             cropping must not be handed a rect that needs it"
+        );
     }
 }

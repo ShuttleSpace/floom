@@ -50,6 +50,20 @@ pub enum NativeCompositionMode {
     Offscreen,
 }
 
+impl NativeCompositionMode {
+    /// Whether the *framework* holds this participant's pixels, and can
+    /// therefore crop them itself.
+    ///
+    /// This is the property that decides the fallback for a provider that
+    /// cannot crop a view it does not own: `Texture` and `Offscreen` are drawn
+    /// by the framework, so a host-side clip applies for free, while `Overlay`
+    /// and `Surface` are shown by the OS and are cropped only if the platform
+    /// or the provider does it.
+    pub fn is_host_composited(self) -> bool {
+        matches!(self, Self::Texture | Self::Offscreen)
+    }
+}
+
 /// Whether a participant takes pointer input itself.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub enum InputMode {

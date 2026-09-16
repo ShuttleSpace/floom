@@ -92,6 +92,43 @@ impl<P: NativeViewProvider> NativeViewController<P> {
         Ok(mode)
     }
 
+    /// Change a participant's composition mode, on the same slot.
+    ///
+    /// The mode decides *how* a view is composited, so changing it means a
+    /// different kind of view: the old one is destroyed and a new one created.
+    /// The slot — and with it the caller's identity and the pool's accounting —
+    /// is kept, and the generation is deliberately **not** bumped: this is the
+    /// same participant, not a slot recycled for a different row, and a
+    /// provider keying per-slot resources has to be able to tell those apart.
+    ///
+    /// Focus survives the swap. A native text field that had to be recomposited
+    /// (because its provider cannot crop and it landed in a clipping ancestor)
+    /// must not silently drop the keyboard — the IME goes with it.
+    ///
+    /// Callers are expected to have checked that `preferred` can succeed: this
+    /// destroys the old view before it knows whether a new one can be made, so
+    /// a `NoSupportedMode` here leaves the slot unbound.
+    pub fn rebind(
+        &mut self,
+        slot: NativeSlot,
+        kind: NativeViewKind,
+        preferred: &[NativeCompositionMode],
+    ) -> Result<NativeCompositionMode, NativeError> {
+        if !self.bound.contains(&slot) {
+            return Err(NativeError::NotBound(slot));
+        }
+        let was_focused = self.focused;
+        self.destroy(slot)?;
+        let mode = self.bind(slot, kind, preferred)?;
+        if was_focused == Some(slot) {
+            // Best effort: a provider that turned out not to be focusable gets
+            // no focus rather than an error, and the host notices
+            // `native_focused` went `None` and stops masking its own caret.
+            let _ = self.focus(slot);
+        }
+        Ok(mode)
+    }
+
     /// Tear a participant down.
     ///
     /// A frozen participant is restored first: destroying the OS view without
@@ -123,6 +160,25 @@ impl<P: NativeViewProvider> NativeViewController<P> {
         let caps = self.provider.capabilities();
         if !caps.supports(state.mode) {
             return Err(NativeError::UnsupportedMode(state.mode));
+        }
+        if state.visible
+            && state.needs_crop()
+            && !caps.can_crop()
+            && !state.mode.is_host_composited()
+        {
+            // Not a platform limitation to work around: a provider that cannot
+            // crop and is not composited by the framework would draw outside
+            // the box it was given, over content it should be under, or rescale
+            // its content to fit. The host is expected to have moved this
+            // participant to a mode it composites, or hidden it.
+            //
+            // Two states get through on purpose. One that needs no crop, and
+            // one that shows nothing: `visible: false` has no visible region to
+            // get wrong, and refusing it would leave the host unable to take a
+            // wrongly-composited participant off the screen.
+            return Err(NativeError::UnsupportedClip(
+                state.clip.unwrap_or(state.rect),
+            ));
         }
         if !caps.input.supports(state.input) {
             return Err(NativeError::Unsupported(match state.input {
