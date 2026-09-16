@@ -213,6 +213,60 @@ fn a_grant_binds_the_participant_and_applies_its_geometry() {
     assert_eq!(state.device_rect().width, 120);
 }
 
+/// A display change doubles the device rect and leaves the participant's rect
+/// exactly where it was.
+///
+/// This is the line between a participant and a painted widget. The framework's
+/// own content is drawn into a surface the presenter already scales, so a denser
+/// display is the presenter's problem alone; a participant is placed *in device
+/// pixels* by the platform layer, which means the host has to be told the density
+/// or it places a real OS view at half size — in a window that is itself drawn
+/// correctly, which is what makes it hard to spot. The logical rect is a
+/// statement about layout and must not move (device case D1).
+#[test]
+fn a_display_change_doubles_the_device_rect_and_leaves_the_rect_alone() {
+    let mut app = empty_app();
+    let root = app.root();
+    app.host_mut().mount(
+        root,
+        at(10.0, 20.0, 120.0, 80.0),
+        NativeSurface::new(NativeViewKind::Video),
+    );
+    let (fake, log) = provider();
+    app.host_mut().set_native_provider(fake);
+    app.frame();
+
+    let before = live_state(&app);
+    assert_eq!(
+        before.rect,
+        Rect {
+            x0: 10.0,
+            y0: 20.0,
+            x1: 130.0,
+            y1: 100.0
+        }
+    );
+    assert_eq!(before.device_rect().width, 120, "1x to start");
+    let commands = log.count();
+
+    let window = app.window();
+    app.platform().set_scale_factor(window, 2.0);
+    app.settle();
+
+    let after = live_state(&app);
+    assert_eq!(
+        after.rect, before.rect,
+        "layout is in logical units: moving a window to a denser display does not move anything"
+    );
+    assert_eq!(after.device_rect().width, 240, "the OS view doubles");
+    assert_eq!(after.device_rect().height, 160);
+    assert_eq!(
+        log.count(),
+        commands + 1,
+        "the participant is re-placed at the new density, not left behind at the old one"
+    );
+}
+
 /// A frame in which nothing moved must not talk to the provider at all. This is
 /// the whole point of keeping the diff host-side: an `apply` per frame per
 /// participant is an OS call per frame per participant.

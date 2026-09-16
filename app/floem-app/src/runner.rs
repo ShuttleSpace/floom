@@ -209,10 +209,7 @@ impl<R: Presenter> AppRunner<R> {
                 surface,
                 size,
             } => {
-                let scale = platform
-                    .window(window)
-                    .map(|w| w.display_info().scale_factor.get())
-                    .unwrap_or(1.0);
+                let scale = window_scale(platform, window);
                 self.windows.insert(
                     window.index(),
                     WindowRecord {
@@ -232,16 +229,28 @@ impl<R: Presenter> AppRunner<R> {
                 // The widget tree lays out in logical pixels; the window's
                 // logical size *is* the host's viewport.
                 self.host.set_size(size);
+                // Logical is not the only unit in play: a native participant is
+                // placed in *device* pixels, and the host is the one converting.
+                // A window created on a Retina display therefore has to hand its
+                // scale over here or every participant lands at 1x — half-sized,
+                // in the middle of a view that is drawn correctly.
+                self.host.set_scale(scale);
                 self.attach(platform, window);
                 platform.request_frame(window);
                 self.stats.redraws_requested += 1;
                 self.stats.windows_created += 1;
             }
             PlatformEvent::WindowResized { window, size } => {
+                // The ABI has no scale event: a window dragged to a display of a
+                // different density shows up here, so the scale is read back off
+                // the window rather than taken from the record, which only ever
+                // saw the display the window was born on.
+                let scale = window_scale(platform, window);
                 if let Some(record) = self.windows.get_mut(&window.index()) {
                     record.size = size;
-                    let scale = record.scale;
+                    record.scale = scale;
                     self.host.set_size(size);
+                    self.host.set_scale(scale);
                     self.presenter.resize(size, scale);
                 }
                 platform.request_frame(window);
@@ -519,6 +528,22 @@ impl<R: Presenter> AppRunner<R> {
         ));
         self.presenter_ready = attached;
     }
+}
+
+/// The device-pixel scale of a window, as its display reports it.
+///
+/// Read from the platform on every use rather than trusted from the window
+/// record, because the ABI has no scale event: a window moved to a display of a
+/// different density advertises the change only as a resize, so the record's copy
+/// — taken when the window was born — is exactly the value that goes stale. A
+/// window the platform no longer knows about is 1:1, which is the same assumption
+/// every backend already makes about a window it has not heard from.
+fn window_scale<P: Platform>(platform: &P, window: WindowId) -> f64 {
+    platform
+        .window(window)
+        .map(|w| w.display_info().scale_factor.get())
+        .filter(|scale| scale.is_finite() && *scale > 0.0)
+        .unwrap_or(1.0)
 }
 
 /// Destructures a platform [`SurfaceTarget`] into the renderer's handle pair.

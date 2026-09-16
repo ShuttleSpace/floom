@@ -205,6 +205,15 @@ impl TestApp {
         self.size
     }
 
+    /// The window the app booted into.
+    ///
+    /// Needed by anything that talks about the window *as a window* rather than
+    /// as a viewport — a display change, for one, which is addressed to a window
+    /// and not to the tree drawn inside it.
+    pub fn window(&self) -> WindowId {
+        self.window
+    }
+
     /// The screen rect `node` occupies.
     pub fn bounds(&self, node: impl Into<Selector>) -> Rect {
         self.host().bounds(self.node(node))

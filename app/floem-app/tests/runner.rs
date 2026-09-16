@@ -90,6 +90,31 @@ fn settle(platform: &mut FakePlatform, runner: &mut AppRunner<SoftwarePresenter>
     stats
 }
 
+/// A window born on a display of twice the density hands the host that density
+/// at creation, not at the first resize.
+///
+/// Logical units and device pixels are different units, and a native participant
+/// is placed in the second: the host is what converts, so a host still at its 1x
+/// default places every OS view at half size inside a window the framework draws
+/// correctly. The scale is knowable only through the window, which makes creation
+/// the one moment it has to be read.
+#[test]
+fn a_window_born_at_two_x_hands_the_host_two_x() {
+    let mut platform = FakePlatform::new().with_scale_factor(2.0);
+    let mut host = WidgetHost::new();
+    host.mount_root(LayoutStyle::default(), Text::new("hi"));
+    let mut runner = AppRunner::new(host, SoftwarePresenter::new());
+
+    platform.create_window(small_window());
+    settle(&mut platform, &mut runner);
+
+    assert_eq!(
+        runner.host().scale(),
+        2.0,
+        "the host lays out in logical units but places participants in device pixels"
+    );
+}
+
 #[test]
 fn window_creation_attaches_and_presents() {
     let mut platform = FakePlatform::new();

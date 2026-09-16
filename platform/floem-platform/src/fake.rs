@@ -36,6 +36,10 @@ struct FakeWindow {
     id: WindowId,
     title: String,
     size: Size,
+    /// Device pixels per logical pixel, as the display reports it. Real windows
+    /// are created on whichever display they land on, so this is a property of
+    /// the window and not a constant of the backend.
+    scale: f64,
     state: WindowState,
     surface: Option<FakeSurface>,
     next_surface: u32,
@@ -81,7 +85,7 @@ impl Window for FakeWindow {
     fn display_info(&self) -> DisplayInfo {
         DisplayInfo {
             logical_size: self.size,
-            scale_factor: ScaleFactor::new(1.0),
+            scale_factor: ScaleFactor::new(self.scale),
         }
     }
 }
@@ -100,6 +104,9 @@ pub struct HostPlatform {
     clipboard: String,
     started: Instant,
     ime_enabled: HashMap<u32, bool>,
+    /// Device-pixel scale handed to windows this backend creates. Lets a test
+    /// boot onto a Retina display without a Retina display.
+    scale: f64,
     /// Last caret rectangle reported to the IME bridge (`set_cursor_area`),
     /// kept so tests can assert the runner's caret-area handshake fired.
     ime_cursor_area: Option<(Point, Size)>,
@@ -125,6 +132,7 @@ impl HostPlatform {
             clipboard: String::new(),
             started: Instant::now(),
             ime_enabled: HashMap::new(),
+            scale: 1.0,
             ime_cursor_area: None,
         }
     }
@@ -132,6 +140,45 @@ impl HostPlatform {
     pub fn with_id(mut self, id: PlatformId) -> Self {
         self.id = id;
         self
+    }
+
+    /// Create subsequent windows on a display of `scale` device pixels per
+    /// logical pixel. Non-finite or non-positive values are ignored, matching
+    /// [`ScaleFactor`]'s own contract.
+    pub fn with_scale_factor(mut self, scale: f64) -> Self {
+        if scale.is_finite() && scale > 0.0 {
+            self.scale = scale;
+        }
+        self
+    }
+
+    /// Move `window` to a display of `scale` and announce the resize.
+    ///
+    /// A display change keeps the window the same size *on the glass* — the
+    /// physical rect is what does not move — so the logical rect the framework
+    /// lays out in does. The new logical size arrives as the same
+    /// [`PlatformEvent::WindowResized`] every other backend sends, because the
+    /// ABI has no separate scale event: the scale is read back off the window.
+    pub fn set_scale_factor(&mut self, window: WindowId, scale: f64) {
+        if !(scale.is_finite() && scale > 0.0) {
+            return;
+        }
+        let Some(w) = self
+            .windows
+            .get_mut(&window.index())
+            .filter(|w| w.id == window)
+        else {
+            return;
+        };
+        let physical = Size::new(w.size.width * w.scale, w.size.height * w.scale);
+        w.scale = scale;
+        w.size = Size::new(physical.width / scale, physical.height / scale);
+        let size = w.size;
+        if let Some(surface) = w.surface.as_mut() {
+            surface.size = size;
+        }
+        self.events
+            .push(PlatformEvent::WindowResized { window, size });
     }
 
     pub fn with_capabilities(mut self, caps: PlatformCapabilities) -> Self {
@@ -192,6 +239,7 @@ impl Platform for HostPlatform {
             id,
             title: config.title.clone(),
             size: config.size,
+            scale: self.scale,
             state: WindowState::Normal,
             surface: None,
             next_surface: 0,
