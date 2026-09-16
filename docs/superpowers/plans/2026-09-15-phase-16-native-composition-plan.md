@@ -207,14 +207,48 @@ findings worth carrying forward:
 - Step 4's "the participant wins" turned out to need a `HitTester` change too,
   not just a host change: native regions now beat framework regions outright,
   because in Overlay mode the participant is stacked above the *whole* scene.
-- **Open question (unsettled):** `NativeState` has no clip channel, so a
-  participant clipped by an ancestor is reported as the intersection of its box
-  with the clips. A provider that cannot clip at the OS level will shrink its
-  content instead of cropping it. Either the ABI grows a clip rect or
-  Overlay-mode providers clip themselves; D6 is where this shows.
+- **Settled (`6d0b4a6`): the clip.** `NativeState` grew a `clip: Option<Rect>`
+  and `rect` stopped being intersected with anything. Placement and clipping are
+  two statements: a provider handed the intersection would *rescale* its content
+  to fit, which looks plausible on a map and obviously wrong on a video. Cropping
+  became a declared capability (`ClipSupport::{Platform,Provider,Unsupported}`),
+  and a provider that cannot crop is moved by the host into a mode whose pixels
+  the framework owns — where the crop is free — or hidden with a counted
+  diagnostic. The controller refuses to *show* a cropped rect to a provider that
+  cannot crop, so no backend can opt out by forgetting.
+- That same work found a second bug: **an off-screen participant kept its hit
+  region**, so a surface clipped away by a container went on swallowing clicks
+  meant for whatever was painted where it used to be. Withdrawing the *native*
+  claim is not enough — the node is still a widget, and a deep node's region
+  outranks a shallow one's. Off-screen participants now have no region at all.
 - Step 7 (the desktop bridge) is untouched, and `desktop_default` still does
   **not** set `Capability::NATIVE_VIEW` — correctly, since there is no desktop
   provider yet.
+
+**Step 7 recipe**, so the next session does not re-derive it. The bridge is the
+only part of 16.2 that needs an OS, and it needs three things wired in this
+order:
+
+1. `platform/floem-platform-desktop` gains `floem-native` (same layer, L4, so
+   the architecture gate permits it) and a `NativeViewProvider` impl that takes
+   the parent view from the window. macOS: `objc2-app-kit`'s `NSView` added with
+   `addSubview:` to the `ns_view` out of winit's
+   `RawWindowHandle::AppKit`; the workspace already pins `objc2 0.6` /
+   `objc2-app-kit 0.3` for the legacy crate, so no new major. Windows: a child
+   `HWND` with `CreateWindowExW` and `SetWindowPos`. Linux: X11 subwindow, or
+   nothing at all on Wayland (D5 is the case that says so).
+2. **The coordinate flip is the thing that will be wrong first.** AppKit's
+   default origin is bottom-left and its `isFlipped` is `false`, while
+   `NativeState::rect` is top-left logical. `y_os = parent_height - (y +
+   height)`, and the height must come from the *parent view*, not the window,
+   for a participant inside a container. D1's "no seam at 1x and 2x" is exactly
+   this arithmetic plus `to_device`'s whole-pixel rounding.
+3. `desktop_default` gains `Capability::NATIVE_VIEW` only in the same commit,
+   so the capability flag and the provider cannot drift apart.
+
+D1–D3 then become checkable without eyes: the provider can be asked for the
+`NSView`'s frame and the assertion is `frame == state.device_rect()`, which is
+what "pixel-aligned, no seam" means.
 
 **Files**
 
@@ -280,6 +314,39 @@ once with the outcome recorded in the device checklist.
 ---
 
 ## Task 16.3 — Texture / Surface composition *(mostly device-gated)*
+
+**Status: steps 1 and 2 done.** `tests/negotiation.rs` (7 tests) plus
+`floem-renderer/src/external.rs` (10 tests) and four GPU tests in
+`gpu.rs`. Findings worth carrying forward:
+
+- **vello 0.7 cannot import a GPU texture.** `peniko::ImageData` is `Blob<u8>`
+  and nothing else — there is no `External` variant — so a backend cannot wrap
+  an object another process owns. What the framework *can* do, and what texture
+  mode actually needs, is accept a fresh pixel buffer per produced frame and
+  re-upload only when the producer says the contents changed. That is what
+  landed; `ExternalFrame::pixels: Option<Arc<[u8]>>` marks the boundary, where
+  `None` is the backend-imported case that is currently unreachable rather than
+  an incomplete frame.
+- **A refreshed texture must invalidate the fragment that drew it.** Vello's
+  scene is a command list, so the per-node fragment cache (R5) bakes in the
+  brush it was built from. Re-importing pixels under an unchanged *node* is
+  precisely the case that cache gets wrong, and the failure looks like the
+  "frozen video" of D8 arriving through the fragment cache instead of the
+  texture cache. `import_texture` drops the fragments whose `image_keys`
+  mention the resource; the test fails without that line.
+- **Liveness has two independent sources.** A texture stays resident if its
+  producer produced a frame *or* the scene still draws it. Either alone is
+  wrong: a participant's node can be created a pass after its first frame, and
+  a paused stream is still on screen. `ExternalTextureCache::prune` is therefore
+  driven from the fragment table, and runs on *skipped* frames too, because a
+  producer going quiet is not scene damage.
+- `texture_cache_hits` counts an external texture as a hit: the upload already
+  happened at `import_texture`, so the encode is a lookup.
+
+**Still open:** steps 3 (surface compositor on KMS/Android/iOS) and 4 (the
+bytes-per-frame, added-frame-time benchmark). Step 4's *bytes* half is
+measurable today — `external_stats().bytes_uploaded` counts only what actually
+crossed — but frame time needs a device.
 
 **Files**
 
