@@ -210,7 +210,7 @@ impl PaintContext for SceneRecorder {
     }
 
     fn draw_image(&mut self, bounds: Rect, image: ResourceId) {
-        self.scene.insert(SceneNode::Image { bounds, image });
+        self.scene.insert(SceneNode::image(bounds, image));
         self.ops.push(PaintOp::Image {
             bounds,
             resource: image,

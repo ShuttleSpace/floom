@@ -57,7 +57,12 @@ fn image_widget_paints_a_node_referencing_its_resource() {
 
     let mut images = 0;
     for (_id, node) in host.scene().iter() {
-        if let SceneNode::Image { bounds, image } = node {
+        if let SceneNode::Image {
+            bounds,
+            image,
+            alpha: _,
+        } = node
+        {
             images += 1;
             assert_eq!(*image, img, "node references the registered resource");
             assert!(

@@ -331,6 +331,58 @@ fn a_popup_fades_in_and_then_stops_damaging_the_scene() {
     );
 }
 
+/// An image inside a fading overlay fades with it.
+///
+/// This is the shape the missing image alpha took: the composite path scaled
+/// rects and text and silently skipped images, so a popup's backdrop dimmed
+/// while the picture on top of it stayed at full strength. `Image` nodes now
+/// carry an alpha, and the same fold that dims a rect reaches them.
+#[test]
+fn an_image_in_a_fading_overlay_fades_with_it() {
+    let mut app = app_with_root();
+    let img = app
+        .host_mut()
+        .register_image(2, 2, vec![255; 2 * 2 * 4])
+        .expect("valid extent");
+    let area = Rect::from_origin_size(Point::new(300.0, 300.0), Size::new(120.0, 40.0));
+    open(
+        &mut app,
+        OverlayKind::Popup,
+        false,
+        area,
+        floem_widgets::Image::new(img).intrinsic_size(Size::new(120.0, 40.0)),
+    );
+
+    let mut seen_partial = None;
+    for _ in 0..12 {
+        let alpha = app.scene_nodes().iter().find_map(|node| match node {
+            SceneNode::Image { image, alpha, .. } if *image == img => Some(*alpha),
+            _ => None,
+        });
+        if let Some(alpha) = alpha {
+            if alpha > 0 && alpha < 255 {
+                seen_partial = Some(alpha);
+            }
+        }
+        app.frame();
+    }
+
+    assert!(
+        seen_partial.is_some(),
+        "the overlay's image passed through partial opacity on its way in"
+    );
+    // And it settles opaque, rather than being left permanently dimmed.
+    let settled = app.scene_nodes().iter().find_map(|node| match node {
+        SceneNode::Image { image, alpha, .. } if *image == img => Some(*alpha),
+        _ => None,
+    });
+    assert_eq!(
+        settled,
+        Some(255),
+        "a settled overlay's image is opaque again"
+    );
+}
+
 /// Opening and closing an overlay both change the scene, so each repaints —
 /// proving the overlay subtree participates in the paint pass (on top of the
 /// main tree) rather than being skipped.

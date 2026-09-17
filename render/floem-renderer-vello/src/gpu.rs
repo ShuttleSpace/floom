@@ -63,8 +63,8 @@ use std::collections::{HashMap, HashSet};
 
 use vello::kurbo::{Affine, Rect as KurboRect, RoundedRect as KurboRoundedRect};
 use vello::peniko::{
-    Blob, Color as PenikoColor, Fill, ImageAlphaType, ImageBrush, ImageData, ImageFormat,
-    ImageSampler,
+    BlendMode, Blob, Color as PenikoColor, Fill, ImageAlphaType, ImageBrush, ImageData,
+    ImageFormat, ImageSampler,
 };
 use vello::util::RenderSurface;
 use vello::wgpu;
@@ -75,6 +75,40 @@ use vello::wgpu::{
     TextureViewDescriptor,
 };
 use vello::{AaConfig, RenderParams, RendererOptions, Scene as VelloScene};
+
+/// Draws `brush` inside `transform`, dimmed to `alpha`.
+///
+/// vello 0.7 has no per-draw alpha: `fill` stops at the brush and
+/// `draw_image` takes nothing but a brush and a transform. So a faded image is
+/// a one-draw layer with the alpha on the layer instead, clipped to the image's
+/// own rectangle *in its own transform* — the layer then covers exactly the
+/// pixels the image would have covered, and nothing else picks up the alpha.
+///
+/// The opaque case skips the layer entirely: pushing one costs an offscreen
+/// pass, and almost every image on screen is fully opaque.
+fn draw_image_at(
+    target: &mut VelloScene,
+    brush: &ImageBrush,
+    transform: Affine,
+    width: u32,
+    height: u32,
+    alpha: u8,
+) {
+    if alpha >= u8::MAX {
+        target.draw_image(brush, transform);
+        return;
+    }
+    let rect = KurboRect::new(0.0, 0.0, f64::from(width), f64::from(height));
+    target.push_layer(
+        Fill::NonZero,
+        BlendMode::default(),
+        f32::from(alpha) / f32::from(u8::MAX),
+        transform,
+        &rect,
+    );
+    target.draw_image(brush, transform);
+    target.pop_layer();
+}
 
 /// What the last `present` actually drew.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
@@ -207,12 +241,21 @@ fn node_fingerprint(node: &SceneNode) -> u64 {
             );
             hasher.write_u32(radius.to_bits());
         }
-        SceneNode::Image { bounds, image } => {
+        SceneNode::Image {
+            bounds,
+            image,
+            alpha,
+        } => {
             hasher.write_u8(2);
             for v in [bounds.x0, bounds.y0, bounds.x1, bounds.y1] {
                 hasher.write_u64(v.to_bits());
             }
             hasher.write_u64(image.raw());
+            // In the fingerprint on purpose: the encoder bakes the brush into a
+            // cached fragment, so an alpha that is not part of the key would
+            // keep serving the fragment built at the old one — a frozen
+            // mid-fade image, arriving through the cache rather than the clock.
+            hasher.write_u8(*alpha);
         }
         SceneNode::Text {
             origin,
@@ -669,7 +712,11 @@ impl VelloGpuPresenter {
                     stats.glyph_runs += 1;
                 }
             }
-            SceneNode::Image { bounds, image } => {
+            SceneNode::Image {
+                bounds,
+                image,
+                alpha,
+            } => {
                 if bounds.width() <= 0.0 || bounds.height() <= 0.0 {
                     return stats;
                 }
@@ -690,7 +737,7 @@ impl VelloGpuPresenter {
                         let sy = bounds.height() / f64::from(height);
                         let transform = Affine::translate((bounds.x0, bounds.y0))
                             * Affine::scale_non_uniform(sx, sy);
-                        target.draw_image(&brush, transform);
+                        draw_image_at(target, &brush, transform, width, height, *alpha);
                         stats.images += 1;
                     }
                     return stats;
@@ -745,7 +792,7 @@ impl VelloGpuPresenter {
                 let sy = bounds.height() / f64::from(*height);
                 let transform =
                     Affine::translate((bounds.x0, bounds.y0)) * Affine::scale_non_uniform(sx, sy);
-                target.draw_image(&*brush, transform);
+                draw_image_at(target, brush, transform, *width, *height, *alpha);
                 stats.images += 1;
             }
             SceneNode::Group { .. } => {}
@@ -1119,6 +1166,32 @@ mod tests {
         VelloGpuPresenter::new()
     }
 
+    /// Two image nodes differing only in alpha must not share a fragment.
+    ///
+    /// The fragment cache keys on this fingerprint and bakes the brush into the
+    /// encoded commands, so an alpha left out of the key would keep serving the
+    /// fragment built at the old alpha — a picture frozen mid-fade, arriving
+    /// through the cache rather than through the clock. No GPU needed: the
+    /// fingerprint is pure.
+    #[test]
+    fn an_images_alpha_is_part_of_its_fingerprint() {
+        let bounds = floem_types::Rect::from_origin_size(
+            floem_types::Point::new(1.0, 2.0),
+            Size::new(8.0, 4.0),
+        );
+        let image = floem_types::ResourceId::new(0, 1);
+        let at = |alpha| {
+            node_fingerprint(&SceneNode::Image {
+                bounds,
+                image,
+                alpha,
+            })
+        };
+        assert_ne!(at(255), at(128), "a dimmed image is a different encoding");
+        assert_ne!(at(255), at(254), "even one step must re-encode");
+        assert_eq!(at(200), at(200), "and the same payload is stable");
+    }
+
     fn headless_surface() -> AttachedSurface {
         AttachedSurface::new(
             WindowId::new(0, 1),
@@ -1204,13 +1277,13 @@ mod tests {
         });
         let mut scene = Scene::new();
         scene.begin_update();
-        let _ = scene.insert(SceneNode::Image {
-            bounds: floem_types::Rect::from_origin_size(
+        let _ = scene.insert(SceneNode::image(
+            floem_types::Rect::from_origin_size(
                 floem_types::Point::new(1.0, 2.0),
                 Size::new(8.0, 4.0),
             ),
-            image: img,
-        });
+            img,
+        ));
         scene.finish_update();
 
         // No surface attached: encoding still happens (and is counted), only
@@ -1241,13 +1314,13 @@ mod tests {
         });
         let mut scene = Scene::new();
         scene.begin_update();
-        let _ = scene.insert(SceneNode::Image {
-            bounds: floem_types::Rect::from_origin_size(
+        let _ = scene.insert(SceneNode::image(
+            floem_types::Rect::from_origin_size(
                 floem_types::Point::new(0.0, 0.0),
                 Size::new(8.0, 8.0),
             ),
-            image: img,
-        });
+            img,
+        ));
         scene.finish_update();
 
         presenter.present(&scene, &registry);
@@ -1291,13 +1364,13 @@ mod tests {
         let mut both = Scene::new();
         both.begin_update();
         for image in [img_a, img_b] {
-            let _ = both.insert(SceneNode::Image {
-                bounds: floem_types::Rect::from_origin_size(
+            let _ = both.insert(SceneNode::image(
+                floem_types::Rect::from_origin_size(
                     floem_types::Point::new(0.0, 0.0),
                     Size::new(6.0, 4.0),
                 ),
                 image,
-            });
+            ));
         }
         both.finish_update();
 
@@ -1313,13 +1386,13 @@ mod tests {
         // Scene referencing only img_b: img_a's brush must be pruned.
         let mut only_b = Scene::new();
         only_b.begin_update();
-        let _ = only_b.insert(SceneNode::Image {
-            bounds: floem_types::Rect::from_origin_size(
+        let _ = only_b.insert(SceneNode::image(
+            floem_types::Rect::from_origin_size(
                 floem_types::Point::new(0.0, 0.0),
                 Size::new(6.0, 4.0),
             ),
-            image: img_b,
-        });
+            img_b,
+        ));
         only_b.finish_update();
 
         presenter.present(&only_b, &registry);
@@ -1343,13 +1416,13 @@ mod tests {
         let mut scene = Scene::new();
         scene.begin_update();
         // A resource id that resolves to nothing (empty registry).
-        let _ = scene.insert(SceneNode::Image {
-            bounds: floem_types::Rect::from_origin_size(
+        let _ = scene.insert(SceneNode::image(
+            floem_types::Rect::from_origin_size(
                 floem_types::Point::new(0.0, 0.0),
                 Size::new(8.0, 4.0),
             ),
-            image: floem_types::ResourceId::new(99, 1),
-        });
+            floem_types::ResourceId::new(99, 1),
+        ));
         scene.finish_update();
 
         presenter.present(&scene, &ResourceRegistry::new());
@@ -1548,13 +1621,13 @@ mod tests {
         });
         let mut scene = Scene::new();
         scene.begin_update();
-        let _ = scene.insert(SceneNode::Image {
-            bounds: floem_types::Rect::from_origin_size(
+        let _ = scene.insert(SceneNode::image(
+            floem_types::Rect::from_origin_size(
                 floem_types::Point::new(0.0, 0.0),
                 Size::new(6.0, 6.0),
             ),
-            image: img,
-        });
+            img,
+        ));
         scene.finish_update();
 
         // First present: there is damage, the image encodes (and uploads).
@@ -1594,13 +1667,13 @@ mod tests {
     fn scene_drawing(texture: floem_types::ResourceId) -> Scene {
         let mut scene = Scene::new();
         scene.begin_update();
-        let _ = scene.insert(SceneNode::Image {
-            bounds: floem_types::Rect::from_origin_size(
+        let _ = scene.insert(SceneNode::image(
+            floem_types::Rect::from_origin_size(
                 floem_types::Point::new(0.0, 0.0),
                 Size::new(8.0, 8.0),
             ),
-            image: texture,
-        });
+            texture,
+        ));
         scene.finish_update();
         scene
     }

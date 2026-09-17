@@ -2827,7 +2827,7 @@ impl PaintContext for NodePaintContext<'_> {
     }
 
     fn draw_image(&mut self, bounds: Rect, image: ResourceId) {
-        self.push(floem_scene::SceneNode::Image { bounds, image });
+        self.push(floem_scene::SceneNode::image(bounds, image));
     }
 }
 
@@ -2859,11 +2859,16 @@ impl NodePaintContext<'_> {
 /// damages both the old and the new box, which is what makes the motion
 /// repaint without the host asking for a full frame.
 ///
-/// Two things are deliberately *not* done. `Scale` is left alone: scaling a
-/// layout node-by-node about each node's own centre would pull the subtree
-/// apart, and scaling it about a shared origin needs the group node the host
-/// does not build. Images do not fade either, for the same structural reason —
-/// a scene image carries no tint, so there is nowhere to put the alpha.
+/// `Scale` is deliberately left alone: scaling a layout node-by-node about each
+/// node's own centre would pull the subtree apart, and scaling it about a shared
+/// origin needs the group node the host does not build.
+///
+/// Images used to be skipped alongside it, and the old comment gave the same
+/// structural reason for both. Only `Scale`'s reason was structural — an image
+/// simply had nowhere to put an alpha, which is a missing field rather than a
+/// missing shape. `SceneNode::Image` now carries one, so an overlay holding a
+/// picture fades with the rest of it instead of staying opaque over a dimming
+/// background.
 fn apply_composite(node: &mut floem_scene::SceneNode, prop: CompositorProp) {
     match prop {
         CompositorProp::Opacity(alpha) => {
@@ -2871,8 +2876,9 @@ fn apply_composite(node: &mut floem_scene::SceneNode, prop: CompositorProp) {
             let scale = |c: u8| (c as f64 * alpha).round().clamp(0.0, 255.0) as u8;
             match node {
                 floem_scene::SceneNode::Rect { fill, .. } => fill.a = scale(fill.a),
+                floem_scene::SceneNode::Image { alpha, .. } => *alpha = scale(*alpha),
                 floem_scene::SceneNode::Text { color, .. } => color.a = scale(color.a),
-                _ => {}
+                floem_scene::SceneNode::Group { .. } => {}
             }
         }
         CompositorProp::TranslateX(dx) => match node {

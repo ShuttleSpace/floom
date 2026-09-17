@@ -119,10 +119,10 @@ mod tests {
             fill: Color::BLACK,
             radius: 0.0,
         });
-        let _ = scene.insert(SceneNode::Image {
-            bounds: Rect::from_origin_size(Point::ZERO, Size::new(8.0, 8.0)),
-            image: floem_types::ResourceId::new(0, 1),
-        });
+        let _ = scene.insert(SceneNode::image(
+            Rect::from_origin_size(Point::ZERO, Size::new(8.0, 8.0)),
+            floem_types::ResourceId::new(0, 1),
+        ));
         let _ = scene.insert(SceneNode::Text {
             origin: Point::ZERO,
             size: Size::new(20.0, 12.0),

@@ -21,6 +21,13 @@ pub enum SceneNode {
     Image {
         bounds: Rect,
         image: ResourceId,
+        /// Per-node alpha, `255` meaning opaque.
+        ///
+        /// An image carries its own pixels and no tint, which is what made
+        /// `Rect`-style fading impossible here for a long time — and why an
+        /// overlay containing an image used to fade around it. The composite
+        /// path scales this exactly the way it scales a `Rect`'s `fill.a`.
+        alpha: u8,
     },
     Text {
         origin: Point,
@@ -31,6 +38,18 @@ pub enum SceneNode {
 }
 
 impl SceneNode {
+    /// An opaque image filling `bounds`.
+    ///
+    /// Every construction site wants 255, and writing a literal at each one is
+    /// how a future field gets forgotten in half of them.
+    pub fn image(bounds: Rect, image: ResourceId) -> Self {
+        Self::Image {
+            bounds,
+            image,
+            alpha: u8::MAX,
+        }
+    }
+
     pub fn bounds_hint(&self) -> Option<Rect> {
         match self {
             SceneNode::Group { .. } => None,

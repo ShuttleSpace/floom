@@ -415,6 +415,7 @@ impl SoftwareRenderer {
         &mut self,
         bounds: Rect,
         image_resource: floem_types::ResourceId,
+        alpha: u8,
         resources: &ResourceRegistry,
         clip: Clip,
     ) {
@@ -457,7 +458,7 @@ impl SoftwareRenderer {
                     ((pb / pa) * 255.0).round().clamp(0.0, 255.0) as u8,
                     pa as u8,
                 );
-                self.blend_pixel(x, y, straight, 1.0);
+                self.blend_pixel(x, y, straight, f32::from(alpha) / f32::from(u8::MAX));
             }
         }
         self.images_drawn += 1;
@@ -518,9 +519,13 @@ impl SoftwareRenderer {
                         self.draw_text(*origin, *glyphs, *color, resources, clip);
                     }
                 }
-                SceneNode::Image { bounds, image } => {
+                SceneNode::Image {
+                    bounds,
+                    image,
+                    alpha,
+                } => {
                     if let Some(resources) = resources {
-                        self.draw_image(*bounds, *image, resources, clip);
+                        self.draw_image(*bounds, *image, *alpha, resources, clip);
                     }
                 }
                 SceneNode::Group { .. } => {}
@@ -789,10 +794,10 @@ mod tests {
             fill: Color::rgb(0, 0, 255),
             radius: 0.0,
         });
-        let _ = scene.insert(SceneNode::Image {
-            bounds: Rect::from_origin_size(Point::new(1.0, 1.0), Size::new(2.0, 2.0)),
-            image: img,
-        });
+        let _ = scene.insert(SceneNode::image(
+            Rect::from_origin_size(Point::new(1.0, 1.0), Size::new(2.0, 2.0)),
+            img,
+        ));
         scene.finish_update();
 
         let mut sw = SoftwareRenderer::new(4, 4);
@@ -816,6 +821,60 @@ mod tests {
             "expected a red/blue blend from premultiplied source, got {px:?}"
         );
         assert_eq!(sw.images_drawn, 1);
+    }
+
+    /// A node alpha dims the image it is drawn with.
+    ///
+    /// The scene's `Image` variant carried no alpha for a long time, so an
+    /// image inside a fading overlay stayed opaque over a dimming background —
+    /// the composite had nowhere to write. Halving the alpha has to halve the
+    /// image's contribution, not do nothing.
+    #[test]
+    fn a_node_alpha_dims_the_image_it_draws() {
+        let mut registry = ResourceRegistry::new();
+        // Opaque white, so the only thing between it and the backdrop is the
+        // node alpha.
+        let img = registry.insert(floem_scene::Resource {
+            kind: ResourceKind::Image {
+                width: 1,
+                height: 1,
+                pixels: std::sync::Arc::from(vec![255, 255, 255, 255].into_boxed_slice()),
+            },
+        });
+
+        let mut solids = Vec::new();
+        for alpha in [u8::MAX, u8::MAX / 2] {
+            let mut scene = Scene::new();
+            scene.begin_update();
+            let _ = scene.insert(SceneNode::Rect {
+                bounds: Rect::from_origin_size(Point::ZERO, Size::new(2.0, 2.0)),
+                fill: Color::rgb(0, 0, 0),
+                radius: 0.0,
+            });
+            let _ = scene.insert(SceneNode::Image {
+                bounds: Rect::from_origin_size(Point::ZERO, Size::new(2.0, 2.0)),
+                image: img,
+                alpha,
+            });
+            scene.finish_update();
+
+            let mut sw = SoftwareRenderer::new(2, 2);
+            let mut damage = DamageRegion::new();
+            damage.union_rect(Rect::from_origin_size(Point::ZERO, Size::new(2.0, 2.0)));
+            sw.render_scene_with_resources(&scene, &damage, &registry);
+            sw.end_frame();
+            solids.push(sw.pixel_rgba(0, 0).expect("in bounds")[0]);
+        }
+
+        let (opaque, half) = (solids[0], solids[1]);
+        assert!(
+            opaque > 200,
+            "opaque white over black stays white: {opaque}"
+        );
+        assert!(
+            (100..=155).contains(&half),
+            "half alpha must land near half brightness, got {half}"
+        );
     }
 
     /// Text nodes rasterise through swash when the registry is available:

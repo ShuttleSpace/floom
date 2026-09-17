@@ -7,7 +7,7 @@ use floem_types::{Color, Rect};
 #[derive(Debug, Clone, PartialEq)]
 pub enum SkiaCommand {
     FillRect { bounds: Rect, color: Color },
-    DrawImage { bounds: Rect },
+    DrawImage { bounds: Rect, alpha: u8 },
     DrawText { bounds: Rect },
 }
 
@@ -29,9 +29,14 @@ impl Renderer for SkiaRendererAdapter {
                     bounds: *bounds,
                     color: *fill,
                 }),
-                SceneNode::Image { bounds, .. } => self
-                    .commands
-                    .push(SkiaCommand::DrawImage { bounds: *bounds }),
+                SceneNode::Image {
+                    bounds,
+                    image: _,
+                    alpha,
+                } => self.commands.push(SkiaCommand::DrawImage {
+                    bounds: *bounds,
+                    alpha: *alpha,
+                }),
                 SceneNode::Text { origin, size, .. } => self.commands.push(SkiaCommand::DrawText {
                     bounds: Rect::from_origin_size(*origin, *size),
                 }),
