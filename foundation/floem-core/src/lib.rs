@@ -16,8 +16,8 @@ pub use context::{CreateContext, EventContext, PaintContext, SemanticsContext, U
 pub use element::{Element, ElementKind};
 pub use floem_types::{
     Color, ElementId, Event, ImeUpdate, InputMode, Key, KeyEvent, KeyPhase, Modifiers, NamedKey,
-    NativeCompositionMode, NativeViewKind, OverlayHandle, OverlayKind, Point, PointerButton,
-    PointerEvent, PointerKind, PointerPhase, Rect, ResourceId, ScrollEvent, Size,
+    NativeCompositionMode, NativeSnapshot, NativeViewKind, OverlayHandle, OverlayKind, Point,
+    PointerButton, PointerEvent, PointerKind, PointerPhase, Rect, ResourceId, ScrollEvent, Size,
 };
 pub use native::{NativeGrant, NativeRequest};
 pub use overlay::OverlayRequest;

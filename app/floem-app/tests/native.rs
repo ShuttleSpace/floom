@@ -22,7 +22,7 @@ use floem_core::{
 use floem_layout::{AbsoluteInset, LayoutStyle, Position};
 use floem_native::{
     ClipSupport, FakeNativeProvider, InputMode, InputModes, NativeCapabilities, NativeCommandLog,
-    NativeCompositionMode, NativeViewKind,
+    NativeCompositionMode, NativeSlot, NativeViewKind,
 };
 use floem_overlay::OverlayKind;
 use floem_testkit::TestApp;
@@ -978,6 +978,217 @@ fn clearing_the_provider_tears_every_participant_down() {
     assert_eq!(app.host().participant_count(), 0);
     assert!(!app.host().has_native_provider());
 }
+
+// --- 16.4 step 1: freeze and thaw ------------------------------------------
+
+/// A participant with a provider installed and geometry applied, plus its slot.
+fn bound_surface(app: &mut TestApp) -> NativeSlot {
+    let root = app.root();
+    app.host_mut().mount(
+        root,
+        at(0.0, 0.0, 200.0, 80.0),
+        NativeSurface::new(NativeViewKind::Video),
+    );
+    app.frame();
+    app.host().participant_slots()[0]
+}
+
+/// A frame whose *last* pushed state for the single participant is the thing
+/// under test — a freeze that never reached the provider would leave the older,
+/// visible one in place and look fine in every other respect.
+fn last_applied(log: &NativeCommandLog) -> floem_native::NativeState {
+    log.applied().last().expect("nothing was ever applied").1
+}
+
+/// Freezing withdraws the live view.
+///
+/// This is the swap itself: the OS keeps showing whatever it was showing unless
+/// somebody tells it to stop, so leaving the view visible would draw the native
+/// view *and* the texture — two copies of one participant, a frame apart, which
+/// is visible the moment anything moves.
+#[test]
+fn freezing_a_participant_takes_its_live_view_off_screen() {
+    let mut app = empty_app();
+    let (fake, log) = provider();
+    app.host_mut().set_native_provider(fake);
+    let slot = bound_surface(&mut app);
+    assert!(live_state(&app).visible, "precondition: compositing live");
+
+    app.host_mut().freeze_native(slot).unwrap().unwrap();
+    app.frame();
+
+    assert!(
+        !last_applied(&log).visible,
+        "the live view must be hidden while the texture stands in for it"
+    );
+    assert_eq!(app.host().frozen_participants(), vec![slot]);
+    // Still bound: a transition's end hands the participant back, and
+    // re-creating an OS view is the expensive thing.
+    assert_eq!(app.host().participant_count(), 1);
+    assert_eq!(log.destroys(), 0);
+}
+
+/// The texture has to actually reach the screen, through the widget whose box
+/// the participant occupies.
+///
+/// The participant's own `paint` is empty by design — the OS view paints
+/// itself — so a freeze that forgot the drawing half leaves a hole exactly
+/// where the video was, for the whole transition. That absence is what device
+/// case D11 names as "the participant is missing during the animation".
+#[test]
+fn a_frozen_participant_is_painted_as_an_image_in_its_own_box() {
+    let mut app = empty_app();
+    let (fake, _log) = provider();
+    app.host_mut().set_native_provider(fake);
+    let slot = bound_surface(&mut app);
+
+    let snapshot = app.host_mut().freeze_native(slot).unwrap().unwrap();
+    app.frame();
+
+    let drawn = app
+        .scene_nodes()
+        .into_iter()
+        .filter(|node| matches!(node, floem_scene::SceneNode::Image { image, .. } if *image == snapshot.resource))
+        .count();
+    assert_eq!(drawn, 1, "the frozen texture must be drawn exactly once");
+}
+
+/// Thawing hands ownership back: the view goes live and the provider is told
+/// it can have its pixels again.
+#[test]
+fn thawing_restores_the_live_view() {
+    let mut app = empty_app();
+    let (fake, log) = provider();
+    app.host_mut().set_native_provider(fake);
+    let slot = bound_surface(&mut app);
+
+    app.host_mut().freeze_native(slot).unwrap().unwrap();
+    app.frame();
+    log.clear();
+    app.host_mut().thaw_native(slot).unwrap();
+    app.frame();
+
+    assert!(last_applied(&log).visible, "the live view must come back");
+    assert!(
+        app.host().frozen_participants().is_empty(),
+        "a thawed participant is no longer frozen"
+    );
+    assert_eq!(
+        log.commands()
+            .iter()
+            .filter(|c| matches!(c, floem_native::NativeCommand::Restore { .. }))
+            .count(),
+        1,
+        "ownership moves exactly once"
+    );
+}
+
+/// Ownership moves once, so the illegal states have to be *reported*. A second
+/// freeze would strand the first texture and a stray thaw would hand back a
+/// texture nobody owns — both indistinguishable from working in the moment.
+#[test]
+fn the_freeze_lifecycle_rejects_double_and_stray_calls() {
+    let mut app = empty_app();
+    let (fake, log) = provider();
+    app.host_mut().set_native_provider(fake);
+    let slot = bound_surface(&mut app);
+
+    app.host_mut().freeze_native(slot).unwrap().unwrap();
+    assert_eq!(
+        app.host_mut().freeze_native(slot),
+        Err(floem_native::NativeError::AlreadyFrozen(slot)),
+        "freezing twice strands the first snapshot"
+    );
+    assert_eq!(
+        log.commands()
+            .iter()
+            .filter(|c| matches!(c, floem_native::NativeCommand::Snapshot { .. }))
+            .count(),
+        1,
+        "the rejected second freeze must not reach the provider"
+    );
+
+    app.host_mut().thaw_native(slot).unwrap();
+    assert_eq!(
+        app.host_mut().thaw_native(slot),
+        Err(floem_native::NativeError::NotFrozen(slot)),
+        "thawing twice frees a texture nobody owns"
+    );
+}
+
+/// `Ok(None)` is not a failure: a provider that cannot freeze into a texture is
+/// answered honestly, and the participant simply carries on being composited
+/// live. Getting this wrong is how a platform without snapshot support would
+/// silently lose its native views mid-transition.
+#[test]
+fn a_provider_that_cannot_snapshot_keeps_the_live_view() {
+    let mut app = empty_app();
+    let cannot = FakeNativeProvider::with_capabilities(NativeCapabilities {
+        modes: &[NativeCompositionMode::Overlay],
+        snapshot: false,
+        input: InputModes::ALL,
+        focusable: false,
+        clip: ClipSupport::Platform,
+    });
+    app.host_mut().set_native_provider(cannot);
+    let slot = bound_surface(&mut app);
+
+    assert_eq!(
+        app.host_mut().freeze_native(slot),
+        Ok(None),
+        "cannot-freeze is a capability answer, not an error"
+    );
+    app.frame();
+
+    assert!(
+        live_state(&app).visible,
+        "nothing was frozen, so the live view must stay live"
+    );
+    assert!(app.host().frozen_participants().is_empty());
+}
+
+/// Unmounting while frozen must not strand the texture.
+///
+/// The node goes away, so the widget that would have drawn the texture goes
+/// with it — and the provider is still holding a view it thinks is frozen.
+#[test]
+fn an_unmounting_frozen_participant_hands_ownership_back() {
+    let mut app = empty_app();
+    let root = app.root();
+    let (fake, log) = provider();
+    app.host_mut().set_native_provider(fake);
+    let node = app.host_mut().mount(
+        root,
+        at(0.0, 0.0, 200.0, 80.0),
+        NativeSurface::new(NativeViewKind::Video),
+    );
+    app.frame();
+    let slot = app.host().participant_slots()[0];
+
+    app.host_mut().freeze_native(slot).unwrap().unwrap();
+    log.clear();
+    app.host_mut().unmount(node);
+    app.frame();
+
+    assert!(
+        app.host().frozen_participants().is_empty(),
+        "a retired participant cannot still be frozen"
+    );
+    assert_eq!(app.host().participant_count(), 0);
+    assert_eq!(
+        app.host().unreleased_participants(),
+        Vec::new(),
+        "nothing may survive that the framework can no longer name"
+    );
+    let _ = log;
+}
+
+// A recycled slot does *not* need protecting from its predecessor's freeze, and
+// it is worth saying why: the pool hands the slot back with a bumped
+// generation, so `NativeSlot` equality — which the freeze record is keyed on —
+// already tells the two occupants apart. What does need cleaning up is the
+// record itself, which the test above covers; a version of this test keyed on
+// the record survived deleting the cleanup, so it was asserting nothing.
 
 /// A node that is not a participant keeps its own hit region, so the subtraction
 /// above is a property of the participant and not of the host.

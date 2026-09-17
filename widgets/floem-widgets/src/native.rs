@@ -18,7 +18,7 @@ use floem_core::{
     CreateContext, ElementId, LayoutRequest, NativeGrant, NativeRequest, PaintContext,
     SemanticsContext, UpdateContext, Widget,
 };
-use floem_types::{InputMode, NativeCompositionMode, NativeViewKind};
+use floem_types::{InputMode, NativeCompositionMode, NativeSnapshot, NativeViewKind};
 
 use crate::primitives::{SemanticsHint, emit_semantics};
 
@@ -29,6 +29,9 @@ use crate::primitives::{SemanticsHint, emit_semantics};
 pub struct NativeSurface {
     request: NativeRequest,
     grant: NativeGrant,
+    /// The texture standing in for the live view while it is frozen for a
+    /// transition. Read in `update`, drawn in `paint`.
+    snapshot: Option<NativeSnapshot>,
     width: Option<f32>,
     height: Option<f32>,
     label: Option<String>,
@@ -45,6 +48,7 @@ impl NativeSurface {
         Self {
             request: NativeRequest::new(kind),
             grant: NativeGrant::Refused,
+            snapshot: None,
             width: None,
             height: None,
             label: None,
@@ -135,6 +139,14 @@ impl Widget for NativeSurface {
             self.grant = grant;
             cx.mark_dirty(id);
         }
+        // Asked rather than remembered from `update`: the freeze is the host's
+        // decision and can be taken away without the widget doing anything, so
+        // the only honest source is the host itself, every frame.
+        let snapshot = cx.native_snapshot();
+        if snapshot != self.snapshot {
+            self.snapshot = snapshot;
+            cx.mark_dirty(id);
+        }
     }
 
     fn layout_request(&self) -> Option<LayoutRequest> {
@@ -151,9 +163,20 @@ impl Widget for NativeSurface {
         Some(request)
     }
 
-    /// Nothing: the native view paints itself. 16.4 draws a frozen snapshot
-    /// here as an image node when the participant is mid-transition.
-    fn paint(&self, _cx: &mut dyn PaintContext, _id: ElementId) {}
+    /// Nothing while the live view is compositing: it paints itself, and the
+    /// framework drawing over it would double-draw the same content at two
+    /// different latencies.
+    ///
+    /// While the participant is frozen, though, the live view has been taken
+    /// away and this is the *only* thing on screen for it — so a widget that
+    /// ignored the snapshot would show a hole exactly where the video was, for
+    /// the whole transition.
+    fn paint(&self, cx: &mut dyn PaintContext, _id: ElementId) {
+        let Some(snapshot) = self.snapshot else {
+            return;
+        };
+        cx.draw_image(cx.bounds(), snapshot.resource);
+    }
 
     fn semantics(&self, cx: &mut dyn SemanticsContext, _id: ElementId) {
         emit_semantics(self.semantics_hint(), cx);

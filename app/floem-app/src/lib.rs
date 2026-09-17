@@ -27,8 +27,9 @@ use std::sync::{Arc, Mutex};
 use floem_accessibility::{SemanticsNode, SemanticsTree};
 use floem_core::{
     Align, Axis, Child, ChildKey, CreateContext, ElementId, Event, EventContext, LayoutRequest,
-    NativeGrant, NativeRequest, OverlayHandle, OverlayKind, OverlayRequest, PaintContext, Point,
-    PointerPhase, Position, Rect, ResourceId, SemanticsHint, SemanticsRole, Size, UpdateContext,
+    NativeGrant, NativeRequest, NativeSnapshot, OverlayHandle, OverlayKind, OverlayRequest,
+    PaintContext, Point, PointerPhase, Position, Rect, ResourceId, SemanticsHint, SemanticsRole,
+    Size, UpdateContext,
 };
 use floem_focus::{FocusDirection, FocusManager, FocusScopeId};
 use floem_layout::{
@@ -36,8 +37,8 @@ use floem_layout::{
     MeasureFn, Position as LPosition,
 };
 use floem_native::{
-    InputMode, NativeCompositionMode, NativeSlot, NativeState, NativeViewController, NativeViewId,
-    NativeViewKind, NativeViewPool, NativeViewProvider,
+    InputMode, NativeCompositionMode, NativeError, NativeSlot, NativeState, NativeViewController,
+    NativeViewId, NativeViewKind, NativeViewPool, NativeViewProvider,
 };
 use floem_overlay::{CompositorProp, OverlayManager};
 use floem_runtime::{EventRouter, Hit, HitRegion, RouteStop};
@@ -221,6 +222,25 @@ struct Participant {
     clip_starved: bool,
 }
 
+/// A participant whose live view has been withdrawn in favour of a texture.
+///
+/// The OS cannot animate a view it owns: no windowing API will move an
+/// `NSView` along a curve, fade it out mid-transition, or rotate it, and the
+/// closest available trick — re-placing it every frame — still leaves it unable
+/// to do any of the things a page transition asks for. So a transition freezes
+/// the participant into a texture and the framework paints the texture instead.
+///
+/// The *host* owns this record rather than the widget, and for the same reason
+/// it owns the participant: the live view is still bound underneath. A widget
+/// that owned the frozen texture would strand it on unmount, and the provider
+/// would be left holding a view nobody can name.
+struct Frozen {
+    node: usize,
+    slot: NativeSlot,
+    /// The texture standing in for the live view.
+    snapshot: NativeSnapshot,
+}
+
 /// What a widget asked the host to do with an overlay during an event.
 ///
 /// Queued rather than applied inline: opening an overlay mounts a subtree and
@@ -332,6 +352,8 @@ pub struct WidgetHost {
     native: Option<NativeViewController<Box<dyn NativeViewProvider>>>,
     /// Live participants, in the order they were bound.
     participants: Vec<Participant>,
+    /// Participants frozen into a texture for the duration of a transition.
+    frozen: Vec<Frozen>,
     /// Slots keyed by recycling key, so a row scrolling out of view hands its
     /// slot to the row scrolling in instead of minting another.
     native_pool: NativeViewPool<SlotKey>,
@@ -602,6 +624,7 @@ impl WidgetHost {
             overlay_animating: false,
             native: None,
             participants: Vec::new(),
+            frozen: Vec::new(),
             native_pool: NativeViewPool::new(),
             next_native_key: 0,
             scale: 1.0,
@@ -1355,6 +1378,10 @@ impl WidgetHost {
             if self.nodes[index].dead {
                 continue;
             }
+            // Read before the node is borrowed mutably: the update pass hands
+            // the node out for the whole `update` call, and asking the host a
+            // question from inside it is not possible.
+            let snapshot = self.frozen_snapshot(index);
             let node = &mut self.nodes[index];
             let native = match self.native.as_mut() {
                 Some(controller) => Some(NativeGrantSink {
@@ -1372,6 +1399,7 @@ impl WidgetHost {
                 children_dirty: false,
                 bounds: node.bounds,
                 viewport,
+                snapshot,
                 overlays: Some(UpdateOverlaySink {
                     commands: &mut overlay_commands,
                     next_handle: &mut self.next_overlay_handle,
@@ -1918,6 +1946,95 @@ impl WidgetHost {
         self.native_focus
     }
 
+    /// Freezes a participant into a texture, standing in for its live view.
+    ///
+    /// The live view stays bound — it is *hidden*, not destroyed — because a
+    /// transition's end hands it back and re-creating an OS view is the
+    /// expensive thing. [`WidgetHost::thaw_native`] undoes this, and must be
+    /// called exactly once per participant that got `Some`.
+    ///
+    /// `Ok(None)` means the provider cannot snapshot. That is not a failure:
+    /// the participant carries on being composited live, and the caller gets to
+    /// decide what a transition looks like without a frozen texture (the honest
+    /// answer is usually "the native view simply does not animate"). It is
+    /// deliberately distinct from `Err`, which means the caller did something
+    /// illegal — freezing twice, or naming a slot that is not bound.
+    pub fn freeze_native(
+        &mut self,
+        slot: NativeSlot,
+    ) -> Result<Option<NativeSnapshot>, NativeError> {
+        let Some(controller) = self.native.as_mut() else {
+            return Err(NativeError::NotBound(slot));
+        };
+        // No "already frozen" check of our own: that invariant belongs to the
+        // controller, which is the only thing that can answer it truthfully — a
+        // second copy here would be a second answer that can drift.
+        let Some(snapshot) = controller.snapshot(slot)? else {
+            // Nothing was frozen, so there is nothing to record — and noting it
+            // anyway would make a later `thaw` look legitimate.
+            return Ok(None);
+        };
+        let Some(node) = self
+            .participants
+            .iter()
+            .find(|p| p.slot == slot)
+            .map(|p| p.node)
+        else {
+            // The provider handed back a texture, so ownership travelled; it has
+            // to travel straight back or the resource is stranded.
+            let _ = controller.restore(slot);
+            return Err(NativeError::NotBound(slot));
+        };
+        self.frozen.push(Frozen {
+            node,
+            slot,
+            snapshot,
+        });
+        Ok(Some(snapshot))
+    }
+
+    /// Hands a frozen participant its live view back.
+    ///
+    /// Idempotence would be the wrong shape here: ownership moves exactly once,
+    /// and a second `restore` either frees a texture nobody owns or leaks the
+    /// one somebody already got. So thawing what is not frozen is an error.
+    pub fn thaw_native(&mut self, slot: NativeSlot) -> Result<(), NativeError> {
+        let Some(controller) = self.native.as_mut() else {
+            return Err(NativeError::NotBound(slot));
+        };
+        // Ownership moves here or it does not move at all: the same reasoning
+        // the controller applies to its own invariant set, and deliberately not
+        // duplicated. To err after this point would leave the provider holding a
+        // frozen view and the host believing it is live.
+        controller.restore(slot)?;
+        // The record has to go, or it outlives the participant it describes:
+        // nothing else consults `frozen` for a slot once the slot is gone. The
+        // *next frame* is what puts the live view back on screen, because
+        // `sync_native` recomputes visibility from this list.
+        if let Some(position) = self.frozen.iter().position(|f| f.slot == slot) {
+            self.frozen.remove(position);
+        }
+        Ok(())
+    }
+
+    /// Slots currently showing a frozen texture instead of a live view.
+    pub fn frozen_participants(&self) -> Vec<NativeSlot> {
+        self.frozen.iter().map(|f| f.slot).collect()
+    }
+
+    /// The texture standing in for the participant bound to `node`.
+    fn frozen_snapshot(&self, node: usize) -> Option<NativeSnapshot> {
+        self.frozen
+            .iter()
+            .find(|f| f.node == node)
+            .map(|f| f.snapshot)
+    }
+
+    /// Whether a participant is currently replaced by a frozen texture.
+    fn is_frozen(&self, slot: NativeSlot) -> bool {
+        self.frozen.iter().any(|f| f.slot == slot)
+    }
+
     /// Device-pixel scale handed to participants.
     ///
     /// A change does not dirty layout — logical geometry is unchanged — but it
@@ -1940,6 +2057,14 @@ impl WidgetHost {
             return;
         };
         let participant = self.participants.remove(position);
+        // Drop the freeze record *before* the controller unwinds it, because the
+        // slot is about to go back in the pool: a record that outlived its
+        // participant would answer `is_frozen` for whatever the pool hands the
+        // slot to next, and a recycled row would come back hidden with its
+        // texture drawn nowhere — for no reason the caller can observe.
+        if let Some(position) = self.frozen.iter().position(|f| f.slot == participant.slot) {
+            self.frozen.remove(position);
+        }
         if let Some(controller) = self.native.as_mut() {
             // A frozen participant is restored first by the controller, so the
             // snapshot texture cannot outlive the view that owned it.
@@ -2014,7 +2139,13 @@ impl WidgetHost {
                 && !participant.clip_starved
                 && !modal_up
                 && !node.is_overlay
-                && !self.is_in_overlay(participant.node);
+                && !self.is_in_overlay(participant.node)
+                // A frozen participant has handed its pixels to the framework
+                // for the length of a transition. Leaving the live view visible
+                // would draw it *and* the texture — and since the view cannot
+                // be transformed, the two would visibly separate the moment the
+                // tween moved.
+                && !self.is_frozen(participant.slot);
             let state = NativeState {
                 // The placement, never the intersection: a provider that fitted
                 // its content to a clipped rect would rescale instead of crop.
@@ -2421,6 +2552,9 @@ struct HostUpdateContext<'a> {
     bounds: Rect,
     /// The host viewport, for a composite whose overlay spans the window.
     viewport: Rect,
+    /// The frozen texture standing in for this node's participant, if its
+    /// transition has taken the live view away.
+    snapshot: Option<NativeSnapshot>,
     overlays: Option<UpdateOverlaySink<'a>>,
     /// The native door, present when the host has a provider.
     native: Option<NativeGrantSink<'a>>,
@@ -2512,6 +2646,7 @@ impl HostUpdateContext<'_> {
             children_dirty: false,
             bounds,
             viewport,
+            snapshot: None,
             overlays: None,
             native: None,
         }
@@ -2576,6 +2711,10 @@ impl UpdateContext for HostUpdateContext<'_> {
             Some(sink) => sink.grant(request),
             None => NativeGrant::Refused,
         }
+    }
+
+    fn native_snapshot(&self) -> Option<NativeSnapshot> {
+        self.snapshot
     }
 }
 

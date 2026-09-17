@@ -82,6 +82,25 @@ pub trait UpdateContext {
         let _ = request;
         crate::NativeGrant::Refused
     }
+
+    /// The texture this node's participant has been frozen into, if any.
+    ///
+    /// A participant cannot be *animated* by the OS that owns it: there is no
+    /// "move this `NSView` along a curve" in any windowing API, and the ones
+    /// that come closest (re-placing it every frame) still leave it unable to
+    /// fade, scale or rotate. So a transition freezes the live view into a
+    /// texture and the framework paints the texture instead — which is exactly
+    /// what makes a participant follow a page transition at all.
+    ///
+    /// `Some` means "stop expecting the live view: it is hidden, and this image
+    /// is what belongs in your box right now". A widget draws it like any other
+    /// image; a widget that ignores this shows a hole where the participant was
+    /// for the length of the transition, which is failure mode D11 names.
+    ///
+    /// Defaults to `None`, so every existing caller keeps drawing nothing.
+    fn native_snapshot(&self) -> Option<crate::NativeSnapshot> {
+        None
+    }
 }
 
 /// Pointer/keyboard routing context.

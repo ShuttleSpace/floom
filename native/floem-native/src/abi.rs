@@ -22,15 +22,19 @@
 
 use std::fmt;
 
-use floem_types::{Rect, ResourceId};
+use floem_types::Rect;
 
 use crate::pool::NativeSlot;
 
-// The three nouns a widget, a host and a provider all have to say live in
+// The nouns a widget, a host and a provider all have to say live in
 // `floem-types`: the widget layer sits above this crate and may not name
 // anything in it, so "I want a video composited as an overlay" has to be
 // spellable below both. Re-exported so callers of this crate keep one import.
-pub use floem_types::{InputMode, NativeCompositionMode, NativeViewKind};
+//
+// `NativeSnapshot` joined them in 16.4, and for a reason 16.1 did not have:
+// the frozen texture has to be *painted*, and painting is the widget's job. A
+// widget at L6 cannot name a type defined here at L4.
+pub use floem_types::{InputMode, NativeCompositionMode, NativeSnapshot, NativeViewKind};
 
 /// Whether a provider can crop a participant to a rect it does not own.
 ///
@@ -318,19 +322,6 @@ pub fn to_device(rect: Rect, scale: f64) -> DeviceRect {
         width: (x1 - x0).max(0.0) as u32,
         height: (y1 - y0).max(0.0) as u32,
     }
-}
-
-/// A participant frozen into a texture, for a transition that moves it.
-///
-/// The resource is owned by whoever took the snapshot until `restore`.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct NativeSnapshot {
-    /// Texture resource the renderer can draw as an image node.
-    pub resource: ResourceId,
-    /// Size of the frozen texture in device pixels. A snapshot taken before a
-    /// scale change and restored after it is a stale-size bug.
-    pub pixel_width: u32,
-    pub pixel_height: u32,
 }
 
 /// Why a participant operation did not happen.

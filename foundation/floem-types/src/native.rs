@@ -9,6 +9,8 @@
 //!
 //! [`OverlayKind`]: crate::OverlayKind
 
+use crate::ResourceId;
+
 /// What kind of native view a participant is.
 ///
 /// Deliberately a tag rather than a typed handle: the framework names intent
@@ -62,6 +64,27 @@ impl NativeCompositionMode {
     pub fn is_host_composited(self) -> bool {
         matches!(self, Self::Texture | Self::Offscreen)
     }
+}
+
+/// A participant frozen into a texture, for a transition that moves it.
+///
+/// This lives beside the other three nouns rather than in `floem-native` for
+/// the same reason they do: the widget that paints the frozen image sits two
+/// layers above the crate that defines the ABI, and asking it to name a type
+/// from there would be an upward edge. A fourth noun was not anticipated by
+/// 16.1 — a *frozen* participant is still the same participant, and the only
+/// thing a widget needs to know about it is how to draw it.
+///
+/// The resource is owned by whoever took the snapshot until `restore`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct NativeSnapshot {
+    /// Texture resource the renderer can draw as an image node.
+    pub resource: ResourceId,
+    /// Size of the frozen texture in device pixels. A snapshot taken before a
+    /// scale change and restored after it is a stale-size bug.
+    pub pixel_width: u32,
+    /// Height of the frozen texture in device pixels.
+    pub pixel_height: u32,
 }
 
 /// Whether a participant takes pointer input itself.
