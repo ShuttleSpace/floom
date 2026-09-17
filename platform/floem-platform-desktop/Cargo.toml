@@ -42,6 +42,14 @@ objc2-app-kit = { version = "0.3", default-features = false, features = [
     "NSView",
     "NSResponder",
     "NSWindow",
+    # Freezing a participant into a texture (Phase 16, task 16.4 step 3) needs
+    # to read the view's rendered pixels back out of the window server. Both
+    # features are required together: `bitmapImageRepForCachingDisplayInRect`
+    # and `cacheDisplayInRect:toBitmapImageRep:` are gated on
+    # `NSBitmapImageRep && NSImageRep`, and `pixelsWide`/`pixelsHigh` live on
+    # `NSImageRep`.
+    "NSBitmapImageRep",
+    "NSImageRep",
 ] }
 objc2-foundation = { version = "0.3", default-features = false, features = [
     "std",

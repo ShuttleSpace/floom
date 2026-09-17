@@ -44,20 +44,26 @@
 //! - `focusable: true` — the participant, or failing that its container, becomes
 //!   the window's first responder, which is what makes the OS hand it the
 //!   keyboard and the IME.
-//! - `snapshot: false` — freezing a view into a texture needs a bitmap round
-//!   trip that has not been written, so the bridge does not offer the modes that
-//!   depend on it. Undeclared, not half-done.
+//! - `snapshot: true` — a participant can be frozen into a texture for a
+//!   transition (task 16.4 step 3). The bitmap round trip lives in
+//!   [`NativeViewHost::snapshot_view`]: it reads the view's rendered pixels back
+//!   out of the window server and stashes them for the app runner to import as
+//!   an external texture.
 
 use std::cell::Cell;
 use std::collections::HashMap;
+use std::ptr::NonNull;
+use std::sync::Arc;
 
 use objc2::rc::Retained;
 use objc2::{DefinedClass, MainThreadMarker, define_class, msg_send};
-use objc2_app_kit::{NSResponder, NSView};
+use objc2_app_kit::{NSBitmapFormat, NSResponder, NSView};
 use objc2_foundation::{NSObject, NSPoint, NSRect, NSSize};
 
-use floem_native::{ClipSupport, InputMode, InputModes, NativeError, NativeSlot, NativeViewKind};
-use floem_types::Size;
+use floem_native::{
+    ClipSupport, InputMode, InputModes, NativeError, NativeSnapshot, NativeSlot, NativeViewKind,
+};
+use floem_types::{NativeCapture, ResourceId, Size};
 
 use crate::native::{
     NativeViewHost, Origin, ViewPlacement, device_to_points, os_frame, split_placement,
@@ -160,6 +166,13 @@ pub struct MacNativeViewHost {
     mtm: MainThreadMarker,
     factory: ViewFactory,
     views: HashMap<NativeSlot, Participant>,
+    /// Snapshots taken since the last drain, waiting for the app runner to
+    /// import them as textures. Filled only by [`Self::snapshot_view`]; the
+    /// runner empties it through [`Self::take_captures`].
+    pending_captures: Vec<NativeCapture>,
+    /// Monotonic id source for snapshot textures. Each frozen participant gets a
+    /// fresh resource id, so a texture is never keyed on a stale capture.
+    next_capture: u32,
 }
 
 impl std::fmt::Debug for MacNativeViewHost {
@@ -184,6 +197,8 @@ impl MacNativeViewHost {
             mtm,
             factory,
             views: HashMap::new(),
+            pending_captures: Vec::new(),
+            next_capture: 1,
         }
     }
 
@@ -384,6 +399,13 @@ impl NativeViewHost for MacNativeViewHost {
         true
     }
 
+    /// Freezing a participant into a texture is the one capability this backend
+    /// now advertises: the bitmap round trip below is what makes a transition
+    /// animate a native view it otherwise could not.
+    fn can_snapshot(&self) -> bool {
+        true
+    }
+
     fn create_view(&mut self, slot: NativeSlot, kind: NativeViewKind) -> Result<(), NativeError> {
         let container = Container::new(self.mtm);
         let content = (self.factory)(kind, self.mtm);
@@ -459,5 +481,78 @@ impl NativeViewHost for MacNativeViewHost {
         if ours {
             window.makeFirstResponder(Some(self.parent.view()));
         }
+    }
+
+    fn snapshot_view(&mut self, slot: NativeSlot) -> Option<NativeSnapshot> {
+        let participant = self.views.get(&slot)?;
+        // The content view's own bounds, in points. `cacheDisplayInRect` renders
+        // the view's already-drawn content at the window's backing resolution,
+        // so the bitmap comes back in *device* pixels — exactly what the
+        // renderer's external texture wants, with no manual scale multiply.
+        let bounds = participant.content.bounds();
+        let rep = participant
+            .content
+            .bitmapImageRepForCachingDisplayInRect(bounds)?;
+        participant
+            .content
+            .cacheDisplayInRect_toBitmapImageRep(bounds, &rep);
+
+        let width = rep.pixelsWide() as u32;
+        let height = rep.pixelsHigh() as u32;
+        let Some(src) = NonNull::new(rep.bitmapData()) else {
+            return None;
+        };
+        if width == 0 || height == 0 {
+            return None;
+        }
+
+        // AppKit hands back `ARGB` premultiplied by default; vello uploads
+        // `RGBA8` premultiplied verbatim. Reorder the channels, and if the
+        // platform gave back *non*-premultiplied bytes, premultiply on the way
+        // so the pixels match what the renderer expects.
+        let format = rep.bitmapFormat();
+        let alpha_first = format.contains(NSBitmapFormat::AlphaFirst);
+        let premultiplied = !format.contains(NSBitmapFormat::AlphaNonpremultiplied);
+        let len = width as usize * height as usize * 4;
+        let src_bytes = unsafe { std::slice::from_raw_parts(src.as_ptr(), len) };
+
+        let mut pixels: Vec<u8> = Vec::with_capacity(len);
+        let mut push = |a: u8, r: u8, g: u8, b: u8| {
+            let (r, g, b) = if premultiplied {
+                (r, g, b)
+            } else {
+                let mul = |c: u8| -> u8 {
+                    let v = c as u32 * a as u32 + 127;
+                    (v / 255) as u8
+                };
+                (mul(r), mul(g), mul(b))
+            };
+            pixels.extend_from_slice(&[r, g, b, a]);
+        };
+        for chunk in src_bytes.chunks_exact(4) {
+            if alpha_first {
+                push(chunk[0], chunk[1], chunk[2], chunk[3]);
+            } else {
+                push(chunk[3], chunk[0], chunk[1], chunk[2]);
+            }
+        }
+
+        let resource = ResourceId::new(self.next_capture, 1);
+        self.next_capture = self.next_capture.wrapping_add(1);
+        self.pending_captures.push(NativeCapture {
+            resource,
+            pixel_width: width,
+            pixel_height: height,
+            pixels: Arc::from(pixels.into_boxed_slice()),
+        });
+        Some(NativeSnapshot {
+            resource,
+            pixel_width: width,
+            pixel_height: height,
+        })
+    }
+
+    fn take_captures(&mut self) -> Vec<NativeCapture> {
+        std::mem::take(&mut self.pending_captures)
     }
 }

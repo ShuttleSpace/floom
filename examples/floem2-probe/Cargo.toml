@@ -19,6 +19,7 @@ real = [
 ]
 
 [dependencies]
+floem-animation = { path = "../../framework/floem-animation", version = "0.2.0" }
 floem-app = { path = "../../app/floem-app", version = "0.2.0" }
 floem-core = { path = "../../foundation/floem-core", version = "0.2.0" }
 floem-layout = { path = "../../layout/floem-layout", version = "0.2.0" }

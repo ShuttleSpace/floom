@@ -9,6 +9,8 @@
 //!
 //! [`OverlayKind`]: crate::OverlayKind
 
+use std::sync::Arc;
+
 use crate::ResourceId;
 
 /// What kind of native view a participant is.
@@ -85,6 +87,35 @@ pub struct NativeSnapshot {
     pub pixel_width: u32,
     /// Height of the frozen texture in device pixels.
     pub pixel_height: u32,
+}
+
+/// Pixels of a frozen participant, handed from the OS host to the renderer.
+///
+/// A snapshotter lives in the windowing crate; the renderer that uploads the
+/// pixels lives a layer above it. Carrying the bytes in a type *both* can name
+/// is what lets them stay decoupled: this struct holds plain `Arc<[u8]>`, so
+/// neither side has to depend on the other's OS or GPU types — the same
+/// decoupling that puts the other native nouns in this crate rather than in
+/// `floem-native`.
+///
+/// The bytes are always [`ImageFormat::Rgba8`] / premultiplied, the format the
+/// vello path uploads verbatim; the host does the OS-specific conversion
+/// (AppKit hands back `ARGB` premultiplied) before it stashes one here.
+#[derive(Debug, Clone)]
+pub struct NativeCapture {
+    /// The resource the renderer must key the uploaded texture on, so the
+    /// frozen participant's `SceneNode::Image` (which references this id) and
+    /// the GPU brush it resolves to agree.
+    ///
+    /// Minted by the host at snapshot time; unique among resident captures for
+    /// the life of the transition.
+    pub resource: ResourceId,
+    /// Width of the frozen texture in device pixels.
+    pub pixel_width: u32,
+    /// Height of the frozen texture in device pixels.
+    pub pixel_height: u32,
+    /// RGBA8, premultiplied, row-major, `pixel_width * pixel_height * 4` bytes.
+    pub pixels: Arc<[u8]>,
 }
 
 /// Whether a participant takes pointer input itself.

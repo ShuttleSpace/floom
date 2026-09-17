@@ -73,7 +73,7 @@ use floem_native::{
     to_device,
 };
 use floem_platform::{Capability, PlatformCapabilities};
-use floem_types::Size;
+use floem_types::{NativeCapture, Size};
 
 /// A participant's placement, in the framework's own device space.
 ///
@@ -332,6 +332,19 @@ pub trait NativeViewHost {
     fn restore_view(&mut self, slot: NativeSlot) {
         let _ = slot;
     }
+
+    /// Drain any snapshots taken since the last call, so the app runner can
+    /// hand their pixels to the renderer.
+    ///
+    /// A host that has not implemented snapshotting (`can_snapshot() == false`)
+    /// never has any, so the default is empty and the bridge stays silent. A
+    /// host that *can* snapshot but has not been asked to (no `snapshot_view`
+    /// call drained yet) also returns empty — the queue only fills when a
+    /// participant is actually frozen.
+    fn take_captures(&mut self) -> Vec<NativeCapture> {
+        let _ = self;
+        Vec::new()
+    }
 }
 
 /// What the bridge last told the OS about one slot.
@@ -500,6 +513,10 @@ impl<H: NativeViewHost> NativeViewProvider for DesktopNativeBridge<H> {
 
     fn restore(&mut self, slot: NativeSlot) {
         self.host.restore_view(slot);
+    }
+
+    fn take_captures(&mut self) -> Vec<NativeCapture> {
+        self.host.take_captures()
     }
 }
 

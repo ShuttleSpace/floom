@@ -2582,6 +2582,7 @@ dependencies = [
 name = "floem2-probe"
 version = "0.2.0"
 dependencies = [
+ "floem-animation",
  "floem-app",
  "floem-core",
  "floem-layout",

@@ -938,6 +938,15 @@ impl Presenter for VelloGpuPresenter {
             .is_some()
     }
 
+    fn import_external_texture(&mut self, frame: ExternalFrame) {
+        // One call per snapshot: the app runner drains the host's pending
+        // captures and imports each exactly once, before the frame that first
+        // draws the frozen texture. The default no-op is for backends with no
+        // texture path; vello resolves the participant's `SceneNode::Image`
+        // from the brush keyed on `frame.resource`.
+        let _ = self.import_texture(frame);
+    }
+
     fn resize(&mut self, size: Size, scale: f64) {
         self.size = size;
         self.scale = if scale > 0.0 { scale } else { 1.0 };

@@ -35,7 +35,7 @@ use std::collections::HashMap;
 
 use floem_error::{ErrorBoundary, Outcome};
 use floem_platform::{Platform, PlatformEvent, SurfaceTarget};
-use floem_renderer::{AttachedSurface, Presenter, SurfaceHandles};
+use floem_renderer::{AttachedSurface, ExternalFrame, Presenter, SurfaceHandles};
 use floem_services::{Scope, Services};
 use floem_types::{
     Event, ImeUpdate, Key, KeyEvent, KeyPhase, Modifiers, Point, PointerEvent, PointerKind,
@@ -429,9 +429,27 @@ impl<R: Presenter> AppRunner<R> {
 
     /// Run one frame and present it.
     fn render(&mut self) -> FrameStats {
+        let ready = self.presenter_ready;
+        // Drain any snapshots the native provider took since the last frame and
+        // hand their pixels to the presenter as external textures. This must
+        // happen before `host.frame()` builds the scene that references them: a
+        // frozen participant's `SceneNode::Image` keys on the same `ResourceId`,
+        // so the brush has to be resident for the frame that first draws it.
+        let captures = self.host.take_native_captures();
+        for capture in captures {
+            self.presenter.import_external_texture(ExternalFrame {
+                resource: capture.resource,
+                // A frozen texture is imported once and then referenced by the
+                // scene until its transition ends; `ImportDecision::First` is
+                // the right answer, and a constant sequence keeps it stable.
+                sequence: 0,
+                width: capture.pixel_width,
+                height: capture.pixel_height,
+                pixels: Some(capture.pixels),
+            });
+        }
         let host = &mut self.host;
         let presenter = &mut self.presenter;
-        let ready = self.presenter_ready;
         let frame_stats = host.frame();
         if ready {
             presenter.present(host.scene(), host.resources());

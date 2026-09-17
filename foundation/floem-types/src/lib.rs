@@ -20,7 +20,7 @@ pub use event::{
 };
 pub use geometry::{Constraints, Insets, Point, Rect, Size, Transform};
 pub use ids::{ElementId, NativeViewId, PlatformId, ResourceId, SceneNodeId, SurfaceId, WindowId};
-pub use native::{InputMode, NativeCompositionMode, NativeSnapshot, NativeViewKind};
+pub use native::{InputMode, NativeCapture, NativeCompositionMode, NativeSnapshot, NativeViewKind};
 pub use overlay::{OverlayHandle, OverlayKind};
 
 #[cfg(test)]

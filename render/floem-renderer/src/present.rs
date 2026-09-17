@@ -26,6 +26,8 @@ use floem_types::{Size, SurfaceId, WindowId};
 
 use raw_window_handle::{RawDisplayHandle, RawWindowHandle};
 
+use crate::ExternalFrame;
+
 /// Native handles for a surface that is ready to be presented into.
 #[derive(Debug, Clone, Copy)]
 pub struct SurfaceHandles {
@@ -109,6 +111,22 @@ pub trait Presenter {
     /// Frames presented so far, for diagnostics.
     fn frames_presented(&self) -> u64 {
         0
+    }
+
+    /// Hands a just-frozen participant's pixels to the presenter, so the
+    /// texture it was frozen into can be drawn as an ordinary scene image.
+    ///
+    /// Called once per snapshot, before the frame that first draws it, by the
+    /// app runner. A backend without a texture path — the software presenter,
+    /// or any headless renderer — does nothing: the frozen participant simply
+    /// falls back to being composited live, which is the honest answer for a
+    /// backend that cannot import a GPU texture.
+    ///
+    /// The vello backend overrides this to feed [`crate::external::ExternalFrame`]
+    /// into its `ExternalTextureCache`; the bytes are uploaded verbatim as
+    /// RGBA8 premultiplied, the format the host already produced them in.
+    fn import_external_texture(&mut self, frame: ExternalFrame) {
+        let _ = frame;
     }
 }
 

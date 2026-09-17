@@ -47,6 +47,7 @@ use floem_runtime_core::IdAllocator;
 use floem_scene::{Resource, ResourceKind, ResourceRegistry, Scene, SceneNodeId};
 use floem_text::{LayoutCache, TextAlign, TextLayoutOptions, TextShaper};
 use floem_types::ScrollEvent;
+use floem_types::NativeCapture;
 use floem_widgets::WidgetAny;
 
 /// Stable handle to a mounted widget.
@@ -1949,6 +1950,19 @@ impl WidgetHost {
             .iter()
             .filter_map(|p| p.last.map(|state| (p.slot, state)))
             .collect()
+    }
+
+    /// Drains any snapshot pixels the native provider has queued.
+    ///
+    /// Called by the app runner before each frame, so a frozen participant's
+    /// texture is imported exactly once — the frame its transition starts — and
+    /// never lingers in the host. Empty when nothing was frozen (or no provider
+    /// is installed).
+    pub fn take_native_captures(&mut self) -> Vec<NativeCapture> {
+        match &mut self.native {
+            Some(controller) => controller.take_native_captures(),
+            None => Vec::new(),
+        }
     }
 
     /// Slots the provider was told to create and never told to destroy. Should

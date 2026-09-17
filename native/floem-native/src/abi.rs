@@ -22,7 +22,7 @@
 
 use std::fmt;
 
-use floem_types::Rect;
+use floem_types::{NativeCapture, Rect};
 
 use crate::pool::NativeSlot;
 
@@ -440,6 +440,17 @@ pub trait NativeViewProvider {
 
     /// Undo [`Self::snapshot`], handing the live view back.
     fn restore(&mut self, slot: NativeSlot);
+
+    /// Drain any snapshots taken since the last call, so the app runner can
+    /// hand their pixels to the renderer.
+    ///
+    /// Default empty: a provider whose host cannot snapshot (the common and
+    /// honest case) has nothing to drain. Only a bridge wrapping a snapshotting
+    /// host overrides this to forward to it.
+    fn take_captures(&mut self) -> Vec<NativeCapture> {
+        let _ = self;
+        Vec::new()
+    }
 }
 
 #[cfg(test)]

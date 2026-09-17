@@ -23,6 +23,17 @@
 //! | `Popup` inside a 160×48 box | R2-2 (it must be drawn outside that box) |
 //! | `BottomSheet` | R2-6 (slide up from the bottom edge) |
 //! | `NavigationDrawer` | R2-7 (leading-edge slide, stacked above a popup) |
+//! | `NativeSurface` + "transition" | D11 (a frozen, animating texture, then live again) |
+//!
+//! D11 is the one case that can also be fired without a click, because its
+//! whole point is a 0.15 s tween nobody can aim a mouse at:
+//!
+//! ```sh
+//! FLOEM2_PROBE_TRANSITION_EVERY=90 cargo run -p floem2-probe --features real
+//! ```
+//!
+//! re-fires the transition every 90 frames. Off by default, so the window is
+//! still idle when G1-4 is being observed.
 //!
 //! Unlike `floem2-window`, this app does **not** ask for a frame on every
 //! `about_to_wait`. It asks for one frame to get started and then runs only when
@@ -35,6 +46,7 @@
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
+use floem_animation::{AnimKind, CompositorProp, Tween};
 use floem_app::{AppRunner, NodeId, WidgetHost};
 use floem_core::{Axis, Child, ChildKey, LayoutRequest};
 use floem_layout::LayoutStyle;
@@ -70,6 +82,16 @@ struct ProbeApp {
     request: Arc<AtomicUsize>,
     /// The request already pushed into the widgets, so each click is applied once.
     applied: usize,
+    /// How many times "transition" has been pressed. A counter rather than a
+    /// flag, because the failures worth finding are the ones that only show on
+    /// the second attempt — a participant left frozen, or a view that never
+    /// came back.
+    transitions: Arc<AtomicUsize>,
+    /// How many of those have actually been started.
+    fired: usize,
+    /// Frames between automatic transitions. `0` = never, which is the default:
+    /// a window that fires by itself is not the window G1-4 wants to watch.
+    auto_every: u32,
     /// Resolved lazily: the composite children mount during the first frame.
     surfaces: Option<Surfaces>,
     status: Option<NodeId>,
@@ -139,7 +161,11 @@ impl WinitApp for ProbeApp {
         self.sync();
         // One frame to get started, then only what the runner asks for. See the
         // module docs: a settled probe window should be idle, not spinning.
-        if self.frames == 0 {
+        //
+        // The exception is an auto-firing D11 run, which has to keep the loop
+        // alive to reach its next trigger — and which is opt-in precisely
+        // because it is the one mode that is not idle.
+        if self.frames == 0 || self.auto_every > 0 {
             self.runner.request_frame(platform);
         }
     }
@@ -184,6 +210,8 @@ impl ProbeApp {
             self.applied = want;
         }
 
+        self.fire_transitions();
+
         let status = match self.status {
             Some(node) => node,
             None => {
@@ -196,6 +224,72 @@ impl ProbeApp {
         };
         if let Some(text) = self.runner.host_mut().widget_mut::<Text>(status) {
             text.set_content(format!("status: showing {}", name_of(self.applied)));
+        }
+    }
+
+    /// Starts any transition the "transition" button — or the auto-fire env
+    /// var — has asked for, and prints what came back.
+    ///
+    /// The print *is* the evidence. D11 asks whether a native participant can
+    /// be pushed as a frozen, animating texture, and on a real window the first
+    /// thing to establish is which of the three answers this platform gives:
+    /// a snapshot arrived (`Some`), the provider cannot take one (`None` — a
+    /// contract, not a failure, and the honest answer for a backend with no
+    /// snapshotter), or the host refused the call outright (`Err`).
+    ///
+    /// Each of those has a different observable consequence, and the log has to
+    /// say which one happened: only the first hides the live view.
+    fn fire_transitions(&mut self) {
+        if self.auto_every > 0 && self.frames % self.auto_every == 0 {
+            self.transitions.fetch_add(1, Ordering::SeqCst);
+        }
+        let wanted = self.transitions.load(Ordering::SeqCst);
+        if wanted == self.fired {
+            return;
+        }
+        let Some(slot) = self
+            .runner
+            .host()
+            .participant_slots()
+            .into_iter()
+            .next()
+        else {
+            // Nothing bound yet is not "no snapshot": come back on a later
+            // frame rather than report a verdict about an empty stage.
+            return;
+        };
+        self.fired = wanted;
+        let anim = AnimKind::Tween(Tween {
+            from: -160.0,
+            to: 0.0,
+            // Longer than an overlay's 0.15 s entry on purpose. This is the one
+            // case that has to be *watched*, and nine frames is not watchable.
+            duration_secs: 0.6,
+            compositor: Some(CompositorProp::TranslateX(-160.0)),
+        });
+        match self.runner.host_mut().begin_native_transition(slot, anim) {
+            Ok(Some(snap)) => eprintln!(
+                "probe: transition {}: FROZEN — resource {:?}, {}x{} px, {} frozen total",
+                self.fired,
+                snap.resource,
+                snap.pixel_width,
+                snap.pixel_height,
+                self.runner.host().frozen_participants().len(),
+            ),
+            Ok(None) => eprintln!(
+                "probe: transition {}: NO SNAPSHOT — provider cannot freeze, so nothing is \
+                 animated and the live view stays live ({} frozen)",
+                self.fired,
+                self.runner.host().frozen_participants().len(),
+            ),
+            Err(err) => eprintln!("probe: transition {}: REFUSED — {err}", self.fired),
+        }
+        // Force the OS view tree to be reprinted next frame: whether the live
+        // view got hidden is the observable difference between the two `Ok`
+        // answers, and it is the OS that has to be asked.
+        #[cfg(target_os = "macos")]
+        {
+            self.reported = None;
         }
     }
 
@@ -270,6 +364,16 @@ impl ProbeApp {
 fn main() {
     let mut host = WidgetHost::new();
     let request = Arc::new(AtomicUsize::new(NONE));
+    let transitions = Arc::new(AtomicUsize::new(0));
+    // Off unless asked for: a window that animates by itself cannot be the
+    // window G1-4 watches to see whether an idle window spins.
+    let auto_every: u32 = std::env::var("FLOEM2_PROBE_TRANSITION_EVERY")
+        .ok()
+        .and_then(|value| value.parse().ok())
+        .unwrap_or(0);
+    if auto_every > 0 {
+        eprintln!("probe: auto-firing a transition every {auto_every} frames");
+    }
 
     // Builders are replayable `Fn`s: each call builds a fresh widget, so the
     // flag is cloned *inside* the closure rather than moved out of it.
@@ -279,6 +383,7 @@ fn main() {
     let r_drawer = Arc::clone(&request);
     let r_close = Arc::clone(&request);
     let r_box = Arc::clone(&request);
+    let r_transition = Arc::clone(&transitions);
 
     let root = Stack::new(Axis::Vertical)
         .gap(10.0)
@@ -383,6 +488,14 @@ fn main() {
             Box::new(NativeSurface::new(NativeViewKind::Video).size(200.0, 80.0))
         })
         .push(|| Box::new(Text::new("native surface above").size(13.0)))
+        // D11's trigger, next to the participant it acts on. The label names the
+        // case because this button is the only reason to open the window.
+        .push(move || {
+            let flag = r_transition.clone();
+            Box::new(Button::new("transition (D11)").on_click(move || {
+                flag.fetch_add(1, Ordering::SeqCst);
+            }))
+        })
         .push(|| {
             Box::new(Dialog::new().title("modal dialog").body(Child::new(
                 ChildKey::index(0),
@@ -426,6 +539,9 @@ fn main() {
         runner: AppRunner::new(host, presenter),
         request,
         applied: NONE,
+        transitions,
+        fired: 0,
+        auto_every,
         surfaces: None,
         status: None,
         frames: 0,

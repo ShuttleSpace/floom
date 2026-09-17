@@ -18,6 +18,8 @@
 
 use std::collections::{HashMap, HashSet};
 
+use floem_types::NativeCapture;
+
 use crate::abi::{
     NativeCapabilities, NativeCompositionMode, NativeError, NativeSnapshot, NativeState,
     NativeViewKind, NativeViewProvider,
@@ -277,6 +279,16 @@ impl<P: NativeViewProvider> NativeViewController<P> {
     pub fn unreleased(&self) -> impl Iterator<Item = NativeSlot> + '_ {
         self.bound.iter().copied()
     }
+
+    /// Drain any snapshot pixels the provider has queued, so the app runner can
+    /// import them as textures.
+    ///
+    /// The host stashes a capture the moment it freezes a participant, and the
+    /// runner drains the queue once per snapshot before the frame that draws
+    /// it. Empty when nothing has been frozen (or the provider cannot snapshot).
+    pub fn take_native_captures(&mut self) -> Vec<NativeCapture> {
+        self.provider.take_captures()
+    }
 }
 
 /// Let a boxed provider stand in for the provider itself, so
@@ -312,6 +324,10 @@ impl<P: NativeViewProvider + ?Sized> NativeViewProvider for Box<P> {
 
     fn restore(&mut self, slot: NativeSlot) {
         (**self).restore(slot)
+    }
+
+    fn take_captures(&mut self) -> Vec<NativeCapture> {
+        (**self).take_captures()
     }
 }
 
