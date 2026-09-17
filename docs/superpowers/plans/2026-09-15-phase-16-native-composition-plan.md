@@ -492,6 +492,24 @@ crossed — but frame time needs a device.
 
 ## Task 16.4 — Snapshot / offscreen transitions *(headless half + device half)*
 
+**Status: steps 1 and 2 done (`12757bf`, `c80da2e`, `4d0ab28`).** The plan's
+own sequencing put 16.4 ahead of 16.3 on the grounds that it unblocks animated
+transitions, and that turned out to be the right call for a second reason: it
+is the only remaining task whose *device* case (D11) is runnable on the machine
+the work is being done on.
+
+- The frozen texture is painted by the widget that owns the box, so
+  `NativeSnapshot` had to move to `floem-types` — a fourth shared noun, which
+  16.1 did not anticipate because a frozen participant is still the same
+  participant.
+- Freezing hides the live view rather than destroying it: a transition's end
+  hands it back, and re-creating an OS view is the expensive thing.
+- The animation is the overlay's own: `AnimationScheduler` sampled into a
+  `CompositorProp`, handed to `paint_node`, folded into the image node. A
+  finished transition thaws itself.
+- `Ok(None)` from a provider that cannot snapshot is not an error, and starts
+  nothing: fading a texture that could not be taken is not a thing to attempt.
+
 **Files**
 
 - Modify: `native/floem-native` (snapshot contract), `framework/floem-animation`

@@ -1471,6 +1471,58 @@ embedded
 
 ---
 
+# Appendix — Work done outside this plan (recorded 2026-09-17)
+
+The step count above is `- [x]` vs `- [ ]`, and it stopped meaning what it looks
+like it means. Phases 16 and 31 describe their work as *files and interfaces*
+rather than as checkbox steps, and everything the roadmap calls R1–R6 was never
+a step at all — so the number reads as "which phases have been started" while
+being quoted as a percentage.
+
+These entries are retroactive: they are what was actually built, ticked by the
+same four criteria every other step is held to (a test that fails without the
+change, a green workspace, a passing architecture gate, a real window that
+still runs). They are recorded here rather than folded into the phases because
+the phases are the plan and this is the record of where the plan was wrong.
+
+**R1 — `floem-ime` bridged into `TextField`** (`f6d5819`)
+- [x] `ImeUpdate` payload and `Event::Ime` in `floem-types` (crate stays zero-dep)
+- [x] runner routes preedit to the focused widget instead of dropping it
+- [x] caret rect pushed back to the OS, cleared on commit
+
+**R2 — the overlay story finished** (`61894b2`, `3cba342`)
+- [x] `Dialog` / `Popup` / `BottomSheet` / `NavigationDrawer` hoisted onto the host overlay stack
+- [x] outside-click dismissal as a host rule (modals excluded)
+- [x] entry animation composited through a real frame clock
+
+**R3 — `tooling/floem-testkit`** (`5187233`)
+- [x] shared harness; all app-level suites rewritten on it, no local scaffolding left
+
+**R5 — delivery hygiene** (`44cff56`, `879401b`)
+- [x] a `floem-2.0` CI job scoped to the 2.0 crates
+- [x] twenty drifted 2.0 files reformatted
+
+**R6 — structure and conventions** (`36c8f3c`, `3d7da27`, `a5c8a71`)
+- [x] topology reconciled with spec §5; `app/` added to the spec
+- [x] §6's dependency directions enforced by `scripts/check-architecture-deps.sh`
+
+**Phase 16 — native composition** (plan:
+`docs/superpowers/plans/2026-09-15-phase-16-native-composition-plan.md`)
+- [x] 16.1 ABI, fake provider, controller, slot pool (`d25bf07`)
+- [x] 16.2 host-side composition, steps 1–6 (`dab2547`, `6773950`, `6d0b4a6`)
+- [x] 16.2 step 7 translation layer (`6829445`)
+- [x] 16.2 step 7 AppKit host, plus the density fix it exposed (`7276d27`, `7b6e4c6`)
+- [ ] 16.2 step 7 Win32 / X11 — trait impls, but not compilable or verifiable on this machine
+- [x] 16.3 capability negotiation + external texture path (`4203ef9`, `c33f758`)
+- [ ] 16.3 step 3 surface compositor (device-gated: KMS / Android / iOS)
+- [ ] 16.3 step 4 benchmark (frame-time half needs a device)
+- [x] 16.4 steps 1–2: freeze/thaw and the animated frozen texture (`12757bf`, `c80da2e`, `4d0ab28`)
+- [ ] 16.4 step 3 device case D11
+
+**Unplanned, and load-bearing** — the rendering/text/interaction work of
+2026-09-14/15 that the plan assumed was already true: none of it has a step
+above, and it is the single largest gap between the count and the code.
+
 # Phase 32 — Required Agent Execution Order
 
 The execution order is intentionally sequential at architecture boundaries, but independent work can be parallelized once a boundary is frozen.
