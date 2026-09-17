@@ -25,6 +25,7 @@ use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, Mutex};
 
 use floem_accessibility::{SemanticsNode, SemanticsTree};
+use floem_animation::{AnimId, AnimKind, AnimationScheduler};
 use floem_core::{
     Align, Axis, Child, ChildKey, CreateContext, ElementId, Event, EventContext, LayoutRequest,
     NativeGrant, NativeRequest, NativeSnapshot, OverlayHandle, OverlayKind, OverlayRequest,
@@ -239,6 +240,14 @@ struct Frozen {
     slot: NativeSlot,
     /// The texture standing in for the live view.
     snapshot: NativeSnapshot,
+    /// The transition running against that texture, if any. `None` for a
+    /// freeze with no animation: the texture is simply drawn where the view
+    /// was until somebody thaws it.
+    anim: Option<AnimId>,
+    /// This frame's sampled tween — the same channel an overlay's entry
+    /// animation uses, and for the same reason: whatever ticks the clock and
+    /// whatever paints must read one value, not derive two.
+    composite: Option<CompositorProp>,
 }
 
 /// What a widget asked the host to do with an overlay during an event.
@@ -346,6 +355,11 @@ pub struct WidgetHost {
     /// Whether any overlay is still playing its entry animation, i.e. whether
     /// the frame loop owes another frame for no other reason.
     overlay_animating: bool,
+    /// The clock the native-transition tweens run on: the same scheduler the
+    /// overlay stack uses, ticked from the same frame step. Reusing it is the
+    /// point — a second animation mechanism is the likeliest way to end up
+    /// with a participant that never unfreezes.
+    native_anim: AnimationScheduler,
     /// Native composition. `None` means every participant request is refused,
     /// which is the honest answer for a host with no OS bridge rather than a
     /// participant that silently draws nothing.
@@ -622,6 +636,7 @@ impl WidgetHost {
             ime_caret: None,
             anim_clock: 0.0,
             overlay_animating: false,
+            native_anim: AnimationScheduler::new(),
             native: None,
             participants: Vec::new(),
             frozen: Vec::new(),
@@ -1259,7 +1274,9 @@ impl WidgetHost {
     /// relative, so repeated calls accumulate.
     pub fn tick_animations(&mut self, dt_secs: f64) -> bool {
         self.anim_clock += dt_secs.max(0.0);
-        let animating = self.overlay.tick_animations(self.anim_clock);
+        let overlays = self.overlay.tick_animations(self.anim_clock);
+        let native = self.tick_native_transitions();
+        let animating = overlays || native;
         self.overlay_animating = animating;
         animating
     }
@@ -1573,7 +1590,10 @@ impl WidgetHost {
                 }
                 continue;
             }
-            self.paint_node(index, None, stats);
+            // A frozen participant's tween rides along here, on the same
+            // channel an overlay's entry animation uses.
+            let composite = self.frozen_composite(index);
+            self.paint_node(index, composite, stats);
         }
 
         // Overlays paint last, so their content sits above everything beneath
@@ -1989,8 +2009,64 @@ impl WidgetHost {
             node,
             slot,
             snapshot,
+            anim: None,
+            composite: None,
         });
         Ok(Some(snapshot))
+    }
+
+    /// Freezes a participant and runs `anim` against the frozen texture,
+    /// thawing it when the animation finishes.
+    ///
+    /// The point of the whole exercise: a transition is the one thing an OS
+    /// view cannot do, and ending it is as much part of the contract as
+    /// starting it — a participant left frozen is a texture standing in for a
+    /// view that is hidden and will never come back.
+    ///
+    /// `Ok(None)` means the provider cannot snapshot, and in that case nothing
+    /// is animated and nothing is frozen: fading a texture you cannot take is
+    /// not a thing to attempt.
+    pub fn begin_native_transition(
+        &mut self,
+        slot: NativeSlot,
+        anim: AnimKind,
+    ) -> Result<Option<NativeSnapshot>, NativeError> {
+        let snapshot = self.freeze_native(slot)?;
+        let Some(snapshot) = snapshot else {
+            return Ok(None);
+        };
+        let id = self.native_anim.start(anim, self.anim_clock);
+        if let Some(entry) = self.frozen.iter_mut().find(|f| f.slot == slot) {
+            entry.anim = Some(id);
+        }
+        Ok(Some(snapshot))
+    }
+
+    /// Advances the native transitions and ends the ones that finished.
+    fn tick_native_transitions(&mut self) -> bool {
+        if self.native_anim.is_empty() {
+            return false;
+        }
+        let now = self.anim_clock;
+        let samples = self.native_anim.tick(now);
+        let mut finished = Vec::new();
+        for sample in samples {
+            let Some(entry) = self.frozen.iter_mut().find(|f| f.anim == Some(sample.id)) else {
+                continue;
+            };
+            if sample.finished {
+                finished.push(entry.slot);
+            } else {
+                entry.composite = sample.compositor;
+            }
+        }
+        // Thawing is what ends a transition, and it is the host doing it
+        // rather than the caller: the caller is the thing that might have
+        // scrolled away or unmounted by the time the tween parks.
+        for slot in finished {
+            let _ = self.thaw_native(slot);
+        }
+        !self.native_anim.is_empty()
     }
 
     /// Hands a frozen participant its live view back.
@@ -2028,6 +2104,19 @@ impl WidgetHost {
             .iter()
             .find(|f| f.node == node)
             .map(|f| f.snapshot)
+    }
+
+    /// This frame's tween for the frozen participant at `node`.
+    ///
+    /// Travels the same path an overlay's entry animation does — handed to
+    /// `paint_node` and folded into every node it writes — because a frozen
+    /// texture is drawn by the ordinary paint pass. That is the whole reason
+    /// 16.4 needs no second animation mechanism.
+    fn frozen_composite(&self, node: usize) -> Option<CompositorProp> {
+        self.frozen
+            .iter()
+            .find(|f| f.node == node)
+            .and_then(|f| f.composite)
     }
 
     /// Whether a participant is currently replaced by a frozen texture.

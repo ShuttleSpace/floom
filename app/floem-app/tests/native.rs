@@ -16,6 +16,7 @@ use std::any::Any;
 use std::cell::Cell;
 use std::rc::Rc;
 
+use floem_animation::{AnimKind, CompositorProp, Tween};
 use floem_core::{
     CreateContext, ElementId, NativeGrant, NativeRequest, UpdateContext, Widget, WidgetAny,
 };
@@ -26,7 +27,7 @@ use floem_native::{
 };
 use floem_overlay::OverlayKind;
 use floem_testkit::TestApp;
-use floem_types::{Point, Rect, Size};
+use floem_types::{Point, Rect, ResourceId, Size};
 use floem_widgets::NativeSurface;
 use floem_widgets::controls::{Button, TextField};
 use floem_widgets::primitives::Container;
@@ -1181,6 +1182,112 @@ fn an_unmounting_frozen_participant_hands_ownership_back() {
         "nothing may survive that the framework can no longer name"
     );
     let _ = log;
+}
+
+// --- 16.4 step 2: animating the frozen texture -----------------------------
+
+/// A 0.15 s slide from `from` to `to`, the shape a page transition asks for.
+fn slide(from: f64, to: f64) -> AnimKind {
+    AnimKind::Tween(Tween {
+        from,
+        to,
+        duration_secs: 0.15,
+        compositor: Some(CompositorProp::TranslateX(0.0)),
+    })
+}
+
+/// The frozen image's drawn box, which is where a slide has to show up: the
+/// live view cannot move — that is the entire reason it was frozen — so the
+/// texture's bounds are the only thing on screen that can.
+fn frozen_bounds(app: &TestApp, resource: ResourceId) -> Option<Rect> {
+    app.scene_nodes().into_iter().find_map(|node| match node {
+        floem_scene::SceneNode::Image { bounds, image, .. } if image == resource => Some(bounds),
+        _ => None,
+    })
+}
+
+/// The texture follows the tween, and the participant goes live when it ends.
+///
+/// D11 in two halves: *the pushed screen animates as a frozen texture*, and
+/// *then goes live at the end*. Missing either half is a real failure — a
+/// texture that never thaws is a participant that will never animate again,
+/// and one that thaws on the first frame is not an animation.
+#[test]
+fn a_frozen_participant_is_animated_then_goes_live() {
+    let mut app = empty_app();
+    let (fake, log) = provider();
+    app.host_mut().set_native_provider(fake);
+    let slot = bound_surface(&mut app);
+
+    let snapshot = app
+        .host_mut()
+        .begin_native_transition(slot, slide(-40.0, 0.0))
+        .unwrap()
+        .unwrap();
+
+    // Mid-transition: the texture has been drawn off its resting place.
+    app.frame();
+    let start = frozen_bounds(&app, snapshot.resource).expect("frozen texture is drawn");
+    let mut moved = start;
+    for _ in 0..4 {
+        app.frame();
+        if let Some(bounds) = frozen_bounds(&app, snapshot.resource) {
+            moved = bounds;
+        }
+    }
+    assert_ne!(
+        moved.x0, start.x0,
+        "the frozen texture must travel with the tween: {start:?} -> {moved:?}"
+    );
+
+    // Then it ends, by itself.
+    for _ in 0..12 {
+        app.frame();
+    }
+    assert!(
+        app.host().frozen_participants().is_empty(),
+        "a finished transition thaws the participant"
+    );
+    assert!(
+        last_applied(&log).visible,
+        "and the live view is what is on screen afterwards"
+    );
+    assert!(
+        !app.host().overlay_animating(),
+        "a settled transition stops owing frames"
+    );
+}
+
+/// A provider that cannot snapshot must not be left half-transitioned: no
+/// texture exists, so there is nothing to animate and nothing to thaw.
+#[test]
+fn a_transition_without_a_snapshot_animates_nothing() {
+    let mut app = empty_app();
+    let mut cannot = FakeNativeProvider::with_capabilities(NativeCapabilities {
+        modes: &[NativeCompositionMode::Overlay],
+        snapshot: false,
+        input: InputModes::ALL,
+        focusable: false,
+        clip: ClipSupport::Platform,
+    });
+    let log = cannot.watch();
+    app.host_mut().set_native_provider(cannot);
+    let slot = bound_surface(&mut app);
+
+    assert_eq!(
+        app.host_mut()
+            .begin_native_transition(slot, slide(-40.0, 0.0)),
+        Ok(None)
+    );
+    for _ in 0..6 {
+        app.frame();
+    }
+
+    assert!(app.host().frozen_participants().is_empty());
+    assert!(
+        last_applied(&log).visible,
+        "the live view never went away, so it never comes back"
+    );
 }
 
 // A recycled slot does *not* need protecting from its predecessor's freeze, and
