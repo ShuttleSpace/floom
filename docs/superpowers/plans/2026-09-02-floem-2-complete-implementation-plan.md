@@ -1517,7 +1517,7 @@ the phases are the plan and this is the record of where the plan was wrong.
 - [ ] 16.3 step 3 surface compositor (device-gated: KMS / Android / iOS)
 - [ ] 16.3 step 4 benchmark (frame-time half needs a device)
 - [x] 16.4 steps 1–2: freeze/thaw and the animated frozen texture (`12757bf`, `c80da2e`, `4d0ab28`)
-- [ ] 16.4 step 3 device case D11
+- [x] 16.4 step 3 device case D11 — **PASS 2026-09-17** on a real macOS window (AppKit `snapshot_view` → ARGB → RGBA8 → `NativeCapture` → runner `import_external_texture` → vello brush; 24/24 freeze probes reported, `frozen total` held at 1, no panic). Recorded in `.superpowers/sdd/device-verification-2026-09-15.md`.
 
 **Unplanned, and load-bearing** — the rendering/text/interaction work of
 2026-09-14/15 that the plan assumed was already true: none of it has a step
