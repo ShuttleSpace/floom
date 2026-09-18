@@ -63,6 +63,10 @@ pub struct RunStats {
     pub auto_redraws: u64,
     /// Failures the error boundary caught and downgraded to a fallback.
     pub errors_caught: u64,
+    /// Redraw requests dropped because the app was suspended (the OS took the
+    /// surface away). A suspended app must not spend CPU painting into a
+    /// surface it does not have — see the `Suspended` arm.
+    pub frames_skipped_suspended: u64,
 }
 
 /// Per-window bookkeeping the runner needs across events.
@@ -95,6 +99,11 @@ pub struct AppRunner<R: Presenter> {
     window_scopes: HashMap<u32, Scope>,
     /// Optional boundary over widget callbacks (see [`Self::with_error_boundary`]).
     boundary: Option<ErrorBoundary>,
+    /// Set between `Suspended` and `Resumed`: the OS has taken the surface (and
+    /// usually the CPU budget) away. Frames requested while suspended are
+    /// dropped, and the host's animation clock is frozen so a paused app does
+    /// not queue animated work it cannot show.
+    suspended: bool,
 }
 
 impl<R: Presenter> AppRunner<R> {
@@ -112,6 +121,7 @@ impl<R: Presenter> AppRunner<R> {
             scope: Scope::root(),
             window_scopes: HashMap::new(),
             boundary: None,
+            suspended: false,
         }
     }
 
@@ -392,6 +402,14 @@ impl<R: Presenter> AppRunner<R> {
                 self.request_repaint(platform, window);
             }
             PlatformEvent::RedrawRequested { window } => {
+                // A suspended app has no surface and no CPU budget to paint
+                // with: drop the frame instead of running the full pipeline
+                // into a detached presenter. `Resumed` schedules redraws for
+                // every window, so nothing is lost by skipping these.
+                if self.suspended {
+                    self.stats.frames_skipped_suspended += 1;
+                    return;
+                }
                 // A resize or a resume between the request and its delivery can
                 // leave us without a live surface; rebuild before painting.
                 if !self.presenter_ready {
@@ -411,13 +429,20 @@ impl<R: Presenter> AppRunner<R> {
             PlatformEvent::Suspended => {
                 // The OS is taking the surface away (Android pause, display
                 // removal). Drop the swap-chain now, rebuild on the next
-                // `WindowCreated` or redraw.
+                // `WindowCreated` or redraw — and stop doing work a suspended
+                // app cannot show: frame requests are dropped and animation
+                // clocks freeze until `Resumed`.
+                self.suspended = true;
+                self.host.set_paused(true);
                 self.presenter.detach();
                 self.presenter_ready = false;
             }
             PlatformEvent::Resumed => {
                 // Surfaces were rebuilt by the OS; schedule a redraw per window
-                // so the redraw arm re-attaches and repaints.
+                // so the redraw arm re-attaches and repaints. Animation resumes
+                // from exactly where the pause froze it.
+                self.suspended = false;
+                self.host.set_paused(false);
                 let windows: Vec<WindowId> = self.order.clone();
                 for window in windows {
                     platform.request_frame(window);

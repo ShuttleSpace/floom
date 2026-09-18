@@ -313,9 +313,11 @@ pub struct WidgetHost {
     layout: LayoutEngine,
     scene: Scene,
     resources: ResourceRegistry,
-    /// Interned glyph runs, keyed by (text, font size), so frames reuse
-    /// resources and shaping work across frames.
-    glyph_cache: HashMap<(String, u32), ResourceId>,
+    /// Interned glyph runs, keyed by a hash of (text, font size): a per-frame
+    /// lookup must not allocate a key String per text node just to find out it
+    /// is already cached. The entry carries the text for verification, so a
+    /// u64 collision degrades to a re-intern, never to a wrong resource.
+    glyph_cache: HashMap<u64, GlyphCacheEntry>,
     /// Parley-backed shaper that produces the runs stored in `resources`.
     shaper: TextShaper,
     /// Shaped-text cache keyed by (text + layout options). `fill_text` reuses
@@ -327,6 +329,23 @@ pub struct WidgetHost {
     /// retired at the start of the next paint (inside its transaction).
     pending_scene_removals: Vec<SceneNodeId>,
     semantics: SemanticsTree,
+    /// Whether the semantics tree needs a *full* rebuild before it is read
+    /// again — the tree's shape changed (mount, unmount, reconcile, overlay
+    /// open/close). Content-only changes go through `semantics_stale` instead,
+    /// which upserts individual entries without touching the rest.
+    semantics_dirty: bool,
+    /// Mounted node indices whose widget reported dirty since the last frame
+    /// and whose semantics entry therefore needs an incremental refresh.
+    semantics_stale: Vec<usize>,
+    /// Scratch buffers reused across `run_layout` passes: taffy reports
+    /// parent-relative rects, and accumulating them into absolute ones needs
+    /// one slot per node. Resized (not reallocated) per pass.
+    layout_relative: Vec<Option<Rect>>,
+    layout_absolute: Vec<Option<Rect>>,
+    /// True while the embedder says the app is not visible or the OS has
+    /// suspended it: animation clocks stop advancing (see
+    /// [`WidgetHost::set_paused`]), and the runner drops frame requests.
+    paused: bool,
     focus: FocusManager,
     scope: FocusScopeId,
     /// Stacked overlays (popups, dialogs, sheets) painted above the main tree.
@@ -628,6 +647,13 @@ impl WidgetHost {
             text_layout_cache: LayoutCache::new(),
             pending_scene_removals: Vec::new(),
             semantics: SemanticsTree::new(),
+            semantics_dirty: true,
+            semantics_stale: Vec::new(),
+            // Reused across layout passes so a re-layout does not allocate a
+            // fresh `Vec<Option<Rect>>` per pass (grown to node count below).
+            layout_relative: Vec::new(),
+            layout_absolute: Vec::new(),
+            paused: false,
             focus,
             scope,
             overlay: OverlayManager::new(),
@@ -669,6 +695,7 @@ impl WidgetHost {
     pub fn mount_root(&mut self, style: LayoutStyle, widget: impl WidgetAny + 'static) -> NodeId {
         let index = self.push(None, style, None, Box::new(widget));
         self.root = Some(index);
+        self.semantics_dirty = true;
         NodeId(index)
     }
 
@@ -679,6 +706,7 @@ impl WidgetHost {
         widget: impl WidgetAny + 'static,
     ) -> NodeId {
         assert!(parent.0 < self.nodes.len(), "unknown parent node");
+        self.semantics_dirty = true;
         NodeId(self.push(Some(parent.0), style, None, Box::new(widget)))
     }
 
@@ -697,6 +725,7 @@ impl WidgetHost {
         // a runner keying off `needs_frame` would leave it on screen.
         self.content_dirty = true;
         self.layout_dirty = true;
+        self.semantics_dirty = true;
     }
 
     // --- overlays ----------------------------------------------------------
@@ -789,6 +818,8 @@ impl WidgetHost {
             }
         }
         self.content_dirty = true;
+        // An overlay opened: its subtree joins the semantics tree.
+        self.semantics_dirty = true;
         id
     }
 
@@ -836,6 +867,8 @@ impl WidgetHost {
                     self.nodes[index].dirty = true;
                 }
                 self.content_dirty = true;
+                // An overlay closed: its subtree leaves the semantics tree.
+                self.semantics_dirty = true;
             }
         }
     }
@@ -1083,11 +1116,17 @@ impl WidgetHost {
             self.reconcile(index);
             self.nodes[index].children_dirty = false;
         }
-        // Re-fetch after `reconcile`: it may have mounted new children.
-        let children = self.nodes[index].children.clone();
-        for child in children {
-            self.reconcile_subtree(child);
+        // Take the child list out instead of cloning it: this walk runs every
+        // frame, and a clone would allocate once per node-with-children per
+        // frame even when nothing changed. The recursion below never touches
+        // *this* node's child list (a descendant's `reconcile` rewrites the
+        // descendant's own list), so restoring the taken list afterwards is
+        // faithful.
+        let children = std::mem::take(&mut self.nodes[index].children);
+        for child in &children {
+            self.reconcile_subtree(*child);
         }
+        self.nodes[index].children = children;
     }
 
     /// Reconciles `parent_index`'s direct children against `children()`, keyed
@@ -1179,6 +1218,8 @@ impl WidgetHost {
         let parent_layout = self.nodes[parent_index].layout_node;
         self.layout.set_children(parent_layout, &child_layouts);
         self.layout_dirty = true;
+        // The tree's shape (and therefore the semantics tree) changed.
+        self.semantics_dirty = true;
     }
 
     /// Marks `index` and its whole subtree dead, releasing layout, hit-test and
@@ -1188,6 +1229,8 @@ impl WidgetHost {
         if self.nodes[index].dead {
             return;
         }
+        // A retired subtree leaves the semantics tree.
+        self.semantics_dirty = true;
         // Detach from the parent's child list *before* marking dead so the parent
         // does not keep routing to a removed slot.
         if let Some(parent) = self.nodes[index].parent {
@@ -1247,6 +1290,9 @@ impl WidgetHost {
             .as_any_mut()
             .downcast_mut::<T>()?;
         self.content_dirty = true;
+        // Out-of-band mutation can change a widget's semantics hint too; the
+        // tree shape did not change, so one incremental refresh suffices.
+        self.semantics_stale.push(node.0);
         Some(widget)
     }
 
@@ -1290,6 +1336,21 @@ impl WidgetHost {
     /// Whether any overlay is still playing its entry animation.
     pub fn overlay_animating(&self) -> bool {
         self.overlay_animating
+    }
+
+    /// Freezes or unfreezes non-essential work: the animation clock stops
+    /// advancing (overlays, native-transition tweens) while the app is
+    /// backgrounded or the OS has suspended it, and resumes from exactly the
+    /// point it stopped. Frames still run — a paused host must still answer a
+    /// platform-driven repaint with correct, settled pixels — they just make
+    /// no animation progress while paused.
+    pub fn set_paused(&mut self, paused: bool) {
+        self.paused = paused;
+    }
+
+    /// Whether animation progress is currently frozen.
+    pub fn is_paused(&self) -> bool {
+        self.paused
     }
 
     pub fn node_id(&self, node: NodeId) -> ElementId {
@@ -1381,10 +1442,19 @@ impl WidgetHost {
         // Advance the overlay animations first so update, layout and paint all
         // see the same sampled value — and so an overlay that opened since the
         // last frame is already a step into its entry rather than a frame of
-        // nothing.
-        self.tick_animations(NOMINAL_FRAME_SECS);
+        // nothing. A paused host (suspended/backgrounded embedder) freezes the
+        // clock instead: no frame of animation progress, no resumed clock on
+        // unpause — the resume picks up exactly where the pause left it.
+        if !self.paused {
+            self.tick_animations(NOMINAL_FRAME_SECS);
+        }
 
         let mut retext = Vec::new();
+        // Nodes whose widget reported dirty this frame: their semantics hint
+        // may have changed with their content, so the semantics tree gets an
+        // incremental upsert for exactly these elements (a full rebuild is
+        // reserved for structural changes).
+        let mut stale_semantics = Vec::new();
         let viewport = Rect::from_origin_size(Point::ZERO, self.size);
         // Overlay requests a widget makes from `update` — a composite flipping
         // `present` on a state change, with no event to react to — are queued
@@ -1430,6 +1500,9 @@ impl WidgetHost {
             node.children_dirty |= cx.children_dirty;
             if cx.dirty {
                 stats.updated += 1;
+                // A widget that changed may have changed its semantics hint
+                // with it (labels, roles, states ride on widget state).
+                stale_semantics.push(index);
                 // Measure-driven text leaves must be re-measured before layout
                 // when their content changed — otherwise the frozen extent
                 // (and the stale glyph resource) survive another frame.
@@ -1438,6 +1511,7 @@ impl WidgetHost {
                 }
             }
         }
+        self.semantics_stale = stale_semantics;
         // Drained *before* `reconcile_all`: a composite that just handed its
         // surface to a host overlay must have its in-tree children dropped in
         // the same frame, or the tree would paint the surface twice.
@@ -1463,7 +1537,24 @@ impl WidgetHost {
         self.sync_native(&mut stats);
 
         self.paint(&mut stats);
-        self.collect_semantics();
+
+        // Semantics are refreshed only when something above may have changed
+        // them: a structural change rebuilds the whole tree, and a content
+        // change upserts just the elements whose widget reported dirty. A
+        // settled frame skips the walk entirely instead of re-collecting a
+        // tree that is byte-for-byte what it was.
+        if self.semantics_dirty {
+            self.collect_semantics();
+            self.semantics_dirty = false;
+            self.semantics_stale.clear();
+        } else if !self.semantics_stale.is_empty() {
+            for index in std::mem::take(&mut self.semantics_stale) {
+                if self.nodes[index].dead {
+                    continue;
+                }
+                self.update_semantics_node(index);
+            }
+        }
 
         // Everything the frame loop can observe has been consumed: the scene
         // carries this frame's changes, layout ran if it was marked, and any
@@ -1533,8 +1624,12 @@ impl WidgetHost {
         self.layout.set_style(root_node, root_style);
         self.layout.compute(root_node, self.size);
         // Parent-relative and absolute rects, filled in the passes below.
-        let mut relative: Vec<Option<Rect>> = vec![None; self.nodes.len()];
-        let mut absolute: Vec<Option<Rect>> = vec![None; self.nodes.len()];
+        // Host-owned scratch, resized (not reallocated) per pass: a re-layout
+        // at 100k nodes must not mint two fresh 100k-slot vectors to do it.
+        self.layout_relative.clear();
+        self.layout_relative.resize(self.nodes.len(), None);
+        self.layout_absolute.clear();
+        self.layout_absolute.resize(self.nodes.len(), None);
         for index in 0..self.nodes.len() {
             if self.nodes[index].dead {
                 continue;
@@ -1544,7 +1639,8 @@ impl WidgetHost {
             if self.nodes[index].is_overlay || self.is_in_overlay(index) {
                 continue;
             }
-            relative[index] = Some(self.layout.layout(self.nodes[index].layout_node).rect);
+            self.layout_relative[index] =
+                Some(self.layout.layout(self.nodes[index].layout_node).rect);
         }
         // Taffy reports each node's location relative to its *parent*, so a
         // subtree whose ancestors are not at the window origin would paint and
@@ -1552,21 +1648,21 @@ impl WidgetHost {
         // parent before its children, so one forward pass accumulates each
         // node's absolute position out of its parent's.
         for index in 0..self.nodes.len() {
-            let Some(mut rect) = relative[index] else {
+            let Some(mut rect) = self.layout_relative[index] else {
                 continue;
             };
             if let Some(parent) = self.nodes[index].parent {
-                if let Some(parent_rect) = absolute[parent] {
+                if let Some(parent_rect) = self.layout_absolute[parent] {
                     rect.x0 += parent_rect.x0;
                     rect.y0 += parent_rect.y0;
                     rect.x1 += parent_rect.x0;
                     rect.y1 += parent_rect.y0;
                 }
             }
-            absolute[index] = Some(rect);
+            self.layout_absolute[index] = Some(rect);
         }
         for index in 0..self.nodes.len() {
-            let Some(rect) = absolute[index] else {
+            let Some(rect) = self.layout_absolute[index] else {
                 continue;
             };
             self.nodes[index].bounds = rect;
@@ -1649,9 +1745,9 @@ impl WidgetHost {
         composite: Option<CompositorProp>,
         stats: &mut FrameStats,
     ) {
-        let prev = std::mem::take(&mut self.nodes[index].scene_nodes);
-        let mut next = Vec::new();
-        let leftover;
+        // The node's id list is painted in place — no per-frame replacement
+        // vector, so a settled frame does not allocate per node.
+        let mut ids = std::mem::take(&mut self.nodes[index].scene_nodes);
         {
             let node = &self.nodes[index];
             let mut cx = NodePaintContext {
@@ -1661,20 +1757,14 @@ impl WidgetHost {
                 shaper: &mut self.shaper,
                 layout_cache: &mut self.text_layout_cache,
                 composite,
-                prev,
+                prev: ids,
                 used: 0,
-                next: &mut next,
                 bounds: node.bounds,
             };
             node.widget.paint(&mut cx, node.id);
-            let (painted, stale) = cx.finish();
-            next = painted;
-            leftover = stale;
+            ids = cx.finish();
         }
-        for id in leftover {
-            self.scene.remove(id);
-        }
-        self.nodes[index].scene_nodes = next;
+        self.nodes[index].scene_nodes = ids;
         stats.painted += 1;
     }
 
@@ -1696,52 +1786,82 @@ impl WidgetHost {
         }
     }
 
+    /// Builds the semantics node for one mounted element, or `None` when the
+    /// element publishes nothing (no hint of its own and no semantic
+    /// descendants) and therefore has no entry in the tree.
+    fn build_semantics_node(&self, index: usize) -> Option<SemanticsNode> {
+        let node = &self.nodes[index];
+        let hint = node.widget.semantics_hint();
+        let publishes_itself = hint.as_ref().map_or(false, |hint| {
+            hint.role != SemanticsRole::None || hint.label.is_some()
+        });
+        let has_children = node.children.iter().any(|&child| !self.nodes[child].dead);
+        if !publishes_itself && !has_children {
+            return None;
+        }
+
+        let children: Vec<ElementId> = node
+            .children
+            .iter()
+            .copied()
+            .filter(|&child| !self.nodes[child].dead)
+            .map(|child| self.nodes[child].id)
+            .collect();
+
+        // A purely structural node with semantic descendants becomes a
+        // `Group` so the assistive-technology tree keeps its hierarchy.
+        let role = match hint.as_ref().map(|hint| hint.role) {
+            Some(SemanticsRole::None) => floem_accessibility::SemanticsRole::Group,
+            Some(role) => to_a11y_role(role),
+            None => floem_accessibility::SemanticsRole::Group,
+        };
+        let state = hint
+            .as_ref()
+            .map(|hint| to_a11y_state(hint.state))
+            .unwrap_or_else(floem_accessibility::SemanticsState::empty);
+
+        let mut semantics_node = SemanticsNode::new(role).with_state(state);
+        if let Some(label) = hint.and_then(|hint| hint.label) {
+            semantics_node = semantics_node.with_label(label);
+        }
+        for child in children {
+            semantics_node = semantics_node.with_child(child);
+        }
+        Some(semantics_node)
+    }
+
     fn collect_semantics(&mut self) {
-        self.semantics = SemanticsTree::new();
+        // Rebuild in place: clearing (not replacing) the tree keeps its map
+        // capacity, so a rebuild allocates for structural content — a child
+        // list, a label — rather than per element for storage.
+        self.semantics.begin_rebuild();
         for index in 0..self.nodes.len() {
             if self.nodes[index].dead {
                 continue;
             }
-            let node = &self.nodes[index];
-            let hint = node.widget.semantics_hint();
-            let children: Vec<ElementId> = node
-                .children
-                .iter()
-                .copied()
-                .filter(|&child| !self.nodes[child].dead)
-                .map(|child| self.nodes[child].id)
-                .collect();
-
-            let publishes_itself = hint.as_ref().map_or(false, |hint| {
-                hint.role != SemanticsRole::None || hint.label.is_some()
-            });
-            if !publishes_itself && children.is_empty() {
-                continue;
+            if let Some(semantics_node) = self.build_semantics_node(index) {
+                let id = self.nodes[index].id;
+                self.semantics.set_node(id, semantics_node);
             }
-
-            // A purely structural node with semantic descendants becomes a
-            // `Group` so the assistive-technology tree keeps its hierarchy.
-            let role = match hint.as_ref().map(|hint| hint.role) {
-                Some(SemanticsRole::None) => floem_accessibility::SemanticsRole::Group,
-                Some(role) => to_a11y_role(role),
-                None => floem_accessibility::SemanticsRole::Group,
-            };
-            let state = hint
-                .as_ref()
-                .map(|hint| to_a11y_state(hint.state))
-                .unwrap_or_else(floem_accessibility::SemanticsState::empty);
-
-            let mut semantics_node = SemanticsNode::new(role).with_state(state);
-            if let Some(label) = hint.and_then(|hint| hint.label) {
-                semantics_node = semantics_node.with_label(label);
-            }
-            for child in children {
-                semantics_node = semantics_node.with_child(child);
-            }
-            self.semantics.set_node(node.id, semantics_node);
         }
         if let Some(root) = self.root {
             self.semantics.set_root(self.nodes[root].id);
+        }
+    }
+
+    /// Refreshes the semantics entry of one element whose *content* changed
+    /// without any structural change (a renamed label, a new text, a new
+    /// state). This is the incremental counterpart of
+    /// [`Self::collect_semantics`]: a full rebuild walks every element and
+    /// allocates per structural node, which a frame that changed one label
+    /// has no business paying for.
+    fn update_semantics_node(&mut self, index: usize) {
+        let id = self.nodes[index].id;
+        match self.build_semantics_node(index) {
+            Some(semantics_node) => self.semantics.set_node(id, semantics_node),
+            // The element stopped publishing (its only label vanished): drop
+            // the entry instead of leaving a stale one behind.
+            None => self.semantics.remove(id),
         }
     }
 
@@ -2848,53 +2968,92 @@ impl UpdateContext for HostUpdateContext<'_> {
     }
 }
 
+/// An interned glyph-run entry: the resource id plus the identity it was
+/// interned under, so a hash lookup can verify instead of trust.
+#[derive(Debug, Clone)]
+struct GlyphCacheEntry {
+    text: String,
+    size_bits: u32,
+    id: ResourceId,
+}
+
+/// Hashes (text, font size) for [`WidgetHost::glyph_cache`]. Text content and
+/// size together decide glyph ids and positions, so both belong in the key.
+fn glyph_hash(text: &str, font_size: f32) -> u64 {
+    use std::hash::{Hash, Hasher};
+    let mut hasher = std::collections::hash_map::DefaultHasher::new();
+    text.hash(&mut hasher);
+    font_size.to_bits().hash(&mut hasher);
+    hasher.finish()
+}
+
 struct NodePaintContext<'a> {
     scene: &'a mut Scene,
     resources: &'a mut ResourceRegistry,
-    glyphs: &'a mut HashMap<(String, u32), ResourceId>,
+    glyphs: &'a mut HashMap<u64, GlyphCacheEntry>,
     shaper: &'a mut TextShaper,
     layout_cache: &'a mut LayoutCache,
     /// The overlay entry animation this node is being painted under, if any.
     /// Applied to every scene node the context writes, so a whole overlay
     /// subtree fades or slides as one.
     composite: Option<CompositorProp>,
-    /// Last frame's scene node ids for this widget. Painting reuses them
-    /// positionally: `upsert` on a match (no damage when the payload is
-    /// unchanged), `insert` once the previous nodes run out.
+    /// Last frame's scene node ids for this widget — and, in place, this
+    /// frame's. Painting reuses them positionally (`upsert` on a match, no
+    /// damage when the payload is unchanged; `insert` once the previous nodes
+    /// run out), so the vector only ever grows at the tail: a frame that
+    /// repaints the tree allocates nothing per node to do it.
     prev: Vec<SceneNodeId>,
     used: usize,
-    /// Scene node ids painted this frame; written back to the node afterwards.
-    next: &'a mut Vec<SceneNodeId>,
     bounds: Rect,
 }
 
 impl NodePaintContext<'_> {
-    /// Consumes the context: returns the ids painted this frame plus the
-    /// previous ids that were never reused (retired by the caller, which
-    /// damages their old bounds).
-    fn finish(self) -> (Vec<SceneNodeId>, Vec<SceneNodeId>) {
-        let leftover = self.prev[self.used..].to_vec();
-        (std::mem::take(self.next), leftover)
+    /// Consumes the context: the (in-place updated) id list minus the ids
+    /// this frame no longer produced. Stale ids are retired here — removal
+    /// needs the scene borrow the context already holds, and draining them
+    /// straight out of the vector avoids a second allocation per node.
+    fn finish(mut self) -> Vec<SceneNodeId> {
+        for id in self.prev.drain(self.used..) {
+            self.scene.remove(id);
+        }
+        self.prev
+    }
+
+    /// The interned id for (text, size) if the cache already holds it —
+    /// allocation-free on the hit path (no key String, no run clones). This
+    /// must run *before* shaping: interning after shaping still paid for the
+    /// shaping and a full `Vec<GlyphRun>` clone on every frame the text did
+    /// not change.
+    fn cached_glyph_id(&self, text: &str, font_size: f32) -> Option<ResourceId> {
+        let entry = self.glyphs.get(&glyph_hash(text, font_size))?;
+        (entry.text == text && entry.size_bits == font_size.to_bits()).then_some(entry.id)
     }
 
     /// Interns a shaped glyph run, reusing the resource across frames.
     ///
-    /// The cache key is (text, font size): the same string at two sizes has
-    /// different glyph ids and positions, so the size must be part of the key.
+    /// The key is the (text, font size) hash — the same string at two sizes
+    /// has different glyph ids and positions, so the size must be part of it.
+    /// Call [`Self::cached_glyph_id`] first; only a miss needs the runs.
     fn intern_glyphs(
         &mut self,
         text: &str,
         font_size: f32,
         runs: Vec<floem_text::GlyphRun>,
     ) -> ResourceId {
-        let key = (text.to_string(), font_size.to_bits());
-        if let Some(id) = self.glyphs.get(&key) {
-            return *id;
+        if let Some(id) = self.cached_glyph_id(text, font_size) {
+            return id;
         }
         let id = self.resources.insert(Resource {
             kind: ResourceKind::GlyphRun { runs },
         });
-        self.glyphs.insert(key, id);
+        self.glyphs.insert(
+            glyph_hash(text, font_size),
+            GlyphCacheEntry {
+                text: text.to_string(),
+                size_bits: font_size.to_bits(),
+                id,
+            },
+        );
         id
     }
 }
@@ -2936,21 +3095,32 @@ impl PaintContext for NodePaintContext<'_> {
             font_size: size,
             align: TextAlign::Start,
         };
-        // Reuse a previously shaped result when the text + layout options are
-        // unchanged: shaping is the expensive part (parse / script segmentation
-        // / glyph placement), and reusing the cached `GlyphRun`s keeps their
-        // font data stable so the downstream glyph raster cache keeps hitting.
-        let shaper = &mut *self.shaper;
-        let (runs, laid_out_size) = {
-            let laid = self
-                .layout_cache
-                .get_or_insert_with(text, &options, || shaper.shape(text, &options));
-            (laid.runs.clone(), laid.size)
+        // The intern cache is checked *before* any shaping: a repeat frame
+        // must not re-shape, clone the shaped runs, or mint a key String for
+        // a text that has not changed. Shaping is the expensive part (parse /
+        // script segmentation / glyph placement); the cache hit keeps glyph
+        // runs — and their font data — stable across frames.
+        let glyphs = match self.cached_glyph_id(text, size) {
+            Some(id) => id,
+            None => {
+                let shaper = &mut *self.shaper;
+                let laid = self
+                    .layout_cache
+                    .get_or_insert_with(text, &options, || shaper.shape(text, &options));
+                let runs = laid.runs.clone();
+                self.intern_glyphs(text, size, runs)
+            }
         };
-        let glyphs = self.intern_glyphs(text, size, runs);
+        // The laid-out extent is a cheap cache lookup either way (no clones,
+        // no re-shaping on a hit).
+        let shaper = &mut *self.shaper;
+        let laid_size = self
+            .layout_cache
+            .get_or_insert_with(text, &options, || shaper.shape(text, &options))
+            .size;
         self.push(floem_scene::SceneNode::Text {
             origin,
-            size: laid_out_size,
+            size: laid_size,
             glyphs,
             color,
         });
@@ -2963,20 +3133,22 @@ impl PaintContext for NodePaintContext<'_> {
 
 impl NodePaintContext<'_> {
     /// Inserts a scene node — reusing the previous frame's slot when one is
-    /// available at this position, allocating a fresh one otherwise.
+    /// available at this position, allocating a fresh one otherwise. The id
+    /// list is updated in place: a reused slot already holds the id being
+    /// written (positional reuse), so only the append case touches memory.
     fn push(&mut self, mut node: floem_scene::SceneNode) {
         if let Some(prop) = self.composite {
             apply_composite(&mut node, prop);
         }
-        let id = if self.used < self.prev.len() {
+        if self.used < self.prev.len() {
             let id = self.prev[self.used];
             self.used += 1;
             self.scene.upsert(id, node);
-            id
         } else {
-            self.scene.insert(node)
-        };
-        self.next.push(id);
+            let id = self.scene.insert(node);
+            self.prev.push(id);
+            self.used += 1;
+        }
     }
 }
 

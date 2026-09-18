@@ -15,7 +15,14 @@ use crate::layout::{LaidOutText, TextLayoutOptions};
 /// (a chat log, a virtualised list) grow without limit.
 pub const DEFAULT_LAYOUT_CACHE_CAPACITY: usize = 1024;
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+/// The identity a shaping result was produced for, retained *inside* the entry
+/// so a lookup can verify without allocating: the map is keyed by a u64 hash
+/// and the hit path must not mint an owned `String` per text node per frame
+/// just to find out the text is unchanged (the Phase 28.1 allocation audit
+/// measured exactly that — one key allocation per painted text node per
+/// frame). A hash collision with different content degrades to a re-shape,
+/// never to a wrong result.
+#[derive(Debug, Clone, PartialEq, Eq)]
 struct CacheKey {
     text: String,
     max_width_bits: u64,
@@ -32,12 +39,32 @@ impl CacheKey {
             align: options.align as u8,
         }
     }
+
+    fn matches(&self, text: &str, options: &TextLayoutOptions) -> bool {
+        self.text == text
+            && self.max_width_bits == options.max_width.to_bits()
+            && self.font_size_bits == options.font_size.to_bits()
+            && self.align == options.align as u8
+    }
+}
+
+/// Hashes (text, layout options) into the map key. Every field of `CacheKey`
+/// participates, so two keys hash equal only when their content does.
+fn cache_key_hash(text: &str, options: &TextLayoutOptions) -> u64 {
+    use std::hash::{Hash, Hasher};
+    let mut hasher = std::collections::hash_map::DefaultHasher::new();
+    text.hash(&mut hasher);
+    options.max_width.to_bits().hash(&mut hasher);
+    options.font_size.to_bits().hash(&mut hasher);
+    (options.align as u8).hash(&mut hasher);
+    hasher.finish()
 }
 
 /// A cached shaping result stamped with the tick it was last used at, so
 /// eviction can drop the entry that has gone unused longest.
 #[derive(Debug)]
 struct CacheEntry {
+    key: CacheKey,
     value: LaidOutText,
     last_used: u64,
 }
@@ -48,7 +75,7 @@ struct CacheEntry {
 /// data stable — the renderer's glyph raster cache keys off that data.
 #[derive(Debug)]
 pub struct LayoutCache {
-    map: FxHashMap<CacheKey, CacheEntry>,
+    map: FxHashMap<u64, CacheEntry>,
     /// Monotonic access counter. Comparing `last_used` is what makes eviction
     /// LRU rather than first-in-first-out, so a label painted every frame is
     /// never dropped in favour of one-off text.
@@ -107,22 +134,31 @@ impl LayoutCache {
         options: &TextLayoutOptions,
         f: impl FnOnce() -> LaidOutText,
     ) -> &LaidOutText {
-        let key = CacheKey::new(text, options);
-        if self.map.contains_key(&key) {
+        // The hit path is allocation-free: verify the retained key against the
+        // borrowed text instead of building an owned key to look up with.
+        let hash = cache_key_hash(text, options);
+        let hit = self
+            .map
+            .get(&hash)
+            .is_some_and(|entry| entry.key.matches(text, options));
+        if hit {
             self.hits += 1;
         } else {
             self.misses += 1;
             // Make room before inserting so `len()` never exceeds the cap.
             self.make_room();
             let entry = CacheEntry {
+                key: CacheKey::new(text, options),
                 value: f(),
                 last_used: self.next_tick(),
             };
-            self.map.insert(key.clone(), entry);
+            self.map.insert(hash, entry);
         }
-        let tick = self.next_tick();
-        let entry = self.map.get_mut(&key).expect("just inserted or present");
-        entry.last_used = tick;
+        // Bump the LRU order for both paths, then lend the value out. Direct
+        // field access (not `next_tick`) so the map borrow stays disjoint.
+        let entry = self.map.get_mut(&hash).expect("hit or just inserted");
+        self.clock = self.clock.wrapping_add(1);
+        entry.last_used = self.clock;
         &entry.value
     }
 
@@ -160,10 +196,10 @@ impl LayoutCache {
             .map
             .iter()
             .min_by_key(|(_, entry)| entry.last_used)
-            .map(|(key, _)| key.clone());
+            .map(|(hash, _)| *hash);
         match oldest {
-            Some(key) => {
-                self.map.remove(&key);
+            Some(hash) => {
+                self.map.remove(&hash);
                 true
             }
             None => false,

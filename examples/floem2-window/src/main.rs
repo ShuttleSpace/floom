@@ -126,6 +126,30 @@ impl std::fmt::Display for IdleSnapshot {
     }
 }
 
+/// Process CPU time (user + sys) in seconds via `getrusage(RUSAGE_SELF)`:
+/// in-process, no external command, unix only. This is what turns device case
+/// G1-4 from "frames stop" into a measured idle-CPU number — the Phase 28.3
+/// deliverable on desktop targets.
+#[cfg(unix)]
+fn process_cpu_seconds() -> Option<f64> {
+    let usage = unsafe {
+        let mut usage: libc::rusage = std::mem::zeroed();
+        if libc::getrusage(libc::RUSAGE_SELF, &mut usage) != 0 {
+            return None;
+        }
+        usage
+    };
+    let user = usage.ru_utime;
+    let sys = usage.ru_stime;
+    let to_secs = |tv: libc::timeval| tv.tv_sec as f64 + tv.tv_usec as f64 / 1_000_000.0;
+    Some(to_secs(user) + to_secs(sys))
+}
+
+#[cfg(not(unix))]
+fn process_cpu_seconds() -> Option<f64> {
+    None
+}
+
 /// Builds the idle probe from `FLOEM2_WINDOW_IDLE=1` (and optional
 /// `FLOEM2_WINDOW_IDLE_SECS`, default 30). Spawns the watchdog thread that
 /// sleeps, prints the last published snapshot, and exits — the winit loop
@@ -145,10 +169,22 @@ fn idle_probe_from_env() -> Option<IdleProbe> {
     let shared = Arc::new(Mutex::new(IdleSnapshot::default()));
     let watchdog = shared.clone();
     eprintln!("idle probe armed for {secs}s (device case G1-4)");
+    let cpu_start = process_cpu_seconds();
     thread::spawn(move || {
         thread::sleep(Duration::from_secs(secs));
         let snap = *watchdog.lock().unwrap();
-        eprintln!("idle probe after {secs}s: {snap}");
+        // The headline number: process CPU consumed over the idle window, as
+        // a fraction of one core. A parked loop reads ~0%; anything above a
+        // couple of percent means the app is burning CPU with nothing to do.
+        if let (Some(start), Some(end)) = (cpu_start, process_cpu_seconds()) {
+            let cpu = (end - start).max(0.0);
+            let share = if secs > 0 { cpu / secs as f64 * 100.0 } else { 0.0 };
+            eprintln!(
+                "idle probe after {secs}s: {snap}; process CPU: {cpu:.2}s ({share:.1}% of one core)"
+            );
+        } else {
+            eprintln!("idle probe after {secs}s: {snap}");
+        }
         std::process::exit(0);
     });
     Some(IdleProbe { shared, waits: 0 })

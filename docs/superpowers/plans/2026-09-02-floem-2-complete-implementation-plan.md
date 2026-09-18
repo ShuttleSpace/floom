@@ -1389,26 +1389,72 @@ tester.assert_text(selector, text)
 
 ## Task 28.1: Arena and allocation audit
 
-- [ ] Run allocation profiling on 1k/10k/100k element scenarios.
-- [ ] Identify hidden per-node allocations.
-- [ ] Convert proven hot-path cases to inline/small storage.
-- [ ] Add allocation regression benchmarks.
-- [ ] Commit.
+- [x] Run allocation profiling on 1k/10k/100k element scenarios. — counting
+  allocator in `app/floem-app/tests/allocation.rs`; settled frame at 1101
+  nodes allocated 6743 times before the fixes, relayout at 110001 nodes went
+  10029 → 28 allocations after them.
+- [x] Identify hidden per-node allocations. — three proven on the static
+  path: (1) `paint_node` built a fresh scene-id `Vec` per node per frame;
+  (2) `collect_semantics` rebuilt the whole tree every frame with a
+  children-`Vec` clone per node; (3) `LayoutCache::get_or_insert_with`
+  minted an owned key `String` per painted text node per frame (and cloned
+  the shaped runs before consulting the glyph intern cache). Plus
+  `reconcile_subtree` cloned child lists every frame.
+- [x] Convert proven hot-path cases to inline/small storage. — paint id list
+  reused in place (`prev` doubles as the output buffer, stale tail drained
+  into `Scene::remove`); semantics gated and now incremental (full rebuild
+  only on structural change, per-node upsert on content change,
+  `SemanticsTree::begin_rebuild` retains map capacity); glyph intern cache
+  keyed by a verified u64 hash (no key String on the hit path) and consulted
+  *before* shaping; `run_layout` reuses host-owned relative/absolute scratch
+  slots instead of two fresh `vec![None; n]` per pass.
+- [x] Add allocation regression benchmarks. — settled frame at 1k/10k/100k
+  nodes must allocate ≤ 8 times (control proves the first frame does
+  allocate); one-widget-change frame at ~11k nodes must stay under half the
+  node count (16k before the fixes, 86 after); relayout audit printed for
+  the ledger.
+- [x] Commit.
 
 ## Task 28.2: GPU cache budget system
 
-- [ ] Add configurable geometry/resource/raster budgets.
-- [ ] Add per-platform default budgets.
-- [ ] Implement memory pressure trimming.
-- [ ] Add cache hit/miss telemetry in dev builds.
-- [ ] Commit.
+- [x] Add configurable geometry/resource/raster budgets. —
+  `render/floem-renderer-vello/src/budget.rs` (feature-independent, unit
+  tested without a GPU): `GpuCacheBudget { max_fragments,
+  max_resource_bytes, max_scratch_bytes }` with `may_cache_fragment` /
+  `may_cache_resource`; presenter enforcement in `encode` (refusal = draw
+  without retaining, counted in telemetry) and a fragment-reuse guard that
+  re-encodes any cached fragment whose textures lost residency (a refusal
+  must not be masked by a cached fragment drawing nothing).
+- [x] Add per-platform default budgets. — `PlatformClass::{Desktop, Mobile,
+  Web, Embedded}` with `for_platform`/`for_current_platform` (cfg-driven),
+  ordered Desktop > Mobile > Web > Embedded in every category.
+- [x] Implement memory pressure trimming. — `MemoryPressure::{Normal,
+  Moderate, Critical}` + `plan_trim` (geometry first, resident pixels last,
+  nothing at Normal, nothing-held drops nothing); `VelloGpuPresenter::trim`
+  executes the plan; scratch is budget-bound at attach/resize with a
+  full-frame fallback for oversized targets.
+- [x] Add cache hit/miss telemetry in dev builds. — `CacheTrimTelemetry
+  { trims, fragments_dropped, resources_dropped, caching_refused }` counted
+  in all builds and exposed via `trim_telemetry()`, with a debug-build-only
+  log line in `trim`.
+- [x] Commit.
 
 ## Task 28.3: Idle/power optimization
 
-- [ ] Verify no unnecessary frame request while scene is static.
-- [ ] Pause animation/nonessential tasks when background/suspended.
-- [ ] Measure idle CPU on all desktop targets.
-- [ ] Commit.
+- [x] Verify no unnecessary frame request while scene is static. —
+  `app/floem-app/tests/idle.rs`: after the content cascade settles, eight
+  quiet pumps add zero redraw requests (`a_settled_tree_stops_requesting_redraws`).
+- [x] Pause animation/nonessential tasks when background/suspended. —
+  `WidgetHost::set_paused` freezes the animation clock (resumes from the
+  frozen point); `AppRunner` drops `RedrawRequested` between
+  `Suspended`/`Resumed` (counted as `frames_skipped_suspended`), releases
+  the surface, and pauses the host.
+- [x] Measure idle CPU on all desktop targets. — the G1-4 idle probe now
+  prints process CPU via `getrusage`: macOS (Apple M4 Pro, Metal) measured
+  **0.14 s CPU over an 8 s idle window ≈ 1.7 % of one core including process
+  startup** with frames settling at 2. Win32/X11 remain for other machines
+  (device-gated like 17/19).
+- [x] Commit.
 
 ---
 

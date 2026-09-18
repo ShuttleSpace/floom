@@ -30,6 +30,10 @@ floem-platform-desktop = { path = "../../platform/floem-platform-desktop", versi
 floem-renderer-vello = { path = "../../render/floem-renderer-vello", version = "0.2.0", optional = true }
 # PNG encode for the self-generated gradient (decode happens in floem-app).
 image = { workspace = true, features = ["png"], optional = true }
+# getrusage for the idle-probe CPU measurement (unix targets only; the probe
+# needs the process's own CPU time, which std does not expose).
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
 
 [[bin]]
 name = "floem2-window"

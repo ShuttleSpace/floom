@@ -191,6 +191,22 @@ impl SemanticsTree {
         Self::default()
     }
 
+    /// Clears the tree in place for a wholesale rebuild, retaining the node
+    /// map's capacity. A host that re-collects after any change must not pay
+    /// a fresh allocation per element for storage it already owned — the
+    /// Phase 28.1 allocation audit measured a full rebuild allocating per
+    /// node purely because the previous tree (and its spare capacity) was
+    /// dropped on the floor. Diff bookkeeping resets with the content, so a
+    /// rebuild reports the same full diff dropping and recreating the tree
+    /// always did.
+    pub fn begin_rebuild(&mut self) {
+        self.nodes.clear();
+        self.dirty.clear();
+        self.inserted.clear();
+        self.removed.clear();
+        self.root = None;
+    }
+
     /// Upsert a node and mark the element dirty.
     pub fn set_node(&mut self, id: ElementId, node: SemanticsNode) {
         if self.nodes.insert(id, node).is_none() {

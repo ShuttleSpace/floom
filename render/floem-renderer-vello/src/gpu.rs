@@ -61,6 +61,8 @@ use floem_scene::{ResourceKind, ResourceRegistry, Scene, SceneNode};
 use floem_types::{Size, SurfaceId, WindowId};
 use std::collections::{HashMap, HashSet};
 
+use crate::budget::{CacheTrimTelemetry, GpuCacheBudget, MemoryPressure, TrimPlan, plan_trim};
+
 use vello::kurbo::{Affine, Rect as KurboRect, RoundedRect as KurboRoundedRect};
 use vello::peniko::{
     BlendMode, Blob, Color as PenikoColor, Fill, ImageAlphaType, ImageBrush, ImageData,
@@ -318,6 +320,10 @@ pub struct VelloGpuPresenter {
     /// Scratch texture for partial rasterisation, grown on demand and reused
     /// across frames (a damaged region rarely keeps the same size).
     scratch: Option<ScratchTarget>,
+    /// Retained-state budgets (fragments, resident textures, scratch) and
+    /// what trimming has done about them.
+    budget: GpuCacheBudget,
+    trim_telemetry: CacheTrimTelemetry,
 }
 
 impl std::fmt::Debug for VelloGpuPresenter {
@@ -378,7 +384,85 @@ impl VelloGpuPresenter {
             fragments: HashMap::new(),
             needs_present: true,
             scratch: None,
+            budget: GpuCacheBudget::for_current_platform(),
+            trim_telemetry: CacheTrimTelemetry::default(),
         })
+    }
+
+    /// Overrides the retained-state budget (defaults come from the platform
+    /// class; see `GpuCacheBudget::for_current_platform`). Takes effect on the
+    /// next encode; call [`Self::trim`] to shed what is already retained.
+    pub fn set_budget(&mut self, budget: GpuCacheBudget) {
+        self.budget = budget;
+    }
+
+    /// The budget in force.
+    pub fn budget(&self) -> GpuCacheBudget {
+        self.budget
+    }
+
+    /// Trim telemetry: trims performed, cache entries shed, caching refused.
+    pub fn trim_telemetry(&self) -> CacheTrimTelemetry {
+        self.trim_telemetry
+    }
+
+    /// Bytes of resident image textures (registry-backed brushes only;
+    /// external textures are the producer's pipeline, accounted by
+    /// `external_stats`, and are governed by pruning, not by the budget).
+    fn resident_resource_bytes(&self) -> u64 {
+        self.image_cache
+            .values()
+            .map(|brush| u64::from(brush.image.width) * u64::from(brush.image.height) * 4)
+            .sum()
+    }
+
+    /// How many image textures are currently resident (diagnostics).
+    pub fn resident_resources(&self) -> usize {
+        self.image_cache.len()
+    }
+
+    /// Sheds retained state under memory pressure. Geometry goes first (it
+    /// re-encodes from the scene at the next frame's cost), resident textures
+    /// second (they re-upload), the scratch texture last (it is reallocated
+    /// on the next partial frame). A trim never touches external textures:
+    /// those belong to their producer's pipeline and are governed by
+    /// `prune_external`.
+    pub fn trim(&mut self, pressure: MemoryPressure) {
+        let scratch_bytes = self
+            .scratch
+            .as_ref()
+            .map(|s| u64::from(s.width) * u64::from(s.height) * 4)
+            .unwrap_or(0);
+        let plan = plan_trim(
+            &self.budget,
+            self.fragments.len(),
+            self.resident_resource_bytes(),
+            scratch_bytes,
+            pressure,
+        );
+        if plan == TrimPlan::NOTHING {
+            return;
+        }
+        if plan.drop_fragments {
+            self.trim_telemetry.fragments_dropped += self.fragments.len() as u64;
+            self.fragments.clear();
+        }
+        if plan.drop_resources {
+            self.trim_telemetry.resources_dropped += self.image_cache.len() as u64;
+            self.image_cache.clear();
+        }
+        if plan.release_scratch {
+            self.scratch = None;
+        }
+        self.trim_telemetry.trims += 1;
+        #[cfg(debug_assertions)]
+        eprintln!(
+            "[floem-gpu] trim({pressure:?}): fragments_dropped={} resources_dropped={} \
+             (telemetry: {:?})",
+            self.trim_telemetry.fragments_dropped,
+            self.trim_telemetry.resources_dropped,
+            self.trim_telemetry
+        );
     }
 
     pub fn stats(&self) -> GpuFrameStats {
@@ -524,13 +608,21 @@ impl VelloGpuPresenter {
         surface.configure(&self.device, &config);
 
         let (target_texture, target_view) = create_target(&self.device, width, height);
-        let (scratch_texture, scratch_view) = create_scratch(&self.device, width, height);
-        self.scratch = Some(ScratchTarget {
-            texture: scratch_texture,
-            view: scratch_view,
-            width,
-            height,
-        });
+        // Scratch is budget-bound: a target whose scratch would exceed the
+        // budget simply runs full-frame rasterisation (the partial path
+        // falls back below), instead of holding a texture the budget forbids.
+        self.scratch = if u64::from(width) * u64::from(height) * 4 <= self.budget.max_scratch_bytes
+        {
+            let (scratch_texture, scratch_view) = create_scratch(&self.device, width, height);
+            Some(ScratchTarget {
+                texture: scratch_texture,
+                view: scratch_view,
+                width,
+                height,
+            })
+        } else {
+            None
+        };
         let blitter = TextureBlitter::new(&self.device, format);
 
         self.surface = Some(RenderSurface {
@@ -557,15 +649,21 @@ impl VelloGpuPresenter {
             return;
         }
         let (target_texture, target_view) = create_target(&self.device, width, height);
-        let (scratch_texture, scratch_view) = create_scratch(&self.device, width, height);
         surface.target_texture = target_texture;
         surface.target_view = target_view;
-        self.scratch = Some(ScratchTarget {
-            texture: scratch_texture,
-            view: scratch_view,
-            width,
-            height,
-        });
+        // Same budget rule as `build_surface`: oversize targets go full-frame.
+        self.scratch = if u64::from(width) * u64::from(height) * 4 <= self.budget.max_scratch_bytes
+        {
+            let (scratch_texture, scratch_view) = create_scratch(&self.device, width, height);
+            Some(ScratchTarget {
+                texture: scratch_texture,
+                view: scratch_view,
+                width,
+                height,
+            })
+        } else {
+            None
+        };
         surface.config.width = width;
         surface.config.height = height;
         surface.surface.configure(&self.device, &surface.config);
@@ -599,7 +697,15 @@ impl VelloGpuPresenter {
             let fingerprint = node_fingerprint(node);
             let key = id.raw();
             if let Some(cached) = self.fragments.get_mut(&key) {
-                if cached.fingerprint == fingerprint {
+                // A reused fragment must not outlive the textures its commands
+                // were built from: a brush that lost residency (a resource
+                // budget refusal, an external prune) means the cached commands
+                // would draw nothing, so the node re-encodes instead — which
+                // is also what rebuilds the missing brush.
+                let textures_resident = cached.stats.image_keys.iter().all(|&k| {
+                    self.image_cache.contains_key(&k) || self.external_brushes.contains_key(&k)
+                });
+                if cached.fingerprint == fingerprint && textures_resident {
                     // Unchanged node: append its cached commands and report
                     // its draws (a reused image is a texture-cache hit — the
                     // pixels are already resident).
@@ -628,16 +734,24 @@ impl VelloGpuPresenter {
             totals.texture_cache_misses += stats.cache_misses;
             totals.fragments_encoded += 1;
             used_fragments.insert(key);
-            self.fragments.insert(
-                key,
-                SceneFragment {
-                    fingerprint,
-                    scene: fragment_scene,
-                    stats,
-                },
-            );
-            self.vello_scene
-                .append(&self.fragments[&key].scene, Some(shift));
+            // Budget enforcement limits *retention*, never drawing: an
+            // over-budget node still appends its freshly encoded commands,
+            // they are just not kept for the next frame to reuse.
+            if self.budget.may_cache_fragment(self.fragments.len()) {
+                self.fragments.insert(
+                    key,
+                    SceneFragment {
+                        fingerprint,
+                        scene: fragment_scene,
+                        stats,
+                    },
+                );
+                self.vello_scene
+                    .append(&self.fragments[&key].scene, Some(shift));
+            } else {
+                self.trim_telemetry.caching_refused += 1;
+                self.vello_scene.append(&fragment_scene, Some(shift));
+            }
         }
         // Prune fragments the scene no longer holds (and brushes nothing
         // re-encoded this frame references). The keys include generations, so
@@ -755,28 +869,37 @@ impl VelloGpuPresenter {
                 if *width == 0 || *height == 0 {
                     return stats;
                 }
+                let key = image.raw();
+                used_images.insert(key);
+                stats.image_keys.push(key);
                 // Texture cache: one ImageBrush per resource id. The
                 // brush's Blob shares the registry's `Arc<[u8]>` and keeps
                 // a stable id, which is what vello's atlas keys on —
                 // rebuilding it per frame would re-upload every frame.
-                let key = image.raw();
-                used_images.insert(key);
-                stats.image_keys.push(key);
-                let brush = match self.image_cache.entry(key) {
-                    std::collections::hash_map::Entry::Occupied(entry) => {
-                        stats.cache_hits += 1;
-                        entry.into_mut()
-                    }
-                    std::collections::hash_map::Entry::Vacant(entry) => {
-                        stats.cache_misses += 1;
-                        // One Arc clone, no pixel bytes copied: the Blob
-                        // shares ownership with the registry. The extra
-                        // Arc layer exists because `Blob` wants an
-                        // `Arc<dyn AsRef<[u8]>>` and an unsized pointee
-                        // cannot coerce directly — this happens once per
-                        // registration (cache miss), not per frame.
-                        let shared = std::sync::Arc::new(std::sync::Arc::clone(pixels));
-                        entry.insert(ImageBrush {
+                // Budget enforcement: an image that would not *fit* is still
+                // drawn — built for this frame and dropped after it — so a
+                // full budget degrades to re-uploads, never to missing
+                // content.
+                let new_bytes = u64::from(*width) * u64::from(*height) * 4;
+                let mut uncached: Option<ImageBrush> = None;
+                let brush: &ImageBrush = if let Some(brush) = self.image_cache.get(&key) {
+                    stats.cache_hits += 1;
+                    brush
+                } else if self
+                    .budget
+                    .may_cache_resource(self.resident_resource_bytes(), new_bytes)
+                {
+                    stats.cache_misses += 1;
+                    // One Arc clone, no pixel bytes copied: the Blob
+                    // shares ownership with the registry. The extra
+                    // Arc layer exists because `Blob` wants an
+                    // `Arc<dyn AsRef<[u8]>>` and an unsized pointee
+                    // cannot coerce directly — this happens once per
+                    // registration (cache miss), not per frame.
+                    let shared = std::sync::Arc::new(std::sync::Arc::clone(pixels));
+                    self.image_cache.insert(
+                        key,
+                        ImageBrush {
                             image: ImageData {
                                 data: Blob::new(shared),
                                 format: ImageFormat::Rgba8,
@@ -785,8 +908,24 @@ impl VelloGpuPresenter {
                                 height: *height,
                             },
                             sampler: ImageSampler::default(),
-                        })
-                    }
+                        },
+                    );
+                    self.image_cache.get(&key).expect("just inserted")
+                } else {
+                    stats.cache_misses += 1;
+                    self.trim_telemetry.caching_refused += 1;
+                    let shared = std::sync::Arc::new(std::sync::Arc::clone(pixels));
+                    uncached = Some(ImageBrush {
+                        image: ImageData {
+                            data: Blob::new(shared),
+                            format: ImageFormat::Rgba8,
+                            alpha_type: ImageAlphaType::AlphaPremultiplied,
+                            width: *width,
+                            height: *height,
+                        },
+                        sampler: ImageSampler::default(),
+                    });
+                    uncached.as_ref().expect("just built")
                 };
                 let sx = bounds.width() / f64::from(*width);
                 let sy = bounds.height() / f64::from(*height);
@@ -1005,11 +1144,22 @@ impl Presenter for VelloGpuPresenter {
                 (self.size.height.max(0.0) * self.scale).ceil() as u32,
             ),
         };
-        let region = if stale_screen {
+        let mut region = if stale_screen {
             None
         } else {
             Self::damage_region(scene.damage(), pw, ph, self.scale)
         };
+        // Partial rasterisation needs a live surface and a scratch view big
+        // enough for the region; if the budget refused (or trimmed) the
+        // scratch, fall back to a full-frame pass rather than dropping the
+        // frame.
+        if self.surface.is_some() {
+            if let Some((_, _, w, h)) = region {
+                if self.scratch_for(w, h).is_none() {
+                    region = None;
+                }
+            }
+        }
         let offset = region.map_or((0.0, 0.0), |(x, y, _, _)| (f64::from(x), f64::from(y)));
         let encoded = self.encode(scene, resources, offset);
         // After `encode`, the fragment table is this frame's scene — which is
@@ -1033,13 +1183,7 @@ impl Presenter for VelloGpuPresenter {
         // Prepare the scratch view up front: both it and the surface live on
         // `self`, and the surface is borrowed mutably below.
         let scratch = if self.surface.is_some() {
-            match region {
-                Some((_, _, w, h)) => match self.scratch_for(w, h) {
-                    Some(view) => Some(view),
-                    None => return,
-                },
-                None => None,
-            }
+            region.and_then(|(_, _, w, h)| self.scratch_for(w, h))
         } else {
             None
         };
@@ -1667,6 +1811,109 @@ mod tests {
             stats.texture_cache_hits, 1,
             "re-encode reuses the cached texture"
         );
+    }
+
+    // --- Phase 28.2: cache budgets -----------------------------------------
+
+    /// A fragment budget caps *retention*, not drawing: an over-budget scene
+    /// still reports every node's draws, and the refusals are counted.
+    #[test]
+    fn a_fragment_budget_limits_retention_but_not_drawing() {
+        let Some(mut presenter) = presenter() else {
+            return;
+        };
+        presenter.set_budget(crate::budget::GpuCacheBudget {
+            max_fragments: 1,
+            ..crate::budget::GpuCacheBudget::for_platform(crate::budget::PlatformClass::Desktop)
+        });
+        let mut scene = Scene::new();
+        scene.begin_update();
+        for x in 0..3u32 {
+            let _ = scene.insert(rect_node(f64::from(x) * 8.0));
+        }
+        scene.finish_update();
+        presenter.present(&scene, &ResourceRegistry::new());
+        let stats = presenter.stats();
+        assert_eq!(stats.rects, 3, "every node is drawn");
+        assert!(
+            presenter.fragment_count() <= 1,
+            "only the budgeted number of fragments is retained"
+        );
+        assert!(
+            presenter.trim_telemetry().caching_refused >= 2,
+            "refused caching is counted"
+        );
+        // The scene still re-encodes what it did not retain: presenting again
+        // re-encodes everything, never draws from a phantom cache.
+        presenter.resize(Size::new(64.0, 48.0), 1.0);
+        presenter.present(&scene, &ResourceRegistry::new());
+        assert_eq!(presenter.stats().rects, 3);
+    }
+
+    /// A resource budget refuses to *retain* an oversized image but still
+    /// draws it, and a critical trim sheds every derived cache.
+    #[test]
+    fn resource_budget_and_critical_trim_behave() {
+        let Some(mut presenter) = presenter() else {
+            return;
+        };
+        presenter.set_budget(crate::budget::GpuCacheBudget {
+            max_resource_bytes: 8, // one 2×2 image is 16 bytes: does not fit
+            ..crate::budget::GpuCacheBudget::for_platform(crate::budget::PlatformClass::Desktop)
+        });
+        let mut registry = ResourceRegistry::new();
+        let img = registry.insert(floem_scene::Resource {
+            kind: ResourceKind::Image {
+                width: 2,
+                height: 2,
+                pixels: std::sync::Arc::from(vec![9u8; 16].into_boxed_slice()),
+            },
+        });
+        let mut scene = Scene::new();
+        scene.begin_update();
+        let _ = scene.insert(SceneNode::image(
+            floem_types::Rect::from_origin_size(
+                floem_types::Point::new(0.0, 0.0),
+                Size::new(6.0, 6.0),
+            ),
+            img,
+        ));
+        scene.finish_update();
+        presenter.present(&scene, &registry);
+        let stats = presenter.stats();
+        assert_eq!(stats.images, 1, "the image is drawn regardless");
+        assert!(
+            presenter.trim_telemetry().caching_refused >= 1,
+            "the oversized retention is refused and counted"
+        );
+
+        // Back to a fitting budget: two image nodes cache, then Critical
+        // sheds them along with the encode fragments.
+        presenter.set_budget(crate::budget::GpuCacheBudget::for_platform(
+            crate::budget::PlatformClass::Desktop,
+        ));
+        presenter.resize(Size::new(64.0, 48.0), 1.0);
+        presenter.present(&scene, &registry);
+        assert_eq!(presenter.resident_resources(), 1);
+        assert!(presenter.fragment_count() >= 1);
+
+        presenter.trim(MemoryPressure::Critical);
+        let telemetry = presenter.trim_telemetry();
+        assert!(telemetry.trims >= 1);
+        assert!(
+            telemetry.fragments_dropped >= 1,
+            "geometry is the first thing to go"
+        );
+        assert_eq!(
+            telemetry.resources_dropped, 1,
+            "resident textures are dropped by a critical trim"
+        );
+        assert_eq!(presenter.fragment_count(), 0);
+        assert_eq!(presenter.resident_resources(), 0);
+        // The scene still renders after the trim: caches are derived state.
+        presenter.resize(Size::new(64.0, 48.0), 1.0);
+        presenter.present(&scene, &registry);
+        assert_eq!(presenter.stats().images, 1);
     }
 
     // --- external textures (16.3) ------------------------------------------

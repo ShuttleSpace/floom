@@ -2882,6 +2882,7 @@ dependencies = [
  "floem-types",
  "floem-widgets",
  "image 0.25.9",
+ "libc",
 ]
 
 [[package]]

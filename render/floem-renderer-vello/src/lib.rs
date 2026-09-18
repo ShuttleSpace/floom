@@ -8,9 +8,13 @@
 //! * [`VelloGpuPresenter`] (feature `gpu`) — the real thing: a wgpu
 //!   swap-chain driven by vello, which is what actually puts pixels in a window.
 
+pub mod budget;
+
 #[cfg(feature = "gpu")]
 mod gpu;
 
+#[cfg(feature = "gpu")]
+pub use budget::{CacheTrimTelemetry, GpuCacheBudget, MemoryPressure};
 #[cfg(feature = "gpu")]
 pub use gpu::{GpuFrameStats, VelloGpuPresenter};
 
