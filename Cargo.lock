@@ -1933,6 +1933,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "floem-agent"
+version = "0.2.0"
+dependencies = [
+ "floem-core",
+ "floem-inspector",
+ "floem-snapshot",
+ "floem-testkit",
+ "floem-types",
+ "floem-ui-ir",
+ "floem-widgets",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "floem-android-example"
 version = "0.1.0"
 dependencies = [

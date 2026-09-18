@@ -226,6 +226,35 @@ pub fn prop_is_declared(name: &str) -> bool {
         || WIDGET_PROPS.iter().any(|(_, r)| r.name == name)
 }
 
+/// Every property name the tables declare, in declaration order, deduplicated.
+///
+/// The schema emitter (Phase 25.2) walks this list against each kind, so a
+/// property a validator accepts but a schema omits would be exactly the
+/// "drift between two implementations of the vocabulary" this crate exists to
+/// make impossible. Deduplication matters: `size` is declared twice (Text and
+/// Button) and must be probed once per kind, with the kind picking the row.
+pub fn all_prop_names() -> Vec<&'static str> {
+    let mut names: Vec<&'static str> = Vec::new();
+    let mut push = |name: &'static str| {
+        if !names.contains(&name) {
+            names.push(name);
+        }
+    };
+    for r in STYLE_PROPS {
+        push(r.name);
+    }
+    for r in LAYOUT_PROPS {
+        push(r.name);
+    }
+    for r in NATIVE_PROPS {
+        push(r.name);
+    }
+    for (_, r) in WIDGET_PROPS {
+        push(r.name);
+    }
+    names
+}
+
 /// Whether `kind` emits `event`.
 pub fn emits(kind: NodeKind, event: EventName) -> bool {
     EVENTS.iter().any(|(k, e)| *k == kind && *e == event)
@@ -317,6 +346,25 @@ mod tests {
         assert!(NodeKind::Dialog.is_container());
         assert!(!NodeKind::Text.is_container());
         assert!(!NodeKind::Spacer.is_container());
+    }
+
+    #[test]
+    fn all_prop_names_is_deduplicated_and_complete() {
+        let names = all_prop_names();
+        let unique = names.len();
+        let expected = names.iter().collect::<std::collections::HashSet<_>>().len();
+        assert_eq!(
+            unique, expected,
+            "`size` is declared twice and must not repeat"
+        );
+        // Both spellings of the double-declared name resolve through the list.
+        assert!(names.contains(&"size"));
+        assert!(names.contains(&"variant"));
+        assert!(names.contains(&"background"));
+        // And everything the tables declare is reachable through it.
+        for (_, row) in WIDGET_PROPS {
+            assert!(names.contains(&row.name), "{} missing", row.name);
+        }
     }
 
     #[test]

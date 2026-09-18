@@ -1,0 +1,31 @@
+[package]
+name = "floem-agent"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Agent protocol over a running Floem 2.0 app: versioned inspection/control commands, a localhost-only transport with a dev token, and an AI-friendly component schema (Phase 25)"
+
+[dependencies]
+# The wire vocabulary is the inspector's: a request carries a
+# `ProtocolVersion`, and inspection payloads reuse the DTOs Phase 23 defined
+# rather than spelling a second copy of them.
+floem-inspector = { path = "../floem-inspector", version = "0.2.0" }
+# The component schema is emitted from the UI IR's property/event tables, so a
+# schema consumer and the validator can never disagree about a widget.
+floem-ui-ir = { path = "../../compiler/floem-ui-ir", version = "0.2.0" }
+# A session drives a headless app the way a test would — the harness is the
+# runtime this protocol is about.
+floem-testkit = { path = "../floem-testkit", version = "0.2.0" }
+# Screenshots are served as the snapshot engine's deterministic hashes, so an
+# agent that compares two frames compares the same fingerprint a test would.
+floem-snapshot = { path = "../floem-snapshot", version = "0.2.0" }
+floem-core = { path = "../../foundation/floem-core", version = "0.2.0" }
+floem-types = { path = "../../foundation/floem-types", version = "0.2.0" }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+
+[dev-dependencies]
+# The end-to-end fixture is a real widget tree.
+floem-widgets = { path = "../../widgets/floem-widgets", version = "0.2.0" }

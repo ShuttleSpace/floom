@@ -1289,9 +1289,9 @@ tester.drag(...)
 tester.assert_text(selector, text)
 ```
 
-- [ ] **Step 1: Write interaction tests using semantic/test-id selectors.**
-- [ ] **Step 2: Implement headless runtime harness.**
-- [ ] **Step 3: Commit.**
+- [x] **Step 1: Write interaction tests using semantic/test-id selectors.** — DONE 2026-09-15 as `tooling/floem-testkit` (the planned `floem-test` name is owned by the v1 `test/` crate): `Selector` resolves by Label/Role/Id — the same strings the a11y tree publishes. 14 harness tests pin the harness itself (`tests/testkit.rs`), because a harness bug reads exactly like a product bug.
+- [x] **Step 2: Implement headless runtime harness.** — `TestApp` wraps FakePlatform → AppRunner → WidgetHost; actors `tap`/`type_text`/`drag`/`key`/`preedit`/`settle`/`drain`, readers `assert_text`/`labels`/`bounds`/`scene_nodes`. Surfaced two real bugs: `settle` returned while frames were still owed, and unmounted (dead-but-slotted) nodes were still found by `host.widget::<T>()` — the host now exposes `is_mounted`/`live_semantics_hint`.
+- [x] **Step 3: Commit.** — `5187233`.
 
 ## Task 24.2: Snapshot engine
 
@@ -1299,11 +1299,11 @@ tester.assert_text(selector, text)
 - Create: `tooling/floem-snapshot`
 - Test: PNG/scene/semantics snapshots
 
-- [ ] **Step 1: Implement software-renderer snapshots.**
-- [ ] **Step 2: Implement Scene snapshot.**
-- [ ] **Step 3: Implement Semantics snapshot.**
-- [ ] **Step 4: Add deterministic font/resource test fixtures.**
-- [ ] **Step 5: Commit.**
+- [x] **Step 1: Implement software-renderer snapshots.** — DONE 2026-09-18 in `tooling/floem-snapshot`: `PixelSnapshot` renders the scene through the software presenter offscreen and hashes the RGBA8 buffer (FNV-1a, hand-rolled — stable across Rust versions).
+- [x] **Step 2: Implement Scene snapshot.** — `SceneSnapshot` over the retained scene graph, one deterministic line per live node.
+- [x] **Step 3: Implement Semantics snapshot.** — `SemanticsSnapshot` over `SemanticsTree`, sorted by `(index, generation)`. Goldens land in the *asserting* crate via `snapshots_dir!()` — the original `env!("CARGO_MANIFEST_DIR")` version dropped every downstream golden into `tooling/floem-snapshot/snapshots/` (fixed in Phase 21).
+- [x] **Step 4: Add deterministic font/resource test fixtures.** — `single_rect_scene` / `semantics_node` builders; design-system galleries (Phase 21) pin 93 goldens across four systems with `UPDATE_SNAPSHOTS=1` regeneration and re-read.
+- [x] **Step 5: Commit.** — `e98fa9e2` (engine + first consumers).
 
 ---
 
@@ -1315,26 +1315,26 @@ tester.assert_text(selector, text)
 - Create: `tooling/floem-agent`
 - Test: protocol round-trip tests
 
-- [ ] **Step 1: Define inspection/control commands.**
-- [ ] **Step 2: Version protocol payloads.**
-- [ ] **Step 3: Implement local transport.**
-- [ ] **Step 4: Add authentication/localhost-only guard for development.**
-- [ ] **Step 5: Commit.**
+- [x] **Step 1: Define inspection/control commands.** — DONE 2026-09-18 as `tooling/floem-agent`: `Command` = Tree/Semantics/Scene/Screenshot/Performance/Schema + Tap/TypeText/Drag; selectors are semantic only (Label/Role) — host-internal `NodeId`s are handles a client cannot forge or keep alive across reloads. A missed selector returns `SelectorNotFound` carrying what *is* on screen, so an agent can correct itself.
+- [x] **Step 2: Version protocol payloads.** — Requests carry `floem_inspector::ProtocolVersion`; the gate reuses the inspector rule (same major, older-or-equal minor), refused newer minors tested.
+- [x] **Step 3: Implement local transport.** — `local_channel` (in-memory pair, test-driven server loop) and `spawn_loopback` (TCP, length-prefixed JSON, app built *inside* the server thread via factory so nothing headless must be `Send`).
+- [x] **Step 4: Add authentication/localhost-only guard for development.** — `bind` refuses any non-loopback host with `PermissionDenied`; non-loopback peers are dropped before their first byte; `with_token` gates every request (`AuthRequired`). Guard is the transport, not a convention.
+- [x] **Step 5: Commit.** — this commit.
 
 ## Task 25.2: AI-friendly component schema
 
-- [ ] Emit widget/property/event/slot metadata.
-- [ ] Emit examples and allowed enum values.
-- [ ] Emit design token relationships.
-- [ ] Add schema tests.
-- [ ] Commit.
+- [x] Emit widget/property/event/slot metadata. — `component_schema()` walks `NodeKind::ALL × floem_ui_ir::schema::all_prop_names()` (new table accessor, +1 test in ui-ir) through `prop_spec`, so schema and validator cannot disagree; slots from `is_container`.
+- [x] Emit examples and allowed enum values. — Examples derived from the widget-class rows (first domain value for idents); domains served verbatim from the tables.
+- [x] Emit design token relationships. — Tokens derived from the resolved properties: `interaction_state` for anything styled (values from `floem_inspector::STYLE_STATES`), `variant`/`control_size` exactly when the kind declares those properties.
+- [x] Add schema tests. — 6 tests: full coverage of `NodeKind::ALL` with no inventions, class/type/domain equal to the table, event table equality, slot split, derived examples, derived tokens.
+- [x] Commit. — this commit.
 
 ## Task 25.3: Running-app agent loop
 
-- [ ] Implement screenshot + inspection + interaction sequence.
-- [ ] Expose performance and accessibility information.
-- [ ] Add end-to-end agent fixture app.
-- [ ] Commit.
+- [x] Implement screenshot + inspection + interaction sequence. — `AgentSession` over `floem_testkit::TestApp`: the agent's tap is the *same* tap a test's is (same event path, same damage answer). Screenshot = `PixelSnapshot` hash — two equal hashes are the same frame, no pixels shipped.
+- [x] Expose performance and accessibility information. — Session-observed counters (interactions/repaints/taps/drags/text_commits; per-stage timing belongs to the Phase 23 profiler, not re-invented) and semantics entries with checked/disabled/focused flags.
+- [x] Add end-to-end agent fixture app. — `tests/agent_loop.rs` (checkbox + text field, local channel): tap flips the checkbox, screenshot hash changes, semantics shows checked; `tests/loopback.rs` runs the same loop over TCP with the token gate.
+- [x] Commit. — this commit.
 
 ---
 

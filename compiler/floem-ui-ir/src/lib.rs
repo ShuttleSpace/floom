@@ -31,6 +31,8 @@ pub use error::IrError;
 pub use node::{
     DEFAULT_SLOT, EventBinding, EventName, NativeKind, NodeKey, NodeKind, Prop, Slot, UiNode,
 };
-pub use schema::{PropClass, PropSpec, emits, prop_is_declared, prop_spec};
+pub use schema::{
+    PropClass, PropSpec, all_prop_names, emits, events_for, prop_is_declared, prop_spec,
+};
 pub use value::{Binding, BindingKind, PropValue, Rgba, ValueType};
 pub use version::{IrVersion, MIGRATIONS, MigrationStep, migrate, migrate_with};
