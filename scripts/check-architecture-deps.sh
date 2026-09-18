@@ -153,7 +153,7 @@ GPU_HINTS = {norm(x) for x in GPU_HINTS}
 RENDERER_PACKAGES = {norm(x) for x in RENDERER_PACKAGES}
 WIDGET_HINTS = {norm(x) for x in WIDGET_HINTS}
 WIDGET_ALIASES = {norm(x) for x in WIDGET_ALIASES}
-FUTURE = [(crate, {norm(x) for x in banned}, msg) for crate, banned, msg in FUTURE]
+FUTURE = [(norm(crate), {norm(x) for x in banned}, msg) for crate, banned, msg in FUTURE]
 
 # --- Future crate rules ---
 for crate, banned, msg in FUTURE:
