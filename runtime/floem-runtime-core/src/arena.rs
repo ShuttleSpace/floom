@@ -67,6 +67,24 @@ impl ElementArena {
         assert!(self.ids.free(id));
         element
     }
+
+    /// Put an element back at its own id (checkpoint/restore).
+    ///
+    /// [`insert`](Self::insert) mints a fresh id on purpose; a rollback must
+    /// not, or every retained handle in the restored tree would dangle. The
+    /// id allocator refuses the restore unless the slot is free and expects
+    /// exactly this generation, so a stale id cannot sneak back in.
+    pub fn restore(&mut self, element: Element) -> bool {
+        if !self.ids.restore(element.id) {
+            return false;
+        }
+        let index = element.id.index() as usize;
+        if index >= self.elements.len() {
+            self.elements.resize_with(index + 1, || None);
+        }
+        self.elements[index] = Some(element);
+        true
+    }
 }
 
 #[cfg(test)]

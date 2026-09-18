@@ -1,0 +1,342 @@
+{
+  "version": {
+    "major": 1,
+    "minor": 0
+  },
+  "root": "app.root",
+  "bindings": [
+    {
+      "name": "label",
+      "kind": {
+        "Value": "Text"
+      }
+    },
+    {
+      "name": "count",
+      "kind": {
+        "Value": "Number"
+      }
+    },
+    {
+      "name": "show_extra",
+      "kind": {
+        "Value": "Bool"
+      }
+    },
+    {
+      "name": "save",
+      "kind": "Handler"
+    }
+  ],
+  "nodes": [
+    {
+      "key": "app.root",
+      "kind": "Stack",
+      "props": [
+        {
+          "name": "axis",
+          "value": {
+            "Ident": "vertical"
+          }
+        },
+        {
+          "name": "gap",
+          "value": {
+            "Number": 8.0
+          }
+        },
+        {
+          "name": "padding",
+          "value": {
+            "Number": 16.0
+          }
+        },
+        {
+          "name": "grow",
+          "value": {
+            "Number": 1.0
+          }
+        }
+      ],
+      "slots": [
+        {
+          "name": "default",
+          "children": [
+            "app.header",
+            "app.count",
+            "app.save",
+            "app.extra",
+            "app.web"
+          ]
+        }
+      ],
+      "events": []
+    },
+    {
+      "key": "app.header",
+      "kind": "Stack",
+      "props": [
+        {
+          "name": "axis",
+          "value": {
+            "Ident": "horizontal"
+          }
+        },
+        {
+          "name": "gap",
+          "value": {
+            "Number": 4.0
+          }
+        }
+      ],
+      "slots": [
+        {
+          "name": "default",
+          "children": [
+            "app.title",
+            "app.subtitle"
+          ]
+        }
+      ],
+      "events": []
+    },
+    {
+      "key": "app.title",
+      "kind": "Text",
+      "props": [
+        {
+          "name": "label",
+          "value": {
+            "Ref": "label"
+          }
+        },
+        {
+          "name": "size",
+          "value": {
+            "Number": 16.0
+          }
+        },
+        {
+          "name": "foreground",
+          "value": {
+            "Color": {
+              "r": 17,
+              "g": 34,
+              "b": 51,
+              "a": 255
+            }
+          }
+        }
+      ],
+      "slots": [],
+      "events": []
+    },
+    {
+      "key": "app.subtitle",
+      "kind": "Text",
+      "props": [
+        {
+          "name": "label",
+          "value": {
+            "Text": "phase 22"
+          }
+        },
+        {
+          "name": "size",
+          "value": {
+            "Number": 12.0
+          }
+        },
+        {
+          "name": "opacity",
+          "value": {
+            "Number": 0.7
+          }
+        }
+      ],
+      "slots": [],
+      "events": []
+    },
+    {
+      "key": "app.count",
+      "kind": "Progress",
+      "props": [
+        {
+          "name": "value",
+          "value": {
+            "Ref": "count"
+          }
+        },
+        {
+          "name": "min",
+          "value": {
+            "Number": 0.0
+          }
+        },
+        {
+          "name": "max",
+          "value": {
+            "Number": 100.0
+          }
+        }
+      ],
+      "slots": [],
+      "events": []
+    },
+    {
+      "key": "app.save",
+      "kind": "Button",
+      "props": [
+        {
+          "name": "label",
+          "value": {
+            "Text": "Save"
+          }
+        },
+        {
+          "name": "variant",
+          "value": {
+            "Ident": "filled"
+          }
+        },
+        {
+          "name": "size",
+          "value": {
+            "Ident": "md"
+          }
+        }
+      ],
+      "slots": [],
+      "events": [
+        {
+          "event": "Click",
+          "handler": "save"
+        }
+      ]
+    },
+    {
+      "key": "app.extra",
+      "kind": "Conditional",
+      "props": [
+        {
+          "name": "when",
+          "value": {
+            "Ref": "show_extra"
+          }
+        }
+      ],
+      "slots": [
+        {
+          "name": "default",
+          "children": [
+            "app.badge"
+          ]
+        }
+      ],
+      "events": []
+    },
+    {
+      "key": "app.badge",
+      "kind": "Container",
+      "props": [
+        {
+          "name": "background",
+          "value": {
+            "Color": {
+              "r": 224,
+              "g": 224,
+              "b": 255,
+              "a": 255
+            }
+          }
+        },
+        {
+          "name": "radius",
+          "value": {
+            "Number": 8.0
+          }
+        },
+        {
+          "name": "border_width",
+          "value": {
+            "Number": 1.0
+          }
+        },
+        {
+          "name": "border_color",
+          "value": {
+            "Color": {
+              "r": 136,
+              "g": 136,
+              "b": 136,
+              "a": 255
+            }
+          }
+        },
+        {
+          "name": "elevation",
+          "value": {
+            "Number": 2.0
+          }
+        }
+      ],
+      "slots": [
+        {
+          "name": "default",
+          "children": [
+            "app.badge_text"
+          ]
+        }
+      ],
+      "events": []
+    },
+    {
+      "key": "app.badge_text",
+      "kind": "Text",
+      "props": [
+        {
+          "name": "label",
+          "value": {
+            "Text": "new"
+          }
+        }
+      ],
+      "slots": [],
+      "events": []
+    },
+    {
+      "key": "app.web",
+      "kind": {
+        "Native": "Web"
+      },
+      "props": [
+        {
+          "name": "composition",
+          "value": {
+            "Ident": "texture"
+          }
+        },
+        {
+          "name": "input_mode",
+          "value": {
+            "Ident": "passthrough"
+          }
+        },
+        {
+          "name": "width",
+          "value": {
+            "Number": 480.0
+          }
+        },
+        {
+          "name": "height",
+          "value": {
+            "Number": 320.0
+          }
+        }
+      ],
+      "slots": [],
+      "events": []
+    }
+  ]
+}

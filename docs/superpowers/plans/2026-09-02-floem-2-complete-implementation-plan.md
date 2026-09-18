@@ -1194,10 +1194,10 @@ fluent 23, harmony 24). Every system is registered at L5 in
 - Create: `compiler/floem-ui-ir`
 - Test: schema round-trip fixtures
 
-- [ ] **Step 1: Define node/property/slot/event schema.**
-- [ ] **Step 2: Add versioning and compatibility rules.**
-- [ ] **Step 3: Add Rust serializer/deserializer used only by tooling.**
-- [ ] **Step 4: Commit.**
+- [x] **Step 1: Define node/property/slot/event schema.** Table-driven (`schema.rs`): style/layout/widget classes route `radius` to `floem_style` and `grow` to `LayoutRequest` without name-matching; per-kind event table is deliberately narrow. Validation reports *which kinds declare the name* so "not allowed here" becomes actionable.
+- [x] **Step 2: Add versioning and compatibility rules.** Same major required; a *newer* minor is refused (an unknown field cannot be round-tripped faithfully), an *older* minor loads through `MIGRATIONS` — each step named and exercised by a test.
+- [x] **Step 3: Add Rust serializer/deserializer used only by tooling.** serde JSON; the hand-written fixtures are byte-compared against regenerated output, and the guard was proven to fire by renaming a wire-format tag (8 tests red, naming the unknown variant).
+- [x] **Step 4: Commit.**
 
 ## Task 22.2: Implement DSL parser/compiler
 
@@ -1205,11 +1205,11 @@ fluent 23, harmony 24). Every system is registered at L5 in
 - Create: `compiler/floem-dsl`
 - Test: parser/compiler fixtures
 
-- [ ] **Step 1: Define syntax for structure, style, events, variants, and bindings.**
-- [ ] **Step 2: Parse into AST.**
-- [ ] **Step 3: Lower AST to UI IR.**
-- [ ] **Step 4: Add optimized builder/codegen output.**
-- [ ] **Step 5: Commit.**
+- [x] **Step 1: Define syntax for structure, style, events, variants, and bindings.** `key = kind prop=value on:click=handler { … }`, `bindings { name: type }`, `@name` for value references; handler names are bare identifiers matched against declared bindings.
+- [x] **Step 2: Parse into AST.** Hand-rolled lexer + recursive descent with line/column on every diagnostic. `Ident Eq` after a kind is ambiguous between attribute and sibling (`size=1` vs `c = text`); the property vocabulary is the tiebreak — an unknown name starts a sibling. Without it, the second child of a block is silently eaten as an attribute of the first (caught by a test, fixed in the parser).
+- [x] **Step 3: Lower AST to UI IR.** The lowering owns *no vocabulary*: kinds/props/events resolve against the IR's tables, so a property added to the IR is instantly usable from source. Numbers take Int vs Number from the property's declared type; a fractional Int is refused rather than truncated. Errors land on the offending attribute via the span map.
+- [x] **Step 4: Add optimized builder/codegen output.** Emitter with shared-subtree extraction (identical siblings collapse to a loop) — 10 → 100 identical copies multiply the output by <2×, with a control group of all-distinct nodes that must grow ~linearly. The output is *compiled by a real toolchain* in `tests/compile_fixture.rs` (scratch crate under `target/`, own target dir; the negative control mutates one token and must turn red).
+- [x] **Step 5: Commit.**
 
 ## Task 22.3: Hot reload
 
@@ -1217,10 +1217,10 @@ fluent 23, harmony 24). Every system is registered at L5 in
 - Create: `compiler/floem-hot-reload`
 - Test: live style/layout tree patching
 
-- [ ] **Step 1: Add runtime UI patch protocol.**
-- [ ] **Step 2: Preserve Element IDs/state for compatible patches.**
-- [ ] **Step 3: Add reload failure isolation and rollback.**
-- [ ] **Step 4: Commit.**
+- [x] **Step 1: Add runtime UI patch protocol.** `diff(old, new)` matches by stable `NodeKey` only; ops are Insert/Remove/Move/SetStyle/ClearLayout/SetLayout/AddEvent/RemoveEvent. `apply` is transactional against a checkpoint and wires invalidations into `DirtySet` (children on structure, style+paint on style, ancestor propagation on layout).
+- [x] **Step 2: Preserve Element IDs/state for compatible patches.** Proven with a stash: state stashed on a node survives a patch that recolours a sibling, re-lays-out the parent and inserts a new node. Control group: renaming every key must NOT preserve — ids and stash reset — otherwise "preserved" would just mean the diff matched nothing.
+- [x] **Step 3: Add reload failure isolation and rollback.** A patch whose second op fails reports `RolledBack { failed_at, reason }` and leaves a structural fingerprint of the whole tree (ids, parents, child order, every side table) byte-identical. Required two runtime-core additions: `ElementTree::clear_children` (a removed element's child list must not survive into the next occupant of its index slot) and id/arena `restore` (put back the exact freed id; refuses any generation at or beyond the one the allocator would mint next).
+- [x] **Step 4: Commit.**
 
 ---
 

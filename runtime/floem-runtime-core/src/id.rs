@@ -108,6 +108,77 @@ impl IdAllocator {
         }
     }
 
+    /// Put a previously-live id back without bumping its generation.
+    ///
+    /// This is the checkpoint/restore path: after a rollback the allocator
+    /// must be able to resurrect the *same* handle, or every retained id in
+    /// the restored tree would dangle. It is only allowed when the slot is
+    /// free and its recorded next generation equals `id`'s — i.e. this is
+    /// exactly the handle this allocator would mint next for the index, so a
+    /// stale id can never be resurrected through it.
+    pub fn restore(&mut self, id: ElementId) -> bool {
+        if id.is_invalid() {
+            return false;
+        }
+        let index = id.index();
+        // The slot must be free and expecting exactly this generation.
+        let Some(IdSlotState::Free {
+            next_free,
+            next_generation,
+        }) = self.slots.get(index as usize).copied()
+        else {
+            return false; // live slot, out of range, or invalid id
+        };
+        if next_generation == 0 || id.generation() == 0 || id.generation() >= next_generation {
+            // Restoring the generation the allocator would hand out *next*
+            // (or one already superseded) would alias a live-or-future handle.
+            // Only a strictly earlier generation is safe, and only under the
+            // rollback discipline: the generation in between was allocated
+            // inside a failed patch that released no handles.
+            return false;
+        }
+        // Unlink the index from the free list. The list is singly linked, so
+        // this is a walk; restore is a rare, user-visible operation and the
+        // list is short (one link per free slot).
+        let mut prev: Option<u32> = None;
+        let mut current = self.free_head;
+        let mut found = false;
+        while let Some(c) = current {
+            if c == index {
+                found = true;
+                break;
+            }
+            prev = Some(c);
+            current = match self.slots[c as usize] {
+                IdSlotState::Free { next_free, .. } => next_free,
+                IdSlotState::Occupied { .. } => unreachable!("free list only walks free slots"),
+            };
+        }
+        if !found {
+            return false;
+        }
+        match prev {
+            None => self.free_head = next_free,
+            Some(p) => {
+                if let IdSlotState::Free {
+                    next_generation: prev_gen,
+                    ..
+                } = self.slots[p as usize]
+                {
+                    self.slots[p as usize] = IdSlotState::Free {
+                        next_free,
+                        next_generation: prev_gen,
+                    };
+                }
+            }
+        }
+        self.slots[index as usize] = IdSlotState::Occupied {
+            generation: id.generation(),
+        };
+        self.live_count += 1;
+        true
+    }
+
     pub fn slot(&self, index: u32) -> Option<IdSlot> {
         match self.slots.get(index as usize)? {
             IdSlotState::Free {

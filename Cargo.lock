@@ -2016,6 +2016,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "floem-dsl"
+version = "0.2.0"
+dependencies = [
+ "floem-ui-ir",
+]
+
+[[package]]
 name = "floem-editor"
 version = "0.1.0"
 dependencies = [
@@ -2098,6 +2105,18 @@ dependencies = [
  "floem-style",
  "floem-theme",
  "floem-types",
+]
+
+[[package]]
+name = "floem-hot-reload"
+version = "0.2.0"
+dependencies = [
+ "floem-core",
+ "floem-dsl",
+ "floem-runtime-core",
+ "floem-style",
+ "floem-types",
+ "floem-ui-ir",
 ]
 
 [[package]]
@@ -2480,6 +2499,15 @@ dependencies = [
  "floem-winit",
  "ui-events",
  "web-time",
+]
+
+[[package]]
+name = "floem-ui-ir"
+version = "0.2.0"
+dependencies = [
+ "floem-types",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]

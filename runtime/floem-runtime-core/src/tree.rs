@@ -101,6 +101,24 @@ impl ElementTree {
         true
     }
 
+    /// Drop every child link of `id`; its children become parentless.
+    ///
+    /// Used when unmounting a subtree: the removed node's own child list must
+    /// not survive into whatever element later reuses its index slot.
+    pub fn clear_children(&mut self, arena: &mut ElementArena, id: ElementId) {
+        if arena.get(id).is_none() {
+            return;
+        }
+        let index = id.index() as usize;
+        self.ensure_index(index);
+        let kids = std::mem::take(&mut self.children[index]);
+        for child in kids {
+            if let Some(el) = arena.get_mut(child) {
+                el.parent = None;
+            }
+        }
+    }
+
     /// Move `id` among siblings under `parent` to `index`.
     pub fn move_child(
         &mut self,

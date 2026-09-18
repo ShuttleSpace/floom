@@ -1,0 +1,16 @@
+[package]
+name = "floem-dsl"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Declarative UI DSL: parser, lowering to the UI IR, and builder codegen (Phase 22.2)"
+
+[dependencies]
+# The IR owns the vocabulary (kinds, properties, events, bindings). This crate
+# deliberately does not restate it: it lowers into the IR and then asks the IR
+# to validate, so there is exactly one property table in the workspace.
+floem-ui-ir = { path = "../floem-ui-ir", version = "0.2.0" }
+
+[dev-dependencies]

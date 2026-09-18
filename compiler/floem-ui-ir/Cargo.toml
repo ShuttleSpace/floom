@@ -1,0 +1,18 @@
+[package]
+name = "floem-ui-ir"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Versioned, serializable UI intermediate representation for Floem 2.0 tooling (Phase 22.1)"
+
+[dependencies]
+# L0 vocabulary only: `Color` is the runtime colour type the IR's serializable
+# `Rgba` bridges to. Like `floem-codegen`, this crate stays runtime-free so the
+# IR can be parsed by tooling that never links a window.
+floem-types = { path = "../../foundation/floem-types", version = "0.2.0" }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+
+[dev-dependencies]

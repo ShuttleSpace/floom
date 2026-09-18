@@ -82,3 +82,30 @@ fn reparent_detaches_from_old() {
     assert_eq!(tree.children(b), &[child]);
     assert_eq!(arena.get(child).unwrap().parent, Some(b));
 }
+
+#[test]
+fn clear_children_drops_the_list_so_index_reuse_is_clean() {
+    // A removed element's slot can be reused by a later alloc. If its child
+    // list survived, the new element would start life with phantom children.
+    let mut arena = ElementArena::new();
+    let mut tree = ElementTree::new();
+    let parent = arena.insert_primitive();
+    let a = arena.insert_primitive();
+    let b = arena.insert_primitive();
+    assert!(tree.append_child(&mut arena, parent, a));
+    assert!(tree.append_child(&mut arena, parent, b));
+
+    tree.clear_children(&mut arena, parent);
+    assert!(tree.children(parent).is_empty());
+    assert_eq!(arena.get(a).unwrap().parent, None);
+    assert_eq!(arena.get(b).unwrap().parent, None);
+
+    // The slot is reusable with a clean list: a fresh child of the *new*
+    // element is the only one listed.
+    assert!(arena.remove(parent).is_some());
+    let reused = arena.insert_primitive();
+    assert_eq!(reused.index(), parent.index());
+    let kid = arena.insert_primitive();
+    assert!(tree.append_child(&mut arena, reused, kid));
+    assert_eq!(tree.children(reused), &[kid]);
+}

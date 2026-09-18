@@ -49,3 +49,19 @@ fn element_is_stack_allocated_copy() {
     assert_copy(&e);
     assert!(std::mem::size_of::<Element>() <= 32);
 }
+
+#[test]
+fn restore_puts_an_element_back_at_its_own_id() {
+    // The hot-reload checkpoint needs to rebuild the arena with the ids the
+    // snapshot held: a fresh `insert` would mint new ids and every retained
+    // handle would dangle.
+    let mut arena = ElementArena::new();
+    let id = arena.insert_primitive();
+    let element = *arena.get(id).unwrap();
+    assert!(arena.remove(id).is_some());
+
+    assert!(arena.restore(element));
+    assert_eq!(arena.get(id).map(|e| e.id), Some(id));
+    // The slot is live again; restore refuses to double-occupy it.
+    assert!(!arena.restore(element));
+}
