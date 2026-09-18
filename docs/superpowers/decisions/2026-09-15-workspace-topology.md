@@ -121,3 +121,63 @@ Vendored forks moved from `platform-compat/` to `vendor/`, each with a
 `NOTICE.md` (upstream URL, rev/version, local delta, exit criterion), and
 `notices/` holds the `cargo-deny` / `cargo-about` configuration. The conventions
 are written down in `docs/workspace-conventions.md`.
+
+## Addendum (2026-09-18): one repository, not a directory of repos
+
+The outer working folder used to hold nine sibling git repositories plus a
+`floem_packages/` directory of byte-identical copies of five of them. It now
+holds exactly one repository — this one.
+
+| was | now | how |
+| --- | --- | --- |
+| `../flome-ui` (17 commits, gitee remote) | `ecosystem/floem-ui/` | `git subtree add` — history kept; the `flome`→`floem` typo fixed |
+| `../floem-editor` (1 commit, no remote) | `ecosystem/floem-editor/` | working tree imported flat (its substance was 47 uncommitted files) |
+| `../flameo` (1 commit) | `ecosystem/flameo/` | imported flat |
+| `../floem-winit-ios-fork` | removed | already vendored as `vendor/floem-winit` |
+| `../tgui-winit-ohos-fork` | removed | already vendored (now `vendor/floem-winit-ohos`) |
+| `../harmony-app-rs-patch` | removed | already vendored as `vendor/harmony-app-rs` |
+| `../tgui-winit-ohos-patch` | removed | already at `vendor/…/patch/` |
+| `../floem-winit-ios-fork.old0295` | removed | unreferenced; the 08-31 plan already said "do not import; delete" |
+| `../floem_packages/` | removed | five byte-identical copies of the trees above |
+
+The removals went to the Trash rather than `rm`, so the step is reversible, and
+each was content-diffed against the surviving copy first.
+
+`ecosystem/` is excluded from the root workspace, so the topology described
+above is unchanged. Two consequences are worth recording:
+
+- **A nested workspace does not inherit `[patch]`.** `floem-editor` and `flameo`
+  reach `floem` by path, so each re-declares the lapce/winit (and lapce/floem)
+  redirects. Omitting that is invisible until a type fails to unify across the
+  boundary — see the bug below.
+- **The `floem-editor` collision is now in-repo.** "Shadowed package names"
+  (above) described a sibling checkout; it is now `text/floem-editor` (2.0) vs
+  `ecosystem/floem-editor/floem-editor` (satellite). They never share a
+  workspace *as members*, but `examples/{custom_keymap,widget-gallery}` pull the
+  satellite in by path, so the root graph does contain both. The script's
+  "resolve among `workspace_members` first" rule is what keeps the check honest,
+  which makes it load-bearing rather than defensive.
+
+### The OHOS fork rename surfaced a real bug
+
+`vendor/tgui-winit-ohos` became `vendor/floem-winit-ohos` (package
+`floem-winit-ohos`, lib `floem_winit_ohos`), and because a `[patch.crates-io]`
+entry must keep the name of the package it replaces, the fork became a path
+dependency in `[workspace.dependencies]` instead of a patched crates.io crate.
+
+Renaming forced a look at the resolution, which showed that gate 1 in
+`docs/ohos.md` — "`floem-winit-core` is a single shared crate instance used by
+both" — had become **false** when the iOS fork was vendored on 2026-08-31.
+`vendor/floem-winit-ohos` pinned `floem-winit-core` and `dpi` at the *git* rev
+while the patched `floem-winit` facade uses the vendored *path* copies; cargo
+treats different sources as different packages, so `cargo metadata` reported two
+`floem-winit-core` and three `dpi` instances. The OHOS backend therefore
+required a different `ApplicationHandler` than `floem::Application` implements,
+and `export_ohos_winit_app!(floem_app_factory)` could not type-check.
+`[patch."https://github.com/lapce/winit"]` now redirects all three members
+(`floem-winit`, `floem-winit-core`, `dpi`) at the vendored tree.
+
+Only an OHOS target can observe this, which is why it survived on macOS for
+three weeks — and why `docs/ohos.md` now carries the correction instead of the
+claim.
+

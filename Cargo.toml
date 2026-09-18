@@ -1,6 +1,10 @@
 [workspace]
 resolver = "3"
-exclude = ["vendor"]
+# `vendor/` holds forked upstream trees wired in via `[patch]` / path deps.
+# `ecosystem/` holds the satellite projects (floem-editor, floem-ui, flameo);
+# each is its own workspace, so the root `cargo test --workspace` stays focused
+# on the core. Build them from their own directory.
+exclude = ["vendor", "ecosystem"]
 members = [
   "foundation/floem-types",
   "foundation/floem-core",

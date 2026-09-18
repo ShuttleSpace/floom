@@ -312,9 +312,19 @@ floem-widget-md-icon = { path = "crates/material/md-icon" }
 floem-widget-cupertino-icon = { path = "crates/cupertino/cupertino-icon" }
 floem-widget-fluent-icon = { path = "crates/fluent/fluent-icon" }
 
-# Use the local floem checkout (commits export `Scope` / `create_global_rw_signal`)
-# so floem-core-theme can bind process-wide signals to the never-disposed root
-# scope instead of a transient view scope. Keeps the upstream git source as the
-# canonical spec; this only overrides the resolved artifact.
+# Use the local floem checkout in this monorepo (commits export `Scope` /
+# `create_global_rw_signal`) so floem-core-theme can bind process-wide signals to
+# the never-disposed root scope instead of a transient view scope. Keeps the
+# upstream git source as the canonical spec; this only overrides the resolved
+# artifact.
 [patch."https://github.com/lapce/floem"]
-floem = { path = "/Users/ahs/Project/Rust/floem" }
+floem = { path = "../.." }
+
+# `floem` reaches `lapce/winit` through git, and a nested workspace does not
+# inherit the monorepo root's `[patch]` — so pin the vendored tree here too,
+# exactly as `../../Cargo.toml` does. Without this, `floem-winit` would be
+# fetched from git and `floem-winit-core` / `dpi` would exist twice.
+[patch."https://github.com/lapce/winit"]
+floem-winit = { path = "../../vendor/floem-winit/winit" }
+floem-winit-core = { path = "../../vendor/floem-winit/winit-core" }
+dpi = { path = "../../vendor/floem-winit/dpi" }

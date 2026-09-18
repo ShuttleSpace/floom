@@ -1,0 +1,13 @@
+[package]
+name = "editor"
+edition.workspace = true
+license.workspace = true
+version.workspace = true
+
+[[bin]]
+name = "editor"
+path = "src/main.rs"
+
+[dependencies]
+floem.workspace = true
+floem-editor = { path = "../../floem-editor" }

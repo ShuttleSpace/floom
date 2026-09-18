@@ -43,9 +43,25 @@ Directories encode the architecture layer (enforced by
 | — | `ui-events/` | `floem-winit` — the ui-events ↔ winit input bridge |
 | — | `vendor/` | forked third-party crates (excluded from the workspace) |
 | — | `examples/` | runnable examples (`examples/*`) |
+| — | `ecosystem/` | satellite projects, each its own nested workspace (excluded) |
 
 A lower layer must never depend on a higher one. New 2.0 crates are registered in
 the layer table in `scripts/check-architecture-deps.sh`.
+
+## 2b. Satellites → `ecosystem/`
+
+The official satellites (`floem-ui`, `floem-editor`, `flameo`) live in this
+repository under `ecosystem/`, but each is its **own workspace** — the root
+`Cargo.toml` excludes the whole directory. Consequences worth knowing:
+
+- `cargo test --workspace` at the root does not build them. Run cargo from
+  `ecosystem/<satellite>/` instead.
+- A `[patch]` applies only to the workspace that declares it, so a satellite
+  reaching `floem` by path must **re-declare** the vendored `[patch]`
+  (`floem-winit`, `floem-winit-core`, `dpi` / `floem`). Skipping this silently
+  produces two instances of a type across the boundary.
+- Import history is preserved with `git subtree add` where the satellite had real
+  history (`floem-ui`, 17 commits); single-commit scaffolds were imported flat.
 
 ## 3. Forked / vendored third-party code → `vendor/`
 

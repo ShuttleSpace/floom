@@ -529,12 +529,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "72f5acc6cb2ba439de613abc23857ec3d78374d8ed5ac84e9d11336e87da8649"
 
 [[package]]
-name = "bytecount"
-version = "0.6.9"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "175812e0be2bccb6abe50bb8d566126198344f707e304f45c648fd8f2cc0365e"
-
-[[package]]
 name = "bytemuck"
 version = "1.25.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -912,16 +906,15 @@ checksum = "75b325c5dbd37f80359721ad39aca5a29fb04c89279657cffdda8736d0c0b9d2"
 [[package]]
 name = "dpi"
 version = "0.1.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d8b14ccef22fc6f5a8f4d7d768562a182c04ce9a3b3157b91390b52ddfdf1a76"
+dependencies = [
+ "serde",
+]
 
 [[package]]
 name = "dpi"
 version = "0.1.2"
-source = "git+https://github.com/lapce/winit?rev=133268de675a4fda70816d78a7a1435eb972fea1#133268de675a4fda70816d78a7a1435eb972fea1"
-dependencies = [
- "serde",
-]
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d8b14ccef22fc6f5a8f4d7d768562a182c04ce9a3b3157b91390b52ddfdf1a76"
 
 [[package]]
 name = "drm"
@@ -980,12 +973,6 @@ dependencies = [
  "quote",
  "syn 2.0.119",
 ]
-
-[[package]]
-name = "either"
-version = "1.17.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9e5e8f6c15a24b9a3ee5efec809ccd006d3b30e8b3bb63c39af737c7f87daa1d"
 
 [[package]]
 name = "endi"
@@ -1157,18 +1144,18 @@ dependencies = [
  "dispatch2",
  "dpi 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "educe",
- "floem-editor-core",
+ "floem-legacy-reactive",
+ "floem-legacy-renderer",
+ "floem-legacy-renderer-tiny-skia",
+ "floem-legacy-renderer-vger",
+ "floem-ui-events-winit",
  "floem-winit",
- "floem_reactive",
- "floem_renderer",
- "floem_tiny_skia_renderer",
- "floem_vger_renderer",
+ "floem-winit-ohos",
  "futures",
  "image",
  "imbl",
  "indexmap",
  "jni 0.21.1",
- "lapce-xi-rope",
  "muda",
  "napi",
  "napi-derive",
@@ -1190,12 +1177,8 @@ dependencies = [
  "sha2",
  "slotmap",
  "smallvec",
- "strum",
- "strum_macros",
  "taffy",
- "tgui-winit-ohos",
  "ui-events",
- "ui-events-floem-winit",
  "understory_box_tree",
  "understory_event_state",
  "understory_focus",
@@ -1223,20 +1206,6 @@ dependencies = [
  "floem-core-theme",
  "floem-elements",
  "floem-widget-runtime",
-]
-
-[[package]]
-name = "floem-editor-core"
-version = "0.2.0"
-dependencies = [
- "bitflags 2.13.1",
- "itertools",
- "lapce-xi-rope",
- "memchr",
- "serde",
- "strum",
- "strum_macros",
- "ui-events",
 ]
 
 [[package]]
@@ -1539,6 +1508,69 @@ dependencies = [
  "floem-widget-md-validation_messages",
  "floem-widget-md-virtual_scroller",
  "floem-widget-md-window",
+]
+
+[[package]]
+name = "floem-legacy-reactive"
+version = "0.2.0"
+dependencies = [
+ "parking_lot",
+ "smallvec",
+]
+
+[[package]]
+name = "floem-legacy-renderer"
+version = "0.2.0"
+dependencies = [
+ "floem-winit",
+ "fontique",
+ "futures",
+ "parking_lot",
+ "parley",
+ "peniko",
+ "resvg",
+ "wasm-bindgen-futures",
+ "wgpu",
+]
+
+[[package]]
+name = "floem-legacy-renderer-tiny-skia"
+version = "0.2.0"
+dependencies = [
+ "anyhow",
+ "floem-legacy-renderer",
+ "parley",
+ "peniko",
+ "raw-window-handle",
+ "resvg",
+ "rustc-hash 2.1.3",
+ "softbuffer",
+ "swash",
+]
+
+[[package]]
+name = "floem-legacy-renderer-vger"
+version = "0.2.0"
+dependencies = [
+ "anyhow",
+ "floem-legacy-renderer",
+ "floem-vger",
+ "image",
+ "parley",
+ "peniko",
+ "resvg",
+ "swash",
+ "wgpu",
+]
+
+[[package]]
+name = "floem-ui-events-winit"
+version = "0.2.0"
+dependencies = [
+ "dpi 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "floem-winit",
+ "ui-events",
+ "web-time",
 ]
 
 [[package]]
@@ -4053,12 +4085,11 @@ dependencies = [
 [[package]]
 name = "floem-winit"
 version = "25.10.0"
-source = "git+https://github.com/lapce/winit?rev=133268de675a4fda70816d78a7a1435eb972fea1#133268de675a4fda70816d78a7a1435eb972fea1"
 dependencies = [
  "bitflags 2.13.1",
  "cfg_aliases",
  "cursor-icon",
- "dpi 0.1.2 (git+https://github.com/lapce/winit?rev=133268de675a4fda70816d78a7a1435eb972fea1)",
+ "dpi 0.1.2",
  "floem-winit-android",
  "floem-winit-appkit",
  "floem-winit-common",
@@ -4080,11 +4111,10 @@ dependencies = [
 [[package]]
 name = "floem-winit-android"
 version = "25.10.0"
-source = "git+https://github.com/lapce/winit?rev=133268de675a4fda70816d78a7a1435eb972fea1#133268de675a4fda70816d78a7a1435eb972fea1"
 dependencies = [
  "android-activity",
  "bitflags 2.13.1",
- "dpi 0.1.2 (git+https://github.com/lapce/winit?rev=133268de675a4fda70816d78a7a1435eb972fea1)",
+ "dpi 0.1.2",
  "floem-winit-core",
  "ndk",
  "raw-window-handle",
@@ -4095,12 +4125,11 @@ dependencies = [
 [[package]]
 name = "floem-winit-appkit"
 version = "25.10.0"
-source = "git+https://github.com/lapce/winit?rev=133268de675a4fda70816d78a7a1435eb972fea1#133268de675a4fda70816d78a7a1435eb972fea1"
 dependencies = [
  "bitflags 2.13.1",
  "block2 0.6.2",
  "dispatch2",
- "dpi 0.1.2 (git+https://github.com/lapce/winit?rev=133268de675a4fda70816d78a7a1435eb972fea1)",
+ "dpi 0.1.2",
  "floem-winit-common",
  "floem-winit-core",
  "objc2 0.6.4",
@@ -4117,7 +4146,6 @@ dependencies = [
 [[package]]
 name = "floem-winit-common"
 version = "25.10.0"
-source = "git+https://github.com/lapce/winit?rev=133268de675a4fda70816d78a7a1435eb972fea1#133268de675a4fda70816d78a7a1435eb972fea1"
 dependencies = [
  "floem-winit-core",
  "memmap2",
@@ -4132,11 +4160,10 @@ dependencies = [
 [[package]]
 name = "floem-winit-core"
 version = "25.10.0"
-source = "git+https://github.com/lapce/winit?rev=133268de675a4fda70816d78a7a1435eb972fea1#133268de675a4fda70816d78a7a1435eb972fea1"
 dependencies = [
  "bitflags 2.13.1",
  "cursor-icon",
- "dpi 0.1.2 (git+https://github.com/lapce/winit?rev=133268de675a4fda70816d78a7a1435eb972fea1)",
+ "dpi 0.1.2",
  "keyboard-types 0.8.3",
  "raw-window-handle",
  "serde",
@@ -4145,12 +4172,24 @@ dependencies = [
 ]
 
 [[package]]
-name = "floem-winit-orbital"
-version = "25.10.0"
-source = "git+https://github.com/lapce/winit?rev=133268de675a4fda70816d78a7a1435eb972fea1#133268de675a4fda70816d78a7a1435eb972fea1"
+name = "floem-winit-ohos"
+version = "0.4.11"
 dependencies = [
  "bitflags 2.13.1",
- "dpi 0.1.2 (git+https://github.com/lapce/winit?rev=133268de675a4fda70816d78a7a1435eb972fea1)",
+ "dpi 0.1.2",
+ "floem-winit-core",
+ "keyboard-types 0.8.3",
+ "raw-window-handle",
+ "smol_str",
+ "tracing",
+]
+
+[[package]]
+name = "floem-winit-orbital"
+version = "25.10.0"
+dependencies = [
+ "bitflags 2.13.1",
+ "dpi 0.1.2",
  "floem-winit-core",
  "orbclient",
  "raw-window-handle",
@@ -4162,12 +4201,11 @@ dependencies = [
 [[package]]
 name = "floem-winit-uikit"
 version = "25.10.0"
-source = "git+https://github.com/lapce/winit?rev=133268de675a4fda70816d78a7a1435eb972fea1#133268de675a4fda70816d78a7a1435eb972fea1"
 dependencies = [
  "bitflags 2.13.1",
  "block2 0.6.2",
  "dispatch2",
- "dpi 0.1.2 (git+https://github.com/lapce/winit?rev=133268de675a4fda70816d78a7a1435eb972fea1)",
+ "dpi 0.1.2",
  "floem-winit-common",
  "floem-winit-core",
  "objc2 0.6.4",
@@ -4183,13 +4221,12 @@ dependencies = [
 [[package]]
 name = "floem-winit-wayland"
 version = "25.10.0"
-source = "git+https://github.com/lapce/winit?rev=133268de675a4fda70816d78a7a1435eb972fea1#133268de675a4fda70816d78a7a1435eb972fea1"
 dependencies = [
  "ahash",
  "bitflags 2.13.1",
  "calloop",
  "cursor-icon",
- "dpi 0.1.2 (git+https://github.com/lapce/winit?rev=133268de675a4fda70816d78a7a1435eb972fea1)",
+ "dpi 0.1.2",
  "floem-winit-common",
  "floem-winit-core",
  "libc",
@@ -4209,13 +4246,12 @@ dependencies = [
 [[package]]
 name = "floem-winit-web"
 version = "25.10.0"
-source = "git+https://github.com/lapce/winit?rev=133268de675a4fda70816d78a7a1435eb972fea1#133268de675a4fda70816d78a7a1435eb972fea1"
 dependencies = [
  "atomic-waker",
  "bitflags 2.13.1",
  "concurrent-queue",
  "cursor-icon",
- "dpi 0.1.2 (git+https://github.com/lapce/winit?rev=133268de675a4fda70816d78a7a1435eb972fea1)",
+ "dpi 0.1.2",
  "floem-winit-core",
  "js-sys",
  "pin-project",
@@ -4231,11 +4267,10 @@ dependencies = [
 [[package]]
 name = "floem-winit-win32"
 version = "25.10.0"
-source = "git+https://github.com/lapce/winit?rev=133268de675a4fda70816d78a7a1435eb972fea1#133268de675a4fda70816d78a7a1435eb972fea1"
 dependencies = [
  "bitflags 2.13.1",
  "cursor-icon",
- "dpi 0.1.2 (git+https://github.com/lapce/winit?rev=133268de675a4fda70816d78a7a1435eb972fea1)",
+ "dpi 0.1.2",
  "floem-winit-core",
  "raw-window-handle",
  "smol_str",
@@ -4247,13 +4282,12 @@ dependencies = [
 [[package]]
 name = "floem-winit-x11"
 version = "25.10.0"
-source = "git+https://github.com/lapce/winit?rev=133268de675a4fda70816d78a7a1435eb972fea1#133268de675a4fda70816d78a7a1435eb972fea1"
 dependencies = [
  "bitflags 2.13.1",
  "bytemuck",
  "calloop",
  "cursor-icon",
- "dpi 0.1.2 (git+https://github.com/lapce/winit?rev=133268de675a4fda70816d78a7a1435eb972fea1)",
+ "dpi 0.1.2",
  "floem-winit-common",
  "floem-winit-core",
  "libc",
@@ -4268,61 +4302,8 @@ dependencies = [
 ]
 
 [[package]]
-name = "floem_reactive"
-version = "0.2.0"
-dependencies = [
- "parking_lot",
- "smallvec",
-]
-
-[[package]]
-name = "floem_renderer"
-version = "0.2.0"
-dependencies = [
- "floem-winit",
- "fontique",
- "futures",
- "parking_lot",
- "parley",
- "peniko",
- "resvg",
- "wasm-bindgen-futures",
- "wgpu",
-]
-
-[[package]]
 name = "floem_testing"
 version = "0.1.0"
-
-[[package]]
-name = "floem_tiny_skia_renderer"
-version = "0.2.0"
-dependencies = [
- "anyhow",
- "floem_renderer",
- "parley",
- "peniko",
- "raw-window-handle",
- "resvg",
- "rustc-hash 2.1.3",
- "softbuffer",
- "swash",
-]
-
-[[package]]
-name = "floem_vger_renderer"
-version = "0.2.0"
-dependencies = [
- "anyhow",
- "floem-vger",
- "floem_renderer",
- "image",
- "parley",
- "peniko",
- "resvg",
- "swash",
- "wgpu",
-]
 
 [[package]]
 name = "foldhash"
@@ -5044,15 +5025,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "itertools"
-version = "0.14.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2b192c782037fadd9cfa75548310488aabdbf3d2da73885b31bd0abd03351285"
-dependencies = [
- "either",
-]
-
-[[package]]
 name = "itoa"
 version = "1.0.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5202,19 +5174,6 @@ dependencies = [
  "polycool",
  "serde",
  "smallvec",
-]
-
-[[package]]
-name = "lapce-xi-rope"
-version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "edc91b8df26aaa2700656a7c1a5b0aeb587aca512a44618974f79673dbe793ba"
-dependencies = [
- "bytecount",
- "memchr",
- "regex",
- "serde",
- "unicode-segmentation",
 ]
 
 [[package]]
@@ -6844,27 +6803,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "strum"
-version = "0.28.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9628de9b8791db39ceda2b119bbe13134770b56c138ec1d3af810d045c04f9bd"
-dependencies = [
- "strum_macros",
-]
-
-[[package]]
-name = "strum_macros"
-version = "0.28.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ab85eea0270ee17587ed4156089e10b9e6880ee688791d45a905f5b1ca36f664"
-dependencies = [
- "heck 0.5.0",
- "proc-macro2",
- "quote",
- "syn 2.0.119",
-]
-
-[[package]]
 name = "svgtypes"
 version = "0.16.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6968,21 +6906,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "06794f8f6c5c898b3275aebefa6b8a1cb24cd2c6c79397ab15774837a0bc5755"
 dependencies = [
  "winapi-util",
-]
-
-[[package]]
-name = "tgui-winit-ohos"
-version = "0.4.11"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5af92abcbd0be886ac0ccadcfefa3134dd2fc0d1524535b9d5e176d55426a7e7"
-dependencies = [
- "bitflags 2.13.1",
- "dpi 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "keyboard-types 0.8.3",
- "raw-window-handle",
- "smol_str",
- "tracing",
- "winit-core",
 ]
 
 [[package]]
@@ -7257,16 +7180,6 @@ dependencies = [
  "dpi 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "keyboard-types 0.8.3",
  "kurbo",
-]
-
-[[package]]
-name = "ui-events-floem-winit"
-version = "0.2.0"
-dependencies = [
- "dpi 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "floem-winit",
- "ui-events",
- "web-time",
 ]
 
 [[package]]
@@ -8235,21 +8148,6 @@ name = "windows_x86_64_msvc"
 version = "0.53.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d6bbff5f0aada427a1e5a6da5f1f98158182f26556f345ac9e04d36d0ebed650"
-
-[[package]]
-name = "winit-core"
-version = "0.31.0-beta.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e4f0ccd7abb43740e2c6124ac7cae7d865ecec74eec63783e8922577ac232583"
-dependencies = [
- "bitflags 2.13.1",
- "cursor-icon",
- "dpi 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "keyboard-types 0.8.3",
- "raw-window-handle",
- "smol_str",
- "web-time",
-]
 
 [[package]]
 name = "winnow"

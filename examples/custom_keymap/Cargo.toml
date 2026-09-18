@@ -5,4 +5,4 @@ edition = "2021"
 
 [dependencies]
 floem = { path = "../.." }
-floem-editor = { path = "../../../floem-editor/floem-editor" }
+floem-editor = { path = "../../ecosystem/floem-editor/floem-editor" }
