@@ -54,9 +54,9 @@
 //!
 //! ### Signals as State
 //!
-//! You can create reactive state by creating a signal anywhere in the program using [`RwSignal::new()`](floem_reactive::RwSignal::new), [`RwSignal::new_split()`](floem_reactive::RwSignal::new_split), or use a [different signal type](floem_reactive).
+//! You can create reactive state by creating a signal anywhere in the program using [`RwSignal::new()`](floem_legacy_reactive::RwSignal::new), [`RwSignal::new_split()`](floem_legacy_reactive::RwSignal::new_split), or use a [different signal type](floem_legacy_reactive).
 //!
-//! When you use a signal by calling the [`get`](floem_reactive::SignalGet::get) or [`with`](floem_reactive::SignalWith::with) methods, (which are also called when you use an operator such as `==`)
+//! When you use a signal by calling the [`get`](floem_legacy_reactive::SignalGet::get) or [`with`](floem_legacy_reactive::SignalWith::with) methods, (which are also called when you use an operator such as `==`)
 //! the runtime will automatically subscribe the correct side effects
 //! to changes in that signal, creating reactivity. To the programmer this is transparent.
 //! By simply accessing the value where you want to use it, the reactivity will "just work" and
@@ -226,19 +226,19 @@ pub use box_tree::{BoxTree, ElementId, ElementMeta, FocusNavMeta};
 pub(crate) use box_tree::{bump_focus_nav_meta_revision, focus_nav_meta_revision};
 
 pub use app::{AppConfig, AppEvent, Application, launch, quit_app, reopen};
-pub use floem_reactive as reactive;
+pub use floem_legacy_reactive as reactive;
 // Re-export the most commonly used reactive primitives at the crate root so they
 // can be reached as `floem::Scope`, `floem::create_global_rw_signal`, etc. without
 // going through the `reactive` module path. The full set remains available under
 // `floem::reactive::*`.
-pub use floem_reactive::{
+pub use floem_legacy_reactive::{
     Memo, RwSignal, Scope, Trigger, create_effect, create_global_memo, create_global_rw_signal,
     create_global_signal, create_global_trigger, create_memo, create_rw_signal, create_signal,
     create_trigger, root_scope,
 };
-pub use floem_renderer::Renderer;
-pub use floem_renderer::Svg as RendererSvg;
-pub use floem_renderer::gpu_resources::GpuResources;
+pub use floem_legacy_renderer::Renderer;
+pub use floem_legacy_renderer::Svg as RendererSvg;
+pub use floem_legacy_renderer::gpu_resources::GpuResources;
 pub use imbl;
 pub use layout::ScreenLayout;
 #[cfg(not(any(
@@ -283,7 +283,7 @@ pub mod prelude {
     pub use crate::views::*;
     pub use crate::{HasViewId, IntoView, ParentView, View};
     #[allow(deprecated)]
-    pub use floem_reactive::{
+    pub use floem_legacy_reactive::{
         Memo, RwSignal, Scope, SignalGet, SignalTrack, SignalUpdate, SignalWith, Trigger,
         create_effect, create_global_memo, create_global_rw_signal, create_global_signal,
         create_global_trigger, create_memo, create_rw_signal, create_signal, create_trigger,

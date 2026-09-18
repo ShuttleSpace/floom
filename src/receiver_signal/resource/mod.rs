@@ -4,7 +4,7 @@ mod builder;
 
 use super::common::{EventLoopExecutor, NoInitial};
 use builder::ResourceBuilder;
-use floem_reactive::ReadSignal;
+use floem_legacy_reactive::ReadSignal;
 use std::hash::Hash;
 
 // Resource-specific type-state markers
@@ -54,7 +54,7 @@ pub struct Resource<T> {
     /// The signal indicating whether an async fetch operation is currently in progress.
     pub(super) finished: ReadSignal<bool>,
     /// A trigger for manually rerunning the `fetcher` with the last used `source`.
-    pub(super) refetch_trigger: floem_reactive::RwSignal<u64>,
+    pub(super) refetch_trigger: floem_legacy_reactive::RwSignal<u64>,
 }
 
 impl<T> Copy for Resource<T> {}
@@ -178,7 +178,7 @@ impl<T: 'static> Resource<T> {
     /// - Spawns a new fetch operation
     /// - Bypasses memoization for this fetch
     pub fn refetch(&self) {
-        use floem_reactive::SignalUpdate;
+        use floem_legacy_reactive::SignalUpdate;
         self.refetch_trigger.update(|count| *count += 1);
     }
 
@@ -189,30 +189,30 @@ impl<T: 'static> Resource<T> {
     where
         T: 'static,
     {
-        use floem_reactive::SignalGet;
+        use floem_legacy_reactive::SignalGet;
         !self.finished.get()
     }
 }
 
-impl<T> floem_reactive::SignalWith<T> for Resource<T> {
-    fn id(&self) -> floem_reactive::ReactiveId {
+impl<T> floem_legacy_reactive::SignalWith<T> for Resource<T> {
+    fn id(&self) -> floem_legacy_reactive::ReactiveId {
         self.data.id()
     }
 }
 
-impl<T> floem_reactive::SignalRead<T> for Resource<T> {
-    fn id(&self) -> floem_reactive::ReactiveId {
+impl<T> floem_legacy_reactive::SignalRead<T> for Resource<T> {
+    fn id(&self) -> floem_legacy_reactive::ReactiveId {
         self.data.id()
     }
 
-    fn try_read(&self) -> Option<floem_reactive::ReadRef<'_, T>>
+    fn try_read(&self) -> Option<floem_legacy_reactive::ReadRef<'_, T>>
     where
         T: 'static,
     {
         self.data.try_read()
     }
 
-    fn try_read_untracked(&self) -> Option<floem_reactive::ReadRef<'_, T>>
+    fn try_read_untracked(&self) -> Option<floem_legacy_reactive::ReadRef<'_, T>>
     where
         T: 'static,
     {
@@ -220,14 +220,14 @@ impl<T> floem_reactive::SignalRead<T> for Resource<T> {
     }
 }
 
-impl<T: Clone + 'static> floem_reactive::SignalGet<T> for Resource<T> {
-    fn id(&self) -> floem_reactive::ReactiveId {
+impl<T: Clone + 'static> floem_legacy_reactive::SignalGet<T> for Resource<T> {
+    fn id(&self) -> floem_legacy_reactive::ReactiveId {
         self.data.id()
     }
 }
 
-impl<T: 'static> floem_reactive::SignalTrack<T> for Resource<T> {
-    fn id(&self) -> floem_reactive::ReactiveId {
+impl<T: 'static> floem_legacy_reactive::SignalTrack<T> for Resource<T> {
+    fn id(&self) -> floem_legacy_reactive::ReactiveId {
         self.data.id()
     }
 }

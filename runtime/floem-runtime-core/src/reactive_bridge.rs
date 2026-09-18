@@ -3,7 +3,7 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use floem_reactive::{Effect, Runtime, RwSignal, Scope, SignalGet};
+use floem_legacy_reactive::{Effect, Runtime, RwSignal, Scope, SignalGet};
 use floem_types::ElementId;
 
 use crate::arena::ElementArena;

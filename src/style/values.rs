@@ -1,8 +1,8 @@
 //! Core style property value trait and implementations.
 
-use floem_reactive::{RwSignal, SignalGet, SignalUpdate as _};
-use floem_renderer::Renderer;
-use floem_renderer::text::{FontWeight, LineHeightValue};
+use floem_legacy_reactive::{RwSignal, SignalGet, SignalUpdate as _};
+use floem_legacy_renderer::Renderer;
+use floem_legacy_renderer::text::{FontWeight, LineHeightValue};
 use peniko::color::{HueDirection, palette};
 use peniko::kurbo::{self, Affine, Point, Stroke, Vec2};
 use peniko::{
@@ -82,7 +82,7 @@ impl<T> ContextValue<T> {
     }
 
     pub fn resolve(&self, style: &Style) -> T {
-        floem_reactive::Runtime::with_effect(style.effect_context.clone(), || {
+        floem_legacy_reactive::Runtime::with_effect(style.effect_context.clone(), || {
             // todo use context
             (self.eval)(style)
         })

@@ -14,7 +14,7 @@
 //! ## State management
 //!
 //! For all reactive state that your type contains, either in the form of signals or derived signals, you need to process the changes within an effect.
-//! The most common pattern is to [`get`](floem_reactive::ReadSignal::get) the data in an effect and pass it in to `id.update_state()` and then handle that data in the `update` method of the View trait.
+//! The most common pattern is to [`get`](floem_legacy_reactive::ReadSignal::get) the data in an effect and pass it in to `id.update_state()` and then handle that data in the `update` method of the View trait.
 //!
 //! For example a minimal slider might look like the following. First, we define the struct with the [`ViewData`] that contains the [`Id`].
 //! Then, we use a function to construct the slider. As part of this function we create an effect that will be re-run every time the signals in the  `percent` closure change.
@@ -59,7 +59,7 @@ pub use storage::{FinalizeFn, LayoutNodeCx, LayoutTree, MeasureCx, MeasureFn};
 pub(crate) use storage::*;
 pub use tuple::*;
 
-use floem_reactive::{Effect, ReadSignal, RwSignal, Scope, SignalGet, UpdaterEffect};
+use floem_legacy_reactive::{Effect, ReadSignal, RwSignal, Scope, SignalGet, UpdaterEffect};
 use peniko::kurbo::*;
 use smallvec::SmallVec;
 use std::any::Any;
@@ -916,7 +916,7 @@ impl IntoView for LazyView<()> {
 /// ## State Management in a Custom View
 ///
 /// For all reactive state that your type contains, either in the form of signals or derived signals, you need to process the changes within an effect.
-/// The most common pattern is to [`get`](floem_reactive::SignalGet::get) the data in an effect and pass it in to `id.update_state()` and then handle that data in the `update` method of the `View` trait.
+/// The most common pattern is to [`get`](floem_legacy_reactive::SignalGet::get) the data in an effect and pass it in to `id.update_state()` and then handle that data in the `update` method of the `View` trait.
 ///
 /// For example a minimal slider might look like the following. First, we define the struct that contains the [`ViewId`](crate::ViewId).
 /// Then, we use a function to construct the slider. As part of this function we create an effect that will be re-run every time the signals in the  `percent` closure change.

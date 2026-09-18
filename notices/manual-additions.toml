@@ -1,0 +1,16 @@
+# cargo-about manual license additions.
+#
+# Floem vendors forked upstream crates in `vendor/`. They are not on crates.io,
+# so cargo-about cannot auto-detect their licenses. Record them here, taken from
+# each fork's upstream project (see `vendor/*/NOTICE.md` for the full source +
+# delta note).
+
+[[annotations]]
+id = "vendor/floem-winit"
+license = "Apache-2.0 OR MIT"
+notes = "Fork of lapce/winit @ 133268de. See vendor/floem-winit/NOTICE.md."
+
+[[annotations]]
+id = "vendor/tgui-winit-ohos"
+license = "Apache-2.0 OR MIT"
+notes = "Fork of tgui-winit-ohos 0.4.11. See vendor/tgui-winit-ohos/NOTICE.md."

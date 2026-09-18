@@ -1,4 +1,4 @@
-use floem_reactive::Scope;
+use floem_legacy_reactive::Scope;
 use floem_task::{CancelToken, ResourceState, SyncExecutor, resource, spawn, ui_spawn};
 use std::cell::Cell;
 use std::rc::Rc;

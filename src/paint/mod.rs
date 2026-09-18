@@ -11,8 +11,8 @@ pub mod renderer;
 pub use border_path_iter::{BorderPath, BorderPathEvent};
 pub use renderer::Renderer;
 
-use floem_renderer::Renderer as FloemRenderer;
-use floem_renderer::gpu_resources::{GpuResourceError, GpuResources};
+use floem_legacy_renderer::Renderer as FloemRenderer;
+use floem_legacy_renderer::gpu_resources::{GpuResourceError, GpuResources};
 use peniko::kurbo::{Affine, RoundedRect, Shape, Size};
 use std::ops::{Deref, DerefMut};
 use std::sync::Arc;

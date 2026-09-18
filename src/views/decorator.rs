@@ -4,7 +4,7 @@
 //!
 //! The decorator trait is the primary interface for extending the appearance and functionality of ['View']s.
 
-use floem_reactive::{Effect, SignalUpdate, UpdaterEffect};
+use floem_legacy_reactive::{Effect, SignalUpdate, UpdaterEffect};
 use std::rc::Rc;
 use ui_events::keyboard::{Key, KeyboardEvent, Modifiers};
 

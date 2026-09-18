@@ -89,7 +89,7 @@
 
 use std::{any::Any, hash::Hash, marker::PhantomData, rc::Rc};
 
-use floem_reactive::{Effect, ReadSignal, RwSignal, Scope, SignalWith};
+use floem_legacy_reactive::{Effect, ReadSignal, RwSignal, Scope, SignalWith};
 use smallvec::SmallVec;
 
 use crate::{

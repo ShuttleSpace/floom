@@ -3,6 +3,13 @@
 - **Date:** 2026-09-15
 - **Spec:** `docs/superpowers/specs/2026-09-02-floem-2-complete-architecture.md` §5 (Workspace and Crate Topology), §6 (Dependency Direction Rules)
 - **Plan:** `docs/superpowers/plans/2026-09-02-floem-2-complete-implementation-plan.md`
+- **Status update (2026-09-17):** the rows below whose decision was forced by a
+  legacy-crate *name collision* (`render/` vs the legacy `renderer/`, and
+  `tooling/floem-testkit` vs the legacy `test/`), and the *naming* half of the
+  `reactive/` gap, are no longer collisions — the v1 crates were relocated under
+  `legacy/` with a `floem-legacy-` prefix. The rows are left as written to record
+  what was decided on 2026-09-15; see the **Addendum** at the end for the current
+  state.
 
 ## The question
 
@@ -67,3 +74,50 @@ gate that cannot fail is worse than no gate, because it is taken as evidence.
   2.0 tree, `floem-{gesture,persistence,store,task,style,theme,native}` and the
   non-desktop platform backends have no inbound edges. Several are backends
   chosen at runtime (expected); the framework ones are the Phase-15 glue gap.
+
+## Addendum (2026-09-17): the legacy-crate collisions are resolved
+
+The two rows above whose decision was *forced by a name collision* are now moot,
+and so is the *naming* half of the `reactive/` gap. Following the
+[EpicGames/lore](https://github.com/EpicGames/lore) workspace model, every v1
+crate moved under `legacy/` and took a `floem-legacy-` package prefix, and the
+`ui-events` bridge moved under `ui-events/`:
+
+| was (path) | now (path) | package name → import identifier |
+| --- | --- | --- |
+| `renderer/` | `legacy/floem-renderer/` | `floem_renderer` → `floem-legacy-renderer` (`floem_legacy_renderer`) |
+| `vello/` | `legacy/floem-renderer-vello/` | `floem_vello_renderer` → `floem-legacy-renderer-vello` |
+| `skia/` | `legacy/floem-renderer-skia/` | `floem_skia_renderer` → `floem-legacy-renderer-skia` |
+| `vger/` | `legacy/floem-renderer-vger/` | `floem_vger_renderer` → `floem-legacy-renderer-vger` |
+| `tiny_skia/` | `legacy/floem-renderer-tiny-skia/` | `floem_tiny_skia_renderer` → `floem-legacy-renderer-tiny-skia` |
+| `reactive/` | `legacy/floem-reactive/` | `floem_reactive` → `floem-legacy-reactive` |
+| `test/` | `legacy/floem-test/` | `floem_test` → `floem-legacy-test` |
+| `ui-events-winit/` | `ui-events/floem-winit/` | `ui-events-floem-winit` → `floem-ui-events-winit` (`floem_ui_events_winit`) |
+
+How that settles the three rows above:
+
+- **`render/…` vs `renderer/`** — the collision is gone. The v1 renderer is now
+  `legacy/floem-renderer` (package `floem-legacy-renderer`); the 2.0 ABI keeps
+  `render/floem-renderer` (package `floem-renderer`). The two no longer share an
+  import name (`floem_legacy_renderer` vs `floem_renderer`), so keeping the v1
+  crate at a root-level `renderer/` is no longer required for that reason.
+- **`tooling/floem-test` → `tooling/floem-testkit`** — likewise gone: the v1
+  harness is `legacy/floem-test` (package `floem-legacy-test`), so `floem-testkit`
+  has no name to collide with, and renaming the v1 crate is no longer "out of
+  scope."
+- **`reactive/` gap** — the *naming* half is resolved the same way. The
+  *architectural* half is unchanged: `floem-runtime`, `floem-runtime-core`,
+  `floem-store` and `floem-task` still depend on `floem-legacy-reactive`, and the
+  script still reports that as a NOTE, not a failure. Giving 2.0 its own reactive
+  layer remains open work.
+
+The layer table now carries the legacy crates explicitly at **L0**
+(`floem-legacy-*`): anything may depend *down* onto them, nothing may depend *up*
+out of them, so a stray `legacy → 2.0` edge fails instead of being silently
+skipped. `LEGACY_DEPS` in the script tracks the one legacy edge that survives
+(the v1 reactive graph).
+
+Vendored forks moved from `platform-compat/` to `vendor/`, each with a
+`NOTICE.md` (upstream URL, rev/version, local delta, exit criterion), and
+`notices/` holds the `cargo-deny` / `cargo-about` configuration. The conventions
+are written down in `docs/workspace-conventions.md`.

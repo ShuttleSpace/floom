@@ -4,7 +4,7 @@
 
 use std::{cell::RefCell, rc::Rc, time::Duration};
 
-use floem_reactive::{Effect, SignalGet, SignalUpdate};
+use floem_legacy_reactive::{Effect, SignalGet, SignalUpdate};
 use peniko::Brush;
 use peniko::kurbo::{Point, Rect, Size};
 use ui_events::pointer::PointerEvent;

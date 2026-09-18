@@ -14,9 +14,9 @@ use crate::{
     style_class,
     view::LayoutNodeCx,
 };
-use floem_reactive::{Effect, SignalGet, SignalTrack, SignalUpdate, SignalWith};
+use floem_legacy_reactive::{Effect, SignalGet, SignalTrack, SignalUpdate, SignalWith};
 
-use floem_renderer::Renderer;
+use floem_legacy_renderer::Renderer;
 use taffy::Dimension;
 use ui_events::keyboard::{Key, KeyState, KeyboardEvent, Modifiers, NamedKey};
 use ui_events::pointer::{PointerButton, PointerButtonEvent, PointerEvent};
@@ -110,8 +110,8 @@ impl BufferState {
 /// Useful for submitting forms using a keyboard.
 /// ```
 /// # use floem::views::{Decorators, TextInput, TextInputEnter};
-/// # use floem_reactive::RwSignal;
-/// # use floem_reactive::SignalGet;
+/// # use floem_legacy_reactive::RwSignal;
+/// # use floem_legacy_reactive::SignalGet;
 /// let form = RwSignal::new(String::new());
 /// TextInput::new(form)
 ///     .placeholder("fill the form")
@@ -334,7 +334,7 @@ impl TextInput {
     /// Add placeholder text visible when buffer is empty.
     /// ```
     /// # use floem::views::TextInput;
-    /// # use floem_reactive::RwSignal;
+    /// # use floem_legacy_reactive::RwSignal;
     /// let text = RwSignal::new(String::new());
     /// let simple = TextInput::new(text)
     ///     // Optional placeholder text

@@ -1,4 +1,4 @@
-use floem_reactive::{Effect, SignalGet};
+use floem_legacy_reactive::{Effect, SignalGet};
 use floem_store::store;
 use std::cell::Cell;
 use std::rc::Rc;

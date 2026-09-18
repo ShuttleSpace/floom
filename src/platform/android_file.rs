@@ -31,7 +31,7 @@ use jni::{
 use parking_lot::Mutex;
 use std::sync::atomic::{AtomicU32, Ordering};
 
-use floem_reactive::Scope;
+use floem_legacy_reactive::Scope;
 
 use crate::ext_event::create_ext_action;
 use crate::platform::android_jni::AndroidJni;

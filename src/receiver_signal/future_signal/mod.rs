@@ -26,8 +26,8 @@ use builder::FutureSignalBuilder;
 ///     .build();
 /// ```
 pub struct FutureSignal<T> {
-    pub(super) value: floem_reactive::ReadSignal<Option<T>>,
-    pub(super) finished: floem_reactive::ReadSignal<bool>,
+    pub(super) value: floem_legacy_reactive::ReadSignal<Option<T>>,
+    pub(super) finished: floem_legacy_reactive::ReadSignal<bool>,
 }
 
 impl<T: 'static> FutureSignal<T> {
@@ -75,36 +75,36 @@ impl<T: 'static> FutureSignal<T> {
     }
 
     pub fn is_finished(&self) -> bool {
-        use floem_reactive::SignalGet;
+        use floem_legacy_reactive::SignalGet;
         self.finished.get()
     }
 }
 
-impl<T: Clone> floem_reactive::SignalGet<Option<T>> for FutureSignal<T> {
-    fn id(&self) -> floem_reactive::ReactiveId {
+impl<T: Clone> floem_legacy_reactive::SignalGet<Option<T>> for FutureSignal<T> {
+    fn id(&self) -> floem_legacy_reactive::ReactiveId {
         self.value.id()
     }
 }
 
-impl<T> floem_reactive::SignalWith<Option<T>> for FutureSignal<T> {
-    fn id(&self) -> floem_reactive::ReactiveId {
+impl<T> floem_legacy_reactive::SignalWith<Option<T>> for FutureSignal<T> {
+    fn id(&self) -> floem_legacy_reactive::ReactiveId {
         self.value.id()
     }
 }
 
-impl<T> floem_reactive::SignalRead<Option<T>> for FutureSignal<T> {
-    fn id(&self) -> floem_reactive::ReactiveId {
+impl<T> floem_legacy_reactive::SignalRead<Option<T>> for FutureSignal<T> {
+    fn id(&self) -> floem_legacy_reactive::ReactiveId {
         self.value.id()
     }
 
-    fn try_read(&self) -> Option<floem_reactive::ReadRef<'_, Option<T>>>
+    fn try_read(&self) -> Option<floem_legacy_reactive::ReadRef<'_, Option<T>>>
     where
         T: 'static,
     {
         self.value.try_read()
     }
 
-    fn try_read_untracked(&self) -> Option<floem_reactive::ReadRef<'_, Option<T>>>
+    fn try_read_untracked(&self) -> Option<floem_legacy_reactive::ReadRef<'_, Option<T>>>
     where
         T: 'static,
     {
@@ -112,8 +112,8 @@ impl<T> floem_reactive::SignalRead<Option<T>> for FutureSignal<T> {
     }
 }
 
-impl<T> floem_reactive::SignalTrack<Option<T>> for FutureSignal<T> {
-    fn id(&self) -> floem_reactive::ReactiveId {
+impl<T> floem_legacy_reactive::SignalTrack<Option<T>> for FutureSignal<T> {
+    fn id(&self) -> floem_legacy_reactive::ReactiveId {
         self.value.id()
     }
 }

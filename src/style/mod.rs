@@ -127,7 +127,7 @@
 //!
 //! You can create custom extractors and embed them in your custom views so that you can get out any built in prop, or any of your custom props from the final combined style that is applied to your `View`.
 
-use floem_renderer::text::FontWeight as FontWeightProp;
+use floem_legacy_renderer::text::FontWeight as FontWeightProp;
 use peniko::color::palette;
 use peniko::kurbo::{self, Affine, RoundedRect, Stroke, Vec2};
 use peniko::{Brush, Color};
@@ -883,7 +883,7 @@ pub struct Style {
     /// The effect context that was active when this style was created.
     /// This is restored when evaluating context mappings and selectors to ensure
     /// reactive dependencies are tracked correctly.
-    effect_context: Option<Rc<dyn floem_reactive::EffectTrait>>,
+    effect_context: Option<Rc<dyn floem_legacy_reactive::EffectTrait>>,
 }
 impl Default for Style {
     fn default() -> Self {
@@ -893,7 +893,7 @@ impl Default for Style {
 
 impl Style {
     fn with_capacity(capacity: usize) -> Self {
-        let effect_context = floem_reactive::Runtime::get_current_effect();
+        let effect_context = floem_legacy_reactive::Runtime::get_current_effect();
         let map = Rc::new(fx_hash_map_with_capacity(capacity));
         Self {
             merge_id: next_style_merge_id(),
@@ -1300,7 +1300,7 @@ impl Style {
     pub(crate) fn apply_iter<'a>(
         &mut self,
         iter: impl Iterator<Item = (&'a StyleKey, &'a Rc<dyn Any>)>,
-        source_effect_context: Option<Rc<dyn floem_reactive::EffectTrait>>,
+        source_effect_context: Option<Rc<dyn floem_legacy_reactive::EffectTrait>>,
     ) {
         if self.effect_context.is_none() && source_effect_context.is_some() {
             self.effect_context = source_effect_context;

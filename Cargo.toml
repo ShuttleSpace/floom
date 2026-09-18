@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-exclude = ["platform-compat"]
+exclude = ["vendor"]
 members = [
   "foundation/floem-types",
   "foundation/floem-core",
@@ -42,15 +42,15 @@ members = [
   "widgets/floem-widgets",
   "app/floem-app",
   "tooling/floem-testkit",
-  "renderer",
-  "skia",
-  "vello",
-  "vger",
-  "tiny_skia",
-  "reactive",
+  "legacy/floem-renderer",
+  "legacy/floem-renderer-skia",
+  "legacy/floem-renderer-vello",
+  "legacy/floem-renderer-vger",
+  "legacy/floem-renderer-tiny-skia",
+  "legacy/floem-reactive",
   "examples/*",
-  "ui-events-winit",
-  "test",
+  "ui-events/floem-winit",
+  "legacy/floem-test",
 ]
 default-members = [
   ".",
@@ -94,14 +94,14 @@ default-members = [
   "widgets/floem-widgets",
   "app/floem-app",
   "tooling/floem-testkit",
-  "renderer",
-  "skia",
-  "vello",
-  "vger",
-  "tiny_skia",
-  "reactive",
-  "ui-events-winit",
-  "test",
+  "legacy/floem-renderer",
+  "legacy/floem-renderer-skia",
+  "legacy/floem-renderer-vello",
+  "legacy/floem-renderer-vger",
+  "legacy/floem-renderer-tiny-skia",
+  "legacy/floem-reactive",
+  "ui-events/floem-winit",
+  "legacy/floem-test",
 ]
 
 [workspace.package]
@@ -143,7 +143,7 @@ swash = { version = "0.2" }
 muda = { version = "0.17.1", default-features = false }
 winit = { git = "https://github.com/lapce/winit", rev = "133268de675a4fda70816d78a7a1435eb972fea1", package = "floem-winit" }
 ui-events = { version = "0.3", features = ["kurbo"] }
-ui-events-winit = { path = "./ui-events-winit", package = "ui-events-floem-winit" }
+floem-ui-events-winit = { path = "./ui-events/floem-winit", package = "floem-ui-events-winit" }
 dpi = { version = "0.1.2", default-features = false }
 rustc-hash = "2.1"
 
@@ -165,19 +165,19 @@ parley = { workspace = true }
 serde = { workspace = true, optional = true }
 serde_json = { workspace = true }
 paste = "1.0"
-floem_renderer = { path = "renderer", version = "0.2.0" }
-floem_skia_renderer = { path = "skia", version = "0.2.0", optional = true }
-floem_vello_renderer = { path = "vello", version = "0.2.0", optional = true }
-floem_vger_renderer = { path = "vger", version = "0.2.0", optional = true }
-floem_tiny_skia_renderer = { path = "tiny_skia", version = "0.2.0" }
-floem_reactive = { path = "reactive", version = "0.2.0" }
+floem-legacy-renderer = { path = "legacy/floem-renderer", version = "0.2.0" }
+floem-legacy-renderer-skia = { path = "legacy/floem-renderer-skia", version = "0.2.0", optional = true }
+floem-legacy-renderer-vello = { path = "legacy/floem-renderer-vello", version = "0.2.0", optional = true }
+floem-legacy-renderer-vger = { path = "legacy/floem-renderer-vger", version = "0.2.0", optional = true }
+floem-legacy-renderer-tiny-skia = { path = "legacy/floem-renderer-tiny-skia", version = "0.2.0" }
+floem-legacy-reactive = { path = "legacy/floem-reactive", version = "0.2.0" }
 parking_lot = { workspace = true }
 image = { workspace = true }
 winit = { workspace = true }
 futures = { version = "0.3.31" }
 crossbeam = { version = "0.8", optional = true }
 ui-events.workspace = true
-ui-events-winit.workspace = true
+floem-ui-events-winit.workspace = true
 dpi.workspace = true
 wgpu.workspace = true
 fluent-bundle = { version = "0.16", optional = true }
@@ -303,8 +303,8 @@ objc2-ui-kit = { version = "0.3", features = [
 # retargeting that crate onto `floem-winit-core`. The drift is near-zero (the
 # `ApplicationHandler` trait is byte-identical and tgui only uses the unchanged
 # subset), so the retarget is a pure `winit_core -> floem_winit_core` rename —
-# see `platform-compat/tgui-winit-ohos/patch/retarget-to-floem-winit-core.patch` and
-# `docs/ohos.md`. The retargeted fork lives under `platform-compat/tgui-winit-ohos/`.
+# see `vendor/tgui-winit-ohos/patch/retarget-to-floem-winit-core.patch` and
+# `docs/ohos.md`. The retargeted fork lives under `vendor/tgui-winit-ohos/`.
 [target.'cfg(target_env = "ohos")'.dependencies]
 tgui-winit-ohos = "0.4"
 # N-API bridge for clipboard / file_dialog / open_external / receive_files.
@@ -319,10 +319,10 @@ napi-derive = "2"
 
 [features]
 default = ["default-image-formats", "vger", "serde"]
-skia = ["dep:floem_skia_renderer"]
-vello = ["dep:floem_vello_renderer"]
-vger = ["dep:floem_vger_renderer"]
-# tiny-skia = ["dep:floem_tiny_skia_renderer"]
+skia = ["dep:floem-legacy-renderer-skia"]
+vello = ["dep:floem-legacy-renderer-vello"]
+vger = ["dep:floem-legacy-renderer-vger"]
+# tiny-skia = ["dep:floem-legacy-renderer-tiny-skia"]
 serde = [
   "dep:serde",
   "winit/serde",
@@ -349,12 +349,12 @@ image-tiff = ["image/tiff"]
 image-webp = ["image/webp"]
 tokio = ["dep:tokio"]
 # rfd (file dialog) async runtime
-crossbeam = ["dep:crossbeam", "floem_renderer/crossbeam"]
+crossbeam = ["dep:crossbeam", "floem-legacy-renderer/crossbeam"]
 localization = ["dep:fluent-bundle", "dep:unic-langid", "dep:sys-locale", "dep:ouroboros"]
 
 [dev-dependencies]
 criterion = { version = "0.8.1", features = ["html_reports"] }
-floem_renderer = { path = "renderer" }
+floem-legacy-renderer = { path = "legacy/floem-renderer" }
 peniko = { workspace = true }
 # Doc examples in `views::dropdown` show the enum-driven dropdown workflow,
 # which is the one place the docs ask users to reach for `strum`.
@@ -407,11 +407,11 @@ harness = false
 # `export_ohos_winit_app!(floem_app_factory)` cannot compile until both sides
 # share one `ApplicationHandler` definition. This patch points the published
 # crate at a local fork that renames `winit_core -> floem_winit_core` (pure
-# crate rename, zero logic change — see platform-compat/tgui-winit-ohos/patch/README.md).
+# crate rename, zero logic change — see vendor/tgui-winit-ohos/patch/README.md).
 # The fork's `floem-winit-core` git rev matches floem's `floem-winit` git rev
 # exactly, so the trait is byte-identical.
 [patch.crates-io]
-tgui-winit-ohos = { path = "platform-compat/tgui-winit-ohos" }
+tgui-winit-ohos = { path = "vendor/tgui-winit-ohos" }
 
 # --- iOS: fork floem-winit to forward shared files/URLs (floem #109) ---
 # lapce/winit @ 133268de owns the `WinitApplicationDelegate` and used to drop
@@ -424,4 +424,4 @@ tgui-winit-ohos = { path = "platform-compat/tgui-winit-ohos" }
 # so the patch must point at the `floem-winit` member package (`winit/`), not
 # the workspace root. See docs/ios.md "Step 8b".
 [patch."https://github.com/lapce/winit"]
-floem-winit = { path = "platform-compat/floem-winit/winit" }
+floem-winit = { path = "vendor/floem-winit/winit" }

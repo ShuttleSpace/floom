@@ -30,7 +30,7 @@ use objc2_foundation::{NSArray, NSString, NSURL};
 use objc2_ui_kit::{UIApplication, UIDocumentPickerViewController, UIWindow};
 use objc2_uniform_type_identifiers::UTType;
 
-use floem_reactive::Scope;
+use floem_legacy_reactive::Scope;
 
 use crate::ext_event::create_ext_action;
 use crate::platform::file::{FileDialogOptions, FileInfo};

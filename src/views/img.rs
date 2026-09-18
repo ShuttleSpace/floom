@@ -2,7 +2,7 @@
 #![deny(missing_docs)]
 use std::{cell::RefCell, path::PathBuf, rc::Rc, sync::Arc};
 
-use floem_reactive::UpdaterEffect;
+use floem_legacy_reactive::UpdaterEffect;
 use peniko::{Blob, ImageAlphaType, ImageData, kurbo::Rect};
 use sha2::{Digest, Sha256};
 
@@ -370,7 +370,7 @@ impl View for Img {
         }
 
         cx.draw_img(
-            floem_renderer::Img {
+            floem_legacy_renderer::Img {
                 img: self.img.clone(),
                 hash: &self.img_hash,
             },

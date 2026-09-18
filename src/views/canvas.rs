@@ -1,4 +1,4 @@
-use floem_reactive::SignalTracker;
+use floem_legacy_reactive::SignalTracker;
 use peniko::kurbo::Size;
 
 use crate::{

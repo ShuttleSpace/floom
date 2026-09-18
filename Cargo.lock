@@ -1873,13 +1873,14 @@ dependencies = [
  "dispatch2",
  "dpi 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "educe",
+ "floem-legacy-reactive",
+ "floem-legacy-renderer",
+ "floem-legacy-renderer-skia",
+ "floem-legacy-renderer-tiny-skia",
+ "floem-legacy-renderer-vello",
+ "floem-legacy-renderer-vger",
+ "floem-ui-events-winit",
  "floem-winit",
- "floem_reactive",
- "floem_renderer",
- "floem_skia_renderer",
- "floem_tiny_skia_renderer",
- "floem_vello_renderer",
- "floem_vger_renderer",
  "fluent-bundle",
  "futures",
  "image 0.25.9",
@@ -1914,7 +1915,6 @@ dependencies = [
  "tgui-winit-ohos",
  "tokio",
  "ui-events",
- "ui-events-floem-winit",
  "understory_box_tree",
  "understory_event_state",
  "understory_focus",
@@ -1994,7 +1994,7 @@ version = "0.1.0"
 dependencies = [
  "floem",
  "floem-editor-core",
- "floem_reactive",
+ "floem-legacy-reactive",
  "lapce-xi-rope",
  "parley",
  "peniko",
@@ -2067,6 +2067,98 @@ dependencies = [
  "criterion",
  "floem-types",
  "taffy",
+]
+
+[[package]]
+name = "floem-legacy-reactive"
+version = "0.2.0"
+dependencies = [
+ "parking_lot",
+ "smallvec",
+]
+
+[[package]]
+name = "floem-legacy-renderer"
+version = "0.2.0"
+dependencies = [
+ "crossbeam",
+ "floem-winit",
+ "fontique",
+ "futures",
+ "parking_lot",
+ "parley",
+ "peniko",
+ "resvg",
+ "wasm-bindgen-futures",
+ "wgpu",
+]
+
+[[package]]
+name = "floem-legacy-renderer-skia"
+version = "0.2.0"
+dependencies = [
+ "anyhow",
+ "anyrender",
+ "anyrender_skia",
+ "floem-legacy-renderer",
+ "floem-winit",
+ "kurbo",
+ "parley",
+ "peniko",
+ "raw-window-handle",
+ "resvg",
+]
+
+[[package]]
+name = "floem-legacy-renderer-tiny-skia"
+version = "0.2.0"
+dependencies = [
+ "anyhow",
+ "floem-legacy-renderer",
+ "parley",
+ "peniko",
+ "raw-window-handle",
+ "resvg",
+ "rustc-hash 2.1.1",
+ "softbuffer",
+ "swash",
+]
+
+[[package]]
+name = "floem-legacy-renderer-vello"
+version = "0.2.0"
+dependencies = [
+ "anyhow",
+ "floem-legacy-renderer",
+ "parley",
+ "peniko",
+ "vello",
+ "vello_svg",
+ "wgpu",
+]
+
+[[package]]
+name = "floem-legacy-renderer-vger"
+version = "0.2.0"
+dependencies = [
+ "anyhow",
+ "floem-legacy-renderer",
+ "floem-vger",
+ "image 0.25.9",
+ "parley",
+ "peniko",
+ "resvg",
+ "swash",
+ "wgpu",
+]
+
+[[package]]
+name = "floem-legacy-test"
+version = "0.2.0"
+dependencies = [
+ "floem",
+ "serial_test",
+ "ui-events",
 ]
 
 [[package]]
@@ -2211,10 +2303,10 @@ name = "floem-runtime"
 version = "0.2.0"
 dependencies = [
  "floem-core",
+ "floem-legacy-reactive",
  "floem-runtime-core",
  "floem-scheduler",
  "floem-types",
- "floem_reactive",
 ]
 
 [[package]]
@@ -2224,8 +2316,8 @@ dependencies = [
  "bitflags 2.11.0",
  "criterion",
  "floem-core",
+ "floem-legacy-reactive",
  "floem-types",
- "floem_reactive",
  "smallvec",
 ]
 
@@ -2251,7 +2343,7 @@ name = "floem-store"
 version = "0.2.0"
 dependencies = [
  "criterion",
- "floem_reactive",
+ "floem-legacy-reactive",
 ]
 
 [[package]]
@@ -2266,16 +2358,7 @@ dependencies = [
 name = "floem-task"
 version = "0.2.0"
 dependencies = [
- "floem_reactive",
-]
-
-[[package]]
-name = "floem-test"
-version = "0.2.0"
-dependencies = [
- "floem",
- "serial_test",
- "ui-events",
+ "floem-legacy-reactive",
 ]
 
 [[package]]
@@ -2313,6 +2396,16 @@ dependencies = [
 [[package]]
 name = "floem-types"
 version = "0.2.0"
+
+[[package]]
+name = "floem-ui-events-winit"
+version = "0.2.0"
+dependencies = [
+ "dpi 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "floem-winit",
+ "ui-events",
+ "web-time",
+]
 
 [[package]]
 name = "floem-vger"
@@ -2606,89 +2699,6 @@ dependencies = [
  "floem-types",
  "floem-widgets",
  "image 0.25.9",
-]
-
-[[package]]
-name = "floem_reactive"
-version = "0.2.0"
-dependencies = [
- "parking_lot",
- "smallvec",
-]
-
-[[package]]
-name = "floem_renderer"
-version = "0.2.0"
-dependencies = [
- "crossbeam",
- "floem-winit",
- "fontique",
- "futures",
- "parking_lot",
- "parley",
- "peniko",
- "resvg",
- "wasm-bindgen-futures",
- "wgpu",
-]
-
-[[package]]
-name = "floem_skia_renderer"
-version = "0.2.0"
-dependencies = [
- "anyhow",
- "anyrender",
- "anyrender_skia",
- "floem-winit",
- "floem_renderer",
- "kurbo",
- "parley",
- "peniko",
- "raw-window-handle",
- "resvg",
-]
-
-[[package]]
-name = "floem_tiny_skia_renderer"
-version = "0.2.0"
-dependencies = [
- "anyhow",
- "floem_renderer",
- "parley",
- "peniko",
- "raw-window-handle",
- "resvg",
- "rustc-hash 2.1.1",
- "softbuffer",
- "swash",
-]
-
-[[package]]
-name = "floem_vello_renderer"
-version = "0.2.0"
-dependencies = [
- "anyhow",
- "floem_renderer",
- "parley",
- "peniko",
- "vello",
- "vello_svg",
- "wgpu",
-]
-
-[[package]]
-name = "floem_vger_renderer"
-version = "0.2.0"
-dependencies = [
- "anyhow",
- "floem-vger",
- "floem_renderer",
- "image 0.25.9",
- "parley",
- "peniko",
- "resvg",
- "swash",
- "wgpu",
 ]
 
 [[package]]
@@ -7247,16 +7257,6 @@ dependencies = [
  "dpi 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "keyboard-types 0.8.3",
  "kurbo",
-]
-
-[[package]]
-name = "ui-events-floem-winit"
-version = "0.2.0"
-dependencies = [
- "dpi 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "floem-winit",
- "ui-events",
- "web-time",
 ]
 
 [[package]]

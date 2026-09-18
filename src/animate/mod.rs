@@ -17,7 +17,7 @@ use std::any::Any;
 use std::rc::Rc;
 
 use crate::platform::{Duration, Instant};
-use floem_reactive::{RwSignal, SignalGet, Trigger, UpdaterEffect};
+use floem_legacy_reactive::{RwSignal, SignalGet, Trigger, UpdaterEffect};
 use smallvec::{SmallVec, smallvec};
 
 /// Holds a resolved prop, along with the associated frame id and easing function

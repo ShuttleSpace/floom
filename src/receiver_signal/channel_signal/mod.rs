@@ -27,8 +27,8 @@ use builder::ChannelSignalBuilder;
 ///     .build();
 /// ```
 pub struct ChannelSignal<T, E> {
-    value: floem_reactive::ReadSignal<T>,
-    error: floem_reactive::ReadSignal<Option<E>>,
+    value: floem_legacy_reactive::ReadSignal<T>,
+    error: floem_legacy_reactive::ReadSignal<Option<E>>,
 }
 
 /// This implementation will be removed in the future
@@ -125,39 +125,39 @@ impl<T: Send + 'static, E: Send + 'static> ChannelSignal<T, E> {
         ChannelSignalBuilder::new(receiver)
     }
 
-    pub fn error(&self) -> floem_reactive::ReadSignal<Option<E>> {
+    pub fn error(&self) -> floem_legacy_reactive::ReadSignal<Option<E>> {
         self.error
     }
 }
 
-impl<T, E> floem_reactive::SignalGet<T> for ChannelSignal<T, E>
+impl<T, E> floem_legacy_reactive::SignalGet<T> for ChannelSignal<T, E>
 where
     T: Clone,
 {
-    fn id(&self) -> floem_reactive::ReactiveId {
+    fn id(&self) -> floem_legacy_reactive::ReactiveId {
         self.value.id()
     }
 }
 
-impl<T, E> floem_reactive::SignalWith<T> for ChannelSignal<T, E> {
-    fn id(&self) -> floem_reactive::ReactiveId {
+impl<T, E> floem_legacy_reactive::SignalWith<T> for ChannelSignal<T, E> {
+    fn id(&self) -> floem_legacy_reactive::ReactiveId {
         self.value.id()
     }
 }
 
-impl<T, E> floem_reactive::SignalRead<T> for ChannelSignal<T, E> {
-    fn id(&self) -> floem_reactive::ReactiveId {
+impl<T, E> floem_legacy_reactive::SignalRead<T> for ChannelSignal<T, E> {
+    fn id(&self) -> floem_legacy_reactive::ReactiveId {
         self.value.id()
     }
 
-    fn try_read(&self) -> Option<floem_reactive::ReadRef<'_, T>>
+    fn try_read(&self) -> Option<floem_legacy_reactive::ReadRef<'_, T>>
     where
         T: 'static,
     {
         self.value.try_read()
     }
 
-    fn try_read_untracked(&self) -> Option<floem_reactive::ReadRef<'_, T>>
+    fn try_read_untracked(&self) -> Option<floem_legacy_reactive::ReadRef<'_, T>>
     where
         T: 'static,
     {
@@ -165,8 +165,8 @@ impl<T, E> floem_reactive::SignalRead<T> for ChannelSignal<T, E> {
     }
 }
 
-impl<T, E> floem_reactive::SignalTrack<T> for ChannelSignal<T, E> {
-    fn id(&self) -> floem_reactive::ReactiveId {
+impl<T, E> floem_legacy_reactive::SignalTrack<T> for ChannelSignal<T, E> {
+    fn id(&self) -> floem_legacy_reactive::ReactiveId {
         self.value.id()
     }
 }

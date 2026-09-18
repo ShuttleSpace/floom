@@ -77,8 +77,8 @@ where
     where
         F: FnOnce(
                 S,
-                floem_reactive::WriteSignal<T>,
-                floem_reactive::WriteSignal<bool>,
+                floem_legacy_reactive::WriteSignal<T>,
+                floem_legacy_reactive::WriteSignal<bool>,
                 ExtSendTrigger,
             ) + 'static,
     {
@@ -157,8 +157,8 @@ where
     S: futures::Stream<Item = T> + 'static,
     F: FnOnce(
             S,
-            floem_reactive::WriteSignal<Option<T>>,
-            floem_reactive::WriteSignal<bool>,
+            floem_legacy_reactive::WriteSignal<Option<T>>,
+            floem_legacy_reactive::WriteSignal<bool>,
             ExtSendTrigger,
         ) + 'static,
 {
@@ -172,7 +172,7 @@ impl<S, T, F> StreamSignalBuilder<S, T, CustomExecutor<F>, WithInitialValue<T>>
 where
     T: 'static,
     S: futures::Stream<Item = T> + 'static,
-    F: FnOnce(S, floem_reactive::WriteSignal<T>, floem_reactive::WriteSignal<bool>, ExtSendTrigger)
+    F: FnOnce(S, floem_legacy_reactive::WriteSignal<T>, floem_legacy_reactive::WriteSignal<bool>, ExtSendTrigger)
         + 'static,
 {
     pub fn build(self) -> StreamSignal<T> {
@@ -184,9 +184,9 @@ fn build_stream_signal_with_initial<S, T, F>(stream: S, initial: T, executor: F)
 where
     T: 'static,
     S: futures::Stream<Item = T> + 'static,
-    F: FnOnce(S, floem_reactive::WriteSignal<T>, floem_reactive::WriteSignal<bool>, ExtSendTrigger),
+    F: FnOnce(S, floem_legacy_reactive::WriteSignal<T>, floem_legacy_reactive::WriteSignal<bool>, ExtSendTrigger),
 {
-    use floem_reactive::*;
+    use floem_legacy_reactive::*;
 
     let cx = Scope::current();
     let trigger = cx.enter(ExtSendTrigger::new);
@@ -207,12 +207,12 @@ where
     S: futures::Stream<Item = T> + 'static,
     F: FnOnce(
         S,
-        floem_reactive::WriteSignal<Option<T>>,
-        floem_reactive::WriteSignal<bool>,
+        floem_legacy_reactive::WriteSignal<Option<T>>,
+        floem_legacy_reactive::WriteSignal<bool>,
         ExtSendTrigger,
     ),
 {
-    use floem_reactive::*;
+    use floem_legacy_reactive::*;
 
     let cx = Scope::current();
     let trigger = cx.enter(ExtSendTrigger::new);

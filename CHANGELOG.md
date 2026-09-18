@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Reorganise the workspace after the [EpicGames/lore](https://github.com/EpicGames/lore) model. The legacy v1 crates move under `legacy/` with a `floem-legacy-` prefix (`floem_renderer` → `floem-legacy-renderer`, `floem_reactive` → `floem-legacy-reactive`, `floem-test` → `floem-legacy-test`, plus the four renderer backends), vendored third-party forks move to `vendor/` with a per-fork `NOTICE.md`, and `notices/` is added for license compliance. See `docs/workspace-conventions.md`.
 - Use by default `std::sync::mpsc::channel` and place crossbeam behind the `crossbeam` feature [#775](https://github.com/lapce/floem/pull/775)
 
 ## [0.2.0] - 2024-11-13

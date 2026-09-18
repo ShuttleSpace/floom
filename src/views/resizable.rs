@@ -18,7 +18,7 @@ use crate::{
     style_class,
     unit::{Pct, Pt},
 };
-use floem_reactive::Effect;
+use floem_legacy_reactive::Effect;
 use peniko::{
     Brush,
     color::palette::css,

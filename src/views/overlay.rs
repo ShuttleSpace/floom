@@ -3,7 +3,7 @@
 //! This module provides a declarative overlay that automatically manages
 //! the overlay lifecycle, without requiring manual `add_overlay`/`remove_overlay` calls.
 
-use floem_reactive::Scope;
+use floem_legacy_reactive::Scope;
 
 use crate::{
     style::Style,

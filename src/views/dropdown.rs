@@ -6,7 +6,7 @@
 //! The [`DropdownCustomStyle`] struct allows for easy and advanced customization of the dropdown's appearance.
 use std::{any::Any, rc::Rc};
 
-use floem_reactive::{Effect, RwSignal, Scope, SignalGet, SignalUpdate, UpdaterEffect};
+use floem_legacy_reactive::{Effect, RwSignal, Scope, SignalGet, SignalUpdate, UpdaterEffect};
 use imbl::OrdMap;
 use peniko::kurbo::{Point, Size};
 

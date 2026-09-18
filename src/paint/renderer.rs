@@ -14,7 +14,7 @@
 //!
 //! #### Event handling -> reactive system updates
 //! Event handling is a common place for reactive state changes to occur. E.g., on the counter example, when you click increment,
-//! it updates the counter and because the label has an effect that is subscribed to those changes (see [`floem_reactive::create_effect`]), the label will update the text it presents.
+//! it updates the counter and because the label has an effect that is subscribed to those changes (see [`floem_legacy_reactive::create_effect`]), the label will update the text it presents.
 //!
 //! #### Update
 //! The update of states on the Views could cause some of them to need a new layout recalculation, because the size might have changed etc.
@@ -49,15 +49,15 @@
 //!
 use std::sync::Arc;
 
-use floem_renderer::Img;
-use floem_renderer::gpu_resources::GpuResources;
+use floem_legacy_renderer::Img;
+use floem_legacy_renderer::gpu_resources::GpuResources;
 #[cfg(feature = "skia")]
-use floem_skia_renderer::SkiaRenderer as ActiveRenderer;
-use floem_tiny_skia_renderer::TinySkiaRenderer;
+use floem_legacy_renderer_skia::SkiaRenderer as ActiveRenderer;
+use floem_legacy_renderer_tiny_skia::TinySkiaRenderer;
 #[cfg(all(feature = "vello", not(feature = "skia")))]
-use floem_vello_renderer::VelloRenderer as ActiveRenderer;
+use floem_legacy_renderer_vello::VelloRenderer as ActiveRenderer;
 #[cfg(all(not(feature = "vello"), not(feature = "skia")))]
-use floem_vger_renderer::VgerRenderer as ActiveRenderer;
+use floem_legacy_renderer_vger::VgerRenderer as ActiveRenderer;
 use peniko::BrushRef;
 use peniko::kurbo::{Affine, Point, Rect, Shape, Size, Stroke};
 use winit::window::Window;
@@ -258,7 +258,7 @@ impl Renderer {
     }
 }
 
-impl floem_renderer::Renderer for Renderer {
+impl floem_legacy_renderer::Renderer for Renderer {
     fn begin(&mut self, capture: bool) {
         match self {
             Renderer::Active(r) => {
@@ -370,8 +370,8 @@ impl floem_renderer::Renderer for Renderer {
     fn draw_glyphs<'a>(
         &mut self,
         origin: Point,
-        props: &floem_renderer::text::GlyphRunProps<'a>,
-        glyphs: impl Iterator<Item = floem_renderer::text::Glyph> + 'a,
+        props: &floem_legacy_renderer::text::GlyphRunProps<'a>,
+        glyphs: impl Iterator<Item = floem_legacy_renderer::text::Glyph> + 'a,
     ) {
         match self {
             Renderer::Active(v) => v.draw_glyphs(origin, props, glyphs),
@@ -382,7 +382,7 @@ impl floem_renderer::Renderer for Renderer {
 
     fn draw_svg<'b>(
         &mut self,
-        svg: floem_renderer::Svg<'b>,
+        svg: floem_legacy_renderer::Svg<'b>,
         rect: Rect,
         brush: Option<impl Into<BrushRef<'b>>>,
     ) {

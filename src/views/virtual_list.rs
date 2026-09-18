@@ -1,4 +1,4 @@
-use floem_reactive::Effect;
+use floem_legacy_reactive::Effect;
 use taffy::FlexDirection;
 use ui_events::keyboard::{Key, NamedKey};
 

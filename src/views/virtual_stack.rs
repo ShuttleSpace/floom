@@ -7,7 +7,7 @@ use std::{
     rc::Rc,
 };
 
-use floem_reactive::{
+use floem_legacy_reactive::{
     Effect, ReadSignal, RwSignal, Scope, SignalGet, SignalTrack, SignalUpdate, SignalWith,
 };
 use peniko::kurbo::Rect;

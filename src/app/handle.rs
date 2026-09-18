@@ -1,5 +1,5 @@
 use dpi::PhysicalPosition;
-use floem_renderer::gpu_resources::GpuResources;
+use floem_legacy_renderer::gpu_resources::GpuResources;
 #[cfg(not(target_arch = "wasm32"))]
 use std::time::Instant;
 #[cfg(target_arch = "wasm32")]
@@ -8,7 +8,7 @@ use web_time::Instant;
 #[cfg(target_arch = "wasm32")]
 use wgpu::web_sys;
 
-use floem_reactive::{Runtime, SignalUpdate};
+use floem_legacy_reactive::{Runtime, SignalUpdate};
 use peniko::kurbo::{Point, Size};
 use std::{collections::HashMap, rc::Rc, time::Duration};
 use winit::{
@@ -409,7 +409,7 @@ impl ApplicationHandle {
             }
             WindowEvent::ModifiersChanged(modifiers) => {
                 window_handle.modifiers_changed(
-                    ui_events_winit::keyboard::from_winit_modifier_state(modifiers.state()),
+                    floem_ui_events_winit::keyboard::from_winit_modifier_state(modifiers.state()),
                 );
             }
             WindowEvent::Ime(ime) => {

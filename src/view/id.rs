@@ -6,7 +6,7 @@
 
 use std::{any::Any, cell::RefCell, collections::HashSet, rc::Rc};
 
-use floem_reactive::Scope;
+use floem_legacy_reactive::Scope;
 use peniko::kurbo::{Affine, Point, Rect, RoundedRect, Size};
 use smallvec::smallvec;
 use taffy::{Layout, NodeId};

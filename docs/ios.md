@@ -420,7 +420,7 @@ This is a small, contained cfg-extension and is the main "UI" piece for iOS.
   `objc2`/`define_class!` world) and its `[patch]` was silently ignored →
   `set_on_open_url` unresolved (E0425). Fix: rebuilt the fork from the cached
   checkout `lapce/winit@133268de` (= 25.10.0 virtual workspace, members
-  `dpi`/`winit*`); it now lives at `platform-compat/floem-winit/`.
+  `dpi`/`winit*`); it now lives at `vendor/floem-winit/`.
 
   **Wiring** — workspace root `Cargo.toml`:
   ```toml
@@ -429,10 +429,10 @@ This is a small, contained cfg-extension and is the main "UI" piece for iOS.
   # `floem-winit` member package (`winit/`), not the workspace root
   # (which would error "found a virtual manifest").
   [patch."https://github.com/lapce/winit"]
-  floem-winit = { path = "platform-compat/floem-winit/winit" }
+  floem-winit = { path = "vendor/floem-winit/winit" }
   ```
 
-  **Fork changes** (all in `platform-compat/floem-winit/`):
+  **Fork changes** (all in `vendor/floem-winit/`):
   - `winit-uikit/src/app_delegate.rs` (new): `define_class!` defines
     `FloemWinitApplicationDelegate`
     (`#[name = "FloemWinitApplicationDelegate"]`,

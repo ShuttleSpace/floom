@@ -1,8 +1,8 @@
 mod data;
 pub(crate) mod profiler;
 mod view;
-use floem_reactive::{Effect, Scope};
-use floem_renderer::text::FontWeight;
+use floem_legacy_reactive::{Effect, Scope};
+use floem_legacy_renderer::text::FontWeight;
 use peniko::kurbo::{Rect, Size};
 use peniko::{
     Color,

@@ -5,7 +5,7 @@
 #   floem-scene            → concrete platform / windowing crates
 #   floem-types            → platform / GPU crates
 #   floem-*-widgets / floem-widgets → concrete renderer backends
-#   floem_*_renderer / floem-renderer-* → widget crates
+#   floem-legacy-renderer-* / floem-renderer-* → widget crates
 #
 # Pre-migration: the monolithic `floem` crate still mixes these concerns.
 # Those paths are allowlisted below until the corresponding Phase tasks land.
@@ -122,8 +122,13 @@ GPU_HINTS = {
     "wgpu", "vello", "vger", "floem-vger", "skia-safe", "metal", "ash",
 }
 RENDERER_PACKAGES = {
-    "floem_vger_renderer", "floem_vello_renderer", "floem_skia_renderer",
-    "floem_tiny_skia_renderer", "floem_renderer",
+    # Legacy v1 renderers, relocated under `legacy/` with a `floem-legacy-`
+    # package prefix (e.g. the old `floem_renderer` is now `floem-legacy-renderer`).
+    "floem-legacy-renderer", "floem-legacy-renderer-vello",
+    "floem-legacy-renderer-skia", "floem-legacy-renderer-vger",
+    "floem-legacy-renderer-tiny-skia",
+    # 2.0 renderer ABI + backends, under `render/`. `floem-renderer` is the
+    # abstract ABI (the one widgets are allowed to name); the rest are concrete.
     "floem-renderer", "floem-renderer-vello", "floem-renderer-software",
     "floem-renderer-skia",
 }
@@ -204,6 +209,19 @@ for w in sorted(WIDGET_HINTS):
 # neutral schema crate that happens to live under framework/.
 LAYERS: dict[str, int] = {}
 for _names, _level in [
+    # Legacy v1 crates (under `legacy/`): the bottom of the graph. Anything may
+    # depend *down* onto them; nothing may depend up out of them. Keeping them
+    # in the table turns a stray legacy → 2.0 edge into a failure instead of a
+    # silently skipped dependency.
+    (
+        [
+            "floem-legacy-renderer", "floem-legacy-renderer-vello",
+            "floem-legacy-renderer-skia", "floem-legacy-renderer-vger",
+            "floem-legacy-renderer-tiny-skia", "floem-legacy-reactive",
+            "floem-legacy-test",
+        ],
+        0,
+    ),
     (["floem-types"], 0),
     (["floem-core"], 1),
     (["floem-runtime-core", "floem-runtime", "floem-scheduler"], 2),
@@ -268,9 +286,9 @@ for crate, level in sorted(LAYERS.items()):
     else:
         notes.append(f"OK {crate}(L{level}): no dependency on a higher layer")
 
-# Crates outside the layer table that a 2.0 crate still depends on: the legacy
-# reactive graph. Reported, not failed — see the topology decision doc.
-LEGACY_DEPS = {norm(x) for x in ("floem_reactive",)}
+# Legacy v1 crates a 2.0 crate still depends on: the v1 reactive graph.
+# Reported, not failed — see the topology decision doc.
+LEGACY_DEPS = {norm(x) for x in ("floem_legacy_reactive",)}
 reach = sorted(
     {d for c in LAYERS if c in packages for d in shipped_deps(c)} & LEGACY_DEPS
 )

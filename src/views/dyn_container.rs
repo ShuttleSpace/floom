@@ -1,6 +1,6 @@
 use std::any::Any;
 
-use floem_reactive::{Scope, UpdaterEffect};
+use floem_legacy_reactive::{Scope, UpdaterEffect};
 
 use crate::{
     IntoView, ViewId,

@@ -20,7 +20,7 @@ use winit::cursor::CursorIcon;
 use winit::dpi::PhysicalInsets;
 use winit::window::Theme;
 
-use floem_reactive::{RwSignal, SignalGet};
+use floem_legacy_reactive::{RwSignal, SignalGet};
 
 use std::rc::Rc;
 use slotmap::KeyData;

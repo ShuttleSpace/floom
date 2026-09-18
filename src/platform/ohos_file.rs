@@ -33,7 +33,7 @@ use napi_derive::napi;
 use napi::{Env, Result as NapiResult};
 use parking_lot::Mutex;
 
-use floem_reactive::Scope;
+use floem_legacy_reactive::Scope;
 
 use crate::ext_event::create_ext_action;
 use crate::platform::file::{FileDialogOptions, FileInfo};

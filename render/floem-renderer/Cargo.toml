@@ -7,8 +7,10 @@ repository.workspace = true
 description = "Renderer ABI for Floem 2.0 (backend-neutral)"
 rust-version.workspace = true
 
-# Lives under `render/` so it does not collide with the legacy `renderer/`
-# (`floem_renderer`) crate path.
+# This is the 2.0 renderer ABI crate, `floem-renderer` (imported as
+# `floem_renderer`). The v1 renderer now lives under `legacy/floem-renderer` as
+# `floem-legacy-renderer` (imported as `floem_legacy_renderer`), so the two no
+# longer collide on an import name.
 
 [dependencies]
 floem-types = { path = "../../foundation/floem-types", version = "0.2.0" }

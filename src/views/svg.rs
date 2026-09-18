@@ -1,7 +1,7 @@
 use std::{cell::RefCell, rc::Rc};
 
-use floem_reactive::Effect;
-use floem_renderer::{
+use floem_legacy_reactive::Effect;
+use floem_legacy_renderer::{
     Renderer,
     usvg::{self, Tree},
 };

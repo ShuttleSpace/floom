@@ -19,8 +19,8 @@ use crate::{
     },
     view::{LayoutNodeCx, View},
 };
-use floem_reactive::UpdaterEffect;
-use floem_renderer::Renderer;
+use floem_legacy_reactive::UpdaterEffect;
+use floem_legacy_renderer::Renderer;
 use peniko::{
     Brush,
     color::palette::{self},

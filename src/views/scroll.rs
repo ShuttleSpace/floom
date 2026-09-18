@@ -1,7 +1,7 @@
 #![deny(missing_docs)]
 //! Scroll View
 
-use floem_reactive::Effect;
+use floem_legacy_reactive::Effect;
 use peniko::kurbo::{Affine, Axis, Point, Rect, RoundedRect, RoundedRectRadii, Stroke, Vec2};
 use peniko::{Brush, Color};
 use std::time::Duration;

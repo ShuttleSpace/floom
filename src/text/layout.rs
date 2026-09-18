@@ -6,8 +6,8 @@ use std::{
     sync::LazyLock,
 };
 
-use floem_renderer::Renderer as _;
-use floem_renderer::text::{AttrsList, GlyphRunProps, TextBrush};
+use floem_legacy_renderer::Renderer as _;
+use floem_legacy_renderer::text::{AttrsList, GlyphRunProps, TextBrush};
 use parking_lot::Mutex;
 use parley::swash::{FontRef, scale::ScaleContext, zeno};
 use parley::{

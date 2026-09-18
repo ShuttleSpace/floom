@@ -17,16 +17,16 @@ use muda::MenuTheme as MudaMenuTheme;
 use crate::platform::{Duration, Instant};
 use ui_events::keyboard::{Key, KeyboardEvent, Modifiers, NamedKey};
 use ui_events::pointer::PointerEvent;
-use ui_events_winit::WindowEventReducer;
+use floem_ui_events_winit::WindowEventReducer;
 
 #[cfg(not(any(target_os = "ios", target_env = "ohos")))]
 use winit::window::{
     ImeCapabilities, ImeEnableRequest, ImeHint, ImePurpose, ImeRequest, ImeRequestData,
 };
 
-use floem_reactive::{ReadSignal, RwSignal, Scope, SignalGet, SignalUpdate};
-use floem_renderer::Renderer;
-use floem_renderer::gpu_resources::GpuResources;
+use floem_legacy_reactive::{ReadSignal, RwSignal, Scope, SignalGet, SignalUpdate};
+use floem_legacy_renderer::Renderer;
+use floem_legacy_renderer::gpu_resources::GpuResources;
 use peniko::color::palette;
 use peniko::kurbo::{self, Point, Size};
 use winit::{

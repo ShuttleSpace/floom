@@ -7,7 +7,7 @@ use crate::{
     style::{Style, StyleCx, recalc::StyleReason},
     style_class,
 };
-use floem_reactive::{Effect, RwSignal, SignalGet, SignalUpdate};
+use floem_legacy_reactive::{Effect, RwSignal, SignalGet, SignalUpdate};
 use ui_events::keyboard::{Key, KeyboardEvent, NamedKey};
 
 style_class!(pub ListClass);

@@ -11,7 +11,7 @@
 
 use peniko::kurbo::{Point, Size};
 use smallvec::SmallVec;
-use ui_events_winit::WindowEventTranslation;
+use floem_ui_events_winit::WindowEventTranslation;
 use winit::{dpi::PhysicalPosition, event::WindowEvent};
 
 use crate::embedder::{
@@ -30,13 +30,13 @@ pub(crate) fn winit_window_id(window_id: winit::window::WindowId) -> EmbedderWin
 /// Translate a single winit `WindowEvent` into zero or more neutral
 /// [`EmbedderEvent`]s.
 ///
-/// Keyboard and pointer input are produced by `ui_events_winit`'s reducer
+/// Keyboard and pointer input are produced by `floem_ui_events_winit`'s reducer
 /// (the canonical winit → ui-events bridge). Lifecycle, IME, surface, focus,
 /// theme, and drag-and-drop events are mapped directly.
 pub(crate) fn translate_window_event(
     embedder_window_id: EmbedderWindowId,
     scale: f64,
-    reducer: &mut ui_events_winit::WindowEventReducer,
+    reducer: &mut floem_ui_events_winit::WindowEventReducer,
     event: &WindowEvent,
 ) -> SmallVec<[EmbedderEvent; 4]> {
     let mut events = SmallVec::new();

@@ -9,7 +9,7 @@ use std::rc::Rc;
 use std::time::Instant;
 
 use floem_core::{CreateContext, ElementKind, Widget};
-use floem_reactive::RwSignal;
+use floem_legacy_reactive::RwSignal;
 use floem_runtime_core::{
     BindingRegistry, DirtyFlags, DirtySet, ElementArena, ElementTree, ReactiveBinding,
 };

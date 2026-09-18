@@ -1,7 +1,7 @@
 #![deny(missing_docs)]
 use std::{hash::Hash, marker::PhantomData};
 
-use floem_reactive::{Effect, Scope};
+use floem_legacy_reactive::{Effect, Scope};
 use smallvec::SmallVec;
 
 use crate::{

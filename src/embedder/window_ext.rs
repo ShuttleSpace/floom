@@ -8,7 +8,7 @@ use crate::embedder::{
     CommandSink, EmbedderEvent, FocusEvent, ImeEvent, SurfaceEvent, Theme, WindowLifecycleEvent,
 };
 use crate::window::handle::WindowHandle;
-use floem_reactive::{SignalGet, SignalUpdate};
+use floem_legacy_reactive::{SignalGet, SignalUpdate};
 
 impl WindowHandle {
     /// Route a single embedder event into this window.

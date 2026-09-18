@@ -12,6 +12,6 @@ floem-types = { path = "../../foundation/floem-types", version = "0.2.0" }
 floem-core = { path = "../../foundation/floem-core", version = "0.2.0" }
 floem-runtime-core = { path = "../floem-runtime-core", version = "0.2.0" }
 floem-scheduler = { path = "../floem-scheduler", version = "0.2.0" }
-floem_reactive = { path = "../../reactive", version = "0.2.0" }
+floem-legacy-reactive = { path = "../../legacy/floem-reactive", version = "0.2.0" }
 
 [dev-dependencies]

@@ -17,7 +17,7 @@ use peniko::kurbo::Point;
 #[cfg(not(feature = "crossbeam"))]
 use std::sync::mpsc::{Receiver, Sender, channel};
 
-use floem_reactive::{Runtime, WriteSignal};
+use floem_legacy_reactive::{Runtime, WriteSignal};
 use parking_lot::Mutex;
 use raw_window_handle::HasDisplayHandle;
 use winit::{

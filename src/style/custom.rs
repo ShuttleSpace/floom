@@ -8,7 +8,7 @@
 
 use std::rc::Rc;
 
-use floem_reactive::UpdaterEffect;
+use floem_legacy_reactive::UpdaterEffect;
 
 use crate::layout::responsive::ScreenSize;
 use crate::view::{IntoView, View};

@@ -6,7 +6,7 @@
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 
-use floem_reactive::{RwSignal, Scope, SignalGet, SignalUpdate};
+use floem_legacy_reactive::{RwSignal, Scope, SignalGet, SignalUpdate};
 
 /// Lifecycle of a fetched resource.
 #[derive(Debug, Clone, PartialEq, Eq)]

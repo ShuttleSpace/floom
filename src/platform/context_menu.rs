@@ -3,7 +3,7 @@
 //! This module provides a fallback context menu UI for platforms where
 //! native context menus aren't fully supported by the muda crate.
 
-use floem_reactive::{Effect, RwSignal, Scope, SignalGet, SignalUpdate, SignalWith};
+use floem_legacy_reactive::{Effect, RwSignal, Scope, SignalGet, SignalUpdate, SignalWith};
 use peniko::Color;
 use peniko::color::palette;
 use peniko::kurbo::{Point, Size};

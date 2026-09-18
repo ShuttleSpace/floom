@@ -1,5 +1,5 @@
 use floem_core::{CreateContext, ElementId, UpdateContext, Widget};
-use floem_reactive::{RwSignal, SignalGet, SignalUpdate};
+use floem_legacy_reactive::{RwSignal, SignalGet, SignalUpdate};
 use floem_runtime::{Event, Runtime};
 use floem_runtime_core::DirtyFlags;
 use floem_types::Point;

@@ -18,7 +18,7 @@ use crate::{
     },
     view::LayoutTree,
 };
-use floem_reactive::Scope;
+use floem_legacy_reactive::Scope;
 use imbl::HashSet;
 use peniko::kurbo::{Affine, Vec2};
 use rustc_hash::FxHashMap;

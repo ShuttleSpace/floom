@@ -122,8 +122,8 @@ where
     where
         F: Fn(
                 Fut,
-                floem_reactive::WriteSignal<T>,
-                floem_reactive::WriteSignal<bool>,
+                floem_legacy_reactive::WriteSignal<T>,
+                floem_legacy_reactive::WriteSignal<bool>,
                 ExtSendTrigger,
             ) + 'static,
     {
@@ -420,8 +420,8 @@ where
     Dep: 'static,
     F: Fn(
             Fut,
-            floem_reactive::WriteSignal<Option<T>>,
-            floem_reactive::WriteSignal<bool>,
+            floem_legacy_reactive::WriteSignal<Option<T>>,
+            floem_legacy_reactive::WriteSignal<bool>,
             ExtSendTrigger,
         ) + 'static,
 {
@@ -437,7 +437,7 @@ where
     T: 'static,
     Fut: std::future::Future<Output = T> + 'static,
     Dep: 'static,
-    F: Fn(Fut, floem_reactive::WriteSignal<T>, floem_reactive::WriteSignal<bool>, ExtSendTrigger)
+    F: Fn(Fut, floem_legacy_reactive::WriteSignal<T>, floem_legacy_reactive::WriteSignal<bool>, ExtSendTrigger)
         + 'static,
 {
     pub fn build(self) -> Resource<T> {
@@ -462,10 +462,10 @@ where
     Fut: std::future::Future<Output = T> + 'static,
     Dep: 'static,
     K: PartialEq + 'static,
-    F: Fn(Fut, floem_reactive::WriteSignal<T>, floem_reactive::WriteSignal<bool>, ExtSendTrigger)
+    F: Fn(Fut, floem_legacy_reactive::WriteSignal<T>, floem_legacy_reactive::WriteSignal<bool>, ExtSendTrigger)
         + 'static,
 {
-    use floem_reactive::{Scope, SignalGet, SignalUpdate};
+    use floem_legacy_reactive::{Scope, SignalGet, SignalUpdate};
 
     let cx = Scope::current();
     let trigger = cx.enter(ExtSendTrigger::new);
@@ -517,12 +517,12 @@ where
     K: PartialEq + 'static,
     F: Fn(
             Fut,
-            floem_reactive::WriteSignal<Option<U>>,
-            floem_reactive::WriteSignal<bool>,
+            floem_legacy_reactive::WriteSignal<Option<U>>,
+            floem_legacy_reactive::WriteSignal<bool>,
             ExtSendTrigger,
         ) + 'static,
 {
-    use floem_reactive::{Scope, SignalGet, SignalUpdate};
+    use floem_legacy_reactive::{Scope, SignalGet, SignalUpdate};
 
     let cx = Scope::current();
     let trigger = cx.enter(ExtSendTrigger::new);
@@ -571,10 +571,10 @@ where
     T: 'static,
     Fut: std::future::Future<Output = T> + 'static,
     Dep: 'static,
-    F: Fn(Fut, floem_reactive::WriteSignal<T>, floem_reactive::WriteSignal<bool>, ExtSendTrigger)
+    F: Fn(Fut, floem_legacy_reactive::WriteSignal<T>, floem_legacy_reactive::WriteSignal<bool>, ExtSendTrigger)
         + 'static,
 {
-    use floem_reactive::{Scope, SignalGet, SignalUpdate};
+    use floem_legacy_reactive::{Scope, SignalGet, SignalUpdate};
 
     let cx = Scope::current();
     let trigger = cx.enter(ExtSendTrigger::new);
@@ -609,12 +609,12 @@ where
     Dep: 'static,
     F: Fn(
             Fut,
-            floem_reactive::WriteSignal<Option<U>>,
-            floem_reactive::WriteSignal<bool>,
+            floem_legacy_reactive::WriteSignal<Option<U>>,
+            floem_legacy_reactive::WriteSignal<bool>,
             ExtSendTrigger,
         ) + 'static,
 {
-    use floem_reactive::{Scope, SignalGet, SignalUpdate};
+    use floem_legacy_reactive::{Scope, SignalGet, SignalUpdate};
 
     let cx = Scope::current();
     let trigger = cx.enter(ExtSendTrigger::new);

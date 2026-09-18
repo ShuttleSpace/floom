@@ -2,7 +2,7 @@
 
 use std::ops::RangeInclusive;
 
-use floem_reactive::{SignalGet, SignalUpdate, UpdaterEffect};
+use floem_legacy_reactive::{SignalGet, SignalUpdate, UpdaterEffect};
 use peniko::Brush;
 use peniko::color::palette;
 use peniko::kurbo::{Circle, Point, RoundedRect, RoundedRectRadii};
