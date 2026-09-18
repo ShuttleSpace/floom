@@ -1426,48 +1426,171 @@ embedded
 
 ## P0 Acceptance
 
-- [ ] Core types stable.
-- [ ] ElementArena stable.
-- [ ] Dirty propagation verified.
-- [ ] Reactive bridge verified.
-- [ ] Scheduler verified.
-- [ ] Scene ABI verified.
-- [ ] Renderer ABI verified by Vello + software.
-- [ ] Platform ABI verified by fake backend + desktop backend.
+Judged 2026-09-18 against named evidence — see the acceptance run below. A
+crate existing is not evidence; each line names the test target or bench that
+would go red if the claim stopped being true.
+
+- [x] Core types stable. — `foundation/floem-types`: zero dependencies, asserted in its own test; 15 inline tests.
+- [x] ElementArena stable. — `runtime/floem-runtime-core/src/arena.rs` + `arena_tests.rs`; `element_arena` bench covers insert/get at 1k/10k/100k.
+- [x] Dirty propagation verified. — `src/dirty.rs` + `dirty_tests.rs`, `src/tree.rs` + `tree_tests.rs`; `dirty_vs_scan` bench group.
+- [x] Reactive bridge verified. — `src/reactive_bridge.rs` + `reactive_bridge_tests.rs`. Built on the **v1 reactive graph by design** (Task 3.1: "modify current reactive crate internals only where necessary"), so the `floem_legacy_reactive` edge is the intent, not leftover debt.
+- [x] Scheduler verified. — `runtime/floem-scheduler` + `tests/order.rs`.
+- [x] Scene ABI verified. — `scene/floem-scene` + `tests/scene.rs`, `tests/resources.rs`.
+- [x] Renderer ABI verified by Vello + software. — `render/floem-renderer/tests/contract.rs` + `render_handoff.rs`; 21 vello + 19 software inline tests; `scene_render` bench.
+- [x] Platform ABI verified by fake backend + desktop backend. — `floem-platform/src/fake.rs` + `tests/contracts.rs`; `floem-platform-desktop` (33 inline + 6 integration, incl. `lifecycle.rs`, `winit_capabilities.rs`, `accessibility.rs`); plus real-window cases G1-1 / G1-5.
 - [x] Legacy adapter — **WAIVED (Policy A):** no legacy adapter; demos must target the new runtime before P0 claim.
-- [ ] Baseline benchmarks and dependency checks pass.
+- [x] Baseline benchmarks and dependency checks pass. — 240 targets / 1642 tests / 0 failed / 72 ignored, architecture gate PASS, and **no bench exceeds the 10% threshold** `benches/memory_baseline.md` sets, measured under criterion's default protocol. Closest to the line: `update_reuse/scroll_100k_recycle` at **+9.9%** — inside the budget but with no headroom, and it is precisely the bench the deferred CI budget was meant to watch. A first, shortened-profile run had read +12%; re-measuring properly showed that to be a sampling artifact, which is why the re-measure is recorded rather than the first number.
 
 ## P1 Acceptance
 
-- [ ] Layout/Text/Style/Theme stable.
-- [ ] Focus/Gesture/Animation/Overlay stable.
-- [ ] Accessibility/IME functional on representative desktop/mobile targets.
-- [ ] Core widgets and forms complete.
-- [ ] Typed Navigation and VirtualViewport complete.
-- [ ] Snapshot/interaction tests cover core widgets.
+- [x] Layout/Text/Style/Theme stable. — `floem-layout` (11+11 tests, `incremental` bench), `floem-text` (16+9, `shaping` bench), `floem-style` (4+4), `floem-theme` (2+2).
+- [x] Focus/Gesture/Animation/Overlay stable. — `floem-focus` (7+7), `floem-gesture` (4+4), `floem-animation` (3+3, `frame_rates` bench), `floem-overlay` (5+5); the overlay story was finished in R2.
+- [ ] Accessibility/IME functional on representative desktop/mobile targets. **PARTIAL — desktop only.** IME is functional on desktop end-to-end (R1: preedit reaches the focused `TextField`, commit replaces it, caret rect goes back to the OS). But the mobile half of this line cannot be met: `floem-platform-android` / `-ios` are headless capability-limited stubs, and floem-2 cannot run on mobile at all yet. Blocked on the same OS-surface bridge Phase 16 and Phase 19.4/19.5 stop at.
+- [x] Core widgets and forms complete. — `floem-widgets` (72 inline + 52 integration) covers primitives, controls, composites and navigation chrome; `floem-forms` (10) binds to the real controls. Phase 14.1–14.4 all ticked.
+- [x] Typed Navigation and VirtualViewport complete. — `floem-navigation` (13 tests, R6 glue `bf6a01c`); `layout/floem-virtual` (`ItemSizes`/`VisibleRange`/`VirtualViewport`, 7+7 tests, 1k/10k/100k benches).
+- [ ] Snapshot/interaction tests cover core widgets. **PARTIAL — interaction yes, snapshot no.** `tooling/floem-testkit` (R3) gives the shared harness and all three app-level suites are rewritten on it, so interaction coverage is real. The snapshot engine the line also asks for is `tooling/floem-snapshot` (Task 24.2) and **does not exist** — nothing renders a widget to pixels and compares PNG/scene/semantics fixtures. Not blocked on hardware; simply unstarted.
 
 ## P2 Acceptance
 
-- [ ] macOS/Windows/Linux/iOS/Android/Harmony/Web/Embedded backend matrix passes defined conformance suite.
-- [ ] WebView/Video/Camera/Map native providers work on agreed target subsets.
-- [ ] Native composition policy works without widget-level platform conditionals.
+- [ ] macOS/Windows/Linux/iOS/Android/Harmony/Web/Embedded backend matrix passes defined conformance suite. **BLOCKED — and the suite does not exist yet either.** Phase 19 is 0/24. Note that `docs/gates/*.md` is **not** this suite: those are the Floem **1.0** platform gates, every item still unrun with an empty Sign-off. macOS is the only platform with any real evidence (G1-1, G1-5, D1, D11); the other seven have none, and the mobile ones cannot be run here at all. Phase 19.1–19.8 is what has to define and then run the matrix.
+- [ ] WebView/Video/Camera/Map native providers work on agreed target subsets. **BLOCKED.** Phase 17 (21 steps) is unstarted; no provider exists, so there is nothing to agree a target subset for.
+- [ ] Native composition policy works without widget-level platform conditionals. **PARTIAL — the policy is built and holds on macOS only.** The mechanism is real and verified: capability negotiation, `ClipSupport` fail-closed, sticky re-negotiation, freeze/thaw and the external-texture path all have headless tests, and D1/D11 confirm it on a real window. What is missing is the cross-platform half — the Win32/X11 `NativeViewHost` impls do not compile here, and the surface compositor (KMS/Android/iOS) is device-gated. So "no widget-level platform conditionals" is demonstrated on one backend, not proven across the set.
 
 ## P3 Acceptance
 
-- [ ] Inspector can trace Element → Scene → source.
-- [ ] Profiler reports frame budget and allocations.
-- [ ] MCP agent can inspect/click/type/scroll/screenshot.
-- [ ] UI IR round-trips reference fixtures.
-- [ ] Hot reload handles compatible UI patches.
-- [ ] Figma/design contract diff works.
+All six blocked on unstarted phases; none is blocked on hardware, so this whole
+tier is available to anyone with the time.
+
+- [ ] Inspector can trace Element → Scene → source. **BLOCKED** — Phase 23.1/23.2 unstarted (18 steps). No inspection protocol exists.
+- [ ] Profiler reports frame budget and allocations. **BLOCKED** — Phase 23.3 unstarted.
+- [ ] MCP agent can inspect/click/type/scroll/screenshot. **BLOCKED** — Phase 25 (14 steps) unstarted. Nothing in the plan's list has an MCP surface today.
+- [ ] UI IR round-trips reference fixtures. **BLOCKED** — Phase 22.1/22.2 unstarted (13 steps).
+- [ ] Hot reload handles compatible UI patches. **BLOCKED** — Phase 22.3 unstarted.
+- [ ] Figma/design contract diff works. **BLOCKED** — Phase 26 (8 steps) and its accuracy loop, Phase 27 (12 steps), both unstarted.
 
 ## P4 Acceptance
 
-- [ ] Material/Cupertino/Fluent/Harmony design systems available.
-- [ ] Docs/examples complete.
-- [ ] Third-party plugin authoring path documented.
-- [ ] Compatibility/release policy active.
-- [ ] Performance budgets enforced in CI.
+- [ ] Material/Cupertino/Fluent/Harmony design systems available. **BLOCKED, but not from scratch.** The Material / Cupertino / Fluent kits already exist as `ecosystem/floem-ui` (~350 crates, imported into this repo on 2026-09-18). They are **not** available to floem 2.0, though: their `floem` dependency resolves to the **v1 monolith** at the repo root (`floem = { git = … }` patched to `path = "../.."`), so they are built against the old `View` API, not the 2.0 widget layer. Phase 21.1–21.4 is therefore a porting job with an existing asset behind it, not a greenfield one. Harmony has no kit at all.
+- [ ] Docs/examples complete. **PARTIAL.** Runable 2.0 examples exist (`floem2-window`, `floem2-probe`, `floem2-counter`) and there is real architecture documentation (`docs/workspace-conventions.md`, `ecosystem.md`, `accessibility.md`, `ohos.md`, `ios.md`, `android.md`, `host-embedding.md`). Phase 30.1's golden-example set and 30.2's full architecture doc pass are unstarted (18 steps).
+- [ ] Third-party plugin authoring path documented. **BLOCKED** — no such document anywhere under `docs/`; Phase 30 does not currently name it either.
+- [ ] Compatibility/release policy active. **PARTIAL.** `docs/ecosystem.md` carries a floem↔satellite compatibility matrix and `vendor/MIGRATION.md` covers the vendored forks, but there is no user-facing v1→v2 migration guide (Task 30.3) and no active release policy — `docs/gates/*.md` for 1.0 are entirely unrun.
+- [ ] Performance budgets enforced in CI. **BLOCKED by an explicit deferral.** Phase 0.3 Step 4 landed as "policy documented; absolute CI fail deferred until multi-run calibration" (`benches/memory_baseline.md`), and the calibration numbers were never checked in under `docs/superpowers/benchmarks/`. The 12% `update_reuse` reading above is exactly the kind of drift a live budget would have caught; today nothing does.
+
+---
+
+## Acceptance run — 2026-09-18
+
+First pass that actually **walked** the matrix instead of reading it. Executed on
+`floem-2.0` at `b35cfcb1`. The goal was to make every line name evidence that
+can go red — and two of the gates turned out not to be checking what they
+claimed, which is the single most important result here.
+
+### Gates, raw
+
+| Gate | Command | Result |
+|---|---|---|
+| Tests | `cargo test --workspace --no-fail-fast` | **240 targets / 1642 passed / 0 failed / 72 ignored / EXIT=0** — identical to the 2026-09-17 baseline |
+| Architecture | `bash scripts/check-architecture-deps.sh` | **PASS** — after the fix below |
+| Format, 2.0 selection | `cargo fmt <40 packages> --check` | **FAIL** on first run (2 files); clean after the fix below |
+| Real window | `floem2-window --features real`, 12 s then killed | **PASS** — `Apple M4 Pro (Metal)`, frame 1200, `partial 1`, `skips 0`, no panic |
+| Native probe | `floem2-probe --features real`, 14 s then killed | **PASS** — `NATIVE_VIEW true`, `all four surfaces mounted (frame 2)`, content view `520x560 flipped true`, native view 0 frame `(0.0, 278.0, 200.0, 80.0)` pt == the framework's expected `(0, 556, 400, 160)` device px, no panic |
+
+### Two gates were lying
+
+**1. The architecture gate skipped three of its own rules — and always had.**
+
+`FUTURE` normalised each banned *set* but not the *crate name*, so
+`"floem-types"` was looked up in a dict keyed `floem_types`. The lookup missed,
+the branch fell into `SKIP … not in workspace yet`, and three named rules had
+never executed — even though all three crates have existed for weeks:
+
+```
+· SKIP floem-types: not in workspace yet (types must stay platform/GPU free)
+· SKIP floem-scene: not in workspace yet (scene must not depend on OS windowing)
+· SKIP floem-platform: not in workspace yet (platform ABI must stay free of concrete OS/GPU crates)
+```
+
+Fixed by normalising the name too, then **proven able to fail** rather than
+assumed: adding `winit` to `floem-types` now yields `EXIT=1` and
+`✗ FORBIDDEN floem_types → ['winit']: types must stay platform/GPU free`. Before
+the fix the same injection was skipped and the gate printed PASS. Reverted
+afterwards.
+
+This is the same defect class the ledger already carries as "a check that cannot
+fail is taken as evidence". It had been fixed for the layer table and for the
+hint sets, but this list was missed — which is exactly why the 2026-09-15 audit
+did not catch it.
+
+**2. The 2.0 format gate was red, and the drift was a day older than the reorg.**
+
+`cargo fmt --check` over the forty 2.0 packages failed on two files:
+`app/floem-app/src/lib.rs` (import order) and
+`platform/floem-platform-desktop/src/native_appkit.rs` (`NativeSlot` /
+`NativeSnapshot` order). Both were introduced by `b6c05b63` — the D11 / 16.4
+commit of **2026-09-17** — not by the 2026-09-18 workspace reorg, which is the
+obvious suspect. Fixed by formatting those two packages individually; `--all`
+remains wrong for the reason the ledger records.
+
+Repo-wide `cargo fmt --all --check` currently reports **149** unique drifted
+files (132 under the legacy `src/`, plus 5 `vendor/`, 5 `legacy/`, 3 `examples/`,
+and the 2 now-fixed 2.0 ones). The ledger's recorded figure of 63 is stale.
+
+### Benchmarks
+
+| Bench | default protocol | shortened profile | recorded baseline | Δ (default) |
+|---|---|---|---|---|
+| `visible_range/1000` | 42.9 ns | 44.4 ns | ≈41 ns | +3.5% |
+| `visible_range/10000` | 411 ns | 425 ns | ≈400 ns | +2.8% |
+| `visible_range/100000` | 7.23 µs | 7.47 µs | ≈7.1 µs | +1.8% |
+| `update_reuse/scroll_100k_recycle` | **1.275 ms** | 1.295 ms | ≈1.16 ms | **+9.9%** |
+| `native_pool_10k_churn` | — | 524 µs | ≈512 µs | +2% (shortened) |
+
+"Default protocol" is criterion's own (3 s warm-up, 100 samples) and is the
+figure to trust; the shortened column (`--warm-up-time 1 --measurement-time 3
+--sample-size 20`) is kept only to show why it is not.
+
+First measurements, no baseline to compare: `element_arena/insert` 3.72 µs (1k) /
+34.0 µs (10k) / 370 µs (100k); `element_arena/get` 1.23 µs / 12.4 µs / 125 µs;
+`dirty_vs_scan/propagate_layout_10k_chain` 22.9 µs;
+`dirty_vs_scan/whole_tree_scan_10k` 12.5 µs;
+`tree_mutation/append_1k_children` 9.48 µs; `tree_mutation/reparent_1k` 90.7 µs.
+
+Two caveats on reading these, and both matter:
+
+- **Short sampling inflates small deltas — this run proved it on itself.**
+  `update_reuse` first read +12% under the shortened profile, i.e. over the
+  documented threshold; re-measured under the default protocol it is **+9.9%**,
+  inside the budget. Nothing about the code changed between the two runs. So
+  that bench is *fine*, but with no headroom, and it is the one the deferred CI
+  budget was written to guard. Any future quick-profile number here should be
+  treated as a lead, never a verdict.
+- **`propagate_layout_10k_chain` (22.9 µs) is slower than
+  `whole_tree_scan_10k` (12.5 µs), and that does not mean dirty tracking loses to
+  a full scan.** They are not a controlled pair: the first propagates up a
+  deliberately pathological **10 000-deep** parent chain, the second is a flat
+  10 000-element walk of `arena.get`. Different shapes, different costs. The
+  group name invites the wrong conclusion — rename it or match the shapes.
+
+### Device cases
+
+Unchanged from the device sheet: **4 of 29 recorded** — `G1-1`, `G1-5`, `D1`,
+`D11`. The remaining **25 are PENDING** (`R1-1…4`, `R2-1…8`, `D2–D10`, `D12`,
+`G1-2…4`). This pass added no new device evidence; it re-ran G1-1 and G1-5 to
+confirm they still hold after the workspace reorg, and they do.
+
+### What the pass changed
+
+- Ticked **all ten P0** lines (nine of them in this pass; the tenth was the
+  Policy A waiver) and **four of six P1** lines, each against a named target,
+  bench or observed run.
+- Left **every P2/P3/P4 line unticked** and annotated with *why*, separating the
+  three cases the matrix had been blurring: **unstarted** (all of P3, most of
+  P2), **needs another machine** (Win32/X11, KMS, mobile), and **needs another
+  machine and an asset that already exists** (`ecosystem/floem-ui`'s design kits,
+  which target the v1 API).
+- Fixed two gates that were reporting success without checking anything.
+- Reframed the earlier "P0 exists, it just was never walked" claim: P0 was
+  built — but nothing had verified the verifier.
 
 ---
 
