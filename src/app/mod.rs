@@ -424,20 +424,20 @@ impl Application {
     /// Create an `Application` for OpenHarmony (HarmonyOS).
     ///
     /// Unlike Android/iOS/macOS, the event loop is **not** created here. The
-    /// `tgui-winit-ohos` runtime owns the OHOS event loop: its `runtime_new`
+    /// `floem-winit-ohos` runtime owns the OHOS event loop: its `runtime_new`
     /// calls `EventLoop::bootstrap()` and then drives this `Application` as the
     /// `ApplicationHandler` from a worker thread via `pump_app_events`. So this
     /// constructor only builds the handler state (`event_loop` stays `None`);
-    /// the real loop lives inside `tgui-winit-ohos`.
+    /// the real loop lives inside `floem-winit-ohos`.
     ///
     /// # Compile-time note
     ///
-    /// `tgui-winit-ohos`'s `RuntimeApplication` requires
+    /// `floem-winit-ohos`'s `RuntimeApplication` requires
     /// `floem_winit_core::application::ApplicationHandler`. That is the **same**
     /// trait Floem implements: `floem-winit` (the facade Floem depends on)
     /// re-exports `floem-winit-core::application::ApplicationHandler`, and
     /// `floem-winit-core` is a single shared crate instance used by both
-    /// `floem-winit` and `tgui-winit-ohos`. So the `ApplicationHandler` bound
+    /// `floem-winit` and `floem-winit-ohos`. So the `ApplicationHandler` bound
     /// is satisfied — the two traits unify through `floem-winit-core`.
     ///
     /// The fork's runtime owns the OHOS event loop **and** the `ApplicationHandler`
@@ -466,7 +466,7 @@ impl Application {
         }
     }
 
-    /// Factory handed to `tgui_winit_ohos::export_ohos_winit_app!`.
+    /// Factory handed to `floem_winit_ohos::export_ohos_winit_app!`.
     ///
     /// `runtime_new` calls this once to obtain the `ApplicationHandler` it
     /// pumps. Returns an `Application` built by [`Application::new_ohos`].

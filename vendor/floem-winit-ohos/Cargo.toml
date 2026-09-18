@@ -12,7 +12,7 @@
 [package]
 edition = "2024"
 rust-version = "1.85"
-name = "tgui-winit-ohos"
+name = "floem-winit-ohos"
 version = "0.4.11"
 build = false
 exclude = ["examples/ohos-shell/**"]
@@ -41,7 +41,7 @@ default = []
 serde = ["floem-winit-core/serde"]
 
 [lib]
-name = "tgui_winit_ohos"
+name = "floem_winit_ohos"
 path = "src/lib.rs"
 
 [dependencies.bitflags]

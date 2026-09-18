@@ -19,8 +19,10 @@ Floem vendors third-party forks under [`vendor/`](../vendor/). Each fork carries
 
 - `vendor/floem-winit` — fork of [lapce/winit](https://github.com/lapce/winit)
   (iOS open-URL forwarding).
-- `vendor/tgui-winit-ohos` — fork of `tgui-winit-ohos` 0.4.11 (OHOS
+- `vendor/floem-winit-ohos` — fork of `tgui-winit-ohos` 0.4.11 (OHOS
   `floem-winit-core` retarget).
+- `vendor/harmony-app-rs` — patches for `taoyuan11/harmony-app-rs`
+  (`cargo-ohos-app`) so the OHOS packaging flow works on macOS/Linux.
 
 ## Generating the notice
 

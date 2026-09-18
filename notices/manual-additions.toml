@@ -11,9 +11,9 @@ license = "Apache-2.0 OR MIT"
 notes = "Fork of lapce/winit @ 133268de. See vendor/floem-winit/NOTICE.md."
 
 [[annotations]]
-id = "vendor/tgui-winit-ohos"
+id = "vendor/floem-winit-ohos"
 license = "Apache-2.0 OR MIT"
-notes = "Fork of tgui-winit-ohos 0.4.11. See vendor/tgui-winit-ohos/NOTICE.md."
+notes = "Fork of tgui-winit-ohos 0.4.11 (renamed to floem-winit-ohos). See vendor/floem-winit-ohos/NOTICE.md."
 
 # The third fork — `ui-events/floem-winit`, a fork of endoli/ui-events'
 # `ui-events-winit` 0.1.0 (upstream is Apache-2.0 OR MIT) — needs no entry here:

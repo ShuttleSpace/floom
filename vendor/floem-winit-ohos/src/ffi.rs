@@ -70,7 +70,7 @@ pub fn runtime_new(factory: AppFactory) -> *mut OhosRuntime {
             crate::deveco_log_with_level(
                 crate::OhosLogLevel::Error,
                 format!(
-                    "tgui-winit-ohos runtime worker panicked: {}",
+                    "floem-winit-ohos runtime worker panicked: {}",
                     panic_payload_to_string(payload.as_ref())
                 ),
             );

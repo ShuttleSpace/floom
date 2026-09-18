@@ -1146,7 +1146,7 @@ impl CoreWindow for Window {
     }
 
     fn title(&self) -> String {
-        String::from("tgui-winit-ohos")
+        String::from("floem-winit-ohos")
     }
 
     fn reset_dead_keys(&self) {}

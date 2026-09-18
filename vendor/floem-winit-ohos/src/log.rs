@@ -7,7 +7,7 @@ use std::ffi::{CString, c_int};
 
 pub const LOG_PREFIX: &str = "rust => ";
 pub const DEFAULT_LOG_DOMAIN: u32 = 0x3433;
-pub const DEFAULT_LOG_TAG: &str = "tgui-winit-ohos";
+pub const DEFAULT_LOG_TAG: &str = "floem-winit-ohos";
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 #[repr(u32)]

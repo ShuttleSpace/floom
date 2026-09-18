@@ -59,7 +59,7 @@ pub(crate) use backend_ohos_native::{
 };
 
 /// Called once at window creation with the XComponent pointer obtained from
-/// `tgui_winit_ohos::WindowExtOhos::xcomponent_ptr`. Registers Floem's
+/// `floem_winit_ohos::WindowExtOhos::xcomponent_ptr`. Registers Floem's
 /// accessibility callbacks on the XComponent's native provider so the OHOS
 /// screen reader can traverse the neutral tree (#122, Route A).
 ///

@@ -78,13 +78,13 @@ impl WindowExtOhos for dyn CoreWindow + '_ {
 #[macro_export]
 macro_rules! export_ohos_winit_app {
     ($factory:path) => {
-        fn __tgui_winit_ohos_factory() -> Box<dyn $crate::ffi::RuntimeApplication> {
+        fn __floem_winit_ohos_factory() -> Box<dyn $crate::ffi::RuntimeApplication> {
             Box::new($factory())
         }
 
         #[unsafe(no_mangle)]
         pub extern "C" fn ohos_winit_runtime_new() -> *mut ::std::ffi::c_void {
-            $crate::ffi::runtime_new(__tgui_winit_ohos_factory) as *mut ::std::ffi::c_void
+            $crate::ffi::runtime_new(__floem_winit_ohos_factory) as *mut ::std::ffi::c_void
         }
 
         #[unsafe(no_mangle)]

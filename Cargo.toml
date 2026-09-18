@@ -144,6 +144,11 @@ muda = { version = "0.17.1", default-features = false }
 winit = { git = "https://github.com/lapce/winit", rev = "133268de675a4fda70816d78a7a1435eb972fea1", package = "floem-winit" }
 ui-events = { version = "0.3", features = ["kurbo"] }
 floem-ui-events-winit = { path = "./ui-events/floem-winit", package = "floem-ui-events-winit" }
+# OHOS event loop / windowing. A vendored fork of `tgui-winit-ohos` — see
+# vendor/README.md. Declared as a plain path dependency rather than a
+# `[patch]`, because the fork is package-renamed and a `[patch]` entry must
+# keep the name of the package it replaces.
+floem-winit-ohos = { path = "vendor/floem-winit-ohos" }
 dpi = { version = "0.1.2", default-features = false }
 rustc-hash = "2.1"
 
@@ -298,15 +303,17 @@ objc2-ui-kit = { version = "0.3", features = [
 ] }
 
 # OpenHarmony (HarmonyOS) backend. The event loop / windowing is provided by
-# `tgui-winit-ohos` (a split-architecture winit backend for OHOS). A prerequisite
-# for Floem's `Application` to satisfy its `RuntimeApplication` trait is
-# retargeting that crate onto `floem-winit-core`. The drift is near-zero (the
-# `ApplicationHandler` trait is byte-identical and tgui only uses the unchanged
-# subset), so the retarget is a pure `winit_core -> floem_winit_core` rename —
-# see `vendor/tgui-winit-ohos/patch/retarget-to-floem-winit-core.patch` and
-# `docs/ohos.md`. The retargeted fork lives under `vendor/tgui-winit-ohos/`.
+# `floem-winit-ohos`, a vendored fork of `tgui-winit-ohos` (a split-architecture
+# winit backend for OHOS) whose `winit-core` dependency is retargeted onto
+# `floem-winit-core`. That retarget is what lets Floem's `Application` satisfy
+# the crate's `RuntimeApplication` trait at all. The drift is near-zero (the
+# `ApplicationHandler` trait is byte-identical and the OHOS backend only uses
+# the unchanged subset), so the retarget is a pure `winit_core ->
+# floem_winit_core` rename — see
+# `vendor/floem-winit-ohos/patch/retarget-to-floem-winit-core.patch` and
+# `docs/ohos.md`. The fork is declared in `[workspace.dependencies]`.
 [target.'cfg(target_env = "ohos")'.dependencies]
-tgui-winit-ohos = "0.4"
+floem-winit-ohos = { workspace = true }
 # N-API bridge for clipboard / file_dialog / open_external / receive_files.
 # napi-rs compiles the Rust<->ArkTS FFI; the OpenHarmony N-API lib is linked
 # into libentry.so by cargo-ohos-app. TODO(OHOS): confirm the napi version and
@@ -400,28 +407,39 @@ harness = false
 name = "render_baseline"
 harness = false
 
-# --- OHOS: retarget tgui-winit-ohos onto floem-winit-core ---
-# `tgui-winit-ohos` 0.4.11 depends on upstream `winit-core` 0.31.0-beta.2, whose
-# `ApplicationHandler` is a *different* trait from the one floem's `Application`
-# implements (floem-winit-core). The two don't unify, so floem's
-# `export_ohos_winit_app!(floem_app_factory)` cannot compile until both sides
-# share one `ApplicationHandler` definition. This patch points the published
-# crate at a local fork that renames `winit_core -> floem_winit_core` (pure
-# crate rename, zero logic change — see vendor/tgui-winit-ohos/patch/README.md).
-# The fork's `floem-winit-core` git rev matches floem's `floem-winit` git rev
-# exactly, so the trait is byte-identical.
-[patch.crates-io]
-tgui-winit-ohos = { path = "vendor/tgui-winit-ohos" }
+# --- OHOS: the retargeted fork is a plain dependency, not a `[patch]` ---
+# A `[patch.crates-io] tgui-winit-ohos = { path = ... }` entry used to live
+# here. The fork is now package-renamed to `floem-winit-ohos`, and a `[patch]`
+# entry must keep the name of the package it replaces, so it became a plain
+# path dependency in `[workspace.dependencies]`. The retarget rationale
+# (`winit_core -> floem_winit_core`, zero logic change) is recorded in the
+# OHOS dependency block above.
 
-# --- iOS: fork floem-winit to forward shared files/URLs (floem #109) ---
-# lapce/winit @ 133268de owns the `WinitApplicationDelegate` and used to drop
-# both cold-start (`application:didFinishLaunchingWithOptions:`) and warm-start
-# (`application:openURL:options:`) shares. This local fork (built from the
-# published `floem-winit 0.29.5`, which is that exact rev) adds a
-# `set_on_open_url` C callback that floem registers at startup; the delegate
-# forwards every shared `NSURL` through it. No `[patch]` drift risk — same rev,
-# same version (25.10.0). The fork's root `Cargo.toml` is a virtual workspace,
-# so the patch must point at the `floem-winit` member package (`winit/`), not
-# the workspace root. See docs/ios.md "Step 8b".
+# --- lapce/winit: pin every member of the vendor fork to the local tree ---
+#
+# Two reasons, and the second is a correctness fix:
+#
+# 1. iOS (#109). lapce/winit @ 133268de owns the `WinitApplicationDelegate` and
+#    used to drop both cold-start (`application:didFinishLaunchingWithOptions:`)
+#    and warm-start (`application:openURL:options:`) shares. This local fork
+#    (built from the published `floem-winit 0.29.5`, which is that exact rev)
+#    adds a `set_on_open_url` C callback that floem registers at startup; the
+#    delegate forwards every shared `NSURL` through it. No drift risk — same
+#    rev, same version (25.10.0). The fork's root `Cargo.toml` is a virtual
+#    workspace, so the patch must point at member packages, not at the root.
+#    See docs/ios.md "Step 8b".
+#
+# 2. OHOS trait identity. `vendor/floem-winit-ohos` used to depend on the *git*
+#    `floem-winit-core` / `dpi` while the patched `floem-winit` facade depends
+#    on the vendored *path* copies. Cargo treats those as different packages, so
+#    the resolve graph carried two `floem-winit-core` and three `dpi` instances
+#    (`cargo metadata`). Floem's `Application` implements the local
+#    `ApplicationHandler` while the OHOS backend required the git one — meaning
+#    `export_ohos_winit_app!(floem_app_factory)` could not type-check. Every
+#    member is now redirected to the vendored tree, so one instance is left.
+#    This is only observable on an OHOS target, which is why macOS never
+#    noticed.
 [patch."https://github.com/lapce/winit"]
 floem-winit = { path = "vendor/floem-winit/winit" }
+floem-winit-core = { path = "vendor/floem-winit/winit-core" }
+dpi = { path = "vendor/floem-winit/dpi" }

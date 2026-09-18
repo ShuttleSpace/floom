@@ -68,8 +68,12 @@ Current forks:
 
 - `vendor/floem-winit` — fork of [lapce/winit](https://github.com/lapce/winit)
   (iOS open-URL forwarding). See `vendor/floem-winit/NOTICE.md`.
-- `vendor/tgui-winit-ohos` — fork of `tgui-winit-ohos` 0.4.11 (OHOS
-  `floem-winit-core` retarget). See `vendor/tgui-winit-ohos/NOTICE.md`.
+- `vendor/floem-winit-ohos` — fork of `tgui-winit-ohos` 0.4.11 (OHOS
+  `floem-winit-core` retarget, renamed off the `tgui` namespace). See
+  `vendor/floem-winit-ohos/NOTICE.md`.
+- `vendor/harmony-app-rs` — patches for `taoyuan11/harmony-app-rs`
+  (`cargo-ohos-app`) making the OHOS packaging flow work on macOS/Linux. See
+  `vendor/harmony-app-rs/USAGE.md`.
 - `ui-events/floem-winit` — fork of
   [endoli/ui-events](https://github.com/endoli/ui-events) (`ui-events-winit`
   0.1.0). This one stays a **workspace member** (it is built against the

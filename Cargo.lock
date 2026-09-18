@@ -1534,11 +1534,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d8b14ccef22fc6f5a8f4d7d768562a182c04ce9a3b3157b91390b52ddfdf1a76"
 
 [[package]]
-name = "dpi"
-version = "0.1.2"
-source = "git+https://github.com/lapce/winit?rev=133268de675a4fda70816d78a7a1435eb972fea1#133268de675a4fda70816d78a7a1435eb972fea1"
-
-[[package]]
 name = "drm"
 version = "0.14.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1881,6 +1876,7 @@ dependencies = [
  "floem-legacy-renderer-vger",
  "floem-ui-events-winit",
  "floem-winit",
+ "floem-winit-ohos",
  "fluent-bundle",
  "futures",
  "image 0.25.9",
@@ -1912,7 +1908,6 @@ dependencies = [
  "strum",
  "sys-locale",
  "taffy",
- "tgui-winit-ohos",
  "tokio",
  "ui-events",
  "understory_box_tree",
@@ -2451,7 +2446,7 @@ dependencies = [
  "floem-winit-android",
  "floem-winit-appkit",
  "floem-winit-common",
- "floem-winit-core 25.10.0",
+ "floem-winit-core",
  "floem-winit-orbital",
  "floem-winit-uikit",
  "floem-winit-wayland",
@@ -2473,7 +2468,7 @@ dependencies = [
  "android-activity",
  "bitflags 2.11.0",
  "dpi 0.1.2",
- "floem-winit-core 25.10.0",
+ "floem-winit-core",
  "ndk",
  "raw-window-handle",
  "smol_str 0.3.6",
@@ -2489,7 +2484,7 @@ dependencies = [
  "dispatch2",
  "dpi 0.1.2",
  "floem-winit-common",
- "floem-winit-core 25.10.0",
+ "floem-winit-core",
  "objc2 0.6.4",
  "objc2-app-kit 0.3.2",
  "objc2-core-foundation",
@@ -2505,7 +2500,7 @@ dependencies = [
 name = "floem-winit-common"
 version = "25.10.0"
 dependencies = [
- "floem-winit-core 25.10.0",
+ "floem-winit-core",
  "memmap2",
  "objc2 0.6.4",
  "objc2-core-foundation",
@@ -2530,17 +2525,16 @@ dependencies = [
 ]
 
 [[package]]
-name = "floem-winit-core"
-version = "25.10.0"
-source = "git+https://github.com/lapce/winit?rev=133268de675a4fda70816d78a7a1435eb972fea1#133268de675a4fda70816d78a7a1435eb972fea1"
+name = "floem-winit-ohos"
+version = "0.4.11"
 dependencies = [
  "bitflags 2.11.0",
- "cursor-icon",
- "dpi 0.1.2 (git+https://github.com/lapce/winit?rev=133268de675a4fda70816d78a7a1435eb972fea1)",
+ "dpi 0.1.2",
+ "floem-winit-core",
  "keyboard-types 0.8.3",
  "raw-window-handle",
  "smol_str 0.3.6",
- "web-time",
+ "tracing",
 ]
 
 [[package]]
@@ -2549,7 +2543,7 @@ version = "25.10.0"
 dependencies = [
  "bitflags 2.11.0",
  "dpi 0.1.2",
- "floem-winit-core 25.10.0",
+ "floem-winit-core",
  "orbclient",
  "raw-window-handle",
  "redox_syscall 0.5.18",
@@ -2566,7 +2560,7 @@ dependencies = [
  "dispatch2",
  "dpi 0.1.2",
  "floem-winit-common",
- "floem-winit-core 25.10.0",
+ "floem-winit-core",
  "objc2 0.6.4",
  "objc2-core-foundation",
  "objc2-foundation 0.3.2",
@@ -2587,7 +2581,7 @@ dependencies = [
  "cursor-icon",
  "dpi 0.1.2",
  "floem-winit-common",
- "floem-winit-core 25.10.0",
+ "floem-winit-core",
  "libc",
  "memmap2",
  "raw-window-handle",
@@ -2611,7 +2605,7 @@ dependencies = [
  "concurrent-queue",
  "cursor-icon",
  "dpi 0.1.2",
- "floem-winit-core 25.10.0",
+ "floem-winit-core",
  "js-sys",
  "pin-project",
  "raw-window-handle",
@@ -2630,7 +2624,7 @@ dependencies = [
  "bitflags 2.11.0",
  "cursor-icon",
  "dpi 0.1.2",
- "floem-winit-core 25.10.0",
+ "floem-winit-core",
  "raw-window-handle",
  "smol_str 0.3.6",
  "tracing",
@@ -2648,7 +2642,7 @@ dependencies = [
  "cursor-icon",
  "dpi 0.1.2",
  "floem-winit-common",
- "floem-winit-core 25.10.0",
+ "floem-winit-core",
  "libc",
  "percent-encoding",
  "raw-window-handle",
@@ -4863,7 +4857,7 @@ name = "ohos"
 version = "0.1.0"
 dependencies = [
  "floem",
- "tgui-winit-ohos",
+ "floem-winit-ohos",
 ]
 
 [[package]]
@@ -6777,19 +6771,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "06794f8f6c5c898b3275aebefa6b8a1cb24cd2c6c79397ab15774837a0bc5755"
 dependencies = [
  "winapi-util",
-]
-
-[[package]]
-name = "tgui-winit-ohos"
-version = "0.4.11"
-dependencies = [
- "bitflags 2.11.0",
- "dpi 0.1.2 (git+https://github.com/lapce/winit?rev=133268de675a4fda70816d78a7a1435eb972fea1)",
- "floem-winit-core 25.10.0 (git+https://github.com/lapce/winit?rev=133268de675a4fda70816d78a7a1435eb972fea1)",
- "keyboard-types 0.8.3",
- "raw-window-handle",
- "smol_str 0.3.6",
- "tracing",
 ]
 
 [[package]]

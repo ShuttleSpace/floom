@@ -219,7 +219,7 @@ pub enum ArkUI_AccessibilityActionArguments {}
 pub enum ArkUI_Node {}
 
 /// Opaque OHOS XComponent (from the NDK `ace/xcomponent/native_interface_xcomponent.h`).
-/// `tgui-winit-ohos` hands us this as a raw `*mut c_void` via
+/// `floem-winit-ohos` hands us this as a raw `*mut c_void` via
 /// `WindowExtOhos::xcomponent_ptr`; we cast it back here to call the NDK.
 pub enum OH_NativeXComponent {}
 
@@ -835,7 +835,7 @@ pub(crate) unsafe fn try_create_and_register_provider() -> bool {
 /// Register Floem's accessibility callbacks on the XComponent's native
 /// provider. This is the **#122 Route A** entry point: the embedder passes the
 /// `OH_NativeXComponent*` it already holds (from
-/// `tgui_winit_ohos::WindowExtOhos::xcomponent_ptr`), and we obtain the
+/// `floem_winit_ohos::WindowExtOhos::xcomponent_ptr`), and we obtain the
 /// provider directly via `OH_NativeXComponent_GetNativeAccessibilityProvider`
 /// (API 13) — no custom ArkUI node or window-tree mount needed. Returns `true`
 /// on success.

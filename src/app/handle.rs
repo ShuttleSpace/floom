@@ -729,11 +729,11 @@ impl ApplicationHandle {
         // Capture the raw `OH_NativeXComponent*` so the OHOS accessibility
         // backend (#122, Route A) can register its provider on the XComponent.
         // `window` is a `Box<dyn winit::window::Window>` (= `floem_winit_core`'s
-        // `Window`, the same trait `tgui-winit-ohos`' `WindowExtOhos` is
+        // `Window`, the same trait `floem-winit-ohos`' `WindowExtOhos` is
         // implemented for), so `xcomponent_ptr()` is reachable via that trait.
         #[cfg(target_env = "ohos")]
         let a11y_xcomponent = {
-            use tgui_winit_ohos::WindowExtOhos;
+            use floem_winit_ohos::WindowExtOhos;
             window.as_ref().xcomponent_ptr()
         };
 
