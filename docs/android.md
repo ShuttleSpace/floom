@@ -122,7 +122,7 @@ used for reordering list items, moving views, custom drag interactions, etc. It 
 driven entirely by `PointerEvent`s (Down/Move/Up) plus Floem's **internal** pointer
 capture (`WindowState::set_pointer_capture`, tracked in
 `pending_pointer_capture_target`) — it never touches winit's `set_cursor_grab`.
-Android feeds touch as `PointerEvent`s through the same `ui_events_winit` reducer
+Android feeds touch as `PointerEvent`s through the same `floem_ui_events_winit` reducer
 the desktop uses, each with a stable `pointer_id`, so the whole threshold →
 `DragStart` → `DragMove` → `Drop`/`Cancel` lifecycle runs unchanged. To make a view
 draggable on Android you follow the exact same recipe as desktop:

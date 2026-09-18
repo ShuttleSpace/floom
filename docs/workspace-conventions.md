@@ -49,8 +49,11 @@ the layer table in `scripts/check-architecture-deps.sh`.
 
 ## 3. Forked / vendored third-party code → `vendor/`
 
-Forked upstream crates live in **`vendor/`** (lore uses the same name). Each fork
-carries a **`NOTICE.md`** stating:
+Forked upstream crates live in **`vendor/`** (lore uses the same name). A fork
+that has to stay a workspace member — because it compiles against a
+workspace-wide dependency pin — lives under its own directory instead (see
+`ui-events/`), but the attribution rule is identical. **Every fork carries a
+`NOTICE.md`** stating:
 
 - the upstream project URL,
 - the exact fork rev / version,
@@ -67,6 +70,11 @@ Current forks:
   (iOS open-URL forwarding). See `vendor/floem-winit/NOTICE.md`.
 - `vendor/tgui-winit-ohos` — fork of `tgui-winit-ohos` 0.4.11 (OHOS
   `floem-winit-core` retarget). See `vendor/tgui-winit-ohos/NOTICE.md`.
+- `ui-events/floem-winit` — fork of
+  [endoli/ui-events](https://github.com/endoli/ui-events) (`ui-events-winit`
+  0.1.0). This one stays a **workspace member** (it is built against the
+  workspace's own `winit` pin), so it is not `exclude`d — but it carries a
+  `NOTICE.md` all the same. See `ui-events/floem-winit/NOTICE.md`.
 
 ## 4. License compliance → `notices/`
 
