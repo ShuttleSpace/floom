@@ -19,15 +19,25 @@
 
 #![forbid(unsafe_code)]
 
+mod design_contract;
 mod document;
 mod error;
+mod importer;
 mod node;
 mod schema;
 mod value;
 mod version;
 
+pub use design_contract::{
+    ColorRole, ContractValue, ContractVersion, DesignContract, DiffEntry, Radius, Spacing,
+    StateStyle, TypeStyle, compare,
+};
 pub use document::{LoadOutcome, UiDocument};
 pub use error::IrError;
+pub use importer::{
+    AutoLayout, DesignAxis, DesignFile, DesignNode, DesignRole, DesignSize, DesignStroke,
+    ImportedDesign, ImporterError, TextSpec, import,
+};
 pub use node::{
     DEFAULT_SLOT, EventBinding, EventName, NativeKind, NodeKey, NodeKind, Prop, Slot, UiNode,
 };

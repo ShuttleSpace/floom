@@ -1346,17 +1346,17 @@ tester.assert_text(selector, text)
 - Create: `compiler/floem-ui-ir/src/design_contract.rs`
 - Test: expected/actual comparison tests
 
-- [ ] **Step 1: Define dimensions/spacing/typography/colors/radius/state/animation/accessibility fields.**
-- [ ] **Step 2: Implement deterministic comparison output.**
-- [ ] **Step 3: Commit.**
+- [x] **Step 1: Define dimensions/spacing/typography/colors/radius/state/animation/accessibility fields.** — DONE 2026-09-18: `compiler/floem-ui-ir/src/design_contract.rs` — versioned (`ContractVersion`, same major/older-minor rule as the IR) `DesignContract` with `Dimensions`/`Spacing`/`Radius`/`TypeStyle`/`ColorRole`/`StateStyle`+overrides/`Animation`/`Accessibility` (WCAG 4.5 contrast + 44 pt target as the defaults a silent design still promises).
+- [x] **Step 2: Implement deterministic comparison output.** — `compare(expected, actual) -> ContractDiff`: one fixed field walk, lists sorted by name, entries as `(path, expected, actual)` with `"<absent>"` for one-sided names. Rendering *is* the tolerance: floats render at three decimals, so `8`/`8.0`/`8.0004` match and `8.5` disagrees — one rule does both jobs where a separate epsilon would be a second implementation of "how close is close".
+- [x] **Step 3: Commit.** — this commit. 7 inline tests (identical-match, one-path-per-family, missing/extra colours, tolerance+rendering, state/typography names, JSON round trip, version gate).
 
 ## Task 26.2: Figma importer boundary
 
-- [ ] Define an importer API accepting normalized design data.
-- [ ] Map auto-layout → Flex, spacing → gap, padding → padding, variants → semantic variants, text styles → typography tokens.
-- [ ] Emit UI IR and Design Contract.
-- [ ] Add fixture-based tests.
-- [ ] Commit.
+- [x] Define an importer API accepting normalized design data. — `compiler/floem-ui-ir/src/importer.rs`: the boundary takes `DesignFile` (frames/text/buttons with hex fills, auto-layout, variants), not Figma's REST shapes — a Figma-specific converter upstream owns that.
+- [x] Map auto-layout → Flex, spacing → gap, padding → padding, variants → semantic variants, text styles → typography tokens. — Frame+auto-layout → `Stack` (`axis`/`gap`/`padding`), frame without → `Container`; fill/stroke → `background`/`border_*` (a text node's fill is its `foreground`); variants validated against the IR's own `VARIANT_DOMAIN` (unknown → `UnknownVariant` naming the allowed set, never coerced); text runs → `Text` `label`/`size` plus a named contract token. Names become keys; collisions and illegal names are refused, not repaired.
+- [x] Emit UI IR and Design Contract. — `import() -> ImportedDesign { document, contract }`, both from one deterministic walk; the emitted document passes `UiDocument::validate()` (tested), and `compare` on two imports of the same fixture matches.
+- [x] Add fixture-based tests. — `fixtures/normalized_design.json` + `tests/importer.rs`, 13 tests: mapping table, variant refusal with allowed set, key rules (`BadName`/`DuplicateKey`), `MissingText`, contract emission (distinct fills share a role named by first user), determinism, and the design-vs-drifted-implementation diff naming `spacing.gap`/`radius.corner`.
+- [x] Commit. — this commit.
 
 ---
 
