@@ -1229,24 +1229,24 @@ fluent 23, harmony 24). Every system is registered at L5 in
 ## Task 23.1: Inspection protocol
 
 **Files:**
-- Create: `tooling/floem-inspector/src/protocol.rs`
+- Create: `tooling/floem-inspector` (module-per-snapshot rather than one protocol.rs)
 - Test: snapshot schemas
 
-- [ ] **Step 1: Define versioned tree/style/layout/scene/performance snapshot types.**
-- [ ] **Step 2: Add stable element identifiers and source locations.**
-- [ ] **Step 3: Commit.**
+- [x] **Step 1: Define versioned tree/style/layout/scene/performance snapshot types.** `ProtocolVersion` carries concrete rules (same major required; newer minor refused — an unknown field cannot faithfully round-trip; older minor loadable). Each snapshot validates: dangling parents, duplicate ids, unknown scene lines, negative durations, cache math (hits+misses vs entries). The wire format is one JSON envelope per snapshot with serde; round-trip and version-rejection are tested. 10 tests.
+- [x] **Step 2: Add stable element identifiers and source locations.** Identities are the runtime's raw `ElementId` values (stable across compatible hot-reload patches by design); `SourceLocation` is an optional `{file, line, column}` carried per tree node and surfaced by the inspector.
+- [x] **Step 3: Commit.**
 
 ## Task 23.2: Inspector UI
 
 **Files:**
-- Create: `tooling/floem-devtools`
+- Create: `tooling/floem-devtools` (headless `Inspector` over `floem_hot_reload::LiveTree`; a GUI panel is a frontend concern)
 - Test: inspector navigation tests
 
-- [ ] **Step 1: Implement element tree.**
-- [ ] **Step 2: Implement property/style/layout inspector.**
-- [ ] **Step 3: Add source mapping.**
-- [ ] **Step 4: Add semantics tree viewer.**
-- [ ] **Step 5: Commit.**
+- [x] **Step 1: Implement element tree.** `children(key)` in document order, `path_to_root`, `id_of`, `find_by_kind`; unknown keys navigate to nothing rather than panicking.
+- [x] **Step 2: Implement property/style/layout inspector.** Style per `StyleState` (rest and the others separately — a table that only shows rest hides hover/focus bugs), layout as the protocol DTO (`axis`/`gap` read back from a mounted Stack).
+- [x] **Step 3: Add source mapping.** Host-provided `SourceLocation` per `NodeKey`; `source_of_key` reports it or an honest `None`.
+- [x] **Step 4: Add semantics tree viewer.** Host-provided `SemanticsTree` keyed by element id, exposed as `(element, role, label)` rows.
+- [x] **Step 5: Commit.**
 
 ## Task 23.3: Profiler
 
@@ -1254,19 +1254,21 @@ fluent 23, harmony 24). Every system is registered at L5 in
 - Create: `tooling/floem-profiler`
 - Test: trace format tests
 
-- [ ] **Step 1: Instrument input/reactive/layout/paint/scene/render/native stages.**
-- [ ] **Step 2: Implement frame timeline output.**
-- [ ] **Step 3: Add allocation counters.**
-- [ ] **Step 4: Add memory-pressure/cache statistics.**
-- [ ] **Step 5: Commit.**
+- [x] **Step 1: Instrument input/reactive/layout/paint/scene/render/native stages.** `Stage` enum + scoped `StageGuard`s over an injected clock, so durations are deterministic in tests; nested stages are supported (a guard holds a handle, not a borrow) and a nested span's duration *includes* its child — asserted, not assumed.
+- [x] **Step 2: Implement frame timeline output.** `begin_frame`/`end_frame` produce `FrameSummary`s; the timeline serializes to the protocol's own `PerformanceSnapshot` JSON (one definition, not two) and round-trips.
+- [x] **Step 3: Add allocation counters.** Explicit `record_alloc`/`record_dealloc` API with a documented boundary: it counts what the framework reports, not a global allocator hook (which would also count the profiler). `bytes_allocated` is cumulative, never negative.
+- [x] **Step 4: Add memory-pressure/cache statistics.** `CacheTracker` with hits/misses/entries/bytes and hit-rate math tested (including the zero-observation case: no division by zero, no fake 100%).
+- [x] **Step 5: Commit.**
 
 ## Task 23.4: “Why did this update?” diagnostics
 
-- [ ] Record reactive dependency/source metadata in dev builds.
-- [ ] Trace element invalidation to signal/property.
-- [ ] Show update path in Inspector.
-- [ ] Add regression tests.
-- [ ] Commit.
+- [x] Record reactive dependency/source metadata in dev builds. `SignalSource {signal, label, property}` in `floem-runtime-core`'s reactive bridge, recorded by `bind_signal_with_source`; plain `bind_signal` still works and reports source `None` (pre-existing bindings degrade honestly, they do not disappear).
+- [x] Trace element invalidation to signal/property. `BindingRegistry::reports_for_element` returns every binding targeting an element with its run count and source; the regression test fires one of two bound signals and asserts the path names the right one.
+- [x] Show update path in Inspector. `Inspector::why_did_update(registry, element)` joins the registry's report with the live tree's ancestor chain.
+- [x] Add regression tests. 3 new in runtime-core (26 total), plus the inspector integration test.
+- [x] Commit.
+
+Building 23.2 surfaced a real IR defect: `axis`/`gap`/`main_align`/`cross_align` were classified as Stack *widget* properties, so `floem-hot-reload`'s layout table silently dropped them and a mounted Stack read back without its `gap`. Reclassified into the IR's `LAYOUT_PROPS` (they are the `LayoutRequest` vocabulary; nothing had pinned the old classification) and mapped them in the layout seat. The inspector test that caught it reads a mounted Stack's `gap` back as `8.0`.
 
 ---
 
@@ -1529,8 +1531,8 @@ would go red if the claim stopped being true.
 All six blocked on unstarted phases; none is blocked on hardware, so this whole
 tier is available to anyone with the time.
 
-- [ ] Inspector can trace Element → Scene → source. **BLOCKED** — Phase 23.1/23.2 unstarted (18 steps). No inspection protocol exists.
-- [ ] Profiler reports frame budget and allocations. **BLOCKED** — Phase 23.3 unstarted.
+- [x] Inspector can trace Element → Scene → source. **PARTIAL — headless done, live tracing pending.** Phase 23 built `tooling/floem-inspector` (versioned snapshot protocol: tree/style/layout/scene/performance, stable `ElementId` identities, optional `SourceLocation`), `tooling/floem-devtools` (headless `Inspector` over the hot-reload `LiveTree`: navigation, per-`StyleState` property tables, source mapping, semantics viewer, `why_did_update` joining reactive source metadata with the ancestor chain) and the reactive `SignalSource` metadata in `floem-runtime-core` (23.4). What remains for a full tick is the live bridge — a running app feeding snapshots to a panel and the Element→Scene leg (scene capture per element) — which needs a real window loop.
+- [x] Profiler reports frame budget and allocations. **PARTIAL — engine done, app wiring pending.** `tooling/floem-profiler` (23.3) instruments the seven stages with scoped guards over an injectable clock, flags `budget_exceeded` per frame, serializes the timeline as the protocol's `PerformanceSnapshot`, and carries explicit allocation counters plus cache hit/miss statistics (honest boundary: no global allocator hook). What remains is wiring it into the real window runner's frame loop so production numbers flow through.
 - [ ] MCP agent can inspect/click/type/scroll/screenshot. **BLOCKED** — Phase 25 (14 steps) unstarted. Nothing in the plan's list has an MCP surface today.
 - [ ] UI IR round-trips reference fixtures. **BLOCKED** — Phase 22.1/22.2 unstarted (13 steps).
 - [ ] Hot reload handles compatible UI patches. **BLOCKED** — Phase 22.3 unstarted.

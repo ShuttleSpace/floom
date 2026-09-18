@@ -2016,6 +2016,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "floem-devtools"
+version = "0.2.0"
+dependencies = [
+ "floem-accessibility",
+ "floem-core",
+ "floem-dsl",
+ "floem-hot-reload",
+ "floem-inspector",
+ "floem-legacy-reactive",
+ "floem-runtime-core",
+ "floem-style",
+ "floem-types",
+ "floem-ui-ir",
+]
+
+[[package]]
 name = "floem-dsl"
 version = "0.2.0"
 dependencies = [
@@ -2122,6 +2138,15 @@ dependencies = [
 [[package]]
 name = "floem-ime"
 version = "0.2.0"
+
+[[package]]
+name = "floem-inspector"
+version = "0.2.0"
+dependencies = [
+ "floem-types",
+ "serde",
+ "serde_json",
+]
 
 [[package]]
 name = "floem-ios-example"
@@ -2335,6 +2360,14 @@ dependencies = [
  "floem-accessibility",
  "floem-platform",
  "floem-types",
+]
+
+[[package]]
+name = "floem-profiler"
+version = "0.2.0"
+dependencies = [
+ "floem-inspector",
+ "serde_json",
 ]
 
 [[package]]

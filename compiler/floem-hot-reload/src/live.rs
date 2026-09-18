@@ -3,7 +3,7 @@
 
 use std::collections::HashMap;
 
-use floem_core::{Element, ElementKind, LayoutRequest, Position};
+use floem_core::{Align, Axis, Element, ElementKind, LayoutRequest, Position};
 use floem_runtime_core::{ElementArena, ElementTree};
 use floem_style::{StyleMap, StyleProps, StyleSet, StyleState};
 use floem_types::ElementId;
@@ -33,6 +33,16 @@ pub struct LiveTree {
     /// preserve it — losing a scroll offset on an unrelated edit is the bug
     /// this whole crate exists to prevent.
     stash: HashMap<u64, String>,
+}
+
+/// A read-only view of one live element for inspection.
+#[derive(Debug, Clone)]
+pub struct ElementRef {
+    pub key: NodeKey,
+    pub id: ElementId,
+    pub kind: NodeKind,
+    pub parent: Option<ElementId>,
+    pub children: Vec<ElementId>,
 }
 
 /// What kind of element an IR node mounts as.
@@ -177,6 +187,25 @@ impl LiveTree {
     /// How many elements are live.
     pub fn element_count(&self) -> usize {
         self.arena.len()
+    }
+
+    /// Every live element, sorted by stable key so the order is reproducible.
+    pub fn elements(&self) -> Vec<ElementRef> {
+        let mut keys: Vec<&NodeKey> = self.keys.keys().collect();
+        keys.sort();
+        keys.iter()
+            .filter_map(|key| {
+                let id = *self.keys.get(*key)?;
+                let element = self.arena.get(id)?;
+                Some(ElementRef {
+                    key: (*key).clone(),
+                    id,
+                    kind: *self.kinds.get(&id.raw())?,
+                    parent: element.parent,
+                    children: self.tree.children(id).to_vec(),
+                })
+            })
+            .collect()
     }
 
     pub(crate) fn layouts_mut(&mut self) -> &mut HashMap<u64, LayoutRequest> {
@@ -378,7 +407,34 @@ fn set_layout_prop(layout: &mut LayoutRequest, prop: &Prop) {
         ("inset_top", PropValue::Number(n)) => set_inset(layout, 1, Some(*n as f32)),
         ("inset_right", PropValue::Number(n)) => set_inset(layout, 2, Some(*n as f32)),
         ("inset_bottom", PropValue::Number(n)) => set_inset(layout, 3, Some(*n as f32)),
+        // Flow intent. These used to sit in the IR's Widget class and were
+        // silently dropped here; they are the LayoutRequest vocabulary.
+        ("axis", PropValue::Ident(word)) => {
+            layout.axis = Some(if word == "horizontal" {
+                Axis::Horizontal
+            } else {
+                Axis::Vertical
+            });
+        }
+        ("gap", PropValue::Number(n)) => layout.gap = Some(*n as f32),
+        ("main_align", PropValue::Ident(word)) => {
+            layout.main_align = Some(align_from(word));
+        }
+        ("cross_align", PropValue::Ident(word)) => {
+            layout.cross_align = Some(align_from(word));
+        }
         _ => {}
+    }
+}
+
+/// Map an IR alignment ident onto the core enum. Unaligned props cannot reach
+/// here (the IR validates idents against its domain), so a fallthrough is a
+/// vocabulary bug, not a data condition.
+fn align_from(word: &str) -> Align {
+    match word {
+        "start" => Align::Start,
+        "center" => Align::Center,
+        _ => Align::End,
     }
 }
 

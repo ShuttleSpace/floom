@@ -267,7 +267,7 @@ for _names, _level in [
     # test harness; `floem-snapshot` is the golden-image engine (Phase 24.2);
     # `floem-codegen` is the native-glue compiler (Phase 18); `floem-ui-ir` is
     # the versioned UI intermediate representation (Phase 22.1).
-    (["floem-testkit", "floem-snapshot", "floem-codegen", "floem-ui-ir", "floem-dsl", "floem-hot-reload"], 8),
+    (["floem-testkit", "floem-snapshot", "floem-codegen", "floem-ui-ir", "floem-dsl", "floem-hot-reload", "floem-inspector", "floem-devtools", "floem-profiler"], 8),
 ]:
     for _n in _names:
         LAYERS[_n] = _level

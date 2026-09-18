@@ -24,7 +24,7 @@ mod live;
 mod patch;
 
 pub use diff::diff;
-pub use live::{LiveTree, Snapshot};
+pub use live::{ElementRef, LiveTree, Snapshot};
 pub use patch::{ApplyReport, PatchOp, RolledBack, UiPatch};
 
 /// Re-exported so a caller can talk about keys without depending on

@@ -1,4 +1,4 @@
-use super::{BindingRegistry, ReactiveBinding};
+use super::{BindingRegistry, ReactiveBinding, SignalSource};
 use crate::arena::ElementArena;
 use crate::dirty::{DirtyFlags, DirtySet};
 use floem_legacy_reactive::{RwSignal, SignalUpdate};
@@ -69,4 +69,100 @@ fn unbind_stops_updates() {
     signal.set(1);
     assert_eq!(dirty.borrow().get(el), DirtyFlags::empty());
     assert!(registry.run_count(id).is_none());
+}
+
+#[test]
+fn the_update_path_names_the_signal_that_fired() {
+    // "Why did this update?" needs the *source*, not just the fact that
+    // something went dirty: two signals can both target one element, and the
+    // diagnostic that cannot tell them apart is noise.
+    let arena = Rc::new(RefCell::new(ElementArena::new()));
+    let dirty = Rc::new(RefCell::new(DirtySet::new()));
+    let el = arena.borrow_mut().insert_primitive();
+
+    let label = RwSignal::new("hello".to_string());
+    let count = RwSignal::new(0u32);
+    let mut registry = BindingRegistry::new();
+
+    let label_binding = registry.bind_signal_with_source(
+        arena.clone(),
+        dirty.clone(),
+        ReactiveBinding {
+            element: el,
+            flags: DirtyFlags::PAINT,
+        },
+        label,
+        SignalSource {
+            signal: label.id(),
+            label: "heading_text".into(),
+            property: "label".into(),
+        },
+    );
+    let _count_binding = registry.bind_signal_with_source(
+        arena.clone(),
+        dirty.clone(),
+        ReactiveBinding {
+            element: el,
+            flags: DirtyFlags::STYLE,
+        },
+        count,
+        SignalSource {
+            signal: count.id(),
+            label: "progress_value".into(),
+            property: "background".into(),
+        },
+    );
+
+    dirty.borrow_mut().clear(el);
+    count.set(3);
+
+    let reports = registry.reports_for_element(el);
+    assert_eq!(reports.len(), 2, "two bindings target the element");
+    let fired = reports
+        .iter()
+        .find(|r| r.runs >= 2)
+        .expect("exactly one binding ran twice");
+    assert_eq!(
+        fired.source.as_ref().map(|s| s.label.as_str()),
+        Some("progress_value"),
+        "the update path names the signal that actually fired"
+    );
+    assert_eq!(
+        fired.source.as_ref().map(|s| s.property.as_str()),
+        Some("background")
+    );
+    let _ = label_binding;
+}
+
+#[test]
+fn a_bound_element_without_source_metadata_still_reports() {
+    // Bindings made before the diagnostic existed carry no source; the report
+    // must not crash or drop them — it just says "unknown source".
+    let arena = Rc::new(RefCell::new(ElementArena::new()));
+    let dirty = Rc::new(RefCell::new(DirtySet::new()));
+    let el = arena.borrow_mut().insert_primitive();
+    let text = RwSignal::new("x".to_string());
+    let mut registry = BindingRegistry::new();
+    let binding = registry.bind_signal(
+        arena.clone(),
+        dirty.clone(),
+        ReactiveBinding {
+            element: el,
+            flags: DirtyFlags::PAINT,
+        },
+        text,
+    );
+
+    let reports = registry.reports_for_element(el);
+    assert_eq!(reports.len(), 1);
+    assert_eq!(reports[0].id, binding);
+    assert!(reports[0].source.is_none());
+}
+
+#[test]
+fn an_unbound_element_reports_no_bindings() {
+    let arena = Rc::new(RefCell::new(ElementArena::new()));
+    let el = arena.borrow_mut().insert_primitive();
+    let registry = BindingRegistry::new();
+    assert!(registry.reports_for_element(el).is_empty());
 }

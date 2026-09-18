@@ -87,6 +87,14 @@ const LAYOUT_PROPS: &[Row] = &[
     row("inset_top", ValueType::Number),
     row("inset_right", ValueType::Number),
     row("inset_bottom", ValueType::Number),
+    // Flow intent — the rest of the `LayoutRequest` vocabulary. These used to
+    // live as Stack widget properties, which silently dropped them from every
+    // layout table: the Phase 23 inspector read a mounted Stack back and its
+    // `gap` was gone.
+    row_in("axis", ValueType::Ident, AXIS),
+    row("gap", ValueType::Number),
+    row_in("main_align", ValueType::Ident, ALIGN),
+    row_in("cross_align", ValueType::Ident, ALIGN),
 ];
 
 /// Properties of a native participant. These mirror `floem_types`, so the same
@@ -143,16 +151,6 @@ const WIDGET_PROPS: &[(NodeKind, Row)] = &[
     (NodeKind::TextField, row("value", ValueType::Text)),
     (NodeKind::TextField, row("placeholder", ValueType::Text)),
     (NodeKind::TextField, row("disabled", ValueType::Bool)),
-    (NodeKind::Stack, row_in("axis", ValueType::Ident, AXIS)),
-    (NodeKind::Stack, row("gap", ValueType::Number)),
-    (
-        NodeKind::Stack,
-        row_in("main_align", ValueType::Ident, ALIGN),
-    ),
-    (
-        NodeKind::Stack,
-        row_in("cross_align", ValueType::Ident, ALIGN),
-    ),
     (NodeKind::Grid, row("columns", ValueType::Int)),
     (NodeKind::Grid, row("column_gap", ValueType::Number)),
     (NodeKind::Grid, row("row_gap", ValueType::Number)),
