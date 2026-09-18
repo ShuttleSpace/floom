@@ -1462,25 +1462,75 @@ tester.assert_text(selector, text)
 
 ## Task 29.1: Public prelude
 
-- [ ] Define `floem::prelude::*` as the beginner-facing stable surface.
-- [ ] Re-export only semantic widgets/runtime primitives.
-- [ ] Keep advanced/experimental APIs under explicit modules.
-- [ ] Add compile-fail tests for unsupported patterns.
-- [ ] Commit.
+- [x] Define `floem::prelude::*` as the beginner-facing stable surface. — the
+  2.0 facade crate **`floem2`** (`app/floem2`, L9 in the layer table) owns
+  `floem2::prelude`: the package name `floem` is still held by the v1
+  monolith, and 29.2's preservation policy says v1 apps must keep compiling,
+  so the facade takes the sibling name now and the one-line rename to `floem`
+  happens when the monolith retires. Registered in the root manifest, the
+  `LAYERS` table (new level 9 — it aggregates L8 devtools, so it sits above
+  the tooling tier, and unlike that tier it *is* shipped).
+- [x] Re-export only semantic widgets/runtime primitives. — 30 widgets
+  (Stack/Button/List/Tabs/Dialog/…), the app shell (`WidgetHost`, `AppRunner`,
+  `NodeId`, `RunStats`, `FrameStats`), and the runtime primitives beginners
+  actually name (`Point/Rect/Size`, `Axis`, `Child/ChildKey/LayoutRequest`,
+  `LayoutStyle`, `PointerEvent/ScrollEvent`). One deliberate ambiguity fix:
+  the layout `Axis` (what Stack takes) wins the glob; the divider-orientation
+  `floem_widgets::Axis` stays at its explicit path.
+- [x] Keep advanced/experimental APIs under explicit modules. —
+  `floem2::advanced` holds the authoring contracts (`Widget`, `WidgetAny`,
+  contexts, semantics vocabulary); the full layered crates stay reachable as
+  top-level re-exports (`floem2::widgets`, `floem2::core`, …).
+- [x] Add compile-fail tests for unsupported patterns. — doctests: v1
+  `create_signal` unresolved in the prelude; v1 `IntoView` unresolved; and a
+  **real v1 `floem::views::label(...)` rejected by
+  `WidgetHost::mount_root`** (facade dev-depends on the monolith for exactly
+  this test). Plus a positive inventory test pinning all 46 prelude names and
+  a prelude-only hello app that mounts, paints and routes a button click
+  (`app/floem2/tests/prelude_surface.rs`, 5 tests + 4 doctests).
+- [x] Commit.
 
 ## Task 29.2: Deprecate legacy View internals
 
-- [ ] Mark old View lifecycle APIs as compatibility/advanced.
-- [ ] Add migration diagnostics.
-- [ ] Preserve old applications through the current major version.
-- [ ] Commit.
+- [x] Mark old View lifecycle APIs as compatibility/advanced. — `src/view`
+  module docs carry the compatibility-tier note; the frozen v1 surface lives
+  at **`floem::compat::v1_prelude`** (verbatim copy of the current prelude
+  body) so the stable v1 path exists *before* any future narrowing of
+  `floem::prelude` (which is unchanged this phase — preservation).
+- [x] Add migration diagnostics. — `#[diagnostic::on_unimplemented]` on
+  **both** `floem_core::Widget` and `floem_core::WidgetAny` (the trait real
+  mount points take): passing a v1 view to a 2.0 mount reports "`{Self}` is
+  not a Floem 2.0 `Widget`" plus notes naming `floem2::prelude` and the
+  preservation policy, verified rendering at a scratch call site.
+- [x] Preserve old applications through the current major version. —
+  `floem::prelude` untouched (all 342 referencing files compile unchanged);
+  `tests/compat_prelude.rs` (4 tests) pins the mirror guarantee: same fn
+  items and `TypeId`s through `prelude` and `compat::v1_prelude`, and a v1
+  app snippet (signals, effects vocabulary, `UnitExt`, css colours) running
+  through the compat path alone.
+- [x] Commit.
 
 ## Task 29.3: Feature graph trimming
 
-- [ ] Group features into desktop/mobile/web/embedded and renderer/native/devtools bundles.
-- [ ] Ensure unused backends are not linked.
-- [ ] Measure release binary size per target.
-- [ ] Commit.
+- [x] Group features into desktop/mobile/web/embedded and renderer/native/devtools bundles. —
+  facade features: `desktop` (platform-desktop + winit), `mobile`
+  (android+ios+harmony), `web`, `embedded`; `renderer-gpu` (vello+wgpu),
+  `renderer-software` (tiny-skia), `devtools` (L8 tooling, reachable because
+  the facade sits at L9). `native` needs no bundle: native view composition
+  is part of the `floem-app` shell (Phase 16), not an optional backend.
+- [x] Ensure unused backends are not linked. — `tests/feature_graph.rs` (5
+  tests) resolves the facade's dependency graph with `cargo tree -e normal`:
+  default features contain **no** windowing backend, renderer, GPU stack,
+  tooling, or the legacy monolith; each bundle adds exactly its own crates
+  (e.g. `desktop` brings winit but not wgpu; `renderer-gpu` brings wgpu but
+  not winit).
+- [x] Measure release binary size per target. — macOS (Apple M4 Pro),
+  release, unstripped: **`floem2-hello`** (new minimal example, imports
+  *only* `floem2::prelude`, headless) **2,694,256 B ≈ 2.6 MiB**;
+  `floem2-counter` (headless composite demo) 2,835,248 B ≈ 2.7 MiB;
+  `floem2-window --features real` (winit + vello + wgpu/Metal) 11,626,912 B ≈
+  11.1 MiB. Win32/X11/other targets remain device-gated (17/19).
+- [x] Commit.
 
 ---
 

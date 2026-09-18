@@ -2844,6 +2844,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "floem2"
+version = "0.2.0"
+dependencies = [
+ "floem",
+ "floem-app",
+ "floem-core",
+ "floem-devtools",
+ "floem-layout",
+ "floem-platform-android",
+ "floem-platform-desktop",
+ "floem-platform-embedded",
+ "floem-platform-harmony",
+ "floem-platform-ios",
+ "floem-platform-web",
+ "floem-renderer-software",
+ "floem-renderer-vello",
+ "floem-types",
+ "floem-widgets",
+]
+
+[[package]]
 name = "floem2-counter"
 version = "0.2.0"
 dependencies = [
@@ -2852,6 +2873,13 @@ dependencies = [
  "floem-layout",
  "floem-types",
  "floem-widgets",
+]
+
+[[package]]
+name = "floem2-hello"
+version = "0.2.0"
+dependencies = [
+ "floem2",
 ]
 
 [[package]]

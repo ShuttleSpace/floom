@@ -5,6 +5,18 @@ use crate::context::{CreateContext, EventContext, PaintContext, SemanticsContext
 use floem_types::ElementId;
 
 /// High-level UI description. Implementations must not depend on concrete renderers.
+///
+/// The `on_unimplemented` diagnostic is the Phase 29.2 migration hook: the
+/// most common cross-version mistake is handing a v1 `floem::view::View`
+/// value to a Floem 2.0 mount point. The unsatisfied bound then reports the
+/// migration path at the exact line that needs it, instead of a bare
+/// "trait bound not satisfied".
+#[diagnostic::on_unimplemented(
+    message = "`{Self}` is not a Floem 2.0 `Widget`",
+    label = "not a Floem 2.0 `Widget`",
+    note = "v1 `floem::view::View` values are compatibility APIs and cannot be mounted into a Floem 2.0 host",
+    note = "rebuild the subtree from `floem2::prelude` widgets, or keep the application on the v1 `floem` crate (preserved for the current major version)"
+)]
 pub trait Widget {
     fn create(&self, cx: &mut dyn CreateContext) -> ElementId;
     fn update(&mut self, cx: &mut dyn UpdateContext, id: ElementId);

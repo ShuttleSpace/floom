@@ -2,6 +2,13 @@
 //! Views are self-contained components that can be composed together to create complex UIs.
 //! Views are the main building blocks of Floem.
 //!
+//! **Compatibility tier (Phase 29.2).** The `View` lifecycle below is the v1
+//! API: it is preserved for the current major version, and the stable import
+//! path for v1 application code is [`floem::compat::v1_prelude`](crate::compat::v1_prelude).
+//! New applications target the Floem 2.0 surface instead (`floem2::prelude`);
+//! passing a v1 view into a 2.0 mount point is a compile error whose
+//! diagnostic names this migration.
+//!
 //! Views are structs that implement the [`View`] and [`Widget`] traits. Many of these structs will also contain a child field that also implements [`View`]. In this way, views can be composed together easily to create complex UIs. This is the most common way to build UIs in Floem. For more information on how to compose views check out the [views](crate::views) module.
 //!
 //! Creating a struct and manually implementing the [`View`] and [`Widget`] traits is typically only needed for building new widgets and for special cases. The rest of this module documentation is for help when manually implementing [`View`] and [`Widget`] on your own types.

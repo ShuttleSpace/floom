@@ -268,6 +268,11 @@ for _names, _level in [
     # `floem-codegen` is the native-glue compiler (Phase 18); `floem-ui-ir` is
     # the versioned UI intermediate representation (Phase 22.1).
     (["floem-testkit", "floem-snapshot", "floem-codegen", "floem-ui-ir", "floem-dsl", "floem-hot-reload", "floem-inspector", "floem-devtools", "floem-profiler", "floem-agent", "floem-accuracy"], 8),
+    # L9: the public facade (`floem2::prelude`), Phase 29.1. It aggregates the
+    # whole stack — including the L8 devtools bundle behind a feature — so it
+    # sits above everything it re-exports. Unlike the L8 tooling tier it IS
+    # shipped as part of an application binary.
+    (["floem2"], 9),
 ]:
     for _n in _names:
         LAYERS[_n] = _level

@@ -1,0 +1,62 @@
+[package]
+name = "floem2"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Floem 2.0 public facade: the beginner-facing prelude and feature bundles"
+
+# Phase 29.3 — feature bundles.
+#
+# The default build is the headless core: no windowing backend, no GPU
+# renderer, no tooling. Bundles are the beginner-facing spelling of "what a
+# real app needs"; each one only adds `optional = true` dependencies, so
+# `unused backends are not linked` is enforced structurally (and tested by
+# `tests/feature_graph.rs`).
+#
+# Platform bundles: desktop / mobile / web / embedded. Only `desktop` is
+# buildable on this machine (macOS + winit); the others exist so a
+# target-appropriate build is one `--features` away.
+#
+# Capability bundles: `renderer-gpu` (vello + wgpu), `renderer-software`
+# (tiny-skia), `devtools` (the L8 inspector/devtools tier — reachable from the
+# facade because the facade sits at L9, above the tooling it re-exports).
+#
+# `native` needs no bundle: native view composition is part of the `floem-app`
+# shell itself (Phase 16), not an optional backend.
+[features]
+default = []
+desktop = ["dep:floem-platform-desktop", "floem-platform-desktop/winit"]
+mobile = [
+    "dep:floem-platform-android",
+    "dep:floem-platform-ios",
+    "dep:floem-platform-harmony",
+]
+web = ["dep:floem-platform-web"]
+embedded = ["dep:floem-platform-embedded"]
+renderer-gpu = ["dep:floem-renderer-vello", "floem-renderer-vello/gpu"]
+renderer-software = ["dep:floem-renderer-software"]
+devtools = ["dep:floem-devtools"]
+
+[dependencies]
+floem-app = { path = "../floem-app", version = "0.2.0" }
+floem-core = { path = "../../foundation/floem-core", version = "0.2.0" }
+floem-layout = { path = "../../layout/floem-layout", version = "0.2.0" }
+floem-types = { path = "../../foundation/floem-types", version = "0.2.0" }
+floem-widgets = { path = "../../widgets/floem-widgets", version = "0.2.0" }
+floem-platform-desktop = { path = "../../platform/floem-platform-desktop", version = "0.2.0", optional = true }
+floem-platform-android = { path = "../../platform/floem-platform-android", version = "0.2.0", optional = true }
+floem-platform-ios = { path = "../../platform/floem-platform-ios", version = "0.2.0", optional = true }
+floem-platform-harmony = { path = "../../platform/floem-platform-harmony", version = "0.2.0", optional = true }
+floem-platform-web = { path = "../../platform/floem-platform-web", version = "0.2.0", optional = true }
+floem-platform-embedded = { path = "../../platform/floem-platform-embedded", version = "0.2.0", optional = true }
+floem-renderer-vello = { path = "../../render/floem-renderer-vello", version = "0.2.0", optional = true }
+floem-renderer-software = { path = "../../render/floem-renderer-software", version = "0.2.0", optional = true }
+floem-devtools = { path = "../../tooling/floem-devtools", version = "0.2.0", optional = true }
+
+[dev-dependencies]
+# The v1 monolith, used only by the compile-fail doctest that proves a legacy
+# `View` is rejected at the 2.0 mount point (with the migration diagnostic).
+# Dev-only: a shipped facade never links the legacy stack, and the
+# architecture gate ignores dev dependencies for exactly this reason.
+floem = { path = "../.." }

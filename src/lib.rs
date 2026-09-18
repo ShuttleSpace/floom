@@ -297,3 +297,59 @@ pub mod prelude {
         pointer::{PointerButtonEvent, PointerEvent},
     };
 }
+
+/// Compatibility tier (Phase 29.2): the v1 application surface, preserved
+/// verbatim under a stable path.
+///
+/// [`crate::prelude`] still re-exports exactly this API today, so existing v1
+/// applications compile unchanged — that is the preservation policy for the
+/// current major version. [`compat::v1_prelude`] pins that path *now*: if a
+/// future minor release narrows `prelude` toward the Floem 2.0 surface (see
+/// the `floem2` facade crate), this module will not move or change.
+///
+/// Migration diagnostics: the 2.0 mount point rejects v1 views with a
+/// targeted message — `floem_core::Widget` carries an
+/// `#[diagnostic::on_unimplemented]` note naming the v1-to-2.0 migration
+/// path, so an accidental cross-version mix-up reports where and how to fix
+/// it instead of a bare "trait bound not satisfied".
+pub mod compat {
+    /// The v1 prelude, frozen.
+    ///
+    /// Import this in v1 application code that should survive a future
+    /// narrowing of [`crate::prelude`]. Every name below is the same item
+    /// [`crate::prelude`] exports today.
+    ///
+    /// ```
+    /// use floem::compat::v1_prelude::*;
+    ///
+    /// // The v1 reactive + view API, exactly as it has always been.
+    /// let counter = create_rw_signal(0_i32);
+    /// let colour: Color = Color::BLACK;
+    /// assert_eq!(counter.get(), 0);
+    /// ```
+    pub mod v1_prelude {
+        pub use crate::Renderer;
+        pub use crate::event::listener as el;
+        pub use crate::event::listener;
+        pub use crate::event::listener::EventListenerTrait;
+        pub use crate::unit::{DurationUnitExt, UnitExt};
+        pub use crate::view::IntoViewIter;
+        pub use crate::view::ViewTuple;
+        pub use crate::views::*;
+        pub use crate::{HasViewId, IntoView, ParentView, View};
+        #[allow(deprecated)]
+        pub use floem_legacy_reactive::{
+            Memo, RwSignal, Scope, SignalGet, SignalTrack, SignalUpdate, SignalWith, Trigger,
+            create_effect, create_global_memo, create_global_rw_signal, create_global_signal,
+            create_global_trigger, create_memo, create_rw_signal, create_signal, create_trigger,
+            root_scope,
+        };
+        pub use palette::css;
+        pub use peniko::Color;
+        pub use peniko::color::palette;
+        pub use ui_events::{
+            keyboard::{Code, Key, KeyState, KeyboardEvent, Modifiers, NamedKey},
+            pointer::{PointerButtonEvent, PointerEvent},
+        };
+    }
+}
