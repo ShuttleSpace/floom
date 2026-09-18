@@ -988,10 +988,10 @@ enum NativeCompositionMode { Overlay, Texture, Surface, Offscreen }
 - Create: `compiler/floem-codegen/schema/*.rs`
 - Test: schema round-trip tests
 
-- [ ] **Step 1: Define typed command/event/property schema.**
-- [ ] **Step 2: Define ABI versioning.**
-- [ ] **Step 3: Add schema serialization for tooling only.**
-- [ ] **Step 4: Commit.**
+- [x] **Step 1: Define typed command/event/property schema.** — `compiler/floem-codegen/src/schema.rs`: `ComponentSchema` + `PropertySchema` / `CommandSchema` / `EventSchema` / `Param`, `TypeRef`, validated `Ident`.
+- [x] **Step 2: Define ABI versioning.** — `AbiVersion { major, minor }` with `compatible()` (same major, producer minor ≥ required minor).
+- [x] **Step 3: Add schema serialization for tooling only.** — serde derive + `serde_json` round-trip test; `From` bridges to the `floem-types` native vocabulary so the compiler stays runtime-free.
+- [x] **Step 4: Commit.** — lands together with Phase 18.2 below (2026-09-18; the crate had been created but never committed, and was missing from the architecture `LAYERS` table — both fixed).
 
 ## Task 18.2: Generate Swift/Kotlin/C/C++ glue
 
@@ -999,12 +999,12 @@ enum NativeCompositionMode { Overlay, Texture, Surface, Offscreen }
 - Create: `compiler/floem-codegen/backends/*`
 - Test: generated-code compile fixtures
 
-- [ ] **Step 1: Implement C ABI generator.**
-- [ ] **Step 2: Implement Swift generator.**
-- [ ] **Step 3: Implement Kotlin generator.**
-- [ ] **Step 4: Implement C++/Harmony bindings as needed.**
-- [ ] **Step 5: Add compile fixtures.**
-- [ ] **Step 6: Commit.**
+- [x] **Step 1: Implement C ABI generator.** — `src/backends/c.rs`: opaque handle, property getters/setters (access-aware), commands, event callbacks; helper types (`floem_bytes`, `floem_slice_*`, `floem_resource_id`, opaque forwards) emitted only when used. Struct-shaped callback params are expanded to `(pointer, length)` — no aggregate copies across FFI, and the only shape Swift's `@convention(c)` can represent.
+- [x] **Step 2: Implement Swift generator.** — `src/backends/swift.rs`: `<Name>Shims.swift` (`@_silgen_name` bindings + C-layout mirror structs) and `<Name>.swift` (class; events recover the instance from `userdata`, so registered closures capture nothing and convert to C function pointers).
+- [x] **Step 3: Implement Kotlin generator.** — `src/backends/kotlin.rs`: class with `external` JNI accessors (properties delegate to them) and stored lambda events.
+- [x] **Step 4: Implement C++/Harmony bindings as needed.** — `src/backends/cpp.rs`: header-only `floem_gen::<Name>` RAII facade over the C ABI (`std::string` for `String`, `std::function` + static trampolines for events).
+- [x] **Step 5: Add compile fixtures.** — `tests/compile_fixtures.rs` writes the generated glue to a scratch dir and **invokes the real toolchains**: `cc -std=c11`, `c++ -std=c++17`, `swiftc -typecheck`, over both a realistic schema and a wide type-coverage schema; `kotlinc` is skipped-with-reason when absent. Backend total **30 tests** (24 unit + 6 fixtures) green. The fixture is a check that can fail — it caught two real generator bugs while being written (Swift argument labels in a function type; a Swift struct that `@convention(c)` cannot represent).
+- [x] **Step 6: Commit.** — 2026-09-18.
 
 ---
 

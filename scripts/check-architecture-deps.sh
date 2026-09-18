@@ -240,6 +240,9 @@ for _names, _level in [
             "floem-platform-ios", "floem-platform-harmony", "floem-platform-web",
             "floem-platform-embedded",
             "floem-native",
+            # winit event-loop adapter; no internal floem deps, consumed by the
+            # desktop platform layer above.
+            "floem-ui-events-winit",
         ],
         4,
     ),
@@ -254,7 +257,11 @@ for _names, _level in [
     ),
     (["floem-widgets"], 6),
     (["floem-app"], 7),
-    (["floem-testkit"], 8),
+    # Tooling/compiler tier: these may depend on anything below them and are not
+    # shipped as part of an application binary. `floem-testkit` is the runtime
+    # test harness; `floem-snapshot` is the golden-image engine (Phase 24.2);
+    # `floem-codegen` is the native-glue compiler (Phase 18).
+    (["floem-testkit", "floem-snapshot", "floem-codegen"], 8),
 ]:
     for _n in _names:
         LAYERS[_n] = _level
@@ -285,6 +292,40 @@ for crate, level in sorted(LAYERS.items()):
         failures.append(f"UPWARD {crate}(L{level}) → {', '.join(bad)}")
     else:
         notes.append(f"OK {crate}(L{level}): no dependency on a higher layer")
+
+# --- Completeness: every 2.0 library crate must be registered above ---
+#
+# The loop above only inspects crates that appear in LAYERS. A workspace member
+# that was never added there is silently unchecked — which is how a crate with a
+# genuine upward edge can still be reported "OK" by simply not being listed.
+# (This is the same class of defect as the `norm()` miss that once let three
+# rules skip: a check that cannot fire.) Scope the guard to the 2.0 library
+# directories; `examples/` and the legacy monolith (`src/`) are deliberately not
+# layered, and `vendor/` + `ecosystem/` are excluded from the workspace.
+LIB_DIRS = (
+    "foundation/", "runtime/", "layout/", "scene/", "text/", "render/",
+    "platform/", "framework/", "widgets/", "app/", "native/", "compiler/",
+    "tooling/", "ui-events/",
+)
+workspace_root = Path(meta["workspace_root"])
+unregistered = []
+for _pid in workspace_members:
+    _name = norm(id_to_name.get(_pid, ""))
+    _p = packages.get(_name)
+    if not _p:
+        continue
+    try:
+        _rel = Path(_p["manifest_path"]).parent.relative_to(workspace_root)
+    except ValueError:
+        continue
+    _rel = _rel.as_posix() + "/"
+    if any(_rel.startswith(d) for d in LIB_DIRS) and _name not in LAYERS:
+        unregistered.append(f"{_name} ({_rel})")
+if unregistered:
+    failures.append(
+        "UNREGISTERED 2.0 library crate(s) missing from LAYERS: "
+        + ", ".join(sorted(unregistered))
+    )
 
 # Legacy v1 crates a 2.0 crate still depends on: the v1 reactive graph.
 # Reported, not failed — see the topology decision doc.

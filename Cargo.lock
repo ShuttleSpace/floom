@@ -1977,6 +1977,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "floem-codegen"
+version = "0.2.0"
+dependencies = [
+ "floem-types",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "floem-core"
 version = "0.2.0"
 dependencies = [
