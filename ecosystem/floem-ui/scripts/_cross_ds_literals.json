@@ -1,0 +1,392 @@
+[
+  {
+    "component": "snackbar",
+    "divergences": {
+      "flex_basis": {
+        "material": [],
+        "cupertino": [
+          "1.0"
+        ],
+        "fluent": []
+      },
+      "inset_bottom": {
+        "material": [],
+        "cupertino": [],
+        "fluent": [
+          "24.0"
+        ]
+      },
+      "inset_left": {
+        "material": [],
+        "cupertino": [],
+        "fluent": [
+          "0.0"
+        ]
+      },
+      "padding": {
+        "material": [],
+        "cupertino": [
+          "16.0"
+        ],
+        "fluent": []
+      },
+      "padding_bottom": {
+        "material": [
+          "24.0"
+        ],
+        "cupertino": [],
+        "fluent": []
+      }
+    }
+  },
+  {
+    "component": "slider",
+    "divergences": {
+      "border_radius": {
+        "material": [
+          "9999.0"
+        ],
+        "cupertino": [],
+        "fluent": []
+      },
+      "inset_left": {
+        "material": [],
+        "cupertino": [
+          "0.0"
+        ],
+        "fluent": [
+          "0.0"
+        ]
+      },
+      "inset_top": {
+        "material": [],
+        "cupertino": [
+          "0.0"
+        ],
+        "fluent": [
+          "0.0"
+        ]
+      },
+      "size": {
+        "material": [
+          "40.0, 40.0"
+        ],
+        "cupertino": [],
+        "fluent": []
+      }
+    }
+  },
+  {
+    "component": "bottom_navigation",
+    "divergences": {
+      "gap": {
+        "material": [
+          "4.0"
+        ],
+        "cupertino": [
+          "2.0"
+        ],
+        "fluent": []
+      },
+      "margin_top": {
+        "material": [],
+        "cupertino": [
+          "4.0"
+        ],
+        "fluent": []
+      },
+      "padding_vert": {
+        "material": [],
+        "cupertino": [],
+        "fluent": [
+          "8.0"
+        ]
+      }
+    }
+  },
+  {
+    "component": "navigation_drawer",
+    "divergences": {
+      "gap": {
+        "material": [
+          "8.0"
+        ],
+        "cupertino": [
+          "8.0"
+        ],
+        "fluent": []
+      },
+      "inset_bottom": {
+        "material": [],
+        "cupertino": [
+          "0.0"
+        ],
+        "fluent": []
+      },
+      "inset_top": {
+        "material": [
+          "0.0"
+        ],
+        "cupertino": [
+          "0.0"
+        ],
+        "fluent": []
+      }
+    }
+  },
+  {
+    "component": "autocomplete",
+    "divergences": {
+      "margin_top": {
+        "material": [
+          "4.0"
+        ],
+        "cupertino": [],
+        "fluent": []
+      },
+      "size": {
+        "material": [
+          "14.0"
+        ],
+        "cupertino": [
+          "14.0, 14.0"
+        ],
+        "fluent": [
+          "14.0, 14.0"
+        ]
+      }
+    }
+  },
+  {
+    "component": "checkbox",
+    "divergences": {
+      "border_radius": {
+        "material": [
+          "9999.0"
+        ],
+        "cupertino": [],
+        "fluent": []
+      },
+      "size": {
+        "material": [
+          "40.0, 40.0"
+        ],
+        "cupertino": [],
+        "fluent": []
+      }
+    }
+  },
+  {
+    "component": "combobox",
+    "divergences": {
+      "margin_top": {
+        "material": [
+          "4.0"
+        ],
+        "cupertino": [],
+        "fluent": []
+      },
+      "size": {
+        "material": [
+          "14.0"
+        ],
+        "cupertino": [
+          "14.0, 14.0"
+        ],
+        "fluent": [
+          "14.0, 14.0"
+        ]
+      }
+    }
+  },
+  {
+    "component": "list",
+    "divergences": {
+      "border_radius": {
+        "material": [
+          "8.0"
+        ],
+        "cupertino": [],
+        "fluent": []
+      },
+      "padding_horiz": {
+        "material": [
+          "16.0"
+        ],
+        "cupertino": [
+          "12.0"
+        ],
+        "fluent": []
+      }
+    }
+  },
+  {
+    "component": "progress_linear",
+    "divergences": {
+      "inset_left": {
+        "material": [],
+        "cupertino": [
+          "0.0"
+        ],
+        "fluent": []
+      },
+      "inset_top": {
+        "material": [],
+        "cupertino": [
+          "0.0"
+        ],
+        "fluent": []
+      }
+    }
+  },
+  {
+    "component": "radio-group",
+    "divergences": {
+      "border_radius": {
+        "material": [
+          "9999.0"
+        ],
+        "cupertino": [],
+        "fluent": []
+      },
+      "gap": {
+        "material": [
+          "8.0"
+        ],
+        "cupertino": [],
+        "fluent": [
+          "8.0"
+        ]
+      }
+    }
+  },
+  {
+    "component": "select",
+    "divergences": {
+      "flex_basis": {
+        "material": [],
+        "cupertino": [
+          "1.0"
+        ],
+        "fluent": []
+      },
+      "size": {
+        "material": [
+          "14.0"
+        ],
+        "cupertino": [
+          "12.0, 12.0"
+        ],
+        "fluent": [
+          "12.0, 12.0"
+        ]
+      }
+    }
+  },
+  {
+    "component": "app_bar",
+    "divergences": {
+      "gap": {
+        "material": [
+          "8.0"
+        ],
+        "cupertino": [
+          "8.0"
+        ],
+        "fluent": []
+      }
+    }
+  },
+  {
+    "component": "avatar",
+    "divergences": {
+      "border_radius": {
+        "material": [
+          "9999.0"
+        ],
+        "cupertino": [],
+        "fluent": []
+      }
+    }
+  },
+  {
+    "component": "expansion_panels",
+    "divergences": {
+      "size": {
+        "material": [
+          "18.0, 18.0"
+        ],
+        "cupertino": [
+          "16.0, 16.0"
+        ],
+        "fluent": [
+          "16.0, 16.0"
+        ]
+      }
+    }
+  },
+  {
+    "component": "list_group",
+    "divergences": {
+      "size": {
+        "material": [
+          "18.0, 18.0"
+        ],
+        "cupertino": [
+          "16.0, 16.0"
+        ],
+        "fluent": [
+          "16.0, 16.0"
+        ]
+      }
+    }
+  },
+  {
+    "component": "menu",
+    "divergences": {
+      "border_radius": {
+        "material": [
+          "4.0"
+        ],
+        "cupertino": [],
+        "fluent": []
+      }
+    }
+  },
+  {
+    "component": "progress_circular",
+    "divergences": {
+      "border_radius": {
+        "material": [
+          "50.0"
+        ],
+        "cupertino": [],
+        "fluent": []
+      }
+    }
+  },
+  {
+    "component": "radio",
+    "divergences": {
+      "size": {
+        "material": [
+          "40.0, 40.0"
+        ],
+        "cupertino": [],
+        "fluent": []
+      }
+    }
+  },
+  {
+    "component": "tabs",
+    "divergences": {
+      "font_size": {
+        "material": [
+          "14.0"
+        ],
+        "cupertino": [],
+        "fluent": []
+      }
+    }
+  }
+]

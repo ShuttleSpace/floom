@@ -1,0 +1,13 @@
+[package]
+name = "floem-widget-runtime"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+floem = { workspace = true }
+floem-core-theme = { workspace = true }
+
+[features]
+material = ["floem-core-theme/material"]
+cupertino = ["floem-core-theme/cupertino"]
+fluent = ["floem-core-theme/fluent"]
