@@ -252,6 +252,11 @@ for _names, _level in [
             "floem-theme", "floem-store", "floem-task", "floem-forms",
             "floem-navigation", "floem-persistence", "floem-services",
             "floem-error", "floem-ime", "floem-editor",
+            # Design systems sit beside `floem-theme` (which they extend) and
+            # below the widgets they style. They are renderer-neutral: their
+            # output is `floem_style` property values, not paint calls.
+            "floem-design", "floem-material", "floem-cupertino", "floem-fluent",
+            "floem-harmony",
         ],
         5,
     ),
@@ -305,7 +310,7 @@ for crate, level in sorted(LAYERS.items()):
 LIB_DIRS = (
     "foundation/", "runtime/", "layout/", "scene/", "text/", "render/",
     "platform/", "framework/", "widgets/", "app/", "native/", "compiler/",
-    "tooling/", "ui-events/",
+    "tooling/", "ui-events/", "design-systems/",
 )
 workspace_root = Path(meta["workspace_root"])
 unregistered = []

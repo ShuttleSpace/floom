@@ -66,8 +66,8 @@ impl SceneSnapshot {
 
     /// Golden-file compare / update. Returns the hash so a test can also assert
     /// on it directly.
-    pub fn assert(&self, name: &str) {
-        assert_snapshot(name, &self.text);
+    pub fn assert(&self, manifest_dir: &str, name: &str) {
+        assert_snapshot(manifest_dir, name, &self.text);
     }
 }
 
@@ -103,8 +103,8 @@ impl SemanticsSnapshot {
     }
 
     /// Golden-file compare / update.
-    pub fn assert(&self, name: &str) {
-        assert_snapshot(name, &self.text);
+    pub fn assert(&self, manifest_dir: &str, name: &str) {
+        assert_snapshot(manifest_dir, name, &self.text);
     }
 }
 
@@ -143,18 +143,34 @@ impl PixelSnapshot {
 
     /// Golden-file compare / update. The golden stores `WxH <hash>` so a resize
     /// shows up as a mismatch, not a silent re-hash of a different buffer.
-    pub fn assert(&self, name: &str) {
+    pub fn assert(&self, manifest_dir: &str, name: &str) {
         let content = format!("{}x{} {}", self.width, self.height, self.hash);
-        assert_snapshot(name, &content);
+        assert_snapshot(manifest_dir, name, &content);
     }
 }
 
-/// Compare `content` against `snapshots/<name>.snap` next to the manifest.
+/// The manifest directory of the crate that *calls* this macro.
+///
+/// A golden file belongs to the crate whose test asserts it, and the caller is
+/// the only one that knows where that is: `env!` inside this crate expands to
+/// *this* crate's manifest, so a `snapshot_path` that used it would drop every
+/// downstream crate's goldens into `tooling/floem-snapshot/snapshots/` — which
+/// is exactly what happened before this macro existed, and why two crates could
+/// collide on a snapshot name. A macro expands at the call site, so it resolves
+/// to the right directory.
+#[macro_export]
+macro_rules! snapshots_dir {
+    () => {
+        env!("CARGO_MANIFEST_DIR")
+    };
+}
+
+/// Compare `content` against `<manifest_dir>/snapshots/<name>.snap`.
 ///
 /// With `UPDATE_SNAPSHOTS=1` the file is (re)written and the test passes.
 /// Otherwise a missing or differing file fails the test with a short diff.
-pub fn assert_snapshot(name: &str, content: &str) {
-    let path = snapshot_path(name);
+pub fn assert_snapshot(manifest_dir: &str, name: &str, content: &str) {
+    let path = snapshot_path(manifest_dir, name);
     if std::env::var("UPDATE_SNAPSHOTS")
         .map(|v| v == "1")
         .unwrap_or(false)
@@ -178,9 +194,12 @@ pub fn assert_snapshot(name: &str, content: &str) {
     }
 }
 
-/// Path of the golden file for `name`.
-pub fn snapshot_path(name: &str) -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+/// Path of the golden file for `name`, inside `manifest_dir`.
+///
+/// `manifest_dir` is the asserting crate's own manifest directory — normally
+/// [`snapshots_dir!`], which resolves it at the call site.
+pub fn snapshot_path(manifest_dir: &str, name: &str) -> PathBuf {
+    PathBuf::from(manifest_dir)
         .join("snapshots")
         .join(format!("{name}.snap"))
 }

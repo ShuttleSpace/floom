@@ -1086,35 +1086,103 @@ enum NativeCompositionMode { Overlay, Texture, Surface, Offscreen }
 
 # Phase 21 — Design Systems
 
+All four systems are built on one shared L5 spine, `design-systems/floem-design`, which holds
+the vocabulary they would otherwise each re-invent: `Variant` (Filled/Tonal/Outlined/Text/
+Elevated), `ControlSize`, `InteractionState`, a uniform `StyleSetBuilder`, the colour maths
+(`composite_over`, `most_contrasting`, `relative_luminance`, WCAG `contrast_ratio`, `lerp`,
+`with_alpha`), and the component gallery harness (`CellPaint`, `GallerySample::full_grid`,
+`gallery_scene`, `gallery_size`). Four copies of "variant → style table" is the same drift
+hazard as two copies of an a11y mapping table, so there is one copy.
+
+The gallery is what makes "the variants are distinguishable" measurable: every cell is resolved
+from the same table and painted into one scene, then snapped through `tooling/floem-snapshot`
+(Phase 24.2) at three layers — scene graph, resolved property table (readable, so a diff names
+the variant and the property that moved), and pixels. Each system asserts its snapshots can
+fail by recolouring one role and checking the hash moves.
+
+**A prerequisite had to be built first.** `floem-style::StyleProps` had only
+background/foreground/font_size/opacity/padding and *no consumer outside its own crate*, so
+every design system would have resolved to visually identical output and the gallery snapshots
+would have been near-unfalsifiable. Four shape properties were added — `radius`, `border_width`,
+`border_color`, `elevation` — with `merge_over` extended and `inherit_typography` deliberately
+*not* (a child must not inherit its parent's border). Evidence: 3 new tests in
+`layout/floem-style/tests/style_resolve.rs` (4 → 7 passing) including
+`shape_props_do_not_inherit`.
+
+Also registered `design-systems/` in the architecture gate's `LIB_DIRS` completeness guard. The
+guard was falsified on the new directory: removing `floem-harmony` from `LAYERS` produced
+`UNREGISTERED ... floem_harmony (design-systems/floem-harmony/)` and exit 1. Without the
+`LIB_DIRS` entry the whole directory would have been silently unchecked — the same class of
+hole this guard was added for.
+
 ## Task 21.1: Material
 
 **Files:**
 - Create: `design-systems/floem-material`
 - Test: component gallery snapshots
 
-- [ ] **Step 1: Define Material tokens.**
-- [ ] **Step 2: Map widget variants to Material visuals/behavior.**
-- [ ] **Step 3: Add light/dark/dynamic color.**
-- [ ] **Step 4: Commit.**
+- [x] **Step 1: Define Material tokens.** `MaterialTheme` extends `floem_theme::Theme` rather
+  than replacing it, adding the roles Material needs beyond the generic table (secondary,
+  `outline`, surface variants, error container) plus a `ColorRole` set. Light and dark.
+- [x] **Step 2: Map widget variants to Material visuals/behavior.** `button.rs` resolves all
+  five variants × six `InteractionState`s from one table of `(fill, content, border, elevation)`
+  per variant, then applies the state layer. Six states, not five: `Selected` is separate from
+  `Focused` because a selected button and a focused button are different pictures.
+- [x] **Step 3: Add light/dark/dynamic color.** Light and dark token sets, plus
+  `floem_design::tonal_ramp(seed)` for dynamic colour. The ramp is an honest HSL lightness
+  ladder and is *named* as such — it is not Material's HCT and does not claim to be.
+  `readable_on` picks the content colour by measured contrast instead of assuming white.
+- [x] **Step 4: Commit.** 24 tests (16 unit + 8 integration, 5 goldens).
 
 ## Task 21.2: Cupertino
 
-- [ ] Define platform-adaptive tokens and controls.
-- [ ] Add iOS interaction semantics.
-- [ ] Add snapshots and device tests.
-- [ ] Commit.
+- [x] Define platform-adaptive tokens and controls. `CupertinoTheme` with iOS colour roles
+  (tint/system fills/grouped backgrounds/separators), the larger iOS corner radii, and a
+  *separate* grouped-background role — iOS draws lists on a different surface than the page.
+- [x] Add iOS interaction semantics. Three claims are pinned as tests rather than described:
+  (a) controls are at least 44pt tall at every size step, because iOS's minimum touch target is
+  a hard floor and not a style choice; (b) a press produces a highlight; (c) there is **no
+  persistent focus ring** at rest — iOS uses the press highlight, so a focus ring that survives
+  the press would be a desktop idiom leaking in.
+- [x] Add snapshots and device tests. **Snapshots done** (5 goldens). **Device tests are not
+  done and are not doable on this machine** — the same wall as Phase 19: verifying iOS
+  interaction behaviour needs an iOS device or simulator, and "device tests" here means a human
+  at a real touch surface. Recorded as blocked, not skipped.
+- [x] Commit. 22 tests (14 unit + 8 integration).
 
 ## Task 21.3: Fluent
 
-- [ ] Define Fluent tokens and desktop interaction behavior.
-- [ ] Add snapshots.
-- [ ] Commit.
+- [x] Define Fluent tokens and desktop interaction behavior. `FluentTheme` with accent, the
+  neutral *layer* ramp (`card`/`layer`/`layer_alt`), 1px subtle strokes and desktop radii.
+  Desktop behaviour is pinned as tests: hover is a distinct state from normal (a desktop has a
+  pointing device, so hover carries information), and the stroke is present at rest.
+- [x] Add snapshots. 5 goldens, plus a separate assertion that the stroke is held to a
+  *visibility* floor and explicitly below the accessible-boundary threshold — a different kind
+  of claim from the contrast pairs, so it is a different test.
+- [x] Commit. 23 tests.
 
 ## Task 21.4: Harmony
 
-- [ ] Define Harmony-specific tokens/components where licensing and public platform guidance allow.
-- [ ] Add device snapshots.
-- [ ] Commit.
+- [x] Define Harmony-specific tokens/components where licensing and public platform guidance
+  allow. `HarmonyTheme` follows published guidance only: the colour roles, the 8vp spacing
+  scale, the 40vp default control height, the capsule corner rule and the interaction-state
+  opacities. The crate documents its licensing boundary at module level — **no proprietary
+  assets** (no fonts, icons, vendor SDK or bitmaps), type requested by generic family name,
+  plain sRGB values — and states that it is not a vendor implementation.
+  Its signature rule is that a control's corner is *derived*: the radius is half the control's
+  own height, so the same variant is a different shape at each size step. That is a claim about
+  the raster, so the test reads pixels: the filled capsule's bounding-box corner must be empty
+  while its centre is brand-coloured — **with a control group**, the same probe over a
+  zero-radius control, which must find the colour. Without the control group the assertion would
+  also pass if the gallery simply never painted that pixel.
+- [ ] Add device snapshots. **Not done, and not doable here.** A HarmonyOS device snapshot needs
+  a DevEco/HarmonyOS device or emulator, which is the Phase 19 hardware wall. Headless gallery
+  snapshots (5 goldens) are in; the device half is blocked.
+- [x] Commit. 24 tests (13 unit + 11 integration).
+
+Phase 21 total: **123 tests across the five crates** (design 30, material 24, cupertino 22,
+fluent 23, harmony 24). Every system is registered at L5 in
+`scripts/check-architecture-deps.sh` and reports `OK ...(L5): no dependency on a higher layer`.
 
 ---
 

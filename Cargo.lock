@@ -1993,6 +1993,29 @@ dependencies = [
 ]
 
 [[package]]
+name = "floem-cupertino"
+version = "0.2.0"
+dependencies = [
+ "floem-design",
+ "floem-scene",
+ "floem-snapshot",
+ "floem-style",
+ "floem-theme",
+ "floem-types",
+]
+
+[[package]]
+name = "floem-design"
+version = "0.2.0"
+dependencies = [
+ "floem-accessibility",
+ "floem-scene",
+ "floem-style",
+ "floem-theme",
+ "floem-types",
+]
+
+[[package]]
 name = "floem-editor"
 version = "0.1.0"
 dependencies = [
@@ -2036,6 +2059,18 @@ name = "floem-error"
 version = "0.2.0"
 
 [[package]]
+name = "floem-fluent"
+version = "0.2.0"
+dependencies = [
+ "floem-design",
+ "floem-scene",
+ "floem-snapshot",
+ "floem-style",
+ "floem-theme",
+ "floem-types",
+]
+
+[[package]]
 name = "floem-focus"
 version = "0.2.0"
 dependencies = [
@@ -2050,6 +2085,18 @@ version = "0.2.0"
 name = "floem-gesture"
 version = "0.2.0"
 dependencies = [
+ "floem-types",
+]
+
+[[package]]
+name = "floem-harmony"
+version = "0.2.0"
+dependencies = [
+ "floem-design",
+ "floem-scene",
+ "floem-snapshot",
+ "floem-style",
+ "floem-theme",
  "floem-types",
 ]
 
@@ -2163,6 +2210,18 @@ dependencies = [
  "floem",
  "serial_test",
  "ui-events",
+]
+
+[[package]]
+name = "floem-material"
+version = "0.2.0"
+dependencies = [
+ "floem-design",
+ "floem-scene",
+ "floem-snapshot",
+ "floem-style",
+ "floem-theme",
+ "floem-types",
 ]
 
 [[package]]

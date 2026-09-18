@@ -1,0 +1,17 @@
+[package]
+name = "floem-design"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Shared design-system spine: control variants, state mapping, colour math and gallery fixtures"
+rust-version.workspace = true
+
+[dependencies]
+floem-types = { path = "../../foundation/floem-types", version = "0.2.0" }
+floem-style = { path = "../../layout/floem-style", version = "0.2.0" }
+floem-theme = { path = "../../framework/floem-theme", version = "0.2.0" }
+floem-scene = { path = "../../scene/floem-scene", version = "0.2.0" }
+
+[dev-dependencies]
+floem-accessibility = { path = "../../framework/floem-accessibility", version = "0.2.0" }
