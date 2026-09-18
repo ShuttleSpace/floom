@@ -2334,6 +2334,18 @@ name = "floem-services"
 version = "0.2.0"
 
 [[package]]
+name = "floem-snapshot"
+version = "0.2.0"
+dependencies = [
+ "floem-accessibility",
+ "floem-renderer",
+ "floem-renderer-software",
+ "floem-scene",
+ "floem-types",
+ "floem-widgets",
+]
+
+[[package]]
 name = "floem-store"
 version = "0.2.0"
 dependencies = [

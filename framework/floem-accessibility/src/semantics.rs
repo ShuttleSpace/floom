@@ -215,6 +215,13 @@ impl SemanticsTree {
         self.nodes.get(&id)
     }
 
+    /// Iterate all live `(ElementId, &SemanticsNode)` pairs. Order is unspecified
+    /// (a `HashMap`); callers that need a stable snapshot sort by
+    /// `(id.index(), id.generation())` — the id has no `Ord` impl by design.
+    pub fn iter(&self) -> impl Iterator<Item = (ElementId, &SemanticsNode)> + '_ {
+        self.nodes.iter().map(|(id, node)| (*id, node))
+    }
+
     pub fn contains(&self, id: ElementId) -> bool {
         self.nodes.contains_key(&id)
     }

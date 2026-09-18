@@ -1,0 +1,22 @@
+[package]
+name = "floem-snapshot"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Deterministic scene / semantics / pixel snapshots for Floem 2.0 visual-regression tests"
+rust-version.workspace = true
+
+# No external deps: the deterministic hash is a hand-rolled FNV-1a (stable
+# across platforms and Rust versions, unlike DefaultHasher), and golden files
+# are plain text.
+
+[dependencies]
+floem-types = { path = "../../foundation/floem-types", version = "0.2.0" }
+floem-scene = { path = "../../scene/floem-scene", version = "0.2.0" }
+floem-accessibility = { path = "../../framework/floem-accessibility", version = "0.2.0" }
+floem-renderer = { path = "../../render/floem-renderer", version = "0.2.0" }
+floem-renderer-software = { path = "../../render/floem-renderer-software", version = "0.2.0" }
+
+[dev-dependencies]
+floem-widgets = { path = "../../widgets/floem-widgets", version = "0.2.0" }
