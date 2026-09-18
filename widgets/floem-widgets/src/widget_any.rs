@@ -17,7 +17,13 @@ use floem_core::{
 
 use crate::primitives::SemanticsHint;
 
-fn to_core_role(role: floem_accessibility::SemanticsRole) -> CoreRole {
+/// Lowers this crate's accessibility role vocabulary into the engine-neutral
+/// one `floem-core` owns.
+///
+/// Public so a sibling widget crate can publish semantics through the same
+/// mapping instead of keeping a second copy of the table — two copies is how
+/// the two vocabularies drift apart.
+pub fn to_core_role(role: floem_accessibility::SemanticsRole) -> CoreRole {
     use floem_accessibility::SemanticsRole as A;
     match role {
         A::None => CoreRole::None,
@@ -46,7 +52,9 @@ fn to_core_role(role: floem_accessibility::SemanticsRole) -> CoreRole {
     }
 }
 
-fn to_core_state(state: A11yState) -> CoreState {
+/// Lowers this crate's accessibility state flags into the engine-neutral ones.
+/// Public for the same reason as [`to_core_role`].
+pub fn to_core_state(state: A11yState) -> CoreState {
     let mut out = CoreState::empty();
     let mut add = |flag: A11yState, core: CoreState| {
         if state.contains(flag) {

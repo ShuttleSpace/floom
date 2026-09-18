@@ -1069,18 +1069,18 @@ enum NativeCompositionMode { Overlay, Texture, Surface, Offscreen }
 - Create: `widgets/floem-widgets-data/src/tree.rs`
 - Test: virtualization/sort/edit/selection tests
 
-- [ ] **Step 1: Define headless data models.**
-- [ ] **Step 2: Add virtualized rendering.**
-- [ ] **Step 3: Add keyboard navigation and selection.**
-- [ ] **Step 4: Add editing/undo integration.**
-- [ ] **Step 5: Commit.**
+- [x] **Step 1: Define headless data models.** `model.rs`: `RowId`/`ColumnId`/`Column`/`CellValue` (+`parse`/`display`/ordering), `SortSpec`+`SortDirection` with the three-state `toggled` cycle and a stable `sorted_order`, `SelectionMode`/`SelectionModel` (cursor/anchor/range/toggle, `navigate`/`jump`/`clamp_to`), `TableModel` trait + `VecTable`, and `EditSession`/`CellEdit`/`EditHistory` (push clears redo). `EditSession::move_caret` owns the caret bounds rule so no caller can walk the caret off the text.
+- [x] **Step 2: Add virtualized rendering.** `data_grid.rs` and `tree.rs` both sit on `floem_virtual::VirtualViewport`, so only the rows inside the box are laid out and painted. Tests assert the sharp form: a 100k-row grid and a 100k-node tree emit the *same* paint ops as a 10k one, `visible_range` is a function of the box alone, and the `RowPool`'s high-water mark stays at the window size after 1,000 scrolled frames.
+- [x] **Step 3: Add keyboard navigation and selection.** Arrows (shift to extend), Home/End, PageUp/PageDown by a window, Ctrl/Cmd+A, Space to toggle, Enter to edit; pointer click / shift-click / modifier-click / double-click; the cursor is scrolled back into view on every move. Left/Right in the tree drill out/in; the grid's Left/Right move the active column.
+- [x] **Step 4: Add editing/undo integration.** `EditSession` rejects a value that does not parse for its column kind and stays open; a committed edit is pushed to `EditHistory` (only a fresh commit — `apply` is also the undo/redo path) so Ctrl+Z / Ctrl+Shift+Z round-trip.
+- [x] **Step 5: Commit.** `widgets/floem-widgets-data` registered in the root manifest and in the arch gate's L6 row; 125 tests green.
 
 ## Task 20.2: Charts and media controls
 
-- [ ] Define renderer-neutral chart primitives.
-- [ ] Add accessible chart summaries.
-- [ ] Add media controls with semantic states.
-- [ ] Commit.
+- [x] Define renderer-neutral chart primitives. `chart.rs`: `ChartKind`/`SeriesKind`/`DataPoint`/`ChartSeries`/`AxisSpec`/`LinearScale`, plus geometry the headless tests can read directly — `scales`, `segments`, `markers`, `y_ticks`, and a `stroke` that rasterizes into one column per device pixel so stroking cost is bounded by the plot width, not the point count. A degenerate domain maps to the middle rather than dividing by zero, and a bar/area series forces a zero baseline.
+- [x] Add accessible chart summaries. `ChartSummary` carries the series/point counts, the axis *titles* and ranges, and the peak; `describe()` also says "Mixed chart" when the kinds disagree and "no data" when empty.
+- [x] Add media controls with semantic states. `media.rs`: `MediaState` + `MediaControls` (play/pause, seek, volume, mute, time readout) with `Button`/`Slider`/`ProgressBar` roles, `DISABLED` on a trackless transport, `LIVE` while playing, and Space/M/arrows/Home/End keys. `toggle_play` returns "did anything change" (not "is it playing") because the handlers forward it as their handled flag.
+- [x] Commit.
 
 ---
 

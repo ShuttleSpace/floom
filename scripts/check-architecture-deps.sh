@@ -255,7 +255,7 @@ for _names, _level in [
         ],
         5,
     ),
-    (["floem-widgets"], 6),
+    (["floem-widgets", "floem-widgets-data"], 6),
     (["floem-app"], 7),
     # Tooling/compiler tier: these may depend on anything below them and are not
     # shipped as part of an application binary. `floem-testkit` is the runtime

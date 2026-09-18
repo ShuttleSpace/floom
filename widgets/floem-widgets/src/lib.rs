@@ -23,6 +23,8 @@ mod widget_any;
 /// `WidgetAny` lives in `floem-core` (the type-erasure contract); re-exported
 /// here so existing importers keep working.
 pub use floem_core::WidgetAny;
+/// The accessibility bridge, shared with the sibling data-widget crate.
+pub use widget_any::{to_core_role, to_core_state};
 
 pub use compose::{BottomSheet, Conditional, Dialog, Grid, List, Overlay, Popup, Stack, Tabs};
 pub use controls::{
