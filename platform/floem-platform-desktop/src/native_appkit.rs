@@ -61,7 +61,7 @@ use objc2_app_kit::{NSBitmapFormat, NSResponder, NSView};
 use objc2_foundation::{NSObject, NSPoint, NSRect, NSSize};
 
 use floem_native::{
-    ClipSupport, InputMode, InputModes, NativeError, NativeSnapshot, NativeSlot, NativeViewKind,
+    ClipSupport, InputMode, InputModes, NativeError, NativeSlot, NativeSnapshot, NativeViewKind,
 };
 use floem_types::{NativeCapture, ResourceId, Size};
 
