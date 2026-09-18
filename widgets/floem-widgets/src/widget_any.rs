@@ -108,6 +108,7 @@ macro_rules! impl_widget_any {
 
 impl_widget_any!(
     crate::primitives::Text,
+    crate::labeled::Labeled,
     crate::primitives::Icon,
     crate::primitives::Image,
     crate::primitives::Container,

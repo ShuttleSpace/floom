@@ -1532,6 +1532,9 @@ impl WidgetHost {
         }
         self.layout.set_style(root_node, root_style);
         self.layout.compute(root_node, self.size);
+        // Parent-relative and absolute rects, filled in the passes below.
+        let mut relative: Vec<Option<Rect>> = vec![None; self.nodes.len()];
+        let mut absolute: Vec<Option<Rect>> = vec![None; self.nodes.len()];
         for index in 0..self.nodes.len() {
             if self.nodes[index].dead {
                 continue;
@@ -1541,8 +1544,32 @@ impl WidgetHost {
             if self.nodes[index].is_overlay || self.is_in_overlay(index) {
                 continue;
             }
-            let output = self.layout.layout(self.nodes[index].layout_node);
-            self.nodes[index].bounds = output.rect;
+            relative[index] = Some(self.layout.layout(self.nodes[index].layout_node).rect);
+        }
+        // Taffy reports each node's location relative to its *parent*, so a
+        // subtree whose ancestors are not at the window origin would paint and
+        // hit-test shifted by exactly those offsets. Mount order puts every
+        // parent before its children, so one forward pass accumulates each
+        // node's absolute position out of its parent's.
+        for index in 0..self.nodes.len() {
+            let Some(mut rect) = relative[index] else {
+                continue;
+            };
+            if let Some(parent) = self.nodes[index].parent {
+                if let Some(parent_rect) = absolute[parent] {
+                    rect.x0 += parent_rect.x0;
+                    rect.y0 += parent_rect.y0;
+                    rect.x1 += parent_rect.x0;
+                    rect.y1 += parent_rect.y0;
+                }
+            }
+            absolute[index] = Some(rect);
+        }
+        for index in 0..self.nodes.len() {
+            let Some(rect) = absolute[index] else {
+                continue;
+            };
+            self.nodes[index].bounds = rect;
             // A participant that is off screen has no region at all, not just
             // no native claim — see `Node::native_hidden`.
             if self.nodes[index].native_hidden {
@@ -1553,7 +1580,7 @@ impl WidgetHost {
             self.router.hits.set_region(
                 self.nodes[index].id,
                 HitRegion {
-                    bounds: output.rect,
+                    bounds: rect,
                     // A node with a participant resolves to the native view,
                     // which takes the pointer itself. Set by the grant, read
                     // back here so a relayout keeps it.

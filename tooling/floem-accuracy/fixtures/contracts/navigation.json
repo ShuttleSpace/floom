@@ -1,0 +1,91 @@
+{
+  "version": {
+    "major": 1,
+    "minor": 0
+  },
+  "name": "Navigation",
+  "dimensions": {
+    "width": 360.0,
+    "height": 640.0
+  },
+  "spacing": {
+    "gap": 12.0,
+    "padding": [
+      16.0,
+      16.0,
+      16.0,
+      16.0
+    ]
+  },
+  "radius": {
+    "corner": 10.0
+  },
+  "typography": [
+    {
+      "name": "body",
+      "font_size": 14.0
+    },
+    {
+      "name": "title",
+      "font_size": 18.0
+    }
+  ],
+  "colors": [
+    {
+      "name": "accent",
+      "value": {
+        "r": 30,
+        "g": 95,
+        "b": 214,
+        "a": 255
+      }
+    },
+    {
+      "name": "card",
+      "value": {
+        "r": 244,
+        "g": 246,
+        "b": 248,
+        "a": 255
+      }
+    },
+    {
+      "name": "on_accent",
+      "value": {
+        "r": 255,
+        "g": 255,
+        "b": 255,
+        "a": 255
+      }
+    },
+    {
+      "name": "surface",
+      "value": {
+        "r": 255,
+        "g": 255,
+        "b": 255,
+        "a": 255
+      }
+    },
+    {
+      "name": "text",
+      "value": {
+        "r": 23,
+        "g": 33,
+        "b": 43,
+        "a": 255
+      }
+    }
+  ],
+  "states": [],
+  "animation": {
+    "duration_ms": 150,
+    "easing": "ease-out"
+  },
+  "accessibility": {
+    "role": "window",
+    "label": "Navigation",
+    "min_contrast": 4.5,
+    "min_touch_target": 48.0
+  }
+}

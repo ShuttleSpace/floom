@@ -1933,6 +1933,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "floem-accuracy"
+version = "0.2.0"
+dependencies = [
+ "floem-accessibility",
+ "floem-agent",
+ "floem-core",
+ "floem-design",
+ "floem-scene",
+ "floem-snapshot",
+ "floem-testkit",
+ "floem-text",
+ "floem-types",
+ "floem-ui-ir",
+ "floem-widgets",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "floem-agent"
 version = "0.2.0"
 dependencies = [

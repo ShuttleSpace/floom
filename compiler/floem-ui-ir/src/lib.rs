@@ -29,8 +29,8 @@ mod value;
 mod version;
 
 pub use design_contract::{
-    ColorRole, ContractValue, ContractVersion, DesignContract, DiffEntry, Radius, Spacing,
-    StateStyle, TypeStyle, compare,
+    Accessibility, Animation, ColorRole, ContractDiff, ContractValue, ContractVersion,
+    DesignContract, DiffEntry, Dimensions, Radius, Spacing, StateStyle, TypeStyle, compare,
 };
 pub use document::{LoadOutcome, UiDocument};
 pub use error::IrError;

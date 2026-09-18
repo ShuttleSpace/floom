@@ -1364,24 +1364,24 @@ tester.assert_text(selector, text)
 
 ## Task 27.1: Build reference gallery
 
-- [ ] Create representative screens: settings, dashboard, feed, editor, media list, form, dialog, navigation, webview screen.
-- [ ] Store reference design contracts.
-- [ ] Commit fixtures.
+- [x] Create representative screens: settings, dashboard, feed, editor, media list, form, dialog, navigation, webview screen. — DONE 2026-09-19 as `tooling/floem-accuracy` (L8): `Screen::ALL`, nine screens built from real widgets as a pure function of a `ScreenTokens` table (card + title/body + screen rows + a primary/secondary action pair each). The dialog dims via an in-tree scrim, navigation splits a drawer beside the pane, and the webview screen mounts a labelled placeholder — real web content stays behind the Phase 17 OS providers, and the screen says so.
+- [x] Store reference design contracts. — `fixtures/contracts/<screen>.json`, one Phase 26 `DesignContract` per screen (dimensions 360x640, gap 12, padding 16, radius 10, title 18/body 14, accent #1e5fd6, WCAG 4.5 contrast floor, 48 px touch floor), version-gated on load.
+- [x] Commit fixtures. — this commit. Prerequisite shipped alongside: `floem-widgets::Labeled`, a labelled single-child group — the engine's styled boxes are `Container` leaves, so without a nameable wrapper nothing in a deep subtree can be addressed by label. Plus two tests.
 
 ## Task 27.2: Automated render-and-compare loop
 
-- [ ] Render reference screen with headless renderer.
-- [ ] Compare geometry/style/semantics/optional pixels.
-- [ ] Emit machine-readable diff.
-- [ ] Commit evaluation harness.
+- [x] Render reference screen with headless renderer. — `evaluate_screen` mounts the screen in `floem-testkit`, settles it, and reads the retained scene. **It caught a real L7 bug on its first run**: taffy 0.9 reports each node's location *relative to its parent*, and the host stored those rects as absolute — every subtree with a parent off the origin painted and hit-tested shifted. Fixed in `floem-app` by accumulating parent offsets in the layout pass (`relative` → `absolute`); the gallery is the first test in the workspace that checks absolute scene geometry of a deep mounted tree, which is why only it could see this.
+- [x] Compare geometry/style/semantics/optional pixels. — Measurements come out of the rendered result: gap and padding from sibling bounds, radius and fills from the painted rects (card found as the largest non-full-window rect, so a dialog scrim needs no special case), text colours and line heights from the scene's text runs, resolved font sizes from the mounted widgets, WCAG contrast via `floem_design::contrast_ratio`, and a `PixelSnapshot` fingerprint rendered **with** the host's `ResourceRegistry` — the second real find: without the registry the renderer silently skips Text nodes and a "pixel" comparison measures only rectangles.
+- [x] Emit machine-readable diff. — Measurements become an *observed* `DesignContract` and the diff is Phase 26's `compare` (same paths, same vocabulary, serde-serializable `EvaluationReport` with `to_json`/`from_json` round-trip). Floors the contract declares are checked as ">= " claims and reported as `FloorFailure`s, not compared for equality; animation and the copied a11y block are documented as not statically observable.
+- [x] Commit evaluation harness. — this commit. 8 evaluation tests + 4 gallery tests, including the falsifiability pair (typography measurement must track the token; a colour drift must move the pixel hash) and floor tests with a clean-reference control.
 
 ## Task 27.3: Agent repair benchmark
 
-- [ ] Give an agent a design contract and imperfect implementation.
-- [ ] Allow MCP inspection and edits.
-- [ ] Measure convergence and regressions.
-- [ ] Establish acceptance thresholds.
-- [ ] Commit benchmark harness.
+- [x] Give an agent a design contract and imperfect implementation. — `run_benchmark(screen, &drifted_tokens, &mut policy)`: the implementation is the screen rebuilt from a drifted `ScreenTokens` table (11 named drifts), the contract is the screen's fixture.
+- [x] Allow MCP inspection and edits. — Inspection goes through the Phase 25 protocol: a test drives `AgentSession` with `Tree`/`Schema` requests against a mounted gallery screen and the schema gates the edits — every `TokenEdit` lowers to a property `floem_ui_ir::prop_is_declared` accepts (gap/padding/radius/font_size/height/background/foreground), so an agent that reads the schema authors edits that validate. Edits parse back from `compare`'s own canonical renderings (`from_diff_entry`), so the diff vocabulary and the repair vocabulary cannot drift apart.
+- [x] Measure convergence and regressions. — `DiffDrivenPolicy` maps diff entries (and the touch-target floor) back to token edits and converges every drift on every probed screen in one pass, regressions 0. Regression counting needs the universe of comparable paths and gets it from `compare` itself — the reference compared against a perturbed copy of itself emits every path — never a restated list. `BlunderingPolicy` (fixes everything, then shatters a clean corner radius) earns `regressions >= 1` and a rejected run; `DoNothingPolicy` stalls honestly.
+- [x] Establish acceptance thresholds. — `Thresholds::default()` = converge within 8 passes, 0 regressions; `accepts` rejects the blunderer's and the stalled run's results.
+- [x] Commit benchmark harness. — this commit. 6 benchmark tests + 3 token-table unit tests; crate total 21, workspace delta +23 (21 here + 2 `Labeled`).
 
 ---
 

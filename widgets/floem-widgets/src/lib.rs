@@ -13,6 +13,7 @@
 
 pub mod compose;
 pub mod controls;
+pub mod labeled;
 pub mod native;
 pub mod nav;
 pub mod navigation;
@@ -30,6 +31,7 @@ pub use compose::{BottomSheet, Conditional, Dialog, Grid, List, Overlay, Popup, 
 pub use controls::{
     Button, Checkbox, InteractionState, Progress, Radio, Select, Slider, Switch, TextField,
 };
+pub use labeled::Labeled;
 pub use native::NativeSurface;
 pub use nav::{NavHandle, NavHost};
 pub use navigation::{NavDestination, NavigationBar, NavigationDrawer, NavigationRail};
