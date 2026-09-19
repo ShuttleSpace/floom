@@ -11,14 +11,22 @@ rust-version.workspace = true
 floem-accessibility = { path = "../../framework/floem-accessibility", version = "0.2.0" }
 floem-platform = { path = "../floem-platform", version = "0.2.0" }
 floem-types = { path = "../../foundation/floem-types", version = "0.2.0" }
+# The JNI bridge (JavaVM / activity handover + `with_env`) lives with the mobile
+# capability packages, because those are its first consumers. Same layer (L4),
+# so this is a sibling edge, not an upward one — the gate permits `dep <= self`.
+floem-platform-mobile = { path = "../floem-platform-mobile", version = "0.2.0" }
 
 # --- Android real backend (Phase 17 / 19.4) ---------------------------------
 # These mirror the dependency blueprint already declared for the workspace root
 # at `Cargo.toml` (the `android-native-activity` feature pulls in
 # `floem-winit-android` + `android-activity`; `ndk` gives the native window for
 # the renderer surface; `android_logger` routes logs to logcat). The block is
-# target-gated so the host build (macOS) is untouched. `jni` arrives with the
-# clipboard / IME bridge (Step 4 of the blueprint).
+# target-gated so the host build (macOS) is untouched.
+#
+# No direct `jni` dependency: the platform hands its `JavaVM` / activity
+# pointers to `floem-platform-mobile::jni` (which owns the `jni` crate) and
+# calls back through that module's `with_env`. Keeping the JNI types in one
+# place also means one version of the crate in the graph.
 [target.'cfg(target_os = "android")'.dependencies]
 winit = { workspace = true, features = ["android-native-activity"] }
 ndk = "0.9"

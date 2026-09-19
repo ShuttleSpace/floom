@@ -51,7 +51,7 @@ jobs:
         --package=floem-renderer --package=floem-renderer-vello --package=floem-renderer-software --package=floem-renderer-skia
         --package=floem-platform --package=floem-platform-desktop --package=floem-platform-android
         --package=floem-platform-ios --package=floem-platform-harmony --package=floem-platform-web
-        --package=floem-platform-embedded
+        --package=floem-platform-embedded --package=floem-platform-mobile
         --package=floem-text --package=floem-editor --package=floem-ime
         --package=floem-layout --package=floem-style --package=floem-virtual
         --package=floem-native
@@ -104,6 +104,56 @@ jobs:
 
       - name: Check architecture dependency boundaries
         run: ./scripts/check-architecture-deps.sh
+
+  # Floem 2.0's mobile platform code lives behind `#[cfg(target_os = "android")]`,
+  # so nothing above compiles it: the `floem-2.0` job builds the *host* arm of
+  # every crate, which for these two crates is a headless stand-in. That gap is
+  # not hypothetical. `floem-platform-mobile`'s entire Android half (the JNI
+  # bridge plus every capability package's `android.rs`) and `floem-platform-android`'s
+  # whole winit-backed `android` module had never been compiled by CI, and a
+  # JNI module sitting there with five hard errors went unnoticed until a device
+  # build finally pulled it in.
+  #
+  # So this job compiles those cfg'd arms for a real Android target. It is a
+  # `cargo check`: no NDK is required — `android-activity`'s build script only
+  # invokes `cc` for its `game-activity` backend, which nothing here enables —
+  # and nothing is linked or run.
+  #
+  # Deliberately NOT covered: `examples/floem2-android`. Its Android module is
+  # gated on `--features real` as well as the target, and `real` drags wgpu +
+  # vello through a cross build for no extra coverage of the platform seams this
+  # job exists to check. That example is compiled by `scripts/build-apk.sh`,
+  # i.e. by the device workflow, and by nothing in CI. If it starts breaking
+  # unnoticed, that is why — add it here with `--features real` and accept the
+  # build time.
+  android-check:
+    name: Floem 2.0 for aarch64-linux-android
+    if: github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Update toolchain & add the Android target
+        run: |
+          rustup update --no-self-update
+          rustup target add aarch64-linux-android
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: android-check
+          save-if: ${{ github.event_name != 'merge_group' }}
+
+      - name: Fetch dependencies
+        run: cargo fetch --target aarch64-linux-android
+
+      - name: Check the Android arms of the platform crates
+        run: >
+          cargo check
+          --package=floem-platform-mobile
+          --package=floem-platform-android
+          --target aarch64-linux-android
 
   build:
     name: Rust on ${{ matrix.os }}

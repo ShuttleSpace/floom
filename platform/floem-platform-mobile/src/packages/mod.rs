@@ -14,6 +14,9 @@
 //!   visibility/height with hysteresis ([`keyboard::soft_input`]).
 //! * [`safe_area`] — OS-reserved insets as `floem_types::Insets`.
 //! * [`system_chrome`] — status/navigation bar appearance (`SystemChromeStyle`).
+//! * [`clipboard`] — system clipboard read/write. The Android arm is **real**
+//!   JNI (`ClipboardManager`); there is no NDK clipboard API, so this is what
+//!   `floem-platform-android` uses to implement `floem_platform::Clipboard`.
 //! * [`device_info`], [`battery`], [`connectivity`], [`location`],
 //!   [`sensors`], [`local_auth`], [`notifications`], [`share`] — typed
 //!   capability APIs with a `#[cfg]`-dispatched public surface. The data types
@@ -30,6 +33,7 @@
 //! feature gate.
 
 pub mod battery;
+pub mod clipboard;
 pub mod connectivity;
 pub mod device_info;
 pub mod keyboard;

@@ -121,6 +121,37 @@ pub fn is_keyboard_visible() -> bool {
     soft_keyboard_state().visible
 }
 
+/// Ask the OS to show or hide the soft keyboard.
+///
+/// This is the *control* half of the package: [`soft_keyboard_state`] reads
+/// what the OS reports, this changes it. On Android the keyboard is driven
+/// through a hidden anchor view — see [`android`] for why the obvious NDK route
+/// cannot work for a `NativeActivity`.
+///
+/// `Err` means the request could not be issued at all (the platform bridge is
+/// missing or a JNI call failed), not that the OS declined: Android's
+/// `showSoftInput` returns `false` for "nothing to show", which is not an error
+/// for a caller that just asked for the keyboard.
+///
+/// Host builds have no soft keyboard, so there is nothing to control and the
+/// call succeeds vacuously — that keeps callers free of `#[cfg]`.
+pub fn set_soft_keyboard_visible(visible: bool) -> Result<(), String> {
+    #[cfg(target_os = "android")]
+    {
+        android::set_visible(visible)
+    }
+    #[cfg(target_os = "ios")]
+    {
+        let _ = visible;
+        Err("soft keyboard control is not implemented on iOS yet".to_string())
+    }
+    #[cfg(not(any(target_os = "android", target_os = "ios")))]
+    {
+        let _ = visible;
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

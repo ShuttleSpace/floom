@@ -39,11 +39,13 @@ use winit::keyboard::{Key as WinitKey, KeyCode as WinitKeyCode, ModifiersState, 
 use winit::platform::android::EventLoopBuilderExtAndroid;
 use winit::platform::android::activity::AndroidApp;
 use winit::raw_window_handle::{HasDisplayHandle, HasWindowHandle};
-use winit::window::{Window as WinitWindow, WindowAttributes, WindowId as WinitWindowId};
+use winit::window::{
+    ImeRequest, ImeRequestData, Window as WinitWindow, WindowAttributes, WindowId as WinitWindowId,
+};
 
 use floem_platform::{
-    Clipboard, Ime, KeyCode, Platform, PlatformCapabilities, PlatformEvent, PointerButton,
-    SurfaceConfig, SurfaceTarget, Window, WindowConfig, WindowState,
+    Capability, Clipboard, Ime, KeyCode, Platform, PlatformCapabilities, PlatformEvent,
+    PointerButton, SurfaceConfig, SurfaceTarget, Window, WindowConfig, WindowState,
 };
 use floem_types::{
     DisplayInfo, Modifiers, PlatformId, Point, ScaleFactor, Size, SurfaceId, WindowId,
@@ -186,6 +188,11 @@ pub struct AndroidPlatform {
     /// Requests made before an [`ActiveEventLoop`] was available.
     pending: Vec<(WindowId, WindowConfig)>,
     events: Vec<PlatformEvent>,
+    /// Per-window IME enabled state, mirroring the desktop backend and the
+    /// headless platform. Kept here rather than only in winit because
+    /// `set_cursor_area` may arrive before or after the enable and must not
+    /// forward an `Update` for a field that was never enabled.
+    ime_enabled: HashMap<u32, bool>,
     started: Instant,
 }
 
@@ -204,6 +211,7 @@ impl AndroidPlatform {
             next_window: 1,
             pending: Vec::new(),
             events: Vec::new(),
+            ime_enabled: HashMap::new(),
             started: Instant::now(),
         }
     }
@@ -420,9 +428,12 @@ impl Platform for AndroidPlatform {
         self.id
     }
     fn capabilities(&self) -> PlatformCapabilities {
-        // Windowing + touch + IME available; clipboard arrives with the JNI
-        // bridge (Step 4) and a11y is the L-stub for now.
-        PlatformCapabilities::unsupported_a11y_stub()
+        // Windowing + touch + IME are real, and so is the clipboard now that
+        // `run` hands the JVM to the capability bridge. a11y remains the
+        // mobile L-stub — that is the one capability still absent.
+        let mut caps = PlatformCapabilities::unsupported_a11y_stub();
+        caps.caps |= Capability::CLIPBOARD;
+        caps
     }
     fn create_window(&mut self, config: WindowConfig) -> WindowId {
         self.enqueue_window(config)
@@ -453,23 +464,106 @@ impl Platform for AndroidPlatform {
     }
 }
 
-/// Clipboard on Android is routed through the system `ClipboardManager` via JNI
-/// (Step 4 of the blueprint). Until that bridge exists we are inert — this is a
-/// known seam, not a capability claim (see `capabilities()` above).
+/// Clipboard on Android goes through the system `ClipboardManager`. There is no
+/// NDK clipboard API, so the call itself is JNI — it lives in
+/// [`floem_platform_mobile::packages::clipboard`], next to the `jni` crate and
+/// the `JavaVM`/activity handover it needs (see [`hand_over_jni_bridge`]).
+///
+/// The trait's shape (`Option<String>` / `bool`) predates the richer
+/// `Result<_, String>` the package uses, so failures are folded here: "empty
+/// clipboard" and "bridge unavailable" both read as `None`/`false` to a caller
+/// that cannot act differently on them anyway.
 impl Clipboard for AndroidPlatform {
     fn get_text(&mut self) -> Option<String> {
-        None
+        match floem_platform_mobile::packages::clipboard::get_text() {
+            Ok(text) => text,
+            Err(err) => {
+                eprintln!("floem2-android: clipboard read failed: {err}");
+                None
+            }
+        }
     }
-    fn set_text(&mut self, _text: &str) -> bool {
-        false
+
+    fn set_text(&mut self, text: &str) -> bool {
+        match floem_platform_mobile::packages::clipboard::set_text(text) {
+            Ok(()) => true,
+            Err(err) => {
+                eprintln!("floem2-android: clipboard write failed: {err}");
+                false
+            }
+        }
     }
 }
 
-/// IME on Android is the `InputMethodManager` + a hidden `EditText` (the
-/// Slint/GPUI-Mobile pattern). Until that JNI bridge exists we are inert.
+/// IME on Android is the system soft keyboard, driven through the framework.
+///
+/// # Why this does not go through winit
+///
+/// The obvious route — winit's `request_ime_update`, which calls the NDK's
+/// `ANativeActivity_showSoftInput` — **cannot work for a `NativeActivity`**.
+/// The request travels the whole chain and is then refused by the framework:
+///
+/// ```text
+/// ImeTracker: com.example.floem2:… onRequestShow at ORIGIN_CLIENT_SHOW_SOFT_INPUT
+/// InputMethodManager: Ignoring showSoftInput() as view=…NativeContentView is not served.
+/// ImeTracker: com.example.floem2:… onFailed at PHASE_CLIENT_VIEW_SERVED
+/// ```
+///
+/// `showSoftInput` needs a view the IME can serve, and a `NativeActivity` has
+/// none. So the keyboard is driven the way Java apps do it — through a hidden
+/// anchor view that `floem-platform-mobile`'s soft-input package owns and
+/// attaches to the activity. That package is also where the live keyboard
+/// height/visibility are read back from.
 impl Ime for AndroidPlatform {
-    fn set_enabled(&mut self, _window: WindowId, _enabled: bool) {}
-    fn set_cursor_area(&mut self, _window: WindowId, _origin: Point, _size: Size) {}
+    fn set_enabled(&mut self, window: WindowId, enabled: bool) {
+        self.ime_enabled.insert(window.index(), enabled);
+        if !self.windows.contains_key(&window.index()) {
+            return;
+        }
+        // stderr rather than the logger: `android_logger`'s default level
+        // follows the compile-time `log::max_level`, so a `log::warn!` here
+        // routinely never reaches logcat. stderr always does, tagged
+        // `RustStdoutStderr`.
+        if let Err(err) =
+            floem_platform_mobile::packages::keyboard::soft_input::set_soft_keyboard_visible(
+                enabled,
+            )
+        {
+            let what = if enabled { "show" } else { "hide" };
+            eprintln!("floem2-android: soft keyboard {what} failed: {err}");
+        }
+    }
+
+    /// Records the caret rect, and forwards it to winit.
+    ///
+    /// Be clear about what this does here: nothing observable. The Android
+    /// backend ignores the area (`set_ime_cursor_area` is a no-op), and winit
+    /// only accepts an `Update` while *its* IME state is enabled — which it
+    /// never is now, because `set_enabled` deliberately bypasses winit. So the
+    /// forwarding below is kept for shape parity with desktop and for the day
+    /// the caret anchor is wired to the anchor view; today it is inert.
+    ///
+    /// Wiring it properly means `InputMethodManager.updateCursorAnchorInfo`, or
+    /// moving the EditText anchor to the caret — which only matters once the
+    /// `InputConnection` (text delivery) exists.
+    fn set_cursor_area(&mut self, window: WindowId, origin: Point, size: Size) {
+        let Some(w) = self.windows.get(&window.index()) else {
+            return;
+        };
+        if !self
+            .ime_enabled
+            .get(&window.index())
+            .copied()
+            .unwrap_or(false)
+        {
+            return;
+        }
+        let data = ImeRequestData::default().with_cursor_area(
+            winit::dpi::Position::Logical(winit::dpi::LogicalPosition::new(origin.x, origin.y)),
+            winit::dpi::Size::Logical(winit::dpi::LogicalSize::new(size.width, size.height)),
+        );
+        let _ = w.native.request_ime_update(ImeRequest::Update(data));
+    }
 }
 
 /// The winit `ApplicationHandler` that drives an [`AndroidPlatform`]. Mirrors
@@ -561,8 +655,13 @@ impl<A: AndroidRunner> ApplicationHandler for AndroidDriver<A> {
 /// the OS allows window creation (after `resumed`).
 pub fn run<A: AndroidRunner + 'static>(app: A, windows: Vec<WindowConfig>) -> Result<(), String> {
     android_logger::init_once(android_logger::Config::default());
+    let android_app = get_android_app();
+    // Hand the JVM + activity to the capability bridge before anything can use
+    // it. Both setters are first-write-wins and ignore null, so a second `run`
+    // (or a caller that already did this) is harmless.
+    hand_over_jni_bridge(&android_app);
     let mut builder = EventLoop::builder();
-    builder.with_android_app(get_android_app());
+    builder.with_android_app(android_app);
     let event_loop = builder
         .build()
         .map_err(|err| format!("android event loop: {err}"))?;
@@ -602,6 +701,24 @@ fn get_android_app() -> AndroidApp {
         .get()
         .cloned()
         .expect("android_main must call set_android_app before run")
+}
+
+/// Hand the `JavaVM` and activity over to [`floem_platform_mobile::jni`].
+///
+/// Android exposes the clipboard, `InputMethodManager`, vibration, location …
+/// only as Java APIs, so every one of those capabilities needs a JVM. The
+/// mobile capability crate owns that bridge but cannot obtain the handles
+/// itself — `android-activity` is a dependency of *this* crate — so the
+/// handover has to happen here, once, before any capability is used.
+///
+/// Getting this wrong is silent: `with_env` would keep returning its
+/// "JavaVM not initialised" error and every capability would look merely
+/// "unsupported" rather than misconfigured. That is why it is a single named
+/// function called from [`run`] rather than an inline pair of calls a later
+/// refactor could drop.
+fn hand_over_jni_bridge(app: &AndroidApp) {
+    floem_platform_mobile::jni::set_java_vm(app.vm_as_ptr());
+    floem_platform_mobile::jni::set_activity(app.activity_as_ptr());
 }
 
 fn logical_size(size: winit::dpi::PhysicalSize<u32>, scale: f64) -> Size {

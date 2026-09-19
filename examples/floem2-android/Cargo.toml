@@ -28,6 +28,7 @@ floem-core = { path = "../../foundation/floem-core" }
 floem-layout = { path = "../../layout/floem-layout" }
 floem-platform = { path = "../../platform/floem-platform" }
 floem-platform-android = { path = "../../platform/floem-platform-android" }
+floem-platform-mobile = { path = "../../platform/floem-platform-mobile" }
 floem-renderer-vello = { path = "../../render/floem-renderer-vello", optional = true }
 floem-types = { path = "../../foundation/floem-types" }
 floem-widgets = { path = "../../widgets/floem-widgets" }

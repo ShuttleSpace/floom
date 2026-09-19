@@ -11,9 +11,9 @@
 
 ## 0. 摘要（TL;DR）
 
-- **现状**：`floem-platform-{android,ios,harmony}` 目前只是 ~100 行的 **headless 骨架**，把 `floem-platform::fake::HostPlatform`（内存态实现）重新导出，**没有任何窗口/渲染/事件循环**。桌面端（`floem-platform-desktop`，3332 行 winit 胶水）是唯一真实后端，且已在本机 Metal 冒烟验证。
+- **现状**：`floem-platform-{ios,harmony}` 目前只是 ~100 行的 **headless 骨架**，把 `floem-platform::fake::HostPlatform`（内存态实现）重新导出，**没有任何窗口/渲染/事件循环**。**Android 已不再是骨架**：`floem-platform-android` 有 winit 驱动的真实 `Platform`/`Window`/`Ime`/`Clipboard`（`#[cfg(target_os="android")]`）加一个可运行入口，首帧、tap、剪贴板、软键盘已在模拟器上逐项取证（§7.2、§7.2.2）。桌面端（`floem-platform-desktop`，3332 行 winit 胶水）是另一条真实后端，已在本机 Metal 冒烟验证。
 - **好消息**：floem 已经具备"真后端"所需的**全部地基**——（1）`floem-platform` 的 `Platform`/`Window`/`Surface`/`Ime`/`Clipboard` 契约（= Flutter 的 Embedder ABI）；（2）**vello/wgpu** 渲染（与 GPUI Mobile 同源）；（3）桌面端用 **raw-window-handle** 做 OS 无关的 surface 交接；（4）我们已把触摸状态机、NDK 键码表、软键盘高度滤波、safe-area/system-chrome 类型这些**纯逻辑层**从 GPUI Mobile 搬进了 `floem-gesture` / `floem-platform-mobile`。
-- **真正的缺口是"OS 胶水层"**，不是 UI 逻辑：三个平台各自需要一个**真实 `Platform`/`Window`/`Ime`/`Clipboard` 实现** + 生命周期/事件循环接入 + JNI / objc2 / NAPI 桥 + 从原生窗口句柄创建 wgpu 设备。
+- **真正的缺口是"OS 胶水层"**，不是 UI 逻辑：三个平台各自需要一个**真实 `Platform`/`Window`/`Ime`/`Clipboard` 实现** + 生命周期/事件循环接入 + JNI / objc2 / NAPI 桥 + 从原生窗口句柄创建 wgpu 设备。**Android 这一层已交付**（§7.2.2，含 JNI 服务桥）；iOS / Harmony 仍待做。
 - **可行性排序**：Android（最高，wgpu-Vulkan 成熟 + cargo-ndk）＞ iOS（wgpu-Metal + UIKit，Apple 工具链摩擦）＞ **Harmony（路径已清晰且"硬伤"被 `gpui_ohos` 实测证伪：复用 `openharmony-ability` NAPI 桥 + wgpu `Backends::GL`(GLES/EGL) 经 `OHNativeWindow`，`raw_window_handle::Ohos` 已被 wgpu 原生支持，`SurfaceTarget` 零改造；参照 Flutter/RN/gpui-ohos 成熟实现）**。
 - **工作量包络**（单工程师，到"空窗口渲染 + 基础输入"里程碑）：Android 4–6 周、iOS 4–6 周、Harmony 6–10 周；三平台完整功能对等（IME/剪贴板/safe-area/文本/深色模式）+ 各 2–3 周；CI/AVD/模拟器/真机验证另计 3–5 周。总计约 **21–38 人周**（≈ 5–9 月·人）。
 
@@ -39,8 +39,9 @@
 - `floem-gesture/src/touch.rs` — 触摸手势分类状态机（`Idle`/`Pending`/`Scrolling`，`SCROLL_SLOP=8.0`，tap↔scroll 区分 + `VelocityTracker`→fling），9 个测试。
 - `floem-platform-mobile/src/packages/keyboard/android_table.rs` — NDK `AKEYCODE_*`/`AMETA_*` → floem `Keystroke`/`Modifiers` 映射表，23 个测试。
 - `floem-platform-mobile/src/packages/keyboard/soft_input/` — `SoftKeyboardState` + `KeyboardHeightFilter`（迟滞滤波）。
-- `floem-platform-mobile/src/packages/{safe_area,system_chrome}` — `safe_area_insets()` / `SystemChromeStyle` 类型与 host no-op。
-- 8 个设备能力包（`device_info`/`battery`/`connectivity`/`location`/`sensors`/`local_auth`/`notifications`/`share`）——全部是**带类型的 inert stub**，等真后端落地填原生实现。
+- `floem-platform-mobile/src/packages/{safe_area,system_chrome}` — `safe_area_insets()` / `SystemChromeStyle` 类型与 host no-op。**Android 臂仍未实现**（返回 `Insets::ZERO`，与 §7.2.2 末尾的 `InsetsChanged` 通知缺口同源）。
+- `floem-platform-mobile/src/packages/clipboard` — 不再是 stub：Android 臂是**真 JNI**（`ClipboardManager`），已在设备上取到逐字节一致的回值。
+- 8 个设备能力包（`device_info`/`battery`/`connectivity`/`location`/`sensors`/`local_auth`/`notifications`/`share`）——全部是**带类型的 inert stub**，等真后端落地填原生实现（`vibration` 有一个 worked example）。
 
 ### 1.3 缺口的本质
 
@@ -285,10 +286,11 @@ pub trait Ime { fn set_enabled / set_cursor_area }
 - [x] 可运行入口已落地：`examples/floem2-android`（`cdylib` + `android_main` → `set_android_app` → `AndroidRunner`/`run`），交叉编译 `--features real` 0 错 0 警（登记于 `docs/2.0/EXAMPLES.md`）。
 - [x] 在 Pixel 模拟器（含 Play 的 x86_64 或 arm64 镜像）打开**一个空 floem 窗口**，vello/wgpu-Vulkan 成功呈现首帧。**已达成（2026-09-19）**：`system-images;android-34;google_apis;arm64-v8a` + Pixel 6 profile 建 AVD `floem2api34`，无头启动（`-gpu swiftshader_indirect`）后 logcat 出 `GPU adapter: SwiftShader Device (LLVM 10.0.0) (Vulkan)` 与 `Displayed com.example.floem2/android.app.NativeActivity: +4s709ms`，screencap 可见按钮。
 - [x] 派发一次 tap → `poll_events` 收到 `PlatformEvent::Pointer`（`floem-gesture::TouchRecognizer` 判为 tap）。**已达成（2026-09-19）**：`adb shell input tap` 落在按钮**可见位置**的中心 → `PointerButton src=Touch{finger_id:0} mapped=Primary` → `on_click` → 计数 +1（logcat `pointer -> button click, counter = 2`）；对照组（同一 x、按钮外）不触发。
-- [ ] `soft_input` / `safe_area_insets` 经 JNI 返回非默认值（证明系统服务桥通）。**未达成（`impl Clipboard`/`impl Ime` 仍为 inert stub，留 JNI seam）。**
+- [x] **Clipboard / Ime 经 JNI 生效**（证明系统服务桥通）。**已达成（2026-09-19）**：`impl Clipboard` / `impl Ime` 不再是 inert stub，两者都在模拟器上取到真实回值 —— 见 §7.2.2。
+- [ ] `safe_area_insets` 经 JNI 返回非默认值。**未达成**：`safe_area/android.rs` 仍返回 `Insets::ZERO`。它与"键盘出现没人通知应用"是同一个 `WindowInsets` 通知缺口（§7.2.2 末尾），宜一同解决。
 - [x] 架构门 `bash scripts/check-architecture-deps.sh` 仍 PASS（L4 不依赖更高层）。
 
-**当前结论**：编译级、入口级、**设备级首帧与 tap 均已收口**（四项 ✅）；剩余仅 JNI 服务回值（inert stub）。
+**当前结论**：编译级、入口级、**设备级首帧、tap、剪贴板、软键盘四类均已在模拟器上收口**；剩余仅 `safe_area`（与 `InsetsChanged` 通知缺口同源）与 IME **文字回传**（`InputConnection`）。
 
 ### 7.2.1 设备运行暴露并已修复的两个真实缺陷
 
@@ -297,7 +299,21 @@ pub trait Ime { fn set_enabled / set_cursor_area }
 1. **presenter 从不消费 scale factor**：场景按 logical 单位构建，target 是 device 像素，但 vello 的根变换只有 `translate(-damage origin)`、软件后端也只按缓冲尺寸换算。后果是**应用按 1× 画进一个 ×2.625 的靶面**（UI 缩在角落），而命中测试仍把指针**除**以 scale 变成 logical —— 于是**点击永远落在"实际绘制位置 / scale"处**：看着点在按钮上，事件却打在别处。修法是把 scale 并入唯一的那一个根变换（`render/floem-renderer-vello::scene_transform`）并在软件后端逐几何换算；由 `a_logical_scene_is_painted_at_the_scale_factor`（软件后端像素断言）与 `the_scene_transform_scales_then_translates`（纯算术，无需 GPU）钉住。
 2. **glyph run 里存的是 offset 而不是位置**：parley 的 `Glyph.x` 是"相对笔位的偏移 + advance"，而 `floem-text::Glyph` 是"已定位字形"，两个渲染器都按后者绘制 —— 于是**整串字形叠在 run 原点上**，文字糊成一团；而**行宽是 advance 之和、依旧正确**，所以布局留下的位置分毫不差，只有屏幕看得出来。修法是在 shaper 拷贝时累加笔位（`text/floem-text/src/layout.rs`），由 `glyph_positions_advance_across_the_run` 钉住。
 
-> 设备侧备注：本模拟器窗口 surface 为 1080×2272 而 display 为 1080×2400，`adb shell input tap` 用的是 **display 坐标**，与 surface 的 event 坐标差 128px 的垂直偏移；设备验证必须"先截屏量出控件的可见 rect，再点它的中心"，不能拿逻辑坐标反推。
+> 设备侧备注：`adb shell input tap` 用的是 **display 坐标**，而平台的事件坐标是**窗口相对**的（本模拟器 status bar 占 128 device px）。因此设备验证必须"先截屏量出控件的可见 rect，再点它的中心"，不能拿逻辑/窗口坐标反推。已实测：按钮绘制于 device y 230..335，tap 在 250/283/310 命中、229 与 336 均落空 —— 命中区与绘制区边界一致。
+
+### 7.2.2 JNI 服务桥：从 inert stub 到设备回值
+
+三处改动把 `Clipboard` / `Ime` 从 stub 变成真实现，且都**只在设备上可核实**：
+
+1. **桥没接线**：`floem-platform-mobile::jni` 早已写好 `set_java_vm`/`set_activity`，但**没有任何代码调用它们** —— 于是 12 个能力包全是死的。现由 `floem-platform-android::run` 在启动时从 `AndroidApp::vm_as_ptr`/`activity_as_ptr` 交接（setter 收 `*mut c_void`，后端不必依赖 `jni`）。
+2. **Clipboard**：Android 无 NDK 剪贴板 API，只能走 JNI 的 `ClipboardManager`。实测 `write=true`；`read_back=None` 是 **Android 10+ 的焦点限制**，系统日志给出确证原因：`Denying clipboard access to com.example.floem2, application is not in focus`（首次读发生在 `ActivityTaskManager` 报 `Displayed` 之前约 30ms）。焦点稳定后再读 → `Some("floem2-android clipboard probe 9f3c")`，**逐字节一致**，证明值确实存在于系统剪贴板而非仅进程内。
+3. **Ime**：winit 的 `request_ime_update` 走 NDK `ANativeActivity_showSoftInput`，对 `NativeActivity` **不可能生效** —— 请求走完全链后被框架拒绝：`Ignoring showSoftInput() as view=…NativeContentView is not served` / `onFailed at PHASE_CLIENT_VIEW_SERVED`。改为 Java 侧通行做法：向 activity 挂一个 1×1、alpha=0 的 `EditText` 锚点并让 `InputMethodManager` 为**它**显示输入法（`floem-platform-mobile` 的 `keyboard::soft_input::android`）。实测 `mServedView=android.widget.EditText{… 0,0-1,1}`、`mInputShown=true`、`ImeTracker: onShown`，截屏可见键盘。
+
+**仍未收口、且已定位到确切位置的一处**：**键盘出现时没有任何事件通知应用**。`android-activity` 会抛 `MainEvent::InsetsChanged`，而 winit 的 Android 后端把它丢掉了（`winit-android/src/event_loop.rs`：`TODO: handle Android InsetsChanged notification`）；窗口虽声明 `adjustResize` 却**并未真的 resize**，所以也不产生窗口事件。后果有二：应用**无法避开被键盘遮住的区域**（`soft_keyboard_state()` 读得出 336.4 logical px 的高度，但要有人先把它唤醒）；`safe_area_insets` 同样缺这条通知。修法是在该 fork 里转发 `InsetsChanged`（或由锚点注册 `OnApplyWindowInsetsListener` 回调 Rust）。
+
+**另一处已知边界**：`Ime` 目前只驱动键盘的**显隐**，**不接收键入的字符** —— 把文字送回应用需要 `InputConnection`（`commitText`/`getExtractedText`），锚点的文本从未被读取。
+
+**CI 缺口（本次一并补上）**：上述 JNI 代码位于 `#[cfg(target_os = "android")]` 之下，而 CI 从不跨编译 Android，`floem-platform-mobile` 连包列表都没进 —— 所以该模块**从未被编译过**，其中 5 个硬错误一直藏着（`OnceLock<jobject>` 不是 `Sync`、全局引用被当局部引用释放等）。现已在 `ci.yml` 增加 `android-check` 作业（`cargo check --package=floem-platform-mobile --package=floem-platform-android --target aarch64-linux-android`，无需 NDK），并把 `floem-platform-mobile` 补进 `FLOEM2_PACKAGES`。已做变异证伪：在 Android 专属代码里注入一个类型错误 → 该作业变红，而 host 构建**依旧全绿**。
 
 ### 7.3 前置核查清单（在写代码前）
 

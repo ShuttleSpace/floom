@@ -14,33 +14,63 @@
 
 use std::ffi::c_void;
 use std::sync::OnceLock;
+use std::sync::atomic::{AtomicPtr, Ordering};
 
 use jni::JavaVM;
 use jni::objects::{JObject, JValue};
 use jni::sys::{JavaVM as RawJavaVM, jobject};
 
 static JAVA_VM: OnceLock<JavaVM> = OnceLock::new();
-static ACTIVITY: OnceLock<jobject> = OnceLock::new();
+
+/// The activity handle, as handed over by the platform.
+///
+/// `AtomicPtr` rather than `OnceLock<jobject>` because a raw pointer is neither
+/// `Send` nor `Sync`, so `OnceLock<jobject>` cannot be a `static` at all. The
+/// atomic also gives "first writer wins" for free via `compare_exchange`, which
+/// is the semantics the setter documents.
+static ACTIVITY: AtomicPtr<c_void> = AtomicPtr::new(std::ptr::null_mut());
 
 /// Hand over the `JavaVM` pointer obtained at Android startup.
 ///
+/// Takes a bare `*mut c_void` because that is what
+/// `android_activity::AndroidApp::vm_as_ptr` hands out: the platform backend
+/// should not need a `jni` dependency (and the matching) just to forward it.
+/// The cast is to `jni::sys::JavaVM`, i.e. the JNI `JavaVM*`, which is what the
+/// pointer already is.
+///
 /// Safe to call more than once; the first call wins. A null pointer is ignored.
-pub fn set_java_vm(vm: *mut RawJavaVM) {
+pub fn set_java_vm(vm: *mut c_void) {
     if vm.is_null() {
         return;
     }
+    let vm = vm as *mut RawJavaVM;
     let _ = JAVA_VM.get_or_init(|| unsafe { JavaVM::from_raw(vm) });
 }
 
 /// Hand over the activity `jobject` obtained at Android startup.
 ///
-/// The object is a global reference owned by the platform backend and valid for
-/// the lifetime of the app. A null pointer is ignored.
-pub fn set_activity(ptr: jobject) {
+/// Also takes `*mut c_void` for the same reason: it comes from
+/// `AndroidApp::activity_as_ptr`. The handle is the framework's **global**
+/// reference and must outlive the app, so it is *never* released here — see
+/// [`activity`] for why that matters when reading it back. A null pointer is
+/// ignored, and a later non-null call is ignored too (first writer wins).
+pub fn set_activity(ptr: *mut c_void) {
     if ptr.is_null() {
         return;
     }
-    let _ = ACTIVITY.get_or_init(|| ptr);
+    let _ = ACTIVITY.compare_exchange(
+        std::ptr::null_mut(),
+        ptr,
+        Ordering::AcqRel,
+        Ordering::Acquire,
+    );
+}
+
+/// Whether the handover has happened. Useful for a backend (or an example) that
+/// wants to report the bridge state rather than discovering it from a failed
+/// capability call.
+pub fn is_initialised() -> bool {
+    JAVA_VM.get().is_some() && !ACTIVITY.load(Ordering::Acquire).is_null()
 }
 
 /// Run a closure with an `Env` attached to the current thread.
@@ -61,14 +91,31 @@ pub fn with_env<T>(f: impl FnOnce(&mut jni::Env) -> Result<T, String>) -> Result
 }
 
 /// Get the Activity as a [`JObject`] bound to the given env's local frame.
-pub fn activity<'local>(env: &jni::Env<'local>) -> Result<JObject<'local>, String> {
-    let ptr = *ACTIVITY
-        .get()
-        .ok_or_else(|| "Activity not initialised; call set_activity at startup".to_string())?;
-    if ptr.is_null() {
-        return Err("Activity is null".to_string());
+///
+/// # Why this is not just a cast
+///
+/// The stored handle is a JNI **global** reference owned by the Android
+/// framework. `JObject` is an *owning* wrapper: dropping one calls
+/// `DeleteLocalRef`, and deleting a global reference that way is undefined
+/// behaviour. So the raw handle is wrapped only to borrow it, and the wrapper
+/// is deliberately leaked (never dropped) while a genuine **local** reference —
+/// which this function's caller owns and which is released with the frame — is
+/// minted from it.
+///
+/// This mirrors what `android-activity` itself does when it needs a class
+/// reference out of its `GlobalRef`.
+pub fn activity<'local>(env: &mut jni::Env<'local>) -> Result<JObject<'local>, String> {
+    let raw = ACTIVITY.load(Ordering::Acquire);
+    if raw.is_null() {
+        return Err("Activity not initialised; call set_activity at startup".to_string());
     }
-    Ok(unsafe { JObject::from_raw(ptr as jobject) })
+    // Safety: `raw` is a valid global reference for the app's lifetime, which
+    // outlives this frame. The wrapper is leaked immediately below, so nothing
+    // ever treats the global reference as a local one.
+    let borrowed = unsafe { JObject::from_raw(env, raw as jobject) };
+    let local = env.new_local_ref(&borrowed).e()?;
+    std::mem::forget(borrowed);
+    Ok(local)
 }
 
 /// Convenience: `Result::err()` mapped to `String`, for the jni 0.22 API which
@@ -86,8 +133,12 @@ impl<T, E: std::fmt::Display> JniExt for Result<T, E> {
 }
 
 /// Build a `JValue::Object` from a `JObject` (helper for call signatures).
+///
+/// `JValue::Object` borrows, so the lifetimes have to be threaded by hand: the
+/// object must outlive the `JValue`, and `JValue`'s own parameter is the
+/// borrow's lifetime.
 #[inline]
-pub fn obj(value: &JObject) -> JValue {
+pub fn obj<'a>(value: &'a JObject<'a>) -> JValue<'a> {
     JValue::Object(value)
 }
 
