@@ -1,5 +1,38 @@
 use floem_text::{LayoutCache, TextAlign, TextLayoutOptions, TextShaper};
 
+/// A glyph run is a *positioned* sequence: the pen advances across the run and
+/// each glyph carries its own offset from that pen.
+///
+/// Parley hands back the two separately, and copying its per-glyph offset
+/// straight into the position field leaves every glyph at the run origin: the
+/// text paints as one overlapping blob. Nothing else notices, because the
+/// measured width is the *sum of the advances* and stays correct — the layout
+/// reserves exactly the right box for text that renders as a smudge.
+#[test]
+fn glyph_positions_advance_across_the_run() {
+    let mut shaper = TextShaper::new();
+    let opts = TextLayoutOptions {
+        max_width: f64::INFINITY,
+        font_size: 20.0,
+        align: TextAlign::Start,
+    };
+    let laid = shaper.shape("click me", &opts);
+    let run = &laid.runs[0];
+
+    let xs: Vec<f32> = run.glyphs.iter().map(|g| g.x).collect();
+    assert!(
+        xs.windows(2).all(|w| w[1] > w[0]),
+        "each glyph sits further along the run than the one before it: {xs:?}"
+    );
+    let last = run.glyphs.last().expect("glyphs");
+    assert!(
+        (last.x + last.advance - laid.size.width as f32).abs() < 0.01,
+        "the run ends where the layout says it does: {} vs {}",
+        last.x + last.advance,
+        laid.size.width
+    );
+}
+
 #[test]
 fn ascii_wraps_to_multiple_lines() {
     let mut shaper = TextShaper::new();

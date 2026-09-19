@@ -91,6 +91,13 @@ pub struct SoftwareRenderer {
     glyph_cache_byte_limit: usize,
     /// Monotonic access clock feeding the LRU order.
     glyph_cache_clock: u64,
+    /// Device pixels per logical unit, as reported by the frame. Scene geometry
+    /// — and glyph pen positions, and the size glyphs rasterise at — is in
+    /// logical units; the buffer is in device pixels, so every coordinate is
+    /// multiplied by this on the way in. A renderer that ignores it paints the
+    /// scene into a `scale`-times-larger buffer at 1:1, i.e. the app drawn at
+    /// half size on a 2× display.
+    scale: f64,
 }
 
 impl SoftwareRenderer {
@@ -114,6 +121,7 @@ impl SoftwareRenderer {
             glyph_cache_bytes: 0,
             glyph_cache_byte_limit: GLYPH_CACHE_BYTES,
             glyph_cache_clock: 0,
+            scale: 1.0,
         }
     }
 
@@ -211,13 +219,19 @@ impl SoftwareRenderer {
     }
 
     /// Intersects a clip (or the whole buffer) with this renderer's bounds.
+    ///
+    /// The clip arrives in scene units — logical pixels — and the buffer is in
+    /// device pixels, so it is scaled on the way in. The `max`/`min` against the
+    /// buffer bounds has to come *after* that: a logical edge can sit far
+    /// outside the device extent (`x = 400` on a 2× display is device 800), and
+    /// clamping first would silently clip the app to half its width.
     fn clip_region(&self, clip: Option<Rect>) -> Clip {
         let (mut x0, mut y0, mut x1, mut y1) = (0u32, 0u32, self.width, self.height);
         if let Some(clip) = clip {
-            x0 = x0.max(clip.x0.floor() as u32);
-            y0 = y0.max(clip.y0.floor() as u32);
-            x1 = x1.min(clip.x1.ceil() as u32);
-            y1 = y1.min(clip.y1.ceil() as u32);
+            x0 = x0.max((clip.x0 * self.scale).floor().max(0.0) as u32);
+            y0 = y0.max((clip.y0 * self.scale).floor().max(0.0) as u32);
+            x1 = x1.min((clip.x1 * self.scale).ceil().max(0.0) as u32);
+            y1 = y1.min((clip.y1 * self.scale).ceil().max(0.0) as u32);
         }
         (x0.min(x1), y0.min(y1), x1, y1)
     }
@@ -329,6 +343,14 @@ impl SoftwareRenderer {
         else {
             return;
         };
+        // Logical → device happens here, once, for the whole run: a glyph run
+        // is shaped in logical units (the laid-out box the widget measured
+        // against) and the buffer is in device pixels. Scaling the pen
+        // positions but rasterising at the logical size would space the
+        // letters out and shrink the glyphs — the size has to scale too, which
+        // is also why it belongs in the cache key.
+        let scale = self.scale;
+        let font_scale = scale as f32;
         for run in runs {
             if run.font.data.as_ref().is_empty() {
                 continue;
@@ -339,15 +361,16 @@ impl SoftwareRenderer {
                 continue;
             };
             // Baseline where this run lands, in buffer pixels.
-            let bx = origin.x as f32 + run.origin.x as f32;
-            let by = origin.y as f32 + run.origin.y as f32;
+            let bx = (origin.x as f32 + run.origin.x as f32) * font_scale;
+            let by = (origin.y as f32 + run.origin.y as f32) * font_scale;
+            let font_size = run.font_size * font_scale;
             for glyph in &run.glyphs {
                 // Cache lookup/insert must finish before the buffer is
                 // borrowed mutably, so clone the (cheap Arc) mask out first.
                 let cache_key: GlyphCacheKey = (
                     run.font.data.as_ref().as_ptr() as usize,
                     run.font.index,
-                    run.font_size.to_bits(),
+                    font_size.to_bits(),
                     glyph.id,
                 );
                 let mask = if let Some((_, mask, stamp)) = self.glyph_cache.get_mut(&cache_key) {
@@ -357,7 +380,7 @@ impl SoftwareRenderer {
                     std::sync::Arc::clone(mask)
                 } else {
                     self.glyph_cache_misses += 1;
-                    let Some(mask) = rasterize_glyph(font_ref, run.font_size, glyph.id) else {
+                    let Some(mask) = rasterize_glyph(font_ref, font_size, glyph.id) else {
                         // Colour glyphs (emoji) have no alpha-mask form;
                         // not cached, retried (and skipped) each frame.
                         continue;
@@ -382,8 +405,10 @@ impl SoftwareRenderer {
                 // image-top→baseline (y-down), so the image's top-left lands
                 // at (baseline_x + left, baseline_y - top). Same convention
                 // tiny-skia's adapter uses (`new_y.floor() - cached.top`).
-                let px = (bx + glyph.x).floor() as i32 + i32::from(mask.placement.left);
-                let py = (by + glyph.y).floor() as i32 - i32::from(mask.placement.top);
+                let px = (bx + glyph.x as f32 * font_scale).floor() as i32
+                    + i32::from(mask.placement.left);
+                let py = (by + glyph.y as f32 * font_scale).floor() as i32
+                    - i32::from(mask.placement.top);
                 let (cx0, cy0, cx1, cy1) = clip;
                 for row in 0..mask.placement.height as i32 {
                     let dy = py + row;
@@ -480,35 +505,46 @@ impl SoftwareRenderer {
         region: Option<Rect>,
     ) {
         let clip = self.clip_region(region);
+        let scale = self.scale;
         for (_id, node) in scene.iter() {
             // Groups report no bounds (they force a full frame), so they are
             // never culled — only nodes with a known box are.
             if let Some(bounds) = node.bounds_hint() {
-                if !hits_clip(bounds, clip) {
+                if !hits_clip(scale_rect(bounds, scale), clip) {
                     self.nodes_skipped += 1;
                     continue;
                 }
             }
+            // Every arm below crosses from the scene's logical units into the
+            // device-pixel buffer, so each one scales its own geometry.
             match node {
                 SceneNode::Rect {
                     bounds,
                     fill,
                     radius: 0.0,
-                } => self.fill_rect(
-                    bounds.x0.floor() as i32,
-                    bounds.y0.floor() as i32,
-                    bounds.x1.ceil() as i32,
-                    bounds.y1.ceil() as i32,
-                    *fill,
-                    clip,
-                ),
+                } => {
+                    let b = scale_rect(*bounds, scale);
+                    self.fill_rect(
+                        b.x0.floor() as i32,
+                        b.y0.floor() as i32,
+                        b.x1.ceil() as i32,
+                        b.y1.ceil() as i32,
+                        *fill,
+                        clip,
+                    );
+                }
                 // A non-zero radius takes the AA path, which works in the
                 // node's own (sub-pixel) geometry instead of the integer grid.
                 SceneNode::Rect {
                     bounds,
                     fill,
                     radius,
-                } => self.fill_rounded_rect(*bounds, f64::from(*radius), *fill, clip),
+                } => self.fill_rounded_rect(
+                    scale_rect(*bounds, scale),
+                    f64::from(*radius) * scale,
+                    *fill,
+                    clip,
+                ),
                 SceneNode::Text {
                     origin,
                     glyphs,
@@ -516,6 +552,10 @@ impl SoftwareRenderer {
                     ..
                 } => {
                     if let Some(resources) = resources {
+                        // Unscaled: `draw_text` scales the block origin, the
+                        // run offset, every pen position and the size the
+                        // glyphs rasterise at, which only stays consistent if
+                        // it is handed the scene's own units.
                         self.draw_text(*origin, *glyphs, *color, resources, clip);
                     }
                 }
@@ -525,7 +565,13 @@ impl SoftwareRenderer {
                     alpha,
                 } => {
                     if let Some(resources) = resources {
-                        self.draw_image(*bounds, *image, *alpha, resources, clip);
+                        self.draw_image(
+                            scale_rect(*bounds, scale),
+                            *image,
+                            *alpha,
+                            resources,
+                            clip,
+                        );
                     }
                 }
                 SceneNode::Group { .. } => {}
@@ -575,6 +621,20 @@ impl SoftwareRenderer {
 /// past the buffer, so both sides are compared in floating point before any
 /// clamping: `ceil` on the upper edge keeps a node that merely grazes the
 /// region, which matters for the anti-aliased boundary pixel.
+/// Logical scene rect → device-pixel rect. The identity when `scale` is 1,
+/// which is why a 1× display has never needed it.
+fn scale_rect(bounds: Rect, scale: f64) -> Rect {
+    if scale == 1.0 {
+        return bounds;
+    }
+    Rect {
+        x0: bounds.x0 * scale,
+        y0: bounds.y0 * scale,
+        x1: bounds.x1 * scale,
+        y1: bounds.y1 * scale,
+    }
+}
+
 fn hits_clip(bounds: Rect, clip: Clip) -> bool {
     let (cx0, cy0, cx1, cy1) = clip;
     bounds.x1.ceil() > f64::from(cx0)
@@ -630,6 +690,23 @@ impl Renderer for SoftwareRenderer {
                 // A resized buffer cannot be patched incrementally.
                 self.needs_full_clear = true;
             }
+        }
+        // A density change moves every logical coordinate on screen without
+        // touching a single node, so the scene is stale even though the damage
+        // region — computed in logical units — is empty.
+        let scale = if info.scale_factor > 0.0 {
+            info.scale_factor
+        } else {
+            1.0
+        };
+        if scale != self.scale {
+            self.scale = scale;
+            self.needs_full_clear = true;
+            // Cached masks were rasterised at the old density; the size is part
+            // of the cache key, so they would never be hit again — release them
+            // rather than hold the memory.
+            self.glyph_cache.clear();
+            self.glyph_cache_bytes = 0;
         }
         // No bulk clear here: damage decides what gets wiped in render_scene.
     }
@@ -934,6 +1011,70 @@ mod tests {
             }
         }
         assert!(inked > 0, "text left no ink inside its bounds");
+    }
+
+    /// Glyphs must be spread *along* the run, not stacked at its origin.
+    ///
+    /// This is the failure mode of reading Parley's per-glyph offset as a
+    /// position: every glyph lands on the run origin, so the ink hugs the start
+    /// of a box the layout sized correctly for the whole string — a smudge
+    /// sitting inside exactly the right amount of space. "Some ink was drawn"
+    /// passes either way (see the test above, which is why it did not catch
+    /// this); ink in the far end of the run is what tells them apart.
+    #[test]
+    fn glyphs_spread_along_the_run_instead_of_stacking() {
+        use floem_text::{TextAlign, TextLayoutOptions};
+
+        let text = "clicked 2 times";
+        let mut shaper = floem_text::TextShaper::new();
+        let laid = shaper.shape(
+            text,
+            &TextLayoutOptions {
+                max_width: f64::INFINITY,
+                font_size: 20.0,
+                align: TextAlign::Start,
+            },
+        );
+        let width = laid.size.width.ceil() as u32;
+        assert!(width > 100, "the string is wide enough to tell: {width}");
+
+        let mut registry = ResourceRegistry::new();
+        let glyphs = registry.insert(floem_scene::Resource {
+            kind: ResourceKind::GlyphRun {
+                runs: laid.runs.clone(),
+            },
+        });
+        let mut scene = Scene::new();
+        scene.begin_update();
+        let _ = scene.insert(SceneNode::Text {
+            origin: Point::new(2.0, 2.0),
+            size: laid.size,
+            glyphs,
+            color: Color::rgb(255, 255, 255),
+        });
+        scene.finish_update();
+
+        let mut sw = SoftwareRenderer::new(width + 8, 40);
+        sw.render_scene_with_resources(&scene, scene.damage(), &registry);
+        sw.end_frame();
+
+        // Rightmost inked column, relative to the text origin.
+        let mut rightmost = 0i64;
+        for y in 0..laid.size.height.ceil() as u32 {
+            for x in 0..width {
+                if let Some(px) = sw.pixel_rgba(2 + x, 2 + y) {
+                    if px[0] > 100 {
+                        rightmost = rightmost.max(i64::from(x));
+                    }
+                }
+            }
+        }
+        assert!(
+            rightmost as f64 > f64::from(width) * 0.8,
+            "the last glyph should sit near the end of the {width}px run, \
+             but the ink stops at column {rightmost} — the run is stacked at \
+             its origin"
+        );
     }
 
     /// Damage-driven partial redraw: pixels outside the damaged region

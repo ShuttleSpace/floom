@@ -337,6 +337,24 @@ impl std::fmt::Debug for VelloGpuPresenter {
     }
 }
 
+/// The one transform between the scene and the target.
+///
+/// The scene is authored in logical units; the target is in device pixels. A
+/// point is therefore scaled by the display density first and then shifted by
+/// the damaged region's *device-space* origin (see [`VelloGpuPresenter::damage_region`],
+/// which converts the scene's logical damage into device pixels). Both halves
+/// matter. Without the scale the app paints 1:1 into a `scale`-times-larger
+/// target — half size in the corner of a 2× display — while hit-testing still
+/// converts the pointer *into* logical units, so every tap lands at `1/scale`
+/// of where the widget is drawn. With the translate composed on the other side
+/// the offset would itself be scaled, and a partially rasterised frame would
+/// land displaced.
+fn scene_transform(offset: (f64, f64), scale: f64) -> Affine {
+    // kurbo composes `a * b` as "apply `b` first", so this scales and then
+    // translates — the order the two halves need.
+    Affine::translate((-offset.0, -offset.1)) * Affine::scale(scale)
+}
+
 impl VelloGpuPresenter {
     /// Create a presenter, or `None` when no usable GPU adapter exists.
     ///
@@ -686,7 +704,7 @@ impl VelloGpuPresenter {
         self.vello_scene.reset();
         // When only a region is rasterised the scene is composed shifted, so
         // the region's top-left becomes the scratch texture's origin.
-        let shift = Affine::translate((-offset.0, -offset.1));
+        let shift = scene_transform(offset, self.scale);
         let mut totals = GpuFrameStats {
             present_skips: 0,
             ..GpuFrameStats::default()
@@ -1317,6 +1335,32 @@ mod tests {
     /// fail in that case.
     fn presenter() -> Option<VelloGpuPresenter> {
         VelloGpuPresenter::new()
+    }
+
+    /// The scene→target transform must scale *and* shift, in that order.
+    ///
+    /// Pure arithmetic, so it runs without an adapter — which is the point:
+    /// the bug it pins (a logical scene painted 1:1 into a device-pixel target)
+    /// is invisible in any test whose surface is 1×, and CI machines and
+    /// emulators are frequently not.
+    #[test]
+    fn the_scene_transform_scales_then_translates() {
+        use vello::kurbo::Point;
+
+        // Logical (3,5) on a 2× display whose damaged region starts at device
+        // (4,8): scale to (6,10), then subtract the region origin.
+        let t = scene_transform((4.0, 8.0), 2.0);
+        assert_eq!(t * Point::new(3.0, 5.0), Point::new(2.0, 2.0));
+
+        // Translating first would give (3-4)*2, (5-8)*2: the offset scaled
+        // along with the scene, which is what a partial rasterisation must not
+        // do.
+        assert_ne!(t * Point::new(3.0, 5.0), Point::new(-2.0, -6.0));
+
+        // At 1× with no damage offset it is the identity, so every existing 1×
+        // expectation keeps meaning what it did.
+        let identity = scene_transform((0.0, 0.0), 1.0);
+        assert_eq!(identity * Point::new(7.0, 9.0), Point::new(7.0, 9.0));
     }
 
     /// Two image nodes differing only in alpha must not share a fragment.

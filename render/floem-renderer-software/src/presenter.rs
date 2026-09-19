@@ -13,7 +13,9 @@
 //! inspect or copy. That is the whole point: an offscreen frame the harness can
 //! assert on.
 
-use floem_renderer::{AttachedSurface, FrameInfo, Presenter, Renderer, SurfaceHandles};
+use floem_renderer::{
+    AttachedSurface, FrameInfo, Presenter, RenderTarget, Renderer, SurfaceHandles,
+};
 use floem_scene::{ResourceRegistry, Scene};
 use floem_types::Size;
 
@@ -24,6 +26,10 @@ pub struct SoftwarePresenter {
     renderer: SoftwareRenderer,
     width: u32,
     height: u32,
+    /// Logical size of the attached surface, as opposed to the device-pixel
+    /// extent in `width`/`height`. Both are handed to the renderer: the scene
+    /// it receives is authored in these units.
+    logical: Size,
     scale: f64,
     attached: bool,
     frames: u64,
@@ -42,6 +48,7 @@ impl SoftwarePresenter {
             renderer: SoftwareRenderer::new(1, 1),
             width: 1,
             height: 1,
+            logical: Size::new(1.0, 1.0),
             scale: 1.0,
             attached: false,
             frames: 0,
@@ -76,6 +83,7 @@ impl SoftwarePresenter {
     }
 
     fn set_extent(&mut self, size: Size, scale: f64) {
+        self.logical = size;
         self.scale = if scale > 0.0 { scale } else { 1.0 };
         let width = (size.width.max(1.0) * self.scale).ceil() as u32;
         let height = (size.height.max(1.0) * self.scale).ceil() as u32;
@@ -109,7 +117,18 @@ impl Presenter for SoftwarePresenter {
             return;
         }
         self.frames += 1;
-        let info = FrameInfo::software(self.width, self.height, self.frames);
+        // The buffer is in device pixels, the scene in logical ones: the frame
+        // has to carry both, or the renderer has no way to know the scene is
+        // not already in the units it is painting into.
+        let info = FrameInfo {
+            target: RenderTarget::Software {
+                width: self.width,
+                height: self.height,
+            },
+            logical_size: self.logical,
+            scale_factor: self.scale,
+            frame_number: self.frames,
+        };
         self.renderer.begin_frame(&info);
         // The registry drives text (glyph-run rasterisation) and image blits;
         // the renderer itself is damage-aware, so an unchanged frame skips.
@@ -179,6 +198,51 @@ mod tests {
         assert_eq!(presenter.frames_presented(), 1);
         assert_eq!(presenter.pixel_rgba(1, 1), Some([200, 100, 50, 255]));
         assert_eq!(presenter.pixel_rgba(6, 6), Some([0, 0, 0, 0]));
+    }
+
+    /// A scene is authored in *logical* units and the buffer is in *device*
+    /// pixels, so the scale factor is the only thing that crosses the gap. A
+    /// 4×4 logical rect on a 2× display is 8×8 device pixels: it reaches
+    /// device (7,7) and stops there.
+    ///
+    /// Painting it 1:1 leaves the app drawn at half size in the corner of its
+    /// own surface — and, because hit-testing converts the pointer *into*
+    /// logical units, leaves every click landing at 1/scale of where the
+    /// widget is drawn. The far pixel is what tells the two apart; asserting
+    /// only the near one passes at either scale.
+    #[test]
+    fn a_logical_scene_is_painted_at_the_scale_factor() {
+        let mut presenter = SoftwarePresenter::new();
+        let surface = AttachedSurface::new(
+            WindowId::new(0, 1),
+            SurfaceId::new(0, 1),
+            Size::new(8.0, 6.0),
+            2.0,
+            None,
+        );
+        presenter.attach(surface);
+        assert_eq!((presenter.width(), presenter.height()), (16, 12));
+
+        let mut scene = Scene::new();
+        scene.begin_update();
+        let _ = scene.insert(SceneNode::Rect {
+            bounds: Rect::from_origin_size(Point::new(0.0, 0.0), Size::new(4.0, 4.0)),
+            fill: Color::rgb(200, 100, 50),
+            radius: 0.0,
+        });
+        scene.finish_update();
+        presenter.present(&scene, &ResourceRegistry::new());
+
+        assert_eq!(
+            presenter.pixel_rgba(7, 7),
+            Some([200, 100, 50, 255]),
+            "4 logical px at 2x reach the 8th device pixel"
+        );
+        assert_eq!(
+            presenter.pixel_rgba(9, 9),
+            Some([0, 0, 0, 0]),
+            "and no further: the scene is scaled, not stretched to the buffer"
+        );
     }
 
     #[test]

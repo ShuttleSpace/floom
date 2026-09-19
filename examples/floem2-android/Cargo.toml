@@ -37,3 +37,7 @@ floem-widgets = { path = "../../widgets/floem-widgets" }
 # match the one pinned in Floem's root `Cargo.toml` (`winit` workspace dep).
 [target.'cfg(target_os = "android")'.dependencies]
 winit = { git = "https://github.com/lapce/winit", rev = "133268de675a4fda70816d78a7a1435eb972fea1", package = "floem-winit", features = ["android-native-activity"] }
+# No `log` dependency: this crate reports through `eprintln!`, which Android
+# surfaces in logcat as `RustStdoutStderr` independent of logger configuration.
+# (`run` does initialise `android_logger`, but its level defaults to the
+# compile-time `log::max_level`, so `log::info!` is not reliably visible.)

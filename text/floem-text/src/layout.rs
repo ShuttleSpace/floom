@@ -146,14 +146,22 @@ impl TextShaper {
                 };
                 let run = glyph_run.run();
                 let mut glyphs = Vec::with_capacity(glyph_run.glyphs().count());
-                // Re-iterate — count consumed iterator
+                // Parley reports a *pen advance* plus a per-glyph offset, and a
+                // glyph run here is a positioned sequence — the renderers draw
+                // `glyph.x` at the run origin and never look at the advance. So
+                // the pen has to be accumulated while copying, or every glyph
+                // keeps its own offset (0 for plain LTR text) and the whole run
+                // paints stacked at the origin — while the line's measured
+                // width, the sum of the advances, stays correct and hides it.
+                let mut pen_x = 0.0f32;
                 for g in glyph_run.glyphs() {
                     glyphs.push(Glyph {
                         id: g.id,
-                        x: g.x,
+                        x: pen_x + g.x,
                         y: g.y,
                         advance: g.advance,
                     });
+                    pen_x += g.advance;
                 }
                 if glyphs.is_empty() && text.is_empty() {
                     continue;

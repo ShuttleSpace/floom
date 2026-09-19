@@ -22,7 +22,7 @@ mod android {
     use std::sync::Arc;
 
     use floem_app::{AppRunner, NodeId, WidgetHost};
-    use floem_core::{Axis, LayoutRequest};
+    use floem_core::{Axis, Color, LayoutRequest};
     use floem_layout::LayoutStyle;
     use floem_platform::WindowConfig;
     use floem_platform_android::{run, set_android_app, AndroidPlatform, AndroidRunner};
@@ -41,6 +41,9 @@ mod android {
         clicked: Arc<AtomicI32>,
         /// Resolved lazily once the first frame has mounted the tree.
         label: Option<NodeId>,
+        /// Last counter value written to logcat, so a tap is observable in the
+        /// log rather than only as pixels (see `sync_label`).
+        logged: i32,
     }
 
     impl AndroidRunner for AndroidWindowApp {
@@ -53,13 +56,14 @@ mod android {
         }
 
         fn about_to_wait(&mut self, platform: &mut AndroidPlatform) {
-            // Drain again so runner-initiated redraw requests (queued during the
-            // last `events` call) are picked up before the loop blocks, then keep
-            // the loop awake. A real app would drop this keep-awake call and let
-            // the runner park when nothing changes.
+            // Drain the queue once more so redraw requests the runner queued
+            // during `events` are honoured. Do NOT request a frame here: that
+            // makes every `about_to_wait` produce another `RedrawRequested`,
+            // so the loop never parks and burns a core (measured: 2.7M redraws
+            // in 8s on the emulator). The runner already requests a frame when
+            // the tree is dirty, which is what drives the first frame too.
             self.runner.pump(platform);
             self.sync_label();
-            self.runner.request_frame(platform);
         }
     }
 
@@ -74,11 +78,25 @@ mod android {
                         return;
                     };
                     self.label = Some(found);
+                    // Evidence the tree is mounted and addressable, so a device
+                    // run can tell "rendered" apart from "started". Stderr is
+                    // deliberate: Android surfaces it in logcat as
+                    // `RustStdoutStderr`, whatever the logger's level is.
+                    eprintln!(
+                        "floem2-android: widget tree mounted ({} nodes)",
+                        self.runner.host().node_count()
+                    );
                     found
                 }
             };
             if let Some(text) = self.runner.host_mut().widget_mut::<Text>(node) {
                 text.set_content(format!("clicked {clicked} times"));
+            }
+            if clicked != self.logged {
+                // A tap reached the widget: pointer event -> L4 queue -> input
+                // routing -> `on_click`. This is the observable tap evidence.
+                self.logged = clicked;
+                eprintln!("floem2-android: pointer -> button click, counter = {clicked}");
             }
         }
     }
@@ -117,7 +135,10 @@ mod android {
         let root = Stack::new(Axis::Vertical)
             .gap(16.0)
             .push_layout(LayoutRequest::new(), || {
-                Box::new(Text::new("clicked 0 times").size(20.0))
+                // `Text::new` defaults to `Color::BLACK`, and nothing here paints
+                // a background, so the default surface (black) would swallow the
+                // label. Name the colour explicitly.
+                Box::new(Text::new("clicked 0 times").size(20.0).color(Color::WHITE))
             })
             .push_layout(LayoutRequest::new().width(160.0).height(40.0), move || {
                 let flag = flag.clone();
@@ -141,6 +162,7 @@ mod android {
             runner: AppRunner::new(host, presenter),
             clicked,
             label: None,
+            logged: 0,
         };
 
         let windows = vec![WindowConfig {

@@ -26,7 +26,7 @@
 | 后端 crate | 源码量 | 状态 | 渲染 |
 |---|---|---|---|
 | `floem-platform-desktop` | `winit_backend.rs` + `winit_input.rs` + `native_appkit.rs` ≈ **3332 行** | ✅ **唯一真实后端**（winit + AppKit），本机 Metal 冒烟已验证 | vello/wgpu（via `floem-renderer-vello`） |
-| `floem-platform-android` | `lib.rs` + `accessibility.rs` ≈ 107 行 | ❌ headless 骨架，注释 "headless until NDK surface glue exists" | 无 |
+| `floem-platform-android` | `android.rs` 828 + `lib.rs`/`accessibility.rs` ≈ 950 行 | ✅ **真实后端**（lapce/winit fork + `AndroidDriver`/`run`/`set_android_app`）；**已在 API 34 arm64 模拟器上验证首帧 + tap**（见 §7.2） | vello/wgpu（Vulkan；模拟器走 SwiftShader） |
 | `floem-platform-ios` | `lib.rs` + `accessibility.rs` ≈ 98 行 | ❌ headless 骨架，仅 `HostPlatform::new()` | 无 |
 | `floem-platform-harmony` | `lib.rs` + `accessibility.rs` ≈ 94 行 | ❌ headless 骨架，仅 `HostPlatform::new()` | 无 |
 
@@ -47,6 +47,8 @@
 SDD（`.superpowers/sdd/progress-floem-2.md` L153-154）已官方确认：
 
 > "floem-2 cannot run on mobile at all yet" —— mobile half 在 android/ios 仍是 headless capability-limited stub 时无法满足；OS-surface bridge 与 Phase 16 / 19.4 / 19.5 同一工作。
+
+> **该判断对 Android 已过期（2026-09-19）**：Android 已能真实启动、渲染首帧并响应 tap（§7.2）。iOS/Harmony 仍成立。
 
 因此这是 **Phase 17（OS provider）/ 19（跨平台硬件）的"实现缺口"，不是"测试缺口"**。旧笔记把 17/19 记为"设备门控做不了（测试）"不准确——更准确的说法：**后端尚未实现，所以既无物可测、也无从验证**。
 
@@ -193,7 +195,7 @@ pub trait Ime { fn set_enabled / set_cursor_area }
 
 ### 4.1 Android（最高可行性）
 
-- **现状**：`floem-platform-android` 仅重导出 `HostPlatform`；`#[cfg(target_os="android")]` 下尚无任何代码；Rust 目标 `aarch64-linux-android` **已装**；本机 `emulator` 在但 **无 AVD 镜像**；`android-activity` / `jni` / `ndk` 需加入依赖。
+- **现状（2026-09-19 更新）**：`android.rs` 已是**真实 `Platform` 实现**（`AndroidPlatform`/`AndroidWindow`/`AndroidDriver`/`run`/`set_android_app`，走 lapce/winit fork 的 android 后端），并已在 **API 34 arm64 模拟器**上验证首帧与 tap（§7.2）；剩余为 JNI 服务回值（`android-activity` / `jni` / `ndk` 尚未加入依赖）。Rust 目标 `aarch64-linux-android` 已装；AVD 镜像 `system-images;android-34;google_apis;arm64-v8a` 已装（AVD 名 `floem2api34`）。
 - **要做的事**：
   1. 新增 `android.rs` 实现 `Platform`/`Window`/`Ime`/`Clipboard`（`#[cfg(target_os="android")]`），用 **`android-activity`**（`NativeActivity`/`GameActivity`）接管生命周期与事件循环（参照 Slint `android-activity` 后端、GPUI Mobile `jni_entry.rs`）。
   2. 从 `ANativeWindow` 取 `RawWindowHandle::AndroidNdk`，在 `winit_backend` 风格的 `target()` 里枚举该变体，建 **wgpu Vulkan** surface（GPUI Mobile 证实 Vulkan 优先、GL ES 3.0 回退，API 26+）。
@@ -281,12 +283,21 @@ pub trait Ime { fn set_enabled / set_cursor_area }
 - [x] `cargo check --target aarch64-linux-android -p floem-platform-android` 通过（真实 `Platform` 实现接入）。**已达成**（0 错 0 警）。
 - [x] 应用层链路能为 Android 编译：`cargo check -p floem-app --target aarch64-linux-android` 通过（app runner + vello renderer + L4 后端）。
 - [x] 可运行入口已落地：`examples/floem2-android`（`cdylib` + `android_main` → `set_android_app` → `AndroidRunner`/`run`），交叉编译 `--features real` 0 错 0 警（登记于 `docs/2.0/EXAMPLES.md`）。
-- [ ] 在 Pixel 模拟器（含 Play 的 x86_64 或 arm64 镜像）打开**一个空 floem 窗口**，vello/wgpu-Vulkan 成功呈现首帧。**未达成——本机无 AVD 系统镜像。**
-- [ ] 派发一次 tap → `poll_events` 收到 `PlatformEvent::Pointer`（`floem-gesture::TouchRecognizer` 判为 tap）。**未达成（需真机/模拟器）。**
+- [x] 在 Pixel 模拟器（含 Play 的 x86_64 或 arm64 镜像）打开**一个空 floem 窗口**，vello/wgpu-Vulkan 成功呈现首帧。**已达成（2026-09-19）**：`system-images;android-34;google_apis;arm64-v8a` + Pixel 6 profile 建 AVD `floem2api34`，无头启动（`-gpu swiftshader_indirect`）后 logcat 出 `GPU adapter: SwiftShader Device (LLVM 10.0.0) (Vulkan)` 与 `Displayed com.example.floem2/android.app.NativeActivity: +4s709ms`，screencap 可见按钮。
+- [x] 派发一次 tap → `poll_events` 收到 `PlatformEvent::Pointer`（`floem-gesture::TouchRecognizer` 判为 tap）。**已达成（2026-09-19）**：`adb shell input tap` 落在按钮**可见位置**的中心 → `PointerButton src=Touch{finger_id:0} mapped=Primary` → `on_click` → 计数 +1（logcat `pointer -> button click, counter = 2`）；对照组（同一 x、按钮外）不触发。
 - [ ] `soft_input` / `safe_area_insets` 经 JNI 返回非默认值（证明系统服务桥通）。**未达成（`impl Clipboard`/`impl Ime` 仍为 inert stub，留 JNI seam）。**
 - [x] 架构门 `bash scripts/check-architecture-deps.sh` 仍 PASS（L4 不依赖更高层）。
 
-**当前结论**：编译级与入口级已收口（三项 ✅）；**剩余全部是设备级**（首帧 / tap / JNI 回值），被"本机无 AVD 镜像"门控——这是一次外部购置（`sdkmanager` 装一个系统镜像）即可解锁的步骤，不是架构缺口。
+**当前结论**：编译级、入口级、**设备级首帧与 tap 均已收口**（四项 ✅）；剩余仅 JNI 服务回值（inert stub）。
+
+### 7.2.1 设备运行暴露并已修复的两个真实缺陷
+
+首帧与 tap 不是"跑起来就完事"——设备级验证第一次跑就抓到两个**只在 scale≠1 的真实设备上才会现形**的缺陷，桌面 1× 测试全部绿着：
+
+1. **presenter 从不消费 scale factor**：场景按 logical 单位构建，target 是 device 像素，但 vello 的根变换只有 `translate(-damage origin)`、软件后端也只按缓冲尺寸换算。后果是**应用按 1× 画进一个 ×2.625 的靶面**（UI 缩在角落），而命中测试仍把指针**除**以 scale 变成 logical —— 于是**点击永远落在"实际绘制位置 / scale"处**：看着点在按钮上，事件却打在别处。修法是把 scale 并入唯一的那一个根变换（`render/floem-renderer-vello::scene_transform`）并在软件后端逐几何换算；由 `a_logical_scene_is_painted_at_the_scale_factor`（软件后端像素断言）与 `the_scene_transform_scales_then_translates`（纯算术，无需 GPU）钉住。
+2. **glyph run 里存的是 offset 而不是位置**：parley 的 `Glyph.x` 是"相对笔位的偏移 + advance"，而 `floem-text::Glyph` 是"已定位字形"，两个渲染器都按后者绘制 —— 于是**整串字形叠在 run 原点上**，文字糊成一团；而**行宽是 advance 之和、依旧正确**，所以布局留下的位置分毫不差，只有屏幕看得出来。修法是在 shaper 拷贝时累加笔位（`text/floem-text/src/layout.rs`），由 `glyph_positions_advance_across_the_run` 钉住。
+
+> 设备侧备注：本模拟器窗口 surface 为 1080×2272 而 display 为 1080×2400，`adb shell input tap` 用的是 **display 坐标**，与 surface 的 event 坐标差 128px 的垂直偏移；设备验证必须"先截屏量出控件的可见 rect，再点它的中心"，不能拿逻辑坐标反推。
 
 ### 7.3 前置核查清单（在写代码前）
 
