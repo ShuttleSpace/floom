@@ -1598,14 +1598,14 @@ would go red if the claim stopped being true.
 
 - [x] Core types stable. — `foundation/floem-types`: zero dependencies, asserted in its own test; 15 inline tests.
 - [x] ElementArena stable. — `runtime/floem-runtime-core/src/arena.rs` + `arena_tests.rs`; `element_arena` bench covers insert/get at 1k/10k/100k.
-- [x] Dirty propagation verified. — `src/dirty.rs` + `dirty_tests.rs`, `src/tree.rs` + `tree_tests.rs`; `dirty_vs_scan` bench group.
-- [x] Reactive bridge verified. — `src/reactive_bridge.rs` + `reactive_bridge_tests.rs`. Built on the **v1 reactive graph by design** (Task 3.1: "modify current reactive crate internals only where necessary"), so the `floem_legacy_reactive` edge is the intent, not leftover debt.
-- [x] Scheduler verified. — `runtime/floem-scheduler` + `tests/order.rs`.
-- [x] Scene ABI verified. — `scene/floem-scene` + `tests/scene.rs`, `tests/resources.rs`.
+- [x] Dirty propagation verified. — `runtime/floem-runtime-core/src/dirty.rs` + `dirty_tests.rs`, `runtime/floem-runtime-core/src/tree.rs` + `tree_tests.rs`; `dirty_vs_scan` bench group.
+- [x] Reactive bridge verified. — `runtime/floem-runtime-core/src/reactive_bridge.rs` + `reactive_bridge_tests.rs`. Built on the **v1 reactive graph by design** (Task 3.1: "modify current reactive crate internals only where necessary"), so the `floem_legacy_reactive` edge is the intent, not leftover debt.
+- [x] Scheduler verified. — `runtime/floem-scheduler` + `runtime/floem-scheduler/tests/order.rs`.
+- [x] Scene ABI verified. — `scene/floem-scene` + `scene/floem-scene/tests/scene.rs`, `scene/floem-scene/tests/resources.rs`.
 - [x] Renderer ABI verified by Vello + software. — `render/floem-renderer/tests/contract.rs` + `render_handoff.rs`; 21 vello + 19 software inline tests; `scene_render` bench.
-- [x] Platform ABI verified by fake backend + desktop backend. — `floem-platform/src/fake.rs` + `tests/contracts.rs`; `floem-platform-desktop` (33 inline + 6 integration, incl. `lifecycle.rs`, `winit_capabilities.rs`, `accessibility.rs`); plus real-window cases G1-1 / G1-5.
+- [x] Platform ABI verified by fake backend + desktop backend. — `platform/floem-platform/src/fake.rs` + `platform/floem-platform/tests/contracts.rs`; `floem-platform-desktop` (33 inline + 6 integration, incl. `lifecycle.rs`, `winit_capabilities.rs`, `accessibility.rs`); plus real-window cases G1-1 / G1-5.
 - [x] Legacy adapter — **WAIVED (Policy A):** no legacy adapter; demos must target the new runtime before P0 claim.
-- [x] Baseline benchmarks and dependency checks pass. — 240 targets / 1642 tests / 0 failed / 72 ignored, architecture gate PASS, and **no bench exceeds the 10% threshold** `benches/memory_baseline.md` sets, measured under criterion's default protocol. Closest to the line: `update_reuse/scroll_100k_recycle` at **+9.9%** — inside the budget but with no headroom, and it is precisely the bench the deferred CI budget was meant to watch. A first, shortened-profile run had read +12%; re-measuring properly showed that to be a sampling artifact, which is why the re-measure is recorded rather than the first number.
+- [x] Baseline benchmarks and dependency checks pass. — 2178 tests / 0 failed / 72 ignored, architecture gate PASS, and **no budgeted bench exceeds its threshold** under `scripts/check-perf-budgets.sh` (best-of-3 Criterion medians against `docs/superpowers/benchmarks/floem-2-budget-baseline.json`; see the acceptance run below for why best-of-3 replaced the single run the 2026-09-18 pass used).
 
 ## P1 Acceptance
 
@@ -1614,12 +1614,12 @@ would go red if the claim stopped being true.
 - [ ] Accessibility/IME functional on representative desktop/mobile targets. **PARTIAL — desktop only.** IME is functional on desktop end-to-end (R1: preedit reaches the focused `TextField`, commit replaces it, caret rect goes back to the OS). But the mobile half of this line cannot be met: `floem-platform-android` / `-ios` are headless capability-limited stubs, and floem-2 cannot run on mobile at all yet. Blocked on the same OS-surface bridge Phase 16 and Phase 19.4/19.5 stop at.
 - [x] Core widgets and forms complete. — `floem-widgets` (72 inline + 52 integration) covers primitives, controls, composites and navigation chrome; `floem-forms` (10) binds to the real controls. Phase 14.1–14.4 all ticked.
 - [x] Typed Navigation and VirtualViewport complete. — `floem-navigation` (13 tests, R6 glue `bf6a01c`); `layout/floem-virtual` (`ItemSizes`/`VisibleRange`/`VirtualViewport`, 7+7 tests, 1k/10k/100k benches).
-- [ ] Snapshot/interaction tests cover core widgets. **PARTIAL — interaction yes, snapshot engine built, integration over real widgets pending.** `tooling/floem-testkit` (R3) gives the shared harness and all three app-level suites are rewritten on it, so interaction coverage is real. `tooling/floem-snapshot` (Task 24.2) **now exists** (built 2026-09-18, `7cf…` commit): it renders a scene to pixels via `SoftwarePresenter`, hashes scene/semantics/pixel layers deterministically (FNV-1a), and provides a golden-file workflow (`assert_snapshot` + `UPDATE_SNAPSHOTS=1`) with 7 tests (3 unit + 4 golden) all passing. What remains is wiring real `floem-widgets` into that engine so core widgets have pixel/scene/semantics fixtures — integration work, not a missing engine. Not blocked on hardware.
+- [x] Snapshot/interaction tests cover core widgets. — `tooling/floem-snapshot/tests/widgets.rs` (9 tests) mounts real `Text` / `Checkbox` / `Button` / `Container` / `Stack` widgets in a `WidgetHost` and holds scene, semantics and pixel goldens for them; `tooling/floem-snapshot/tests/golden.rs` covers the engine itself. Two caveats are written into the test file rather than assumed away: a pixel hash over text depends on the host font stack, so the pixel golden is glyph-free, and the glyph path is instead pinned by a within-run comparison that also catches the Phase 27 defect (without the resource registry, two different strings hash identically). `tooling/floem-testkit` (R3) gives the shared harness and all three app-level suites are rewritten on it, so interaction coverage is real. `tooling/floem-snapshot` (Task 24.2) **now exists** (built 2026-09-18, `7cf…` commit): it renders a scene to pixels via `SoftwarePresenter`, hashes scene/semantics/pixel layers deterministically (FNV-1a), and provides a golden-file workflow (`assert_snapshot` + `UPDATE_SNAPSHOTS=1`) with 7 tests (3 unit + 4 golden) all passing. What remains is wiring real `floem-widgets` into that engine so core widgets have pixel/scene/semantics fixtures — integration work, not a missing engine. Not blocked on hardware.
 
 ## P2 Acceptance
 
 - [ ] macOS/Windows/Linux/iOS/Android/Harmony/Web/Embedded backend matrix passes defined conformance suite. **BLOCKED — and the suite does not exist yet either.** Phase 19 is 0/24. Note that `docs/gates/*.md` is **not** this suite: those are the Floem **1.0** platform gates, every item still unrun with an empty Sign-off. macOS is the only platform with any real evidence (G1-1, G1-5, D1, D11); the other seven have none, and the mobile ones cannot be run here at all. Phase 19.1–19.8 is what has to define and then run the matrix.
-- [ ] WebView/Video/Camera/Map native providers work on agreed target subsets. **BLOCKED.** Phase 17 (21 steps) is unstarted; no provider exists, so there is nothing to agree a target subset for.
+- [ ] WebView/Video/Camera/Map native providers work on agreed target subsets. **BLOCKED — the mechanism is built, the four named providers are not.** `native/floem-native` gives the ABI (capability negotiation, slot pool, freeze/thaw, external texture) and `examples/floem2-native-plugin` writes a complete `NativeViewProvider` against it (a TextInput bridge), so authoring a provider is a documented, tested path. What Phase 17 has not done is the OS-backed WebView/Video/Camera/Map set itself, each of which needs the platform surface of Phase 16.2/19.
 - [ ] Native composition policy works without widget-level platform conditionals. **PARTIAL — the policy is built and holds on macOS only.** The mechanism is real and verified: capability negotiation, `ClipSupport` fail-closed, sticky re-negotiation, freeze/thaw and the external-texture path all have headless tests, and D1/D11 confirm it on a real window. What is missing is the cross-platform half — the Win32/X11 `NativeViewHost` impls do not compile here, and the surface compositor (KMS/Android/iOS) is device-gated. So "no widget-level platform conditionals" is demonstrated on one backend, not proven across the set.
 
 ## P3 Acceptance
@@ -1629,18 +1629,18 @@ tier is available to anyone with the time.
 
 - [x] Inspector can trace Element → Scene → source. **PARTIAL — headless done, live tracing pending.** Phase 23 built `tooling/floem-inspector` (versioned snapshot protocol: tree/style/layout/scene/performance, stable `ElementId` identities, optional `SourceLocation`), `tooling/floem-devtools` (headless `Inspector` over the hot-reload `LiveTree`: navigation, per-`StyleState` property tables, source mapping, semantics viewer, `why_did_update` joining reactive source metadata with the ancestor chain) and the reactive `SignalSource` metadata in `floem-runtime-core` (23.4). What remains for a full tick is the live bridge — a running app feeding snapshots to a panel and the Element→Scene leg (scene capture per element) — which needs a real window loop.
 - [x] Profiler reports frame budget and allocations. **PARTIAL — engine done, app wiring pending.** `tooling/floem-profiler` (23.3) instruments the seven stages with scoped guards over an injectable clock, flags `budget_exceeded` per frame, serializes the timeline as the protocol's `PerformanceSnapshot`, and carries explicit allocation counters plus cache hit/miss statistics (honest boundary: no global allocator hook). What remains is wiring it into the real window runner's frame loop so production numbers flow through.
-- [ ] MCP agent can inspect/click/type/scroll/screenshot. **BLOCKED** — Phase 25 (14 steps) unstarted. Nothing in the plan's list has an MCP surface today.
-- [ ] UI IR round-trips reference fixtures. **BLOCKED** — Phase 22.1/22.2 unstarted (13 steps).
-- [ ] Hot reload handles compatible UI patches. **BLOCKED** — Phase 22.3 unstarted.
-- [ ] Figma/design contract diff works. **BLOCKED** — Phase 26 (8 steps) and its accuracy loop, Phase 27 (12 steps), both unstarted.
+- [ ] MCP agent can inspect/click/type/scroll/screenshot. **PARTIAL — four of five verbs, on Floem's own transport.** Phase 25 shipped `tooling/floem-agent` (`tooling/floem-agent/src/protocol.rs`, `tooling/floem-agent/src/transport.rs`, `tooling/floem-agent/tests/agent_loop.rs`): inspect (`Tree`/`Semantics`/`Scene`/`Screenshot`/`Performance`/`Schema`) and control (`Tap`/`TypeText`/`Drag`) over an in-memory channel and a loopback-only TCP transport with a dev token. Two gaps against the line as written: there is **no `Scroll` command** — an agent cannot reach off-screen content — and the transport is length-prefixed JSON, **not MCP**. Both are software work, not hardware; the `Scroll` variant is the cheaper of the two.
+- [x] UI IR round-trips reference fixtures. — `compiler/floem-ui-ir` (versioned IR + `fixtures/` at byte-level spec) and `compiler/floem-dsl` (lexer/parser/lowering/emitter, whose emitted output is compiled by cargo for real).
+- [x] Hot reload handles compatible UI patches. — `compiler/floem-hot-reload` (`diff.rs`/`live.rs`/`patch.rs`) matches by `NodeKey` so ids and state survive a patch, with checkpoint/rollback; `tooling/floem-devtools/tests/inspector.rs` exercises the headless `Inspector` over its `LiveTree`.
+- [x] Figma/design contract diff works. — `tooling/floem-accuracy` (`tokens.rs`/`screens.rs`/`evaluate.rs`/`benchmark.rs` + `tooling/floem-accuracy/tests/evaluation.rs`, `tooling/floem-accuracy/tests/gallery.rs`, `tooling/floem-accuracy/tests/benchmark.rs`) compares a rendered gallery against a `DesignContract` fixture and drives a repair loop; the schema half is `tooling/floem-agent/src/schema.rs`.
 
 ## P4 Acceptance
 
-- [ ] Material/Cupertino/Fluent/Harmony design systems available. **BLOCKED, but not from scratch.** The Material / Cupertino / Fluent kits already exist as `ecosystem/floem-ui` (~350 crates, imported into this repo on 2026-09-18). They are **not** available to floem 2.0, though: their `floem` dependency resolves to the **v1 monolith** at the repo root (`floem = { git = … }` patched to `path = "../.."`), so they are built against the old `View` API, not the 2.0 widget layer. Phase 21.1–21.4 is therefore a porting job with an existing asset behind it, not a greenfield one. Harmony has no kit at all.
-- [ ] Docs/examples complete. **PARTIAL.** Runable 2.0 examples exist (`floem2-window`, `floem2-probe`, `floem2-counter`) and there is real architecture documentation (`docs/workspace-conventions.md`, `ecosystem.md`, `accessibility.md`, `ohos.md`, `ios.md`, `android.md`, `host-embedding.md`). Phase 30.1's golden-example set and 30.2's full architecture doc pass are unstarted (18 steps).
-- [ ] Third-party plugin authoring path documented. **BLOCKED** — no such document anywhere under `docs/`; Phase 30 does not currently name it either.
-- [ ] Compatibility/release policy active. **PARTIAL — written, not yet exercised.** Phase 30.3/30.4 landed `docs/2.0/MIGRATION.md` and `docs/2.0/RELEASE-POLICY.md`, and `app/floem2/tests/docs_parity.rs` keeps both honest (every test/bench target they name exists; every example they list exists and runs). Still missing for "active": `docs/gates/*.md` for 1.0 remain entirely unrun, so no release has yet been measured against the policy end to end.
-- [ ] Performance budgets enforced in CI. **BLOCKED by an explicit deferral.** Phase 0.3 Step 4 landed as "policy documented; absolute CI fail deferred until multi-run calibration" (`benches/memory_baseline.md`), and the calibration numbers were never checked in under `docs/superpowers/benchmarks/`. The 12% `update_reuse` reading above is exactly the kind of drift a live budget would have caught; today nothing does.
+- [x] Material/Cupertino/Fluent/Harmony design systems available. — `design-systems/floem-material`, `design-systems/floem-cupertino`, `design-systems/floem-fluent` and `design-systems/floem-harmony`, all built on the 2.0 stack (`floem-types`, `floem-style`, `floem-theme`, `floem-scene`, `design-systems/floem-design`) with 42 gallery/token tests between them. `ecosystem/floem-ui` (~350 crates) is still v1-only and untouched; the Phase 21 crates are the 2.0 answer, not a port of it.
+- [x] Docs/examples complete. — `docs/2.0/EXAMPLES.md` (9 golden examples, each with its captured real output, run by `scripts/run-golden-examples.sh`), `docs/2.0/ARCHITECTURE.md`, `docs/2.0/MIGRATION.md`, `docs/2.0/RELEASE-POLICY.md`; `app/floem2/tests/docs_parity.rs` asserts the four pages agree with the tree, so they cannot rot silently.
+- [x] Third-party plugin authoring path documented. — `docs/2.0/ARCHITECTURE.md` §"Add a renderer or platform backend" and §"Add a native plugin", `docs/2.0/MIGRATION.md`'s renderer/platform plugin sections, and two executable references: `examples/floem2-native-plugin` writes a real `NativeViewProvider` end to end, and `platform/floem-platform/tests/contracts.rs` is the conformance suite a new backend must pass.
+- [ ] Compatibility/release policy active. **PARTIAL — written and self-checking, not yet exercised end to end.** `docs/2.0/MIGRATION.md` and `docs/2.0/RELEASE-POLICY.md` landed in Phase 30; `app/floem2/tests/docs_parity.rs` keeps both honest (every test/bench target they name exists; every example they list exists and runs). Missing for "active": no release has been cut and measured against the policy, and `docs/gates/*.md` — the **1.0** platform gates — are still entirely unrun. Those gates belong to the v1 line; what 2.0 needs is its own conformance run, which Phase 19 owns.
+- [ ] Performance budgets enforced in CI. **PARTIAL — the budget exists and fails, the CI job does not.** `docs/superpowers/benchmarks/floem-2-budget-baseline.json` finally carries calibration numbers (best-of-3 Criterion medians for the five hot benches), and `scripts/check-perf-budgets.sh` measures and fails over the 10% threshold — verified able to fail, exit 1. Not wired into CI on purpose: the baseline is one host's numbers (macOS arm64, the only tested target) and a runner-specific failure is worse than no gate. Widening the support matrix in `docs/2.0/RELEASE-POLICY.md` is the prerequisite.
 
 ---
 
@@ -1757,6 +1757,83 @@ confirm they still hold after the workspace reorg, and they do.
 - Fixed two gates that were reporting success without checking anything.
 - Reframed the earlier "P0 exists, it just was never walked" claim: P0 was
   built — but nothing had verified the verifier.
+
+## Acceptance run — 2026-09-19
+
+Second walk, and the point of it was not to re-judge the same lines. The matrix
+was last walked 2026-09-18; by 2026-09-19 it had rotted in two separate ways,
+and neither was visible from reading it.
+
+### Gates, raw
+
+| Gate | Command | Result |
+|---|---|---|
+| Tests | `cargo test --workspace --no-fail-fast` | **2178 passed / 0 failed / 72 ignored / EXIT=0** |
+| Architecture | `bash scripts/check-architecture-deps.sh` | **PASS** |
+| Format (touched packages) | `cargo fmt --package=floem2 --package=floem-snapshot --check` | **clean** |
+| Golden examples | `bash scripts/run-golden-examples.sh` | **9/9** |
+| Performance budgets | `bash scripts/check-perf-budgets.sh` | **PASS — 5 budgets, best of 3** |
+| Real window | `floem2-window --features real`, 8 s idle | **PASS** — `Apple M4 Pro (Metal)`, `frames=2`, CPU `0.16 s` (1.9 % of one core) |
+
+### The matrix had rotted, twice over
+
+**1. Five evidence paths in ticked lines no longer existed.** `src/dirty.rs`,
+`src/tree.rs`, `src/reactive_bridge.rs` and two more were written before the
+workspace reorg and never updated; the corresponding files have lived in
+`runtime/floem-runtime-core/src/` for weeks. A line that says "verified — see
+`src/dirty.rs`" was pointing at nothing, and nothing noticed, because reading a
+document is not checking it. All five now name where the file actually is.
+
+**2. Six lines still called shipped phases unstarted.** Four P3 lines read
+"BLOCKED — Phase 22 / 25 / 26 / 27 unstarted" for phases that landed weeks ago,
+and one P4 line said the design systems were BLOCKED while
+`design-systems/floem-{material,cupertino,fluent,harmony}` sit in the tree with
+42 tests between them. Five of those lines are now ticked against real targets;
+the MCP one is PARTIAL for reasons given on the line itself.
+
+So the pass added `app/floem2/tests/acceptance.rs`: it parses this section and
+asserts that every path named as evidence exists, that no ticked line is
+evidence-free (waivers excepted), that P0 stays ticked, and that a **dated**
+acceptance run is present. The last one is why this section exists — the test
+was red until it was written.
+
+### Two gaps closed rather than annotated
+
+**P1, snapshot over real widgets.** `tooling/floem-snapshot/tests/widgets.rs`
+(9 tests) mounts actual `Text` / `Checkbox` / `Button` / `Container` / `Stack`
+widgets in a `WidgetHost` and holds scene, semantics and pixel goldens. Writing
+it surfaced a caveat worth recording: a scene node carries the **shaped advance
+width**, which comes from the host font stack, so text goldens are pinned to the
+machine that generated them. The pixel golden is therefore glyph-free, and the
+glyph path is pinned by within-run comparisons instead — one of which is the
+Phase 27 defect (no resource registry ⇒ two different strings hash identically).
+Falsified before trusting it: changing one character of the `Text` fixture turns
+exactly one test red.
+
+**P4, performance budgets.** `docs/superpowers/benchmarks/floem-2-budget-baseline.json`
+now carries real calibration numbers and `scripts/check-perf-budgets.sh` enforces
+them. Building it produced the most useful measurement of the pass:
+`visible_range/10000` read **444.3 / 404.8 / 408.4 ns** across three consecutive
+runs of the *same binary* — a 9.8 % swing against a 10 % budget. Single-run
+comparison would have false-positived on a warm-up outlier. The script takes the
+**best of N** (default 2, this pass 3) on the grounds that contention only ever
+makes a run slower; observed spread dropped to ≤2.6 %. Falsified: tightening one
+budget below the measured value fails with exit 1.
+
+### What is still open, and why
+
+- **All of P2** — backend matrix, the four named native providers, cross-platform
+  composition. Needs other machines (Win32/X11, KMS, mobile). Unchanged, still
+  the honest blocker.
+- **MCP agent (P3)** — four of five verbs exist on Floem's own transport; no
+  `Scroll` command and no MCP framing. Software work, not hardware.
+- **Performance budgets in CI (P4)** — the gate works and fails correctly; it is
+  deliberately not wired into a job, because the baseline is one host's numbers.
+- **Compatibility/release policy "active" (P4)** — self-checking now, but no
+  release has been cut and measured against it.
+
+Device cases: unchanged at 4 of 29 recorded (`G1-1`, `G1-5`, `D1`, `D11`). This
+pass re-ran `G1-4` (idle window) and it holds.
 
 ---
 

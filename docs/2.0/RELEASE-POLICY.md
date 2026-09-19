@@ -111,12 +111,25 @@ per-crate suites in `floem-layout`, `floem-virtual`, `floem-text`,
 `floem-runtime-core`, `floem-renderer-vello`, `floem-native`, `floem-store`,
 `floem-animation`, `floem-accessibility`, `floem-widgets-data`.
 
-Gate: **no benchmark may regress by more than 20 % against the previous
-release** on the reference machine (macOS 26.6.2, Apple M4 Pro) without a
-written reason recorded next to the number. This comparison is **manual
-today** — criterion baselines are not yet committed and no CI job enforces the
-percentage. It is stated as a policy because the number has to be recorded
-somewhere before it can be enforced automatically.
+Two different gates, and it matters which one is being quoted:
+
+- **The whole set, 20 %, manual.** No benchmark may regress by more than 20 %
+  against the previous release on the reference machine without a written reason
+  recorded next to the number. This comparison is **manual today**: only the hot
+  benches below have committed baselines, and no CI job enforces the percentage.
+  It is stated as a policy because the number has to be recorded somewhere
+  before it can be enforced automatically.
+- **The hot benches, 10 %, enforced by a script.**
+  `docs/superpowers/benchmarks/floem-2-budget-baseline.json` carries the
+  calibration Criterion medians and `scripts/check-perf-budgets.sh` measures and
+  fails over the threshold (exit 1, verified able to fail). It runs Criterion's
+  own default protocol and takes the **best of N** runs, because a single run is
+  not stable at this budget: `visible_range/10000` measured 444.3 / 404.8 /
+  408.4 ns across three consecutive runs of one binary — a 9.8 % swing against a
+  10 % budget — and best-of-3 brought the observed spread to ≤2.6 %.
+  It is **not wired into CI on purpose**: the baseline is one host's numbers, and
+  a job that fails on someone else's runner is worse than a job that does not
+  run. Widening the support matrix above is the prerequisite.
 
 **Idle.** An idle window must not burn a core:
 
@@ -125,7 +138,7 @@ FLOEM2_WINDOW_IDLE=1 FLOEM2_WINDOW_IDLE_SECS=8 cargo run -p floem2-window --feat
 ```
 
 Last measured (macOS 26.6.2, Apple M4 Pro): `frames=2 redraws_requested=3
-auto_redraws=1 events=4`, process CPU `0.17 s` (2.1 % of one core) over 8 s
+auto_redraws=1 events=4`, process CPU `0.16 s` (1.9 % of one core) over 8 s
 idle. The gate is on **frames**: two frames for a window that has been idle for
 eight seconds is the whole point. `redraws_requested` and the CPU figure drift
 by a redraw or two between runs — they count the startup redraw and whatever the

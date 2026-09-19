@@ -1,0 +1,45 @@
+{
+  "schema": 1,
+  "note": "Criterion medians for the hot benches named in the P0/P4 acceptance lines. Criterion's own default protocol (3 s warm-up, 100 samples); the statistic is the median point estimate from target/criterion/<id>/new/estimates.json, which is what scripts/check-perf-budgets.sh compares. Do not mix in mean-based numbers: the 2026-09-18 acceptance run recorded means, and a mean/median pair is not a controlled comparison.",
+  "generated": "2026-09-19",
+  "host": "macOS 26.6.2 arm64, Apple M4 Pro, rustc 1.98.0",
+  "threshold_pct": 10.0,
+  "budgets": [
+    {
+      "id": "visible_range/1000",
+      "package": "floem-virtual",
+      "bench": "scroll",
+      "median_ns": 42.36738657454536,
+      "observed_spread_pct": 2.6
+    },
+    {
+      "id": "visible_range/10000",
+      "package": "floem-virtual",
+      "bench": "scroll",
+      "median_ns": 407.65388816943823,
+      "observed_spread_pct": 2.0
+    },
+    {
+      "id": "visible_range/100000",
+      "package": "floem-virtual",
+      "bench": "scroll",
+      "median_ns": 7197.45646403739,
+      "observed_spread_pct": 0.8
+    },
+    {
+      "id": "update_reuse/scroll_100k_recycle",
+      "package": "floem-virtual",
+      "bench": "scroll",
+      "median_ns": 1257850.0868055555,
+      "comment": "The bench with no headroom: +9.9% against the pre-2.0 figure when this budget was written. A real regression here is the thing the budget exists to catch.",
+      "observed_spread_pct": 1.7
+    },
+    {
+      "id": "native_pool_10k_churn",
+      "package": "floem-native",
+      "bench": "rows",
+      "median_ns": 527346.0103225806,
+      "observed_spread_pct": 0.2
+    }
+  ]
+}
