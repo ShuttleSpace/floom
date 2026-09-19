@@ -1,4 +1,6 @@
-use floem_overlay::{OverlayHandle, OverlayKind, OverlayManager, sheet_bounds};
+use floem_overlay::{
+    CompositorProp, ENTRY_SECS, OverlayHandle, OverlayKind, OverlayManager, sheet_bounds,
+};
 use floem_types::{ElementId, Point, Rect, Size};
 
 fn eid(i: u32) -> ElementId {
@@ -111,6 +113,36 @@ fn animation_ticks_on_overlay() {
     assert!(!om.anim.is_empty());
     om.tick_animations(0.2);
     assert!(om.anim.is_empty());
+}
+
+/// The entry animation *decelerates*, and the composite it parks says so.
+///
+/// Asserted through the entry's own composite rather than on the curve
+/// directly: the claim is about what the overlay hands a painter, and a curve
+/// that was configured but never sampled would satisfy a test of the curve
+/// alone. A quarter of the way through the duration the fade is already past a
+/// quarter of the way up — which is exactly where a linear entry would sit.
+#[test]
+fn the_entry_animation_decelerates() {
+    let mut om = OverlayManager::new();
+    let id = om.push(
+        handle(0),
+        OverlayKind::Dialog,
+        eid(1),
+        Rect::from_origin_size(Point::ZERO, Size::new(1.0, 1.0)),
+        false,
+        0.0,
+    );
+    om.tick_animations(ENTRY_SECS * 0.25);
+    let alpha = match om.composite(id) {
+        Some(CompositorProp::Opacity(alpha)) => alpha,
+        other => panic!("a dialog enters by fading; it parked {other:?}"),
+    };
+    assert!(
+        alpha > 0.25,
+        "a linear entry sits on 0.25 exactly; this one is at {alpha}"
+    );
+    assert!(alpha <= 1.0, "a fade must not overshoot: {alpha}");
 }
 
 #[test]

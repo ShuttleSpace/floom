@@ -1,0 +1,679 @@
+//! S1 / B8 — the host's animation door, and the claims it has to keep.
+//!
+//! B1–B3 gave the vocabulary its shape. This file is about the *door*: a
+//! widget cannot start an animation (it is borrowed out of the host for the
+//! whole of every call the host makes into it), and an app holding a host
+//! could not reach the scheduler at all. `WidgetHost::animate` is the public
+//! entry, `Widget::animation` is the declarative one, and both have to end up
+//! at the same place: a sample per frame, folded into the scene the host
+//! already paints.
+//!
+//! Every assertion here is about an *observable* difference — the alpha of a
+//! painted text node, the geometry of a painted bar, the damage a frame
+//! reports — rather than about the scheduler's bookkeeping, because
+//! bookkeeping that agrees with itself and paints nothing is exactly the
+//! failure this door could have.
+
+use floem_animation::{AnimKind, CompositorProp, Tween};
+use floem_app::{NodeId, WidgetHost};
+use floem_layout::LayoutStyle;
+use floem_scene::SceneNode;
+use floem_types::{Rect, Size};
+use floem_widgets::{Container, Progress, Text};
+
+/// A host with one text leaf on screen and one frame behind it, so layout has
+/// run and the scene holds a painted text node to watch.
+fn host_with_label() -> (WidgetHost, NodeId) {
+    let mut host = WidgetHost::new();
+    host.set_size(Size::new(200.0, 80.0));
+    let label = host.mount_root(LayoutStyle::default(), Text::new("hello"));
+    host.frame();
+    (host, label)
+}
+
+/// The alpha of the first text node the host painted.
+fn text_alpha(host: &WidgetHost) -> u8 {
+    host.scene()
+        .iter()
+        .find_map(|(_, node)| match node {
+            SceneNode::Text { color, .. } => Some(color.a),
+            _ => None,
+        })
+        .expect("the tree painted a text node")
+}
+
+/// Every rect the host painted, in paint order.
+fn rects(host: &WidgetHost) -> Vec<Rect> {
+    host.scene()
+        .iter()
+        .filter_map(|(_, node)| match node {
+            SceneNode::Rect { bounds, .. } => Some(*bounds),
+            _ => None,
+        })
+        .collect()
+}
+
+/// A linear fade of a label, from opaque to invisible, over `secs`.
+///
+/// Linear on purpose: this file is about the *channel*, and the default curve
+/// is also the pre-S1 behaviour, so every assertion here would hold with or
+/// without B1. The curves have their own tests where they belong.
+fn fade(from: f64, to: f64, secs: f64) -> AnimKind {
+    AnimKind::Tween(Tween::new(from, to, secs).with_compositor(CompositorProp::Opacity(0.0)))
+}
+
+/// The host's door reaches the painter: an animated node's alpha changes on
+/// screen, frame by frame, and lands where the animation said it would.
+#[test]
+fn a_node_animation_changes_what_the_host_paints() {
+    let (mut host, label) = host_with_label();
+    assert_eq!(
+        text_alpha(&host),
+        255,
+        "control: the label starts fully opaque"
+    );
+
+    host.animate(label, fade(1.0, 0.0, 0.5));
+    assert_eq!(host.animations_running(), 1, "the door started something");
+    assert!(
+        host.needs_frame(),
+        "and it is what is keeping the loop awake"
+    );
+
+    let mut alphas = Vec::new();
+    for _ in 0..5 {
+        host.frame();
+        alphas.push(text_alpha(&host));
+    }
+    assert!(
+        alphas.windows(2).all(|pair| pair[0] > pair[1]),
+        "a fade has to fade every frame it runs: {alphas:?}"
+    );
+    assert!(
+        alphas[0] < 255,
+        "the first frame of the animation is already a step into it, not the \
+         un-animated appearance: {alphas:?}"
+    );
+
+    // Run it out. Half a second at the nominal step is 30 frames.
+    for _ in 0..30 {
+        host.frame();
+    }
+    assert_eq!(text_alpha(&host), 0, "the fade reaches its target");
+    assert_eq!(host.animations_running(), 0, "and then it is over");
+
+    // The deliberate half of the design, and the one a `clear on finish` would
+    // silently break: an animation *leaves the node where it put it*. Clearing
+    // the sample on the last tick would snap the label back to opaque on the
+    // one frame where the seam is most visible.
+    host.frame();
+    assert_eq!(
+        text_alpha(&host),
+        0,
+        "a finished animation does not snap its node back to its un-animated look"
+    );
+    assert!(
+        (host.animation_value(label).expect("the sample is parked") - 0.0).abs() < 1e-9,
+        "and the parked sample is what the paint reads"
+    );
+}
+
+/// Motion is a compositor-level repaint, not a layout pass. If this ever
+/// starts relaying out, every frame of every animation would pay a full
+/// measure/layout cycle for a change that cannot move a box.
+#[test]
+fn an_animation_repaints_without_relaying_out() {
+    let (mut host, label) = host_with_label();
+    host.animate(label, fade(1.0, 0.0, 0.5));
+
+    let mut repainted = 0;
+    for _ in 0..8 {
+        let stats = host.frame();
+        assert!(
+            !stats.relaid,
+            "a frame of an opacity animation must not re-lay-out the tree"
+        );
+        if !host.scene().damage().is_empty() {
+            repainted += 1;
+        }
+    }
+    assert!(
+        repainted >= 7,
+        "the animation has to repaint the frames it changes ({repainted} of 8 \
+         damaged); a channel that moved nothing would leave every frame clean"
+    );
+}
+
+/// B2 at the host's door: redirecting a running animation carries on from
+/// where it is — **with the speed it had** — and arrives at the new target.
+///
+/// "Does not jump" alone is satisfied by a spring seeded from rest, so it is
+/// not the claim. The claim has an observable signature: a node moving fast
+/// *downward* that is redirected upward keeps going down for a moment before
+/// it turns around. A spring seeded from rest is already climbing past where
+/// it started on the very first frame, and an assertion that only looks at how
+/// far the value moved cannot tell the two apart.
+#[test]
+fn retargeting_carries_the_momentum_it_interrupted() {
+    let (mut host, label) = host_with_label();
+    // Fast on purpose: the momentum has to be worth carrying.
+    host.animate(label, fade(1.0, 0.0, 0.2));
+    for _ in 0..5 {
+        host.frame();
+    }
+    let midway = host.animation_value(label).expect("running");
+    assert!(
+        (0.4..0.9).contains(&midway),
+        "control: partway through and moving fast ({midway})"
+    );
+    assert!(text_alpha(&host) < 255, "control: and the scene shows it");
+
+    assert!(
+        host.retarget_animation(label, 1.0),
+        "it had something to redirect"
+    );
+    host.frame();
+    let after = host.animation_value(label).expect("still running");
+    assert!(
+        after < midway - 0.02,
+        "the retarget has to carry the speed it interrupted: {midway} -> {after} \
+         (a spring seeded from rest would already be climbing past {midway})"
+    );
+    assert!(
+        after > midway - 0.2,
+        "and that is momentum, not a jump: {midway} -> {after}"
+    );
+
+    for _ in 0..90 {
+        host.frame();
+    }
+    let settled = host.animation_value(label).expect("parked");
+    assert!(
+        settled > 0.9,
+        "a retargeted animation has to reach its new target ({settled})"
+    );
+}
+
+/// The host's doors answer honestly: nothing to redirect, nothing to cancel.
+#[test]
+fn the_doors_report_whether_they_had_anything_to_do() {
+    let (mut host, label) = host_with_label();
+    assert!(
+        !host.retarget_animation(label, 0.0),
+        "no animation, nothing to redirect"
+    );
+    assert!(!host.cancel_animation(label), "and nothing to cancel");
+    assert_eq!(host.animation_value(label), None);
+
+    host.animate(label, fade(1.0, 0.0, 0.5));
+    assert!(
+        !host.retarget_animation(label, 0.0) || host.animations_running() == 1,
+        "a running animation is redirectable"
+    );
+    assert!(host.cancel_animation(label), "and cancellable");
+    assert_eq!(host.animations_running(), 0);
+}
+
+/// Cancelling releases the channel: the node goes back to what its widget
+/// paints, and from then on nothing moves and nothing repaints.
+///
+/// This is the deliberate opposite of an animation *finishing*, which parks
+/// its endpoint. A stopped animation has not reached a state anybody asked
+/// for, so leaving the node wrapped in a half-applied compositing would strand
+/// it in a look no live animation is feeding and that only another animation
+/// could clear. The two tests here pin both halves of that rule.
+#[test]
+fn cancelling_an_animation_releases_the_channel() {
+    let (mut host, label) = host_with_label();
+    host.animate(label, fade(1.0, 0.0, 10.0));
+    for _ in 0..5 {
+        host.frame();
+    }
+    assert!(text_alpha(&host) < 255, "control: the fade got somewhere");
+    assert!(
+        host.animation_value(label).expect("running") < 1.0,
+        "control: and the channel is holding it there"
+    );
+
+    assert!(host.cancel_animation(label));
+    assert_eq!(host.animations_running(), 0);
+    assert!(
+        !host.needs_frame(),
+        "a cancelled animation must release the frame loop"
+    );
+
+    // The frame that shows the release, and then the frames that show nothing
+    // at all — a channel that kept re-damaging the node would never park.
+    host.frame();
+    assert_eq!(
+        text_alpha(&host),
+        255,
+        "cancelling is not freezing: the node goes back to its widget's paint"
+    );
+    assert_eq!(
+        host.animation_value(label),
+        None,
+        "and the sample it was painting from is gone with it"
+    );
+
+    let stopped = text_alpha(&host);
+    let stats = host.frame();
+    assert_eq!(text_alpha(&host), stopped, "nothing moves any more");
+    assert!(
+        host.scene().damage().is_empty(),
+        "and no frame keeps damaging the node"
+    );
+    assert!(!stats.relaid, "nor relaying it out");
+}
+
+/// A finished animation, by contrast, stays where it ended: the same fade run
+/// out instead of stopped, and the node holds its endpoint.
+#[test]
+fn a_finished_animation_parks_its_endpoint() {
+    let (mut host, label) = host_with_label();
+    host.animate(label, fade(1.0, 0.0, 0.5));
+    for _ in 0..40 {
+        host.frame();
+    }
+    assert_eq!(host.animations_running(), 0, "it is over");
+    assert_eq!(
+        text_alpha(&host),
+        0,
+        "and the label is still invisible on the frame after that"
+    );
+    assert_eq!(
+        host.animation_value(label),
+        Some(0.0),
+        "the endpoint is still readable as the node's sample"
+    );
+    host.frame();
+    assert!(
+        host.scene().damage().is_empty(),
+        "a parked endpoint does not re-damage either"
+    );
+}
+
+/// A node that leaves the tree takes its animation with it. Without this the
+/// scheduler would keep sampling a node that is gone — and `needs_frame`
+/// would keep the frame loop awake forever on a tree with nothing in it.
+#[test]
+fn unmounting_a_node_retires_its_animation() {
+    let mut host = WidgetHost::new();
+    host.set_size(Size::new(200.0, 80.0));
+    let root = host.mount_root(LayoutStyle::default(), Container::new());
+    let child = host.mount(root, LayoutStyle::default(), Text::new("transient"));
+    host.frame();
+
+    host.animate(
+        child,
+        AnimKind::Tween(
+            Tween::new(0.0, 1.0, 30.0).with_compositor(CompositorProp::TranslateY(0.0)),
+        ),
+    );
+    host.frame();
+    assert_eq!(host.animations_running(), 1, "control: it was running");
+    assert!(host.needs_frame());
+
+    host.unmount(child);
+    host.frame();
+    host.frame();
+    assert_eq!(
+        host.animations_running(),
+        0,
+        "the unmounted node's animation is retired, not orphaned"
+    );
+    assert!(
+        !host.needs_frame(),
+        "an empty tree with an orphan animation would never park"
+    );
+}
+
+/// The declarative door: a widget that cannot hold a host states the motion it
+/// wants, and the host runs it for as long as the widget keeps saying so.
+#[test]
+fn a_widget_that_declares_motion_animates_itself() {
+    let mut host = WidgetHost::new();
+    host.set_size(Size::new(200.0, 40.0));
+    host.mount_root(LayoutStyle::default(), Progress::indeterminate());
+    host.frame();
+
+    assert_eq!(
+        host.animations_running(),
+        1,
+        "the bar's declaration has to start on the frame it first reports dirty"
+    );
+
+    let before = rects(&host);
+    assert!(
+        before.len() >= 2,
+        "a bar paints a track and a moving segment"
+    );
+
+    // The track is painted first and is the box the shuttle travels along.
+    let track = before[0];
+
+    let mut seen_segment = Vec::new();
+    for _ in 0..4 {
+        host.frame();
+        let now = rects(&host);
+        assert_eq!(now.len(), before.len(), "the bar's shape is stable");
+        let segment = now
+            .iter()
+            .zip(&before)
+            .find(|(a, b)| a.x0 != b.x0 || a.x1 != b.x1)
+            .map(|(a, _)| *a);
+        let segment = segment.unwrap_or_else(|| panic!("no rect moved: {now:?}"));
+        assert!(
+            segment.x0 >= track.x0 - 0.5 && segment.x1 <= track.x1 + 0.5,
+            "the shuttle stays on the bar: {segment:?} outside {track:?}"
+        );
+        seen_segment.push(segment.x0);
+    }
+    assert!(
+        seen_segment.windows(2).any(|pair| pair[0] != pair[1]),
+        "the shuttle has to keep moving: {seen_segment:?}"
+    );
+}
+
+/// Animating a node that is about to report dirty must not cancel the
+/// animation.
+///
+/// The declaration pass runs over exactly the nodes that reported dirty, and
+/// "this widget declares nothing" is the same answer from a widget that never
+/// declared anything and from one that withdrew its declaration. A host that
+/// treats those as the same answer cancels an imperative animation on the next
+/// frame the node reports dirty — which is the frame after `animate` on any
+/// freshly mounted node, and the frame after any state change on any other.
+/// That is the *first* thing a caller does, which is what makes it worth a test
+/// of its own: the whole imperative door is unusable if this regresses.
+#[test]
+fn an_imperative_animation_survives_a_node_that_reports_dirty() {
+    let mut host = WidgetHost::new();
+    host.set_size(Size::new(200.0, 80.0));
+    // Deliberately no frame before `animate`: a freshly mounted node still has
+    // its mount-time dirty to report, and that is the state an app animates a
+    // node on arrival in.
+    let label = host.mount_root(LayoutStyle::default(), Text::new("arriving"));
+    host.animate(label, fade(1.0, 0.0, 1.0));
+
+    host.frame();
+    assert_eq!(
+        host.animations_running(),
+        1,
+        "the frame that reconciles the node's declaration must not take the \
+         animation away"
+    );
+    let first = host.animation_value(label).expect("running");
+    assert!(first < 1.0, "control: and it has started moving ({first})");
+
+    // The same thing again, from a change the widget itself reports.
+    for _ in 0..3 {
+        host.frame();
+    }
+    let before = host.animation_value(label).expect("running");
+    host.widget_mut::<Text>(label)
+        .expect("mounted")
+        .set_content("arrived");
+    host.frame();
+    assert_eq!(
+        host.animations_running(),
+        1,
+        "a content change is not a withdrawal of a declaration nobody made"
+    );
+    let after = host.animation_value(label).expect("running");
+    assert!(
+        after < before,
+        "and it carried on rather than restarting: {before} -> {after}"
+    );
+}
+
+/// A declaration still wins over an imperative animation: the widget owns its
+/// own element, so the first time it gets to say what it wants, that is what
+/// runs. The two owners are not combined and the app is not asked — this is the
+/// documented precedence, not an accident.
+#[test]
+fn a_declaration_takes_over_from_an_imperative_animation() {
+    let mut host = WidgetHost::new();
+    host.set_size(Size::new(200.0, 40.0));
+    let bar = host.mount_root(LayoutStyle::default(), Progress::indeterminate());
+    // Both owners on one element, before either has had a chance to run: the
+    // widget declares a shuttle, and the app imperatively starts something else
+    // on the same node. The mount frame is where the declaration is reconciled
+    // for the first time, so that is where the two owners meet.
+    host.animate(bar, fade(1.0, 0.0, 1.0));
+    assert_eq!(host.animations_running(), 1, "control: the app's animation");
+    host.frame();
+
+    // Which one is running? The bar's shuttle never ends; the app's fade is
+    // over in a second. Running well past that second is the observable that
+    // says which of the two owners won, and it is not available from the value
+    // alone: both of them are on their way to zero early on.
+    for _ in 0..90 {
+        host.frame();
+    }
+    assert_eq!(
+        host.animations_running(),
+        1,
+        "after 1.5 s the app's one-second fade would be over; something endless \
+         is still running, so the declaration took the element back"
+    );
+    let value = host.animation_value(bar).expect("running");
+    assert!(
+        (0.0..=1.0).contains(&value),
+        "and it is the shuttle's own value ({value})"
+    );
+}
+
+/// The frame loop has to stay awake for an animation that is *not* changing
+/// any pixel yet.
+///
+/// `needs_frame` has two ways to say yes while motion is in flight — the
+/// animation itself, and the damage the last frame left. An animating node
+/// usually produces both, which makes the first one easy to assert without
+/// ever touching it. This test isolates it: a fade slow enough that its
+/// sampled alpha still rounds to the same byte damages nothing at all, and a
+/// loop that keyed off damage alone would park here and freeze the animation
+/// on its first frame forever.
+#[test]
+fn a_running_animation_keeps_the_loop_awake_when_no_pixel_changes() {
+    let (mut host, label) = host_with_label();
+    // 255 alpha steps over 10 000 seconds is one step every ~39 s, so the
+    // frames below move the sample without moving a single pixel.
+    host.animate(label, fade(1.0, 0.0, 10_000.0));
+    host.frame();
+
+    assert_eq!(host.animations_running(), 1, "control: it is running");
+    assert_eq!(
+        text_alpha(&host),
+        255,
+        "control: and it has not changed a pixel"
+    );
+    assert!(
+        host.scene().damage().is_empty(),
+        "control: so the last frame left nothing damaged"
+    );
+    assert!(
+        host.needs_frame(),
+        "an animation in flight keeps the loop awake on its own account, not \
+         on the strength of a damaged pixel"
+    );
+
+    // And it is really progressing, at a resolution the screen cannot show.
+    let before = host.animation_value(label).expect("running");
+    for _ in 0..3 {
+        host.frame();
+        assert!(host.needs_frame(), "the loop stays awake every frame of it");
+    }
+    let after = host.animation_value(label).expect("running");
+    assert!(
+        after < before,
+        "the clock and the sample keep advancing: {before} -> {after}"
+    );
+    assert_eq!(
+        text_alpha(&host),
+        255,
+        "and the screen still shows none of it"
+    );
+}
+
+/// The control for the test above: the same widget with a value declares
+/// nothing, so the host has nothing to run and the bar holds still. Without
+/// this pair, "the bar moved" could be satisfied by a bar that always moves.
+#[test]
+fn a_determinate_bar_declares_no_motion() {
+    let mut host = WidgetHost::new();
+    host.set_size(Size::new(200.0, 40.0));
+    host.mount_root(LayoutStyle::default(), Progress::determinate(0.5));
+    // Two frames: the first owes the scene its freshly mounted nodes, so it
+    // is not an idle frame no matter what declares anything.
+    host.frame();
+    host.frame();
+
+    assert_eq!(
+        host.animations_running(),
+        0,
+        "a bar with a value is not animating"
+    );
+    assert!(
+        !host.needs_frame(),
+        "so nothing is asking for frames on its behalf"
+    );
+    let before = rects(&host);
+    assert!(!before.is_empty(), "it still paints");
+    host.frame();
+    assert_eq!(
+        rects(&host),
+        before,
+        "and it paints the same thing twice in a row"
+    );
+}
+
+/// Clearing the declaration stops the motion, and re-stating it starts it
+/// again — the widget's half of the two-owner contract.
+#[test]
+fn a_declaration_that_goes_away_stops_the_motion() {
+    let mut host = WidgetHost::new();
+    host.set_size(Size::new(200.0, 40.0));
+    let bar = host.mount_root(LayoutStyle::default(), Progress::indeterminate());
+    host.frame();
+    assert_eq!(host.animations_running(), 1);
+
+    host.widget_mut::<Progress>(bar)
+        .expect("the bar is mounted")
+        .set_value(Some(0.25));
+    host.frame();
+    host.frame();
+    assert_eq!(
+        host.animations_running(),
+        0,
+        "a widget that stopped declaring motion stops being animated"
+    );
+    assert!(!host.needs_frame());
+
+    let mut host2 = WidgetHost::new();
+    host2.set_size(Size::new(200.0, 40.0));
+    let bar2 = host2.mount_root(LayoutStyle::default(), Progress::determinate(0.25));
+    host2.frame();
+    assert_eq!(
+        host2.animations_running(),
+        0,
+        "control: determinate at rest"
+    );
+    host2
+        .widget_mut::<Progress>(bar2)
+        .expect("mounted")
+        .set_value(None);
+    host2.frame();
+    assert_eq!(
+        host2.animations_running(),
+        1,
+        "declaring motion again restarts it"
+    );
+}
+
+/// Re-stating the *same* declaration is not a restart. This is what lets a
+/// widget say what it wants on every update without resetting the animation
+/// it is already running — a spinner that restarts every frame never leaves
+/// its first position.
+#[test]
+fn restating_the_same_declaration_does_not_restart_it() {
+    let mut host = WidgetHost::new();
+    host.set_size(Size::new(200.0, 40.0));
+    let bar = host.mount_root(LayoutStyle::default(), Progress::indeterminate());
+    host.frame();
+    for _ in 0..20 {
+        host.frame();
+    }
+    let progressed = host.animation_value(bar).expect("running");
+
+    // A change to the widget that is not a change to its motion: the revision
+    // bumps, the node reports dirty, and the declaration is re-stated
+    // verbatim. It must be recognised as the one already running.
+    host.widget_mut::<Progress>(bar)
+        .expect("mounted")
+        .disabled(true);
+    host.frame();
+    assert_eq!(host.animations_running(), 1);
+    let after = host.animation_value(bar).expect("still running");
+    assert!(
+        (after - progressed).abs() < 0.05,
+        "the animation carried on from {progressed}; a restart would have put \
+         it back at the start ({after})"
+    );
+}
+
+/// The sample reads the same from outside the widget as inside its paint.
+#[test]
+fn the_parked_sample_is_the_same_number_the_widget_paints_with() {
+    let (mut host, label) = host_with_label();
+    host.animate(label, fade(1.0, 0.0, 1.0));
+    for _ in 0..6 {
+        host.frame();
+        let value = host.animation_value(label).expect("running");
+        let expected = (255.0 * value).round().clamp(0.0, 255.0) as u8;
+        assert_eq!(
+            text_alpha(&host),
+            expected,
+            "the scene alpha is the parked sample scaled to 8 bits ({value})"
+        );
+    }
+}
+
+/// A `TranslateY` animation reaches the same place by the same route: this is
+/// the channel's second compositor property, and the one a real container
+/// will drive once sub-tree transforms land.
+#[test]
+fn a_translation_animation_moves_the_painted_box() {
+    let (mut host, label) = host_with_label();
+    let origin = host
+        .scene()
+        .iter()
+        .find_map(|(_, node)| match node {
+            SceneNode::Text { origin, .. } => Some(*origin),
+            _ => None,
+        })
+        .expect("a text node");
+
+    host.animate(
+        label,
+        AnimKind::Tween(
+            Tween::new(0.0, 40.0, 0.5).with_compositor(CompositorProp::TranslateY(0.0)),
+        ),
+    );
+    for _ in 0..30 {
+        host.frame();
+    }
+    let moved = host
+        .scene()
+        .iter()
+        .find_map(|(_, node)| match node {
+            SceneNode::Text { origin, .. } => Some(*origin),
+            _ => None,
+        })
+        .expect("a text node");
+    assert!(
+        (moved.y - origin.y - 40.0).abs() < 0.5,
+        "the label should have travelled 40px down: {origin:?} -> {moved:?}"
+    );
+    assert_eq!(moved.x, origin.x, "and not sideways");
+}

@@ -8,9 +8,9 @@
 
 use floem_accessibility::{SemanticsRole, SemanticsState};
 use floem_core::{
-    Color, CreateContext, ElementId, Event, EventContext, Key, KeyEvent, KeyPhase, NamedKey,
-    OverlayHandle, OverlayKind, OverlayRequest, PaintContext, Point, Rect, SemanticsContext, Size,
-    UpdateContext, Widget, WidgetAny,
+    AnimationSpec, Color, CreateContext, Easing, ElementId, Event, EventContext, Key, KeyEvent,
+    KeyPhase, NamedKey, OverlayHandle, OverlayKind, OverlayRequest, PaintContext, Point, Rect,
+    RepeatSpec, SemanticsContext, Size, UpdateContext, Widget, WidgetAny,
 };
 use floem_ime::{CompositionState, ImeEvent, ImeState};
 use floem_types::{ImeUpdate, PointerButton, PointerPhase};
@@ -1622,6 +1622,30 @@ impl Slider {
     }
 }
 
+/// How much of an indeterminate bar's width the moving segment covers.
+const INDETERMINATE_SEGMENT: f64 = 0.3;
+
+/// One end-to-end pass of the indeterminate shuttle.
+///
+/// A convention rather than a spec value: the bar is decoration whose only job
+/// is to say "still working", and this is long enough to read as motion and
+/// short enough to stay out of the way.
+const INDETERMINATE_CYCLE_SECS: f64 = 1.2;
+
+/// The sweep an indeterminate bar runs on until it is given a value.
+///
+/// A shuttle — out and back — rather than a one-way sweep that restarts. A
+/// restart jumps the segment from the far edge back to the near one every
+/// cycle, which reads as a glitch rather than as progress; easing the ends
+/// keeps the turnarounds from looking like a bounce.
+const INDETERMINATE_SWEEP: AnimationSpec = AnimationSpec::repeating(
+    0.0,
+    1.0,
+    INDETERMINATE_CYCLE_SECS,
+    RepeatSpec::INFINITE_REVERSE,
+)
+.with_easing(Easing::EASE_IN_OUT);
+
 /// Determinate or indeterminate progress indicator.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Progress {
@@ -1702,6 +1726,19 @@ impl Widget for Progress {
         )
     }
 
+    /// An indeterminate bar keeps a shuttle running on itself; a determinate
+    /// one declares nothing, because a bar that has a value is not animating.
+    ///
+    /// The declaration is what makes the bar move: this widget cannot start
+    /// anything itself (it holds no host handle), so it states the motion it
+    /// wants and the host owns running it.
+    fn animation(&self) -> Option<AnimationSpec> {
+        if self.value.is_some() {
+            return None;
+        }
+        Some(INDETERMINATE_SWEEP)
+    }
+
     fn paint(&self, cx: &mut dyn PaintContext, _id: ElementId) {
         let bounds = cx.bounds();
         if bounds.width() <= 0.0 || bounds.height() <= 0.0 {
@@ -1722,10 +1759,26 @@ impl Widget for Progress {
                 cx.fill_rect(filled, base);
             }
             None => {
-                // Indeterminate: a full-width dim bar; animation comes later
-                // with `floem-animation`.
+                // Indeterminate: a shuttle over a dim track. The phase is the
+                // value the host sampled for this element, so this widget draws
+                // the motion itself rather than having the host move the whole
+                // bar for it. With nothing animating — a host that has no
+                // animation, or a frame drawn before the first tick — the
+                // segment parks at the start rather than vanishing, because
+                // "not moving yet" is not the same as "nothing here".
                 cx.fill_rect(bounds, Color::rgb(0xE2, 0xE8, 0xF0));
-                cx.fill_rect(bounds, disabled_tint(base));
+                let phase = cx.animation_value().unwrap_or(0.0).clamp(0.0, 1.0);
+                let segment = (bounds.width() * INDETERMINATE_SEGMENT).min(bounds.width());
+                let travel = (bounds.width() - segment).max(0.0);
+                let x0 = bounds.x0 + travel * phase;
+                cx.fill_rect(
+                    Rect {
+                        x0,
+                        x1: x0 + segment,
+                        ..bounds
+                    },
+                    base,
+                );
             }
         }
     }

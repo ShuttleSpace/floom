@@ -109,9 +109,64 @@ fn advanced_surface_is_explicit_not_global() {
     exists::<advanced::LayoutEngine>();
     exists::<advanced::MeasureFn>();
 
+    // The declarative motion a widget returns from `Widget::animation` — only
+    // nameable by someone implementing that contract, so it stays out of the
+    // prelude with the rest of the authoring surface.
+    exists::<advanced::AnimationSpec>();
+    exists::<advanced::RepeatSpec>();
+
     // The accessibility bridge (functions).
     let _ = advanced::to_core_role;
     let _ = advanced::to_core_state;
+}
+
+/// The motion vocabulary is beginner surface, and it has to *work* through the
+/// prelude alone.
+///
+/// `WidgetHost::animate` is a single call, which makes it easy to ship the
+/// entry point and forget that the call takes arguments a beginner cannot
+/// name: without the vocabulary in the prelude, "you can animate any node" is
+/// true of the host and false of the documented surface. Naming the types is
+/// the compile-time half; driving a node to its endpoint is the half that
+/// catches a vocabulary that resolves but does not connect.
+#[test]
+fn the_prelude_can_animate_a_node_from_a_single_glob_import() {
+    exists::<AnimKind>();
+    exists::<Tween>();
+    exists::<Easing>();
+    exists::<RepeatMode>();
+    exists::<CompositorProp>();
+    exists::<AnimId>();
+
+    let mut host = WidgetHost::new();
+    host.set_size(Size::new(160.0, 40.0));
+    let label = host.mount_root(LayoutStyle::default(), Text::new("fade"));
+    host.frame();
+
+    host.animate(
+        label,
+        AnimKind::Tween(
+            Tween::new(1.0, 0.0, 0.2)
+                .with_easing(Easing::EASE_OUT)
+                .with_compositor(CompositorProp::Opacity(0.0)),
+        ),
+    );
+    host.frame();
+    assert_eq!(
+        host.animations_running(),
+        1,
+        "the prelude's vocabulary has to drive the host, not just resolve"
+    );
+
+    for _ in 0..20 {
+        host.frame();
+    }
+    assert_eq!(host.animations_running(), 0, "and it finishes");
+    assert_eq!(
+        host.animation_value(label),
+        Some(0.0),
+        "on the endpoint the prelude named"
+    );
 }
 
 #[test]

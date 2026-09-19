@@ -23,6 +23,7 @@ EXAMPLES=(
   floem2-forms
   floem2-hello
   floem2-list
+  floem2-motion
   floem2-native-plugin
   floem2-navigation
   floem2-virtual-list

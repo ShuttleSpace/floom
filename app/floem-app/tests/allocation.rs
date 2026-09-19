@@ -11,6 +11,7 @@ use std::alloc::{GlobalAlloc, Layout, System};
 use std::cell::Cell;
 use std::sync::atomic::Ordering::Relaxed;
 
+use floem_animation::{AnimKind, CompositorProp, Tween};
 use floem_app::{NodeId, WidgetHost};
 use floem_layout::LayoutStyle;
 use floem_types::Size;
@@ -182,4 +183,139 @@ fn relayout_allocation_audit_record() {
         );
         assert!(stats.layout_nodes > 0, "the forced relayout actually ran");
     }
+}
+
+/// The alpha of the first text node on screen.
+fn first_text_alpha(host: &WidgetHost) -> u8 {
+    host.scene()
+        .iter()
+        .find_map(|(_, node)| match node {
+            floem_scene::SceneNode::Text { color, .. } => Some(color.a),
+            _ => None,
+        })
+        .expect("the tree painted a text node")
+}
+
+/// S1/B9 — a *running* animation must not make a settled frame allocate per
+/// node either.
+///
+/// This is the claim that makes an animation affordable at all: a spinner runs
+/// for as long as the user waits, so "the frame loop is awake" cannot be
+/// allowed to mean "the frame loop allocates". Two things have to hold, and
+/// both are easy to get wrong in a way no "did it move" test can see: the
+/// per-frame samples live in a buffer the host owns (which is why the
+/// scheduler has `tick_into` at all), and the node's motion is a field that is
+/// written in place rather than a fresh collection built per frame.
+#[test]
+fn a_running_animation_does_not_allocate_per_node() {
+    let (mut host, leaf) = wide_tree(1_000, 10);
+    host.frame();
+    host.frame();
+
+    // Four seconds, on a tree that will be measured within four frames: the
+    // sampled value moves the 8-bit alpha by ~1 every frame, so every measured
+    // frame really does repaint the node it animates. A longer animation would
+    // round to the same byte for hundreds of frames and quietly turn this into
+    // a test of an idle frame.
+    host.animate(
+        leaf,
+        AnimKind::Tween(Tween::new(0.0, 1.0, 4.0).with_compositor(CompositorProp::Opacity(1.0))),
+    );
+    let warm = host.frame();
+    assert_eq!(host.animations_running(), 1, "control: it is running");
+    assert!(
+        warm.updated == 0,
+        "control: no widget changed — whatever this frame costs is the \
+         animation's cost, not a widget's"
+    );
+    let before = first_text_alpha(&host);
+
+    let (allocs, stats) = measure(|| host.frame());
+    assert!(
+        first_text_alpha(&host) != before,
+        "control: the measured frame is a frame the animation moved"
+    );
+    assert!(stats.painted > 0, "and it painted");
+
+    // The same constant the settled-frame test allows, on purpose: the claim
+    // is that an animation does not move a frame's allocation profile at all.
+    // A per-node bound here would be useless — on an 11k-node tree it would
+    // permit 5.5k allocations and call that "no per-node cost".
+    let nodes = 1 + 1_000 * 11;
+    assert!(
+        allocs <= 8,
+        "one frame of a running animation on a {nodes}-node tree allocated \
+         {allocs} times; the animation's own per-frame work is hiding a \
+         per-node or per-frame allocation"
+    );
+    eprintln!("motion audit: {nodes} nodes, animation running -> {allocs} allocations/frame");
+}
+
+/// A flat tree of `leaves` text children, every one of them animating.
+///
+/// Built to make the *number of animations* the only thing that scales, so a
+/// cost that grows with it has nowhere to hide behind the tree's shape.
+fn animated_tree(leaves: usize) -> (WidgetHost, Vec<NodeId>) {
+    let mut host = WidgetHost::new();
+    host.set_size(Size::new(800.0, 600.0));
+    let root = host.mount_root(LayoutStyle::default(), Container::new());
+    let mut ids = Vec::new();
+    for _ in 0..leaves {
+        let leaf = host.mount(root, LayoutStyle::default(), Text::new("leaf"));
+        ids.push(leaf);
+    }
+    host.frame();
+    host.frame();
+    for &id in &ids {
+        host.animate(
+            id,
+            AnimKind::Tween(
+                Tween::new(0.0, 1.0, 4.0).with_compositor(CompositorProp::Opacity(1.0)),
+            ),
+        );
+    }
+    // Two frames to settle whatever the first one builds (the damage list grows
+    // to hold the nodes that moved) before anything is measured.
+    host.frame();
+    host.frame();
+    (host, ids)
+}
+
+/// S1/B9, the other axis — a frame with a hundred animations must not cost
+/// more *allocations* than a frame with ten.
+///
+/// The count is the falsifiable part: an implementation that rebuilt a
+/// per-animation structure each frame (`motion_samples.clone()` in the parking
+/// loop is the shape of it) allocates once per animation and lands orders of
+/// magnitude over this bound, while costing exactly the same number of bytes
+/// per node it would otherwise have. Nothing about the pixels gives it away.
+#[test]
+fn a_running_animation_does_not_allocate_per_animation() {
+    let (mut few, few_ids) = animated_tree(10);
+    assert_eq!(
+        few.animations_running(),
+        few_ids.len(),
+        "control: 10 running"
+    );
+    let (small, small_stats) = measure(|| few.frame());
+    assert_eq!(small_stats.updated, 0, "control: no widget changed");
+
+    let (mut many, many_ids) = animated_tree(400);
+    assert_eq!(
+        many.animations_running(),
+        many_ids.len(),
+        "control: 400 running"
+    );
+    let (big, big_stats) = measure(|| many.frame());
+    assert_eq!(big_stats.updated, 0, "control: no widget changed");
+
+    assert!(
+        big <= small + 8,
+        "40x the animations turned {small} allocations into {big}; the frame's \
+         per-frame cost is scaling with how many animations are running"
+    );
+    eprintln!(
+        "motion audit: 10 animations -> {small} allocations/frame, \
+         400 animations -> {big} allocations/frame"
+    );
 }

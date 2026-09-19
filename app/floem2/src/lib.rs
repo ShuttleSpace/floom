@@ -134,6 +134,14 @@ pub mod prelude {
     // --- Layout style + input value types --------------------------------
     pub use floem_layout::LayoutStyle;
     pub use floem_types::{PointerEvent, ScrollEvent};
+
+    // --- Motion vocabulary ------------------------------------------------
+    // `WidgetHost::animate` is one call, but it takes this vocabulary, and an
+    // app that cannot spell `Tween` or `Easing` cannot animate anything. It
+    // rides in the prelude for the same reason `LayoutStyle` does: it is a
+    // value an app *writes*, not a contract it implements.
+    pub use floem_animation::{AnimId, AnimKind, Tween};
+    pub use floem_types::{CompositorProp, Easing, RepeatMode};
 }
 
 /// Explicit, opt-in surface for everything the prelude keeps out: the
@@ -147,6 +155,10 @@ pub mod advanced {
     };
     // Layout engine seam for custom measure logic.
     pub use floem_layout::{LayoutEngine, MeasureFn};
+    // The declarative motion a widget returns from `Widget::animation`: only
+    // nameable by someone implementing that contract, which is what keeps it
+    // out of the prelude.
+    pub use floem_types::{AnimationSpec, RepeatSpec};
     // The accessibility bridge shared by widget crates.
     pub use floem_widgets::{to_core_role, to_core_state};
 }

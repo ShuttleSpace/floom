@@ -9,8 +9,8 @@
 ## 0. 摘要（TL;DR）
 
 - **底座已经在**：确定性动画调度器 + 可注入时钟、合成通道（compositor）、宿主冻结时钟（paused）、`settle()` 测试收敛、快照/像素黄金、分配计数与性能预算门。动画**不是从零开始**。
-- **表现层几乎为零**：全仓只有 **2 处**启动动画（原生过渡、overlay 入场），且 Tween 是**纯线性、无缓动**；app/widget 作者**没有任何 API** 能让任意节点动起来。
-- **自绘能力只剩"矩形 + 圆角矩形 + 文字 + 图片"**：`PaintContext` 一共 5 个方法；场景 IR 一共 4 种节点。画不了路径、描边、圆弧、渐变、裁剪、模糊、着色器。
+- **动画侧的原语层已补齐（S1，见 §2b）**：缓动、中断重定向、循环/往返、给任意节点起动画的公开入口都已落地并有会红的负例。**动作**：overlay 入场在 S1 前是全仓仅有的两处动画之一，Tween 也是纯线性——那两条描述已随 S1 过期，保留在此仅作对照。
+- **自绘侧一行未动**（S2–S4 的范围）：`PaintContext` 仍是 5 个方法，场景 IR 仍是 4 种节点。画不了路径、描边、圆弧、渐变、裁剪、模糊、着色器。**这一半的缺口清单 A 完全未动。**
 - **最贵的一条**：`SceneNode::Group { transform }` **有类型、无实现** —— 三个后端里没有一个应用它，宿主也从不产生它，而 `Transform` 只有 `translate` 构造器。这意味着**子树级变换（统一缩放/旋转）在架构上是空的**，它不是"加个字段"能补上的。
 - **最便宜的一刀**：Material 设计系统里 `MotionDuration` token **零消费者**（`design-systems/floem-material/src/scale.rs:134`）—— 设计语言已经写好，引擎没有能消费它的 API。
 
@@ -36,7 +36,7 @@
 |---|---|
 | 帧驱动动画调度器 `AnimationScheduler`（`start`/`cancel`/`tick`） | `framework/floem-animation/src/lib.rs:26-85` |
 | 可注入时钟（测试用 `FakeClock`）→ 动画可确定性断言 | `framework/floem-animation/src/clock.rs`、`framework/floem-animation/tests/scheduler.rs` |
-| 三种动画种类 `Tween` / `Spring` / `Keyframe` | `framework/floem-animation/src/kinds.rs:23-37` |
+| 四种动画种类 `Tween` / `Spring` / `Keyframe` / `Repeat` | `framework/floem-animation/src/kinds.rs`（S1 增 `Repeat`） |
 | 合成通道 `CompositorProp`（不经布局的透明/位移/缩放） | `framework/floem-animation/src/kinds.rs:8-13` |
 | 宿主逐帧推进 + 宿主时钟 + 暂停冻结 | `app/floem-app/src/lib.rs:1325`（`tick_animations`）、`anim_clock` |
 | 原生参与者冻结/解冻过渡复用同一调度器 | `app/floem-app/src/lib.rs:2190`、`:2199`、`:2207` |
@@ -45,7 +45,34 @@
 | 像素/场景/语义三层黄金 + 分配计数 + 性能预算门 | `tooling/floem-snapshot/`、`scripts/check-perf-budgets.sh` |
 | 外部纹理通路（自带渲染器 → 作为场景 Image 画进来） | `render/floem-renderer/src/external.rs:1-52` |
 
-**一句话**：通道、时钟、可测性都齐了；缺的是**原语**、**缓动/中断**、**面向作者的 API**。
+**一句话**（S1 之后）：通道、时钟、可测性、**缓动/中断/循环/面向作者的入口**都齐了；剩下的是**绘制原语**（A 清单整片）与**隐式/过渡层**（B4–B6）。
+
+---
+
+## 2b. S1 已交付（2026-09-19）
+
+> 本节引用**新代码一律用 `文件::符号` 而不写行号**：这一片代码刚落地，行号在下一个改动里立刻腐烂，符号名与测试名不会。旧条目的 `文件:行` 是 S1 之前的快照，保留未改。
+
+| 缺口 | 落点 | 钉住它的测试 |
+|---|---|---|
+| **B1 缓动** | `foundation/floem-types/src/motion.rs::Easing`（Linear / CubicBezier / Spring 三种阻尼区）＋ `AnimKind::Tween.easing`（`framework/floem-animation/src/kinds.rs`，默认 `Linear` = 改造前的行为，曲线是 opt-in） | `floem-types` 的 `motion` 单测（逐点数值）、`framework/floem-animation/tests/motion.rs` |
+| **B2 中断/重定向** | `floem-animation::AnimationScheduler::retarget`（tween → 带初速 spring）、`floem_app::WidgetHost::retarget_animation` | `floem-animation/tests/motion.rs`（不跳变）、`app/floem-app/tests/motion_host.rs::retargeting_carries_the_momentum_it_interrupted`（**真的保速度**：改目标后先沿原方向再走一帧，零初速的 spring 做不到） |
+| **B3 循环/无限/往返** | `AnimKind::Repeat { inner, iterations: Option<u32>, mode }`、`RepeatMode::{Restart, Reverse}`；spring 无 span → 文档化的"退化为播一次" | `floem-animation/tests/motion.rs`（环绕/有界结束/往返/退化）、`floem-widgets` 的 `INDETERMINATE_SWEEP` |
+| **B8 公开入口** | 命令式 `WidgetHost::{animate, retarget_animation, cancel_animation, animation_value, animations_running}`；声明式 `floem_core::Widget::animation()`；控件自绘侧 `PaintContext::animation_value()`；**facade 词汇**：`floem2::prelude` 导出 `AnimKind/Tween/Easing/CompositorProp/RepeatMode/AnimId`，`floem2::advanced` 导出 `AnimationSpec/RepeatSpec` | `app/floem-app/tests/motion_host.rs`（16 条）、`app/floem2/tests/prelude_surface.rs::the_prelude_can_animate_a_node_from_a_single_glob_import` |
+| **B9 自检门** | 稳定帧预算（金帧留待 S2 与像素黄金一批补） | `app/floem-app/tests/allocation.rs::a_running_animation_does_not_allocate_per_node`（11k 节点、动画在跑 → **0 次分配/帧**）与 `::a_running_animation_does_not_allocate_per_animation`（10 → 400 个动画，分配数不得增长） |
+
+**四判据的实测结果（2026-09-20）**：
+
+- `cargo test --workspace --no-fail-fast` → **2304 passed / 0 failed / 74 ignored / EXIT=0**（基线 2254，**delta = +50**，逐项对账：`floem-types/src/motion.rs` +11、`floem-animation/src/kinds.rs` 内联 +4、`floem-animation/tests/motion.rs` +15、`floem-overlay/tests/overlay.rs` +1、`floem-app/tests/motion_host.rs` +16、`floem-app/tests/allocation.rs` +2、`floem2/tests/prelude_surface.rs` +1）。
+- `bash scripts/check-architecture-deps.sh` → PASS。
+- **真窗口**：`examples/floem2-window` 加了一条一次性入场淡入（0.4s / ease-out / opacity），`FLOEM2_WINDOW_IDLE=1 FLOEM2_WINDOW_IDLE_SECS=8` 实测 `frames` 从 2 涨到 **26**（含淡入的 24 帧）后**冻住**、`about_to_wait=50`（未空转）、CPU 2.9%（Apple M4 Pro / Metal）。**即：动画真实地在 winit+Metal 帧循环里跑过并释放了循环。** 淡放刻意做成一次性——无限动画会让 G1-4 这条用例失去可证伪性。EXAMPLES.md 里原本写死的 `frames=2` 已同步更新（这正是"点名的证据会腐烂"的又一例）。
+- 未做：逐帧**像素金帧**（B9 的另一半）与 `Rotate`；`Scale` 仍受 A6 阻塞。
+
+**落地时被测试逼出来的两条语义**（都不是实现细节，是契约，写在这里免得下次重新踩）：
+
+1. **"跑完"与"停掉"是两件事。** 动画**跑完**要停在终点（终点是调用者要的状态；末帧清掉采样会让节点在接缝最显眼的一帧弹回原样），**停掉**（`cancel_animation`）则要放掉合成通道。否则节点会永远裹着一层没有动画在喂的合成属性，而除了再起一个动画没人能清掉它。两条都有对照测试（`a_finished_animation_parks_its_endpoint` / `cancelling_an_animation_releases_the_channel`）。
+2. **"还在跑"必须自己把帧循环唤醒。** 一条时长足够长的动画（采到的 8 位 alpha 还没跨过一格、什么都没伤到）是 `needs_frame` 里动画子句**唯一可达**的场景；只要有像素在动，损伤子句就会把断言带过——`a_running_animation_keeps_the_loop_awake_when_no_pixel_changes` 专门隔离这一条。
+3. **仍然是"每元素一个动画"。** 两条入口共用同一个合成属性槽：同时驱动淡入 + 位移需要 A6 的子树变换，`WidgetHost::animate` 的文档里写明了这一点。
 
 ---
 
@@ -113,20 +140,20 @@
 
 ## 4. 缺口清单 B：动画
 
-### B1. 没有缓动函数（easing） — **P0 / S**
+### B1. ~~没有缓动函数（easing）~~ — **P0 / S** — ✅ 已交付（S1）
 
 - **现状**：`Tween` 是纯线性插值 `from + (to - from) * u`（`framework/floem-animation/src/kinds.rs:43-49`）。2.0 全目录里 `easing` 这个词**只出现过一次**，还是文档注释里的 M3 规范链接（`design-systems/floem-material/src/scale.rs:133`）——**没有任何缓动实现**。v1 有完整的 `Easing` trait 与实现：`Linear` / `Step`(+`StepPosition`) / `Bezier`(三次贝塞尔参数) / `Spring`（`src/animate/easing.rs:53,62,78,159,208`）。
 - **对标**：Compose `tween(easing = FastOutSlowInEasing)` 等；Flutter `Curves.easeInOut / bounceOut / elasticIn`。
 - **代价**：所有动画线性 → 观感机械，这是"开箱即用动画"的第一道门槛，也直接卡住 B6。
 - **补上判据**：`Easing`（至少 linear / cubic-bezier / spring 参数化）接入 `AnimKind::Tween`；**按 t=0.25/0.5/0.75 逐点断言数值**（不是只测端点）。
 
-### B2. 没有中断 / 重定向（interruption & retarget） — **P1 / M**
+### B2. ~~没有中断 / 重定向（interruption & retarget）~~ — **P1 / M** — ✅ 已交付（S1）
 
 - **现状**：`AnimationScheduler` 只有 `start` / `cancel` / `tick`（`framework/floem-animation/src/lib.rs:38-84`）——取消即丢失进度，无法"从当前值继续飞"。
 - **对标**：Compose `Animatable.animateTo` 可从当前值**和当前速度**续飞；Flutter `AnimationController.animateTo` 同理。手势跟随（拖拽回弹）依赖这条。
 - **补上判据**：`retarget(id, new_target)` 保留当前值与速度；测试断言"中途改目标不跳变"（相邻两帧的值差有界）。
 
-### B3. 没有循环 / 无限 / 往返 — **P1 / S**
+### B3. ~~没有循环 / 无限 / 往返~~ — **P1 / S** — ✅ 已交付（S1）
 
 - **现状**：`AnimKind` 只有 `Tween` / `Spring` / `Keyframe`（`kinds.rs:23-37`），`tick` 到 `finished` 即从表里移除（`lib.rs:76-83`）。
 - **对标**：Compose `repeatable(iterations, repeatMode = RepeatMode.Reverse)` / `infiniteRepeatable`；Flutter `controller.repeat(reverse: true)`。
@@ -158,12 +185,12 @@
 - **现状**：`CompositorProp` 只有 `Opacity` / `TranslateX` / `TranslateY` / `Scale`（`kinds.rs:8-13`）——**没有 Rotate**；而 `Scale` 被宿主明确跳过（`app/floem-app/src/lib.rs:3164`），原因就是 A6。
 - **补上判据**：增加 `Rotate`；`Scale` 在 group 上真正生效；一个缩放/旋转动画的像素黄金。**这条是 A6 的下游。**
 
-### B8. 没有"给任意节点起动画"的入口 — **P0 / S**
+### B8. ~~没有"给任意节点起动画"的入口~~ — **P0 / S** — ✅ 已交付（S1）
 
 - **现状**：全仓只有 **2 处** `AnimationScheduler::start`：宿主的原生过渡（`app/floem-app/src/lib.rs:2199`）与 overlay 入场（`framework/floem-overlay/src/lib.rs:99`）。**app 与 widget 作者无法让任意节点动起来。** 同时 2.0 **没有** per-widget 重绘请求 API（`request_paint` / `invalidate_paint` 零命中；v1 有 `id.request_paint()`，见 `src/views/canvas.rs:82-84`）。
 - **补上判据**：`host.animate(node, AnimKind) -> AnimHandle` 之类的公开入口（或控件级 API）；并**用帧统计断言它只驱动重绘、不触发重排**——否则每个动画都会退化成全树布局。
 
-### B9. 动画缺少自检门（金帧 + 稳定帧预算） — **P2 / S**
+### B9. 动画缺少自检门（金帧 + 稳定帧预算） — **P2 / S** — ◐ 半交付（S1 只补了稳定帧预算，金帧并入 S2）
 
 - **现状**：已有 `framework/floem-animation/tests/scheduler.rs`（FakeClock 确定性）与 `benches/frame_rates.rs`；testkit 的 `settle()` 能跑完动画（`tooling/floem-testkit/src/lib.rs:69`）。**缺**：动画中途的像素金帧、以及"动画帧不新增分配"的门。
 - **补上判据**：任选一个动画，在 t=0 / 50% / 100% 三个时刻断言场景（或像素）；并加一条稳定帧分配断言。
@@ -197,7 +224,7 @@ A8 独立，随时可做（但越早越好——它是"自绘控件在无障碍�
 
 | 切片 | 内容 | 规模 | 交付物 |
 |---|---|---|---|
-| **S1 让动画"像样"** | B1 + B2 + B3 + B8 + B9 | M | 缓动/中断/循环 + 公开入口 + 三个示例（hover 渐隐、不确定态进度、可打断的拖拽回弹） |
+| **S1 让动画"像样"** ✅ 已交付 | B1 + B2 + B3 + B8 + B9 | M | 缓动/中断/循环 + 公开入口；**示例未做**（`examples/` 零改动）——不确定态 `Progress` 已作为真实消费点接上，hover 渐隐与拖拽回弹随 B4 一起做（它们本质是隐式层） |
 | **S2 让自绘"能用"** | A1 + A2 + A7 + A8 + A9 | M–L | 路径/描边/裁剪 + Canvas 控件 + 语义 role + 规模基准；示例：折线图 + 进度环 |
 | **S3 让变换"成立"** | A6 + B7（**需先确认需求**） | L | 子树变换在三后端落地 + 缩放/旋转动画黄金；若需求不成立则改为**删除 Group** |
 | **S4 让风格"成套"** | A3 + A4 + B4 + B5 + B6 | L | 画刷/模糊 + 隐式过渡 + 挂载过渡 + motion token 接通 |

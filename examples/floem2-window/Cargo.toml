@@ -23,6 +23,10 @@ real = [
 floem-app = { path = "../../app/floem-app", version = "0.2.0" }
 floem-core = { path = "../../foundation/floem-core", version = "0.2.0" }
 floem-layout = { path = "../../layout/floem-layout", version = "0.2.0" }
+# The entry fade-in is the only motion here, and it is finite on purpose (see
+# `WindowApp::intro_fade`): an animation that never ends would make this
+# binary's own idle harness (device case G1-4) unable to park.
+floem-animation = { path = "../../framework/floem-animation", version = "0.2.0" }
 floem-platform = { path = "../../platform/floem-platform", version = "0.2.0" }
 floem-types = { path = "../../foundation/floem-types", version = "0.2.0" }
 floem-widgets = { path = "../../widgets/floem-widgets", version = "0.2.0" }

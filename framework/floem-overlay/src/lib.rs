@@ -1,6 +1,6 @@
 //! Overlay tree with z-order hit priority, focus scopes, and enter/exit animation.
 
-use floem_animation::{AnimId, AnimKind, AnimationScheduler, Tween};
+use floem_animation::{AnimId, AnimKind, AnimationScheduler, Easing, Tween};
 use floem_focus::{FocusManager, FocusScopeId};
 use floem_types::{ElementId, Point, Rect, Size};
 
@@ -14,6 +14,15 @@ pub use floem_types::{OverlayHandle, OverlayKind};
 /// Short on purpose: an overlay is meant to feel like it was already there and
 /// simply became visible, not like it is being performed.
 pub const ENTRY_SECS: f64 = 0.15;
+
+/// The shape an overlay's entry takes.
+///
+/// Decelerating: the surface arrives at speed and settles, rather than being
+/// eased *into* its position frame by frame. On an entrance that is the
+/// difference between "it was already there and became visible" and "you are
+/// watching it being performed", which is the same thing the short duration is
+/// for.
+pub const ENTRY_EASING: Easing = Easing::EASE_OUT;
 
 #[derive(Debug, Clone)]
 pub struct OverlayEntry {
@@ -101,6 +110,7 @@ impl OverlayManager {
                 from,
                 to,
                 duration_secs: ENTRY_SECS,
+                easing: ENTRY_EASING,
                 compositor: Some(compositor),
             }),
             now_secs,

@@ -1,7 +1,7 @@
 use std::hint::black_box;
 
 use criterion::{Criterion, criterion_group, criterion_main};
-use floem_animation::{AnimKind, AnimationScheduler, CompositorProp, Tween};
+use floem_animation::{AnimKind, AnimationScheduler, CompositorProp, Easing, Tween};
 
 fn tick_many(c: &mut Criterion) {
     let mut group = c.benchmark_group("animation_tick");
@@ -14,6 +14,7 @@ fn tick_many(c: &mut Criterion) {
                         from: 0.0,
                         to: 1.0,
                         duration_secs: 1.0,
+                        easing: Easing::Linear,
                         compositor: Some(CompositorProp::Opacity(0.0)),
                     }),
                     i as f64 * 0.001,

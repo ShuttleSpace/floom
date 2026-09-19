@@ -191,6 +191,22 @@ pub trait PaintContext {
     fn draw_image(&mut self, bounds: Rect, image: ResourceId) {
         let _ = (bounds, image);
     }
+
+    /// This frame's value from the animation running on this element.
+    ///
+    /// The other half of [`crate::Widget::animation`]: a widget whose animation
+    /// drives no compositor channel is handed the sampled scalar here and draws
+    /// its own motion with it. That is what a control animating *part* of itself
+    /// needs — a progress bar's sweep, a caret's blink — where the alternative
+    /// (translating the whole element) would move the thing the motion is
+    /// supposed to happen inside.
+    ///
+    /// `None` covers both "nothing is animating this element" and "a host that
+    /// has no animation at all", which a drawing routine should treat the same
+    /// way: as the settled state, not as a reason to draw nothing.
+    fn animation_value(&self) -> Option<f64> {
+        None
+    }
 }
 
 /// Accessibility / semantics emission context.

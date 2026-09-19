@@ -16,7 +16,7 @@ use std::any::Any;
 use std::cell::Cell;
 use std::rc::Rc;
 
-use floem_animation::{AnimKind, CompositorProp, Tween};
+use floem_animation::{AnimKind, CompositorProp, Easing, Tween};
 use floem_core::{
     CreateContext, ElementId, NativeGrant, NativeRequest, UpdateContext, Widget, WidgetAny,
 };
@@ -1192,6 +1192,7 @@ fn slide(from: f64, to: f64) -> AnimKind {
         from,
         to,
         duration_secs: 0.15,
+        easing: Easing::Linear,
         compositor: Some(CompositorProp::TranslateX(0.0)),
     })
 }

@@ -2867,6 +2867,7 @@ name = "floem2"
 version = "0.2.0"
 dependencies = [
  "floem",
+ "floem-animation",
  "floem-app",
  "floem-core",
  "floem-devtools",
@@ -2951,6 +2952,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "floem2-motion"
+version = "0.2.0"
+dependencies = [
+ "floem2",
+]
+
+[[package]]
 name = "floem2-native-plugin"
 version = "0.2.0"
 dependencies = [
@@ -2993,6 +3001,7 @@ dependencies = [
 name = "floem2-window"
 version = "0.2.0"
 dependencies = [
+ "floem-animation",
  "floem-app",
  "floem-core",
  "floem-layout",

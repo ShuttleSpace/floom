@@ -47,6 +47,28 @@ pub trait Widget {
     fn paint(&self, cx: &mut dyn PaintContext, id: ElementId) {
         let _ = (cx, id);
     }
+    /// The animation this widget wants the host to keep running on its own
+    /// element, or `None` (the default) for a widget that does not move on its
+    /// own.
+    ///
+    /// Declarative rather than imperative on purpose. A widget has no host
+    /// handle — it is borrowed *out* of the host for the duration of every call
+    /// the host makes into it — so it cannot start anything itself; what it can
+    /// do is say what it wants and let the host own the running state. The host
+    /// starts the animation when the declaration first appears, leaves a
+    /// running one alone while the declaration is unchanged (so a widget that
+    /// re-declares its motion every update does not restart it every update),
+    /// and cancels it when the declaration goes away.
+    ///
+    /// **One animation per element.** Two at once — a fade *and* a slide — would
+    /// need the node to carry a composed transform rather than a single
+    /// compositor property, and this framework does not build one yet: the host
+    /// builds a flat scene, and the group node that would hold a composite
+    /// transform is the same missing piece that keeps `Scale` from working.
+    /// Declaring two is not a thing to plan around; declaring one is.
+    fn animation(&self) -> Option<crate::AnimationSpec> {
+        None
+    }
     fn semantics(&self, cx: &mut dyn SemanticsContext, id: ElementId) {
         let _ = (cx, id);
     }

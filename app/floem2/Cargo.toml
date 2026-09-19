@@ -41,6 +41,11 @@ devtools = ["dep:floem-devtools"]
 [dependencies]
 floem-app = { path = "../floem-app", version = "0.2.0" }
 floem-core = { path = "../../foundation/floem-core", version = "0.2.0" }
+# Only the motion *vocabulary* is taken from here (the kind space and the
+# tween builder); the scheduler itself stays behind `floem-app`. It is a new
+# edge for the facade but not a new crate in the graph — `floem-app` already
+# depends on it, so the headless floor `floem2-hello` measures is unchanged.
+floem-animation = { path = "../../framework/floem-animation", version = "0.2.0" }
 floem-layout = { path = "../../layout/floem-layout", version = "0.2.0" }
 floem-types = { path = "../../foundation/floem-types", version = "0.2.0" }
 floem-widgets = { path = "../../widgets/floem-widgets", version = "0.2.0" }

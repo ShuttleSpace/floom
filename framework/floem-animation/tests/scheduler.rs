@@ -1,4 +1,6 @@
-use floem_animation::{AnimKind, AnimationScheduler, Clock, CompositorProp, FakeClock, Tween};
+use floem_animation::{
+    AnimKind, AnimationScheduler, Clock, CompositorProp, Easing, FakeClock, Tween,
+};
 
 #[test]
 fn tween_deterministic_with_fake_clock() {
@@ -9,6 +11,7 @@ fn tween_deterministic_with_fake_clock() {
             from: 0.0,
             to: 100.0,
             duration_secs: 1.0,
+            easing: Easing::Linear,
             compositor: Some(CompositorProp::Opacity(0.0)),
         }),
         clock.now_secs(),
@@ -34,6 +37,7 @@ fn spring_and_keyframe() {
         AnimKind::Spring {
             from: 0.0,
             to: 1.0,
+            velocity: 0.0,
             stiffness: 200.0,
             damping: 20.0,
             compositor: Some(CompositorProp::Scale(0.0)),
@@ -64,6 +68,7 @@ fn compositor_only_transform_opacity_path() {
             from: 0.0,
             to: 1.0,
             duration_secs: 0.2,
+            easing: Easing::Linear,
             compositor: Some(CompositorProp::TranslateY(0.0)),
         }),
         0.0,

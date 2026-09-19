@@ -46,7 +46,7 @@
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-use floem_animation::{AnimKind, CompositorProp, Tween};
+use floem_animation::{AnimKind, CompositorProp, Easing, Tween};
 use floem_app::{AppRunner, NodeId, WidgetHost};
 use floem_core::{Axis, Child, ChildKey, LayoutRequest};
 use floem_layout::LayoutStyle;
@@ -265,6 +265,7 @@ impl ProbeApp {
             // Longer than an overlay's 0.15 s entry on purpose. This is the one
             // case that has to be *watched*, and nine frames is not watchable.
             duration_secs: 0.6,
+            easing: Easing::EASE_OUT,
             compositor: Some(CompositorProp::TranslateX(-160.0)),
         });
         match self.runner.host_mut().begin_native_transition(slot, anim) {

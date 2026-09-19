@@ -19,6 +19,13 @@
 //! Without the `real` feature the binary is not built at all
 //! (`required-features`), so headless builds and CI never compile wgpu.
 //!
+//! ## Motion
+//!
+//! The label fades in once (0.4 s, ease-out, opacity). It is the only place
+//! the animation channel runs inside a real frame loop, and it is one-shot on
+//! purpose — see `WindowApp::intro_fade` for why an endless one would break
+//! the idle harness below.
+//!
 //! ## Idle harness (device case G1-4)
 //!
 //! The default loop calls `request_frame` from `about_to_wait` and rewrites a
@@ -40,11 +47,12 @@
 
 use std::env;
 use std::sync::Arc;
-use std::sync::atomic::{AtomicI32, Ordering};
 use std::sync::Mutex;
+use std::sync::atomic::{AtomicI32, Ordering};
 use std::thread;
 use std::time::Duration;
 
+use floem_animation::{AnimKind, CompositorProp, Easing, Tween};
 use floem_app::{AppRunner, NodeId, RunStats, WidgetHost};
 use floem_core::{Axis, LayoutRequest};
 use floem_layout::LayoutStyle;
@@ -76,6 +84,9 @@ struct WindowApp {
     /// the tree can actually settle — only then can the "park when static"
     /// contract be observed.
     idle: Option<IdleProbe>,
+    /// Whether the entry fade has been started (it needs the label's node,
+    /// which only exists after the first frame's reconcile).
+    intro_started: bool,
 }
 
 /// Publishes [`RunStats`] from the event loop to a watchdog thread that prints
@@ -178,7 +189,11 @@ fn idle_probe_from_env() -> Option<IdleProbe> {
         // couple of percent means the app is burning CPU with nothing to do.
         if let (Some(start), Some(end)) = (cpu_start, process_cpu_seconds()) {
             let cpu = (end - start).max(0.0);
-            let share = if secs > 0 { cpu / secs as f64 * 100.0 } else { 0.0 };
+            let share = if secs > 0 {
+                cpu / secs as f64 * 100.0
+            } else {
+                0.0
+            };
             eprintln!(
                 "idle probe after {secs}s: {snap}; process CPU: {cpu:.2}s ({share:.1}% of one core)"
             );
@@ -196,6 +211,7 @@ impl WinitApp for WindowApp {
         // tree and requests redraws; `RedrawRequested` runs a frame and
         // presents it through the GPU presenter.
         self.runner.pump(platform);
+        self.intro_fade();
         self.sync_label();
     }
 
@@ -229,6 +245,46 @@ impl WinitApp for WindowApp {
 }
 
 impl WindowApp {
+    /// Fades the label in once, on the first frame its node exists.
+    ///
+    /// This is the only thing in this binary that exercises the motion channel
+    /// inside a *real* winit + Metal frame loop, and it is deliberately a
+    /// finite, one-shot animation: an endless one would keep the runner asking
+    /// for frames and make case G1-4 ("with no events, no frames are requested")
+    /// unfalsifiable with this binary — the harness would never be able to
+    /// park, so it could never tell a correct loop from a spinning one.
+    ///
+    /// The idle probe still reads it: `frames` climbs by the fade's own frame
+    /// count before it freezes, so `FLOEM2_WINDOW_IDLE=1` shows both halves —
+    /// the animation ran in the real loop, and it released the loop when it
+    /// finished.
+    ///
+    /// It is also an *imperative* animation on a node the app keeps rewriting:
+    /// the default path rewrites the label's text on every frame
+    /// (`sync_label`), so the node reports dirty throughout the fade — the case
+    /// that `floem-app/tests/motion_host.rs::an_imperative_animation_survives_a_node_that_reports_dirty`
+    /// exists for. That half is that test's to prove, not this binary's to
+    /// assume; what this binary adds is that the motion channel runs at all
+    /// inside a real winit + Metal frame loop.
+    fn intro_fade(&mut self) {
+        if self.intro_started {
+            return;
+        }
+        let Some(node) = find_label(&self.runner) else {
+            return;
+        };
+        self.intro_started = true;
+        self.runner.host_mut().animate(
+            node,
+            AnimKind::Tween(
+                Tween::new(0.0, 1.0, 0.4)
+                    .with_easing(Easing::EASE_OUT)
+                    .with_compositor(CompositorProp::Opacity(0.0)),
+            ),
+        );
+        eprintln!("entry fade: 0.4s ease-out on the label (opacity 0 -> 1)");
+    }
+
     /// Rewrites the label: on every frame (the frame counter) or when the
     /// click counter moved since the last sync.
     fn sync_label(&mut self) {
@@ -353,6 +409,7 @@ fn main() {
         label: None,
         frames: 0,
         idle: idle_probe_from_env(),
+        intro_started: false,
     };
 
     let windows = vec![WindowConfig {

@@ -20,6 +20,7 @@ something stale.
 | `floem2-forms` | form validation, dirty/touched tracking, control bindings | all | headless |
 | `floem2-navigation` | typed routes, history, page transitions, nav containers, deep links | all | headless |
 | `floem2-editor` | text document: transactions, selection, undo/redo, IME pre-edit | all | headless |
+| `floem2-motion` | eased tweens, interruption, and a control that animates itself | all | headless |
 | `floem2-native-plugin` | writing a native provider plugin + slot pooling | all | headless |
 | `floem2-probe` | device probe: one window holding every control the on-screen cases need | desktop | **display-gated** — `--features real`, driven by hand |
 | `floem2-window` | a real OS window: winit + vello GPU | desktop | **verified on macOS** |
@@ -146,6 +147,39 @@ ime preedit      : Some("にほん")
 ime committed    : "hi, world?にほん"
 ```
 
+### `floem2-motion`
+
+The motion vocabulary, reached through `floem2::prelude` alone — if the
+vocabulary is not in the prelude then `WidgetHost::animate` is unusable from the
+documented surface, so this example doubles as the check that it is there.
+
+```text
+== 1. a curve is not a duration ==
+  fade of 0.4s, sampled at 25% of the way in:
+    linear   travelled 0.250 of the distance
+    ease-out travelled 0.378 of the distance
+== 2. interruption ==
+  frames that re-laid-out during motion: 0
+  redirected at 0.622 -> next frame 0.585
+  settled on 1.000 (the new target was 1.0)
+== 3. a control that animates itself ==
+  the host is running 1 animation(s) nobody asked it to start
+```
+
+Two claims are worth reading off that output. **The first act is a comparison,
+not a measurement**: the same fade is run twice and sampled at the same instant,
+which is the only way to see a curve at all — endpoints are identical by
+construction. **The second act counts re-layouts**, and the count is zero: motion
+is a compositor repaint, so an animation must never drag a layout pass behind it.
+
+Writing it caught a bug the unit tests could not see: an imperative animation was
+cancelled by the next frame that reconciled the node's declaration, because "this
+widget declares nothing" and "this widget withdrew its declaration" were the same
+answer from the host. Any freshly mounted node reports dirty, so `animate` then
+`frame` on a node you just mounted — the first thing anyone does — lost the
+animation. `motion_host.rs::an_imperative_animation_survives_a_node_that_reports_dirty`
+is the test that keeps it fixed.
+
 ### `floem2-native-plugin`
 
 Writes a plugin (a `NativeViewProvider` that can only do overlays), then proves
@@ -165,18 +199,27 @@ The only example that opens a real window: winit + vello over wgpu.
 
 ```text
 GPU adapter: Apple M4 Pro (Metal)
-idle probe after 8s: frames=2 redraws_requested=3 auto_redraws=1 events=4 about_to_wait=84; process CPU: 0.17s (2.1% of one core)
+entry fade: 0.4s ease-out on the label (opacity 0 -> 1)
+[idle] waits=4 frames=5 redraws_requested=7 auto_redraws=5 events=7 about_to_wait=4
+idle probe after 8s: frames=26 redraws_requested=27 auto_redraws=25 events=28 about_to_wait=50; process CPU: 0.24s (2.9% of one core)
 ```
 
 Run with `FLOEM2_WINDOW_IDLE=1 FLOEM2_WINDOW_IDLE_SECS=8 cargo run -p
 floem2-window --features real`. Release binary: **11,626,912 B ≈ 11.1 MiB** —
 what the desktop + GPU bundle costs on top of the 2.6 MiB headless floor.
 
-The load-bearing number is `frames=2`: an idle window must not keep producing
-frames. `redraws_requested` and the CPU percentage move a little run to run
-(3 / 2.1 % here, 2 / 1.7 % on an earlier run) because they count the startup
-redraw and whatever the window server sends in the first second; the gate is on
-frames, not on those.
+**The load-bearing claim is that `frames` stops climbing, not that it is small.**
+Before the motion work landed the number was `frames=2`; the label now fades in
+(0.4 s, ease-out, opacity), so a run reads `frames=26` — the mount frame plus the
+fade's own 24 — and then freezes there for the remaining ~7.5 s, with
+`about_to_wait` at 50 rather than in the thousands. That makes the case *stronger*
+than it was: the number is no longer small for the trivial reason that nothing
+ever animated, and an endless animation would have kept it climbing (which is why
+the fade is one-shot — see `WindowApp::intro_fade`). The trace lines show the
+climb frame by frame, so a wedged loop is visible in the output rather than only
+in the total. `redraws_requested` and the CPU percentage move a little run to
+run (27 / 2.9 % here, 3 / 2.1 % on the pre-motion run) because they count the
+startup redraw and whatever the window server sends in the first second.
 
 ### `floem2-android`
 

@@ -25,12 +25,12 @@ use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, Mutex};
 
 use floem_accessibility::{SemanticsNode, SemanticsTree};
-use floem_animation::{AnimId, AnimKind, AnimationScheduler};
+use floem_animation::{AnimId, AnimKind, AnimSample, AnimationScheduler};
 use floem_core::{
-    Align, Axis, Child, ChildKey, CreateContext, ElementId, Event, EventContext, LayoutRequest,
-    NativeGrant, NativeRequest, NativeSnapshot, OverlayHandle, OverlayKind, OverlayRequest,
-    PaintContext, Point, PointerPhase, Position, Rect, ResourceId, SemanticsHint, SemanticsRole,
-    Size, UpdateContext,
+    Align, AnimationSpec, Axis, Child, ChildKey, CreateContext, ElementId, Event, EventContext,
+    LayoutRequest, NativeGrant, NativeRequest, NativeSnapshot, OverlayHandle, OverlayKind,
+    OverlayRequest, PaintContext, Point, PointerPhase, Position, Rect, ResourceId, SemanticsHint,
+    SemanticsRole, Size, UpdateContext,
 };
 use floem_focus::{FocusDirection, FocusManager, FocusScopeId};
 use floem_layout::{
@@ -59,6 +59,13 @@ pub struct FrameStats {
     pub updated: usize,
     pub painted: usize,
     pub layout_nodes: usize,
+    /// Whether this frame ran the layout pass.
+    ///
+    /// Separate from `layout_nodes`, which is the size of the layout tree
+    /// whether or not anything was laid out this frame: a test that asserts
+    /// "layout ran" against a node count is asserting something that cannot
+    /// fail, and this is what it should assert instead.
+    pub relaid: bool,
     /// Participants whose state changed this frame.
     ///
     /// Not scene damage: in Overlay mode a participant is a sibling above the
@@ -137,6 +144,41 @@ struct Node {
     /// so extent changes (content edit, container reflow) re-measure instead
     /// of freezing the mount-time measurement.
     text_measure: Option<Arc<Mutex<TextMeasure>>>,
+    /// What this node's own animation is doing to it this frame, if it has one.
+    ///
+    /// Parked on the node rather than looked up from the running list so the
+    /// paint pass reads it in constant time: looking it up per node would put
+    /// a cost on every node in the tree for a feature most of them never use.
+    motion: Option<MotionSample>,
+}
+
+/// This frame's sample of the animation running on one node.
+#[derive(Debug, Clone, Copy)]
+struct MotionSample {
+    /// The sampled value — what the element's own `paint` reads through
+    /// `PaintContext::animation_value`.
+    value: f64,
+    /// The compositor channel, when the animation drives one. `None` means the
+    /// motion is the element's to draw rather than the host's to fold in.
+    prop: Option<CompositorProp>,
+}
+
+/// One node's animation, as the host is running it.
+#[derive(Debug)]
+struct NodeAnimation {
+    node: usize,
+    /// The scheduler's id, while it is running.
+    ///
+    /// `None` once a *declared* animation has finished. The declaration is
+    /// still standing, so the entry stays: dropping it would let the next
+    /// reconcile meet a declaration it does not recognise and restart the
+    /// animation — which for a finite repeat would mean it played again every
+    /// time its widget was updated.
+    id: Option<AnimId>,
+    /// What the widget declared, for entries that came from a declaration.
+    /// `None` for the ones started through [`WidgetHost::animate`], which the
+    /// host retires as soon as they are over.
+    declared: Option<AnimationSpec>,
 }
 
 /// How far [`WidgetHost::frame`] advances the animation clock.
@@ -380,6 +422,19 @@ pub struct WidgetHost {
     /// point — a second animation mechanism is the likeliest way to end up
     /// with a participant that never unfreezes.
     native_anim: AnimationScheduler,
+    /// Animations running against whole nodes: what [`WidgetHost::animate`]
+    /// starts, and what a widget's own declaration starts.
+    ///
+    /// Its own scheduler rather than a shared one, because the overlay manager
+    /// owns its table and the native transitions need theirs. What the three
+    /// have in common is the clock, not the state.
+    motion: AnimationScheduler,
+    /// One entry per animating node — empty on a tree where nothing moves,
+    /// which is what keeps this channel free for everybody who does not use it.
+    node_anims: Vec<NodeAnimation>,
+    /// Scratch for the sampler's output, so an animation frame does not
+    /// allocate (see [`AnimationScheduler::tick_into`]).
+    motion_samples: Vec<AnimSample>,
     /// Native composition. `None` means every participant request is refused,
     /// which is the honest answer for a host with no OS bridge rather than a
     /// participant that silently draws nothing.
@@ -664,6 +719,9 @@ impl WidgetHost {
             anim_clock: 0.0,
             overlay_animating: false,
             native_anim: AnimationScheduler::new(),
+            motion: AnimationScheduler::new(),
+            node_anims: Vec::new(),
+            motion_samples: Vec::new(),
             native: None,
             participants: Vec::new(),
             frozen: Vec::new(),
@@ -1086,7 +1144,12 @@ impl WidgetHost {
             native_hidden: false,
             scene_nodes: Vec::new(),
             text_measure,
+            motion: None,
         });
+        // A widget that animates from birth — an indeterminate progress bar —
+        // declares its motion on the frame it is mounted. Waiting for it to
+        // become dirty would leave it parked until something else changed it.
+        self.sync_declared_animation(index);
         self.layout_dirty = true;
         index
     }
@@ -1271,6 +1334,10 @@ impl WidgetHost {
             // paint transaction); park them so nothing renders after now.
             self.pending_scene_removals
                 .extend(self.nodes[i].scene_nodes.drain(..));
+            // An animation belongs to the node it runs on: a retired node keeps
+            // none, or the scheduler would go on advancing a value nothing
+            // reads and the frame loop would never park.
+            self.retire_node_animations(i);
             self.nodes[i].dead = true;
         }
     }
@@ -1306,6 +1373,7 @@ impl WidgetHost {
         self.content_dirty
             || self.layout_dirty
             || self.overlay_animating
+            || self.animations_running() > 0
             || !self.pending_scene_removals.is_empty()
             || !self.scene.damage().is_empty()
     }
@@ -1323,9 +1391,273 @@ impl WidgetHost {
         self.anim_clock += dt_secs.max(0.0);
         let overlays = self.overlay.tick_animations(self.anim_clock);
         let native = self.tick_native_transitions();
-        let animating = overlays || native;
-        self.overlay_animating = animating;
-        animating
+        let motion = self.tick_node_animations();
+        self.overlay_animating = overlays || native;
+        overlays || native || motion
+    }
+
+    // --- node animation -----------------------------------------------------
+    //
+    // Two doors in, one channel out. `animate` is the imperative one, for
+    // anything that holds a host — an app, an example, a test. A widget's own
+    // declaration ([`floem_core::Widget::animation`]) is the declarative one,
+    // for the code that cannot hold a host: a widget is borrowed *out* of it
+    // for the whole of every call the host makes into it, so it can only say
+    // what it wants and let the host own what is running.
+    //
+    // Both end up in `node_anims` and both are read back through the node they
+    // run on: the sampled compositor property is what the scene node is folded
+    // with, and the sampled value is what the element's own paint reads.
+
+    /// Starts `kind` on `node`, replacing whatever it was running.
+    ///
+    /// One animation per element. The compositor property a node carries is a
+    /// single value, and driving two channels at once — a fade *and* a slide —
+    /// would need it to be a composed node transform, which is the same
+    /// missing piece that keeps `Scale` from working.
+    ///
+    /// The animation ends when its kind says so; an endless one runs until it
+    /// is cancelled or its node is unmounted. Returns the scheduler's id,
+    /// which is an opaque token: the host's own doors take a [`NodeId`], and
+    /// they are what a caller wants.
+    ///
+    /// Note that this is the *imperative* owner. A node whose widget also
+    /// declares motion is reconciled back to the declaration on its next
+    /// update — the two owners are not combined, and a widget that animates
+    /// itself should not also be animated from outside.
+    pub fn animate(&mut self, node: NodeId, kind: AnimKind) -> AnimId {
+        self.cancel_animation(node);
+        let id = self.motion.start(kind, self.anim_clock);
+        self.node_anims.push(NodeAnimation {
+            node: node.0,
+            id: Some(id),
+            declared: None,
+        });
+        id
+    }
+
+    /// Redirects the animation on `node` toward `to`, keeping the value and
+    /// the velocity it has right now.
+    ///
+    /// Returns whether the node had an animation to redirect. See
+    /// [`AnimationScheduler::retarget`] for what "keeping the velocity" means:
+    /// the animation becomes a spring, because a tween cannot be pointed
+    /// somewhere else without either jumping its value or jumping its speed.
+    pub fn retarget_animation(&mut self, node: NodeId, to: f64) -> bool {
+        let Some(entry) = self.node_anims.iter().find(|entry| entry.node == node.0) else {
+            return false;
+        };
+        let Some(id) = entry.id else {
+            return false;
+        };
+        self.motion.retarget(id, to, self.anim_clock)
+    }
+
+    /// Stops the animation on `node`, if it has one, and releases the
+    /// compositing it was applying.
+    ///
+    /// Returns whether there was one. A widget that declares its own motion
+    /// will start it again on its next update, so this is for the imperative
+    /// case; a declared one stops by the widget stopping declaring it.
+    ///
+    /// Stopping releases the channel, which makes this the deliberate opposite
+    /// of an animation *finishing*. A finished animation leaves the node where
+    /// it put it (that is what `tick_node_animations` parks the sample for)
+    /// because its
+    /// endpoint is a state the caller asked for; a stopped one is not, and
+    /// leaving the node wrapped in a half-applied compositing would strand it
+    /// in a look that no live animation is feeding and that only another
+    /// animation could clear. So the node returns to what its widget paints,
+    /// and the frame after this one is the frame that shows it.
+    ///
+    /// Redirecting rather than stopping is [`WidgetHost::retarget_animation`],
+    /// which does carry the node's current look forward.
+    pub fn cancel_animation(&mut self, node: NodeId) -> bool {
+        let Some(position) = self
+            .node_anims
+            .iter()
+            .position(|entry| entry.node == node.0)
+        else {
+            return false;
+        };
+        let entry = self.node_anims.remove(position);
+        if let Some(id) = entry.id {
+            self.motion.cancel(id);
+        }
+        self.nodes[node.0].motion = None;
+        true
+    }
+
+    /// The sample parked on `node` this frame — the value its animation last
+    /// wrote, whether or not that animation is still running.
+    ///
+    /// The host-side twin of `PaintContext::animation_value`: same number, for
+    /// anyone reading from outside the widget rather than inside its paint. It
+    /// outlives the animation that wrote it, which is what makes "where did
+    /// the fade end up" answerable after the fade is over; stopping an
+    /// animation (rather than letting it finish) is what clears it again.
+    pub fn animation_value(&self, node: NodeId) -> Option<f64> {
+        self.nodes.get(node.0)?.motion.map(|sample| sample.value)
+    }
+
+    /// How many node animations are running right now.
+    ///
+    /// Counts *running* ones: a declared animation that has finished is still
+    /// remembered, so that its declaration does not look unfamiliar on the next
+    /// reconcile, but it is not running and must not keep a frame loop awake.
+    pub fn animations_running(&self) -> usize {
+        self.node_anims
+            .iter()
+            .filter(|entry| entry.id.is_some())
+            .count()
+    }
+
+    /// Brings the animation running on `index` in line with what its widget
+    /// declares.
+    ///
+    /// Three outcomes: nothing declared and nothing running (the common case —
+    /// one virtual call and out of the way), a declaration that changed
+    /// (cancel and restart), and a declaration that went away (cancel). An
+    /// *unchanged* declaration is left exactly as it is, which is what lets a
+    /// widget re-state its motion on every update without restarting it every
+    /// update.
+    ///
+    /// Only declarations are reconciled. "This widget declares nothing" and
+    /// "this widget withdrew the declaration it had" are the same answer from
+    /// the widget and must not be the same answer from the host: an entry this
+    /// pass did not create is an imperative one (see [`WidgetHost::animate`]),
+    /// and cancelling it here would mean that animating a node which then
+    /// reports dirty — which is what a freshly mounted node does, and what any
+    /// node does the moment its state changes — silently cancelled the
+    /// animation it had just been asked to start.
+    fn sync_declared_animation(&mut self, index: usize) {
+        let declared = self.nodes[index].widget.animation();
+        let position = self.node_anims.iter().position(|entry| entry.node == index);
+
+        match (declared, position) {
+            (None, None) => {}
+            (None, Some(position)) => {
+                if self.node_anims[position].declared.is_none() {
+                    return;
+                }
+                let entry = self.node_anims.remove(position);
+                if let Some(id) = entry.id {
+                    self.motion.cancel(id);
+                }
+                self.nodes[index].motion = None;
+            }
+            (Some(spec), position) => {
+                let unchanged = position.is_some_and(|position| {
+                    self.node_anims[position]
+                        .declared
+                        .is_some_and(|declared| declared.matches(&spec))
+                });
+                if unchanged {
+                    return;
+                }
+                if let Some(position) = position {
+                    let entry = self.node_anims.remove(position);
+                    if let Some(id) = entry.id {
+                        self.motion.cancel(id);
+                    }
+                }
+                let id = self.motion.start(AnimKind::from(&spec), self.anim_clock);
+                self.node_anims.push(NodeAnimation {
+                    node: index,
+                    id: Some(id),
+                    declared: Some(spec),
+                });
+            }
+        }
+    }
+
+    /// Reconciles the declarations of the nodes that changed this frame.
+    fn reconcile_declared_animations(&mut self, dirty: &[usize]) {
+        for &index in dirty {
+            if index < self.nodes.len() && !self.nodes[index].dead {
+                self.sync_declared_animation(index);
+            }
+        }
+    }
+
+    /// Advances every node animation and parks this frame's sample on the node
+    /// it runs on. Returns whether anything is still running.
+    ///
+    /// The list is walked back to front so that an entry can be removed while
+    /// its neighbours keep their indices, and the samples live in a buffer the
+    /// host owns rather than in a fresh vector per frame: a spinner that runs
+    /// for a minute has hundreds of chances to be the reason a steady-state
+    /// frame stopped being allocation-free.
+    fn tick_node_animations(&mut self) -> bool {
+        if self.animations_running() == 0 {
+            return false;
+        }
+        let now = self.anim_clock;
+        self.motion.tick_into(now, &mut self.motion_samples);
+
+        for index in (0..self.node_anims.len()).rev() {
+            let Some(id) = self.node_anims[index].id else {
+                // A declared animation that already finished: its declaration
+                // is still standing, so the entry stays put.
+                continue;
+            };
+            let sampled = self
+                .motion_samples
+                .iter()
+                .find(|sample| sample.id == id)
+                .map(|sample| (sample.value, sample.compositor, sample.finished));
+
+            match sampled {
+                Some((value, prop, finished)) => {
+                    // Park the sample even on the last tick. An animation
+                    // *leaves the node where it put it*: a fade that ends at
+                    // zero opacity stays faded, and a slide that ends offset
+                    // stays offset, until something else moves it. Clearing it
+                    // here would snap the node back to its un-composited
+                    // appearance on the very frame the motion finished, which
+                    // is the one moment the seam would be most visible. (The
+                    // overlay entry animation clears instead, because "no
+                    // compositing" *is* the state it is entering — that is a
+                    // different question, answered where it belongs.)
+                    let node = self.node_anims[index].node;
+                    self.nodes[node].motion = Some(MotionSample { value, prop });
+                    if finished {
+                        let declared = self.node_anims[index].declared.is_some();
+                        self.node_anims[index].id = None;
+                        if !declared {
+                            self.node_anims.remove(index);
+                        }
+                    }
+                }
+                // Gone from the scheduler without the host retiring it: only
+                // possible if something cancelled the id behind the host's
+                // back. Nothing is running on the node now.
+                None => {
+                    let declared = self.node_anims[index].declared.is_some();
+                    self.node_anims[index].id = None;
+                    if !declared {
+                        self.node_anims.remove(index);
+                    }
+                }
+            }
+        }
+        self.animations_running() > 0
+    }
+
+    /// Drops whatever animation `index` had, running or merely remembered.
+    fn retire_node_animations(&mut self, index: usize) {
+        let mut position = self.node_anims.len();
+        while position > 0 {
+            position -= 1;
+            if self.node_anims[position].node != index {
+                continue;
+            }
+            if let Some(id) = self.node_anims[position].id {
+                self.motion.cancel(id);
+            }
+            self.node_anims.remove(position);
+            self.nodes[index].motion = None;
+        }
     }
 
     /// The host's animation clock, in seconds since the first frame.
@@ -1511,6 +1843,12 @@ impl WidgetHost {
                 }
             }
         }
+        // Widgets declare the motion they want on their own elements; the host
+        // owns what is running. Reconciled exactly for the nodes that reported
+        // dirty, because a declaration is a function of widget state and a
+        // widget whose state changed is a widget that reported itself dirty —
+        // which is what makes this pass cost nothing on a tree standing still.
+        self.reconcile_declared_animations(&stale_semantics);
         self.semantics_stale = stale_semantics;
         // Drained *before* `reconcile_all`: a composite that just handed its
         // surface to a host overlay must have its in-tree children dropped in
@@ -1527,6 +1865,7 @@ impl WidgetHost {
         if self.layout_dirty {
             self.run_layout();
             self.layout_dirty = false;
+            stats.relaid = true;
         }
         // Overlays lay out against the viewport independently of the main tree.
         self.layout_overlays();
@@ -1742,7 +2081,7 @@ impl WidgetHost {
     fn paint_node(
         &mut self,
         index: usize,
-        composite: Option<CompositorProp>,
+        inherited: Option<CompositorProp>,
         stats: &mut FrameStats,
     ) {
         // The node's id list is painted in place — no per-frame replacement
@@ -1750,6 +2089,11 @@ impl WidgetHost {
         let mut ids = std::mem::take(&mut self.nodes[index].scene_nodes);
         {
             let node = &self.nodes[index];
+            // A node's own animation beats one it merely sits inside (an
+            // overlay's entry): the more specific declaration is the one its
+            // owner asked for.
+            let motion = node.motion;
+            let composite = motion.and_then(|sample| sample.prop).or(inherited);
             let mut cx = NodePaintContext {
                 scene: &mut self.scene,
                 resources: &mut self.resources,
@@ -1757,6 +2101,7 @@ impl WidgetHost {
                 shaper: &mut self.shaper,
                 layout_cache: &mut self.text_layout_cache,
                 composite,
+                animation: motion.map(|sample| sample.value),
                 prev: ids,
                 used: 0,
                 bounds: node.bounds,
@@ -2993,10 +3338,14 @@ struct NodePaintContext<'a> {
     glyphs: &'a mut HashMap<u64, GlyphCacheEntry>,
     shaper: &'a mut TextShaper,
     layout_cache: &'a mut LayoutCache,
-    /// The overlay entry animation this node is being painted under, if any.
-    /// Applied to every scene node the context writes, so a whole overlay
-    /// subtree fades or slides as one.
+    /// The overlay entry animation this node is being painted under, if any —
+    /// or the node's own animation, which takes precedence. Applied to every
+    /// scene node the context writes, so a whole overlay subtree fades or
+    /// slides as one.
     composite: Option<CompositorProp>,
+    /// This frame's value from the animation running on this element, for the
+    /// element to draw its own motion with.
+    animation: Option<f64>,
     /// Last frame's scene node ids for this widget — and, in place, this
     /// frame's. Painting reuses them positionally (`upsert` on a match, no
     /// damage when the payload is unchanged; `insert` once the previous nodes
@@ -3061,6 +3410,10 @@ impl NodePaintContext<'_> {
 impl PaintContext for NodePaintContext<'_> {
     fn bounds(&self) -> Rect {
         self.bounds
+    }
+
+    fn animation_value(&self) -> Option<f64> {
+        self.animation
     }
 
     fn fill_rect(&mut self, rect: Rect, color: floem_types::Color) {

@@ -1,0 +1,563 @@
+//! Motion vocabulary — the *shape* of an animation, as plain data.
+//!
+//! Nothing here drives anything: no clock, no scheduler, no host state. What
+//! lives here is what more than one layer has to be able to *name* — a timing
+//! curve, a repeat policy, the compositor channel an animation drives, and a
+//! declarative description of an animation a widget wants kept running on its
+//! own element.
+//!
+//! It sits in `floem-types` rather than beside the scheduler because the
+//! layers that need these names cannot all depend on `floem-animation`:
+//! `floem-core` (a widget declares an [`AnimationSpec`] through the `Widget`
+//! contract) is below it in the layer order. `floem-animation` re-exports
+//! everything here, so `floem_animation::Easing` keeps working and there is
+//! still exactly one definition of each type.
+
+/// Maps normalised progress to normalised progress.
+///
+/// A curve takes the fraction of an animation's duration that has elapsed
+/// (`0.0 ..= 1.0`) and returns the fraction of the distance to travel. Every
+/// variant satisfies `ease(0) == 0` and `ease(1) == 1` exactly, so a curve can
+/// never leave an animation parked off its endpoint; what differs is the shape
+/// in between, and a spring is allowed to overshoot past `1.0` on the way.
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
+pub enum Easing {
+    /// Constant speed. The default: a caller that says nothing about timing
+    /// gets the same motion this framework had before curves existed.
+    #[default]
+    Linear,
+    /// The CSS / Flutter cubic-bezier form, with control points `(x1, y1)` and
+    /// `(x2, y2)` and implicit endpoints `(0, 0)` and `(1, 1)`.
+    ///
+    /// `x` values are clamped to `0.0 ..= 1.0` when sampled: outside that
+    /// range the curve is no longer a function of time (the same instant maps
+    /// to several positions), which has no meaning for an animation.
+    CubicBezier { x1: f64, y1: f64, x2: f64, y2: f64 },
+    /// The shape of a damped spring, stretched over whatever duration the
+    /// caller asked for.
+    ///
+    /// *Not* the same thing as a spring-driven animation (see
+    /// [`crate::AnimationSpec`] vs. the scheduler's spring kind): this variant
+    /// has a fixed duration and therefore a definite end, and its stiffness is
+    /// expressed over the *normalised* duration, so the same numbers produce
+    /// the same shape whether the animation runs for 80 ms or 800 ms. Reach for
+    /// it when you want overshoot with a deadline; reach for a real spring when
+    /// you want the physics to decide when the motion is over.
+    Spring { stiffness: f64, damping: f64 },
+}
+
+impl Easing {
+    /// CSS `ease-in`: slow to start, fast at the end.
+    pub const EASE_IN: Self = Self::CubicBezier {
+        x1: 0.42,
+        y1: 0.0,
+        x2: 1.0,
+        y2: 1.0,
+    };
+
+    /// CSS `ease-out`: fast to start, slow to settle.
+    ///
+    /// The right default for something that is *appearing*: it arrives at full
+    /// speed and decelerates into place, which reads as responsive, where
+    /// `ease-in` on an entrance reads as reluctant.
+    pub const EASE_OUT: Self = Self::CubicBezier {
+        x1: 0.0,
+        y1: 0.0,
+        x2: 0.58,
+        y2: 1.0,
+    };
+
+    /// CSS `ease-in-out`: slow at both ends, fast in the middle.
+    pub const EASE_IN_OUT: Self = Self::CubicBezier {
+        x1: 0.42,
+        y1: 0.0,
+        x2: 0.58,
+        y2: 1.0,
+    };
+
+    /// The curve with explicit control points.
+    pub const fn cubic_bezier(x1: f64, y1: f64, x2: f64, y2: f64) -> Self {
+        Self::CubicBezier { x1, y1, x2, y2 }
+    }
+
+    /// Samples the curve at `progress`.
+    ///
+    /// Out-of-range input is clamped, so a caller that overshoots the
+    /// animation's duration gets its endpoint rather than a curve extrapolated
+    /// into nonsense.
+    pub fn ease(&self, progress: f64) -> f64 {
+        let u = progress.clamp(0.0, 1.0);
+        match *self {
+            Self::Linear => u,
+            Self::CubicBezier { x1, y1, x2, y2 } => {
+                if u <= 0.0 {
+                    return 0.0;
+                }
+                if u >= 1.0 {
+                    return 1.0;
+                }
+                cubic_bezier_at(x1, y1, x2, y2, u)
+            }
+            Self::Spring { stiffness, damping } => {
+                if u <= 0.0 {
+                    return 0.0;
+                }
+                if u >= 1.0 {
+                    return 1.0;
+                }
+                // Released from rest one unit away from home: the response is
+                // the *shape* of the spring, and the caller's duration is the
+                // time it gets to complete it. Forcing the endpoint above is
+                // what keeps a non-settling spring from leaving the animation
+                // stranded away from its target.
+                1.0 + damped_spring(-1.0, 0.0, stiffness, damping, u).0
+            }
+        }
+    }
+}
+
+/// How a repeating animation goes round again.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+pub enum RepeatMode {
+    /// Jump back to the start of the cycle and play it again. A spinner that
+    /// sweeps one way and restarts uses this.
+    #[default]
+    Restart,
+    /// Play the cycle backwards every other time — a ping-pong that lands back
+    /// where it started after each *pair* of half-cycles.
+    Reverse,
+}
+
+/// How many times a repeating animation runs.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct RepeatSpec {
+    pub mode: RepeatMode,
+    /// `None` means forever — the animation never reports finished, which is
+    /// what keeps a frame loop awake for as long as it is mounted.
+    pub iterations: Option<u32>,
+}
+
+impl RepeatSpec {
+    /// An endless ping-pong, the shape a breathing/pulsing element wants.
+    pub const INFINITE_REVERSE: Self = Self {
+        mode: RepeatMode::Reverse,
+        iterations: None,
+    };
+
+    /// `iterations` full cycles, jumping back to the start each time.
+    pub const fn restart(iterations: u32) -> Self {
+        Self {
+            mode: RepeatMode::Restart,
+            iterations: Some(iterations),
+        }
+    }
+
+    /// `iterations` full there-and-back cycles.
+    pub const fn reverse(iterations: u32) -> Self {
+        Self {
+            mode: RepeatMode::Reverse,
+            iterations: Some(iterations),
+        }
+    }
+}
+
+/// A declarative description of a tween: where it goes, how long it takes, and
+/// what it drives.
+///
+/// The vocabulary a *widget* can ask the host for. Deliberately narrower than
+/// the scheduler's kind space — a widget can declare a timed, possibly
+/// repeating tween, not a physical spring or a keyframe track, because those
+/// need parameters (velocity, key tracks) that a widget has no business
+/// inventing on its own element.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct AnimationSpec {
+    pub from: f64,
+    pub to: f64,
+    pub duration_secs: f64,
+    pub easing: Easing,
+    /// `None` plays once.
+    pub repeat: Option<RepeatSpec>,
+    /// Which compositor channel the animation drives, if any.
+    ///
+    /// The payload is a *tag*, not a value: it names the channel, and the
+    /// per-frame value replaces it. `None` means the animation drives nothing
+    /// on its own — the step is handed to the element's owner to read (see the
+    /// paint context's `animation_value`) and draw with, which is how a
+    /// self-drawn control animates one part of itself instead of being
+    /// translated whole.
+    pub prop: Option<CompositorProp>,
+}
+
+impl AnimationSpec {
+    /// A one-shot tween that drives nothing by itself.
+    pub const fn new(from: f64, to: f64, duration_secs: f64) -> Self {
+        Self {
+            from,
+            to,
+            duration_secs,
+            easing: Easing::Linear,
+            repeat: None,
+            prop: None,
+        }
+    }
+
+    /// A repeating tween that drives nothing by itself.
+    pub const fn repeating(from: f64, to: f64, duration_secs: f64, repeat: RepeatSpec) -> Self {
+        Self {
+            from,
+            to,
+            duration_secs,
+            easing: Easing::Linear,
+            repeat: Some(repeat),
+            prop: None,
+        }
+    }
+
+    pub const fn with_easing(mut self, easing: Easing) -> Self {
+        self.easing = easing;
+        self
+    }
+
+    /// Drives a compositor channel, so the element moves without a re-layout.
+    pub const fn with_prop(mut self, prop: CompositorProp) -> Self {
+        self.prop = Some(prop);
+        self
+    }
+
+    /// Whether two specs would produce the same motion.
+    ///
+    /// What the host reconciles a widget's declaration against: an animation
+    /// whose spec is unchanged is left running rather than restarted, so a
+    /// widget re-declaring its motion on every update does not restart it every
+    /// update.
+    pub fn matches(&self, other: &Self) -> bool {
+        self == other
+    }
+}
+
+/// Properties that can be applied to a scene node without re-laying it out.
+///
+/// The value inside the variant is either the template a scheduler maps its
+/// sampled value onto, or the live value a node carries — the same type does
+/// both, and which one you are holding is decided by where it came from: a
+/// `CompositorProp` in an animation kind is a template, a `CompositorProp`
+/// returned by a sampler is a value.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum CompositorProp {
+    Opacity(f64),
+    TranslateX(f64),
+    TranslateY(f64),
+    Scale(f64),
+}
+
+/// Cubic-bezier timing curve: solves for the parameter that lands on `x` and
+/// returns the corresponding `y`.
+///
+/// `x1`/`x2` are clamped into `0.0 ..= 1.0` (see [`Easing::CubicBezier`]).
+/// Newton's method does the work in the common case; a bisection fallback
+/// catches the curves where the derivative vanishes partway, which is exactly
+/// where a plain Newton iteration would stall or wander.
+pub fn cubic_bezier_at(x1: f64, y1: f64, x2: f64, y2: f64, x: f64) -> f64 {
+    let x1 = x1.clamp(0.0, 1.0);
+    let x2 = x2.clamp(0.0, 1.0);
+
+    let mut u = x;
+    for _ in 0..8 {
+        let error = bezier_axis(u, x1, x2) - x;
+        if error.abs() < 1e-10 {
+            return bezier_axis(u, y1, y2);
+        }
+        let slope = bezier_axis_slope(u, x1, x2);
+        if slope.abs() < 1e-10 {
+            break;
+        }
+        u -= error / slope;
+    }
+
+    // The curve is monotone in `u` once the `x` control points are in range,
+    // so bracketing converges even where Newton could not.
+    let (mut low, mut high) = (0.0, 1.0);
+    let mut u = x;
+    for _ in 0..64 {
+        let current = bezier_axis(u, x1, x2);
+        if (current - x).abs() < 1e-12 {
+            break;
+        }
+        if current < x {
+            low = u;
+        } else {
+            high = u;
+        }
+        u = 0.5 * (low + high);
+    }
+    bezier_axis(u, y1, y2)
+}
+
+/// One axis of a cubic bezier whose endpoints are `0` and `1`.
+fn bezier_axis(t: f64, p1: f64, p2: f64) -> f64 {
+    let c = 3.0 * p1;
+    let b = 3.0 * p2 - 6.0 * p1;
+    let a = 1.0 - 3.0 * p2 + 3.0 * p1;
+    ((a * t + b) * t + c) * t
+}
+
+/// Derivative of [`bezier_axis`] with respect to its parameter.
+fn bezier_axis_slope(t: f64, p1: f64, p2: f64) -> f64 {
+    let c = 3.0 * p1;
+    let b = 3.0 * p2 - 6.0 * p1;
+    let a = 1.0 - 3.0 * p2 + 3.0 * p1;
+    (3.0 * a * t + 2.0 * b) * t + c
+}
+
+/// Analytic response of a viscously damped spring, `t` seconds after being
+/// released from `offset` (relative to rest) with `velocity`.
+///
+/// Returns `(offset, velocity)` at `t`. This is the single implementation
+/// behind both [`Easing::Spring`] — a fixed shape stretched over a duration —
+/// and the scheduler's spring animation kind, which has a velocity of its own
+/// and takes as long as it takes. Keeping one formula means the two cannot
+/// drift apart, and it lets a retarget hand the spring the velocity the tween
+/// it replaced was carrying.
+///
+/// The three damping regimes are solved separately because they are genuinely
+/// different functions: approximating the overdamped case with the critically
+/// damped form (as an earlier version did) leaves the animation visibly wrong
+/// whenever damping is more than critical — common for anything meant to settle
+/// without bounce.
+pub fn damped_spring(
+    offset: f64,
+    velocity: f64,
+    stiffness: f64,
+    damping: f64,
+    t: f64,
+) -> (f64, f64) {
+    let omega = stiffness.max(0.0).sqrt();
+    if omega <= 0.0 {
+        // No restoring force: the offset just drifts at its initial speed.
+        return (offset + velocity * t, velocity);
+    }
+    let zeta = damping / (2.0 * omega);
+
+    if (zeta - 1.0).abs() < 1e-9 {
+        // Critically damped: the fastest approach that does not overshoot.
+        let a = omega;
+        let decay = (-a * t).exp();
+        let c = velocity + a * offset;
+        let x = decay * (offset + c * t);
+        return (x, decay * (c - a * (offset + c * t)));
+    }
+
+    if zeta < 1.0 {
+        let a = zeta * omega;
+        let wd = omega * (1.0 - zeta * zeta).sqrt();
+        let decay = (-a * t).exp();
+        let (sin, cos) = (wd * t).sin_cos();
+        let b = (velocity + a * offset) / wd;
+        let x = decay * (offset * cos + b * sin);
+        let v = decay * ((b * wd - a * offset) * cos - (offset * wd + a * b) * sin);
+        return (x, v);
+    }
+
+    // Overdamped: two real modes, and the slow one is what you see in any
+    // range worth sampling.
+    let a = zeta * omega;
+    let r = omega * (zeta * zeta - 1.0).sqrt();
+    let (s1, s2) = (-a - r, -a + r);
+    let denominator = s1 - s2;
+    let c1 = (velocity - s2 * offset) / denominator;
+    let c2 = (s1 * offset - velocity) / denominator;
+    let (e1, e2) = ((s1 * t).exp(), (s2 * t).exp());
+    (c1 * e1 + c2 * e2, s1 * c1 * e1 + s2 * c2 * e2)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Sampled densely enough that a wrong branch or a stalled solver shows up.
+    fn samples(easing: Easing) -> Vec<f64> {
+        (0..=100)
+            .map(|i| easing.ease(f64::from(i) / 100.0))
+            .collect()
+    }
+
+    #[test]
+    fn every_curve_lands_exactly_on_its_endpoints() {
+        for easing in [
+            Easing::Linear,
+            Easing::EASE_IN,
+            Easing::EASE_OUT,
+            Easing::EASE_IN_OUT,
+            Easing::Spring {
+                stiffness: 200.0,
+                damping: 12.0,
+            },
+            Easing::Spring {
+                stiffness: 200.0,
+                damping: 60.0,
+            },
+        ] {
+            assert_eq!(easing.ease(0.0), 0.0, "{easing:?} at 0");
+            assert_eq!(easing.ease(1.0), 1.0, "{easing:?} at 1");
+            // Out of range clamps rather than extrapolating.
+            assert_eq!(easing.ease(-0.5), 0.0, "{easing:?} below range");
+            assert_eq!(easing.ease(1.5), 1.0, "{easing:?} above range");
+        }
+    }
+
+    /// A cubic bezier whose control points sit exactly a third and two thirds
+    /// along the diagonal *is* the identity: `x(u) == u == y(u)`, so solving
+    /// for the parameter is a no-op and the curve must return its input. That
+    /// makes the three-quarter points checkable without magic numbers, and it
+    /// exercises the solver rather than the fast paths.
+    #[test]
+    fn the_diagonal_curve_is_the_identity_at_every_sampled_point() {
+        let diagonal = Easing::cubic_bezier(1.0 / 3.0, 1.0 / 3.0, 2.0 / 3.0, 2.0 / 3.0);
+        for t in [0.25, 0.5, 0.75] {
+            let got = diagonal.ease(t);
+            assert!(
+                (got - t).abs() < 1e-9,
+                "diagonal curve at {t} returned {got}"
+            );
+        }
+    }
+
+    /// A curve through `(0.5, 0)` and `(0.5, 1)` is symmetric about the middle
+    /// of the unit square, so the two quarter points must add up to one. This
+    /// is the point-wise check that catches a solver returning the *y* of the
+    /// wrong parameter.
+    #[test]
+    fn a_symmetric_curve_is_antisymmetric_about_its_middle() {
+        let symmetric = Easing::cubic_bezier(0.5, 0.0, 0.5, 1.0);
+        let sum = symmetric.ease(0.25) + symmetric.ease(0.75);
+        assert!((sum - 1.0).abs() < 1e-9, "quarter points summed to {sum}");
+        let middle = symmetric.ease(0.5);
+        assert!((middle - 0.5).abs() < 1e-9, "middle was {middle}");
+    }
+
+    #[test]
+    fn the_named_curves_accelerate_and_decelerate_where_they_claim_to() {
+        assert!(
+            Easing::EASE_IN.ease(0.25) < 0.25,
+            "ease-in must still be behind at a quarter of the way"
+        );
+        assert!(
+            Easing::EASE_OUT.ease(0.25) > 0.25,
+            "ease-out must already be ahead at a quarter of the way"
+        );
+        assert!(
+            Easing::EASE_IN_OUT.ease(0.5) - 0.5 < 1e-9,
+            "ease-in-out is symmetric, so it is level at the midpoint"
+        );
+        assert_eq!(Easing::Linear.ease(0.25), 0.25);
+        assert_eq!(Easing::Linear.ease(0.75), 0.75);
+    }
+
+    /// The curves must be distinguishable — a sampler that quietly ignored its
+    /// curve would pass every endpoint assertion above.
+    #[test]
+    fn different_curves_disagree_in_the_middle() {
+        let linear = Easing::Linear.ease(0.25);
+        assert!((Easing::EASE_IN.ease(0.25) - linear).abs() > 0.05);
+        assert!((Easing::EASE_OUT.ease(0.25) - linear).abs() > 0.05);
+        assert!((Easing::EASE_IN.ease(0.75) - Easing::EASE_OUT.ease(0.75)).abs() > 0.05);
+    }
+
+    #[test]
+    fn travelling_curves_never_go_backwards() {
+        for easing in [
+            Easing::Linear,
+            Easing::EASE_IN,
+            Easing::EASE_OUT,
+            Easing::EASE_IN_OUT,
+        ] {
+            let values = samples(easing);
+            for pair in values.windows(2) {
+                assert!(
+                    pair[1] >= pair[0] - 1e-12,
+                    "{easing:?} went backwards: {} -> {}",
+                    pair[0],
+                    pair[1]
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn an_underdamped_spring_easing_overshoots_and_a_stiff_one_does_not() {
+        let bouncy = Easing::Spring {
+            stiffness: 200.0,
+            damping: 8.0,
+        };
+        let highest = samples(bouncy).into_iter().fold(f64::MIN, f64::max);
+        assert!(
+            highest > 1.02,
+            "an underdamped spring easing is supposed to overshoot; peak was {highest}"
+        );
+
+        let flat = Easing::Spring {
+            stiffness: 200.0,
+            damping: 80.0,
+        };
+        let highest = samples(flat).into_iter().fold(f64::MIN, f64::max);
+        assert!(
+            highest <= 1.0 + 1e-9,
+            "a heavily damped spring easing must not overshoot; peak was {highest}"
+        );
+    }
+
+    /// The spring and the physical spring kind share one solver, so the damped
+    /// regimes have to be continuous across the critical boundary — a jump
+    /// there is what an approximation would hide.
+    #[test]
+    fn the_damping_regimes_meet_at_critical_damping() {
+        // ω = 10, so ζ = damping / 20 and ζ = 1 sits at damping = 20.
+        let just_under = damped_spring(1.0, 0.0, 100.0, 20.0 - 1e-6, 0.1).0;
+        let just_over = damped_spring(1.0, 0.0, 100.0, 20.0 + 1e-6, 0.1).0;
+        assert!(
+            (just_under - just_over).abs() < 1e-6,
+            "critical damping is a discontinuity: {just_under} vs {just_over}"
+        );
+    }
+
+    #[test]
+    fn a_spring_with_velocity_carries_it() {
+        // Released at rest, the offset can only move toward home; released with
+        // velocity away from home it first moves the other way.
+        let at_rest = damped_spring(-1.0, 0.0, 100.0, 20.0, 0.01).0;
+        assert!(at_rest > -1.0, "at rest it advances toward home");
+
+        let thrown = damped_spring(-1.0, 60.0, 100.0, 20.0, 0.01).0;
+        assert!(
+            thrown > at_rest,
+            "a velocity away from home must carry the offset past the resting case: \
+             {thrown} vs {at_rest}"
+        );
+    }
+
+    #[test]
+    fn a_spec_matches_only_an_identical_spec() {
+        let spec = AnimationSpec::repeating(0.0, 1.0, 1.2, RepeatSpec::restart(3));
+        assert!(spec.matches(&spec));
+        assert!(!spec.matches(&AnimationSpec::repeating(
+            0.0,
+            1.0,
+            1.2,
+            RepeatSpec::reverse(3)
+        )));
+        assert!(!spec.matches(&AnimationSpec::repeating(
+            0.0,
+            1.0,
+            1.3,
+            RepeatSpec::restart(3)
+        )));
+    }
+
+    #[test]
+    fn repeat_specs_carry_the_iteration_count() {
+        assert_eq!(RepeatSpec::restart(3).iterations, Some(3));
+        assert_eq!(RepeatSpec::restart(3).mode, RepeatMode::Restart);
+        assert_eq!(RepeatSpec::reverse(2).mode, RepeatMode::Reverse);
+        assert_eq!(RepeatSpec::INFINITE_REVERSE.iterations, None);
+    }
+}

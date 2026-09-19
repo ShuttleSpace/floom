@@ -15,9 +15,10 @@ pub use compose::{Align, Axis, Child, ChildBuilder, ChildKey, Inset, LayoutReque
 pub use context::{CreateContext, EventContext, PaintContext, SemanticsContext, UpdateContext};
 pub use element::{Element, ElementKind};
 pub use floem_types::{
-    Color, ElementId, Event, ImeUpdate, InputMode, Key, KeyEvent, KeyPhase, Modifiers, NamedKey,
-    NativeCompositionMode, NativeSnapshot, NativeViewKind, OverlayHandle, OverlayKind, Point,
-    PointerButton, PointerEvent, PointerKind, PointerPhase, Rect, ResourceId, ScrollEvent, Size,
+    AnimationSpec, Color, CompositorProp, Easing, ElementId, Event, ImeUpdate, InputMode, Key,
+    KeyEvent, KeyPhase, Modifiers, NamedKey, NativeCompositionMode, NativeSnapshot, NativeViewKind,
+    OverlayHandle, OverlayKind, Point, PointerButton, PointerEvent, PointerKind, PointerPhase,
+    Rect, RepeatMode, RepeatSpec, ResourceId, ScrollEvent, Size,
 };
 pub use native::{NativeGrant, NativeRequest};
 pub use overlay::OverlayRequest;

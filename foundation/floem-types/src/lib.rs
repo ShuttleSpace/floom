@@ -1,4 +1,4 @@
-//! Platform-neutral geometry, color, display, and ID types for Floem 2.0.
+//! Platform-neutral geometry, color, display, motion, and ID types for Floem 2.0.
 //!
 //! This crate must remain free of OS windowing and GPU backend dependencies.
 
@@ -9,6 +9,7 @@ mod display;
 mod event;
 mod geometry;
 mod ids;
+mod motion;
 mod native;
 mod overlay;
 
@@ -20,6 +21,9 @@ pub use event::{
 };
 pub use geometry::{Constraints, Insets, Point, Rect, Size, Transform};
 pub use ids::{ElementId, NativeViewId, PlatformId, ResourceId, SceneNodeId, SurfaceId, WindowId};
+pub use motion::{
+    AnimationSpec, CompositorProp, Easing, RepeatMode, RepeatSpec, cubic_bezier_at, damped_spring,
+};
 pub use native::{InputMode, NativeCapture, NativeCompositionMode, NativeSnapshot, NativeViewKind};
 pub use overlay::{OverlayHandle, OverlayKind};
 
