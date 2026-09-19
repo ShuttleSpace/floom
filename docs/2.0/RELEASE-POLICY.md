@@ -137,9 +137,10 @@ Two different gates, and it matters which one is being quoted:
 FLOEM2_WINDOW_IDLE=1 FLOEM2_WINDOW_IDLE_SECS=8 cargo run -p floem2-window --features real
 ```
 
-Last measured (macOS 26.6.2, Apple M4 Pro): `frames=2 redraws_requested=3
-auto_redraws=1 events=4`, process CPU `0.16 s` (1.9 % of one core) over 8 s
-idle. The gate is on **frames**: two frames for a window that has been idle for
+Last measured (macOS 26.6.2, Apple M4 Pro), at the case's own 30 s horizon and
+reproduced twice: `frames=2 redraws_requested=3 auto_redraws=1 events=4`,
+process CPU `0.15 s` (0.5 % of one core), with `about_to_wait` 82 and 71 — i.e.
+the loop parked ~75 times and never asked for a frame. The gate is on **frames**: two frames for a window that has been idle for
 eight seconds is the whole point. `redraws_requested` and the CPU figure drift
 by a redraw or two between runs — they count the startup redraw and whatever the
 window server sends in the first second — so they are recorded, not gated. A

@@ -1832,8 +1832,16 @@ budget below the measured value fails with exit 1.
 - **Compatibility/release policy "active" (P4)** — self-checking now, but no
   release has been cut and measured against it.
 
-Device cases: unchanged at 4 of 29 recorded (`G1-1`, `G1-5`, `D1`, `D11`). This
-pass re-ran `G1-4` (idle window) and it holds.
+Device cases: **5 of 29 now recorded** — `G1-1`, `G1-5`, `D1`, `D11`, and
+`G1-4` **closed as PASS in this pass**. G1-4 had been left INCONCLUSIVE on
+2026-09-18 because `frames` climbed 2 → 44 over 30 s of idling, which was read
+as macOS resize jitter. Re-run twice here, at the case's own 30 s horizon, it
+produced `frames=2 redraws_requested=3 auto_redraws=1 events=4` with
+`about_to_wait` 82 and 71 — no frame beyond the startup pair across ~75
+event-loop waits, CPU 0.15 s (0.5 % of one core). Two agreeing runs beat one
+unreproduced artifact, so the case closes and the 2026-09-18 row is marked
+superseded. `G1-2` remains BLOCKED (single display); the other **23 are
+PENDING** (`R1-1…4`, `R2-1…8`, `D2–D10`, `D12`, `G1-3`).
 
 ---
 
