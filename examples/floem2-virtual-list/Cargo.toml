@@ -1,0 +1,12 @@
+[package]
+name = "floem2-virtual-list"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+description = "Virtual scrolling golden example: bounded element pool over a 100k item list"
+
+[dependencies]
+floem-core = { path = "../../foundation/floem-core", version = "0.2.0" }
+floem-types = { path = "../../foundation/floem-types", version = "0.2.0" }
+floem-virtual = { path = "../../layout/floem-virtual", version = "0.2.0" }

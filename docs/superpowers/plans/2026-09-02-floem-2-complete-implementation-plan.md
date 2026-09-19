@@ -1558,33 +1558,33 @@ web
 embedded
 ```
 
-- [ ] Ensure each compiles for its intended target.
-- [ ] Add screenshots and benchmark notes.
-- [ ] Commit.
+- [x] Ensure each compiles for its intended target. — `examples/floem2-{hello,counter,list,virtual-list,datagrid,forms,navigation,editor,native-plugin}` run headless and **assert** the invariant they demonstrate (compiled by `cargo build --workspace`, *run* by `bash scripts/run-golden-examples.sh`, 9/9 green). `floem2-probe` and `floem2-window` need a display (`--features real`). `webview`/`video`/`camera` remain device-gated (Phase 17), `harmony`/`web`/`embedded` target-gated (Phase 19).
+- [x] Add screenshots and benchmark notes. — **Partially, and stated as such:** no screenshots — the headless examples have nothing to photograph, and the two display examples are documented with their captured output instead. Benchmark notes are the measured invariants recorded in `docs/2.0/EXAMPLES.md`: 38 elements materialized over a 100 000-row scroll, paint ops 44 vs 44 for 1 000 vs 100 000 rows, release sizes.
+- [x] Commit.
 
 ## Task 30.2: Architecture documentation
 
-- [ ] Document Runtime, Scene, Renderer, Platform, Native, Widget, AI layers.
-- [ ] Add dependency diagrams.
-- [ ] Add contributor guide for new widget/backend/plugin.
-- [ ] Commit.
+- [x] Document Runtime, Scene, Renderer, Platform, Native, Widget, AI layers. — `docs/2.0/ARCHITECTURE.md`: an L0–L9 table (every row parity-checked against the gate's `LAYERS` by `app/floem2/tests/docs_parity.rs`), plus the three ABIs (renderer / platform / native) and the two crates deliberately outside the ladder. The "AI layer" is the L8 tooling tier (`floem-agent`, `floem-devtools`), documented as reachable only from the L9 facade and never shipped in an app binary.
+- [x] Add dependency diagrams. — the layer diagram in the same file (arrows point down; `floem2` is the only crate that may reach L8).
+- [x] Add contributor guide for new widget/backend/plugin. — four recipes: add a widget, add a renderer/platform backend (the three registrations, including `LIB_DIRS`), add a native plugin, add a crate/example.
+- [x] Commit.
 
 ## Task 30.3: Compatibility and migration guide
 
-- [ ] Document `View` → `Widget`/`Element` migration.
-- [ ] Document `ViewId` compatibility.
-- [ ] Document renderer/platform plugin migration.
-- [ ] Add before/after examples.
-- [ ] Commit.
+- [x] Document `View` → `Widget`/`Element` migration. — `docs/2.0/MIGRATION.md`: the concept table plus steps 1–2 (state, keyed children).
+- [x] Document `ViewId` compatibility. — §Step 3: `ViewId` (global registry) → `NodeId` (issued by, and scoped to, one `WidgetHost`), with the consequence for code that stashed ids in structs, threads or statics.
+- [x] Document renderer/platform plugin migration. — §Renderer plugins (v1 immediate-mode `begin/set_transform/fill/…` → 2.0 retained `render_scene(&SceneGraph, &DamageRegion)`) and §Platform plugins (winit baked into the monolith → the `floem-platform` `Platform`/`Window`/`Surface`/`Clipboard`/`Ime` ABI), each naming its conformance suite.
+- [x] Add before/after examples. — both halves are compiled **and run** by `app/floem2/tests/migration.rs` (5 tests): the before half through `floem::compat::v1_prelude`, the after half through `floem2::prelude`. A migration guide whose snippets do not compile is worse than none.
+- [x] Commit.
 
 ## Task 30.4: Release gates
 
-- [ ] Define supported target versions and tested OS ranges.
-- [ ] Define semantic-versioning policy for public crates.
-- [ ] Define renderer/platform conformance tests.
-- [ ] Define memory/CPU benchmark gates.
-- [ ] Define deprecation policy.
-- [ ] Commit release policy.
+- [x] Define supported target versions and tested OS ranges. — `docs/2.0/RELEASE-POLICY.md` §Supported targets: `aarch64-apple-darwin` **tested** (macOS 26.6.2, Apple M4 Pro, rustc 1.98.0); `x86_64-apple-darwin` explicitly **untested**; Windows/Linux **device-gated** (winit lifecycle is portable, native composition is Phase 16.2 and incomplete); Android/iOS (17), OHOS/wasm/embedded (19) gated with the reason named.
+- [x] Define semantic-versioning policy for public crates. — §Versioning + the locked-surface table: prelude names, feature-bundle names, `Widget`/`WidgetAny` and the three plugin ABIs are breaking-on-change; `advanced` and L5 may change in a minor; L8 tooling carries no guarantee.
+- [x] Define renderer/platform conformance tests. — §Conformance names `render/floem-renderer/tests/{contract,render_handoff}.rs`, `platform/floem-platform/tests/contracts.rs`, `platform/floem-platform-desktop/tests/{lifecycle,accessibility,winit_capabilities}.rs`, plus the facade/compat suites — and requires a backend to pass the **ABI's** suite, not only its own.
+- [x] Define memory/CPU benchmark gates. — §Performance: the 10 root bench targets and the per-crate suites, a 20 % regression rule, the idle-frame gate (`frames=2` over 8 s), and the two scale invariants. The regression rule is recorded as **manual today** — criterion baselines are not committed and no CI job enforces the percentage — rather than implied to be automatic.
+- [x] Define deprecation policy. — §Deprecation policy: the v1 compat tier guaranteed for the current major version of `floem`, removal requiring one release with `#[deprecated]` + a migration entry; the `floem` name reserved until the monolith retires.
+- [x] Commit release policy.
 
 ---
 
@@ -1639,7 +1639,7 @@ tier is available to anyone with the time.
 - [ ] Material/Cupertino/Fluent/Harmony design systems available. **BLOCKED, but not from scratch.** The Material / Cupertino / Fluent kits already exist as `ecosystem/floem-ui` (~350 crates, imported into this repo on 2026-09-18). They are **not** available to floem 2.0, though: their `floem` dependency resolves to the **v1 monolith** at the repo root (`floem = { git = … }` patched to `path = "../.."`), so they are built against the old `View` API, not the 2.0 widget layer. Phase 21.1–21.4 is therefore a porting job with an existing asset behind it, not a greenfield one. Harmony has no kit at all.
 - [ ] Docs/examples complete. **PARTIAL.** Runable 2.0 examples exist (`floem2-window`, `floem2-probe`, `floem2-counter`) and there is real architecture documentation (`docs/workspace-conventions.md`, `ecosystem.md`, `accessibility.md`, `ohos.md`, `ios.md`, `android.md`, `host-embedding.md`). Phase 30.1's golden-example set and 30.2's full architecture doc pass are unstarted (18 steps).
 - [ ] Third-party plugin authoring path documented. **BLOCKED** — no such document anywhere under `docs/`; Phase 30 does not currently name it either.
-- [ ] Compatibility/release policy active. **PARTIAL.** `docs/ecosystem.md` carries a floem↔satellite compatibility matrix and `vendor/MIGRATION.md` covers the vendored forks, but there is no user-facing v1→v2 migration guide (Task 30.3) and no active release policy — `docs/gates/*.md` for 1.0 are entirely unrun.
+- [ ] Compatibility/release policy active. **PARTIAL — written, not yet exercised.** Phase 30.3/30.4 landed `docs/2.0/MIGRATION.md` and `docs/2.0/RELEASE-POLICY.md`, and `app/floem2/tests/docs_parity.rs` keeps both honest (every test/bench target they name exists; every example they list exists and runs). Still missing for "active": `docs/gates/*.md` for 1.0 remain entirely unrun, so no release has yet been measured against the policy end to end.
 - [ ] Performance budgets enforced in CI. **BLOCKED by an explicit deferral.** Phase 0.3 Step 4 landed as "policy documented; absolute CI fail deferred until multi-run calibration" (`benches/memory_baseline.md`), and the calibration numbers were never checked in under `docs/superpowers/benchmarks/`. The 12% `update_reuse` reading above is exactly the kind of drift a live budget would have caught; today nothing does.
 
 ---

@@ -1,0 +1,14 @@
+[package]
+name = "floem2-datagrid"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+description = "Data grid golden example: virtualized rows, sorting, selection and editing"
+
+[dependencies]
+floem-core = { path = "../../foundation/floem-core", version = "0.2.0" }
+floem-types = { path = "../../foundation/floem-types", version = "0.2.0" }
+floem-virtual = { path = "../../layout/floem-virtual", version = "0.2.0" }
+floem-widgets = { path = "../../widgets/floem-widgets", version = "0.2.0" }
+floem-widgets-data = { path = "../../widgets/floem-widgets-data", version = "0.2.0" }

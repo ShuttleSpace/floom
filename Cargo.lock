@@ -2876,10 +2876,58 @@ dependencies = [
 ]
 
 [[package]]
+name = "floem2-datagrid"
+version = "0.2.0"
+dependencies = [
+ "floem-core",
+ "floem-types",
+ "floem-virtual",
+ "floem-widgets",
+ "floem-widgets-data",
+]
+
+[[package]]
+name = "floem2-editor"
+version = "0.2.0"
+dependencies = [
+ "floem-editor 0.2.0",
+]
+
+[[package]]
+name = "floem2-forms"
+version = "0.2.0"
+dependencies = [
+ "floem-forms",
+ "floem2",
+]
+
+[[package]]
 name = "floem2-hello"
 version = "0.2.0"
 dependencies = [
  "floem2",
+]
+
+[[package]]
+name = "floem2-list"
+version = "0.2.0"
+dependencies = [
+ "floem2",
+]
+
+[[package]]
+name = "floem2-native-plugin"
+version = "0.2.0"
+dependencies = [
+ "floem-native",
+ "floem-types",
+]
+
+[[package]]
+name = "floem2-navigation"
+version = "0.2.0"
+dependencies = [
+ "floem-navigation",
 ]
 
 [[package]]
@@ -2895,6 +2943,15 @@ dependencies = [
  "floem-renderer-vello",
  "floem-types",
  "floem-widgets",
+]
+
+[[package]]
+name = "floem2-virtual-list"
+version = "0.2.0"
+dependencies = [
+ "floem-core",
+ "floem-types",
+ "floem-virtual",
 ]
 
 [[package]]

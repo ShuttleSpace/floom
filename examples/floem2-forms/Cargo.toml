@@ -1,0 +1,11 @@
+[package]
+name = "floem2-forms"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+description = "Form validation golden example: rules, dirty/touched tracking and control bindings"
+
+[dependencies]
+floem2 = { path = "../../app/floem2", version = "0.2.0" }
+floem-forms = { path = "../../framework/floem-forms", version = "0.2.0" }
