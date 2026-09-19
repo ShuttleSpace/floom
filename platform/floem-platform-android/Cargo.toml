@@ -11,3 +11,15 @@ rust-version.workspace = true
 floem-accessibility = { path = "../../framework/floem-accessibility", version = "0.2.0" }
 floem-platform = { path = "../floem-platform", version = "0.2.0" }
 floem-types = { path = "../../foundation/floem-types", version = "0.2.0" }
+
+# --- Android real backend (Phase 17 / 19.4) ---------------------------------
+# These mirror the dependency blueprint already declared for the workspace root
+# at `Cargo.toml` (the `android-native-activity` feature pulls in
+# `floem-winit-android` + `android-activity`; `ndk` gives the native window for
+# the renderer surface; `android_logger` routes logs to logcat). The block is
+# target-gated so the host build (macOS) is untouched. `jni` arrives with the
+# clipboard / IME bridge (Step 4 of the blueprint).
+[target.'cfg(target_os = "android")'.dependencies]
+winit = { workspace = true, features = ["android-native-activity"] }
+ndk = "0.9"
+android_logger = "0.14"

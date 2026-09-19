@@ -25,6 +25,7 @@ Companion pages: [`EXAMPLES.md`](EXAMPLES.md) (the golden examples),
 | `floem-renderer`, `floem-renderer-software`, `floem-renderer-vello`, `floem-renderer-skia` | L4 | the renderer ABI plus concrete backends |
 | `floem-platform`, `floem-platform-desktop`, `floem-platform-android`, `floem-platform-ios`, `floem-platform-harmony`, `floem-platform-web`, `floem-platform-embedded`, `floem-ui-events-winit` | L4 | the windowing ABI plus concrete backends |
 | `floem-native` | L4 | native view composition: capability negotiation, slots, pooling |
+| `floem-platform-mobile` | L4 | mobile OS capabilities (camera, location, sensors, vibration) behind one ABI, with `jni` / `objc2` backends |
 | `floem-animation`, `floem-focus`, `floem-gesture`, `floem-overlay`, `floem-theme`, `floem-store`, `floem-task`, `floem-forms`, `floem-navigation`, `floem-persistence`, `floem-services`, `floem-error`, `floem-ime`, `floem-editor` | L5 | framework services, widget-free by design |
 | `floem-design`, `floem-material`, `floem-cupertino`, `floem-fluent`, `floem-harmony` | L5 | design systems — they emit `floem-style` property values, not paint calls |
 | `floem-widgets`, `floem-widgets-data` | L6 | widgets: Tier-0 primitives, controls, composites, data widgets |

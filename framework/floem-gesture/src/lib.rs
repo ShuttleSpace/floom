@@ -1,6 +1,15 @@
 //! Gesture arena: competing recognizers with exclusive ownership.
+//!
+//! The arena ([`GestureArena`]) arbitrates competing pointer recognizers
+//! (tap / drag / scroll / scale / native scroll) for a pointer sequence.
+//! [`momentum`] provides the post-gesture fling physics that pairs with the
+//! scroll recognizer: feed it pointer velocities on lift, then drain
+//! decelerating deltas on each frame.
 
 use floem_types::{ElementId, Point};
+
+pub mod momentum;
+pub mod touch;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct RecognizerId(pub u32);

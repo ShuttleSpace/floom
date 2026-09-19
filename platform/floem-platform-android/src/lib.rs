@@ -11,11 +11,26 @@ use floem_types::PlatformId;
 pub use floem_platform::{Capability, Clipboard, Ime, Platform, PlatformEvent, WindowConfig};
 
 /// Build an Android-capability host (headless until NDK surface glue exists).
+///
+/// On a real Android target this is superseded by [`android`] (the winit
+/// backend): its [`android::run`] is the real entry point and
+/// [`android::AndroidPlatform`] the real [`Platform`] implementation. This
+/// headless constructor stays available on every target so host-side unit
+/// tests and tooling can still exercise the capability surface.
 pub fn android_platform() -> HostPlatform {
     HostPlatform::new()
         .with_id(PlatformId::new(10, 1))
         .with_capabilities(PlatformCapabilities::unsupported_a11y_stub())
 }
+
+/// Real winit-backed Android backend (Phase 17 / 19.4). Only compiled for the
+/// `android` target; on other targets [`android_platform`] provides a headless
+/// stand-in. See the module for the `android_main` entry-point seam.
+#[cfg(target_os = "android")]
+pub use android::{AndroidPlatform, AndroidRunner, run, set_android_app};
+
+#[cfg(target_os = "android")]
+mod android;
 
 #[cfg(test)]
 mod tests {

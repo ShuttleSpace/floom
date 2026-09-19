@@ -23,6 +23,7 @@ something stale.
 | `floem2-native-plugin` | writing a native provider plugin + slot pooling | all | headless |
 | `floem2-probe` | device probe: one window holding every control the on-screen cases need | desktop | **display-gated** — `--features real`, driven by hand |
 | `floem2-window` | a real OS window: winit + vello GPU | desktop | **verified on macOS** |
+| `floem2-android` | a real Android app: `native-activity` + vello GPU in one APK | Android | **device-gated** — `--features real`, packaged by `examples/floem2-android/scripts/build-apk.sh` |
 | `webview` | embedded web view | OS provider | device-gated (Phase 17) |
 | `video` | embedded video | OS provider | device-gated (Phase 17) |
 | `camera` | camera preview | OS provider | device-gated (Phase 17) |
@@ -176,3 +177,30 @@ frames. `redraws_requested` and the CPU percentage move a little run to run
 (3 / 2.1 % here, 2 / 1.7 % on an earlier run) because they count the startup
 redraw and whatever the window server sends in the first second; the gate is on
 frames, not on those.
+
+### `floem2-android`
+
+The mobile analogue of `floem2-window`: the same `AppRunner<VelloGpuPresenter>`
+widget tree, but pumped by the Android (winit) event loop instead of the desktop
+one. `native-activity` loads `libfloem2_android_example.so` and calls
+`android_main`, which hands the `AndroidApp` to `floem-platform-android`, mounts
+a counter, and runs — the only Android-specific seam is the entry point and the
+`AndroidRunner` callbacks that pump the app from winit's push loop. The GPU
+surface is built from the Android `ANativeWindow*` by the renderer exactly the
+way the desktop window is; no custom surface shim is involved.
+
+The crate is a `cdylib` (a bin-only crate would make `cargo ndk` copy nothing
+into `jniLibs/`), so the host build compiles only the placeholder `src/main.rs`.
+The Android module is behind the `real` feature, so the cross-check is:
+
+```text
+cargo check -p floem2-android-example --target aarch64-linux-android --features real
+```
+
+which passes with zero warnings from this crate. Keeping the presenter behind
+`real` is what lets `cargo test --workspace` stay dependency-light: the default
+host build never pulls wgpu.
+
+It is **device-gated**: this machine has no emulator image, so the APK has never
+been launched. What is verified here is compile-level (host + `aarch64-linux-android`
++ the architecture gate), not first-frame on a device.
