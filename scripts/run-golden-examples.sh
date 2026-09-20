@@ -27,7 +27,6 @@ EXAMPLES=(
   floem2-motion
   floem2-native-plugin
   floem2-navigation
-  floem2-paths
   floem2-progress-ring
   floem2-virtual-list
 )

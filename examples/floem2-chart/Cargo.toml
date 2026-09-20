@@ -14,3 +14,6 @@ floem2 = { path = "../../app/floem2", version = "0.2.0", features = [
     "renderer-software",
 ] }
 floem-renderer = { path = "../../render/floem-renderer", version = "0.2.0" }
+# The chart's data is a reactive signal read by the painter closure; the
+# canvas needs it Send + Sync, hence the sync flavour.
+floem-legacy-reactive = { path = "../../legacy/floem-reactive", version = "0.2.0" }

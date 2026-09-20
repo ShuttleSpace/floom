@@ -12,7 +12,7 @@ something stale.
 
 | example | topic | target | status |
 | --- | --- | --- | --- |
-| `floem2-chart` | self-drawn content: a line chart on a `Canvas`, clipped to its plot area | all | headless |
+| `floem2-chart` | self-drawn content: a line chart on a `Canvas`, clipped to its own box, redrawn from data | all | headless |
 | `floem2-hello` | the smallest app: everything from `floem2::prelude` | all | headless |
 | `floem2-counter` | composites (`Stack`/`List`/`Grid`/`Tabs`/`Dialog`/`NavBar`) + reconciliation | all | headless |
 | `floem2-list` | a keyed list: append / remove / reorder without rebuilding rows | all | headless |
@@ -20,7 +20,6 @@ something stale.
 | `floem2-datagrid` | data grid: virtualized rows, sorting, selection, edit + undo | all | headless |
 | `floem2-forms` | form validation, dirty/touched tracking, control bindings | all | headless |
 | `floem2-navigation` | typed routes, history, page transitions, nav containers, deep links | all | headless |
-| `floem2-paths` | self-drawn surfaces: a chart driven by data, a progress ring, a spinner | all | headless |
 | `floem2-progress-ring` | self-drawn motion: an animated ring + a `Spinner` that animates itself | all | headless |
 | `floem2-editor` | text document: transactions, selection, undo/redo, IME pre-edit | all | headless |
 | `floem2-motion` | eased tweens, interruption, and a control that animates itself | all | headless |
@@ -59,164 +58,35 @@ the floor of the size table, because it pulls the headless core only.
 
 ### `floem2-chart`
 
-Self-drawn content (MOTION-GAP A1/A2/A7/A8): a `Canvas` whose painter draws a
-line chart — axes, a translucent area fill, a stroked data line — plus the two
-things a drawn surface needs besides pixels:
+Self-drawn content (MOTION-GAP A1/A2/A7/A8 + the repaint bridge): a `Canvas`
+whose painter draws a line chart — axes, a translucent area fill, a stroked
+data line — plus the three things a drawn surface needs besides pixels:
 
-* **The clip is a declaration.** The canvas declares `clip(ClipShape::Box)`;
-  the host brackets exactly its subtree with `ClipPush`/`ClipPop` in the
-  retained scene, and a software render proves the bracket *cuts*: the data
-  peak that would reach into the top margin leaves the margin untouched.
+* **The clip is a declaration, and a widget's clip is the widget's own box.**
+  The canvas declares `clip(ClipShape::Box)`; the host brackets exactly its
+  subtree with `ClipPush`/`ClipPop` in the retained scene. The canvas sits
+  24px down the surface and the data peaks above the box's top edge, so a
+  software render proves the bracket *cuts*: the band of surface above the
+  canvas stays untouched while the plot below it paints.
 * **The surface says what it is.** The canvas publishes `Role::Image` with a
   label, so assistive tech sees a chart, not silence.
+* **Data is made geometry, and the ping carries it.** The painter reads a
+  reactive value; a value change alone wakes nothing, the repaint ping wakes
+  the loop, and the drawn vertex moves to exactly where the new value says —
+  still cut off by the clip, which is a property of the surface, not of one
+  dataset.
 
 ```text
 == 1. the closure reaches the scene ==
   4 path nodes: 1 with a fill, 3 with a stroke
 == 2. the clip is a bracket the host writes ==
   1 ClipPush / 1 ClipPop in the retained scene
-  the margin above the plot is untouched; the plot itself is not
+  the band above the canvas is untouched; the plot itself is not
 == 3. the canvas says what it is ==
   role: Image, label: Some("Quarterly revenue")
-```
-
-### `floem2-counter`
-
-Mounts a vertical `Stack` of composites, then mutates them and pumps frames,
-printing what the reconciler did. The interesting number is *what does not
-change*: appending a list row mounts one row, not a whole subtree.
-
-### `floem2-list`
-
-Rows are identified by a stable key, so the collection can be replaced freely.
-
-```text
-mounted : 1001 live widgets for 1000 rows
-append  : 1002 widgets (+1), rows now 1001
-remove  : 1001 widgets (released) after dropping row 500
-reorder : 1001 widgets (same set, new order)
-```
-
-The assertion is the point: appending must grow the tree by at most a handful of
-widgets — if a list ever rebuilds its rows, this example fails.
-
-### `floem2-virtual-list`
-
-"Virtualized" is a claim about cost, so this example scrolls a 100 000-item list
-end to end and counts elements ever created.
-
-```text
-items        : 100000
-viewport     : 800px @ 24px rows
-visible rows : 36
-elements created over the whole scroll : 38
-pool high-water mark                   : 38
-```
-
-**0.04 %** of the list is ever materialized.
-
-### `floem2-datagrid`
-
-Two grids of *identical shape* — same ten-row window — differing only in the
-number of rows behind them:
-
-```text
-rows behind the grid : 1,000 vs 100,000
-paint ops           : 44 vs 44
-row pool high-water : 10 live rows (allocated 10, in use 10)
-```
-
-Equal paint ops is the virtualization claim (comparing differently shaped
-fixtures would prove nothing). The rest of the run exercises the three-state
-sort cycle (ascending → descending → unsorted), selection, and an edit session
-opened the way the UI opens one — a double click — with undo/redo:
-
-```text
-editor open           : row=RowId(1) column=ColumnId(1)
-cell edit             : "1" -> "4242" (committed row RowId(1))
-after undo            : "1"
-after redo            : "4242"
-```
-
-### `floem2-forms`
-
-Rules (`required`, `email`, `min_length(8)`), dirty/touched separation, and the
-`FieldBinding` bridge between a form field and `TextField`:
-
-```text
-pristine : valid=false errors=[("email", "this field is required"), ("password", "must be at least 8 characters")]
-email says : Some("must be a valid email address")
-complete : valid=true email=Some("alice@example.com")
-```
-
-### `floem2-navigation`
-
-Typed routes (`encode`/`decode` are exact inverses), a bounded history, a page
-stack whose popped pages survive their exit transition, containers, and the one
-stringly-typed edge — deep links:
-
-```text
-current=Settings depth=1 can_pop=true history=["/profile/7", "/settings"]
-after pop: top="/profile/42" exiting=Some("/settings")
-deep link -> path=/profile/42 route=Profile { id: 42 } tab=Some("posts")
-```
-
-### `floem2-editor`
-
-`apply` changes text and returns the inverse; `commit` applies *and* records it.
-Two histories are shown side by side — the document's own, and an app-owned
-`UndoManager` fed by `apply`'s inverses — plus the IME rule that a pre-edit is
-never part of the document:
-
-```text
-ime preedit      : Some("にほん")
-ime committed    : "hi, world?にほん"
-```
-
-### `floem2-motion`
-
-The motion vocabulary, reached through `floem2::prelude` alone — if the
-vocabulary is not in the prelude then `WidgetHost::animate` is unusable from the
-documented surface, so this example doubles as the check that it is there.
-
-```text
-== 1. a curve is not a duration ==
-  fade of 0.4s, sampled at 25% of the way in:
-    linear   travelled 0.250 of the distance
-    ease-out travelled 0.378 of the distance
-== 2. interruption ==
-  frames that re-laid-out during motion: 0
-  redirected at 0.622 -> next frame 0.585
-  settled on 1.000 (the new target was 1.0)
-== 3. a control that animates itself ==
-  the host is running 1 animation(s) nobody asked it to start
-```
-
-Two claims are worth reading off that output. **The first act is a comparison,
-not a measurement**: the same fade is run twice and sampled at the same instant,
-which is the only way to see a curve at all — endpoints are identical by
-construction. **The second act counts re-layouts**, and the count is zero: motion
-is a compositor repaint, so an animation must never drag a layout pass behind it.
-
-Writing it caught a bug the unit tests could not see: an imperative animation was
-cancelled by the next frame that reconciled the node's declaration, because "this
-widget declares nothing" and "this widget withdrew its declaration" were the same
-answer from the host. Any freshly mounted node reports dirty, so `animate` then
-`frame` on a node you just mounted — the first thing anyone does — lost the
-animation. `motion_host.rs::an_imperative_animation_survives_a_node_that_reports_dirty`
-is the test that keeps it fixed.
-
-### `floem2-native-plugin`
-
-Writes a plugin (a `NativeViewProvider` that can only do overlays), then proves
-negotiation downgrades rather than silently granting, and that pooling keeps
-live slots bounded across 1 000 rows:
-
-```text
-requested     : [Texture, Overlay]   →  negotiated : Some(Overlay)
-plugin counts : created=1 destroyed=1 live=0 applies=1
-pool          : live=8 free=1
-recycled slot : generation=112 (was 1)
+== 4. data made geometry ==
+  third vertex: [133,109] -> [133,2]
+  the ping drew the new data; the clip cut it at the same edge
 ```
 
 ### `floem2-progress-ring`
@@ -238,21 +108,6 @@ paint-only repaint with no relayout.
 == 2. a control that animates itself ==
   running animations nobody asked for: 1
   sweep: 0.017 -> 0.183 after 10 frames
-```
-
-### `floem2-paths`
-
-Self-drawn surfaces driven by data (MOTION-GAP A1/A7 + the repaint bridge): a
-canvas polyline whose last vertex follows a value change after a repaint ping,
-a progress ring whose flattened arc grows exactly as the fraction says, and a
-self-animating spinner. Distinctive assertion: a data change with *no* ping
-never wakes the frame loop — the ping is what turns "the data changed" into
-"draw a frame".
-
-```text
-act 1 — the line chart is data made geometry: ok
-act 2 — the progress ring is geometry made by a fraction: ok
-act 3 — the spinner animates itself: ok
 ```
 
 ### `floem2-window`

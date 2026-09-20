@@ -2909,6 +2909,7 @@ dependencies = [
 name = "floem2-chart"
 version = "0.2.0"
 dependencies = [
+ "floem-legacy-reactive",
  "floem-renderer",
  "floem2",
 ]
@@ -2984,15 +2985,6 @@ name = "floem2-navigation"
 version = "0.2.0"
 dependencies = [
  "floem-navigation",
-]
-
-[[package]]
-name = "floem2-paths"
-version = "0.2.0"
-dependencies = [
- "floem-legacy-reactive",
- "floem-scene",
- "floem2",
 ]
 
 [[package]]
