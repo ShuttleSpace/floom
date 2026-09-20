@@ -213,14 +213,11 @@ fn node_fingerprint(node: &SceneNode) -> u64 {
     use std::hash::Hasher;
     let mut hasher = std::collections::hash_map::DefaultHasher::new();
     match node {
-        SceneNode::Group {
-            children,
-            transform,
-        } => {
+        // The group markers are consumed by the encode walk (like the clip
+        // markers) and never reach a fragment fingerprint; matched anyway so
+        // the enum stays exhaustively handled.
+        SceneNode::GroupPush { transform } => {
             hasher.write_u8(0);
-            for child in children {
-                hasher.write_u64(child.raw());
-            }
             for v in [
                 transform.a,
                 transform.b,
@@ -232,6 +229,7 @@ fn node_fingerprint(node: &SceneNode) -> u64 {
                 hasher.write_u64(v.to_bits());
             }
         }
+        SceneNode::GroupPop => hasher.write_u8(7),
         SceneNode::Rect {
             bounds,
             fill,
@@ -915,6 +913,12 @@ impl VelloGpuPresenter {
         // outer clip from everything the inner one covers, which is the bug a
         // "replace" reading of the markers would introduce.
         let mut clip_depth: usize = 0;
+        // The transform scopes in force, as a stack of the *outer* composed
+        // affines: a pop restores the top directly. A scope is not a vello
+        // layer (nothing to close at the end of the stream), so a trailing
+        // push is genuinely harmless here.
+        let mut group_stack: Vec<Affine> = Vec::new();
+        let mut group_affine = Affine::IDENTITY;
         for (id, node) in scene.iter() {
             match node {
                 SceneNode::ClipPush { region } => {
@@ -928,6 +932,25 @@ impl VelloGpuPresenter {
                     if clip_depth > 0 {
                         self.vello_scene.pop_layer();
                         clip_depth -= 1;
+                    }
+                    continue;
+                }
+                SceneNode::GroupPush { transform } => {
+                    group_stack.push(group_affine);
+                    group_affine = group_affine
+                        * Affine::new([
+                            transform.a,
+                            transform.b,
+                            transform.c,
+                            transform.d,
+                            transform.e,
+                            transform.f,
+                        ]);
+                    continue;
+                }
+                SceneNode::GroupPop => {
+                    if let Some(outer) = group_stack.pop() {
+                        group_affine = outer;
                     }
                     continue;
                 }
@@ -948,7 +971,8 @@ impl VelloGpuPresenter {
                     // Unchanged node: append its cached commands and report
                     // its draws (a reused image is a texture-cache hit — the
                     // pixels are already resident).
-                    self.vello_scene.append(&cached.scene, Some(shift));
+                    self.vello_scene
+                        .append(&cached.scene, Some(shift * group_affine));
                     totals.rects += cached.stats.rects;
                     totals.paths += cached.stats.paths;
                     totals.glyph_runs += cached.stats.glyph_runs;
@@ -988,10 +1012,11 @@ impl VelloGpuPresenter {
                     },
                 );
                 self.vello_scene
-                    .append(&self.fragments[&key].scene, Some(shift));
+                    .append(&self.fragments[&key].scene, Some(shift * group_affine));
             } else {
                 self.trim_telemetry.caching_refused += 1;
-                self.vello_scene.append(&fragment_scene, Some(shift));
+                self.vello_scene
+                    .append(&fragment_scene, Some(shift * group_affine));
             }
         }
         // Close whatever the stream left open. The scene is allowed to end with
@@ -1218,11 +1243,11 @@ impl VelloGpuPresenter {
                 draw_image_at(target, brush, transform, *width, *height, *alpha);
                 stats.images += 1;
             }
-            SceneNode::Group { .. } => {}
             // Markers are consumed by the walk in `encode`, before it reaches
             // here; reaching this arm would mean a marker slipped past the
-            // clip bookkeeping.
+            // clip/transform bookkeeping.
             SceneNode::ClipPush { .. } | SceneNode::ClipPop => {}
+            SceneNode::GroupPush { .. } | SceneNode::GroupPop => {}
         }
         stats
     }
@@ -2047,8 +2072,7 @@ mod tests {
         let group = scene.alloc_id();
         scene.upsert(
             group,
-            SceneNode::Group {
-                children: Default::default(),
+            SceneNode::GroupPush {
                 transform: floem_types::Transform::IDENTITY,
             },
         );

@@ -28,7 +28,7 @@ pub use presenter::SoftwarePresenter;
 
 use floem_renderer::{FrameInfo, RenderTarget, Renderer};
 use floem_scene::{DamageRegion, Rect, ResourceKind, ResourceRegistry, Scene, SceneNode};
-use floem_types::{Color, Point, Polyline};
+use floem_types::{Color, Point, Polyline, Transform};
 use raster::{ClipStack, Scissor};
 use std::collections::HashMap;
 
@@ -118,6 +118,20 @@ pub struct SoftwareRenderer {
     /// empty (a clip to nothing) is not counted, because nothing under it is
     /// ever visible — that is the same "no clip" the host would have produced.
     pub clips_resolved: u64,
+    /// Transform scopes opened by the scene's `GroupPush` markers: each entry
+    /// is the composed transform of every scope *outside* the current one, so
+    /// a pop restores it directly. Cleared at the start of every walk, exactly
+    /// like the clip stack — the marker stream may end with scopes open.
+    transform_stack: Vec<Transform>,
+    /// The transform every subsequently drawn node is mapped through.
+    transform: Transform,
+    /// Text nodes drawn under a non-identity transform, for the frame stats:
+    /// the origin maps, the glyph masks do not rotate or scale with it.
+    pub text_drawn_untransformed: u64,
+    /// Image nodes skipped because a rotating/scaling group asked for a blit,
+    /// which this rasteriser does not sample for. Visible, recorded, never
+    /// fatal — the same policy text under a transform follows.
+    pub images_skipped_transformed: u64,
 }
 
 impl SoftwareRenderer {
@@ -147,6 +161,10 @@ impl SoftwareRenderer {
             coverage: Vec::new(),
             paths_drawn: 0,
             clips_resolved: 0,
+            transform_stack: Vec::new(),
+            transform: Transform::IDENTITY,
+            text_drawn_untransformed: 0,
+            images_skipped_transformed: 0,
         }
     }
 
@@ -619,6 +637,8 @@ impl SoftwareRenderer {
         // walk. Inheriting it into the next one would, and the next walk starts
         // at the first node again.
         self.clips.clear();
+        self.transform_stack.clear();
+        self.transform = Transform::IDENTITY;
         for (_id, node) in scene.iter() {
             // Clip markers change the stack rather than the pixels, so they are
             // handled *before* culling: a marker whose own box misses the
@@ -626,12 +646,27 @@ impl SoftwareRenderer {
             // follow it, or those nodes would be clipped by the wrong region.
             match node {
                 SceneNode::ClipPush { region } => {
-                    self.clips.push(region.clone(), scale);
+                    // A clip opened inside a transform scope is a window in
+                    // *that* space: map it before pushing, or it would cut
+                    // the transformed content in the wrong place.
+                    let region = region.map(self.transform);
+                    self.clips.push(region, scale);
                     self.clips_resolved += 1;
                     continue;
                 }
                 SceneNode::ClipPop => {
                     self.clips.pop();
+                    continue;
+                }
+                SceneNode::GroupPush { transform } => {
+                    self.transform_stack.push(self.transform);
+                    self.transform = self.transform.multiply(*transform);
+                    continue;
+                }
+                SceneNode::GroupPop => {
+                    if let Some(outer) = self.transform_stack.pop() {
+                        self.transform = outer;
+                    }
                     continue;
                 }
                 _ => {}
@@ -650,19 +685,32 @@ impl SoftwareRenderer {
             // frame), so they are never culled — only nodes with a known box
             // are.
             if let Some(bounds) = node.bounds_hint() {
-                if !hits_clip(scale_rect(bounds, scale), clip) {
+                // A node inside a transform scope paints where its box maps
+                // to — a rotating card's box covers a diamond, not a rect —
+                // so culling reads the mapped bounding box.
+                let mapped = if self.transform.is_identity() {
+                    bounds
+                } else {
+                    self.transform.map_rect(bounds)
+                };
+                if !hits_clip(scale_rect(mapped, scale), clip) {
                     self.nodes_skipped += 1;
                     continue;
                 }
             }
             // Every arm below crosses from the scene's logical units into the
-            // device-pixel buffer, so each one scales its own geometry.
+            // device-pixel buffer, so each one scales its own geometry. A node
+            // inside a `GroupPush` scope is additionally mapped through the
+            // scope's transform; the identity fast paths stay exactly as they
+            // were, so an ungrouped scene pays nothing.
+            let t = self.transform;
+            let transformed = !t.is_identity();
             match node {
                 SceneNode::Rect {
                     bounds,
                     fill,
                     radius: 0.0,
-                } => {
+                } if !transformed => {
                     let b = scale_rect(*bounds, scale);
                     self.fill_rect(
                         b.x0.floor() as i32,
@@ -679,24 +727,60 @@ impl SoftwareRenderer {
                     bounds,
                     fill,
                     radius,
-                } => self.fill_rounded_rect(
+                } if !transformed => self.fill_rounded_rect(
                     scale_rect(*bounds, scale),
                     f64::from(*radius) * scale,
                     *fill,
                     clip,
                 ),
+                // A rect under a transform is no longer an axis-aligned rect
+                // (a quarter turn makes it a diamond), so it rasterises as a
+                // path: the same scanline filler, fed the mapped geometry.
+                SceneNode::Rect {
+                    bounds,
+                    fill,
+                    radius,
+                } => {
+                    let shape = if *radius > 0.0 {
+                        floem_types::Path::rounded_rect(*bounds, f64::from(*radius))
+                    } else {
+                        floem_types::Path::rect(*bounds)
+                    };
+                    let polylines = shape
+                        .flatten(floem_types::DEFAULT_FLATTEN_TOLERANCE)
+                        .into_iter()
+                        .map(|mut poly| {
+                            for p in &mut poly.points {
+                                *p = t.map_point(*p);
+                            }
+                            poly
+                        })
+                        .collect();
+                    self.build_contours(polylines, scale);
+                    self.rasterize_contours(*fill, clip);
+                }
                 SceneNode::Text {
                     origin,
                     glyphs,
                     color,
                     ..
                 } => {
+                    // The block's origin maps through the scope; the glyph
+                    // masks themselves rasterise untransformed. Honest, and
+                    // counted: a caller that needs rotated text sees the
+                    // counter move instead of silently wrong pixels.
+                    let origin = if transformed {
+                        self.text_drawn_untransformed += 1;
+                        t.map_point(*origin)
+                    } else {
+                        *origin
+                    };
                     if let Some(resources) = resources {
                         // Unscaled: `draw_text` scales the block origin, the
                         // run offset, every pen position and the size the
                         // glyphs rasterise at, which only stays consistent if
                         // it is handed the scene's own units.
-                        self.draw_text(*origin, *glyphs, *color, resources, clip);
+                        self.draw_text(origin, *glyphs, *color, resources, clip);
                     }
                 }
                 SceneNode::Image {
@@ -704,20 +788,54 @@ impl SoftwareRenderer {
                     image,
                     alpha,
                 } => {
+                    // An axis-aligned scope just moves and stretches the blit;
+                    // a rotating one would need a sampling rasteriser this
+                    // backend does not have, so the image is skipped and
+                    // counted (visible in the stats, never fatal).
+                    let axis_aligned = t.b.abs() < 1e-9 && t.c.abs() < 1e-9;
                     if let Some(resources) = resources {
-                        self.draw_image(
-                            scale_rect(*bounds, scale),
-                            *image,
-                            *alpha,
-                            resources,
-                            clip,
-                        );
+                        if transformed && !axis_aligned {
+                            self.images_skipped_transformed += 1;
+                        } else {
+                            let mapped = if transformed {
+                                t.map_rect(*bounds)
+                            } else {
+                                *bounds
+                            };
+                            self.draw_image(
+                                scale_rect(mapped, scale),
+                                *image,
+                                *alpha,
+                                resources,
+                                clip,
+                            );
+                        }
                     }
                 }
                 SceneNode::Path { path, fill, stroke } => {
+                    // Flatten in the node's own space, then map the points:
+                    // the transform is affine, so straight lines stay straight
+                    // and only the sampling density of the curves is the
+                    // node-space one (the same trade the flatten tolerance
+                    // already makes under device scale).
+                    let map_polylines = |polylines: Vec<Polyline>| -> Vec<Polyline> {
+                        if transformed {
+                            polylines
+                                .into_iter()
+                                .map(|mut poly| {
+                                    for p in &mut poly.points {
+                                        *p = t.map_point(*p);
+                                    }
+                                    poly
+                                })
+                                .collect()
+                        } else {
+                            polylines
+                        }
+                    };
                     if let Some(color) = *fill {
                         let polylines = path.flatten(floem_types::DEFAULT_FLATTEN_TOLERANCE);
-                        self.build_contours(polylines, scale);
+                        self.build_contours(map_polylines(polylines), scale);
                         self.rasterize_contours(color, clip);
                     }
                     if let Some(stroke) = stroke {
@@ -727,12 +845,12 @@ impl SoftwareRenderer {
                         // code the fill is.
                         let outline = stroke
                             .outline_with_tolerance(path, floem_types::DEFAULT_FLATTEN_TOLERANCE);
-                        self.build_contours(outline, scale);
+                        self.build_contours(map_polylines(outline), scale);
                         self.rasterize_contours(stroke.color, clip);
                     }
                     self.paths_drawn += 1;
                 }
-                SceneNode::Group { .. } => {}
+                SceneNode::GroupPush { .. } | SceneNode::GroupPop => {}
                 // Unreachable: the markers were consumed above, before any
                 // node could be culled. Listed anyway so adding a variant to
                 // the scene IR without teaching this backend about it is a

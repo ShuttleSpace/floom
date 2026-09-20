@@ -55,6 +55,13 @@ pub enum VelloCommand {
     },
     /// Closes the innermost clip.
     PopClip,
+    /// Opens a transform scope: every command recorded after it is drawn
+    /// through `transform` until the matching [`VelloCommand::PopTransform`].
+    PushTransform {
+        transform: floem_types::Transform,
+    },
+    /// Closes the innermost transform scope.
+    PopTransform,
 }
 
 #[derive(Debug, Default)]
@@ -110,7 +117,12 @@ impl Renderer for VelloRendererAdapter {
                         bounds: Rect::from_origin_size(*origin, *size),
                     });
                 }
-                SceneNode::Group { .. } => {}
+                SceneNode::GroupPush { transform } => {
+                    self.commands.push(VelloCommand::PushTransform {
+                        transform: *transform,
+                    });
+                }
+                SceneNode::GroupPop => self.commands.push(VelloCommand::PopTransform),
                 SceneNode::Path { path, fill, stroke } => {
                     let bounds = path.bounds();
                     if let Some(fill) = fill {
@@ -182,6 +194,48 @@ mod tests {
         assert!(matches!(vello.commands[1], VelloCommand::DrawImage { .. }));
         assert!(matches!(vello.commands[2], VelloCommand::DrawGlyphs { .. }));
         assert_eq!(vello.cache_misses, 1);
+    }
+
+    /// A transform scope reaches the headless command list as a
+    /// push/pop pair bracketing the draws it wraps, carrying the transform.
+    #[test]
+    fn records_a_transform_scope_bracketing_its_draws() {
+        let mut scene = Scene::new();
+        scene.begin_update();
+        let _ = scene.insert(SceneNode::GroupPush {
+            transform: floem_types::Transform::scale_around(
+                2.0,
+                2.0,
+                floem_types::Point::new(16.0, 16.0),
+            ),
+        });
+        let _ = scene.insert(SceneNode::Rect {
+            bounds: Rect::from_origin_size(Point::new(4.0, 4.0), Size::new(8.0, 8.0)),
+            fill: Color::BLACK,
+            radius: 0.0,
+        });
+        let _ = scene.insert(SceneNode::GroupPop);
+        scene.finish_update();
+
+        let mut vello = VelloRendererAdapter::new();
+        render_once(&mut vello, &FrameInfo::software(32, 32, 1), &scene);
+        assert!(
+            matches!(
+                vello.commands.as_slice(),
+                [
+                    VelloCommand::PushTransform { transform },
+                    VelloCommand::FillRect { .. },
+                    VelloCommand::PopTransform,
+                ] if *transform
+                    == floem_types::Transform::scale_around(
+                        2.0,
+                        2.0,
+                        floem_types::Point::new(16.0, 16.0)
+                    )
+            ),
+            "the scope brackets its draws and carries the transform: {:?}",
+            vello.commands
+        );
     }
 
     #[test]

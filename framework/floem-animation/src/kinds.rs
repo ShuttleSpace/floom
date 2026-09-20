@@ -298,6 +298,7 @@ pub(crate) fn map_compositor(template: Option<CompositorProp>, v: f64) -> Option
         CompositorProp::TranslateX(_) => CompositorProp::TranslateX(v),
         CompositorProp::TranslateY(_) => CompositorProp::TranslateY(v),
         CompositorProp::Scale(_) => CompositorProp::Scale(v),
+        CompositorProp::Rotate(_) => CompositorProp::Rotate(v),
     })
 }
 

@@ -87,8 +87,7 @@ fn damage_tracks_rect_updates() {
 fn group_update_marks_full_frame() {
     let mut scene = Scene::new();
     scene.begin_update();
-    let _ = scene.insert(SceneNode::Group {
-        children: smallvec::smallvec![],
+    let _ = scene.insert(SceneNode::GroupPush {
         transform: Default::default(),
     });
     scene.finish_update();

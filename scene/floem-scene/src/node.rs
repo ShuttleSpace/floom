@@ -1,17 +1,25 @@
 //! Retained scene node payloads (no GPU / OS types).
 
-use floem_types::{
-    ClipRegion, Color, Path, Point, Rect, ResourceId, SceneNodeId, Size, Stroke, Transform,
-};
+use floem_types::{ClipRegion, Color, Path, Point, Rect, ResourceId, Size, Stroke, Transform};
 use std::sync::Arc;
 
 /// Drawable / structural node in the retained scene.
 #[derive(Debug, Clone, PartialEq)]
 pub enum SceneNode {
-    Group {
-        children: smallvec::SmallVec<[SceneNodeId; 4]>,
-        transform: Transform,
-    },
+    /// Opens a transform scope: every scene node that follows, up to the
+    /// matching [`SceneNode::GroupPop`], is drawn through `transform` —
+    /// the child coordinates the backends see are already in scope space, so
+    /// a subtree can rotate or scale as one picture.
+    ///
+    /// A stream marker, not a nested node, for the same reason the clip
+    /// markers are (see [`SceneNode::ClipPush`]): the retained scene is one
+    /// flat ordered stream, and a nested `children` list would either double
+    /// draw (children also present in the stream) or fight the positional
+    /// `upsert` reuse. Pushes and pops are stream-position, not nesting.
+    GroupPush { transform: Transform },
+    /// Closes the innermost open [`SceneNode::GroupPush`]. See that variant
+    /// for the marker semantics.
+    GroupPop,
     Rect {
         bounds: Rect,
         fill: Color,
@@ -119,7 +127,7 @@ impl SceneNode {
     /// one is treated as full-frame damage rather than a guess at a region.
     pub fn bounds_hint(&self) -> Option<Rect> {
         match self {
-            SceneNode::Group { .. } => None,
+            SceneNode::GroupPush { .. } | SceneNode::GroupPop => None,
             SceneNode::Rect { bounds, .. } => Some(*bounds),
             SceneNode::Path { path, fill, stroke } => {
                 if fill.is_none() && stroke.is_none() {

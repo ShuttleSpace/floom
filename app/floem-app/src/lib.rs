@@ -140,6 +140,14 @@ struct Node {
     /// this subtree.
     clip_push: Option<SceneNodeId>,
     clip_pop: Option<SceneNodeId>,
+    /// The `GroupPush`/`GroupPop` pair bracketing this node's scene nodes
+    /// while a transform-class composite (scale, rotate) animates it, when the
+    /// widget paints. Same story as `clip_push`/`clip_pop`: the host writes
+    /// the bracket because only the walk knows where the node's picture begins
+    /// and ends, and the ids are held (not re-minted) so the markers keep
+    /// their draw-order slots across frames.
+    group_push: Option<SceneNodeId>,
+    group_pop: Option<SceneNodeId>,
     /// Set when a native participant is bound to this node. Its hit region
     /// then resolves to the native view — which takes the pointer itself —
     /// instead of to this widget. Cleared when the participant is retired.
@@ -1160,6 +1168,8 @@ impl WidgetHost {
             scene_nodes: Vec::new(),
             clip_push: None,
             clip_pop: None,
+            group_push: None,
+            group_pop: None,
             text_measure,
             motion: None,
         });
@@ -2181,8 +2191,21 @@ impl WidgetHost {
         // A frozen participant's tween rides along here, on the same channel an
         // overlay's entry animation uses.
         let composite = self.frozen_composite(index);
+        // A transform-class composite (scale, rotate) cannot fold into the
+        // node's own payloads — scaling each rect about its own centre would
+        // tear the picture apart. It becomes a group scope bracketing the
+        // subtree, pivoting about the node's box centre.
+        let group = self.node_group_transform(index, composite);
+        let transformed = group.is_some();
+        match group {
+            Some(transform) => self.write_group_push(index, transform),
+            None => self.retire_group_markers(index),
+        }
         self.paint_node(index, composite, stats);
         self.paint_children(index, stats);
+        if transformed {
+            self.write_group_pop(index);
+        }
         if clipped {
             self.write_clip_pop(index);
         }
@@ -2225,6 +2248,11 @@ impl WidgetHost {
         match self.nodes[index].clip_push {
             Some(id) => self.scene.upsert(id, node),
             None => {
+                // Same mid-life ordering hazard as `write_group_push`: a clip
+                // declared after the subtree has painted would slot after the
+                // very picture it is supposed to bracket ahead of. Reseed
+                // first, so the push claims the subtree's own old slot.
+                self.reseed_subtree_scene_nodes(index);
                 let id = self.scene.insert(node);
                 self.nodes[index].clip_push = Some(id);
             }
@@ -2253,6 +2281,101 @@ impl WidgetHost {
         }
     }
 
+    /// The transform a transform-class composite asks for on this node, if
+    /// any: the effective composite (the node's own animation wins over an
+    /// inherited one, exactly as [`Self::paint_node`] folds it) resolved
+    /// against the node's laid-out box, so the scope pivots about the box's
+    /// centre. `None` for every other composite — opacity and translate fold
+    /// per node, and there is no laid-out box to pivot an empty one around.
+    fn node_group_transform(
+        &self,
+        index: usize,
+        inherited: Option<CompositorProp>,
+    ) -> Option<floem_types::Transform> {
+        let composite = self.nodes[index]
+            .motion
+            .and_then(|sample| sample.prop)
+            .or(inherited);
+        let bounds = self.nodes[index].bounds;
+        if bounds.width() <= 0.0 || bounds.height() <= 0.0 {
+            return None;
+        }
+        let center = floem_types::Point::new(
+            bounds.x0 + bounds.width() / 2.0,
+            bounds.y0 + bounds.height() / 2.0,
+        );
+        match composite {
+            Some(CompositorProp::Scale(s)) => {
+                Some(floem_types::Transform::scale_around(s, s, center))
+            }
+            Some(CompositorProp::Rotate(radians)) => {
+                Some(floem_types::Transform::rotate_around(radians, center))
+            }
+            _ => None,
+        }
+    }
+
+    /// Opens this node's transform scope, on the same retained-slot scheme as
+    /// [`Self::write_clip_push`]: the marker is minted on the way into the
+    /// node's picture and kept there, so later frames only `upsert` it.
+    fn write_group_push(&mut self, index: usize, transform: floem_types::Transform) {
+        let node = SceneNode::GroupPush { transform };
+        match self.nodes[index].group_push {
+            Some(id) => self.scene.upsert(id, node),
+            None => {
+                // The scope arrived mid-life: the subtree's picture already
+                // holds earlier slots, and slot order is draw order — a push
+                // appended now would land *after* the picture it must wrap.
+                // Reseed first: the freed slots are reused oldest-first, so
+                // the push takes the subtree's own old slot and every node
+                // re-mints behind it.
+                self.reseed_subtree_scene_nodes(index);
+                let id = self.scene.insert(node);
+                self.nodes[index].group_push = Some(id);
+            }
+        }
+    }
+
+    /// Drops the subtree's retained scene-node ids so the next paint of every
+    /// node under `index` re-inserts after whatever was just minted here.
+    /// One allocation-order fix per bracket appearance, not a per-frame cost.
+    fn reseed_subtree_scene_nodes(&mut self, index: usize) {
+        if self.nodes[index].dead {
+            return;
+        }
+        for id in std::mem::take(&mut self.nodes[index].scene_nodes) {
+            self.scene.remove(id);
+        }
+        let mut i = 0;
+        while i < self.nodes[index].children.len() {
+            let child = self.nodes[index].children[i];
+            self.reseed_subtree_scene_nodes(child);
+            i += 1;
+        }
+    }
+
+    /// Closes the scope [`Self::write_group_push`] opened — after the last
+    /// descendant has painted.
+    fn write_group_pop(&mut self, index: usize) {
+        match self.nodes[index].group_pop {
+            Some(id) => self.scene.upsert(id, SceneNode::GroupPop),
+            None => {
+                let id = self.scene.insert(SceneNode::GroupPop);
+                self.nodes[index].group_pop = Some(id);
+            }
+        }
+    }
+
+    /// Retires both markers of a node no longer animated by a transform.
+    fn retire_group_markers(&mut self, index: usize) {
+        if let Some(id) = self.nodes[index].group_push.take() {
+            self.scene.remove(id);
+        }
+        if let Some(id) = self.nodes[index].group_pop.take() {
+            self.scene.remove(id);
+        }
+    }
+
     /// Pre-order paint of an overlay subtree (parent before its children),
     /// applying the overlay's entry animation to every node it writes.
     fn paint_overlay_subtree(
@@ -2273,12 +2396,23 @@ impl WidgetHost {
             Some(region) => self.write_clip_push(index, region),
             None => self.retire_clip_markers(index),
         }
+        // Transform scopes work under overlays too: the entry composite is
+        // inherited, but a node's own scale/rotate animation still brackets.
+        let group = self.node_group_transform(index, composite);
+        let transformed = group.is_some();
+        match group {
+            Some(transform) => self.write_group_push(index, transform),
+            None => self.retire_group_markers(index),
+        }
         self.paint_node(index, composite, stats);
         let mut i = 0;
         while i < self.nodes[index].children.len() {
             let child = self.nodes[index].children[i];
             self.paint_overlay_subtree(child, composite, stats);
             i += 1;
+        }
+        if transformed {
+            self.write_group_pop(index);
         }
         if clipped {
             self.write_clip_pop(index);
@@ -3713,7 +3847,7 @@ fn apply_composite(node: &mut floem_scene::SceneNode, prop: CompositorProp) {
                 // alone is the correct answer rather than an omission: dimming
                 // a window would *reveal* what it was hiding.
                 SceneNode::ClipPush { .. } | SceneNode::ClipPop => {}
-                SceneNode::Group { .. } => {}
+                SceneNode::GroupPush { .. } | SceneNode::GroupPop => {}
             }
         }
         CompositorProp::TranslateX(dx) => match node {
@@ -3739,7 +3873,13 @@ fn apply_composite(node: &mut floem_scene::SceneNode, prop: CompositorProp) {
             SceneNode::ClipPush { region } => *region = region.translate(0.0, dy),
             _ => {}
         },
+        // Scale and rotate are *not* folded per node — scaling each rect about
+        // its own centre would tear the picture apart. The paint walk brackets
+        // the subtree in a `GroupPush` scope instead (see
+        // `paint_subtree`/`node_group_transform`), so the payloads stay
+        // untouched here and every backend applies one transform.
         CompositorProp::Scale(_) => {}
+        CompositorProp::Rotate(_) => {}
     }
 }
 

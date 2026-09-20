@@ -27,7 +27,8 @@ impl Renderer for FakeRenderer {
                 SceneNode::Path { .. } => self.ops.borrow_mut().push("path"),
                 SceneNode::ClipPush { .. } => self.ops.borrow_mut().push("clip_push"),
                 SceneNode::ClipPop => self.ops.borrow_mut().push("clip_pop"),
-                SceneNode::Group { .. } => self.ops.borrow_mut().push("group"),
+                SceneNode::GroupPush { .. } => self.ops.borrow_mut().push("group_push"),
+                SceneNode::GroupPop => self.ops.borrow_mut().push("group_pop"),
             }
         }
     }

@@ -244,6 +244,115 @@ impl Transform {
         }
     }
 
+    /// Uniform-free axis scaling about the origin.
+    #[inline]
+    pub const fn scale(sx: f64, sy: f64) -> Self {
+        Self {
+            a: sx,
+            b: 0.0,
+            c: 0.0,
+            d: sy,
+            e: 0.0,
+            f: 0.0,
+        }
+    }
+
+    /// Scaling about a fixed point: `translate(origin) ∘ scale ∘ translate(-origin)`.
+    /// This is what "scale this subtree around its own centre" means.
+    #[inline]
+    pub fn scale_around(sx: f64, sy: f64, origin: Point) -> Self {
+        Self::translate(origin.x, origin.y)
+            .multiply(Self::scale(sx, sy))
+            .multiply(Self::translate(-origin.x, -origin.y))
+    }
+
+    /// Rotation by `radians` (screen coordinates: positive turns clockwise,
+    /// because y points down).
+    #[inline]
+    pub fn rotate(radians: f64) -> Self {
+        let (s, c) = radians.sin_cos();
+        Self {
+            a: c,
+            b: s,
+            c: -s,
+            d: c,
+            e: 0.0,
+            f: 0.0,
+        }
+    }
+
+    /// Rotation about a fixed point — the pivot a spinner or a card flip
+    /// actually spins around.
+    #[inline]
+    pub fn rotate_around(radians: f64, origin: Point) -> Self {
+        Self::translate(origin.x, origin.y)
+            .multiply(Self::rotate(radians))
+            .multiply(Self::translate(-origin.x, -origin.y))
+    }
+
+    /// Matrix product `self ∘ other`: apply `other` to the point *first*,
+    /// then `self`. `(a.multiply(b)).map_point(p) == a.map_point(b.map_point(p))`.
+    #[inline]
+    pub fn multiply(self, other: Self) -> Self {
+        Self {
+            a: self.a * other.a + self.c * other.b,
+            b: self.b * other.a + self.d * other.b,
+            c: self.a * other.c + self.c * other.d,
+            d: self.b * other.c + self.d * other.d,
+            e: self.a * other.e + self.c * other.f + self.e,
+            f: self.b * other.e + self.d * other.f + self.f,
+        }
+    }
+
+    /// The transform that undoes this one; `None` when it is singular
+    /// (a zero scale has no inverse — nothing maps back).
+    pub fn inverse(self) -> Option<Self> {
+        let det = self.a * self.d - self.b * self.c;
+        if det == 0.0 || !det.is_finite() {
+            return None;
+        }
+        let inv = 1.0 / det;
+        Some(Self {
+            a: self.d * inv,
+            b: -self.b * inv,
+            c: -self.c * inv,
+            d: self.a * inv,
+            e: (self.c * self.f - self.d * self.e) * inv,
+            f: (self.b * self.e - self.a * self.f) * inv,
+        })
+    }
+
+    /// The axis-aligned bounding box of a rect mapped through the transform.
+    /// For rotations this is strictly larger than the rotated shape — that is
+    /// what a damage region needs (cover everything that changed), not what a
+    /// hit test needs.
+    pub fn map_rect(self, r: Rect) -> Rect {
+        let corners = [
+            self.map_point(Point::new(r.x0, r.y0)),
+            self.map_point(Point::new(r.x1, r.y0)),
+            self.map_point(Point::new(r.x0, r.y1)),
+            self.map_point(Point::new(r.x1, r.y1)),
+        ];
+        let (mut x0, mut y0, mut x1, mut y1) = (
+            f64::INFINITY,
+            f64::INFINITY,
+            f64::NEG_INFINITY,
+            f64::NEG_INFINITY,
+        );
+        for p in corners {
+            x0 = x0.min(p.x);
+            y0 = y0.min(p.y);
+            x1 = x1.max(p.x);
+            y1 = y1.max(p.y);
+        }
+        Rect { x0, y0, x1, y1 }
+    }
+
+    #[inline]
+    pub fn is_identity(self) -> bool {
+        self == Self::IDENTITY
+    }
+
     #[inline]
     pub fn map_point(self, p: Point) -> Point {
         Point::new(
@@ -289,5 +398,102 @@ mod tests {
     fn transform_translate_maps_point() {
         let t = Transform::translate(3.0, 4.0);
         assert_eq!(t.map_point(Point::new(1.0, 2.0)), Point::new(4.0, 6.0));
+    }
+
+    #[test]
+    fn transform_scale_maps_about_origin_and_about_a_point() {
+        let s = Transform::scale(2.0, 3.0);
+        assert_eq!(s.map_point(Point::new(1.0, 1.0)), Point::new(2.0, 3.0));
+
+        // Scaling around (10, 10) must leave the pivot fixed.
+        let around = Transform::scale_around(2.0, 2.0, Point::new(10.0, 10.0));
+        assert_eq!(
+            around.map_point(Point::new(10.0, 10.0)),
+            Point::new(10.0, 10.0)
+        );
+        // And push a point 5 to the left of the pivot 5 further away.
+        assert_eq!(
+            around.map_point(Point::new(5.0, 10.0)),
+            Point::new(0.0, 10.0)
+        );
+    }
+
+    #[test]
+    fn transform_rotate_spins_the_axes() {
+        // A quarter turn clockwise (y down) maps +x onto +y.
+        let r = Transform::rotate(std::f64::consts::FRAC_PI_2);
+        let mapped = r.map_point(Point::new(1.0, 0.0));
+        assert!(mapped.x.abs() < 1e-9 && (mapped.y - 1.0).abs() < 1e-9);
+
+        // Rotating around the pivot leaves the pivot fixed.
+        let around = Transform::rotate_around(std::f64::consts::FRAC_PI_2, Point::new(4.0, 4.0));
+        assert_eq!(around.map_point(Point::new(4.0, 4.0)), Point::new(4.0, 4.0));
+    }
+
+    #[test]
+    fn transform_multiply_applies_the_right_one_first() {
+        let t = Transform::translate(10.0, 0.0);
+        let s = Transform::scale(2.0, 2.0);
+        // translate ∘ scale: scale first, then shift.
+        let both = t.multiply(s);
+        assert_eq!(both.map_point(Point::new(1.0, 0.0)), Point::new(12.0, 0.0));
+        // The other order shifts first, so the scale doubles the shift too.
+        let swapped = s.multiply(t);
+        assert_eq!(
+            swapped.map_point(Point::new(1.0, 0.0)),
+            Point::new(22.0, 0.0)
+        );
+    }
+
+    #[test]
+    fn transform_inverse_undoes_the_mapping_and_rejects_singular() {
+        let t = Transform::rotate_around(0.7, Point::new(3.0, 5.0))
+            .multiply(Transform::scale_around(2.0, 3.0, Point::new(1.0, 1.0)))
+            .multiply(Transform::translate(4.0, -2.0));
+        let inv = t
+            .inverse()
+            .expect("a non-singular transform has an inverse");
+        let p = Point::new(7.25, -3.5);
+        let back = inv.map_point(t.map_point(p));
+        assert!((back.x - p.x).abs() < 1e-9 && (back.y - p.y).abs() < 1e-9);
+
+        // A zero scale collapses the plane: nothing maps back.
+        assert!(Transform::scale(0.0, 1.0).inverse().is_none());
+    }
+
+    #[test]
+    fn transform_map_rect_is_the_bounding_box_of_the_mapped_corners() {
+        // Translation maps the rect exactly (no rotation slop).
+        let t = Transform::translate(5.0, 7.0);
+        let r = Rect::from_origin_size(Point::new(0.0, 0.0), Size::new(4.0, 2.0));
+        assert_eq!(
+            t.map_rect(r),
+            Rect {
+                x0: 5.0,
+                y0: 7.0,
+                x1: 9.0,
+                y1: 9.0
+            }
+        );
+
+        // A quarter turn about the origin maps [0..4]×[0..2] to a box on the
+        // other side; the bbox must cover every mapped corner (within fp slop).
+        let t90 = Transform::rotate(std::f64::consts::FRAC_PI_2);
+        let r90 = t90.map_rect(r);
+        for corner in [
+            Point::new(0.0, 0.0),
+            Point::new(4.0, 2.0),
+            Point::new(0.0, 2.0),
+            Point::new(4.0, 0.0),
+        ] {
+            let c = t90.map_point(corner);
+            assert!(
+                c.x >= r90.x0 - 1e-9
+                    && c.x <= r90.x1 + 1e-9
+                    && c.y >= r90.y0 - 1e-9
+                    && c.y <= r90.y1 + 1e-9,
+                "the bbox covers the mapped corner {c:?}: {r90:?}"
+            );
+        }
     }
 }

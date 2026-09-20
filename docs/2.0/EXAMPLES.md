@@ -21,6 +21,7 @@ something stale.
 | `floem2-forms` | form validation, dirty/touched tracking, control bindings | all | headless |
 | `floem2-navigation` | typed routes, history, page transitions, nav containers, deep links | all | headless |
 | `floem2-progress-ring` | self-drawn motion: an animated ring + a `Spinner` that animates itself | all | headless |
+| `floem2-transform` | subtree transforms: a card that scales and rotates as one picture | all | headless |
 | `floem2-editor` | text document: transactions, selection, undo/redo, IME pre-edit | all | headless |
 | `floem2-motion` | eased tweens, interruption, and a control that animates itself | all | headless |
 | `floem2-native-plugin` | writing a native provider plugin + slot pooling | all | headless |
@@ -108,6 +109,22 @@ paint-only repaint with no relayout.
 == 2. a control that animates itself ==
   running animations nobody asked for: 1
   sweep: 0.017 -> 0.183 after 10 frames
+```
+
+### `floem2-transform`
+
+Subtree transforms (MOTION-GAP A6/B7): a transform-class composite — scale,
+rotate — becomes a `GroupPush` scope bracketing the animated element's picture,
+and every backend applies one transform. The card's own payloads never move;
+the scope carries the sampled value about the box centre, pivoting where
+"scale the whole thing" actually means.
+
+```text
+== 1. the scope brackets the picture ==
+  sampled scale 0.667 about the box centre
+== 2. the pixels follow the scale ==
+== 3. a rotation turns the whole picture ==
+== 4. a finished transform parks clean ==
 ```
 
 ### `floem2-window`

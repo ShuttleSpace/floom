@@ -218,12 +218,14 @@ pub fn rect(bounds: Rect, fill: Color) -> SceneNode {
     }
 }
 
-/// Convenience: a group node with the given children.
-pub fn group(children: &[SceneNodeId], transform: floem_types::Transform) -> SceneNode {
-    SceneNode::Group {
-        children: children.iter().copied().collect(),
-        transform,
-    }
+/// Convenience: opens a transform scope around the scene nodes that follow.
+pub fn group_push(transform: floem_types::Transform) -> SceneNode {
+    SceneNode::GroupPush { transform }
+}
+
+/// Convenience: closes the innermost transform scope.
+pub fn group_pop() -> SceneNode {
+    SceneNode::GroupPop
 }
 
 /// Build a one-rect scene at the given extent — the simplest pixel fixture.

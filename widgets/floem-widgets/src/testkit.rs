@@ -201,7 +201,8 @@ impl SceneRecorder {
         self.scene
             .iter()
             .map(|(_, node)| match node {
-                SceneNode::Group { .. } => "Group",
+                SceneNode::GroupPush { .. } => "GroupPush",
+                SceneNode::GroupPop => "GroupPop",
                 SceneNode::Rect { .. } => "Rect",
                 SceneNode::Path { .. } => "Path",
                 SceneNode::ClipPush { .. } => "ClipPush",

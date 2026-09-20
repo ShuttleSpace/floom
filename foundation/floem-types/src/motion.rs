@@ -248,6 +248,8 @@ pub enum CompositorProp {
     TranslateX(f64),
     TranslateY(f64),
     Scale(f64),
+    /// Rotation in radians (screen coordinates: positive turns clockwise).
+    Rotate(f64),
 }
 
 /// Cubic-bezier timing curve: solves for the parameter that lands on `x` and

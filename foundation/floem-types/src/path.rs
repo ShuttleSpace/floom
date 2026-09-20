@@ -23,7 +23,7 @@
 //! stroked path and a filled path can share one rasteriser.
 
 use crate::color::Color;
-use crate::geometry::{Point, Rect};
+use crate::geometry::{Point, Rect, Transform};
 use std::sync::Arc;
 
 /// Flattening tolerance, in logical pixels: the maximum distance a flattened
@@ -138,6 +138,37 @@ impl Path {
                     c1: shift(c1),
                     c2: shift(c2),
                     to: shift(to),
+                },
+                PathSeg::Close => PathSeg::Close,
+            })
+            .collect();
+        Self { segs }
+    }
+
+    /// A copy of this path with every point mapped through the affine `t`.
+    ///
+    /// An affine map carries Bézier control points to the control points of
+    /// the mapped curve *exactly* — the same property translation has — so
+    /// the result is the transformed path, not a re-approximation of one.
+    pub fn transform(&self, t: Transform) -> Self {
+        if t.is_identity() {
+            return self.clone();
+        }
+        let map = |p: Point| t.map_point(p);
+        let segs = self
+            .segs
+            .iter()
+            .map(|seg| match *seg {
+                PathSeg::MoveTo(to) => PathSeg::MoveTo(map(to)),
+                PathSeg::LineTo(to) => PathSeg::LineTo(map(to)),
+                PathSeg::QuadTo { ctrl, to } => PathSeg::QuadTo {
+                    ctrl: map(ctrl),
+                    to: map(to),
+                },
+                PathSeg::CubicTo { c1, c2, to } => PathSeg::CubicTo {
+                    c1: map(c1),
+                    c2: map(c2),
+                    to: map(to),
                 },
                 PathSeg::Close => PathSeg::Close,
             })
@@ -891,6 +922,46 @@ impl ClipRegion {
         }
     }
 
+    /// The region mapped through the affine `t`.
+    ///
+    /// Rotation and scale change a rect clip into something that is no longer
+    /// an axis-aligned rect, and this type has no rotated-rect variant — so
+    /// the honest answer is the transform's *bounding box*: a clip that admits
+    /// everything the mapped region would, possibly a little more. A clip that
+    /// under-covers would cut off content the scene says is visible, which is
+    /// the worse direction to be wrong in. A path region maps exactly (an
+    /// affine takes Bézier control points to Bézier control points).
+    pub fn map(&self, t: Transform) -> Self {
+        if t.is_identity() {
+            return self.clone();
+        }
+        match self {
+            Self::Rect(bounds) => Self::Rect(t.map_rect(*bounds)),
+            Self::RoundedRect { bounds, radius } => Self::RoundedRect {
+                bounds: t.map_rect(*bounds),
+                radius: radius * t.a.abs().max(t.d.abs()),
+            },
+            Self::Path {
+                bounds,
+                origin,
+                path,
+            } => {
+                // The path's points are offsets from `origin`, so only the
+                // linear part maps them; the translation lands in `origin`.
+                let linear = Transform {
+                    e: 0.0,
+                    f: 0.0,
+                    ..t
+                };
+                Self::Path {
+                    bounds: t.map_rect(*bounds),
+                    origin: t.map_point(*origin),
+                    path: Arc::new(path.transform(linear)),
+                }
+            }
+        }
+    }
+
     /// True when the region admits a pixel centre, evaluated exactly.
     ///
     /// Only used by backends that clip per pixel; a backend with a scissor or
@@ -947,6 +1018,7 @@ pub fn resolve_clip(shape: &ClipShape, bounds: Rect) -> Option<ClipRegion> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::geometry::Size;
 
     fn rect(x0: f64, y0: f64, x1: f64, y1: f64) -> Rect {
         Rect { x0, y0, x1, y1 }
@@ -1472,6 +1544,91 @@ mod tests {
             } => {
                 assert_eq!(origin, Point::new(3.0, 4.0));
                 assert!(Arc::ptr_eq(&p, &path), "the placement moved, not the shape");
+            }
+            other => panic!("expected a path region, got {other:?}"),
+        }
+    }
+
+    /// An affine maps a path exactly: rotation about a point carries every
+    /// vertex where the matrix says, and the identity map is a no-op clone.
+    #[test]
+    fn path_transform_maps_points_and_identity_clones() {
+        let mut path = Path::new();
+        path.move_to(Point::new(1.0, 0.0))
+            .line_to(Point::new(2.0, 0.0));
+        let quarter = Transform::rotate_around(std::f64::consts::FRAC_PI_2, Point::new(0.0, 0.0));
+        let mapped = path.transform(quarter);
+        let pts: Vec<Point> = mapped
+            .segments()
+            .iter()
+            .filter_map(|seg| match seg {
+                PathSeg::MoveTo(p) | PathSeg::LineTo(p) => Some(*p),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(pts.len(), 2);
+        assert!((pts[0].x - 0.0).abs() < 1e-9 && (pts[0].y - 1.0).abs() < 1e-9);
+        assert!((pts[1].x - 0.0).abs() < 1e-9 && (pts[1].y - 2.0).abs() < 1e-9);
+
+        // Identity maps to the same geometry...
+        let same = path.transform(Transform::IDENTITY);
+        assert_eq!(same, path);
+        // ...and scales reach every control point, quad included.
+        let mut curve = Path::new();
+        curve
+            .move_to(Point::new(0.0, 0.0))
+            .quad_to(Point::new(1.0, 0.0), Point::new(2.0, 0.0));
+        let scaled = curve.transform(Transform::scale(3.0, 3.0));
+        assert!(
+            matches!(
+                scaled.segments(),
+                [
+                    PathSeg::MoveTo(p0),
+                    PathSeg::QuadTo { ctrl, to },
+                ] if *p0 == Point::new(0.0, 0.0)
+                    && *ctrl == Point::new(3.0, 0.0)
+                    && *to == Point::new(6.0, 0.0)
+            ),
+            "the quad's control points scaled with it"
+        );
+    }
+
+    /// A rect region mapped under a quarter turn becomes its rotated
+    /// bounding box; a path region maps its points relative to its origin.
+    #[test]
+    fn clip_region_map_covers_the_mapped_area() {
+        let rect = Rect::from_origin_size(Point::new(0.0, 0.0), Size::new(4.0, 2.0));
+        let quarter = Transform::rotate(std::f64::consts::FRAC_PI_2);
+        let mapped = ClipRegion::Rect(rect).map(quarter);
+        let b = mapped.bounds();
+        // (x, y) → (−y, x): [0..4]×[0..2] → [−2..0]×[0..4].
+        assert!((b.x0 - (-2.0)).abs() < 1e-9 && (b.x1 - 0.0).abs() < 1e-9);
+        assert!((b.y0 - 0.0).abs() < 1e-9 && (b.y1 - 4.0).abs() < 1e-9);
+
+        // Identity is a no-op.
+        assert_eq!(
+            ClipRegion::Rect(rect).map(Transform::IDENTITY),
+            ClipRegion::Rect(rect)
+        );
+
+        // A path region keeps its points relative to a mapped origin.
+        let mut path = Path::new();
+        path.move_to(Point::new(0.0, 0.0))
+            .line_to(Point::new(1.0, 0.0));
+        let segs = path.segments().to_vec();
+        let region = ClipRegion::Path {
+            bounds: Rect::from_origin_size(Point::new(10.0, 10.0), Size::new(1.0, 1.0)),
+            origin: Point::new(10.0, 10.0),
+            path: Arc::new(path),
+        };
+        let shift = Transform::translate(5.0, 7.0);
+        match region.map(shift) {
+            ClipRegion::Path {
+                origin, path: p, ..
+            } => {
+                assert_eq!(origin, Point::new(15.0, 17.0));
+                // The offsets are unchanged: the placement moved, not the shape.
+                assert_eq!(p.segments(), segs.as_slice());
             }
             other => panic!("expected a path region, got {other:?}"),
         }

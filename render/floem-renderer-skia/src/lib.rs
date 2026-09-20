@@ -28,6 +28,19 @@ pub enum SkiaCommand {
         rounded: bool,
     },
     PopClip,
+    /// `canvas.save()` + `canvas.concat(matrix)` for a `GroupPush` marker.
+    /// Recorded as the six matrix coefficients so the contract test can
+    /// compare scopes without linking Skia.
+    PushTransform {
+        a: f64,
+        b: f64,
+        c: f64,
+        d: f64,
+        e: f64,
+        f: f64,
+    },
+    /// `canvas.restore()` for a `GroupPop`.
+    PopTransform,
     DrawImage {
         bounds: Rect,
         alpha: u8,
@@ -79,7 +92,17 @@ impl Renderer for SkiaRendererAdapter {
                     rounded: !matches!(region, floem_types::ClipRegion::Rect(_)),
                 }),
                 SceneNode::ClipPop => self.commands.push(SkiaCommand::PopClip),
-                SceneNode::Group { .. } => {}
+                SceneNode::GroupPush { transform } => {
+                    self.commands.push(SkiaCommand::PushTransform {
+                        a: transform.a,
+                        b: transform.b,
+                        c: transform.c,
+                        d: transform.d,
+                        e: transform.e,
+                        f: transform.f,
+                    })
+                }
+                SceneNode::GroupPop => self.commands.push(SkiaCommand::PopTransform),
             }
         }
     }
@@ -95,7 +118,7 @@ mod tests {
     use floem_renderer::{FrameInfo, render_once};
     use floem_renderer_software::SoftwareRenderer;
     use floem_scene::{Point, SceneNode, Size};
-    use floem_types::Color;
+    use floem_types::{Color, Transform};
 
     #[test]
     fn skia_and_software_see_same_rect_scene() {
@@ -116,6 +139,45 @@ mod tests {
         render_once(&mut sw, &FrameInfo::software(16, 16, 1), &scene);
         assert_eq!(sw.rects_drawn, 1);
         assert_eq!(sw.pixel_rgba(1, 1), Some([1, 2, 3, 255]));
+    }
+
+    /// A transform scope reaches Skia as a save/concat pair bracketing the
+    /// draws it wraps — the same stream position the scene carries.
+    #[test]
+    fn skia_records_a_transform_scope_bracketing_its_draws() {
+        let mut scene = Scene::new();
+        scene.begin_update();
+        let _ = scene.insert(SceneNode::GroupPush {
+            transform: Transform::rotate_around(0.5, Point::new(8.0, 8.0)),
+        });
+        let _ = scene.insert(SceneNode::Rect {
+            bounds: Rect::from_origin_size(Point::new(1.0, 1.0), Size::new(4.0, 4.0)),
+            fill: Color::rgb(9, 9, 9),
+            radius: 0.0,
+        });
+        let _ = scene.insert(SceneNode::GroupPop);
+        scene.finish_update();
+
+        let mut skia = SkiaRendererAdapter::default();
+        render_once(&mut skia, &FrameInfo::software(16, 16, 1), &scene);
+
+        assert!(
+            matches!(
+                skia.commands.as_slice(),
+                [
+                    SkiaCommand::PushTransform { a, b, c, d, e, f },
+                    SkiaCommand::FillRect { .. },
+                    SkiaCommand::PopTransform,
+                ] if (*a - 0.5f64.cos()).abs() < 1e-9
+                    && (*b - 0.5f64.sin()).abs() < 1e-9
+                    && (*c + 0.5f64.sin()).abs() < 1e-9
+                    && (*d - 0.5f64.cos()).abs() < 1e-9
+                    && e.is_finite()
+                    && f.is_finite()
+            ),
+            "the scope brackets its draws and carries the rotation matrix: {:?}",
+            skia.commands
+        );
     }
 
     /// The three backends do not share pixels, but they do share an *IR*: a
