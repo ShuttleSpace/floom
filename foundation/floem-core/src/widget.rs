@@ -69,6 +69,23 @@ pub trait Widget {
     fn animation(&self) -> Option<crate::AnimationSpec> {
         None
     }
+    /// The shape this widget's subtree is clipped to, in the widget's own
+    /// coordinates, or `None` (the default) for the usual "content may paint
+    /// outside my box".
+    ///
+    /// Declared rather than done at paint time, for a reason that is structural
+    /// and not stylistic: this host paints a **flat** scene in node order, so a
+    /// widget's paint call is not bracketed by its children's — there is no
+    /// "before and after the subtree" moment for a widget to push and pop a
+    /// clip in. The host therefore resolves this declaration against laid-out
+    /// bounds and writes the clip markers around the whole subtree itself.
+    ///
+    /// A clip applies to the widget's own paint as well as its descendants'.
+    /// The region is resolved from the element's box, so the one thing a widget
+    /// cannot express here is a clip unrelated to its own layout.
+    fn clip(&self) -> Option<floem_types::ClipShape> {
+        None
+    }
     fn semantics(&self, cx: &mut dyn SemanticsContext, id: ElementId) {
         let _ = (cx, id);
     }

@@ -70,6 +70,7 @@
 pub use floem_app;
 pub use floem_core;
 pub use floem_layout;
+pub use floem_scene;
 pub use floem_types;
 pub use floem_widgets;
 
@@ -119,10 +120,10 @@ pub mod prelude {
     // --- Semantic widgets (floem-widgets) -------------------------------
     pub use floem_widgets::NativeSurface;
     pub use floem_widgets::{
-        BottomSheet, Button, Checkbox, Conditional, Container, Dialog, Divider, Grid, Icon, Image,
-        ImageFit, InteractionState, Labeled, List, NavDestination, NavHandle, NavHost,
+        BottomSheet, Button, Canvas, Checkbox, Conditional, Container, Dialog, Divider, Grid, Icon,
+        Image, ImageFit, InteractionState, Labeled, List, NavDestination, NavHandle, NavHost,
         NavigationBar, NavigationDrawer, NavigationRail, Overlay, Popup, Progress, Radio, Select,
-        Slider, Spacer, Stack, Switch, Tabs, Text, TextField,
+        Slider, Spacer, Spinner, Stack, Switch, Tabs, Text, TextField,
     };
 
     // --- App shell (floem-app) -------------------------------------------
@@ -142,6 +143,16 @@ pub mod prelude {
     // value an app *writes*, not a contract it implements.
     pub use floem_animation::{AnimId, AnimKind, Tween};
     pub use floem_types::{CompositorProp, Easing, RepeatMode};
+
+    // --- Self-drawn value types -------------------------------------------
+    // A `Canvas` painter writes `Path`s and `Stroke`s in app colors; without
+    // these the canvas is unnameable from the beginner surface. Same rule as
+    // the motion vocabulary: values an app writes, not contracts it implements.
+    pub use floem_types::{Color, LineCap, LineJoin, Path, Stroke};
+
+    // A `Canvas::repaint_on` ping is also a value an app writes: bump it and
+    // the canvas repaints on the next frame, paint-only.
+    pub use floem_legacy_reactive::{RwSignal, SignalGet, SignalUpdate};
 }
 
 /// Explicit, opt-in surface for everything the prelude keeps out: the

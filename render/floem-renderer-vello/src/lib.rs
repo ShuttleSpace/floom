@@ -37,6 +37,24 @@ pub enum VelloCommand {
     DrawGlyphs {
         bounds: Rect,
     },
+    /// A filled path. Bounds alone would let two different shapes collide,
+    /// so the segment count rides along as a cheap identity check.
+    FillPath {
+        bounds: Rect,
+        segments: usize,
+    },
+    /// A stroked path; `width` is in logical px.
+    StrokePath {
+        bounds: Rect,
+        width: f32,
+    },
+    /// Opens a clip. Every command recorded after it is confined to
+    /// `bounds` until the matching [`VelloCommand::PopClip`].
+    PushClip {
+        bounds: Rect,
+    },
+    /// Closes the innermost clip.
+    PopClip,
 }
 
 #[derive(Debug, Default)]
@@ -93,6 +111,28 @@ impl Renderer for VelloRendererAdapter {
                     });
                 }
                 SceneNode::Group { .. } => {}
+                SceneNode::Path { path, fill, stroke } => {
+                    let bounds = path.bounds();
+                    if let Some(fill) = fill {
+                        self.commands.push(VelloCommand::FillPath {
+                            bounds: Rect::from_origin_size(bounds.origin(), bounds.size()),
+                            segments: path.segments().len(),
+                        });
+                        let _ = fill;
+                    }
+                    if let Some(stroke) = stroke {
+                        self.commands.push(VelloCommand::StrokePath {
+                            bounds: Rect::from_origin_size(bounds.origin(), bounds.size()),
+                            width: stroke.width as f32,
+                        });
+                    }
+                }
+                SceneNode::ClipPush { region } => {
+                    self.commands.push(VelloCommand::PushClip {
+                        bounds: region.bounds(),
+                    });
+                }
+                SceneNode::ClipPop => self.commands.push(VelloCommand::PopClip),
             }
         }
         self.last_cmd_len = self.commands.len();

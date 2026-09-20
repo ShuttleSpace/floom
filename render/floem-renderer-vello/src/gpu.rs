@@ -58,12 +58,15 @@ use floem_renderer::{
     Presenter, SurfaceHandles,
 };
 use floem_scene::{ResourceKind, ResourceRegistry, Scene, SceneNode};
-use floem_types::{Size, SurfaceId, WindowId};
+use floem_types::{ClipRegion, PathSeg, Size, SurfaceId, WindowId};
 use std::collections::{HashMap, HashSet};
 
 use crate::budget::{CacheTrimTelemetry, GpuCacheBudget, MemoryPressure, TrimPlan, plan_trim};
 
-use vello::kurbo::{Affine, Rect as KurboRect, RoundedRect as KurboRoundedRect};
+use vello::kurbo::{
+    Affine, BezPath, Cap as KurboLineCap, Join as KurboLineJoin, Rect as KurboRect,
+    RoundedRect as KurboRoundedRect, Stroke as KurboStroke,
+};
 use vello::peniko::{
     BlendMode, Blob, Color as PenikoColor, Fill, ImageAlphaType, ImageBrush, ImageData,
     ImageFormat, ImageSampler,
@@ -122,6 +125,8 @@ pub struct GpuFrameStats {
     pub glyph_runs: u64,
     /// Images encoded into the last frame.
     pub images: u64,
+    /// Vector path nodes encoded into the last frame.
+    pub paths: u64,
     /// Nodes skipped: only nodes with a dangling / wrong-kind resource id land
     /// here now that rect, text and image all have pipelines.
     pub unsupported_nodes: u64,
@@ -173,6 +178,7 @@ struct ScratchTarget {
 #[derive(Debug, Clone, Default)]
 struct NodeEncodeStats {
     rects: u64,
+    paths: u64,
     glyph_runs: u64,
     images: u64,
     unsupported: u64,
@@ -277,8 +283,197 @@ fn node_fingerprint(node: &SceneNode) -> u64 {
                     | u32::from(color.a),
             );
         }
+        SceneNode::Path { path, fill, stroke } => {
+            hasher.write_u8(4);
+            // Every segment, bit for bit. A path is the one payload whose
+            // *shape* is data rather than a handful of numbers, so a hash over
+            // "it is still a path" would freeze a cached fragment on the first
+            // frame's geometry — the same class of bug the image alpha note
+            // above describes, one level deeper.
+            for seg in path.segments() {
+                match *seg {
+                    PathSeg::MoveTo(p) => {
+                        hasher.write_u8(0);
+                        hash_point(&mut hasher, p);
+                    }
+                    PathSeg::LineTo(p) => {
+                        hasher.write_u8(1);
+                        hash_point(&mut hasher, p);
+                    }
+                    PathSeg::QuadTo { ctrl, to } => {
+                        hasher.write_u8(2);
+                        hash_point(&mut hasher, ctrl);
+                        hash_point(&mut hasher, to);
+                    }
+                    PathSeg::CubicTo { c1, c2, to } => {
+                        hasher.write_u8(3);
+                        hash_point(&mut hasher, c1);
+                        hash_point(&mut hasher, c2);
+                        hash_point(&mut hasher, to);
+                    }
+                    PathSeg::Close => hasher.write_u8(4),
+                }
+            }
+            match fill {
+                None => hasher.write_u8(0),
+                Some(fill) => {
+                    hasher.write_u8(1);
+                    hash_color(&mut hasher, fill);
+                }
+            }
+            match stroke {
+                None => hasher.write_u8(0),
+                Some(stroke) => {
+                    hasher.write_u8(1);
+                    hasher.write_u64(stroke.width.to_bits());
+                    hasher.write_u8(stroke.cap as u8);
+                    hasher.write_u8(stroke.join as u8);
+                    hasher.write_u64(stroke.miter_limit.to_bits());
+                    hash_color(&mut hasher, &stroke.color);
+                }
+            }
+        }
+        SceneNode::ClipPush { region } => {
+            hasher.write_u8(5);
+            hash_clip_region(&mut hasher, region);
+        }
+        SceneNode::ClipPop => hasher.write_u8(6),
     }
     hasher.finish()
+}
+
+/// Hashes a clip region's geometry and identity.
+///
+/// Used by the fingerprint of the marker nodes themselves (which are never
+/// fragmented) rather than by the fragment key of the nodes under them: vello
+/// applies a clip through the *command stream*, not through each fragment's
+/// contents, so a cached fragment is valid under any clip and stays reusable
+/// when one moves.
+fn hash_clip_region(hasher: &mut impl std::hash::Hasher, region: &ClipRegion) {
+    match region {
+        ClipRegion::Rect(bounds) => {
+            hasher.write_u8(0);
+            hash_rect(hasher, *bounds);
+        }
+        ClipRegion::RoundedRect { bounds, radius } => {
+            hasher.write_u8(1);
+            hash_rect(hasher, *bounds);
+            hasher.write_u64(radius.to_bits());
+        }
+        ClipRegion::Path {
+            bounds,
+            origin,
+            path,
+        } => {
+            hasher.write_u8(2);
+            hash_rect(hasher, *bounds);
+            hash_point(hasher, *origin);
+            for seg in path.segments() {
+                match *seg {
+                    PathSeg::MoveTo(p) => {
+                        hasher.write_u8(0);
+                        hash_point(hasher, p);
+                    }
+                    PathSeg::LineTo(p) => {
+                        hasher.write_u8(1);
+                        hash_point(hasher, p);
+                    }
+                    PathSeg::QuadTo { ctrl, to } => {
+                        hasher.write_u8(2);
+                        hash_point(hasher, ctrl);
+                        hash_point(hasher, to);
+                    }
+                    PathSeg::CubicTo { c1, c2, to } => {
+                        hasher.write_u8(3);
+                        hash_point(hasher, c1);
+                        hash_point(hasher, c2);
+                        hash_point(hasher, to);
+                    }
+                    PathSeg::Close => hasher.write_u8(4),
+                }
+            }
+        }
+    }
+}
+
+fn hash_point(hasher: &mut impl std::hash::Hasher, p: floem_types::Point) {
+    hasher.write_u64(p.x.to_bits());
+    hasher.write_u64(p.y.to_bits());
+}
+
+fn hash_rect(hasher: &mut impl std::hash::Hasher, r: floem_types::Rect) {
+    for v in [r.x0, r.y0, r.x1, r.y1] {
+        hasher.write_u64(v.to_bits());
+    }
+}
+
+fn hash_color(hasher: &mut impl std::hash::Hasher, c: &floem_types::Color) {
+    hasher.write_u32(
+        u32::from(c.r) << 24 | u32::from(c.g) << 16 | u32::from(c.b) << 8 | u32::from(c.a),
+    );
+}
+
+/// Translates a path in Floem's vocabulary into kurbo's.
+fn bez_path(path: &floem_types::Path) -> BezPath {
+    let mut bez = BezPath::new();
+    for seg in path.segments() {
+        match *seg {
+            PathSeg::MoveTo(p) => bez.move_to((p.x, p.y)),
+            PathSeg::LineTo(p) => bez.line_to((p.x, p.y)),
+            PathSeg::QuadTo { ctrl, to } => bez.quad_to((ctrl.x, ctrl.y), (to.x, to.y)),
+            PathSeg::CubicTo { c1, c2, to } => {
+                bez.curve_to((c1.x, c1.y), (c2.x, c2.y), (to.x, to.y));
+            }
+            PathSeg::Close => bez.close_path(),
+        }
+    }
+    bez
+}
+
+fn kurbo_rect(bounds: floem_types::Rect) -> KurboRect {
+    KurboRect::new(bounds.x0, bounds.y0, bounds.x1, bounds.y1)
+}
+
+fn kurbo_cap(cap: floem_types::LineCap) -> KurboLineCap {
+    match cap {
+        floem_types::LineCap::Butt => KurboLineCap::Butt,
+        floem_types::LineCap::Round => KurboLineCap::Round,
+        floem_types::LineCap::Square => KurboLineCap::Square,
+    }
+}
+
+fn kurbo_join(join: floem_types::LineJoin) -> KurboLineJoin {
+    match join {
+        floem_types::LineJoin::Miter => KurboLineJoin::Miter,
+        floem_types::LineJoin::Round => KurboLineJoin::Round,
+        floem_types::LineJoin::Bevel => KurboLineJoin::Bevel,
+    }
+}
+
+/// Opens a clip layer for `region`.
+///
+/// Vello has no scissor: a clip is a layer, which is why the renderer pushes
+/// one per region rather than intersecting rectangles. The region arrives in
+/// absolute logical coordinates, so a path region also carries the translate
+/// that places its own coordinates — `push_clip_layer` applies its `transform`
+/// to the clip shape alone and leaves the rest of the stream alone.
+fn push_clip_region(scene: &mut VelloScene, region: &ClipRegion) {
+    match region {
+        ClipRegion::Rect(bounds) => {
+            let shape = kurbo_rect(*bounds);
+            scene.push_clip_layer(Fill::NonZero, Affine::IDENTITY, &shape);
+        }
+        ClipRegion::RoundedRect { bounds, radius } => {
+            let radius = radius.clamp(0.0, bounds.width().min(bounds.height()) / 2.0);
+            let shape = KurboRoundedRect::from_rect(kurbo_rect(*bounds), radius);
+            scene.push_clip_layer(Fill::NonZero, Affine::IDENTITY, &shape);
+        }
+        ClipRegion::Path { origin, path, .. } => {
+            let shape = bez_path(path);
+            let place = Affine::translate((origin.x, origin.y));
+            scene.push_clip_layer(Fill::NonZero, place, &shape);
+        }
+    }
 }
 
 /// Vello + wgpu [`Presenter`].
@@ -711,7 +906,33 @@ impl VelloGpuPresenter {
         };
         let mut used_fragments: HashSet<u64> = HashSet::new();
         let mut used_images: HashSet<u64> = HashSet::new();
+        // The clips in force, as a stack. Vello's layers nest, and the scene's
+        // `ClipPush`/`ClipPop` markers describe exactly that stack: a push opens
+        // a layer, a pop closes the innermost one, and two overlapping clips
+        // intersect (clip A *and* clip B) — the same thing the software
+        // backend's coverage stack does. The walk therefore pushes and pops
+        // without ever closing the previous layer; closing it would drop the
+        // outer clip from everything the inner one covers, which is the bug a
+        // "replace" reading of the markers would introduce.
+        let mut clip_depth: usize = 0;
         for (id, node) in scene.iter() {
+            match node {
+                SceneNode::ClipPush { region } => {
+                    push_clip_region(&mut self.vello_scene, region);
+                    clip_depth += 1;
+                    continue;
+                }
+                SceneNode::ClipPop => {
+                    // The scene is well-formed (never pops an empty stack), so
+                    // this always matches a preceding push.
+                    if clip_depth > 0 {
+                        self.vello_scene.pop_layer();
+                        clip_depth -= 1;
+                    }
+                    continue;
+                }
+                _ => {}
+            }
             let fingerprint = node_fingerprint(node);
             let key = id.raw();
             if let Some(cached) = self.fragments.get_mut(&key) {
@@ -729,6 +950,7 @@ impl VelloGpuPresenter {
                     // pixels are already resident).
                     self.vello_scene.append(&cached.scene, Some(shift));
                     totals.rects += cached.stats.rects;
+                    totals.paths += cached.stats.paths;
                     totals.glyph_runs += cached.stats.glyph_runs;
                     totals.images += cached.stats.images;
                     totals.unsupported_nodes += cached.stats.unsupported;
@@ -745,6 +967,7 @@ impl VelloGpuPresenter {
             let stats = self.encode_node(&mut fragment_scene, node, resources, &mut used_images);
             // Accumulate before the stats move into the fragment.
             totals.rects += stats.rects;
+            totals.paths += stats.paths;
             totals.glyph_runs += stats.glyph_runs;
             totals.images += stats.images;
             totals.unsupported_nodes += stats.unsupported;
@@ -770,6 +993,14 @@ impl VelloGpuPresenter {
                 self.trim_telemetry.caching_refused += 1;
                 self.vello_scene.append(&fragment_scene, Some(shift));
             }
+        }
+        // Close whatever the stream left open. The scene is allowed to end with
+        // regions still pushed — nothing is drawn after the last node — but a
+        // vello scene with an unterminated layer is a malformed command list,
+        // not a harmless trailing instruction.
+        while clip_depth > 0 {
+            self.vello_scene.pop_layer();
+            clip_depth -= 1;
         }
         // Prune fragments the scene no longer holds (and brushes nothing
         // re-encoded this frame references). The keys include generations, so
@@ -807,6 +1038,41 @@ impl VelloGpuPresenter {
                     &shape,
                 );
                 stats.rects += 1;
+            }
+            SceneNode::Path { path, fill, stroke } => {
+                let bez = bez_path(path);
+                if let Some(fill) = fill {
+                    target.fill(
+                        Fill::NonZero,
+                        Affine::IDENTITY,
+                        PenikoColor::from_rgba8(fill.r, fill.g, fill.b, fill.a),
+                        None,
+                        &bez,
+                    );
+                }
+                if let Some(stroke) = stroke {
+                    let pen = KurboStroke {
+                        width: stroke.width,
+                        join: kurbo_join(stroke.join),
+                        miter_limit: stroke.miter_limit,
+                        start_cap: kurbo_cap(stroke.cap),
+                        end_cap: kurbo_cap(stroke.cap),
+                        ..Default::default()
+                    };
+                    target.stroke(
+                        &pen,
+                        Affine::IDENTITY,
+                        PenikoColor::from_rgba8(
+                            stroke.color.r,
+                            stroke.color.g,
+                            stroke.color.b,
+                            stroke.color.a,
+                        ),
+                        None,
+                        &bez,
+                    );
+                }
+                stats.paths += 1;
             }
             SceneNode::Text {
                 origin,
@@ -953,6 +1219,10 @@ impl VelloGpuPresenter {
                 stats.images += 1;
             }
             SceneNode::Group { .. } => {}
+            // Markers are consumed by the walk in `encode`, before it reaches
+            // here; reaching this arm would mean a marker slipped past the
+            // clip bookkeeping.
+            SceneNode::ClipPush { .. } | SceneNode::ClipPop => {}
         }
         stats
     }

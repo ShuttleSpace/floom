@@ -18,3 +18,8 @@ peniko.workspace = true
 
 [dev-dependencies]
 floem-text = { path = "../../text/floem-text", version = "0.2.0" }
+criterion = { version = "0.8.1", features = ["html_reports"] }
+
+[[bench]]
+name = "self_draw"
+harness = false

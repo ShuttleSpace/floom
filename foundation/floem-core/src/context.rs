@@ -187,6 +187,30 @@ pub trait PaintContext {
         let _ = (origin, text, size, color);
     }
 
+    /// Fills an arbitrary vector path.
+    ///
+    /// Paths are in absolute logical coordinates, unlike the rect ops, which
+    /// are also absolute — the difference is only that a path is not tied to
+    /// the element's box, because the interesting ones (a chart line, a ring,
+    /// a chevron) are not rectangles at all.
+    ///
+    /// Defaults to a no-op, matching [`PaintContext::fill_text`]: a host with no
+    /// path support draws nothing rather than guessing at a bounding box.
+    fn fill_path(&mut self, path: &floem_types::Path, color: Color) {
+        let _ = (path, color);
+    }
+
+    /// Strokes an arbitrary vector path: the outline drawn as a band of
+    /// `stroke.width` centred on the path.
+    ///
+    /// Separate from [`PaintContext::fill_path`] because the two answer
+    /// different questions — a fill is "what is inside this shape", a stroke is
+    /// "trace this shape" — and a caller that wants both calls both, in that
+    /// order. Defaults to a no-op.
+    fn stroke_path(&mut self, path: &floem_types::Path, stroke: &floem_types::Stroke) {
+        let _ = (path, stroke);
+    }
+
     /// An already-registered image resource drawn into `bounds`.
     fn draw_image(&mut self, bounds: Rect, image: ResourceId) {
         let _ = (bounds, image);
@@ -216,4 +240,17 @@ pub trait SemanticsContext {
     fn set_label(&mut self, label: &str);
     fn set_bounds(&mut self, bounds: Rect);
     fn size_hint(&self) -> Size;
+    /// Declares what kind of thing this element is.
+    ///
+    /// Without this a drawn element can only say *what it is called*, which
+    /// leaves a self-drawn canvas indistinguishable from decorative noise: the
+    /// role is what tells a screen reader that there is an image here to
+    /// describe at all. Compose's canvas and Flutter's `CustomPaint` both
+    /// defaulted to invisible for exactly this reason, and both now require the
+    /// author to attach semantics explicitly — so the default here is
+    /// [`SemanticsRole::None`], i.e. publish nothing, and a widget that draws
+    /// something worth describing says so.
+    fn set_role(&mut self, role: crate::SemanticsRole) {
+        let _ = role;
+    }
 }

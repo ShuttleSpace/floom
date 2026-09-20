@@ -44,10 +44,11 @@ use floem_native::{
 use floem_overlay::{CompositorProp, OverlayManager};
 use floem_runtime::{EventRouter, Hit, HitRegion, RouteStop};
 use floem_runtime_core::IdAllocator;
-use floem_scene::{Resource, ResourceKind, ResourceRegistry, Scene, SceneNodeId};
+use floem_scene::{Resource, ResourceKind, ResourceRegistry, Scene, SceneNode, SceneNodeId};
 use floem_text::{LayoutCache, TextAlign, TextLayoutOptions, TextShaper};
 use floem_types::NativeCapture;
 use floem_types::ScrollEvent;
+use floem_types::{ClipRegion, resolve_clip};
 use floem_widgets::WidgetAny;
 
 /// Stable handle to a mounted widget.
@@ -125,6 +126,20 @@ struct Node {
     /// positionally via `Scene::upsert` (so unchanged payloads produce no
     /// damage), and leftovers are retired.
     scene_nodes: Vec<SceneNodeId>,
+    /// The `ClipPush`/`ClipPop` pair bracketing this node's subtree in the
+    /// scene's draw order, when the node's widget declares
+    /// [`Widget::clip`]. Both are `None` for every unclipped node.
+    ///
+    /// They live here, not in `scene_nodes`, because a widget's own `paint`
+    /// cannot bracket the *descendants* it does not paint: the host walks the
+    /// subtree, so the host is the only party that knows where the bracket
+    /// ends. Holding the ids (rather than minting them per frame) is what
+    /// keeps the pair in place across frames — a scene node's position in the
+    /// draw order is the slot it was allocated in, so re-inserting them every
+    /// frame would append the pop *after* the whole scene instead of after
+    /// this subtree.
+    clip_push: Option<SceneNodeId>,
+    clip_pop: Option<SceneNodeId>,
     /// Set when a native participant is bound to this node. Its hit region
     /// then resolves to the native view — which takes the pointer itself —
     /// instead of to this widget. Cleared when the participant is retired.
@@ -1143,6 +1158,8 @@ impl WidgetHost {
             native: None,
             native_hidden: false,
             scene_nodes: Vec::new(),
+            clip_push: None,
+            clip_pop: None,
             text_measure,
             motion: None,
         });
@@ -1376,6 +1393,12 @@ impl WidgetHost {
             || self.animations_running() > 0
             || !self.pending_scene_removals.is_empty()
             || !self.scene.damage().is_empty()
+            // A repaint request that has not reached a frame yet is exactly
+            // the "content changed outside the frame loop" case above — but
+            // it lives in the channel, not on the host, so it is polled here.
+            // `frame()` drains the channel, so this settles to `false` once
+            // the request has been served.
+            || floem_core::has_repaint_requests()
     }
 
     /// Advances the animation clock by `dt_secs` and re-samples every running
@@ -1794,6 +1817,14 @@ impl WidgetHost {
         // reason the event path queues them: opening one mounts a subtree and
         // needs the host to itself while the asking widget is borrowed out of it.
         let mut overlay_commands: Vec<OverlayCommand> = Vec::new();
+        // Repaint requests that arrived outside the frame loop (a reactive
+        // effect turning a signal change into `request_repaint`, say) fold
+        // into the update pass below through the same dirty flag a widget's
+        // own `update` reports — a repaint and nothing else. Taken once, up
+        // front: a request repaints at most one frame, and requests for
+        // elements that no longer exist simply match nothing.
+        let repaint_requests: std::collections::HashSet<ElementId> =
+            floem_core::take_repaint_requests().into_iter().collect();
         for index in 0..self.nodes.len() {
             if self.nodes[index].dead {
                 continue;
@@ -1828,9 +1859,13 @@ impl WidgetHost {
                 native,
             };
             node.widget.update(&mut cx, node.id);
-            node.dirty = cx.dirty;
+            // A queued repaint request rides the same dirty flag a widget's
+            // own `update` reports, so every downstream consumer (update
+            // stats, semantics upsert, paint) treats the two identically.
+            let dirty = cx.dirty || repaint_requests.contains(&node.id);
+            node.dirty = dirty;
             node.children_dirty |= cx.children_dirty;
-            if cx.dirty {
+            if dirty {
                 stats.updated += 1;
                 // A widget that changed may have changed its semantics hint
                 // with it (labels, roles, states ride on widget state).
@@ -2040,23 +2075,33 @@ impl WidgetHost {
             self.scene.remove(id);
         }
 
+        // Scene nodes parked on a node that died between two paints. Unmount
+        // already pends these; draining defensively means a dead node can
+        // never keep a phantom scene node alive.
         for index in 0..self.nodes.len() {
+            if !self.nodes[index].dead || self.nodes[index].scene_nodes.is_empty() {
+                continue;
+            }
+            for id in self.nodes[index].scene_nodes.drain(..) {
+                self.scene.remove(id);
+            }
+        }
+
+        // The main tree is walked depth-first from its roots rather than as one
+        // flat sweep, so a node whose widget declares a clip can bracket its
+        // own subtree with the push/pop markers. The two walks visit the same
+        // nodes in the same order — a child is mounted immediately after its
+        // parent, so ascending index *is* pre-order — and
+        // `the_paint_walk_is_preorder` holds the invariant that makes it so.
+        for index in 0..self.nodes.len() {
+            if self.nodes[index].is_overlay || self.nodes[index].dead {
+                continue;
+            }
             // Overlay subtrees are painted afterwards, on top of the main tree.
-            if self.nodes[index].is_overlay || self.is_in_overlay(index) {
+            if self.nodes[index].parent.is_some() {
                 continue;
             }
-            if self.nodes[index].dead {
-                // Unmount already pends these; drain defensively so a dead
-                // node can never keep a phantom scene node alive.
-                for id in self.nodes[index].scene_nodes.drain(..) {
-                    self.scene.remove(id);
-                }
-                continue;
-            }
-            // A frozen participant's tween rides along here, on the same
-            // channel an overlay's entry animation uses.
-            let composite = self.frozen_composite(index);
-            self.paint_node(index, composite, stats);
+            self.paint_subtree(index, stats);
         }
 
         // Overlays paint last, so their content sits above everything beneath
@@ -2113,6 +2158,101 @@ impl WidgetHost {
         stats.painted += 1;
     }
 
+    /// Paints `index` and everything under it, bracketing the subtree with
+    /// this node's clip markers when its widget declares a clip.
+    ///
+    /// A walk, rather than the flat sweep this used to be, for exactly one
+    /// reason: the bracket. A widget's `paint` writes scene nodes for itself
+    /// and nothing for descendants it does not paint, so only the host knows
+    /// where a clipped subtree begins and ends. Nothing else changes — each
+    /// node still paints at its own turn with its own composite.
+    fn paint_subtree(&mut self, index: usize, stats: &mut FrameStats) {
+        if self.nodes[index].dead {
+            return;
+        }
+        let clip = self.node_clip_region(index);
+        let clipped = clip.is_some();
+        match clip {
+            Some(region) => self.write_clip_push(index, region),
+            // A widget that stopped declaring a clip must not leave its window
+            // applied to the subtree it no longer covers.
+            None => self.retire_clip_markers(index),
+        }
+        // A frozen participant's tween rides along here, on the same channel an
+        // overlay's entry animation uses.
+        let composite = self.frozen_composite(index);
+        self.paint_node(index, composite, stats);
+        self.paint_children(index, stats);
+        if clipped {
+            self.write_clip_pop(index);
+        }
+    }
+
+    /// Paints `index`'s children in order.
+    ///
+    /// Walked by index rather than collected into a `Vec` first: cloning the
+    /// child list is one allocation per node per frame, which is what the
+    /// settled-frame allocation budget exists to forbid.
+    fn paint_children(&mut self, index: usize, stats: &mut FrameStats) {
+        let mut i = 0;
+        while i < self.nodes[index].children.len() {
+            let child = self.nodes[index].children[i];
+            self.paint_subtree(child, stats);
+            i += 1;
+        }
+    }
+
+    /// The clip this node's widget asks for, resolved against its laid-out box.
+    ///
+    /// `None` when the widget asks for nothing — or when it has no box yet
+    /// (see [`resolve_clip`]), because clipping to an empty box would make the
+    /// subtree invisible rather than the no-op "not laid out yet" means.
+    fn node_clip_region(&self, index: usize) -> Option<ClipRegion> {
+        let shape = self.nodes[index].widget.clip()?;
+        resolve_clip(&shape, self.nodes[index].bounds)
+    }
+
+    /// Opens this node's clip: writes the `ClipPush` marker into the slot the
+    /// node holds for it, minting the slot on the first frame the clip appears.
+    ///
+    /// *Where* the slot comes from is the whole trick. The scene draws in slot
+    /// order, and a slot is placed where it is allocated; allocating here — on
+    /// the way into the subtree, before the node's own scene nodes exist —
+    /// puts the marker exactly on the subtree's leading edge. Keeping the id
+    /// puts it there on every later frame, since `upsert` never moves a node.
+    fn write_clip_push(&mut self, index: usize, region: ClipRegion) {
+        let node = SceneNode::ClipPush { region };
+        match self.nodes[index].clip_push {
+            Some(id) => self.scene.upsert(id, node),
+            None => {
+                let id = self.scene.insert(node);
+                self.nodes[index].clip_push = Some(id);
+            }
+        }
+    }
+
+    /// Closes the region [`Self::write_clip_push`] opened — after the last
+    /// descendant has painted, so it lands on the subtree's trailing edge.
+    fn write_clip_pop(&mut self, index: usize) {
+        match self.nodes[index].clip_pop {
+            Some(id) => self.scene.upsert(id, SceneNode::ClipPop),
+            None => {
+                let id = self.scene.insert(SceneNode::ClipPop);
+                self.nodes[index].clip_pop = Some(id);
+            }
+        }
+    }
+
+    /// Retires both markers of a node that no longer declares a clip.
+    fn retire_clip_markers(&mut self, index: usize) {
+        if let Some(id) = self.nodes[index].clip_push.take() {
+            self.scene.remove(id);
+        }
+        if let Some(id) = self.nodes[index].clip_pop.take() {
+            self.scene.remove(id);
+        }
+    }
+
     /// Pre-order paint of an overlay subtree (parent before its children),
     /// applying the overlay's entry animation to every node it writes.
     fn paint_overlay_subtree(
@@ -2124,10 +2264,24 @@ impl WidgetHost {
         if self.nodes[index].dead {
             return;
         }
+        // An overlay clips exactly the way a main-tree node does. It has to:
+        // a popup whose content is clipped is the *reason* an overlay is
+        // painted after its parent in the first place.
+        let clip = self.node_clip_region(index);
+        let clipped = clip.is_some();
+        match clip {
+            Some(region) => self.write_clip_push(index, region),
+            None => self.retire_clip_markers(index),
+        }
         self.paint_node(index, composite, stats);
-        let children = self.nodes[index].children.clone();
-        for child in children {
+        let mut i = 0;
+        while i < self.nodes[index].children.len() {
+            let child = self.nodes[index].children[i];
             self.paint_overlay_subtree(child, composite, stats);
+            i += 1;
+        }
+        if clipped {
+            self.write_clip_pop(index);
         }
     }
 
@@ -3482,6 +3636,17 @@ impl PaintContext for NodePaintContext<'_> {
     fn draw_image(&mut self, bounds: Rect, image: ResourceId) {
         self.push(floem_scene::SceneNode::image(bounds, image));
     }
+
+    fn fill_path(&mut self, path: &floem_types::Path, color: floem_types::Color) {
+        self.push(floem_scene::SceneNode::filled_path(path.clone(), color));
+    }
+
+    fn stroke_path(&mut self, path: &floem_types::Path, stroke: &floem_types::Stroke) {
+        self.push(floem_scene::SceneNode::stroked_path(
+            path.clone(),
+            stroke.clone(),
+        ));
+    }
 }
 
 impl NodePaintContext<'_> {
@@ -3530,28 +3695,48 @@ fn apply_composite(node: &mut floem_scene::SceneNode, prop: CompositorProp) {
             let alpha = alpha.clamp(0.0, 1.0);
             let scale = |c: u8| (c as f64 * alpha).round().clamp(0.0, 255.0) as u8;
             match node {
-                floem_scene::SceneNode::Rect { fill, .. } => fill.a = scale(fill.a),
-                floem_scene::SceneNode::Image { alpha, .. } => *alpha = scale(*alpha),
-                floem_scene::SceneNode::Text { color, .. } => color.a = scale(color.a),
-                floem_scene::SceneNode::Group { .. } => {}
+                SceneNode::Rect { fill, .. } => fill.a = scale(fill.a),
+                SceneNode::Image { alpha, .. } => *alpha = scale(*alpha),
+                SceneNode::Text { color, .. } => color.a = scale(color.a),
+                // A self-drawn node fades through *both* of its inks: a chart
+                // line is stroked with no fill, a chart area filled with no
+                // stroke, and a shape that has both must dim as one thing.
+                SceneNode::Path { fill, stroke, .. } => {
+                    if let Some(fill) = fill {
+                        fill.a = scale(fill.a);
+                    }
+                    if let Some(stroke) = stroke {
+                        stroke.color.a = scale(stroke.color.a);
+                    }
+                }
+                // A clip is not painted, so it has nothing to dim. Leaving it
+                // alone is the correct answer rather than an omission: dimming
+                // a window would *reveal* what it was hiding.
+                SceneNode::ClipPush { .. } | SceneNode::ClipPop => {}
+                SceneNode::Group { .. } => {}
             }
         }
         CompositorProp::TranslateX(dx) => match node {
-            floem_scene::SceneNode::Rect { bounds, .. }
-            | floem_scene::SceneNode::Image { bounds, .. } => {
+            SceneNode::Rect { bounds, .. } | SceneNode::Image { bounds, .. } => {
                 bounds.x0 += dx;
                 bounds.x1 += dx;
             }
-            floem_scene::SceneNode::Text { origin, .. } => origin.x += dx,
+            SceneNode::Text { origin, .. } => origin.x += dx,
+            // A path's geometry is its own coordinates, so it moves by moving
+            // its points. A clip is a window, and a window that stayed behind
+            // while its content slid would cut the content in half.
+            SceneNode::Path { path, .. } => *path = std::sync::Arc::new(path.translate(dx, 0.0)),
+            SceneNode::ClipPush { region } => *region = region.translate(dx, 0.0),
             _ => {}
         },
         CompositorProp::TranslateY(dy) => match node {
-            floem_scene::SceneNode::Rect { bounds, .. }
-            | floem_scene::SceneNode::Image { bounds, .. } => {
+            SceneNode::Rect { bounds, .. } | SceneNode::Image { bounds, .. } => {
                 bounds.y0 += dy;
                 bounds.y1 += dy;
             }
-            floem_scene::SceneNode::Text { origin, .. } => origin.y += dy,
+            SceneNode::Text { origin, .. } => origin.y += dy,
+            SceneNode::Path { path, .. } => *path = std::sync::Arc::new(path.translate(0.0, dy)),
+            SceneNode::ClipPush { region } => *region = region.translate(0.0, dy),
             _ => {}
         },
         CompositorProp::Scale(_) => {}

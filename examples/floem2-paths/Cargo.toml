@@ -1,0 +1,15 @@
+[package]
+name = "floem2-paths"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+description = "Self-drawn surfaces: a line chart, a progress ring, and a spinner"
+
+[dependencies]
+floem2 = { path = "../../app/floem2", version = "0.2.0" }
+# The repaint ping is a reactive signal; the canvas subscribes an effect to it.
+floem-legacy-reactive = { path = "../../legacy/floem-reactive", version = "0.2.0" }
+# The example asserts on the scene the host painted — the shapes, not just
+# the fact that painting happened.
+floem-scene = { path = "../../scene/floem-scene", version = "0.2.0" }

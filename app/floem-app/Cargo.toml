@@ -36,6 +36,7 @@ floem-renderer = { path = "../../render/floem-renderer", version = "0.2.0" }
 image = { workspace = true, features = ["png", "jpeg"] }
 
 [dev-dependencies]
+floem-legacy-reactive = { path = "../../legacy/floem-reactive", version = "0.2.0" }
 floem-forms = { path = "../../framework/floem-forms", version = "0.2.0" }
 floem-renderer-software = { path = "../../render/floem-renderer-software", version = "0.2.0" }
 floem-text = { path = "../../text/floem-text", version = "0.2.0" }

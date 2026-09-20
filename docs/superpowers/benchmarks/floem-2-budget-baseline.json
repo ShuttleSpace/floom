@@ -40,6 +40,30 @@
       "bench": "rows",
       "median_ns": 527346.0103225806,
       "observed_spread_pct": 0.2
+    },
+    {
+      "id": "self_draw/1000",
+      "package": "floem-renderer-software",
+      "bench": "self_draw",
+      "median_ns": 8516263.916666668,
+      "comment": "MOTION-GAP A9: a 1000-segment self-drawn chart, full software frame (encode + flatten + stroke + scanline rasterise). This is the worst case the flat-scene walk absorbs with no damage to skip.",
+      "observed_spread_pct": 0.5
+    },
+    {
+      "id": "self_draw/10000",
+      "package": "floem-renderer-software",
+      "bench": "self_draw",
+      "median_ns": 84011916.5,
+      "comment": "MOTION-GAP A9: the 10k-segment extreme. Scales linearly with the 1k figure (~8.4 us/segment), which is the shape evidence that nothing per-node is superlinear.",
+      "observed_spread_pct": 0.5
+    },
+    {
+      "id": "self_draw/circles_1k",
+      "package": "floem-renderer-software",
+      "bench": "self_draw",
+      "median_ns": 1995887.0709726443,
+      "comment": "MOTION-GAP A9: 1000 filled discs, area-dominated rasterisation, ~2 us per disc at r=6.",
+      "observed_spread_pct": 0.8
     }
   ]
 }

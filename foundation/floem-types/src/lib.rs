@@ -12,6 +12,7 @@ mod ids;
 mod motion;
 mod native;
 mod overlay;
+mod path;
 
 pub use color::Color;
 pub use display::{DisplayInfo, ScaleFactor};
@@ -26,6 +27,10 @@ pub use motion::{
 };
 pub use native::{InputMode, NativeCapture, NativeCompositionMode, NativeSnapshot, NativeViewKind};
 pub use overlay::{OverlayHandle, OverlayKind};
+pub use path::{
+    ClipRegion, ClipShape, DEFAULT_FLATTEN_TOLERANCE, LineCap, LineJoin, Path, PathSeg, Polyline,
+    Stroke, resolve_clip,
+};
 
 #[cfg(test)]
 mod dependency_boundary_tests {

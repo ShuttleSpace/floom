@@ -12,6 +12,7 @@ something stale.
 
 | example | topic | target | status |
 | --- | --- | --- | --- |
+| `floem2-chart` | self-drawn content: a line chart on a `Canvas`, clipped to its plot area | all | headless |
 | `floem2-hello` | the smallest app: everything from `floem2::prelude` | all | headless |
 | `floem2-counter` | composites (`Stack`/`List`/`Grid`/`Tabs`/`Dialog`/`NavBar`) + reconciliation | all | headless |
 | `floem2-list` | a keyed list: append / remove / reorder without rebuilding rows | all | headless |
@@ -19,6 +20,8 @@ something stale.
 | `floem2-datagrid` | data grid: virtualized rows, sorting, selection, edit + undo | all | headless |
 | `floem2-forms` | form validation, dirty/touched tracking, control bindings | all | headless |
 | `floem2-navigation` | typed routes, history, page transitions, nav containers, deep links | all | headless |
+| `floem2-paths` | self-drawn surfaces: a chart driven by data, a progress ring, a spinner | all | headless |
+| `floem2-progress-ring` | self-drawn motion: an animated ring + a `Spinner` that animates itself | all | headless |
 | `floem2-editor` | text document: transactions, selection, undo/redo, IME pre-edit | all | headless |
 | `floem2-motion` | eased tweens, interruption, and a control that animates itself | all | headless |
 | `floem2-native-plugin` | writing a native provider plugin + slot pooling | all | headless |
@@ -53,6 +56,29 @@ hello floem 2.0: mounted and painted 2 widgets
 
 Release binary (macOS, Apple M4 Pro, unstripped): **2,694,256 B ≈ 2.6 MiB** —
 the floor of the size table, because it pulls the headless core only.
+
+### `floem2-chart`
+
+Self-drawn content (MOTION-GAP A1/A2/A7/A8): a `Canvas` whose painter draws a
+line chart — axes, a translucent area fill, a stroked data line — plus the two
+things a drawn surface needs besides pixels:
+
+* **The clip is a declaration.** The canvas declares `clip(ClipShape::Box)`;
+  the host brackets exactly its subtree with `ClipPush`/`ClipPop` in the
+  retained scene, and a software render proves the bracket *cuts*: the data
+  peak that would reach into the top margin leaves the margin untouched.
+* **The surface says what it is.** The canvas publishes `Role::Image` with a
+  label, so assistive tech sees a chart, not silence.
+
+```text
+== 1. the closure reaches the scene ==
+  4 path nodes: 1 with a fill, 3 with a stroke
+== 2. the clip is a bracket the host writes ==
+  1 ClipPush / 1 ClipPop in the retained scene
+  the margin above the plot is untouched; the plot itself is not
+== 3. the canvas says what it is ==
+  role: Image, label: Some("Quarterly revenue")
+```
 
 ### `floem2-counter`
 
@@ -191,6 +217,42 @@ requested     : [Texture, Overlay]   →  negotiated : Some(Overlay)
 plugin counts : created=1 destroyed=1 live=0 applies=1
 pool          : live=8 free=1
 recycled slot : generation=112 (was 1)
+```
+
+### `floem2-progress-ring`
+
+Self-drawn motion (MOTION-GAP A7 + the B3 loop): the host animates a `Canvas`
+ring by running a tween whose value the painter turns into arc geometry — the
+arc's scene node measurably changes shape between frames — and a `Spinner`
+animates itself forever by declaring an endless cycle. Also exercised: the
+repaint channel, where bumping a `RwSignal` ping wakes the host for a
+paint-only repaint with no relayout.
+
+```text
+== 1. the host drives a drawn shape ==
+  animation value: 0.167 -> 1.000
+  arc box: [48,6 .. 84,27] -> [6,6 .. 90,90]
+  a finished tween parks the frame loop
+== 3. a signal repaints the canvas ==
+  painted 2 widgets on the wake frame
+== 2. a control that animates itself ==
+  running animations nobody asked for: 1
+  sweep: 0.017 -> 0.183 after 10 frames
+```
+
+### `floem2-paths`
+
+Self-drawn surfaces driven by data (MOTION-GAP A1/A7 + the repaint bridge): a
+canvas polyline whose last vertex follows a value change after a repaint ping,
+a progress ring whose flattened arc grows exactly as the fraction says, and a
+self-animating spinner. Distinctive assertion: a data change with *no* ping
+never wakes the frame loop — the ping is what turns "the data changed" into
+"draw a frame".
+
+```text
+act 1 — the line chart is data made geometry: ok
+act 2 — the progress ring is geometry made by a fraction: ok
+act 3 — the spinner animates itself: ok
 ```
 
 ### `floem2-window`

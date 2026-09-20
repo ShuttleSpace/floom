@@ -9,7 +9,8 @@ use std::any::Any;
 
 use floem_core::{
     Color, CreateContext, ElementId, Event, EventContext, OverlayHandle, OverlayKind, PaintContext,
-    Point, Rect, ResourceId, SemanticsContext, Size, UpdateContext, Widget, WidgetAny,
+    Point, Rect, ResourceId, SemanticsContext, SemanticsRole, Size, UpdateContext, Widget,
+    WidgetAny,
 };
 use floem_scene::{Resource, ResourceKind, ResourceRegistry, Scene, SceneNode};
 use floem_types::PointerEvent;
@@ -35,6 +36,15 @@ pub enum PaintOp {
     Image {
         bounds: Rect,
         resource: ResourceId,
+    },
+    /// A filled and/or stroked vector path. `segments` is the flattened count
+    /// the node carries, so two shapes that share a box are still telling
+    /// apart.
+    Path {
+        bounds: Rect,
+        segments: usize,
+        fill: Option<Color>,
+        stroke: Option<(f64, Color)>,
     },
 }
 
@@ -84,6 +94,24 @@ impl PaintOp {
                 resource.index(),
                 resource.generation()
             ),
+            PaintOp::Path {
+                bounds,
+                segments,
+                fill,
+                stroke,
+            } => {
+                let fill = fill.map(fmt_color).unwrap_or_else(|| "none".to_string());
+                let stroke = stroke
+                    .map(|(w, c)| format!("{w:.1}/{}", fmt_color(c)))
+                    .unwrap_or_else(|| "none".to_string());
+                format!(
+                    "Path {} segs={} fill={} stroke={}",
+                    fmt_rect(*bounds),
+                    segments,
+                    fill,
+                    stroke
+                )
+            }
         }
     }
 }
@@ -95,6 +123,10 @@ pub struct SceneRecorder {
     registry: ResourceRegistry,
     ops: Vec<PaintOp>,
     finished: bool,
+    /// The animation value a widget's paint reads back. `None` reproduces a
+    /// frame with nothing running; a test sets it to simulate a frame in the
+    /// middle of a declared animation.
+    animation_value: Option<f64>,
 }
 
 impl SceneRecorder {
@@ -107,7 +139,14 @@ impl SceneRecorder {
             registry: ResourceRegistry::new(),
             ops: Vec::new(),
             finished: false,
+            animation_value: None,
         }
+    }
+
+    /// Simulates a frame where an animation of this element reports `value`.
+    pub fn with_animation_value(mut self, value: f64) -> Self {
+        self.animation_value = Some(value);
+        self
     }
 
     /// Ends the scene transaction. Safe to call more than once.
@@ -126,6 +165,37 @@ impl SceneRecorder {
         &self.scene
     }
 
+    /// Records a path into both the op log and the retained scene.
+    ///
+    /// `stroke` carries only what the snapshot line shows; the retained node
+    /// gets the whole style, so a test can assert on the round cap the recorder
+    /// never had to print.
+    fn record_path(
+        &mut self,
+        path: &floem_types::Path,
+        fill: Option<Color>,
+        stroke: Option<(f64, Color)>,
+    ) {
+        let node = match (fill, stroke) {
+            (Some(fill), None) => SceneNode::filled_path(path.clone(), fill),
+            (None, Some((width, color))) => {
+                SceneNode::stroked_path(path.clone(), floem_types::Stroke::new(width, color))
+            }
+            _ => SceneNode::Path {
+                path: std::sync::Arc::new(path.clone()),
+                fill,
+                stroke: stroke.map(|(width, color)| floem_types::Stroke::new(width, color)),
+            },
+        };
+        self.scene.insert(node);
+        self.ops.push(PaintOp::Path {
+            bounds: path.bounds(),
+            segments: path.segments().len(),
+            fill,
+            stroke,
+        });
+    }
+
     /// Node kind name for each retained scene node, in insertion order.
     pub fn scene_node_kinds(&self) -> Vec<&'static str> {
         self.scene
@@ -133,6 +203,9 @@ impl SceneRecorder {
             .map(|(_, node)| match node {
                 SceneNode::Group { .. } => "Group",
                 SceneNode::Rect { .. } => "Rect",
+                SceneNode::Path { .. } => "Path",
+                SceneNode::ClipPush { .. } => "ClipPush",
+                SceneNode::ClipPop => "ClipPop",
                 SceneNode::Image { .. } => "Image",
                 SceneNode::Text { .. } => "Text",
             })
@@ -209,12 +282,24 @@ impl PaintContext for SceneRecorder {
         });
     }
 
+    fn fill_path(&mut self, path: &floem_types::Path, color: Color) {
+        self.record_path(path, Some(color), None);
+    }
+
+    fn stroke_path(&mut self, path: &floem_types::Path, stroke: &floem_types::Stroke) {
+        self.record_path(path, None, Some((stroke.width, stroke.color)));
+    }
+
     fn draw_image(&mut self, bounds: Rect, image: ResourceId) {
         self.scene.insert(SceneNode::image(bounds, image));
         self.ops.push(PaintOp::Image {
             bounds,
             resource: image,
         });
+    }
+
+    fn animation_value(&self) -> Option<f64> {
+        self.animation_value
     }
 }
 
@@ -223,6 +308,7 @@ pub struct SemanticsRecorder {
     bounds: Rect,
     size_hint: Size,
     label: Option<String>,
+    role: SemanticsRole,
     reported_bounds: Option<Rect>,
 }
 
@@ -232,6 +318,7 @@ impl SemanticsRecorder {
             bounds,
             size_hint: bounds.size(),
             label: None,
+            role: SemanticsRole::None,
             reported_bounds: None,
         }
     }
@@ -243,6 +330,12 @@ impl SemanticsRecorder {
 
     pub fn label(&self) -> Option<&str> {
         self.label.as_deref()
+    }
+
+    /// The role the widget published, if any. Defaults to [`SemanticsRole::None`]
+    /// until a widget calls `set_role`.
+    pub fn role(&self) -> SemanticsRole {
+        self.role
     }
 
     pub fn reported_bounds(&self) -> Option<Rect> {
@@ -266,6 +359,10 @@ impl SemanticsContext for SemanticsRecorder {
 
     fn set_label(&mut self, label: &str) {
         self.label = Some(label.to_string());
+    }
+
+    fn set_role(&mut self, role: SemanticsRole) {
+        self.role = role;
     }
 
     fn set_bounds(&mut self, bounds: Rect) {

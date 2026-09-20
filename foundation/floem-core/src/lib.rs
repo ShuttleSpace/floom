@@ -7,6 +7,7 @@ mod context;
 mod element;
 mod native;
 mod overlay;
+mod repaint;
 mod semantics;
 mod widget;
 mod widget_any;
@@ -14,6 +15,7 @@ mod widget_any;
 pub use compose::{Align, Axis, Child, ChildBuilder, ChildKey, Inset, LayoutRequest, Position};
 pub use context::{CreateContext, EventContext, PaintContext, SemanticsContext, UpdateContext};
 pub use element::{Element, ElementKind};
+pub use repaint::{has_repaint_requests, request_repaint, take_repaint_requests};
 pub use floem_types::{
     AnimationSpec, Color, CompositorProp, Easing, ElementId, Event, ImeUpdate, InputMode, Key,
     KeyEvent, KeyPhase, Modifiers, NamedKey, NativeCompositionMode, NativeSnapshot, NativeViewKind,

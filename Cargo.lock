@@ -1994,6 +1994,7 @@ dependencies = [
  "floem-focus",
  "floem-forms",
  "floem-layout",
+ "floem-legacy-reactive",
  "floem-native",
  "floem-overlay",
  "floem-platform",
@@ -2443,6 +2444,7 @@ dependencies = [
 name = "floem-renderer-software"
 version = "0.2.0"
 dependencies = [
+ "criterion",
  "floem-renderer",
  "floem-scene",
  "floem-text",
@@ -2623,6 +2625,7 @@ dependencies = [
  "floem-accessibility",
  "floem-core",
  "floem-ime",
+ "floem-legacy-reactive",
  "floem-navigation",
  "floem-scene",
  "floem-text",
@@ -2872,6 +2875,7 @@ dependencies = [
  "floem-core",
  "floem-devtools",
  "floem-layout",
+ "floem-legacy-reactive",
  "floem-platform-android",
  "floem-platform-desktop",
  "floem-platform-embedded",
@@ -2880,6 +2884,7 @@ dependencies = [
  "floem-platform-web",
  "floem-renderer-software",
  "floem-renderer-vello",
+ "floem-scene",
  "floem-types",
  "floem-widgets",
 ]
@@ -2898,6 +2903,14 @@ dependencies = [
  "floem-types",
  "floem-widgets",
  "floem-winit",
+]
+
+[[package]]
+name = "floem2-chart"
+version = "0.2.0"
+dependencies = [
+ "floem-renderer",
+ "floem2",
 ]
 
 [[package]]
@@ -2974,6 +2987,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "floem2-paths"
+version = "0.2.0"
+dependencies = [
+ "floem-legacy-reactive",
+ "floem-scene",
+ "floem2",
+]
+
+[[package]]
 name = "floem2-probe"
 version = "0.2.0"
 dependencies = [
@@ -2986,6 +3008,13 @@ dependencies = [
  "floem-renderer-vello",
  "floem-types",
  "floem-widgets",
+]
+
+[[package]]
+name = "floem2-progress-ring"
+version = "0.2.0"
+dependencies = [
+ "floem2",
 ]
 
 [[package]]

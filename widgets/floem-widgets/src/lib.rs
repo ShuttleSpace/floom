@@ -11,6 +11,7 @@
 
 #![forbid(unsafe_code)]
 
+pub mod canvas;
 pub mod compose;
 pub mod controls;
 pub mod labeled;
@@ -27,6 +28,8 @@ pub use floem_core::WidgetAny;
 /// The accessibility bridge, shared with the sibling data-widget crate.
 pub use widget_any::{to_core_role, to_core_state};
 
+/// Self-drawn surfaces: a closure-driven drawing board and a loading spinner.
+pub use canvas::{Canvas, Spinner};
 pub use compose::{BottomSheet, Conditional, Dialog, Grid, List, Overlay, Popup, Stack, Tabs};
 pub use controls::{
     Button, Checkbox, InteractionState, Progress, Radio, Select, Slider, Switch, TextField,

@@ -22,12 +22,14 @@
 //! straight alpha. Without resources those nodes are skipped, never fatal.
 
 mod presenter;
+mod raster;
 
 pub use presenter::SoftwarePresenter;
 
 use floem_renderer::{FrameInfo, RenderTarget, Renderer};
 use floem_scene::{DamageRegion, Rect, ResourceKind, ResourceRegistry, Scene, SceneNode};
-use floem_types::Color;
+use floem_types::{Color, Point, Polyline};
+use raster::{ClipStack, Scissor};
 use std::collections::HashMap;
 
 /// Pixel-space clip region: `(x0, y0, x1, y1)`, exclusive right/bottom.
@@ -98,6 +100,24 @@ pub struct SoftwareRenderer {
     /// scene into a `scale`-times-larger buffer at 1:1, i.e. the app drawn at
     /// half size on a 2× display.
     scale: f64,
+    /// Clip regions pushed by the scene's `ClipPush` markers. Cleared at the
+    /// start of every walk, because the marker stream is allowed to end with
+    /// regions still pushed and nothing drawn after them.
+    clips: ClipStack,
+    /// Flattened device-space contours for the path node currently being
+    /// drawn, kept between calls so a chart that draws every frame does not
+    /// re-allocate its outline every frame.
+    contours: Vec<Vec<Point>>,
+    /// Coverage buffer shared by every path fill. Sized to the shape, not the
+    /// frame.
+    coverage: Vec<f32>,
+    /// Path nodes drawn (fills and strokes), for the frame stats.
+    pub paths_drawn: u64,
+    /// `ClipPush` markers that resolved to a real window this frame, for the
+    /// frame stats and backend-parity contract tests. A push whose region is
+    /// empty (a clip to nothing) is not counted, because nothing under it is
+    /// ever visible — that is the same "no clip" the host would have produced.
+    pub clips_resolved: u64,
 }
 
 impl SoftwareRenderer {
@@ -122,6 +142,11 @@ impl SoftwareRenderer {
             glyph_cache_byte_limit: GLYPH_CACHE_BYTES,
             glyph_cache_clock: 0,
             scale: 1.0,
+            clips: ClipStack::new(),
+            contours: Vec::new(),
+            coverage: Vec::new(),
+            paths_drawn: 0,
+            clips_resolved: 0,
         }
     }
 
@@ -244,6 +269,21 @@ impl SoftwareRenderer {
         }
     }
 
+    /// src-over blend of `color` at fractional `coverage`, scaled by whatever
+    /// the clip stack admits at this pixel.
+    ///
+    /// Every drawing routine goes through here rather than calling
+    /// `blend_pixel` directly: a curved or path clip cannot be expressed as a
+    /// scissor, so its coverage has to reach the pixel no matter which
+    /// primitive is being drawn.
+    fn blend(&mut self, x: u32, y: u32, color: Color, coverage: f32) {
+        let clip = self.clips.coverage(x, y, self.scale);
+        if clip <= 0.0 {
+            return;
+        }
+        self.blend_pixel(x, y, color, coverage * clip);
+    }
+
     /// src-over blend of `color` at fractional `coverage` onto one pixel.
     fn blend_pixel(&mut self, x: u32, y: u32, color: Color, coverage: f32) {
         let i = ((y * self.width + x) as usize) * 4;
@@ -271,6 +311,22 @@ impl SoftwareRenderer {
     }
 
     fn fill_rect(&mut self, x0: i32, y0: i32, x1: i32, y1: i32, color: Color, clip: Clip) {
+        if !self.clips.is_rect_only() {
+            // A curved or path clip admits a fraction of some pixels, so the
+            // opaque store below would paint straight over the clip's edge.
+            let (cx0, cy0, cx1, cy1) = clip;
+            let x0 = (x0.clamp(0, self.width as i32) as u32).max(cx0);
+            let y0 = (y0.clamp(0, self.height as i32) as u32).max(cy0);
+            let x1 = (x1.clamp(0, self.width as i32) as u32).min(cx1);
+            let y1 = (y1.clamp(0, self.height as i32) as u32).min(cy1);
+            for y in y0..y1 {
+                for x in x0..x1 {
+                    self.blend(x, y, color, 1.0);
+                }
+            }
+            self.rects_drawn += 1;
+            return;
+        }
         let (cx0, cy0, cx1, cy1) = clip;
         let x0 = (x0.clamp(0, self.width as i32) as u32).max(cx0);
         let y0 = (y0.clamp(0, self.height as i32) as u32).max(cy0);
@@ -323,7 +379,7 @@ impl SoftwareRenderer {
                 if coverage <= 0.0 {
                     continue;
                 }
-                self.blend_pixel(x, y, color, coverage as f32);
+                self.blend(x, y, color, coverage as f32);
             }
         }
         self.rects_drawn += 1;
@@ -426,7 +482,7 @@ impl SoftwareRenderer {
                             continue;
                         }
                         let coverage = f32::from(alpha) / 255.0;
-                        self.blend_pixel(dx as u32, dy as u32, color, coverage);
+                        self.blend(dx as u32, dy as u32, color, coverage);
                         self.glyphs_drawn += 1;
                     }
                 }
@@ -483,10 +539,62 @@ impl SoftwareRenderer {
                     ((pb / pa) * 255.0).round().clamp(0.0, 255.0) as u8,
                     pa as u8,
                 );
-                self.blend_pixel(x, y, straight, f32::from(alpha) / f32::from(u8::MAX));
+                self.blend(x, y, straight, f32::from(alpha) / f32::from(u8::MAX));
             }
         }
         self.images_drawn += 1;
+    }
+
+    /// Flattens a polyline set into `self.contours`, in device pixels.
+    ///
+    /// The outer vector is reused, and each slot's `Vec<Point>` is refilled in
+    /// place, so a scene that draws a chart every frame does not re-allocate
+    /// the outline every frame. The flattening itself still allocates (one
+    /// vector per subpath); that is the price of the path being a value rather
+    /// than a view, and it is bounded by the path's own complexity.
+    fn build_contours(&mut self, polylines: Vec<Polyline>, scale: f64) {
+        let count = polylines.len();
+        if self.contours.len() < count {
+            self.contours.resize_with(count, Vec::new);
+        }
+        for (slot, poly) in self.contours.iter_mut().zip(polylines) {
+            slot.clear();
+            slot.extend(
+                poly.points
+                    .into_iter()
+                    .map(|p| Point::new(p.x * scale, p.y * scale)),
+            );
+        }
+        self.contours.truncate(count);
+    }
+
+    /// Rasterises the contours currently in `self.contours` and blends `color`
+    /// through the coverage.
+    fn rasterize_contours(&mut self, color: Color, clip: Scissor) {
+        let Some(shape) = raster::contour_bounds(&self.contours) else {
+            return;
+        };
+        // The shape's own extent, not the frame's: a coverage buffer the size
+        // of the window would make every path node cost a snapshot of the
+        // window.
+        let region = raster::intersect_scissor(shape, clip);
+        if raster::scissor_is_empty(region) {
+            return;
+        }
+        let stride = raster::rasterize(&self.contours, region, &mut self.coverage);
+        if stride == 0 {
+            return;
+        }
+        let (x0, y0, x1, y1) = region;
+        for y in y0..y1 {
+            let base = (y - y0) as usize * stride;
+            for x in x0..x1 {
+                let coverage = self.coverage[base + (x - x0) as usize];
+                if coverage > 0.0 {
+                    self.blend(x, y, color, coverage);
+                }
+            }
+        }
     }
 
     /// Redraws the nodes that touch `region` (`None` = whole buffer), clipped
@@ -504,11 +612,43 @@ impl SoftwareRenderer {
         resources: Option<&ResourceRegistry>,
         region: Option<Rect>,
     ) {
-        let clip = self.clip_region(region);
+        let damage_clip = self.clip_region(region);
         let scale = self.scale;
+        // The marker stream may end with regions still pushed — nothing is
+        // drawn after the last node, so a trailing push has no effect on this
+        // walk. Inheriting it into the next one would, and the next walk starts
+        // at the first node again.
+        self.clips.clear();
         for (_id, node) in scene.iter() {
-            // Groups report no bounds (they force a full frame), so they are
-            // never culled — only nodes with a known box are.
+            // Clip markers change the stack rather than the pixels, so they are
+            // handled *before* culling: a marker whose own box misses the
+            // damaged rect still has to move the stack for the nodes that
+            // follow it, or those nodes would be clipped by the wrong region.
+            match node {
+                SceneNode::ClipPush { region } => {
+                    self.clips.push(region.clone(), scale);
+                    self.clips_resolved += 1;
+                    continue;
+                }
+                SceneNode::ClipPop => {
+                    self.clips.pop();
+                    continue;
+                }
+                _ => {}
+            }
+            let clip = match self.clips.scissor(scale) {
+                Some(scissor) => raster::intersect_scissor(damage_clip, scissor),
+                None => damage_clip,
+            };
+            if raster::scissor_is_empty(clip) {
+                // Everything from here on is clipped away. Not counted as a
+                // node skip: `nodes_skipped` means "culled by damage", and
+                // conflating the two would make the counter lie.
+                continue;
+            }
+            // Groups and clip markers report no bounds (they force a full
+            // frame), so they are never culled — only nodes with a known box
+            // are.
             if let Some(bounds) = node.bounds_hint() {
                 if !hits_clip(scale_rect(bounds, scale), clip) {
                     self.nodes_skipped += 1;
@@ -574,7 +714,30 @@ impl SoftwareRenderer {
                         );
                     }
                 }
+                SceneNode::Path { path, fill, stroke } => {
+                    if let Some(color) = *fill {
+                        let polylines = path.flatten(floem_types::DEFAULT_FLATTEN_TOLERANCE);
+                        self.build_contours(polylines, scale);
+                        self.rasterize_contours(color, clip);
+                    }
+                    if let Some(stroke) = stroke {
+                        // A stroke is a fill of its own outline, so both halves
+                        // of the path vocabulary go through one scanline
+                        // filler — the caps and joins are exercised by the same
+                        // code the fill is.
+                        let outline = stroke
+                            .outline_with_tolerance(path, floem_types::DEFAULT_FLATTEN_TOLERANCE);
+                        self.build_contours(outline, scale);
+                        self.rasterize_contours(stroke.color, clip);
+                    }
+                    self.paths_drawn += 1;
+                }
                 SceneNode::Group { .. } => {}
+                // Unreachable: the markers were consumed above, before any
+                // node could be culled. Listed anyway so adding a variant to
+                // the scene IR without teaching this backend about it is a
+                // compile error rather than a silently missing feature.
+                SceneNode::ClipPush { .. } | SceneNode::ClipPop => {}
             }
         }
     }

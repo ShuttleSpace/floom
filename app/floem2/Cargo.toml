@@ -47,6 +47,14 @@ floem-core = { path = "../../foundation/floem-core", version = "0.2.0" }
 # depends on it, so the headless floor `floem2-hello` measures is unchanged.
 floem-animation = { path = "../../framework/floem-animation", version = "0.2.0" }
 floem-layout = { path = "../../layout/floem-layout", version = "0.2.0" }
+# The repaint-ping vocabulary (`RwSignal`) a `Canvas::repaint_on` app writes.
+# Same story as floem-animation: a new facade edge but no new crate —
+# `floem-widgets` already depends on it.
+floem-legacy-reactive = { path = "../../legacy/floem-reactive", version = "0.2.0" }
+# Re-exported whole (`floem2::floem_scene`): the retained scene is the IR an
+# app inspects when it asserts on what it drew, and `floem-app` already
+# depends on it, so the headless graph gains no new crate.
+floem-scene = { path = "../../scene/floem-scene", version = "0.2.0" }
 floem-types = { path = "../../foundation/floem-types", version = "0.2.0" }
 floem-widgets = { path = "../../widgets/floem-widgets", version = "0.2.0" }
 floem-platform-desktop = { path = "../../platform/floem-platform-desktop", version = "0.2.0", optional = true }

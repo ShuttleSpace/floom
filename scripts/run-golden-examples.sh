@@ -17,6 +17,7 @@ set -euo pipefail
 
 # Keep the list alphabetical and in sync with docs/2.0/EXAMPLES.md.
 EXAMPLES=(
+  floem2-chart
   floem2-counter
   floem2-datagrid
   floem2-editor
@@ -26,6 +27,8 @@ EXAMPLES=(
   floem2-motion
   floem2-native-plugin
   floem2-navigation
+  floem2-paths
+  floem2-progress-ring
   floem2-virtual-list
 )
 
