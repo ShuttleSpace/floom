@@ -1302,6 +1302,12 @@ impl VelloGpuPresenter {
                 // full budget degrades to re-uploads, never to missing
                 // content.
                 let new_bytes = u64::from(*width) * u64::from(*height) * 4;
+                // The refused-by-budget path has to own its brush for the
+                // rest of this arm and hand out a borrow, so it parks it in
+                // a slot declared outside the chain. `get_or_insert_with`
+                // rather than `= Some(..)` + `.as_ref().expect(..)`: the
+                // slot's initial value is genuinely read (it decides whether
+                // to build), and there is no "just built" unwrap left to lie.
                 let mut uncached: Option<ImageBrush> = None;
                 let brush: &ImageBrush = if let Some(brush) = self.image_cache.get(&key) {
                     stats.cache_hits += 1;
@@ -1336,7 +1342,7 @@ impl VelloGpuPresenter {
                     stats.cache_misses += 1;
                     self.trim_telemetry.caching_refused += 1;
                     let shared = std::sync::Arc::new(std::sync::Arc::clone(pixels));
-                    uncached = Some(ImageBrush {
+                    uncached.get_or_insert_with(|| ImageBrush {
                         image: ImageData {
                             data: Blob::new(shared),
                             format: ImageFormat::Rgba8,
@@ -1345,8 +1351,7 @@ impl VelloGpuPresenter {
                             height: *height,
                         },
                         sampler: ImageSampler::default(),
-                    });
-                    uncached.as_ref().expect("just built")
+                    })
                 };
                 let sx = bounds.width() / f64::from(*width);
                 let sy = bounds.height() / f64::from(*height);
