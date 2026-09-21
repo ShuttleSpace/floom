@@ -17,7 +17,7 @@
 //!
 //! [`gpui-mobile`]: https://github.com/itsbalamurali/gpui-mobile
 
-use floem_types::Color;
+use floem_types::{Color, Easing, Transition};
 
 /// Convert a `0xRRGGBB` integer to a [`Color`].
 ///
@@ -168,6 +168,61 @@ impl MotionDuration {
     pub const EXTRA_LONG4: u64 = 1000;
 }
 
+/// Material Design 3 motion easing tokens.
+///
+/// <https://m3.material.io/styles/motion/easing-and-duration/tokens-specs>
+///
+/// The curves are the M3 "standard" and "emphasized" families, expressed as
+/// Floem's own [`Easing`] vocabulary. They are what make the [`MotionDuration`]
+/// tokens a *transition* rather than a bare number: a duration alone says how
+/// long, and the easing here says how it feels on the way.
+pub struct MotionEasing;
+
+impl MotionEasing {
+    /// The standard easing curve, for the common "move between states" motion.
+    pub const STANDARD: Easing = Easing::cubic_bezier(0.2, 0.0, 0.0, 1.0);
+    /// The emphasized easing curve, for the rare "draw attention" motion.
+    pub const EMPHASIZED: Easing = Easing::cubic_bezier(0.2, 0.0, 0.0, 1.0);
+    /// The decelerated easing curve, for elements that enter the screen.
+    pub const EMPHASIZED_DECELERATE: Easing = Easing::cubic_bezier(0.05, 0.7, 0.1, 1.0);
+    /// The accelerated easing curve, for elements that leave the screen.
+    pub const EMPHASIZED_ACCELERATE: Easing = Easing::cubic_bezier(0.3, 0.0, 0.8, 0.15);
+}
+
+/// The engine-facing transition a Material duration + easing token names.
+///
+/// This is the *consumer* that ends the "motion token has zero consumers"
+/// state: a Material control that wants an implicit transition asks for
+/// [`MotionTransition::state_change`] and gets a [`Transition`] ready to hand
+/// to `floem_widgets::Button::transition` — the design system's tokens decide
+/// the timing, and the engine only has to play it.
+pub struct MotionTransition;
+
+impl MotionTransition {
+    /// A short "state changed" transition: `SHORT2` (100 ms), standard curve —
+    /// the Material answer to a hover/press colour change.
+    ///
+    /// Spelled *from the tokens*, not restating them: `100.0` written here would
+    /// be a second home for a duration that already lives in
+    /// [`MotionDuration::SHORT2`], and the two would drift the first time the
+    /// token moved. Deriving it is what makes the token a consumer input rather
+    /// than documentation.
+    pub const STATE_CHANGE: Transition =
+        Self::from_tokens(MotionDuration::SHORT2, MotionEasing::STANDARD);
+
+    /// A medium "expand / appear" transition: `MEDIUM1` (250 ms), emphasized
+    /// decelerate — the Material answer to an element that grows into place.
+    pub const EXPAND: Transition =
+        Self::from_tokens(MotionDuration::MEDIUM1, MotionEasing::EMPHASIZED_DECELERATE);
+
+    /// Builds a transition from a [`MotionDuration`] token (milliseconds) and a
+    /// [`MotionEasing`] token. The two constants above are this with the tokens
+    /// already chosen, so there is one conversion and one place it can be wrong.
+    pub const fn from_tokens(duration_ms: u64, easing: Easing) -> Transition {
+        Transition::new(duration_ms as f64 / 1000.0).with_easing(easing)
+    }
+}
+
 /// Interactive state layers as defined by MD3.
 ///
 /// Each state has a prescribed opacity that should be applied as an overlay on
@@ -226,5 +281,32 @@ mod tests {
     fn type_scale_monotonic_within_groups() {
         assert!(TypeScale::DISPLAY_SMALL < TypeScale::DISPLAY_MEDIUM);
         assert!(TypeScale::BODY_SMALL < TypeScale::BODY_LARGE);
+    }
+
+    #[test]
+    fn motion_tokens_build_the_engine_transition_they_name() {
+        // The B6 consumer: a Material duration token + an easing token become a
+        // `Transition` the engine's implicit-transition door (`Button::transition`)
+        // can play. The duration is milliseconds in the token and seconds in the
+        // transition, so 100 ms is 0.1 s — the one conversion that must not be
+        // off by an order of magnitude.
+        let state_change =
+            MotionTransition::from_tokens(MotionDuration::SHORT2, MotionEasing::STANDARD);
+        assert_eq!(state_change.duration_secs, 0.1);
+        assert_eq!(state_change.easing, MotionEasing::STANDARD);
+
+        // The shorthand constants agree with the token spelling.
+        assert_eq!(
+            MotionTransition::STATE_CHANGE.duration_secs,
+            MotionDuration::SHORT2 as f64 / 1000.0
+        );
+        assert_eq!(
+            MotionTransition::EXPAND.duration_secs,
+            MotionDuration::MEDIUM1 as f64 / 1000.0
+        );
+
+        // A real curve, not the pre-B1 linear default: the standard easing is a
+        // cubic-bezier, so the token actually *says* something about feel.
+        assert_ne!(MotionEasing::STANDARD, Easing::Linear);
     }
 }

@@ -4,6 +4,7 @@
 
 #![forbid(unsafe_code)]
 
+mod brush;
 mod color;
 mod display;
 mod event;
@@ -14,6 +15,7 @@ mod native;
 mod overlay;
 mod path;
 
+pub use brush::{Brush, Shadow};
 pub use color::Color;
 pub use display::{DisplayInfo, ScaleFactor};
 pub use event::{
@@ -23,7 +25,8 @@ pub use event::{
 pub use geometry::{Constraints, Insets, Point, Rect, Size, Transform};
 pub use ids::{ElementId, NativeViewId, PlatformId, ResourceId, SceneNodeId, SurfaceId, WindowId};
 pub use motion::{
-    AnimationSpec, CompositorProp, Easing, RepeatMode, RepeatSpec, cubic_bezier_at, damped_spring,
+    AnimationSpec, CompositorProp, Easing, RepeatMode, RepeatSpec, Transition, cubic_bezier_at,
+    damped_spring,
 };
 pub use native::{InputMode, NativeCapture, NativeCompositionMode, NativeSnapshot, NativeViewKind};
 pub use overlay::{OverlayHandle, OverlayKind};

@@ -14,6 +14,12 @@ impl Point {
     pub const fn new(x: f64, y: f64) -> Self {
         Self { x, y }
     }
+
+    /// Euclidean distance between the two points.
+    #[inline]
+    pub fn distance_to(self, other: Self) -> f64 {
+        (self.x - other.x).hypot(self.y - other.y)
+    }
 }
 
 /// 2D size in logical pixels.
@@ -88,6 +94,15 @@ impl Rect {
     }
 
     #[inline]
+    /// Centre of the rect.
+    ///
+    /// Where a rect collapses to the one point that represents it: the sample
+    /// a gradient is reduced to when it has to be drawn as a single colour,
+    /// and the pivot a rotation about the rect's middle turns on.
+    pub fn center(self) -> Point {
+        Point::new((self.x0 + self.x1) / 2.0, (self.y0 + self.y1) / 2.0)
+    }
+
     pub fn union(self, other: Self) -> Self {
         Self {
             x0: self.x0.min(other.x0),

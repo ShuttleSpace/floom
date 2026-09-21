@@ -18,8 +18,8 @@ use floem_animation::{AnimKind, CompositorProp, Tween};
 use floem_app::{NodeId, WidgetHost};
 use floem_layout::LayoutStyle;
 use floem_scene::SceneNode;
-use floem_types::{Rect, Size};
-use floem_widgets::{Container, Progress, Text};
+use floem_types::{Color, Event, Point, PointerEvent, Rect, Size, Transition};
+use floem_widgets::{Button, Container, Progress, Text};
 
 /// A host with one text leaf on screen and one frame behind it, so layout has
 /// run and the scene holds a painted text node to watch.
@@ -609,9 +609,12 @@ fn restating_the_same_declaration_does_not_restart_it() {
     // A change to the widget that is not a change to its motion: the revision
     // bumps, the node reports dirty, and the declaration is re-stated
     // verbatim. It must be recognised as the one already running.
+    // `Progress` is not `Copy` (it can carry a `Brush`), so this has to be the
+    // in-place setter: `Progress::disabled` takes `self` by value and would
+    // otherwise be a no-op written into a temporary.
     host.widget_mut::<Progress>(bar)
         .expect("mounted")
-        .disabled(true);
+        .set_disabled(true);
     host.frame();
     assert_eq!(host.animations_running(), 1);
     let after = host.animation_value(bar).expect("still running");
@@ -676,4 +679,222 @@ fn a_translation_animation_moves_the_painted_box() {
         "the label should have travelled 40px down: {origin:?} -> {moved:?}"
     );
     assert_eq!(moved.x, origin.x, "and not sideways");
+}
+
+// --- B4: implicit transitions ---------------------------------------------
+
+/// The fill colour of the first solid rect the host painted — a button's own
+/// background, since it is the only rect on a bare-button tree.
+fn first_rect_fill(host: &WidgetHost) -> Color {
+    host.scene()
+        .iter()
+        .find_map(|(_, node)| match node {
+            SceneNode::Rect { fill, .. } => fill.solid(),
+            _ => None,
+        })
+        .expect("the tree painted a rect")
+}
+
+/// A host with one button on screen, a frame behind it, and its box reported.
+fn host_with_button(transition: Option<Transition>) -> (WidgetHost, NodeId, Rect) {
+    let mut host = WidgetHost::new();
+    host.set_size(Size::new(200.0, 80.0));
+    let mut button = Button::new("Hover me");
+    if let Some(transition) = transition {
+        button = button.transition(transition);
+    }
+    let node = host.mount_root(LayoutStyle::default(), button);
+    host.frame();
+    let bounds = host.bounds(node);
+    (host, node, bounds)
+}
+
+/// Hovers the button by dispatching a move event into its centre.
+fn hover(host: &mut WidgetHost, bounds: Rect) {
+    let centre = Point::new(
+        bounds.x0 + bounds.width() / 2.0,
+        bounds.y0 + bounds.height() / 2.0,
+    );
+    host.dispatch(Event::Pointer(PointerEvent::hover(centre)));
+}
+
+/// The centre of a node's box.
+fn centre_of(bounds: Rect) -> Point {
+    Point::new(
+        bounds.x0 + bounds.width() / 2.0,
+        bounds.y0 + bounds.height() / 2.0,
+    )
+}
+
+/// Presses the primary button down inside the box.
+fn press_down(host: &mut WidgetHost, bounds: Rect) {
+    host.dispatch(Event::Pointer(PointerEvent::primary_down(centre_of(
+        bounds,
+    ))));
+}
+
+/// Releases the primary button inside the box. This is the event that clears
+/// `pressed` — and therefore the one that moves the resolved colour away from
+/// the pressed colour.
+fn press_up(host: &mut WidgetHost, bounds: Rect) {
+    host.dispatch(Event::Pointer(PointerEvent::primary_up(centre_of(bounds))));
+}
+
+/// A button with an armed transition fades its fill toward the hover colour
+/// instead of snapping: hovering starts a *fresh* transition, the first frame
+/// after the event is still near the resting colour (not already at the hover
+/// colour), and it lands on the hover colour once the transition has run out.
+#[test]
+fn a_transitioned_button_fades_its_fill_on_hover() {
+    let (mut host, _node, bounds) = host_with_button(Some(Transition::new(0.5)));
+    let resting = first_rect_fill(&host);
+
+    // Settle the tree first: a transitioned button declares its transition on
+    // the frame it mounts, and that declaration seeds an initial 0 → 1 tween.
+    // Let it run out so the *only* motion left to observe is the hover's.
+    for _ in 0..40 {
+        host.frame();
+    }
+    assert_eq!(
+        host.animations_running(),
+        0,
+        "a settled transitioned button is not animating"
+    );
+
+    hover(&mut host, bounds);
+    host.frame();
+    assert_eq!(
+        host.animations_running(),
+        1,
+        "hovering a transitioned button restarts its transition"
+    );
+
+    // The first painted frame after the hover is still at the resting colour:
+    // the transition starts from where the fill *is*, not where it is going.
+    // (The deliberate contrast is the untransitioned control below, which is
+    // already at the hover colour on this same frame.)
+    let first = first_rect_fill(&host);
+    assert_eq!(
+        first, resting,
+        "the transition opens at the resting colour, not a jump to the hover \
+         colour: {first:?}"
+    );
+
+    // A few frames in, the fill is strictly between the resting and the hover
+    // colour — proof it is moving, not parked at either end.
+    for _ in 0..8 {
+        host.frame();
+    }
+    let midway = first_rect_fill(&host);
+    assert_ne!(
+        midway, resting,
+        "the fill leaves its resting colour: {midway:?}"
+    );
+
+    // Run the transition out — 0.5 s is 30 nominal frames — and it lands on the
+    // hover colour, which is `base` lifted toward white.
+    for _ in 0..40 {
+        host.frame();
+    }
+    let settled = first_rect_fill(&host);
+    assert_ne!(
+        settled, resting,
+        "the hover colour differs from the resting one"
+    );
+    assert_ne!(
+        midway, settled,
+        "the fill did not jump straight to the hover colour: {midway:?} -> {settled:?}"
+    );
+    assert_eq!(
+        host.animations_running(),
+        0,
+        "the transition is over once the colour arrives"
+    );
+}
+
+/// Letting go fades too.
+///
+/// Releasing a press is its own colour change — `pressed` clears, so the fill
+/// has to travel from the pressed colour back to the hovered one. It is the
+/// one state transition that does *not* arrive as `Press::Consumed` (a release
+/// is `Press::Activate`), which is exactly why arming the transition inside a
+/// single match arm loses it: every other change fades and letting go snaps.
+#[test]
+fn releasing_a_press_fades_the_fill_back() {
+    let (mut host, _node, bounds) = host_with_button(Some(Transition::new(0.5)));
+    for _ in 0..40 {
+        host.frame();
+    }
+
+    // Press, then settle into the pressed colour.
+    press_down(&mut host, bounds);
+    for _ in 0..40 {
+        host.frame();
+    }
+    let pressed = first_rect_fill(&host);
+    assert_eq!(
+        host.animations_running(),
+        0,
+        "the press transition has run out"
+    );
+
+    // Let go. The target colour moves back to the hovered colour, so the host
+    // must restart the transition — and the frame it does, the fill has to
+    // still be the pressed colour it is leaving, not the one it is heading to.
+    press_up(&mut host, bounds);
+    host.frame();
+    assert_eq!(
+        host.animations_running(),
+        1,
+        "releasing restarts the transition"
+    );
+    let on_release = first_rect_fill(&host);
+    assert_eq!(
+        on_release, pressed,
+        "the fill opens the release fade at the pressed colour, not a jump \
+         back: {on_release:?} vs {pressed:?}"
+    );
+
+    // A few frames in it has left the pressed colour but has not arrived.
+    for _ in 0..8 {
+        host.frame();
+    }
+    let midway = first_rect_fill(&host);
+    assert_ne!(midway, pressed, "the fill leaves the pressed colour");
+
+    for _ in 0..40 {
+        host.frame();
+    }
+    let settled = first_rect_fill(&host);
+    assert_ne!(
+        midway, settled,
+        "the release travelled instead of snapping: {midway:?} -> {settled:?}"
+    );
+    assert_eq!(
+        host.animations_running(),
+        0,
+        "the release transition is over once the colour arrives"
+    );
+}
+
+/// A button *without* a transition is the deliberate control: hovering changes
+/// the fill instantly, and no animation is what the host reports.
+#[test]
+fn an_untransitioned_button_snaps_its_fill_on_hover() {
+    let (mut host, _node, bounds) = host_with_button(None);
+    let resting = first_rect_fill(&host);
+
+    hover(&mut host, bounds);
+    host.frame();
+
+    assert_eq!(
+        host.animations_running(),
+        0,
+        "no transition means no animation"
+    );
+    assert_ne!(
+        first_rect_fill(&host),
+        resting,
+        "but the colour still changes — just all at once"
+    );
 }

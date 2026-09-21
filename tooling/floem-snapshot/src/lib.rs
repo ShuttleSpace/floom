@@ -210,11 +210,12 @@ pub use floem_scene::SceneNode;
 pub use floem_types::{ElementId, SceneNodeId};
 
 /// Convenience: a filled axis-aligned rect node (radius 0 → crisp edges).
-pub fn rect(bounds: Rect, fill: Color) -> SceneNode {
+pub fn rect(bounds: Rect, fill: impl Into<floem_types::Brush>) -> SceneNode {
     SceneNode::Rect {
         bounds,
-        fill,
+        fill: fill.into(),
         radius: 0.0,
+        shadow: None,
     }
 }
 

@@ -1,6 +1,8 @@
 //! Retained scene node payloads (no GPU / OS types).
 
-use floem_types::{ClipRegion, Color, Path, Point, Rect, ResourceId, Size, Stroke, Transform};
+use floem_types::{
+    Brush, ClipRegion, Color, Path, Point, Rect, ResourceId, Shadow, Size, Stroke, Transform,
+};
 use std::sync::Arc;
 
 /// Drawable / structural node in the retained scene.
@@ -22,12 +24,21 @@ pub enum SceneNode {
     GroupPop,
     Rect {
         bounds: Rect,
-        fill: Color,
+        /// What the rect is filled with — a solid colour in the common case,
+        /// a linear or radial gradient where the design asks for one.
+        fill: Brush,
         /// Corner radius in logical px; `0.0` is a plain right-angle rect.
         /// A single node rather than a separate variant: rounded corners are
         /// the same fill, just a different shape, and every painter wants a
         /// uniform path for the common case.
         radius: f32,
+        /// Drop shadow drawn behind the fill, if the widget casts one.
+        ///
+        /// On `Rect` rather than a separate node because a shadow is not an
+        /// independent drawing — it belongs to exactly one shape, must sit
+        /// directly beneath it in the z-order, and a separate node would let
+        /// the two drift apart in the stream the way two nodes can.
+        shadow: Option<Shadow>,
     },
     /// An arbitrary vector path, filled and/or stroked.
     ///
@@ -46,7 +57,7 @@ pub enum SceneNode {
         /// immediate-mode caller that builds a fresh path each frame pays one
         /// allocation either way.
         path: Arc<Path>,
-        fill: Option<Color>,
+        fill: Option<Brush>,
         stroke: Option<Stroke>,
     },
     /// Pushes a clip region onto the renderer's clip stack.
@@ -97,13 +108,13 @@ impl SceneNode {
         }
     }
 
-    /// A filled path. Takes anything that becomes an `Arc<Path>`, so a caller
-    /// that already holds one (a widget that kept its geometry) shares it and
-    /// a caller that just built one hands it over.
-    pub fn filled_path(path: impl Into<Arc<Path>>, fill: Color) -> Self {
+    /// A filled path. Takes anything that becomes a `Brush`, so a caller with
+    /// a plain colour keeps its old shape and a caller with a gradient hands
+    /// the brush straight over.
+    pub fn filled_path(path: impl Into<Arc<Path>>, fill: impl Into<Brush>) -> Self {
         Self::Path {
             path: path.into(),
-            fill: Some(fill),
+            fill: Some(fill.into()),
             stroke: None,
         }
     }
@@ -128,7 +139,20 @@ impl SceneNode {
     pub fn bounds_hint(&self) -> Option<Rect> {
         match self {
             SceneNode::GroupPush { .. } | SceneNode::GroupPop => None,
-            SceneNode::Rect { bounds, .. } => Some(*bounds),
+            SceneNode::Rect { bounds, shadow, .. } => {
+                // The shadow reaches past the shape itself; damage computed
+                // from the bare box would clip the blur's outer edge.
+                let Some(shadow) = shadow else {
+                    return Some(*bounds);
+                };
+                let reach = shadow.reach();
+                Some(Rect {
+                    x0: bounds.x0 - reach,
+                    y0: bounds.y0 - reach,
+                    x1: bounds.x1 + reach,
+                    y1: bounds.y1 + reach,
+                })
+            }
             SceneNode::Path { path, fill, stroke } => {
                 if fill.is_none() && stroke.is_none() {
                     return None;

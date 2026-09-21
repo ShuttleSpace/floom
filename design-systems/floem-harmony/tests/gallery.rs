@@ -14,6 +14,7 @@ use floem_harmony::{
 };
 use floem_snapshot::{PixelSnapshot, SceneSnapshot, assert_snapshot, snapshots_dir};
 use floem_theme::ColorScheme;
+use floem_scene::SceneNode;
 use floem_types::{Color, Size};
 
 fn light() -> HarmonyTheme {
@@ -214,18 +215,30 @@ fn the_gallery_paints_the_requested_number_of_rects() {
         .iter()
         .filter(|s| resolved(s).border_width.unwrap_or(0.0) > 0.0)
         .count();
-    let elevation_rects = samples
+    assert_eq!(scene.len(), 1 + samples.len() + border_rects);
+
+    // A disabled raised button loses its shadow, which is the one place the
+    // shadow count is not simply "every elevated sample". The shadows
+    // themselves are asserted on separately: exactly the elevated cells carry
+    // one, now on the fill node rather than as a rect of its own.
+    let elevated = samples
         .iter()
         .filter(|s| resolved(s).elevation.unwrap_or(0.0) > 0.0)
         .count();
-    assert_eq!(
-        scene.len(),
-        1 + samples.len() + border_rects + elevation_rects
-    );
-
-    // A disabled raised button loses its shadow, which is the one place the
-    // elevation count is not simply "every elevated sample".
-    assert_eq!(elevation_rects, 15, "18 raised samples minus 3 disabled");
+    let shadowed = scene
+        .iter()
+        .filter(|(_, node)| {
+            matches!(
+                node,
+                SceneNode::Rect {
+                    shadow: Some(_),
+                    ..
+                }
+            )
+        })
+        .count();
+    assert_eq!(shadowed, elevated, "every elevated cell carries its shadow");
+    assert_eq!(elevated, 15, "18 raised samples minus 3 disabled");
 
     let size = gallery_size(&samples, GALLERY_COLUMNS);
     assert_eq!(size, Size::new(size.width, size.height));

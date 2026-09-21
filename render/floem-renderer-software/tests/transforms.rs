@@ -17,8 +17,9 @@ const INK: Color = Color::rgb(220, 40, 40);
 fn fill(bounds: Rect, color: Color) -> SceneNode {
     SceneNode::Rect {
         bounds,
-        fill: color,
+        fill: floem_types::Brush::from(color),
         radius: 0.0,
+        shadow: None,
     }
 }
 

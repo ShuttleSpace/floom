@@ -308,7 +308,9 @@ fn a_popup_fades_in_and_then_stops_damaging_the_scene() {
             .scene_nodes()
             .iter()
             .filter_map(|node| match node {
-                SceneNode::Rect { bounds, fill, .. } if overlaps(area, *bounds) => Some(fill.a),
+                SceneNode::Rect { bounds, fill, .. } if overlaps(area, *bounds) => {
+                    fill.solid().map(|c| c.a)
+                }
                 _ => None,
             })
             .min();

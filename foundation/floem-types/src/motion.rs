@@ -186,6 +186,18 @@ pub struct AnimationSpec {
     /// self-drawn control animates one part of itself instead of being
     /// translated whole.
     pub prop: Option<CompositorProp>,
+    /// An opaque identity token for *this* motion, so that two otherwise
+    /// identical specs can still be told apart.
+    ///
+    /// This is the implicit-transition hook (B4): a control whose target value
+    /// changed re-declares the *same* `from`/`to`/`duration` (its transition
+    /// is always "0 → 1, over this long, with this curve") but bumps `key`, so
+    /// the host sees a *new* declaration and restarts the tween rather than
+    /// leaving the finished one parked. Without the key, "I changed my target"
+    /// would be indistinguishable from "I am re-stating my unchanged motion",
+    /// and the transition would never replay. The key does not affect the
+    /// sampled value — it only participates in [`AnimationSpec::matches`].
+    pub key: u64,
 }
 
 impl AnimationSpec {
@@ -198,6 +210,7 @@ impl AnimationSpec {
             easing: Easing::Linear,
             repeat: None,
             prop: None,
+            key: 0,
         }
     }
 
@@ -210,6 +223,7 @@ impl AnimationSpec {
             easing: Easing::Linear,
             repeat: Some(repeat),
             prop: None,
+            key: 0,
         }
     }
 
@@ -224,14 +238,60 @@ impl AnimationSpec {
         self
     }
 
+    /// Tags this declaration with an identity key. See the field's docs for
+    /// what a changed key means to the host.
+    pub const fn with_key(mut self, key: u64) -> Self {
+        self.key = key;
+        self
+    }
+
     /// Whether two specs would produce the same motion.
     ///
     /// What the host reconciles a widget's declaration against: an animation
     /// whose spec is unchanged is left running rather than restarted, so a
     /// widget re-declaring its motion on every update does not restart it every
-    /// update.
+    /// update. The [`AnimationSpec::key`] is part of the comparison: two
+    /// otherwise identical specs with different keys are different motions.
     pub fn matches(&self, other: &Self) -> bool {
         self == other
+    }
+}
+
+/// A style property's implicit transition: "when this property's value
+/// changes, animate from the old value to the new one over `duration_secs`
+/// with `easing`, instead of jumping".
+///
+/// This is the B4 "change-the-value-and-it-animates" layer, the Compose
+/// `animate*AsState` / Flutter `Animated*` counterpart. A control that carries
+/// a [`Transition`] does not hold its own clock — it declares the *shape* of
+/// the transition and reads the host's sampled progress back through
+/// `PaintContext::animation_value`, interpolating between its old and new
+/// value in its paint routine. The host restarts the underlying tween whenever
+/// the control's declaration key changes (see [`AnimationSpec::key`]), which
+/// is what turns "the target moved" into "play the transition again".
+///
+/// Deliberately the *narrow* shape: a duration and a curve, nothing more. The
+/// minimum viable set (colour, size, opacity, translation) all interpolate
+/// through one scalar `0..=1` progress, so a single type serves every one of
+/// them; a property that needs a different shape is out of scope for the
+/// implicit layer and belongs to the imperative `WidgetHost::animate` door.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Transition {
+    pub duration_secs: f64,
+    pub easing: Easing,
+}
+
+impl Transition {
+    pub const fn new(duration_secs: f64) -> Self {
+        Self {
+            duration_secs,
+            easing: Easing::Linear,
+        }
+    }
+
+    pub const fn with_easing(mut self, easing: Easing) -> Self {
+        self.easing = easing;
+        self
     }
 }
 

@@ -132,9 +132,9 @@ fn measure(screen: Screen, app: &TestApp) -> EvaluationReport {
     // excluded by the same rule, no special case needed.
     let surface_fill = nodes.iter().find_map(|node| match node {
         floem_scene::SceneNode::Rect { bounds, fill, .. }
-            if covers_window(bounds) && fill.a == 255 =>
+            if covers_window(bounds) && fill.solid().is_some_and(|c| c.a == 255) =>
         {
-            Some(*fill)
+            fill.solid()
         }
         _ => None,
     });
@@ -145,8 +145,9 @@ fn measure(screen: Screen, app: &TestApp) -> EvaluationReport {
                 bounds,
                 fill,
                 radius,
+                ..
             } if !covers_window(bounds) && bounds.width() > 1.0 && bounds.height() > 1.0 => {
-                Some((bounds.width() * bounds.height(), *bounds, *fill, *radius))
+                Some((bounds.width() * bounds.height(), *bounds, fill.solid(), *radius))
             }
             _ => None,
         })
@@ -169,7 +170,7 @@ fn measure(screen: Screen, app: &TestApp) -> EvaluationReport {
             floem_scene::SceneNode::Rect { bounds, fill, .. }
                 if same_rect(bounds, &primary_bounds) =>
             {
-                Some(*fill)
+                fill.solid()
             }
             _ => None,
         })
@@ -220,7 +221,7 @@ fn measure(screen: Screen, app: &TestApp) -> EvaluationReport {
         body_line_height: body_text.as_ref().map(|t| t.height).unwrap_or_default(),
         primary_height: primary_bounds.height(),
         surface: surface.into(),
-        card: card_fill.into(),
+        card: card_fill.unwrap_or_default().into(),
         accent: accent.into(),
         on_accent: on_accent.into(),
         text: text_color.into(),

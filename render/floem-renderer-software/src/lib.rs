@@ -28,7 +28,7 @@ pub use presenter::SoftwarePresenter;
 
 use floem_renderer::{FrameInfo, RenderTarget, Renderer};
 use floem_scene::{DamageRegion, Rect, ResourceKind, ResourceRegistry, Scene, SceneNode};
-use floem_types::{Color, Point, Polyline, Transform};
+use floem_types::{Brush, Color, Point, Polyline, Shadow, Transform};
 use raster::{ClipStack, Scissor};
 use std::collections::HashMap;
 
@@ -132,6 +132,18 @@ pub struct SoftwareRenderer {
     /// which this rasteriser does not sample for. Visible, recorded, never
     /// fatal — the same policy text under a transform follows.
     pub images_skipped_transformed: u64,
+    /// Non-solid fills drawn this frame — a gradient went through the
+    /// per-pixel sampler at least once. The counter a "gradients render"
+    /// assertion reads, and the one that moves when a gradient silently
+    /// degrades to its first stop.
+    pub gradients_drawn: u64,
+    /// Drop shadows blurred and composited this frame.
+    pub shadows_drawn: u64,
+    /// The inverse of the current group-scope transform, in *device* space,
+    /// for brush sampling: a gradient is defined in the node's own logical
+    /// space, so a pixel must be mapped back through the scope before it can
+    /// ask the brush what colour it is. Reset whenever the transform changes.
+    paint_space: Transform,
 }
 
 impl SoftwareRenderer {
@@ -165,6 +177,9 @@ impl SoftwareRenderer {
             transform: Transform::IDENTITY,
             text_drawn_untransformed: 0,
             images_skipped_transformed: 0,
+            gradients_drawn: 0,
+            shadows_drawn: 0,
+            paint_space: Transform::IDENTITY,
         }
     }
 
@@ -328,35 +343,59 @@ impl SoftwareRenderer {
         self.pixels[i + 3] = (out_a * 255.0).round().clamp(0.0, 255.0) as u8;
     }
 
-    fn fill_rect(&mut self, x0: i32, y0: i32, x1: i32, y1: i32, color: Color, clip: Clip) {
-        if !self.clips.is_rect_only() {
-            // A curved or path clip admits a fraction of some pixels, so the
-            // opaque store below would paint straight over the clip's edge.
-            let (cx0, cy0, cx1, cy1) = clip;
-            let x0 = (x0.clamp(0, self.width as i32) as u32).max(cx0);
-            let y0 = (y0.clamp(0, self.height as i32) as u32).max(cy0);
-            let x1 = (x1.clamp(0, self.width as i32) as u32).min(cx1);
-            let y1 = (y1.clamp(0, self.height as i32) as u32).min(cy1);
-            for y in y0..y1 {
-                for x in x0..x1 {
-                    self.blend(x, y, color, 1.0);
+    /// The colour `paint` puts at the pixel whose device-space centre is
+    /// `(x, y)`.
+    ///
+    /// A brush lives in the node's own logical space, so the pixel is mapped
+    /// back through the group scope first (`paint_space`) and out of device
+    /// scale second. Solids skip all of it.
+    fn sample_paint(&self, paint: &Brush, x: u32, y: u32) -> Color {
+        let Some(color) = paint.solid() else {
+            let logical = Point::new(
+                (f64::from(x) + 0.5) / self.scale,
+                (f64::from(y) + 0.5) / self.scale,
+            );
+            let in_scope = self.paint_space.map_point(logical);
+            return paint.sample(in_scope);
+        };
+        color
+    }
+
+    fn fill_rect(&mut self, x0: i32, y0: i32, x1: i32, y1: i32, paint: &Brush, clip: Clip) {
+        // A solid, fully opaque fill under a straight-edge clip is a direct
+        // byte store — the fast path every plain UI surface takes.
+        if let Some(color) = paint.solid() {
+            if color.a == u8::MAX && self.clips.is_rect_only() {
+                let (cx0, cy0, cx1, cy1) = clip;
+                let x0 = (x0.clamp(0, self.width as i32) as u32).max(cx0);
+                let y0 = (y0.clamp(0, self.height as i32) as u32).max(cy0);
+                let x1 = (x1.clamp(0, self.width as i32) as u32).min(cx1);
+                let y1 = (y1.clamp(0, self.height as i32) as u32).min(cy1);
+                for y in y0..y1 {
+                    for x in x0..x1 {
+                        let i = ((y * self.width + x) as usize) * 4;
+                        self.pixels[i] = color.r;
+                        self.pixels[i + 1] = color.g;
+                        self.pixels[i + 2] = color.b;
+                        self.pixels[i + 3] = color.a;
+                    }
                 }
+                self.rects_drawn += 1;
+                return;
             }
-            self.rects_drawn += 1;
-            return;
         }
         let (cx0, cy0, cx1, cy1) = clip;
         let x0 = (x0.clamp(0, self.width as i32) as u32).max(cx0);
         let y0 = (y0.clamp(0, self.height as i32) as u32).max(cy0);
         let x1 = (x1.clamp(0, self.width as i32) as u32).min(cx1);
         let y1 = (y1.clamp(0, self.height as i32) as u32).min(cy1);
+        if paint.solid().is_none() {
+            self.gradients_drawn += 1;
+        }
         for y in y0..y1 {
             for x in x0..x1 {
-                let i = ((y * self.width + x) as usize) * 4;
-                self.pixels[i] = color.r;
-                self.pixels[i + 1] = color.g;
-                self.pixels[i + 2] = color.b;
-                self.pixels[i + 3] = color.a;
+                let color = self.sample_paint(paint, x, y);
+                self.blend(x, y, color, 1.0);
             }
         }
         self.rects_drawn += 1;
@@ -369,7 +408,7 @@ impl SoftwareRenderer {
     /// negative inside, in pixels). The 0.5px band across `d = 0` is the AA
     /// ramp — the same coverage a 16-sample box filter would converge to for a
     /// straight edge, at one distance evaluation per pixel instead of 16.
-    fn fill_rounded_rect(&mut self, bounds: Rect, radius: f64, color: Color, clip: Clip) {
+    fn fill_rounded_rect(&mut self, bounds: Rect, radius: f64, paint: &Brush, clip: Clip) {
         let (cx0, cy0, cx1, cy1) = clip;
         let radius = radius.clamp(0.0, bounds.width().min(bounds.height()) / 2.0);
         let x0 = (bounds.x0.floor().max(0.0) as u32).max(cx0);
@@ -383,6 +422,10 @@ impl SoftwareRenderer {
         // Corner box: rectangle of the "inner core" the corner arcs attach to.
         let qx_extent = half_w - radius;
         let qy_extent = half_h - radius;
+        let gradient = paint.solid().is_none();
+        if gradient {
+            self.gradients_drawn += 1;
+        }
 
         for y in y0..y1 {
             for x in x0..x1 {
@@ -397,6 +440,11 @@ impl SoftwareRenderer {
                 if coverage <= 0.0 {
                     continue;
                 }
+                let color = if gradient {
+                    self.sample_paint(paint, x, y)
+                } else {
+                    paint.solid().expect("checked above")
+                };
                 self.blend(x, y, color, coverage as f32);
             }
         }
@@ -586,9 +634,9 @@ impl SoftwareRenderer {
         self.contours.truncate(count);
     }
 
-    /// Rasterises the contours currently in `self.contours` and blends `color`
+    /// Rasterises the contours currently in `self.contours` and blends `paint`
     /// through the coverage.
-    fn rasterize_contours(&mut self, color: Color, clip: Scissor) {
+    fn rasterize_contours(&mut self, paint: &Brush, clip: Scissor) {
         let Some(shape) = raster::contour_bounds(&self.contours) else {
             return;
         };
@@ -603,16 +651,141 @@ impl SoftwareRenderer {
         if stride == 0 {
             return;
         }
+        let gradient = paint.solid().is_none();
+        if gradient {
+            self.gradients_drawn += 1;
+        }
         let (x0, y0, x1, y1) = region;
         for y in y0..y1 {
             let base = (y - y0) as usize * stride;
             for x in x0..x1 {
                 let coverage = self.coverage[base + (x - x0) as usize];
                 if coverage > 0.0 {
+                    let color = if gradient {
+                        self.sample_paint(paint, x, y)
+                    } else {
+                        paint.solid().expect("checked above")
+                    };
                     self.blend(x, y, color, coverage);
                 }
             }
         }
+    }
+
+    /// Draws a drop shadow: the shape's silhouette, blurred, tinted, offset.
+    ///
+    /// The blur is a three-pass box filter over the silhouette's coverage —
+    /// the standard cheap stand-in for a Gaussian (three passes converge to
+    /// within a few percent of one) at a running sum's cost per pixel instead
+    /// of a kernel's. The shadow composites *before* the caller draws the fill
+    /// on top, so a node draws its own shadow and its own fill as one unit.
+    ///
+    /// `scope` is the group-scope transform the node paints under (identity
+    /// for the common case). The silhouette is blurred in the *node's own*
+    /// space — blur and transform do not commute, and blurring after mapping
+    /// would smear a rotated shadow the wrong way — so every screen pixel
+    /// maps back through the scope's inverse to ask the blurred field what
+    /// coverage it inherits, offset included.
+    fn draw_shadow(
+        &mut self,
+        bounds: Rect,
+        radius: f64,
+        shadow: &Shadow,
+        scope: Transform,
+        clip: Clip,
+    ) {
+        if shadow.color.a == 0 {
+            return;
+        }
+        let scale = self.scale;
+        let blur = shadow.blur.max(0.0) * scale;
+        let off_x = shadow.offset_x * scale;
+        let off_y = shadow.offset_y * scale;
+        let inv = scope.inverse().unwrap_or(Transform::IDENTITY);
+        let radius_dev = radius.clamp(0.0, bounds.width().min(bounds.height()) / 2.0) * scale;
+
+        // 1. SDF coverage of the (rounded) silhouette into a node-space
+        //    working buffer, padded by the blur's spread.
+        let pad = blur.ceil() as i32 + 2;
+        let bx0 = bounds.x0 * scale - f64::from(pad);
+        let by0 = bounds.y0 * scale - f64::from(pad);
+        let bx1 = bounds.x1 * scale + f64::from(pad);
+        let by1 = bounds.y1 * scale + f64::from(pad);
+        let (ix0, iy0, ix1, iy1) = (
+            bx0.floor() as i32,
+            by0.floor() as i32,
+            bx1.ceil() as i32,
+            by1.ceil() as i32,
+        );
+        let w = (ix1 - ix0).max(1) as usize;
+        let h = (iy1 - iy0).max(1) as usize;
+        let cx = (bounds.x0 + bounds.x1) / 2.0 * scale;
+        let cy = (bounds.y0 + bounds.y1) / 2.0 * scale;
+        let half_w = (bounds.x1 - bounds.x0) / 2.0 * scale;
+        let half_h = (bounds.y1 - bounds.y0) / 2.0 * scale;
+        let qx_extent = half_w - radius_dev;
+        let qy_extent = half_h - radius_dev;
+        let mut alpha = vec![0.0f32; w * h];
+        for row in 0..h {
+            let py = f64::from(iy0 + row as i32) + 0.5;
+            for col in 0..w {
+                let px = f64::from(ix0 + col as i32) + 0.5;
+                let qxp = (px - cx).abs() - qx_extent;
+                let qyp = (py - cy).abs() - qy_extent;
+                let d = qxp.max(0.0).hypot(qyp.max(0.0)) + qxp.max(qyp).min(0.0) - radius_dev;
+                alpha[row * w + col] = ((0.5 - d).clamp(0.0, 1.0)) as f32;
+            }
+        }
+
+        // 2. Three box-blur passes; the CSS-style blur radius halves into the
+        //    kernel radius.
+        let br = (blur / 2.0).round().max(1.0) as usize;
+        box_blur(&mut alpha, w, h, br);
+        box_blur(&mut alpha, w, h, br);
+        box_blur(&mut alpha, w, h, br);
+
+        // 3. Composite: walk the mapped silhouette's on-screen extent, map each
+        //    pixel back into node space, and read the (offset) blurred field.
+        let reach = shadow.reach() * scale + 2.0;
+        let mapped = scope.map_rect(Rect {
+            x0: bx0 / scale - reach / scale,
+            y0: by0 / scale - reach / scale,
+            x1: bx1 / scale + reach / scale,
+            y1: by1 / scale + reach / scale,
+        });
+        let dx0 = ((mapped.x0 * scale).floor() as i32)
+            .max(clip.0 as i32)
+            .max(0);
+        let dy0 = ((mapped.y0 * scale).floor() as i32)
+            .max(clip.1 as i32)
+            .max(0);
+        let dx1 = ((mapped.x1 * scale).ceil() as i32)
+            .min(clip.2 as i32)
+            .min(self.width as i32);
+        let dy1 = ((mapped.y1 * scale).ceil() as i32)
+            .min(clip.3 as i32)
+            .min(self.height as i32);
+        for py in dy0..dy1 {
+            for px in dx0..dx1 {
+                let logical =
+                    Point::new((f64::from(px) + 0.5) / scale, (f64::from(py) + 0.5) / scale);
+                let local = inv.map_point(logical);
+                // The blurred field lives at silhouette + offset: this screen
+                // pixel shows whatever sits at `local - offset` in node space.
+                let sx = local.x * scale - off_x - f64::from(ix0);
+                let sy = local.y * scale - off_y - f64::from(iy0);
+                if sx < 0.0 || sy < 0.0 {
+                    continue;
+                }
+                let col = (sx as usize).min(w - 1);
+                let row = (sy as usize).min(h - 1);
+                let coverage = alpha[row * w + col];
+                if coverage > 0.0 {
+                    self.blend(px as u32, py as u32, shadow.color, coverage);
+                }
+            }
+        }
+        self.shadows_drawn += 1;
     }
 
     /// Redraws the nodes that touch `region` (`None` = whole buffer), clipped
@@ -639,6 +812,7 @@ impl SoftwareRenderer {
         self.clips.clear();
         self.transform_stack.clear();
         self.transform = Transform::IDENTITY;
+        self.paint_space = Transform::IDENTITY;
         for (_id, node) in scene.iter() {
             // Clip markers change the stack rather than the pixels, so they are
             // handled *before* culling: a marker whose own box misses the
@@ -661,11 +835,13 @@ impl SoftwareRenderer {
                 SceneNode::GroupPush { transform } => {
                     self.transform_stack.push(self.transform);
                     self.transform = self.transform.multiply(*transform);
+                    self.paint_space = self.transform.inverse().unwrap_or(Transform::IDENTITY);
                     continue;
                 }
                 SceneNode::GroupPop => {
                     if let Some(outer) = self.transform_stack.pop() {
                         self.transform = outer;
+                        self.paint_space = self.transform.inverse().unwrap_or(Transform::IDENTITY);
                     }
                     continue;
                 }
@@ -710,6 +886,7 @@ impl SoftwareRenderer {
                     bounds,
                     fill,
                     radius: 0.0,
+                    shadow: None,
                 } if !transformed => {
                     let b = scale_rect(*bounds, scale);
                     self.fill_rect(
@@ -717,7 +894,7 @@ impl SoftwareRenderer {
                         b.y0.floor() as i32,
                         b.x1.ceil() as i32,
                         b.y1.ceil() as i32,
-                        *fill,
+                        fill,
                         clip,
                     );
                 }
@@ -727,10 +904,11 @@ impl SoftwareRenderer {
                     bounds,
                     fill,
                     radius,
+                    shadow: None,
                 } if !transformed => self.fill_rounded_rect(
                     scale_rect(*bounds, scale),
                     f64::from(*radius) * scale,
-                    *fill,
+                    fill,
                     clip,
                 ),
                 // A rect under a transform is no longer an axis-aligned rect
@@ -740,12 +918,9 @@ impl SoftwareRenderer {
                     bounds,
                     fill,
                     radius,
+                    shadow: None,
                 } => {
-                    let shape = if *radius > 0.0 {
-                        floem_types::Path::rounded_rect(*bounds, f64::from(*radius))
-                    } else {
-                        floem_types::Path::rect(*bounds)
-                    };
+                    let shape = rect_shape(*bounds, *radius);
                     let polylines = shape
                         .flatten(floem_types::DEFAULT_FLATTEN_TOLERANCE)
                         .into_iter()
@@ -757,7 +932,47 @@ impl SoftwareRenderer {
                         })
                         .collect();
                     self.build_contours(polylines, scale);
-                    self.rasterize_contours(*fill, clip);
+                    self.rasterize_contours(fill, clip);
+                }
+                // A shadowed rect draws its blurred silhouette *first* (the
+                // fill must sit on top of its own shadow), then the fill
+                // through the same shape choice the shadowless arms make.
+                SceneNode::Rect {
+                    bounds,
+                    fill,
+                    radius,
+                    shadow: Some(shadow),
+                } => {
+                    self.draw_shadow(*bounds, f64::from(*radius), shadow, t, clip);
+                    if !transformed {
+                        let b = scale_rect(*bounds, scale);
+                        if *radius > 0.0 {
+                            self.fill_rounded_rect(b, f64::from(*radius) * scale, fill, clip);
+                        } else {
+                            self.fill_rect(
+                                b.x0.floor() as i32,
+                                b.y0.floor() as i32,
+                                b.x1.ceil() as i32,
+                                b.y1.ceil() as i32,
+                                fill,
+                                clip,
+                            );
+                        }
+                    } else {
+                        let shape = rect_shape(*bounds, *radius);
+                        let polylines = shape
+                            .flatten(floem_types::DEFAULT_FLATTEN_TOLERANCE)
+                            .into_iter()
+                            .map(|mut poly| {
+                                for p in &mut poly.points {
+                                    *p = t.map_point(*p);
+                                }
+                                poly
+                            })
+                            .collect();
+                        self.build_contours(polylines, scale);
+                        self.rasterize_contours(fill, clip);
+                    }
                 }
                 SceneNode::Text {
                     origin,
@@ -833,10 +1048,10 @@ impl SoftwareRenderer {
                             polylines
                         }
                     };
-                    if let Some(color) = *fill {
+                    if let Some(paint) = fill {
                         let polylines = path.flatten(floem_types::DEFAULT_FLATTEN_TOLERANCE);
                         self.build_contours(map_polylines(polylines), scale);
-                        self.rasterize_contours(color, clip);
+                        self.rasterize_contours(paint, clip);
                     }
                     if let Some(stroke) = stroke {
                         // A stroke is a fill of its own outline, so both halves
@@ -846,7 +1061,8 @@ impl SoftwareRenderer {
                         let outline = stroke
                             .outline_with_tolerance(path, floem_types::DEFAULT_FLATTEN_TOLERANCE);
                         self.build_contours(map_polylines(outline), scale);
-                        self.rasterize_contours(stroke.color, clip);
+                        let stroke_paint = Brush::Solid(stroke.color);
+                        self.rasterize_contours(&stroke_paint, clip);
                     }
                     self.paths_drawn += 1;
                 }
@@ -897,6 +1113,7 @@ impl SoftwareRenderer {
 }
 
 /// True when `bounds` (logical space) overlaps `clip` (pixel space) at all.
+
 ///
 /// Node bounds are inclusive-exclusive rects that may start negative or run
 /// past the buffer, so both sides are compared in floating point before any
@@ -922,6 +1139,69 @@ fn hits_clip(bounds: Rect, clip: Clip) -> bool {
         && bounds.x0.floor() < f64::from(cx1)
         && bounds.y1.ceil() > f64::from(cy0)
         && bounds.y0.floor() < f64::from(cy1)
+}
+
+/// The rect node's silhouette as a path: rounded when it has a radius, plain
+/// when it does not. Both the transformed fill and the shadow share it, so a
+/// rect and its shadow can never disagree about what shape they are.
+fn rect_shape(bounds: Rect, radius: f32) -> floem_types::Path {
+    if radius > 0.0 {
+        floem_types::Path::rounded_rect(bounds, f64::from(radius))
+    } else {
+        floem_types::Path::rect(bounds)
+    }
+}
+
+/// One horizontal+vertical pass of a box blur over a single-channel field,
+/// `radius` pixels wide, via a sliding window — O(pixels), independent of
+/// radius. Window edges clamp to the field, which is the edge behaviour a
+/// shadow wants (the blur does not fall off a cliff at the pad boundary).
+fn box_blur(field: &mut [f32], width: usize, height: usize, radius: usize) {
+    if width == 0 || height == 0 || radius == 0 {
+        return;
+    }
+    let mut tmp = vec![0.0f32; field.len()];
+
+    // Horizontal: rows of `width`, window [x-radius, x+radius] clamped.
+    for y in 0..height {
+        let row = y * width;
+        let mut lo = 0usize;
+        let mut hi = radius.min(width - 1);
+        let mut sum: f32 = field[row..=row + hi].iter().sum();
+        for x in 0..width {
+            tmp[row + x] = sum / (hi - lo + 1) as f32;
+            let nlo = (x + 1).saturating_sub(radius);
+            let nhi = (x + 1 + radius).min(width - 1);
+            while hi < nhi {
+                hi += 1;
+                sum += field[row + hi];
+            }
+            while lo < nlo {
+                sum -= field[row + lo];
+                lo += 1;
+            }
+        }
+    }
+
+    // Vertical: columns of `height` over the horizontal result.
+    for x in 0..width {
+        let mut lo = 0usize;
+        let mut hi = radius.min(height - 1);
+        let mut sum: f32 = (0..=hi).map(|y| tmp[y * width + x]).sum();
+        for y in 0..height {
+            field[y * width + x] = sum / (hi - lo + 1) as f32;
+            let nlo = (y + 1).saturating_sub(radius);
+            let nhi = (y + 1 + radius).min(height - 1);
+            while hi < nhi {
+                hi += 1;
+                sum += tmp[hi * width + x];
+            }
+            while lo < nlo {
+                sum -= tmp[lo * width + x];
+                lo += 1;
+            }
+        }
+    }
 }
 
 struct GlyphMask {
@@ -1023,8 +1303,10 @@ mod tests {
         scene.begin_update();
         let _ = scene.insert(SceneNode::Rect {
             bounds: Rect::from_origin_size(Point::new(2.0, 2.0), Size::new(3.0, 3.0)),
-            fill: Color::rgb(10, 20, 30),
+            fill: floem_types::Brush::from(Color::rgb(10, 20, 30)),
             radius: 0.0,
+
+            shadow: None,
         });
         scene.finish_update();
 
@@ -1045,8 +1327,10 @@ mod tests {
         scene.begin_update();
         let _ = scene.insert(SceneNode::Rect {
             bounds: Rect::from_origin_size(Point::new(2.0, 2.0), Size::new(4.0, 4.0)),
-            fill: Color::rgb(200, 10, 10),
+            fill: floem_types::Brush::from(Color::rgb(200, 10, 10)),
             radius: 2.0,
+
+            shadow: None,
         });
         scene.finish_update();
 
@@ -1082,8 +1366,10 @@ mod tests {
         scene.begin_update();
         let _ = scene.insert(SceneNode::Rect {
             bounds: Rect::from_origin_size(Point::new(1.0, 3.0), Size::new(6.0, 2.0)),
-            fill: Color::rgb(0, 255, 0),
+            fill: floem_types::Brush::from(Color::rgb(0, 255, 0)),
             radius: 99.0,
+
+            shadow: None,
         });
         scene.finish_update();
 
@@ -1106,13 +1392,17 @@ mod tests {
         scene.begin_update();
         let _ = scene.insert(SceneNode::Rect {
             bounds: Rect::from_origin_size(Point::new(0.0, 0.0), Size::new(4.0, 4.0)),
-            fill: Color::rgb(255, 0, 0),
+            fill: floem_types::Brush::from(Color::rgb(255, 0, 0)),
             radius: 0.0,
+
+            shadow: None,
         });
         let _ = scene.insert(SceneNode::Rect {
             bounds: Rect::from_origin_size(Point::new(0.0, 0.0), Size::new(4.0, 4.0)),
-            fill: Color::rgba(0, 0, 255, 128),
+            fill: floem_types::Brush::from(Color::rgba(0, 0, 255, 128)),
             radius: 1.0,
+
+            shadow: None,
         });
         scene.finish_update();
 
@@ -1149,8 +1439,10 @@ mod tests {
         scene.begin_update();
         let _ = scene.insert(SceneNode::Rect {
             bounds: Rect::from_origin_size(Point::new(0.0, 0.0), Size::new(4.0, 4.0)),
-            fill: Color::rgb(0, 0, 255),
+            fill: floem_types::Brush::from(Color::rgb(0, 0, 255)),
             radius: 0.0,
+
+            shadow: None,
         });
         let _ = scene.insert(SceneNode::image(
             Rect::from_origin_size(Point::new(1.0, 1.0), Size::new(2.0, 2.0)),
@@ -1206,8 +1498,10 @@ mod tests {
             scene.begin_update();
             let _ = scene.insert(SceneNode::Rect {
                 bounds: Rect::from_origin_size(Point::ZERO, Size::new(2.0, 2.0)),
-                fill: Color::rgb(0, 0, 0),
+                fill: floem_types::Brush::from(Color::rgb(0, 0, 0)),
                 radius: 0.0,
+
+                shadow: None,
             });
             let _ = scene.insert(SceneNode::Image {
                 bounds: Rect::from_origin_size(Point::ZERO, Size::new(2.0, 2.0)),
@@ -1368,13 +1662,17 @@ mod tests {
             scene.begin_update();
             let _ = scene.insert(SceneNode::Rect {
                 bounds: Rect::from_origin_size(Point::new(x, 1.0), Size::new(3.0, 3.0)),
-                fill: Color::rgb(200, 0, 0),
+                fill: floem_types::Brush::from(Color::rgb(200, 0, 0)),
                 radius: 0.0,
+
+                shadow: None,
             });
             let _ = scene.insert(SceneNode::Rect {
                 bounds: Rect::from_origin_size(Point::new(6.0, 1.0), Size::new(3.0, 3.0)),
-                fill: Color::rgb(0, 0, 200),
+                fill: floem_types::Brush::from(Color::rgb(0, 0, 200)),
                 radius: 0.0,
+
+                shadow: None,
             });
             scene.finish_update();
             scene
@@ -1412,8 +1710,10 @@ mod tests {
         scene.begin_update();
         let _ = scene.insert(SceneNode::Rect {
             bounds: Rect::from_origin_size(Point::new(0.0, 0.0), Size::new(4.0, 4.0)),
-            fill: Color::rgb(255, 0, 0),
+            fill: floem_types::Brush::from(Color::rgb(255, 0, 0)),
             radius: 0.0,
+
+            shadow: None,
         });
         scene.finish_update();
 
@@ -1501,13 +1801,17 @@ mod tests {
         scene.begin_update();
         let _ = scene.insert(SceneNode::Rect {
             bounds: Rect::from_origin_size(Point::new(1.0, 1.0), Size::new(3.0, 3.0)),
-            fill: Color::rgb(200, 0, 0),
+            fill: floem_types::Brush::from(Color::rgb(200, 0, 0)),
             radius: 0.0,
+
+            shadow: None,
         });
         let _ = scene.insert(SceneNode::Rect {
             bounds: Rect::from_origin_size(Point::new(8.0, 1.0), Size::new(3.0, 3.0)),
-            fill: Color::rgb(0, 0, 200),
+            fill: floem_types::Brush::from(Color::rgb(0, 0, 200)),
             radius: 0.0,
+
+            shadow: None,
         });
         scene.finish_update();
 

@@ -37,6 +37,28 @@ pub enum PaintOp {
         bounds: Rect,
         resource: ResourceId,
     },
+    /// A rect whose ink varies per pixel — a gradient. The op log keeps what
+    /// one line can say (the colour the brush samples at the rect's centre,
+    /// the colour a one-colour backend would fall back to); the whole brush
+    /// lives on the retained scene node, which is where a test asserting the
+    /// ramp itself has to look.
+    BrushRect {
+        bounds: Rect,
+        radius: f32,
+        sampled: Color,
+    },
+    /// A cast shadow: the silhouette requested of it, plus the blur and offset
+    /// that carry it past that silhouette. Carries no rendered result —
+    /// whether a shadow reaches a pixel is the backend's answer, not the
+    /// request's — so a test asserting pixels asks a renderer, and a test
+    /// asserting the ask reads this op.
+    Shadow {
+        bounds: Rect,
+        radius: f32,
+        blur: f64,
+        offset_x: f64,
+        offset_y: f64,
+    },
     /// A filled and/or stroked vector path. `segments` is the flattened count
     /// the node carries, so two shapes that share a box are still telling
     /// apart.
@@ -93,6 +115,30 @@ impl PaintOp {
                 fmt_rect(*bounds),
                 resource.index(),
                 resource.generation()
+            ),
+            PaintOp::BrushRect {
+                bounds,
+                radius,
+                sampled,
+            } => format!(
+                "BrushRect {} r={:.1} {}",
+                fmt_rect(*bounds),
+                radius,
+                fmt_color(*sampled)
+            ),
+            PaintOp::Shadow {
+                bounds,
+                radius,
+                blur,
+                offset_x,
+                offset_y,
+            } => format!(
+                "Shadow {} r={:.1} blur={:.1} off=({:.1}, {:.1})",
+                fmt_rect(*bounds),
+                radius,
+                blur,
+                offset_x,
+                offset_y
             ),
             PaintOp::Path {
                 bounds,
@@ -183,7 +229,7 @@ impl SceneRecorder {
             }
             _ => SceneNode::Path {
                 path: std::sync::Arc::new(path.clone()),
-                fill,
+                fill: fill.map(floem_types::Brush::from),
                 stroke: stroke.map(|(width, color)| floem_types::Stroke::new(width, color)),
             },
         };
@@ -234,8 +280,9 @@ impl PaintContext for SceneRecorder {
     fn fill_rect(&mut self, rect: Rect, color: Color) {
         self.scene.insert(SceneNode::Rect {
             bounds: rect,
-            fill: color,
+            fill: color.into(),
             radius: 0.0,
+            shadow: None,
         });
         self.ops.push(PaintOp::Rect {
             bounds: rect,
@@ -246,13 +293,71 @@ impl PaintContext for SceneRecorder {
     fn fill_rounded_rect(&mut self, rect: Rect, radius: f32, color: Color) {
         self.scene.insert(SceneNode::Rect {
             bounds: rect,
-            fill: color,
+            fill: color.into(),
             radius: radius.max(0.0),
+            shadow: None,
         });
         self.ops.push(PaintOp::RoundedRect {
             bounds: rect,
             radius,
             color,
+        });
+    }
+
+    fn fill_rect_brush(&mut self, rect: Rect, brush: &floem_types::Brush) {
+        let sampled = brush.sample(rect.center());
+        self.scene.insert(SceneNode::Rect {
+            bounds: rect,
+            fill: brush.clone(),
+            radius: 0.0,
+            shadow: None,
+        });
+        self.ops.push(PaintOp::BrushRect {
+            bounds: rect,
+            radius: 0.0,
+            sampled,
+        });
+    }
+
+    fn fill_rounded_rect_brush(&mut self, rect: Rect, radius: f32, brush: &floem_types::Brush) {
+        let sampled = brush.sample(rect.center());
+        self.scene.insert(SceneNode::Rect {
+            bounds: rect,
+            fill: brush.clone(),
+            radius: radius.max(0.0),
+            shadow: None,
+        });
+        self.ops.push(PaintOp::BrushRect {
+            bounds: rect,
+            radius,
+            sampled,
+        });
+    }
+
+    fn fill_path_brush(&mut self, path: &floem_types::Path, brush: &floem_types::Brush) {
+        self.scene
+            .insert(SceneNode::filled_path(path.clone(), brush.clone()));
+        self.ops.push(PaintOp::Path {
+            bounds: path.bounds(),
+            segments: path.segments().len(),
+            fill: brush.solid(),
+            stroke: None,
+        });
+    }
+
+    fn draw_shadow(&mut self, rect: Rect, radius: f32, shadow: &floem_types::Shadow) {
+        self.scene.insert(SceneNode::Rect {
+            bounds: rect,
+            fill: Color::TRANSPARENT.into(),
+            radius: radius.max(0.0),
+            shadow: Some(*shadow),
+        });
+        self.ops.push(PaintOp::Shadow {
+            bounds: rect,
+            radius,
+            blur: shadow.blur,
+            offset_x: shadow.offset_x,
+            offset_y: shadow.offset_y,
         });
     }
 

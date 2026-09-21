@@ -142,13 +142,13 @@ pub mod prelude {
     // rides in the prelude for the same reason `LayoutStyle` does: it is a
     // value an app *writes*, not a contract it implements.
     pub use floem_animation::{AnimId, AnimKind, Tween};
-    pub use floem_types::{CompositorProp, Easing, RepeatMode};
+    pub use floem_types::{CompositorProp, Easing, RepeatMode, Transition};
 
     // --- Self-drawn value types -------------------------------------------
     // A `Canvas` painter writes `Path`s and `Stroke`s in app colors; without
     // these the canvas is unnameable from the beginner surface. Same rule as
     // the motion vocabulary: values an app writes, not contracts it implements.
-    pub use floem_types::{Color, LineCap, LineJoin, Path, Stroke};
+    pub use floem_types::{Brush, Color, LineCap, LineJoin, Path, Shadow, Stroke};
 
     // A `Canvas::repaint_on` ping is also a value an app writes: bump it and
     // the canvas repaints on the next frame, paint-only.

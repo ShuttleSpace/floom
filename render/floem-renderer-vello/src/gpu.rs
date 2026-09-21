@@ -64,12 +64,13 @@ use std::collections::{HashMap, HashSet};
 use crate::budget::{CacheTrimTelemetry, GpuCacheBudget, MemoryPressure, TrimPlan, plan_trim};
 
 use vello::kurbo::{
-    Affine, BezPath, Cap as KurboLineCap, Join as KurboLineJoin, Rect as KurboRect,
-    RoundedRect as KurboRoundedRect, Stroke as KurboStroke,
+    Affine, BezPath, Cap as KurboLineCap, Join as KurboLineJoin, Point as KurboPoint,
+    Rect as KurboRect, RoundedRect as KurboRoundedRect, Stroke as KurboStroke,
 };
 use vello::peniko::{
-    BlendMode, Blob, Color as PenikoColor, Fill, ImageAlphaType, ImageBrush, ImageData,
-    ImageFormat, ImageSampler,
+    BlendMode, Blob, Brush as PenikoBrush, Color as PenikoColor, Extend, Fill, Gradient,
+    GradientKind, ImageAlphaType, ImageBrush, ImageData, ImageFormat, ImageSampler,
+    LinearGradientPosition, RadialGradientPosition,
 };
 use vello::util::RenderSurface;
 use vello::wgpu;
@@ -144,6 +145,9 @@ pub struct GpuFrameStats {
     /// Scene nodes freshly encoded into vello commands this frame (their
     /// payload changed, or the node is new).
     pub fragments_encoded: u64,
+    /// Drop shadows skipped because vello has no blur primitive yet — the
+    /// recorded degradation for a shadow request this backend cannot honour.
+    pub shadows_skipped: u64,
     /// Pixels vello rasterised this frame. With a real surface and partial
     /// damage this is the damaged area, not the whole screen.
     pub rasterized_pixels: u64,
@@ -182,6 +186,9 @@ struct NodeEncodeStats {
     glyph_runs: u64,
     images: u64,
     unsupported: u64,
+    /// Shadow requests skipped: vello has no blur primitive yet, so a node
+    /// carrying a drop shadow draws its fill and records the skip here.
+    shadow_skips: u64,
     cache_hits: u64,
     cache_misses: u64,
     /// Image resources this fragment's commands still reference. A reused
@@ -234,18 +241,24 @@ fn node_fingerprint(node: &SceneNode) -> u64 {
             bounds,
             fill,
             radius,
+            shadow,
         } => {
             hasher.write_u8(1);
             for v in [bounds.x0, bounds.y0, bounds.x1, bounds.y1] {
                 hasher.write_u64(v.to_bits());
             }
-            hasher.write_u32(
-                u32::from(fill.r) << 24
-                    | u32::from(fill.g) << 16
-                    | u32::from(fill.b) << 8
-                    | u32::from(fill.a),
-            );
+            hash_brush(&mut hasher, fill);
             hasher.write_u32(radius.to_bits());
+            match shadow {
+                None => hasher.write_u8(0),
+                Some(shadow) => {
+                    hasher.write_u8(1);
+                    hash_color(&mut hasher, &shadow.color);
+                    for v in [shadow.blur, shadow.offset_x, shadow.offset_y] {
+                        hasher.write_u64(v.to_bits());
+                    }
+                }
+            }
         }
         SceneNode::Image {
             bounds,
@@ -316,7 +329,7 @@ fn node_fingerprint(node: &SceneNode) -> u64 {
                 None => hasher.write_u8(0),
                 Some(fill) => {
                     hasher.write_u8(1);
-                    hash_color(&mut hasher, fill);
+                    hash_brush(&mut hasher, fill);
                 }
             }
             match stroke {
@@ -409,6 +422,108 @@ fn hash_color(hasher: &mut impl std::hash::Hasher, c: &floem_types::Color) {
     hasher.write_u32(
         u32::from(c.r) << 24 | u32::from(c.g) << 16 | u32::from(c.b) << 8 | u32::from(c.a),
     );
+}
+
+/// Fingerprint of a brush: kind tag, geometry, every stop. Two different
+/// gradients must never share a fragment cache entry.
+fn hash_brush(hasher: &mut impl std::hash::Hasher, b: &floem_types::Brush) {
+    match b {
+        floem_types::Brush::Solid(c) => {
+            hasher.write_u8(0);
+            hash_color(hasher, c);
+        }
+        floem_types::Brush::Linear { stops, from, to } => {
+            hasher.write_u8(1);
+            for p in [from.x, from.y, to.x, to.y] {
+                hasher.write_u64(p.to_bits());
+            }
+            hash_stops(hasher, stops);
+        }
+        floem_types::Brush::Radial {
+            stops,
+            center,
+            radius,
+        } => {
+            hasher.write_u8(2);
+            for p in [center.x, center.y] {
+                hasher.write_u64(p.to_bits());
+            }
+            hasher.write_u64(radius.to_bits());
+            hash_stops(hasher, stops);
+        }
+    }
+}
+
+fn hash_stops(hasher: &mut impl std::hash::Hasher, stops: &[(f32, floem_types::Color)]) {
+    hasher.write_u64(stops.len() as u64);
+    for (offset, color) in stops {
+        hasher.write_u32(offset.to_bits());
+        hash_color(hasher, color);
+    }
+}
+
+/// Maps the scene's brush vocabulary onto peniko's, so a gradient encoded on
+/// the GPU interpolates exactly the ramp the software rasteriser samples.
+fn fill_with_brush(
+    target: &mut VelloScene,
+    shape: &impl vello::kurbo::Shape,
+    brush: &floem_types::Brush,
+) {
+    // The gradient is built per call and borrowed for exactly that one `fill`:
+    // vello's brush parameter takes the gradient by reference (`&Gradient`),
+    // so the ramp cannot outlive the arm that built it.
+    let to_peniko = |ramp: &[(f32, floem_types::Color)]| -> Vec<(f32, PenikoColor)> {
+        ramp.iter()
+            .map(|(offset, c)| (*offset, PenikoColor::from_rgba8(c.r, c.g, c.b, c.a)))
+            .collect()
+    };
+    match brush {
+        floem_types::Brush::Solid(c) => target.fill(
+            Fill::NonZero,
+            Affine::IDENTITY,
+            PenikoColor::from_rgba8(c.r, c.g, c.b, c.a),
+            None,
+            shape,
+        ),
+        floem_types::Brush::Linear { stops, from, to } => {
+            let mut gradient = Gradient::default();
+            gradient.kind = GradientKind::Linear(LinearGradientPosition {
+                start: KurboPoint::new(from.x, from.y),
+                end: KurboPoint::new(to.x, to.y),
+            });
+            gradient.extend = Extend::Pad;
+            let ramp = to_peniko(stops);
+            target.fill(
+                Fill::NonZero,
+                Affine::IDENTITY,
+                PenikoBrush::Gradient(&gradient.with_stops(&*ramp)),
+                None,
+                shape,
+            )
+        }
+        floem_types::Brush::Radial {
+            stops,
+            center,
+            radius,
+        } => {
+            let mut gradient = Gradient::default();
+            gradient.kind = GradientKind::Radial(RadialGradientPosition {
+                start_center: KurboPoint::new(center.x, center.y),
+                start_radius: 0.0,
+                end_center: KurboPoint::new(center.x, center.y),
+                end_radius: *radius as f32,
+            });
+            gradient.extend = Extend::Pad;
+            let ramp = to_peniko(stops);
+            target.fill(
+                Fill::NonZero,
+                Affine::IDENTITY,
+                PenikoBrush::Gradient(&gradient.with_stops(&*ramp)),
+                None,
+                shape,
+            )
+        }
+    }
 }
 
 /// Translates a path in Floem's vocabulary into kurbo's.
@@ -978,6 +1093,7 @@ impl VelloGpuPresenter {
                     totals.glyph_runs += cached.stats.glyph_runs;
                     totals.images += cached.stats.images;
                     totals.unsupported_nodes += cached.stats.unsupported;
+                    totals.shadows_skipped += cached.stats.shadow_skips;
                     totals.texture_cache_hits += cached.stats.images;
                     totals.fragments_reused += 1;
                     for key in cached.stats.image_keys.iter().copied() {
@@ -995,6 +1111,7 @@ impl VelloGpuPresenter {
             totals.glyph_runs += stats.glyph_runs;
             totals.images += stats.images;
             totals.unsupported_nodes += stats.unsupported;
+            totals.shadows_skipped += stats.shadow_skips;
             totals.texture_cache_hits += stats.cache_hits;
             totals.texture_cache_misses += stats.cache_misses;
             totals.fragments_encoded += 1;
@@ -1051,29 +1168,24 @@ impl VelloGpuPresenter {
                 bounds,
                 fill,
                 radius,
+                shadow,
             } => {
                 let rect = KurboRect::new(bounds.x0, bounds.y0, bounds.x1, bounds.y1);
                 // One fill for both shapes: a zero radius is a plain rect.
                 let shape = KurboRoundedRect::from_rect(rect, f64::from(radius.max(0.0)));
-                target.fill(
-                    Fill::NonZero,
-                    Affine::IDENTITY,
-                    PenikoColor::from_rgba8(fill.r, fill.g, fill.b, fill.a),
-                    None,
-                    &shape,
-                );
+                fill_with_brush(target, &shape, fill);
+                // No blur primitive in vello yet: the fill renders, the shadow
+                // does not, and the skip is counted — a degraded request is a
+                // visible number, never a silent one.
+                if shadow.is_some() {
+                    stats.shadow_skips += 1;
+                }
                 stats.rects += 1;
             }
             SceneNode::Path { path, fill, stroke } => {
                 let bez = bez_path(path);
                 if let Some(fill) = fill {
-                    target.fill(
-                        Fill::NonZero,
-                        Affine::IDENTITY,
-                        PenikoColor::from_rgba8(fill.r, fill.g, fill.b, fill.a),
-                        None,
-                        &bez,
-                    );
+                    fill_with_brush(target, &bez, fill);
                 }
                 if let Some(stroke) = stroke {
                     let pen = KurboStroke {
@@ -1716,8 +1828,10 @@ mod tests {
                 floem_types::Point::new(0.0, 0.0),
                 Size::new(4.0, 4.0),
             ),
-            fill: floem_types::Color::rgb(1, 2, 3),
+            fill: floem_types::Brush::from(floem_types::Color::rgb(1, 2, 3)),
             radius: 0.0,
+
+            shadow: None,
         });
         scene.finish_update();
         presenter.present(&scene, &ResourceRegistry::new());
@@ -2092,8 +2206,10 @@ mod tests {
                 floem_types::Point::new(x, 0.0),
                 Size::new(4.0, 4.0),
             ),
-            fill: floem_types::Color::rgb(1, 2, 3),
+            fill: floem_types::Brush::from(floem_types::Color::rgb(1, 2, 3)),
             radius: 0.0,
+
+            shadow: None,
         }
     }
 

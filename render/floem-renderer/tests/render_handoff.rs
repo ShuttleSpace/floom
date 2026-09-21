@@ -13,8 +13,11 @@ fn render_thread_consumes_immutable_snapshot() {
     scene.begin_update();
     let _ = scene.insert(SceneNode::Rect {
         bounds: Rect::from_origin_size(Point::ZERO, Size::new(10.0, 10.0)),
-        fill: Color::BLACK,
+        fill: floem_types::Brush::from(Color::BLACK),
         radius: 0.0,
+
+        shadow: None,
+
     });
     scene.finish_update();
 
@@ -44,16 +47,22 @@ fn bounded_queue_drops_oldest() {
     a.begin_update();
     let _ = a.insert(SceneNode::Rect {
         bounds: Rect::from_origin_size(Point::ZERO, Size::new(1.0, 1.0)),
-        fill: Color::BLACK,
+        fill: floem_types::Brush::from(Color::BLACK),
         radius: 0.0,
+
+        shadow: None,
+
     });
     a.finish_update();
     let mut b = Scene::new();
     b.begin_update();
     let _ = b.insert(SceneNode::Rect {
         bounds: Rect::from_origin_size(Point::ZERO, Size::new(2.0, 2.0)),
-        fill: Color::WHITE,
+        fill: floem_types::Brush::from(Color::WHITE),
         radius: 0.0,
+
+        shadow: None,
+
     });
     b.finish_update();
 

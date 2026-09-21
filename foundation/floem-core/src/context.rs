@@ -1,6 +1,6 @@
 //! Context objects passed into widget lifecycle methods.
 
-use floem_types::{Color, ElementId, Event, Point, Rect, ResourceId, Size};
+use floem_types::{Brush, Color, ElementId, Event, Point, Rect, ResourceId, Shadow, Size};
 
 /// Context available while creating an element from a widget.
 pub trait CreateContext {
@@ -170,6 +170,25 @@ pub trait PaintContext {
     /// Solid, axis-aligned rectangle.
     fn fill_rect(&mut self, rect: Rect, color: Color);
 
+    /// A rectangle filled with a [`Brush`] — a gradient where the design asks
+    /// for one, [`Brush::Solid`] in the common case.
+    ///
+    /// This is the widget-facing half of the gradient gap (A3): without it a
+    /// control can draw nothing but flat colours no matter what the scene IR
+    /// supports, exactly the state Compose was in before it added a `brush:`
+    /// overload beside every `color:` one. The brush's own coordinates are
+    /// absolute logical px, so a gradient does *not* rescale with whatever
+    /// rect receives it — a progress bar's ramp stays anchored to its track
+    /// while the fill grows along it.
+    ///
+    /// The default is honest rather than silent: a backend with no per-pixel
+    /// brush paints the rect in one representative colour (the brush sampled
+    /// at the rect's centre) instead of dropping the shape. That is a visible
+    /// approximation, and a backend that can do better overrides it.
+    fn fill_rect_brush(&mut self, rect: Rect, brush: &Brush) {
+        self.fill_rect(rect, brush.sample(rect.center()));
+    }
+
     /// Rectangle with uniformly rounded corners.
     ///
     /// Backends without a rounded-rect primitive may fall back to `fill_rect`;
@@ -177,6 +196,29 @@ pub trait PaintContext {
     fn fill_rounded_rect(&mut self, rect: Rect, radius: f32, color: Color) {
         let _ = radius;
         self.fill_rect(rect, color);
+    }
+
+    /// Rounded rectangle filled with a [`Brush`]. See
+    /// [`PaintContext::fill_rect_brush`] for what the brush's own coordinates
+    /// mean and why the default paints one representative colour.
+    fn fill_rounded_rect_brush(&mut self, rect: Rect, radius: f32, brush: &Brush) {
+        self.fill_rounded_rect(rect, radius, brush.sample(rect.center()));
+    }
+
+    /// Draws `shadow` behind `rect`: the rect's own silhouette, blurred and
+    /// offset, composited *before* the caller draws anything on top of it.
+    ///
+    /// A separate op from the fill because a shadow belongs to a shape rather
+    /// than being a shape: the caller decides the order (shadow first, then
+    /// the shape it sits behind) and the backend decides how much of the blur
+    /// it can actually do. A backend that cannot blur draws nothing here and
+    /// is expected to say so in its own frame stats rather than stay quiet —
+    /// the software backend counts what it drew, vello counts what it skipped.
+    ///
+    /// Defaults to nothing: a shadow is decoration, and a backend inventing one
+    /// (a hard black rectangle, say) would be worse than the absence of it.
+    fn draw_shadow(&mut self, rect: Rect, radius: f32, shadow: &Shadow) {
+        let _ = (rect, radius, shadow);
     }
 
     /// A single run of text. `size` is the font size in logical pixels.
@@ -209,6 +251,15 @@ pub trait PaintContext {
     /// order. Defaults to a no-op.
     fn stroke_path(&mut self, path: &floem_types::Path, stroke: &floem_types::Stroke) {
         let _ = (path, stroke);
+    }
+
+    /// Fills an arbitrary vector path with a [`Brush`].
+    ///
+    /// The same trade as [`PaintContext::fill_rect_brush`], and the one that
+    /// lets a self-drawn chart paint its area with a ramp rather than a flat
+    /// colour. Defaults to the representative colour.
+    fn fill_path_brush(&mut self, path: &floem_types::Path, brush: &Brush) {
+        self.fill_path(path, brush.sample(path.bounds().center()));
     }
 
     /// An already-registered image resource drawn into `bounds`.

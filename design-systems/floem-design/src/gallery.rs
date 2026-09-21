@@ -13,7 +13,7 @@
 
 use floem_scene::{Scene, SceneNode};
 use floem_style::StyleProps;
-use floem_types::{Color, Point, Rect, Size};
+use floem_types::{Color, Point, Rect, Shadow, Size};
 
 use crate::variant::{ControlSize, InteractionState, Variant};
 
@@ -148,8 +148,9 @@ pub fn gallery_scene(
     let size = gallery_size(samples, columns);
     let _ = scene.insert(SceneNode::Rect {
         bounds: Rect::from_origin_size(Point::new(0.0, 0.0), size),
-        fill: page,
+        fill: page.into(),
         radius: 0.0,
+        shadow: None,
     });
 
     for (index, sample) in samples.iter().enumerate() {
@@ -168,21 +169,15 @@ pub fn gallery_scene(
             y1: top + height,
         };
 
-        if let Some(elevation) = props.elevation.filter(|e| *e > 0.0) {
-            // The shadow sits under the fill and is pushed down by the
-            // elevation, so a bigger level is a visibly bigger offset.
-            let offset = elevation as f64;
-            let _ = scene.insert(SceneNode::Rect {
-                bounds: Rect {
-                    x0: cell.x0,
-                    y0: cell.y0 + offset,
-                    x1: cell.x1,
-                    y1: cell.y1 + offset,
-                },
-                fill: Color::rgba(0, 0, 0, SHADOW_ALPHA),
-                radius,
-            });
-        }
+        // Elevation becomes a real drop shadow on the cell's own rect: the
+        // offset pushes it down, the blur spreads it, and both scale with the
+        // elevation level — no pseudo-shadow rect underneath any more.
+        let shadow = props.elevation.filter(|e| *e > 0.0).map(|elevation| Shadow {
+            color: Color::rgba(0, 0, 0, SHADOW_ALPHA),
+            blur: f64::from(elevation),
+            offset_x: 0.0,
+            offset_y: f64::from(elevation),
+        });
 
         let fill = props.background.unwrap_or(Color::TRANSPARENT);
         let border_width = props.border_width.unwrap_or(0.0);
@@ -190,8 +185,9 @@ pub fn gallery_scene(
             let border = props.border_color.unwrap_or(Color::TRANSPARENT);
             let _ = scene.insert(SceneNode::Rect {
                 bounds: cell,
-                fill: border,
+                fill: border.into(),
                 radius,
+                shadow,
             });
             let inset = border_width as f64;
             let _ = scene.insert(SceneNode::Rect {
@@ -201,14 +197,16 @@ pub fn gallery_scene(
                     x1: cell.x1 - inset,
                     y1: cell.y1 - inset,
                 },
-                fill,
+                fill: fill.into(),
                 radius: (radius - border_width).max(0.0),
+                shadow: None,
             });
         } else {
             let _ = scene.insert(SceneNode::Rect {
                 bounds: cell,
-                fill,
+                fill: fill.into(),
                 radius,
+                shadow,
             });
         }
     }
@@ -222,6 +220,7 @@ mod tests {
     use super::*;
     use crate::color::lerp;
     use crate::style::Props;
+    use floem_types::Brush;
 
     /// A miniature design system: shape comes from the variant, shade from the
     /// state, radius and box height from the size.
@@ -255,7 +254,7 @@ mod tests {
         CellPaint::new(props, sample.size.pick(24.0, 32.0, 40.0))
     }
 
-    fn rects(scene: &Scene) -> Vec<(Rect, Color, f32)> {
+    fn rects(scene: &Scene) -> Vec<(Rect, Brush, f32)> {
         scene
             .iter()
             .filter_map(|(_, node)| match node {
@@ -263,17 +262,21 @@ mod tests {
                     bounds,
                     fill,
                     radius,
-                } => Some((*bounds, *fill, *radius)),
+                    ..
+                } => Some((*bounds, fill.clone(), *radius)),
                 _ => None,
             })
             .collect()
     }
 
-    fn shadow_y(scene: &Scene) -> Option<f64> {
-        rects(scene)
-            .into_iter()
-            .find(|(_, fill, _)| fill.a == SHADOW_ALPHA)
-            .map(|(bounds, _, _)| bounds.y0)
+    fn shadow_offset_y(scene: &Scene) -> Option<f64> {
+        scene.iter().find_map(|(_, node)| match node {
+            SceneNode::Rect {
+                shadow: Some(shadow),
+                ..
+            } if shadow.offset_y > 0.0 => Some(shadow.offset_y),
+            _ => None,
+        })
     }
 
     #[test]
@@ -285,8 +288,8 @@ mod tests {
         // + Tonal    (fill)
         // + Outlined (border + fill)
         // + Text     (fill)
-        // + Elevated (shadow + fill)
-        assert_eq!(scene.len(), 1 + 1 + 1 + 2 + 1 + 2);
+        // + Elevated (one rect: the fill carries its shadow on the node)
+        assert_eq!(scene.len(), 1 + 1 + 1 + 2 + 1 + 1);
     }
 
     #[test]
@@ -330,8 +333,8 @@ mod tests {
                 |_| style.clone(),
             )
         };
-        let low = shadow_y(&render(1.0)).expect("an elevated cell has a shadow");
-        let high = shadow_y(&render(4.0)).expect("an elevated cell has a shadow");
+        let low = shadow_offset_y(&render(1.0)).expect("an elevated cell has a shadow");
+        let high = shadow_offset_y(&render(4.0)).expect("an elevated cell has a shadow");
         assert!(high > low, "elevation 4 offset {high} <= elevation 1 {low}");
     }
 
@@ -350,15 +353,15 @@ mod tests {
 
         let all = rects(&scene);
         assert_eq!(all.len(), 2, "page + one cell");
-        assert_eq!(all[0].1, Color::WHITE, "node 0 is the page");
-        let cell = all[1];
+        assert_eq!(all[0].1.solid(), Some(Color::WHITE), "node 0 is the page");
+        let (_, cell_fill, cell_radius) = &all[1];
         assert_eq!(
-            cell.2,
+            *cell_radius,
             style.props.radius.unwrap(),
             "radius did not reach the rect"
         );
         assert_eq!(
-            cell.1,
+            cell_fill.solid().unwrap(),
             style.props.background.unwrap(),
             "fill did not reach the rect"
         );

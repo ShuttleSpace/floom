@@ -2295,12 +2295,15 @@ dependencies = [
 name = "floem-material"
 version = "0.2.0"
 dependencies = [
+ "floem-app",
  "floem-design",
+ "floem-layout",
  "floem-scene",
  "floem-snapshot",
  "floem-style",
  "floem-theme",
  "floem-types",
+ "floem-widgets",
 ]
 
 [[package]]
@@ -3006,6 +3009,15 @@ dependencies = [
 name = "floem2-progress-ring"
 version = "0.2.0"
 dependencies = [
+ "floem2",
+]
+
+[[package]]
+name = "floem2-style"
+version = "0.2.0"
+dependencies = [
+ "floem-material",
+ "floem-renderer",
  "floem2",
 ]
 

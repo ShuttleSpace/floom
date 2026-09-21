@@ -1594,12 +1594,22 @@ impl WidgetHost {
                         self.motion.cancel(id);
                     }
                 }
-                let id = self.motion.start(AnimKind::from(&spec), self.anim_clock);
+                let kind = AnimKind::from(&spec);
+                let id = self.motion.start(kind.clone(), self.anim_clock);
                 self.node_anims.push(NodeAnimation {
                     node: index,
                     id: Some(id),
                     declared: Some(spec),
                 });
+                // Park the t = 0 sample *now*: a declared animation is started
+                // here, after the frame's animation tick already ran, so without
+                // this the node would paint the previous (settled) value on the
+                // very frame its transition restarts — an implicit transition
+                // would snap to its endpoint instead of starting from its origin.
+                // The next `tick_node_animations` overwrites this with the real
+                // first step, so it only closes the one-frame gap.
+                let (value, prop, _) = kind.sample(0.0);
+                self.nodes[index].motion = Some(MotionSample { value, prop });
             }
         }
     }
@@ -3707,16 +3717,62 @@ impl PaintContext for NodePaintContext<'_> {
     fn fill_rect(&mut self, rect: Rect, color: floem_types::Color) {
         self.push(floem_scene::SceneNode::Rect {
             bounds: rect,
-            fill: color,
+            fill: color.into(),
             radius: 0.0,
+            shadow: None,
         });
     }
 
     fn fill_rounded_rect(&mut self, rect: Rect, radius: f32, color: floem_types::Color) {
         self.push(floem_scene::SceneNode::Rect {
             bounds: rect,
-            fill: color,
+            fill: color.into(),
             radius: radius.max(0.0),
+            shadow: None,
+        });
+    }
+
+    fn fill_rect_brush(&mut self, rect: Rect, brush: &floem_types::Brush) {
+        self.push(floem_scene::SceneNode::Rect {
+            bounds: rect,
+            fill: brush.clone(),
+            radius: 0.0,
+            shadow: None,
+        });
+    }
+
+    fn fill_rounded_rect_brush(&mut self, rect: Rect, radius: f32, brush: &floem_types::Brush) {
+        self.push(floem_scene::SceneNode::Rect {
+            bounds: rect,
+            fill: brush.clone(),
+            radius: radius.max(0.0),
+            shadow: None,
+        });
+    }
+
+    fn fill_path_brush(&mut self, path: &floem_types::Path, brush: &floem_types::Brush) {
+        self.push(floem_scene::SceneNode::Path {
+            path: std::sync::Arc::new(path.clone()),
+            fill: Some(brush.clone()),
+            stroke: None,
+        });
+    }
+
+    /// A shadow is a *rect-shaped* request, so it rides on a rect node whose
+    /// own fill contributes no ink: the silhouette is the rect, the blur and
+    /// offset come from the shadow, and whatever the widget draws next lands
+    /// on top. One node rather than a pending state latched onto the following
+    /// fill — otherwise "the shadow this shape casts" and "this shape" would
+    /// be two things the scene has to keep in step.
+    fn draw_shadow(&mut self, rect: Rect, radius: f32, shadow: &floem_types::Shadow) {
+        if shadow.color.a == 0 {
+            return;
+        }
+        self.push(floem_scene::SceneNode::Rect {
+            bounds: rect,
+            fill: floem_types::Brush::Solid(floem_types::Color::TRANSPARENT),
+            radius: radius.max(0.0),
+            shadow: Some(*shadow),
         });
     }
 
@@ -3829,7 +3885,10 @@ fn apply_composite(node: &mut floem_scene::SceneNode, prop: CompositorProp) {
             let alpha = alpha.clamp(0.0, 1.0);
             let scale = |c: u8| (c as f64 * alpha).round().clamp(0.0, 255.0) as u8;
             match node {
-                SceneNode::Rect { fill, .. } => fill.a = scale(fill.a),
+                // A gradient fades the way a solid does — every stop scales,
+                // so the ramp stays a ramp instead of collapsing to its ends
+                // (see `Brush::with_alpha_factor`).
+                SceneNode::Rect { fill, .. } => *fill = fill.with_alpha_factor(alpha),
                 SceneNode::Image { alpha, .. } => *alpha = scale(*alpha),
                 SceneNode::Text { color, .. } => color.a = scale(color.a),
                 // A self-drawn node fades through *both* of its inks: a chart
@@ -3837,7 +3896,7 @@ fn apply_composite(node: &mut floem_scene::SceneNode, prop: CompositorProp) {
                 // stroke, and a shape that has both must dim as one thing.
                 SceneNode::Path { fill, stroke, .. } => {
                     if let Some(fill) = fill {
-                        fill.a = scale(fill.a);
+                        *fill = fill.with_alpha_factor(alpha);
                     }
                     if let Some(stroke) = stroke {
                         stroke.color.a = scale(stroke.color.a);

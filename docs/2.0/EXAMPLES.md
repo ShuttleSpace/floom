@@ -22,6 +22,7 @@ something stale.
 | `floem2-navigation` | typed routes, history, page transitions, nav containers, deep links | all | headless |
 | `floem2-progress-ring` | self-drawn motion: an animated ring + a `Spinner` that animates itself | all | headless |
 | `floem2-transform` | subtree transforms: a card that scales and rotates as one picture | all | headless |
+| `floem2-style` | style that is made of something: a gradient card, a real drop shadow, and an implicit hover fade armed with a design-system motion token | all | headless |
 | `floem2-editor` | text document: transactions, selection, undo/redo, IME pre-edit | all | headless |
 | `floem2-motion` | eased tweens, interruption, and a control that animates itself | all | headless |
 | `floem2-native-plugin` | writing a native provider plugin + slot pooling | all | headless |
@@ -125,6 +126,31 @@ the scope carries the sampled value about the box centre, pivoting where
 == 2. the pixels follow the scale ==
 == 3. a rotation turns the whole picture ==
 == 4. a finished transform parks clean ==
+```
+
+### `floem2-style`
+
+Style realised in primitives (MOTION-GAP A3/A4/B4/B6): a gradient background,
+a blurred drop shadow instead of the pseudo-shadow rect v1 faked elevation
+with, an implicit transition the author never has to start, and Material's own
+motion tokens as its timing. Every act is asserted — including the control that
+makes each positive claim mean something: a flat background really does put the
+same pixel at both ends, an unraised card really does leave the pixels below it
+empty, and an untransitioned button really does snap in one frame.
+
+```text
+== 1. a gradient card is not one colour ==
+  left [37, 60, 213, 255]  right [214, 60, 36, 255]
+  the ramp reached the renderer intact; the flat card stayed flat
+== 2. elevation casts a shadow ==
+  below the card: [0, 0, 0, 167]
+  below: inked; above and the unraised control: empty
+== 3. the hover fade is implicit ==
+  one frame after hover: faded #2B6CB0FF, snapped #5186BEFF
+  both arrive at #5186BEFF; only one of them travelled
+== 4. the design token is the transition ==
+  MotionDuration::SHORT2 = 100 ms -> 0.100 s
+  armed with MotionTransition::STATE_CHANGE, and it takes that long
 ```
 
 ### `floem2-window`

@@ -1,0 +1,19 @@
+[package]
+name = "floem2-style"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+description = "Gradients, real elevation, and an implicit hover fade armed with a design-system motion token"
+
+# The software renderer is enabled *by the example*, not by the facade: acts 1
+# and 2 assert rendered pixels, and a facade consumer that never draws pays
+# nothing for that.
+[dependencies]
+floem2 = { path = "../../app/floem2", version = "0.2.0", features = [
+    "renderer-software",
+] }
+floem-renderer = { path = "../../render/floem-renderer", version = "0.2.0" }
+# Act 4 arms a button with the Material motion tokens themselves: the design
+# system decides the timing, and nothing below restates it.
+floem-material = { path = "../../design-systems/floem-material", version = "0.2.0" }

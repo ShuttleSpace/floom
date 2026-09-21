@@ -10,6 +10,7 @@ use floem_material::{
     GALLERY_COLUMNS, MaterialTheme, button_gallery, button_gallery_labels, button_metrics,
     button_style,
 };
+use floem_scene::SceneNode;
 use floem_snapshot::{PixelSnapshot, SceneSnapshot, assert_snapshot, snapshots_dir};
 use floem_types::Color;
 
@@ -132,18 +133,30 @@ fn the_gallery_paints_the_requested_number_of_rects() {
         .iter()
         .filter(|s| resolved(s).border_width.unwrap_or(0.0) > 0.0)
         .count();
-    let elevation_rects = samples
+    assert_eq!(scene.len(), 1 + samples.len() + border_rects);
+
+    // A disabled raised button loses its shadow along with its colour, so the
+    // shadow count sits strictly below the sample count for that variant. The
+    // shadows themselves are asserted on separately: exactly the elevated
+    // cells carry one, now on the fill node rather than as a rect of its own.
+    let elevated = samples
         .iter()
         .filter(|s| resolved(s).elevation.unwrap_or(0.0) > 0.0)
         .count();
-    assert_eq!(
-        scene.len(),
-        1 + samples.len() + border_rects + elevation_rects
-    );
-
-    // A disabled raised button loses its shadow as well as its colour, so the
-    // elevation count is strictly below the sample count for that variant.
-    assert_eq!(elevation_rects, 15, "18 elevated samples minus 3 disabled");
+    let shadowed = scene
+        .iter()
+        .filter(|(_, node)| {
+            matches!(
+                node,
+                SceneNode::Rect {
+                    shadow: Some(_),
+                    ..
+                }
+            )
+        })
+        .count();
+    assert_eq!(shadowed, elevated, "every elevated cell carries its shadow");
+    assert_eq!(elevated, 15, "18 elevated samples minus 3 disabled");
 
     let size = gallery_size(&samples, GALLERY_COLUMNS);
     let rows = samples.len().div_ceil(GALLERY_COLUMNS) as f64;

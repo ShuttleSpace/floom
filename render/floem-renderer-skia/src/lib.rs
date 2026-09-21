@@ -8,7 +8,14 @@ use floem_types::{Color, Rect};
 pub enum SkiaCommand {
     FillRect {
         bounds: Rect,
-        color: Color,
+        /// The fill as the scene's own `Brush` vocabulary: the real submit
+        /// path maps a gradient to an `SkShader`, a solid to a plain paint
+        /// colour. Carried structurally so the contract tests can compare
+        /// fills without linking Skia.
+        brush: floem_types::Brush,
+        /// Drop shadow requested behind the fill; the submit path turns it
+        /// into an `SkBlurImageFilter`-based draw (see the type's docs).
+        shadow: Option<floem_types::Shadow>,
     },
     /// A path, in Skia's own shape vocabulary: `SkPath` holds the segments and
     /// a `SkPaint` decides fill or stroke. Recorded as the segment count plus
@@ -17,7 +24,7 @@ pub enum SkiaCommand {
     DrawPath {
         bounds: Rect,
         segments: usize,
-        fill: Option<Color>,
+        fill: Option<floem_types::Brush>,
         stroke: Option<(f64, Color)>,
     },
     /// `canvas.clipPath` / `clipRRect`. Skia keeps the same push/pop stack the
@@ -64,9 +71,15 @@ impl Renderer for SkiaRendererAdapter {
     fn render_scene(&mut self, scene: &Scene, _damage: &DamageRegion) {
         for (_id, node) in scene.iter() {
             match node {
-                SceneNode::Rect { bounds, fill, .. } => self.commands.push(SkiaCommand::FillRect {
+                SceneNode::Rect {
+                    bounds,
+                    fill,
+                    shadow,
+                    ..
+                } => self.commands.push(SkiaCommand::FillRect {
                     bounds: *bounds,
-                    color: *fill,
+                    brush: fill.clone(),
+                    shadow: *shadow,
                 }),
                 SceneNode::Image {
                     bounds,
@@ -83,7 +96,7 @@ impl Renderer for SkiaRendererAdapter {
                     self.commands.push(SkiaCommand::DrawPath {
                         bounds: path.bounds(),
                         segments: path.segments().len(),
-                        fill: *fill,
+                        fill: fill.clone(),
                         stroke: stroke.as_ref().map(|s| (s.width, s.color)),
                     })
                 }
@@ -126,8 +139,11 @@ mod tests {
         scene.begin_update();
         let _ = scene.insert(SceneNode::Rect {
             bounds: Rect::from_origin_size(Point::new(1.0, 1.0), Size::new(2.0, 2.0)),
-            fill: Color::rgb(1, 2, 3),
+            fill: floem_types::Brush::from(Color::rgb(1, 2, 3)),
             radius: 0.0,
+
+            shadow: None,
+
         });
         scene.finish_update();
 
@@ -152,8 +168,11 @@ mod tests {
         });
         let _ = scene.insert(SceneNode::Rect {
             bounds: Rect::from_origin_size(Point::new(1.0, 1.0), Size::new(4.0, 4.0)),
-            fill: Color::rgb(9, 9, 9),
+            fill: floem_types::Brush::from(Color::rgb(9, 9, 9)),
             radius: 0.0,
+
+            shadow: None,
+
         });
         let _ = scene.insert(SceneNode::GroupPop);
         scene.finish_update();

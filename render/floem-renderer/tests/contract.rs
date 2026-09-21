@@ -44,13 +44,19 @@ fn fake_renderer_consumes_scene_without_widgets() {
     scene.begin_update();
     let _ = scene.insert(SceneNode::Rect {
         bounds: Rect::from_origin_size(Point::ZERO, Size::new(20.0, 10.0)),
-        fill: Color::rgb(255, 0, 0),
+        fill: floem_types::Brush::from(Color::rgb(255, 0, 0)),
         radius: 0.0,
+
+        shadow: None,
+
     });
     let _ = scene.insert(SceneNode::Rect {
         bounds: Rect::from_origin_size(Point::new(5.0, 5.0), Size::new(4.0, 4.0)),
-        fill: Color::BLACK,
+        fill: floem_types::Brush::from(Color::BLACK),
         radius: 0.0,
+
+        shadow: None,
+
     });
     scene.finish_update();
 

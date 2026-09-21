@@ -7,13 +7,14 @@ use floem_accessibility::SemanticsState;
 use floem_core::{
     ElementId, Key, NamedKey, OverlayHandle, OverlayKind, Point, Rect, Size, Widget, WidgetAny,
 };
-use floem_types::{KeyEvent, Modifiers, PointerEvent, PointerPhase};
+use floem_scene::SceneNode;
+use floem_types::{Brush, Color, KeyEvent, Modifiers, PointerEvent, PointerPhase};
 use floem_widgets::controls::{
     Button, Checkbox, Progress, Radio, Select, SelectPopup, Slider, Switch, TextField,
 };
 use floem_widgets::testkit::{
-    AllocatingCreateContext, OverlayCall, RecordingUpdateContext, TestEventContext, dispatch,
-    paint_snapshot, semantics_snapshot,
+    AllocatingCreateContext, OverlayCall, RecordingUpdateContext, SceneRecorder, TestEventContext,
+    dispatch, paint_snapshot, semantics_snapshot,
 };
 
 const ROW: Rect = Rect {
@@ -847,5 +848,96 @@ fn control_paint_snapshots_are_stable() {
     assert!(
         snapshot.contains("\"Accept\""),
         "label follows the box: {snapshot}"
+    );
+}
+
+// --- A3: a gradient in a real control ---------------------------------------
+
+/// A progress bar's gradient is anchored to its *track*, not squeezed into
+/// whatever fraction is currently filled — which is what "the brush carries
+/// its own coordinates" buys, and the difference a screenshot cannot show you.
+///
+/// The evidence: paint the same bar at 25 % and at 90 %. The brush that reaches
+/// the renderer is byte-identical in both (nothing was rebuilt per value), and
+/// the ink at the fill's own centre has moved along the ramp — which it could
+/// only do if the ramp stayed put while the fill grew over it. A ramp
+/// compressed into the filled width would sample the same midpoint both times.
+#[test]
+fn a_progress_gradient_stays_anchored_to_the_track_as_the_fill_grows() {
+    let ramp = Brush::linear(
+        &[
+            (0.0, Color::rgb(40, 60, 220)),
+            (1.0, Color::rgb(220, 40, 40)),
+        ],
+        Point::new(0.0, 0.0),
+        Point::new(200.0, 0.0),
+    );
+    let quarter = Progress::determinate(0.25).gradient(ramp.clone());
+    let almost = Progress::determinate(0.9).gradient(ramp.clone());
+
+    let painted = |widget: &Progress| {
+        let id = allocate(widget);
+        let mut recorder = SceneRecorder::new(ROW);
+        widget.paint(&mut recorder, id);
+        recorder.finish();
+        let fills: Vec<_> = recorder
+            .scene()
+            .iter()
+            .filter_map(|(_, node)| match node {
+                SceneNode::Rect { fill, .. } => Some(fill.clone()),
+                _ => None,
+            })
+            .collect();
+        (recorder.snapshot(), fills)
+    };
+
+    let (quarter_ops, quarter_fills) = painted(&quarter);
+    let (almost_ops, almost_fills) = painted(&almost);
+
+    // Two rects each: the dim track, then the gradient fill.
+    assert_eq!(quarter_fills.len(), 2);
+    assert_eq!(
+        quarter_fills[1], ramp,
+        "the whole ramp reaches the renderer at 25 %"
+    );
+    assert_eq!(
+        almost_fills[1], ramp,
+        "and the identical ramp at 90 % — nothing was respecified"
+    );
+    let track_line = "Rect (0.0, 0.0, 200.0, 32.0) #E2E8F0FF";
+    let quarter_fill_line = quarter_ops
+        .lines()
+        .nth(1)
+        .expect("the fill is the second op")
+        .to_string();
+    let almost_fill_line = almost_ops
+        .lines()
+        .nth(1)
+        .expect("the fill is the second op")
+        .to_string();
+    assert_eq!(quarter_ops.lines().next().unwrap(), track_line);
+    assert_eq!(almost_ops.lines().next().unwrap(), track_line);
+    assert!(
+        quarter_fill_line.starts_with("BrushRect (0.0, 0.0, 50.0, 32.0)"),
+        "a quarter of the 200px track: {quarter_fill_line}"
+    );
+    assert!(
+        almost_fill_line.starts_with("BrushRect (0.0, 0.0, 180.0, 32.0)"),
+        "ninety percent of the track: {almost_fill_line}"
+    );
+    assert_ne!(
+        quarter_fill_line, almost_fill_line,
+        "the fill's own centre landed further along the ramp"
+    );
+}
+
+/// Without a gradient the bar is unchanged: one flat fill at the colour it has
+/// always used. The new door must not repaint yesterday's bar.
+#[test]
+fn a_gradientless_progress_paints_the_same_flat_fill_as_before() {
+    let id = allocate(&Progress::determinate(0.5));
+    assert_eq!(
+        paint_snapshot(&Progress::determinate(0.5), id, ROW),
+        "Rect (0.0, 0.0, 200.0, 32.0) #E2E8F0FF\nRect (0.0, 0.0, 100.0, 32.0) #2B6CB0FF"
     );
 }

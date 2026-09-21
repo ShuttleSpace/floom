@@ -15,8 +15,10 @@ fn build_scene(n: usize) -> Scene {
                 Point::new((i % 100) as f64, (i / 100) as f64),
                 Size::new(4.0, 4.0),
             ),
-            fill: Color::BLACK,
+            fill: floem_types::Brush::from(Color::BLACK),
             radius: 0.0,
+
+            shadow: None,
         });
     }
     scene.finish_update();
@@ -49,8 +51,10 @@ fn bench_scene_render(c: &mut Criterion) {
             id,
             SceneNode::Rect {
                 bounds: Rect::from_origin_size(Point::ZERO, Size::new(4.0, 4.0)),
-                fill: Color::WHITE,
+                fill: floem_types::Brush::from(Color::WHITE),
                 radius: 0.0,
+
+                shadow: None,
             },
         );
     }

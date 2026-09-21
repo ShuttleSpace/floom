@@ -6,7 +6,7 @@ mod kinds;
 use kinds::map_compositor;
 
 pub use clock::{Clock, FakeClock};
-pub use floem_types::{AnimationSpec, CompositorProp, Easing, RepeatMode, RepeatSpec};
+pub use floem_types::{AnimationSpec, CompositorProp, Easing, RepeatMode, RepeatSpec, Transition};
 pub use kinds::{AnimId, AnimKind, SPRING_SETTLE_SECS, Tween};
 
 /// Stiffness a retarget hands the spring it converts the animation into.

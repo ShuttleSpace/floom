@@ -11,8 +11,8 @@
 
 use floem_accessibility::{SemanticsRole, SemanticsState};
 use floem_core::{
-    Color, CreateContext, ElementId, LayoutRequest, PaintContext, Point, Rect, ResourceId,
-    SemanticsContext, Size, UpdateContext, Widget,
+    Brush, Color, CreateContext, ElementId, LayoutRequest, PaintContext, Point, Rect, ResourceId,
+    SemanticsContext, Shadow, Size, UpdateContext, Widget,
 };
 use floem_types::Insets;
 
@@ -488,14 +488,20 @@ impl Widget for Image {
 // Container
 // ---------------------------------------------------------------------------
 
-/// A decoration box: background, corner radius, and inner padding.
+/// A decoration box: background, corner radius, inner padding, and elevation.
 ///
 /// Semantically transparent — it never publishes a node of its own.
-#[derive(Debug, Clone, Copy, PartialEq)]
+///
+/// The background is a [`Brush`] rather than a colour, so a card can be filled
+/// with a gradient; a plain colour still fits through `impl Into<Brush>`, which
+/// is why every pre-gradient call site reads exactly as it did.
+#[derive(Debug, Clone, PartialEq)]
 pub struct Container {
-    background: Option<Color>,
+    background: Option<Brush>,
     radius: f32,
     padding: Insets,
+    /// The drop shadow this card casts, drawn behind its own fill.
+    shadow: Option<Shadow>,
     revision: Revision,
 }
 
@@ -505,18 +511,31 @@ impl Container {
             background: None,
             radius: 0.0,
             padding: Insets::ZERO,
+            shadow: None,
             revision: Revision::default(),
         }
     }
 
-    pub fn background(mut self, color: Color) -> Self {
-        self.background = Some(color);
+    /// What the box is filled with: a colour in the common case, a gradient
+    /// where the design asks for one.
+    pub fn background(mut self, fill: impl Into<Brush>) -> Self {
+        self.background = Some(fill.into());
         self.revision.bump();
         self
     }
 
     pub fn radius(mut self, radius: f32) -> Self {
         self.radius = radius;
+        self.revision.bump();
+        self
+    }
+
+    /// Casts this card's own shadow: its silhouette, blurred by `shadow.blur`
+    /// and pushed by its offset, drawn *behind* the background rather than as
+    /// a second hard-edged rect underneath it — which is what "elevation"
+    /// used to mean here, and what every pseudo-shadow in v1 was.
+    pub fn shadow(mut self, shadow: Shadow) -> Self {
+        self.shadow = Some(shadow);
         self.revision.bump();
         self
     }
@@ -528,12 +547,29 @@ impl Container {
         self
     }
 
+    /// The background as whatever it is — the accessor a gradient assertion
+    /// reads, since a colour cannot express a ramp.
+    pub fn background_brush(&self) -> Option<&Brush> {
+        self.background.as_ref()
+    }
+
+    /// The background, when it is a flat colour. Not every background survives
+    /// this narrowing, and that is the point: a caller that can only take a
+    /// colour asks here rather than sampling the brush behind the caller's
+    /// back and pretending the answer was exact.
     pub fn background_color(&self) -> Option<Color> {
-        self.background
+        self.background.as_ref().and_then(Brush::solid)
     }
 
     pub fn corner_radius(&self) -> f32 {
         self.radius
+    }
+
+    /// The shadow this card casts, if any. Named apart from the builder
+    /// because Rust has no overloads and a setter plus getter cannot share a
+    /// name; `drop_shadow` keeps the door the builder opened recognisable.
+    pub fn drop_shadow(&self) -> Option<Shadow> {
+        self.shadow
     }
 
     pub fn semantics_hint(&self) -> SemanticsHint {
@@ -557,17 +593,27 @@ impl Widget for Container {
     }
 
     fn paint(&self, cx: &mut dyn PaintContext, _id: ElementId) {
-        let Some(color) = self.background else {
-            return;
-        };
         let bounds = cx.bounds();
         if bounds.width() <= 0.0 || bounds.height() <= 0.0 {
             return;
         }
-        if self.radius > 0.0 {
-            cx.fill_rounded_rect(bounds, self.radius, color);
-        } else {
-            cx.fill_rect(bounds, color);
+        // Shadow first: it belongs *behind* the shape that cast it, and the
+        // order of ops inside one paint call is the order the scene keeps.
+        if let Some(shadow) = self.shadow {
+            cx.draw_shadow(bounds, self.radius, &shadow);
+        }
+        let Some(fill) = self.background.as_ref() else {
+            return;
+        };
+        // A solid background takes the fast path the renderers take themselves
+        // — one colour needs no per-pixel sampling, and emitting the ops it
+        // always did keeps every pre-gradient snapshot honest about what it
+        // is looking at.
+        match fill.solid() {
+            Some(color) if self.radius > 0.0 => cx.fill_rounded_rect(bounds, self.radius, color),
+            Some(color) => cx.fill_rect(bounds, color),
+            None if self.radius > 0.0 => cx.fill_rounded_rect_brush(bounds, self.radius, fill),
+            None => cx.fill_rect_brush(bounds, fill),
         }
     }
 

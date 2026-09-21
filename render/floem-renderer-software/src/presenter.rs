@@ -161,8 +161,10 @@ mod tests {
         scene.begin_update();
         let _ = scene.insert(SceneNode::Rect {
             bounds: Rect::from_origin_size(Point::new(0.0, 0.0), Size::new(4.0, 4.0)),
-            fill: Color::rgb(200, 100, 50),
+            fill: floem_types::Brush::from(Color::rgb(200, 100, 50)),
             radius: 0.0,
+
+            shadow: None,
         });
         scene.finish_update();
         scene
@@ -227,8 +229,10 @@ mod tests {
         scene.begin_update();
         let _ = scene.insert(SceneNode::Rect {
             bounds: Rect::from_origin_size(Point::new(0.0, 0.0), Size::new(4.0, 4.0)),
-            fill: Color::rgb(200, 100, 50),
+            fill: floem_types::Brush::from(Color::rgb(200, 100, 50)),
             radius: 0.0,
+
+            shadow: None,
         });
         scene.finish_update();
         presenter.present(&scene, &ResourceRegistry::new());

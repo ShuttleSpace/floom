@@ -32,7 +32,7 @@ fn container_radius_reaches_the_scene_rect() {
     let mut rounded = 0;
     for (_id, node) in host.scene().iter() {
         if let SceneNode::Rect { radius, fill, .. } = node {
-            assert_eq!(fill, &Color::rgb(30, 30, 30));
+            assert_eq!(fill.solid(), Some(Color::rgb(30, 30, 30)));
             assert_eq!(*radius, 8.0, "widget radius must reach the scene node");
             rounded += 1;
         }

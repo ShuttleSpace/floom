@@ -23,8 +23,9 @@ fn rect(x0: f64, y0: f64, x1: f64, y1: f64) -> Rect {
 fn fill(bounds: Rect, color: Color) -> SceneNode {
     SceneNode::Rect {
         bounds,
-        fill: color,
+        fill: floem_types::Brush::from(color),
         radius: 0.0,
+        shadow: None,
     }
 }
 

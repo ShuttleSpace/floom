@@ -8,9 +8,9 @@
 
 use floem_accessibility::{SemanticsRole, SemanticsState};
 use floem_core::{
-    AnimationSpec, Color, CreateContext, Easing, ElementId, Event, EventContext, Key, KeyEvent,
-    KeyPhase, NamedKey, OverlayHandle, OverlayKind, OverlayRequest, PaintContext, Point, Rect,
-    RepeatSpec, SemanticsContext, Size, UpdateContext, Widget, WidgetAny,
+    AnimationSpec, Brush, Color, CreateContext, Easing, ElementId, Event, EventContext, Key,
+    KeyEvent, KeyPhase, NamedKey, OverlayHandle, OverlayKind, OverlayRequest, PaintContext, Point,
+    Rect, RepeatSpec, SemanticsContext, Size, Transition, UpdateContext, Widget, WidgetAny,
 };
 use floem_ime::{CompositionState, ImeEvent, ImeState};
 use floem_types::{ImeUpdate, PointerButton, PointerPhase};
@@ -244,6 +244,20 @@ pub struct Button {
     radius: f32,
     state: InteractionState,
     revision: Revision,
+    /// The implicit colour transition, when set: hovering / pressing fades the
+    /// fill between its old and new colour instead of snapping. `None` (the
+    /// default) keeps the pre-transition instant switch.
+    transition: Option<Transition>,
+    /// The fill colour the current transition *started from* — the value the
+    /// resolved colour had when the last transition was seeded. Interpolating
+    /// from here (rather than always from `base`) is what makes a mid-flight
+    /// reversal start from where the colour is, not where it was born.
+    transition_from: Color,
+    /// Bumped every time the resolved fill colour changes while a transition is
+    /// armed. Feeds [`Button::animation`]'s declaration key, so the host sees a
+    /// *new* declaration and replays the tween instead of leaving the finished
+    /// one parked.
+    transition_rev: u64,
 }
 
 impl std::fmt::Debug for Button {
@@ -265,6 +279,9 @@ impl Button {
             radius: 4.0,
             state: InteractionState::default(),
             revision: Revision::default(),
+            transition: None,
+            transition_from: Color::rgb(0x2B, 0x6C, 0xB0),
+            transition_rev: 0,
         }
     }
 
@@ -280,6 +297,21 @@ impl Button {
         self
     }
 
+    /// Arms the implicit fill-colour transition: hovering or pressing this
+    /// button fades the fill between its old and new colour over `transition`
+    /// instead of switching instantly.
+    ///
+    /// The button has no clock of its own — it declares the transition's shape
+    /// (see [`Button::animation`]) and reads the host's sampled progress back
+    /// in [`Button::paint`], interpolating the fill colour between where it
+    /// was and where it should be. Reversing the hover mid-flight starts the
+    /// fade again from the colour at that moment, not from the resting colour.
+    pub fn transition(mut self, transition: Transition) -> Self {
+        self.transition = Some(transition);
+        self.revision.bump();
+        self
+    }
+
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.state.disabled = disabled;
         self.revision.bump();
@@ -288,6 +320,37 @@ impl Button {
 
     pub fn label(&self) -> &str {
         &self.label
+    }
+
+    /// The fill colour the current interaction state resolves to, absent any
+    /// transition — the value the fill is *heading toward*.
+    fn resolved_fill(&self) -> Color {
+        let (darker, lighter) = emphasis(self.base);
+        resolved_color(self.base, darker, lighter, self.state)
+    }
+
+    /// Seeds the implicit transition when the pointer changed the state such
+    /// that the resolved fill colour moved. `before` is the interaction state
+    /// prior to the event that just ran.
+    ///
+    /// Called from [`Button::event`] only, and only when a transition is
+    /// armed. When the target colour genuinely changed, the old target becomes
+    /// the new `transition_from` (so a mid-flight reversal starts from the
+    /// colour at that moment) and the declaration key bumps, which is what the
+    /// host reads as "restart the tween".
+    fn arm_transition(&mut self, before: InteractionState) {
+        if self.transition.is_none() {
+            return;
+        }
+        let (darker, lighter) = emphasis(self.base);
+        let old_target = resolved_color(self.base, darker, lighter, before);
+        let new_target = resolved_color(self.base, darker, lighter, self.state);
+        if old_target == new_target {
+            return;
+        }
+        self.transition_from = old_target;
+        self.transition_rev = self.transition_rev.wrapping_add(1);
+        self.revision.bump();
     }
 
     pub fn interaction(&self) -> InteractionState {
@@ -332,7 +395,16 @@ impl Widget for Button {
     }
 
     fn event(&mut self, cx: &mut dyn EventContext, id: ElementId) -> bool {
-        match track_pointer(&mut self.state, cx, id) {
+        let before = self.state;
+        let press = track_pointer(&mut self.state, cx, id);
+        // Armed once for *every* path rather than inside one branch: releasing a
+        // press is `Press::Activate`, and it clears `pressed` — which moves the
+        // resolved colour just as leaving does — so arming only on `Consumed`
+        // makes letting go snap while everything else fades. `arm_transition`
+        // itself compares the old and new target colours, so a path that moved
+        // no colour costs nothing.
+        self.arm_transition(before);
+        match press {
             Press::Activate => {
                 if let Some(callback) = &self.on_click {
                     callback();
@@ -361,8 +433,18 @@ impl Widget for Button {
         if bounds.width() <= 0.0 || bounds.height() <= 0.0 {
             return;
         }
-        let (darker, lighter) = emphasis(self.base);
-        let fill = resolved_color(self.base, darker, lighter, self.state);
+        let target = self.resolved_fill();
+        // With a transition armed, the fill fades toward `target` from where
+        // the last transition started. The host's sampled progress is the
+        // eased `0..=1` fraction; `None` means "not animating", which here is
+        // the settled state — the target itself, not a reason to draw nothing.
+        let fill = match self.transition {
+            Some(_) => {
+                let t = cx.animation_value().unwrap_or(1.0).clamp(0.0, 1.0);
+                mix(self.transition_from, target, t as f32)
+            }
+            None => target,
+        };
         if self.radius > 0.0 {
             cx.fill_rounded_rect(bounds, self.radius, fill);
         } else {
@@ -374,6 +456,21 @@ impl Widget for Button {
             self.text_color
         };
         draw_centered_text(cx, bounds, &self.label, LABEL_FONT_SIZE, color);
+    }
+
+    fn animation(&self) -> Option<AnimationSpec> {
+        // The implicit fill-colour transition, declared rather than driven: the
+        // host runs a `0 → 1` tween and hands the eased progress back through
+        // `PaintContext::animation_value`, which `paint` interpolates the fill
+        // with. The `key` is what makes "my target moved" restart the tween:
+        // each colour change bumps it, so the host sees a *new* declaration
+        // instead of an unchanged one it would leave parked.
+        let transition = self.transition?;
+        Some(
+            AnimationSpec::new(0.0, 1.0, transition.duration_secs)
+                .with_easing(transition.easing)
+                .with_key(self.transition_rev),
+        )
     }
 
     fn semantics(&self, cx: &mut dyn SemanticsContext, _id: ElementId) {
@@ -1647,11 +1744,19 @@ const INDETERMINATE_SWEEP: AnimationSpec = AnimationSpec::repeating(
 .with_easing(Easing::EASE_IN_OUT);
 
 /// Determinate or indeterminate progress indicator.
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Progress {
     /// `None` renders the indeterminate appearance.
     value: Option<f64>,
     disabled: bool,
+    /// What the moving part is filled with, when it is not a flat colour.
+    ///
+    /// The brush carries its own coordinates, so it stays anchored to the
+    /// *track* while the fill grows along it — the ramp does not compress into
+    /// whatever fraction is currently filled, which is what would happen if
+    /// the gradient were respecified per value. That is the whole reason this
+    /// is a brush and not a second colour.
+    gradient: Option<Brush>,
     revision: Revision,
 }
 
@@ -1660,6 +1765,7 @@ impl Progress {
         Self {
             value: Some(value.clamp(0.0, 1.0)),
             disabled: false,
+            gradient: None,
             revision: Revision::default(),
         }
     }
@@ -1668,8 +1774,17 @@ impl Progress {
         Self {
             value: None,
             disabled: false,
+            gradient: None,
             revision: Revision::default(),
         }
+    }
+
+    /// Fills the moving part with a gradient instead of its flat colour. See
+    /// the field's docs for what the brush anchors to.
+    pub fn gradient(mut self, brush: Brush) -> Self {
+        self.gradient = Some(brush);
+        self.revision.bump();
+        self
     }
 
     pub fn disabled(mut self, disabled: bool) -> Self {
@@ -1678,8 +1793,25 @@ impl Progress {
         self
     }
 
+    /// The in-place counterpart to [`Progress::disabled`]: this widget carries a
+    /// [`Brush`], which owns its stops, so it is not `Copy` and the by-value
+    /// builder cannot be used through a `&mut` reference. Anything reachable
+    /// from `WidgetHost::widget_mut` needs this form — the by-value one silently
+    /// edits a temporary wherever `Copy` still happens to be derived, which is
+    /// exactly how this trap hides.
+    pub fn set_disabled(&mut self, disabled: bool) -> &mut Self {
+        self.disabled = disabled;
+        self.revision.bump();
+        self
+    }
+
     pub fn value(&self) -> Option<f64> {
         self.value
+    }
+
+    /// The brush the moving part is filled with, when it is not a flat colour.
+    pub fn gradient_brush(&self) -> Option<&Brush> {
+        self.gradient.as_ref()
     }
 
     pub fn set_value(&mut self, value: Option<f64>) -> &mut Self {
@@ -1749,6 +1881,14 @@ impl Widget for Progress {
         } else {
             Color::rgb(0x2B, 0x6C, 0xB0)
         };
+        let ink = self.gradient.clone().unwrap_or(Brush::Solid(base));
+        // A solid ink takes the same fast path every renderer does: one colour
+        // costs nothing per pixel, and the ops stay what they were before this
+        // widget had a gradient at all.
+        let paint_part = |cx: &mut dyn PaintContext, part: Rect| match ink.solid() {
+            Some(color) => cx.fill_rect(part, color),
+            None => cx.fill_rect_brush(part, &ink),
+        };
         match self.value {
             Some(value) => {
                 cx.fill_rect(bounds, Color::rgb(0xE2, 0xE8, 0xF0));
@@ -1756,7 +1896,7 @@ impl Widget for Progress {
                     x1: bounds.x0 + bounds.width() * value.clamp(0.0, 1.0),
                     ..bounds
                 };
-                cx.fill_rect(filled, base);
+                paint_part(cx, filled);
             }
             None => {
                 // Indeterminate: a shuttle over a dim track. The phase is the
@@ -1771,13 +1911,13 @@ impl Widget for Progress {
                 let segment = (bounds.width() * INDETERMINATE_SEGMENT).min(bounds.width());
                 let travel = (bounds.width() - segment).max(0.0);
                 let x0 = bounds.x0 + travel * phase;
-                cx.fill_rect(
+                paint_part(
+                    cx,
                     Rect {
                         x0,
                         x1: x0 + segment,
                         ..bounds
                     },
-                    base,
                 );
             }
         }

@@ -10,9 +10,9 @@
 
 - **底座已经在**：确定性动画调度器 + 可注入时钟、合成通道（compositor）、宿主冻结时钟（paused）、`settle()` 测试收敛、快照/像素黄金、分配计数与性能预算门。动画**不是从零开始**。
 - **动画侧的原语层已补齐（S1，见 §2b）**：缓动、中断重定向、循环/往返、给任意节点起动画的公开入口都已落地并有会红的负例。**动作**：overlay 入场在 S1 前是全仓仅有的两处动画之一，Tween 也是纯线性——那两条描述已随 S1 过期，保留在此仅作对照。
-- **自绘侧一行未动**（S2–S4 的范围）：`PaintContext` 仍是 5 个方法，场景 IR 仍是 4 种节点。画不了路径、描边、圆弧、渐变、裁剪、模糊、着色器。**这一半的缺口清单 A 完全未动。**
-- **最贵的一条**：`SceneNode::Group { transform }` **有类型、无实现** —— 三个后端里没有一个应用它，宿主也从不产生它，而 `Transform` 只有 `translate` 构造器。这意味着**子树级变换（统一缩放/旋转）在架构上是空的**，它不是"加个字段"能补上的。
-- **最便宜的一刀**：Material 设计系统里 `MotionDuration` token **零消费者**（`design-systems/floem-material/src/scale.rs:134`）—— 设计语言已经写好，引擎没有能消费它的 API。
+- **自绘侧已逐片补齐（S2/S3/S4，见 §2b 与 §6）**：路径/描边、裁剪、子树变换、`Canvas`、`Brush`（含控件侧入口）、阴影、隐式过渡、motion token 消费都已落地；**这份文档里 S2–S4 之前的"未动"描述已整体过期**，缺口清单 A 的条目逐个标注了交付状态，剩下的只有 A5（着色器）、通用滤镜与 B5（挂载过渡）。
+- ~~**最贵的一条**：`SceneNode::Group { transform }` **有类型、无实现**~~ —— S3 已按"要么三后端都实现、要么删掉"的纪律处置：`Group` 重塑为 `GroupPush`/`GroupPop` 流标记，三后端应用，`Transform` 补齐 `scale_around`/`rotate_around`/`multiply`/`inverse`/`map_rect`。
+- ~~**最便宜的一刀**：Material 设计系统里 `MotionDuration` token **零消费者**~~ —— S4 已接通：`MotionTransition::from_tokens(MotionDuration, MotionEasing)` → `floem_types::Transition` → `Button::transition`，ms→s 只换算一次。
 
 ---
 
@@ -91,13 +91,23 @@
 - **对标**：Compose 有 `Modifier.clip(shape)`，`DrawScope` 本身还带"内容不裁剪、可溢出"的明确语义；Flutter 有 `ClipRRect` / `ClipPath` / `canvas.clipPath`。v1 floem 也有：`Renderer::clip(&impl Shape)` + `clear_clip`（`legacy/floem-renderer/src/lib.rs:137,140`）与 `src/views/clip.rs`。
 - **补上判据**：场景级 `Clip { shape, children }`（或等效的 push/pop clip 栈），三后端像素一致；圆角裁剪与路径裁剪各一条黄金。
 
-### A3. 没有画刷（渐变 / 图像笔刷） — **P1 / M**
+### A3. ~~没有画刷（渐变 / 图像笔刷）~~ — **P1 / M** — ✅ 已交付（S4）
+
+- **交付**：场景 IR 的 `fill` 是 `Brush { Solid, Linear, Radial }`；`PaintContext` 补上 `fill_rect_brush` / `fill_rounded_rect_brush` / `fill_path_brush`，`Container::background` 收 `impl Into<Brush>`、`Progress::gradient` 收一支锚在轨道上的渐变。软件后端逐像素采样，vello 映射 `peniko::Brush`，skia 记录 `SkShader` 请求。
+- **为什么控件侧入口也算这条**：IR 与后端都支持渐变，但 `PaintContext` 只收 `Color` 时，**没有任何控件能要一支**——和 Compose 在 `brush:` 重载之前的状态一模一样。
+- **黄金**：`floem2-style` 第一幕（渐变卡片两端像素不同 + 单色对照组零差异）、`render/floem-renderer-software/tests/brush.rs`。
+- **旧判据原文**：
 
 - **现状**：`SceneNode::Rect.fill` 是**单色 `Color`**（`scene/floem-scene/src/node.rs:12-20`），文字同理。
 - **对标**：Compose 所有绘制都有 `color:` 与 `brush:` 两个重载（`Brush.linearGradient` / `radialGradient` / `sweepGradient`）；Flutter `Paint..shader = LinearGradient(...).createShader(rect)`。v1 有 `fill(path, brush: impl Into<BrushRef>, blur_radius)`（`legacy/floem-renderer/src/lib.rs:159`）。
 - **补上判据**：`Brush { Solid(Color), Linear{stops, from, to}, Radial{..} }`，vello 映射 `peniko::Brush`、skia 映射 shader；一个渐变按钮/进度条黄金。
 
-### A4. 没有模糊 / 阴影 / 滤镜 — **P1 / M**
+### A4. ~~没有模糊 / 阴影~~ — **P1 / M** — ⚠️ 部分交付（S4：阴影已落地，通用滤镜未做）
+
+- **交付**：`Shadow { color, blur, offset }` 挂在 `SceneNode::Rect` 上（不在独立节点——阴影属于且仅属于一个形状）；`PaintContext::draw_shadow` 是控件侧入口，`Container::shadow` 是消费点。软件后端走**真实模糊**（三趟 box filter，模糊半径折半为核半径），并计数 `shadows_drawn`；vello 无 blur 原语，**跳过并在 `shadows_skipped` 里计数**（降级不静默）；skia 记录请求待 submit 路径映射。
+- **未做**：`Modifier.blur` / `renderEffect` / `BackdropFilter` 那一类**通用滤镜**——那是对已绘制内容的后处理，不是给形状加一层阴影，需要另一条通路。
+- **黄金**：`floem2-style` 第二幕（卡片下方着墨、上方与无高程对照组均空）、`render/floem-renderer-software/tests/brush.rs`。
+- **旧判据原文**：
 
 - **现状**：场景 IR 与 `PaintContext` 都没有 blur / shadow / renderEffect 字段。
 - **对标**：Compose `Modifier.blur`、`graphicsLayer { renderEffect = ... }`、`Modifier.shadow`；Flutter `ImageFiltered` / `BackdropFilter` / `BoxShadow` / `PhysicalModel`。v1 的 `fill(..., blur_radius)` 支持模糊（`legacy/floem-renderer/src/lib.rs:159`）。
@@ -160,7 +170,12 @@
 - **代价（已可见）**：spinner、骨架屏（shimmer）、marquee、脉冲全都做不了——2.0 自己的不确定态进度条就卡在这，注释写着"animation comes later with `floem-animation`"（`widgets/floem-widgets/src/controls.rs:1725`，控件本体见 `:1627`）。
 - **补上判据**：`AnimKind::Repeat { spec, iterations: Option<u32>, mode: Reverse|Restart }`；不确定态 Progress 用它实现；**并加一条"无限动画不等于每帧分配"的预算断言**（否则稳定帧预算会被它吃掉）。
 
-### B4. 没有"改值即动"的隐式层 — **P1 / M**
+### B4. ~~没有"改值即动"的隐式层~~ — **P1 / M** — ✅ 已交付（S4，最小集合）
+
+- **交付**：`AnimationSpec::key` 让"我的目标值变了"与"我又声明了一次同样的动画"可以被区分（否则过渡永不重播）；`Transition { duration_secs, easing }` + `Button::transition`，hover/press 的填充色沿主机采样的 `0..=1` 插值，中途反向从**当前颜色**起算而非回到静止色。
+- **只做最小集合**：颜色一条。尺寸/透明度/位移是同一个标量通道的重复实现，等有真实消费点再加（见反面清单第 3 条）。
+- **黄金**：`floem2-style` 第三幕（过渡按钮逐帧走、无过渡控件一帧到位、两者终值相同）+ `app/floem-app/tests/motion_host.rs`。
+- **旧判据原文**：
 
 - **现状**：2.0 **没有**任何样式属性过渡机制（`Transition` / `easing` 在 2.0 目录零命中）。v1 有 `.transition(Background, Transition::ease_in_out(500.millis()))`（`examples/themes/src/main.rs:25-93`、`src/style/transition.rs`）。
 - **对标**：这正是 Compose 的 `animate*AsState` 家族（Float/Dp/Color/Int + 自定义类型的 `TwoWayConverter`）与 Flutter 的 `AnimatedXxx` 组件（`AnimatedContainer`/`AnimatedOpacity`/…）。**它覆盖两家约 70–80% 的实际用例**。
@@ -173,7 +188,11 @@
 - **对标**：Compose `AnimatedVisibility(enter, exit)` / `AnimatedContent` / `Crossfade` / `SharedTransitionLayout`（1.7+）；Flutter `AnimatedSwitcher` / `AnimatedCrossFade` / `Hero`。
 - **补上判据**：`Conditional`（`widgets/floem-widgets/src/compose.rs:161`）支持 enter/exit 过渡；`AnimatedContent` 或 Crossfade 之一；共享元素给一个示例 + 快照（不做完整 SharedTransitionLayout 也算达标，但必须**在文档里写明只做了哪个子集**）。
 
-### B6. 组合层缺失 + 设计系统 motion token 零消费者 — **P1 / S（最便宜的一刀）**
+### B6. ~~motion token 零消费者~~ — **P1 / S** — ✅ 已交付（S4；多值编排未做）
+
+- **交付**：`MotionTransition::from_tokens(MotionDuration, MotionEasing)` 把 Material 的两个 token 变成一个 `floem_types::Transition`，而 `Button::transition` 直接收它——**只写一次 ms→s 换算**，改 token 即改动效，无需在任何地方复述数值。`design-systems/floem-material/tests/motion.rs` 与 `floem2-style` 第四幕锁住这条链。
+- **未做**：`updateTransition` 那样的**多值编排**（一条曲线上挂若干属性）。
+- **旧判据原文**：
 
 - **现状**：`MotionDuration`（Material 3 时长 token）已定义并 re-export（`design-systems/floem-material/src/scale.rs:134`、`design-systems/floem-material/src/lib.rs:25`），但**全仓没有任何消费者**；也**没有** `MotionEasing`（缓动 token）。讽刺的是，定义它的上一行正是 M3 的 easing-and-duration 规范链接（`scale.rs:133`）——**duration 实现了，easing 没有**。
 - **对标**：Compose 侧对应 `updateTransition`（多值共用同一时钟）与 Material 的 motion token；Flutter 侧对应同一份 M3 时长/曲线表。
@@ -225,9 +244,9 @@ A8 独立，随时可做（但越早越好——它是"自绘控件在无障碍�
 | 切片 | 内容 | 规模 | 交付物 |
 |---|---|---|---|
 | **S1 让动画"像样"** ✅ 已交付 | B1 + B2 + B3 + B8 + B9 | M | 缓动/中断/循环 + 公开入口；**示例未做**（`examples/` 零改动）——不确定态 `Progress` 已作为真实消费点接上，hover 渐隐与拖拽回弹随 B4 一起做（它们本质是隐式层） |
-| **S2 让自绘"能用"** | A1 + A2 + A7 + A8 + A9 | M–L | 路径/描边/裁剪 + Canvas 控件 + 语义 role + 规模基准；示例：折线图 + 进度环 |
-| **S3 让变换"成立"** | A6 + B7（**需先确认需求**） | L | 子树变换在三后端落地 + 缩放/旋转动画黄金；若需求不成立则改为**删除 Group** |
-| **S4 让风格"成套"** | A3 + A4 + B4 + B5 + B6 | L | 画刷/模糊 + 隐式过渡 + 挂载过渡 + motion token 接通 |
+| **S2 让自绘"能用"** ✅ 已交付 | A1 + A2 + A7 + A8 + A9 | M–L | `Path`/`Stroke`/`ClipRegion` + `Canvas`/`Spinner` + 语义 role + 规模基准并入预算门；示例 `floem2-chart` / `floem2-progress-ring`（原 `floem2-paths` 已并入前者） |
+| **S3 让变换"成立"** ✅ 已交付 | A6 + B7 | L | 需求成立：`Group` 重塑为 `GroupPush`/`GroupPop` 流标记，三后端应用之；`CompositorProp::Scale` 从"故意不动"转为真实；示例 `floem2-transform` |
+| **S4 让风格"成套"** ⚠️ 部分交付（**B5 未做**） | A3 + A4 + B4 + ~~B5~~ + B6 | L | `Brush`（线性/径向）在场景 IR + 三后端落地，**并补上了控件侧入口**（`PaintContext::fill_*_brush` / `draw_shadow`）；`Shadow` 由软件后端真模糊合成，vello 无 blur 原语→**跳过并计数**；B4 只做最小集合（颜色），B6 接通 Material token → `Transition`；示例 `floem2-style`。**B5（挂载/内容过渡/共享元素）仍未动**——它需要一个挂载生命周期上的动画编排点，与 B4 的值驱动不是一回事 |
 
 四个切片都完成后，与 Flutter / Compose Multiplatform 在"canvas + 动画"这两项上的差距只余 **A5（自定义着色器）**，而 A5 恰好是**唯一一个"两边都需要平台分支"的能力**（见下）。
 
@@ -272,20 +291,22 @@ FLOEM2_WINDOW_IDLE=1 FLOEM2_WINDOW_IDLE_SECS=30 \
 | 能力 | floem 2.0 现状 | Compose Multiplatform | Flutter |
 |---|---|---|---|
 | 画矩形 / 圆角矩形 / 文字 / 图片 | ✅ | ✅ | ✅ |
-| 路径 / 描边 / 圆弧 / 椭圆 / 线 | ❌ (A1) | ✅ `drawPath`/`drawArc`… | ✅ `Canvas.drawPath`… |
-| 裁剪 | ❌ 仅宿主内部轴对齐矩形 (A2) | ✅ `Modifier.clip` | ✅ `ClipRRect`/`ClipPath` |
-| 渐变 / 画刷 | ❌ (A3) | ✅ `Brush.*` | ✅ `Paint.shader` |
-| 模糊 / 阴影 / 滤镜 | ❌ (A4) | ✅ `blur`/`renderEffect` | ✅ `ImageFilter`/`BoxShadow` |
+| 路径 / 描边 / 圆弧 / 椭圆 / 线 | ✅ (A1, S2) `Path`/`Stroke` + `fill_path`/`stroke_path` | ✅ `drawPath`/`drawArc`… | ✅ `Canvas.drawPath`… |
+| 裁剪 | ✅ (A2, S2) `ClipRegion` 矩形/圆角/路径 + `Widget::clip` | ✅ `Modifier.clip` | ✅ `ClipRRect`/`ClipPath` |
+| 渐变 / 画刷 | ✅ (A3, S4) `Brush` 线性/径向；控件侧 `fill_*_brush` | ✅ `Brush.*` | ✅ `Paint.shader` |
+| 阴影（模糊合成） | ⚠️ (A4, S4) 软件后端真模糊；vello **跳过并计数** | ✅ `Modifier.shadow` | ✅ `BoxShadow` |
+| 通用滤镜（对已绘内容后处理） | ❌ (A4 未做) | ✅ `blur`/`renderEffect` | ✅ `ImageFilter`/`BackdropFilter` |
 | 自定义着色器 | ❌ 仅外部纹理绕行 (A5) | ✅ 需 AGSL+SkSL 两套 | ✅ `.frag` 一套 |
-| 子树变换（缩放/旋转） | ❌ 类型存在、无人实现 (A6) | ✅ `graphicsLayer` | ✅ `Transform` |
-| Canvas 控件 | ❌ (A7，v1 曾有) | ✅ `Canvas` | ✅ `CustomPaint` |
-| 自绘内容语义 | ❌ 不能声明 role (A8) | ⚠️ 需手动 `semantics` | ⚠️ 需手动 `Semantics` |
-| 缓动函数 | ❌ 纯线性 (B1，v1 曾有) | ✅ 多种 | ✅ `Curves` |
-| 中断 / 重定向 | ❌ (B2) | ✅ `Animatable` | ✅ `AnimationController` |
-| 循环 / 无限 / 往返 | ❌ (B3) | ✅ `infiniteRepeatable` | ✅ `repeat(reverse:)` |
-| 隐式动画（改值即动） | ❌ (B4，v1 曾有) | ✅ `animate*AsState` | ✅ `AnimatedXxx` |
+| 子树变换（缩放/旋转） | ✅ (A6, S3) `GroupPush`/`GroupPop` + 三后端应用 | ✅ `graphicsLayer` | ✅ `Transform` |
+| Canvas 控件 | ✅ (A7, S2) `Canvas` + `Spinner` | ✅ `Canvas` | ✅ `CustomPaint` |
+| 自绘内容语义 | ✅ (A8, S2) `SemanticsContext::set_role`；`Canvas` 默认 `Image` | ⚠️ 需手动 `semantics` | ⚠️ 需手动 `Semantics` |
+| 缓动函数 | ✅ (B1, S1) 含三次贝塞尔与阻尼弹簧 | ✅ 多种 | ✅ `Curves` |
+| 中断 / 重定向 | ✅ (B2, S1) `retarget` 从当前值续接 | ✅ `Animatable` | ✅ `AnimationController` |
+| 循环 / 无限 / 往返 | ✅ (B3, S1) `RepeatSpec` 含 `INFINITE_REVERSE` | ✅ `infiniteRepeatable` | ✅ `repeat(reverse:)` |
+| 隐式动画（改值即动） | ⚠️ (B4, S4) **最小集合：颜色**（`Button::transition`） | ✅ `animate*AsState` | ✅ `AnimatedXxx` |
 | 挂载/内容过渡/共享元素 | ⚠️ 仅 overlay 入场 (B5) | ✅ `AnimatedVisibility`/共享元素 | ✅ `AnimatedSwitcher`/`Hero` |
-| 多值编排 / motion token 消费 | ❌ token 零消费者 (B6) | ✅ `updateTransition` | ✅（组件层） |
-| 合成属性（不重排的动画） | ⚠️ 4 个，`Scale` 不可用 (B7) | ✅ 完整 `graphicsLayer` | ✅ `Transform`/`Opacity` |
-| 公开"起动画"入口 | ❌ 仅 2 处框架内部调用 (B8) | ✅ 公开 API | ✅ 公开 API |
+| motion token 消费 | ✅ (B6, S4) Material token → `Transition` → 控件 | ✅（组件层） | ✅（组件层） |
+| 多值编排（一条曲线挂多属性） | ❌ (B6 未做) | ✅ `updateTransition` | ✅（组件层） |
+| 合成属性（不重排的动画） | ✅ (B7, S3) 含 `Scale`/`Rotate` | ✅ 完整 `graphicsLayer` | ✅ `Transform`/`Opacity` |
+| 公开"起动画"入口 | ✅ (B8, S1) `WidgetHost::animate` / `retarget` / `cancel` | ✅ 公开 API | ✅ 公开 API |
 | 动画自检门（金帧/分配） | ⚠️ 有调度器测试与 bench，缺金帧与分配门 (B9) | — | — |

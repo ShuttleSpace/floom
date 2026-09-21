@@ -1,6 +1,7 @@
 //! Scene and semantics snapshots for the Tier-0 primitives.
 
-use floem_core::{Color, Point, Rect, ResourceId, Size, Widget};
+use floem_core::{Brush, Color, Point, Rect, ResourceId, Shadow, Size, Widget};
+use floem_scene::SceneNode;
 use floem_widgets::primitives::{Axis, Container, Divider, Icon, Image, ImageFit, Spacer, Text};
 use floem_widgets::testkit::{
     AllocatingCreateContext, RecordingUpdateContext, SceneRecorder, paint_snapshot,
@@ -191,6 +192,113 @@ fn container_zero_radius_uses_plain_rect() {
     assert_eq!(
         paint_snapshot(&widget, id, BOX),
         "Rect (0.0, 0.0, 100.0, 20.0) #FFFFFFFF"
+    );
+}
+
+/// A gradient background reaches the scene as a *brush*, not as one unlucky
+/// colour the Layouter collapsed it to — the retained node carries the ramp,
+/// because that is what every renderer needs to sample per pixel.
+#[test]
+fn container_gradient_background_reaches_the_scene_as_a_brush() {
+    let ramp = Brush::linear(
+        &[
+            (0.0, Color::rgb(220, 40, 40)),
+            (1.0, Color::rgb(40, 60, 220)),
+        ],
+        Point::new(0.0, 0.0),
+        Point::new(100.0, 0.0),
+    );
+    let widget = Container::new().background(ramp.clone());
+    let (id, _create) = allocate(&widget);
+
+    let mut recorder = SceneRecorder::new(BOX);
+    widget.paint(&mut recorder, id);
+    recorder.finish();
+
+    let nodes: Vec<_> = recorder
+        .scene()
+        .iter()
+        .map(|(_, node)| node.clone())
+        .collect();
+    assert_eq!(nodes.len(), 1, "one box, one node");
+    match &nodes[0] {
+        SceneNode::Rect { fill, shadow, .. } => {
+            assert_eq!(fill, &ramp, "the whole ramp survives to the renderer");
+            assert!(shadow.is_none(), "no shadow was asked for");
+        }
+        other => panic!("expected a rect node, got {other:?}"),
+    }
+    // The op log is what a one-line snapshot can carry: the colour at the
+    // box's centre (50 of 100 along the axis ⇒ halfway between the two stops,
+    // i.e. rgb(130, 50, 130)). It is an *approximation* of the ink, and it is
+    // not where a test about the ramp itself should look — the node above is.
+    assert_eq!(
+        recorder.snapshot(),
+        "BrushRect (0.0, 0.0, 100.0, 20.0) r=0.0 #823282FF"
+    );
+}
+
+/// A shadow is cast *behind* the box's own fill: the op order inside one paint
+/// call is the draw order the scene keeps, and a renderer that composites them
+/// the other way round would hide the card under its own shadow.
+#[test]
+fn container_shadow_is_cast_behind_its_own_fill() {
+    let shadow = Shadow {
+        color: Color::rgba(0, 0, 0, 128),
+        blur: 4.0,
+        offset_x: 0.0,
+        offset_y: 3.0,
+    };
+    let widget = Container::new()
+        .background(Color::WHITE)
+        .radius(6.0)
+        .shadow(shadow);
+    let (id, _create) = allocate(&widget);
+
+    let mut recorder = SceneRecorder::new(BOX);
+    widget.paint(&mut recorder, id);
+    recorder.finish();
+
+    let lines: Vec<String> = recorder.snapshot().lines().map(|l| l.to_string()).collect();
+    assert_eq!(
+        lines,
+        vec![
+            "Shadow (0.0, 0.0, 100.0, 20.0) r=6.0 blur=4.0 off=(0.0, 3.0)".to_string(),
+            "RoundedRect (0.0, 0.0, 100.0, 20.0) r=6.0 #FFFFFFFF".to_string(),
+        ],
+        "the ask precedes the shape it belongs to"
+    );
+    // And the two are one request each in the retained scene, not one merged
+    // node a reader could mistake for the fill carrying the shadow silently.
+    let carries: Vec<bool> = recorder
+        .scene()
+        .iter()
+        .map(|(_, node)| {
+            matches!(
+                node,
+                SceneNode::Rect {
+                    shadow: Some(_),
+                    ..
+                }
+            )
+        })
+        .collect();
+    assert_eq!(carries, vec![true, false]);
+    assert_eq!(widget.drop_shadow(), Some(shadow));
+}
+
+/// The fast path a solid fill takes is observable: exactly the ops it emitted
+/// before gradients existed. Nothing about the new capability may quietly
+/// reclassify yesterday's flat background.
+#[test]
+fn container_solid_background_is_still_a_plain_rect_op() {
+    let widget = Container::new().background(Color::rgb(1, 2, 3));
+    assert_eq!(widget.background_color(), Some(Color::rgb(1, 2, 3)));
+    assert!(widget.background_brush().unwrap().solid().is_some());
+    let (id, _create) = allocate(&widget);
+    assert_eq!(
+        paint_snapshot(&widget, id, BOX),
+        "Rect (0.0, 0.0, 100.0, 20.0) #010203FF"
     );
 }
 

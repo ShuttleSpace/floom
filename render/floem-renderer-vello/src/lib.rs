@@ -20,16 +20,23 @@ pub use gpu::{GpuFrameStats, VelloGpuPresenter};
 
 use floem_renderer::{FrameInfo, Renderer};
 use floem_scene::{DamageRegion, Scene, SceneNode};
-use floem_types::{Color, Rect};
+use floem_types::Rect;
 
 /// Recorded draw command (Vello backend consumes this later).
 #[derive(Debug, Clone, PartialEq)]
 pub enum VelloCommand {
     FillRect {
         bounds: Rect,
-        color: Color,
+        /// What the rect is filled with — a solid or a gradient brush. The
+        /// brush is carried as the scene's own vocabulary; the GPU encoder is
+        /// where it becomes a peniko gradient.
+        brush: floem_types::Brush,
         /// Corner radius in logical px; `0.0` is a plain right-angle rect.
         radius: f32,
+        /// The drop shadow requested behind the fill, if any. Vello has no
+        /// blur primitive yet, so the encoder skips it and counts the skip —
+        /// recorded here so the request is never silently dropped.
+        shadow: Option<floem_types::Shadow>,
     },
     DrawImage {
         bounds: Rect,
@@ -101,11 +108,13 @@ impl Renderer for VelloRendererAdapter {
                     bounds,
                     fill,
                     radius,
+                    shadow,
                 } => {
                     self.commands.push(VelloCommand::FillRect {
                         bounds: *bounds,
-                        color: *fill,
+                        brush: fill.clone(),
                         radius: radius.max(0.0),
+                        shadow: *shadow,
                     });
                 }
                 SceneNode::Image { bounds, .. } => {
@@ -172,8 +181,9 @@ mod tests {
         scene.begin_update();
         let _ = scene.insert(SceneNode::Rect {
             bounds: Rect::from_origin_size(Point::ZERO, Size::new(10.0, 10.0)),
-            fill: Color::BLACK,
+            fill: floem_types::Brush::from(Color::BLACK),
             radius: 0.0,
+            shadow: None,
         });
         let _ = scene.insert(SceneNode::image(
             Rect::from_origin_size(Point::ZERO, Size::new(8.0, 8.0)),
@@ -211,8 +221,9 @@ mod tests {
         });
         let _ = scene.insert(SceneNode::Rect {
             bounds: Rect::from_origin_size(Point::new(4.0, 4.0), Size::new(8.0, 8.0)),
-            fill: Color::BLACK,
+            fill: floem_types::Brush::from(Color::BLACK),
             radius: 0.0,
+            shadow: None,
         });
         let _ = scene.insert(SceneNode::GroupPop);
         scene.finish_update();
@@ -244,8 +255,9 @@ mod tests {
         scene.begin_update();
         let _ = scene.insert(SceneNode::Rect {
             bounds: Rect::from_origin_size(Point::ZERO, Size::new(1.0, 1.0)),
-            fill: Color::BLACK,
+            fill: floem_types::Brush::from(Color::BLACK),
             radius: 0.0,
+            shadow: None,
         });
         scene.finish_update();
 
@@ -264,13 +276,16 @@ mod tests {
         scene.begin_update();
         let _ = scene.insert(SceneNode::Rect {
             bounds: Rect::from_origin_size(Point::ZERO, Size::new(10.0, 10.0)),
-            fill: Color::BLACK,
+            fill: floem_types::Brush::from(Color::BLACK),
             radius: 6.0,
+
+            shadow: None,
         });
         let _ = scene.insert(SceneNode::Rect {
             bounds: Rect::from_origin_size(Point::new(0.0, 20.0), Size::new(10.0, 10.0)),
-            fill: Color::BLACK,
+            fill: floem_types::Brush::from(Color::BLACK),
             radius: -3.0, // clamped to 0 at the adapter boundary
+            shadow: None,
         });
         scene.finish_update();
 
@@ -286,5 +301,73 @@ mod tests {
         };
         assert_eq!(*ra, 6.0);
         assert_eq!(*rb, 0.0, "negative radius is clamped");
+    }
+
+    /// A gradient crosses the adapter boundary as the scene's own brush — not
+    /// collapsed to one sampled colour here, where the pre-gradient code would
+    /// have had room to quietly degrade it. The GPU encoder is the only place
+    /// allowed to turn a brush into pixels.
+    #[test]
+    fn a_gradient_reaches_the_command_list_as_a_brush() {
+        let ramp = floem_types::Brush::linear(
+            &[(0.0, Color::BLACK), (1.0, Color::WHITE)],
+            Point::new(0.0, 0.0),
+            Point::new(10.0, 0.0),
+        );
+        let mut scene = Scene::new();
+        scene.begin_update();
+        let _ = scene.insert(SceneNode::Rect {
+            bounds: Rect::from_origin_size(Point::ZERO, Size::new(10.0, 10.0)),
+            fill: ramp.clone(),
+            radius: 0.0,
+            shadow: None,
+        });
+        scene.finish_update();
+
+        let mut vello = VelloRendererAdapter::new();
+        render_once(&mut vello, &FrameInfo::software(32, 32, 1), &scene);
+        let VelloCommand::FillRect { brush, .. } = &vello.commands[0] else {
+            panic!("expected a fill-rect command, got {:?}", vello.commands[0]);
+        };
+        assert_eq!(*brush, ramp, "the ramp is intact at the ABI boundary");
+        assert!(brush.solid().is_none(), "and it is not one flat colour");
+    }
+
+    /// A shadow request is *carried*, not dropped, even though vello has no
+    /// blur primitive yet. This is the "degradation is never silent" half of
+    /// A4: the encoder counts the skip and draws the fill, but it can only do
+    /// that if the request survives to reach it.
+    #[test]
+    fn a_shadow_request_is_carried_rather_than_dropped() {
+        let shadow = floem_types::Shadow {
+            color: Color::rgba(0, 0, 0, 128),
+            blur: 6.0,
+            offset_x: 0.0,
+            offset_y: 4.0,
+        };
+        let mut scene = Scene::new();
+        scene.begin_update();
+        let _ = scene.insert(SceneNode::Rect {
+            bounds: Rect::from_origin_size(Point::ZERO, Size::new(10.0, 10.0)),
+            fill: floem_types::Brush::from(Color::WHITE),
+            radius: 4.0,
+            shadow: Some(shadow),
+        });
+        scene.finish_update();
+
+        let mut vello = VelloRendererAdapter::new();
+        render_once(&mut vello, &FrameInfo::software(32, 32, 1), &scene);
+        let VelloCommand::FillRect {
+            brush,
+            radius,
+            shadow: carried,
+            ..
+        } = &vello.commands[0]
+        else {
+            panic!("expected a fill-rect command, got {:?}", vello.commands[0]);
+        };
+        assert_eq!(*carried, Some(shadow), "the request survives the adapter");
+        assert_eq!(*radius, 4.0);
+        assert_eq!(brush.solid(), Some(Color::WHITE), "and so does the fill");
     }
 }

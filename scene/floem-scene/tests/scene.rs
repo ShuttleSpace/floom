@@ -7,8 +7,10 @@ fn stable_id_survives_upsert() {
     scene.begin_update();
     let id = scene.insert(SceneNode::Rect {
         bounds: Rect::from_origin_size(Point::ZERO, Size::new(10.0, 10.0)),
-        fill: Color::BLACK,
+        fill: floem_types::Brush::from(Color::BLACK),
         radius: 0.0,
+
+        shadow: None,
     });
     scene.finish_update();
 
@@ -17,8 +19,9 @@ fn stable_id_survives_upsert() {
         id,
         SceneNode::Rect {
             bounds: Rect::from_origin_size(Point::new(1.0, 1.0), Size::new(10.0, 10.0)),
-            fill: Color::WHITE,
+            fill: floem_types::Brush::from(Color::WHITE),
             radius: 0.0,
+            shadow: None,
         },
     );
     scene.finish_update();
@@ -33,8 +36,10 @@ fn remove_invalidates_id_and_reuses_index() {
     scene.begin_update();
     let id = scene.insert(SceneNode::Rect {
         bounds: Rect::from_origin_size(Point::ZERO, Size::new(5.0, 5.0)),
-        fill: Color::BLACK,
+        fill: floem_types::Brush::from(Color::BLACK),
         radius: 0.0,
+
+        shadow: None,
     });
     scene.finish_update();
 
@@ -46,8 +51,10 @@ fn remove_invalidates_id_and_reuses_index() {
     scene.begin_update();
     let id2 = scene.insert(SceneNode::Rect {
         bounds: Rect::from_origin_size(Point::ZERO, Size::new(1.0, 1.0)),
-        fill: Color::WHITE,
+        fill: floem_types::Brush::from(Color::WHITE),
         radius: 0.0,
+
+        shadow: None,
     });
     scene.finish_update();
     assert_eq!(id2.index(), id.index());
@@ -61,8 +68,10 @@ fn damage_tracks_rect_updates() {
     scene.begin_update();
     let id = scene.insert(SceneNode::Rect {
         bounds: Rect::from_origin_size(Point::ZERO, Size::new(10.0, 10.0)),
-        fill: Color::BLACK,
+        fill: floem_types::Brush::from(Color::BLACK),
         radius: 0.0,
+
+        shadow: None,
     });
     scene.finish_update();
     assert!(!scene.damage().is_empty());
@@ -74,8 +83,9 @@ fn damage_tracks_rect_updates() {
         id,
         SceneNode::Rect {
             bounds: Rect::from_origin_size(Point::new(2.0, 2.0), Size::new(10.0, 10.0)),
-            fill: Color::BLACK,
+            fill: floem_types::Brush::from(Color::BLACK),
             radius: 0.0,
+            shadow: None,
         },
     );
     scene.finish_update();
@@ -92,6 +102,46 @@ fn group_update_marks_full_frame() {
     });
     scene.finish_update();
     assert!(scene.damage().is_full_frame());
+}
+
+/// A shadow reaches past the box it belongs to, so the hint damage is computed
+/// from has to contain the whole reach — a damage region built from the bare
+/// box would clip the blur's outer edge, and a shadow that loses its edge
+/// under partial repaints is worse than no shadow at all.
+#[test]
+fn a_shadowed_rects_damage_contains_its_reach() {
+    let box_of = Rect::from_origin_size(Point::new(10.0, 10.0), Size::new(20.0, 20.0));
+    let shadow = floem_types::Shadow {
+        color: Color::rgba(0, 0, 0, 128),
+        blur: 4.0,
+        offset_x: 0.0,
+        offset_y: 3.0,
+    };
+    let bare = SceneNode::Rect {
+        bounds: box_of,
+        fill: floem_types::Brush::from(Color::WHITE),
+        radius: 0.0,
+        shadow: None,
+    };
+    let shadowed = SceneNode::Rect {
+        bounds: box_of,
+        fill: floem_types::Brush::from(Color::WHITE),
+        radius: 0.0,
+        shadow: Some(shadow),
+    };
+    assert_eq!(bare.bounds_hint(), Some(box_of));
+
+    // reach = furthest offset (3) + blur (4) = 7 px in every direction.
+    let reach = 7.0;
+    assert_eq!(
+        shadowed.bounds_hint(),
+        Some(Rect {
+            x0: box_of.x0 - reach,
+            y0: box_of.y0 - reach,
+            x1: box_of.x1 + reach,
+            y1: box_of.y1 + reach,
+        })
+    );
 }
 
 #[test]
