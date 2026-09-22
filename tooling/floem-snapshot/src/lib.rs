@@ -27,6 +27,9 @@ use floem_renderer_software::SoftwarePresenter;
 use floem_scene::{ResourceRegistry, Scene};
 use floem_types::{Color, Point, Rect, Size, SurfaceId, WindowId};
 
+pub mod frames;
+pub use frames::{FrameDigest, FrameDiff, GoldenFrames, parse_sequence};
+
 /// Stable, dependency-free 64-bit hash (FNV-1a, 64-bit offset basis).
 pub fn fnv1a(bytes: &[u8]) -> u64 {
     let mut hash: u64 = 0xcbf2_9ce4_8422_2325;

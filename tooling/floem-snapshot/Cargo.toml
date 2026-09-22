@@ -24,5 +24,7 @@ floem-renderer-software = { path = "../../render/floem-renderer-software", versi
 # tests cover core widgets"). All three are lower layers, so no upward edge.
 floem-app = { path = "../../app/floem-app", version = "0.2.0" }
 floem-core = { path = "../../foundation/floem-core", version = "0.2.0" }
+# The animation vocabulary the per-frame goldens drive a host with.
+floem-animation = { path = "../../framework/floem-animation", version = "0.2.0" }
 floem-layout = { path = "../../layout/floem-layout", version = "0.2.0" }
 floem-widgets = { path = "../../widgets/floem-widgets", version = "0.2.0" }

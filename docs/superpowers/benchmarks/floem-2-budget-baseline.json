@@ -64,6 +64,14 @@
       "median_ns": 1995887.0709726443,
       "comment": "MOTION-GAP A9: 1000 filled discs, area-dominated rasterisation, ~2 us per disc at r=6.",
       "observed_spread_pct": 0.8
+    },
+    {
+      "id": "self_draw/rounded_rects_1k",
+      "package": "floem-renderer-software",
+      "bench": "self_draw",
+      "median_ns": 8334886.857142857,
+      "comment": "MOTION-GAP A9: 1000 filled rounded rects (40x24, r=8) — the shape a card, button or list row is. Each is a small filled path; heavier than circles_1k because the rounded corners flatten to more segments.",
+      "observed_spread_pct": 1.0
     }
   ]
 }

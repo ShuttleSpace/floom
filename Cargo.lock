@@ -2513,6 +2513,7 @@ name = "floem-snapshot"
 version = "0.2.0"
 dependencies = [
  "floem-accessibility",
+ "floem-animation",
  "floem-app",
  "floem-core",
  "floem-layout",
