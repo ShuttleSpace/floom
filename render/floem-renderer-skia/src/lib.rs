@@ -2,7 +2,7 @@
 
 use floem_renderer::{FrameInfo, Renderer};
 use floem_scene::{DamageRegion, Scene, SceneNode};
-use floem_types::{Color, Rect};
+use floem_types::{Color, Filter, Rect};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum SkiaCommand {
@@ -54,6 +54,22 @@ pub enum SkiaCommand {
     },
     DrawText {
         bounds: Rect,
+    },
+    /// `canvas.saveLayer()` with an `SkImageFilter` for a `FilterPush`
+    /// marker: the scope's content is drawn into a layer and the filter runs
+    /// when the layer is restored — which is exactly the layer the scene's
+    /// markers describe, so the adapter records the request instead of
+    /// folding it into the commands underneath.
+    PushFilter {
+        filter: Filter,
+    },
+    /// `canvas.restore()` for a `FilterPop`.
+    PopFilter,
+    /// A filter over the pixels already drawn inside `rect`: Skia's
+    /// `SkImageFilter` applied to a backdrop save-layer.
+    BackdropFilter {
+        rect: Rect,
+        filter: Filter,
     },
 }
 
@@ -116,6 +132,16 @@ impl Renderer for SkiaRendererAdapter {
                     })
                 }
                 SceneNode::GroupPop => self.commands.push(SkiaCommand::PopTransform),
+                SceneNode::FilterPush { filter } => self
+                    .commands
+                    .push(SkiaCommand::PushFilter { filter: *filter }),
+                SceneNode::FilterPop => self.commands.push(SkiaCommand::PopFilter),
+                SceneNode::BackdropFilter { rect, filter } => {
+                    self.commands.push(SkiaCommand::BackdropFilter {
+                        rect: *rect,
+                        filter: *filter,
+                    })
+                }
             }
         }
     }
@@ -143,7 +169,6 @@ mod tests {
             radius: 0.0,
 
             shadow: None,
-
         });
         scene.finish_update();
 
@@ -172,7 +197,6 @@ mod tests {
             radius: 0.0,
 
             shadow: None,
-
         });
         let _ = scene.insert(SceneNode::GroupPop);
         scene.finish_update();
@@ -196,6 +220,51 @@ mod tests {
             ),
             "the scope brackets its draws and carries the rotation matrix: {:?}",
             skia.commands
+        );
+    }
+
+    /// A filter request reaches the skia command list as the save-layer it
+    /// maps to, and a backdrop filter keeps its own rect.
+    #[test]
+    fn records_a_filter_scope_bracketing_its_draws() {
+        let mut scene = Scene::new();
+        scene.begin_update();
+        let _ = scene.insert(SceneNode::FilterPush {
+            filter: Filter::blur(4.0),
+        });
+        let _ = scene.insert(SceneNode::Rect {
+            bounds: Rect::from_origin_size(Point::new(2.0, 2.0), Size::new(6.0, 6.0)),
+            fill: floem_types::Brush::from(Color::BLACK),
+            radius: 0.0,
+            shadow: None,
+        });
+        let _ = scene.insert(SceneNode::FilterPop);
+        let _ = scene.insert(SceneNode::BackdropFilter {
+            rect: Rect::from_origin_size(Point::new(1.0, 1.0), Size::new(8.0, 8.0)),
+            filter: Filter::blur_xy(2.0, 7.0),
+        });
+        scene.finish_update();
+
+        let mut skia = SkiaRendererAdapter::default();
+        render_once(&mut skia, &FrameInfo::software(16, 16, 1), &scene);
+        assert_eq!(
+            skia.commands,
+            vec![
+                SkiaCommand::PushFilter {
+                    filter: Filter::blur(4.0)
+                },
+                SkiaCommand::FillRect {
+                    bounds: Rect::from_origin_size(Point::new(2.0, 2.0), Size::new(6.0, 6.0)),
+                    brush: floem_types::Brush::from(Color::BLACK),
+                    shadow: None,
+                },
+                SkiaCommand::PopFilter,
+                SkiaCommand::BackdropFilter {
+                    rect: Rect::from_origin_size(Point::new(1.0, 1.0), Size::new(8.0, 8.0)),
+                    filter: Filter::blur_xy(2.0, 7.0),
+                },
+            ],
+            "a filter is a layer, not a folded-in flag on the draws beneath it"
         );
     }
 

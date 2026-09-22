@@ -148,6 +148,12 @@ struct Node {
     /// their draw-order slots across frames.
     group_push: Option<SceneNodeId>,
     group_pop: Option<SceneNodeId>,
+    /// The `FilterPush`/`FilterPop` pair bracketing this node's subtree while
+    /// its widget declares [`Widget::filter`]. Same story as the two pairs
+    /// above: only the walk knows where the subtree's picture begins and ends,
+    /// and the ids are held so the markers keep their draw-order slots.
+    filter_push: Option<SceneNodeId>,
+    filter_pop: Option<SceneNodeId>,
     /// Set when a native participant is bound to this node. Its hit region
     /// then resolves to the native view — which takes the pointer itself —
     /// instead of to this widget. Cleared when the participant is retired.
@@ -1176,6 +1182,8 @@ impl WidgetHost {
             clip_pop: None,
             group_push: None,
             group_pop: None,
+            filter_push: None,
+            filter_pop: None,
             text_measure,
             motion: None,
         });
@@ -2305,12 +2313,31 @@ impl WidgetHost {
             Some(transform) => self.write_group_push(index, transform),
             None => self.retire_group_markers(index),
         }
+        // A declared filter wraps the subtree: this widget's own paint *and*
+        // every descendant's, because what the filter sees has to be the
+        // composite of both. Inside the clip (a rounded card's blur stays
+        // inside the card) and outside the group scope (the filter runs in the
+        // space the content was laid out in, not in the rotated one).
+        // An identity filter is "no filter": writing markers for it would
+        // make every backend pay for a layer to do nothing, and a `FilterPop`
+        // with no matching visual effect is one more thing that can go wrong.
+        match self.nodes[index]
+            .widget
+            .filter()
+            .filter(|f| !f.is_identity())
+        {
+            Some(filter) => self.write_filter_push(index, filter),
+            None => self.retire_filter_markers(index),
+        }
         self.paint_node(index, composite, stats);
         // The fold an ancestor's presence fade hands down: the node's own fold
         // class wins, so it does not double-apply; a transform-class own prop
         // does not fold, so the inherited fold still reaches descendants.
         let fold_down = Self::fold_class_only(own_prop).or(inherited);
         self.paint_children(index, stats, fold_down);
+        if self.nodes[index].filter_push.is_some() {
+            self.write_filter_pop(index);
+        }
         if transformed {
             self.write_group_pop(index);
         }
@@ -2490,6 +2517,48 @@ impl WidgetHost {
         }
     }
 
+    /// Opens this node's filter scope, on the same retained-slot scheme as
+    /// [`Self::write_group_push`] — including the mid-life reseed, which this
+    /// one needs just as much: a card that gains a blur after its first paint
+    /// would otherwise be slotted *after* the picture it has to filter.
+    fn write_filter_push(&mut self, index: usize, filter: floem_types::Filter) {
+        let node = SceneNode::FilterPush { filter };
+        match self.nodes[index].filter_push {
+            Some(id) => self.scene.upsert(id, node),
+            None => {
+                self.reseed_subtree_scene_nodes(index);
+                let id = self.scene.insert(node);
+                self.nodes[index].filter_push = Some(id);
+            }
+        }
+    }
+
+    /// Closes the scope [`Self::write_filter_push`] opened — after the last
+    /// descendant has painted.
+    fn write_filter_pop(&mut self, index: usize) {
+        match self.nodes[index].filter_pop {
+            Some(id) => self.scene.upsert(id, SceneNode::FilterPop),
+            None => {
+                let id = self.scene.insert(SceneNode::FilterPop);
+                self.nodes[index].filter_pop = Some(id);
+            }
+        }
+    }
+
+    /// Retires both markers of a node that no longer declares a filter.
+    ///
+    /// Not optional: a widget that stops filtering must stop paying for a
+    /// layer, and a `FilterPop` left behind would close some *other* scope —
+    /// or none, silently.
+    fn retire_filter_markers(&mut self, index: usize) {
+        if let Some(id) = self.nodes[index].filter_push.take() {
+            self.scene.remove(id);
+        }
+        if let Some(id) = self.nodes[index].filter_pop.take() {
+            self.scene.remove(id);
+        }
+    }
+
     /// Pre-order paint of an overlay subtree (parent before its children),
     /// applying the overlay's entry animation to every node it writes.
     fn paint_overlay_subtree(
@@ -2518,12 +2587,29 @@ impl WidgetHost {
             Some(transform) => self.write_group_push(index, transform),
             None => self.retire_group_markers(index),
         }
+        // Filters work under overlays for the same reason the clip and the
+        // group scope do: an overlay is painted after its parent, not painted
+        // differently.
+        // An identity filter is "no filter": writing markers for it would
+        // make every backend pay for a layer to do nothing, and a `FilterPop`
+        // with no matching visual effect is one more thing that can go wrong.
+        match self.nodes[index]
+            .widget
+            .filter()
+            .filter(|f| !f.is_identity())
+        {
+            Some(filter) => self.write_filter_push(index, filter),
+            None => self.retire_filter_markers(index),
+        }
         self.paint_node(index, composite, stats);
         let mut i = 0;
         while i < self.nodes[index].children.len() {
             let child = self.nodes[index].children[i];
             self.paint_overlay_subtree(child, composite, stats);
             i += 1;
+        }
+        if self.nodes[index].filter_push.is_some() {
+            self.write_filter_pop(index);
         }
         if transformed {
             self.write_group_pop(index);
@@ -3880,6 +3966,18 @@ impl PaintContext for NodePaintContext<'_> {
         });
     }
 
+    fn backdrop_filter(&mut self, rect: Rect, filter: &floem_types::Filter) {
+        // An identity filter is "no filter": writing a node for it would make
+        // every backend pay for a layer to do nothing.
+        if filter.is_identity() {
+            return;
+        }
+        self.push(floem_scene::SceneNode::BackdropFilter {
+            rect,
+            filter: *filter,
+        });
+    }
+
     fn fill_text(&mut self, origin: Point, text: &str, size: f32, color: floem_types::Color) {
         if text.is_empty() || size <= 0.0 {
             return;
@@ -4011,6 +4109,11 @@ fn apply_composite(node: &mut floem_scene::SceneNode, prop: CompositorProp) {
                 // a window would *reveal* what it was hiding.
                 SceneNode::ClipPush { .. } | SceneNode::ClipPop => {}
                 SceneNode::GroupPush { .. } | SceneNode::GroupPop => {}
+                // Nothing to dim here either: a filter scope is a window over
+                // content, and a backdrop filter reads pixels that are already
+                // dimmed by their own nodes.
+                SceneNode::FilterPush { .. } | SceneNode::FilterPop => {}
+                SceneNode::BackdropFilter { .. } => {}
             }
         }
         CompositorProp::TranslateX(dx) => match node {

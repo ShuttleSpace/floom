@@ -15,7 +15,7 @@ mod native;
 mod overlay;
 mod path;
 
-pub use brush::{Brush, Shadow};
+pub use brush::{Brush, Filter, Shadow};
 pub use color::Color;
 pub use display::{DisplayInfo, ScaleFactor};
 pub use event::{

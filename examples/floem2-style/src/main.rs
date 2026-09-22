@@ -19,6 +19,15 @@
 //! 4. **The design token *is* the transition.** The button's fade is armed
 //!    with the Material timing itself, so changing the token changes the fade
 //!    and nothing has to be restated anywhere else.
+//! 5. **A filter is not a shadow.** A card drawn through a blur puts ink
+//!    *outside* its own box and thinning; the same card without the blur ends
+//!    exactly where it was drawn. A shadow also blurs, so the difference is
+//!    what act 5 is about: this one post-processes the picture the whole
+//!    subtree made, rather than decorating one shape.
+//! 6. **Frost reads what is behind it.** A panel over a hard black/white edge
+//!    greys the edge inside its own box and leaves the same edge sharp one
+//!    pixel outside it — the one probe that tells a backdrop filter from a
+//!    content one, since both blur and both change pixels.
 //!
 //! Run with `cargo run -p floem2-style`.
 
@@ -387,5 +396,161 @@ fn main() {
     act_2_elevation_is_a_shadow_not_a_second_rect();
     act_3_the_hover_fade_is_implicit();
     act_4_the_token_is_the_transition();
-    println!("\nfloem2-style: 4 acts, every claim asserted.");
+    act_5_a_filter_is_not_a_shadow();
+    act_6_frost_reads_what_is_behind_it();
+    println!("\nfloem2-style: 6 acts, every claim asserted.");
+}
+
+/// A blurred card's ink crosses the edge it was drawn inside, and thins as it
+/// goes. The control is the same card without the blur: it ends exactly where
+/// it was laid out, so "ink landed outside the box" is evidence rather than a
+/// lucky sample.
+fn act_5_a_filter_is_not_a_shadow() {
+    println!("== 5. a filter is not a shadow ==");
+    let host = mount_card(Container::new().background(Color::WHITE).blur(7.0));
+    let sw = render(&host);
+
+    let mid_y = (CARD_TOP + CARD_H / 2.0) as u32;
+    let just_outside = (CARD_LEFT - 3.0) as u32;
+    let further_out = (CARD_LEFT - 6.0) as u32;
+    let near = pixel(&sw, just_outside, mid_y);
+    let far = pixel(&sw, further_out, mid_y);
+    println!("  3px outside the card: {near:?}   6px outside: {far:?}");
+    assert!(near[3] > 0, "the blur carried ink past the card's own box");
+    assert!(
+        near[3] > far[3],
+        "and it thins with distance instead of stopping at a hard edge"
+    );
+    assert_eq!(
+        sw.filters_drawn, 1,
+        "one filtered scope was composited — not zero, which would mean the \
+         request was dropped"
+    );
+
+    let plain = mount_card(Container::new().background(Color::WHITE));
+    let plain_sw = render(&plain);
+    assert_eq!(
+        pixel(&plain_sw, just_outside, mid_y)[3],
+        0,
+        "the same card without a blur ends where it was drawn"
+    );
+    assert_eq!(plain_sw.filters_drawn, 0, "and pays for no layer");
+    println!("  the ink crossed the edge and thinned; the unfiltered card did not");
+}
+
+/// Frost: the vertical edge down the middle of the surface is the filter's
+/// *input*. Inside the panel it goes grey; one pixel outside the panel the
+/// same edge is still a hard step.
+fn act_6_frost_reads_what_is_behind_it() {
+    println!("== 6. frost reads what is behind it ==");
+    // The edge: white left of x = 120, black right of it.
+    let edge_x = SURFACE_W as f32 / 2.0;
+    // A panel straddling the edge, with no fill of its own: everything a probe
+    // reads inside it is the backdrop, filtered or not.
+    let panel_left = edge_x - 80.0;
+    let panel_top = 30.0;
+    let panel_w = 160.0;
+    let panel_h = 70.0;
+
+    let mut host = WidgetHost::new();
+    host.set_size(Size::new(SURFACE_W as f64, SURFACE_H as f64));
+    let root = host.mount_root(LayoutStyle::default(), Container::new());
+    for (left, color) in [(0.0, Color::WHITE), (edge_x, Color::BLACK)] {
+        host.mount(
+            root,
+            LayoutStyle {
+                position: Position::Absolute,
+                inset: AbsoluteInset {
+                    left: Some(left),
+                    top: Some(0.0),
+                    ..AbsoluteInset::default()
+                },
+                width: Some(edge_x),
+                height: Some(SURFACE_H as f32),
+                ..LayoutStyle::default()
+            },
+            Container::new().background(color),
+        );
+    }
+    host.mount(
+        root,
+        LayoutStyle {
+            position: Position::Absolute,
+            inset: AbsoluteInset {
+                left: Some(panel_left),
+                top: Some(panel_top),
+                ..AbsoluteInset::default()
+            },
+            width: Some(panel_w),
+            height: Some(panel_h),
+            ..LayoutStyle::default()
+        },
+        Container::new().backdrop_blur(7.0),
+    );
+    host.frame();
+    settle(&mut host);
+    let sw = render(&host);
+    assert_eq!(sw.backdrops_drawn, 1, "one backdrop was applied");
+
+    // Two px left of the edge, *inside* the panel.
+    let inside = pixel(
+        &sw,
+        (edge_x - 2.0) as u32,
+        (panel_top + panel_h / 2.0) as u32,
+    );
+    println!("  inside the panel, 2px from the edge: {inside:?}");
+    assert_ne!(
+        inside,
+        [255, 255, 255, 255],
+        "the edge smeared — white picked up ink from the black side"
+    );
+    assert!(
+        inside[0] < 250 && inside[0] > 5,
+        "it is grey, not either end"
+    );
+    assert_eq!(inside[3], 255, "a backdrop blur does not punch a hole");
+
+    // The same x, above the panel: outside its rect, so the edge is untouched.
+    let outside = pixel(&sw, (edge_x - 2.0) as u32, (panel_top - 8.0) as u32);
+    assert_eq!(
+        outside,
+        [255, 255, 255, 255],
+        "the filter is confined to the panel's own box"
+    );
+
+    // Control: the scene without the panel's frost leaves the edge sharp.
+    let mut bare = WidgetHost::new();
+    bare.set_size(Size::new(SURFACE_W as f64, SURFACE_H as f64));
+    let bare_root = bare.mount_root(LayoutStyle::default(), Container::new());
+    for (left, color) in [(0.0, Color::WHITE), (edge_x, Color::BLACK)] {
+        bare.mount(
+            bare_root,
+            LayoutStyle {
+                position: Position::Absolute,
+                inset: AbsoluteInset {
+                    left: Some(left),
+                    top: Some(0.0),
+                    ..AbsoluteInset::default()
+                },
+                width: Some(edge_x),
+                height: Some(SURFACE_H as f32),
+                ..LayoutStyle::default()
+            },
+            Container::new().background(color),
+        );
+    }
+    bare.frame();
+    settle(&mut bare);
+    let bare_sw = render(&bare);
+    assert_eq!(
+        pixel(
+            &bare_sw,
+            (edge_x - 2.0) as u32,
+            (panel_top + panel_h / 2.0) as u32
+        ),
+        [255, 255, 255, 255],
+        "without the panel the same probe reads the sharp edge"
+    );
+    assert_eq!(bare_sw.backdrops_drawn, 0);
+    println!("  the edge went grey inside the panel and stayed sharp outside it");
 }

@@ -29,6 +29,9 @@ impl Renderer for FakeRenderer {
                 SceneNode::ClipPop => self.ops.borrow_mut().push("clip_pop"),
                 SceneNode::GroupPush { .. } => self.ops.borrow_mut().push("group_push"),
                 SceneNode::GroupPop => self.ops.borrow_mut().push("group_pop"),
+                SceneNode::FilterPush { .. } => self.ops.borrow_mut().push("filter_push"),
+                SceneNode::FilterPop => self.ops.borrow_mut().push("filter_pop"),
+                SceneNode::BackdropFilter { .. } => self.ops.borrow_mut().push("backdrop_filter"),
             }
         }
     }
@@ -48,7 +51,6 @@ fn fake_renderer_consumes_scene_without_widgets() {
         radius: 0.0,
 
         shadow: None,
-
     });
     let _ = scene.insert(SceneNode::Rect {
         bounds: Rect::from_origin_size(Point::new(5.0, 5.0), Size::new(4.0, 4.0)),
@@ -56,7 +58,6 @@ fn fake_renderer_consumes_scene_without_widgets() {
         radius: 0.0,
 
         shadow: None,
-
     });
     scene.finish_update();
 

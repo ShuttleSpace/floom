@@ -702,10 +702,7 @@ impl<T: Clone + Eq + Send + Sync + 'static> AnimatedContent<T> {
 
     /// Produces the child for each value. Called once per switch (and once for
     /// the initial value), so the leaving and arriving subtrees can differ.
-    pub fn content_with(
-        mut self,
-        build: impl Fn(&T) -> Child + Send + Sync + 'static,
-    ) -> Self {
+    pub fn content_with(mut self, build: impl Fn(&T) -> Child + Send + Sync + 'static) -> Self {
         self.build = Some(Arc::new(build));
         self.spawn_initial();
         self

@@ -16,8 +16,8 @@ pub use compose::{Align, Axis, Child, ChildBuilder, ChildKey, Inset, LayoutReque
 pub use context::{CreateContext, EventContext, PaintContext, SemanticsContext, UpdateContext};
 pub use element::{Element, ElementKind};
 pub use floem_types::{
-    AnimationSpec, Brush, Color, CompositorProp, Easing, ElementId, Event, ImeUpdate, InputMode,
-    Key, KeyEvent, KeyPhase, Modifiers, NamedKey, NativeCompositionMode, NativeSnapshot,
+    AnimationSpec, Brush, Color, CompositorProp, Easing, ElementId, Event, Filter, ImeUpdate,
+    InputMode, Key, KeyEvent, KeyPhase, Modifiers, NamedKey, NativeCompositionMode, NativeSnapshot,
     NativeViewKind, OverlayHandle, OverlayKind, Point, PointerButton, PointerEvent, PointerKind,
     PointerPhase, PresenceChannel, PresenceTransition, Rect, RepeatMode, RepeatSpec, ResourceId,
     ScrollEvent, Shadow, Size, Transition,

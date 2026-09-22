@@ -387,3 +387,61 @@ fn primitives_are_reusable_across_frames() {
     assert_eq!(first, second, "painting is idempotent");
     assert_eq!(update.dirty_count(), 1);
 }
+
+// --- filters --------------------------------------------------------------
+
+/// A backdrop blur is an *op*, not a declaration: its input is whatever is
+/// already behind this box, which a bracket around the widget's own paint
+/// cannot reach. So it has to appear in the op log, ahead of the fill that
+/// lands on top of it.
+#[test]
+fn a_backdrop_blur_is_asked_for_before_the_fill_that_sits_on_top_of_it() {
+    let widget = Container::new().background(Color::WHITE).backdrop_blur(6.0);
+    let (id, _create) = allocate(&widget);
+
+    let mut recorder = SceneRecorder::new(BOX);
+    widget.paint(&mut recorder, id);
+    recorder.finish();
+
+    let lines: Vec<String> = recorder.snapshot().lines().map(|l| l.to_string()).collect();
+    assert_eq!(
+        lines,
+        vec![
+            "BackdropFilter (0.0, 0.0, 100.0, 20.0) r=(6.0, 6.0)".to_string(),
+            "Rect (0.0, 0.0, 100.0, 20.0) #FFFFFFFF".to_string(),
+        ],
+        "the backdrop is filtered before the card's own fill covers it"
+    );
+    assert_eq!(
+        recorder.scene_node_kinds(),
+        vec!["BackdropFilter", "Rect"],
+        "and the retained scene carries it as its own node"
+    );
+}
+
+/// A *content* blur is the other half, and it is deliberately **absent** from
+/// the op log: the widget declares it and the host brackets the subtree, so a
+/// paint call has nothing to emit. That absence is the assertion — a filter
+/// pushed at paint time would blur only this widget's own nodes and leave its
+/// children sharp.
+#[test]
+fn a_content_blur_is_declared_not_painted() {
+    let widget = Container::new().background(Color::WHITE).blur(4.0);
+    let (id, _create) = allocate(&widget);
+
+    let mut recorder = SceneRecorder::new(BOX);
+    widget.paint(&mut recorder, id);
+    recorder.finish();
+
+    assert_eq!(
+        recorder.scene_node_kinds(),
+        vec!["Rect"],
+        "the paint call emitted no filter marker"
+    );
+    assert_eq!(
+        widget.filter(),
+        Some(floem_core::Filter::blur(4.0)),
+        "but the widget declares one, which is where the host reads it"
+    );
+    assert_eq!(widget.content_filter(), Some(floem_core::Filter::blur(4.0)));
+}

@@ -11,8 +11,8 @@
 
 use floem_accessibility::{SemanticsRole, SemanticsState};
 use floem_core::{
-    Brush, Color, CreateContext, ElementId, LayoutRequest, PaintContext, Point, Rect, ResourceId,
-    SemanticsContext, Shadow, Size, UpdateContext, Widget,
+    Brush, Color, CreateContext, ElementId, Filter, LayoutRequest, PaintContext, Point, Rect,
+    ResourceId, SemanticsContext, Shadow, Size, UpdateContext, Widget,
 };
 use floem_types::Insets;
 
@@ -502,6 +502,16 @@ pub struct Container {
     padding: Insets,
     /// The drop shadow this card casts, drawn behind its own fill.
     shadow: Option<Shadow>,
+    /// The filter this card's **content** — its own fill and every descendant
+    /// — is drawn through. Declared rather than pushed in `paint` because the
+    /// filter has to see the whole subtree composited, which a paint call
+    /// cannot do (see `Widget::filter`).
+    filter: Option<Filter>,
+    /// A filter over what is *behind* this card, inside its own box. A
+    /// separate thing from `filter` rather than a flag on it: one starts from
+    /// an empty layer, the other from the pixels already on screen, and a
+    /// single field would have to pick.
+    backdrop: Option<Filter>,
     revision: Revision,
 }
 
@@ -512,6 +522,8 @@ impl Container {
             radius: 0.0,
             padding: Insets::ZERO,
             shadow: None,
+            filter: None,
+            backdrop: None,
             revision: Revision::default(),
         }
     }
@@ -538,6 +550,51 @@ impl Container {
         self.shadow = Some(shadow);
         self.revision.bump();
         self
+    }
+
+    /// Draws this card's content — its own fill *and* everything inside it —
+    /// through a blur: Compose's `Modifier.blur`, Flutter's `ImageFiltered`.
+    ///
+    /// `0.0` (or less) is "no filter": the card is drawn as it is, and no
+    /// backend pays for a layer.
+    pub fn blur(mut self, radius: f64) -> Self {
+        self.filter = Some(Filter::blur(radius));
+        self.revision.bump();
+        self
+    }
+
+    /// [`Self::blur`] with a radius per axis.
+    pub fn blur_xy(mut self, radius_x: f64, radius_y: f64) -> Self {
+        self.filter = Some(Filter::blur_xy(radius_x, radius_y));
+        self.revision.bump();
+        self
+    }
+
+    /// Blurs what is *behind* this card, inside its own box — the frosted
+    /// panel. Drawn before this card's own background, so the tint and the
+    /// text on top of it stay sharp while the picture underneath goes soft.
+    pub fn backdrop_blur(mut self, radius: f64) -> Self {
+        self.backdrop = Some(Filter::blur(radius));
+        self.revision.bump();
+        self
+    }
+
+    /// The in-place form of [`Self::blur`].
+    ///
+    /// A builder takes `self` by value, so a caller holding `&mut Container` —
+    /// a test driving a mounted widget, or a host mutating one — cannot call
+    /// it; this is the same shape `Progress::set_disabled` had to take, for the
+    /// same reason.
+    pub fn set_blur(&mut self, radius: f64) {
+        self.filter = Some(Filter::blur(radius));
+        self.revision.bump();
+    }
+
+    /// The in-place form of [`Self::backdrop_blur`]. See [`Self::set_blur`]
+    /// for why a builder cannot serve here.
+    pub fn set_backdrop_blur(&mut self, radius: f64) {
+        self.backdrop = Some(Filter::blur(radius));
+        self.revision.bump();
     }
 
     /// Padding is consumed by the layout layer; the primitive only carries it.
@@ -572,6 +629,16 @@ impl Container {
         self.shadow
     }
 
+    /// The filter this card's content is drawn through, if any.
+    pub fn content_filter(&self) -> Option<Filter> {
+        self.filter
+    }
+
+    /// The filter this card applies to what is behind it, if any.
+    pub fn backdrop_filter(&self) -> Option<Filter> {
+        self.backdrop
+    }
+
     pub fn semantics_hint(&self) -> SemanticsHint {
         SemanticsHint::decorative()
     }
@@ -592,10 +659,22 @@ impl Widget for Container {
         self.revision.sync(cx, id);
     }
 
+    /// The content filter this card declared — answered here rather than in
+    /// `paint` so the host can bracket the whole subtree with it.
+    fn filter(&self) -> Option<Filter> {
+        self.filter
+    }
+
     fn paint(&self, cx: &mut dyn PaintContext, _id: ElementId) {
         let bounds = cx.bounds();
         if bounds.width() <= 0.0 || bounds.height() <= 0.0 {
             return;
+        }
+        // A backdrop filter comes first of all: it consumes what is already
+        // behind this box, so it has to run before anything this card draws
+        // lands on top of it.
+        if let Some(backdrop) = self.backdrop {
+            cx.backdrop_filter(bounds, &backdrop);
         }
         // Shadow first: it belongs *behind* the shape that cast it, and the
         // order of ops inside one paint call is the order the scene keeps.

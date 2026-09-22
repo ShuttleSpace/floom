@@ -1243,14 +1243,14 @@ fn an_animated_content_keeps_both_sides_live_while_it_switches() {
     host.set_size(Size::new(200.0, 80.0));
     let root = host.mount_root(
         LayoutStyle::default(),
-        AnimatedContent::new(1u32).content_with(|v| {
-            let label = format!("v{v}");
-            Child::new(
-                ChildKey::index(0),
-                LayoutRequest::default(),
-                move || Box::new(Text::new(label.clone())),
-            )
-        }).presence(PresenceTransition::fade(0.2)),
+        AnimatedContent::new(1u32)
+            .content_with(|v| {
+                let label = format!("v{v}");
+                Child::new(ChildKey::index(0), LayoutRequest::default(), move || {
+                    Box::new(Text::new(label.clone()))
+                })
+            })
+            .presence(PresenceTransition::fade(0.2)),
     );
     host.frame();
 
@@ -1258,11 +1258,7 @@ fn an_animated_content_keeps_both_sides_live_while_it_switches() {
     for _ in 0..30 {
         host.frame();
     }
-    assert_eq!(
-        child_text_count(&host),
-        1,
-        "rests showing one content"
-    );
+    assert_eq!(child_text_count(&host), 1, "rests showing one content");
     assert_eq!(child_text_alphas(&host), vec![255]);
 
     // Switch the key. The instant after, both the leaving (1) and arriving (2)
@@ -1317,14 +1313,14 @@ fn an_animated_content_swaps_instantly_without_a_transition() {
     host.set_size(Size::new(200.0, 80.0));
     let root = host.mount_root(
         LayoutStyle::default(),
-        AnimatedContent::new(1u32).content_with(|v| {
-            let label = format!("v{v}");
-            Child::new(
-                ChildKey::index(0),
-                LayoutRequest::default(),
-                move || Box::new(Text::new(label.clone())),
-            )
-        }).presence(PresenceTransition::fade(0.0)),
+        AnimatedContent::new(1u32)
+            .content_with(|v| {
+                let label = format!("v{v}");
+                Child::new(ChildKey::index(0), LayoutRequest::default(), move || {
+                    Box::new(Text::new(label.clone()))
+                })
+            })
+            .presence(PresenceTransition::fade(0.0)),
     );
     host.frame();
     for _ in 0..30 {
@@ -1365,14 +1361,14 @@ fn an_animated_content_replays_enter_when_a_value_returns() {
     host.set_size(Size::new(200.0, 80.0));
     let root = host.mount_root(
         LayoutStyle::default(),
-        AnimatedContent::new(1u32).content_with(|v| {
-            let label = format!("v{v}");
-            Child::new(
-                ChildKey::index(0),
-                LayoutRequest::default(),
-                move || Box::new(Text::new(label.clone())),
-            )
-        }).presence(PresenceTransition::fade(0.2)),
+        AnimatedContent::new(1u32)
+            .content_with(|v| {
+                let label = format!("v{v}");
+                Child::new(ChildKey::index(0), LayoutRequest::default(), move || {
+                    Box::new(Text::new(label.clone()))
+                })
+            })
+            .presence(PresenceTransition::fade(0.2)),
     );
     host.frame();
     for _ in 0..30 {

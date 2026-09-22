@@ -22,7 +22,7 @@ something stale.
 | `floem2-navigation` | typed routes, history, page transitions, nav containers, deep links | all | headless |
 | `floem2-progress-ring` | self-drawn motion: an animated ring + a `Spinner` that animates itself | all | headless |
 | `floem2-transform` | subtree transforms: a card that scales and rotates as one picture | all | headless |
-| `floem2-style` | style that is made of something: a gradient card, a real drop shadow, and an implicit hover fade armed with a design-system motion token | all | headless |
+| `floem2-style` | style that is made of something: a gradient card, a real drop shadow, an implicit hover fade armed with a design-system motion token, a blurred card whose ink crosses its own edge, and a frosted panel that greys the edge behind it | all | headless |
 | `floem2-editor` | text document: transactions, selection, undo/redo, IME pre-edit | all | headless |
 | `floem2-motion` | eased tweens, interruption, a control that animates itself, presence enter/exit, a crossfade that keeps both sides alive, and an `AnimatedContent` that keeps both sides alive by key | all | headless |
 | `floem2-native-plugin` | writing a native provider plugin + slot pooling | all | headless |
@@ -132,11 +132,15 @@ the scope carries the sampled value about the box centre, pivoting where
 
 Style realised in primitives (MOTION-GAP A3/A4/B4/B6): a gradient background,
 a blurred drop shadow instead of the pseudo-shadow rect v1 faked elevation
-with, an implicit transition the author never has to start, and Material's own
-motion tokens as its timing. Every act is asserted — including the control that
-makes each positive claim mean something: a flat background really does put the
-same pixel at both ends, an unraised card really does leave the pixels below it
-empty, and an untransitioned button really does snap in one frame.
+with, an implicit transition the author never has to start, Material's own
+motion tokens as its timing, and — A4's back half — a *filter*: a card drawn
+through a blur, and a frosted panel whose input is the picture behind it. Every
+act is asserted — including the control that makes each positive claim mean
+something: a flat background really does put the same pixel at both ends, an
+unraised card really does leave the pixels below it empty, an untransitioned
+button really does snap in one frame, an unfiltered card really does end where
+it was drawn, and the frost's own edge really does stay sharp outside the
+panel.
 
 ```text
 == 1. a gradient card is not one colour ==
@@ -151,7 +155,19 @@ empty, and an untransitioned button really does snap in one frame.
 == 4. the design token is the transition ==
   MotionDuration::SHORT2 = 100 ms -> 0.100 s
   armed with MotionTransition::STATE_CHANGE, and it takes that long
+== 5. a filter is not a shadow ==
+  3px outside the card: [255, 255, 255, 41]   6px outside: [255, 255, 255, 2]
+  the ink crossed the edge and thinned; the unfiltered card did not
+== 6. frost reads what is behind it ==
+  inside the panel, 2px from the edge: [184, 184, 184, 255]
+  the edge went grey inside the panel and stayed sharp outside it
 ```
+
+Act 5's pair is what separates a filter from the shadow in act 2: the ink is
+*outside* the card's box and thinning with distance, and the unfiltered card
+puts nothing there. Act 6's pair is what separates a backdrop filter from a
+content one — both blur, so the only discriminating probe is the same hard
+edge read inside the panel (grey) and outside it (still a step).
 
 ### `floem2-motion`
 

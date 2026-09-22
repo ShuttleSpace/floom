@@ -1,6 +1,6 @@
 //! Context objects passed into widget lifecycle methods.
 
-use floem_types::{Brush, Color, ElementId, Event, Point, Rect, ResourceId, Shadow, Size};
+use floem_types::{Brush, Color, ElementId, Event, Filter, Point, Rect, ResourceId, Shadow, Size};
 
 /// Context available while creating an element from a widget.
 pub trait CreateContext {
@@ -219,6 +219,23 @@ pub trait PaintContext {
     /// (a hard black rectangle, say) would be worse than the absence of it.
     fn draw_shadow(&mut self, rect: Rect, radius: f32, shadow: &Shadow) {
         let _ = (rect, radius, shadow);
+    }
+
+    /// Filters the pixels **already drawn** inside `rect` — the backdrop half
+    /// of the filter vocabulary, and the frosted-glass case.
+    ///
+    /// The other half — filtering a *subtree* — is the host's job rather than
+    /// an op: only the host knows where a subtree starts and ends in the draw
+    /// order, so a widget asks for that with [`crate::Widget::filter`] and the
+    /// host brackets it. This op is for the case where the input is whatever
+    /// happens to be behind, which no bracket can express.
+    ///
+    /// Defaults to nothing. A backend that cannot reach the pixels it has
+    /// already drawn must not paint a translucent panel and call it frost —
+    /// the same reason [`Self::draw_shadow`] defaults to nothing rather than
+    /// to a hard rectangle.
+    fn backdrop_filter(&mut self, rect: Rect, filter: &Filter) {
+        let _ = (rect, filter);
     }
 
     /// A single run of text. `size` is the font size in logical pixels.

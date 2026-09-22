@@ -28,7 +28,7 @@ pub use presenter::SoftwarePresenter;
 
 use floem_renderer::{FrameInfo, RenderTarget, Renderer};
 use floem_scene::{DamageRegion, Rect, ResourceKind, ResourceRegistry, Scene, SceneNode};
-use floem_types::{Brush, Color, Point, Polyline, Shadow, Transform};
+use floem_types::{Brush, Color, Filter, Point, Polyline, Shadow, Transform};
 use raster::{ClipStack, Scissor};
 use std::collections::HashMap;
 
@@ -46,6 +46,14 @@ type GlyphCacheKey = (usize, u32, u32, u32);
 /// can grow the set without bound — the cache evicts least-recently-used
 /// entries beyond this, trading a re-rasterisation for a bounded footprint.
 const GLYPH_CACHE_LIMIT: usize = 4096;
+
+/// Box-blur passes used to approximate a Gaussian.
+///
+/// Three is the usual trade: one pass is a square kernel (visible banding at
+/// the edges of a large blur), two still shows its corners, three reads as a
+/// Gaussian to the eye. Each pass costs one O(pixels) sweep, and the radius is
+/// split across them, so the *spread* stays the filter's radius.
+const BLUR_PASSES: usize = 3;
 
 /// Default ceiling on the mask *bytes* the cache holds. Masks vary wildly in
 /// size — a 10px glyph is tens of bytes, a 96px one is tens of kilobytes — so
@@ -144,6 +152,34 @@ pub struct SoftwareRenderer {
     /// space, so a pixel must be mapped back through the scope before it can
     /// ask the brush what colour it is. Reset whenever the transform changes.
     paint_space: Transform,
+    /// Filter scopes opened by `FilterPush` markers: each parks the pixel
+    /// buffer the scope was opened *over* until the matching pop has filtered
+    /// the layer and composited it. Cleared at the start of every walk, like
+    /// the clip and transform stacks — the marker stream may end with a scope
+    /// still open, and nothing is drawn after it.
+    filter_stack: Vec<FilterLayer>,
+    /// Buffers retired by a finished filter scope, reused by the next one: a
+    /// card that blurs its content must not allocate a whole surface per frame.
+    layer_pool: Vec<Vec<u8>>,
+    /// Filter scopes composited this frame — layers really blurred and blended,
+    /// the counter a "filters render" assertion reads and the one that stops
+    /// moving when a filter silently degrades into a straight copy.
+    pub filters_drawn: u64,
+    /// `BackdropFilter` nodes applied this frame. Counted separately from the
+    /// scopes because they are different requests with different costs, and a
+    /// single "filters" number would hide which of the two stopped working.
+    pub backdrops_drawn: u64,
+}
+
+/// One open filter scope in the software renderer.
+struct FilterLayer {
+    /// The buffer the scope was opened over, parked until the pop.
+    parent: Vec<u8>,
+    /// The damage window the composite step must stay inside. The frame only
+    /// promised to rebuild the pixels it damaged; writing outside them would
+    /// stamp over content no node was asked to redraw.
+    parent_clip: Clip,
+    filter: Filter,
 }
 
 impl SoftwareRenderer {
@@ -180,6 +216,10 @@ impl SoftwareRenderer {
             gradients_drawn: 0,
             shadows_drawn: 0,
             paint_space: Transform::IDENTITY,
+            filter_stack: Vec::new(),
+            layer_pool: Vec::new(),
+            filters_drawn: 0,
+            backdrops_drawn: 0,
         }
     }
 
@@ -803,13 +843,16 @@ impl SoftwareRenderer {
         resources: Option<&ResourceRegistry>,
         region: Option<Rect>,
     ) {
-        let damage_clip = self.clip_region(region);
+        let mut damage_clip = self.clip_region(region);
         let scale = self.scale;
         // The marker stream may end with regions still pushed — nothing is
         // drawn after the last node, so a trailing push has no effect on this
         // walk. Inheriting it into the next one would, and the next walk starts
         // at the first node again.
         self.clips.clear();
+        // Not `filter_stack.clear()`: a scope still open here would take its
+        // parked buffer with it and leave the *layer* as the renderer's
+        // surface. Open scopes are closed (and composited) below instead.
         self.transform_stack.clear();
         self.transform = Transform::IDENTITY;
         self.paint_space = Transform::IDENTITY;
@@ -843,6 +886,18 @@ impl SoftwareRenderer {
                         self.transform = outer;
                         self.paint_space = self.transform.inverse().unwrap_or(Transform::IDENTITY);
                     }
+                    continue;
+                }
+                // Filter markers move the *target*, so they are handled before
+                // culling for the same reason the clip markers are: a marker
+                // whose own scope misses the damaged rect still has to be in
+                // place for the nodes that follow it.
+                SceneNode::FilterPush { filter } => {
+                    self.push_filter_layer(*filter, &mut damage_clip);
+                    continue;
+                }
+                SceneNode::FilterPop => {
+                    self.pop_filter_layer(&mut damage_clip);
                     continue;
                 }
                 _ => {}
@@ -1066,14 +1121,143 @@ impl SoftwareRenderer {
                     }
                     self.paths_drawn += 1;
                 }
+                SceneNode::BackdropFilter { rect, filter } => {
+                    self.apply_backdrop_filter(*rect, *filter, clip);
+                }
                 SceneNode::GroupPush { .. } | SceneNode::GroupPop => {}
                 // Unreachable: the markers were consumed above, before any
                 // node could be culled. Listed anyway so adding a variant to
                 // the scene IR without teaching this backend about it is a
                 // compile error rather than a silently missing feature.
                 SceneNode::ClipPush { .. } | SceneNode::ClipPop => {}
+                SceneNode::FilterPush { .. } | SceneNode::FilterPop => {}
             }
         }
+        // A well-formed scene closes every scope it opens; one that does not
+        // still has to hand its picture back, or the surface would be left as
+        // the layer and the frame would show only the filtered part.
+        while self.filter_stack.last().is_some() {
+            self.pop_filter_layer(&mut damage_clip);
+        }
+    }
+
+    /// Opens a filter layer: parks the current target and hands the rest of the
+    /// walk a fresh buffer to draw into.
+    ///
+    /// Drawing carries on *unaware* it is inside a layer — every primitive
+    /// keeps writing to `self.pixels`, so no rasteriser routine had to grow a
+    /// "which target" parameter. The layer is the buffer, not a mode.
+    fn push_filter_layer(&mut self, filter: Filter, damage: &mut Clip) {
+        let parent = std::mem::take(&mut self.pixels);
+        let mut layer = self.layer_pool.pop().unwrap_or_default();
+        if layer.len() != parent.len() {
+            layer.resize(parent.len(), 0);
+        }
+        self.pixels = layer;
+        // The halo: a blur of radius `r` reads `r` pixels beyond anything it
+        // writes, so the window has to be that much wider than the damage —
+        // otherwise the soft edge would be built out of whatever this buffer
+        // held the last time it was a layer.
+        let window = inflate_clip(
+            *damage,
+            (filter.reach() * self.scale).ceil() as u32 + 1,
+            self.width,
+            self.height,
+        );
+        self.clear_region(window);
+        self.filter_stack.push(FilterLayer {
+            parent,
+            parent_clip: *damage,
+            filter,
+        });
+        *damage = window;
+    }
+
+    /// Closes the innermost filter scope: filters the layer and composites it
+    /// over the buffer the scope was opened over.
+    fn pop_filter_layer(&mut self, damage: &mut Clip) {
+        let Some(layer) = self.filter_stack.pop() else {
+            return;
+        };
+        let window = *damage;
+        let layer_pixels = std::mem::take(&mut self.pixels);
+        self.pixels = layer.parent;
+        let (mut bytes, w, h) = extract_window(&layer_pixels, self.width as usize, window);
+        blur_window(&mut bytes, w, h, &layer.filter, self.scale);
+        // Where the result may land: the damage the frame promised to rebuild,
+        // narrowed by whatever clip is in force at the pop — the blur spreads
+        // past where the content was drawn, and that spread is clipped too.
+        let target = match self.clips.scissor(self.scale) {
+            Some(scissor) => raster::intersect_scissor(layer.parent_clip, scissor),
+            None => layer.parent_clip,
+        };
+        let (wx0, wy0) = (window.0, window.1);
+        for y in target.1..target.3 {
+            for x in target.0..target.2 {
+                if x < wx0 || y < wy0 {
+                    continue;
+                }
+                let (cx, cy) = ((x - wx0) as usize, (y - wy0) as usize);
+                if cx >= w || cy >= h {
+                    continue;
+                }
+                let i = (cy * w + cx) * 4;
+                let color = Color::rgba(bytes[i], bytes[i + 1], bytes[i + 2], bytes[i + 3]);
+                self.blend_pixel(x, y, color, 1.0);
+            }
+        }
+        // Recycled rather than dropped: the next scope clears its own window,
+        // so a frame with a filtered card does not allocate a surface per frame.
+        self.layer_pool.push(layer_pixels);
+        self.filters_drawn += 1;
+        *damage = layer.parent_clip;
+    }
+
+    /// Filters the pixels **already drawn** inside `rect` — the
+    /// `BackdropFilter` case, where the input is the picture behind.
+    ///
+    /// The result *replaces* rather than blends: those pixels are the filter's
+    /// input, and src-over-ing the blurred version onto the sharp original
+    /// would just mix the sharpness back in.
+    fn apply_backdrop_filter(&mut self, rect: Rect, filter: Filter, clip: Clip) {
+        let scale = self.scale;
+        let device = scale_rect(rect, scale);
+        let write = raster::intersect_scissor(
+            clip,
+            (
+                device.x0.floor().max(0.0) as u32,
+                device.y0.floor().max(0.0) as u32,
+                device.x1.ceil().max(0.0) as u32,
+                device.y1.ceil().max(0.0) as u32,
+            ),
+        );
+        if raster::scissor_is_empty(write) {
+            return;
+        }
+        // Read wider than the write: the blur samples a `reach`-wide halo
+        // outside the rect, which is what makes the edge soft instead of a
+        // sharp-edged tile of blur.
+        let read = inflate_clip(
+            write,
+            (filter.reach() * scale).ceil() as u32 + 1,
+            self.width,
+            self.height,
+        );
+        let (mut bytes, w, h) = extract_window(&self.pixels, self.width as usize, read);
+        blur_window(&mut bytes, w, h, &filter, scale);
+        let (rx0, ry0) = (read.0, read.1);
+        for y in write.1..write.3 {
+            for x in write.0..write.2 {
+                let (cx, cy) = ((x - rx0) as usize, (y - ry0) as usize);
+                if cx >= w || cy >= h {
+                    continue;
+                }
+                let src = (cy * w + cx) * 4;
+                let dst = ((y * self.width + x) as usize) * 4;
+                self.pixels[dst..dst + 4].copy_from_slice(&bytes[src..src + 4]);
+            }
+        }
+        self.backdrops_drawn += 1;
     }
 
     /// The render path shared by the trait entry points: decide the damaged
@@ -1152,46 +1336,136 @@ fn rect_shape(bounds: Rect, radius: f32) -> floem_types::Path {
     }
 }
 
+/// Copies the `window` region of `pixels` into its own tightly packed RGBA
+/// buffer, returned with its width and height.
+///
+/// Tightly packed rather than strided because the blur is a convolution over
+/// a rectangle: a stride would make every window sum chase the source width,
+/// and a per-axis blur wants to see its rows as rows.
+fn extract_window(pixels: &[u8], width: usize, window: Clip) -> (Vec<u8>, usize, usize) {
+    let (x0, y0, x1, y1) = (
+        window.0 as usize,
+        window.1 as usize,
+        window.2 as usize,
+        window.3 as usize,
+    );
+    let w = x1.saturating_sub(x0);
+    let h = y1.saturating_sub(y0);
+    let mut out = vec![0u8; w * h * 4];
+    for row in 0..h {
+        let src = ((y0 + row) * width + x0) * 4;
+        let dst = row * w * 4;
+        out[dst..dst + w * 4].copy_from_slice(&pixels[src..src + w * 4]);
+    }
+    (out, w, h)
+}
+
+/// Blurs a tightly packed RGBA window **in place**.
+///
+/// Premultiplied, because the buffer holds straight alpha: blurring straight
+/// channels averages a transparent pixel's colour in as if it were ink, which
+/// haloes every edge. Three passes of a box blur of radius `r / 3` spread by
+/// `r` in total — which is what lets [`Filter::reach`] report the whole spread
+/// instead of a per-pass detail.
+fn blur_window(bytes: &mut [u8], w: usize, h: usize, filter: &Filter, scale: f64) {
+    let Filter::Blur { radius_x, radius_y } = *filter;
+    // A radius too small to survive the three-way split still gets a one-pixel
+    // kernel: rounding it to zero would make a 1px blur silently do nothing.
+    let kernel = |radius: f64| -> usize {
+        if !(radius > 0.0) || !radius.is_finite() {
+            return 0;
+        }
+        ((radius * scale) / f64::from(BLUR_PASSES as u32))
+            .round()
+            .max(1.0) as usize
+    };
+    let (rx, ry) = (kernel(radius_x), kernel(radius_y));
+    if w == 0 || h == 0 || (rx == 0 && ry == 0) {
+        // Nothing to smear: the window passes through untouched, which is what
+        // an identity filter asked for and what a zero-area window must do.
+        return;
+    }
+    let mut fields: Vec<Vec<f32>> = (0..4).map(|_| vec![0.0f32; w * h]).collect();
+    for i in 0..(w * h) {
+        let a = f32::from(bytes[i * 4 + 3]) / 255.0;
+        fields[3][i] = a;
+        for c in 0..3 {
+            fields[c][i] = f32::from(bytes[i * 4 + c]) / 255.0 * a;
+        }
+    }
+    for field in fields.iter_mut() {
+        for _ in 0..BLUR_PASSES {
+            box_blur_xy(field, w, h, rx, ry);
+        }
+    }
+    for i in 0..(w * h) {
+        let a = fields[3][i];
+        let inv = if a > 1e-6 { 1.0 / a } else { 0.0 };
+        for c in 0..3 {
+            let v = fields[c][i] * inv * 255.0;
+            bytes[i * 4 + c] = v.round().clamp(0.0, 255.0) as u8;
+        }
+        bytes[i * 4 + 3] = (a * 255.0).round().clamp(0.0, 255.0) as u8;
+    }
+}
+
 /// One horizontal+vertical pass of a box blur over a single-channel field,
 /// `radius` pixels wide, via a sliding window — O(pixels), independent of
 /// radius. Window edges clamp to the field, which is the edge behaviour a
 /// shadow wants (the blur does not fall off a cliff at the pad boundary).
 fn box_blur(field: &mut [f32], width: usize, height: usize, radius: usize) {
-    if width == 0 || height == 0 || radius == 0 {
+    box_blur_xy(field, width, height, radius, radius);
+}
+
+/// [`box_blur`] with a radius per axis: a horizontal motion smear and a
+/// frosted panel are both real requests, and collapsing them into one number
+/// would force a caller to pick.
+fn box_blur_xy(field: &mut [f32], width: usize, height: usize, radius_x: usize, radius_y: usize) {
+    if width == 0 || height == 0 {
         return;
     }
     let mut tmp = vec![0.0f32; field.len()];
 
-    // Horizontal: rows of `width`, window [x-radius, x+radius] clamped.
-    for y in 0..height {
-        let row = y * width;
-        let mut lo = 0usize;
-        let mut hi = radius.min(width - 1);
-        let mut sum: f32 = field[row..=row + hi].iter().sum();
-        for x in 0..width {
-            tmp[row + x] = sum / (hi - lo + 1) as f32;
-            let nlo = (x + 1).saturating_sub(radius);
-            let nhi = (x + 1 + radius).min(width - 1);
-            while hi < nhi {
-                hi += 1;
-                sum += field[row + hi];
-            }
-            while lo < nlo {
-                sum -= field[row + lo];
-                lo += 1;
+    if radius_x == 0 {
+        // A zero-width window averages one pixel, so the horizontal pass is a
+        // copy — running the sliding window anyway would only burn time.
+        tmp.copy_from_slice(field);
+    } else {
+        // Horizontal: rows of `width`, window [x-radius, x+radius] clamped.
+        for y in 0..height {
+            let row = y * width;
+            let mut lo = 0usize;
+            let mut hi = radius_x.min(width - 1);
+            let mut sum: f32 = field[row..=row + hi].iter().sum();
+            for x in 0..width {
+                tmp[row + x] = sum / (hi - lo + 1) as f32;
+                let nlo = (x + 1).saturating_sub(radius_x);
+                let nhi = (x + 1 + radius_x).min(width - 1);
+                while hi < nhi {
+                    hi += 1;
+                    sum += field[row + hi];
+                }
+                while lo < nlo {
+                    sum -= field[row + lo];
+                    lo += 1;
+                }
             }
         }
     }
 
+    if radius_y == 0 {
+        field.copy_from_slice(&tmp);
+        return;
+    }
     // Vertical: columns of `height` over the horizontal result.
     for x in 0..width {
         let mut lo = 0usize;
-        let mut hi = radius.min(height - 1);
+        let mut hi = radius_y.min(height - 1);
         let mut sum: f32 = (0..=hi).map(|y| tmp[y * width + x]).sum();
         for y in 0..height {
             field[y * width + x] = sum / (hi - lo + 1) as f32;
-            let nlo = (y + 1).saturating_sub(radius);
-            let nhi = (y + 1 + radius).min(height - 1);
+            let nlo = (y + 1).saturating_sub(radius_y);
+            let nhi = (y + 1 + radius_y).min(height - 1);
             while hi < nhi {
                 hi += 1;
                 sum += tmp[hi * width + x];
@@ -1202,6 +1476,21 @@ fn box_blur(field: &mut [f32], width: usize, height: usize, radius: usize) {
             }
         }
     }
+}
+
+/// `clip` grown by `reach` pixels on every side, held inside a `width` ×
+/// `height` surface.
+///
+/// This is the blur's halo: a filter reads `reach` pixels beyond anything it
+/// writes, so both the layer a scope renders into and the area a backdrop
+/// filter samples have to be that much wider than the result.
+fn inflate_clip(clip: Clip, reach: u32, width: u32, height: u32) -> Clip {
+    (
+        clip.0.saturating_sub(reach),
+        clip.1.saturating_sub(reach),
+        (clip.2.saturating_add(reach)).min(width),
+        (clip.3.saturating_add(reach)).min(height),
+    )
 }
 
 struct GlyphMask {

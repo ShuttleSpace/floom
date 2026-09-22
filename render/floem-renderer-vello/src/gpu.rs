@@ -148,6 +148,14 @@ pub struct GpuFrameStats {
     /// Drop shadows skipped because vello has no blur primitive yet — the
     /// recorded degradation for a shadow request this backend cannot honour.
     pub shadows_skipped: u64,
+    /// Filter requests this backend did not apply: a filtered scope whose
+    /// content was drawn sharp instead, and a backdrop filter drawn as nothing.
+    ///
+    /// One count rather than one per kind because the answer is the same for
+    /// both — vello has no blur primitive, so neither can be honoured — and
+    /// because what a caller needs from this number is "was my filter dropped",
+    /// not which of the two it was.
+    pub filters_skipped: u64,
     /// Pixels vello rasterised this frame. With a real surface and partial
     /// damage this is the damaged area, not the whole screen.
     pub rasterized_pixels: u64,
@@ -189,6 +197,9 @@ struct NodeEncodeStats {
     /// Shadow requests skipped: vello has no blur primitive yet, so a node
     /// carrying a drop shadow draws its fill and records the skip here.
     shadow_skips: u64,
+    /// Filter requests skipped on a node that reached the encoder: a
+    /// `BackdropFilter` draws nothing and says so here.
+    filter_skips: u64,
     cache_hits: u64,
     cache_misses: u64,
     /// Image resources this fragment's commands still reference. A reused
@@ -237,6 +248,18 @@ fn node_fingerprint(node: &SceneNode) -> u64 {
             }
         }
         SceneNode::GroupPop => hasher.write_u8(7),
+        SceneNode::FilterPush { filter } => {
+            hasher.write_u8(8);
+            hash_filter(&mut hasher, filter);
+        }
+        SceneNode::FilterPop => hasher.write_u8(9),
+        SceneNode::BackdropFilter { rect, filter } => {
+            hasher.write_u8(10);
+            for v in [rect.x0, rect.y0, rect.x1, rect.y1] {
+                hasher.write_u64(v.to_bits());
+            }
+            hash_filter(&mut hasher, filter);
+        }
         SceneNode::Rect {
             bounds,
             fill,
@@ -450,6 +473,19 @@ fn hash_brush(hasher: &mut impl std::hash::Hasher, b: &floem_types::Brush) {
             }
             hasher.write_u64(radius.to_bits());
             hash_stops(hasher, stops);
+        }
+    }
+}
+
+/// Hashes a filter the way [`hash_brush`] hashes a brush: field bits, so a
+/// changed radius invalidates the cached fragment instead of drawing last
+/// frame's blur.
+fn hash_filter(hasher: &mut impl std::hash::Hasher, filter: &floem_types::Filter) {
+    match filter {
+        floem_types::Filter::Blur { radius_x, radius_y } => {
+            hasher.write_u8(0);
+            hasher.write_u64(radius_x.to_bits());
+            hasher.write_u64(radius_y.to_bits());
         }
     }
 }
@@ -1069,6 +1105,18 @@ impl VelloGpuPresenter {
                     }
                     continue;
                 }
+                // A filter scope is consumed here and drawn as an ordinary
+                // band of picture: vello has no blur primitive, so the content
+                // inside it lands sharp. The alternative — dropping the
+                // content too — would make a filtered card invisible, which is
+                // a worse answer to "cannot blur" than "did not blur".
+                SceneNode::FilterPush { filter } => {
+                    if !filter.is_identity() {
+                        totals.filters_skipped += 1;
+                    }
+                    continue;
+                }
+                SceneNode::FilterPop => continue,
                 _ => {}
             }
             let fingerprint = node_fingerprint(node);
@@ -1094,6 +1142,7 @@ impl VelloGpuPresenter {
                     totals.images += cached.stats.images;
                     totals.unsupported_nodes += cached.stats.unsupported;
                     totals.shadows_skipped += cached.stats.shadow_skips;
+                    totals.filters_skipped += cached.stats.filter_skips;
                     totals.texture_cache_hits += cached.stats.images;
                     totals.fragments_reused += 1;
                     for key in cached.stats.image_keys.iter().copied() {
@@ -1112,6 +1161,7 @@ impl VelloGpuPresenter {
             totals.images += stats.images;
             totals.unsupported_nodes += stats.unsupported;
             totals.shadows_skipped += stats.shadow_skips;
+            totals.filters_skipped += stats.filter_skips;
             totals.texture_cache_hits += stats.cache_hits;
             totals.texture_cache_misses += stats.cache_misses;
             totals.fragments_encoded += 1;
@@ -1360,11 +1410,19 @@ impl VelloGpuPresenter {
                 draw_image_at(target, brush, transform, *width, *height, *alpha);
                 stats.images += 1;
             }
+            SceneNode::BackdropFilter { .. } => {
+                // Nothing to draw: what this node asks for is a filter over
+                // pixels that have already been rasterised, which vello cannot
+                // reach into. The skip is the record — a silent no-op would
+                // leave a frosted panel reading as plain transparency.
+                stats.filter_skips += 1;
+            }
             // Markers are consumed by the walk in `encode`, before it reaches
             // here; reaching this arm would mean a marker slipped past the
             // clip/transform bookkeeping.
             SceneNode::ClipPush { .. } | SceneNode::ClipPop => {}
             SceneNode::GroupPush { .. } | SceneNode::GroupPop => {}
+            SceneNode::FilterPush { .. } | SceneNode::FilterPop => {}
         }
         stats
     }
@@ -1782,6 +1840,31 @@ mod tests {
     /// fragment built at the old alpha — a picture frozen mid-fade, arriving
     /// through the cache rather than through the clock. No GPU needed: the
     /// fingerprint is pure.
+    /// A filter's radii are part of a node's fingerprint.
+    ///
+    /// The fragment cache keys on this hash, so radii left out of it would keep
+    /// serving the fragment encoded at the old blur — a frost that never
+    /// deepens, arriving through the cache rather than through the value.
+    #[test]
+    fn a_filters_radii_are_part_of_its_fingerprint() {
+        let push = |filter| node_fingerprint(&SceneNode::FilterPush { filter });
+        assert_ne!(
+            push(floem_types::Filter::blur(3.0)),
+            push(floem_types::Filter::blur(6.0)),
+            "a deeper blur is a different encoding"
+        );
+        assert_ne!(
+            push(floem_types::Filter::blur_xy(6.0, 1.0)),
+            push(floem_types::Filter::blur_xy(1.0, 6.0)),
+            "and the two axes are not interchangeable"
+        );
+        assert_ne!(
+            push(floem_types::Filter::blur(4.0)),
+            node_fingerprint(&SceneNode::FilterPop),
+            "a push and a pop are different nodes"
+        );
+    }
+
     #[test]
     fn an_images_alpha_is_part_of_its_fingerprint() {
         let bounds = floem_types::Rect::from_origin_size(

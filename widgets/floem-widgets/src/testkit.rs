@@ -68,6 +68,14 @@ pub enum PaintOp {
         fill: Option<Color>,
         stroke: Option<(f64, Color)>,
     },
+    /// A filter over what has already been drawn inside `bounds`. Carries the
+    /// request, not a result — whether the backdrop went soft is a renderer's
+    /// answer, and a test asserting pixels asks one.
+    BackdropFilter {
+        bounds: Rect,
+        radius_x: f64,
+        radius_y: f64,
+    },
 }
 
 fn fmt_rect(r: Rect) -> String {
@@ -109,6 +117,16 @@ impl PaintOp {
                 size,
                 text,
                 fmt_color(*color)
+            ),
+            PaintOp::BackdropFilter {
+                bounds,
+                radius_x,
+                radius_y,
+            } => format!(
+                "BackdropFilter {} r=({:.1}, {:.1})",
+                fmt_rect(*bounds),
+                radius_x,
+                radius_y
             ),
             PaintOp::Image { bounds, resource } => format!(
                 "Image {} res=({}, {})",
@@ -255,6 +273,9 @@ impl SceneRecorder {
                 SceneNode::ClipPop => "ClipPop",
                 SceneNode::Image { .. } => "Image",
                 SceneNode::Text { .. } => "Text",
+                SceneNode::FilterPush { .. } => "FilterPush",
+                SceneNode::FilterPop => "FilterPop",
+                SceneNode::BackdropFilter { .. } => "BackdropFilter",
             })
             .collect()
     }
@@ -401,6 +422,19 @@ impl PaintContext for SceneRecorder {
         self.ops.push(PaintOp::Image {
             bounds,
             resource: image,
+        });
+    }
+
+    fn backdrop_filter(&mut self, rect: Rect, filter: &floem_types::Filter) {
+        let floem_types::Filter::Blur { radius_x, radius_y } = *filter;
+        self.scene.insert(SceneNode::BackdropFilter {
+            rect,
+            filter: *filter,
+        });
+        self.ops.push(PaintOp::BackdropFilter {
+            bounds: rect,
+            radius_x,
+            radius_y,
         });
     }
 

@@ -20,7 +20,7 @@ pub use gpu::{GpuFrameStats, VelloGpuPresenter};
 
 use floem_renderer::{FrameInfo, Renderer};
 use floem_scene::{DamageRegion, Scene, SceneNode};
-use floem_types::Rect;
+use floem_types::{Filter, Rect};
 
 /// Recorded draw command (Vello backend consumes this later).
 #[derive(Debug, Clone, PartialEq)]
@@ -54,6 +54,18 @@ pub enum VelloCommand {
     StrokePath {
         bounds: Rect,
         width: f32,
+    },
+    /// Opens a filter scope. Recorded so the request is visible at this ABI
+    /// even though the GPU encoder cannot honour it — the same reasoning that
+    /// keeps a rect's `shadow` on the command instead of dropping it.
+    PushFilter {
+        filter: Filter,
+    },
+    PopFilter,
+    /// A filter over the pixels already drawn inside `rect`.
+    BackdropFilter {
+        rect: Rect,
+        filter: Filter,
     },
     /// Opens a clip. Every command recorded after it is confined to
     /// `bounds` until the matching [`VelloCommand::PopClip`].
@@ -154,6 +166,16 @@ impl Renderer for VelloRendererAdapter {
                     });
                 }
                 SceneNode::ClipPop => self.commands.push(VelloCommand::PopClip),
+                SceneNode::FilterPush { filter } => self
+                    .commands
+                    .push(VelloCommand::PushFilter { filter: *filter }),
+                SceneNode::FilterPop => self.commands.push(VelloCommand::PopFilter),
+                SceneNode::BackdropFilter { rect, filter } => {
+                    self.commands.push(VelloCommand::BackdropFilter {
+                        rect: *rect,
+                        filter: *filter,
+                    })
+                }
             }
         }
         self.last_cmd_len = self.commands.len();
@@ -204,6 +226,56 @@ mod tests {
         assert!(matches!(vello.commands[1], VelloCommand::DrawImage { .. }));
         assert!(matches!(vello.commands[2], VelloCommand::DrawGlyphs { .. }));
         assert_eq!(vello.cache_misses, 1);
+    }
+
+    /// A filter request reaches the headless command list intact.
+    ///
+    /// Vello has no blur primitive, so the GPU encoder skips it and counts the
+    /// skip — but the request has to be *visible* at this ABI, exactly as a
+    /// rect's shadow is: a backend quietly dropping it would leave a frosted
+    /// panel reading as plain transparency with nothing to explain why.
+    #[test]
+    fn records_filter_requests_instead_of_dropping_them() {
+        let mut scene = Scene::new();
+        scene.begin_update();
+        let _ = scene.insert(SceneNode::FilterPush {
+            filter: floem_types::Filter::blur(3.0),
+        });
+        let _ = scene.insert(SceneNode::Rect {
+            bounds: Rect::from_origin_size(Point::new(4.0, 4.0), Size::new(8.0, 8.0)),
+            fill: floem_types::Brush::from(Color::BLACK),
+            radius: 0.0,
+            shadow: None,
+        });
+        let _ = scene.insert(SceneNode::FilterPop);
+        let _ = scene.insert(SceneNode::BackdropFilter {
+            rect: Rect::from_origin_size(Point::new(2.0, 2.0), Size::new(12.0, 12.0)),
+            filter: floem_types::Filter::blur_xy(5.0, 1.0),
+        });
+        scene.finish_update();
+
+        let mut vello = VelloRendererAdapter::new();
+        render_once(&mut vello, &FrameInfo::software(32, 32, 1), &scene);
+        assert_eq!(
+            vello.commands,
+            vec![
+                VelloCommand::PushFilter {
+                    filter: floem_types::Filter::blur(3.0)
+                },
+                VelloCommand::FillRect {
+                    bounds: Rect::from_origin_size(Point::new(4.0, 4.0), Size::new(8.0, 8.0)),
+                    brush: floem_types::Brush::from(Color::BLACK),
+                    radius: 0.0,
+                    shadow: None,
+                },
+                VelloCommand::PopFilter,
+                VelloCommand::BackdropFilter {
+                    rect: Rect::from_origin_size(Point::new(2.0, 2.0), Size::new(12.0, 12.0)),
+                    filter: floem_types::Filter::blur_xy(5.0, 1.0),
+                },
+            ],
+            "the scope brackets its draw and the backdrop keeps its own rect"
+        );
     }
 
     /// A transform scope reaches the headless command list as a

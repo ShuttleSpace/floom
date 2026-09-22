@@ -105,6 +105,23 @@ pub trait Widget {
     fn clip(&self) -> Option<floem_types::ClipShape> {
         None
     }
+    /// The filter this widget's **whole subtree** is drawn through, or `None`
+    /// (the default) for the usual "drawn as it is".
+    ///
+    /// Declared rather than pushed at paint time for exactly the reason
+    /// [`Self::clip`] is, and one more: a filter has to see the composite of
+    /// the subtree, so blurring inside `paint` would blur only the nodes this
+    /// widget paints itself — the children's ink would stay sharp on top of a
+    /// blurred background, which is a different picture, not a cheaper one.
+    /// The host brackets the subtree with the filter markers instead.
+    ///
+    /// This is the content filter (Compose's `Modifier.blur`). Filtering what
+    /// sits *behind* the widget is a different request with a different input,
+    /// and it is an op rather than a declaration — see
+    /// [`crate::PaintContext::backdrop_filter`].
+    fn filter(&self) -> Option<floem_types::Filter> {
+        None
+    }
     fn semantics(&self, cx: &mut dyn SemanticsContext, id: ElementId) {
         let _ = (cx, id);
     }

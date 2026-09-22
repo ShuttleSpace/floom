@@ -10,7 +10,7 @@
 
 - **底座已经在**：确定性动画调度器 + 可注入时钟、合成通道（compositor）、宿主冻结时钟（paused）、`settle()` 测试收敛、快照/像素黄金、分配计数与性能预算门。动画**不是从零开始**。
 - **动画侧的原语层已补齐（S1，见 §2b）**：缓动、中断重定向、循环/往返、给任意节点起动画的公开入口都已落地并有会红的负例。**动作**：overlay 入场在 S1 前是全仓仅有的两处动画之一，Tween 也是纯线性——那两条描述已随 S1 过期，保留在此仅作对照。
-- **自绘侧与过渡层已逐片补齐（S2/S3/S4/S5，见 §2b 与 §6）**：路径/描边、裁剪、子树变换、`Canvas`、`Brush`（含控件侧入口）、阴影、隐式过渡、motion token 消费、`Conditional` 的 enter/exit 过渡、**`Crossfade` 内容切换**都已落地；**这份文档里 S2–S5 之前的"未动"描述已整体过期**，缺口清单 A/B 的条目逐个标注了交付状态，剩下的只有 A5（着色器）、通用滤镜、`AnimatedContent` 与共享元素（B5 明确未做的子集，见 B5）。
+- **自绘侧与过渡层已逐片补齐（S2/S3/S4/S5，见 §2b 与 §6）**：路径/描边、裁剪、子树变换、`Canvas`、`Brush`（含控件侧入口）、阴影、隐式过渡、motion token 消费、`Conditional` 的 enter/exit 过渡、**`Crossfade` 内容切换**、**通用滤镜**（内容过滤 + 背景过滤）都已落地；**这份文档里 S2–S7 之前的"未动"描述已整体过期**，缺口清单 A/B 的条目逐个标注了交付状态，剩下的只有 A5（着色器）、共享元素（B5 明确未做的子集，见 B5）、B6 的多值编排与 B9 的逐帧像素金帧。
 - ~~**最贵的一条**：`SceneNode::Group { transform }` **有类型、无实现**~~ —— S3 已按"要么三后端都实现、要么删掉"的纪律处置：`Group` 重塑为 `GroupPush`/`GroupPop` 流标记，三后端应用，`Transform` 补齐 `scale_around`/`rotate_around`/`multiply`/`inverse`/`map_rect`。
 - ~~**最便宜的一刀**：Material 设计系统里 `MotionDuration` token **零消费者**~~ —— S4 已接通：`MotionTransition::from_tokens(MotionDuration, MotionEasing)` → `floem_types::Transition` → `Button::transition`，ms→s 只换算一次。
 
@@ -102,11 +102,15 @@
 - **对标**：Compose 所有绘制都有 `color:` 与 `brush:` 两个重载（`Brush.linearGradient` / `radialGradient` / `sweepGradient`）；Flutter `Paint..shader = LinearGradient(...).createShader(rect)`。v1 有 `fill(path, brush: impl Into<BrushRef>, blur_radius)`（`legacy/floem-renderer/src/lib.rs:159`）。
 - **补上判据**：`Brush { Solid(Color), Linear{stops, from, to}, Radial{..} }`，vello 映射 `peniko::Brush`、skia 映射 shader；一个渐变按钮/进度条黄金。
 
-### A4. ~~没有模糊 / 阴影~~ — **P1 / M** — ⚠️ 部分交付（S4：阴影已落地，通用滤镜未做）
+### A4. ~~没有模糊 / 阴影~~ — **P1 / M** — ✅ 已交付（S4：阴影；S7：通用滤镜）
 
 - **交付**：`Shadow { color, blur, offset }` 挂在 `SceneNode::Rect` 上（不在独立节点——阴影属于且仅属于一个形状）；`PaintContext::draw_shadow` 是控件侧入口，`Container::shadow` 是消费点。软件后端走**真实模糊**（三趟 box filter，模糊半径折半为核半径），并计数 `shadows_drawn`；vello 无 blur 原语，**跳过并在 `shadows_skipped` 里计数**（降级不静默）；skia 记录请求待 submit 路径映射。
-- **未做**：`Modifier.blur` / `renderEffect` / `BackdropFilter` 那一类**通用滤镜**——那是对已绘制内容的后处理，不是给形状加一层阴影，需要另一条通路。
-- **黄金**：`floem2-style` 第二幕（卡片下方着墨、上方与无高程对照组均空）、`render/floem-renderer-software/tests/brush.rs`。
+- **交付（S7：通用滤镜，A4 的后半）**：`Filter::Blur { radius_x, radius_y }` 落在 `floem-types`；场景 IR 加**两个**动词而不是一个，因为它们要的是相反的两样东西：
+  - `FilterPush { filter }` / `FilterPop` 流标记（与 clip / group 同一套习语）——**内容过滤**：标记之间的内容画进独立图层，弹出时过滤一次再合成，等于 Compose `Modifier.blur` / Flutter `ImageFiltered`。它必须是标记而不是节点里的字段，因为被过滤的是若干节点**合成后**的结果：逐个节点各模糊一遍会把重叠部分重复模糊，那是另一张图。
+  - `BackdropFilter { rect, filter }` 单节点——**背景过滤**：就地过滤 `rect` 内**已经画过**的像素，等于 Flutter `BackdropFilter`（磨砂玻璃）。它需要自己的节点，因为它的输入在流里位于它**之前**，而 push/pop 无论从空图层还是从快照起都只能表达其中一种。
+  - 软件后端真做：图层靠**换缓冲**实现（父缓冲入栈，绘制照旧往 `self.pixels` 写，弹出时模糊 + 合成），所以没有一条光栅化例程需要多长一个"目标"参数；模糊走**预乘**通道（缓冲是直通 alpha，直接模糊会把透明像素的颜色当墨平均进来，边缘发 halo），三趟 box blur 分摊 `radius/3` 的核半径，总扩散正好等于 `Filter::reach`——这就是 damage 为什么能用半径这一个数。vello 无 blur 原语 → 内容照常画（画sharp比消失好）并计 `filters_skipped`；skia 记录为 `saveLayer` + `SkImageFilter`。
+  - 控件侧入口同样是真正的缺口所在：`Widget::filter()` 声明式钩子（宿主照 clip/group 的槽位方案括包**整棵子树**，含中途声明的 reseed）+ `PaintContext::backdrop_filter(rect, &filter)` 操作式入口；`Container::blur()` / `Container::backdrop_blur()` 是消费点。
+- **黄金**：`floem2-style` 第二幕（阴影：卡片下方着墨、无高程对照组为空）、第五幕（滤镜：卡片边缘外 3px 有墨且随距离变淡，无滤镜对照组为 0）、第六幕（背景过滤：硬边在面板内变灰 184、面板外仍是纯白 255）；`render/floem-renderer-software/tests/filters.rs`、`app/floem-app/tests/filters.rs`。
 - **旧判据原文**：
 
 - **现状**：场景 IR 与 `PaintContext` 都没有 blur / shadow / renderEffect 字段。
@@ -259,7 +263,9 @@ A8 独立，随时可做（但越早越好——它是"自绘控件在无障碍�
 | **S4 让风格"成套"** ⚠️ 部分交付 | A3 + A4 + B4 + B6 | L | `Brush`（线性/径向）在场景 IR + 三后端落地，**并补上了控件侧入口**（`PaintContext::fill_*_brush` / `draw_shadow`）；`Shadow` 由软件后端真模糊合成，vello 无 blur 原语→**跳过并计数**；B4 只做最小集合（颜色），B6 接通 Material token → `Transition`；示例 `floem2-style`。通用滤镜、A5 着色器、`AnimatedContent`/共享元素仍未动 |
 | **S5 让过渡"成立"（enter/exit）** ◐ 部分交付 | B5（子集） | M | `Conditional` 支持 `enter`/`exit`/`presence` 过渡，退场动画播完前保持子树挂载；`Crossfade`（`AnimatedContent` / Crossfade 判据支）以两个叠放的 presence 子节点实现"交换时两侧同屏"；`PresenceTransition` 词汇（Fade/Grow/Slide）；宿主加 `Widget::animation_finished` 回调 + fold 类合成属性向下传播；示例 `floem2-motion`（第四幕：presence 延迟卸载；第五幕：crossfade 两侧同屏）。`AnimatedContent`（通用内容过渡）与**共享元素**未做（明确子集，见 B5） |
 
-四个切片都完成后，与 Flutter / Compose Multiplatform 在"canvas + 动画"这两项上的差距只余 **A5（自定义着色器）**，而 A5 恰好是**唯一一个"两边都需要平台分支"的能力**（见下）。
+| **S7 让滤镜"成立"** ✅ 已交付 | A4（后半：通用滤镜） | M | `Filter` 词汇 + `FilterPush/FilterPop` 内容过滤 + `BackdropFilter` 背景过滤；软件后端换缓冲做真图层模糊（预乘通道），vello 跳过并计 `filters_skipped`，skia 记录为 saveLayer；`Widget::filter()` 让宿主括包整棵子树，`PaintContext::backdrop_filter` 是背景那一路的入口；`Container::blur()` / `Container::backdrop_blur()` 是消费点；示例 `floem2-style` 第五、六幕 |
+
+所有切片完成后，与 Flutter / Compose Multiplatform 在"canvas + 动画"这两项上的差距只余 **A5（自定义着色器）**，而 A5 恰好是**唯一一个"两边都需要平台分支"的能力**（见下）。
 
 ---
 
@@ -306,7 +312,7 @@ FLOEM2_WINDOW_IDLE=1 FLOEM2_WINDOW_IDLE_SECS=30 \
 | 裁剪 | ✅ (A2, S2) `ClipRegion` 矩形/圆角/路径 + `Widget::clip` | ✅ `Modifier.clip` | ✅ `ClipRRect`/`ClipPath` |
 | 渐变 / 画刷 | ✅ (A3, S4) `Brush` 线性/径向；控件侧 `fill_*_brush` | ✅ `Brush.*` | ✅ `Paint.shader` |
 | 阴影（模糊合成） | ⚠️ (A4, S4) 软件后端真模糊；vello **跳过并计数** | ✅ `Modifier.shadow` | ✅ `BoxShadow` |
-| 通用滤镜（对已绘内容后处理） | ❌ (A4 未做) | ✅ `blur`/`renderEffect` | ✅ `ImageFilter`/`BackdropFilter` |
+| 通用滤镜（对已绘内容后处理） | ✅ 内容过滤 `FilterPush/Pop` + 背景过滤 `BackdropFilter`（软件真模糊，vello 跳过计数，skia 记录）(S7) | ✅ `blur`/`renderEffect` | ✅ `ImageFilter`/`BackdropFilter` |
 | 自定义着色器 | ❌ 仅外部纹理绕行 (A5) | ✅ 需 AGSL+SkSL 两套 | ✅ `.frag` 一套 |
 | 子树变换（缩放/旋转） | ✅ (A6, S3) `GroupPush`/`GroupPop` + 三后端应用 | ✅ `graphicsLayer` | ✅ `Transform` |
 | Canvas 控件 | ✅ (A7, S2) `Canvas` + `Spinner` | ✅ `Canvas` | ✅ `CustomPaint` |

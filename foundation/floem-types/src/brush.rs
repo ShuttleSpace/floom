@@ -41,6 +41,80 @@ impl Shadow {
     }
 }
 
+/// A post-processing filter over **already-drawn** content.
+///
+/// This is the other half of the blur story, and the reason it cannot just be
+/// folded into [`Shadow`]: a shadow is a blurred silhouette *drawn behind one
+/// shape*, while a filter is something done to a band of picture that has
+/// already been painted — Compose's `Modifier.blur` / `renderEffect`,
+/// Flutter's `ImageFiltered` and `BackdropFilter`. One shape cannot express the
+/// other: a filter has to see pixels contributed by several nodes at once, so
+/// it lives in the draw order rather than inside a node.
+///
+/// The scene carries the *request*; each backend answers with its best
+/// approximation and is expected to count what it could not do (see
+/// `shadows_skipped`'s precedent — the degradation is recorded, never silent).
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum Filter {
+    /// Blur, `radius` in logical px. Separate radii per axis because a
+    /// horizontal motion smear and a frosted panel are both real requests, and
+    /// collapsing them into one number would force a caller to pick.
+    Blur { radius_x: f64, radius_y: f64 },
+}
+
+impl Filter {
+    /// A blur with the same radius on both axes — the common case.
+    pub fn blur(radius: f64) -> Self {
+        Filter::Blur {
+            radius_x: radius,
+            radius_y: radius,
+        }
+    }
+
+    /// A blur with a different radius per axis.
+    pub fn blur_xy(radius_x: f64, radius_y: f64) -> Self {
+        Filter::Blur { radius_x, radius_y }
+    }
+
+    /// Whether this filter would leave the picture unchanged.
+    ///
+    /// A zero-radius blur has nothing to smear, so a backend must not pay for a
+    /// layer to apply it; a negative radius is a caller's typo and reads as the
+    /// same thing rather than as "blur inward". Non-finite radii land here too
+    /// — a radius no kernel can be built from is no blur at all, and the
+    /// alternative (saturating an infinite radius into a buffer size) is a
+    /// hang waiting to happen.
+    pub fn is_identity(&self) -> bool {
+        match *self {
+            Filter::Blur { radius_x, radius_y } => {
+                !((radius_x > 0.0 && radius_x.is_finite())
+                    || (radius_y > 0.0 && radius_y.is_finite()))
+            }
+        }
+    }
+
+    /// How far outside its own area the filtered result can spread, in logical
+    /// px — what a damage region has to include so the blur's outer edge is
+    /// not clipped.
+    ///
+    /// Equals the blur radius rather than the kernel radius any one pass uses:
+    /// a triple box blur of radius `r/3` spreads by `r`, which is what makes
+    /// this number the *whole* spread instead of a per-pass detail. Non-finite
+    /// radii reach nothing, for the reason [`Self::is_identity`] gives.
+    pub fn reach(&self) -> f64 {
+        match *self {
+            Filter::Blur { radius_x, radius_y } => {
+                let widest = radius_x.max(radius_y);
+                if widest.is_finite() {
+                    widest.max(0.0)
+                } else {
+                    0.0
+                }
+            }
+        }
+    }
+}
+
 /// What a shape is filled with: one colour, or a colour that varies.
 ///
 /// Stops are `(offset, color)` pairs with offsets in `0.0..=1.0`. They are
@@ -343,6 +417,48 @@ mod tests {
         assert!(brush.is_fully_opaque());
         let transparent = Brush::Solid(Color::rgba(1, 2, 3, 0));
         assert!(!transparent.is_fully_opaque());
+    }
+
+    #[test]
+    fn a_zero_radius_blur_is_the_identity_filter() {
+        // A backend must be able to skip the layer entirely for these, so the
+        // answer has to come from the value and not from a radius comparison at
+        // each call site.
+        assert!(Filter::blur(0.0).is_identity());
+        assert!(Filter::blur_xy(0.0, 0.0).is_identity());
+        // A negative radius is a caller's typo, and reads as "no blur" rather
+        // than as something that blurs inward.
+        assert!(Filter::blur(-4.0).is_identity());
+        assert!(Filter::blur_xy(-1.0, -1.0).is_identity());
+        assert!(!Filter::blur(0.5).is_identity());
+        // Non-finite radii cannot fail open into a kernel no buffer can hold.
+        assert!(Filter::blur(f64::NAN).is_identity());
+        assert!(Filter::blur(f64::INFINITY).is_identity());
+        assert_eq!(Filter::blur(f64::INFINITY).reach(), 0.0);
+    }
+
+    #[test]
+    fn a_blur_reaches_its_radius_not_its_per_pass_kernel() {
+        // The trap this pins: a triple box blur of radius `r/3` spreads by
+        // `r`, so `reach` has to be the *whole* spread. A damage region built
+        // from a per-pass kernel radius would clip the blur's outer edge.
+        assert_eq!(Filter::blur(9.0).reach(), 9.0);
+        // Two axes, one number: the widest one wins, or a horizontal smear
+        // would be cut off vertically instead.
+        assert_eq!(Filter::blur_xy(10.0, 4.0).reach(), 10.0);
+        assert_eq!(Filter::blur_xy(4.0, 10.0).reach(), 10.0);
+    }
+
+    #[test]
+    fn the_two_axes_stay_distinguishable() {
+        // Collapsing them into one radius would make a uniform blur and a
+        // one-axis smear equal — and then unexpressible.
+        assert_ne!(Filter::blur(6.0), Filter::blur_xy(6.0, 1.0));
+        assert_eq!(Filter::blur(6.0), Filter::blur_xy(6.0, 6.0));
+        // Copy, so a scene node can hold one by value without a lifetime.
+        let filter = Filter::blur(3.0);
+        let copied = filter;
+        assert_eq!(filter, copied);
     }
 
     #[test]

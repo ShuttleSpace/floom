@@ -1,7 +1,8 @@
 //! Retained scene node payloads (no GPU / OS types).
 
 use floem_types::{
-    Brush, ClipRegion, Color, Path, Point, Rect, ResourceId, Shadow, Size, Stroke, Transform,
+    Brush, ClipRegion, Color, Filter, Path, Point, Rect, ResourceId, Shadow, Size, Stroke,
+    Transform,
 };
 use std::sync::Arc;
 
@@ -76,6 +77,39 @@ pub enum SceneNode {
     ClipPush { region: ClipRegion },
     /// Pops one clip region. See [`SceneNode::ClipPush`].
     ClipPop,
+    /// Opens a filter scope: everything drawn from here to the matching
+    /// [`SceneNode::FilterPop`] is painted into its own layer, and the layer is
+    /// filtered *once* before it is composited onto what preceded it.
+    ///
+    /// A stream marker for exactly the reason the clip and group markers are,
+    /// and for one more of its own: a filter cannot live inside a node because
+    /// what it filters is the *composite* of several nodes — blurring each of
+    /// them separately would double-blur every overlap, which is not the same
+    /// picture. This is Compose's `Modifier.blur` / Flutter's `ImageFiltered`.
+    ///
+    /// What it does **not** cover is filtering what was drawn *before* the
+    /// marker — a frosted panel over a photo. That is
+    /// [`SceneNode::BackdropFilter`], and it is a separate node rather than a
+    /// flag on this one because the two need opposite things from the renderer:
+    /// this one starts from an empty layer, that one starts from the pixels
+    /// already on screen.
+    FilterPush { filter: Filter },
+    /// Closes the innermost open [`SceneNode::FilterPush`]: filters the layer
+    /// and composites it. See that variant for the marker semantics.
+    FilterPop,
+    /// Filters what has **already been drawn** inside `rect`: the pixels there
+    /// are replaced by their filtered selves, and nothing inside the filter
+    /// scope is redrawn.
+    ///
+    /// Flutter's `BackdropFilter` — the frosted-glass case. It needs its own
+    /// node because the content it filters precedes it in the stream, which no
+    /// push/pop pair can reach: a `FilterPush` here would open an empty layer
+    /// and have nothing to blur.
+    ///
+    /// `rect` is the *result* area, not the area read: a blur samples a
+    /// `reach`-wide halo outside it, which is why
+    /// [`bounds_hint`](Self::bounds_hint) reports the inflated rect.
+    BackdropFilter { rect: Rect, filter: Filter },
     Image {
         bounds: Rect,
         image: ResourceId,
@@ -176,6 +210,19 @@ impl SceneNode {
                 Some(bounds)
             }
             SceneNode::ClipPush { .. } | SceneNode::ClipPop => None,
+            SceneNode::FilterPush { .. } | SceneNode::FilterPop => None,
+            // The blur samples a halo outside the rect it fills, so damage
+            // has to cover that halo or the outer edge of the blur is left
+            // un-rendered (stale) instead of soft.
+            SceneNode::BackdropFilter { rect, filter } => {
+                let reach = filter.reach();
+                Some(Rect {
+                    x0: rect.x0 - reach,
+                    y0: rect.y0 - reach,
+                    x1: rect.x1 + reach,
+                    y1: rect.y1 + reach,
+                })
+            }
             SceneNode::Image { bounds, .. } => Some(*bounds),
             SceneNode::Text { origin, size, .. } => Some(Rect::from_origin_size(*origin, *size)),
         }

@@ -17,7 +17,6 @@ fn render_thread_consumes_immutable_snapshot() {
         radius: 0.0,
 
         shadow: None,
-
     });
     scene.finish_update();
 
@@ -51,7 +50,6 @@ fn bounded_queue_drops_oldest() {
         radius: 0.0,
 
         shadow: None,
-
     });
     a.finish_update();
     let mut b = Scene::new();
@@ -62,7 +60,6 @@ fn bounded_queue_drops_oldest() {
         radius: 0.0,
 
         shadow: None,
-
     });
     b.finish_update();
 
