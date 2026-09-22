@@ -120,10 +120,11 @@ pub mod prelude {
     // --- Semantic widgets (floem-widgets) -------------------------------
     pub use floem_widgets::NativeSurface;
     pub use floem_widgets::{
-        BottomSheet, Button, Canvas, Checkbox, Conditional, Container, Crossfade, Dialog, Divider,
-        Grid, Icon, Image, ImageFit, InteractionState, Labeled, List, NavDestination, NavHandle,
-        NavHost, NavigationBar, NavigationDrawer, NavigationRail, Overlay, Popup, Progress, Radio,
-        Select, Slider, Spacer, Spinner, Stack, Switch, Tabs, Text, TextField,
+        AnimatedContent, BottomSheet, Button, Canvas, Checkbox, Conditional, Container, Crossfade,
+        Dialog, Divider, Grid, Icon, Image, ImageFit, InteractionState, Labeled, List,
+        NavDestination, NavHandle, NavHost, NavigationBar, NavigationDrawer, NavigationRail,
+        Overlay, Popup, Progress, Radio, Select, Slider, Spacer, Spinner, Stack, Switch, Tabs, Text,
+        TextField,
     };
 
     // --- App shell (floem-app) -------------------------------------------

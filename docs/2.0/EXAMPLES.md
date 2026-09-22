@@ -24,7 +24,7 @@ something stale.
 | `floem2-transform` | subtree transforms: a card that scales and rotates as one picture | all | headless |
 | `floem2-style` | style that is made of something: a gradient card, a real drop shadow, and an implicit hover fade armed with a design-system motion token | all | headless |
 | `floem2-editor` | text document: transactions, selection, undo/redo, IME pre-edit | all | headless |
-| `floem2-motion` | eased tweens, interruption, a control that animates itself, presence enter/exit, and a crossfade that keeps both sides alive | all | headless |
+| `floem2-motion` | eased tweens, interruption, a control that animates itself, presence enter/exit, a crossfade that keeps both sides alive, and an `AnimatedContent` that keeps both sides alive by key | all | headless |
 | `floem2-native-plugin` | writing a native provider plugin + slot pooling | all | headless |
 | `floem2-probe` | device probe: one window holding every control the on-screen cases need | desktop | **display-gated** — `--features real`, driven by hand |
 | `floem2-window` | a real OS window: winit + vello GPU | desktop | **verified on macOS** |
@@ -157,13 +157,16 @@ empty, and an untransitioned button really does snap in one frame.
 
 Motion, end to end (MOTION-GAP B1/B2/B3/B5): a curve is not a duration,
 interruption carries what it interrupted, a control animates itself, a presence
-transition delays unmount, and a crossfade keeps *both* sides alive.
+transition delays unmount, a crossfade keeps *both* sides alive, and an
+`AnimatedContent` keeps both sides alive *by key*.
 
 ```text
 == 4. a presence transition delays unmount ==
   enter fades in; exit keeps the child mounted until it finishes, then it unmounts
 == 5. a crossfade keeps both sides live ==
   A and B both stay on screen during the swap; A unmounts only when its exit finishes
+== 6. an animated content keeps both sides live ==
+  v1 -> v2 keeps both mounted; v2 -> v1 (a return) replays the enter from invisible
 ```
 
 Act 4 is the enter/exit half of B5: a subtree leaving the screen stays mounted
@@ -171,7 +174,11 @@ until its exit animation has played, because a departure nobody sees is not a
 transition. Act 5 is the `AnimatedContent` / `Crossfade` half: both contents are
 stacked in one box, so mid-swap the scene holds **two** mounted children — the
 leaving one at full opacity, the arriving one at none — and only the arriving one
-is left once the swap completes.
+is left once the swap completes. Act 6 generalises act 5 to a content key:
+`AnimatedContent::new(key).content_with(|v| child).presence(transition)` switches
+the tracked value and keeps the leaving subtree mounted (exit) while the arriving
+one enters; a value that returns mounts a *fresh* node that replays its enter from
+invisible rather than resurrecting the one that already finished.
 
 ### `floem2-window`
 

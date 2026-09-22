@@ -20,7 +20,7 @@ use floem_core::{Child, ChildKey, LayoutRequest};
 use floem_layout::LayoutStyle;
 use floem_scene::SceneNode;
 use floem_types::{Color, Event, Point, PointerEvent, PresenceTransition, Rect, Size, Transition};
-use floem_widgets::{Button, Conditional, Container, Crossfade, Progress, Text};
+use floem_widgets::{AnimatedContent, Button, Conditional, Container, Crossfade, Progress, Text};
 
 /// A host with one text leaf on screen and one frame behind it, so layout has
 /// run and the scene holds a painted text node to watch.
@@ -1230,4 +1230,185 @@ fn a_crossfade_keeps_both_children_mounted_while_it_swaps() {
         vec![255],
         "and it rests fully shown"
     );
+}
+
+/// An `AnimatedContent` keeps both the leaving and arriving contents mounted
+/// through a switch — exactly the crossfade property, but driven by a content
+/// key instead of a fixed two-slot swap. This is the whole point of B5's
+/// `AnimatedContent` slice, and what separates it from a plain `Conditional`
+/// swap (which never keeps the old subtree on screen).
+#[test]
+fn an_animated_content_keeps_both_sides_live_while_it_switches() {
+    let mut host = WidgetHost::new();
+    host.set_size(Size::new(200.0, 80.0));
+    let root = host.mount_root(
+        LayoutStyle::default(),
+        AnimatedContent::new(1u32).content_with(|v| {
+            let label = format!("v{v}");
+            Child::new(
+                ChildKey::index(0),
+                LayoutRequest::default(),
+                move || Box::new(Text::new(label.clone())),
+            )
+        }).presence(PresenceTransition::fade(0.2)),
+    );
+    host.frame();
+
+    // Let the initial content settle fully shown.
+    for _ in 0..30 {
+        host.frame();
+    }
+    assert_eq!(
+        child_text_count(&host),
+        1,
+        "rests showing one content"
+    );
+    assert_eq!(child_text_alphas(&host), vec![255]);
+
+    // Switch the key. The instant after, both the leaving (1) and arriving (2)
+    // contents are mounted — one still fully shown, the other still hidden.
+    host.widget_mut::<AnimatedContent<u32>>(root)
+        .expect("the root is an animated content")
+        .set_value(2);
+    host.frame();
+    let both = child_text_alphas(&host);
+    assert_eq!(
+        both.len(),
+        2,
+        "an animated content keeps both contents mounted through the switch"
+    );
+    assert!(
+        both.iter().any(|&a| a == 255) && both.iter().any(|&a| a == 0),
+        "the leaving side is still shown and the arriving side is still hidden \
+         at the start of the switch: {both:?}"
+    );
+
+    for _ in 0..4 {
+        host.frame();
+        assert_eq!(
+            child_text_count(&host),
+            2,
+            "both contents remain mounted while the switch plays"
+        );
+    }
+
+    for _ in 0..30 {
+        host.frame();
+    }
+    assert_eq!(
+        child_text_count(&host),
+        1,
+        "once the switch completes only the arriving content is mounted"
+    );
+    assert_eq!(
+        child_text_alphas(&host),
+        vec![255],
+        "and it rests fully shown"
+    );
+}
+
+/// Without a transition, an `AnimatedContent` swaps the content instantly: the
+/// leaving side is not kept around, because there is no exit to play. This is
+/// the same instant behaviour a `Conditional` has, and confirms the transition
+/// is what buys the crossfade.
+#[test]
+fn an_animated_content_swaps_instantly_without_a_transition() {
+    let mut host = WidgetHost::new();
+    host.set_size(Size::new(200.0, 80.0));
+    let root = host.mount_root(
+        LayoutStyle::default(),
+        AnimatedContent::new(1u32).content_with(|v| {
+            let label = format!("v{v}");
+            Child::new(
+                ChildKey::index(0),
+                LayoutRequest::default(),
+                move || Box::new(Text::new(label.clone())),
+            )
+        }).presence(PresenceTransition::fade(0.0)),
+    );
+    host.frame();
+    for _ in 0..30 {
+        host.frame();
+    }
+    assert_eq!(child_text_count(&host), 1);
+    assert_eq!(child_text_alphas(&host), vec![255]);
+
+    host.widget_mut::<AnimatedContent<u32>>(root)
+        .expect("the root is an animated content")
+        .set_value(2);
+    host.frame();
+    // No transition: the departure leaves nothing behind, so only the arriving
+    // content is mounted (a `Conditional` swap would do the same).
+    assert_eq!(
+        child_text_count(&host),
+        1,
+        "an instant swap keeps only the arriving content"
+    );
+    // The arriving content settles to fully shown within a frame or two — an
+    // instant enter still samples t = 0 on its mount frame before folding to
+    // rest, which is the same one-frame artefact an untransitioned `Conditional`
+    // shows.
+    for _ in 0..3 {
+        host.frame();
+    }
+    assert_eq!(child_text_count(&host), 1);
+    assert_eq!(child_text_alphas(&host), vec![255]);
+}
+
+/// A value that returns after having left replays its enter rather than
+/// reappearing already arrived. Because each content gets a fresh, uniquely
+/// keyed subtree, coming back to a value mounts a new node that starts its
+/// enter from invisible.
+#[test]
+fn an_animated_content_replays_enter_when_a_value_returns() {
+    let mut host = WidgetHost::new();
+    host.set_size(Size::new(200.0, 80.0));
+    let root = host.mount_root(
+        LayoutStyle::default(),
+        AnimatedContent::new(1u32).content_with(|v| {
+            let label = format!("v{v}");
+            Child::new(
+                ChildKey::index(0),
+                LayoutRequest::default(),
+                move || Box::new(Text::new(label.clone())),
+            )
+        }).presence(PresenceTransition::fade(0.2)),
+    );
+    host.frame();
+    for _ in 0..30 {
+        host.frame();
+    }
+    assert_eq!(child_text_alphas(&host), vec![255]);
+
+    // Leave to 2 and let it settle.
+    host.widget_mut::<AnimatedContent<u32>>(root)
+        .expect("the root is an animated content")
+        .set_value(2);
+    for _ in 0..30 {
+        host.frame();
+    }
+    assert_eq!(child_text_count(&host), 1);
+
+    // Come back to 1. A fresh node for 1 mounts and must start its enter from
+    // invisible — it cannot lean on the 1 that already finished.
+    host.widget_mut::<AnimatedContent<u32>>(root)
+        .expect("the root is an animated content")
+        .set_value(1);
+    host.frame();
+    let both = child_text_alphas(&host);
+    assert_eq!(
+        both.len(),
+        2,
+        "the returning value and the leaving value are both mounted"
+    );
+    assert!(
+        both.iter().any(|&a| a == 0),
+        "the returning value replays its enter from invisible: {both:?}"
+    );
+
+    for _ in 0..30 {
+        host.frame();
+    }
+    assert_eq!(child_text_count(&host), 1);
+    assert_eq!(child_text_alphas(&host), vec![255]);
 }

@@ -1,6 +1,6 @@
 //! Motion, from the prelude alone.
 //!
-//! Three acts, each one a capability that did not exist before S1 and each one
+//! Six acts, each one a capability that did not exist before S1 and each one
 //! asserted rather than described, because "it animates" is the easiest claim
 //! in this codebase to write down and never check:
 //!
@@ -24,6 +24,11 @@
 //!    stay mounted (the leaving one plays its exit, the arriving one its enter),
 //!    which a plain cut would never show. This is the "one of AnimatedContent /
 //!    Crossfade" half of the B5 gap.
+//! 6. **An `AnimatedContent` keeps both sides live by key.** The same property
+//!    as act 5, but driven by a content key instead of two fixed slots: switch
+//!    the tracked value and the leaving content stays mounted (exit) while the
+//!    arriving one enters, and a value that returns mounts a fresh node that
+//!    replays its enter. This closes the AnimatedContent half of B5.
 //!
 //! Everything below is `floem2::prelude` — no crate below the facade is named.
 //! Run with `cargo run -p floem2-motion`.
@@ -71,6 +76,7 @@ fn main() {
     act_3_a_control_can_animate_itself(&mut host, root);
     act_4_a_presence_transition_delays_unmount(&mut host);
     act_5_a_crossfade_keeps_both_sides_live(&mut host);
+    act_6_an_animated_content_keeps_both_sides_live(&mut host);
 
     println!();
     println!("every act above was asserted, not printed");
@@ -419,4 +425,129 @@ fn act_5_a_crossfade_keeps_both_sides_live(_host: &mut WidgetHost) {
     );
     assert_eq!(first_alpha(&host), 255, "and B rests fully shown");
     println!("  A and B both stay on screen during the swap; A unmounts only when its exit finishes");
+}
+
+/// An `AnimatedContent` is the N-ary, content-keyed generalisation of the
+/// crossfade: instead of two fixed sides it switches on a value, and whenever
+/// that value changes the leaving content stays mounted and plays its exit
+/// while the arriving content plays its enter. So it is the same "both sides
+/// live" property as act 5, but driven by a key rather than a two-slot swap —
+/// this closes the AnimatedContent half of B5.
+fn act_6_an_animated_content_keeps_both_sides_live(_host: &mut WidgetHost) {
+    println!("== 6. an animated content keeps both sides live ==");
+
+    let mut host = WidgetHost::new();
+    host.set_size(Size::new(240.0, 80.0));
+
+    let root = host.mount_root(
+        LayoutStyle::default(),
+        AnimatedContent::new(1u32).content_with(|v| {
+            let label = format!("v{v}");
+            Child::new(
+                ChildKey::index(0),
+                LayoutRequest::default(),
+                move || Box::new(Text::new(label.clone())),
+            )
+        }).presence(PresenceTransition::fade(0.2)),
+    );
+    host.frame();
+
+    for _ in 0..30 {
+        host.frame();
+    }
+    let count_text = |host: &WidgetHost| {
+        host.scene()
+            .iter()
+            .filter(|(_, node)| matches!(node, SceneNode::Text { .. }))
+            .count()
+    };
+    let first_alpha = |host: &WidgetHost| {
+        host.scene()
+            .iter()
+            .find_map(|(_, node)| match node {
+                SceneNode::Text { color, .. } => Some(color.a),
+                _ => None,
+            })
+            .expect("a child is mounted")
+    };
+    assert_eq!(count_text(&host), 1, "rests showing one content");
+    assert_eq!(first_alpha(&host), 255, "and it is fully shown");
+
+    // Switch the key to 2. The instant after, both the leaving (1) and arriving
+    // (2) contents are mounted — one still shown, the other still hidden.
+    host.widget_mut::<AnimatedContent<u32>>(root)
+        .expect("the root is an animated content")
+        .set_value(2);
+    host.frame();
+    let both: Vec<u8> = host
+        .scene()
+        .iter()
+        .filter_map(|(_, node)| match node {
+            SceneNode::Text { color, .. } => Some(color.a),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(
+        both.len(),
+        2,
+        "an animated content keeps both contents mounted through the switch"
+    );
+    assert!(
+        both.iter().any(|&a| a == 255) && both.iter().any(|&a| a == 0),
+        "the leaving side is still shown and the arriving side is still hidden \
+         at the start of the switch: {both:?}"
+    );
+
+    for _ in 0..4 {
+        host.frame();
+        assert_eq!(
+            count_text(&host),
+            2,
+            "both contents remain mounted while the switch plays"
+        );
+    }
+
+    for _ in 0..30 {
+        host.frame();
+    }
+    assert_eq!(
+        count_text(&host),
+        1,
+        "once the switch completes only 2 is mounted"
+    );
+    assert_eq!(first_alpha(&host), 255, "and it rests fully shown");
+
+    // And a value that returns mounts a fresh node that replays its enter: the
+    // returning 1 starts from invisible, it does not resurrect the 1 that
+    // already finished.
+    host.widget_mut::<AnimatedContent<u32>>(root)
+        .expect("the root is an animated content")
+        .set_value(1);
+    host.frame();
+    let returned: Vec<u8> = host
+        .scene()
+        .iter()
+        .filter_map(|(_, node)| match node {
+            SceneNode::Text { color, .. } => Some(color.a),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(
+        returned.len(),
+        2,
+        "the returning value and the leaving value are both mounted"
+    );
+    assert!(
+        returned.iter().any(|&a| a == 0),
+        "the returning value replays its enter from invisible: {returned:?}"
+    );
+
+    for _ in 0..30 {
+        host.frame();
+    }
+    assert_eq!(count_text(&host), 1);
+    assert_eq!(first_alpha(&host), 255);
+    println!(
+        "  v1 -> v2 keeps both mounted; v2 -> v1 (a return) replays the enter from invisible"
+    );
 }

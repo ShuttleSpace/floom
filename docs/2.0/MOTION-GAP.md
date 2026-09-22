@@ -182,18 +182,18 @@
 - **代价**：hover / pressed 变色、展开收起、透明度变化——最常见的三个需求在 2.0 全部无 API。
 - **补上判据**：样式属性可声明过渡（属性 + 时长 + 缓动），状态变化时自动启动；hover 变色与展开收起各一条像素黄金。**注意：这条依赖 B1。**
 
-### B5. 过渡层（挂载 / 内容切换 / 共享元素） — **P1 / L** — ◐ 部分交付（S5）
+### B5. 过渡层（挂载 / 内容切换 / 共享元素） — **P1 / L** — ✅ 已交付（S5 + S6）
 
 - **现状（S5 之前）**：只有 overlay 入场（`framework/floem-overlay/src/lib.rs:85-107`，时长硬编码为常量 `ENTRY_SECS = 0.15`，见 `:16`）与原生参与者冻结/解冻（`app/floem-app/src/lib.rs:2190`）。**没有**组件挂载/卸载过渡、内容切换、共享元素。
 - **对标**：Compose `AnimatedVisibility(enter, exit)` / `AnimatedContent` / `Crossfade` / `SharedTransitionLayout`（1.7+）；Flutter `AnimatedSwitcher` / `AnimatedCrossFade` / `Hero`。
 - **交付（S5）**：
   - `Conditional`（`widgets/floem-widgets/src/compose.rs`）新增 `enter(transition)` / `exit(transition)` / `presence(transition)` builder；带过渡时它成为一个相位机 `Hidden → Entering → Shown → Exiting → Hidden`，退场动画播完前**保持子树挂载**、播完才真正卸载——解决了"退场动画必须在子树还在屏上时才看得见"这个核心难点。
   - `Crossfade`（同文件，判据里的 `AnimatedContent` / `Crossfade` **之一**）：`Crossfade::new(show_a).a(child).b(child).presence(transition)`，两个内容以 `absolute_fill()` 叠在同一盒里，交换时**两侧同时保持挂载**——离开的一侧播 exit、到达的一侧播 enter，各自由一枚 `PresenceLeaf`（把 `when` 从 `Arc<AtomicBool>` 读出来的 `Conditional` 包装）复用上面那套 presence 生命周期。默认 `PresenceTransition::fade(0.0)`，即未配置时就是一次即时切换，与无过渡的 `Conditional` 一致。
+  - `AnimatedContent<T>`（S6，判据里 `AnimatedContent` / `Crossfade` 的**另一支**，至此 B5 的"内容切换"判据完全闭合）：`AnimatedContent::new(key).content_with(|v| child).presence(transition)`——它是 `Crossfade` 的 **N 元、按内容键泛化**：每次 `key` 变化，离开的内容以唯一递增 `ChildKey::keyed(id)` 保持挂载播 exit，到达的内容作为全新的叶节点播 enter，二者因此成为两棵独立的子树（互不干扰，且 key 回到旧值时挂载的是**全新的节点**而非复活已结束的那棵）。每枚内容叶是 `PresenceLeaf` 的薄包装 `AnimatedContentLeaf`——只多带一个 `exited: Arc<AtomicBool>`，在自身 exit 完成时置位，让父节点把已结束的退场子树剪掉，避免每次切换泄漏一个隐藏节点。`T: Clone + Eq + Send + Sync + 'static` 即内容键。
   - 词汇落在 `floem-types`：`PresenceTransition { channel, duration_secs, easing }` + `PresenceChannel::{Fade, Grow{from}, Slide{dy}}`，`spec(entering)` 一次描述双向，避免 enter/exit 各写一遍后漂移。
   - 宿主侧两处配套：①`Widget::animation_finished(cx, id)` 回调——声明式动画完成时通知 widget，是 presence 知道"退场播完了"的事件门（`app/floem-app/src/lib.rs::tick_node_animations`）；②绘制 walk 把 **fold 类**（opacity / translate）合成属性**向下传给子树**，于是一个 presence 节点的淡入淡出作用到整棵子树而非只有自身（scale/rotate 仍走既有的 Group 作用域，不叠加）。
-  - 判据：`app/floem-app/tests/motion_host.rs` 五条——首帧淡入、退场中途仍挂载且已变暗、退场播完才卸载、无过渡时退场即时卸载、grow 退场同样延迟卸载，外加 `a_crossfade_keeps_both_children_mounted_while_it_swaps`（交换中途**两侧**都在屏上、且分别处于淡入淡出的两端，交换结束后只剩到达侧）；黄金示例 `floem2-motion` 第四幕（presence 延迟卸载）与第五幕（crossfade 两侧同屏）；并用**变异**证伪。
+  - 判据：`app/floem-app/tests/motion_host.rs` 五条——首帧淡入、退场中途仍挂载且已变暗、退场播完才卸载、无过渡时退场即时卸载、grow 退场同样延迟卸载，外加 `a_crossfade_keeps_both_children_mounted_while_it_swaps`（交换中途**两侧**都在屏上、且分别处于淡入淡出的两端，交换结束后只剩到达侧）；S6 新增 `an_animated_content_keeps_both_sides_live_while_it_switches` / `an_animated_content_swaps_instantly_without_a_transition` / `an_animated_content_replays_enter_when_a_value_returns`（按内容键切换中途两侧同屏、无过渡即时切换、返回值重放 enter）；黄金示例 `floem2-motion` 第四幕（presence 延迟卸载）、第五幕（crossfade 两侧同屏）与第六幕（AnimatedContent 按键切换 + 返回值重放）；并用**变异**证伪。
 - **未做（明确子集，按判据允许在此写明）**：
-  - `AnimatedContent`（按内容键做通用的"旧子树 → 新子树"大小/位移过渡；`Crossfade` 已覆盖判据里"`AnimatedContent` 或 Crossfade **之一**"这一支）。
   - **共享元素**（`SharedTransitionLayout` / `Hero`）：需要布局坐标在两个子树间共享，超出本次范围——**判据允许"不做完整 SharedTransitionLayout 也算达标"，此处明确记录：本次未做共享元素，也未提供其示例与快照**。
   - 退出子树仍参与命中测试与可访问性树（退场期间子树仍"存在"，未把它从语义层摘除——已知限制，待后续切片处理）。
 - **补上判据（原）**：`Conditional` 支持 enter/exit 过渡；`AnimatedContent` 或 Crossfade 之一；共享元素给一个示例 + 快照（不做完整 SharedTransitionLayout 也算达标，但必须**在文档里写明只做了哪个子集**）。

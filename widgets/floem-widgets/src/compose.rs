@@ -552,6 +552,294 @@ impl Widget for Crossfade {
 }
 
 // ---------------------------------------------------------------------------
+// AnimatedContent
+// ---------------------------------------------------------------------------
+
+/// A content-keyed presence transition: whenever the tracked `value` changes,
+/// the outgoing content stays mounted and plays its exit while the incoming
+/// content plays its enter. [`Crossfade`] is the two-value special case; this
+/// is the N-ary, key-driven generalisation Flutter calls `AnimatedSwitcher`.
+///
+/// The transition is supplied once with [`AnimatedContent::presence`]; every
+/// side plays it. A non-positive duration collapses to an instant swap. The
+/// defining property is the one [`Crossfade`] has to keep too: the leaving
+/// content must remain on screen until its exit animation is over, or the
+/// departure is invisible.
+///
+/// `T` is the *content key* — it decides, by `Eq`, when a switch has happened,
+/// and the content for each key comes from the closure passed to
+/// [`AnimatedContent::content_with`]. Two simultaneously-live keys (the leaving
+/// and the arriving) are therefore two distinct subtrees, each animating on its
+/// own.
+#[derive(Clone)]
+pub struct AnimatedContent<T: Clone + Eq + Send + Sync + 'static> {
+    value: T,
+    last_value: T,
+    build: Option<Arc<dyn Fn(&T) -> Child + Send + Sync>>,
+    transition: PresenceTransition,
+    /// One live subtree per currently-mounted-or-exiting value. Each gets a
+    /// unique, ever-increasing id used as its [`ChildKey`], so two different
+    /// values never collide and a value that returns later mounts a fresh node
+    /// rather than resurrecting a finished one.
+    entries: Vec<AnimatedContentSlot>,
+    next_id: u64,
+    /// The id of the entry currently shown at rest (the one *not* exiting).
+    /// `None` until the first content is mounted.
+    active_id: Option<u64>,
+}
+
+/// A live subtree for one value, plus the bookkeeping that lets the parent
+/// prune it once its exit has finished.
+#[derive(Clone)]
+struct AnimatedContentSlot {
+    id: u64,
+    leaf: AnimatedContentLeaf,
+}
+
+/// A [`PresenceLeaf`] that additionally reports when *its own* exit has
+/// completed, so the parent [`AnimatedContent`] can drop the finished subtree
+/// instead of leaking a hidden node on every switch.
+///
+/// Everything but `exited` delegates to the inner [`PresenceLeaf`], which
+/// already owns the enter/exit lifecycle; this wrapper only adds the one bit of
+/// state the parent needs and the inner leaf cannot see. The content lives in
+/// the wrapped [`Conditional`] as a [`Child`], so this wrapper itself carries
+/// no `T` — which is why it is not generic.
+#[derive(Clone)]
+struct AnimatedContentLeaf {
+    inner: PresenceLeaf,
+    exited: Arc<AtomicBool>,
+}
+
+impl AnimatedContentLeaf {
+    fn new(child: Child, transition: PresenceTransition, shown: bool) -> Self {
+        let signal = Arc::new(AtomicBool::new(shown));
+        Self {
+            inner: PresenceLeaf {
+                inner: Conditional::new(shown).show(child).presence(transition),
+                when_signal: signal,
+            },
+            exited: Arc::new(AtomicBool::new(false)),
+        }
+    }
+
+    /// Re-points the wrapped transition; used when `presence` is configured
+    /// after the initial content was already spawned.
+    fn set_transition(&mut self, transition: PresenceTransition) {
+        self.inner.inner.enter = Some(transition);
+        self.inner.inner.exit = Some(transition);
+    }
+
+    fn semantics_hint(&self) -> SemanticsHint {
+        self.inner.semantics_hint()
+    }
+}
+
+impl Widget for AnimatedContentLeaf {
+    fn create(&self, cx: &mut dyn CreateContext) -> ElementId {
+        cx.alloc_child()
+    }
+
+    fn update(&mut self, cx: &mut dyn UpdateContext, id: ElementId) {
+        self.inner.update(cx, id);
+    }
+
+    fn children(&self) -> Vec<Child> {
+        self.inner.children()
+    }
+
+    fn animation(&self) -> Option<floem_core::AnimationSpec> {
+        self.inner.animation()
+    }
+
+    fn animation_finished(&mut self, cx: &mut dyn UpdateContext, id: ElementId) {
+        // Only an *exiting* leaf may be pruned; the one arriving at rest stays.
+        // `when_signal` is false exactly while this leaf is leaving.
+        let exiting = !self.inner.when_signal.load(Ordering::Relaxed);
+        self.inner.animation_finished(cx, id);
+        if exiting {
+            self.exited.store(true, Ordering::Relaxed);
+        }
+    }
+
+    fn paint(&self, cx: &mut dyn PaintContext, id: ElementId) {
+        self.inner.paint(cx, id);
+    }
+
+    fn semantics(&self, cx: &mut dyn SemanticsContext, id: ElementId) {
+        self.inner.semantics(cx, id);
+    }
+}
+
+impl WidgetAny for AnimatedContentLeaf {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
+    }
+
+    fn semantics_hint(&self) -> Option<floem_core::SemanticsHint> {
+        Some(<Self>::semantics_hint(self).into())
+    }
+}
+
+impl<T: Clone + Eq + Send + Sync + 'static> AnimatedContent<T> {
+    /// Starts tracking `value`; the content for it is supplied by
+    /// [`AnimatedContent::content_with`].
+    pub fn new(value: T) -> Self {
+        Self {
+            value: value.clone(),
+            last_value: value,
+            build: None,
+            transition: PresenceTransition::fade(0.0),
+            entries: Vec::new(),
+            next_id: 0,
+            active_id: None,
+        }
+    }
+
+    /// Produces the child for each value. Called once per switch (and once for
+    /// the initial value), so the leaving and arriving subtrees can differ.
+    pub fn content_with(
+        mut self,
+        build: impl Fn(&T) -> Child + Send + Sync + 'static,
+    ) -> Self {
+        self.build = Some(Arc::new(build));
+        self.spawn_initial();
+        self
+    }
+
+    /// Convenience for a single static child regardless of value.
+    pub fn content(mut self, child: Child) -> Self {
+        self.build = Some(Arc::new(move |_| child.clone()));
+        self.spawn_initial();
+        self
+    }
+
+    /// The transition each side plays as it arrives or leaves. A fade by
+    /// default; a non-positive duration is treated as an instant swap.
+    pub fn presence(mut self, transition: PresenceTransition) -> Self {
+        self.transition = transition;
+        for slot in &mut self.entries {
+            slot.leaf.set_transition(transition);
+        }
+        self
+    }
+
+    /// Switches to `value`; the next frame crossfades if it differs from the
+    /// current one.
+    pub fn set_value(&mut self, value: T) {
+        self.value = value;
+    }
+
+    /// Builds and mounts the content for the current `value` as a new, entering
+    /// entry. Returns its id, or `None` if no content closure was supplied.
+    fn spawn_entry(&mut self) -> Option<u64> {
+        let build = self.build.clone()?;
+        let id = self.next_id;
+        self.next_id = self.next_id.wrapping_add(1);
+        let child = build(&self.value);
+        let leaf = AnimatedContentLeaf::new(child, self.transition, true);
+        self.entries.push(AnimatedContentSlot { id, leaf });
+        Some(id)
+    }
+
+    /// Mounts the initial entry; called from the content builders so the first
+    /// frame already shows content.
+    fn spawn_initial(&mut self) {
+        if let Some(id) = self.spawn_entry() {
+            self.active_id = Some(id);
+        }
+    }
+
+    pub fn semantics_hint(&self) -> SemanticsHint {
+        SemanticsHint::decorative()
+    }
+}
+
+impl<T: Clone + Eq + Send + Sync + 'static> Widget for AnimatedContent<T> {
+    fn create(&self, cx: &mut dyn CreateContext) -> ElementId {
+        cx.alloc_child()
+    }
+
+    fn update(&mut self, cx: &mut dyn UpdateContext, id: ElementId) {
+        // Drop finished exits first, so a long burst of switches cannot leak
+        // hidden nodes. The active entry is never pruned.
+        if self.entries.len() > 1 {
+            let before = self.entries.len();
+            self.entries.retain(|slot| {
+                slot.id == self.active_id.unwrap_or(u64::MAX)
+                    || !slot.leaf.exited.load(Ordering::Relaxed)
+            });
+            if self.entries.len() != before {
+                cx.mark_children_dirty(id);
+            }
+        }
+
+        // Nothing mounted yet (no content closure, or not yet spawned): remember
+        // the value and mount the initial entry if we can.
+        if self.entries.is_empty() {
+            self.last_value = self.value.clone();
+            if let Some(new_id) = self.spawn_entry() {
+                self.active_id = Some(new_id);
+                cx.mark_children_dirty(id);
+            }
+            return;
+        }
+
+        // A value change: flip the resting entry to exit and spawn the new one.
+        if self.value != self.last_value {
+            self.last_value = self.value.clone();
+            if let Some(active_id) = self.active_id {
+                if let Some(slot) = self.entries.iter_mut().find(|s| s.id == active_id) {
+                    slot.leaf.inner.when_signal.store(false, Ordering::Relaxed);
+                }
+            }
+            if let Some(new_id) = self.spawn_entry() {
+                self.active_id = Some(new_id);
+                cx.mark_children_dirty(id);
+            }
+        }
+    }
+
+    fn children(&self) -> Vec<Child> {
+        self.entries
+            .iter()
+            .map(|slot| {
+                let leaf = slot.leaf.clone();
+                Child::new(
+                    ChildKey::keyed(slot.id),
+                    LayoutRequest::new().absolute_fill(),
+                    move || Box::new(leaf.clone()),
+                )
+            })
+            .collect()
+    }
+
+    fn paint(&self, _cx: &mut dyn PaintContext, _id: ElementId) {}
+
+    fn semantics(&self, cx: &mut dyn SemanticsContext, _id: ElementId) {
+        crate::primitives::emit_semantics(self.semantics_hint(), cx);
+    }
+}
+
+impl<T: Clone + Eq + Send + Sync + 'static> WidgetAny for AnimatedContent<T> {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
+    }
+
+    fn semantics_hint(&self) -> Option<floem_core::SemanticsHint> {
+        Some(<Self>::semantics_hint(self).into())
+    }
+}
+
+// ---------------------------------------------------------------------------
 // Overlay-backed surface plumbing
 // ---------------------------------------------------------------------------
 

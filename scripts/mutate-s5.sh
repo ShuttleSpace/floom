@@ -110,5 +110,13 @@ mutate_one "$COMPOSE" \
   "cargo run -q -p floem2-motion" \
   "example-presence-act-has-teeth"
 
+# A restore-by-copy can land inside the same second as the mutated build, and
+# cargo fingerprints on mtime — so leave every file this campaign touched newer
+# than its last artifact. Then *re-run the suite before trusting any count*: a
+# stale binary passing (or failing) is indistinguishable from a real result.
+touch "$COMPOSE" "$MOTION"
+
 echo "=== campaign results ==="
 cat "$RESULTS"
+echo
+echo "NOTE: verify with a clean full run afterwards; see the touch above."
