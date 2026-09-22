@@ -20,7 +20,7 @@ use floem_core::{Child, ChildKey, LayoutRequest};
 use floem_layout::LayoutStyle;
 use floem_scene::SceneNode;
 use floem_types::{Color, Event, Point, PointerEvent, PresenceTransition, Rect, Size, Transition};
-use floem_widgets::{AnimatedContent, Button, Conditional, Container, Crossfade, Progress, Text};
+use floem_widgets::{AnimatedContent, Button, Conditional, Container, Crossfade, Opacity, Progress, Text};
 
 /// A host with one text leaf on screen and one frame behind it, so layout has
 /// run and the scene holds a painted text node to watch.
@@ -1407,4 +1407,129 @@ fn an_animated_content_replays_enter_when_a_value_returns() {
     }
     assert_eq!(child_text_count(&host), 1);
     assert_eq!(child_text_alphas(&host), vec![255]);
+}
+
+// ---------------------------------------------------------------------------
+// B4 — implicit opacity transition (the colour channel extended to compositor
+// opacity)
+//
+// `Button::transition` already animates *colour* by reading the host's sampled
+// progress in paint. `Opacity` animates the compositor opacity channel instead,
+// so the same "change the value and it animates" contract now covers a whole
+// subtree's transparency. The host applies the declared `AnimationSpec::prop`
+// to the compositor and folds it onto the children, so no host change is
+// needed — these tests only watch the alpha of the text the subtree paints.
+// ---------------------------------------------------------------------------
+
+/// A host whose root is an `Opacity` wrapping a `Text` child, at `value`
+/// opacity, optionally with an implicit transition. One frame has run.
+fn host_with_opacity(value: f32, transition: Option<Transition>) -> (WidgetHost, NodeId) {
+    let mut host = WidgetHost::new();
+    host.set_size(Size::new(200.0, 80.0));
+    let child = Child::new(ChildKey::index(1), LayoutRequest::default(), || {
+        Box::new(Text::new("hi"))
+    });
+    let opacity = Opacity::new(child).opacity(value);
+    let opacity = match transition {
+        Some(t) => opacity.transition(t),
+        None => opacity,
+    };
+    let root = host.mount_root(LayoutStyle::default(), opacity);
+    host.frame();
+    (host, root)
+}
+
+/// A change of target fades the subtree from its old opacity to the new one
+/// rather than snapping.
+#[test]
+fn an_opacity_transition_fades_from_its_old_value_to_the_new_one() {
+    let (mut host, root) = host_with_opacity(1.0, Some(Transition::new(0.2)));
+
+    // Rests fully shown before any change.
+    assert_eq!(child_text_alpha(&host), Some(255));
+
+    // Change the target; the next frames fade from the old (1.0) toward 0.5.
+    host.widget_mut::<Opacity>(root)
+        .expect("the root is an opacity")
+        .set_opacity(0.5);
+    for _ in 0..3 {
+        host.frame();
+    }
+    let mid = child_text_alpha(&host).expect("child present");
+    assert!(mid < 255, "the fade has left full opacity: {mid}");
+    assert!(mid > 140, "but has not yet arrived at 0.5: {mid}");
+
+    // Run it out: it lands at ~0.5 (127) rather than snapping to an endpoint.
+    for _ in 0..30 {
+        host.frame();
+    }
+    let settled = child_text_alpha(&host).expect("child present");
+    assert!(settled < 155, "it faded down toward 0.5: {settled}");
+    assert!(settled > 110, "and did not under-shoot past it: {settled}");
+    assert_eq!(host.animations_running(), 0, "and then rests");
+}
+
+/// Without a transition the new opacity is applied on the very next frame.
+#[test]
+fn an_opacity_without_a_transition_is_applied_instantly() {
+    let (mut host, root) = host_with_opacity(1.0, None);
+
+    assert_eq!(child_text_alpha(&host), Some(255), "starts opaque");
+
+    host.widget_mut::<Opacity>(root)
+        .expect("the root is an opacity")
+        .set_opacity(0.5);
+    host.frame();
+
+    // No transition → the new opacity is applied on the very next frame.
+    let alpha = child_text_alpha(&host).expect("child present");
+    assert!(alpha < 135 && alpha > 119, "0.5 applied instantly: {alpha}");
+
+    // The zero-duration tween the static value rides on completes on the next
+    // frame, so there is no animation left running.
+    host.frame();
+    assert_eq!(
+        host.animations_running(),
+        0,
+        "and there is no animation running"
+    );
+}
+
+/// A transition that returns to its old value fades back up from where it
+/// rested, not from where the subtree was born. This is the teeth for the
+/// `from = last_target` arm: drop it and the 0.5 → 1.0 leg snaps to full
+/// opacity because `from` stays at the initial 1.0.
+#[test]
+fn an_opacity_transition_reverses_to_its_old_value_when_it_returns() {
+    let (mut host, root) = host_with_opacity(1.0, Some(Transition::new(0.2)));
+
+    // 1.0 → 0.5 and settle.
+    host.widget_mut::<Opacity>(root)
+        .expect("the root is an opacity")
+        .set_opacity(0.5);
+    for _ in 0..30 {
+        host.frame();
+    }
+    let faded = child_text_alpha(&host).expect("child present");
+    assert!(faded < 155 && faded > 110, "control: it faded to ~0.5: {faded}");
+
+    // 0.5 → 1.0: must fade back up from 0.5, not jump.
+    host.widget_mut::<Opacity>(root)
+        .expect("the root is an opacity")
+        .set_opacity(1.0);
+    host.frame();
+    let just_started = child_text_alpha(&host).expect("child present");
+    assert!(
+        just_started < 255,
+        "it did not snap back to full opacity: {just_started}"
+    );
+
+    for _ in 0..30 {
+        host.frame();
+    }
+    assert_eq!(
+        child_text_alpha(&host),
+        Some(255),
+        "and lands fully shown again"
+    );
 }

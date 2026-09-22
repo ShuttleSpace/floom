@@ -1,6 +1,6 @@
 //! Motion, from the prelude alone.
 //!
-//! Six acts, each one a capability that did not exist before S1 and each one
+//! Seven acts, each one a capability that did not exist before S1 and each one
 //! asserted rather than described, because "it animates" is the easiest claim
 //! in this codebase to write down and never check:
 //!
@@ -29,6 +29,12 @@
 //!    the tracked value and the leaving content stays mounted (exit) while the
 //!    arriving one enters, and a value that returns mounts a fresh node that
 //!    replays its enter. This closes the AnimatedContent half of B5.
+//! 7. **An opacity transition fades instead of snapping.** Change a subtree's
+//!    target opacity and the whole subtree fades there — this is the B4
+//!    "change-the-value-and-it-animates" layer extended from colour (which
+//!    `Button::transition` drives through paint) to the compositor opacity
+//!    channel, the Flutter `AnimatedOpacity` half. A value that returns fades
+//!    back up from where it rested, not from where it was born.
 //!
 //! Everything below is `floem2::prelude` — no crate below the facade is named.
 //! Run with `cargo run -p floem2-motion`.
@@ -77,6 +83,7 @@ fn main() {
     act_4_a_presence_transition_delays_unmount(&mut host);
     act_5_a_crossfade_keeps_both_sides_live(&mut host);
     act_6_an_animated_content_keeps_both_sides_live(&mut host);
+    act_7_an_opacity_transition_fades_instead_of_snapping(&mut host);
 
     println!();
     println!("every act above was asserted, not printed");
@@ -550,4 +557,72 @@ fn act_6_an_animated_content_keeps_both_sides_live(_host: &mut WidgetHost) {
     println!(
         "  v1 -> v2 keeps both mounted; v2 -> v1 (a return) replays the enter from invisible"
     );
+}
+
+/// The implicit opacity transition: change a subtree's target opacity and it
+/// fades there instead of snapping. This is the B4 "change-the-value-and-it-
+/// animates" layer extended from colour (which `Button::transition` drives
+/// through paint) to the compositor opacity channel — the Flutter
+/// `AnimatedOpacity` half.
+fn act_7_an_opacity_transition_fades_instead_of_snapping(_host: &mut WidgetHost) {
+    println!("== 7. an opacity transition fades instead of snapping ==");
+
+    let mut host = WidgetHost::new();
+    host.set_size(Size::new(240.0, 80.0));
+    let child = Child::new(
+        ChildKey::index(1),
+        LayoutRequest::default(),
+        || Box::new(Text::new("hi")),
+    );
+    let root = host.mount_root(
+        LayoutStyle::default(),
+        Opacity::new(child).opacity(1.0).transition(Transition::new(0.2)),
+    );
+    host.frame();
+
+    let first_alpha = |host: &WidgetHost| {
+        host.scene()
+            .iter()
+            .find_map(|(_, node)| match node {
+                SceneNode::Text { color, .. } => Some(color.a),
+                _ => None,
+            })
+            .expect("a child is mounted")
+    };
+
+    assert_eq!(first_alpha(&host), 255, "rests fully shown");
+
+    // Change the target to 0.5. A few frames in it is strictly between the
+    // endpoints — it animated rather than snapped.
+    host.widget_mut::<Opacity>(root)
+        .expect("the root is an opacity")
+        .set_opacity(0.5);
+    for _ in 0..3 {
+        host.frame();
+    }
+    let mid = first_alpha(&host);
+    assert!(mid < 255, "the fade has left full opacity: {mid}");
+    assert!(mid > 140, "but has not yet arrived at 0.5: {mid}");
+
+    for _ in 0..30 {
+        host.frame();
+    }
+    let settled = first_alpha(&host);
+    assert!(settled < 155 && settled > 110, "it landed near 0.5: {settled}");
+
+    // And back to 1.0: it fades up from 0.5, not from the initial 1.0.
+    host.widget_mut::<Opacity>(root)
+        .expect("the root is an opacity")
+        .set_opacity(1.0);
+    host.frame();
+    let just_started = first_alpha(&host);
+    assert!(
+        just_started < 255,
+        "it did not snap back to full opacity: {just_started}"
+    );
+    for _ in 0..30 {
+        host.frame();
+    }
+    assert_eq!(first_alpha(&host), 255, "and lands fully shown again");
+    println!("  1.0 -> 0.5 fades; 0.5 -> 1.0 fades back up from 0.5, not from 1.0");
 }

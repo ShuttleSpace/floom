@@ -23,9 +23,9 @@ use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 
 use floem_accessibility::SemanticsRole;
 use floem_core::{
-    Align, Axis, Child, ChildKey, CreateContext, ElementId, LayoutRequest, OverlayHandle,
-    OverlayKind, OverlayRequest, PaintContext, PresenceTransition, Rect, SemanticsContext,
-    UpdateContext, Widget, WidgetAny,
+    Align, AnimationSpec, Axis, Child, ChildKey, CompositorProp, CreateContext, Easing, ElementId,
+    LayoutRequest, OverlayHandle, OverlayKind, OverlayRequest, PaintContext, PresenceTransition,
+    Rect, SemanticsContext, Transition, UpdateContext, Widget, WidgetAny,
 };
 
 use crate::controls::Button;
@@ -833,6 +833,131 @@ impl<T: Clone + Eq + Send + Sync + 'static> WidgetAny for AnimatedContent<T> {
 
     fn semantics_hint(&self) -> Option<floem_core::SemanticsHint> {
         Some(<Self>::semantics_hint(self).into())
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Opacity — implicit opacity transition (B4 extended from colour to the
+// compositor opacity channel)
+// ---------------------------------------------------------------------------
+
+/// A single-child wrapper that applies an opacity to its subtree, with an
+/// optional implicit transition: change the target and the subtree fades from
+/// its old opacity to the new one instead of snapping. This is the B4
+/// "change-the-value-and-it-animates" layer extended from colour — which
+/// `Button::transition` drives through paint — to the compositor opacity
+/// channel: the Flutter `AnimatedOpacity` / Compose `AnimatedVisibility`
+/// opacity half.
+///
+/// When no transition is set, the opacity is *still* applied: a static
+/// `Opacity(0.3)` is a real, visible state, not a no-op. The mechanism is the
+/// same in both cases — every `Opacity` declares one compositor-driven tween
+/// whose endpoints are its old and new value, so the host folds the
+/// interpolated alpha onto the whole subtree (and, being a fold-class
+/// channel, onto the children too).
+#[derive(Clone)]
+pub struct Opacity {
+    child: Child,
+    /// The opacity the subtree is heading toward, `0.0..=1.0`.
+    target: f32,
+    /// The value the current transition started from — the subtree's previously
+    /// rested opacity. Mirrors `Button::transition_from`: a mid-flight reversal
+    /// restarts from here rather than from the currently displayed value.
+    from: f32,
+    /// The target as of the last `update`, compared against `target` to detect
+    /// a change worth animating.
+    last_target: f32,
+    /// The implicit transition shape. `None` means "snap to the new value".
+    transition: Option<Transition>,
+    /// Bumped every time `target` changes while a transition is armed, so the
+    /// host sees a *new* declaration and restarts the tween rather than leaving
+    /// the finished one parked.
+    rev: u64,
+}
+
+impl Opacity {
+    /// Wraps `child`, fully opaque by default.
+    pub fn new(child: Child) -> Self {
+        Self {
+            child,
+            target: 1.0,
+            from: 1.0,
+            last_target: 1.0,
+            transition: None,
+            rev: 0,
+        }
+    }
+
+    /// Sets the resting opacity. The change is detected on the next `update`;
+    /// no animation is armed here.
+    pub fn opacity(mut self, value: f32) -> Self {
+        let value = value.clamp(0.0, 1.0);
+        self.target = value;
+        self.from = value;
+        self.last_target = value;
+        self
+    }
+
+    /// Arms the implicit opacity transition: changing the target fades the
+    /// subtree from its old opacity to the new one over `transition`.
+    pub fn transition(mut self, transition: Transition) -> Self {
+        self.transition = Some(transition);
+        self
+    }
+
+    /// Changes the target opacity at runtime; the next frame animates (or snaps
+    /// if no transition is armed).
+    pub fn set_opacity(&mut self, value: f32) {
+        self.target = value.clamp(0.0, 1.0);
+    }
+
+    pub fn semantics_hint(&self) -> SemanticsHint {
+        SemanticsHint::decorative()
+    }
+}
+
+impl Widget for Opacity {
+    fn create(&self, cx: &mut dyn CreateContext) -> ElementId {
+        cx.alloc_child()
+    }
+
+    fn update(&mut self, cx: &mut dyn UpdateContext, id: ElementId) {
+        if self.target != self.last_target {
+            // A transition starts from the previously rested value. Without a
+            // transition the change still needs to reach the compositor, so the
+            // key is bumped and the declaration re-synced in every case.
+            if self.transition.is_some() {
+                self.from = self.last_target;
+            }
+            self.rev = self.rev.wrapping_add(1);
+            self.last_target = self.target;
+            // Re-sync the declared animation on this node so the host restarts
+            // (or parks the new instant value for) the compositor tween.
+            cx.mark_dirty(id);
+        }
+    }
+
+    fn children(&self) -> Vec<Child> {
+        vec![self.child.clone()]
+    }
+
+    fn animation(&self) -> Option<AnimationSpec> {
+        let (from, to, duration) = match self.transition {
+            Some(t) => (f64::from(self.from), f64::from(self.target), t.duration_secs),
+            // No transition: an instant tween whose endpoints coincide parks
+            // the static value on the compositor.
+            None => (f64::from(self.target), f64::from(self.target), 0.0),
+        };
+        Some(
+            AnimationSpec::new(from, to, duration)
+                .with_easing(self.transition.map_or(Easing::Linear, |t| t.easing))
+                .with_prop(CompositorProp::Opacity(0.0))
+                .with_key(self.rev),
+        )
+    }
+
+    fn semantics(&self, cx: &mut dyn SemanticsContext, _id: ElementId) {
+        crate::primitives::emit_semantics(self.semantics_hint(), cx);
     }
 }
 

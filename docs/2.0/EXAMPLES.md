@@ -24,7 +24,7 @@ something stale.
 | `floem2-transform` | subtree transforms: a card that scales and rotates as one picture | all | headless |
 | `floem2-style` | style that is made of something: a gradient card, a real drop shadow, an implicit hover fade armed with a design-system motion token, a blurred card whose ink crosses its own edge, and a frosted panel that greys the edge behind it | all | headless |
 | `floem2-editor` | text document: transactions, selection, undo/redo, IME pre-edit | all | headless |
-| `floem2-motion` | eased tweens, interruption, a control that animates itself, presence enter/exit, a crossfade that keeps both sides alive, and an `AnimatedContent` that keeps both sides alive by key | all | headless |
+| `floem2-motion` | eased tweens, interruption, a control that animates itself, presence enter/exit, a crossfade that keeps both sides alive, an `AnimatedContent` that keeps both sides alive by key, and an `Opacity` that fades a subtree instead of snapping | all | headless |
 | `floem2-native-plugin` | writing a native provider plugin + slot pooling | all | headless |
 | `floem2-probe` | device probe: one window holding every control the on-screen cases need | desktop | **display-gated** — `--features real`, driven by hand |
 | `floem2-window` | a real OS window: winit + vello GPU | desktop | **verified on macOS** |
@@ -171,10 +171,11 @@ edge read inside the panel (grey) and outside it (still a step).
 
 ### `floem2-motion`
 
-Motion, end to end (MOTION-GAP B1/B2/B3/B5): a curve is not a duration,
+Motion, end to end (MOTION-GAP B1/B2/B3/B4/B5): a curve is not a duration,
 interruption carries what it interrupted, a control animates itself, a presence
-transition delays unmount, a crossfade keeps *both* sides alive, and an
-`AnimatedContent` keeps both sides alive *by key*.
+transition delays unmount, a crossfade keeps *both* sides alive, an
+`AnimatedContent` keeps both sides alive *by key*, and an `Opacity` fades a
+subtree instead of snapping it.
 
 ```text
 == 4. a presence transition delays unmount ==
@@ -183,6 +184,8 @@ transition delays unmount, a crossfade keeps *both* sides alive, and an
   A and B both stay on screen during the swap; A unmounts only when its exit finishes
 == 6. an animated content keeps both sides live ==
   v1 -> v2 keeps both mounted; v2 -> v1 (a return) replays the enter from invisible
+== 7. an opacity transition fades instead of snapping ==
+  1.0 -> 0.5 fades; 0.5 -> 1.0 fades back up from 0.5, not from 1.0
 ```
 
 Act 4 is the enter/exit half of B5: a subtree leaving the screen stays mounted
@@ -194,7 +197,11 @@ is left once the swap completes. Act 6 generalises act 5 to a content key:
 `AnimatedContent::new(key).content_with(|v| child).presence(transition)` switches
 the tracked value and keeps the leaving subtree mounted (exit) while the arriving
 one enters; a value that returns mounts a *fresh* node that replays its enter from
-invisible rather than resurrecting the one that already finished.
+invisible rather than resurrecting the one that already finished. Act 7 is the
+B4 opacity half: `Opacity::new(child).opacity(1.0).transition(transition)` wraps
+a subtree, and changing the target opacity fades the whole subtree through the
+compositor opacity channel (S3's fold-class) instead of snapping — a value that
+returns fades back up from where it rested, not from where it was born.
 
 ### `floem2-window`
 

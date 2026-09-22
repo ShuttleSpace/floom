@@ -31,8 +31,8 @@ pub use widget_any::{to_core_role, to_core_state};
 /// Self-drawn surfaces: a closure-driven drawing board and a loading spinner.
 pub use canvas::{Canvas, Spinner};
 pub use compose::{
-    AnimatedContent, BottomSheet, Conditional, Crossfade, Dialog, Grid, List, Overlay, Popup,
-    Stack, Tabs,
+    AnimatedContent, BottomSheet, Conditional, Crossfade, Dialog, Grid, List, Opacity, Overlay,
+    Popup, Stack, Tabs,
 };
 pub use controls::{
     Button, Checkbox, InteractionState, Progress, Radio, Select, Slider, Switch, TextField,

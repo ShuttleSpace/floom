@@ -174,11 +174,13 @@
 - **代价（已可见）**：spinner、骨架屏（shimmer）、marquee、脉冲全都做不了——2.0 自己的不确定态进度条就卡在这，注释写着"animation comes later with `floem-animation`"（`widgets/floem-widgets/src/controls.rs:1725`，控件本体见 `:1627`）。
 - **补上判据**：`AnimKind::Repeat { spec, iterations: Option<u32>, mode: Reverse|Restart }`；不确定态 Progress 用它实现；**并加一条"无限动画不等于每帧分配"的预算断言**（否则稳定帧预算会被它吃掉）。
 
-### B4. ~~没有"改值即动"的隐式层~~ — **P1 / M** — ✅ 已交付（S4，最小集合）
+### B4. ~~没有"改值即动"的隐式层~~ — **P1 / M** — ✅ 已交付（S4 颜色；S8 透明度）
 
-- **交付**：`AnimationSpec::key` 让"我的目标值变了"与"我又声明了一次同样的动画"可以被区分（否则过渡永不重播）；`Transition { duration_secs, easing }` + `Button::transition`，hover/press 的填充色沿主机采样的 `0..=1` 插值，中途反向从**当前颜色**起算而非回到静止色。
-- **只做最小集合**：颜色一条。尺寸/透明度/位移是同一个标量通道的重复实现，等有真实消费点再加（见反面清单第 3 条）。
-- **黄金**：`floem2-style` 第三幕（过渡按钮逐帧走、无过渡控件一帧到位、两者终值相同）+ `app/floem-app/tests/motion_host.rs`。
+- **交付**：`AnimationSpec::key` 让"我的目标值变了"与"我又声明了一次同样的动画"可以被区分（否则过渡永不重播）；`Transition { duration_secs, easing }` 接两条通道：
+  - **颜色**（S4）：`Button::transition`，hover/press 的填充色沿主机采样的 `0..=1` 插值，中途反向从**当前颜色**起算而非回到静止色。
+  - **透明度**（S8）：`Opacity` 控件包裹单子树，改写目标透明度时整棵子树沿 `CompositorProp::Opacity` 淡入/淡出——复用 S3 已落地的 fold 类合成通道（opacity 向下传给子树），**不改宿主**：控件只在 `Widget::animation` 返回一个带 `with_prop(CompositorProp::Opacity(..))` 的 `AnimationSpec`，宿主本就把声明式动画的 `prop` 折进场景。无过渡时透明度仍以"零时长规范"即时落定（仍是真实可见的静止态，不是 no-op）。
+- **未做**：`尺寸`（真正移除布局空间的折叠）仍需要布局耦合——`run_layout` 只在 `layout_dirty` 时跑，目前隐式层不逐帧重排，留待后续切片；`位移` 与透明度是**同一个机制**（换一个 `CompositorProp::TranslateX/Y` 变体即可，且同样 fold 类），只是还没有真实消费点，未专门做控件。
+- **黄金**：`floem2-style` 第三幕（过渡按钮逐帧走、无过渡控件一帧到位、两者终值相同）；`floem2-motion` 第七幕（`Opacity` 改值淡出、返回值从停留处淡回）；`app/floem-app/tests/motion_host.rs` 三条（`an_opacity_transition_fades_from_its_old_value_to_the_new_one` / `an_opacity_without_a_transition_is_applied_instantly` / `an_opacity_transition_reverses_to_its_old_value_when_it_returns`）。并用**变异**证伪（`scripts/mutate-s8.sh`）。
 - **旧判据原文**：
 
 - **现状**：2.0 **没有**任何样式属性过渡机制（`Transition` / `easing` 在 2.0 目录零命中）。v1 有 `.transition(Background, Transition::ease_in_out(500.millis()))`（`examples/themes/src/main.rs:25-93`、`src/style/transition.rs`）。
@@ -265,6 +267,8 @@ A8 独立，随时可做（但越早越好——它是"自绘控件在无障碍�
 
 | **S7 让滤镜"成立"** ✅ 已交付 | A4（后半：通用滤镜） | M | `Filter` 词汇 + `FilterPush/FilterPop` 内容过滤 + `BackdropFilter` 背景过滤；软件后端换缓冲做真图层模糊（预乘通道），vello 跳过并计 `filters_skipped`，skia 记录为 saveLayer；`Widget::filter()` 让宿主括包整棵子树，`PaintContext::backdrop_filter` 是背景那一路的入口；`Container::blur()` / `Container::backdrop_blur()` 是消费点；示例 `floem2-style` 第五、六幕 |
 
+| **S8 补 B4 透明度通道** ✅ 已交付 | B4（透明度子集） | S | `Opacity` 控件把隐式过渡从颜色扩到合成透明度通道：包裹单子树，改目标透明度时整棵子树沿 `CompositorProp::Opacity` 淡入/淡出，复用 S3 的 fold 类合成（不改宿主）；无过渡时透明度以"零时长规范"即时落定仍为真实可见态。示例 `floem2-motion` 第七幕；`motion_host.rs` 三条 + 变异证伪 |
+
 所有切片完成后，与 Flutter / Compose Multiplatform 在"canvas + 动画"这两项上的差距只余 **A5（自定义着色器）**，而 A5 恰好是**唯一一个"两边都需要平台分支"的能力**（见下）。
 
 ---
@@ -320,7 +324,7 @@ FLOEM2_WINDOW_IDLE=1 FLOEM2_WINDOW_IDLE_SECS=30 \
 | 缓动函数 | ✅ (B1, S1) 含三次贝塞尔与阻尼弹簧 | ✅ 多种 | ✅ `Curves` |
 | 中断 / 重定向 | ✅ (B2, S1) `retarget` 从当前值续接 | ✅ `Animatable` | ✅ `AnimationController` |
 | 循环 / 无限 / 往返 | ✅ (B3, S1) `RepeatSpec` 含 `INFINITE_REVERSE` | ✅ `infiniteRepeatable` | ✅ `repeat(reverse:)` |
-| 隐式动画（改值即动） | ⚠️ (B4, S4) **最小集合：颜色**（`Button::transition`） | ✅ `animate*AsState` | ✅ `AnimatedXxx` |
+| 隐式动画（改值即动） | ⚠️ (B4, S4+S8) **颜色 + 透明度**（`Button::transition` / `Opacity`）；尺寸/位移待消费点 | ✅ `animate*AsState` | ✅ `AnimatedXxx` |
 | 挂载/内容过渡/共享元素 | ◐ `Conditional` enter/exit + `Crossfade` 内容切换；**共享元素未做** (B5) | ✅ `AnimatedVisibility`/共享元素 | ✅ `AnimatedSwitcher`/`Hero` |
 | motion token 消费 | ✅ (B6, S4) Material token → `Transition` → 控件 | ✅（组件层） | ✅（组件层） |
 | 多值编排（一条曲线挂多属性） | ❌ (B6 未做) | ✅ `updateTransition` | ✅（组件层） |
