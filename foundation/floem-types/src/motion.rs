@@ -295,6 +295,135 @@ impl Transition {
     }
 }
 
+/// Which channel a [`PresenceTransition`] drives.
+///
+/// One per transition, not a list: a single element carries a single
+/// compositor sample (see [`CompositorProp`]), so a fade *and* a slide at once
+/// is not something this layer can express. Pick the one the presence reads
+/// as; if none of these is it, reach for the imperative door instead.
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
+pub enum PresenceChannel {
+    /// Opacity. `0 → 1` on the way in.
+    #[default]
+    Fade,
+    /// Uniform scale about the box's centre: `from → 1` on the way in.
+    Grow { from: f32 },
+    /// Vertical offset in points: `dy → 0` on the way in, so a positive `dy`
+    /// slides *up* into place.
+    Slide { dy: f32 },
+}
+
+impl PresenceChannel {
+    /// The default start and end scalars of this channel, `(from, to)` for a
+    /// transition that is playing *into* presence. Playing out of presence
+    /// swaps them, which is what makes one description serve both directions.
+    fn endpoints(&self) -> (f64, f64) {
+        match *self {
+            Self::Fade => (0.0, 1.0),
+            Self::Grow { from } => (f64::from(from), 1.0),
+            Self::Slide { dy } => (f64::from(dy), 0.0),
+        }
+    }
+
+    /// The compositor channel this channel runs on.
+    ///
+    /// The payload is a placeholder: the sampled value replaces it every
+    /// frame, so only the variant matters here.
+    fn prop(&self) -> CompositorProp {
+        match *self {
+            Self::Fade => CompositorProp::Opacity(0.0),
+            Self::Grow { .. } => CompositorProp::Scale(1.0),
+            Self::Slide { .. } => CompositorProp::TranslateY(0.0),
+        }
+    }
+}
+
+/// What plays when a subtree appears or disappears.
+///
+/// The implicit layer ([`Transition`]) answers "this value changed, get there
+/// smoothly". Presence answers a different question: *the widget's value did
+/// not change, its **existence** did* — there is no old value to animate from,
+/// only a before (absent) and an after (present). And "absent" cannot be
+/// painted, so leaving has to *defer* it: something that is animating out is
+/// still mounted, and unmounts when the motion ends.
+///
+/// One direction-neutral description: [`Self::spec`] resolves it against the
+/// direction being played, so an enter and its exit cannot drift apart in
+/// duration or curve — the two things a caller would otherwise restate and
+/// then forget to update together.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct PresenceTransition {
+    pub channel: PresenceChannel,
+    pub duration_secs: f64,
+    pub easing: Easing,
+}
+
+impl PresenceTransition {
+    /// A fade over `duration_secs`, linear.
+    pub const fn fade(duration_secs: f64) -> Self {
+        Self {
+            channel: PresenceChannel::Fade,
+            duration_secs,
+            easing: Easing::Linear,
+        }
+    }
+
+    /// A grow from `from` (a fraction: `0.9` starts nine tenths of full size)
+    /// over `duration_secs`.
+    pub const fn grow(duration_secs: f64, from: f32) -> Self {
+        Self {
+            channel: PresenceChannel::Grow { from },
+            duration_secs,
+            easing: Easing::Linear,
+        }
+    }
+
+    /// A slide of `dy` points up into place over `duration_secs`.
+    pub const fn slide(duration_secs: f64, dy: f32) -> Self {
+        Self {
+            channel: PresenceChannel::Slide { dy },
+            duration_secs,
+            easing: Easing::Linear,
+        }
+    }
+
+    pub const fn with_easing(mut self, easing: Easing) -> Self {
+        self.easing = easing;
+        self
+    }
+
+    /// Whether there is anything to play. A non-positive duration means "no
+    /// transition", which is the caller saying the subtree should simply
+    /// appear/vanish — distinct from "animate over zero seconds", a thing the
+    /// scheduler cannot express and which would leave the frame loop nothing
+    /// to step.
+    pub const fn is_instant(&self) -> bool {
+        self.duration_secs <= 0.0
+    }
+
+    /// The tween to play for `entering` (in) or leaving (out).
+    ///
+    /// The values are the channel's endpoints, reversed on the way out, so the
+    /// same numbers describe the whole round trip.
+    pub fn spec(&self, entering: bool) -> AnimationSpec {
+        let (from, to) = self.channel.endpoints();
+        let (from, to) = if entering { (from, to) } else { (to, from) };
+        AnimationSpec::new(from, to, self.duration_secs)
+            .with_easing(self.easing)
+            .with_prop(self.channel.prop())
+    }
+
+    /// The enter tween. See [`Self::spec`].
+    pub fn enter_spec(&self) -> AnimationSpec {
+        self.spec(true)
+    }
+
+    /// The exit tween. See [`Self::spec`].
+    pub fn exit_spec(&self) -> AnimationSpec {
+        self.spec(false)
+    }
+}
+
 /// Properties that can be applied to a scene node without re-laying it out.
 ///
 /// The value inside the variant is either the template a scheduler maps its
@@ -621,5 +750,134 @@ mod tests {
         assert_eq!(RepeatSpec::restart(3).mode, RepeatMode::Restart);
         assert_eq!(RepeatSpec::reverse(2).mode, RepeatMode::Reverse);
         assert_eq!(RepeatSpec::INFINITE_REVERSE.iterations, None);
+    }
+
+    // --- PresenceTransition -------------------------------------------------
+
+    #[test]
+    fn the_default_presence_channel_is_a_fade() {
+        let fade = PresenceTransition::fade(0.2);
+        assert_eq!(fade.channel, PresenceChannel::Fade);
+        assert_eq!(fade.duration_secs, 0.2);
+    }
+
+    /// The enter/exit of one transition must differ as data, or the host
+    /// cannot tell "appearing" from "disappearing" and would collapse the two
+    /// into a single never-restarting declaration. This is the property the
+    /// presence widget leans on.
+    #[test]
+    fn enter_and_exit_are_different_specs_for_the_same_transition() {
+        let fade = PresenceTransition::fade(0.2);
+        let enter = fade.enter_spec();
+        let exit = fade.exit_spec();
+        assert_ne!(enter, exit, "enter and exit must be distinguishable");
+        assert_eq!(enter.from, 0.0);
+        assert_eq!(enter.to, 1.0);
+        assert_eq!(exit.from, 1.0);
+        assert_eq!(exit.to, 0.0);
+        // The channel is the same for both; only the scalars flip.
+        assert_eq!(enter.prop, exit.prop);
+        assert_eq!(enter.duration_secs, exit.duration_secs);
+    }
+
+    /// A fade drives opacity; the placeholder payload is irrelevant and
+    /// identical across directions.
+    #[test]
+    fn a_fade_rides_the_opacity_channel() {
+        let fade = PresenceTransition::fade(0.15);
+        match fade.enter_spec().prop {
+            Some(CompositorProp::Opacity(_)) => {}
+            other => panic!("a fade must drive opacity, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn grow_and_slide_resolve_to_their_channels_and_endpoints() {
+        let grow = PresenceTransition::grow(0.3, 0.9);
+        assert!((grow.enter_spec().from - 0.9).abs() < 1e-6);
+        assert_eq!(grow.enter_spec().to, 1.0);
+        assert_eq!(grow.enter_spec().prop, Some(CompositorProp::Scale(1.0)));
+
+        let slide = PresenceTransition::slide(0.25, 16.0);
+        assert_eq!(slide.enter_spec().from, 16.0);
+        assert_eq!(slide.enter_spec().to, 0.0);
+        assert_eq!(
+            slide.enter_spec().prop,
+            Some(CompositorProp::TranslateY(0.0))
+        );
+        // Sliding out starts from 0 and ends at the offset.
+        assert_eq!(slide.exit_spec().from, 0.0);
+        assert_eq!(slide.exit_spec().to, 16.0);
+    }
+
+    #[test]
+    fn a_non_positive_duration_is_instant() {
+        assert!(PresenceTransition::fade(0.0).is_instant());
+        assert!(PresenceTransition::fade(-0.1).is_instant());
+        assert!(!PresenceTransition::fade(0.001).is_instant());
+    }
+
+    #[test]
+    fn easing_follows_the_transition() {
+        let eased = PresenceTransition::fade(0.2).with_easing(Easing::EASE_OUT);
+        assert_eq!(eased.enter_spec().easing, Easing::EASE_OUT);
+        assert_eq!(eased.exit_spec().easing, Easing::EASE_OUT);
+    }
+
+    #[test]
+    fn default_presence_channel_is_a_fade() {
+        assert_eq!(PresenceTransition::fade(0.2).channel, PresenceChannel::Fade);
+        let unspecified = PresenceTransition {
+            channel: PresenceChannel::Fade,
+            duration_secs: 0.2,
+            easing: Easing::Linear,
+        };
+        assert_eq!(unspecified.channel, PresenceChannel::default());
+    }
+
+    #[test]
+    fn a_fade_enters_from_invisible_and_exits_to_it() {
+        let t = PresenceTransition::fade(0.2).with_easing(Easing::EASE_OUT);
+        let enter = t.enter_spec();
+        let exit = t.exit_spec();
+        // Opacity runs 0 → 1 coming in and 1 → 0 going out.
+        assert_eq!((enter.from, enter.to), (0.0, 1.0));
+        assert_eq!((exit.from, exit.to), (1.0, 0.0));
+        assert_eq!(enter.prop, Some(CompositorProp::Opacity(0.0)));
+        assert_eq!(exit.prop, Some(CompositorProp::Opacity(0.0)));
+        assert_eq!(enter.duration_secs, 0.2);
+        assert_eq!(enter.easing, Easing::EASE_OUT);
+        // The two directions must not be the same motion, or the host would
+        // never restart the transition when the subtree flips back.
+        assert!(!enter.matches(&exit), "enter and exit must differ");
+    }
+
+    #[test]
+    fn a_grow_enters_at_the_start_scale_and_returns_to_it() {
+        let t = PresenceTransition::grow(0.2, 0.5);
+        let enter = t.enter_spec();
+        let exit = t.exit_spec();
+        assert_eq!((enter.from, enter.to), (0.5, 1.0));
+        assert_eq!((exit.from, exit.to), (1.0, 0.5));
+        assert_eq!(enter.prop, Some(CompositorProp::Scale(1.0)));
+        assert!(!enter.matches(&exit), "enter and exit must differ");
+    }
+
+    #[test]
+    fn a_slide_enters_from_the_offset_and_returns_to_it() {
+        let t = PresenceTransition::slide(0.2, 16.0);
+        let enter = t.enter_spec();
+        let exit = t.exit_spec();
+        assert_eq!((enter.from, enter.to), (16.0, 0.0));
+        assert_eq!((exit.from, exit.to), (0.0, 16.0));
+        assert_eq!(enter.prop, Some(CompositorProp::TranslateY(0.0)));
+        assert!(!enter.matches(&exit), "enter and exit must differ");
+    }
+
+    #[test]
+    fn an_instant_presence_is_no_transition_at_all() {
+        assert!(PresenceTransition::fade(0.0).is_instant());
+        assert!(PresenceTransition::fade(-1.0).is_instant());
+        assert!(!PresenceTransition::fade(0.001).is_instant());
     }
 }

@@ -69,6 +69,25 @@ pub trait Widget {
     fn animation(&self) -> Option<crate::AnimationSpec> {
         None
     }
+    /// The host finished an animation this widget declared through
+    /// [`Self::animation`].
+    ///
+    /// The host finished a *declared* animation this element was running.
+    ///
+    /// Default: nothing. A widget that declares motion for a reason other than
+    /// "drive my own paint" uses this to act on completion — the one thing the
+    /// host cannot decide for it. The presence transition (a subtree's enter
+    /// or exit animation) is the case it exists for: when the *exit* motion
+    /// ends, the subtree is safe to unmount; when the *enter* motion ends, it
+    /// has reached rest. The host calls this at the top of a frame, after the
+    /// clock advanced and before the update pass, so a widget that re-marks
+    /// itself dirty here has its end-of-transition folded in the same frame.
+    ///
+    /// Receiving it does not mean the animation will never run again: re-arming
+    /// a declaration (changing its [`crate::AnimationSpec`] so the host
+    /// restarts it) sends this again on the next completion. A widget that
+    /// treats the event as "I am done forever" will wedge.
+    fn animation_finished(&mut self, _cx: &mut dyn UpdateContext, _id: ElementId) {}
     /// The shape this widget's subtree is clipped to, in the widget's own
     /// coordinates, or `None` (the default) for the usual "content may paint
     /// outside my box".

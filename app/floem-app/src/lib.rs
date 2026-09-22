@@ -458,6 +458,11 @@ pub struct WidgetHost {
     /// Scratch for the sampler's output, so an animation frame does not
     /// allocate (see [`AnimationScheduler::tick_into`]).
     motion_samples: Vec<AnimSample>,
+    /// Scratch for the declared animations that finished this tick, so the
+    /// completion callback can run after the sampler has let go of every
+    /// borrow — calling a widget while `motion_samples` is still borrowed would
+    /// re-enter the host it already holds. Empty on a tree where nothing ended.
+    finished_declared: Vec<usize>,
     /// Native composition. `None` means every participant request is refused,
     /// which is the honest answer for a host with no OS bridge rather than a
     /// participant that silently draws nothing.
@@ -745,6 +750,7 @@ impl WidgetHost {
             motion: AnimationScheduler::new(),
             node_anims: Vec::new(),
             motion_samples: Vec::new(),
+            finished_declared: Vec::new(),
             native: None,
             participants: Vec::new(),
             frozen: Vec::new(),
@@ -1638,6 +1644,14 @@ impl WidgetHost {
         let now = self.anim_clock;
         self.motion.tick_into(now, &mut self.motion_samples);
 
+        // Declared animations that finished this tick: their widgets want the
+        // event, so we tell them after the bookkeeping above — a widget's
+        // `animation_finished` can mark itself dirty, and the update pass that
+        // follows this in `frame` is where that mark takes effect. Reused
+        // scratch rather than a fresh `Vec` so a settled frame allocates
+        // nothing (see the steady-frame budget in B9).
+        self.finished_declared.clear();
+
         for index in (0..self.node_anims.len()).rev() {
             let Some(id) = self.node_anims[index].id else {
                 // A declared animation that already finished: its declaration
@@ -1669,6 +1683,8 @@ impl WidgetHost {
                         self.node_anims[index].id = None;
                         if !declared {
                             self.node_anims.remove(index);
+                        } else {
+                            self.finished_declared.push(node);
                         }
                     }
                 }
@@ -1684,7 +1700,50 @@ impl WidgetHost {
                 }
             }
         }
+
+        for node in std::mem::take(&mut self.finished_declared) {
+            self.notify_declared_motion_finished(node);
+        }
         self.animations_running() > 0
+    }
+
+    /// Hands a declared animation's completion to its widget.
+    ///
+    /// Called from [`Self::tick_node_animations`] while the frame's clock has
+    /// already advanced but the update pass has not yet run. The widget uses
+    /// the event to do the one thing the host cannot decide for it — what a
+    /// finished *presence* animation means: that an exiting subtree can now be
+    /// unmounted, or an entering one has reached rest. The minimal context is
+    /// enough: a presence widget reacts by re-marking itself dirty so the
+    /// update pass folds the transition's end into the tree.
+    fn notify_declared_motion_finished(&mut self, index: usize) {
+        if self.nodes[index].dead {
+            return;
+        }
+        let bounds = self.nodes[index].bounds;
+        let viewport = Rect::from_origin_size(Point::ZERO, self.size);
+        let mut cx = HostUpdateContext {
+            dirty: false,
+            children_dirty: false,
+            bounds,
+            viewport,
+            snapshot: None,
+            overlays: None,
+            native: None,
+        };
+        let id = self.nodes[index].id;
+        self.nodes[index].widget.animation_finished(&mut cx, id);
+        // The widget's reaction to "my motion ended" is to re-mark itself, so
+        // the update pass this frame folds the transition's end into the tree
+        // (an exiting presence drops its child, an entering one reaches rest).
+        // The callback's context is throwaway, so its marks have to be folded
+        // back into the node here — otherwise they would be silently dropped.
+        if cx.dirty {
+            self.nodes[index].dirty = true;
+        }
+        if cx.children_dirty {
+            self.nodes[index].children_dirty = true;
+        }
     }
 
     /// Drops whatever animation `index` had, running or merely remembered.
@@ -2121,7 +2180,7 @@ impl WidgetHost {
             if self.nodes[index].parent.is_some() {
                 continue;
             }
-            self.paint_subtree(index, stats);
+            self.paint_subtree(index, stats, None);
         }
 
         // Overlays paint last, so their content sits above everything beneath
@@ -2185,8 +2244,40 @@ impl WidgetHost {
     /// reason: the bracket. A widget's `paint` writes scene nodes for itself
     /// and nothing for descendants it does not paint, so only the host knows
     /// where a clipped subtree begins and ends. Nothing else changes — each
+    /// Keeps only the *fold* class of a compositor property — opacity and the
+    /// two translations, the ones that fold into a node's own payloads. Scale
+    /// and rotate are deliberately dropped: they bracket the subtree via a
+    /// group scope instead, and folding them per node would tear the picture
+    /// apart (see [`Self::node_group_transform`]).
+    fn fold_class_only(prop: Option<CompositorProp>) -> Option<CompositorProp> {
+        match prop {
+            Some(CompositorProp::Opacity(_))
+            | Some(CompositorProp::TranslateX(_))
+            | Some(CompositorProp::TranslateY(_)) => prop,
+            _ => None,
+        }
+    }
+
+    /// Paints `index` and everything under it, bracketing the subtree with
+    /// this node's clip markers when its widget declares a clip.
+    ///
+    /// A walk, rather than the flat sweep this used to be, for exactly one
+    /// reason: the bracket. A widget's `paint` writes scene nodes for itself
+    /// and nothing for descendants it does not paint, so only the host knows
+    /// where a clipped subtree begins and ends. Nothing else changes — each
     /// node still paints at its own turn with its own composite.
-    fn paint_subtree(&mut self, index: usize, stats: &mut FrameStats) {
+    ///
+    /// `inherited` is the fold-class composite (opacity / translate) an
+    /// *ancestor's* presence animation is driving onto the whole subtree it
+    /// wraps. A node's own motion beats an inherited one, so a descendant that
+    /// animates its own opacity is dimmed by its own animation, not the
+    /// ancestor's; one with no animation of its own inherits the ancestor's.
+    fn paint_subtree(
+        &mut self,
+        index: usize,
+        stats: &mut FrameStats,
+        inherited: Option<CompositorProp>,
+    ) {
         if self.nodes[index].dead {
             return;
         }
@@ -2198,9 +2289,12 @@ impl WidgetHost {
             // applied to the subtree it no longer covers.
             None => self.retire_clip_markers(index),
         }
-        // A frozen participant's tween rides along here, on the same channel an
-        // overlay's entry animation uses.
-        let composite = self.frozen_composite(index);
+        // The composite this node's own payloads and group scope see: its own
+        // motion wins over a frozen native transition, which wins over an
+        // inherited fold from an ancestor's presence animation.
+        let own_prop = self.nodes[index].motion.and_then(|s| s.prop);
+        let frozen = self.frozen_composite(index);
+        let composite = own_prop.or(frozen).or(inherited);
         // A transform-class composite (scale, rotate) cannot fold into the
         // node's own payloads — scaling each rect about its own centre would
         // tear the picture apart. It becomes a group scope bracketing the
@@ -2212,7 +2306,11 @@ impl WidgetHost {
             None => self.retire_group_markers(index),
         }
         self.paint_node(index, composite, stats);
-        self.paint_children(index, stats);
+        // The fold an ancestor's presence fade hands down: the node's own fold
+        // class wins, so it does not double-apply; a transform-class own prop
+        // does not fold, so the inherited fold still reaches descendants.
+        let fold_down = Self::fold_class_only(own_prop).or(inherited);
+        self.paint_children(index, stats, fold_down);
         if transformed {
             self.write_group_pop(index);
         }
@@ -2225,12 +2323,18 @@ impl WidgetHost {
     ///
     /// Walked by index rather than collected into a `Vec` first: cloning the
     /// child list is one allocation per node per frame, which is what the
-    /// settled-frame allocation budget exists to forbid.
-    fn paint_children(&mut self, index: usize, stats: &mut FrameStats) {
+    /// settled-frame allocation budget exists to forbid. `inherited` is the
+    /// fold-class composite to hand each child (see [`Self::paint_subtree`]).
+    fn paint_children(
+        &mut self,
+        index: usize,
+        stats: &mut FrameStats,
+        inherited: Option<CompositorProp>,
+    ) {
         let mut i = 0;
         while i < self.nodes[index].children.len() {
             let child = self.nodes[index].children[i];
-            self.paint_subtree(child, stats);
+            self.paint_subtree(child, stats, inherited);
             i += 1;
         }
     }

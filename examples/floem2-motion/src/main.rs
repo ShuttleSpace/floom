@@ -15,10 +15,20 @@
 //! 3. **A control can animate itself.** `Progress::indeterminate()` states the
 //!    shuttle it wants and the host runs it, with no host handle in sight; the
 //!    frame loop stays awake for it and parks when the bar is given a value.
+//! 4. **A presence transition delays unmount.** A subtree leaving the screen
+//!    has to stay mounted until its exit animation has played, or the departure
+//!    would be invisible — so `Conditional::exit` keeps the child on screen and
+//!    only unmounts it once the host reports the transition finished.
+//! 5. **A crossfade keeps both sides live.** `Crossfade` stacks its two
+//!    contents in the same box and swaps by fading — so during the swap *both*
+//!    stay mounted (the leaving one plays its exit, the arriving one its enter),
+//!    which a plain cut would never show. This is the "one of AnimatedContent /
+//!    Crossfade" half of the B5 gap.
 //!
 //! Everything below is `floem2::prelude` — no crate below the facade is named.
 //! Run with `cargo run -p floem2-motion`.
 
+use floem2::floem_scene::SceneNode;
 use floem2::prelude::*;
 
 /// Frame step the host advances per `frame()`, so "six frames" is a tenth of a
@@ -59,6 +69,8 @@ fn main() {
     act_1_a_curve_is_not_a_duration(&mut host, label);
     act_2_interruption_keeps_what_it_interrupted(&mut host, label);
     act_3_a_control_can_animate_itself(&mut host, root);
+    act_4_a_presence_transition_delays_unmount(&mut host);
+    act_5_a_crossfade_keeps_both_sides_live(&mut host);
 
     println!();
     println!("every act above was asserted, not printed");
@@ -234,4 +246,177 @@ fn act_3_a_control_can_animate_itself(host: &mut WidgetHost, root: NodeId) {
         "and stops asking for frames, so an idle app can park"
     );
     println!("  given a value, the bar stops and the frame loop parks");
+}
+
+/// A presence transition keeps an exiting subtree mounted until its exit
+/// animation has finished, then unmounts it — the part of the implicit layer
+/// that is "the widget's *existence* changed", not "its value did".
+fn act_4_a_presence_transition_delays_unmount(_host: &mut WidgetHost) {
+    println!("== 4. a presence transition delays unmount ==");
+
+    // Its own host: the scene it inspects must not be polluted by the text
+    // nodes the earlier acts left mounted.
+    let mut host = WidgetHost::new();
+    host.set_size(Size::new(240.0, 80.0));
+
+    let child = Child::new(
+        ChildKey::index(0),
+        LayoutRequest::default(),
+        || Box::new(Text::new("hi")),
+    );
+    let presence = Conditional::new(true)
+        .show(child)
+        .presence(PresenceTransition::fade(0.2));
+    let root = host.mount_root(LayoutStyle::default(), presence);
+    host.frame();
+
+    // Let the enter finish and rest.
+    for _ in 0..30 {
+        host.frame();
+    }
+    let count_text_nodes = |host: &WidgetHost| {
+        host.scene()
+            .iter()
+            .filter(|(_, node)| matches!(node, SceneNode::Text { .. }))
+            .count()
+    };
+    assert_eq!(count_text_nodes(&host), 1, "the child is shown");
+
+    // Tell it to leave. The child must stay on screen the moment after — an
+    // exit transition that unmounted immediately would never be seen.
+    host.widget_mut::<Conditional>(root)
+        .expect("the root is a conditional")
+        .set_when(false);
+    host.frame();
+    assert_eq!(
+        count_text_nodes(&host),
+        1,
+        "the child stays mounted the instant it is told to leave"
+    );
+
+    // And it is partway through fading out, not instantly gone.
+    for _ in 0..4 {
+        host.frame();
+    }
+    let mid_alpha = host
+        .scene()
+        .iter()
+        .find_map(|(_, node)| match node {
+            SceneNode::Text { color, .. } => Some(color.a),
+            _ => None,
+        })
+        .expect("child present");
+    assert!(mid_alpha < 255, "the exit is mid-fade, not instant: alpha {mid_alpha}");
+
+    // Run the exit out. Once the host reports the transition finished, the
+    // widget unmounts the subtree.
+    for _ in 0..30 {
+        host.frame();
+    }
+    assert_eq!(
+        count_text_nodes(&host),
+        0,
+        "the child is unmounted only after its exit completed"
+    );
+    println!("  enter fades in; exit keeps the child mounted until it finishes, then it unmounts");
+}
+
+/// A crossfade stacks its two contents in the same box and swaps by fading, so
+/// during the swap *both* stay mounted — the leaving side plays its exit, the
+/// arriving side its enter — which a plain cut would never show. This is the
+/// AnimatedContent / Crossfade half of the B5 gap.
+fn act_5_a_crossfade_keeps_both_sides_live(_host: &mut WidgetHost) {
+    println!("== 5. a crossfade keeps both sides live ==");
+
+    let mut host = WidgetHost::new();
+    host.set_size(Size::new(240.0, 80.0));
+
+    let side_a = Child::new(
+        ChildKey::index(0),
+        LayoutRequest::default(),
+        || Box::new(Text::new("A")),
+    );
+    let side_b = Child::new(
+        ChildKey::index(1),
+        LayoutRequest::default(),
+        || Box::new(Text::new("B")),
+    );
+    let root = host.mount_root(
+        LayoutStyle::default(),
+        Crossfade::new(true)
+            .a(side_a)
+            .b(side_b)
+            .presence(PresenceTransition::fade(0.2)),
+    );
+    host.frame();
+
+    // Let A's enter finish and rest.
+    for _ in 0..30 {
+        host.frame();
+    }
+    let count_text = |host: &WidgetHost| {
+        host.scene()
+            .iter()
+            .filter(|(_, node)| matches!(node, SceneNode::Text { .. }))
+            .count()
+    };
+    let first_alpha = |host: &WidgetHost| {
+        host.scene()
+            .iter()
+            .find_map(|(_, node)| match node {
+                SceneNode::Text { color, .. } => Some(color.a),
+                _ => None,
+            })
+            .expect("a child is mounted")
+    };
+    assert_eq!(count_text(&host), 1, "a rested crossfade shows only A");
+    assert_eq!(first_alpha(&host), 255, "and A is fully shown");
+
+    // Swap to B. The instant after the flip *both* sides are mounted — A mid-
+    // exit, B mid-enter — so count_text is 2, and their alphas are at opposite
+    // ends of the fade: A still fully visible, B still invisible.
+    host.widget_mut::<Crossfade>(root)
+        .expect("the root is a crossfade")
+        .set_show_a(false);
+    host.frame();
+    let both: Vec<u8> = host
+        .scene()
+        .iter()
+        .filter_map(|(_, node)| match node {
+            SceneNode::Text { color, .. } => Some(color.a),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(
+        both.len(),
+        2,
+        "a crossfade keeps both sides mounted through the swap"
+    );
+    assert!(
+        both.iter().any(|&a| a == 255) && both.iter().any(|&a| a == 0),
+        "the leaving side is still shown and the arriving side is still hidden \
+         at the start of the swap: {both:?}"
+    );
+
+    // Across the whole transition both sides stay live.
+    for _ in 0..4 {
+        host.frame();
+        assert_eq!(
+            count_text(&host),
+            2,
+            "both sides remain mounted while the crossfade plays"
+        );
+    }
+
+    // Run it out: A's exit finishes, it unmounts, and only B rests shown.
+    for _ in 0..30 {
+        host.frame();
+    }
+    assert_eq!(
+        count_text(&host),
+        1,
+        "once the swap completes only B is mounted"
+    );
+    assert_eq!(first_alpha(&host), 255, "and B rests fully shown");
+    println!("  A and B both stay on screen during the swap; A unmounts only when its exit finishes");
 }

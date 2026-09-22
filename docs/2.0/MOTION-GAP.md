@@ -10,7 +10,7 @@
 
 - **底座已经在**：确定性动画调度器 + 可注入时钟、合成通道（compositor）、宿主冻结时钟（paused）、`settle()` 测试收敛、快照/像素黄金、分配计数与性能预算门。动画**不是从零开始**。
 - **动画侧的原语层已补齐（S1，见 §2b）**：缓动、中断重定向、循环/往返、给任意节点起动画的公开入口都已落地并有会红的负例。**动作**：overlay 入场在 S1 前是全仓仅有的两处动画之一，Tween 也是纯线性——那两条描述已随 S1 过期，保留在此仅作对照。
-- **自绘侧已逐片补齐（S2/S3/S4，见 §2b 与 §6）**：路径/描边、裁剪、子树变换、`Canvas`、`Brush`（含控件侧入口）、阴影、隐式过渡、motion token 消费都已落地；**这份文档里 S2–S4 之前的"未动"描述已整体过期**，缺口清单 A 的条目逐个标注了交付状态，剩下的只有 A5（着色器）、通用滤镜与 B5（挂载过渡）。
+- **自绘侧与过渡层已逐片补齐（S2/S3/S4/S5，见 §2b 与 §6）**：路径/描边、裁剪、子树变换、`Canvas`、`Brush`（含控件侧入口）、阴影、隐式过渡、motion token 消费、`Conditional` 的 enter/exit 过渡、**`Crossfade` 内容切换**都已落地；**这份文档里 S2–S5 之前的"未动"描述已整体过期**，缺口清单 A/B 的条目逐个标注了交付状态，剩下的只有 A5（着色器）、通用滤镜、`AnimatedContent` 与共享元素（B5 明确未做的子集，见 B5）。
 - ~~**最贵的一条**：`SceneNode::Group { transform }` **有类型、无实现**~~ —— S3 已按"要么三后端都实现、要么删掉"的纪律处置：`Group` 重塑为 `GroupPush`/`GroupPop` 流标记，三后端应用，`Transform` 补齐 `scale_around`/`rotate_around`/`multiply`/`inverse`/`map_rect`。
 - ~~**最便宜的一刀**：Material 设计系统里 `MotionDuration` token **零消费者**~~ —— S4 已接通：`MotionTransition::from_tokens(MotionDuration, MotionEasing)` → `floem_types::Transition` → `Button::transition`，ms→s 只换算一次。
 
@@ -182,11 +182,21 @@
 - **代价**：hover / pressed 变色、展开收起、透明度变化——最常见的三个需求在 2.0 全部无 API。
 - **补上判据**：样式属性可声明过渡（属性 + 时长 + 缓动），状态变化时自动启动；hover 变色与展开收起各一条像素黄金。**注意：这条依赖 B1。**
 
-### B5. 没有过渡层（挂载 / 内容切换 / 共享元素） — **P1 / L**
+### B5. 过渡层（挂载 / 内容切换 / 共享元素） — **P1 / L** — ◐ 部分交付（S5）
 
-- **现状**：只有 overlay 入场（`framework/floem-overlay/src/lib.rs:85-107`，时长硬编码为常量 `ENTRY_SECS = 0.15`，见 `:16`）与原生参与者冻结/解冻（`app/floem-app/src/lib.rs:2190`）。**没有**组件挂载/卸载过渡、内容切换、共享元素。
+- **现状（S5 之前）**：只有 overlay 入场（`framework/floem-overlay/src/lib.rs:85-107`，时长硬编码为常量 `ENTRY_SECS = 0.15`，见 `:16`）与原生参与者冻结/解冻（`app/floem-app/src/lib.rs:2190`）。**没有**组件挂载/卸载过渡、内容切换、共享元素。
 - **对标**：Compose `AnimatedVisibility(enter, exit)` / `AnimatedContent` / `Crossfade` / `SharedTransitionLayout`（1.7+）；Flutter `AnimatedSwitcher` / `AnimatedCrossFade` / `Hero`。
-- **补上判据**：`Conditional`（`widgets/floem-widgets/src/compose.rs:161`）支持 enter/exit 过渡；`AnimatedContent` 或 Crossfade 之一；共享元素给一个示例 + 快照（不做完整 SharedTransitionLayout 也算达标，但必须**在文档里写明只做了哪个子集**）。
+- **交付（S5）**：
+  - `Conditional`（`widgets/floem-widgets/src/compose.rs`）新增 `enter(transition)` / `exit(transition)` / `presence(transition)` builder；带过渡时它成为一个相位机 `Hidden → Entering → Shown → Exiting → Hidden`，退场动画播完前**保持子树挂载**、播完才真正卸载——解决了"退场动画必须在子树还在屏上时才看得见"这个核心难点。
+  - `Crossfade`（同文件，判据里的 `AnimatedContent` / `Crossfade` **之一**）：`Crossfade::new(show_a).a(child).b(child).presence(transition)`，两个内容以 `absolute_fill()` 叠在同一盒里，交换时**两侧同时保持挂载**——离开的一侧播 exit、到达的一侧播 enter，各自由一枚 `PresenceLeaf`（把 `when` 从 `Arc<AtomicBool>` 读出来的 `Conditional` 包装）复用上面那套 presence 生命周期。默认 `PresenceTransition::fade(0.0)`，即未配置时就是一次即时切换，与无过渡的 `Conditional` 一致。
+  - 词汇落在 `floem-types`：`PresenceTransition { channel, duration_secs, easing }` + `PresenceChannel::{Fade, Grow{from}, Slide{dy}}`，`spec(entering)` 一次描述双向，避免 enter/exit 各写一遍后漂移。
+  - 宿主侧两处配套：①`Widget::animation_finished(cx, id)` 回调——声明式动画完成时通知 widget，是 presence 知道"退场播完了"的事件门（`app/floem-app/src/lib.rs::tick_node_animations`）；②绘制 walk 把 **fold 类**（opacity / translate）合成属性**向下传给子树**，于是一个 presence 节点的淡入淡出作用到整棵子树而非只有自身（scale/rotate 仍走既有的 Group 作用域，不叠加）。
+  - 判据：`app/floem-app/tests/motion_host.rs` 五条——首帧淡入、退场中途仍挂载且已变暗、退场播完才卸载、无过渡时退场即时卸载、grow 退场同样延迟卸载，外加 `a_crossfade_keeps_both_children_mounted_while_it_swaps`（交换中途**两侧**都在屏上、且分别处于淡入淡出的两端，交换结束后只剩到达侧）；黄金示例 `floem2-motion` 第四幕（presence 延迟卸载）与第五幕（crossfade 两侧同屏）；并用**变异**证伪。
+- **未做（明确子集，按判据允许在此写明）**：
+  - `AnimatedContent`（按内容键做通用的"旧子树 → 新子树"大小/位移过渡；`Crossfade` 已覆盖判据里"`AnimatedContent` 或 Crossfade **之一**"这一支）。
+  - **共享元素**（`SharedTransitionLayout` / `Hero`）：需要布局坐标在两个子树间共享，超出本次范围——**判据允许"不做完整 SharedTransitionLayout 也算达标"，此处明确记录：本次未做共享元素，也未提供其示例与快照**。
+  - 退出子树仍参与命中测试与可访问性树（退场期间子树仍"存在"，未把它从语义层摘除——已知限制，待后续切片处理）。
+- **补上判据（原）**：`Conditional` 支持 enter/exit 过渡；`AnimatedContent` 或 Crossfade 之一；共享元素给一个示例 + 快照（不做完整 SharedTransitionLayout 也算达标，但必须**在文档里写明只做了哪个子集**）。
 
 ### B6. ~~motion token 零消费者~~ — **P1 / S** — ✅ 已交付（S4；多值编排未做）
 
@@ -246,7 +256,8 @@ A8 独立，随时可做（但越早越好——它是"自绘控件在无障碍�
 | **S1 让动画"像样"** ✅ 已交付 | B1 + B2 + B3 + B8 + B9 | M | 缓动/中断/循环 + 公开入口；**示例未做**（`examples/` 零改动）——不确定态 `Progress` 已作为真实消费点接上，hover 渐隐与拖拽回弹随 B4 一起做（它们本质是隐式层） |
 | **S2 让自绘"能用"** ✅ 已交付 | A1 + A2 + A7 + A8 + A9 | M–L | `Path`/`Stroke`/`ClipRegion` + `Canvas`/`Spinner` + 语义 role + 规模基准并入预算门；示例 `floem2-chart` / `floem2-progress-ring`（原 `floem2-paths` 已并入前者） |
 | **S3 让变换"成立"** ✅ 已交付 | A6 + B7 | L | 需求成立：`Group` 重塑为 `GroupPush`/`GroupPop` 流标记，三后端应用之；`CompositorProp::Scale` 从"故意不动"转为真实；示例 `floem2-transform` |
-| **S4 让风格"成套"** ⚠️ 部分交付（**B5 未做**） | A3 + A4 + B4 + ~~B5~~ + B6 | L | `Brush`（线性/径向）在场景 IR + 三后端落地，**并补上了控件侧入口**（`PaintContext::fill_*_brush` / `draw_shadow`）；`Shadow` 由软件后端真模糊合成，vello 无 blur 原语→**跳过并计数**；B4 只做最小集合（颜色），B6 接通 Material token → `Transition`；示例 `floem2-style`。**B5（挂载/内容过渡/共享元素）仍未动**——它需要一个挂载生命周期上的动画编排点，与 B4 的值驱动不是一回事 |
+| **S4 让风格"成套"** ⚠️ 部分交付 | A3 + A4 + B4 + B6 | L | `Brush`（线性/径向）在场景 IR + 三后端落地，**并补上了控件侧入口**（`PaintContext::fill_*_brush` / `draw_shadow`）；`Shadow` 由软件后端真模糊合成，vello 无 blur 原语→**跳过并计数**；B4 只做最小集合（颜色），B6 接通 Material token → `Transition`；示例 `floem2-style`。通用滤镜、A5 着色器、`AnimatedContent`/共享元素仍未动 |
+| **S5 让过渡"成立"（enter/exit）** ◐ 部分交付 | B5（子集） | M | `Conditional` 支持 `enter`/`exit`/`presence` 过渡，退场动画播完前保持子树挂载；`Crossfade`（`AnimatedContent` / Crossfade 判据支）以两个叠放的 presence 子节点实现"交换时两侧同屏"；`PresenceTransition` 词汇（Fade/Grow/Slide）；宿主加 `Widget::animation_finished` 回调 + fold 类合成属性向下传播；示例 `floem2-motion`（第四幕：presence 延迟卸载；第五幕：crossfade 两侧同屏）。`AnimatedContent`（通用内容过渡）与**共享元素**未做（明确子集，见 B5） |
 
 四个切片都完成后，与 Flutter / Compose Multiplatform 在"canvas + 动画"这两项上的差距只余 **A5（自定义着色器）**，而 A5 恰好是**唯一一个"两边都需要平台分支"的能力**（见下）。
 
@@ -304,7 +315,7 @@ FLOEM2_WINDOW_IDLE=1 FLOEM2_WINDOW_IDLE_SECS=30 \
 | 中断 / 重定向 | ✅ (B2, S1) `retarget` 从当前值续接 | ✅ `Animatable` | ✅ `AnimationController` |
 | 循环 / 无限 / 往返 | ✅ (B3, S1) `RepeatSpec` 含 `INFINITE_REVERSE` | ✅ `infiniteRepeatable` | ✅ `repeat(reverse:)` |
 | 隐式动画（改值即动） | ⚠️ (B4, S4) **最小集合：颜色**（`Button::transition`） | ✅ `animate*AsState` | ✅ `AnimatedXxx` |
-| 挂载/内容过渡/共享元素 | ⚠️ 仅 overlay 入场 (B5) | ✅ `AnimatedVisibility`/共享元素 | ✅ `AnimatedSwitcher`/`Hero` |
+| 挂载/内容过渡/共享元素 | ◐ `Conditional` enter/exit + `Crossfade` 内容切换；**共享元素未做** (B5) | ✅ `AnimatedVisibility`/共享元素 | ✅ `AnimatedSwitcher`/`Hero` |
 | motion token 消费 | ✅ (B6, S4) Material token → `Transition` → 控件 | ✅（组件层） | ✅（组件层） |
 | 多值编排（一条曲线挂多属性） | ❌ (B6 未做) | ✅ `updateTransition` | ✅（组件层） |
 | 合成属性（不重排的动画） | ✅ (B7, S3) 含 `Scale`/`Rotate` | ✅ 完整 `graphicsLayer` | ✅ `Transform`/`Opacity` |

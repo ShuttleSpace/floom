@@ -126,6 +126,8 @@ impl_widget_any!(
     crate::compose::Stack,
     crate::nav::NavHost,
     crate::compose::Conditional,
+    crate::compose::PresenceLeaf,
+    crate::compose::Crossfade,
     crate::compose::Overlay,
     crate::compose::Dialog,
     crate::compose::Tabs,

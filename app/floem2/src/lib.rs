@@ -120,10 +120,10 @@ pub mod prelude {
     // --- Semantic widgets (floem-widgets) -------------------------------
     pub use floem_widgets::NativeSurface;
     pub use floem_widgets::{
-        BottomSheet, Button, Canvas, Checkbox, Conditional, Container, Dialog, Divider, Grid, Icon,
-        Image, ImageFit, InteractionState, Labeled, List, NavDestination, NavHandle, NavHost,
-        NavigationBar, NavigationDrawer, NavigationRail, Overlay, Popup, Progress, Radio, Select,
-        Slider, Spacer, Spinner, Stack, Switch, Tabs, Text, TextField,
+        BottomSheet, Button, Canvas, Checkbox, Conditional, Container, Crossfade, Dialog, Divider,
+        Grid, Icon, Image, ImageFit, InteractionState, Labeled, List, NavDestination, NavHandle,
+        NavHost, NavigationBar, NavigationDrawer, NavigationRail, Overlay, Popup, Progress, Radio,
+        Select, Slider, Spacer, Spinner, Stack, Switch, Tabs, Text, TextField,
     };
 
     // --- App shell (floem-app) -------------------------------------------
@@ -142,13 +142,20 @@ pub mod prelude {
     // rides in the prelude for the same reason `LayoutStyle` does: it is a
     // value an app *writes*, not a contract it implements.
     pub use floem_animation::{AnimId, AnimKind, Tween};
-    pub use floem_types::{CompositorProp, Easing, RepeatMode, Transition};
+    pub use floem_types::{
+        CompositorProp, Easing, PresenceChannel, PresenceTransition, RepeatMode, Transition,
+    };
 
     // --- Self-drawn value types -------------------------------------------
     // A `Canvas` painter writes `Path`s and `Stroke`s in app colors; without
     // these the canvas is unnameable from the beginner surface. Same rule as
     // the motion vocabulary: values an app writes, not contracts it implements.
     pub use floem_types::{Brush, Color, LineCap, LineJoin, Path, Shadow, Stroke};
+    // A presence transition is the other half of the motion vocabulary an app
+    // writes: `Transition` answers "this value changed", `PresenceTransition`
+    // answers "this subtree appeared or disappeared". Both belong on the
+    // beginner surface for the same reason `Transition` does — so they ride in
+    // the motion-vocabulary `pub use` above rather than in a second one.
 
     // A `Canvas::repaint_on` ping is also a value an app writes: bump it and
     // the canvas repaints on the next frame, paint-only.

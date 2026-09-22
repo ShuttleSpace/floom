@@ -16,10 +16,11 @@
 
 use floem_animation::{AnimKind, CompositorProp, Tween};
 use floem_app::{NodeId, WidgetHost};
+use floem_core::{Child, ChildKey, LayoutRequest};
 use floem_layout::LayoutStyle;
 use floem_scene::SceneNode;
-use floem_types::{Color, Event, Point, PointerEvent, Rect, Size, Transition};
-use floem_widgets::{Button, Container, Progress, Text};
+use floem_types::{Color, Event, Point, PointerEvent, PresenceTransition, Rect, Size, Transition};
+use floem_widgets::{Button, Conditional, Container, Crossfade, Progress, Text};
 
 /// A host with one text leaf on screen and one frame behind it, so layout has
 /// run and the scene holds a painted text node to watch.
@@ -896,5 +897,337 @@ fn an_untransitioned_button_snaps_its_fill_on_hover() {
         first_rect_fill(&host),
         resting,
         "but the colour still changes — just all at once"
+    );
+}
+
+// ---------------------------------------------------------------------------
+// B5 — presence transitions (enter / exit)
+//
+// The part of the implicit layer that is not "a value changed": a subtree's
+// *existence* changed. Something leaving has to stay mounted until its exit
+// animation is over, or the departure would be invisible. So a presence widget
+// is a state machine whose exit arm keeps the child on screen and only
+// unmounts it once the host reports the transition finished.
+// ---------------------------------------------------------------------------
+
+/// A host whose root is a `Conditional` with a `Text` child, optionally with
+/// enter/exit transitions. One frame has run, so the child (if shown) is laid
+/// out and painted.
+fn host_with_presence(
+    when: bool,
+    enter: Option<PresenceTransition>,
+    exit: Option<PresenceTransition>,
+) -> (WidgetHost, NodeId) {
+    let mut host = WidgetHost::new();
+    host.set_size(Size::new(200.0, 80.0));
+    let child = Child::new(ChildKey::index(1), LayoutRequest::default(), || {
+        Box::new(Text::new("hi"))
+    });
+    let mut conditional = Conditional::new(when).show(child);
+    if let Some(enter) = enter {
+        conditional = conditional.enter(enter);
+    }
+    if let Some(exit) = exit {
+        conditional = conditional.exit(exit);
+    }
+    let root = host.mount_root(LayoutStyle::default(), conditional);
+    host.frame();
+    (host, root)
+}
+
+/// The alpha of the *child's* text node — the only text node the scene holds,
+/// since the conditional itself paints nothing. `None` when no child is
+/// mounted.
+fn child_text_alpha(host: &WidgetHost) -> Option<u8> {
+    host.scene().iter().find_map(|(_, node)| match node {
+        SceneNode::Text { color, .. } => Some(color.a),
+        _ => None,
+    })
+}
+
+/// How many text nodes the scene currently holds — exactly the number of
+/// mounted child subtrees the conditional shows.
+fn child_text_count(host: &WidgetHost) -> usize {
+    host.scene()
+        .iter()
+        .filter(|(_, node)| matches!(node, SceneNode::Text { .. }))
+        .count()
+}
+
+/// The alpha of *every* text node the scene holds, in paint order. A crossfade
+/// keeps two children mounted at once, so this is how we watch both at once.
+fn child_text_alphas(host: &WidgetHost) -> Vec<u8> {
+    host.scene()
+        .iter()
+        .filter_map(|(_, node)| match node {
+            SceneNode::Text { color, .. } => Some(color.a),
+            _ => None,
+        })
+        .collect()
+}
+
+/// A presence child fades in on first appearance instead of popping in.
+#[test]
+fn a_presence_child_fades_in_on_first_appearance() {
+    let (mut host, _root) = host_with_presence(true, Some(PresenceTransition::fade(0.2)), None);
+
+    // The very first frame has the child mounted (layout ran) but the enter
+    // tween has only parked its t = 0 sample, so it is still transparent.
+    assert_eq!(child_text_count(&host), 1, "the child is mounted");
+    assert_eq!(
+        child_text_alpha(&host),
+        Some(0),
+        "and at the start of the enter it is fully transparent, not resting"
+    );
+
+    // Run the enter out.
+    for _ in 0..30 {
+        host.frame();
+    }
+    assert_eq!(child_text_alpha(&host), Some(255), "it lands fully shown");
+    assert_eq!(host.animations_running(), 0, "and then rests");
+}
+
+/// A presence child stays mounted *while* it exits, then unmounts only once
+/// the exit animation has finished.
+#[test]
+fn a_presence_child_exits_without_vanishing_instantly() {
+    let (mut host, root) = host_with_presence(
+        true,
+        Some(PresenceTransition::fade(0.2)),
+        Some(PresenceTransition::fade(0.2)),
+    );
+
+    // Let the enter finish and rest.
+    for _ in 0..30 {
+        host.frame();
+    }
+    assert_eq!(child_text_count(&host), 1);
+    assert_eq!(child_text_alpha(&host), Some(255));
+
+    // Flip it off. The child must remain on screen the moment after — an exit
+    // transition that unmounted immediately would never be seen.
+    host.widget_mut::<Conditional>(root)
+        .expect("the root is a conditional")
+        .set_when(false);
+    host.frame();
+    assert_eq!(child_text_count(&host), 1, "still mounted mid-exit");
+
+    // A few frames in, the fade-out has progressed past its t = 0 sample, so
+    // the child is dimming but still mounted — and dimming *monotonically
+    // toward invisible*, which is what separates "leaving" from an exit that
+    // ran the enter's endpoints backwards and would be climbing instead.
+    let mut dimming = Vec::new();
+    for _ in 0..4 {
+        host.frame();
+        assert_eq!(child_text_count(&host), 1, "still mounted mid-exit");
+        dimming.push(child_text_alpha(&host).expect("child present"));
+    }
+    assert!(dimming[0] < 255, "partway through fading out: {dimming:?}");
+    assert!(
+        dimming.windows(2).all(|pair| pair[0] > pair[1]),
+        "the exit travels toward invisible rather than back toward shown: {dimming:?}"
+    );
+
+    // Run the exit out. Once the host reports the transition finished, the
+    // widget unmounts the subtree.
+    for _ in 0..30 {
+        host.frame();
+    }
+    assert_eq!(
+        child_text_count(&host),
+        0,
+        "the child is unmounted only after its exit completed"
+    );
+}
+
+/// A child that leaves and comes back **replays** its enter instead of
+/// resuming the finished one.
+///
+/// The re-appearance re-declares a tween identical in every field to the one
+/// the host already ran to completion, so nothing about the value says "start
+/// over" — only the widget's own restart key does. Without it the child would
+/// appear already arrived, which is how "it only fades in the first time"
+/// bugs are born.
+#[test]
+fn a_presence_child_that_returns_replays_its_enter() {
+    // Deliberately no exit transition, so leaving is instant and what is left
+    // to observe when it returns is *its own* enter, not a departure still
+    // running.
+    let (mut host, root) = host_with_presence(true, Some(PresenceTransition::fade(0.2)), None);
+
+    for _ in 0..30 {
+        host.frame();
+    }
+    assert_eq!(
+        child_text_alpha(&host),
+        Some(255),
+        "control: it entered once and rested"
+    );
+
+    host.widget_mut::<Conditional>(root)
+        .expect("the root is a conditional")
+        .set_when(false);
+    host.frame();
+    assert_eq!(
+        child_text_count(&host),
+        0,
+        "an exit with no transition is instant, so nothing is left to resume"
+    );
+
+    // Come back: the enter has to start over from invisible.
+    host.widget_mut::<Conditional>(root)
+        .expect("the root is a conditional")
+        .set_when(true);
+    host.frame();
+    assert_eq!(
+        child_text_count(&host),
+        1,
+        "it is mounted again on the frame it returns"
+    );
+    assert_eq!(
+        child_text_alpha(&host),
+        Some(0),
+        "and it replays its enter from invisible, rather than appearing already \
+         arrived on the strength of the one that finished"
+    );
+
+    for _ in 0..30 {
+        host.frame();
+    }
+    assert_eq!(
+        child_text_alpha(&host),
+        Some(255),
+        "the replayed enter reaches rest"
+    );
+}
+
+/// A `Conditional` with no transitions is the old behaviour: mount/unmount,
+/// no animation, no grace period.
+#[test]
+fn an_untransitioned_conditional_unmounts_instantly() {
+    let (mut host, root) = host_with_presence(true, None, None);
+    assert_eq!(child_text_count(&host), 1);
+
+    host.widget_mut::<Conditional>(root)
+        .expect("the root is a conditional")
+        .set_when(false);
+    host.frame();
+    assert_eq!(
+        child_text_count(&host),
+        0,
+        "no exit transition means no grace period"
+    );
+    assert_eq!(host.animations_running(), 0);
+}
+
+/// A grow exit keeps the child mounted while it shrinks, then unmounts.
+#[test]
+fn a_presence_child_keeps_mounted_through_a_grow_exit() {
+    let (mut host, root) = host_with_presence(
+        true,
+        Some(PresenceTransition::grow(0.2, 0.5)),
+        Some(PresenceTransition::grow(0.2, 0.5)),
+    );
+    for _ in 0..30 {
+        host.frame();
+    }
+    assert_eq!(child_text_count(&host), 1);
+
+    host.widget_mut::<Conditional>(root)
+        .expect("the root is a conditional")
+        .set_when(false);
+    host.frame();
+    assert_eq!(child_text_count(&host), 1, "still mounted mid-exit");
+
+    for _ in 0..30 {
+        host.frame();
+    }
+    assert_eq!(
+        child_text_count(&host),
+        0,
+        "unmounts after the grow finished"
+    );
+}
+
+/// A `Crossfade` keeps *both* contents mounted through the swap, so the one
+/// leaving stays on screen while the one arriving fades in — the defining
+/// property of a crossfade, and exactly the presence choreography B5 asks for.
+#[test]
+fn a_crossfade_keeps_both_children_mounted_while_it_swaps() {
+    let mut host = WidgetHost::new();
+    host.set_size(Size::new(200.0, 80.0));
+    let child_a = Child::new(ChildKey::index(1), LayoutRequest::default(), || {
+        Box::new(Text::new("A"))
+    });
+    let child_b = Child::new(ChildKey::index(2), LayoutRequest::default(), || {
+        Box::new(Text::new("B"))
+    });
+    let root = host.mount_root(
+        LayoutStyle::default(),
+        Crossfade::new(true)
+            .a(child_a)
+            .b(child_b)
+            .presence(PresenceTransition::fade(0.2)),
+    );
+    host.frame();
+
+    // Let A's enter finish and rest before we assert the settled state.
+    for _ in 0..30 {
+        host.frame();
+    }
+
+    // Rested showing A: exactly one child mounted, fully opaque.
+    assert_eq!(
+        child_text_count(&host),
+        1,
+        "a rested crossfade shows only its active side"
+    );
+    assert_eq!(child_text_alphas(&host), vec![255]);
+
+    // Flip to B. The instant after the flip *both* sides are mounted — A is
+    // mid-exit, B is mid-enter — which a plain swap (or a `Conditional`) would
+    // never do. And they are at opposite ends of the fade: A still fully
+    // visible, B still invisible.
+    host.widget_mut::<Crossfade>(root)
+        .expect("the root is a crossfade")
+        .set_show_a(false);
+    host.frame();
+    let both = child_text_alphas(&host);
+    assert_eq!(
+        both.len(),
+        2,
+        "a crossfade keeps both children mounted through the swap"
+    );
+    assert!(
+        both.iter().any(|&a| a == 255) && both.iter().any(|&a| a == 0),
+        "the leaving side is still shown and the arriving side is still hidden \
+         at the start of the swap: {both:?}"
+    );
+
+    // Across the whole transition both sides stay live — never dropping back to
+    // a single mounted child until the swap is done.
+    for _ in 0..4 {
+        host.frame();
+        assert_eq!(
+            child_text_count(&host),
+            2,
+            "both sides remain mounted while the crossfade plays"
+        );
+    }
+
+    // Run it out. The leave is finished, so A unmounts and only B rests shown.
+    for _ in 0..30 {
+        host.frame();
+    }
+    assert_eq!(
+        child_text_count(&host),
+        1,
+        "once the swap completes only the arriving side is mounted"
+    );
+    assert_eq!(
+        child_text_alphas(&host),
+        vec![255],
+        "and it rests fully shown"
     );
 }

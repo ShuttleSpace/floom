@@ -19,7 +19,8 @@ pub use floem_types::{
     AnimationSpec, Brush, Color, CompositorProp, Easing, ElementId, Event, ImeUpdate, InputMode,
     Key, KeyEvent, KeyPhase, Modifiers, NamedKey, NativeCompositionMode, NativeSnapshot,
     NativeViewKind, OverlayHandle, OverlayKind, Point, PointerButton, PointerEvent, PointerKind,
-    PointerPhase, Rect, RepeatMode, RepeatSpec, ResourceId, ScrollEvent, Shadow, Size, Transition,
+    PointerPhase, PresenceChannel, PresenceTransition, Rect, RepeatMode, RepeatSpec, ResourceId,
+    ScrollEvent, Shadow, Size, Transition,
 };
 pub use native::{NativeGrant, NativeRequest};
 pub use overlay::OverlayRequest;

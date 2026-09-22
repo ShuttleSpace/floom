@@ -19,13 +19,13 @@
 
 use std::any::Any;
 use std::sync::Arc;
-use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 
 use floem_accessibility::SemanticsRole;
 use floem_core::{
     Align, Axis, Child, ChildKey, CreateContext, ElementId, LayoutRequest, OverlayHandle,
-    OverlayKind, OverlayRequest, PaintContext, Rect, SemanticsContext, UpdateContext, Widget,
-    WidgetAny,
+    OverlayKind, OverlayRequest, PaintContext, PresenceTransition, Rect, SemanticsContext,
+    UpdateContext, Widget, WidgetAny,
 };
 
 use crate::controls::Button;
@@ -157,28 +157,74 @@ impl Widget for Stack {
 /// Shows its single child when `when` is true, otherwise renders nothing.
 ///
 /// Toggling `when` mounts/unmounts the subtree without touching its siblings.
+/// With [`Self::enter`] / [`Self::exit`] set, the subtree fades (or grows, or
+/// slides) in and out instead of snapping: an exiting subtree is kept mounted
+/// until its exit animation has finished, so the departure is visible rather
+/// than an instant disappearance. A `Conditional` with no transitions behaves
+/// exactly as before — a plain mount/unmount.
 #[derive(Clone)]
 pub struct Conditional {
     when: bool,
     last_when: bool,
     child: Option<Child>,
+    /// The transition played as the child appears. `None` snaps it in.
+    enter: Option<PresenceTransition>,
+    /// The transition played as the child leaves. `None` snaps it out (the
+    /// child unmounts on the next frame).
+    exit: Option<PresenceTransition>,
+    /// What the child is doing right now.
+    phase: PresencePhase,
+    /// Bumped every time a transition is (re-)armed, so the host restarts it
+    /// even when the same `from`/`to`/`duration` is declared again — a child
+    /// that re-appears must replay its enter, not resume a finished one.
+    rev: u64,
+    /// Set by the host when a declared transition finishes; the next `update`
+    /// folds its end into the tree (unmount a finished exit, rest a finished
+    /// enter).
+    finished: bool,
+}
+
+/// Where a presence child is in its life cycle.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum PresencePhase {
+    /// Not mounted.
+    Hidden,
+    /// An enter transition is playing (or snapping straight to rest).
+    Entering,
+    /// At rest, fully shown.
+    Shown,
+    /// An exit transition is playing while the child stays mounted.
+    Exiting,
 }
 
 impl std::fmt::Debug for Conditional {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Conditional")
             .field("when", &self.when)
+            .field("phase", &self.phase)
             .finish()
     }
 }
 
 impl Conditional {
     pub fn new(when: bool) -> Self {
-        // Start "changed" so the first frame always reconciles.
+        // Start "changed" so the first frame always reconciles, and seed the
+        // phase from `when` so a child that starts present fades in rather than
+        // appearing pre-faded.
+        let phase = if when {
+            PresencePhase::Entering
+        } else {
+            PresencePhase::Hidden
+        };
         Self {
             when,
             last_when: !when,
             child: None,
+            enter: None,
+            exit: None,
+            phase,
+            rev: 0,
+            finished: false,
         }
     }
 
@@ -199,6 +245,25 @@ impl Conditional {
         self
     }
 
+    /// The transition played as the child appears.
+    pub fn enter(mut self, transition: PresenceTransition) -> Self {
+        self.enter = Some(transition);
+        self
+    }
+
+    /// The transition played as the child leaves (and before it unmounts).
+    pub fn exit(mut self, transition: PresenceTransition) -> Self {
+        self.exit = Some(transition);
+        self
+    }
+
+    /// Convenience for symmetric enter/exit transitions.
+    pub fn presence(mut self, transition: PresenceTransition) -> Self {
+        self.enter = Some(transition);
+        self.exit = Some(transition);
+        self
+    }
+
     /// Updates whether the child is shown; the next frame reconciles.
     pub fn set_when(&mut self, when: bool) {
         self.when = when;
@@ -215,17 +280,268 @@ impl Widget for Conditional {
     }
 
     fn update(&mut self, cx: &mut dyn UpdateContext, id: ElementId) {
+        // The host finished a transition last frame: fold its end into the
+        // tree now, in update, where marking dirty actually takes effect.
+        if self.finished {
+            self.finished = false;
+            match self.phase {
+                PresencePhase::Entering => {
+                    // The child is already present and at rest; only a repaint
+                    // is owed, and cancelling the declaration returns it to its
+                    // un-composited (full) appearance.
+                    self.phase = PresencePhase::Shown;
+                    cx.mark_dirty(id);
+                }
+                PresencePhase::Exiting => {
+                    // The departure has played; the subtree can really unmount.
+                    self.phase = PresencePhase::Hidden;
+                    cx.mark_children_dirty(id);
+                    cx.mark_dirty(id);
+                }
+                _ => {}
+            }
+            return;
+        }
+
         if self.when != self.last_when {
-            cx.mark_children_dirty(id);
             self.last_when = self.when;
+            // Whether or not a transition plays, the child's mount state
+            // changes, so the subtree must reconcile.
+            cx.mark_children_dirty(id);
+            cx.mark_dirty(id);
+            if self.when {
+                // Appearing: snap to rest when there is no enter transition,
+                // otherwise arm one (its restart key bumps so a re-appearance
+                // replays it).
+                match self.enter {
+                    Some(transition) if !transition.is_instant() => {
+                        self.phase = PresencePhase::Entering;
+                        self.rev = self.rev.wrapping_add(1);
+                    }
+                    _ => self.phase = PresencePhase::Shown,
+                }
+            } else {
+                match self.exit {
+                    Some(transition) if !transition.is_instant() => {
+                        self.phase = PresencePhase::Exiting;
+                        self.rev = self.rev.wrapping_add(1);
+                    }
+                    _ => self.phase = PresencePhase::Hidden,
+                }
+            }
         }
     }
 
     fn children(&self) -> Vec<Child> {
+        // The child is mounted while present *and* while exiting: an exit
+        // transition can only play while the subtree is still on screen. Hidden
+        // is the only phase with no child.
         match &self.child {
-            Some(child) if self.when => vec![child.clone()],
+            Some(child) if self.phase != PresencePhase::Hidden => vec![child.clone()],
             _ => Vec::new(),
         }
+    }
+
+    fn animation(&self) -> Option<floem_core::AnimationSpec> {
+        let spec = match self.phase {
+            PresencePhase::Entering => self.enter?.spec(true),
+            PresencePhase::Exiting => self.exit?.spec(false),
+            _ => return None,
+        };
+        Some(spec.with_key(self.rev))
+    }
+
+    fn animation_finished(&mut self, _cx: &mut dyn UpdateContext, _id: ElementId) {
+        // A presence transition ended. Acting here would unmount a subtree from
+        // inside the host's tick, so we only flag and let `update` fold it in.
+        self.finished = true;
+    }
+
+    fn paint(&self, _cx: &mut dyn PaintContext, _id: ElementId) {}
+
+    fn semantics(&self, cx: &mut dyn SemanticsContext, _id: ElementId) {
+        crate::primitives::emit_semantics(self.semantics_hint(), cx);
+    }
+}
+
+// ---------------------------------------------------------------------------
+// PresenceLeaf
+// ---------------------------------------------------------------------------
+
+/// A child whose `when` is driven by a shared flag rather than internal state,
+/// so a parent (a [`Crossfade`]) can flip it without holding the child's node.
+///
+/// Everything else delegates to an inner [`Conditional`] — this is purely the
+/// "read `when` from a signal" seam that lets a composite own the choreography
+/// while the child owns the presence lifecycle it already implements.
+#[derive(Clone)]
+pub(crate) struct PresenceLeaf {
+    inner: Conditional,
+    when_signal: Arc<AtomicBool>,
+}
+
+impl PresenceLeaf {
+    /// A presence leaf publishes whatever its inner [`Conditional`] does.
+    pub fn semantics_hint(&self) -> SemanticsHint {
+        self.inner.semantics_hint()
+    }
+}
+
+impl Widget for PresenceLeaf {
+    fn create(&self, cx: &mut dyn CreateContext) -> ElementId {
+        cx.alloc_child()
+    }
+
+    fn update(&mut self, cx: &mut dyn UpdateContext, id: ElementId) {
+        let want = self.when_signal.load(Ordering::Relaxed);
+        self.inner.set_when(want);
+        self.inner.update(cx, id);
+    }
+
+    fn children(&self) -> Vec<Child> {
+        self.inner.children()
+    }
+
+    fn animation(&self) -> Option<floem_core::AnimationSpec> {
+        self.inner.animation()
+    }
+
+    fn animation_finished(&mut self, cx: &mut dyn UpdateContext, id: ElementId) {
+        self.inner.animation_finished(cx, id);
+    }
+
+    fn paint(&self, cx: &mut dyn PaintContext, id: ElementId) {
+        self.inner.paint(cx, id);
+    }
+
+    fn semantics(&self, cx: &mut dyn SemanticsContext, id: ElementId) {
+        self.inner.semantics(cx, id);
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Crossfade
+// ---------------------------------------------------------------------------
+
+/// Swaps between two contents by crossfading them, instead of cutting.
+///
+/// Both contents stay mounted — following Flutter's `AnimatedCrossFade`, which
+/// keeps both children live — and are stacked in the same box, so the one
+/// leaving plays its exit transition at the same moment the one arriving plays
+/// its enter. Each side is a presence child in its own right, so a departure is
+/// visible: the outgoing content stays on screen until its motion ends, it does
+/// not vanish the instant the swap begins.
+///
+/// [`Crossfade::presence`] chooses the transition (a fade by default); a
+/// non-positive duration collapses to an instant swap, the same as a
+/// `Conditional` with no transition.
+#[derive(Clone)]
+pub struct Crossfade {
+    show_a: bool,
+    last_show_a: bool,
+    a: Option<Child>,
+    b: Option<Child>,
+    transition: PresenceTransition,
+    signal_a: Arc<AtomicBool>,
+    signal_b: Arc<AtomicBool>,
+}
+
+impl Crossfade {
+    /// Starts showing `a` (`show_a = true`) or `b` (`show_a = false`).
+    pub fn new(show_a: bool) -> Self {
+        Self {
+            show_a,
+            last_show_a: show_a,
+            a: None,
+            b: None,
+            // Instant until a transition is supplied: an unconfigured crossfade
+            // is just a swap, as a `Conditional` with no transition is.
+            transition: PresenceTransition::fade(0.0),
+            signal_a: Arc::new(AtomicBool::new(show_a)),
+            signal_b: Arc::new(AtomicBool::new(!show_a)),
+        }
+    }
+
+    /// The first content, shown while `show_a` is true.
+    pub fn a(mut self, child: Child) -> Self {
+        self.a = Some(child);
+        self
+    }
+
+    /// The second content, shown while `show_a` is false.
+    pub fn b(mut self, child: Child) -> Self {
+        self.b = Some(child);
+        self
+    }
+
+    /// The transition each side plays as it arrives or leaves. A fade by
+    /// default; a non-positive duration is treated as an instant swap.
+    pub fn presence(mut self, transition: PresenceTransition) -> Self {
+        self.transition = transition;
+        self
+    }
+
+    /// Swap which content is shown; the next frame crossfades.
+    pub fn set_show_a(&mut self, show_a: bool) {
+        self.show_a = show_a;
+    }
+
+    pub fn semantics_hint(&self) -> SemanticsHint {
+        SemanticsHint::decorative()
+    }
+}
+
+impl Widget for Crossfade {
+    fn create(&self, cx: &mut dyn CreateContext) -> ElementId {
+        cx.alloc_child()
+    }
+
+    fn update(&mut self, _cx: &mut dyn UpdateContext, _id: ElementId) {
+        if self.show_a != self.last_show_a {
+            self.last_show_a = self.show_a;
+            self.signal_a.store(self.show_a, Ordering::Relaxed);
+            self.signal_b.store(!self.show_a, Ordering::Relaxed);
+            // Deliberately no `mark_dirty` here: nothing about *this* widget
+            // changed — it still owns the same two slots. What changed is each
+            // leaf's `when`, and every leaf reads its own signal and reports
+            // that change itself (that is `Conditional::update`, which both
+            // marks the node dirty and re-syncs the declared transition, since
+            // the host only re-syncs declarations for dirty nodes). Marking
+            // dirty here too would be a second report of a change already
+            // reported, and it is not observable — the S5 mutation campaign
+            // removes it and nothing moves.
+        }
+    }
+
+    fn children(&self) -> Vec<Child> {
+        let mut out = Vec::new();
+        if let Some(a) = &self.a {
+            let leaf = PresenceLeaf {
+                inner: Conditional::new(self.signal_a.load(Ordering::Relaxed))
+                    .show(a.clone())
+                    .presence(self.transition),
+                when_signal: self.signal_a.clone(),
+            };
+            out.push(Child::new(
+                ChildKey::index(0),
+                LayoutRequest::new().absolute_fill(),
+                move || Box::new(leaf.clone()),
+            ));
+        }
+        if let Some(b) = &self.b {
+            let leaf = PresenceLeaf {
+                inner: Conditional::new(self.signal_b.load(Ordering::Relaxed))
+                    .show(b.clone())
+                    .presence(self.transition),
+                when_signal: self.signal_b.clone(),
+            };
+            out.push(Child::new(
+                ChildKey::index(1),
+                LayoutRequest::new().absolute_fill(),
+                move || Box::new(leaf.clone()),
+            ));
+        }
+        out
     }
 
     fn paint(&self, _cx: &mut dyn PaintContext, _id: ElementId) {}
