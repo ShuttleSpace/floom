@@ -24,7 +24,7 @@ something stale.
 | `floem2-transform` | subtree transforms: a card that scales and rotates as one picture | all | headless |
 | `floem2-style` | style that is made of something: a gradient card, a real drop shadow, an implicit hover fade armed with a design-system motion token, a blurred card whose ink crosses its own edge, and a frosted panel that greys the edge behind it | all | headless |
 | `floem2-editor` | text document: transactions, selection, undo/redo, IME pre-edit | all | headless |
-| `floem2-motion` | eased tweens, interruption, a control that animates itself, presence enter/exit, a crossfade that keeps both sides alive, an `AnimatedContent` that keeps both sides alive by key, and an `Opacity` that fades a subtree instead of snapping | all | headless |
+| `floem2-motion` | eased tweens, interruption, a control that animates itself, presence enter/exit, a crossfade that keeps both sides alive, an `AnimatedContent` that keeps both sides alive by key, an `Opacity` that fades a subtree instead of snapping, and a `SharedTransitionLayout` that flies one subtree into the other's box | all | headless |
 | `floem2-native-plugin` | writing a native provider plugin + slot pooling | all | headless |
 | `floem2-probe` | device probe: one window holding every control the on-screen cases need | desktop | **display-gated** — `--features real`, driven by hand |
 | `floem2-window` | a real OS window: winit + vello GPU | desktop | **verified on macOS** |
@@ -171,11 +171,12 @@ edge read inside the panel (grey) and outside it (still a step).
 
 ### `floem2-motion`
 
-Motion, end to end (MOTION-GAP B1/B2/B3/B4/B5): a curve is not a duration,
+Motion, end to end (MOTION-GAP B1/B2/B3/B4/B5/B6): a curve is not a duration,
 interruption carries what it interrupted, a control animates itself, a presence
 transition delays unmount, a crossfade keeps *both* sides alive, an
-`AnimatedContent` keeps both sides alive *by key*, and an `Opacity` fades a
-subtree instead of snapping it.
+`AnimatedContent` keeps both sides alive *by key*, an `Opacity` fades a
+subtree instead of snapping it, and a `SharedTransitionLayout` flies one subtree
+into the other's box.
 
 ```text
 == 4. a presence transition delays unmount ==
@@ -186,6 +187,9 @@ subtree instead of snapping it.
   v1 -> v2 keeps both mounted; v2 -> v1 (a return) replays the enter from invisible
 == 7. an opacity transition fades instead of snapping ==
   1.0 -> 0.5 fades; 0.5 -> 1.0 fades back up from 0.5, not from 1.0
+== 8. a shared element flies to its destination ==
+  source rests at y=0; arming the flight…
+  flew src (y=0) -> dst box (40); revealed 'dst' content
 ```
 
 Act 4 is the enter/exit half of B5: a subtree leaving the screen stays mounted
@@ -201,7 +205,19 @@ invisible rather than resurrecting the one that already finished. Act 7 is the
 B4 opacity half: `Opacity::new(child).opacity(1.0).transition(transition)` wraps
 a subtree, and changing the target opacity fades the whole subtree through the
 compositor opacity channel (S3's fold-class) instead of snapping — a value that
-returns fades back up from where it rested, not from where it was born.
+returns fades back up from where it rested, not from where it was born. Act 8 is
+the `SharedTransitionLayout` / `Hero` half of B5 plus the single `TranslateY`
+channel of B6: `SharedTransitionLayout::new(key, delta).source(src).dest(dst)`
+keeps both subtrees mounted — each pinned to its own absolute box — and arming
+the flight translates the source's ink down onto the destination's box; once it
+lands the destination's *own* content is revealed and the source unmounts. It is
+carried on exactly one compositor channel, so redirecting it mid-flight through
+the host's retarget door keeps the speed it had (B2).
+
+Also exercised end to end in `tooling/floem-snapshot/tests/golden_frames.rs`
+(`a_shared_element_flight_is_golden_frame_by_frame`: the ink's top edge walks
+down the lattice and the landing frame swaps the inky source card for the hot
+destination card, a trajectory no single-pixel probe can hold).
 
 ### `floem2-window`
 

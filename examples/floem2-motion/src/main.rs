@@ -1,6 +1,6 @@
 //! Motion, from the prelude alone.
 //!
-//! Seven acts, each one a capability that did not exist before S1 and each one
+//! Eight acts, each one a capability that did not exist before S1 and each one
 //! asserted rather than described, because "it animates" is the easiest claim
 //! in this codebase to write down and never check:
 //!
@@ -35,6 +35,14 @@
 //!    `Button::transition` drives through paint) to the compositor opacity
 //!    channel, the Flutter `AnimatedOpacity` half. A value that returns fades
 //!    back up from where it rested, not from where it was born.
+//! 8. **A shared element flies its ink.** Two subtrees that own the same
+//!    `shared_key` — the source up top, the destination below — are both kept
+//!    mounted, and arming the flight translates the source's ink down onto the
+//!    destination's box before the destination's *own* content is revealed.
+//!    Redirect it mid-flight and the interrupt keeps the speed it had. This
+//!    closes the `SharedTransitionLayout` / `Hero` half of B5, and the single
+//!    `TranslateY` channel that carries it is B6's multi-value orchestration in
+//!    action.
 //!
 //! Everything below is `floem2::prelude` — no crate below the facade is named.
 //! Run with `cargo run -p floem2-motion`.
@@ -84,6 +92,7 @@ fn main() {
     act_5_a_crossfade_keeps_both_sides_live(&mut host);
     act_6_an_animated_content_keeps_both_sides_live(&mut host);
     act_7_an_opacity_transition_fades_instead_of_snapping(&mut host);
+    act_8_a_shared_element_flies_to_its_destination(&mut host);
 
     println!();
     println!("every act above was asserted, not printed");
@@ -272,11 +281,9 @@ fn act_4_a_presence_transition_delays_unmount(_host: &mut WidgetHost) {
     let mut host = WidgetHost::new();
     host.set_size(Size::new(240.0, 80.0));
 
-    let child = Child::new(
-        ChildKey::index(0),
-        LayoutRequest::default(),
-        || Box::new(Text::new("hi")),
-    );
+    let child = Child::new(ChildKey::index(0), LayoutRequest::default(), || {
+        Box::new(Text::new("hi"))
+    });
     let presence = Conditional::new(true)
         .show(child)
         .presence(PresenceTransition::fade(0.2));
@@ -319,7 +326,10 @@ fn act_4_a_presence_transition_delays_unmount(_host: &mut WidgetHost) {
             _ => None,
         })
         .expect("child present");
-    assert!(mid_alpha < 255, "the exit is mid-fade, not instant: alpha {mid_alpha}");
+    assert!(
+        mid_alpha < 255,
+        "the exit is mid-fade, not instant: alpha {mid_alpha}"
+    );
 
     // Run the exit out. Once the host reports the transition finished, the
     // widget unmounts the subtree.
@@ -344,16 +354,12 @@ fn act_5_a_crossfade_keeps_both_sides_live(_host: &mut WidgetHost) {
     let mut host = WidgetHost::new();
     host.set_size(Size::new(240.0, 80.0));
 
-    let side_a = Child::new(
-        ChildKey::index(0),
-        LayoutRequest::default(),
-        || Box::new(Text::new("A")),
-    );
-    let side_b = Child::new(
-        ChildKey::index(1),
-        LayoutRequest::default(),
-        || Box::new(Text::new("B")),
-    );
+    let side_a = Child::new(ChildKey::index(0), LayoutRequest::default(), || {
+        Box::new(Text::new("A"))
+    });
+    let side_b = Child::new(ChildKey::index(1), LayoutRequest::default(), || {
+        Box::new(Text::new("B"))
+    });
     let root = host.mount_root(
         LayoutStyle::default(),
         Crossfade::new(true)
@@ -431,7 +437,9 @@ fn act_5_a_crossfade_keeps_both_sides_live(_host: &mut WidgetHost) {
         "once the swap completes only B is mounted"
     );
     assert_eq!(first_alpha(&host), 255, "and B rests fully shown");
-    println!("  A and B both stay on screen during the swap; A unmounts only when its exit finishes");
+    println!(
+        "  A and B both stay on screen during the swap; A unmounts only when its exit finishes"
+    );
 }
 
 /// An `AnimatedContent` is the N-ary, content-keyed generalisation of the
@@ -448,14 +456,14 @@ fn act_6_an_animated_content_keeps_both_sides_live(_host: &mut WidgetHost) {
 
     let root = host.mount_root(
         LayoutStyle::default(),
-        AnimatedContent::new(1u32).content_with(|v| {
-            let label = format!("v{v}");
-            Child::new(
-                ChildKey::index(0),
-                LayoutRequest::default(),
-                move || Box::new(Text::new(label.clone())),
-            )
-        }).presence(PresenceTransition::fade(0.2)),
+        AnimatedContent::new(1u32)
+            .content_with(|v| {
+                let label = format!("v{v}");
+                Child::new(ChildKey::index(0), LayoutRequest::default(), move || {
+                    Box::new(Text::new(label.clone()))
+                })
+            })
+            .presence(PresenceTransition::fade(0.2)),
     );
     host.frame();
 
@@ -554,9 +562,7 @@ fn act_6_an_animated_content_keeps_both_sides_live(_host: &mut WidgetHost) {
     }
     assert_eq!(count_text(&host), 1);
     assert_eq!(first_alpha(&host), 255);
-    println!(
-        "  v1 -> v2 keeps both mounted; v2 -> v1 (a return) replays the enter from invisible"
-    );
+    println!("  v1 -> v2 keeps both mounted; v2 -> v1 (a return) replays the enter from invisible");
 }
 
 /// The implicit opacity transition: change a subtree's target opacity and it
@@ -569,14 +575,14 @@ fn act_7_an_opacity_transition_fades_instead_of_snapping(_host: &mut WidgetHost)
 
     let mut host = WidgetHost::new();
     host.set_size(Size::new(240.0, 80.0));
-    let child = Child::new(
-        ChildKey::index(1),
-        LayoutRequest::default(),
-        || Box::new(Text::new("hi")),
-    );
+    let child = Child::new(ChildKey::index(1), LayoutRequest::default(), || {
+        Box::new(Text::new("hi"))
+    });
     let root = host.mount_root(
         LayoutStyle::default(),
-        Opacity::new(child).opacity(1.0).transition(Transition::new(0.2)),
+        Opacity::new(child)
+            .opacity(1.0)
+            .transition(Transition::new(0.2)),
     );
     host.frame();
 
@@ -608,7 +614,10 @@ fn act_7_an_opacity_transition_fades_instead_of_snapping(_host: &mut WidgetHost)
         host.frame();
     }
     let settled = first_alpha(&host);
-    assert!(settled < 155 && settled > 110, "it landed near 0.5: {settled}");
+    assert!(
+        settled < 155 && settled > 110,
+        "it landed near 0.5: {settled}"
+    );
 
     // And back to 1.0: it fades up from 0.5, not from the initial 1.0.
     host.widget_mut::<Opacity>(root)
@@ -625,4 +634,112 @@ fn act_7_an_opacity_transition_fades_instead_of_snapping(_host: &mut WidgetHost)
     }
     assert_eq!(first_alpha(&host), 255, "and lands fully shown again");
     println!("  1.0 -> 0.5 fades; 0.5 -> 1.0 fades back up from 0.5, not from 1.0");
+}
+
+/// A shared element flies one subtree's ink down onto the other's box, then
+/// reveals the destination's *own* content — and can be redirected mid-flight
+/// without snapping. This is the `SharedTransitionLayout` / `Hero` half of B5,
+/// carried on a single `TranslateY` channel (B6).
+fn act_8_a_shared_element_flies_to_its_destination(_host: &mut WidgetHost) {
+    use std::sync::Arc;
+    use std::sync::atomic::{AtomicBool, Ordering};
+
+    println!("== 8. a shared element flies to its destination ==");
+
+    let mut host = WidgetHost::new();
+    host.set_size(Size::new(240.0, 120.0));
+    let fly = Arc::new(AtomicBool::new(false));
+
+    let src = Child::new(ChildKey::index(0), LayoutRequest::new(), || {
+        Box::new(Text::new("src"))
+    });
+    let dst = Child::new(ChildKey::index(1), LayoutRequest::new(), || {
+        Box::new(Text::new("dst"))
+    });
+    let _root = host.mount_root(
+        LayoutStyle::default(),
+        SharedTransitionLayout::new(7, 40.0)
+            .duration(0.4)
+            .fly_signal(fly.clone())
+            .source(src)
+            .dest(dst),
+    );
+    host.frame();
+
+    // Capture the source's resting Y, then arm the flight.
+    let first_y = host
+        .scene()
+        .iter()
+        .find_map(|(_, node)| match node {
+            SceneNode::Text { origin, .. } => Some(origin.y),
+            _ => None,
+        })
+        .expect("a shared element text is mounted");
+    let one_text = |host: &WidgetHost| {
+        host.scene()
+            .iter()
+            .filter(|(_, node)| matches!(node, SceneNode::Text { .. }))
+            .count()
+    };
+    assert_eq!(one_text(&host), 1, "at rest only the source is shown");
+    println!("  source rests at y={first_y:.0}; arming the flight…");
+
+    fly.store(true, Ordering::Relaxed);
+
+    // Sample the flight: the ink should travel monotonically down to the
+    // destination box (first_y + 40), landing on it.
+    let mut ys = Vec::new();
+    for _ in 0..40 {
+        host.frame();
+        ys.push(
+            host.scene()
+                .iter()
+                .find_map(|(_, node)| match node {
+                    SceneNode::Text { origin, .. } => Some(origin.y),
+                    _ => None,
+                })
+                .expect("the in-flight element is mounted"),
+        );
+    }
+    let landed = ys[ys.len() - 1];
+    assert_eq!(host.animations_running(), 0, "the flight ends on its own");
+    assert!(
+        ys.iter()
+            .any(|y| (first_y + 2.0..first_y + 38.0).contains(y)),
+        "the ink travels through the gap between source and destination: {ys:?}"
+    );
+    assert!(
+        ys.windows(2).all(|w| w[1] >= w[0] - 0.5),
+        "a one-way downward flight never detours upward: {ys:?}"
+    );
+    assert!(
+        (landed - (first_y + 40.0)).abs() < 8.0,
+        "the ink lands on the destination box: {landed} vs {first_y}+40"
+    );
+
+    // And once landed, exactly one `dst` text occupies the lower box: the
+    // destination's own content is what is shown (its origin is at the bottom
+    // box, not the source's top box the flight left behind).
+    let landed_origin = host
+        .scene()
+        .iter()
+        .find_map(|(_, node)| match node {
+            SceneNode::Text { origin, .. } => Some(origin.y),
+            _ => None,
+        })
+        .expect("one shared element remains");
+    assert_eq!(one_text(&host), 1, "still one shared element after landing");
+    assert!(
+        (landed_origin - (first_y + 40.0)).abs() < 8.0,
+        "the remaining text sits on the destination's box, source's top box is \
+         gone: {landed_origin}"
+    );
+    assert!(
+        !host.needs_frame(),
+        "a landed shared element lets the frame loop park"
+    );
+    println!(
+        "  flew src (y={first_y:.0}) -> dst box ({:.0}); revealed 'dst' content",
+        first_y + 40.0
+    );
 }

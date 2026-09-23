@@ -37,9 +37,9 @@ use floem_animation::{AnimKind, CompositorProp, Tween};
 use floem_app::{NodeId, WidgetHost};
 use floem_core::{Child, ChildKey, LayoutRequest};
 use floem_layout::LayoutStyle;
-use floem_snapshot::{GoldenFrames, PixelSnapshot, snapshots_dir};
+use floem_snapshot::{FrameDigest, GoldenFrames, PixelSnapshot, snapshots_dir};
 use floem_types::{Brush, Color, PresenceTransition, Size};
-use floem_widgets::{Conditional, Container, Crossfade, WidgetAny};
+use floem_widgets::{Conditional, Container, Crossfade, SharedTransitionLayout, WidgetAny};
 
 /// The frame: 120×60.
 const FRAME: Size = Size::new(120.0, 60.0);
@@ -67,7 +67,11 @@ fn card_style() -> LayoutStyle {
 }
 
 /// Mount `widget` as the root of a host of `size` and run one frame.
-fn mounted(size: Size, style: LayoutStyle, widget: impl WidgetAny + 'static) -> (WidgetHost, NodeId) {
+fn mounted(
+    size: Size,
+    style: LayoutStyle,
+    widget: impl WidgetAny + 'static,
+) -> (WidgetHost, NodeId) {
     let mut host = WidgetHost::new();
     host.set_size(size);
     let root = host.mount_root(style, widget);
@@ -100,7 +104,10 @@ fn pixels(host: &WidgetHost, size: Size) -> PixelSnapshot {
 fn card_alpha(g: &GoldenFrames, index: usize) -> u8 {
     let cells = &g.frames()[index].1.cells;
     let deep = [3 * 12 + 3, 3 * 12 + 4, 4 * 12 + 3, 4 * 12 + 4];
-    deep.iter().map(|&i| cells[i][3]).max().expect("four interior cells")
+    deep.iter()
+        .map(|&i| cells[i][3])
+        .max()
+        .expect("four interior cells")
 }
 
 /// A linear opacity tween from `from` to `to` over `secs`.
@@ -195,7 +202,11 @@ fn a_fading_blurred_card_is_golden_frame_by_frame() {
     // frame changes shape as the alpha rises — ink crossing the card's own edge
     // by an amount that depends on the radius — so these frames pin the filter
     // and the animation together.
-    let (mut host, root) = mounted(FRAME, card_style(), Container::new().background(INK).blur(4.0));
+    let (mut host, root) = mounted(
+        FRAME,
+        card_style(),
+        Container::new().background(INK).blur(4.0),
+    );
     host.animate(root, fade(0.0, 1.0, 0.3));
 
     let mut g = GoldenFrames::new();
@@ -334,6 +345,101 @@ fn a_crossfade_swap_is_golden_frame_by_frame() {
 }
 
 // ---------------------------------------------------------------------------
+// Shared element: the ink flies from one box to another.
+// ---------------------------------------------------------------------------
+
+/// A small solid square child built directly (no glyphs — a golden over shaped
+/// text is pinned to the host's font stack).
+fn shared_card(color: Color, index: usize) -> Child {
+    Child::new(
+        ChildKey::index(index),
+        LayoutRequest {
+            width: Some(20.0),
+            height: Some(20.0),
+            ..LayoutRequest::default()
+        },
+        move || Box::new(Container::new().background(color)),
+    )
+}
+
+/// The vertical band of the highest inked row, as a cell index (rows of the
+/// 12-lattice; each row is 5 px in a 60 px-tall frame). Measures where the top
+/// edge of the card is, which is the coordinate a flight actually changes.
+fn top_true(d: &FrameDigest) -> usize {
+    (0..12)
+        .find(|row| (0..12).any(|col| d.cells[row * 12 + col][3] > 8))
+        .unwrap_or(12)
+}
+
+#[test]
+fn a_shared_element_flight_is_golden_frame_by_frame() {
+    // Source square pinned to the layout's top-left, destination 20 px below.
+    // Grid 12 over a 60 px frame makes 20 px exactly 4 rows, so a flight over
+    // the whole `delta` moves the top edge from cell-row near 0 to near 4.
+    use std::sync::Arc;
+    use std::sync::atomic::{AtomicBool, Ordering};
+
+    let fly = Arc::new(AtomicBool::new(false));
+    let layout = SharedTransitionLayout::new(7, 20.0)
+        .duration(0.4)
+        .fly_signal(fly.clone())
+        .source(shared_card(INK, 1))
+        .dest(shared_card(HOT, 2));
+    let (mut host, _root) = mounted(FRAME, LayoutStyle::default(), layout);
+
+    // Both boxes are laid out but only the source shows at rest (the destination
+    // is hidden until the flight lands) — settle that first.
+    for _ in 0..5 {
+        host.frame();
+    }
+    assert_eq!(top_true(&host_digest(&host)), 0, "source rests at the top");
+
+    fly.store(true, Ordering::Relaxed);
+
+    let mut g = GoldenFrames::new();
+    // 0.4 s at the nominal step is 24 frames; five samples across it, plus one
+    // past the landing so the destination's own content is revealed.
+    record(&mut g, &mut host, FRAME, &[1, 7, 13, 19, 24, 26]);
+
+    // The flight is a *trajectory*: the top edge only ever travels downward,
+    // and it ends up at the destination box's row (≈4), not just somewhere
+    // lower.
+    let rows: Vec<usize> = (0..g.frames().len())
+        .map(|i| top_true(&g.frames()[i].1))
+        .collect();
+    assert!(
+        rows.windows(2).all(|p| p[0] <= p[1]),
+        "a one-way flight never travels upward: {rows:?}"
+    );
+    assert!(
+        rows[0] < rows[rows.len() - 1],
+        "the top edge has to actually move down across the flight: {rows:?}"
+    );
+    assert!(
+        rows[rows.len() - 1] >= 3,
+        "and it lands on the destination's box (row ≈4): {rows:?}"
+    );
+
+    // And the destination reveals *its own* content once the flight lands —
+    // the source card (INK) is replaced by the destination card (HOT), which is
+    // what makes this a shared element rather than a card that walked somewhere.
+    let last_cells = &g.frames()[g.frames().len() - 1].1.cells;
+    let dest_cell = last_cells[4 * 12 + 0];
+    assert!(
+        dest_cell[0] > 0x80 && dest_cell[2] < 0x60,
+        "the landed frame must show the hot destination (r high, b low), not \
+         the inky source: {dest_cell:?}"
+    );
+
+    g.assert(snapshots_dir!(), "frames_shared_element_flight");
+}
+
+/// A one-frame digest helper reused by the shared-flight control assertion.
+fn host_digest(host: &WidgetHost) -> FrameDigest {
+    FrameDigest::of(&pixels(host, FRAME), 12)
+}
+
+// ---------------------------------------------------------------------------
 
 #[test]
 fn every_frame_golden_is_accounted_for() {
@@ -360,6 +466,7 @@ fn every_frame_golden_is_accounted_for() {
         "frames_presence_enter.snap",
         "frames_presence_exit.snap",
         "frames_crossfade_swap.snap",
+        "frames_shared_element_flight.snap",
     ];
     for want in expected {
         assert!(

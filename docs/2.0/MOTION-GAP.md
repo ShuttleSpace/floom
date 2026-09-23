@@ -272,7 +272,7 @@ A8 独立，随时可做（但越早越好——它是"自绘控件在无障碍�
 
 | **A5 自定义着色器** ✅ 已交付 | A5 | L | 只选 **WGSL 单一语言**（反面约束：不引入 AGSL+SkSL 两套）。`Shader{wgsl,params}` + `SceneNode::Shader{bounds,shader}`；软件后端跳过并计 `shaders_skipped`，skia 记录 `SkiaCommand::Shader`，**vello 真跑**（离屏 `Rgba8Unorm` 读回→`ImageBrush` 合回场景，`run_shader_to_image`，节点永不进 fragment 缓存）。`--features gpu` 单测 + `scripts/mutate-a5-shader.sh` 4/4 |
 
-| **共享元素 + B6 多值编排** ✅ 已交付 | A6（共享元素）+ B6（多值） | M | `Child.shared_key` 让两处子树共享同一 `key`；`SharedTransitionLayout{key,delta}`（`floem-widgets`）完整落地：源/目标子树都挂载、各自锚在绝对箱子（源顶、目标下方 `delta`），`fly` 使能时整棵布局沿一条 `TranslateY` 通道把源子树飞入目标箱子、落定（`animation_finished` 折叠）后再揭示目标**自身**内容并卸载源；可经宿主 `retarget_animation` 门**中断重定向**（动量保持、不跳变）。B6 多值编排：`AnimationSpec.channels` + 绘制路径 `SmallVec<[CompositorProp;2]>`，一条曲线同驱不透明+位移。`motion_host.rs` 两条共享元素（飞行+中断）+ 一条多通道；全量 workspace 门通过 |
+| **共享元素 + B6 多值编排** ✅ 已交付 | A6（共享元素）+ B6（多值） | M | `Child.shared_key` 让两处子树共享同一 `key`；`SharedTransitionLayout{key,delta}`（`floem-widgets`）完整落地：源/目标子树都挂载、各自锚在绝对箱子（源顶、目标下方 `delta`），`fly` 使能时整棵布局沿一条 `TranslateY` 通道把源子树飞入目标箱子、落定（`animation_finished` 折叠）后再揭示目标**自身**内容并卸载源；可经宿主 `retarget_animation` 门**中断重定向**（动量保持、不跳变）。B6 多值编排：`AnimationSpec.channels` + 绘制路径 `SmallVec<[CompositorProp;2]>`，一条曲线同驱不透明+位移。`motion_host.rs` 两条共享元素（飞行+中断）+ 一条多通道；`floem-snapshot` 逐帧像素金帧 `frames_shared_element_flight`（顶缘逐帧下移、落帧源卡片换目标卡）；示例 `floem2-motion` 第八幕；变异 `scripts/mutate-a6-shared-element.sh` 4/4；全量 workspace 门通过 |
 
 所有切片完成后，与 Flutter / Compose Multiplatform 在"canvas + 动画"这两项上的差距已把**共享元素 `SharedTransitionLayout`/Hero 与 B6 多值编排**补完（见切片表"共享元素 + B6 多值编排"）。自由坐标系共享元素（任意子树间、随布局推导 delta）仍留作后续增强——本切片以布局内置的固定 `delta` 落地。
 

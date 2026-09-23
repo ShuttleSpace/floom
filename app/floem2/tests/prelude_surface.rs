@@ -44,6 +44,8 @@ fn prelude_exports_the_semantic_widget_surface() {
     exists::<Grid<String>>();
     exists::<Tabs>();
     exists::<Conditional>();
+    exists::<Crossfade>();
+    exists::<SharedTransitionLayout>();
     exists::<Dialog>();
     exists::<Overlay>();
     exists::<Popup>();
