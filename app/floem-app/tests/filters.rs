@@ -75,6 +75,7 @@ fn kinds(host: &WidgetHost) -> Vec<&'static str> {
             SceneNode::FilterPush { .. } => "FilterPush",
             SceneNode::FilterPop => "FilterPop",
             SceneNode::BackdropFilter { .. } => "BackdropFilter",
+            SceneNode::Shader { .. } => "Shader",
         })
         .collect()
 }

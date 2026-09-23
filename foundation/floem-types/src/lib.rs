@@ -14,6 +14,7 @@ mod motion;
 mod native;
 mod overlay;
 mod path;
+mod shader;
 
 pub use brush::{Brush, Filter, Shadow};
 pub use color::Color;
@@ -34,6 +35,7 @@ pub use path::{
     ClipRegion, ClipShape, DEFAULT_FLATTEN_TOLERANCE, LineCap, LineJoin, Path, PathSeg, Polyline,
     Stroke, resolve_clip,
 };
+pub use shader::Shader;
 
 #[cfg(test)]
 mod dependency_boundary_tests {

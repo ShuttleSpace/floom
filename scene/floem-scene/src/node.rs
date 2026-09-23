@@ -1,7 +1,7 @@
 //! Retained scene node payloads (no GPU / OS types).
 
 use floem_types::{
-    Brush, ClipRegion, Color, Filter, Path, Point, Rect, ResourceId, Shadow, Size, Stroke,
+    Brush, ClipRegion, Color, Filter, Path, Point, Rect, ResourceId, Shader, Shadow, Size, Stroke,
     Transform,
 };
 use std::sync::Arc;
@@ -110,6 +110,18 @@ pub enum SceneNode {
     /// `reach`-wide halo outside it, which is why
     /// [`bounds_hint`](Self::bounds_hint) reports the inflated rect.
     BackdropFilter { rect: Rect, filter: Filter },
+    /// A custom shader filling `bounds`.
+    ///
+    /// A `Shader` carries the caller's WGSL fragment program; the backends that
+    /// own a shader runtime (vello/wgpu) compile and run it, rendering `bounds`
+    /// from the program. A backend without one (the software rasteriser, skia
+    /// when it cannot consume WGSL) skips the node and counts the skip — the
+    /// degradation is recorded, never silent, exactly as a `Filter` a backend
+    /// cannot honour.
+    ///
+    /// A real draw node, not a stream marker: it paints pixels of its own, so it
+    /// carries `bounds` and reports them from [`bounds_hint`].
+    Shader { bounds: Rect, shader: Shader },
     Image {
         bounds: Rect,
         image: ResourceId,
@@ -140,6 +152,14 @@ impl SceneNode {
             image,
             alpha: u8::MAX,
         }
+    }
+
+    /// A custom shader filling `bounds`.
+    ///
+    /// `shader` is the caller's WGSL fragment program; see [`Shader`] for the
+    /// uniform contract the backends honour.
+    pub fn shader(bounds: Rect, shader: Shader) -> Self {
+        Self::Shader { bounds, shader }
     }
 
     /// A filled path. Takes anything that becomes a `Brush`, so a caller with
@@ -224,6 +244,7 @@ impl SceneNode {
                 })
             }
             SceneNode::Image { bounds, .. } => Some(*bounds),
+            SceneNode::Shader { bounds, .. } => Some(*bounds),
             SceneNode::Text { origin, size, .. } => Some(Rect::from_origin_size(*origin, *size)),
         }
     }

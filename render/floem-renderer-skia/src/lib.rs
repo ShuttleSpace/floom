@@ -71,6 +71,15 @@ pub enum SkiaCommand {
         rect: Rect,
         filter: Filter,
     },
+    /// A custom WGSL shader filling `bounds`. Recorded so the request is
+    /// visible at this ABI even though the submit path is the only place
+    /// allowed to honour it (and the software rasteriser skips it). The same
+    /// "degradation is never silent" half of A5 a `FilterPush` gets: a backend
+    /// dropping it would leave a custom effect reading as plain transparency.
+    Shader {
+        bounds: Rect,
+        shader: floem_types::Shader,
+    },
 }
 
 #[derive(Debug, Default)]
@@ -142,6 +151,10 @@ impl Renderer for SkiaRendererAdapter {
                         filter: *filter,
                     })
                 }
+                SceneNode::Shader { bounds, shader } => self.commands.push(SkiaCommand::Shader {
+                    bounds: *bounds,
+                    shader: shader.clone(),
+                }),
             }
         }
     }
@@ -157,7 +170,7 @@ mod tests {
     use floem_renderer::{FrameInfo, render_once};
     use floem_renderer_software::SoftwareRenderer;
     use floem_scene::{Point, SceneNode, Size};
-    use floem_types::{Color, Transform};
+    use floem_types::{Color, Shader, Transform};
 
     #[test]
     fn skia_and_software_see_same_rect_scene() {
@@ -318,5 +331,44 @@ mod tests {
         render_once(&mut sw, &FrameInfo::software(16, 16, 1), &scene);
         assert_eq!(sw.clips_resolved, 1);
         assert_eq!(sw.paths_drawn, 1);
+    }
+
+    /// A custom-shader request reaches the headless command list intact.
+    ///
+    /// Only the GPU submit path can actually run WGSL; the adapter cannot, so
+    /// it carries the request (the same "degradation is never silent" half of
+    /// A5 a `FilterPush` gets). A backend dropping it would leave the effect
+    /// reading as plain transparency with nothing to explain why.
+    #[test]
+    fn skia_records_a_shader_request_instead_of_dropping_it() {
+        let shader = Shader::new(
+            "@fragment fn fs_main(in: VsOut) -> @location(0) vec4<f32> { \
+             return vec4<f32>(in.uv, 0.0, 1.0); }",
+            [0.5, 0.25],
+        );
+        let mut scene = Scene::new();
+        scene.begin_update();
+        let _ = scene.insert(SceneNode::shader(
+            Rect::from_origin_size(Point::new(2.0, 2.0), Size::new(12.0, 12.0)),
+            shader.clone(),
+        ));
+        scene.finish_update();
+
+        let mut skia = SkiaRendererAdapter::default();
+        render_once(&mut skia, &FrameInfo::software(32, 32, 1), &scene);
+        assert_eq!(skia.commands.len(), 1);
+        let SkiaCommand::Shader {
+            bounds,
+            shader: carried,
+        } = &skia.commands[0]
+        else {
+            panic!("expected a shader command, got {:?}", skia.commands[0]);
+        };
+        assert_eq!(
+            *bounds,
+            Rect::from_origin_size(Point::new(2.0, 2.0), Size::new(12.0, 12.0)),
+            "the bounds survive"
+        );
+        assert_eq!(carried, &shader, "and so does the program");
     }
 }

@@ -32,6 +32,7 @@ impl Renderer for FakeRenderer {
                 SceneNode::FilterPush { .. } => self.ops.borrow_mut().push("filter_push"),
                 SceneNode::FilterPop => self.ops.borrow_mut().push("filter_pop"),
                 SceneNode::BackdropFilter { .. } => self.ops.borrow_mut().push("backdrop_filter"),
+                SceneNode::Shader { .. } => self.ops.borrow_mut().push("shader"),
             }
         }
     }

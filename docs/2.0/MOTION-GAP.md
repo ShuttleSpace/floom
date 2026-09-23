@@ -117,11 +117,12 @@
 - **对标**：Compose `Modifier.blur`、`graphicsLayer { renderEffect = ... }`、`Modifier.shadow`；Flutter `ImageFiltered` / `BackdropFilter` / `BoxShadow` / `PhysicalModel`。v1 的 `fill(..., blur_radius)` 支持模糊（`legacy/floem-renderer/src/lib.rs:159`）。
 - **补上判据**：至少一条 blur 通路（软件后端可显式跳过并记录降级），`shadow` 可由 blur + 偏移合成；黄金 + 一条"降级不静默"的断言。
 
-### A5. 没有自定义着色器通路 — **P2 / L**
+### A5. ~~没有自定义着色器通路~~ — ~~**P2 / L**~~ — ✅ 已交付（A5 切片）
 
-- **现状**：2.0 目录内**零** RuntimeEffect / AGSL / SkSL 相关代码。现阶段的自定义 GPU 内容只能走外部纹理通路（`render/floem-renderer/src/external.rs:1-27`：自带渲染器产出帧 → 作为普通 Image 节点参与遮挡/裁剪/变换）。
+- **现状**：2.0 目录内的**零** RuntimeEffect / AGSL / SkSL 相关代码是历史状态；A5 切片已补齐。现阶段的自定义 GPU 内容只能走外部纹理通路（`render/floem-renderer/src/external.rs:1-27`：自带渲染器产出帧 → 作为普通 Image 节点参与遮挡/裁剪/变换）**仍是唯一不被本切片覆盖的绕行**（它服务"自带渲染器"而非"用户写着色器"）。
 - **对标**：Compose 走 AGSL（Android，API 33+）/ SkSL（其余平台）**两套实现 + expect/actual**，且 composite 效果链只在 Android 完整——这是反面教材；Flutter 是单一 `FragmentProgram(.frag GLSL)` 全平台一致。
-- **判据（含反面约束）**：见第 7 节——**不要**引入两套着色语言。
+- **判据（含反面约束）**：见第 7 节——**不要**引入两套着色语言。本切片只选 **WGSL 一条语言**：软件后端跳过并计 `shaders_skipped`，skia 记录降级，vello 真跑。
+- **交付**：`floem_types::Shader{wgsl, params}` + `SceneNode::Shader{bounds, shader}`；宿主顶点阶段由 vello 承担（全屏三角形 + `Uniforms`），调用者只写 `fn fs_main` 的 WGSL 体。三后端：软件 `shaders_skipped++`、skia `SkiaCommand::Shader` 记录、**vello GPU 离屏渲染**（`run_shader_to_image`：offscreen `Rgba8Unorm + COPY_SRC`，uniform `[16 f32]`→`Blob`→`ImageBrush` 合回场景，`hash_shader_wgsl`/`shader_cache_key` 缓存，`shader_clock` 每帧 +1/60，Shader 节点**永不进 fragment 缓存**）。`--features gpu` 编译 + 单测（有 adapter 时 `shaders_drawn>=1`）+ 变异 `scripts/mutate-a5-shader.sh` 4/4。
 
 ### A6. `Group` 有类型、无实现：子树变换是空的 — **P0 / L（最贵）**
 
@@ -269,7 +270,9 @@ A8 独立，随时可做（但越早越好——它是"自绘控件在无障碍�
 
 | **S8 补 B4 透明度通道** ✅ 已交付 | B4（透明度子集） | S | `Opacity` 控件把隐式过渡从颜色扩到合成透明度通道：包裹单子树，改目标透明度时整棵子树沿 `CompositorProp::Opacity` 淡入/淡出，复用 S3 的 fold 类合成（不改宿主）；无过渡时透明度以"零时长规范"即时落定仍为真实可见态。示例 `floem2-motion` 第七幕；`motion_host.rs` 三条 + 变异证伪 |
 
-所有切片完成后，与 Flutter / Compose Multiplatform 在"canvas + 动画"这两项上的差距只余 **A5（自定义着色器）**，而 A5 恰好是**唯一一个"两边都需要平台分支"的能力**（见下）。
+| **A5 自定义着色器** ✅ 已交付 | A5 | L | 只选 **WGSL 单一语言**（反面约束：不引入 AGSL+SkSL 两套）。`Shader{wgsl,params}` + `SceneNode::Shader{bounds,shader}`；软件后端跳过并计 `shaders_skipped`，skia 记录 `SkiaCommand::Shader`，**vello 真跑**（离屏 `Rgba8Unorm` 读回→`ImageBrush` 合回场景，`run_shader_to_image`，节点永不进 fragment 缓存）。`--features gpu` 单测 + `scripts/mutate-a5-shader.sh` 4/4 |
+
+所有切片完成后，与 Flutter / Compose Multiplatform 在"canvas + 动画"这两项上的差距只余**共享元素 `SharedTransitionLayout`/Hero 与 B6 多值编排**（均已在各自缺口写明未做）。
 
 ---
 
@@ -317,7 +320,7 @@ FLOEM2_WINDOW_IDLE=1 FLOEM2_WINDOW_IDLE_SECS=30 \
 | 渐变 / 画刷 | ✅ (A3, S4) `Brush` 线性/径向；控件侧 `fill_*_brush` | ✅ `Brush.*` | ✅ `Paint.shader` |
 | 阴影（模糊合成） | ⚠️ (A4, S4) 软件后端真模糊；vello **跳过并计数** | ✅ `Modifier.shadow` | ✅ `BoxShadow` |
 | 通用滤镜（对已绘内容后处理） | ✅ 内容过滤 `FilterPush/Pop` + 背景过滤 `BackdropFilter`（软件真模糊，vello 跳过计数，skia 记录）(S7) | ✅ `blur`/`renderEffect` | ✅ `ImageFilter`/`BackdropFilter` |
-| 自定义着色器 | ❌ 仅外部纹理绕行 (A5) | ✅ 需 AGSL+SkSL 两套 | ✅ `.frag` 一套 |
+| 自定义着色器 | ✅ (A5) 单一 WGSL：vello GPU 真跑（离屏+读回），软件跳过计数，skia 记录；外部纹理仍作自带渲染器绕行 | ✅ 需 AGSL+SkSL 两套 | ✅ `.frag` 一套 |
 | 子树变换（缩放/旋转） | ✅ (A6, S3) `GroupPush`/`GroupPop` + 三后端应用 | ✅ `graphicsLayer` | ✅ `Transform` |
 | Canvas 控件 | ✅ (A7, S2) `Canvas` + `Spinner` | ✅ `Canvas` | ✅ `CustomPaint` |
 | 自绘内容语义 | ✅ (A8, S2) `SemanticsContext::set_role`；`Canvas` 默认 `Image` | ⚠️ 需手动 `semantics` | ⚠️ 需手动 `Semantics` |

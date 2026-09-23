@@ -82,6 +82,13 @@ pub struct SoftwareRenderer {
     pub glyph_cache_misses: u64,
     /// Scene nodes culled because their bounds miss every damaged rect.
     pub nodes_skipped: u64,
+    /// Custom-shader nodes this backend could not draw. The software rasteriser
+    /// has no shader runtime, so a `Shader` node is skipped and counted — the
+    /// degradation is recorded, never silent (the same contract a `Filter` a
+    /// backend cannot honour gets). This is the number a "shaders render"
+    /// assertion reads and the one that stops a mutation dropping the count
+    /// from passing.
+    pub shaders_skipped: u64,
     /// Set after (re)creation/resize: the next render must clear everything,
     /// since the buffer content cannot be trusted.
     needs_full_clear: bool,
@@ -195,6 +202,7 @@ impl SoftwareRenderer {
             images_drawn: 0,
             damage_skips: 0,
             nodes_skipped: 0,
+            shaders_skipped: 0,
             glyph_cache_hits: 0,
             glyph_cache_misses: 0,
             needs_full_clear: true,
@@ -1131,6 +1139,14 @@ impl SoftwareRenderer {
                 // compile error rather than a silently missing feature.
                 SceneNode::ClipPush { .. } | SceneNode::ClipPop => {}
                 SceneNode::FilterPush { .. } | SceneNode::FilterPop => {}
+                // The software rasteriser has no shader runtime, so a `Shader`
+                // node is skipped and counted — the degradation is recorded,
+                // never silent, exactly as a `Filter` this backend cannot
+                // honour. The GPU encoder (vello) is the only place allowed to
+                // actually run WGSL.
+                SceneNode::Shader { .. } => {
+                    self.shaders_skipped += 1;
+                }
             }
         }
         // A well-formed scene closes every scope it opens; one that does not
@@ -2297,5 +2313,42 @@ mod tests {
             "recent size stays cached"
         );
         assert!(sw.glyph_cache_hits > hits_before, "served from the cache");
+    }
+
+    /// The software rasteriser has no shader runtime: a `Shader` node must be
+    /// skipped and *counted*, never silently dropped. The host relies on the
+    /// counter to surface the degradation (the same way it treats a filter this
+    /// backend cannot honour), so a crash or a wrong order of arms is a
+    /// regression this test pins. A rect alongside proves the skip is per-node,
+    /// not "the frame has a shader → skip everything".
+    #[test]
+    fn software_skips_and_counts_shader_nodes() {
+        let mut scene = Scene::new();
+        scene.begin_update();
+        let _ = scene.insert(SceneNode::Rect {
+            bounds: Rect::from_origin_size(Point::new(0.0, 0.0), Size::new(3.0, 3.0)),
+            fill: floem_types::Brush::from(Color::rgb(10, 20, 30)),
+            radius: 0.0,
+
+            shadow: None,
+        });
+        let _ = scene.insert(SceneNode::shader(
+            Rect::from_origin_size(Point::new(4.0, 4.0), Size::new(2.0, 2.0)),
+            floem_types::Shader::new(
+                "@fragment fn fs_main(in: VsOut) -> @location(0) vec4<f32> { \
+                 return vec4<f32>(in.uv, 0.0, 1.0); }",
+                [] as [f32; 0],
+            ),
+        ));
+        scene.finish_update();
+
+        let mut sw = SoftwareRenderer::new(8, 8);
+        render_once(&mut sw, &FrameInfo::software(8, 8, 1), &scene);
+        assert_eq!(sw.frames, 1);
+        assert_eq!(sw.rects_drawn, 1, "the rect still draws");
+        assert_eq!(
+            sw.shaders_skipped, 1,
+            "the shader is skipped but recorded, never silent"
+        );
     }
 }

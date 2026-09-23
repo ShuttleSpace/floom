@@ -67,6 +67,16 @@ pub enum VelloCommand {
         rect: Rect,
         filter: Filter,
     },
+    /// A custom WGSL shader filling `bounds`. Recorded so the request is
+    /// visible at this ABI even though only the GPU encoder can honour it — the
+    /// same reasoning that keeps a rect's `shadow` and a `FilterPush` on the
+    /// command list instead of dropping them: a backend quietly dropping it
+    /// would leave a custom effect reading as plain transparency with nothing
+    /// to explain why.
+    Shader {
+        bounds: Rect,
+        shader: floem_types::Shader,
+    },
     /// Opens a clip. Every command recorded after it is confined to
     /// `bounds` until the matching [`VelloCommand::PopClip`].
     PushClip {
@@ -176,6 +186,10 @@ impl Renderer for VelloRendererAdapter {
                         filter: *filter,
                     })
                 }
+                SceneNode::Shader { bounds, shader } => self.commands.push(VelloCommand::Shader {
+                    bounds: *bounds,
+                    shader: shader.clone(),
+                }),
             }
         }
         self.last_cmd_len = self.commands.len();
@@ -441,5 +455,45 @@ mod tests {
         assert_eq!(*carried, Some(shadow), "the request survives the adapter");
         assert_eq!(*radius, 4.0);
         assert_eq!(brush.solid(), Some(Color::WHITE), "and so does the fill");
+    }
+
+    /// A custom-shader request reaches the headless command list intact.
+    ///
+    /// Only the GPU encoder can actually run WGSL; the adapter cannot, so it
+    /// carries the request (the same "degradation is never silent" half of A5
+    /// that a `FilterPush` gets). A backend dropping it would leave the effect
+    /// reading as plain transparency with nothing to explain why.
+    #[test]
+    fn records_a_shader_request_instead_of_dropping_it() {
+        let shader = floem_types::Shader::new(
+            "@fragment fn fs_main(in: VsOut) -> @location(0) vec4<f32> { \
+             return vec4<f32>(in.uv, 0.0, 1.0); }",
+            [0.5, 0.25],
+        );
+        let mut scene = Scene::new();
+        scene.begin_update();
+        let _ = scene.insert(SceneNode::shader(
+            Rect::from_origin_size(Point::new(2.0, 2.0), Size::new(12.0, 12.0)),
+            shader.clone(),
+        ));
+        scene.finish_update();
+
+        let mut vello = VelloRendererAdapter::new();
+        render_once(&mut vello, &FrameInfo::software(32, 32, 1), &scene);
+        assert_eq!(vello.commands.len(), 1);
+        let VelloCommand::Shader {
+            bounds,
+            shader: carried,
+        } = &vello.commands[0]
+        else {
+            panic!("expected a shader command, got {:?}", vello.commands[0]);
+        };
+        assert_eq!(
+            *bounds,
+            Rect::from_origin_size(Point::new(2.0, 2.0), Size::new(12.0, 12.0)),
+            "the bounds survive"
+        );
+        assert_eq!(carried, &shader, "and so does the program");
+        assert_eq!(carried.params, vec![0.5, 0.25]);
     }
 }

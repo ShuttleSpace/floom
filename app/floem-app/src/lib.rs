@@ -4114,6 +4114,11 @@ fn apply_composite(node: &mut floem_scene::SceneNode, prop: CompositorProp) {
                 // dimmed by their own nodes.
                 SceneNode::FilterPush { .. } | SceneNode::FilterPop => {}
                 SceneNode::BackdropFilter { .. } => {}
+                // A shader's output is generated at raster time from its own
+                // params, which a generic compositor cannot rewrite per alpha
+                // (they are effect-specific, not a dimmable ink). Like a filter
+                // scope, there is nothing to dim here.
+                SceneNode::Shader { .. } => {}
             }
         }
         CompositorProp::TranslateX(dx) => match node {

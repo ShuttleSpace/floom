@@ -58,7 +58,7 @@ use floem_renderer::{
     Presenter, SurfaceHandles,
 };
 use floem_scene::{ResourceKind, ResourceRegistry, Scene, SceneNode};
-use floem_types::{ClipRegion, PathSeg, Size, SurfaceId, WindowId};
+use floem_types::{ClipRegion, PathSeg, Rect, Shader, Size, SurfaceId, WindowId};
 use std::collections::{HashMap, HashSet};
 
 use crate::budget::{CacheTrimTelemetry, GpuCacheBudget, MemoryPressure, TrimPlan, plan_trim};
@@ -76,8 +76,10 @@ use vello::util::RenderSurface;
 use vello::wgpu;
 use vello::wgpu::util::TextureBlitter;
 use vello::wgpu::{
-    CompositeAlphaMode, DeviceDescriptor, Instance, InstanceDescriptor, PresentMode,
-    RequestAdapterOptions, Surface, SurfaceConfiguration, TextureFormat, TextureUsages,
+    BindGroupLayout, BindGroupLayoutDescriptor, BindGroupLayoutEntry, BindingType,
+    BufferBindingType, CompositeAlphaMode, DeviceDescriptor, Instance, InstanceDescriptor,
+    PipelineLayout, PipelineLayoutDescriptor, PresentMode, RenderPipeline, RequestAdapterOptions,
+    ShaderStages, Surface, SurfaceConfiguration, Texture, TextureFormat, TextureUsages,
     TextureViewDescriptor,
 };
 use vello::{AaConfig, RenderParams, RendererOptions, Scene as VelloScene};
@@ -156,6 +158,15 @@ pub struct GpuFrameStats {
     /// because what a caller needs from this number is "was my filter dropped",
     /// not which of the two it was.
     pub filters_skipped: u64,
+    /// Custom-shader nodes this backend actually ran on the GPU — a WGSL
+    /// program compiled into a pipeline and rendered to an offscreen texture.
+    /// This is the "did my shader run" number; the software rasteriser and the
+    /// skia adapter can never raise it.
+    pub shaders_drawn: u64,
+    /// Custom-shader nodes this backend could not run: a program that failed to
+    /// compile, or a node whose bounds made a zero-sized target. The recorded
+    /// degradation for a shader request vello could not honour — never silent.
+    pub shaders_skipped: u64,
     /// Pixels vello rasterised this frame. With a real surface and partial
     /// damage this is the damaged area, not the whole screen.
     pub rasterized_pixels: u64,
@@ -200,6 +211,9 @@ struct NodeEncodeStats {
     /// Filter requests skipped on a node that reached the encoder: a
     /// `BackdropFilter` draws nothing and says so here.
     filter_skips: u64,
+    /// Custom-shader requests drawn / skipped on the GPU this fragment.
+    shader_drawn: u64,
+    shader_skips: u64,
     cache_hits: u64,
     cache_misses: u64,
     /// Image resources this fragment's commands still reference. A reused
@@ -372,7 +386,50 @@ fn node_fingerprint(node: &SceneNode) -> u64 {
             hash_clip_region(&mut hasher, region);
         }
         SceneNode::ClipPop => hasher.write_u8(6),
+        // A shader node's pixels are dynamic (`u.time`), so it is never served
+        // from the fragment cache (see the `encode` walk). The fingerprint is
+        // still needed for exhaustiveness and so any future cache participant
+        // keys on the *program*, not "a shader was here": hashing only a flag
+        // would reuse the first node's rendered pixels for every other shader.
+        SceneNode::Shader { bounds, shader } => {
+            hasher.write_u8(11);
+            for v in [bounds.x0, bounds.y0, bounds.x1, bounds.y1] {
+                hasher.write_u64(v.to_bits());
+            }
+            hasher.write(shader.wgsl.as_bytes());
+            for p in shader.params.iter().copied() {
+                hasher.write_u32(p.to_bits());
+            }
+        }
     }
+    hasher.finish()
+}
+
+/// Hash of a shader program's WGSL source, used as the cache key for its
+/// compiled pipeline. The source is the program's identity: id is stable even
+/// if naga re-validates differently under a new version, and two nodes using
+/// the same source share one pipeline (which they must, so the driver can
+/// hoist the compile).
+fn hash_shader_wgsl(wgsl: &str) -> u64 {
+    use std::hash::Hasher;
+    let mut hasher = std::collections::hash_map::DefaultHasher::new();
+    hasher.write_u8(0x52);
+    hasher.write(wgsl.as_bytes());
+    hasher.finish()
+}
+
+/// Cache key for a shader's readback image: the program plus the render-target
+/// size it was rasterised at. Two programs sharing a source but running at
+/// different sizes must not collide, nor may a resize reuse the stale brush
+/// (a `Shader` node re-encodes every frame, but a reused brush under the same
+/// key would otherwise carry the previous frame's dimensions).
+fn shader_cache_key(wgsl: &str, pw: u32, ph: u32) -> u64 {
+    use std::hash::Hasher;
+    let mut hasher = std::collections::hash_map::DefaultHasher::new();
+    hasher.write_u8(0x53);
+    hasher.write(wgsl.as_bytes());
+    hasher.write_u32(pw);
+    hasher.write_u32(ph);
     hasher.finish()
 }
 
@@ -625,6 +682,47 @@ fn push_clip_region(scene: &mut VelloScene, region: &ClipRegion) {
     }
 }
 
+/// WGSL prologue the host prepends to every custom-shader program. It owns the
+/// vertex stage (a fullscreen triangle) and the uniform block; the caller's
+/// source is only the body of `fn fs_main`. See [`floem_types::Shader`] for the
+/// contract the fragment sees — `u.resolution`, `u.time`, `u.params[0..1]`
+/// (two `vec4<f32>`), and `frag.uv` (0..1, y down).
+const SHADER_PROLOGUE: &str = r#"
+struct VsOut {
+  @builtin(position) pos: vec4<f32>,
+  @location(0) uv: vec2<f32>,
+};
+struct Uniforms {
+  resolution: vec2<f32>,
+  time: f32,
+  _pad0: f32,
+  params: array<vec4<f32>, 2>,
+};
+@group(0) @binding(0) var<uniform> u: Uniforms;
+
+@vertex
+fn vs_main(@builtin(vertex_index) vid: u32) -> VsOut {
+  var positions = array<vec2<f32>, 3>(
+    vec2<f32>(-1.0, -1.0),
+    vec2<f32>( 3.0, -1.0),
+    vec2<f32>(-1.0,  3.0)
+  );
+  var out: VsOut;
+  let p = positions[vid];
+  out.pos = vec4<f32>(p, 0.0, 1.0);
+  out.uv = vec2<f32>((p.x + 1.0) * 0.5, (1.0 - (p.y + 1.0) * 0.5));
+  return out;
+}
+"#;
+
+/// A compiled custom-shader program. wgpu 27's `create_shader_module` and
+/// `create_render_pipeline` are synchronous non-`Result`, so a naga/USM
+/// validation error is surfaced at creation time rather than leaving a
+/// recoverable "failed" state to look up later.
+enum ShaderProgram {
+    Pipeline(RenderPipeline),
+}
+
 /// Vello + wgpu [`Presenter`].
 pub struct VelloGpuPresenter {
     instance: Instance,
@@ -668,6 +766,23 @@ pub struct VelloGpuPresenter {
     /// what trimming has done about them.
     budget: GpuCacheBudget,
     trim_telemetry: CacheTrimTelemetry,
+    /// Bind-group layout for custom-shader uniforms: one uniform buffer at
+    /// binding 0, visible to both stages.
+    shader_bind_group_layout: BindGroupLayout,
+    /// Pipeline layout shared by every custom-shader program (they all use the
+    /// same uniform shape).
+    shader_pipeline_layout: PipelineLayout,
+    /// Compiled custom-shader pipelines, keyed by a hash of the program source.
+    /// A `Failed` entry records a program that did not compile so the next
+    /// frame skips it without re-attempting.
+    shader_programs: HashMap<u64, ShaderProgram>,
+    /// Offscreen textures produced this frame (one per drawn `Shader` node),
+    /// kept alive until the next frame begins, when the vello pass that sampled
+    /// them has already submitted.
+    shader_textures: Vec<Texture>,
+    /// Seconds handed to custom shaders as `u.time`, advanced one frame's worth
+    /// per `present` so an animated program actually moves.
+    shader_clock: f32,
 }
 
 impl std::fmt::Debug for VelloGpuPresenter {
@@ -727,6 +842,28 @@ impl VelloGpuPresenter {
         )
         .ok()?;
 
+        // One bind-group / pipeline layout for every custom-shader program:
+        // they all share the same uniform shape (resolution, time, params).
+        let shader_bind_group_layout =
+            device.create_bind_group_layout(&BindGroupLayoutDescriptor {
+                label: Some("floem-shader-bgl"),
+                entries: &[BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: ShaderStages::VERTEX | ShaderStages::FRAGMENT,
+                    ty: BindingType::Buffer {
+                        ty: BufferBindingType::Uniform,
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                }],
+            });
+        let shader_pipeline_layout = device.create_pipeline_layout(&PipelineLayoutDescriptor {
+            label: Some("floem-shader-pl"),
+            bind_group_layouts: &[&shader_bind_group_layout],
+            push_constant_ranges: &[],
+        });
+
         Some(Self {
             instance,
             adapter,
@@ -748,6 +885,11 @@ impl VelloGpuPresenter {
             scratch: None,
             budget: GpuCacheBudget::for_current_platform(),
             trim_telemetry: CacheTrimTelemetry::default(),
+            shader_bind_group_layout,
+            shader_pipeline_layout,
+            shader_programs: HashMap::new(),
+            shader_textures: Vec::new(),
+            shader_clock: 0.0,
         })
     }
 
@@ -1121,35 +1263,43 @@ impl VelloGpuPresenter {
             }
             let fingerprint = node_fingerprint(node);
             let key = id.raw();
-            if let Some(cached) = self.fragments.get_mut(&key) {
-                // A reused fragment must not outlive the textures its commands
-                // were built from: a brush that lost residency (a resource
-                // budget refusal, an external prune) means the cached commands
-                // would draw nothing, so the node re-encodes instead — which
-                // is also what rebuilds the missing brush.
-                let textures_resident = cached.stats.image_keys.iter().all(|&k| {
-                    self.image_cache.contains_key(&k) || self.external_brushes.contains_key(&k)
-                });
-                if cached.fingerprint == fingerprint && textures_resident {
-                    // Unchanged node: append its cached commands and report
-                    // its draws (a reused image is a texture-cache hit — the
-                    // pixels are already resident).
-                    self.vello_scene
-                        .append(&cached.scene, Some(shift * group_affine));
-                    totals.rects += cached.stats.rects;
-                    totals.paths += cached.stats.paths;
-                    totals.glyph_runs += cached.stats.glyph_runs;
-                    totals.images += cached.stats.images;
-                    totals.unsupported_nodes += cached.stats.unsupported;
-                    totals.shadows_skipped += cached.stats.shadow_skips;
-                    totals.filters_skipped += cached.stats.filter_skips;
-                    totals.texture_cache_hits += cached.stats.images;
-                    totals.fragments_reused += 1;
-                    for key in cached.stats.image_keys.iter().copied() {
-                        used_images.insert(key);
+            // A shader node's pixels are dynamic (`u.time` advances each
+            // present): serving it from the fragment cache would freeze the
+            // first frame's output, and a stale entry under the same id (a node
+            // that used to be a different kind) would draw the wrong thing. So
+            // shaders never enter the cache and always re-encode. (They are
+            // still fingerprinted, for exhaustiveness.)
+            if !matches!(node, SceneNode::Shader { .. }) {
+                if let Some(cached) = self.fragments.get_mut(&key) {
+                    // A reused fragment must not outlive the textures its commands
+                    // were built from: a brush that lost residency (a resource
+                    // budget refusal, an external prune) means the cached commands
+                    // would draw nothing, so the node re-encodes instead — which
+                    // is also what rebuilds the missing brush.
+                    let textures_resident = cached.stats.image_keys.iter().all(|&k| {
+                        self.image_cache.contains_key(&k) || self.external_brushes.contains_key(&k)
+                    });
+                    if cached.fingerprint == fingerprint && textures_resident {
+                        // Unchanged node: append its cached commands and report
+                        // its draws (a reused image is a texture-cache hit — the
+                        // pixels are already resident).
+                        self.vello_scene
+                            .append(&cached.scene, Some(shift * group_affine));
+                        totals.rects += cached.stats.rects;
+                        totals.paths += cached.stats.paths;
+                        totals.glyph_runs += cached.stats.glyph_runs;
+                        totals.images += cached.stats.images;
+                        totals.unsupported_nodes += cached.stats.unsupported;
+                        totals.shadows_skipped += cached.stats.shadow_skips;
+                        totals.filters_skipped += cached.stats.filter_skips;
+                        totals.texture_cache_hits += cached.stats.images;
+                        totals.fragments_reused += 1;
+                        for key in cached.stats.image_keys.iter().copied() {
+                            used_images.insert(key);
+                        }
+                        used_fragments.insert(key);
+                        continue;
                     }
-                    used_fragments.insert(key);
-                    continue;
                 }
             }
             let mut fragment_scene = VelloScene::new();
@@ -1162,6 +1312,8 @@ impl VelloGpuPresenter {
             totals.unsupported_nodes += stats.unsupported;
             totals.shadows_skipped += stats.shadow_skips;
             totals.filters_skipped += stats.filter_skips;
+            totals.shaders_drawn += stats.shader_drawn;
+            totals.shaders_skipped += stats.shader_skips;
             totals.texture_cache_hits += stats.cache_hits;
             totals.texture_cache_misses += stats.cache_misses;
             totals.fragments_encoded += 1;
@@ -1169,7 +1321,9 @@ impl VelloGpuPresenter {
             // Budget enforcement limits *retention*, never drawing: an
             // over-budget node still appends its freshly encoded commands,
             // they are just not kept for the next frame to reuse.
-            if self.budget.may_cache_fragment(self.fragments.len()) {
+            if !matches!(node, SceneNode::Shader { .. })
+                && self.budget.may_cache_fragment(self.fragments.len())
+            {
                 self.fragments.insert(
                     key,
                     SceneFragment {
@@ -1410,6 +1564,92 @@ impl VelloGpuPresenter {
                 draw_image_at(target, brush, transform, *width, *height, *alpha);
                 stats.images += 1;
             }
+            SceneNode::Shader { bounds, shader } => {
+                // The software rasteriser and the skia adapter can't run WGSL
+                // and count a skip; here the program is compiled and run on the
+                // GPU, the output read back, and drawn back into the retained
+                // scene as an image. vello 0.7 cannot import a GPU texture, so
+                // the readback is the one way to keep a shader's z-order, clip,
+                // transform and damage behaviour identical to a rect's — the
+                // alternative (a separate pass over the finished raster) would
+                // paint over occlusion and break the scene contract.
+                let pw = (f64::from(self.scale) * bounds.width()).ceil().max(1.0) as u32;
+                let ph = (f64::from(self.scale) * bounds.height()).ceil().max(1.0) as u32;
+                let prog_key = hash_shader_wgsl(&shader.wgsl);
+                if !self.shader_programs.contains_key(&prog_key) {
+                    let module = self
+                        .device
+                        .create_shader_module(wgpu::ShaderModuleDescriptor {
+                            label: Some("floem-shader"),
+                            source: wgpu::ShaderSource::Wgsl(
+                                format!("{SHADER_PROLOGUE}\n{}", shader.wgsl).into(),
+                            ),
+                        });
+                    let pipeline =
+                        self.device
+                            .create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+                                label: Some("floem-shader-pipeline"),
+                                layout: Some(&self.shader_pipeline_layout),
+                                vertex: wgpu::VertexState {
+                                    module: &module,
+                                    entry_point: "vs_main".into(),
+                                    compilation_options: wgpu::PipelineCompilationOptions::default(
+                                    ),
+                                    buffers: &[],
+                                },
+                                fragment: Some(wgpu::FragmentState {
+                                    module: &module,
+                                    entry_point: "fs_main".into(),
+                                    compilation_options: wgpu::PipelineCompilationOptions::default(
+                                    ),
+                                    targets: &[Some(wgpu::ColorTargetState {
+                                        format: wgpu::TextureFormat::Rgba8Unorm,
+                                        blend: Some(wgpu::BlendState::REPLACE),
+                                        write_mask: wgpu::ColorWrites::ALL,
+                                    })],
+                                }),
+                                primitive: wgpu::PrimitiveState {
+                                    topology: wgpu::PrimitiveTopology::TriangleList,
+                                    strip_index_format: None,
+                                    front_face: wgpu::FrontFace::Ccw,
+                                    cull_mode: None,
+                                    unclipped_depth: false,
+                                    polygon_mode: wgpu::PolygonMode::Fill,
+                                    conservative: false,
+                                },
+                                depth_stencil: None,
+                                multisample: wgpu::MultisampleState {
+                                    count: 1,
+                                    mask: !0,
+                                    alpha_to_coverage_enabled: false,
+                                },
+                                multiview: None,
+                                cache: None,
+                            });
+                    // A failed program is never stored (wgpu 27 surfaces the
+                    // error synchronously), so re-lookup below simply finds the
+                    // cached pipeline and runs it.
+                    self.shader_programs
+                        .insert(prog_key, ShaderProgram::Pipeline(pipeline));
+                }
+                if let Some(ShaderProgram::Pipeline(pipeline)) = self.shader_programs.get(&prog_key)
+                {
+                    // The pipeline is cloned out so the `&mut self` call below
+                    // does not fight the `&self` lookup borrow.
+                    let pipeline = pipeline.clone();
+                    if let Some(skey) =
+                        self.run_shader_to_image(target, bounds, pw, ph, shader, &pipeline)
+                    {
+                        used_images.insert(skey);
+                        stats.image_keys.push(skey);
+                        stats.shader_drawn += 1;
+                    } else {
+                        stats.shader_skips += 1;
+                    }
+                } else {
+                    stats.shader_skips += 1;
+                }
+            }
             SceneNode::BackdropFilter { .. } => {
                 // Nothing to draw: what this node asks for is a filter over
                 // pixels that have already been rasterised, which vello cannot
@@ -1425,6 +1665,194 @@ impl VelloGpuPresenter {
             SceneNode::FilterPush { .. } | SceneNode::FilterPop => {}
         }
         stats
+    }
+
+    /// Renders a custom-shader program into an offscreen `pw x ph` texture,
+    /// reads the pixels back to the CPU, turns them into an [`ImageBrush`] that
+    /// vello can composite, and draws that image into `target` at `bounds`.
+    ///
+    /// vello 0.7 has no way to import a GPU texture as a scene input, so the
+    /// readback is the only route that keeps the shader's z-order, clip,
+    /// transform and damage behaviour identical to a rect's — the pixels are
+    /// an ordinary image node in the live scene. Returns the brush's cache key
+    /// on success, `None` when the readback could not be mapped (never silently
+    ///: the caller counts a skip so the degradation is visible).
+    fn run_shader_to_image(
+        &mut self,
+        target: &mut VelloScene,
+        bounds: &Rect,
+        pw: u32,
+        ph: u32,
+        shader: &Shader,
+        pipeline: &RenderPipeline,
+    ) -> Option<u64> {
+        if pw == 0 || ph == 0 {
+            return None;
+        }
+        let texture = self.device.create_texture(&wgpu::TextureDescriptor {
+            label: Some("floem-shader-output"),
+            size: wgpu::Extent3d {
+                width: pw,
+                height: ph,
+                depth_or_array_layers: 1,
+            },
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension: wgpu::TextureDimension::D2,
+            format: wgpu::TextureFormat::Rgba8Unorm,
+            usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::COPY_SRC,
+            view_formats: &[],
+        });
+        let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
+        self.shader_textures.push(texture);
+
+        // Uniform block: resolution, time, the two param vec4s, packed into
+        // 16 f32 so the WGSL prologue's layout is a straight slice.
+        let mut uniforms = [0.0f32; 16];
+        uniforms[0] = pw as f32;
+        uniforms[1] = ph as f32;
+        uniforms[2] = self.shader_clock;
+        let mut i = 4;
+        for v in shader.params.iter().copied().take(8) {
+            uniforms[i] = v;
+            i += 1;
+        }
+        let uniform = self.device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("floem-shader-uniforms"),
+            size: (uniforms.len() * 4) as u64,
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+        self.queue.write_buffer(&uniform, 0, {
+            let ptr = uniforms.as_ptr().cast::<u8>();
+            // # Safety: uniforms is an owned array living for this block, the
+            // slice is exactly its byte length. Writing a f32 vector as bytes
+            // to a uniform buffer matches how `write_buffer` consumes any
+            // plain data.
+            unsafe { std::slice::from_raw_parts(ptr, uniforms.len() * 4) }
+        });
+
+        let bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("floem-shader-bind"),
+            layout: &self.shader_bind_group_layout,
+            entries: &[wgpu::BindGroupEntry {
+                binding: 0,
+                resource: uniform.as_entire_binding(),
+            }],
+        });
+
+        let mut encoder = self
+            .device
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("floem-shader-encode"),
+            });
+        {
+            let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                label: Some("floem-shader-pass"),
+                color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                    view: &view,
+                    depth_slice: None,
+                    resolve_target: None,
+                    ops: wgpu::Operations {
+                        load: wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT),
+                        store: wgpu::StoreOp::Store,
+                    },
+                })],
+                depth_stencil_attachment: None,
+                timestamp_writes: None,
+                occlusion_query_set: None,
+            });
+            pass.set_pipeline(pipeline);
+            pass.set_bind_group(0, &bind_group, &[]);
+            // The prologue's fullscreen triangle: vertex_index 0..3.
+            pass.draw(0..3, 0..1);
+        }
+
+        // Read back the rendered RGBA into a CPU buffer. `bytes_per_row` for a
+        // texel copy must be a multiple of 256, so pad the stride and copy each
+        // row out of the padded buffer afterwards.
+        let row_bytes = pw * 4;
+        let stride = 256u32 * row_bytes.div_ceil(256);
+        let staging = self.device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("floem-shader-staging"),
+            size: u64::from(stride) * u64::from(ph),
+            usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::MAP_READ,
+            mapped_at_creation: false,
+        });
+        encoder.copy_texture_to_buffer(
+            wgpu::TexelCopyTextureInfo {
+                texture: &self.shader_textures.last().expect("pushed above"),
+                mip_level: 0,
+                origin: wgpu::Origin3d::ZERO,
+                aspect: wgpu::TextureAspect::All,
+            },
+            wgpu::TexelCopyBufferInfo {
+                buffer: &staging,
+                layout: wgpu::TexelCopyBufferLayout {
+                    offset: 0,
+                    bytes_per_row: Some(stride),
+                    rows_per_image: Some(ph),
+                },
+            },
+            wgpu::Extent3d {
+                width: pw,
+                height: ph,
+                depth_or_array_layers: 1,
+            },
+        );
+        self.queue.submit([encoder.finish()]);
+
+        let slice = staging.slice(..);
+        let (tx, rx) = std::sync::mpsc::channel();
+        slice.map_async(wgpu::MapMode::Read, move |res| {
+            let _ = tx.send(res.is_ok());
+        });
+        // Block until the readback lands so the mapping below is valid; a
+        // timeout/error means the map callback never fired happy.
+        match self.device.poll(wgpu::PollType::Wait {
+            submission_index: None,
+            timeout: None,
+        }) {
+            Err(_) => return None,
+            Ok(_) => {}
+        }
+        if !rx.recv().unwrap_or(false) {
+            return None;
+        }
+        let mapped = slice.get_mapped_range();
+        let mut pixels = Vec::with_capacity(pw as usize * ph as usize * 4);
+        for y in 0..ph {
+            let row_start = y as usize * stride as usize;
+            let row = &mapped[row_start..row_start + (pw as usize) * 4];
+            pixels.extend_from_slice(row);
+        }
+        drop(mapped);
+        staging.unmap();
+
+        // Composite the readback as an ordinary image node, scaled to its
+        // logical bounds (the scene is later transformed by `shift`, so the
+        // draw must stay in logical units — matching the brush `Image` arm).
+        // `Arc::new(pixels)` yields `Arc<Vec<u8>>`, which unsizes to the
+        // `Arc<dyn AsRef<[u8]>>` Blob wants.
+        let shared: std::sync::Arc<dyn AsRef<[u8]> + Send + Sync> = std::sync::Arc::new(pixels);
+        let brush = ImageBrush {
+            image: ImageData {
+                data: Blob::new(std::sync::Arc::clone(&shared)),
+                format: ImageFormat::Rgba8,
+                alpha_type: ImageAlphaType::AlphaPremultiplied,
+                width: pw,
+                height: ph,
+            },
+            sampler: ImageSampler::default(),
+        };
+        let sx = bounds.width() / f64::from(pw);
+        let sy = bounds.height() / f64::from(ph);
+        let transform =
+            Affine::translate((bounds.x0, bounds.y0)) * Affine::scale_non_uniform(sx, sy);
+        draw_image_at(target, &brush, transform, pw, ph, u8::MAX);
+        let key = shader_cache_key(&shader.wgsl, pw, ph);
+        self.image_cache.insert(key, brush);
+        Some(key)
     }
 
     /// Number of cached node fragments (diagnostics: the working set size).
@@ -1614,6 +2042,10 @@ impl Presenter for VelloGpuPresenter {
             self.stats.fragments_encoded = 0;
             self.stats.rasterized_pixels = 0;
             self.stats.partial_rasterizations = 0;
+            self.stats.shadows_skipped = 0;
+            self.stats.filters_skipped = 0;
+            self.stats.shaders_drawn = 0;
+            self.stats.shaders_skipped = 0;
             return;
         }
         // Any non-skipped present refreshes the screen (or would, with a
@@ -1623,6 +2055,12 @@ impl Presenter for VelloGpuPresenter {
         // rasterisation can fill it.
         let stale_screen = self.needs_present;
         self.needs_present = false;
+
+        // A non-skipped present is what drives an animated shader: advance the
+        // clock handed to custom programs, and drop last frame's offscreen
+        // shader textures (the vello pass they fed has already submitted).
+        self.shader_clock += 1.0 / 60.0;
+        self.shader_textures.clear();
 
         // Physical extent of the target, whether or not a surface is attached.
         let (pw, ph) = match self.surface.as_ref() {
@@ -1668,6 +2106,10 @@ impl Presenter for VelloGpuPresenter {
         self.stats.texture_cache_misses = encoded.texture_cache_misses;
         self.stats.fragments_reused = encoded.fragments_reused;
         self.stats.fragments_encoded = encoded.fragments_encoded;
+        self.stats.shadows_skipped = encoded.shadows_skipped;
+        self.stats.filters_skipped = encoded.filters_skipped;
+        self.stats.shaders_drawn = encoded.shaders_drawn;
+        self.stats.shaders_skipped = encoded.shaders_skipped;
         // Prepare the scratch view up front: both it and the surface live on
         // `self`, and the surface is borrowed mutably below.
         let scratch = if self.surface.is_some() {
@@ -2628,5 +3070,94 @@ mod tests {
             "neither producing nor drawn: the texture is gone"
         );
         assert_eq!(presenter.external_stats().evictions, 1);
+    }
+
+    /// A `Shader` node's fingerprint must carry the WGSL and both parameter
+    /// vecs, so a changed program (or a changed scalar) re-encodes instead of
+    /// serving a stale fragment. Pure arithmetic — no adapter needed.
+    #[test]
+    fn a_shaders_source_and_params_are_part_of_its_fingerprint() {
+        let bounds = floem_types::Rect::from_origin_size(
+            floem_types::Point::new(0.0, 0.0),
+            Size::new(8.0, 4.0),
+        );
+        let at = |wgsl: &str, params: Vec<f32>| {
+            node_fingerprint(&SceneNode::Shader {
+                bounds,
+                shader: Shader::new(wgsl, params),
+            })
+        };
+        let src = "@fragment fn fs_main(in: VsOut) -> @location(0) vec4<f32> { \
+                   return vec4<f32>(in.uv, 0.0, 1.0); }";
+        assert_ne!(
+            at(src, vec![0.5]),
+            at(src, vec![0.75]),
+            "a changed parameter is a different encoding"
+        );
+        assert_ne!(
+            at(src, vec![0.5]),
+            at("let d = 3.0;", vec![0.5]),
+            "a changed source is a different encoding"
+        );
+        assert_eq!(at(src, vec![0.5]), at(src, vec![0.5]), "stable payload");
+    }
+
+    /// Shader readback cache keys must separate the program from the target
+    /// size: a resize must never reuse the earlier frame's brush.
+    #[test]
+    fn a_shader_cache_key_separates_source_from_size() {
+        let src = "fn red() { }";
+        assert_ne!(
+            shader_cache_key(src, 4, 4),
+            shader_cache_key(src, 8, 4),
+            "a larger target is a different rasterisation"
+        );
+        assert_ne!(
+            shader_cache_key(src, 4, 4),
+            shader_cache_key(src, 4, 8),
+            "a taller target is also a different rasterisation"
+        );
+        assert_ne!(
+            shader_cache_key(src, 4, 4),
+            shader_cache_key("fn blue() { }", 4, 4),
+            "a different program never collides"
+        );
+        assert_eq!(
+            shader_cache_key(src, 4, 4),
+            shader_cache_key(src, 4, 4),
+            "the same program and size is stable"
+        );
+    }
+
+    /// A `Shader` node must encode through the GPU backend's offscreen path,
+    /// counting a draw rather than a skip. Adapter-gated like every other GPU
+    /// test: machines without a usable adapter skip, because "no GPU" is a
+    /// supported configuration (the host falls back to the software backend).
+    #[test]
+    fn shader_nodes_encode_through_the_gpu_backend() {
+        let Some(mut presenter) = presenter() else {
+            return;
+        };
+        let mut scene = Scene::new();
+        scene.begin_update();
+        let _ = scene.insert(SceneNode::shader(
+            floem_types::Rect::from_origin_size(
+                floem_types::Point::new(0.0, 0.0),
+                Size::new(4.0, 4.0),
+            ),
+            Shader::new(
+                "@fragment fn fs_main(in: VsOut) -> @location(0) vec4<f32> { \
+                 return vec4<f32>(in.uv, 0.5, 1.0); }",
+                [0.5],
+            ),
+        ));
+        scene.finish_update();
+
+        presenter.present(&scene, &ResourceRegistry::new());
+        let stats = presenter.stats();
+        assert_eq!(stats.unsupported_nodes, 0, "the shader is understood");
+        assert_eq!(stats.shaders_drawn, 1, "an offscreen readback happened");
+        assert_eq!(stats.shaders_skipped, 0, "nothing was degraded");
+        assert_eq!(presenter.frames_presented(), 0, "nothing presented");
     }
 }
