@@ -16,7 +16,7 @@ fn tween(from: f64, to: f64, duration_secs: f64, easing: Easing) -> AnimKind {
         to,
         duration_secs,
         easing,
-        compositor: None,
+        channels: Vec::new(),
     })
 }
 
@@ -188,7 +188,7 @@ fn a_repeat_of_a_spring_plays_it_once() {
             velocity: 0.0,
             stiffness: 100.0,
             damping: 20.0,
-            compositor: None,
+            channels: Vec::new(),
         },
         None,
         RepeatMode::Restart,
@@ -335,13 +335,9 @@ fn a_retarget_keeps_driving_the_same_compositor_channel() {
     let mut sched = AnimationScheduler::new();
     let mut clock = FakeClock::new();
     let id = sched.start(
-        AnimKind::Tween(Tween {
-            from: 0.0,
-            to: 1.0,
-            duration_secs: 1.0,
-            easing: Easing::Linear,
-            compositor: Some(CompositorProp::Opacity(0.0)),
-        }),
+        AnimKind::Tween(
+            Tween::new(0.0, 1.0, 1.0).with_compositor(CompositorProp::Opacity(0.0)),
+        ),
         clock.now_secs(),
     );
     clock.advance(0.5);
@@ -351,7 +347,7 @@ fn a_retarget_keeps_driving_the_same_compositor_channel() {
     clock.advance(1.0 / 60.0);
     let samples = sched.tick(clock.now_secs());
     assert!(
-        matches!(samples[0].compositor, Some(CompositorProp::Opacity(_))),
+        matches!(samples[0].compositor.as_slice(), [CompositorProp::Opacity(_)]),
         "the channel was lost in the retarget: {:?}",
         samples[0].compositor
     );

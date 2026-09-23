@@ -3,14 +3,13 @@
 mod clock;
 mod kinds;
 
-use kinds::map_compositor;
-
 pub use clock::{Clock, FakeClock};
 pub use floem_types::{
-    AnimationSpec, CompositorProp, Easing, PresenceChannel, PresenceTransition, RepeatMode,
-    RepeatSpec, Transition,
+    AnimationSpec, CompositorChannel, CompositorProp, Easing, PresenceChannel, PresenceTransition,
+    RepeatMode, RepeatSpec, Transition,
 };
-pub use kinds::{AnimId, AnimKind, SPRING_SETTLE_SECS, Tween};
+pub use kinds::{AnimId, AnimKind, Tween, SPRING_SETTLE_SECS};
+use smallvec::SmallVec;
 
 /// Stiffness a retarget hands the spring it converts the animation into.
 pub const RETARGET_STIFFNESS: f64 = 200.0;
@@ -23,7 +22,7 @@ pub const RETARGET_STIFFNESS: f64 = 200.0;
 pub const RETARGET_DAMPING: f64 = 26.0;
 
 /// Per-tick output applied to the visual tree / compositor.
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct AnimSample {
     pub id: AnimId,
     pub value: f64,
@@ -34,7 +33,12 @@ pub struct AnimSample {
     /// whatever picks the motion up how fast it was going, and the only place
     /// that number exists is here.
     pub velocity: f64,
-    pub compositor: Option<CompositorProp>,
+    /// The compositor channels this animation drives this tick, interpolated to
+    /// their per-channel values (B6). Empty when it drives nothing on its own.
+    ///
+    /// `SmallVec`: the common one- and two-channel cases stay inline so a
+    /// steady-state frame with many animations allocates nothing (B9).
+    pub compositor: SmallVec<[CompositorProp; 2]>,
     pub finished: bool,
 }
 
@@ -114,13 +118,14 @@ impl AnimationScheduler {
         };
         let elapsed = (now_secs - run.start_secs).max(0.0);
         let (value, velocity) = run.kind.value_velocity(elapsed);
+        let channels = run.kind.channels();
         run.kind = AnimKind::Spring {
             from: value,
             to,
             velocity,
             stiffness: RETARGET_STIFFNESS,
             damping: RETARGET_DAMPING,
-            compositor: run.kind.compositor(),
+            channels,
         };
         run.start_secs = now_secs;
         true
@@ -152,7 +157,7 @@ impl AnimationScheduler {
                 id: run.id,
                 value,
                 velocity,
-                compositor: map_compositor(run.kind.compositor(), value),
+                compositor: run.kind.sample_compositors(value),
                 finished: done,
             });
             if done {

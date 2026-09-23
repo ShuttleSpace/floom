@@ -1981,6 +1981,7 @@ version = "0.2.0"
 dependencies = [
  "criterion",
  "floem-types",
+ "smallvec",
 ]
 
 [[package]]
@@ -2009,6 +2010,7 @@ dependencies = [
  "floem-types",
  "floem-widgets",
  "image 0.25.9",
+ "smallvec",
 ]
 
 [[package]]

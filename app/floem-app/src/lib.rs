@@ -17,7 +17,7 @@
 pub mod image_codec;
 pub mod runner;
 
-pub use image_codec::{DecodedImage, decode_image};
+pub use image_codec::{decode_image, DecodedImage};
 pub use runner::{AppRunner, RunStats};
 
 use std::any::Any;
@@ -48,8 +48,9 @@ use floem_scene::{Resource, ResourceKind, ResourceRegistry, Scene, SceneNode, Sc
 use floem_text::{LayoutCache, TextAlign, TextLayoutOptions, TextShaper};
 use floem_types::NativeCapture;
 use floem_types::ScrollEvent;
-use floem_types::{ClipRegion, resolve_clip};
+use floem_types::{resolve_clip, ClipRegion};
 use floem_widgets::WidgetAny;
+use smallvec::{smallvec, SmallVec};
 
 /// Stable handle to a mounted widget.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -182,14 +183,15 @@ struct Node {
 }
 
 /// This frame's sample of the animation running on one node.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 struct MotionSample {
     /// The sampled value — what the element's own `paint` reads through
     /// `PaintContext::animation_value`.
     value: f64,
-    /// The compositor channel, when the animation drives one. `None` means the
-    /// motion is the element's to draw rather than the host's to fold in.
-    prop: Option<CompositorProp>,
+    /// The compositor channels the animation is driving this frame, sampled to
+    /// their per-channel values (B6). Empty means the motion is the element's
+    /// to draw rather than the host's to fold in.
+    props: SmallVec<[CompositorProp; 2]>,
 }
 
 /// One node's animation, as the host is running it.
@@ -521,8 +523,8 @@ impl Default for WidgetHost {
 // --- layout intent lowering ------------------------------------------------
 
 fn to_a11y_role(role: SemanticsRole) -> floem_accessibility::SemanticsRole {
-    use SemanticsRole as C;
     use floem_accessibility::SemanticsRole as A;
+    use SemanticsRole as C;
     match role {
         C::None => A::None,
         C::Button => A::Button,
@@ -1544,7 +1546,11 @@ impl WidgetHost {
     /// the fade end up" answerable after the fade is over; stopping an
     /// animation (rather than letting it finish) is what clears it again.
     pub fn animation_value(&self, node: NodeId) -> Option<f64> {
-        self.nodes.get(node.0)?.motion.map(|sample| sample.value)
+        self.nodes
+            .get(node.0)?
+            .motion
+            .as_ref()
+            .map(|sample| sample.value)
     }
 
     /// How many node animations are running right now.
@@ -1597,6 +1603,7 @@ impl WidgetHost {
                 let unchanged = position.is_some_and(|position| {
                     self.node_anims[position]
                         .declared
+                        .as_ref()
                         .is_some_and(|declared| declared.matches(&spec))
                 });
                 if unchanged {
@@ -1622,8 +1629,8 @@ impl WidgetHost {
                 // would snap to its endpoint instead of starting from its origin.
                 // The next `tick_node_animations` overwrites this with the real
                 // first step, so it only closes the one-frame gap.
-                let (value, prop, _) = kind.sample(0.0);
-                self.nodes[index].motion = Some(MotionSample { value, prop });
+                let (value, props, _) = kind.sample(0.0);
+                self.nodes[index].motion = Some(MotionSample { value, props });
             }
         }
     }
@@ -1670,10 +1677,10 @@ impl WidgetHost {
                 .motion_samples
                 .iter()
                 .find(|sample| sample.id == id)
-                .map(|sample| (sample.value, sample.compositor, sample.finished));
+                .map(|sample| (sample.value, sample.compositor.clone(), sample.finished));
 
             match sampled {
-                Some((value, prop, finished)) => {
+                Some((value, props, finished)) => {
                     // Park the sample even on the last tick. An animation
                     // *leaves the node where it put it*: a fade that ends at
                     // zero opacity stays faded, and a slide that ends offset
@@ -1685,7 +1692,7 @@ impl WidgetHost {
                     // compositing" *is* the state it is entering — that is a
                     // different question, answered where it belongs.)
                     let node = self.node_anims[index].node;
-                    self.nodes[node].motion = Some(MotionSample { value, prop });
+                    self.nodes[node].motion = Some(MotionSample { value, props });
                     if finished {
                         let declared = self.node_anims[index].declared.is_some();
                         self.node_anims[index].id = None;
@@ -2188,17 +2195,20 @@ impl WidgetHost {
             if self.nodes[index].parent.is_some() {
                 continue;
             }
-            self.paint_subtree(index, stats, None);
+            self.paint_subtree(index, stats, SmallVec::new());
         }
 
         // Overlays paint last, so their content sits above everything beneath
         // it in z — this is what lets a popup escape its parent's clip. Each
         // carries the value its entry animation sampled this frame, which the
         // paint context folds into every node it writes.
-        let mut overlay_nodes: Vec<(usize, Option<CompositorProp>)> = Vec::new();
+        let mut overlay_nodes: Vec<(usize, SmallVec<[CompositorProp; 2]>)> = Vec::new();
         for slot in &self.overlays {
             if !self.nodes[slot.node].dead {
-                overlay_nodes.push((slot.node, self.overlay.composite(slot.id)));
+                overlay_nodes.push((
+                    slot.node,
+                    self.overlay.composite(slot.id).into_iter().collect(),
+                ));
             }
         }
         for (node, composite) in overlay_nodes {
@@ -2213,7 +2223,7 @@ impl WidgetHost {
     fn paint_node(
         &mut self,
         index: usize,
-        inherited: Option<CompositorProp>,
+        inherited: SmallVec<[CompositorProp; 2]>,
         stats: &mut FrameStats,
     ) {
         // The node's id list is painted in place — no per-frame replacement
@@ -2224,8 +2234,13 @@ impl WidgetHost {
             // A node's own animation beats one it merely sits inside (an
             // overlay's entry): the more specific declaration is the one its
             // owner asked for.
-            let motion = node.motion;
-            let composite = motion.and_then(|sample| sample.prop).or(inherited);
+            let motion = node.motion.clone();
+            // Own channels win as a whole; an animation that drives nothing does
+            // not crowd out an inherited overlay fade.
+            let composite = match &motion {
+                Some(sample) if !sample.props.is_empty() => sample.props.clone(),
+                _ => inherited,
+            };
             let mut cx = NodePaintContext {
                 scene: &mut self.scene,
                 resources: &mut self.resources,
@@ -2233,7 +2248,7 @@ impl WidgetHost {
                 shaper: &mut self.shaper,
                 layout_cache: &mut self.text_layout_cache,
                 composite,
-                animation: motion.map(|sample| sample.value),
+                animation: motion.as_ref().map(|sample| sample.value),
                 prev: ids,
                 used: 0,
                 bounds: node.bounds,
@@ -2257,13 +2272,19 @@ impl WidgetHost {
     /// and rotate are deliberately dropped: they bracket the subtree via a
     /// group scope instead, and folding them per node would tear the picture
     /// apart (see [`Self::node_group_transform`]).
-    fn fold_class_only(prop: Option<CompositorProp>) -> Option<CompositorProp> {
-        match prop {
-            Some(CompositorProp::Opacity(_))
-            | Some(CompositorProp::TranslateX(_))
-            | Some(CompositorProp::TranslateY(_)) => prop,
-            _ => None,
-        }
+    fn fold_class_only(props: &[CompositorProp]) -> SmallVec<[CompositorProp; 2]> {
+        props
+            .iter()
+            .filter(|p| {
+                matches!(
+                    p,
+                    CompositorProp::Opacity(_)
+                        | CompositorProp::TranslateX(_)
+                        | CompositorProp::TranslateY(_)
+                )
+            })
+            .copied()
+            .collect()
     }
 
     /// Paints `index` and everything under it, bracketing the subtree with
@@ -2284,7 +2305,7 @@ impl WidgetHost {
         &mut self,
         index: usize,
         stats: &mut FrameStats,
-        inherited: Option<CompositorProp>,
+        inherited: SmallVec<[CompositorProp; 2]>,
     ) {
         if self.nodes[index].dead {
             return;
@@ -2300,14 +2321,25 @@ impl WidgetHost {
         // The composite this node's own payloads and group scope see: its own
         // motion wins over a frozen native transition, which wins over an
         // inherited fold from an ancestor's presence animation.
-        let own_prop = self.nodes[index].motion.and_then(|s| s.prop);
+        let own = self.nodes[index]
+            .motion
+            .as_ref()
+            .map(|s| s.props.clone())
+            .unwrap_or_default();
+        let own_fold = Self::fold_class_only(&own);
         let frozen = self.frozen_composite(index);
-        let composite = own_prop.or(frozen).or(inherited);
+        let composite = if !own.is_empty() {
+            own
+        } else if !frozen.is_empty() {
+            frozen
+        } else {
+            inherited.clone()
+        };
         // A transform-class composite (scale, rotate) cannot fold into the
         // node's own payloads — scaling each rect about its own centre would
         // tear the picture apart. It becomes a group scope bracketing the
         // subtree, pivoting about the node's box centre.
-        let group = self.node_group_transform(index, composite);
+        let group = self.node_group_transform(index, &composite);
         let transformed = group.is_some();
         match group {
             Some(transform) => self.write_group_push(index, transform),
@@ -2333,7 +2365,11 @@ impl WidgetHost {
         // The fold an ancestor's presence fade hands down: the node's own fold
         // class wins, so it does not double-apply; a transform-class own prop
         // does not fold, so the inherited fold still reaches descendants.
-        let fold_down = Self::fold_class_only(own_prop).or(inherited);
+        let fold_down = if own_fold.is_empty() {
+            inherited
+        } else {
+            own_fold
+        };
         self.paint_children(index, stats, fold_down);
         if self.nodes[index].filter_push.is_some() {
             self.write_filter_pop(index);
@@ -2356,12 +2392,12 @@ impl WidgetHost {
         &mut self,
         index: usize,
         stats: &mut FrameStats,
-        inherited: Option<CompositorProp>,
+        inherited: SmallVec<[CompositorProp; 2]>,
     ) {
         let mut i = 0;
         while i < self.nodes[index].children.len() {
             let child = self.nodes[index].children[i];
-            self.paint_subtree(child, stats, inherited);
+            self.paint_subtree(child, stats, inherited.clone());
             i += 1;
         }
     }
@@ -2422,21 +2458,17 @@ impl WidgetHost {
         }
     }
 
-    /// The transform a transform-class composite asks for on this node, if
-    /// any: the effective composite (the node's own animation wins over an
-    /// inherited one, exactly as [`Self::paint_node`] folds it) resolved
-    /// against the node's laid-out box, so the scope pivots about the box's
-    /// centre. `None` for every other composite — opacity and translate fold
+    /// The transform a transform-class composite asks for on this node, if any:
+    /// the scale/rotate channels of the effective composite (already resolved
+    /// by the caller: own animation wins over inherited) multiplied against
+    /// the node's laid-out box, so the scope pivots about the box's centre.
+    /// `None` when no channel asks for a transform — opacity and translate fold
     /// per node, and there is no laid-out box to pivot an empty one around.
     fn node_group_transform(
         &self,
         index: usize,
-        inherited: Option<CompositorProp>,
+        composite: &[CompositorProp],
     ) -> Option<floem_types::Transform> {
-        let composite = self.nodes[index]
-            .motion
-            .and_then(|sample| sample.prop)
-            .or(inherited);
         let bounds = self.nodes[index].bounds;
         if bounds.width() <= 0.0 || bounds.height() <= 0.0 {
             return None;
@@ -2445,15 +2477,23 @@ impl WidgetHost {
             bounds.x0 + bounds.width() / 2.0,
             bounds.y0 + bounds.height() / 2.0,
         );
-        match composite {
-            Some(CompositorProp::Scale(s)) => {
-                Some(floem_types::Transform::scale_around(s, s, center))
+        let mut transform = None;
+        for prop in composite {
+            match *prop {
+                CompositorProp::Scale(s) => {
+                    transform = Some(compose_transform(transform, {
+                        floem_types::Transform::scale_around(s, s, center)
+                    }));
+                }
+                CompositorProp::Rotate(radians) => {
+                    transform = Some(compose_transform(transform, {
+                        floem_types::Transform::rotate_around(radians, center)
+                    }));
+                }
+                _ => {}
             }
-            Some(CompositorProp::Rotate(radians)) => {
-                Some(floem_types::Transform::rotate_around(radians, center))
-            }
-            _ => None,
         }
+        transform
     }
 
     /// Opens this node's transform scope, on the same retained-slot scheme as
@@ -2564,12 +2604,20 @@ impl WidgetHost {
     fn paint_overlay_subtree(
         &mut self,
         index: usize,
-        composite: Option<CompositorProp>,
+        composite: SmallVec<[CompositorProp; 2]>,
         stats: &mut FrameStats,
     ) {
         if self.nodes[index].dead {
             return;
         }
+        // The effective composite: the node's own animation wins over the
+        // overlay's entry animation (the same rule `paint_node` applies).
+        let own = self.nodes[index]
+            .motion
+            .as_ref()
+            .map(|s| s.props.clone())
+            .unwrap_or_default();
+        let composite = if !own.is_empty() { own } else { composite };
         // An overlay clips exactly the way a main-tree node does. It has to:
         // a popup whose content is clipped is the *reason* an overlay is
         // painted after its parent in the first place.
@@ -2581,7 +2629,7 @@ impl WidgetHost {
         }
         // Transform scopes work under overlays too: the entry composite is
         // inherited, but a node's own scale/rotate animation still brackets.
-        let group = self.node_group_transform(index, composite);
+        let group = self.node_group_transform(index, &composite);
         let transformed = group.is_some();
         match group {
             Some(transform) => self.write_group_push(index, transform),
@@ -2601,11 +2649,11 @@ impl WidgetHost {
             Some(filter) => self.write_filter_push(index, filter),
             None => self.retire_filter_markers(index),
         }
-        self.paint_node(index, composite, stats);
+        self.paint_node(index, composite.clone(), stats);
         let mut i = 0;
         while i < self.nodes[index].children.len() {
             let child = self.nodes[index].children[i];
-            self.paint_overlay_subtree(child, composite, stats);
+            self.paint_overlay_subtree(child, composite.clone(), stats);
             i += 1;
         }
         if self.nodes[index].filter_push.is_some() {
@@ -3051,7 +3099,8 @@ impl WidgetHost {
             if sample.finished {
                 finished.push(entry.slot);
             } else {
-                entry.composite = sample.compositor;
+                // A frozen native transition drives a single channel.
+                entry.composite = sample.compositor.first().copied();
             }
         }
         // Thawing is what ends a transition, and it is the host doing it
@@ -3106,11 +3155,13 @@ impl WidgetHost {
     /// `paint_node` and folded into every node it writes — because a frozen
     /// texture is drawn by the ordinary paint pass. That is the whole reason
     /// 16.4 needs no second animation mechanism.
-    fn frozen_composite(&self, node: usize) -> Option<CompositorProp> {
+    fn frozen_composite(&self, node: usize) -> SmallVec<[CompositorProp; 2]> {
         self.frozen
             .iter()
             .find(|f| f.node == node)
             .and_then(|f| f.composite)
+            .into_iter()
+            .collect()
     }
 
     /// Whether a participant is currently replaced by a frozen texture.
@@ -3829,8 +3880,10 @@ struct NodePaintContext<'a> {
     /// The overlay entry animation this node is being painted under, if any —
     /// or the node's own animation, which takes precedence. Applied to every
     /// scene node the context writes, so a whole overlay subtree fades or
-    /// slides as one.
-    composite: Option<CompositorProp>,
+    /// slides as one. Each channel (opacity folds alpha, a translation offsets
+    /// the box) is applied to every node; scale and rotate are never folded
+    /// here, only bracketed by the group scope.
+    composite: SmallVec<[CompositorProp; 2]>,
     /// This frame's value from the animation running on this element, for the
     /// element to draw its own motion with.
     animation: Option<f64>,
@@ -4047,7 +4100,7 @@ impl NodePaintContext<'_> {
     /// list is updated in place: a reused slot already holds the id being
     /// written (positional reuse), so only the append case touches memory.
     fn push(&mut self, mut node: floem_scene::SceneNode) {
-        if let Some(prop) = self.composite {
+        for &prop in &self.composite {
             apply_composite(&mut node, prop);
         }
         if self.used < self.prev.len() {
@@ -4081,6 +4134,16 @@ impl NodePaintContext<'_> {
 /// missing shape. `SceneNode::Image` now carries one, so an overlay holding a
 /// picture fades with the rest of it instead of staying opaque over a dimming
 /// background.
+fn compose_transform(
+    existing: Option<floem_types::Transform>,
+    m: floem_types::Transform,
+) -> floem_types::Transform {
+    match existing {
+        Some(acc) => acc.multiply(m),
+        None => m,
+    }
+}
+
 fn apply_composite(node: &mut floem_scene::SceneNode, prop: CompositorProp) {
     match prop {
         CompositorProp::Opacity(alpha) => {

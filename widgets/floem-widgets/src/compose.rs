@@ -943,7 +943,11 @@ impl Widget for Opacity {
 
     fn animation(&self) -> Option<AnimationSpec> {
         let (from, to, duration) = match self.transition {
-            Some(t) => (f64::from(self.from), f64::from(self.target), t.duration_secs),
+            Some(t) => (
+                f64::from(self.from),
+                f64::from(self.target),
+                t.duration_secs,
+            ),
             // No transition: an instant tween whose endpoints coincide parks
             // the static value on the compositor.
             None => (f64::from(self.target), f64::from(self.target), 0.0),

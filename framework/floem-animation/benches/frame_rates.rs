@@ -10,13 +10,9 @@ fn tick_many(c: &mut Criterion) {
             let mut sched = AnimationScheduler::new();
             for i in 0..n {
                 sched.start(
-                    AnimKind::Tween(Tween {
-                        from: 0.0,
-                        to: 1.0,
-                        duration_secs: 1.0,
-                        easing: Easing::Linear,
-                        compositor: Some(CompositorProp::Opacity(0.0)),
-                    }),
+                    AnimKind::Tween(
+                        Tween::new(0.0, 1.0, 1.0).with_compositor(CompositorProp::Opacity(0.0)),
+                    ),
                     i as f64 * 0.001,
                 );
             }

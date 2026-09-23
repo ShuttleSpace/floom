@@ -14,8 +14,8 @@ use floem_core::{
 };
 use floem_legacy_reactive::{Effect, RwSignal, SignalGet};
 use floem_types::{Color, Easing, ElementId, Path, Point, RepeatSpec, Size, Stroke};
-use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 
 /// A box for the user's draw routine.
 ///
@@ -489,7 +489,7 @@ mod tests {
             "endless — this is what keeps a frame loop awake"
         );
         assert_eq!(repeat.mode, floem_types::RepeatMode::Restart);
-        assert!(spec.prop.is_none(), "the arc moves, not the element");
+        assert!(spec.channels.is_empty(), "the arc moves, not the element");
     }
 
     /// The sweep is really drawn: one stroked arc, no fill, per frame.

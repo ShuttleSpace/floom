@@ -106,13 +106,11 @@ impl OverlayManager {
             _ => (0.0, 1.0, CompositorProp::Opacity(0.0)),
         };
         let anim = self.anim.start(
-            AnimKind::Tween(Tween {
-                from,
-                to,
-                duration_secs: ENTRY_SECS,
-                easing: ENTRY_EASING,
-                compositor: Some(compositor),
-            }),
+            AnimKind::Tween(
+                Tween::new(from, to, ENTRY_SECS)
+                    .with_easing(ENTRY_EASING)
+                    .with_compositor(compositor),
+            ),
             now_secs,
         );
 
@@ -212,7 +210,9 @@ impl OverlayManager {
                 entry.anim = None;
                 entry.composite = None;
             } else {
-                entry.composite = sample.compositor;
+                // An overlay entry drives a single channel, so the sampled list
+                // holds at most one value.
+                entry.composite = sample.compositor.first().copied();
             }
         }
         self.is_animating()

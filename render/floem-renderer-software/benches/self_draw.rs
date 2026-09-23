@@ -129,5 +129,10 @@ fn bench_rounded_rects(c: &mut Criterion) {
     group.finish();
 }
 
-criterion_group!(benches, bench_chart_segments, bench_circles, bench_rounded_rects);
+criterion_group!(
+    benches,
+    bench_chart_segments,
+    bench_circles,
+    bench_rounded_rects
+);
 criterion_main!(benches);

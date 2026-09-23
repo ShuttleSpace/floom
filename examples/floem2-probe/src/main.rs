@@ -43,15 +43,15 @@
 
 #![cfg(feature = "real")]
 
-use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::Arc;
 
 use floem_animation::{AnimKind, CompositorProp, Easing, Tween};
 use floem_app::{AppRunner, NodeId, WidgetHost};
 use floem_core::{Axis, Child, ChildKey, LayoutRequest};
 use floem_layout::LayoutStyle;
 use floem_platform::{Capability, Platform, WindowConfig};
-use floem_platform_desktop::winit_backend::{WinitApp, WinitPlatform, run};
+use floem_platform_desktop::winit_backend::{run, WinitApp, WinitPlatform};
 use floem_renderer_vello::VelloGpuPresenter;
 use floem_types::{NativeViewKind, Size, WindowId};
 use floem_widgets::{
@@ -247,27 +247,17 @@ impl ProbeApp {
         if wanted == self.fired {
             return;
         }
-        let Some(slot) = self
-            .runner
-            .host()
-            .participant_slots()
-            .into_iter()
-            .next()
-        else {
+        let Some(slot) = self.runner.host().participant_slots().into_iter().next() else {
             // Nothing bound yet is not "no snapshot": come back on a later
             // frame rather than report a verdict about an empty stage.
             return;
         };
         self.fired = wanted;
-        let anim = AnimKind::Tween(Tween {
-            from: -160.0,
-            to: 0.0,
-            // Longer than an overlay's 0.15 s entry on purpose. This is the one
-            // case that has to be *watched*, and nine frames is not watchable.
-            duration_secs: 0.6,
-            easing: Easing::EASE_OUT,
-            compositor: Some(CompositorProp::TranslateX(-160.0)),
-        });
+        let anim = AnimKind::Tween(
+            Tween::new(-160.0, 0.0, 0.6)
+                .with_easing(Easing::EASE_OUT)
+                .with_compositor(CompositorProp::TranslateX(-160.0)),
+        );
         match self.runner.host_mut().begin_native_transition(slot, anim) {
             Ok(Some(snap)) => eprintln!(
                 "probe: transition {}: FROZEN — resource {:?}, {}x{} px, {} frozen total",

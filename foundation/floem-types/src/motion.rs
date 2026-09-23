@@ -169,23 +169,30 @@ impl RepeatSpec {
 /// repeating tween, not a physical spring or a keyframe track, because those
 /// need parameters (velocity, key tracks) that a widget has no business
 /// inventing on its own element.
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct AnimationSpec {
+    /// The animation's principal scalar: where its self-reported value (see the
+    /// paint context's `animation_value`) starts and ends.
+    ///
+    /// Every [`AnimationSpec::channels`] interpolates between its own `from`
+    /// and `to` against the same normalised progress this driver describes, so
+    /// one curve drives several properties in lock-step (B6).
     pub from: f64,
     pub to: f64,
     pub duration_secs: f64,
     pub easing: Easing,
     /// `None` plays once.
     pub repeat: Option<RepeatSpec>,
-    /// Which compositor channel the animation drives, if any.
+    /// The compositor channels this animation drives, each with its own value
+    /// span. Empty means the animation drives nothing on its own — the step is
+    /// handed to the element's owner to read (see the paint context's
+    /// `animation_value`) and draw with, which is how a self-drawn control
+    /// animates one part of itself instead of being translated whole.
     ///
-    /// The payload is a *tag*, not a value: it names the channel, and the
-    /// per-frame value replaces it. `None` means the animation drives nothing
-    /// on its own — the step is handed to the element's owner to read (see the
-    /// paint context's `animation_value`) and draw with, which is how a
-    /// self-drawn control animates one part of itself instead of being
-    /// translated whole.
-    pub prop: Option<CompositorProp>,
+    /// The payloads are *templates*, not values: each names a channel, and the
+    /// sampled value replaces it on every frame. All channels share the
+    /// animation's duration, easing, repeat and key.
+    pub channels: Vec<CompositorChannel>,
     /// An opaque identity token for *this* motion, so that two otherwise
     /// identical specs can still be told apart.
     ///
@@ -209,20 +216,21 @@ impl AnimationSpec {
             duration_secs,
             easing: Easing::Linear,
             repeat: None,
-            prop: None,
+            channels: Vec::new(),
             key: 0,
         }
     }
 
     /// A repeating tween that drives nothing by itself.
     pub const fn repeating(from: f64, to: f64, duration_secs: f64, repeat: RepeatSpec) -> Self {
+        // `Vec::new` is const-stable, so a const builder can still be offered.
         Self {
             from,
             to,
             duration_secs,
             easing: Easing::Linear,
             repeat: Some(repeat),
-            prop: None,
+            channels: Vec::new(),
             key: 0,
         }
     }
@@ -232,9 +240,27 @@ impl AnimationSpec {
         self
     }
 
-    /// Drives a compositor channel, so the element moves without a re-layout.
-    pub const fn with_prop(mut self, prop: CompositorProp) -> Self {
-        self.prop = Some(prop);
+    /// Drives a single compositor channel over this animation's own value span,
+    /// so the element moves without a re-layout.
+    ///
+    /// Shorthand for a one-entry [`Self::with_channels`]: the new channel's
+    /// `from`/`to` mirror the driver's, so a single-prop caller behaves exactly
+    /// as a single-scalar tween always did.
+    pub fn with_prop(mut self, prop: CompositorProp) -> Self {
+        self.channels.push(CompositorChannel {
+            prop,
+            from: self.from,
+            to: self.to,
+        });
+        self
+    }
+
+    /// Drives several compositor channels in lock-step — the B6 multi-value
+    /// arrangement. Each channel interpolates its own `from`→`to` against the
+    /// shared easing, so opacity and translation (say) move together without a
+    /// re-layout or a per-widget choreography of separate tweens.
+    pub fn with_channels(mut self, channels: impl IntoIterator<Item = CompositorChannel>) -> Self {
+        self.channels.extend(channels);
         self
     }
 
@@ -439,6 +465,26 @@ pub enum CompositorProp {
     Scale(f64),
     /// Rotation in radians (screen coordinates: positive turns clockwise).
     Rotate(f64),
+}
+
+/// One compositor channel of a multi-value arrangement (B6).
+///
+/// Names a [`CompositorProp`] channel and the `from`/`to` span its value travels
+/// over, while all of an [`AnimationSpec`]'s channels share a single curve. The
+/// `prop` payload is a *template* — the interpolated value replaces it each
+/// frame — so the variant is what names the channel, and `from`/`to` carry the
+/// distance to travel.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct CompositorChannel {
+    pub prop: CompositorProp,
+    pub from: f64,
+    pub to: f64,
+}
+
+impl CompositorChannel {
+    pub const fn new(prop: CompositorProp, from: f64, to: f64) -> Self {
+        Self { prop, from, to }
+    }
 }
 
 /// Cubic-bezier timing curve: solves for the parameter that lands on `x` and
@@ -776,7 +822,10 @@ mod tests {
         assert_eq!(exit.from, 1.0);
         assert_eq!(exit.to, 0.0);
         // The channel is the same for both; only the scalars flip.
-        assert_eq!(enter.prop, exit.prop);
+        assert_eq!(
+            enter.channels.first().map(|c| c.prop),
+            exit.channels.first().map(|c| c.prop)
+        );
         assert_eq!(enter.duration_secs, exit.duration_secs);
     }
 
@@ -785,8 +834,11 @@ mod tests {
     #[test]
     fn a_fade_rides_the_opacity_channel() {
         let fade = PresenceTransition::fade(0.15);
-        match fade.enter_spec().prop {
-            Some(CompositorProp::Opacity(_)) => {}
+        match fade.enter_spec().channels.as_slice() {
+            [CompositorChannel {
+                prop: CompositorProp::Opacity(_),
+                ..
+            }] => {}
             other => panic!("a fade must drive opacity, got {other:?}"),
         }
     }
@@ -794,16 +846,28 @@ mod tests {
     #[test]
     fn grow_and_slide_resolve_to_their_channels_and_endpoints() {
         let grow = PresenceTransition::grow(0.3, 0.9);
-        assert!((grow.enter_spec().from - 0.9).abs() < 1e-6);
-        assert_eq!(grow.enter_spec().to, 1.0);
-        assert_eq!(grow.enter_spec().prop, Some(CompositorProp::Scale(1.0)));
+        let grow_spec = grow.enter_spec();
+        assert!((grow_spec.from - 0.9).abs() < 1e-6);
+        assert_eq!(grow_spec.to, 1.0);
+        let grow_channel = grow_spec.channels.as_slice();
+        assert_eq!(grow_channel.len(), 1, "grow drives one channel");
+        assert_eq!(grow_channel[0].prop, CompositorProp::Scale(1.0));
+        assert!(
+            (grow_channel[0].from - 0.9).abs() < 1e-4 && (grow_channel[0].to - 1.0).abs() < 1e-6,
+            "grow spans 0.9 → 1.0: {:?}",
+            grow_channel
+        );
 
         let slide = PresenceTransition::slide(0.25, 16.0);
         assert_eq!(slide.enter_spec().from, 16.0);
         assert_eq!(slide.enter_spec().to, 0.0);
         assert_eq!(
-            slide.enter_spec().prop,
-            Some(CompositorProp::TranslateY(0.0))
+            slide.enter_spec().channels,
+            vec![CompositorChannel::new(
+                CompositorProp::TranslateY(0.0),
+                16.0,
+                0.0
+            )]
         );
         // Sliding out starts from 0 and ends at the offset.
         assert_eq!(slide.exit_spec().from, 0.0);
@@ -843,8 +907,14 @@ mod tests {
         // Opacity runs 0 → 1 coming in and 1 → 0 going out.
         assert_eq!((enter.from, enter.to), (0.0, 1.0));
         assert_eq!((exit.from, exit.to), (1.0, 0.0));
-        assert_eq!(enter.prop, Some(CompositorProp::Opacity(0.0)));
-        assert_eq!(exit.prop, Some(CompositorProp::Opacity(0.0)));
+        assert_eq!(
+            enter.channels.first().map(|c| c.prop),
+            Some(CompositorProp::Opacity(0.0))
+        );
+        assert_eq!(
+            exit.channels.first().map(|c| c.prop),
+            Some(CompositorProp::Opacity(0.0))
+        );
         assert_eq!(enter.duration_secs, 0.2);
         assert_eq!(enter.easing, Easing::EASE_OUT);
         // The two directions must not be the same motion, or the host would
@@ -859,7 +929,10 @@ mod tests {
         let exit = t.exit_spec();
         assert_eq!((enter.from, enter.to), (0.5, 1.0));
         assert_eq!((exit.from, exit.to), (1.0, 0.5));
-        assert_eq!(enter.prop, Some(CompositorProp::Scale(1.0)));
+        assert_eq!(
+            enter.channels.first().map(|c| c.prop),
+            Some(CompositorProp::Scale(1.0))
+        );
         assert!(!enter.matches(&exit), "enter and exit must differ");
     }
 
@@ -870,7 +943,10 @@ mod tests {
         let exit = t.exit_spec();
         assert_eq!((enter.from, enter.to), (16.0, 0.0));
         assert_eq!((exit.from, exit.to), (0.0, 16.0));
-        assert_eq!(enter.prop, Some(CompositorProp::TranslateY(0.0)));
+        assert_eq!(
+            enter.channels.first().map(|c| c.prop),
+            Some(CompositorProp::TranslateY(0.0))
+        );
         assert!(!enter.matches(&exit), "enter and exit must differ");
     }
 

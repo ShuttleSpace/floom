@@ -14,13 +14,15 @@
 //! bookkeeping that agrees with itself and paints nothing is exactly the
 //! failure this door could have.
 
-use floem_animation::{AnimKind, CompositorProp, Tween};
+use floem_animation::{AnimKind, CompositorChannel, CompositorProp, Easing, Tween};
 use floem_app::{NodeId, WidgetHost};
 use floem_core::{Child, ChildKey, LayoutRequest};
 use floem_layout::LayoutStyle;
 use floem_scene::SceneNode;
 use floem_types::{Color, Event, Point, PointerEvent, PresenceTransition, Rect, Size, Transition};
-use floem_widgets::{AnimatedContent, Button, Conditional, Container, Crossfade, Opacity, Progress, Text};
+use floem_widgets::{
+    AnimatedContent, Button, Conditional, Container, Crossfade, Opacity, Progress, Text,
+};
 
 /// A host with one text leaf on screen and one frame behind it, so layout has
 /// run and the scene holds a painted text node to watch.
@@ -38,6 +40,17 @@ fn text_alpha(host: &WidgetHost) -> u8 {
         .iter()
         .find_map(|(_, node)| match node {
             SceneNode::Text { color, .. } => Some(color.a),
+            _ => None,
+        })
+        .expect("the tree painted a text node")
+}
+
+/// The origin of the first text node the host painted.
+fn text_origin(host: &WidgetHost) -> Point {
+    host.scene()
+        .iter()
+        .find_map(|(_, node)| match node {
+            SceneNode::Text { origin, .. } => Some(*origin),
             _ => None,
         })
         .expect("the tree painted a text node")
@@ -680,6 +693,71 @@ fn a_translation_animation_moves_the_painted_box() {
         "the label should have travelled 40px down: {origin:?} -> {moved:?}"
     );
     assert_eq!(moved.x, origin.x, "and not sideways");
+}
+
+// --- B6: multi-value arrangement -------------------------------------------
+
+/// One tween drives two compositor channels in lock-step: the text *fades* on
+/// the same frames it *moves*, from a single scheduled animation.
+///
+/// This is the observable the whole multi-value arrangement exists for — opacity
+/// and translation travelling together without two tweens, a per-widget
+/// choreography, or a re-layout. Both channels share one curve, but each spans
+/// its own value range (opacity 1.0 → 0.0, translate 0 → 40 px), so the single
+/// driver value maps to both. Mid-flight, on the very same frame, the alpha has
+/// left full *and* the origin has left (but not reached) its destination.
+#[test]
+fn a_multichannel_animation_drives_opacity_and_translation_together() {
+    let (mut host, label) = host_with_label();
+    let origin = text_origin(&host);
+
+    host.animate(
+        label,
+        AnimKind::Tween(Tween {
+            from: 0.0,
+            to: 1.0,
+            duration_secs: 0.5,
+            easing: Easing::EASE_OUT,
+            channels: vec![
+                CompositorChannel::new(CompositorProp::Opacity(0.0), 1.0, 0.0),
+                CompositorChannel::new(CompositorProp::TranslateY(0.0), 0.0, 40.0),
+            ],
+        }),
+    );
+    assert_eq!(
+        host.animations_running(),
+        1,
+        "the door started one animation"
+    );
+    host.frame();
+
+    let alpha = text_alpha(&host);
+    let moved = text_origin(&host);
+    assert!(
+        alpha < 255,
+        "the opacity channel is fading on the same frame: {alpha}"
+    );
+    assert!(
+        moved.y > origin.y && moved.y < origin.y + 40.0,
+        "and the translation channel is mid-travel on that same frame: \
+         {origin:?} -> {moved:?}"
+    );
+
+    // Both land at their endpoints together.
+    for _ in 0..30 {
+        host.frame();
+    }
+    assert_eq!(text_alpha(&host), 0, "opacity reached its target");
+    let landed = text_origin(&host);
+    assert!(
+        (landed.y - origin.y - 40.0).abs() < 0.5,
+        "translation reached its target too: {origin:?} -> {landed:?}"
+    );
+    assert_eq!(
+        host.animations_running(),
+        0,
+        "and then the one animation rests"
+    );
 }
 
 // --- B4: implicit transitions ---------------------------------------------
@@ -1511,7 +1589,10 @@ fn an_opacity_transition_reverses_to_its_old_value_when_it_returns() {
         host.frame();
     }
     let faded = child_text_alpha(&host).expect("child present");
-    assert!(faded < 155 && faded > 110, "control: it faded to ~0.5: {faded}");
+    assert!(
+        faded < 155 && faded > 110,
+        "control: it faded to ~0.5: {faded}"
+    );
 
     // 0.5 → 1.0: must fade back up from 0.5, not jump.
     host.widget_mut::<Opacity>(root)

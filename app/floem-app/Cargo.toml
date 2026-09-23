@@ -34,6 +34,7 @@ floem-renderer = { path = "../../render/floem-renderer", version = "0.2.0" }
 # Image decoding for `register_image_decoded`: PNG + JPEG decode the formats
 # UI layers actually load; more formats can be opted into via features.
 image = { workspace = true, features = ["png", "jpeg"] }
+smallvec = "1.15"
 
 [dev-dependencies]
 floem-legacy-reactive = { path = "../../legacy/floem-reactive", version = "0.2.0" }

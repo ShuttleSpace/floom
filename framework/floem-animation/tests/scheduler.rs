@@ -1,5 +1,5 @@
 use floem_animation::{
-    AnimKind, AnimationScheduler, Clock, CompositorProp, Easing, FakeClock, Tween,
+    AnimKind, AnimationScheduler, Clock, CompositorChannel, CompositorProp, FakeClock, Tween,
 };
 
 #[test]
@@ -7,13 +7,7 @@ fn tween_deterministic_with_fake_clock() {
     let mut clock = FakeClock::new();
     let mut sched = AnimationScheduler::new();
     let id = sched.start(
-        AnimKind::Tween(Tween {
-            from: 0.0,
-            to: 100.0,
-            duration_secs: 1.0,
-            easing: Easing::Linear,
-            compositor: Some(CompositorProp::Opacity(0.0)),
-        }),
+        AnimKind::Tween(Tween::new(0.0, 100.0, 1.0).with_compositor(CompositorProp::Opacity(0.0))),
         clock.now_secs(),
     );
     clock.advance(0.5);
@@ -21,7 +15,10 @@ fn tween_deterministic_with_fake_clock() {
     assert_eq!(samples.len(), 1);
     assert_eq!(samples[0].id, id);
     assert!((samples[0].value - 50.0).abs() < 1e-6);
-    assert_eq!(samples[0].compositor, Some(CompositorProp::Opacity(50.0)));
+    assert_eq!(
+        samples[0].compositor.as_slice(),
+        &[CompositorProp::Opacity(50.0)]
+    );
     assert!(!samples[0].finished);
 
     clock.advance(0.5);
@@ -40,14 +37,18 @@ fn spring_and_keyframe() {
             velocity: 0.0,
             stiffness: 200.0,
             damping: 20.0,
-            compositor: Some(CompositorProp::Scale(0.0)),
+            channels: vec![CompositorChannel::new(CompositorProp::Scale(0.0), 0.0, 1.0)],
         },
         0.0,
     );
     sched.start(
         AnimKind::Keyframe {
             keys: vec![(0.0, 0.0), (0.5, 10.0), (1.0, 0.0)],
-            compositor: Some(CompositorProp::TranslateX(0.0)),
+            channels: vec![CompositorChannel::new(
+                CompositorProp::TranslateX(0.0),
+                0.0,
+                0.0,
+            )],
         },
         0.0,
     );
@@ -55,7 +56,7 @@ fn spring_and_keyframe() {
     assert_eq!(s.len(), 2);
     let kf = s
         .iter()
-        .find(|x| matches!(x.compositor, Some(CompositorProp::TranslateX(_))))
+        .find(|x| matches!(x.compositor.as_slice(), [CompositorProp::TranslateX(_)]))
         .unwrap();
     assert!((kf.value - 5.0).abs() < 1e-6);
 }
@@ -64,18 +65,12 @@ fn spring_and_keyframe() {
 fn compositor_only_transform_opacity_path() {
     let mut sched = AnimationScheduler::new();
     sched.start(
-        AnimKind::Tween(Tween {
-            from: 0.0,
-            to: 1.0,
-            duration_secs: 0.2,
-            easing: Easing::Linear,
-            compositor: Some(CompositorProp::TranslateY(0.0)),
-        }),
+        AnimKind::Tween(Tween::new(0.0, 1.0, 0.2).with_compositor(CompositorProp::TranslateY(0.0))),
         0.0,
     );
     let s = sched.tick(0.1);
     assert!(matches!(
-        s[0].compositor,
-        Some(CompositorProp::TranslateY(_))
+        s[0].compositor.as_slice(),
+        [CompositorProp::TranslateY(_)]
     ));
 }

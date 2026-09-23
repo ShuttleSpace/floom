@@ -28,9 +28,9 @@ use floem_native::{
 use floem_overlay::OverlayKind;
 use floem_testkit::TestApp;
 use floem_types::{Point, Rect, ResourceId, Size};
-use floem_widgets::NativeSurface;
 use floem_widgets::controls::{Button, TextField};
 use floem_widgets::primitives::Container;
+use floem_widgets::NativeSurface;
 
 // --- scaffolding -----------------------------------------------------------
 
@@ -1188,13 +1188,7 @@ fn an_unmounting_frozen_participant_hands_ownership_back() {
 
 /// A 0.15 s slide from `from` to `to`, the shape a page transition asks for.
 fn slide(from: f64, to: f64) -> AnimKind {
-    AnimKind::Tween(Tween {
-        from,
-        to,
-        duration_secs: 0.15,
-        easing: Easing::Linear,
-        compositor: Some(CompositorProp::TranslateX(0.0)),
-    })
+    AnimKind::Tween(Tween::new(from, to, 0.15).with_compositor(CompositorProp::TranslateX(0.0)))
 }
 
 /// The frozen image's drawn box, which is where a slide has to show up: the

@@ -9,6 +9,7 @@ rust-version.workspace = true
 
 [dependencies]
 floem-types = { path = "../../foundation/floem-types", version = "0.2.0" }
+smallvec = "1.15"
 
 [dev-dependencies]
 criterion = { version = "0.8.1", features = ["html_reports"] }

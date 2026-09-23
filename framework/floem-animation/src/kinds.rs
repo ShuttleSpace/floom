@@ -3,7 +3,8 @@
 // The vocabulary itself lives in `floem-types`, so that layers which cannot
 // depend on this crate (`floem-core`, where a widget declares what it wants)
 // can still name it. The crate root re-exports all of it.
-use floem_types::{CompositorProp, Easing, RepeatMode, damped_spring};
+use floem_types::{damped_spring, CompositorChannel, CompositorProp, Easing, RepeatMode};
+use smallvec::SmallVec;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct AnimId(pub u32);
@@ -18,7 +19,9 @@ pub struct Tween {
     /// [`Easing::Linear`] reproduces this framework's original behaviour
     /// exactly, which is why it is the default: adding a curve is opt-in.
     pub easing: Easing,
-    pub compositor: Option<CompositorProp>,
+    /// The compositor channels this tween drives, each interpolating its own
+    /// `from`→`to` against the tween's shared curve (B6 multi-value).
+    pub channels: Vec<CompositorChannel>,
 }
 
 impl Tween {
@@ -28,7 +31,7 @@ impl Tween {
             to,
             duration_secs,
             easing: Easing::Linear,
-            compositor: None,
+            channels: Vec::new(),
         }
     }
 
@@ -37,8 +40,13 @@ impl Tween {
         self
     }
 
+    /// Drives one compositor channel over this tween's own value span.
     pub fn with_compositor(mut self, prop: CompositorProp) -> Self {
-        self.compositor = Some(prop);
+        self.channels.push(CompositorChannel {
+            prop,
+            from: self.from,
+            to: self.to,
+        });
         self
     }
 }
@@ -57,11 +65,11 @@ pub enum AnimKind {
         velocity: f64,
         stiffness: f64,
         damping: f64,
-        compositor: Option<CompositorProp>,
+        channels: Vec<CompositorChannel>,
     },
     Keyframe {
         keys: Vec<(f64, f64)>, // (time_secs, value)
-        compositor: Option<CompositorProp>,
+        channels: Vec<CompositorChannel>,
     },
     /// Plays `inner` over and over, optionally a bounded number of times.
     ///
@@ -82,9 +90,9 @@ pub enum AnimKind {
 
 impl AnimKind {
     /// Sample at local time `t` seconds since start. Returns (value, compositor, finished).
-    pub fn sample(&self, t: f64) -> (f64, Option<CompositorProp>, bool) {
+    pub fn sample(&self, t: f64) -> (f64, SmallVec<[CompositorProp; 2]>, bool) {
         let (value, _velocity, finished) = self.evaluate(t);
-        (value, map_compositor(self.compositor(), value), finished)
+        (value, self.sample_compositors(value), finished)
     }
 
     /// Sample value *and* velocity.
@@ -96,17 +104,49 @@ impl AnimKind {
         (value, velocity)
     }
 
-    /// The compositor channel this kind drives, if any.
+    /// The compositor values this kind holds at a given driver `value` (B6).
+    ///
+    /// A tween interpolates each channel over its own `from`→`to` against the
+    /// tween's shared progress; a spring or keyframe maps the raw value onto
+    /// every channel it carries, since those kinds have no value span of their
+    /// own. Empty means the kind drives nothing on its own.
+    pub fn sample_compositors(&self, value: f64) -> SmallVec<[CompositorProp; 2]> {
+        match self {
+            Self::Tween(tw) => {
+                let progress = if (tw.to - tw.from).abs() > f64::EPSILON {
+                    ((value - tw.from) / (tw.to - tw.from)).clamp(0.0, 1.0)
+                } else {
+                    1.0
+                };
+                tw.channels
+                    .iter()
+                    .map(|c| map_one(c.prop, c.from + progress * (c.to - c.from)))
+                    .collect()
+            }
+            Self::Spring { channels, .. } | Self::Keyframe { channels, .. } => {
+                channels.iter().map(|c| map_one(c.prop, value)).collect()
+            }
+            Self::Repeat { inner, .. } => inner.sample_compositors(value),
+        }
+    }
+
+    /// The compositor channels this kind drives.
     ///
     /// A repeat drives whatever its inner kind drives — the channel belongs to
     /// the motion, not to the fact that it happens more than once.
-    pub fn compositor(&self) -> Option<CompositorProp> {
+    pub fn channels(&self) -> Vec<CompositorChannel> {
         match self {
-            Self::Tween(tw) => tw.compositor,
-            Self::Spring { compositor, .. } => *compositor,
-            Self::Keyframe { compositor, .. } => *compositor,
-            Self::Repeat { inner, .. } => inner.compositor(),
+            Self::Tween(tw) => tw.channels.clone(),
+            Self::Spring { channels, .. } => channels.clone(),
+            Self::Keyframe { channels, .. } => channels.clone(),
+            Self::Repeat { inner, .. } => inner.channels(),
         }
+    }
+
+    /// The *first* compositor channel this kind drives, if any — the single
+    /// named channel a single-prop caller asked for.
+    pub fn compositor(&self) -> Option<CompositorProp> {
+        self.channels().first().map(|c| c.prop)
     }
 
     /// How long one pass of this kind lasts, where that is knowable.
@@ -264,7 +304,7 @@ impl From<&floem_types::AnimationSpec> for AnimKind {
             to: spec.to,
             duration_secs: spec.duration_secs,
             easing: spec.easing,
-            compositor: spec.prop,
+            channels: spec.channels.clone(),
         };
         match spec.repeat {
             None => Self::Tween(tween),
@@ -292,14 +332,14 @@ pub const SPRING_SETTLE_SECS: f64 = 2.0;
 /// phase arithmetic into a division by zero.
 const MIN_CYCLE_SECS: f64 = 1e-9;
 
-pub(crate) fn map_compositor(template: Option<CompositorProp>, v: f64) -> Option<CompositorProp> {
-    template.map(|c| match c {
+pub(crate) fn map_one(prop: CompositorProp, v: f64) -> CompositorProp {
+    match prop {
         CompositorProp::Opacity(_) => CompositorProp::Opacity(v),
         CompositorProp::TranslateX(_) => CompositorProp::TranslateX(v),
         CompositorProp::TranslateY(_) => CompositorProp::TranslateY(v),
         CompositorProp::Scale(_) => CompositorProp::Scale(v),
         CompositorProp::Rotate(_) => CompositorProp::Rotate(v),
-    })
+    }
 }
 
 #[cfg(test)]
@@ -312,7 +352,7 @@ mod tests {
             to,
             duration_secs: duration,
             easing,
-            compositor: None,
+            channels: Vec::new(),
         })
     }
 
@@ -343,7 +383,7 @@ mod tests {
             velocity: 40.0,
             stiffness: 100.0,
             damping: 10.0,
-            compositor: None,
+            channels: Vec::new(),
         };
         let peak = (0..200)
             .map(|i| carried.sample(f64::from(i) / 100.0).0)
@@ -365,7 +405,7 @@ mod tests {
                 velocity: 0.0,
                 stiffness: 100.0,
                 damping: 20.0,
-                compositor: None,
+                channels: Vec::new(),
             }),
             iterations: None,
             mode: RepeatMode::Restart,
