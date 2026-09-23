@@ -401,6 +401,70 @@ mod tests {
         assert_eq!(cache.stats().bytes_uploaded, 64);
     }
 
+    /// Task 16.3 step 4, bytes half: the *per-frame* cost of Texture mode, the
+    /// number that decides whether it is a fallback or a default.
+    ///
+    /// Bytes only ever accumulate on a producer that actually reports a new
+    /// sequence. A 1080p participant costs one full frame on first import, then
+    /// one full frame per refresh, then nothing while it is quiet — and a
+    /// participant that never says "changed" costs nothing no matter how many
+    /// frames pass. That per-frame delta is the modelling result step 4 exists
+    /// to pin down.
+    #[test]
+    fn texture_mode_moves_an_exact_set_of_bytes_per_produced_frame() {
+        let mut cache = ExternalTextureCache::new();
+
+        // A "video-like" participant: reported content every frame.
+        let video = resource(10);
+        let mut vf = frame(video, 1);
+        vf.width = 1920;
+        vf.height = 1080;
+        vf.pixels = Some(Arc::from(vec![0u8; 1920 * 1080 * 4].into_boxed_slice()));
+
+        // A static "map" participant that changes lanes then goes quiet.
+        let map = resource(11);
+        cache.import(&frame(map, 1));
+
+        // The video's first frame is a full upload.
+        assert_eq!(
+            cache.import(&vf),
+            ImportDecision::First,
+            "the participant's first produced frame is a first import"
+        );
+        assert_eq!(
+            cache.stats().bytes_uploaded,
+            1920 * 1080 * 4 + 32,
+            "first frame of both: one full frame plus the map's 32 B frame"
+        );
+
+        // One second of 60 f/s video, still frames in between: every new content
+        // costs one full frame; silence costs nothing.
+        let mut produced = 1920 * 1080 * 4 + 32;
+        for seq in 2..=60u64 {
+            vf.sequence = seq;
+            cache.import(&vf);
+            produced += 1920 * 1080 * 4;
+        }
+        // The map moved once more, then went quiet.
+        cache.import(&frame(map, 2));
+        produced += 32;
+        for _ in 0..60 {
+            cache.import(&frame(map, 2));
+        }
+
+        assert_eq!(
+            cache.stats().bytes_uploaded,
+            produced,
+            "exactly one full frame per produced frame, nothing for silence"
+        );
+        assert_eq!(
+            cache.stats().refreshes,
+            59 + 1,
+            "every changed frame refreshed"
+        );
+        assert_eq!(cache.stats().reuses, 60, "the quiet map frames reused");
+    }
+
     /// A backend that wraps a GPU object the producer owns moves no bytes, and
     /// that is the fast path rather than a frame missing its contents.
     #[test]

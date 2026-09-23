@@ -446,10 +446,12 @@ once with the outcome recorded in the device checklist.
 - `texture_cache_hits` counts an external texture as a hit: the upload already
   happened at `import_texture`, so the encode is a lookup.
 
-**Still open:** steps 3 (surface compositor on KMS/Android/iOS) and 4 (the
-bytes-per-frame, added-frame-time benchmark). Step 4's *bytes* half is
-measurable today — `external_stats().bytes_uploaded` counts only what actually
-crossed — but frame time needs a device.
+**Still open:** step 3 (surface compositor on KMS/Android/iOS), a device-gated
+task this machine cannot do, and the *frame-time* half of step 4 (needs a
+device). The *bytes* half of step 4 is DONE: `texture_mode_moves_an_exact_set_of_bytes_per_produced_frame`
+(`render/floem-renderer/src/external.rs`) pins the per-frame cost model — one
+full frame per produced frame, nothing for silence. `external_stats().bytes_uploaded`
+counts only what actually crossed.
 
 **Files**
 
