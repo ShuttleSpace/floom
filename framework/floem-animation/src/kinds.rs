@@ -457,4 +457,46 @@ mod tests {
             "declared 0.25 -> 1.0 eased; got {value}, expected {expected}"
         );
     }
+
+    /// Three channels spill past the two-slot inline buffer, and every one of
+    /// them still interpolates over *its own* from→to against the shared driver,
+    /// not the driver's range. Rotate is folded through too, so a non-opacity,
+    /// non-translate prop does not fall out of the sample.
+    #[test]
+    fn three_channels_each_sample_over_their_own_span() {
+        let tween = AnimKind::Tween(Tween {
+            from: 0.0,
+            to: 1.0,
+            duration_secs: 1.0,
+            easing: Easing::Linear,
+            channels: vec![
+                CompositorChannel::new(CompositorProp::Opacity(0.0), 0.0, 1.0),
+                CompositorChannel::new(CompositorProp::TranslateX(0.0), 0.0, 100.0),
+                CompositorChannel::new(CompositorProp::Rotate(0.0), -180.0, 180.0),
+            ],
+        });
+
+        let (_, comps, _) = tween.sample(0.5);
+        // Three entries: past the two-slot inline capacity, so the small vec has
+        // had to spill to the heap rather than silently truncating.
+        assert_eq!(comps.len(), 3, "all three channels survive: {comps:?}");
+        // Each is interpolated against its own span — not the driver's 0→1.
+        assert!(
+            matches!(
+                comps.as_slice(),
+                [CompositorProp::Opacity(o), CompositorProp::TranslateX(x), CompositorProp::Rotate(r)]
+                if (*o - 0.5).abs() < 1e-6
+                && (*x - 50.0).abs() < 1e-6
+                && (*r - 0.0).abs() < 1e-6
+            ),
+            "channels hit 50% of each own span: {comps:?}"
+        );
+
+        // The driver's own value remains independent of the channels.
+        let (value, _, _) = tween.sample(0.5);
+        assert!(
+            (value - 0.5).abs() < 1e-9,
+            "driver value is untouched: {value}"
+        );
+    }
 }

@@ -798,6 +798,29 @@ mod tests {
         assert_eq!(RepeatSpec::INFINITE_REVERSE.iterations, None);
     }
 
+    /// The B6 public builder: `with_channels` lays several channels onto one
+    /// shared driver, each free to span its own value range rather than only the
+    /// driver's — the path `with_prop`'s one-channel shorthand cannot take.
+    #[test]
+    fn with_channels_builds_a_multi_channel_spec() {
+        let spec = AnimationSpec::new(0.0, 1.0, 0.5).with_channels([
+            CompositorChannel::new(CompositorProp::Opacity(0.0), 0.0, 1.0),
+            CompositorChannel::new(CompositorProp::TranslateY(0.0), 0.0, 40.0),
+            CompositorChannel::new(CompositorProp::Rotate(0.0), -180.0, 180.0),
+        ]);
+        assert_eq!(spec.channels.len(), 3);
+        // Each channel keeps its own span, independent of the driver's 0→1.
+        assert_eq!(
+            spec.channels,
+            vec![
+                CompositorChannel::new(CompositorProp::Opacity(0.0), 0.0, 1.0),
+                CompositorChannel::new(CompositorProp::TranslateY(0.0), 0.0, 40.0),
+                CompositorChannel::new(CompositorProp::Rotate(0.0), -180.0, 180.0),
+            ]
+        );
+        assert_eq!(spec.duration_secs, 0.5, "the driver's own fields survive");
+    }
+
     // --- PresenceTransition -------------------------------------------------
 
     #[test]

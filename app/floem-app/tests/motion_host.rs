@@ -1760,3 +1760,103 @@ fn interrupting_a_shared_flight_retargets_without_jumping() {
         "and it commits to the destination's own content at its box: {committed}"
     );
 }
+
+/// The flight is not one-way: with the destination shown, arming it back
+/// flies the same ink *up* from the destination box to the source's, and the
+/// fold hands the stage back to the source's own content.
+#[test]
+fn a_shared_element_flies_back_to_its_source_in_reverse() {
+    let (mut host, _root, fly) = host_with_shared();
+
+    // Reach the destination first: full forward flight to its landing.
+    fly.store(true, std::sync::atomic::Ordering::Relaxed);
+    for _ in 0..34 {
+        host.frame();
+    }
+    let at_dest = text_origin(&host).y;
+    assert!(
+        (at_dest - 40.0).abs() < 8.0,
+        "control: the forward flight landed on the destination box: {at_dest}"
+    );
+    assert_eq!(
+        host.animations_running(),
+        0,
+        "control: forward flight rests"
+    );
+
+    // Now arm the return flight. The source sits above the destination, so the
+    // ink must travel *up* through the space between the boxes.
+    fly.store(false, std::sync::atomic::Ordering::Relaxed);
+    let mut ys = Vec::new();
+    for _ in 0..34 {
+        host.frame();
+        ys.push(text_origin(&host).y);
+    }
+    assert_eq!(
+        host.animations_running(),
+        0,
+        "the return flight finishes of its own accord"
+    );
+    assert!(
+        ys.iter().any(|y| (1.0..39.0).contains(y)),
+        "the ink flies up through the space between the boxes: {ys:?}"
+    );
+    assert!(
+        ys.windows(2).all(|w| w[1] <= w[0] + 0.5),
+        "a reverse flight to a box above never travels downward: {ys:?}"
+    );
+    let back = text_origin(&host).y;
+    assert!(back < 10.0, "the ink lands back on the source box: {back}");
+    assert_eq!(
+        text_count(&host),
+        1,
+        "still one text after the reverse fold"
+    );
+}
+
+/// The imperative door — `set_fly` on the live widget, with no external signal
+/// gate — must arm exactly the same flight the signal gate does. The source
+/// flies to the destination and the fold reveals the destination's content.
+#[test]
+fn set_fly_arms_the_same_flight_as_the_signal_gate() {
+    let mut host = WidgetHost::new();
+    host.set_size(Size::new(200.0, 120.0));
+    let layout = SharedTransitionLayout::new(7, 40.0)
+        .duration(0.4)
+        .source(Child::new(0, LayoutRequest::new(), || {
+            Box::new(Text::new("src"))
+        }))
+        .dest(Child::new(1, LayoutRequest::new(), || {
+            Box::new(Text::new("dst"))
+        }));
+    let root = host.mount_root(LayoutStyle::default(), layout);
+    host.frame();
+
+    // Source at rest until the imperative call arms the flight.
+    assert_eq!(text_count(&host), 1, "one text at rest");
+    assert!(text_origin(&host).y < 10.0, "source sits at the top");
+
+    host.widget_mut::<SharedTransitionLayout>(root)
+        .expect("the root is the shared layout")
+        .set_fly(true);
+    let mut ys = Vec::new();
+    for _ in 0..34 {
+        host.frame();
+        ys.push(text_origin(&host).y);
+    }
+    assert_eq!(
+        host.animations_running(),
+        0,
+        "the imperatively-armed flight finishes"
+    );
+    assert!(
+        ys.iter().any(|y| (1.0..39.0).contains(y)),
+        "set_fly launched a real flight through the space: {ys:?}"
+    );
+    let landed = text_origin(&host).y;
+    assert!(
+        (landed - 40.0).abs() < 8.0,
+        "and it lands on the destination box: {landed}"
+    );
+    assert_eq!(text_count(&host), 1, "still one text after the fold");
+}
