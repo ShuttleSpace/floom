@@ -50,7 +50,7 @@ use floem_types::NativeCapture;
 use floem_types::ScrollEvent;
 use floem_types::{resolve_clip, ClipRegion};
 use floem_widgets::WidgetAny;
-use smallvec::{smallvec, SmallVec};
+use smallvec::SmallVec;
 
 /// Stable handle to a mounted widget.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

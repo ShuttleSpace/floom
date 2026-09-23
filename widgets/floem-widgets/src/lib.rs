@@ -32,7 +32,7 @@ pub use widget_any::{to_core_role, to_core_state};
 pub use canvas::{Canvas, Spinner};
 pub use compose::{
     AnimatedContent, BottomSheet, Conditional, Crossfade, Dialog, Grid, List, Opacity, Overlay,
-    Popup, Stack, Tabs,
+    Popup, SharedTransitionLayout, Stack, Tabs,
 };
 pub use controls::{
     Button, Checkbox, InteractionState, Progress, Radio, Select, Slider, Switch, TextField,

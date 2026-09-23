@@ -21,7 +21,8 @@ use floem_layout::LayoutStyle;
 use floem_scene::SceneNode;
 use floem_types::{Color, Event, Point, PointerEvent, PresenceTransition, Rect, Size, Transition};
 use floem_widgets::{
-    AnimatedContent, Button, Conditional, Container, Crossfade, Opacity, Progress, Text,
+    AnimatedContent, Button, Conditional, Container, Crossfade, Opacity, Progress,
+    SharedTransitionLayout, Text,
 };
 
 /// A host with one text leaf on screen and one frame behind it, so layout has
@@ -1612,5 +1613,150 @@ fn an_opacity_transition_reverses_to_its_old_value_when_it_returns() {
         child_text_alpha(&host),
         Some(255),
         "and lands fully shown again"
+    );
+}
+
+// ---------------------------------------------------------------------------
+// A6 — shared elements
+// ---------------------------------------------------------------------------
+
+/// A host whose root is a shared-element layout: a source text "src" pinned to
+/// the layout's top-left and a destination text "dst" 40px below it, with the
+/// flight armed through a [`std::sync::Arc`] flag a test holds out of the host.
+fn host_with_shared() -> (
+    WidgetHost,
+    NodeId,
+    std::sync::Arc<std::sync::atomic::AtomicBool>,
+) {
+    use std::sync::atomic::{AtomicBool, Ordering};
+    use std::sync::Arc;
+
+    let mut host = WidgetHost::new();
+    host.set_size(Size::new(200.0, 120.0));
+    let fly = Arc::new(AtomicBool::new(false));
+    let layout = SharedTransitionLayout::new(7, 40.0)
+        .duration(0.4)
+        .fly_signal(fly.clone())
+        .source(Child::new(0, LayoutRequest::new(), || {
+            Box::new(Text::new("src"))
+        }))
+        .dest(Child::new(1, LayoutRequest::new(), || {
+            Box::new(Text::new("dst"))
+        }));
+    let root = host.mount_root(LayoutStyle::default(), layout);
+    host.frame();
+    let _ = Ordering::Relaxed;
+    (host, root, fly)
+}
+
+/// Count of text nodes the host painted this frame.
+fn text_count(host: &WidgetHost) -> usize {
+    host.scene()
+        .iter()
+        .filter(|(_, node)| matches!(node, SceneNode::Text { .. }))
+        .count()
+}
+
+/// A shared element stays a single painted text while it flies, moves from its
+/// source box to the destination's, and then the destination's *own* content is
+/// revealed — the flight is not a cut.
+#[test]
+fn a_shared_element_flies_from_source_to_destination() {
+    let (mut host, _root, fly) = host_with_shared();
+
+    // At rest the source is the only thing on screen, pinned to the top.
+    assert_eq!(text_count(&host), 1, "one text at rest");
+    let rest_y = text_origin(&host).y;
+    assert!(rest_y < 10.0, "source sits at the top: {rest_y}");
+
+    fly.store(true, std::sync::atomic::Ordering::Relaxed);
+
+    // Sample the flight to its end (~24 frames at the nominal 1/60 step).
+    let mut ys = Vec::new();
+    for _ in 0..34 {
+        host.frame();
+        ys.push(text_origin(&host).y);
+    }
+    assert_eq!(
+        host.animations_running(),
+        0,
+        "the flight must finish of its own accord"
+    );
+
+    assert!(
+        ys.iter().any(|y| (1.0..39.0).contains(y)),
+        "the ink travels through the space between the two boxes, it does not \
+         teleport: {ys:?}"
+    );
+    assert!(
+        ys.windows(2).all(|w| w[1] >= w[0]),
+        "a one-way flight to a box below never travels upward: {ys:?}"
+    );
+    assert!(
+        ys.iter().all(|y| *y <= 40.5),
+        "every intermediate coordinate stays on the way from A to B, none \
+         beyond the destination box: {ys:?}"
+    );
+    let landed = text_origin(&host).y;
+    assert!(
+        (landed - 40.0).abs() < 8.0,
+        "the ink lands on the destination box: {landed}"
+    );
+    assert_eq!(text_count(&host), 1, "still one text after the swap");
+    assert!(
+        !host.needs_frame(),
+        "a landed shared element does not keep the loop alive"
+    );
+}
+
+/// Interrupting a shared flight mid-run redirects it to the new target without
+/// snapping: it keeps moving down, crosses the target it was originally making
+/// for, and finally commits to reveal the destination.
+#[test]
+fn interrupting_a_shared_flight_retargets_without_jumping() {
+    let (mut host, root, fly) = host_with_shared();
+    fly.store(true, std::sync::atomic::Ordering::Relaxed);
+    host.frame();
+
+    // Get partway between the boxes, moving.
+    let mut midway = 0.0;
+    for _ in 0..5 {
+        host.frame();
+        midway = text_origin(&host).y;
+    }
+    assert!(
+        midway > 4.0 && midway < 36.0,
+        "control: partway between A and B and moving ({midway})"
+    );
+
+    // Redirect to a box 70px down — farther than the 40px it was making for.
+    assert!(
+        host.retarget_animation(root, 70.0),
+        "the flight had something to redirect"
+    );
+    host.frame();
+    let right_after = text_origin(&host).y;
+    assert!(
+        right_after >= midway - 1.0,
+        "no jump backwards on the interrupt: {midway} -> {right_after}"
+    );
+
+    // Run it out; the flying ink should travel past the original landing (40)
+    // toward the new target before the flight commits.
+    let mut max_y = right_after;
+    for _ in 0..120 {
+        host.frame();
+        max_y = max_y.max(text_origin(&host).y);
+    }
+    assert!(
+        max_y > 46.0,
+        "the interrupt carried it past the original landing toward the new \
+         target: {max_y}"
+    );
+    assert_eq!(host.animations_running(), 0, "the redirected flight ends");
+    let committed = text_origin(&host).y;
+    assert!(
+        (committed - 40.0).abs() < 8.0,
+        "and it commits to the destination's own content at its box: {committed}"
     );
 }

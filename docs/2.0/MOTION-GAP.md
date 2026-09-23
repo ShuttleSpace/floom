@@ -201,14 +201,14 @@
   - 宿主侧两处配套：①`Widget::animation_finished(cx, id)` 回调——声明式动画完成时通知 widget，是 presence 知道"退场播完了"的事件门（`app/floem-app/src/lib.rs::tick_node_animations`）；②绘制 walk 把 **fold 类**（opacity / translate）合成属性**向下传给子树**，于是一个 presence 节点的淡入淡出作用到整棵子树而非只有自身（scale/rotate 仍走既有的 Group 作用域，不叠加）。
   - 判据：`app/floem-app/tests/motion_host.rs` 五条——首帧淡入、退场中途仍挂载且已变暗、退场播完才卸载、无过渡时退场即时卸载、grow 退场同样延迟卸载，外加 `a_crossfade_keeps_both_children_mounted_while_it_swaps`（交换中途**两侧**都在屏上、且分别处于淡入淡出的两端，交换结束后只剩到达侧）；S6 新增 `an_animated_content_keeps_both_sides_live_while_it_switches` / `an_animated_content_swaps_instantly_without_a_transition` / `an_animated_content_replays_enter_when_a_value_returns`（按内容键切换中途两侧同屏、无过渡即时切换、返回值重放 enter）；黄金示例 `floem2-motion` 第四幕（presence 延迟卸载）、第五幕（crossfade 两侧同屏）与第六幕（AnimatedContent 按键切换 + 返回值重放）；并用**变异**证伪。
 - **未做（明确子集，按判据允许在此写明）**：
-  - **共享元素**（`SharedTransitionLayout` / `Hero`）：需要布局坐标在两个子树间共享，超出本次范围——**判据允许"不做完整 SharedTransitionLayout 也算达标"，此处明确记录：本次未做共享元素，也未提供其示例与快照**。
+  - **共享元素**（`SharedTransitionLayout` / `Hero`）：JS 布局坐标要在两个子树间共享，S5/S6 未做；**补在 A6 切片**——见切片表"共享元素 + B6 多值编排"，`SharedTransitionLayout` 完整落地（源子树沿 translate 飞入目标箱子、落定后揭示目标自身内容、可经宿主 retarget 门中断重定向）。
   - 退出子树仍参与命中测试与可访问性树（退场期间子树仍"存在"，未把它从语义层摘除——已知限制，待后续切片处理）。
-- **补上判据（原）**：`Conditional` 支持 enter/exit 过渡；`AnimatedContent` 或 Crossfade 之一；共享元素给一个示例 + 快照（不做完整 SharedTransitionLayout 也算达标，但必须**在文档里写明只做了哪个子集**）。
+- **补上判据（原）**：`Conditional` 支持 enter/exit 过渡；`AnimatedContent` 或 Crossfade 之一；共享元素给一个示例 + 快照（不做完整 SharedTransitionLayout 也算达标，但必须**在文档里写明只做了哪个子集**）。**A6 切片已把共享元素补齐**（见切片表）。
 
-### B6. ~~motion token 零消费者~~ — **P1 / S** — ✅ 已交付（S4；多值编排未做）
+### B6. ~~motion token 零消费者~~ — **P1 / S** — ✅ 已交付（S4；多值编排 ✅ B6 切片）
 
 - **交付**：`MotionTransition::from_tokens(MotionDuration, MotionEasing)` 把 Material 的两个 token 变成一个 `floem_types::Transition`，而 `Button::transition` 直接收它——**只写一次 ms→s 换算**，改 token 即改动效，无需在任何地方复述数值。`design-systems/floem-material/tests/motion.rs` 与 `floem2-style` 第四幕锁住这条链。
-- **未做**：`updateTransition` 那样的**多值编排**（一条曲线上挂若干属性）。
+- **交付（B6 切片：多值编排）**：`AnimationSpec.prop` 扩为 `channels: Vec<CompositorChannel>`（每条 `{prop, from, to}`，同享一条曲线），`with_prop` 保留为单通道简写、新增 `with_channels` 多通道；Tween/Spring/Keyframe 据 `channels` 逐通道采样（`sample_compositors`），一条曲线可同时驱动不透明 + 位移。绘制路径把 `MotionSample.props`/`paint_subtree` 继承合成/`NodePaintContext.composite`/`overlay_nodes` 全部收敛为 `SmallVec<[CompositorProp; 2]>`（单/双通道内联零分配，顺带锁住 B9 稳定帧）。顺带修复了多通道暴露的 B9 回归：`fold_class_only` 与 overlay 子树复用父级继承合成，稳定帧不再重新计算空合成。`motion_host.rs` 新增 `a_multichannel_animation_drives_opacity_and_translation_together` 同帧断言两条通道。
 - **旧判据原文**：
 
 - **现状**：`MotionDuration`（Material 3 时长 token）已定义并 re-export（`design-systems/floem-material/src/scale.rs:134`、`design-systems/floem-material/src/lib.rs:25`），但**全仓没有任何消费者**；也**没有** `MotionEasing`（缓动 token）。讽刺的是，定义它的上一行正是 M3 的 easing-and-duration 规范链接（`scale.rs:133`）——**duration 实现了，easing 没有**。
@@ -272,7 +272,9 @@ A8 独立，随时可做（但越早越好——它是"自绘控件在无障碍�
 
 | **A5 自定义着色器** ✅ 已交付 | A5 | L | 只选 **WGSL 单一语言**（反面约束：不引入 AGSL+SkSL 两套）。`Shader{wgsl,params}` + `SceneNode::Shader{bounds,shader}`；软件后端跳过并计 `shaders_skipped`，skia 记录 `SkiaCommand::Shader`，**vello 真跑**（离屏 `Rgba8Unorm` 读回→`ImageBrush` 合回场景，`run_shader_to_image`，节点永不进 fragment 缓存）。`--features gpu` 单测 + `scripts/mutate-a5-shader.sh` 4/4 |
 
-所有切片完成后，与 Flutter / Compose Multiplatform 在"canvas + 动画"这两项上的差距只余**共享元素 `SharedTransitionLayout`/Hero 与 B6 多值编排**（均已在各自缺口写明未做）。
+| **共享元素 + B6 多值编排** ✅ 已交付 | A6（共享元素）+ B6（多值） | M | `Child.shared_key` 让两处子树共享同一 `key`；`SharedTransitionLayout{key,delta}`（`floem-widgets`）完整落地：源/目标子树都挂载、各自锚在绝对箱子（源顶、目标下方 `delta`），`fly` 使能时整棵布局沿一条 `TranslateY` 通道把源子树飞入目标箱子、落定（`animation_finished` 折叠）后再揭示目标**自身**内容并卸载源；可经宿主 `retarget_animation` 门**中断重定向**（动量保持、不跳变）。B6 多值编排：`AnimationSpec.channels` + 绘制路径 `SmallVec<[CompositorProp;2]>`，一条曲线同驱不透明+位移。`motion_host.rs` 两条共享元素（飞行+中断）+ 一条多通道；全量 workspace 门通过 |
+
+所有切片完成后，与 Flutter / Compose Multiplatform 在"canvas + 动画"这两项上的差距已把**共享元素 `SharedTransitionLayout`/Hero 与 B6 多值编排**补完（见切片表"共享元素 + B6 多值编排"）。自由坐标系共享元素（任意子树间、随布局推导 delta）仍留作后续增强——本切片以布局内置的固定 `delta` 落地。
 
 ---
 
@@ -328,9 +330,9 @@ FLOEM2_WINDOW_IDLE=1 FLOEM2_WINDOW_IDLE_SECS=30 \
 | 中断 / 重定向 | ✅ (B2, S1) `retarget` 从当前值续接 | ✅ `Animatable` | ✅ `AnimationController` |
 | 循环 / 无限 / 往返 | ✅ (B3, S1) `RepeatSpec` 含 `INFINITE_REVERSE` | ✅ `infiniteRepeatable` | ✅ `repeat(reverse:)` |
 | 隐式动画（改值即动） | ⚠️ (B4, S4+S8) **颜色 + 透明度**（`Button::transition` / `Opacity`）；尺寸/位移待消费点 | ✅ `animate*AsState` | ✅ `AnimatedXxx` |
-| 挂载/内容过渡/共享元素 | ◐ `Conditional` enter/exit + `Crossfade` 内容切换；**共享元素未做** (B5) | ✅ `AnimatedVisibility`/共享元素 | ✅ `AnimatedSwitcher`/`Hero` |
+| 挂载/内容过渡/共享元素 | ✅ `Conditional` enter/exit + `Crossfade`/`AnimatedContent` 内容切换 + **`SharedTransitionLayout` 共享元素**（源飞入目标箱子、落定揭示目标自身内容、可中断重定向） | ✅ `AnimatedVisibility`/共享元素 | ✅ `AnimatedSwitcher`/`Hero` |
 | motion token 消费 | ✅ (B6, S4) Material token → `Transition` → 控件 | ✅（组件层） | ✅（组件层） |
-| 多值编排（一条曲线挂多属性） | ❌ (B6 未做) | ✅ `updateTransition` | ✅（组件层） |
+| 多值编排（一条曲线挂多属性） | ✅ (B6) `AnimationSpec.channels` → `SmallVec<[CompositorProp;2]>` 一条曲线同驱不透明+位移 | ✅ `updateTransition` | ✅（组件层） |
 | 合成属性（不重排的动画） | ✅ (B7, S3) 含 `Scale`/`Rotate` | ✅ 完整 `graphicsLayer` | ✅ `Transform`/`Opacity` |
 | 公开"起动画"入口 | ✅ (B8, S1) `WidgetHost::animate` / `retarget` / `cancel` | ✅ 公开 API | ✅ 公开 API |
 | 动画自检门（金帧/分配） | ⚠️ 有调度器测试与 bench，缺金帧与分配门 (B9) | — | — |

@@ -18,14 +18,14 @@
 //! the affected subtree instead of repainting everything.
 
 use std::any::Any;
-use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+use std::sync::Arc;
 
 use floem_accessibility::SemanticsRole;
 use floem_core::{
     Align, AnimationSpec, Axis, Child, ChildKey, CompositorProp, CreateContext, Easing, ElementId,
-    LayoutRequest, OverlayHandle, OverlayKind, OverlayRequest, PaintContext, PresenceTransition,
-    Rect, SemanticsContext, Transition, UpdateContext, Widget, WidgetAny,
+    Inset, LayoutRequest, OverlayHandle, OverlayKind, OverlayRequest, PaintContext, Position,
+    PresenceTransition, Rect, SemanticsContext, Transition, UpdateContext, Widget, WidgetAny,
 };
 
 use crate::controls::Button;
@@ -548,6 +548,282 @@ impl Widget for Crossfade {
 
     fn semantics(&self, cx: &mut dyn SemanticsContext, _id: ElementId) {
         crate::primitives::emit_semantics(self.semantics_hint(), cx);
+    }
+}
+
+// ---------------------------------------------------------------------------
+// SharedTransitionLayout
+// ---------------------------------------------------------------------------
+
+/// What the shared element is doing right now.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum SharedPhase {
+    /// Showing the source, at rest.
+    Source,
+    /// The source's ink is flying toward the destination's box.
+    Flying,
+    /// Showing the destination, at rest (the flight landed).
+    Destination,
+}
+
+/// Flies one of two keyed subtrees ("shared elements") into the other's box,
+/// the shared-element transition Compose calls `SharedTransitionLayout` and
+/// Flutter calls `Hero`.
+///
+/// Both subtrees stay mounted (each as a presence child in its own leaf), so
+/// the swap is a *flight* rather than a cut: while `fly` is armed, the source
+/// keeps painting and the whole layout translates it from its box toward the
+/// destination's — same coordinates the destination would claim — and only
+/// when the flight lands is the destination's own content revealed. The
+/// destination is laid out `delta` pixels below the source, so the translate
+/// (a single `TranslateY` channel, B6) lands exactly on it.
+///
+/// Interrupting the flight — pointing the translate somewhere else mid-run —
+/// goes through the host's retarget door, so it keeps the speed it had (the
+/// scheduler turns the tween into a momentum-carrying spring) instead of
+/// snapping to the new target.
+#[derive(Clone)]
+pub struct SharedTransitionLayout {
+    /// The shared-element identity; exposed so a host can name the pair.
+    key: u64,
+    fly: bool,
+    last_fly: bool,
+    phase: SharedPhase,
+    /// Whether the current flight travels source→destination (or back).
+    flying_forward: bool,
+    /// Destination's offset from the source, in logical pixels.
+    delta: f32,
+    duration: f64,
+    easing: Easing,
+    /// Bumped every time a flight is (re-)armed so the host restarts the
+    /// declaration even when the same spec comes back.
+    rev: u64,
+    /// Set by the host when a flight ends; the next `update` folds it in.
+    finished: bool,
+    source: Option<Child>,
+    dest: Option<Child>,
+    signal_source: Arc<AtomicBool>,
+    signal_dest: Arc<AtomicBool>,
+    /// Optional external gate that overrides [`Self::set_fly`], so a caller
+    /// (a test, an app) can arm a flight on an already-mounted layout by
+    /// storing into a handle it kept — the same seam `PresenceLeaf` gives a
+    /// parent over its children.
+    fly_signal: Option<Arc<AtomicBool>>,
+}
+
+impl SharedTransitionLayout {
+    /// A shared layout with `key`, whose destination sits `delta` (logical
+    /// px) below its source.
+    pub fn new(key: u64, delta: f32) -> Self {
+        Self {
+            key,
+            fly: false,
+            last_fly: false,
+            phase: SharedPhase::Source,
+            flying_forward: true,
+            delta,
+            duration: 0.3,
+            easing: Easing::Linear,
+            rev: 0,
+            finished: false,
+            source: None,
+            dest: None,
+            signal_source: Arc::new(AtomicBool::new(true)),
+            signal_dest: Arc::new(AtomicBool::new(false)),
+            fly_signal: None,
+        }
+    }
+
+    /// The source subtree, shown at rest and flown while flying.
+    pub fn source(mut self, child: Child) -> Self {
+        self.source = Some(child);
+        self
+    }
+
+    /// The destination subtree, revealed once the flight lands.
+    pub fn dest(mut self, child: Child) -> Self {
+        self.dest = Some(child);
+        self
+    }
+
+    /// The duration of the flight.
+    pub fn duration(mut self, duration: f64) -> Self {
+        self.duration = duration;
+        self
+    }
+
+    /// Arms (`true`) the flight to the destination, or back (`false`).
+    pub fn set_fly(&mut self, fly: bool) {
+        self.fly = fly;
+    }
+
+    /// Routes fly decisions through `signal`: the layout reads it every update
+    /// instead of the value [`Self::set_fly`] last wrote, so a caller that kept
+    /// the handle can arm a flight on an already-mounted layout.
+    pub fn fly_signal(mut self, signal: Arc<AtomicBool>) -> Self {
+        self.fly_signal = Some(signal);
+        self
+    }
+
+    /// The shared-element identity.
+    pub fn shared_key(&self) -> u64 {
+        self.key
+    }
+
+    pub fn semantics_hint(&self) -> SemanticsHint {
+        SemanticsHint::decorative()
+    }
+}
+
+impl Widget for SharedTransitionLayout {
+    fn create(&self, cx: &mut dyn CreateContext) -> ElementId {
+        cx.alloc_child()
+    }
+
+    fn update(&mut self, cx: &mut dyn UpdateContext, id: ElementId) {
+        // A flight ended last frame: fold its landing in now, where marking
+        // children dirty actually takes effect.
+        if self.finished {
+            self.finished = false;
+            self.phase = if self.flying_forward {
+                SharedPhase::Destination
+            } else {
+                SharedPhase::Source
+            };
+            self.sync_signals();
+            cx.mark_children_dirty(id);
+            cx.mark_dirty(id);
+            return;
+        }
+
+        // Only declarations are reconciled here, but the armed flight is read
+        // fresh each update so an external signal can flip it on a mounted
+        // layout.
+        if let Some(signal) = &self.fly_signal {
+            self.fly = signal.load(Ordering::Relaxed);
+        }
+        if self.fly != self.last_fly {
+            self.last_fly = self.fly;
+            let forward = self.fly && self.phase == SharedPhase::Source
+                || !self.fly && self.phase == SharedPhase::Destination;
+            if forward {
+                self.phase = SharedPhase::Flying;
+                self.flying_forward = self.fly;
+                self.rev = self.rev.wrapping_add(1);
+                self.sync_signals();
+                // Only this widget changed (the leaves stay mounted), so a
+                // repaint — which re-syncs the declaration — is all that's owed.
+                cx.mark_dirty(id);
+            }
+        }
+    }
+
+    fn children(&self) -> Vec<Child> {
+        let mut out = Vec::new();
+        if let Some(source) = &self.source {
+            let leaf = PresenceLeaf {
+                inner: Conditional::new(self.signal_source.load(Ordering::Relaxed))
+                    .show(source.clone()),
+                when_signal: self.signal_source.clone(),
+            };
+            // Both leaves are anchored absolutely to the layout's box origin so
+            // their global positions are fixed: source at the top-left, the
+            // destination `delta` below it. The flight translate then moves the
+            // source's ink from the one box onto the other.
+            out.push(Child::new(
+                ChildKey::index(0),
+                absolute_layout(0.0),
+                move || Box::new(leaf.clone()),
+            ));
+        }
+        if let Some(dest) = &self.dest {
+            let leaf = PresenceLeaf {
+                inner: Conditional::new(self.signal_dest.load(Ordering::Relaxed))
+                    .show(dest.clone()),
+                when_signal: self.signal_dest.clone(),
+            };
+            out.push(Child::new(
+                ChildKey::index(1),
+                absolute_layout(self.delta),
+                move || Box::new(leaf.clone()),
+            ));
+        }
+        out
+    }
+
+    fn animation(&self) -> Option<floem_core::AnimationSpec> {
+        if self.phase != SharedPhase::Flying {
+            return None;
+        }
+        let delta = self.delta as f64;
+        let (from, to) = if self.flying_forward {
+            (0.0, delta)
+        } else {
+            (0.0, -delta)
+        };
+        Some(
+            floem_core::AnimationSpec::new(from, to, self.duration)
+                .with_easing(self.easing)
+                .with_key(self.rev)
+                .with_prop(CompositorProp::TranslateY(0.0)),
+        )
+    }
+
+    fn animation_finished(&mut self, _cx: &mut dyn UpdateContext, _id: ElementId) {
+        self.finished = true;
+    }
+
+    fn paint(&self, _cx: &mut dyn PaintContext, _id: ElementId) {}
+
+    fn semantics(&self, cx: &mut dyn SemanticsContext, _id: ElementId) {
+        crate::primitives::emit_semantics(self.semantics_hint(), cx);
+    }
+}
+
+impl WidgetAny for SharedTransitionLayout {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
+    }
+
+    fn semantics_hint(&self) -> Option<floem_core::SemanticsHint> {
+        Some(<Self>::semantics_hint(self).into())
+    }
+}
+
+impl SharedTransitionLayout {
+    fn sync_signals(&mut self) {
+        let (source, dest) = match self.phase {
+            SharedPhase::Source => (true, false),
+            SharedPhase::Destination => (false, true),
+            SharedPhase::Flying => {
+                if self.flying_forward {
+                    (true, false)
+                } else {
+                    (false, true)
+                }
+            }
+        };
+        self.signal_source.store(source, Ordering::Relaxed);
+        self.signal_dest.store(dest, Ordering::Relaxed);
+    }
+}
+
+/// A child pinned to the layout's top-left corner (`top` px down the layout
+/// box, so `top = 0` is the source box and `top = delta` the destination's).
+fn absolute_layout(top: f32) -> LayoutRequest {
+    LayoutRequest {
+        position: Some(Position::Absolute),
+        inset: Some(Inset {
+            left: Some(0.0),
+            top: Some(top),
+            right: None,
+            bottom: None,
+        }),
+        ..LayoutRequest::new()
     }
 }
 

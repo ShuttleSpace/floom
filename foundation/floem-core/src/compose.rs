@@ -223,6 +223,11 @@ pub struct Child {
     pub key: ChildKey,
     pub layout: LayoutRequest,
     pub build: ChildBuilder,
+    /// A shared-element identity (A6): the same `shared_key` at two spots in
+    /// the tree names the source and the destination of a shared-element
+    /// transition, so a host that lower these children can pair them up and
+    /// fly the source into the destination's box.
+    pub shared_key: Option<u64>,
 }
 
 impl Child {
@@ -235,7 +240,15 @@ impl Child {
             key: key.into(),
             layout,
             build: Arc::new(build),
+            shared_key: None,
         }
+    }
+
+    /// Marks this child as participating in a shared-element transition under
+    /// `key`. Two children with the same key are the source and destination.
+    pub fn shared(mut self, key: u64) -> Self {
+        self.shared_key = Some(key);
+        self
     }
 
     /// Builds the child. Called by whoever owns the tree; only when the key at
@@ -250,6 +263,7 @@ impl std::fmt::Debug for Child {
         f.debug_struct("Child")
             .field("key", &self.key)
             .field("layout", &self.layout)
+            .field("shared_key", &self.shared_key)
             .finish_non_exhaustive()
     }
 }
