@@ -282,10 +282,10 @@ startup redraw and whatever the window server sends in the first second.
 
 The desktop counterpart of `floem2-android`: it exists to produce the evidence
 `docs/gates/macos.md` records rather than to demonstrate anything new about the
-stack. Same `AppRunner<VelloGpuPresenter>`, same winit loop as
-`floem2-window` — what it adds is a text field, an IME request, a focus request,
-and a clipboard write, plus a log line for each, so a spot-check is a read of
-what the OS actually did.
+stack. Same `AppRunner<VelloGpuPresenter>`, same winit loop as `floem2-window` —
+what it adds is a text field, an IME request, a focus trace, and a clipboard
+write, plus a log line for each, so a spot-check is a read of what the OS
+actually did.
 
 ```text
 GPU adapter: Apple M4 Pro (Metal)
@@ -294,6 +294,8 @@ floem2-macos: clipboard write=true read_back=Some("floem2-macos clipboard probe 
 floem2-macos: text field focused
 floem2-macos: button logical=(0.0,92.0 160.0x40.0) scale=1 content_px=x0..160 y92..132
 floem2-macos: field logical=(0.0,36.0 260.0x40.0)
+floem2-macos: focus None -> TextField@2
+floem2-macos: text field text="你好世界" preedit="" composing=false
 ```
 
 The clipboard line is the load-bearing one: on macOS `Clipboard` is
@@ -301,7 +303,15 @@ The clipboard line is the load-bearing one: on macOS `Clipboard` is
 same string is then readable from a different process entirely — which is what
 separates a clipboard from a `String` field. The `logical=` lines are there so a
 click can be *aimed*: they are content-relative, so the window's frame and the
-title bar have to be added before they are screen coordinates.
+32 pt title bar have to be added before they are screen coordinates. The focus
+line is what makes item 7 of the gate falsifiable from the outside — a Tab press
+either moves focus or leaves a trace with no line for it.
+
+The field is deliberately **preloaded with a non-ASCII string**: the log can
+prove characters arrived, but only pixels can show whether they were drawn, and
+on this machine they are not (four empty boxes — see *Open finding* in
+`docs/gates/macos.md`). A probe that only logged would have reported a working
+CJK path.
 
 ### `floem2-android`
 

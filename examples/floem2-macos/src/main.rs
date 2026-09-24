@@ -309,7 +309,15 @@ fn main() {
             Box::new(Text::new("clicked 0 times").size(20.0).color(Color::WHITE))
         })
         .push_layout(LayoutRequest::new().width(260.0).height(40.0), || {
-            Box::new(TextField::new().placeholder("click here, then type"))
+            // A non-ASCII string is preloaded so the *rendering* half of the
+            // CJK question can be answered without typing anything: the log
+            // can prove characters arrived, but only pixels can show whether
+            // they were drawn. (Typing over it is unaffected.)
+            Box::new(
+                TextField::new()
+                    .value("你好世界")
+                    .placeholder("click here, then type"),
+            )
         })
         .push_layout(LayoutRequest::new().width(160.0).height(40.0), move || {
             let flag = flag.clone();
