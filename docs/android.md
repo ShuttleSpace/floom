@@ -7,9 +7,12 @@
 > the pause/resume/rotation lifecycle, the **system clipboard is reachable via
 > JNI**, the **in-UI context menu is triggered** from a secondary pointer
 > button, **external URLs open via an `ACTION_VIEW` intent**, and **file
-> dialogs use the Storage Access Framework**. On-device APK render is the only
-> unverified step (and file-dialog *results* additionally need the optional
-> `FloemNativeActivity` `onActivityResult` hook — see below).
+> dialogs use the Storage Access Framework**. **On-device APK render is now
+> verified** (API 34 emulator, 2026-09-24): the packaged APK paints through
+> vello, taps reach widgets, and the clipboard round-trips. Still unverified:
+> file-dialog *results* (additionally need the optional `FloemNativeActivity`
+> `onActivityResult` hook — see below), and IME text *landing* in a widget (the
+> example has no editor — see below).
 >
 > **Drag & Drop:** the OS-level *file* drag-and-drop capability (`drag_drop`) is
 > `false` on Android **by design** — winit-android emits no drag events and Android
@@ -244,10 +247,10 @@ supports, differing from `BackendCapabilities::winit_default()` in:
 | `drag_drop`       | ✓       | ✗       | **OS-level *file* drag-and-drop only.** The winit-android backend emits no `DragDropped`/`DragEntered`/`DragMoved`/`DragLeft` events, and Android's app sandbox has no in-window OS file DnD. Floem's *in-app* drag system (`Event::Drag` / `DragTracker`) is independent of this capability and **already works on Android** (see below). Receiving a shared file from another app is done via `Intent`/SAF, not `DragDropEvent`. |
 | `file_dialog`     | ✓       | ✓       | SAF via `startActivityForResult` (needs the optional `FloemNativeActivity` `onActivityResult` hook for results). |
 | `receive_files`   | ✗       | ✓       | Android `ACTION_SEND` / `ACTION_VIEW` intents delivered as `content://` URIs via `floem::platform::set_shared_files_handler`. Launch intent works with the default `NativeActivity`; runtime `onNewIntent` needs `FloemNativeActivity`. |
-| `clipboard`       | ✓       | ✓       | JNI bridge wired (`Clipboard::init_android`).|
+| `clipboard`       | ✓       | ✓       | JNI bridge wired (`Clipboard::init_android`); round-trip verified on device 2026-09-24 (write → read after focus → visible in the system paste chip). |
 | `context_menu`    | ✓       | ✓       | In-UI renderer (no muda native menu).        |
 | `native_menu`     | —       | ✗       | muda does not target Android.                |
-| `ime`             | ✓       | ✓       | Soft keyboard.                               |
+| `ime`             | ✓       | ✓       | Soft keyboard, **and its text**. Presence via a hidden anchor view; the characters come back by reading that anchor's `Editable` (see *IME text* below). Latin and CJK both verified on device 2026-09-24. |
 | `virtual_keyboard`| ✗       | ✓       |                                              |
 | `safe_area`       | ✗       | ✓       | Notch / gesture-bar insets.                  |
 | `open_external`   | ✗       | ✓       | Android: JNI `ACTION_VIEW` intent; desktop core leaves URL opening to the `open` crate. |
@@ -318,20 +321,28 @@ scripts/build-apk.sh -t arm64-v8a          # -> target/android/*.apk
 
 ## Known gaps / remaining work
 
-1. **Renderer `ANativeWindow` surface — now wired (code-complete, unverified on device).**
+1. **Renderer `ANativeWindow` surface — verified on device (2026-09-24).**
    The surface is created from `ANativeWindow*` via the standard winit
    `HasWindowHandle` → `GpuResources::request` path, on both initial creation and
-   the pause/resume/rotation lifecycle. What remains is **on-device verification**
-   (build the APK with `cargo ndk` and confirm a frame paints, then survives a
-   rotation). Edge case: if the app is backgrounded *before* the GPU device is
-   acquired, the surface is marked lost and not yet recreated when the device
-   later arrives — acceptable for the skeleton, tighten later.
-2. **Clipboard JNI bridge — done (code-complete, unverified on device).**
-   `Clipboard::get_contents` / `set_contents` now route through
-   `android.content.ClipboardManager` via the `jni` crate. `Clipboard::init_android`
+   the pause/resume/rotation lifecycle. Confirmed by running the packaged APK on
+   the API 34 emulator: the frame paints (`GPU adapter: Apple M4 Pro (Vulkan)`,
+   `widget tree mounted (3 nodes)`, UI visible in a screenshot) and taps reach
+   widgets. Edge case still open: if the app is backgrounded *before* the GPU
+   device is acquired, the surface is marked lost and not yet recreated when the
+   device later arrives — acceptable for the skeleton, tighten later.
+2. **Clipboard JNI bridge — verified on device (2026-09-24).**
+   `Clipboard::get_contents` / `set_contents` route through
+   `android.content.ClipboardManager` via the `jni` crate; `Clipboard::init_android`
    is called from `Application::new_android` with the `JavaVM*` + `Activity` JNI
-   handles. The legacy `copypasta` desktop path is untouched. Remaining: on-device
-   verification of the copy/paste round-trip.
+   handles. The legacy `copypasta` desktop path is untouched. The round-trip is
+   now proven, not just written: the example writes a distinctive probe string and
+   reads it back after the window gains focus
+   (`clipboard read after focus = Some("floem2-android clipboard probe 9f3c")`),
+   and the value is visible from *outside* the process too — Android's own
+   clipboard suggestion chip shows it above the keyboard. One trap worth keeping:
+   a read issued at startup is denied, because `ClipboardService` refuses apps it
+   does not yet consider focused (`Denying clipboard access …, application is not
+   in focus`); read after the first frame instead of in `android_main`.
 3. **Context-menu trigger — done (code-complete).**
    `WindowHandle::show_context_menu` gained an Android branch that drives the
    in-UI `context_menu` signal; `action::show_context_menu` /
@@ -375,6 +386,69 @@ scripts/build-apk.sh -t arm64-v8a          # -> target/android/*.apk
 > so `cargo check -p floem-android-example --target aarch64-linux-android`
 > exercises `android_main` and the JNI bridges without needing the link step.
 
+## IME text — how characters come back
+
+Showing the keyboard is half the job; the other half is getting what the user
+types out of it. That half cannot come from winit: **`winit-android` never emits
+`WindowEvent::Ime`** (the backend has no implementation of it — see
+`vendor/floem-winit/winit-android`), so the two `WindowEvent::Ime` arms in
+`platform/floem-platform-android/src/android.rs` were dead code. Anything that
+waits for them waits forever.
+
+The anchor view is where the text actually is. It is a real `EditText`, so the
+framework already gave it an `InputConnection`, and the IME's `commitText` /
+`setComposingText` land in its `Editable` with no help from us. So instead of
+hand-building an `InputConnection` (which needs a Java subclass and therefore a
+custom `Activity`), the platform **reads the anchor**:
+
+```text
+IME ──commitText/setComposingText──▶ anchor EditText.Editable
+                                          │  polled from poll_events
+                                          ▼
+   split_composition(text, composing span) ──▶ ImeCommit / ImePreedit
+                                          │
+                  runner: commit → one char key-down per scalar
+                          preedit → Event::Ime(Preedit)
+                                          ▼
+                                  focused TextField
+```
+
+Four things are worth knowing:
+
+- **The composing span lives on `BaseInputConnection`, not `Spannable`.**
+  `Spannable.getComposingSpanStart` exists in AOSP but is *not* in
+  `android.jar`; calling it fails at runtime with
+  `Method not found: getComposingSpanStart (Landroid/text/Spannable;)I`. The
+  public static twin is
+  `android.view.inputmethod.BaseInputConnection.getComposingSpanStart(Spannable)`.
+- **The span's offsets are UTF-16 code units, the text is UTF-8 bytes.**
+  Slicing one with the other splits multi-byte characters — invisible in ASCII,
+  every keystroke in CJK. `split_composition` converts, and refuses to slice
+  inside a surrogate pair (degrading to "all committed" rather than losing
+  text).
+- **An idle app polls nothing.** The read happens in `poll_events`, so text
+  arrives on the next frame — and tapping the soft keyboard does *not* wake the
+  app, because the keyboard is a separate window. Measured: a tap on `g` with no
+  other activity produced no log; the same tap followed by any app touch
+  reported `preedit="g"`. The text was in the anchor the whole time.
+- **Only appends are commits.** A rewrite (deletion, replacement) is not an
+  append and is left to the key path — on Android a delete arrives as
+  `KEYCODE_DEL`, not as text.
+
+Measured on the API 34 emulator (2026-09-24), driving the example's `TextField`:
+
+```text
+text=""      preedit="gg"   composing=true    ← composing, not yet committed
+text="gg "   preedit=""     composing=false   ← space committed it
+text="你好世界" preedit=""   composing=false   ← CJK via commitText, intact
+```
+
+The last line used a third-party IME that commits from an `am broadcast`
+(`ADBKeyboard`, selected with `settings put secure default_input_method` because
+its ancient `targetSdk` makes `ime enable` refuse it) — it reaches the field
+through the same `InputConnection` path a real CJK keyboard uses, which is what
+makes it evidence.
+
 ## Verification checklist
 
 - [x] `cargo check -p floem --target aarch64-linux-android` — zero errors.
@@ -387,6 +461,12 @@ scripts/build-apk.sh -t arm64-v8a          # -> target/android/*.apk
 - [x] Android clipboard JNI bridge wired: `Clipboard::init_android` builds
       `AndroidClipboard` (`get_contents`/`set_contents` →
       `android.content.ClipboardManager` via the `jni` crate).
+- [x] IME text reaches a widget: the platform polls the anchor's `Editable`,
+      splits composing from committed text (`BaseInputConnection` composing
+      span, UTF-16 → UTF-8), and queues `ImePreedit`/`ImeCommit` for the runner.
+      Verified on the API 34 emulator — Latin (`"gg "` via space-commit) and
+      CJK (`"你好世界"` via `commitText`), both landing in a `TextField`. See
+      *IME text* above.
 - [x] Android context-menu trigger wired: `show_context_menu` Android branch +
       `action::show_context_menu` / `UpdateMessage::ShowContextMenu` un-gated +
       `handle_menu_events` secondary-button trigger runs on Android.

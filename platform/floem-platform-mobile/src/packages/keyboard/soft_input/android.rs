@@ -42,16 +42,23 @@
 //! # Scope
 //!
 //! This drives the keyboard's *presence*, which is what `Ime::set_enabled`
-//! promises. Delivering the resulting characters back to the app needs an
-//! `InputConnection` (`commitText` / `getExtractedText`) and is **not**
-//! implemented here; the anchor's text is never read.
+//! promises, **and reads back what the IME produced into it** — see
+//! [`take_ime_input`]. The characters never travel through winit: the anchor is
+//! a real `EditText`, so the framework already gave it an `InputConnection` and
+//! the IME's `commitText`/`setComposingText` land in its `Editable` on their
+//! own. Reading that (rather than hand-building an `InputConnection`, which
+//! needs a Java subclass and therefore a custom `Activity`) is the whole trick.
+//!
+//! It is a poll, for the same reason [`soft_keyboard_state`] is: nothing tells
+//! us a character arrived. The cost is bounded the same way too — an idle app
+//! gets no frames, so an idle app polls nothing.
 
 use std::sync::Mutex;
 
-use jni::objects::{Global, JObject, JValue};
+use jni::objects::{Global, JObject, JString, JValue};
 use jni::sys::jint;
 
-use super::SoftKeyboardState;
+use super::{ImeInput, SoftKeyboardState, newly_committed, split_composition};
 use crate::jni::{self as jni_helpers, JniExt, obj};
 
 /// `Context.INPUT_METHOD_SERVICE`.
@@ -64,6 +71,23 @@ const INPUT_METHOD_SERVICE: &str = "input_method";
 /// the activity's content view. The activity's view hierarchy owns the view;
 /// the global reference is how we address it again.
 static IME_ANCHOR: Mutex<Option<Global<JObject<'static>>>> = Mutex::new(None);
+
+/// What the last read found, split the way the IME means it.
+///
+/// Both halves are needed to answer "what is new": committed text grows, and a
+/// preedit appears, changes, and then disappears — either by being committed or
+/// by being abandoned, which look identical from the outside until you compare
+/// against the previous preedit.
+#[derive(Default)]
+struct LastText {
+    committed: String,
+    preedit: String,
+}
+
+static LAST_TEXT: Mutex<LastText> = Mutex::new(LastText {
+    committed: String::new(),
+    preedit: String::new(),
+});
 
 /// Borrow the anchor, creating and attaching it on first use.
 ///
@@ -217,6 +241,10 @@ pub fn set_visible(visible: bool) -> Result<(), String> {
                 &[obj(&token), JValue::Int(0)],
             )
             .e()?;
+            // Nothing is composing once the keyboard is gone, so start the next
+            // session from an empty anchor. Without this, text left behind would
+            // come back as a spurious commit on the next show.
+            reset_text(env, &view)?;
         }
         Ok(())
     })
@@ -339,4 +367,163 @@ fn display_density(env: &mut jni::Env) -> Result<f64, String> {
         .and_then(|value| value.f())
         .unwrap_or(1.0);
     Ok(f64::from(density))
+}
+
+/// Read whatever the IME has put into the anchor since the last call.
+///
+/// Returns nothing when the anchor does not exist (nothing ever asked for the
+/// keyboard) or when the read fails, and never errors: this runs from the frame
+/// loop, and a platform read that cannot be done is not a reason to stop a
+/// frame. A failure is reported once per distinct error so a device run can see
+/// it in logcat without flooding it.
+pub fn take_ime_input() -> Vec<ImeInput> {
+    let stored = match IME_ANCHOR.lock() {
+        Ok(stored) => stored,
+        Err(_) => return Vec::new(),
+    };
+    let Some(anchor) = stored.as_ref() else {
+        return Vec::new();
+    };
+
+    let read = jni_helpers::with_env(|env| read_text(env, anchor));
+    let (text, composing_start, composing_end) = match read {
+        Ok(read) => read,
+        Err(err) => {
+            report_once(&err);
+            return Vec::new();
+        }
+    };
+
+    let (committed, preedit) = split_composition(&text, composing_start, composing_end);
+
+    let mut last = match LAST_TEXT.lock() {
+        Ok(last) => last,
+        Err(_) => return Vec::new(),
+    };
+    let mut out = Vec::new();
+
+    if committed != last.committed {
+        // An append is a commit; a rewrite is not, and is left to the key path
+        // (an Android delete arrives as `KEYCODE_DEL`, not as text). A field the
+        // IME itself emptied (or `reset` below) counts as neither.
+        if let Some(new_text) = newly_committed(&last.committed, &committed) {
+            if !new_text.is_empty() {
+                out.push(ImeInput::Commit(new_text.to_string()));
+            }
+        }
+        last.committed = committed;
+    }
+
+    // A preedit is reported on every change *including its disappearance*: an
+    // editor holding underlined text has to be told to drop it, and "the preedit
+    // is now empty" is the only message that says so.
+    if preedit != last.preedit {
+        out.push(ImeInput::Preedit(preedit.clone()));
+        last.preedit = preedit;
+    }
+
+    out
+}
+
+/// Drop the anchor's contents and forget what was read from it.
+///
+/// Called when the keyboard is hidden: with the keyboard gone nothing is
+/// composing, and text left behind would otherwise be reported as a fresh
+/// commit the next time the keyboard is shown.
+fn reset_text(env: &mut jni::Env, view: &JObject) -> Result<(), String> {
+    let empty = env.new_string("").e()?;
+    env.call_method(
+        view,
+        jni::jni_str!("setText"),
+        jni::jni_sig!("(Ljava/lang/CharSequence;)V"),
+        &[obj(&empty)],
+    )
+    .e()?;
+    if let Ok(mut last) = LAST_TEXT.lock() {
+        last.committed.clear();
+        last.preedit.clear();
+    }
+    Ok(())
+}
+
+/// `(text, composing_start, composing_end)` as the anchor reports them.
+///
+/// The span comes from `Spannable.getComposingSpanStart/End` — the same pair a
+/// Java `TextWatcher` would consult. `-1` means "no composition", which
+/// [`split_composition`] treats as "all committed".
+fn read_text(
+    env: &mut jni::Env,
+    anchor: &Global<JObject<'static>>,
+) -> Result<(String, i32, i32), String> {
+    let view = env.new_local_ref(anchor.as_obj()).e()?;
+    let editable = env
+        .call_method(
+            &view,
+            jni::jni_str!("getText"),
+            jni::jni_sig!("()Landroid/text/Editable;"),
+            &[],
+        )
+        .and_then(|value| value.l())
+        .e()?;
+    if editable.is_null() {
+        return Err("anchor has no Editable".into());
+    }
+
+    let as_string: JObject = env
+        .call_method(
+            &editable,
+            jni::jni_str!("toString"),
+            jni::jni_sig!("()Ljava/lang/String;"),
+            &[],
+        )
+        .and_then(|value| value.l())
+        .e()?;
+    if as_string.is_null() {
+        return Err("anchor Editable is not a String".into());
+    }
+    // Turbofish is required: `cast_local` returns `To::Kind<'local>`, which
+    // cannot be inferred from the binding.
+    let string: JString = env.cast_local::<JString>(as_string).e()?;
+    let text = string.try_to_string(env).e()?;
+
+    // `BaseInputConnection` is where the composing span lives in the public
+    // SDK: the same-named methods on `Spannable` are AOSP-internal and absent
+    // from `android.jar` (`Method not found: getComposingSpanStart`, verified
+    // on API 34). Static, so it is called on the class.
+    let base = env
+        .find_class(jni::jni_str!(
+            "android/view/inputmethod/BaseInputConnection"
+        ))
+        .e()?;
+    let span = |env: &mut jni::Env, name| -> Result<i32, String> {
+        env.call_static_method(
+            &base,
+            name,
+            jni::jni_sig!("(Landroid/text/Spannable;)I"),
+            &[obj(&editable)],
+        )
+        .and_then(|value| value.i())
+        .e()
+    };
+    let start = span(env, jni::jni_str!("getComposingSpanStart"))?;
+    let end = span(env, jni::jni_str!("getComposingSpanEnd"))?;
+
+    Ok((text, start, end))
+}
+
+/// Print an IME read failure once per distinct message.
+fn report_once(err: &str) {
+    use std::sync::OnceLock;
+    static REPORTED: OnceLock<Mutex<Vec<String>>> = OnceLock::new();
+    let reported = REPORTED.get_or_init(|| Mutex::new(Vec::new()));
+    let Ok(mut reported) = reported.lock() else {
+        return;
+    };
+    if reported.iter().any(|seen| seen == err) {
+        return;
+    }
+    reported.push(err.to_string());
+    // stderr, like everything else here: logcat shows it as `RustStdoutStderr`
+    // whatever the compile-time log level is.
+    eprintln!("floem2-android: IME text read failed: {err}");
 }

@@ -121,6 +121,93 @@ pub fn is_keyboard_visible() -> bool {
     soft_keyboard_state().visible
 }
 
+/// Text the IME handed to the platform since the last read.
+///
+/// The distinction is the IME's, not ours: a *composition* is text the IME is
+/// still working on (underline visible in the keyboard's candidate strip) and
+/// may replace or drop, while *committed* text is finished and belongs to the
+/// document. An editor that treats the first as the second will show characters
+/// that then change or vanish.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ImeInput {
+    /// Finished text. Append it.
+    Commit(String),
+    /// The composition in progress. Replaces any previous preedit; empty clears it.
+    Preedit(String),
+}
+
+/// Split a field's raw contents into `(committed, composing)`.
+///
+/// `start`/`end` are the IME's composing span in **UTF-16 code units** — that is
+/// what Android's `Spannable.getComposingSpanStart/End` report, because they
+/// index a Java `String`. Rust strings are UTF-8, so this converts rather than
+/// slicing directly: the two agree only while everything is ASCII, and getting
+/// that wrong splits a multi-byte character in half. (For a `qwerty` IME on a
+/// `TextField` this is invisible; for a CJK IME, where every keystroke commits
+/// multi-byte text, it is every keystroke.)
+///
+/// `start < 0` (Android's "no composition") or any out-of-range / non-boundary
+/// span degrades to "everything is committed, nothing is composing" — a
+/// composition we cannot locate must not cost the user their text.
+pub fn split_composition(text: &str, start: i32, end: i32) -> (String, String) {
+    if start < 0 || end < start {
+        return (text.to_string(), String::new());
+    }
+    let (Some(start), Some(end)) = (
+        utf16_offset_to_byte(text, start as usize),
+        utf16_offset_to_byte(text, end as usize),
+    ) else {
+        return (text.to_string(), String::new());
+    };
+
+    let mut committed = String::with_capacity(text.len() - (end - start));
+    committed.push_str(&text[..start]);
+    committed.push_str(&text[end..]);
+    (committed, text[start..end].to_string())
+}
+
+/// The part of `committed` that was not there before, or `None` when the text
+/// was not extended but rewritten.
+///
+/// An editor can only *append* what the IME commits. A rewrite (deletion, a
+/// replacement, the IME clearing its buffer) is not an append and has to be
+/// handled by whoever owns the document — on Android deletions arrive as key
+/// events, so the honest answer here is `None` rather than a guess.
+pub fn newly_committed<'a>(previous: &str, committed: &'a str) -> Option<&'a str> {
+    committed.strip_prefix(previous)
+}
+
+/// Byte offset of the `utf16`-th UTF-16 code unit, or `None` past the end.
+fn utf16_offset_to_byte(text: &str, utf16: usize) -> Option<usize> {
+    let mut units = 0usize;
+    for (byte, ch) in text.char_indices() {
+        if units == utf16 {
+            return Some(byte);
+        }
+        units += ch.len_utf16();
+        if units > utf16 {
+            // The offset landed inside a surrogate pair: not a boundary.
+            return None;
+        }
+    }
+    (units == utf16).then_some(text.len())
+}
+
+/// Read whatever the IME has delivered since the last call.
+///
+/// Empty on the host (no IME) and on iOS (the anchor's text is not read back
+/// yet) — the same shape as [`soft_keyboard_state`], so callers need no `cfg`.
+pub fn take_ime_input() -> Vec<ImeInput> {
+    #[cfg(target_os = "android")]
+    {
+        android::take_ime_input()
+    }
+    #[cfg(not(target_os = "android"))]
+    {
+        Vec::new()
+    }
+}
+
 /// Ask the OS to show or hide the soft keyboard.
 ///
 /// This is the *control* half of the package: [`soft_keyboard_state`] reads
@@ -200,5 +287,75 @@ mod tests {
         let i = s.insets();
         assert_eq!(i.bottom, 250.0);
         assert_eq!(i.top, 0.0);
+    }
+
+    #[test]
+    fn no_composition_means_everything_is_committed() {
+        // -1 is Android's "no composing span".
+        assert_eq!(
+            split_composition("hello", -1, -1),
+            ("hello".to_string(), String::new())
+        );
+    }
+
+    #[test]
+    fn a_trailing_composition_is_split_off() {
+        let (committed, preedit) = split_composition("hello wor", 6, 9);
+        assert_eq!(committed, "hello ");
+        assert_eq!(preedit, "wor");
+    }
+
+    #[test]
+    fn a_composition_in_the_middle_is_removed_from_the_committed_text() {
+        let (committed, preedit) = split_composition("abXcd", 2, 3);
+        assert_eq!(committed, "abcd");
+        assert_eq!(preedit, "X");
+    }
+
+    /// The regression this exists for: a CJK IME commits multi-byte text, and
+    /// Java's span is in UTF-16 units while a Rust `&str` is UTF-8 bytes. Doing
+    /// the slice in bytes would cut "你好吗" in the middle of a character.
+    #[test]
+    fn utf16_offsets_are_converted_not_used_as_bytes() {
+        // "你好" is 2 code units but 6 bytes. Composing the trailing "吗"
+        // (1 unit, 3 bytes) starts at unit 2 — which is byte 6.
+        let (committed, preedit) = split_composition("你好吗", 2, 3);
+        assert_eq!(committed, "你好");
+        assert_eq!(preedit, "吗");
+    }
+
+    #[test]
+    fn an_offset_inside_a_surrogate_pair_degrades_to_all_committed() {
+        // "🦀" is one char, two code units. Unit 1 is not a boundary.
+        let (committed, preedit) = split_composition("a🦀", 1, 2);
+        assert_eq!(committed, "a🦀");
+        assert_eq!(preedit, "");
+    }
+
+    #[test]
+    fn an_out_of_range_span_degrades_to_all_committed() {
+        assert_eq!(
+            split_composition("abc", 1, 99),
+            ("abc".to_string(), String::new())
+        );
+        assert_eq!(
+            split_composition("abc", 2, 1),
+            ("abc".to_string(), String::new())
+        );
+    }
+
+    #[test]
+    fn only_an_appended_commit_counts_as_new() {
+        assert_eq!(newly_committed("hello", "hello world"), Some(" world"));
+        // Nothing new: no event to send.
+        assert_eq!(newly_committed("hello", "hello"), Some(""));
+        // Rewritten, not appended — the key path owns this.
+        assert_eq!(newly_committed("hello", "hell"), None);
+        assert_eq!(newly_committed("hello", "HELLO"), None);
+    }
+
+    #[test]
+    fn host_ime_input_is_empty() {
+        assert!(take_ime_input().is_empty());
     }
 }

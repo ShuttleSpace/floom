@@ -47,6 +47,8 @@ use floem_platform::{
     Capability, Clipboard, Ime, KeyCode, Platform, PlatformCapabilities, PlatformEvent,
     PointerButton, SurfaceConfig, SurfaceTarget, Window, WindowConfig, WindowState,
 };
+/// What the IME produced, as read back from the anchor view.
+use floem_platform_mobile::packages::keyboard::soft_input::ImeInput as SoftInput;
 use floem_types::{
     DisplayInfo, Modifiers, PlatformId, Point, ScaleFactor, Size, SurfaceId, WindowId,
 };
@@ -279,6 +281,38 @@ impl AndroidPlatform {
         self.native_ids.get(&native).copied()
     }
 
+    /// Move text the IME produced into the event queue.
+    ///
+    /// The anchor view belongs to the platform layer and the app never sees it,
+    /// so the mapping from "what the IME wrote into the anchor" to "an event
+    /// the app can act on" has to happen here.
+    ///
+    /// Only windows that asked for the IME are read: the anchor is one per
+    /// process, so with no field focused there is nothing to route text to, and
+    /// with several the first enabled one owns it — the same window the
+    /// keyboard was shown *for*, which is what a single anchor can honour.
+    fn pump_ime_text(&mut self) {
+        let Some(window) = self
+            .ime_enabled
+            .iter()
+            .find(|(_, enabled)| **enabled)
+            .map(|(index, _)| WindowId::new(*index, 1))
+        else {
+            return;
+        };
+
+        for input in floem_platform_mobile::packages::keyboard::soft_input::take_ime_input() {
+            match input {
+                SoftInput::Commit(text) => {
+                    self.events.push(PlatformEvent::ImeCommit { window, text })
+                }
+                SoftInput::Preedit(text) => {
+                    self.events.push(PlatformEvent::ImePreedit { window, text })
+                }
+            }
+        }
+    }
+
     fn set_size(&mut self, window: WindowId, physical: winit::dpi::PhysicalSize<u32>, scale: f64) {
         if let Some(w) = self.windows.get_mut(&window.index()) {
             if w.id != window {
@@ -452,6 +486,7 @@ impl Platform for AndroidPlatform {
         Some(w as &mut dyn Window)
     }
     fn poll_events(&mut self, out: &mut Vec<PlatformEvent>) {
+        self.pump_ime_text();
         out.append(&mut self.events);
     }
     fn request_frame(&mut self, window: WindowId) {

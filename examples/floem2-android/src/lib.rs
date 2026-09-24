@@ -29,7 +29,7 @@ mod android {
     use floem_platform_mobile::packages::keyboard::soft_input::soft_keyboard_state;
     use floem_renderer_vello::VelloGpuPresenter;
     use floem_types::{Size, WindowId};
-    use floem_widgets::{Button, Stack, Text};
+    use floem_widgets::{Button, Stack, Text, TextField};
     use winit::platform::android::activity::AndroidApp;
 
     /// Text written to the clipboard by the one-shot service probe, and expected
@@ -57,6 +57,13 @@ mod android {
         logged: i32,
         /// The realised window, learned from `window_created`.
         window: Option<WindowId>,
+        /// The text field, once the tree is mounted. Focused by the probe so a
+        /// device run has somewhere for typed characters to land.
+        field: Option<NodeId>,
+        /// Last text/preedit printed, so a change is logged once rather than
+        /// every frame (an idle app would otherwise repeat itself forever).
+        last_text: String,
+        last_preedit: String,
         /// The platform-service probe runs once, after the tree is mounted.
         probed: bool,
         /// Frames spent waiting for the soft keyboard, and whether it has been
@@ -77,6 +84,7 @@ mod android {
             // presents it through the GPU presenter.
             self.runner.pump(platform);
             self.sync_label(platform);
+            self.sync_text_field();
             self.poll_soft_keyboard();
         }
 
@@ -137,6 +145,16 @@ mod android {
             // emulator. Add that offset (or measure the drawn rect from a
             // screenshot) before tapping; do not feed these numbers to `input
             // tap` directly.
+            // Focus the text field so the characters the IME produces have a
+            // destination. Without this a device run types into nothing, and a
+            // silent no-op is indistinguishable from a broken bridge.
+            if let Some(field) = find_text_field(&self.runner) {
+                self.field = Some(field);
+                let element = self.runner.host().node_id(field);
+                self.runner.host_mut().set_focus(element);
+                eprintln!("floem2-android: text field focused");
+            }
+
             if let Some(button) = find_button(&self.runner) {
                 let rect = self.runner.host().bounds(button);
                 let scale = self.runner.host().scale();
@@ -201,6 +219,30 @@ mod android {
             }
         }
 
+        /// Report what the text field holds whenever it changes.
+        ///
+        /// This is the evidence the IME's characters actually arrived: the
+        /// platform reads them out of the anchor, the runner turns each into a
+        /// key-down, and the focused field consumes them like typing. Printed
+        /// only on change, because the frame hook runs on every frame.
+        fn sync_text_field(&mut self) {
+            let Some(node) = self.field else { return };
+            let Some(field) = self.runner.host().widget::<TextField>(node) else {
+                return;
+            };
+            let text = field.text().to_string();
+            let preedit = field.preedit().to_string();
+            if text == self.last_text && preedit == self.last_preedit {
+                return;
+            }
+            let composing = field.is_composing();
+            eprintln!(
+                "floem2-android: text field text={text:?} preedit={preedit:?} composing={composing}"
+            );
+            self.last_text = text;
+            self.last_preedit = preedit;
+        }
+
         /// Watch for the soft keyboard and report its live geometry once.
         ///
         /// Polls rather than listening, because there is nothing to listen to
@@ -236,6 +278,19 @@ mod android {
                 );
             }
         }
+    }
+
+    /// Finds the text field node.
+    fn find_text_field(runner: &AppRunner<VelloGpuPresenter>) -> Option<NodeId> {
+        let host = runner.host();
+        for index in 0..host.node_count() {
+            if let Some(node) = host.node_at(index) {
+                if host.widget::<TextField>(node).is_some() {
+                    return Some(node);
+                }
+            }
+        }
+        None
     }
 
     /// Finds the counter label node: the first `Text` whose content starts with
@@ -296,6 +351,9 @@ mod android {
                 Box::new(Button::new("click me").on_click(move || {
                     flag.fetch_add(1, Ordering::SeqCst);
                 }))
+            })
+            .push_layout(LayoutRequest::new().width(260.0).height(40.0), || {
+                Box::new(TextField::new().placeholder("tap me, then type"))
             });
 
         host.mount_root(LayoutStyle::default(), root);
@@ -315,6 +373,9 @@ mod android {
             label: None,
             logged: 0,
             window: None,
+            field: None,
+            last_text: String::new(),
+            last_preedit: String::new(),
             probed: false,
             keyboard_frames: 0,
             keyboard_seen: false,
