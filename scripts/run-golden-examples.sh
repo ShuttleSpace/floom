@@ -28,6 +28,7 @@ EXAMPLES=(
   floem2-native-plugin
   floem2-navigation
   floem2-progress-ring
+  floem2-shader
   floem2-style
   floem2-transform
   floem2-virtual-list

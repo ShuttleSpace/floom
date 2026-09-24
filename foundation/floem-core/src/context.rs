@@ -238,6 +238,26 @@ pub trait PaintContext {
         let _ = (rect, filter);
     }
 
+    /// Runs a caller-supplied WGSL fragment shader over this element's box —
+    /// the widget-facing half of the custom-shader gap (A5).
+    ///
+    /// The shader replaces this element's ink rather than decorating it: the
+    /// box is the shader's whole output, so a caller does not also fill a rect
+    /// behind it. What the shader sees is one normalised coordinate space over
+    /// that box plus the caller's own scalars, which is why the request is a
+    /// program and not a colour — see [`floem_types::Shader`] for the uniform
+    /// contract it is compiled against.
+    ///
+    /// Defaults to nothing, and for the same reason [`Self::backdrop_filter`]
+    /// does: a backend with no GPU program pipeline has no honest way to
+    /// approximate an arbitrary fragment — drawing a flat grey would *look*
+    /// like a shader that produced grey, which is worse than the absence.
+    /// Backends that skip are expected to say so in their own frame stats
+    /// (the software renderer counts `shaders_skipped`) rather than stay quiet.
+    fn draw_shader(&mut self, shader: &floem_types::Shader) {
+        let _ = shader;
+    }
+
     /// A single run of text. `size` is the font size in logical pixels.
     ///
     /// Multi-paragraph / shaped text goes through `floem-text`; this op carries

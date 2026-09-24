@@ -17,7 +17,7 @@
 pub mod image_codec;
 pub mod runner;
 
-pub use image_codec::{decode_image, DecodedImage};
+pub use image_codec::{DecodedImage, decode_image};
 pub use runner::{AppRunner, RunStats};
 
 use std::any::Any;
@@ -48,7 +48,7 @@ use floem_scene::{Resource, ResourceKind, ResourceRegistry, Scene, SceneNode, Sc
 use floem_text::{LayoutCache, TextAlign, TextLayoutOptions, TextShaper};
 use floem_types::NativeCapture;
 use floem_types::ScrollEvent;
-use floem_types::{resolve_clip, ClipRegion};
+use floem_types::{ClipRegion, resolve_clip};
 use floem_widgets::WidgetAny;
 use smallvec::SmallVec;
 
@@ -523,8 +523,8 @@ impl Default for WidgetHost {
 // --- layout intent lowering ------------------------------------------------
 
 fn to_a11y_role(role: SemanticsRole) -> floem_accessibility::SemanticsRole {
-    use floem_accessibility::SemanticsRole as A;
     use SemanticsRole as C;
+    use floem_accessibility::SemanticsRole as A;
     match role {
         C::None => A::None,
         C::Button => A::Button,
@@ -4029,6 +4029,19 @@ impl PaintContext for NodePaintContext<'_> {
             rect,
             filter: *filter,
         });
+    }
+
+    /// A custom shader is the element's ink, so the box is the program's whole
+    /// output — no rect is filled behind it, and an empty box is dropped
+    /// instead of asking every backend for an offscreen pass over zero pixels.
+    /// The skip counters live in the backends: the software renderer counts
+    /// `shaders_skipped` and vello counts `shaders_drawn`, so "the shader ran"
+    /// and "the shader was degraded" are both observable.
+    fn draw_shader(&mut self, shader: &floem_types::Shader) {
+        if self.bounds.width() <= 0.0 || self.bounds.height() <= 0.0 {
+            return;
+        }
+        self.push(floem_scene::SceneNode::shader(self.bounds, shader.clone()));
     }
 
     fn fill_text(&mut self, origin: Point, text: &str, size: f32, color: floem_types::Color) {

@@ -23,6 +23,7 @@ something stale.
 | `floem2-progress-ring` | self-drawn motion: an animated ring + a `Spinner` that animates itself | all | headless |
 | `floem2-transform` | subtree transforms: a card that scales and rotates as one picture | all | headless |
 | `floem2-style` | style that is made of something: a gradient card, a real drop shadow, an implicit hover fade armed with a design-system motion token, a blurred card whose ink crosses its own edge, and a frosted panel that greys the edge behind it | all | headless |
+| `floem2-shader` | custom WGSL shaders: a box whose ink is a program — the source and the caller's scalars reach the scene over the element's own box, and a CPU rasteriser counts the skip instead of faking ink | all | headless |
 | `floem2-editor` | text document: transactions, selection, undo/redo, IME pre-edit | all | headless |
 | `floem2-motion` | eased tweens, interruption, a control that animates itself, presence enter/exit, a crossfade that keeps both sides alive, an `AnimatedContent` that keeps both sides alive by key, an `Opacity` that fades a subtree instead of snapping, and a `SharedTransitionLayout` that flies one subtree into the other's box | all | headless |
 | `floem2-native-plugin` | writing a native provider plugin + slot pooling | all | headless |
@@ -168,6 +169,35 @@ Act 5's pair is what separates a filter from the shadow in act 2: the ink is
 puts nothing there. Act 6's pair is what separates a backdrop filter from a
 content one — both blur, so the only discriminating probe is the same hard
 edge read inside the panel (grey) and outside it (still a step).
+
+### `floem2-shader`
+
+A5: the one capability in this table whose ink is *code*. Three acts, all
+asserted:
+
+1. a `ShaderBox` mounted like any other widget puts one shader node over its
+   own laid-out box, carrying the WGSL and the scalars untouched — the box is
+   the program's whole output, so nothing is filled behind it;
+2. presented to the software renderer the same scene leaves the box exactly as
+   the backdrop painted it **and counts one skip** — a CPU rasteriser cannot
+   run WGSL, and an empty box is indistinguishable from a shader that drew
+   nothing, so the degradation has to be reported rather than merely be;
+3. re-pointing the scalars on the mounted widget moves the numbers and leaves
+   the box where it was — `u.time` already animates a shader for free, so a
+   caller pushes only its own inputs.
+
+```text
+act 1  a 160x72 box carries 507 bytes of WGSL and 2 scalars, over its own box
+act 2  the software renderer drew no ink and counted 1 skip — the box is empty because the program was dropped, not because it ran
+act 3  params went [0.0, 1.0] -> [0.5, 0.25] over the same 160x72 box
+```
+
+Pixels are the one thing this example deliberately does not show: a shader's
+output needs the GPU path (`floem2-window` / `floem2-probe`, `--features
+real`). What vello does with the same node — compile the WGSL, render it
+offscreen, composite it back, count `shaders_drawn` — is asserted by
+`render/floem-renderer-vello/src/gpu.rs` under `--features gpu`, and both
+halves are covered by `scripts/mutate-a5-shader.sh` (8/8).
 
 ### `floem2-motion`
 

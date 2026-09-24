@@ -122,7 +122,8 @@
 - **现状**：2.0 目录内的**零** RuntimeEffect / AGSL / SkSL 相关代码是历史状态；A5 切片已补齐。现阶段的自定义 GPU 内容只能走外部纹理通路（`render/floem-renderer/src/external.rs:1-27`：自带渲染器产出帧 → 作为普通 Image 节点参与遮挡/裁剪/变换）**仍是唯一不被本切片覆盖的绕行**（它服务"自带渲染器"而非"用户写着色器"）。
 - **对标**：Compose 走 AGSL（Android，API 33+）/ SkSL（其余平台）**两套实现 + expect/actual**，且 composite 效果链只在 Android 完整——这是反面教材；Flutter 是单一 `FragmentProgram(.frag GLSL)` 全平台一致。
 - **判据（含反面约束）**：见第 7 节——**不要**引入两套着色语言。本切片只选 **WGSL 一条语言**：软件后端跳过并计 `shaders_skipped`，skia 记录降级，vello 真跑。
-- **交付**：`floem_types::Shader{wgsl, params}` + `SceneNode::Shader{bounds, shader}`；宿主顶点阶段由 vello 承担（全屏三角形 + `Uniforms`），调用者只写 `fn fs_main` 的 WGSL 体。三后端：软件 `shaders_skipped++`、skia `SkiaCommand::Shader` 记录、**vello GPU 离屏渲染**（`run_shader_to_image`：offscreen `Rgba8Unorm + COPY_SRC`，uniform `[16 f32]`→`Blob`→`ImageBrush` 合回场景，`hash_shader_wgsl`/`shader_cache_key` 缓存，`shader_clock` 每帧 +1/60，Shader 节点**永不进 fragment 缓存**）。`--features gpu` 编译 + 单测（有 adapter 时 `shaders_drawn>=1`）+ 变异 `scripts/mutate-a5-shader.sh` 4/4。
+- **交付**：`floem_types::Shader{wgsl, params}` + `SceneNode::Shader{bounds, shader}`；宿主顶点阶段由 vello 承担（全屏三角形 + `Uniforms`），调用者只写 `fn fs_main` 的 WGSL 体。三后端：软件 `shaders_skipped++`、skia `SkiaCommand::Shader` 记录、**vello GPU 离屏渲染**（`run_shader_to_image`：offscreen `Rgba8Unorm + COPY_SRC`，uniform `[16 f32]`→`Blob`→`ImageBrush` 合回场景，`hash_shader_wgsl`/`shader_cache_key` 缓存，`shader_clock` 每帧 +1/60，Shader 节点**永不进 fragment 缓存**）。`--features gpu` 编译 + 单测（有 adapter 时 `shaders_drawn>=1`）。
+- **控件侧入口（同切片补齐）**：后端能跑不等于应用能调用——一个从 widget 树里叫不出名字的着色器只是后端能力，不是特性。故补 `PaintContext::draw_shader`（默认不做，与 `backdrop_filter` 同一条"非静默"规矩）+ `floem_widgets::ShaderBox`（`Canvas`/`Spinner` 同模块的自绘表面，尺寸来自布局，`u.time` 由宿主推进所以动画零重建，`set_shader`/`set_params` 为挂载后原地改值版本）+ prelude 导出 + 黄金示例 `floem2-shader`（三幕：程序越过控件门 / 软件后端计数而非伪造墨迹 / 标量改动是重绘不是重排）+ `app/floem-app/tests/shader_box.rs` 4 条。变异 `scripts/mutate-a5-shader.sh` **8/8**（含"宿主吞掉 `draw_shader`"与"着色器占窗口而非自身盒子"两刀——只有控件侧断言抓得住，后端测试全绿）。
 
 ### A6. `Group` 有类型、无实现：子树变换是空的 — **P0 / L（最贵）**
 
@@ -270,7 +271,7 @@ A8 独立，随时可做（但越早越好——它是"自绘控件在无障碍�
 
 | **S8 补 B4 透明度通道** ✅ 已交付 | B4（透明度子集） | S | `Opacity` 控件把隐式过渡从颜色扩到合成透明度通道：包裹单子树，改目标透明度时整棵子树沿 `CompositorProp::Opacity` 淡入/淡出，复用 S3 的 fold 类合成（不改宿主）；无过渡时透明度以"零时长规范"即时落定仍为真实可见态。示例 `floem2-motion` 第七幕；`motion_host.rs` 三条 + 变异证伪 |
 
-| **A5 自定义着色器** ✅ 已交付 | A5 | L | 只选 **WGSL 单一语言**（反面约束：不引入 AGSL+SkSL 两套）。`Shader{wgsl,params}` + `SceneNode::Shader{bounds,shader}`；软件后端跳过并计 `shaders_skipped`，skia 记录 `SkiaCommand::Shader`，**vello 真跑**（离屏 `Rgba8Unorm` 读回→`ImageBrush` 合回场景，`run_shader_to_image`，节点永不进 fragment 缓存）。`--features gpu` 单测 + `scripts/mutate-a5-shader.sh` 4/4 |
+| **A5 自定义着色器** ✅ 已交付 | A5 | L | 只选 **WGSL 单一语言**（反面约束：不引入 AGSL+SkSL 两套）。`Shader{wgsl,params}` + `SceneNode::Shader{bounds,shader}`；软件后端跳过并计 `shaders_skipped`，skia 记录 `SkiaCommand::Shader`，**vello 真跑**（离屏 `Rgba8Unorm` 读回→`ImageBrush` 合回场景，`run_shader_to_image`，节点永不进 fragment 缓存）。控件侧：`PaintContext::draw_shader` + `ShaderBox` 控件 + prelude 导出，黄金示例 `floem2-shader` 三幕。`--features gpu` 单测 + `scripts/mutate-a5-shader.sh` **8/8** |
 
 | **共享元素 + B6 多值编排** ✅ 已交付 | A6（共享元素）+ B6（多值） | M | `Child.shared_key` 让两处子树共享同一 `key`；`SharedTransitionLayout{key,delta}`（`floem-widgets`）完整落地：源/目标子树都挂载、各自锚在绝对箱子（源顶、目标下方 `delta`），`fly` 使能时整棵布局沿一条 `TranslateY` 通道把源子树飞入目标箱子、落定（`animation_finished` 折叠）后再揭示目标**自身**内容并卸载源；可经宿主 `retarget_animation` 门**中断重定向**（动量保持、不跳变）。B6 多值编排：`AnimationSpec.channels` + 绘制路径 `SmallVec<[CompositorProp;2]>`，一条曲线同驱不透明+位移。`motion_host.rs` 两条共享元素（飞行+中断）+ 一条多通道；`floem-snapshot` 逐帧像素金帧 `frames_shared_element_flight`（顶缘逐帧下移、落帧源卡片换目标卡）；示例 `floem2-motion` 第八幕；变异 `scripts/mutate-a6-shared-element.sh` 4/4；全量 workspace 门通过 |
 

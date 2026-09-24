@@ -82,18 +82,18 @@ mutate_one "$VELLO" \
 # 4. vello encode: trading the draw for a skip means a shader is silently
 #    degraded back to transparency on the only backend that can run it.
 mutate_one "$VELLO" \
-"                    if let Some(skey) = self.run_shader_to_image(
-                        target, bounds, pw, ph, shader, &pipeline,
-                    ) {
+"                    if let Some(skey) =
+                        self.run_shader_to_image(target, bounds, pw, ph, shader, &pipeline)
+                    {
                         used_images.insert(skey);
                         stats.image_keys.push(skey);
                         stats.shader_drawn += 1;
                     } else {
                         stats.shader_skips += 1;
                     }" \
-"                    if let Some(skey) = self.run_shader_to_image(
-                        target, bounds, pw, ph, shader, &pipeline,
-                    ) {
+"                    if let Some(skey) =
+                        self.run_shader_to_image(target, bounds, pw, ph, shader, &pipeline)
+                    {
                         used_images.insert(skey);
                         stats.image_keys.push(skey);
                         stats.shader_skips += 1;
@@ -103,10 +103,61 @@ mutate_one "$VELLO" \
   "cargo test -q -p floem-renderer-vello --features gpu shader_nodes_encode_through_the_gpu_backend" \
   "vello-shader-actually-awaited-draw"
 
+# 5. the widget door: a host that swallows `draw_shader` leaves the whole
+#    widget surface drawing nothing, while every renderer-side test stays green
+#    (they build their scenes by hand). This is the mutation that says whether
+#    A5 is reachable from an app at all.
+HOST=app/floem-app/src/lib.rs
+mutate_one "$HOST" \
+"        self.push(floem_scene::SceneNode::shader(self.bounds, shader.clone()));" \
+"        let _ = shader;" \
+  "cargo test -q -p floem-app --test shader_box a_shader_box_carries_its_program_over_its_own_box" \
+  "host-carries-the-shader-request"
+
+# 6. the box: a shader that claims the window instead of the element paints
+#    over everything around it. The renderer cannot tell — both are valid
+#    rects — so only the host-side assertion can.
+mutate_one "$HOST" \
+"        self.push(floem_scene::SceneNode::shader(self.bounds, shader.clone()));" \
+"        let mut box_bounds = self.bounds;
+        box_bounds.x1 = box_bounds.x0 + 300.0;
+        box_bounds.y1 = box_bounds.y0 + 200.0;
+        self.push(floem_scene::SceneNode::shader(box_bounds, shader.clone()));" \
+  "cargo test -q -p floem-app --test shader_box a_shader_box_carries_its_program_over_its_own_box" \
+  "host-uses-the-laid-out-box-not-the-window"
+
+# 7/8. The in-place setters: a builder is cloned into the tree, so a setter
+#      that swaps the value without bumping the revision paints the *old*
+#      program forever — the silent no-op this widget is most likely to ship.
+CANVAS=widgets/floem-widgets/src/canvas.rs
+mutate_one "$CANVAS" \
+"    pub fn set_shader(&mut self, shader: Shader) {
+        self.shader = shader;
+        self.revision.bump();
+    }" \
+"    pub fn set_shader(&mut self, shader: Shader) {
+        let _ = shader;
+        self.revision.bump();
+    }" \
+  "cargo test -q -p floem-app --test shader_box replacing_the_program_on_the_mounted_box_repaints_the_new_source" \
+  "set_shader-asks-for-a-frame"
+
+mutate_one "$CANVAS" \
+"    pub fn set_params(&mut self, params: impl Into<Vec<f32>>) {
+        self.shader.params = params.into();
+        self.revision.bump();
+    }" \
+"    pub fn set_params(&mut self, params: impl Into<Vec<f32>>) {
+        let _ = params;
+        self.revision.bump();
+    }" \
+  "cargo test -q -p floem-app --test shader_box changing_only_the_scalars_repaints_them" \
+  "set_params-asks-for-a-frame"
+
 # Restore-by-copy can land inside the same second as the mutated build, and
 # cargo fingerprints on mtime — leave the touched files newer than their last
 # artifact. Then *re-run the suite before trusting any count*.
-touch "$SOFT" "$VELLO"
+touch "$SOFT" "$VELLO" "$HOST" "$CANVAS"
 
 echo "=== A5 campaign results ==="
 cat "$RESULTS"

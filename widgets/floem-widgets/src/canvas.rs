@@ -13,9 +13,9 @@ use floem_core::{
     Widget, WidgetAny,
 };
 use floem_legacy_reactive::{Effect, RwSignal, SignalGet};
-use floem_types::{Color, Easing, ElementId, Path, Point, RepeatSpec, Size, Stroke};
-use std::sync::atomic::{AtomicBool, Ordering};
+use floem_types::{Color, Easing, ElementId, Path, Point, RepeatSpec, Shader, Size, Stroke};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 /// A box for the user's draw routine.
 ///
@@ -238,6 +238,194 @@ impl WidgetAny for Canvas {
     fn semantics_hint(&self) -> Option<SemanticsHint> {
         // A decorative canvas publishes nothing; everything else publishes its
         // role (and label) for the host to lower into the accessibility tree.
+        if self.role == SemanticsRole::None && self.label.is_none() {
+            None
+        } else {
+            Some(self.semantics_hint())
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// ShaderBox — a box whose ink is a caller-supplied WGSL program (A5)
+// ---------------------------------------------------------------------------
+
+/// A box filled by a custom WGSL fragment shader — the widget-facing half of
+/// the custom-shader gap (A5).
+///
+/// Where [`Canvas`] hands the caller a [`PaintContext`] to draw paths into,
+/// `ShaderBox` hands the box to a *program*: the shader is the element's whole
+/// ink, not decoration on top of it, so nothing is filled behind it. That is
+/// the shape a gradient-free procedural background, a plasma, a GPU-side
+/// noise field or a ported Shadertoy effect needs — content no path or brush
+/// can express, but one fragment function can.
+///
+/// **Animation is free.** The host advances `u.time` by one nominal frame per
+/// present (see [`floem_types::Shader`]), so a shader that reads it animates
+/// without the widget rebuilding anything: no repaint request, no re-layout,
+/// no per-frame allocation. [`Self::set_params`] is for the other case — the
+/// caller's own scalars changing — and does ask for a frame.
+///
+/// **Degradation is recorded, not silent.** A backend with no GPU program
+/// pipeline runs nothing here. The software renderer counts the skip
+/// (`shaders_skipped`) and vello counts what it actually drew
+/// (`shaders_drawn`), so an app can tell "my shader is running" from "my
+/// shader was dropped" instead of staring at an empty box.
+#[derive(Clone)]
+pub struct ShaderBox {
+    shader: Shader,
+    intrinsic: Option<Size>,
+    role: SemanticsRole,
+    label: Option<String>,
+    revision: crate::primitives::Revision,
+}
+
+impl std::fmt::Debug for ShaderBox {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ShaderBox")
+            .field("wgsl_len", &self.shader.wgsl.len())
+            .field("params", &self.shader.params)
+            .finish()
+    }
+}
+
+impl ShaderBox {
+    /// A box whose ink is `shader`.
+    pub fn new(shader: Shader) -> Self {
+        Self {
+            shader,
+            intrinsic: None,
+            role: SemanticsRole::Image,
+            label: None,
+            revision: crate::primitives::Revision::default(),
+        }
+    }
+
+    /// A box from WGSL source and caller scalars, without naming [`Shader`].
+    pub fn wgsl(wgsl: impl Into<String>, params: impl Into<Vec<f32>>) -> Self {
+        Self::new(Shader::new(wgsl, params))
+    }
+
+    /// Intrinsic size in logical px. Without it the box fills its parent's
+    /// slot; with it the host sizes this element to the request.
+    pub fn size(mut self, width: f32, height: f32) -> Self {
+        self.intrinsic = Some(Size::new(width as f64, height as f64));
+        self.revision.bump();
+        self
+    }
+
+    /// Replaces the caller scalars (`u.params[0]`/`u.params[1]`).
+    pub fn params(mut self, params: impl Into<Vec<f32>>) -> Self {
+        self.shader.params = params.into();
+        self.revision.bump();
+        self
+    }
+
+    /// Publishes `role` to assistive tech (default: [`SemanticsRole::Image`],
+    /// the same default [`Canvas`] landed on — a drawn surface is, to assistive
+    /// tech, an image).
+    pub fn role(mut self, role: SemanticsRole) -> Self {
+        self.role = role;
+        self.revision.bump();
+        self
+    }
+
+    /// A human-readable description of what the shader shows.
+    pub fn label(mut self, label: impl Into<String>) -> Self {
+        self.label = Some(label.into());
+        self.revision.bump();
+        self
+    }
+
+    /// Equivalent to `role(SemanticsRole::None)`: the box draws nothing worth
+    /// describing to assistive tech.
+    pub fn decorative(mut self) -> Self {
+        self.role = SemanticsRole::None;
+        self.label = None;
+        self.revision.bump();
+        self
+    }
+
+    /// Swaps the whole program on the mounted widget (the tree's copy, reached
+    /// through `widget_mut`). Mutating a *builder* is a silent no-op — the
+    /// builder is cloned into the tree, so this is the in-place form.
+    pub fn set_shader(&mut self, shader: Shader) {
+        self.shader = shader;
+        self.revision.bump();
+    }
+
+    /// Replaces just the caller scalars on the mounted widget.
+    pub fn set_params(&mut self, params: impl Into<Vec<f32>>) {
+        self.shader.params = params.into();
+        self.revision.bump();
+    }
+
+    /// The program this box draws.
+    pub fn shader(&self) -> &Shader {
+        &self.shader
+    }
+
+    fn semantics_hint(&self) -> SemanticsHint {
+        SemanticsHint {
+            role: self.role,
+            label: self.label.clone(),
+            state: floem_core::SemanticsState::empty(),
+        }
+    }
+}
+
+impl Widget for ShaderBox {
+    fn create(&self, cx: &mut dyn floem_core::CreateContext) -> ElementId {
+        cx.alloc_child()
+    }
+
+    fn update(&mut self, cx: &mut dyn UpdateContext, id: ElementId) {
+        self.revision.sync(cx, id);
+    }
+
+    fn layout_request(&self) -> Option<floem_core::LayoutRequest> {
+        let size = self.intrinsic?;
+        if size.width <= 0.0 || size.height <= 0.0 {
+            return None;
+        }
+        Some(
+            floem_core::LayoutRequest::new()
+                .width(size.width as f32)
+                .height(size.height as f32),
+        )
+    }
+
+    fn paint(&self, cx: &mut dyn PaintContext, _id: ElementId) {
+        // The host drops a zero-area box on its own; asking for a pass over no
+        // pixels would only add a skip count nothing can act on.
+        if cx.bounds().width() <= 0.0 || cx.bounds().height() <= 0.0 {
+            return;
+        }
+        cx.draw_shader(&self.shader);
+    }
+
+    fn semantics(&self, cx: &mut dyn SemanticsContext, _id: ElementId) {
+        if self.role == SemanticsRole::None && self.label.is_none() {
+            return;
+        }
+        cx.set_role(self.role);
+        if let Some(label) = self.label.as_deref() {
+            cx.set_label(label);
+        }
+        cx.set_bounds(cx.bounds());
+    }
+}
+
+impl WidgetAny for ShaderBox {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
+        self
+    }
+
+    fn semantics_hint(&self) -> Option<SemanticsHint> {
         if self.role == SemanticsRole::None && self.label.is_none() {
             None
         } else {

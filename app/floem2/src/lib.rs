@@ -123,8 +123,8 @@ pub mod prelude {
         AnimatedContent, BottomSheet, Button, Canvas, Checkbox, Conditional, Container, Crossfade,
         Dialog, Divider, Grid, Icon, Image, ImageFit, InteractionState, Labeled, List,
         NavDestination, NavHandle, NavHost, NavigationBar, NavigationDrawer, NavigationRail,
-        Opacity, Overlay, Popup, Progress, Radio, Select, SharedTransitionLayout, Slider, Spacer,
-        Spinner, Stack, Switch, Tabs, Text, TextField,
+        Opacity, Overlay, Popup, Progress, Radio, Select, ShaderBox, SharedTransitionLayout,
+        Slider, Spacer, Spinner, Stack, Switch, Tabs, Text, TextField,
     };
 
     // --- App shell (floem-app) -------------------------------------------
@@ -151,7 +151,7 @@ pub mod prelude {
     // A `Canvas` painter writes `Path`s and `Stroke`s in app colors; without
     // these the canvas is unnameable from the beginner surface. Same rule as
     // the motion vocabulary: values an app writes, not contracts it implements.
-    pub use floem_types::{Brush, Color, Filter, LineCap, LineJoin, Path, Shadow, Stroke};
+    pub use floem_types::{Brush, Color, Filter, LineCap, LineJoin, Path, Shader, Shadow, Stroke};
     // A presence transition is the other half of the motion vocabulary an app
     // writes: `Transition` answers "this value changed", `PresenceTransition`
     // answers "this subtree appeared or disappeared". Both belong on the

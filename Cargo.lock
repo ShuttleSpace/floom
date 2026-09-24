@@ -3016,6 +3016,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "floem2-shader"
+version = "0.2.0"
+dependencies = [
+ "floem-renderer",
+ "floem2",
+]
+
+[[package]]
 name = "floem2-style"
 version = "0.2.0"
 dependencies = [

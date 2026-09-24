@@ -28,8 +28,9 @@ pub use floem_core::WidgetAny;
 /// The accessibility bridge, shared with the sibling data-widget crate.
 pub use widget_any::{to_core_role, to_core_state};
 
-/// Self-drawn surfaces: a closure-driven drawing board and a loading spinner.
-pub use canvas::{Canvas, Spinner};
+/// Self-drawn surfaces: a closure-driven drawing board, a WGSL shader box and
+/// a loading spinner.
+pub use canvas::{Canvas, ShaderBox, Spinner};
 pub use compose::{
     AnimatedContent, BottomSheet, Conditional, Crossfade, Dialog, Grid, List, Opacity, Overlay,
     Popup, SharedTransitionLayout, Stack, Tabs,
