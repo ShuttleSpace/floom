@@ -27,7 +27,7 @@ use std::sync::{Arc, Mutex};
 use floem_accessibility::{SemanticsNode, SemanticsTree};
 use floem_animation::{AnimId, AnimKind, AnimSample, AnimationScheduler};
 use floem_core::{
-    Align, AnimationSpec, Axis, Child, ChildKey, CreateContext, ElementId, Event, EventContext,
+    Align, AnimationSpec, Axis, Child, ChildKey, CreateContext,     ElementId, Event, EventContext, Key, KeyEvent, KeyPhase, Modifiers, NamedKey,
     LayoutRequest, NativeGrant, NativeRequest, NativeSnapshot, OverlayHandle, OverlayKind,
     OverlayRequest, PaintContext, Point, PointerPhase, Position, Rect, ResourceId, SemanticsHint,
     SemanticsRole, Size, UpdateContext,
@@ -421,6 +421,11 @@ pub struct WidgetHost {
     paused: bool,
     focus: FocusManager,
     scope: FocusScopeId,
+    /// True when focus was last moved by keyboard navigation (Tab), so a focus
+    /// ring can be shown for keyboard users without lighting up on every mouse
+    /// click. Set by [`WidgetHost::focus_next`] / [`WidgetHost::focus_prev`] and
+    /// cleared by any pointer-driven focus in [`WidgetHost::set_focus`].
+    keyboard_navigation: bool,
     /// Stacked overlays (popups, dialogs, sheets) painted above the main tree.
     overlay: OverlayManager,
     /// Mounted overlay subtrees, parallel to `overlay`'s entry order.
@@ -747,6 +752,7 @@ impl WidgetHost {
             paused: false,
             focus,
             scope,
+            keyboard_navigation: false,
             overlay: OverlayManager::new(),
             overlays: Vec::new(),
             overlay_commands: Vec::new(),
@@ -2761,6 +2767,24 @@ impl WidgetHost {
         if self.dismiss_top_overlay_on_press(&event) {
             return true;
         }
+        // Gate #7 (focus + basic keyboard navigation): Tab and Shift+Tab move
+        // focus through the focusable tree. A navigation key carries no text, so
+        // it is consumed here and never routed to a widget — routing it onward
+        // would, for example, try to insert a tab into a focused text field.
+        if let Event::Key(KeyEvent {
+            phase: KeyPhase::Down,
+            key: Key::Named(NamedKey::Tab),
+            modifiers,
+            ..
+        }) = &event
+        {
+            if modifiers.contains(Modifiers::SHIFT) {
+                self.focus_prev();
+            } else {
+                self.focus_next();
+            }
+            return true;
+        }
         let target = match event {
             // Overlays win over the main tree, front-to-back; a modal overlay
             // also swallows clicks outside its content (the scrim). The router
@@ -3507,6 +3531,15 @@ impl WidgetHost {
         self.focus.focused()
     }
 
+    /// Whether focus was last moved by keyboard navigation (Tab / Shift+Tab).
+    ///
+    /// Widgets read this through their own interaction state to decide whether
+    /// to paint a focus ring: keyboard users get a visible ring, mouse users do
+    /// not, which matches platform convention.
+    pub fn keyboard_navigation(&self) -> bool {
+        self.keyboard_navigation
+    }
+
     /// Composition caret rectangle the focused text widget last reported, or
     /// `None` when nothing is composing. The runner reads this after an IME
     /// event to anchor the OS input-method popup.
@@ -3522,6 +3555,9 @@ impl WidgetHost {
     }
 
     pub fn set_focus(&mut self, id: ElementId) {
+        // Pointer-driven focus: a keyboard-initiated ring should disappear once
+        // the mouse takes over (focus follows the pointer).
+        self.keyboard_navigation = false;
         if let Some(previous) = self.focus.focused() {
             self.clear_focus_flag(previous);
         }
@@ -3531,10 +3567,12 @@ impl WidgetHost {
     }
 
     pub fn focus_next(&mut self) {
+        self.keyboard_navigation = true;
         self.move_focus(FocusDirection::Forward);
     }
 
     pub fn focus_prev(&mut self) {
+        self.keyboard_navigation = true;
         self.move_focus(FocusDirection::Backward);
     }
 

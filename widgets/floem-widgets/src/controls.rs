@@ -445,10 +445,56 @@ impl Widget for Button {
             }
             None => target,
         };
+        // The button's own fill is always the full-bounds rect, so callers and
+        // golden frames that sample it keep seeing the button colour.
         if self.radius > 0.0 {
             cx.fill_rounded_rect(bounds, self.radius, fill);
         } else {
             cx.fill_rect(bounds, fill);
+        }
+        // Gate #7 focus indicator: a focused button gets a 2px ring drawn as a
+        // band along the inner edge. It is kept off the button's fill rect so it
+        // never replaces the colour the fill transition paints.
+        if self.state.focused {
+            const RING: Color = Color::rgb(0x4C, 0x9A, 0xFF);
+            let t = 2.0;
+            let i = 1.0;
+            cx.fill_rect(
+                Rect {
+                    x0: bounds.x0 + i,
+                    y0: bounds.y0 + i,
+                    x1: bounds.x1 - i,
+                    y1: bounds.y0 + t,
+                },
+                RING,
+            );
+            cx.fill_rect(
+                Rect {
+                    x0: bounds.x0 + i,
+                    y0: bounds.y1 - t,
+                    x1: bounds.x1 - i,
+                    y1: bounds.y1 - i,
+                },
+                RING,
+            );
+            cx.fill_rect(
+                Rect {
+                    x0: bounds.x0 + i,
+                    y0: bounds.y0 + i,
+                    x1: bounds.x0 + t,
+                    y1: bounds.y1 - i,
+                },
+                RING,
+            );
+            cx.fill_rect(
+                Rect {
+                    x0: bounds.x1 - t,
+                    y0: bounds.y0 + i,
+                    x1: bounds.x1 - i,
+                    y1: bounds.y1 - i,
+                },
+                RING,
+            );
         }
         let color = if self.state.disabled {
             disabled_tint(self.text_color)

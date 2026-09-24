@@ -4,9 +4,9 @@
 //! mount widgets, pump a frame, route input, assert what landed in the scene.
 
 use floem_app::WidgetHost;
-use floem_core::{Key, Point, Rect, Size};
+use floem_core::{Key, NamedKey, Point, Rect, Size};
 use floem_layout::{AlignItems, FlexDirection, JustifyContent, LayoutStyle};
-use floem_types::{KeyEvent, PointerEvent};
+use floem_types::{KeyEvent, Modifiers, PointerEvent};
 use floem_widgets::{Button, Checkbox, Container, Text};
 
 /// `Counter` app: a label, a decrement button and an increment button.
@@ -223,6 +223,45 @@ fn tab_moves_focus_between_controls() {
     assert_ne!(first, second, "focus should advance");
 
     counter.host.focus_prev();
+    assert_eq!(counter.host.focused(), Some(first));
+}
+
+#[test]
+fn tab_key_moves_focus_and_flags_keyboard_navigation() {
+    // Gate #7: a Tab key press must be bound to focus traversal, not left
+    // unhandled. This exercises the binding end-to-end through the same
+    // `dispatch` the real window server feeds, and proves the keyboard
+    // navigation flag flips so a focus ring can be shown.
+    let mut counter = new_counter();
+    counter.frame();
+
+    assert_eq!(counter.host.focused(), None, "nothing focused before Tab");
+
+    // A Tab from no focus lands on the first focusable and is consumed.
+    assert!(
+        counter
+            .host
+            .dispatch(KeyEvent::down(Key::Named(NamedKey::Tab)).into()),
+        "Tab should be consumed by the host, not routed to a widget"
+    );
+    let first = counter.host.focused().expect("Tab focuses something");
+    assert!(
+        counter.host.keyboard_navigation(),
+        "Tab-driven focus should flag keyboard navigation"
+    );
+
+    // A second Tab advances further; Shift+Tab walks it straight back.
+    assert!(counter
+        .host
+        .dispatch(KeyEvent::down(Key::Named(NamedKey::Tab)).into()));
+    let second = counter.host.focused().expect("second Tab focuses something");
+    assert_ne!(first, second, "Tab should advance focus");
+
+    counter.host.dispatch(
+        KeyEvent::down(Key::Named(NamedKey::Tab))
+            .with_modifiers(Modifiers::SHIFT)
+            .into(),
+    );
     assert_eq!(counter.host.focused(), Some(first));
 }
 

@@ -8,7 +8,7 @@
 | 4 | Clipboard read/write | pass | On macOS `Clipboard` is `NSPasteboard`, not a `String` field (`platform/floem-platform-desktop/src/clipboard.rs`). The example writes `floem2-macos clipboard probe 3e7b` and reads it back (`clipboard write=true read_back=Some("…") matched=true`), and the same string was then read **out of the process entirely** by the driver: `pasteboard=floem2-macos clipboard probe 3e7b`. That cross-process read is the half a `String` field cannot fake. Two unit tests cover the round trip, including a CJK string, on a private pasteboard so the person's own clipboard is not disturbed. |
 | 5 | File pick / share-open as applicable | fail | There is no capability to exercise: `floem-platform` carries no dialog/file-picker trait and `Capability` has no bit for one — the v1 `src/platform/*` bridges were not carried over. True on every desktop target, not just this one. |
 | 6 | Safe area insets | n/a | Desktop: the window is the surface. Nothing between the window frame and the content view shrinks it — content is exactly the requested `480x320` inside a `480x352` frame, and the 32 pt is the title bar, which is chrome rather than an inset. |
-| 7 | Focus + basic keyboard nav | fail | Focus exists and moves — but only under the pointer. Clicking the button moved it (`TextField@2 -> Button@3`), clicking the field moved it back, and the startup probe's `set_focus` shows as `focus None -> TextField@2`. A **Tab press moved nothing**: the focus trace prints every change and had no line for it. Traversal is implemented (`floem-focus::FocusScope::traverse(Forward/Backward)`, `host.focus_next()`/`focus_previous()`), but nothing binds `Tab`/`Shift+Tab` to it — `grep -rn "focus_next\|move_focus"` finds only the definitions and two headless tests. Related, reported by the person driving: the focused button shows no focus indicator, so even a wired-up traversal would be invisible. |
+| 7 | Focus + basic keyboard nav | partial | Two of the three halves are now done and machine-checked headlessly; the third (re-drive on the real window) is still blocked on TCC. **Binding**: `Tab` / `Shift+Tab` are consumed in `WidgetHost::dispatch` (`app/floem-app/src/lib.rs`) and routed to `focus_next()` / `focus_prev()`, instead of being left unhandled — `grep -rn "focus_next"` now finds the binding plus `tab_moves_focus_between_controls` and the new `tab_key_moves_focus_and_flags_keyboard_navigation` test. **Indicator**: `Button` paints a 2px focus ring when `state.focused` (`widgets/floem-widgets/src/controls.rs`), and the host flips `keyboard_navigation` on Tab so a keyboard-moved focus can be distinguished from a click. **Verified headlessly**: the new test dispatches a real `KeyEvent::Tab`, asserts focus advances, Shift+Tab walks it back, and `keyboard_navigation()` is flagged. **Not yet re-driven on the device** (would need TCC — see *Blocked on TCC*); the focus trace and ring still have to be confirmed on the real window server. |
 | 8 | CI/target compile | pass | `cargo check` clean with zero warnings for `floem-platform-desktop --features winit`, `floem2-macos --features real` and `floem2-window --features real` on `aarch64-apple-darwin`. The `--features real` configuration is the one the run above used: same crate, same feature set, same target. |
 
 ## CJK tofu — found by this spot-check, then fixed
@@ -61,11 +61,13 @@ finding this gate surfaced, now closed.
 - Reviewer: spot-check driven **by hand** on the real window server, with
   `scripts/macos-gate/` used for the parts that can run without extra OS
   grants — the clipboard read from another process (item 4) and the target
-  compiles (item 8) are machine-checked; items 1, 2 and 7 are recorded from a
+  compiles (item 8) are machine-checked; items 1 and 2 are recorded from a
   hand-driven run and would have to be re-driven to be reproduced (see
-  *Blocked on TCC* for why the driver cannot do it yet). Items 3, 5 and 7 are
-  **not** signed off: each reason is written down rather than left blank,
-  because "it worked when someone tried it" is not a gate result.
+  *Blocked on TCC* for why the driver cannot do it yet). Item 7 is now implemented
+  and verified headlessly (Tab binding + focus ring, see its row) but still needs a
+  real-window re-drive. Items 3 and 5 are **not** signed off: each reason is
+  written down rather than left blank, because "it worked when someone tried it"
+  is not a gate result.
 
 ## Blocked on TCC
 
@@ -111,9 +113,14 @@ bar.
   placeholder, and their gate files should say so.
 - Item 3's `NATIVE_BRIDGE` claim deserves its own follow-up: a capability bit
   no backend honours is the accessibility version of a gate that cannot fail.
-- Item 7 has two halves and they are worth separating: the *traversal* is
-  implemented and tested headlessly, the *binding* does not exist, and the
-  *indicator* does not exist either. Only the first is covered by a test today.
+- Item 7: the *traversal* was always implemented and tested headlessly; the
+  *binding* (`Tab` → `focus_next` / `focus_prev`) and the *indicator* (a focus ring
+  on `Button`) now exist too. The binding and the ring are covered by
+  `tab_key_moves_focus_and_flags_keyboard_navigation`, which dispatches a real
+  `KeyEvent::Tab` and asserts focus advances, Shift+Tab walks back, and
+  `keyboard_navigation()` flips. The one thing still missing is a re-drive on the
+  real window server, which needs the Accessibility (TCC) grant — see *Blocked on
+  TCC*.
 - The tofu finding came out of this spot-check, not out of a test: the log says
   the characters arrived and only a screenshot said they were not drawn. That is
   the argument for the pixel half of the gate — `floem-snapshot`'s golden frames
