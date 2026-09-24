@@ -29,6 +29,7 @@ something stale.
 | `floem2-native-plugin` | writing a native provider plugin + slot pooling | all | headless |
 | `floem2-probe` | device probe: one window holding every control the on-screen cases need | desktop | **display-gated** — `--features real`, driven by hand |
 | `floem2-window` | a real OS window: winit + vello GPU | desktop | **verified on macOS** |
+| `floem2-macos` | the macOS gate probe: a clickable tree, a text field an input method can type into, and a clipboard whose far end is the system pasteboard | macOS | **display-gated** — `--features real`, driven by hand (see `docs/gates/macos.md`) |
 | `floem2-android` | a real Android app: `native-activity` + vello GPU in one APK | Android | **device-gated** — `--features real`, packaged by `examples/floem2-android/scripts/build-apk.sh` |
 | `webview` | embedded web view | OS provider | device-gated (Phase 17) |
 | `video` | embedded video | OS provider | device-gated (Phase 17) |
@@ -276,6 +277,31 @@ climb frame by frame, so a wedged loop is visible in the output rather than only
 in the total. `redraws_requested` and the CPU percentage move a little run to
 run (27 / 2.9 % here, 3 / 2.1 % on the pre-motion run) because they count the
 startup redraw and whatever the window server sends in the first second.
+
+### `floem2-macos`
+
+The desktop counterpart of `floem2-android`: it exists to produce the evidence
+`docs/gates/macos.md` records rather than to demonstrate anything new about the
+stack. Same `AppRunner<VelloGpuPresenter>`, same winit loop as
+`floem2-window` — what it adds is a text field, an IME request, a focus request,
+and a clipboard write, plus a log line for each, so a spot-check is a read of
+what the OS actually did.
+
+```text
+GPU adapter: Apple M4 Pro (Metal)
+floem2-macos: widget tree mounted (4 nodes)
+floem2-macos: clipboard write=true read_back=Some("floem2-macos clipboard probe 3e7b") matched=true
+floem2-macos: text field focused
+floem2-macos: button logical=(0.0,92.0 160.0x40.0) scale=1 content_px=x0..160 y92..132
+floem2-macos: field logical=(0.0,36.0 260.0x40.0)
+```
+
+The clipboard line is the load-bearing one: on macOS `Clipboard` is
+`NSPasteboard` (see `platform/floem-platform-desktop/src/clipboard.rs`), so the
+same string is then readable from a different process entirely — which is what
+separates a clipboard from a `String` field. The `logical=` lines are there so a
+click can be *aimed*: they are content-relative, so the window's frame and the
+title bar have to be added before they are screen coordinates.
 
 ### `floem2-android`
 

@@ -12,6 +12,12 @@ pub mod native;
 #[cfg(target_os = "macos")]
 pub mod native_appkit;
 
+/// The real macOS clipboard (`NSPasteboard`). Split out because it is the one
+/// part of this adapter that must reach AppKit directly: the pasteboard belongs
+/// to the session, not to a window.
+#[cfg(target_os = "macos")]
+pub mod clipboard;
+
 #[cfg(feature = "winit")]
 pub mod winit_backend;
 

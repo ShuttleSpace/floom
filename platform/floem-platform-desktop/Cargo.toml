@@ -39,6 +39,8 @@ objc2 = { version = "0.6", default-features = false, features = ["std"] }
 objc2-app-kit = { version = "0.3", default-features = false, features = [
     "std",
     "objc2-core-foundation",
+    # The system clipboard (NSPasteboard) — see `src/clipboard.rs`.
+    "NSPasteboard",
     "NSView",
     "NSResponder",
     "NSWindow",
@@ -54,6 +56,8 @@ objc2-app-kit = { version = "0.3", default-features = false, features = [
 objc2-foundation = { version = "0.3", default-features = false, features = [
     "std",
     "objc2-core-foundation",
+    # `NSString` is how pasteboard text crosses the bridge.
+    "NSString",
     "NSGeometry",
     "NSObject",
 ] }

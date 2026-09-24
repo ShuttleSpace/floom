@@ -36,9 +36,10 @@
 //!
 //! ## Not yet wired
 //!
-//! * Clipboard is an in-process string. winit exposes no clipboard API; a real
-//!   one needs `arboard`/`copypasta`-class glue, which is a dependency decision
-//!   rather than a wiring one.
+//! * Clipboard off macOS is still an in-process string — see the note on
+//!   [`Clipboard for WinitPlatform`](Self#impl-Clipboard-for-WinitPlatform):
+//!   macOS reaches the system pasteboard through [`crate::clipboard`], and the
+//!   other desktop targets have not been given that bridge yet.
 //! * macOS menu-bar / app-delegate integration lives in the legacy crate.
 
 use std::collections::{HashMap, VecDeque};
@@ -185,6 +186,10 @@ pub struct WinitPlatform {
     /// Requests made before an [`ActiveEventLoop`] was available.
     pending: VecDeque<(WindowId, WindowConfig)>,
     events: Vec<PlatformEvent>,
+    /// Process-local clipboard text. **Not** read on macOS: there the
+    /// system pasteboard is the clipboard, and keeping a second copy here
+    /// would only let the two disagree.
+    #[cfg(not(target_os = "macos"))]
     clipboard: String,
     started: Instant,
     ime_enabled: HashMap<u32, bool>,
@@ -226,6 +231,7 @@ impl WinitPlatform {
             next_window: 0,
             pending: VecDeque::new(),
             events: Vec::new(),
+            #[cfg(not(target_os = "macos"))]
             clipboard: String::new(),
             started: Instant::now(),
             ime_enabled: HashMap::new(),
@@ -652,10 +658,31 @@ impl Platform for WinitPlatform {
 }
 
 impl Clipboard for WinitPlatform {
+    /// macOS reads the **system** pasteboard (`NSPasteboard`), so text copied
+    /// here is pasteable in any other app and vice versa. See
+    /// [`crate::clipboard`] for why the difference is not cosmetic: a
+    /// process-local `String` passes every test a clipboard can be asked to
+    /// pass, while being unusable.
+    ///
+    /// Every other desktop target keeps the in-process placeholder, which is
+    /// honest about its own reach (`None` until something is written here, and
+    /// invisible outside this process) rather than claiming to be the OS's.
+    #[cfg(target_os = "macos")]
+    fn get_text(&mut self) -> Option<String> {
+        crate::clipboard::system_read_text()
+    }
+
+    #[cfg(target_os = "macos")]
+    fn set_text(&mut self, text: &str) -> bool {
+        crate::clipboard::system_write_text(text)
+    }
+
+    #[cfg(not(target_os = "macos"))]
     fn get_text(&mut self) -> Option<String> {
         Some(self.clipboard.clone())
     }
 
+    #[cfg(not(target_os = "macos"))]
     fn set_text(&mut self, text: &str) -> bool {
         self.clipboard = text.to_string();
         true
