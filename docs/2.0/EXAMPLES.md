@@ -308,10 +308,12 @@ line is what makes item 7 of the gate falsifiable from the outside — a Tab pre
 either moves focus or leaves a trace with no line for it.
 
 The field is deliberately **preloaded with a non-ASCII string**: the log can
-prove characters arrived, but only pixels can show whether they were drawn, and
-on this machine they are not (four empty boxes — see *Open finding* in
-`docs/gates/macos.md`). A probe that only logged would have reported a working
-CJK path.
+prove characters arrived, but only pixels can show whether they were drawn. That
+is exactly what happened — the string rendered as four tofu boxes, and the
+finding (parley's per-script fallback resolving Han back to a Latin-only font)
+is written up in `docs/gates/macos.md` and now fixed in
+`floem-text`'s default font stack. A probe that only logged would have reported a
+working CJK path.
 
 ### `floem2-android`
 

@@ -1,9 +1,47 @@
 //! Parley-backed text shaper emitting renderer-neutral glyph runs.
 
+use std::borrow::Cow;
+
 use floem_types::{Point, Size};
 use parley::layout::{Alignment, AlignmentOptions, PositionedLayoutItem};
 use parley::style::{FontFamily, FontStack, FontWeight, GenericFamily, StyleProperty};
 use parley::{FontContext, LayoutContext};
+
+/// Default font stack, tried left-to-right.
+///
+/// The generic sans-serif covers Latin, digits and symbols. The remaining
+/// families are *fallbacks* so that Han (and Kana / Hangul) glyphs resolve to a
+/// real face instead of `.notdef` tofu boxes. parley's automatic per-script
+/// fallback does not reliably pick a Han-capable face on every platform — on
+/// macOS the generic sans resolves to a font with no CJK coverage and the
+/// auto-fallback returns that same font — so we name the common CJK families
+/// explicitly. A name that is not installed is simply ignored by the resolver,
+/// so listing every platform's fonts in one stack is harmless.
+///
+/// `FontFamily::Named(Cow::Borrowed(..))` is a constant expression, so this is a
+/// zero-allocation `static`.
+static DEFAULT_FONT_STACK: &[FontFamily<'static>] = &[
+    FontFamily::Generic(GenericFamily::SansSerif),
+    FontFamily::Named(Cow::Borrowed("PingFang SC")),
+    FontFamily::Named(Cow::Borrowed("Hiragino Sans GB")),
+    FontFamily::Named(Cow::Borrowed("Hiragino Sans")),
+    FontFamily::Named(Cow::Borrowed("STHeiti")),
+    FontFamily::Named(Cow::Borrowed("Microsoft YaHei")),
+    FontFamily::Named(Cow::Borrowed("SimSun")),
+    FontFamily::Named(Cow::Borrowed("Malgun Gothic")),
+    FontFamily::Named(Cow::Borrowed("Noto Sans CJK SC")),
+    FontFamily::Named(Cow::Borrowed("Noto Sans CJK JP")),
+    FontFamily::Named(Cow::Borrowed("Noto Sans CJK KR")),
+    FontFamily::Named(Cow::Borrowed("Noto Sans CJK TC")),
+    FontFamily::Named(Cow::Borrowed("Source Han Sans SC")),
+    FontFamily::Named(Cow::Borrowed("WenQuanYi Zen Hei")),
+    FontFamily::Named(Cow::Borrowed("Droid Sans Fallback")),
+];
+
+/// The default [`FontStack`] used when a caller does not specify one.
+fn default_font_stack() -> FontStack<'static> {
+    FontStack::List(Cow::Borrowed(DEFAULT_FONT_STACK))
+}
 
 /// Horizontal alignment for laid-out paragraphs.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
@@ -110,9 +148,7 @@ impl TextShaper {
             .ranged_builder(&mut self.font_cx, text, 1.0, true);
         builder.push_default(StyleProperty::FontSize(options.font_size));
         builder.push_default(StyleProperty::FontWeight(FontWeight::NORMAL));
-        builder.push_default(StyleProperty::FontStack(FontStack::Single(
-            FontFamily::Generic(GenericFamily::SansSerif),
-        )));
+        builder.push_default(StyleProperty::FontStack(default_font_stack()));
         let mut layout = builder.build(text);
 
         let width = if options.max_width.is_finite() {
@@ -206,5 +242,41 @@ impl TextShaper {
             }
         }
         x
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Regression for the macOS-gate finding: CJK text must not render as
+    /// `.notdef` tofu. The default font stack lists Han-capable families after
+    /// the generic sans, so `你好世界` resolves to real glyph ids rather than 0.
+    ///
+    /// Gated to macOS because that is the platform this was reproduced on and
+    /// the one with a guaranteed-installed CJK face (PingFang / Hiragino). On
+    /// other platforms the assertion only holds if one of `DEFAULT_FONT_STACK`'s
+    /// names is installed, which is an environment property, not a code one.
+    #[test]
+    #[cfg(target_os = "macos")]
+    fn cjk_glyphs_are_not_tofu() {
+        let mut shaper = TextShaper::new();
+        let laid = shaper.shape("你好世界", &TextLayoutOptions::default());
+        assert!(
+            !laid.runs.is_empty(),
+            "expected at least one glyph run for CJK text"
+        );
+        let tofu = laid.runs.iter().flat_map(|r| &r.glyphs).any(|g| g.id == 0);
+        assert!(!tofu, "CJK glyphs resolved to .notdef (tofu box)");
+    }
+
+    /// The default stack still resolves plain Latin text to valid glyphs, so the
+    /// CJK fallback list did not disturb the common case.
+    #[test]
+    fn latin_glyphs_resolve() {
+        let mut shaper = TextShaper::new();
+        let laid = shaper.shape("Hello, world", &TextLayoutOptions::default());
+        let tofu = laid.runs.iter().flat_map(|r| &r.glyphs).any(|g| g.id == 0);
+        assert!(!tofu, "Latin glyphs resolved to .notdef");
     }
 }

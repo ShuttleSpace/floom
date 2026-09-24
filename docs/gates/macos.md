@@ -3,7 +3,7 @@
 | # | Item | Status | Evidence |
 |---|------|--------|----------|
 | 1 | Official example starts + basic interaction | pass | `examples/floem2-macos --features real`, hand-driven on the real window server. Startup: `GPU adapter: Apple M4 Pro (Metal)`, `widget tree mounted (4 nodes)`, window `x:720 y:183 w:480 h:352` on screen (320 pt of content plus a 32 pt title bar). Two clicks on the button produced `focus Some("TextField@2") -> Button@3` — the press hit-tested onto the button, not the field — followed by `pointer -> button click, counter = 1` and `counter = 2`, and the screenshot of the window reads `clicked 2 times`. |
-| 2 | IME Latin + one CJK | pass | Both halves in a single run, through the real input method (Pinyin), hand-driven. **Latin**: `text="n"` → `"ni"` → `"nih"` → `"niha"` → `"nihao"`, every line `composing=false`, then backspaced away one character at a time. **CJK**: `preedit="n"` → `"ni"` → `"ni h"` → `"ni ha"` → `"ni hao"` all with `composing=true` (a live composition, correctly *not* the field's text), then the commit — `text="你好" preedit="" composing=false`. That is OS IME → winit `WindowEvent::Ime(Preedit/Commit)` → `PlatformEvent::ImePreedit/ImeCommit` → runner → focused `TextField`: the same seam `docs/gates/android.md` records for Android, reached through a completely different backend. **The characters arrived; they are not drawn — see the open finding below.** |
+| 2 | IME Latin + one CJK | pass | Both halves in a single run, through the real input method (Pinyin), hand-driven. **Latin**: `text="n"` → `"ni"` → `"nih"` → `"niha"` → `"nihao"`, every line `composing=false`, then backspaced away one character at a time. **CJK**: `preedit="n"` → `"ni"` → `"ni h"` → `"ni ha"` → `"ni hao"` all with `composing=true` (a live composition, correctly *not* the field's text), then the commit — `text="你好" preedit="" composing=false`. That is OS IME → winit `WindowEvent::Ime(Preedit/Commit)` → `PlatformEvent::ImePreedit/ImeCommit` → runner → focused `TextField`: the same seam `docs/gates/android.md` records for Android, reached through a completely different backend. The characters arrive **and are drawn**: the field's preloaded `你好世界` now renders as real Han glyphs (screenshot), where it used to be four tofu boxes — see *CJK tofu* below. |
 | 3 | a11y label + Default action | fail | No OS bridge at all. `framework/floem-accessibility` + `DesktopAccessibilityAdapter` retain a semantics tree in-process, and the adapter advertises `AccessibilityCapabilities::NATIVE_BRIDGE`, but nothing in the floem-2 tree touches `NSAccessibility`: `grep -rn "NSAccessibility\|accessibilityElement\|setAccessibility" platform/ app/ framework/` is empty, and the AppKit-backed bridge that exists is in the **legacy** `src/accessibility/backend_nsaccessibility.rs`. Assistive tech sees the window and nothing inside it. |
 | 4 | Clipboard read/write | pass | On macOS `Clipboard` is `NSPasteboard`, not a `String` field (`platform/floem-platform-desktop/src/clipboard.rs`). The example writes `floem2-macos clipboard probe 3e7b` and reads it back (`clipboard write=true read_back=Some("…") matched=true`), and the same string was then read **out of the process entirely** by the driver: `pasteboard=floem2-macos clipboard probe 3e7b`. That cross-process read is the half a `String` field cannot fake. Two unit tests cover the round trip, including a CJK string, on a private pasteboard so the person's own clipboard is not disturbed. |
 | 5 | File pick / share-open as applicable | fail | There is no capability to exercise: `floem-platform` carries no dialog/file-picker trait and `Capability` has no bit for one — the v1 `src/platform/*` bridges were not carried over. True on every desktop target, not just this one. |
@@ -11,34 +11,45 @@
 | 7 | Focus + basic keyboard nav | fail | Focus exists and moves — but only under the pointer. Clicking the button moved it (`TextField@2 -> Button@3`), clicking the field moved it back, and the startup probe's `set_focus` shows as `focus None -> TextField@2`. A **Tab press moved nothing**: the focus trace prints every change and had no line for it. Traversal is implemented (`floem-focus::FocusScope::traverse(Forward/Backward)`, `host.focus_next()`/`focus_previous()`), but nothing binds `Tab`/`Shift+Tab` to it — `grep -rn "focus_next\|move_focus"` finds only the definitions and two headless tests. Related, reported by the person driving: the focused button shows no focus indicator, so even a wired-up traversal would be invisible. |
 | 8 | CI/target compile | pass | `cargo check` clean with zero warnings for `floem-platform-desktop --features winit`, `floem2-macos --features real` and `floem2-window --features real` on `aarch64-apple-darwin`. The `--features real` configuration is the one the run above used: same crate, same feature set, same target. |
 
-## Open finding — blocks sign-off, and is not one of the eight rows
+## CJK tofu — found by this spot-check, then fixed
 
-**CJK glyphs are not drawn: they render as empty boxes (tofu).**
+**CJK glyphs were drawn as empty boxes (`.notdef` tofu).** The repro needed no
+typing: `examples/floem2-macos` preloads `你好世界` into the text field, and the
+window screenshot showed four empty boxes where the four Han characters should
+be, while every ASCII run in the same window (`clicked 0 times`, `click me`, the
+title bar) rendered normally.
 
-The text pipeline hands the renderer the right characters (`text field
-text="你好世界"` is in the log) and the renderer has nothing to draw them with.
-The repro needs no typing: `examples/floem2-macos` preloads that string into the
-text field, and the window screenshot shows four empty boxes where the four Han
-characters should be — while every ASCII run in the same window (`clicked 0
-times`, `click me`, the title bar) renders normally.
+**Root cause.** Not the renderer, and not the font collection. A diagnostic
+(`floem-text/src/layout.rs`, `FontContext` + `shape("Hello 你好世界")`) showed:
 
-What that already rules out, and what it leaves:
+- The collection *does* contain Han-capable faces — `Hiragino Sans GB` among 606
+  families (`has HiraginoSansGB = true`).
+- parley splits the line into two runs (Latin, Han), so the fallback *is*
+  consulted — but both runs came back with the **same** font blob
+  (`data.len=2369592`) and the Han run's glyph ids were `[0, 0, 0, 0]`, i.e.
+  `.notdef`. Naming `Hiragino Sans GB` explicitly gave a different, larger blob
+  (`data.len=23522052`) and real glyph ids `[2886, 1914, 3415, 2232]`.
 
-- The skip path in `render/floem-renderer-vello/src/gpu.rs` drops a run whose
-  `font.data` is empty **silently — nothing at all is drawn**. Boxes were drawn,
-  so a font *was* selected and it produced glyphs: either `.notdef`, or a font
-  whose Han code points are boxes.
-- So the failure is at family selection / fallback for Han script, not at
-  upload. The candidates are a font collection that has no CJK-capable family
-  when the run is shaped (`floem-text/src/layout.rs` uses `FontContext::new()`,
-  which parley documents as *discovering system fonts if available*), or a
-  fallback that finds one but maps these code points to `.notdef`.
+So the failure was **family selection for Han script**: parley's automatic
+per-script fallback resolved the Han run back to the same Latin-covered generic
+sans (which has no Han coverage) instead of the available CJK face. (The skip
+path in `render/floem-renderer-vello/src/gpu.rs` — drop a run whose `font.data`
+is empty — was already ruled out: it draws *nothing*, whereas boxes were drawn.)
 
-It cannot be recorded as a `fail` row because the eight rows are fixed by
-`docs/superpowers/specs/2026-08-31-floem-industrial-1.0-design.md`, and it is a
-rendering defect rather than a macOS integration one — but **it blocks 1.0 for
-any user who types Chinese, Japanese or Korean**: the characters they typed are
-in the field and they cannot read them.
+**Fix** (`text/floem-text/src/layout.rs`): the default `FontStack` is now a
+*list* — the generic sans-serif first, then explicit CJK fallback families
+(`PingFang SC`, `Hiragino Sans GB`, `Microsoft YaHei`, `Noto Sans CJK SC`, …).
+This is the ordinary UI-toolkit approach to CJK: do not rely on OS auto-fallback,
+name the faces. Names that are not installed are ignored by the resolver, so one
+stack covers macOS / Windows / Linux / Android. A regression test
+(`cjk_glyphs_are_not_tofu`) asserts no Han glyph resolves to `.notdef`; it would
+have been red before the fix, when the ids were `[0, 0, 0, 0]`.
+
+This was not one of the eight rows (they are fixed by
+`docs/superpowers/specs/2026-08-31-floem-industrial-1.0-design.md`, and this was a
+rendering defect rather than a macOS integration one) — but it **blocked 1.0 for
+any user who types Chinese, Japanese or Korean**, so it is recorded here as a
+finding this gate surfaced, now closed.
 
 ## Sign-off
 
@@ -104,9 +115,13 @@ bar.
   implemented and tested headlessly, the *binding* does not exist, and the
   *indicator* does not exist either. Only the first is covered by a test today.
 - The tofu finding came out of this spot-check, not out of a test: the log says
-  the characters arrived and only a screenshot says they were not drawn. That is
+  the characters arrived and only a screenshot said they were not drawn. That is
   the argument for the pixel half of the gate — `floem-snapshot`'s golden frames
-  are ASCII, so nothing in CI would have noticed.
+  are ASCII, so nothing in CI would have noticed. It was then fixed and now has a
+  regression test, but the test only exists *because* the pixel check found it.
+- The fix is in shared text code (`floem-text`), so it is not macOS-specific:
+  any target whose font collection has a named fallback gets CJK for free. The
+  macOS gate is simply where it was found.
 - This is the second gate file to be filled in (Android was the first). The
   remaining files in this directory are untouched, which is not a claim that
   they are fine.
