@@ -54,6 +54,18 @@ impl AndroidJni {
         let mut env_guard = jni.vm.attach_current_thread().ok()?;
         // `AttachGuard` derefs mutably to `JNIEnv`; reborrow for the callback.
         let env: &mut jni::JNIEnv = &mut *env_guard;
-        Some(f(env, activity))
+        let result = f(env, activity);
+        // A failed JNI call leaves the Java exception *pending*. Best-effort
+        // callers swallow the `Err` and move on, but a pending exception is a
+        // landmine: the next JNI call on this thread makes ART abort the whole
+        // process ("No pending exception expected: …"). Concretely, an app
+        // without the optional `FloemAccessibilityView` Java class aborted on
+        // its first hardware key event, because the ClassNotFoundException
+        // thrown during a11y injection at startup was never cleared. Every
+        // `with_env` closure therefore gets a clean exception state on exit.
+        if env.exception_check().unwrap_or(false) {
+            env.exception_clear();
+        }
+        Some(result)
     }
 }
