@@ -116,6 +116,34 @@ else
   cargo ndk -t "$ABI" -o "$STAGE/lib" build $PROFILE_FLAG
 fi
 
+# ------------------------------------------- optional Java activity -> DEX
+# A Java activity subclass (e.g. `FloemNativeActivity`, which forwards
+# onActivityResult / onNewIntent to Floem) lets the app receive runtime
+# file-dialog results and runtime file shares. `cargo ndk` never touches Java,
+# so we compile it here with `javac` and turn the class into a `classes.dex`
+# with `d8` (falling back to the legacy `dx` if only that is present). Without
+# a Java subclass the manifest must keep `android:name="android.app.NativeActivity"`
+# and `android:hasCode="false"` — cold-start shares still work via `getIntent()`,
+# but runtime shares (onNewIntent) and file-dialog results are dropped.
+JAVA_SRC="$EXAMPLE_DIR/FloemNativeActivity.java"
+if [[ -f "$JAVA_SRC" ]]; then
+  info "compiling $(basename "$JAVA_SRC") -> classes.dex"
+  command -v javac >/dev/null || die "javac not found on PATH (required to build the Java activity)"
+  D8="$BUILD_TOOLS/d8"
+  [[ -x "$D8" ]] || D8="$BUILD_TOOLS/dx"
+  [[ -x "$D8" ]] || die "neither d8 nor dx found under $BUILD_TOOLS (required for classes.dex)"
+  JAVAC_OUT="$STAGE/java"
+  rm -rf "$JAVAC_OUT"; mkdir -p "$JAVAC_OUT"
+  # `--release 17` pins the class-file version (61) so the bundled `d8` (R8)
+  # accepts it; the host JDK may be far newer (Java 21/22/26) and emit a class
+  # version d8 rejects. The source only uses basic Android/Java APIs, so 17 is safe.
+  javac --release 17 -cp "$ANDROID_JAR" -d "$JAVAC_OUT" "$JAVA_SRC" \
+    || die "javac failed for $JAVA_SRC"
+  "$D8" --lib "$ANDROID_JAR" --output "$STAGE" \
+    "$JAVAC_OUT"/dev/floem/android/FloemNativeActivity.class \
+    || die "d8 failed to build classes.dex"
+fi
+
 SO="$STAGE/lib/$ABI/lib$LIB.so"
 [[ -f "$SO" ]] || die "expected $SO — is the crate a cdylib? (see [lib] crate-type in Cargo.toml)"
 info "bundling $(basename "$SO") ($(du -h "$SO" | cut -f1))"
@@ -128,9 +156,12 @@ info "aapt2 link"
   --min-sdk-version 24 --target-sdk-version 34 \
   -o "$STAGE/unsigned.apk")
 
-# aapt2 has no native-lib flag; add the (uncompressed) libs to the archive.
+# aapt2 has no native-lib flag; add the (uncompressed) libs AND optional dex.
 command -v zip >/dev/null || die "zip not found on PATH"
 (cd "$STAGE" && zip -0 -q -r unsigned.apk lib)
+if [[ -f "$STAGE/classes.dex" ]]; then
+  (cd "$STAGE" && zip -0 -q -r unsigned.apk classes.dex)
+fi
 
 info "zipalign"
 "$ZIPALIGN" -f -P 16 4 "$STAGE/unsigned.apk" "$STAGE/aligned.apk"

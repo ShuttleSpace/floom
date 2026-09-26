@@ -1,36 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Minimal AndroidManifest.xml for a Rust + Floem app built via `cargo ndk`.
+  AndroidManifest.xml for the Floem Android example (built via `cargo ndk` +
+  scripts/build-apk.sh — no Gradle/AGP).
 
-  The key requirements for a `native-activity` based Rust app:
-  - `android:hasCode="false"` on <application> (no Kotlin/Java Activity class).
-  - A single <activity> whose name matches the native-activity glue
-    (`android.app.NativeActivity`) and is enabled + exported.
-  - The `android:exported="true"` and the MAIN/LAUNCHER intent filter.
+  This example goes beyond the bare `native-activity` setup: it wires the
+  optional `FloemNativeActivity` Java subclass (see the inline note on the
+  <activity> and `FloemNativeActivity.java`) so the app can receive runtime
+  file shares (ACTION_SEND / SEND_MULTIPLE / ACTION_VIEW via onNewIntent) and
+  Storage Access Framework file-dialog results (onActivityResult). Because there
+  is now Java code, `android:hasCode="false"` is NOT set and `build-apk.sh`
+  compiles the class to a `classes.dex`.
 
-  Place this at `app/src/main/AndroidManifest.xml` in your Android Gradle
-  project, then copy the built `*.so` into `app/src/main/jniLibs/<abi>/`.
-
-  OPTIONAL — Android file dialogs + receiving shared files:
-  The default activity above works for everything EXCEPT:
-    - receiving file-picker results (`floem::platform::open_file` / `save_as`), and
-    - receiving files shared into a RUNNING app (ACTION_SEND / ACTION_VIEW via
-      `FloemNativeActivity.onNewIntent`).
-  (The launch intent — an app started by a share — works even with the default
-  `NativeActivity`, because Floem reads `Activity.getIntent()` at startup.)
-  To enable these, AND to make the app appear in the share sheet / "open with"
-  (see the extra <intent-filter> below):
-    1. Add `FloemNativeActivity.java` (in this folder) to your app's Java source
-       set as `dev/floem/android/FloemNativeActivity.java`.
-    2. Change the <activity> below to
-         android:name="dev.floem.android.FloemNativeActivity"
-       and remove `android:hasCode="false"` from <application>.
-    3. Rebuild with `cargo ndk` and repackage; the `floemOnActivityResult` and
-       `floemOnNewIntent` native methods are exported from the Rust `.so`.
-
-  NOTE: scope the <data android:mimeType="..."> in the share intent-filters to
-  the file types your app actually handles (e.g. "image/*", "text/*") instead of
-  "*/*" to avoid hijacking every share on the device.
+  The three intent-filters below make the app a share target and "open with"
+  target. Scope the `<data android:mimeType="...">` to the file types your app
+  actually handles instead of "*/*" to avoid hijacking every share on the device.
 -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.example.floem"
@@ -43,15 +26,28 @@
     <uses-feature android:glEsVersion="0x00030000" android:required="true" />
 
     <application
-        android:label="Floem Example"
-        android:hasCode="false"
-        android:exported="true">
+        android:label="Floem Example">
 
+        <!--
+          This Floem example uses the optional `FloemNativeActivity` Java
+          subclass directly so it can receive runtime file shares (ACTION_SEND /
+          ACTION_VIEW via onNewIntent) and file-dialog results (onActivityResult).
+          `build-apk.sh` compiles that class to a `classes.dex` and bundles it;
+          `android:hasCode="false"` must therefore NOT be set here.
+
+          For your own app: copy `FloemNativeActivity.java`, set
+          `android:name="dev.floem.android.FloemNativeActivity"`, drop
+          `android:hasCode="false"`, and rebuild with `cargo ndk` + a Java-capable
+          APK script. If you instead keep the default `android.app.NativeActivity`
+          (hasCode="false"), cold-start shares still work via `getIntent()`, but
+          runtime shares / file-dialog results are dropped.
+        -->
         <activity
-            android:name="android.app.NativeActivity"
+            android:name="dev.floem.android.FloemNativeActivity"
             android:label="Floem Example"
             android:configChanges="orientation|screenSize|keyboardHidden|density"
             android:exported="true"
+            android:launchMode="singleTop"
             android:theme="@android:style/Theme.NoTitleBar.Fullscreen">
             <meta-data
                 android:name="android.app.lib_name"

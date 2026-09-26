@@ -1,6 +1,6 @@
 # Android Backend (Phase 1 — Skeleton)
 
-> **Status:** Skeleton + **GPU surface wired + clipboard JNI bridge + context-menu trigger + external-URL opening + SAF file dialogs**.
+> **Status:** Skeleton + **GPU surface wired + clipboard JNI bridge + context-menu trigger + external-URL opening + SAF file dialogs + receiving shared files (ACTION_SEND / SEND_MULTIPLE / VIEW) wired**.
 > `floem` **compiles for `aarch64-linux-android`**, the Android entry point +
 > embedder capability preset are in place, the GPU renderer creates its surface
 > from the Android native window (`ANativeWindow*`) on both initial creation and
@@ -10,16 +10,17 @@
 > dialogs use the Storage Access Framework**. **On-device APK render is now
 > verified** (API 34 emulator, 2026-09-24): the packaged APK paints through
 > vello, taps reach widgets, and the clipboard round-trips. Still unverified:
-> file-dialog *results* (additionally need the optional `FloemNativeActivity`
-> `onActivityResult` hook — see below), and IME text *landing* in a widget (the
-> example has no editor — see below).
+> file-dialog *results* and runtime file *shares* (both now wired in the example:
+> `AndroidManifest.xml` uses `dev.floem.android.FloemNativeActivity` with
+> `launchMode="singleTop"`, and `scripts/build-apk.sh` compiles
+> `FloemNativeActivity.java` to a `classes.dex` automatically), and IME text
+> *landing* in a widget (the example has no editor — see below).
 >
 > **Drag & Drop:** the OS-level *file* drag-and-drop capability (`drag_drop`) is
 > `false` on Android **by design** — winit-android emits no drag events and Android
 > has no in-window OS file DnD. Floem's **in-app** drag system (`Event::Drag` /
 > `DragTracker`) is fully platform-agnostic and **already works on Android** through
 > the touch→`PointerEvent` pipeline with no backend code.
-> `FloemNativeActivity` `onActivityResult` hook — see below).
 
 This document tracks the Android backend for Floem, built on top of the
 experimental [`embedder`](../src/embedder) protocol from
@@ -185,9 +186,15 @@ uses a dedicated, Android-shaped API rather than pretending to be file DnD.
    required. If the handler isn't registered yet, the parsed files are queued and
    flushed the moment `set_shared_files_handler` is called.
 2. **Runtime intent** (the app was *already running* and the user shared again).
-   The app's `FloemNativeActivity` must override `onNewIntent` and forward the
-   `Intent` to `floem::platform::dispatch_android_intent` (same JNI-bridge pattern
-   as the file-dialog result hook). See `examples/android/FloemNativeActivity.java`.
+   `FloemNativeActivity` overrides `onNewIntent` and forwards the `Intent` to
+   `floem::platform::dispatch_android_intent` (same JNI-bridge pattern as the
+   file-dialog result hook). The example wires this directly: its
+   `AndroidManifest.xml` uses `dev.floem.android.FloemNativeActivity` with
+   `android:launchMode="singleTop"` (so `onNewIntent` fires when the app is already
+   at the top), and `scripts/build-apk.sh` compiles `FloemNativeActivity.java` to a
+   `classes.dex` and bundles it — no separate Gradle/Java build step. To adopt it in
+   your own app, copy the subclass + manifest changes and rebuild (see
+   `examples/android/FloemNativeActivity.java`).
 
 **Intent shapes handled:** `ACTION_SEND` (single file in `EXTRA_STREAM`),
 `ACTION_SEND_MULTIPLE` (`EXTRA_STREAM` as an `ArrayList`), and `ACTION_VIEW`
@@ -246,7 +253,7 @@ supports, differing from `BackendCapabilities::winit_default()` in:
 | `window_title`    | ✓       | ✗       | No Android title bar.                        |
 | `drag_drop`       | ✓       | ✗       | **OS-level *file* drag-and-drop only.** The winit-android backend emits no `DragDropped`/`DragEntered`/`DragMoved`/`DragLeft` events, and Android's app sandbox has no in-window OS file DnD. Floem's *in-app* drag system (`Event::Drag` / `DragTracker`) is independent of this capability and **already works on Android** (see below). Receiving a shared file from another app is done via `Intent`/SAF, not `DragDropEvent`. |
 | `file_dialog`     | ✓       | ✓       | SAF via `startActivityForResult` (needs the optional `FloemNativeActivity` `onActivityResult` hook for results). |
-| `receive_files`   | ✗       | ✓       | Android `ACTION_SEND` / `ACTION_VIEW` intents delivered as `content://` URIs via `floem::platform::set_shared_files_handler`. Launch intent works with the default `NativeActivity`; runtime `onNewIntent` needs `FloemNativeActivity`. |
+| `receive_files`   | ✗       | ✓       | Android `ACTION_SEND` / `ACTION_VIEW` intents delivered as `content://` URIs via `floem::platform::set_shared_files_handler`. Both launch and runtime delivery are wired in the example (`FloemNativeActivity` + `launchMode="singleTop"` + `classes.dex` built by `build-apk.sh`); the default `NativeActivity` only handles the launch intent. |
 | `clipboard`       | ✓       | ✓       | JNI bridge wired (`Clipboard::init_android`); round-trip verified on device 2026-09-24 (write → read after focus → visible in the system paste chip). |
 | `context_menu`    | ✓       | ✓       | In-UI renderer (no muda native menu).        |
 | `native_menu`     | —       | ✗       | muda does not target Android.                |
@@ -355,19 +362,19 @@ scripts/build-apk.sh -t arm64-v8a          # -> target/android/*.apk
    External URL opening (`open_url` → `ACTION_VIEW` intent) is fire-and-forget
    and needs no extra app wiring. File dialogs (`open_file` / `save_as` via SAF)
    launch the picker without extra wiring, but **receiving the result** requires
-   the optional `FloemNativeActivity` Java subclass (shipped in
-   `examples/android/FloemNativeActivity.java`) so its `onActivityResult` can
-   forward to `floem::platform::dispatch_activity_result`. The default example
-   manifest uses `android.app.NativeActivity` (works for everything except
-   result delivery); swap to `dev.floem.android.FloemNativeActivity` + add the
-   Java file to enable file-dialog results. Selected `content://` URIs are
+   the `FloemNativeActivity` Java subclass so its `onActivityResult` can forward
+   to `floem::platform::dispatch_activity_result`. The example is wired directly:
+   `AndroidManifest.xml` uses `dev.floem.android.FloemNativeActivity` and
+   `scripts/build-apk.sh` compiles `FloemNativeActivity.java` to a `classes.dex`
+   automatically — no manual Java build step. Selected `content://` URIs are
    returned as `FileInfo.path` entries (not filesystem paths).
 5. **`cargo ndk` APK build + device run** is unverified in CI here (no
    `cargo-ndk`, no NDK, no Android rustup target in this environment); the
    example is provided as a template. The **packaging** half
-   (`aapt2`/`zipalign`/sign) *is* verified: `scripts/build-apk.sh --skip-build`
-   produces a well-formed, page-aligned APK (checked with `aapt2 dump badging`
-   + `zipalign -c`). The **Rust** half still needs an NDK.
+   (`aapt2`/`zipalign`/sign) *is* verified: `scripts/build-apk.sh` produces a
+   well-formed, page-aligned APK that also compiles `FloemNativeActivity.java`
+   to a `classes.dex` and bundles it (checked with `aapt2 dump badging` +
+   `zipalign -c` + `dexdump`). The **Rust** half still needs an NDK.
 6. **Drag & Drop — resolved by design, not a gap.** The `drag_drop` capability
    stays `false` on Android because the winit-android backend emits no
    `DragDropped`/`DragEntered`/`DragMoved`/`DragLeft` events and Android has no
@@ -500,10 +507,18 @@ Verified on the emulator with `adb shell input keyevent 61` (TAB): the
       via `startActivityForResult` (`src/platform/android_file.rs`); public
       `dispatch_activity_result` entry + example `FloemNativeActivity.java` native
       bridge for result delivery; `file_dialog` capability true.
+- [x] Android receiving shared files wired: `set_shared_files_handler` +
+      `dispatch_android_intent` handle ACTION_SEND / SEND_MULTIPLE / VIEW;
+      example `AndroidManifest.xml` uses `FloemNativeActivity` +
+      `launchMode="singleTop"`, and `build-apk.sh` compiles the Java subclass to
+      `classes.dex` (verified present in the APK via `aapt2 dump` + `dexdump`).
 - [x] Hardware-key tab navigation: Android `KeyboardInput` carries
       `Key::Named(NamedKey::Tab)` (control chars fall back to the keycode named
       mapping); `focus_visible` ring verified on the emulator via
       `input keyevent 61` + pixel probe. See *Hardware keys* above.
-- [ ] Android APK build + on-device render (needs `cargo-ndk` + device).
-- [ ] On-device verification of external-URL + file-dialog round-trips
-      (incl. the optional `FloemNativeActivity` `onActivityResult` hook).
+- [x] Android APK packaging verified (`build-apk.sh` → well-formed APK with
+      `classes.dex` + `.so`; `aapt2 dump badging` + `zipalign -c` + `dexdump`);
+      on-device render verified 2026-09-24.
+- [ ] On-device verification of external-URL + file-dialog results +
+      shared-file round-trips (the wiring is in place; needs the emulator/device,
+      currently offline — see *Hardware keys* re: emulator state).
