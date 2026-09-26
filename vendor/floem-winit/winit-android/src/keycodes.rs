@@ -228,9 +228,22 @@ pub fn to_logical(key_char: Option<KeyMapChar>, keycode: Keycode) -> Key {
     let native = NativeKey::Android(keycode.into());
 
     match key_char {
-        Some(KeyMapChar::Unicode(c)) => Key::Character(smol_str::SmolStr::from_iter([c])),
+        // Control characters are NOT text: Android's `KeyCharacterMap` reports
+        // them for non-character keys — Tab maps to '\t', Enter to '\n',
+        // Escape to '\x1b', Backspace to '\x08'. Turning those into
+        // `Key::Character(..)` makes the logical key diverge from every other
+        // winit backend (which report `NamedKey::Tab` / `NamedKey::Enter`), and
+        // silently breaks consumers that match on the named key — Tab focus
+        // navigation being the most visible one. Fall through to the
+        // keycode-based named mapping instead.
+        //
+        // Note: U+0020 (space) is intentionally excluded — winit removed
+        // `NamedKey::Space`, so `Key::Character(" ")` is the correct value.
+        Some(KeyMapChar::Unicode(c)) if !c.is_control() => {
+            Key::Character(smol_str::SmolStr::from_iter([c]))
+        },
         Some(KeyMapChar::CombiningAccent(c)) => Key::Dead(Some(c)),
-        None | Some(KeyMapChar::None) => match keycode {
+        _ => match keycode {
             // Using `BrowserHome` instead of `GoHome` according to
             // https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent/key/Key_Values
             Home => Key::Named(NamedKey::BrowserHome),

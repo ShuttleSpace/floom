@@ -449,6 +449,30 @@ its ancient `targetSdk` makes `ime enable` refuse it) — it reaches the field
 through the same `InputConnection` path a real CJK keyboard uses, which is what
 makes it evidence.
 
+## Hardware keys — named keys must survive the key-character map
+
+`KeyCharacterMap` (the `.kcm` tables) maps *every* hardware keycode to a
+character — including keys that are not text. Tab maps to `'\t'`, Enter to
+`'\n'`, Escape to `'\x1b'`, Backspace to `'\x08'`. The Android backend's
+`to_logical` used to turn any `KeyMapChar::Unicode` into `Key::Character(..)`
+unconditionally, so Tab arrived in floem as `Key::Character("\t")` — never
+`Key::Named(NamedKey::Tab)` — and tab focus navigation silently never fired
+(buttons also lost their keyboard-activation sibling keys, since Enter /
+Escape collapsed the same way).
+
+Fix (`vendor/floem-winit/winit-android/src/keycodes.rs`): control characters
+(`char::is_control()`) no longer become `Key::Character`; they fall through to
+the keycode-based named mapping (`Tab → NamedKey::Tab`, `Enter → NamedKey::Enter`,
+…). U+0020 (space) is deliberately excluded — winit removed `NamedKey::Space`,
+`Key::Character(" ")` is the correct cross-platform value, and space was never
+a control character anyway.
+
+Verified on the emulator with `adb shell input keyevent 61` (TAB): the
+`focus_visible` ring paints on the `+` button (1855 blue px) and advances to
+`-` on the next press (ring bbox moves x 419→607), cycling per
+`element_tab_navigation`. Screenshots: `docs/android/screenshots/clean_before.png`,
+`clean_after_tab.png`, `clean_after_tab2.png`.
+
 ## Verification checklist
 
 - [x] `cargo check -p floem --target aarch64-linux-android` — zero errors.
@@ -476,6 +500,10 @@ makes it evidence.
       via `startActivityForResult` (`src/platform/android_file.rs`); public
       `dispatch_activity_result` entry + example `FloemNativeActivity.java` native
       bridge for result delivery; `file_dialog` capability true.
+- [x] Hardware-key tab navigation: Android `KeyboardInput` carries
+      `Key::Named(NamedKey::Tab)` (control chars fall back to the keycode named
+      mapping); `focus_visible` ring verified on the emulator via
+      `input keyevent 61` + pixel probe. See *Hardware keys* above.
 - [ ] Android APK build + on-device render (needs `cargo-ndk` + device).
 - [ ] On-device verification of external-URL + file-dialog round-trips
       (incl. the optional `FloemNativeActivity` `onActivityResult` hook).

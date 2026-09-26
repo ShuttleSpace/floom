@@ -36,9 +36,13 @@ fn app_view(shared_files: RwSignal<Vec<String>>) -> impl IntoView {
     let mut counter = RwSignal::new(0);
     Stack::vertical((
         Stack::horizontal((
-            Button::new("+").action(move || counter += 1),
+            Button::new("+").action(move || counter += 1).style(|s| {
+                s.focus_visible(|s| s.border(3.0).border_color(Color::from_rgb8(0, 120, 255)))
+            }),
             Label::derived(move || format!("Value: {counter}")),
-            Button::new("-").action(move || counter -= 1),
+            Button::new("-").action(move || counter -= 1).style(|s| {
+                s.focus_visible(|s| s.border(3.0).border_color(Color::from_rgb8(0, 120, 255)))
+            }),
         )),
         Label::derived(move || {
             let files = shared_files.get();
@@ -49,7 +53,13 @@ fn app_view(shared_files: RwSignal<Vec<String>>) -> impl IntoView {
             }
         }),
     ))
-    .style(|s| s.size_full().flex_col().items_center().justify_center().gap(10))
+    .style(|s| {
+        s.size_full()
+            .flex_col()
+            .items_center()
+            .justify_center()
+            .gap(10)
+    })
 }
 
 // Native bridge for `FloemNativeActivity.onActivityResult`. The Java class
