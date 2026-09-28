@@ -21,7 +21,12 @@ use peniko::{
 use recording::{RecordedCommand, RecordedLayer, Recording};
 use resvg::tiny_skia::StrokeDash;
 use rustc_hash::FxHashMap;
+#[cfg(not(target_env = "ohos"))]
 use softbuffer::{Context, Surface};
+#[cfg(target_env = "ohos")]
+mod wgpu_present;
+#[cfg(target_env = "ohos")]
+use wgpu_present::WgpuPresent;
 use std::cell::RefCell;
 use std::num::NonZeroU32;
 use std::sync::Arc;
@@ -868,9 +873,15 @@ impl Layer {
 }
 
 pub struct TinySkiaRenderer<W> {
+    #[cfg(not(target_env = "ohos"))]
     #[allow(unused)]
     context: Context<W>,
+    #[cfg(not(target_env = "ohos"))]
     surface: Surface<W, W>,
+    #[cfg(target_env = "ohos")]
+    present: WgpuPresent,
+    #[cfg(target_env = "ohos")]
+    _window: std::marker::PhantomData<W>,
     cache_color: CacheColor,
     recording: Recording,
     transform: Affine,
@@ -1025,6 +1036,7 @@ impl<W: raw_window_handle::HasWindowHandle + raw_window_handle::HasDisplayHandle
         Self::replay_layer(self.recording.root(), raster, &[], width, height);
     }
 
+    #[cfg(not(target_env = "ohos"))]
     pub fn new(window: W, width: u32, height: u32, scale: f64, font_embolden: f32) -> Result<Self>
     where
         W: Clone,
@@ -1054,14 +1066,63 @@ impl<W: raw_window_handle::HasWindowHandle + raw_window_handle::HasDisplayHandle
         })
     }
 
+    /// OHOS: softbuffer has no OHOS backend, so this constructor cannot work
+    /// there; use [`Self::new_wgpu_surface`] instead.
+    #[cfg(target_env = "ohos")]
+    pub fn new(
+        _window: W,
+        _width: u32,
+        _height: u32,
+        _scale: f64,
+        _font_embolden: f32,
+    ) -> Result<Self> {
+        Err(anyhow!(
+            "softbuffer presentation is unavailable on OHOS; \
+             use new_wgpu_surface instead"
+        ))
+    }
+
+    /// OHOS presentation path: softbuffer has no OHOS backend, so the
+    /// rasterized pixels are presented through the wgpu GLES surface instead.
+    #[cfg(target_env = "ohos")]
+    pub fn new_wgpu_surface(
+        window: W,
+        gpu_resources: floem_legacy_renderer::gpu_resources::GpuResources,
+        surface: wgpu::Surface<'static>,
+        width: u32,
+        height: u32,
+        scale: f64,
+        font_embolden: f32,
+    ) -> Result<Self> {
+        let _ = window;
+        let present = WgpuPresent::new(gpu_resources, surface, width, height)
+            .map_err(|err| anyhow!("unable to create wgpu present: {err}"))?;
+        let main_layer = Layer::new_root(width, height)?;
+        Ok(Self {
+            present,
+            _window: std::marker::PhantomData,
+            recording: Recording::new(),
+            transform: Affine::IDENTITY,
+            window_scale: scale,
+            capture: false,
+            cache_color: CacheColor(false),
+            layers: vec![main_layer],
+            last_presented_bounds: None,
+            font_embolden,
+        })
+    }
+
     pub fn resize(&mut self, width: u32, height: u32, scale: f64) {
         if width != self.layers[0].pixmap.width() || height != self.layers[0].pixmap.height() {
+            #[cfg(not(target_env = "ohos"))]
             self.surface
                 .resize(
                     NonZeroU32::new(width).unwrap_or(NonZeroU32::new(1).unwrap()),
                     NonZeroU32::new(height).unwrap_or(NonZeroU32::new(1).unwrap()),
                 )
                 .expect("failed to resize surface");
+            #[cfg(target_env = "ohos")]
+            self.present.resize(width, height);
             self.layers[0] = Layer::new_root(width, height).expect("unable to create layer");
             self.last_presented_bounds = None;
         }
@@ -1520,6 +1581,17 @@ impl<W: raw_window_handle::HasWindowHandle + raw_window_handle::HasDisplayHandle
             }));
         }
 
+        #[cfg(target_env = "ohos")]
+        {
+            let pixmap = &self.layers[0].pixmap;
+            self.present
+                .present(pixmap)
+                .expect("failed to present the wgpu surface");
+            self.last_presented_bounds = self.layers[0].draw_bounds;
+        }
+
+        #[cfg(not(target_env = "ohos"))]
+        {
         let mut buffer = self
             .surface
             .buffer_mut()
@@ -1586,6 +1658,7 @@ impl<W: raw_window_handle::HasWindowHandle + raw_window_handle::HasDisplayHandle
         }
 
         self.last_presented_bounds = current_bounds;
+        }
 
         None
     }

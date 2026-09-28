@@ -17,3 +17,8 @@ rustc-hash.workspace = true
 anyhow = "1.0"
 floem-legacy-renderer = { path = "../floem-renderer", version = "0.2.0" }
 softbuffer = "0.4.1"
+
+# Presenting the CPU-rasterized pixels on OHOS goes through a wgpu GLES
+# surface blit (softbuffer has no OHOS backend).
+[target.'cfg(target_env = "ohos")'.dependencies]
+wgpu = { workspace = true }

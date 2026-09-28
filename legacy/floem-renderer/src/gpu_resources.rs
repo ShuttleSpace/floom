@@ -51,9 +51,21 @@ impl GpuResources {
         backends: Option<Backends>,
         window: Arc<dyn Window>,
     ) -> Receiver<Result<(Self, wgpu::Surface<'static>), GpuResourceError>> {
+        let flags = {
+            let flags = InstanceFlags::from_env_or_default();
+            // The DevEco emulator's DGLES driver segfaults inside
+            // `d_eglCreateDebugMessageBuffer` (during `eglCreateContext`) when
+            // an EGL debug callback is registered (`eglDebugMessageControlKHR`,
+            // gated on VALIDATION) or a debug context flag is requested (gated
+            // on DEBUG). Those debug-only driver paths take down the whole
+            // process, so keep them off on OHOS.
+            #[cfg(target_env = "ohos")]
+            let flags = flags & !(InstanceFlags::VALIDATION | InstanceFlags::DEBUG);
+            flags
+        };
         let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor {
             backends: Backends::from_env().or(backends).unwrap_or(Backends::all()),
-            flags: InstanceFlags::from_env_or_default(),
+            flags,
             ..Default::default()
         });
         // Channel passing to do async out-of-band within the winit event_loop since wasm can't
@@ -91,6 +103,14 @@ impl GpuResources {
                         .request_device(&wgpu::DeviceDescriptor {
                             label: None,
                             required_features,
+                            // Request the adapter's own limits: GLES adapters
+                            // (e.g. the DevEco emulator's DGLES) report 0 for
+                            // compute limits and cannot satisfy the desktop
+                            // defaults, failing device creation with
+                            // "'max_compute_workgroups_per_dimension' ... is
+                            // better than allowed 0". Requesting what the
+                            // adapter reports always succeeds.
+                            required_limits: adapter.limits(),
                             ..Default::default()
                         })
                         .await
