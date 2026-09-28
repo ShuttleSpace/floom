@@ -538,6 +538,19 @@ impl Window {
 
         let view_controller = WinitViewController::new(mtm, &ios_attributes, &view);
         let window = WinitUIWindow::new(mtm, &window_attributes, frame, &view_controller);
+        // iOS 26+ SDK: windows must participate in the (mandatory) scene
+        // session or they never appear. If the scene is already connected,
+        // attach it directly; otherwise (the `Resumed` notification fires
+        // BEFORE `scene:willConnectToSession:` on iOS 26+) hand the window to
+        // the app delegate so the scene delegate attaches it later.
+        if let Some(scene) = crate::app_delegate::current_window_scene(mtm) {
+            window.setWindowScene(Some(&scene));
+        } else {
+            // No scene session (yet): remember the window so the scene
+            // delegate can attach the scene when UIKit connects it (iOS 26+
+            // delivers `Resumed` before `scene:willConnectToSession:`).
+            crate::app_delegate::register_early_window(window.clone());
+        }
         window.makeKeyAndVisible();
 
         let inner = Inner {

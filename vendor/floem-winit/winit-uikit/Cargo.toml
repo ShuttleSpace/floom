@@ -58,6 +58,14 @@ objc2-ui-kit = { workspace = true, features = [
     "UIOrientation",
     "UIPanGestureRecognizer",
     "UIPinchGestureRecognizer",
+    # Scene lifecycle (mandatory for apps linked against the iOS 26+ SDK —
+    # UIKit traps at launch with "no scene lifecycle adoption" otherwise).
+    "UIScene",
+    "UISceneConfiguration",
+    "UISceneDefinitions",
+    "UISceneOptions",
+    "UISceneSession",
+    "UIWindowScene",
     "UIResponder",
     "UIRotationGestureRecognizer",
     "UIScreen",

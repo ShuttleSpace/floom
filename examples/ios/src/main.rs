@@ -31,7 +31,12 @@ fn main() {
 #[cfg(target_os = "ios")]
 fn app_view() -> impl floem::view::IntoView {
     let counter = RwSignal::new(0);
-    let text = RwSignal::new(String::new());
+    // Preload a non-ASCII string: this is the *rendering* half of the IME/CJK
+    // question. Whether a person can type characters in is a property of the
+    // input bridge (driven from outside the app); whether the glyphs are drawn
+    // rather than left as tofu boxes is a property of the text stack, and it is
+    // visible in a screenshot without any input at all.
+    let text = RwSignal::new(String::from("你好世界"));
 
     Stack::vertical((
         // A small counter to prove pointer input + redraw work.

@@ -14,12 +14,17 @@ implemented (Steps 1–5):
   makes a hidden `UITextField` first responder and summons the iOS keyboard;
   typed text is re-injected into Floem as `Event::Ime`.
 
-> Status: **skeleton**. The app compiles for `aarch64-apple-ios` and
-> `aarch64-apple-ios-sim`. The full app-bundle / signing / on-device run is the
-> remaining integration step (see Build below). Features **not yet implemented**
-> are still flagged `false` in `ios_capabilities()`: external URL open (Step 6),
-> file dialog (Step 7), receiving shared files (Step 8), and safe-area insets
-> (Step 9). See [`docs/ios.md`](../../docs/ios.md).
+> Status: **runs on the iOS Simulator** (verified 2026-09-27 — see
+> [`docs/gates/ios.md`](../../docs/gates/ios.md) for the per-item evidence with
+> screenshots). The backend steps 1–10 are implemented and compile for
+> `aarch64-apple-ios` and `aarch64-apple-ios-sim`; `scripts/build.sh
+> floem-ios-example ios` now assembles a real, installable `.app`. Two
+> *rendering/robustness* defects remain and are recorded, not hidden: **CJK
+> characters render as tofu** (the text stack finds no Han-capable face on iOS —
+> Latin is unaffected), and **a11y elements report zero frames** (labels reach
+> the OS but VoiceOver cannot place them). `ios_capabilities().accessibility`
+> is still `false` (VoiceOver is Phase 4). See
+> [`docs/ios.md`](../../docs/ios.md) for the design log.
 
 ## Prerequisites
 
@@ -49,17 +54,58 @@ Xcode:
 open floem-ios-example.xcodeproj
 ```
 
-## Run in the Simulator
+## iOS 26+ scene lifecycle is mandatory
 
-In Xcode, pick the **iPhone Simulator** destination and press Run, or from the
-command line build the simulator target directly:
+Apps built with the iOS 26+ SDK **must** adopt the UIKit scene lifecycle or
+they crash at launch (`EXC_BREAKPOINT` in
+`___UIApplicationEvaluateRuntimeIssueForNoSceneLifecycleAdoption`). After
+generating the Xcode project, make sure the built `.app`'s `Info.plist`
+contains:
 
-```bash
-cargo xcode build --target aarch64-apple-ios-sim
+```xml
+<key>UIApplicationSceneManifest</key>
+<dict>
+  <key>UIApplicationSupportsMultipleScenes</key><false/>
+</dict>
 ```
 
-The counter buttons, long-press context menu, and the text field (soft
-keyboard) should all respond.
+(`cargo-xcode` does not add this key itself — patch it with `PlistBuddy` or an
+Xcode build phase when assembling the bundle.)
+
+The vendored `winit-uikit` already provides the code side: the app delegate
+returns a `UISceneConfiguration` with a `SceneDelegate`, and windows created
+before the scene connects (iOS 26+ delivers `Resumed` *before*
+`scene:willConnectToSession:`) are parked in an early-window registry and
+attached to the `UIWindowScene` when UIKit connects it. Without that registry
+the window never joins a scene and the app renders a black screen.
+
+## Run in the Simulator
+
+The working path builds the Rust binary for `aarch64-apple-ios-sim` and
+assembles + ad-hoc signs an installable `.app` (no Xcode project target needed):
+
+```bash
+./scripts/build.sh floem-ios-example ios      # prints ARTIFACT=…/target/ios/floem-ios-example.app
+xcrun simctl boot <udid>                       # e.g. xcrun simctl list devices | grep iPhone
+xcrun simctl install <udid> target/ios/floem-ios-example.app
+xcrun simctl launch  <udid> dev.floem.floem.ios.example
+xcrun simctl io <udid> screenshot /tmp/ios-launch.png
+```
+
+The counter buttons and the text field (soft keyboard) respond. To *drive* the
+simulator from the command line — `simctl` has no tap/type command — use `idb`
+(the companion server plus the `fb-idb` CLI):
+
+```bash
+idb_companion --udid <udid> --grpc-port 10882 &
+idb --companion localhost:10882 ui tap 156 415        # coordinates in POINTS, not pixels
+idb --companion localhost:10882 ui text "hello"
+idb --companion localhost:10882 ui describe-all       # a11y tree
+```
+
+Note the coordinates are in **points** on the 402×874 pt screen (the screenshot
+is 1206×2622 px at 3×). The clipboard can be checked from outside the process
+with `xcrun simctl pbpaste` / `pbcopy <udid>`.
 
 ## Run on a device
 
