@@ -19,6 +19,16 @@ use winit::{
 };
 
 use super::{APP_UPDATE_EVENTS, AppConfig, AppEventCallback, AppUpdateEvent, UserEvent};
+
+// TEMPORARY DIAGNOSTIC - remove before committing.
+#[cfg(target_arch = "wasm32")]
+pub(crate) fn wit_log(msg: &str) {
+    web_sys::console::log_1(&format!("WIT-APP {}", msg).into());
+}
+// TEMPORARY DIAGNOSTIC - remove before committing.
+#[cfg(not(target_arch = "wasm32"))]
+fn wit_log(_msg: &str) {}
+
 #[cfg(not(feature = "skia"))]
 use crate::context::PaintState;
 use crate::embedder::{EmbedderEvent, VecCommandSink};
@@ -36,7 +46,7 @@ use crate::{
     window::{WindowConfig, handle::WindowHandle, id::process_window_updates},
 };
 
-#[cfg(not(any(target_os = "android", target_os = "ios", target_env = "ohos")))]
+#[cfg(not(any(target_os = "android", target_os = "ios", target_env = "ohos", target_arch = "wasm32")))]
 struct PendingContextMenu {
     window_id: WindowId,
     menu: super::MenuWrapper,
@@ -47,7 +57,7 @@ pub(crate) struct ApplicationHandle {
     window_handles: HashMap<winit::window::WindowId, WindowHandle>,
     timers: HashMap<TimerToken, Timer>,
     animating_windows: std::collections::HashSet<winit::window::WindowId>,
-    #[cfg(not(any(target_os = "android", target_os = "ios", target_env = "ohos")))]
+    #[cfg(not(any(target_os = "android", target_os = "ios", target_env = "ohos", target_arch = "wasm32")))]
     pending_context_menus: Vec<PendingContextMenu>,
     pub(crate) event_listener: Option<Box<AppEventCallback>>,
     pub(crate) gpu_resources: Option<GpuResources>,
@@ -62,7 +72,7 @@ impl ApplicationHandle {
             window_handles: HashMap::new(),
             timers: HashMap::new(),
             animating_windows: std::collections::HashSet::new(),
-            #[cfg(not(any(target_os = "android", target_os = "ios", target_env = "ohos")))]
+            #[cfg(not(any(target_os = "android", target_os = "ios", target_env = "ohos", target_arch = "wasm32")))]
             pending_context_menus: Vec::new(),
             event_listener: None,
             gpu_resources: None,
@@ -71,6 +81,14 @@ impl ApplicationHandle {
     }
 
     pub(crate) fn handle_user_event(&mut self, event_loop: &dyn ActiveEventLoop, event: UserEvent) {
+        // TEMPORARY DIAGNOSTIC - remove before committing.
+        wit_log(match &event {
+            UserEvent::AppUpdate => "HE AppUpdate >",
+            UserEvent::Idle => "HE Idle >",
+            UserEvent::QuitApp => "HE QuitApp >",
+            UserEvent::Reopen { .. } => "HE Reopen >",
+            _ => "HE other >",
+        });
         match event {
             UserEvent::AppUpdate => {
                 self.handle_update_event(event_loop);
@@ -92,6 +110,8 @@ impl ApplicationHandle {
             }
             #[cfg(not(feature = "skia"))]
             UserEvent::GpuResourcesUpdate { window_id } => {
+                #[cfg(target_env = "ohos")]
+                floem_winit_ohos::deveco_log("app: GpuResourcesUpdate received");
                 let handle = self.window_handles.get_mut(&window_id).unwrap();
                 if let PaintState::PendingGpuResources {
                     window,
@@ -100,7 +120,11 @@ impl ApplicationHandle {
                     renderer,
                 } = &handle.paint_state
                 {
-                    let (gpu_resources, surface) = rx.recv().unwrap().unwrap();
+                    let (gpu_resources, surface) = match rx.recv() {
+                        Ok(Ok(resources)) => resources,
+                        Ok(Err(err)) => panic!("GPU resources initialization failed: {err}"),
+                        Err(err) => panic!("GPU resources channel closed: {err}"),
+                    };
                     let renderer = crate::paint::Renderer::new(
                         window.clone(),
                         gpu_resources.clone(),
@@ -117,7 +141,7 @@ impl ApplicationHandle {
                     panic!("Sent a gpu resource update after it had already been initialized");
                 }
             }
-            #[cfg(not(any(target_os = "android", target_os = "ios", target_env = "ohos")))]
+            #[cfg(not(any(target_os = "android", target_os = "ios", target_env = "ohos", target_arch = "wasm32")))]
             UserEvent::ShowContextMenu {
                 window_id,
                 menu,
@@ -138,9 +162,13 @@ impl ApplicationHandle {
                 }
             }
         }
+        // TEMPORARY DIAGNOSTIC - remove before committing.
+        wit_log("HE <");
     }
 
     pub(crate) fn handle_update_event(&mut self, event_loop: &dyn ActiveEventLoop) {
+        // TEMPORARY DIAGNOSTIC - remove before committing.
+        wit_log("HUE >");
         Application::clear_update_posted();
 
         let events = APP_UPDATE_EVENTS.with(|events| {
@@ -248,11 +276,19 @@ impl ApplicationHandle {
         }
 
         let start = Instant::now();
+        // TEMPORARY DIAGNOSTIC - remove before committing.
+        wit_log("HUE windows-budget >");
         let mut any_work_remaining =
             self.handle_updates_for_all_windows_budgeted(start, Self::UPDATE_BUDGET);
+        // TEMPORARY DIAGNOSTIC - remove before committing.
+        wit_log("HUE windows-budget <");
 
         if start.elapsed() < Self::UPDATE_BUDGET && Runtime::has_pending_work() {
+            // TEMPORARY DIAGNOSTIC - remove before committing.
+            wit_log("HUE drain-pending >");
             Runtime::drain_pending_work();
+            // TEMPORARY DIAGNOSTIC - remove before committing.
+            wit_log("HUE drain-pending <");
             if Runtime::has_pending_work() {
                 any_work_remaining = true;
             }
@@ -261,6 +297,8 @@ impl ApplicationHandle {
         if any_work_remaining {
             self.request_update();
         }
+        // TEMPORARY DIAGNOSTIC - remove before committing.
+        wit_log("HUE <");
     }
 
     pub(crate) fn handle_window_event(
@@ -823,7 +861,10 @@ impl ApplicationHandle {
                 any_work_remaining = true;
             }
 
-            if handle.window_state.request_paint && handle.can_render_now() {
+            // TEMPORARY DIAGNOSTIC - remove before committing.
+            let can_render = handle.can_render_now();
+            let should_paint = handle.window_state.request_paint;
+            if should_paint && can_render {
                 handle.window.request_redraw();
                 let frame_interval = handle
                     .window
@@ -832,7 +873,16 @@ impl ApplicationHandle {
                     .and_then(|v| v.refresh_rate_millihertz())
                     .map(|mhz| Duration::from_nanos(1_000_000_000_000 / mhz.get() as u64))
                     .unwrap_or(Duration::from_millis(8));
-                handle.render_frame_if_due(frame_interval);
+                let painted = handle.render_frame_if_due(frame_interval);
+                // TEMPORARY DIAGNOSTIC - remove before committing.
+                wit_log(&format!(
+                    "HUBU done={done} paint={should_paint} can_render={can_render} painted={painted} interval={frame_interval:?}"
+                ));
+            } else {
+                // TEMPORARY DIAGNOSTIC - remove before committing.
+                wit_log(&format!(
+                    "HUBU done={done} paint={should_paint} can_render={can_render} skipped"
+                ));
             }
 
             if !done || start.elapsed() >= budget {
@@ -928,6 +978,8 @@ impl ApplicationHandle {
     }
 
     pub(crate) fn handle_timer(&mut self, event_loop: &dyn ActiveEventLoop) {
+        // TEMPORARY DIAGNOSTIC - remove before committing.
+        wit_log("HT >");
         let now = Instant::now();
         let tokens: Vec<TimerToken> = self
             .timers
@@ -959,9 +1011,11 @@ impl ApplicationHandle {
             self.request_update();
         }
         self.fire_timer(event_loop);
+        // TEMPORARY DIAGNOSTIC - remove before committing.
+        wit_log("HT <");
     }
 
-    #[cfg(not(any(target_os = "android", target_os = "ios", target_env = "ohos")))]
+    #[cfg(not(any(target_os = "android", target_os = "ios", target_env = "ohos", target_arch = "wasm32")))]
     pub(crate) fn flush_deferred_context_menus(&mut self) {
         let pending = std::mem::take(&mut self.pending_context_menus);
         for item in pending {

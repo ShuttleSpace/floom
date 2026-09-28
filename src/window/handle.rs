@@ -38,8 +38,24 @@ use winit::{
 
 use super::state::WindowState;
 use super::tracking::{remove_window_id_mapping, store_window_id_mapping};
+
+// TEMPORARY DIAGNOSTIC - remove before committing. No-op (and no formatting
+// cost) off the web; keeps the update-loop probes out of the native hot path.
+#[cfg(target_arch = "wasm32")]
+macro_rules! wit_dbg {
+    ($($arg:tt)*) => {
+        crate::app::handle::wit_log(&format!($($arg)*))
+    };
+}
+// TEMPORARY DIAGNOSTIC - remove before committing.
+#[cfg(not(target_arch = "wasm32"))]
+#[allow(unused_macros)]
+macro_rules! wit_dbg {
+    ($($arg:tt)*) => {};
+}
+
 use crate::app::add_app_update_event;
-#[cfg(not(any(target_os = "android", target_os = "ios", target_env = "ohos")))]
+#[cfg(not(any(target_os = "android", target_os = "ios", target_env = "ohos", target_arch = "wasm32")))]
 use crate::app::MenuWrapper;
 #[cfg(any(target_os = "linux", target_os = "freebsd", target_arch = "wasm32", target_os = "android", target_os = "ios"))]
 use crate::platform::context_menu::context_menu_view;
@@ -769,7 +785,7 @@ impl WindowHandle {
         // Capture a single timestamp for the entire style pass.
         // All views in this frame see the same `now`, which is both cheaper
         // (avoids per-view syscall) and more correct (no sub-frame jitter).
-        self.window_state.frame_start = std::time::Instant::now();
+        self.window_state.frame_start = crate::platform::Instant::now();
 
         // Loop until no more views need styling
         // This handles the case where styling a parent marks children dirty
@@ -1205,6 +1221,18 @@ impl WindowHandle {
 
                 iterations += 1;
                 if iterations >= MAX_ITERS || start.elapsed() >= budget {
+                    // TEMPORARY DIAGNOSTIC - remove before committing.
+                    wit_dbg!(
+                        "PUB-1 !done iters={} us={} style={} layout={} boxupd={} box={} pend={} paint={}",
+                        iterations,
+                        start.elapsed().as_micros(),
+                        self.needs_style(),
+                        self.needs_layout(),
+                        self.needs_box_tree_update(),
+                        self.needs_box_tree_commit(),
+                        self.window_state.views_needing_box_tree_update.len(),
+                        self.window_state.request_paint
+                    );
                     return false;
                 }
             }
@@ -1216,9 +1244,23 @@ impl WindowHandle {
 
             iterations += 1;
             if iterations >= MAX_ITERS || start.elapsed() >= budget {
+                // TEMPORARY DIAGNOSTIC - remove before committing.
+                wit_dbg!(
+                    "PUB-2 !done deferred iters={} us={}",
+                    iterations,
+                    start.elapsed().as_micros()
+                );
                 return false;
             }
         }
+
+        // TEMPORARY DIAGNOSTIC - remove before committing.
+        wit_dbg!(
+            "PUB-ok iters={} us={} paint={}",
+            iterations,
+            start.elapsed().as_micros(),
+            self.window_state.request_paint
+        );
 
         self.set_cursor();
 
@@ -1493,7 +1535,7 @@ impl WindowHandle {
                         let scale = cx.window_state.effective_scale();
                         self.paint_state.set_scale(scale);
                     }
-                    #[cfg(not(any(target_os = "android", target_os = "ios", target_env = "ohos")))]
+                    #[cfg(not(any(target_os = "android", target_os = "ios", target_env = "ohos", target_arch = "wasm32")))]
                     UpdateMessage::ShowContextMenu { menu, pos, .. } => {
                         let (menu, registry) = menu.build();
                         cx.window_state.context_menu.clear();
@@ -1506,7 +1548,11 @@ impl WindowHandle {
                             pos,
                         });
                     }
-                    #[cfg(any(target_os = "android", target_os = "ios"))]
+                    #[cfg(any(
+                        target_os = "android",
+                        target_os = "ios",
+                        target_arch = "wasm32"
+                    ))]
                     UpdateMessage::ShowContextMenu {
                         menu,
                         pos,

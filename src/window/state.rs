@@ -1,10 +1,10 @@
-use std::{cell::RefCell, collections::HashMap, time::Instant};
+use std::{cell::RefCell, collections::HashMap};
 
 use crate::{
     accessibility::{AccessTree, AccessibilityBackend},
     action::exec_after_animation_frame,
     inspector::CaptureState,
-    platform::menu_types::MenuId,
+    platform::{Instant, menu_types::MenuId},
     style::{StyleCache, StyleSelectors, recalc::StyleReason},
     view::ViewStorage,
 };

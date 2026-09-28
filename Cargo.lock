@@ -840,6 +840,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "calculator"
+version = "0.1.0"
+dependencies = [
+ "floem",
+ "floem-winit",
+ "jni 0.21.1",
+]
+
+[[package]]
 name = "calloop"
 version = "0.14.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1999,8 +2008,10 @@ dependencies = [
  "floem-native",
  "floem-overlay",
  "floem-platform",
+ "floem-platform-tui",
  "floem-renderer",
  "floem-renderer-software",
+ "floem-renderer-tui",
  "floem-runtime",
  "floem-runtime-core",
  "floem-scene",
@@ -2254,6 +2265,7 @@ dependencies = [
  "rustc-hash 2.1.1",
  "softbuffer",
  "swash",
+ "wgpu",
 ]
 
 [[package]]
@@ -2410,6 +2422,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "floem-platform-tui"
+version = "0.2.0"
+dependencies = [
+ "floem-app",
+ "floem-layout",
+ "floem-platform",
+ "floem-renderer-tui",
+ "floem-types",
+ "floem-widgets",
+ "libc",
+]
+
+[[package]]
 name = "floem-platform-web"
 version = "0.2.0"
 dependencies = [
@@ -2456,6 +2481,16 @@ dependencies = [
  "floem-types",
  "peniko",
  "swash",
+]
+
+[[package]]
+name = "floem-renderer-tui"
+version = "0.2.0"
+dependencies = [
+ "floem-renderer",
+ "floem-scene",
+ "floem-text",
+ "floem-types",
 ]
 
 [[package]]
@@ -2887,8 +2922,10 @@ dependencies = [
  "floem-platform-embedded",
  "floem-platform-harmony",
  "floem-platform-ios",
+ "floem-platform-tui",
  "floem-platform-web",
  "floem-renderer-software",
+ "floem-renderer-tui",
  "floem-renderer-vello",
  "floem-scene",
  "floem-types",
@@ -2940,6 +2977,32 @@ dependencies = [
  "floem-virtual",
  "floem-widgets",
  "floem-widgets-data",
+]
+
+[[package]]
+name = "floem2-demo"
+version = "0.2.0"
+dependencies = [
+ "floem-app",
+ "floem-core",
+ "floem-cupertino",
+ "floem-fluent",
+ "floem-forms",
+ "floem-harmony",
+ "floem-layout",
+ "floem-material",
+ "floem-platform",
+ "floem-platform-android",
+ "floem-platform-desktop",
+ "floem-platform-harmony",
+ "floem-platform-ios",
+ "floem-platform-mobile",
+ "floem-platform-web",
+ "floem-renderer-vello",
+ "floem-types",
+ "floem-widgets",
+ "floem-widgets-data",
+ "floem-winit",
 ]
 
 [[package]]
@@ -5292,6 +5355,7 @@ version = "0.1.0"
 dependencies = [
  "floem",
  "floem-winit-ohos",
+ "log",
 ]
 
 [[package]]

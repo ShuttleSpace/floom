@@ -12,7 +12,7 @@ use std::{
 use crate::platform::menu_types::MenuId;
 #[cfg(feature = "crossbeam")]
 use crossbeam::channel::{Receiver, Sender, unbounded as channel};
-#[cfg(not(any(target_os = "android", target_os = "ios", target_env = "ohos")))]
+#[cfg(not(any(target_os = "android", target_os = "ios", target_env = "ohos", target_arch = "wasm32")))]
 use peniko::kurbo::Point;
 #[cfg(not(feature = "crossbeam"))]
 use std::sync::mpsc::{Receiver, Sender, channel};
@@ -109,16 +109,16 @@ pub enum AppEvent {
     Reopen { has_visible_windows: bool },
 }
 
-#[cfg(not(any(target_os = "android", target_os = "ios", target_env = "ohos")))]
+#[cfg(not(any(target_os = "android", target_os = "ios", target_env = "ohos", target_arch = "wasm32")))]
 pub(crate) struct MenuWrapper(pub(crate) muda::Menu);
 // SAFETY: these unsafe wappers are needed so that we can send the muda memu.
 // The muda menu internally uses RC on a String ID and it's Vec of children.
 // This unsafe wrapper is memory safe but the race condition could potentially (unlikely)
 // lead to bad reference counts and leaked memory.
 // I think this is fine for this case.
-#[cfg(not(any(target_os = "android", target_os = "ios", target_env = "ohos")))]
+#[cfg(not(any(target_os = "android", target_os = "ios", target_env = "ohos", target_arch = "wasm32")))]
 unsafe impl Send for MenuWrapper {}
-#[cfg(not(any(target_os = "android", target_os = "ios", target_env = "ohos")))]
+#[cfg(not(any(target_os = "android", target_os = "ios", target_env = "ohos", target_arch = "wasm32")))]
 unsafe impl Sync for MenuWrapper {}
 
 pub(crate) enum UserEvent {
@@ -133,7 +133,7 @@ pub(crate) enum UserEvent {
     GpuResourcesUpdate {
         window_id: WindowId,
     },
-    #[cfg(not(any(target_os = "android", target_os = "ios", target_env = "ohos")))]
+    #[cfg(not(any(target_os = "android", target_os = "ios", target_env = "ohos", target_arch = "wasm32")))]
     ShowContextMenu {
         window_id: WindowId,
         menu: MenuWrapper,
@@ -277,7 +277,7 @@ impl ApplicationHandler for Application {
     }
 
     fn about_to_wait(&mut self, event_loop: &dyn ActiveEventLoop) {
-        #[cfg(not(any(target_os = "android", target_os = "ios", target_env = "ohos")))]
+        #[cfg(not(any(target_os = "android", target_os = "ios", target_env = "ohos", target_arch = "wasm32")))]
         self.handle.flush_deferred_context_menus();
         self.handle.handle_timer(event_loop);
         if Runtime::has_pending_work() {
@@ -450,12 +450,35 @@ impl Application {
     /// `about_to_wait` / `proxy_wake_up` / `destroy_surfaces`) already matches.
     #[cfg(target_env = "ohos")]
     pub fn new_ohos(mut config: AppConfig) -> Self {
-        // OHOS uses the Vulkan backend via VK_OHOS_surface (requires wgpu >= 0.30).
+        // Prefer Vulkan via VK_OHOS_surface (requires wgpu >= 0.30) where the
+        // platform provides it, falling back to GLES via EGL: the DevEco
+        // emulator image ships no Vulkan loader (libvulkan.so.1 is absent),
+        // so a Vulkan-only instance fails surface creation there.
         if config.wgpu_backends.is_none() {
-            config.wgpu_backends = Some(wgpu::Backends::VULKAN);
+            config.wgpu_backends = Some(wgpu::Backends::VULKAN | wgpu::Backends::GL);
         }
 
-        let (_sender, receiver) = channel();
+        // This constructor runs on the floem-winit-ohos runtime's worker thread
+        // (the runtime invokes the app factory there) and `run()` is never
+        // called on OHOS, so mirror `run()`'s reactive init here.
+        Runtime::init_on_ui_thread();
+        // Nudge UI when sync signals are updated from other threads.
+        Runtime::set_sync_effect_waker(|| Application::send_proxy_event(UserEvent::Idle));
+
+        // Register the OHOS runtime's event-loop proxy so `send_proxy_event`
+        // reaches the loop. Without it the async GPU-resources handshake
+        // (`GpuResources::request` -> `UserEvent::GpuResourcesUpdate`) is
+        // dropped silently, the `PaintState` stays pending forever and the
+        // window never renders anything (black screen).
+        let (sender, receiver) = channel();
+        if let Some(proxy) = floem_winit_ohos::runtime_event_loop_proxy() {
+            *EVENT_LOOP_PROXY.lock() = Some((proxy, sender));
+        } else {
+            // The runtime's 16ms pump still drains queued events; wake-ups
+            // from other threads are lost until the proxy is available.
+            floem_winit_ohos::deveco_log("ohos: runtime event loop proxy unavailable");
+        }
+
         let handle = ApplicationHandle::new(config);
 
         Self {
@@ -512,6 +535,21 @@ impl Application {
         // Nudge UI when sync signals are updated from other threads.
         Runtime::set_sync_effect_waker(|| Application::send_proxy_event(UserEvent::Idle));
         let event_loop = self.event_loop.take().unwrap();
+
+        // On the web the loop is driven by `requestAnimationFrame`, not by a
+        // blocking `run`. winit-web's `run_app` signals "the loop is installed"
+        // by throwing a JS exception to escape the Rust stack, which is only
+        // safe when it unwinds into `main()`. From a `#[wasm_bindgen(start)]`
+        // shim (how the web example is launched) that throw unwinds out of
+        // `__wbg_finalize_init`, aborting module init before
+        // `window.wasmBindings` is assigned. `spawn_app` installs the same loop
+        // and returns normally, so init completes and rAF drives the app.
+        #[cfg(target_arch = "wasm32")]
+        {
+            use winit::platform::web::EventLoopExtWeb;
+            event_loop.spawn_app(self);
+        }
+        #[cfg(not(target_arch = "wasm32"))]
         let _ = event_loop.run_app(self);
     }
 

@@ -193,6 +193,7 @@ impl WindowEventReducer {
                             _ => 0.5,
                         }
                     },
+                    scale_factor,
                     ..Default::default()
                 };
 

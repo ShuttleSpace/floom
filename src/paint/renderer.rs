@@ -174,52 +174,76 @@ impl Renderer {
     ) -> Self {
         let size = Size::new(size.width.max(1.0), size.height.max(1.0));
 
-        let force_tiny_skia = std::env::var("FLOEM_FORCE_TINY_SKIA")
-            .ok()
-            .map(|val| val.as_str() == "1")
-            .unwrap_or(false);
-
-        #[cfg(not(feature = "skia"))]
-        let active_err = if !force_tiny_skia {
-            match Self::try_new_active(
-                gpu_resources,
-                surface,
-                size.width as u32,
-                size.height as u32,
-                scale,
-                font_embolden,
-            ) {
-                Ok(renderer) => return Self::Active(renderer),
-                Err(err) => Some(err),
-            }
-        } else {
-            None
-        };
-
-        let tiny_skia_err = match TinySkiaRenderer::new(
+        // On OHOS the GLES adapters (e.g. the DevEco emulator's DGLES, a
+        // GLES 3.0 host-translation layer) do not expose the vertex-shader
+        // storage buffers vger requires, and softbuffer has no OHOS backend
+        // for presenting tiny-skia pixels. Rasterize on the CPU and present
+        // through the already-initialized wgpu GLES surface instead.
+        #[cfg(all(not(feature = "skia"), target_env = "ohos"))]
+        let renderer = match TinySkiaRenderer::new_wgpu_surface(
             window,
+            gpu_resources,
+            surface,
             size.width as u32,
             size.height as u32,
             scale,
             font_embolden,
         ) {
-            Ok(tiny_skia) => return Self::TinySkia(tiny_skia),
-            Err(err) => err,
+            Ok(tiny_skia) => Self::TinySkia(tiny_skia),
+            Err(err) => panic!("Failed to create TinySkiaRenderer: {err}"),
         };
 
-        if !force_tiny_skia {
-            #[cfg(feature = "skia")]
-            panic!("Failed to create TinySkiaRenderer: {tiny_skia_err}");
+        #[cfg(not(all(not(feature = "skia"), target_env = "ohos")))]
+        let renderer = {
+            let force_tiny_skia = std::env::var("FLOEM_FORCE_TINY_SKIA")
+                .ok()
+                .map(|val| val.as_str() == "1")
+                .unwrap_or(false);
 
             #[cfg(not(feature = "skia"))]
-            panic!(
-                "Failed to create {}: {}\nFailed to create TinySkiaRenderer: {tiny_skia_err}",
-                Self::ACTIVE_RENDERER_NAME,
-                active_err.unwrap()
-            );
-        } else {
-            panic!("Failed to create TinySkiaRenderer: {tiny_skia_err}");
-        }
+            let active_err = if !force_tiny_skia {
+                match Self::try_new_active(
+                    gpu_resources,
+                    surface,
+                    size.width as u32,
+                    size.height as u32,
+                    scale,
+                    font_embolden,
+                ) {
+                    Ok(renderer) => return Self::Active(renderer),
+                    Err(err) => Some(err),
+                }
+            } else {
+                None
+            };
+
+            let tiny_skia_err = match TinySkiaRenderer::new(
+                window,
+                size.width as u32,
+                size.height as u32,
+                scale,
+                font_embolden,
+            ) {
+                Ok(tiny_skia) => return Self::TinySkia(tiny_skia),
+                Err(err) => err,
+            };
+
+            if !force_tiny_skia {
+                #[cfg(feature = "skia")]
+                panic!("Failed to create TinySkiaRenderer: {tiny_skia_err}");
+
+                #[cfg(not(feature = "skia"))]
+                panic!(
+                    "Failed to create {}: {}\nFailed to create TinySkiaRenderer: {tiny_skia_err}",
+                    Self::ACTIVE_RENDERER_NAME,
+                    active_err.unwrap()
+                );
+            } else {
+                panic!("Failed to create TinySkiaRenderer: {tiny_skia_err}");
+            }
+        };
+
+        renderer
     }
 
     pub fn resize(&mut self, scale: f64, size: Size) {
