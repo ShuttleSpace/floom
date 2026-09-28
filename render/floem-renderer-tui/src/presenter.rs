@@ -22,7 +22,7 @@ use floem_scene::{ResourceRegistry, Scene};
 use floem_types::Size;
 
 use crate::{
-    DiffStats, PaintStats, TuiGrid, diff_encode, encode, encode_with_stats, paint_scene,
+    DiffStats, PaintStats, TuiGrid, diff_encode, encode_with_stats, paint_scene,
 };
 
 /// How many characters the terminal has.
@@ -99,22 +99,25 @@ impl<W: Write> Presenter for TuiPresenter<W> {
     fn resize(&mut self, size: Size, _scale: f64) {
         if size.width > 0.0 && size.height > 0.0 {
             self.logical = size;
+            let cols = size.width as usize;
+            let rows = size.height as usize;
+            if cols != self.size.cols || rows != self.size.rows {
+                // The grid is allocated to the terminal's cell count; a resize
+                // changes that count, so the stored grid — which is also the
+                // diff baseline — must follow, or the next patch indexes a
+                // differently shaped buffer. Forcing a full repaint is the
+                // honest answer to a reshaped screen: there is no cheap
+                // incremental one.
+                self.size = TerminalSize::new(cols, rows);
+                self.last = None;
+            }
         }
     }
 
     fn present(&mut self, scene: &Scene, resources: &ResourceRegistry) {
-        let mut grid = TuiGrid::new(self.size.cols, self.size.rows, self.logical);
-        paint_scene(&mut grid, scene, resources);
-        self.stats = grid.stats();
-        let bytes = encode(&grid);
-        self.frames += 1;
-        self.last = Some(grid);
-        // A writer that refuses bytes must not take the app down with it: the
-        // frame still counted, and `frames_presented` stays honest about it by
-        // counting the attempt. This is the same "never fatal" rule the other
-        // presenters follow for a refused surface.
-        let _ = self.sink.write_all(bytes.as_bytes());
-        let _ = self.sink.flush();
+        // The runner calls `present`; route it through the incremental path so a
+        // live terminal repaints in patches, not in full every frame.
+        self.present_internal(scene, resources);
     }
 
     fn detach(&mut self) {
@@ -127,16 +130,14 @@ impl<W: Write> Presenter for TuiPresenter<W> {
 }
 
 impl<W: Write> TuiPresenter<W> {
-    /// Like [`present`](Presenter::present) but incremental: the first frame
-    /// clears the screen and homes the cursor, and every later frame emits only
-    /// the cells that changed since the previous one, positioned by absolute
-    /// cursor moves. This is the method a real terminal main loop should call —
-    /// a 80×24 grid that repaints in full on every animation frame is
-    /// unusable, whereas a patch of the few cells that moved is cheap.
-    ///
-    /// Returns [`DiffStats`] describing the patch, including whether the frame
-    /// fell back to a full repaint because there was no prior frame.
-    pub fn present_diff(&mut self, scene: &Scene, resources: &ResourceRegistry) -> DiffStats {
+    /// The shared frame path for [`present`](Presenter::present) and
+    /// [`present_diff`]: build the grid, and — on the first frame — clear the
+    /// screen and home the cursor, then on every later frame emit only the
+    /// cells that changed. A live terminal cannot repaint in full at animation
+    /// speed, and the runner calls `present`, so the incremental behaviour
+    /// lives here and `present_diff` is just the same method with its stats
+    /// surfaced.
+    fn present_internal(&mut self, scene: &Scene, resources: &ResourceRegistry) -> DiffStats {
         let mut grid = TuiGrid::new(self.size.cols, self.size.rows, self.logical);
         paint_scene(&mut grid, scene, resources);
         self.stats = grid.stats();
@@ -154,6 +155,10 @@ impl<W: Write> TuiPresenter<W> {
         };
         self.frames += 1;
         self.last = Some(grid);
+        // A writer that refuses bytes must not take the app down with it: the
+        // frame still counted, and `frames_presented` stays honest about it by
+        // counting the attempt. This is the same "never fatal" rule the other
+        // presenters follow for a refused surface.
         let _ = self.sink.write_all(bytes.as_bytes());
         let _ = self.sink.flush();
         DiffStats {
@@ -161,6 +166,14 @@ impl<W: Write> TuiPresenter<W> {
             escapes,
             full_repaint: full,
         }
+    }
+
+    /// Like [`present`](Presenter::present) but incremental, surfacing
+    /// [`DiffStats`] about the patch. The runner calls `present`, which already
+    /// goes through this path, so this is the explicit spelling for callers
+    /// that want to assert on how much of the screen a frame touched.
+    pub fn present_diff(&mut self, scene: &Scene, resources: &ResourceRegistry) -> DiffStats {
+        self.present_internal(scene, resources)
     }
 }
 
@@ -251,11 +264,13 @@ mod tests {
     }
 
     #[test]
-    fn a_resize_changes_the_logical_extent_the_grid_maps() {
+    fn a_resize_rebuilds_the_grid_at_the_new_terminal_size() {
         let mut presenter = TuiPresenter::new(TerminalSize::new(8, 2), Vec::new());
         presenter.attach(attached(Size::new(8.0, 2.0)));
-        // Doubling the logical width halves what each column covers, so a rect
-        // spanning half the width now lands in a different set of columns.
+        // A real terminal resize changes the cell count, not just the logical
+        // mapping: the grid must follow the new width (here doubled) so a rect
+        // spanning the right half lands in the right half of a 16-column grid,
+        // not squashed into 8 columns.
         presenter.resize(Size::new(16.0, 2.0), 1.0);
 
         let mut scene = Scene::new();
@@ -271,10 +286,13 @@ mod tests {
         presenter.present(&scene, &registry);
 
         let grid = presenter.last_grid().unwrap();
-        // Columns 0..4 must stay unpainted: the rect starts at the midpoint.
+        // The grid now tracks the new terminal width.
+        assert_eq!(grid.cols(), 16, "the grid tracks the new terminal width");
+        // Columns 0..8 stay unpainted: the rect starts at the midpoint of a
+        // 16-column grid.
         assert_eq!(grid.cell(0, 0).unwrap().bg, None);
-        assert_eq!(grid.cell(3, 0).unwrap().bg, None);
-        assert_eq!(grid.cell(4, 0).unwrap().bg, Some(Color::rgb(9, 9, 9)));
+        assert_eq!(grid.cell(7, 0).unwrap().bg, None);
+        assert_eq!(grid.cell(8, 0).unwrap().bg, Some(Color::rgb(9, 9, 9)));
     }
 
     #[test]

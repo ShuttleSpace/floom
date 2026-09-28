@@ -34,6 +34,10 @@ mobile = [
 ]
 web = ["dep:floem-platform-web"]
 embedded = ["dep:floem-platform-embedded"]
+# Terminal (character-grid) backend: the L4 platform + renderer that turn a
+# terminal into a live Floem window. Off by default so a default build stays
+# headless; `--features tui` adds exactly these two crates.
+tui = ["dep:floem-platform-tui", "dep:floem-renderer-tui"]
 renderer-gpu = ["dep:floem-renderer-vello", "floem-renderer-vello/gpu"]
 renderer-software = ["dep:floem-renderer-software"]
 devtools = ["dep:floem-devtools"]
@@ -63,6 +67,8 @@ floem-platform-ios = { path = "../../platform/floem-platform-ios", version = "0.
 floem-platform-harmony = { path = "../../platform/floem-platform-harmony", version = "0.2.0", optional = true }
 floem-platform-web = { path = "../../platform/floem-platform-web", version = "0.2.0", optional = true }
 floem-platform-embedded = { path = "../../platform/floem-platform-embedded", version = "0.2.0", optional = true }
+floem-platform-tui = { path = "../../platform/floem-platform-tui", version = "0.2.0", optional = true }
+floem-renderer-tui = { path = "../../render/floem-renderer-tui", version = "0.2.0", optional = true }
 floem-renderer-vello = { path = "../../render/floem-renderer-vello", version = "0.2.0", optional = true }
 floem-renderer-software = { path = "../../render/floem-renderer-software", version = "0.2.0", optional = true }
 floem-devtools = { path = "../../tooling/floem-devtools", version = "0.2.0", optional = true }

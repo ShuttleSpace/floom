@@ -93,6 +93,64 @@ pub use floem_platform_web;
 pub use floem_renderer_software;
 #[cfg(feature = "renderer-gpu")]
 pub use floem_renderer_vello;
+#[cfg(feature = "tui")]
+pub use floem_platform_tui::{TuiApp, TuiPlatform};
+#[cfg(feature = "tui")]
+pub use floem_renderer_tui::TuiPresenter;
+
+/// Run a Floem app in a terminal — the character-grid backend's one-call entry.
+///
+/// `build` mounts the app's widget tree into the host; the rest (terminal
+/// setup, the stdin reader, SIGWINCH, the frame loop, quit on Ctrl-C/Ctrl-D)
+/// is handled by the backend. Requires `--features tui`.
+///
+/// ```
+/// use floem2::prelude::*;
+/// # #[cfg(feature = "tui")]
+/// # fn doc() -> Result<(), String> {
+/// let mut host = floem2::WidgetHost::new();
+/// host.mount_root(LayoutStyle::default(), Text::new("hello terminal"));
+/// // floem2::run_tui(|host| { /* mount your tree */ });
+/// # let _ = host;
+/// # Ok(())
+/// # }
+/// ```
+#[cfg(feature = "tui")]
+pub fn run_tui<F>(build: F) -> Result<(), String>
+where
+    F: FnOnce(&mut floem_app::WidgetHost) + 'static,
+{
+    use floem_app::{AppRunner, WidgetHost};
+    use floem_renderer_tui::TuiPresenter;
+
+    struct ClosureApp<F> {
+        build: Option<F>,
+        runner: Option<AppRunner<TuiPresenter<std::io::Stdout>>>,
+    }
+
+    impl<F: FnOnce(&mut WidgetHost)> TuiApp for ClosureApp<F> {
+        fn events(&mut self, platform: &mut TuiPlatform) {
+            if let Some(build) = self.build.take() {
+                let mut host = WidgetHost::new();
+                build(&mut host);
+                let size = platform.size();
+                let presenter = TuiPresenter::new(
+                    floem_renderer_tui::TerminalSize::new(size.cols, size.rows),
+                    std::io::stdout(),
+                );
+                self.runner = Some(AppRunner::new(host, presenter));
+            }
+            if let Some(runner) = self.runner.as_mut() {
+                runner.pump(platform);
+            }
+        }
+    }
+
+    floem_platform_tui::run(ClosureApp {
+        build: Some(build),
+        runner: None,
+    })
+}
 
 /// The beginner-facing stable surface: semantic widgets and runtime
 /// primitives, nothing else.

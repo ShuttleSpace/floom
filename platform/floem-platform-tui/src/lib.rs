@@ -17,6 +17,7 @@
 //! runs wherever `std` does.
 
 pub mod input;
+pub mod run;
 pub mod terminal;
 
 use floem_platform::{
@@ -27,6 +28,10 @@ use floem_types::{PlatformId, Size, WindowId};
 
 pub use terminal::TerminalSize;
 
+/// The terminal run loop: [`run`] drives a real terminal event loop for any
+/// [`TuiApp`], and is the backend analogue of the desktop backend's `run`.
+pub use run::{TuiApp, run};
+
 #[derive(Debug)]
 pub struct TuiPlatform {
     host: HostPlatform,
@@ -36,6 +41,8 @@ pub struct TuiPlatform {
     pending: Vec<u8>,
     /// The window this backend created, if any — input events tag it.
     window: Option<WindowId>,
+    /// Set by [`request_exit`](Self::request_exit); the run loop observes it.
+    exit_requested: bool,
 }
 
 impl TuiPlatform {
@@ -55,6 +62,7 @@ impl TuiPlatform {
             parser: input::InputParser::new(),
             pending: Vec::new(),
             window: None,
+            exit_requested: false,
         }
     }
 
@@ -70,6 +78,34 @@ impl TuiPlatform {
     /// Inject raw terminal input bytes for the next pump (test hook).
     pub fn inject_input(&mut self, bytes: &[u8]) {
         self.pending.extend_from_slice(bytes);
+    }
+
+    /// Report a new terminal size (typically after a SIGWINCH) and translate it
+    /// into a `WindowResized` event for the next pump, so the runner re-lays
+    /// out and the presenter rebuilds its grid at the new cell count.
+    pub fn resize(&mut self, size: TerminalSize) {
+        if size == self.size {
+            return;
+        }
+        self.size = size;
+        if let Some(window) = self.window {
+            self.host.push_event(PlatformEvent::WindowResized {
+                window,
+                size: Size::new(size.cols as f64, size.rows as f64),
+            });
+        }
+    }
+
+    /// Ask the run loop to exit after the current iteration. The driver checks
+    /// this after each frame, so a widget (or the `TuiApp` impl) can wire a
+    /// "quit" key without the loop having to know about keys.
+    pub fn request_exit(&mut self) {
+        self.exit_requested = true;
+    }
+
+    /// Whether [`request_exit`](Self::request_exit) has been called.
+    pub fn exit_requested(&self) -> bool {
+        self.exit_requested
     }
 }
 
