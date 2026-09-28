@@ -47,6 +47,9 @@ struct Execution {
     wait_until_strategy: Cell<WaitUntilStrategy>,
     exit: Cell<bool>,
     runner: RefCell<RunnerEnum>,
+    /// Whether a call to `run_until_cleared` is currently on the stack. Used to
+    /// detect re-entrancy instead of recursing (see `run_until_cleared`).
+    running: Cell<bool>,
     suspended: Cell<bool>,
     event_loop_recreation: Cell<bool>,
     events: RefCell<VecDeque<Event>>,
@@ -135,6 +138,24 @@ impl Runner {
     }
 
     fn handle_single_event(&mut self, runner: &Shared, event: Event) {
+        // TEMPORARY DIAGNOSTIC - remove before committing.
+        let label = match &event {
+            Event::NewEvents(_) => "NewEvents",
+            Event::WindowEvent { event, .. } => match event {
+                WindowEvent::RedrawRequested => "WindowEvent(RedrawRequested)",
+                WindowEvent::SurfaceResized(_) => "WindowEvent(SurfaceResized)",
+                WindowEvent::ScaleFactorChanged { .. } => "WindowEvent(ScaleFactorChanged)",
+                _ => "WindowEvent(other)",
+            },
+            Event::ScaleChange { .. } => "ScaleChange",
+            Event::DeviceEvent { .. } => "DeviceEvent",
+            Event::UserWakeUp => "UserWakeUp",
+            Event::Suspended => "Suspended",
+            Event::Resumed => "Resumed",
+            Event::CreateSurfaces => "CreateSurfaces",
+            Event::AboutToWait => "AboutToWait",
+        };
+        web_sys::console::log_1(&format!("WIT-EVENT {} >", label).into());
         match event {
             Event::NewEvents(cause) => self.app.new_events(&self.event_loop, cause),
             Event::WindowEvent { window_id, event } => {
@@ -161,6 +182,7 @@ impl Runner {
             Event::CreateSurfaces => self.app.can_create_surfaces(&self.event_loop),
             Event::AboutToWait => self.app.about_to_wait(&self.event_loop),
         }
+        web_sys::console::log_1(&format!("WIT-EVENT {} <", label).into());
     }
 }
 
@@ -194,6 +216,7 @@ impl Shared {
                 wait_until_strategy: Cell::new(WaitUntilStrategy::default()),
                 exit: Cell::new(false),
                 runner: RefCell::new(RunnerEnum::Pending),
+                running: Cell::new(false),
                 suspended: Cell::new(false),
                 event_loop_recreation: Cell::new(false),
                 events: RefCell::new(VecDeque::new()),
@@ -615,10 +638,27 @@ impl Shared {
     //
     // This will also process any events that have been queued or that are queued during processing
     fn run_until_cleared(&self, events: impl Iterator<Item = Event>) {
+        web_sys::console::log_1(&"WIT-RUN begin".into());
+        // `poll`, `resume_time_reached` and `init` are invoked from scheduler
+        // callbacks and may therefore fire while a user callback is still
+        // executing, i.e. while `handle_event` holds a mutable borrow of
+        // `runner`. Recursing would alias that borrow and abort the whole wasm
+        // module in `apply_control_flow`. Instead, queue the events; the
+        // enclosing `handle_event` drains the queue once the callback returns.
+        if self.0.running.replace(true) {
+            web_sys::console::warn_1(
+                &"winit-web: re-entrant event loop iteration detected; events queued".into(),
+            );
+            self.0.events.borrow_mut().extend(events);
+            return;
+        }
+
         for event in events {
             self.handle_event(event);
         }
+        web_sys::console::log_1(&"WIT-RUN events-done".into());
         self.process_destroy_pending_windows();
+        web_sys::console::log_1(&"WIT-RUN destroy-done".into());
 
         // Collect all of the redraw events to avoid double-locking the RefCell
         let redraw_events: Vec<WindowId> = self.0.redraw_pending.borrow_mut().drain().collect();
@@ -628,15 +668,20 @@ impl Shared {
                 event: WindowEvent::RedrawRequested,
             });
         }
+        web_sys::console::log_1(&"WIT-RUN redraw-done".into());
 
         self.handle_event(Event::AboutToWait);
+        web_sys::console::log_1(&"WIT-RUN atw-done".into());
 
         self.apply_control_flow();
+        web_sys::console::log_1(&"WIT-RUN cf-done".into());
         // If the event loop is closed, it has been closed this iteration and now the closing
         // event should be emitted
         if self.is_closed() {
             self.handle_loop_destroyed();
         }
+
+        self.0.running.set(false);
     }
 
     fn handle_unload(&self) {
@@ -738,8 +783,20 @@ impl Shared {
             }
         };
 
-        if let RunnerEnum::Running(ref mut runner) = *self.0.runner.borrow_mut() {
-            runner.state = new_state;
+        // Some other code is mutating the runner, which most likely means the
+        // event loop is busy inside a user callback. Skipping the update is
+        // safe: the enclosing iteration applies the control flow on its way out.
+        let mut runner = match self.0.runner.try_borrow_mut() {
+            Ok(runner) => runner,
+            Err(_) => {
+                web_sys::console::warn_1(
+                    &"winit-web: apply_control_flow skipped; runner is borrowed".into(),
+                );
+                return;
+            },
+        };
+        if let RunnerEnum::Running(ref mut runner_state) = *runner {
+            runner_state.state = new_state;
         }
     }
 
