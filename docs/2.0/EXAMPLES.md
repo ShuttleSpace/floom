@@ -12,6 +12,7 @@ something stale.
 
 | example | topic | target | status |
 | --- | --- | --- | --- |
+| `floem2-demo` | the demo gallery: every section (primitives, controls, composites, motion, navigation, data, forms, styling) in one app — the same tree runs headless, in a real window, and on Android | all / desktop / Android | headless (default); `--features macos` opens a window, `--features android` produces the APK |
 | `floem2-chart` | self-drawn content: a line chart on a `Canvas`, clipped to its own box, redrawn from data | all | headless |
 | `floem2-hello` | the smallest app: everything from `floem2::prelude` | all | headless |
 | `floem2-counter` | composites (`Stack`/`List`/`Grid`/`Tabs`/`Dialog`/`NavBar`) + reconciliation | all | headless |
@@ -31,6 +32,9 @@ something stale.
 | `floem2-window` | a real OS window: winit + vello GPU | desktop | **verified on macOS** |
 | `floem2-macos` | the macOS gate probe: a clickable tree, a text field an input method can type into, and a clipboard whose far end is the system pasteboard | macOS | **display-gated** — `--features real`, driven by hand (see `docs/gates/macos.md`) |
 | `floem2-android` | a real Android app: `native-activity` + vello GPU in one APK | Android | **device-gated** — `--features real`, packaged by `examples/floem2-android/scripts/build-apk.sh` |
+| `ios` | the iOS app: a counter, the in-UI context menu, a `UIPasteboard` clipboard and the soft keyboard | iOS | **v1 stack** — `just build ios ios` assembles a simulator `.app` |
+| `ohos` | the OpenHarmony app: the v1 stack as a `cdylib` loaded by an ArkTS Stage project | OpenHarmony | **v1 stack** — `just build ohos ohos` assembles an unsigned HAP |
+| `webgpu` | the browser app: the v1 stack on `wasm32` + WebGPU | wasm32 | **v1 stack** — `just build webgpu web` writes the `wasm-bindgen` bundle (raw `.wasm` when `wasm-bindgen-cli` is absent) |
 | `webview` | embedded web view | OS provider | device-gated (Phase 17) |
 | `video` | embedded video | OS provider | device-gated (Phase 17) |
 | `camera` | camera preview | OS provider | device-gated (Phase 17) |
@@ -47,7 +51,77 @@ them proves nothing — their assertions are the point), and
 directory and that script's list all agree, so a new example cannot land
 undocumented and a documented status cannot quietly become false.
 
+## One command per platform
+
+`just build <crate> <platform>` (i.e. `scripts/build.sh`) is the single entry
+point: Android delegates to `scripts/build-apk.sh`, iOS to
+`scripts/ios-bundle.sh`, OHOS to the crate's hvigor Stage project, and each run
+ends with one honest result line —
+
+```text
+TIER=<artifact|check-only|blocked> PLATFORM=<p> CRATE=<c> ARTIFACT=<path|->
+```
+
+A platform whose backend cannot render, or whose toolchain is missing, is
+reported as `check-only`/`blocked`, never as `artifact`.
+
+Two tracks feed the matrix. **v2** is the `floem2-*` demos; `floem2-demo`
+carries one feature per platform. **v1** is the older single-crate stack, and it
+is the one with *real* iOS / OHOS / Web backends today (`src/embedder/*`,
+`src/platform/*`) — which is why those three platforms are covered by the v1
+examples. A v2 artifact on iOS/OHOS/Web waits on those v2 backends (Phase 19),
+not on this build plumbing.
+
+| crate (`just build` name) | platform | tier | what comes out |
+| --- | --- | --- | --- |
+| floem2-demo | macos | artifact | `target/debug/floem2-demo` — a real winit + vello window |
+| floem2-demo | android | artifact | `target/android/…/*.apk` — `native-activity` + vello |
+| floem2-demo | ios / ohos / web | check-only | the v2 backends for these targets are still in-memory skeletons |
+| ios (`floem-ios-example`) | ios | artifact | `target/ios/floem-ios-example.app`, ad-hoc signed for the simulator |
+| ohos | ohos | artifact | `examples/ohos/ohos-app/…/entry-default-unsigned.hap` (unsigned) |
+| webgpu | web | artifact | `target/web/webgpu/` — `webgpu_bg.wasm` + `webgpu.js`, the `wasm-bindgen --target web` bundle (tier drops to `check-only` with a raw `.wasm` when `wasm-bindgen-cli` is not installed — its version must match the `wasm-bindgen` crate) |
+| any | windows / linux | check-only | a `cargo check` once `rustup target add` has run |
+| any | tui | rendering | no terminal **platform** yet: `floem-renderer-tui` paints any scene into a character grid and encodes it as ANSI (see "Terminal output" below), but nothing yet sizes that grid from a real terminal or feeds stdin events back |
+
+Three toolchain facts are encoded in the scripts because each one costs a build
+to rediscover: the OHOS path needs both `DEVECO_SDK_HOME` exported and
+`OHOS_BASE_SDK_HOME` pointed at *that same directory* (hvigor rejects the
+`command-line-tools/sdk/default` layout with "The SDK management mode has
+changed"), the OHOS NDK clang must be the linker — the host `cc` rejects the
+GNU-style flags rustc emits for `aarch64-unknown-linux-ohos` — and the wasm32
+link needs `DYLD_FALLBACK_LIBRARY_PATH` pointed at the toolchain `lib/`, because
+rustup's `rust-lld` resolves `libLLVM.dylib` under `lib/rustlib/<host>/lib` where
+it does not exist (a bare `cargo build --target wasm32-unknown-unknown` or
+`trunk` build fails with "Library not loaded: @rpath/libLLVM.dylib" until the
+path is set or a symlink is added).
+
 ## Notes per example
+
+### `floem2-demo`
+
+The gallery the examples are converging on: one crate holds the whole thing and
+the platform is a feature, so a target build is one command away.
+
+```sh
+cargo run -p floem2-demo              # headless: every demo mounted and painted
+just build floem2-demo macos          # a real winit window (vello over wgpu)
+just build floem2-demo android        # an installable APK
+```
+
+The tree is built once (`demos::gallery_root`) and mounted by three backends
+that differ only in how frames are driven — a hand-pumped `WidgetHost`, the
+desktop winit loop, and the Android `native-activity` loop — so a demo that
+renders in CI is the same demo that renders on screen. The headless run asserts
+each demo painted at least one widget, which is what makes it a golden example
+rather than a screenshot.
+
+**Platform matrix** (`just build floem2-demo <platform>`):
+
+| platform | tier | why |
+| --- | --- | --- |
+| macos | artifact | the desktop winit + vello backend is real |
+| android | artifact | the Android winit + vello backend is real |
+| ios / ohos / web | check-only | the v2 backends for these targets are still in-memory skeletons; the features wire the backend crate in so the target can be `cargo check`ed, but no artifact is claimed |
 
 ### `floem2-hello`
 

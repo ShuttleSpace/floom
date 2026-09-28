@@ -13,3 +13,10 @@ gate-docs:
 
 arch-deps:
     ./scripts/check-architecture-deps.sh
+
+# One command to build an example for a platform:
+#   just build floem2-demo macos
+#   just build floem2-demo android --release
+#   just build ios ios
+build example platform *ARGS:
+    ./scripts/build.sh {{example}} {{platform}} {{ARGS}}

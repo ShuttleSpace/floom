@@ -20,6 +20,7 @@ EXAMPLES=(
   floem2-chart
   floem2-counter
   floem2-datagrid
+  floem2-demo
   floem2-editor
   floem2-forms
   floem2-hello
