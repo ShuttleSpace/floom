@@ -50,9 +50,25 @@ pub fn runtime_new(factory: AppFactory) -> *mut OhosRuntime {
     let app = event_loop.ohos_app().clone();
     let stop_requested = Arc::new(AtomicBool::new(false));
 
+    // Expose the loop's proxy so the app factory (which runs on the worker
+    // thread below) can wire floem's cross-thread notifications into this loop.
+    crate::set_runtime_event_loop_proxy(event_loop.create_proxy());
+    crate::deveco_log("runtime_new: event loop bootstrapped, spawning worker");
+
     let worker_stop = stop_requested.clone();
     let worker = thread::spawn(move || {
         let runtime = AssertUnwindSafe(move || {
+            // Floem's core logging (log/tracing) has no subscriber on OHOS, so
+            // panics would otherwise be silent. Log every panic to hilog, then
+            // defer to the previous hook (stderr).
+            let previous_hook = panic::take_hook();
+            panic::set_hook(Box::new(move |info| {
+                crate::deveco_log_with_level(
+                    crate::OhosLogLevel::Error,
+                    format!("panic: {info}"),
+                );
+                previous_hook(info);
+            }));
             let mut event_loop = event_loop;
             let mut application = factory();
             loop {
@@ -113,6 +129,9 @@ pub unsafe fn runtime_surface_created(
     font_scale: f64,
 ) {
     if let Some(runtime) = unsafe { runtime_ref(runtime) } {
+        crate::deveco_log(format!(
+            "ffi: surface_created {width}x{height} density={density_scale:.3} font={font_scale:.3}"
+        ));
         runtime.app.notify_surface_created(
             xcomponent,
             native_window,

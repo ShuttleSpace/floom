@@ -1,10 +1,14 @@
 # OpenHarmony (HarmonyOS) backend
 
 Experimental support for running floem on OpenHarmony / HarmonyOS, added as an
-embedder backend (no fork of floem core). Status: **`cargo check` compiles
-(floem lib + `examples/ohos`, 0 error on the real DevEco SDK); ArkTS platform
-bridge implemented in `examples/ohos/entry/src/main/ets/FloemBridge.ets`
-(2026-08-13, not yet DevEco-compiled)**. Runtime font fallback (`ohos_font.rs`)
+embedder backend (no fork of floem core). Status: **compiles and runs on the
+DevEco emulator.** `cargo check` / `cargo build` are clean for `floem` +
+`examples/ohos` on `aarch64-unknown-linux-ohos`; the arm64-v8a HAP starts,
+renders and responds to taps (see `docs/gates/ohos.md` gate 1); and the ArkTS
+platform bridge is DevEco-compiled and actually reached from Rust on-device
+(2026-09-27) — floem's N-API exports are merged into `libentry.so`, and every
+bridge call from the event-loop worker thread is marshalled onto the JS thread
+(see "N-API wiring"). Runtime font fallback (`ohos_font.rs`)
 is implemented and verified to *type-check* on the real OHOS toolchain but
 **UNVERIFIED on-device**. The ArkTS accessibility layer (`FloemA11y.ets`) was
 re-audited for #113 and found to use an **API that does not exist** in
@@ -13,8 +17,8 @@ re-audited for #113 and found to use an **API that does not exist** in
 real screen-reader exposure for a native window is the **native C**
 `ArkUI_AccessibilityProvider` (task #121). `FloemA11y.ets` is now a
 type-correct reference seam and no longer references any non-existent symbol.
-Linking (`cargo build` HAP, incl. the `cargo-ohos-app` macOS patch + wgpu
-`VK_OHOS_surface`) and on-device a11y/IME validation remain (the native a11y path
+Linking (`cargo build` → HAP) and the render gate are done; what remains is
+on-device a11y / IME / clipboard / file-picker *validation* (the native a11y path
 is code-complete via #121 + #122 Route A, but still UNVERIFIED on-device).
 
 ## Architecture
@@ -222,21 +226,23 @@ Push (ArkTS → Rust) — the reverse direction, used by the two async bridges:
   shared URIs; it feeds the registered `set_shared_files_handler`.
 
 The **canonical** ArkTS implementation is
-`examples/ohos/entry/src/main/ets/FloemBridge.ets` (written 2026-08-13, uses
-`@kit.*` APIs; **not yet DevEco-compiled** — verify against your SDK). The N-API
-module import there is `import * as floem from 'libohos.so'` (the cdylib from
-the `ohos` crate). Simplified sketch of the bridge object:
+`examples/ohos/ohos-app/entry/src/main/ets/FloemBridge.ets` (DevEco-compiled and
+exercised on the emulator; `examples/ohos/entry/src/main/ets/FloemBridge.ets` is
+a byte-identical reference copy). The N-API module import is
+`import floem from 'libentry.so'` — napi-rs never calls `napi_module_register` on
+OHOS, so floem's exports are merged into the HAP's one registered N-API module
+(see "N-API wiring"). Simplified sketch of the bridge object:
 
 ```typescript
 // entry/src/main/ets/FloemBridge.ets
-import * as floem from 'libohos.so';
+import floem from 'libentry.so';
 import { pasteboard } from '@kit.BasicServicesKit';
 import { picker } from '@kit.CoreFileKit';
 
 // NOTE: openFile / saveFile receive (requestId, options) — Rust fires the
-// picker and expects ArkTS to call back floem.on_file_picked(requestId, uris).
+// picker and expects ArkTS to call back floem.onFilePicked(requestId, uris).
 export function registerPlatformBridge(): void {
-  floem.register_platform_bridge({
+  floem.registerPlatformBridge({
     getText(): string | null {
       return pasteboard.getSystemPasteboard().getDataSync().getPrimaryText() || null;
     },
@@ -249,8 +255,8 @@ export function registerPlatformBridge(): void {
     },
     openFile(requestId: number, options: object): void {
       new picker.DocumentViewPicker().select()
-        .then((uris) => floem.on_file_picked(requestId, uris))
-        .catch(() => floem.on_file_picked(requestId, null));
+        .then((uris) => floem.onFilePicked(requestId, uris))
+        .catch(() => floem.onFilePicked(requestId, null));
     },
     // saveFile(requestId, options) similar, using DocumentSavePicker.
   });
@@ -340,22 +346,55 @@ hideKeyboard(): void {
 > gain via the `EditorView::input_purpose(...)` builder (stored in a `RwSignal`
 > so a later builder call is observed at event time).
 
-### Build wiring to verify (TODO)
+### N-API wiring (resolved, verified on-device 2026-09-27)
 
-- `Cargo.toml` `[target.'cfg(target_os = "ohos")'.dependencies]` adds
-  `napi = "2"`. Confirm the exact version and the `#[napi]` import path
-  (`use napi::bindgen_prelude::*;` for the exported types).
-- `napi` needs its `build.rs` (`napi_build::setup()`) and a module
-  registration. `cargo-ohos-app` already links the N-API lib into
-  `libentry.so`, but the registration of floem's `#[napi]` functions must
-  coexist with the winit C-ABI entry (`export_ohos_winit_app!`) — confirm the
-  two module-registration paths don't collide (typically they don't: napi
-  registers via `napi_register_module_v1`, winit via the `ohos_winit_runtime_*`
-  C symbols).
-- The exact ArkTS import name for floem's N-API module is assumed to be
-  `libohos.so` (the cdylib from the `ohos` crate). Confirm it matches the module
-  id `cargo-ohos-app` generates (it must match the `index.d.ts` the napi build
-  emits) — rename the import in `FloemBridge.ets` if your build differs.
+- Dependencies are `napi = "2"` / `napi-derive = "2"` with no `napi_build::setup()`
+  step. napi-rs 2.x's `#[napi]` codegen registers each export through a `#[ctor]`
+  in the cdylib's `.init_array`, which only runs if the `.so` is dlopen'd *and*
+  something calls its `napi_register_module_v1`.
+- The module-registration collision was the original blocker: napi-rs never calls
+  `napi_module_register` on OHOS, so `import … from 'libohos.so'` resolved to the
+  wrong module and every floem export came back `undefined`. An OHOS HAP links a
+  single N-API module, so `entry/src/main/cpp/napi_init.cpp`'s `Init` now ends
+  with `napi_register_module_v1(env, exports)`, letting libohos.so fill in the
+  same `exports` object `libentry.so` is registering. ArkTS therefore imports
+  floem from `'libentry.so'`, and the declaring pair is
+  `entry/src/main/cpp/types/libentry/{index.d.ts,oh-package.json5}` — the
+  `types/libohos/` copy is gone.
+- napi-rs renames every Rust `snake_case` export to `camelCase` for JS, so ArkTS
+  calls `registerPlatformBridge` / `onFilePicked` / `onSharedFiles` /
+  `onAccessibilityAction` / `onImeCommit` / `onImePreedit` /
+  `onImeCompositionEnd` / `onImeDelete`. The winit C-ABI entry
+  (`ohos_winit_runtime_*`) is unaffected and still goes through `libentry.so`.
+- **Threading — why bridge calls are marshalled.** N-API values belong to the JS
+  thread: `napi_call_function` from any other thread aborts with `Fatal: ecma_vm
+  cannot run in multi-thread!`. floem's OHOS runtime drives the event loop from a
+  *worker* thread (`floem-winit-ohos`'s `runtime_new` bootstraps the loop on the
+  calling — JS — thread, then moves it into `thread::spawn`), and every bridge
+  call (clipboard, file picker, external URL, IME, a11y) originates there.
+  `src/platform/ohos_bridge.rs` therefore creates a thread-safe function at
+  registration time; `call_bridge` either runs inline (already on the JS thread)
+  or posts the closure and waits on a `Condvar` for the JS thread's result,
+  degrading to `None` after a 5 s timeout. The a11y debug feed confirms the
+  round trip: hilog shows `[floem] a11y tree updated: {…}` with the real
+  serialized tree, logged from the **JS** thread, and 0 occurrences of the
+  multi-thread abort.
+- **Packaging — the HAP must actually contain `libohos.so`.** The bridge's
+  `entry/src/main/cpp/CMakeLists.txt` links the Rust runtime as a *shared* library
+  (`add_library(ohos_runtime SHARED IMPORTED)`), so `libentry.so` records
+  `DT_NEEDED libohos.so` and the loader resolves it from
+  `/data/storage/el1/bundle/libs/arm64/`. hvigor packages the CMake build
+  outputs *plus* prebuilt `.so` files under `entry/libs/<abi>/` — so the freshly
+  built runtime must be copied to `entry/libs/arm64-v8a/libohos.so` before
+  `assembleHap`. A `clean` + `assembleHap` is **green even when the file is
+  missing** (the build only compiles/packs; nothing checks the `DT_NEEDED`
+  closure), which yields a HAP that installs and then dies at load with no
+  rendering. Verify with `unzip -l entry/build/default/outputs/default/
+  entry-default-unsigned.hap | grep libohos` (expected ≈ 43.9 MB HAP for a debug
+  build). The two locations must be the **same** build: linking reads
+  `entry/src/main/cpp/libs/arm64-v8a/libohos.so`, packaging reads
+  `entry/libs/arm64-v8a/libohos.so`; having both present from *different* builds
+  raises hvigor's `ProcessLibs … Duplicated files found in module entry`.
 - This code is compiled **only** for `target_env = "ohos"` (not `target_os =
   "ohos"` — the OHOS standard target is `target_os = "linux"`, `target_env =
   "ohos"`), so the host build is unaffected. **Verified 2026-08-12**: `cargo

@@ -297,13 +297,22 @@ impl EventLoop {
     }
 
     fn take_redraw_ready(&self) -> bool {
-        let mut state = self.window_target.shared.inner.lock().unwrap();
-        let should_emit = matches!(state.lifecycle, LifecycleState::Running)
-            && state.redraw_requested
-            && state.frame_ready;
+        let should_emit = {
+            let mut state = self.window_target.shared.inner.lock().unwrap();
+            let should_emit = matches!(state.lifecycle, LifecycleState::Running)
+                && state.redraw_requested
+                && state.frame_ready;
+            if should_emit {
+                state.redraw_requested = false;
+                state.frame_ready = false;
+            }
+            should_emit
+        };
         if should_emit {
-            state.redraw_requested = false;
-            state.frame_ready = false;
+            static FIRST_REDRAW: AtomicBool = AtomicBool::new(true);
+            if FIRST_REDRAW.swap(false, Ordering::AcqRel) {
+                crate::deveco_log("event_loop: first RedrawRequested dispatched");
+            }
         }
         should_emit
     }
@@ -334,12 +343,14 @@ impl EventLoop {
                 self.window_target.shared.inner.lock().unwrap().frame_ready = true
             }
             HostEvent::RedrawRequested => {
-                self.window_target
-                    .shared
-                    .inner
-                    .lock()
-                    .unwrap()
-                    .redraw_requested = true;
+                // The ArkTS shell never calls `ohos_winit_runtime_frame`
+                // (OpenHarmony's XComponent has no vsync callback wired into
+                // the C++ side), so `frame_ready` would stay false forever
+                // after the first frame and the window would never repaint.
+                // Treat a redraw request as the frame-available signal.
+                let mut state = self.window_target.shared.inner.lock().unwrap();
+                state.redraw_requested = true;
+                state.frame_ready = true;
             }
             HostEvent::ProxyWake => {}
             HostEvent::Touch(event) => self.dispatch_touch_event(event, app),
@@ -362,8 +373,11 @@ impl EventLoop {
         };
 
         if should_resume {
+            crate::deveco_log("event_loop: surface created -> resumed");
             app.resumed(self.window_target());
+            crate::deveco_log("event_loop: dispatching can_create_surfaces");
             app.can_create_surfaces(self.window_target());
+            crate::deveco_log("event_loop: can_create_surfaces done");
         }
         self.window_target.shared.inner.lock().unwrap().lifecycle = LifecycleState::Running;
         self.emit_surface_change_events(event, previous_size, previous_scale, app);
@@ -830,6 +844,7 @@ impl RootActiveEventLoop for ActiveEventLoop {
         }
         state.window_created = true;
         drop(state);
+        crate::deveco_log("event_loop: create_window");
         Ok(Box::new(Window {
             shared: self.shared.clone(),
             ohos_app: self.ohos_app.clone(),

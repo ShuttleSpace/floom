@@ -24,8 +24,44 @@
 #[cfg(target_env = "ohos")]
 floem_winit_ohos::export_ohos_winit_app!(ohos_factory);
 
+/// Bridge the `log` crate (wgpu / floem internals) to hilog: stderr is a no-op
+/// on OHOS, so GPU errors would otherwise be invisible.
+#[cfg(target_env = "ohos")]
+struct HilogLogger;
+
+#[cfg(target_env = "ohos")]
+static HILOG_LOGGER: HilogLogger = HilogLogger;
+
+#[cfg(target_env = "ohos")]
+impl log::Log for HilogLogger {
+    fn enabled(&self, metadata: &log::Metadata) -> bool {
+        metadata.level() <= log::Level::Info
+    }
+
+    fn log(&self, record: &log::Record) {
+        if self.enabled(record.metadata()) {
+            let level = match record.level() {
+                log::Level::Error => floem_winit_ohos::OhosLogLevel::Error,
+                log::Level::Warn => floem_winit_ohos::OhosLogLevel::Warn,
+                log::Level::Info => floem_winit_ohos::OhosLogLevel::Info,
+                _ => floem_winit_ohos::OhosLogLevel::Debug,
+            };
+            floem_winit_ohos::deveco_log_with_level(
+                level,
+                format!("{}: {}", record.target(), record.args()),
+            );
+        }
+    }
+
+    fn flush(&self) {}
+}
+
 #[cfg(target_env = "ohos")]
 fn ohos_factory() -> floem::Application {
+    // Surface wgpu / renderer diagnostics in hilog.
+    let _ = log::set_logger(&HILOG_LOGGER);
+    log::set_max_level(log::LevelFilter::Info);
+
     // `floem_app_factory()` in floem core returns an `Application` with *no*
     // window; apps must build their own factory that also calls `.window(...)`
     // so the OHOS runtime has something to surface.

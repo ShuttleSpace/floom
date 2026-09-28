@@ -19,17 +19,30 @@
 //   4. ArkTS calls BACK into the napi exports (on_file_picked / on_shared_files
 //      / on_accessibility_action / on_ime_*) when the OS delivers a result.
 //
-// NOTE: the module name below (`libohos.so`) is the cdylib produced by the
-// `ohos` crate. If your `cargo-ohos-app` build emits a different name, change
-// the import to match the generated `index.d.ts` module id.
+// NOTE: the floem `#[napi]` surface is compiled into the Rust cdylib
+// `libohos.so`, but napi-rs 2.x never calls `napi_module_register` on OHOS, so
+// that .so is not an OHOS N-API module and `import … from 'libohos.so'` resolves
+// to the wrong module (every export comes back `undefined`). `libentry.so` — the
+// HAP's one registered N-API module — forwards to libohos.so's
+// `napi_register_module_v1` (see entry/src/main/cpp/napi_init.cpp), so the bridge
+// is reached through 'libentry.so'.
+//
+// NOTE: napi-rs renames every Rust `snake_case` export to a `camelCase` JS name,
+// so the Rust `register_platform_bridge` / `on_file_picked` / `on_shared_files` /
+// `on_accessibility_action` / `on_ime_*` are reached here as
+// `registerPlatformBridge` / `onFilePicked` / `onSharedFiles` /
+// `onAccessibilityAction` / `onImeCommit` / `onImePreedit` /
+// `onImeCompositionEnd` / `onImeDelete`. The comments below still quote the Rust
+// snake_case names because those are what the `src/platform/*.rs` files define.
 
 import { pasteboard } from '@kit.BasicServicesKit';
 import { picker } from '@kit.CoreFileKit';
-import { Want, common, wantConstant } from '@kit.AbilityKit';
+import { Want, common } from '@kit.AbilityKit';
 import { inputMethod } from '@kit.IMEKit';
 
-// `import * as floem` exposes every `#[napi]` export as a property.
-import * as floem from 'libohos.so';
+// The default export is the module's N-API exports object — the same one the
+// `import bridge from 'libentry.so'` in EntryAbility.ets sees.
+import floem from 'libentry.so';
 
 // ArkTS a11y reference seam (see FloemA11y.ets — the real OHOS a11y provider is
 // registered from Rust via the native C ArkUI_AccessibilityProvider, NOT here).
@@ -56,7 +69,7 @@ interface FloemFileOptions {
 }
 
 export function registerPlatformBridge(): void {
-  floem.register_platform_bridge({
+  floem.registerPlatformBridge({
     // ---- Clipboard (src/platform/clipboard/ohos_clipboard.rs) ----------
     getText(): string | null {
       try {
@@ -84,7 +97,9 @@ export function registerPlatformBridge(): void {
     // ---- External URL (src/platform/ohos_external.rs) ------------------
     openUrl(url: string): void {
       const want: Want = {
-        action: wantConstant.ACTION_VIEW,
+        // API 26's `wantConstant.Action` enum only carries ACTION_SEND_TO_DATA;
+        // the view-data action is still spelled as its raw string.
+        action: 'ohos.want.action.viewData',
         uri: url,
       };
       appContext?.startAbility(want).catch((e: Error) => {
@@ -98,10 +113,10 @@ export function registerPlatformBridge(): void {
     openFile(requestId: number, options: object): void {
       const opts = options as FloemFileOptions;
       const resolve = (uris: Array<string>): void => {
-        floem.on_file_picked(requestId, uris.length > 0 ? uris : null);
+        floem.onFilePicked(requestId, uris.length > 0 ? uris : null);
       };
       const fail = (): void => {
-        floem.on_file_picked(requestId, null);
+        floem.onFilePicked(requestId, null);
       };
 
       if (opts.selectDirectories) {
@@ -131,10 +146,10 @@ export function registerPlatformBridge(): void {
         saveOpts.newFileNames = [opts.defaultName];
       }
       const resolve = (uris: Array<string>): void => {
-        floem.on_file_picked(requestId, uris.length > 0 ? uris : null);
+        floem.onFilePicked(requestId, uris.length > 0 ? uris : null);
       };
       const fail = (): void => {
-        floem.on_file_picked(requestId, null);
+        floem.onFilePicked(requestId, null);
       };
       p.save(saveOpts as picker.DocumentSaveOptions).then(resolve).catch(fail);
     },
@@ -193,7 +208,7 @@ export function registerPlatformBridge(): void {
     updateImeCursorArea(x: number, y: number, w: number, h: number): void {
       try {
         const controller = inputMethod.getInputMethodController();
-        controller.updateCursor({ left: x, top: y, right: x + w, bottom: y + h });
+        controller.updateCursor({ left: x, top: y, width: w, height: h });
       } catch (e) {
         console.warn('[floem] updateImeCursorArea failed', e);
       }
@@ -241,7 +256,7 @@ export function onSharedFiles(
   mimeTypes: Array<string | null> | null,
   displayNames: Array<string | null> | null,
 ): void {
-  floem.on_shared_files(uris, mimeTypes, displayNames);
+  floem.onSharedFiles(uris, mimeTypes, displayNames);
 }
 
 // Call from the Accessibility Kit provider's onPerformAction callback.
@@ -250,23 +265,23 @@ export function onAccessibilityAction(
   action: string,
   payload: string | null,
 ): void {
-  floem.on_accessibility_action(nodeId, action, payload);
+  floem.onAccessibilityAction(nodeId, action, payload);
 }
 
 // Call from the Input Method Extension when the user types. Mirror of the
 // Rust-side `ImeEvent` variants in src/platform/ohos_ime.rs.
 export function imeCommit(text: string): void {
-  floem.on_ime_commit(text);
+  floem.onImeCommit(text);
 }
 
 export function imePreedit(text: string, cursorStart: number, cursorEnd: number): void {
-  floem.on_ime_preedit(text, cursorStart, cursorEnd);
+  floem.onImePreedit(text, cursorStart, cursorEnd);
 }
 
 export function imeCompositionEnd(): void {
-  floem.on_ime_composition_end();
+  floem.onImeCompositionEnd();
 }
 
 export function imeDelete(before: number, after: number): void {
-  floem.on_ime_delete(before, after);
+  floem.onImeDelete(before, after);
 }

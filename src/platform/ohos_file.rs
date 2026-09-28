@@ -93,7 +93,8 @@ fn launch(
         PickerMode::Create => "saveFile",
     };
 
-    let launched = ohos_bridge::call_bridge(|env, obj| {
+    // `move`: the closure runs on the JS thread, so it must own `options`.
+    let launched = ohos_bridge::call_bridge(move |env, obj| {
         let func: JsFunction = obj.get_named_property(method)?;
         let opts_obj = build_options_object(&env, &options)?;
         // (requestId, options) — ArkTS echoes requestId back in on_file_picked.

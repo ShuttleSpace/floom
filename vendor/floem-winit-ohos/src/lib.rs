@@ -20,7 +20,27 @@ pub use crate::log::{
 };
 pub use floem_winit_core::event_loop::EventLoopProxy;
 
+/// Event-loop proxy of the runtime created by the most recent
+/// `ohos_winit_runtime_new()` call.
+///
+/// `runtime_new` bootstraps the OHOS event loop and then calls the app factory
+/// on its worker thread; the factory builds a `floem::Application`, which picks
+/// the proxy up (via [`runtime_event_loop_proxy`]) to wire its cross-thread
+/// event notifications (`UserEvent::GpuResourcesUpdate`, timers, sync-signal
+/// wake-ups) into the runtime's event loop.
+static RUNTIME_EVENT_LOOP_PROXY: Mutex<Option<EventLoopProxy>> = Mutex::new(None);
+
+/// Clone of the OHOS runtime's event-loop proxy, if a runtime exists.
+pub fn runtime_event_loop_proxy() -> Option<EventLoopProxy> {
+    RUNTIME_EVENT_LOOP_PROXY.lock().unwrap().clone()
+}
+
+pub(crate) fn set_runtime_event_loop_proxy(proxy: EventLoopProxy) {
+    *RUNTIME_EVENT_LOOP_PROXY.lock().unwrap() = Some(proxy);
+}
+
 use std::ffi::c_void;
+use std::sync::Mutex;
 
 use floem_winit_core::event_loop::ActiveEventLoop as CoreActiveEventLoop;
 use floem_winit_core::window::Window as CoreWindow;

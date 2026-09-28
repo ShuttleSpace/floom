@@ -134,9 +134,11 @@ impl OhosAccessibilityBackend {
 
     /// Serialize the current tree and push it to ArkTS via the platform bridge.
     fn push(&self) {
-        let tree = &self.tree;
-        call_bridge(|env, bridge| -> NapiResult<()> {
-            let obj = serialize_tree(env, tree)?;
+        // The closure runs on the JS thread, so it must own the tree it
+        // serializes.
+        let tree = self.tree.clone();
+        call_bridge(move |env, bridge| -> NapiResult<()> {
+            let obj = serialize_tree(env, &tree)?;
             let func: JsFunction = bridge.get_named_property("setAccessibilityTree")?;
             // `JsFunction::call<V>(this: Option<&JsObject>, args: &[V])`: pass the
             // serialized tree as the single argument via `JsUnknown` (which is

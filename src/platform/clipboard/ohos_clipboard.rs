@@ -51,9 +51,11 @@ pub(crate) fn get_contents() -> Result<String, crate::platform::ClipboardError> 
 
 /// Write `text` to the system clipboard, via the registered ArkTS bridge.
 pub(crate) fn set_contents(text: &str) -> Result<(), crate::platform::ClipboardError> {
-    let done: Option<()> = ohos_bridge::call_bridge(|env, obj| {
+    // The closure runs on the JS thread, so it must own its captures.
+    let text = text.to_owned();
+    let done: Option<()> = ohos_bridge::call_bridge(move |env, obj| {
         let func: JsFunction = obj.get_named_property("setText")?;
-        let arg = env.create_string(text)?;
+        let arg = env.create_string(&text)?;
         func.call(None, &[arg.into_unknown()])?;
         Ok(())
     });

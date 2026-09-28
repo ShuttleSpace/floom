@@ -40,7 +40,7 @@ static IME_QUEUE: Mutex<Vec<ImeEvent>> = Mutex::new(Vec::new());
 /// bridge has not been registered yet.
 pub(crate) fn set_keyboard_visible(visible: bool) {
     let method = if visible { "showKeyboard" } else { "hideKeyboard" };
-    ohos_bridge::call_bridge(|_env, obj| {
+    ohos_bridge::call_bridge(move |_env, obj| {
         let func: JsFunction = obj.get_named_property(method)?;
         // `showKeyboard` / `hideKeyboard` take no arguments.
         func.call_without_args(None)?;
@@ -56,7 +56,7 @@ pub(crate) fn set_keyboard_visible(visible: bool) {
 /// yet. Coordinates are logical pixels; they are rounded to integers because
 /// OHOS `InputMethodController.updateCursor` takes integer device pixels.
 pub(crate) fn set_ime_cursor_area(x: f64, y: f64, width: f64, height: f64) {
-    ohos_bridge::call_bridge(|env, obj| {
+    ohos_bridge::call_bridge(move |env, obj| {
         let func: JsFunction = obj.get_named_property("updateImeCursorArea")?;
         let args = [
             env.create_int64(x as i64)?.into_unknown(),
@@ -85,7 +85,7 @@ pub(crate) fn set_ime_purpose(purpose: ImePurpose) {
         ImePurpose::Url => 4,
         ImePurpose::Search => 5,
     };
-    ohos_bridge::call_bridge(|env, obj| {
+    ohos_bridge::call_bridge(move |env, obj| {
         let func: JsFunction = obj.get_named_property("updateImeConfig")?;
         let arg = env.create_int64(code)?.into_unknown();
         let _ = func.call(None, &[arg])?;

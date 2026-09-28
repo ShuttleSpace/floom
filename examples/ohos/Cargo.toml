@@ -20,3 +20,5 @@ floem = { path = "../.." }
 
 [target.'cfg(target_env = "ohos")'.dependencies]
 floem-winit-ohos = { workspace = true }
+# Bridge wgpu's `log` output to hilog on OHOS (stderr is a no-op there).
+log = "0.4"
