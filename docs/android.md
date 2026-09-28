@@ -9,12 +9,13 @@
 > button, **external URLs open via an `ACTION_VIEW` intent**, and **file
 > dialogs use the Storage Access Framework**. **On-device APK render is now
 > verified** (API 34 emulator, 2026-09-24): the packaged APK paints through
-> vello, taps reach widgets, and the clipboard round-trips. Still unverified:
-> file-dialog *results* and runtime file *shares* (both now wired in the example:
-> `AndroidManifest.xml` uses `dev.floem.android.FloemNativeActivity` with
-> `launchMode="singleTop"`, and `scripts/build-apk.sh` compiles
-> `FloemNativeActivity.java` to a `classes.dex` automatically), and IME text
-> *landing* in a widget (the example has no editor — see below).
+> vello, taps reach widgets, and the clipboard round-trips. Still unverified on
+> device: SAF file-dialog *results* returning to the app and IME text *landing*
+> in a widget (the example has no editor — see below). **Shared-file receipt is
+> now verified on device** (API 34 emulator, 2026-09-26): `ACTION_SEND` (cold
+> launch) + `ACTION_VIEW` (cold launch) + `ACTION_SEND` runtime
+> (`launchMode="singleTop"` → `onNewIntent`) all deliver the `Uri` to
+> `set_shared_files_handler` and drive a UI update — see *Receiving shared files*.
 >
 > **Drag & Drop:** the OS-level *file* drag-and-drop capability (`drag_drop`) is
 > `false` on Android **by design** — winit-android emits no drag events and Android
@@ -208,6 +209,25 @@ filesystem path.
 and `ACTION_VIEW` (categories `DEFAULT` + `BROWSABLE`). Scope the `<data
 android:mimeType>` to the file types you actually handle instead of `*/*`. See
 `examples/android/AndroidManifest.xml`.
+
+**Verified on device (API 34 emulator, 2026-09-26):** driven from the host with
+`adb shell am start` injecting the `Uri` via `--eu android.intent.extra.STREAM`
+(`ACTION_SEND`) and `-d` (`ACTION_VIEW`):
+- **Cold `ACTION_SEND`** — `EXTRA_STREAM` parsed through `getParcelableExtra`,
+  the handler receives the `Uri`, and the UI shows `Shared (1): file://…`. A
+  longer `Uri` produces a wider label bbox (749px for `shared.txt` → 1079px for a
+  ~60-char name), proving the *real* `Uri` is rendered, not a placeholder.
+- **Cold `ACTION_VIEW`** — `getData()` parsed; the label bbox is identical to the
+  `ACTION_SEND` case for the same `Uri`, confirming the two branches are
+  equivalent.
+- **Runtime `ACTION_SEND`** — with the app already running, `am start` reports
+  *"intent delivered to currently running top-most instance"* (singleTop);
+  `FloemNativeActivity.onNewIntent` → `floemOnNewIntent` →
+  `dispatch_android_intent` updates the UI in place.
+
+`ACTION_SEND_MULTIPLE` (`getParcelableArrayListExtra`) is implemented but **not
+exercised here**: `am` cannot inject an `ArrayList<Parcelable>`, so it needs a
+real multi-file share sheet (a file manager / Photos "share" with 2+ items).
 
 ## Architecture
 
@@ -480,6 +500,19 @@ Verified on the emulator with `adb shell input keyevent 61` (TAB): the
 `element_tab_navigation`. Screenshots: `docs/android/screenshots/clean_before.png`,
 `clean_after_tab.png`, `clean_after_tab2.png`.
 
+**Enter / Space button activation — also verified on device (2026-09-26).** With
+the `+` button focused (the Tab ring at bbox x 419→483), `adb shell input
+keyevent 66` (ENTER) and `62` (SPACE) each fire the focused `Button`'s
+`.action` (counter `Value: 0` → `1` → `2`) **while the focus ring stays put on
+`+`** — the changed pixels between `tab→enter` and `enter→space` are confined to
+the counter-glyph bbox (x 595→612), not the ring. A negative control — ENTER with
+*no* focused widget (cold start, 0 blue px) — changed 0 pixels, confirming the
+activation is the focused-button keyboard-Click path (`decorator.rs` "button
+click or Enter or Space Key", `event/mod.rs` matching `Code::Enter |
+Code::Space`), not a global handler. This exercises the same `to_logical` fix
+branch: Enter now reaches floem as `Key::Named(NamedKey::Enter)` and Space as
+`Key::Character(" ")`, and the focused `Button` consumes them.
+
 ## Verification checklist
 
 - [x] `cargo check -p floem --target aarch64-linux-android` — zero errors.
@@ -516,9 +549,24 @@ Verified on the emulator with `adb shell input keyevent 61` (TAB): the
       `Key::Named(NamedKey::Tab)` (control chars fall back to the keycode named
       mapping); `focus_visible` ring verified on the emulator via
       `input keyevent 61` + pixel probe. See *Hardware keys* above.
+- [x] Hardware-key Enter/Space button activation: with the `+` button focused,
+      `input keyevent 66` (ENTER) and `62` (SPACE) both fire the focused
+      `Button`'s `.action` (counter 0→1→2) while focus stays on `+`; ENTER with no
+      focused widget changes nothing (negative control). Confirms
+      `Key::Named(NamedKey::Enter)` / `Key::Character(" ")` reach the focused
+      `Button` and floem's keyboard-Click path activates it on Android. See
+      *Hardware keys* above.
 - [x] Android APK packaging verified (`build-apk.sh` → well-formed APK with
       `classes.dex` + `.so`; `aapt2 dump badging` + `zipalign -c` + `dexdump`);
       on-device render verified 2026-09-24.
-- [ ] On-device verification of external-URL + file-dialog results +
-      shared-file round-trips (the wiring is in place; needs the emulator/device,
-      currently offline — see *Hardware keys* re: emulator state).
+- [x] Shared-file round-trip verified on device (API 34 emulator, 2026-09-26):
+      `ACTION_SEND` (cold) + `ACTION_VIEW` (cold) + `ACTION_SEND` runtime
+      (singleTop `onNewIntent`) all deliver the `Uri` to the registered handler
+      and update the UI; pixel probe confirms the displayed text width tracks the
+      `Uri` length (749px for `shared.txt`, 1079px for a long name), so the real
+      `Uri` is shown, not a placeholder. `ACTION_SEND_MULTIPLE` not yet exercised
+      via `am` (cannot inject `ArrayList<Uri>`) — pending a real multi-file share.
+- [ ] On-device verification still open: SAF file-dialog *results* returning to
+      the app (the picker opens; the selected `content://` result path is not yet
+      exercised) and external-URL *opening* (the `ACTION_VIEW` intent fires;
+      observing the system handler open the URL is not yet exercised on-device).
