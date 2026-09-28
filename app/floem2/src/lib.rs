@@ -89,6 +89,8 @@ pub use floem_platform_harmony;
 pub use floem_platform_ios;
 #[cfg(feature = "web")]
 pub use floem_platform_web;
+#[cfg(feature = "web")]
+pub use floem_renderer_web::WebPresenter;
 #[cfg(feature = "renderer-software")]
 pub use floem_renderer_software;
 #[cfg(feature = "renderer-gpu")]
@@ -150,6 +152,61 @@ where
         build: Some(build),
         runner: None,
     })
+}
+
+/// Run a Floem app in a web browser — the Web backend's one-call entry.
+///
+/// `build` mounts the app's widget tree into the host; the rest (canvas setup,
+/// DOM event listeners, the `requestAnimationFrame` loop) is handled by the
+/// backend. Requires `--features web` and a `wasm32` target. The pixels are
+/// rasterised on the CPU by `floem-renderer-web` and blitted to a `<canvas>`
+/// (id `floem-canvas`, or the first `<canvas>` found).
+///
+/// ```
+/// use floem2::prelude::*;
+/// # #[cfg(feature = "web")]
+/// # fn doc() -> Result<(), String> {
+/// let mut host = floem2::WidgetHost::new();
+/// host.mount_root(LayoutStyle::default(), Text::new("hello web"));
+/// floem2::run_web(|_host: &mut floem2::WidgetHost| {});
+/// # let _ = host;
+/// # Ok(())
+/// # }
+/// ```
+#[cfg(feature = "web")]
+pub fn run_web<F>(build: F) -> Result<(), String>
+where
+    F: FnOnce(&mut floem_app::WidgetHost) + 'static,
+{
+    use floem_app::{AppRunner, WidgetHost};
+    use floem_renderer_web::WebPresenter;
+
+    struct ClosureApp<F> {
+        build: Option<F>,
+        runner: Option<AppRunner<WebPresenter>>,
+    }
+
+    impl<F: FnOnce(&mut WidgetHost)> floem_platform_web::WebApp for ClosureApp<F> {
+        fn events(&mut self, platform: &mut floem_platform_web::WebPlatform) {
+            if let Some(build) = self.build.take() {
+                let mut host = WidgetHost::new();
+                build(&mut host);
+                let presenter = WebPresenter::new();
+                self.runner = Some(AppRunner::new(host, presenter));
+            }
+            if let Some(runner) = self.runner.as_mut() {
+                runner.pump(platform);
+            }
+        }
+    }
+
+    floem_platform_web::run(
+        ClosureApp {
+            build: Some(build),
+            runner: None,
+        },
+        "floem-canvas",
+    )
 }
 
 /// The beginner-facing stable surface: semantic widgets and runtime

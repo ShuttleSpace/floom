@@ -2441,6 +2441,9 @@ dependencies = [
  "floem-accessibility",
  "floem-platform",
  "floem-types",
+ "js-sys",
+ "wasm-bindgen",
+ "web-sys",
 ]
 
 [[package]]
@@ -2503,6 +2506,18 @@ dependencies = [
  "floem-types",
  "pollster",
  "vello",
+]
+
+[[package]]
+name = "floem-renderer-web"
+version = "0.2.0"
+dependencies = [
+ "floem-renderer",
+ "floem-renderer-software",
+ "floem-scene",
+ "floem-types",
+ "wasm-bindgen",
+ "web-sys",
 ]
 
 [[package]]
@@ -2927,6 +2942,7 @@ dependencies = [
  "floem-renderer-software",
  "floem-renderer-tui",
  "floem-renderer-vello",
+ "floem-renderer-web",
  "floem-scene",
  "floem-types",
  "floem-widgets",

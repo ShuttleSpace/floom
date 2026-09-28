@@ -152,6 +152,14 @@ impl HostPlatform {
         self
     }
 
+    /// Set the device-pixel scale for *subsequently* created windows (the web
+    /// backend seeds `window.devicePixelRatio()` before any window exists).
+    pub fn set_scale(&mut self, scale: f64) {
+        if scale.is_finite() && scale > 0.0 {
+            self.scale = scale;
+        }
+    }
+
     /// Move `window` to a display of `scale` and announce the resize.
     ///
     /// A display change keeps the window the same size *on the glass* — the

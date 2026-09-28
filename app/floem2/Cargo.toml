@@ -32,7 +32,7 @@ mobile = [
     "dep:floem-platform-ios",
     "dep:floem-platform-harmony",
 ]
-web = ["dep:floem-platform-web"]
+web = ["dep:floem-platform-web", "dep:floem-renderer-web"]
 embedded = ["dep:floem-platform-embedded"]
 # Terminal (character-grid) backend: the L4 platform + renderer that turn a
 # terminal into a live Floem window. Off by default so a default build stays
@@ -66,6 +66,7 @@ floem-platform-android = { path = "../../platform/floem-platform-android", versi
 floem-platform-ios = { path = "../../platform/floem-platform-ios", version = "0.2.0", optional = true }
 floem-platform-harmony = { path = "../../platform/floem-platform-harmony", version = "0.2.0", optional = true }
 floem-platform-web = { path = "../../platform/floem-platform-web", version = "0.2.0", optional = true }
+floem-renderer-web = { path = "../../render/floem-renderer-web", version = "0.2.0", optional = true }
 floem-platform-embedded = { path = "../../platform/floem-platform-embedded", version = "0.2.0", optional = true }
 floem-platform-tui = { path = "../../platform/floem-platform-tui", version = "0.2.0", optional = true }
 floem-renderer-tui = { path = "../../render/floem-renderer-tui", version = "0.2.0", optional = true }
