@@ -23,7 +23,7 @@ Companion pages: [`EXAMPLES.md`](EXAMPLES.md) (the golden examples),
 | `floem-runtime-core`, `floem-runtime`, `floem-scheduler` | L2 | element arena, dirty propagation, input routing, task ordering |
 | `floem-layout`, `floem-style`, `floem-text`, `floem-scene`, `floem-virtual`, `floem-accessibility` | L3 | layout engine, style resolution, text shaping, the retained scene, virtualization geometry, the semantics schema |
 | `floem-renderer`, `floem-renderer-software`, `floem-renderer-vello`, `floem-renderer-skia`, `floem-renderer-tui` | L4 | the renderer ABI plus concrete backends (including one whose target is a character grid rather than pixels) |
-| `floem-platform`, `floem-platform-desktop`, `floem-platform-android`, `floem-platform-ios`, `floem-platform-harmony`, `floem-platform-web`, `floem-platform-embedded`, `floem-ui-events-winit` | L4 | the windowing ABI plus concrete backends |
+| `floem-platform`, `floem-platform-desktop`, `floem-platform-android`, `floem-platform-ios`, `floem-platform-harmony`, `floem-platform-web`, `floem-platform-embedded`, `floem-platform-tui`, `floem-ui-events-winit` | L4 | the windowing ABI plus concrete backends (including one whose target is a character grid) |
 | `floem-native` | L4 | native view composition: capability negotiation, slots, pooling |
 | `floem-platform-mobile` | L4 | mobile OS capabilities (camera, location, sensors, vibration) behind one ABI, with `jni` / `objc2` backends |
 | `floem-animation`, `floem-focus`, `floem-gesture`, `floem-overlay`, `floem-theme`, `floem-store`, `floem-task`, `floem-forms`, `floem-navigation`, `floem-persistence`, `floem-services`, `floem-error`, `floem-ime`, `floem-editor` | L5 | framework services, widget-free by design |

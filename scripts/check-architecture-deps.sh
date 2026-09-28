@@ -238,7 +238,7 @@ for _names, _level in [
             "floem-renderer-skia", "floem-renderer-tui",
             "floem-platform", "floem-platform-desktop", "floem-platform-android",
             "floem-platform-ios", "floem-platform-harmony", "floem-platform-web",
-            "floem-platform-embedded", "floem-platform-mobile",
+            "floem-platform-embedded", "floem-platform-tui", "floem-platform-mobile",
             "floem-native",
             # winit event-loop adapter; no internal floem deps, consumed by the
             # desktop platform layer above.

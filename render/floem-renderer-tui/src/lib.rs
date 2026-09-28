@@ -27,6 +27,6 @@ mod ansi;
 mod grid;
 mod presenter;
 
-pub use ansi::{EncodeStats, encode, encode_with_stats};
+pub use ansi::{DiffStats, EncodeStats, diff_encode, encode, encode_cell, encode_with_stats};
 pub use grid::{Cell, PaintStats, TuiGrid, paint_scene};
 pub use presenter::{TerminalSize, TuiPresenter, frame_info};

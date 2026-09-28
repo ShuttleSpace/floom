@@ -16,7 +16,7 @@
 
 use floem_types::Color;
 
-use crate::TuiGrid;
+use crate::{Cell, TuiGrid};
 
 const RESET: &str = "\u{1b}[0m";
 const DEFAULT_FG: &str = "\u{1b}[39m";
@@ -97,6 +97,84 @@ fn bg_code(color: Option<Color>) -> String {
 
 fn truecolor(channel: u8, color: Color) -> String {
     format!("\u{1b}[{};2;{};{};{}m", channel, color.r, color.g, color.b)
+}
+
+/// What a diff frame did, so a caller can tell "nothing changed" apart from
+/// "the whole screen was repainted".
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct DiffStats {
+    /// Cells whose content differs from the previous frame.
+    pub changed_cells: usize,
+    /// ANSI escapes emitted (cursor moves + colour selections + leading reset).
+    pub escapes: usize,
+    /// `true` when there was no previous frame, so the whole screen was cleared
+    /// and repainted rather than patched.
+    pub full_repaint: bool,
+}
+
+/// Emit only the cells that differ from `old`, each positioned by an absolute
+/// cursor move. Returns `(bytes, changed_cells, escapes)`.
+///
+/// The terminal keeps its colour state across a cursor move, so we carry the
+/// tracked `cur_fg`/`cur_bg` through the diff exactly as [`encode`] would: only
+/// transitions are emitted — a cell we jump over and do not touch keeps what was
+/// already on screen. A leading reset establishes a known baseline so a skipped
+/// cell cannot inherit a colour from a region we leapt past.
+pub fn diff_encode(new: &TuiGrid, old: &TuiGrid) -> (String, usize, usize) {
+    let rows = new.rows().min(old.rows());
+    let cols = new.cols().min(old.cols());
+    let mut out = String::new();
+    out.push_str(RESET);
+    let mut cur_fg: Option<Color> = None;
+    let mut cur_bg: Option<Color> = None;
+    let mut escapes = 1; // the leading reset
+    let mut changed = 0;
+    for row in 0..rows {
+        for col in 0..cols {
+            let nc = new.cell(col, row).unwrap();
+            let oc = old.cell(col, row).unwrap();
+            if nc == oc {
+                continue;
+            }
+            changed += 1;
+            out.push_str(&format!("\u{1b}[{};{}H", row + 1, col + 1));
+            escapes += 1; // the cursor move
+            let (chunk, f, b, e) = encode_cell(nc, &cur_fg, &cur_bg);
+            out.push_str(&chunk);
+            escapes += e;
+            cur_fg = f;
+            cur_bg = b;
+        }
+    }
+    (out, changed, escapes)
+}
+
+/// Encode one cell relative to the terminal's tracked colour state.
+///
+/// Returns the bytes written, the new tracked foreground/background, and the
+/// number of SGR escapes emitted. Only the colour transitions from `cur_*` are
+/// written, matching how [`encode`] reuses colours across a run of cells.
+pub fn encode_cell(
+    cell: &Cell,
+    cur_fg: &Option<Color>,
+    cur_bg: &Option<Color>,
+) -> (String, Option<Color>, Option<Color>, usize) {
+    let mut out = String::new();
+    let mut escapes = 0;
+    let mut f = *cur_fg;
+    let mut b = *cur_bg;
+    if cell.fg != f {
+        out.push_str(&fg_code(cell.fg));
+        f = cell.fg;
+        escapes += 1;
+    }
+    if cell.bg != b {
+        out.push_str(&bg_code(cell.bg));
+        b = cell.bg;
+        escapes += 1;
+    }
+    out.push(cell.ch);
+    (out, f, b, escapes)
 }
 
 #[cfg(test)]
@@ -183,5 +261,64 @@ mod tests {
         assert_eq!(rows.len(), 2);
         assert!(rows[0].ends_with(RESET));
         assert!(!rows[1].contains("\u{1b}[38"), "row 2 starts from default");
+    }
+
+    // --- diff encoding ------------------------------------------------------
+
+    fn two_grids() -> (TuiGrid, TuiGrid) {
+        let mut a = grid(4, 1);
+        a.fill_background(rect(0.0, 0.0, 40.0, 10.0), Color::rgb(10, 20, 30));
+        a.put(0, 0, 'X', Color::rgb(200, 200, 200));
+        let mut b = a.clone();
+        // Flip one cell: 'X' -> 'Y' with a different foreground.
+        b.put(0, 0, 'Y', Color::rgb(11, 22, 33));
+        (a, b)
+    }
+
+    #[test]
+    fn identical_grids_diff_to_no_changes() {
+        let g = grid(4, 2);
+        let (out, changed, escapes) = diff_encode(&g, &g);
+        assert_eq!(changed, 0);
+        // Only the leading reset; no cursor moves, no content.
+        assert_eq!(out, RESET);
+        assert_eq!(escapes, 1);
+    }
+
+    #[test]
+    fn diff_emits_only_the_changed_cell() {
+        let (a, b) = two_grids();
+        let (out, changed, _escapes) = diff_encode(&b, &a);
+        assert_eq!(changed, 1, "exactly one cell changed");
+        assert!(
+            out.starts_with(RESET),
+            "a diff starts from a known colour baseline"
+        );
+        assert!(out.contains("\u{1b}[1;1H"), "the changed cell is positioned");
+        assert!(out.contains('Y'), "the new glyph is written");
+        // The new foreground SGR for (11,22,33).
+        assert!(out.contains("\u{1b}[38;2;11;22;33m"));
+        assert!(
+            !out.contains("\u{1b}[2J"),
+            "a patch never clears the whole screen"
+        );
+    }
+
+    #[test]
+    fn diff_is_shorter_than_a_full_reencode() {
+        let mut a = grid(80, 24);
+        a.fill_background(rect(0.0, 0.0, 800.0, 240.0), Color::rgb(1, 2, 3));
+        a.put(0, 0, 'X', Color::rgb(200, 200, 200));
+        let mut b = a.clone();
+        b.put(0, 0, 'Y', Color::rgb(200, 200, 200));
+        let full = encode(&b);
+        let (patch, changed, _) = diff_encode(&b, &a);
+        assert_eq!(changed, 1);
+        assert!(
+            patch.len() < full.len(),
+            "patching one cell must cost far less than re-encoding the screen: {} vs {}",
+            patch.len(),
+            full.len()
+        );
     }
 }

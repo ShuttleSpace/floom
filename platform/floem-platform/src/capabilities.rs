@@ -72,4 +72,14 @@ impl PlatformCapabilities {
         }
         Self { caps }
     }
+
+    /// A character-grid terminal: it paints software-rendered cells, owns a
+    /// window the framework lays out into, and can push clipboard text out via
+    /// OSC 52. It has no native IME surface (the caret-area handshake is a
+    /// no-op) and no accessibility tree the OS can read, so those stay off.
+    pub fn tui_default() -> Self {
+        Self {
+            caps: Capability::WINDOWING | Capability::SOFTWARE_RENDER | Capability::CLIPBOARD,
+        }
+    }
 }

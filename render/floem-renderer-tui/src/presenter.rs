@@ -21,7 +21,9 @@ use floem_renderer::{AttachedSurface, FrameInfo, Presenter};
 use floem_scene::{ResourceRegistry, Scene};
 use floem_types::Size;
 
-use crate::{PaintStats, TuiGrid, encode, paint_scene};
+use crate::{
+    DiffStats, PaintStats, TuiGrid, diff_encode, encode, encode_with_stats, paint_scene,
+};
 
 /// How many characters the terminal has.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -121,6 +123,44 @@ impl<W: Write> Presenter for TuiPresenter<W> {
 
     fn frames_presented(&self) -> u64 {
         self.frames
+    }
+}
+
+impl<W: Write> TuiPresenter<W> {
+    /// Like [`present`](Presenter::present) but incremental: the first frame
+    /// clears the screen and homes the cursor, and every later frame emits only
+    /// the cells that changed since the previous one, positioned by absolute
+    /// cursor moves. This is the method a real terminal main loop should call —
+    /// a 80×24 grid that repaints in full on every animation frame is
+    /// unusable, whereas a patch of the few cells that moved is cheap.
+    ///
+    /// Returns [`DiffStats`] describing the patch, including whether the frame
+    /// fell back to a full repaint because there was no prior frame.
+    pub fn present_diff(&mut self, scene: &Scene, resources: &ResourceRegistry) -> DiffStats {
+        let mut grid = TuiGrid::new(self.size.cols, self.size.rows, self.logical);
+        paint_scene(&mut grid, scene, resources);
+        self.stats = grid.stats();
+        let full = self.last.is_none();
+        let (bytes, changed, escapes) = if full {
+            let (body, stats) = encode_with_stats(&grid);
+            // Clear + home, then the full screen. Patching needs a baseline.
+            let mut s = String::from("\u{1b}[2J\u{1b}[H");
+            s.push_str(&body);
+            (s, grid.cells_with_content(), stats.escapes + 2)
+        } else {
+            let old = self.last.as_ref().unwrap();
+            let (patch, changed, escapes) = diff_encode(&grid, old);
+            (patch, changed, escapes)
+        };
+        self.frames += 1;
+        self.last = Some(grid);
+        let _ = self.sink.write_all(bytes.as_bytes());
+        let _ = self.sink.flush();
+        DiffStats {
+            changed_cells: changed,
+            escapes,
+            full_repaint: full,
+        }
     }
 }
 
@@ -260,5 +300,37 @@ mod tests {
         presenter.present(&scene, &registry);
         assert_eq!(presenter.stats().text_runs, 1);
         assert_eq!(presenter.frames_presented(), 1);
+    }
+
+    #[test]
+    fn first_diff_frame_is_a_full_repaint() {
+        let (scene, registry) = scene_with_label(rect(0.0, 0.0, 80.0, 24.0), Color::rgb(1, 2, 3));
+        let mut presenter = TuiPresenter::new(TerminalSize::new(8, 2), Vec::new());
+        presenter.attach(attached(Size::new(80.0, 24.0)));
+        let stats = presenter.present_diff(&scene, &registry);
+        assert!(stats.full_repaint);
+        let out = String::from_utf8(presenter.sink().clone()).unwrap();
+        assert!(
+            out.starts_with("\u{1b}[2J\u{1b}[H"),
+            "the first diff frame clears and homes: {out:?}"
+        );
+        assert_eq!(presenter.frames_presented(), 1);
+    }
+
+    #[test]
+    fn an_unchanged_second_frame_patches_nothing() {
+        let (scene, registry) = scene_with_label(rect(0.0, 0.0, 8.0, 2.0), Color::BLACK);
+        let mut presenter = TuiPresenter::new(TerminalSize::new(8, 2), Vec::new());
+        presenter.attach(attached(Size::new(8.0, 2.0)));
+        presenter.present_diff(&scene, &registry); // full
+        let before = presenter.sink().clone().len();
+        let stats = presenter.present_diff(&scene, &registry); // identical
+        assert!(!stats.full_repaint);
+        assert_eq!(stats.changed_cells, 0, "nothing moved between identical frames");
+        let patch_len = presenter.sink().clone().len() - before;
+        assert!(
+            patch_len < before,
+            "a no-op patch is a handful of bytes, not a screen: {patch_len} vs {before}"
+        );
     }
 }

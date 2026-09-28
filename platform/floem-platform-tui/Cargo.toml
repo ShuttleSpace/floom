@@ -1,0 +1,16 @@
+[package]
+name = "floem-platform-tui"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Terminal (character-grid) platform backend for Floem 2.0"
+rust-version.workspace = true
+
+[dependencies]
+floem-platform = { path = "../floem-platform" }
+floem-types = { path = "../../foundation/floem-types" }
+
+# Terminal size detection on unix needs an ioctl; libc provides TIOCGWINSZ.
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"

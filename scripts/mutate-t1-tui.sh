@@ -83,10 +83,18 @@ mutate_one "$ANSI" \
 "        Some(c) => truecolor(48, c)," \
 "$UNIT" "ansi: fg_uses_bg_channel"
 
-# 7. Rows stop being reset, so a colour bleeds into the next row.
+# 7. Rows stop being reset, so a colour bleeds into the next row. Anchor on the
+#    per-row reset block in `encode_with_stats` (the `stats.escapes += 1;` line
+#    distinguishes it from the leading reset in `diff_encode`). Removing the
+#    RESET emit also drops its escape counter; `rows_are_reset_independently`
+#    (row 0 must end in RESET) and `colours_are_emitted_once_per_run_of_cells`
+#    (escapes count) both turn red.
 mutate_one "$ANSI" \
-"        out.push_str(RESET);" \
-"        let _ = RESET;" \
+"        out.push_str(RESET);
+        stats.escapes += 1;
+        cur_fg = None;" \
+"        // no per-row SGR reset
+        cur_fg = None;" \
 "$UNIT" "ansi: no_per_row_reset"
 
 echo "=== TUI mutation campaign ==="

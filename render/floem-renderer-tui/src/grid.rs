@@ -111,6 +111,16 @@ impl TuiGrid {
         self.cells.get_mut(row * cols + col)
     }
 
+    /// Count cells that carry any visible content — a non-space character or an
+    /// explicit colour. Used by the diff presenter to report how much of the
+    /// screen a full repaint actually touched.
+    pub fn cells_with_content(&self) -> usize {
+        self.cells
+            .iter()
+            .filter(|c| c.ch != ' ' || c.fg.is_some() || c.bg.is_some())
+            .count()
+    }
+
     /// The column a logical x falls in, if any.
     pub fn col_of(&self, x: f64) -> Option<usize> {
         if x < 0.0 {
