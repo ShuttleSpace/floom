@@ -27,10 +27,10 @@ use std::sync::{Arc, Mutex};
 use floem_accessibility::{SemanticsNode, SemanticsTree};
 use floem_animation::{AnimId, AnimKind, AnimSample, AnimationScheduler};
 use floem_core::{
-    Align, AnimationSpec, Axis, Child, ChildKey, CreateContext,     ElementId, Event, EventContext, Key, KeyEvent, KeyPhase, Modifiers, NamedKey,
-    LayoutRequest, NativeGrant, NativeRequest, NativeSnapshot, OverlayHandle, OverlayKind,
-    OverlayRequest, PaintContext, Point, PointerPhase, Position, Rect, ResourceId, SemanticsHint,
-    SemanticsRole, Size, UpdateContext,
+    Align, AnimationSpec, Axis, Child, ChildKey, CreateContext, ElementId, Event, EventContext,
+    Key, KeyEvent, KeyPhase, LayoutRequest, Modifiers, NamedKey, NativeGrant, NativeRequest,
+    NativeSnapshot, OverlayHandle, OverlayKind, OverlayRequest, PaintContext, Point, PointerPhase,
+    Position, Rect, ResourceId, SemanticsHint, SemanticsRole, Size, UpdateContext,
 };
 use floem_focus::{FocusDirection, FocusManager, FocusScopeId};
 use floem_layout::{
@@ -3971,8 +3971,12 @@ impl NodePaintContext<'_> {
         if let Some(id) = self.cached_glyph_id(text, font_size) {
             return id;
         }
+        // The string the runs were shaped from travels with the resource. It is
+        // the only cheap chance to do so: shaping is lossy (a ligature or a
+        // fallback font makes glyph id -> character many-to-many), so a backend
+        // that needs characters rather than ink cannot recover them later.
         let id = self.resources.insert(Resource {
-            kind: ResourceKind::GlyphRun { runs },
+            kind: ResourceKind::glyph_runs_with_text(runs, text),
         });
         self.glyphs.insert(
             glyph_hash(text, font_size),

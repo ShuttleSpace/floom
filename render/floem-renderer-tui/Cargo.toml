@@ -1,0 +1,16 @@
+[package]
+name = "floem-renderer-tui"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Terminal (character-cell) Scene renderer and presenter for Floem 2.0"
+rust-version.workspace = true
+
+[dependencies]
+floem-renderer = { path = "../floem-renderer", version = "0.2.0" }
+floem-scene = { path = "../../scene/floem-scene", version = "0.2.0" }
+floem-types = { path = "../../foundation/floem-types", version = "0.2.0" }
+
+[dev-dependencies]
+floem-text = { path = "../../text/floem-text", version = "0.2.0" }

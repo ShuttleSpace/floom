@@ -221,6 +221,17 @@ pub trait Ime { fn set_enabled / set_cursor_area }
   4. 输入/文本：触摸状态机 + NDK 键码（已就绪，iOS 侧键码另映射）、CoreText 或复用 floem 文本。
 - **风险**：① Apple 工具链摩擦（需 Xcode、provisioning、XcodeGen/生成 xcodeproj）；② Rust iOS 目标 + wgpu-metal 交叉编译；③ 模拟器 Metal 可用性（需真实设备验证更可靠）。
 
+### 4.4 Terminal (TUI)
+
+前三个平台是"把 OS 表面接进来"，终端是唯一一个**输出本身就不同构**的目标：终端不是像素网格，而是**字符网格**。因此这里的关键设计决定不是"用哪个 GPU API"，而是"要不要把画面降采样成彩色方块"。
+
+- **被否的方案**：先软件光栅化、再按半块（`▀`/`▄`）降采样成 ANSI（即 `chafa`/`viu` 的路子）。它能自动吃下所有节点类型（rect/path/image/filter），但**文字必然糊**——一个 14px 的字在本机常见 120×40 网格下只占约 1 个单元格。能跑不等于能用。
+- **采用的方案**：原生字符网格。`Rect` 填充背景色；`Text` 节点把**它当初被排版的那些字符**写进字形所在的单元格。
+- **这带来一个 IR 改动**（为什么必须由 shared IR 承担）：shaped text 是**有损**的。`GlyphRun` 只带字形 id、位置与字体 blob，连字/回退字体让"字形 id → 字符"是多对多映射，任何下游都无法还原。所以 `ResourceKind::GlyphRun` 现在额外保留源字符串 `text: Arc<str>`（生产注入点唯一：`app/floem-app/src/lib.rs` 的 `intern_glyphs`，那里本来就有 `text`）。同一份字符串将来也是文本提取、无障碍树、命中测试要用的东西——TUI 只是第一个消费者。
+- **诚实放弃的部分**：字符网格表达不了的东西（矢量 path、图片、滤镜、自定义 shader、渐变）**跳过而非近似**。近似（例如拿渐变的第一个色标当纯色）是对"场景到底要了什么"的沉默说谎。跳过量由 `PaintStats::skipped` 计数暴露，调用方能自己看见画面少了什么。
+- **已交付（T1 切片）**：`render/floem-renderer-tui` —— `TuiGrid`（字符网格 + 单元 => 列的映射 + 直 alpha 合成）、ANSI truecolor 编码（同色相邻不重复发转义）、`TuiPresenter`（`Presenter`，输出到可注入的 writer，便于测试逐字节断言）。覆盖 stripe：单元测试 16 项 + `app/floem-app/tests/tui_backend.rs` 三条端到端（真实 `WidgetHost` + `Text` widget 的字符落到网格、重复帧稳定性、列宽改变映射随之改变）。变异战役 7 杀 7（`scripts/mutate-t1-tui.sh`）。
+- **仍缺（下一步，平台层）**：`floem-platform-tui` —— 从真实终端取 cols/rows（`Termion`/`crossterm` 或 `TERM` 环境变量）、把 stdin 事件翻成 `PlatformEvent`、经 OSC 52 实现真剪贴板、以及帧框架（cursor home / 差异重绘，后者是终端性能的关键）。
+
 ### 4.3 Harmony（路径已清晰，硬伤降级）
 
 - **现状**：`floem-platform-harmony` 仅 `HostPlatform::new()`；本机 **`hdc`/`deveco` 全无**，鸿蒙验证在本机**不可能**；**原假设的 `vendor/floem-winit-ohos` 路径不成立——OHOS 没有 winit 后端**（Flutter/RN 均走 XComponent+NAPI 直连，已核查）。

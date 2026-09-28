@@ -1421,7 +1421,7 @@ impl VelloGpuPresenter {
                 color,
                 ..
             } => {
-                let Some(ResourceKind::GlyphRun { runs }) = resources.get(*glyphs).map(|r| &r.kind)
+                let Some(ResourceKind::GlyphRun { runs, .. }) = resources.get(*glyphs).map(|r| &r.kind)
                 else {
                     // Dangling or wrong-kind id: skip rather than fail.
                     return stats;

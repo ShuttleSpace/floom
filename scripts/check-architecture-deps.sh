@@ -130,7 +130,7 @@ RENDERER_PACKAGES = {
     # 2.0 renderer ABI + backends, under `render/`. `floem-renderer` is the
     # abstract ABI (the one widgets are allowed to name); the rest are concrete.
     "floem-renderer", "floem-renderer-vello", "floem-renderer-software",
-    "floem-renderer-skia",
+    "floem-renderer-skia", "floem-renderer-tui",
 }
 WIDGET_HINTS = {"floem-widgets", "floem-widgets-data", "floem-widgets-media"}
 # Legacy underscore spelling still referenced by pre-2.0 crates.
@@ -235,7 +235,7 @@ for _names, _level in [
     (
         [
             "floem-renderer", "floem-renderer-software", "floem-renderer-vello",
-            "floem-renderer-skia",
+            "floem-renderer-skia", "floem-renderer-tui",
             "floem-platform", "floem-platform-desktop", "floem-platform-android",
             "floem-platform-ios", "floem-platform-harmony", "floem-platform-web",
             "floem-platform-embedded", "floem-platform-mobile",

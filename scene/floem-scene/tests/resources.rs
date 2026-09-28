@@ -60,22 +60,28 @@ fn glyph_run_resource_carries_shaped_runs() {
     let laid = shaper.shape("Hello", &options);
     assert!(!laid.runs.is_empty(), "shaping produces at least one run");
 
+    // The retained string is part of the resource, not a side table: shaping is
+    // lossy, so nothing downstream can reconstruct it from the glyph ids.
+    let expected: std::sync::Arc<str> = std::sync::Arc::from("Hello");
     let mut reg = ResourceRegistry::new();
     let id = reg.insert(Resource {
-        kind: ResourceKind::GlyphRun {
-            runs: laid.runs.clone(),
-        },
+        kind: ResourceKind::glyph_runs_with_text(laid.runs.clone(), expected.clone()),
     });
 
-    let Some(ResourceKind::GlyphRun { runs }) = reg.get(id).map(|r| &r.kind) else {
+    let Some(ResourceKind::GlyphRun { runs, text }) = reg.get(id).map(|r| &r.kind) else {
         panic!("glyph run resource does not round-trip");
     };
     assert_eq!(runs, &laid.runs);
+    assert_eq!(text, &expected, "the source string survives into the scene");
+    // Text is charged by the byte, on top of the per-glyph accounting: budget
+    // accounting that treats retained strings as free would let long labels
+    // grow unbounded.
     let glyph_cost: u64 = laid
         .runs
         .iter()
         .map(|run| run.glyphs.len() as u64 * 16 + 64)
-        .sum();
+        .sum::<u64>()
+        + expected.len() as u64;
     assert_eq!(reg.used_units(), glyph_cost);
     assert!(reg.release(id));
     assert!(reg.get(id).is_none());

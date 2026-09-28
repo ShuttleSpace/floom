@@ -388,7 +388,7 @@ impl PaintContext for SceneRecorder {
         // keeps the resource present without pulling a text dependency into
         // the widget layer.
         let glyphs = self.registry.insert(Resource {
-            kind: ResourceKind::GlyphRun { runs: Vec::new() },
+            kind: ResourceKind::glyph_runs(Vec::new()),
         });
         // No shaping happens here (`floem-text` owns that), so the retained
         // node gets a placeholder advance box just to keep a bounds hint.

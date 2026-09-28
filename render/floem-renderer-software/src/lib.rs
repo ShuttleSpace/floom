@@ -509,7 +509,8 @@ impl SoftwareRenderer {
         resources: &ResourceRegistry,
         clip: Clip,
     ) {
-        let Some(ResourceKind::GlyphRun { runs }) = resources.get(glyph_resource).map(|r| &r.kind)
+        let Some(ResourceKind::GlyphRun { runs, .. }) =
+            resources.get(glyph_resource).map(|r| &r.kind)
         else {
             return;
         };
@@ -1853,9 +1854,7 @@ mod tests {
 
         let mut registry = ResourceRegistry::new();
         let glyphs = registry.insert(floem_scene::Resource {
-            kind: ResourceKind::GlyphRun {
-                runs: laid.runs.clone(),
-            },
+            kind: ResourceKind::glyph_runs(laid.runs.clone()),
         });
 
         let mut scene = Scene::new();
@@ -1920,9 +1919,7 @@ mod tests {
 
         let mut registry = ResourceRegistry::new();
         let glyphs = registry.insert(floem_scene::Resource {
-            kind: ResourceKind::GlyphRun {
-                runs: laid.runs.clone(),
-            },
+            kind: ResourceKind::glyph_runs(laid.runs.clone()),
         });
         let mut scene = Scene::new();
         scene.begin_update();
@@ -2053,7 +2050,7 @@ mod tests {
         let make_scene = |runs| {
             let mut registry = ResourceRegistry::new();
             let glyphs = registry.insert(floem_scene::Resource {
-                kind: ResourceKind::GlyphRun { runs },
+                kind: ResourceKind::glyph_runs(runs),
             });
             let mut scene = Scene::new();
             scene.begin_update();
@@ -2151,9 +2148,7 @@ mod tests {
     fn draw_text_frame(sw: &mut SoftwareRenderer, runs: &[floem_text::GlyphRun]) {
         let mut registry = ResourceRegistry::new();
         let glyphs = registry.insert(floem_scene::Resource {
-            kind: ResourceKind::GlyphRun {
-                runs: runs.to_vec(),
-            },
+            kind: ResourceKind::glyph_runs(runs.to_vec()),
         });
         let mut scene = Scene::new();
         scene.begin_update();
@@ -2260,9 +2255,7 @@ mod tests {
         let make_scene = |runs: &[floem_text::GlyphRun]| {
             let mut registry = ResourceRegistry::new();
             let glyphs = registry.insert(floem_scene::Resource {
-                kind: ResourceKind::GlyphRun {
-                    runs: runs.to_vec(),
-                },
+                kind: ResourceKind::glyph_runs(runs.to_vec()),
             });
             let mut scene = Scene::new();
             scene.begin_update();

@@ -39,7 +39,7 @@ fn first_text_node(host: &WidgetHost) -> (floem_types::Size, ResourceId) {
 
 fn glyph_runs(host: &WidgetHost, id: ResourceId) -> Vec<floem_text::GlyphRun> {
     match host.resources().get(id).map(|r| &r.kind) {
-        Some(ResourceKind::GlyphRun { runs }) => runs.clone(),
+        Some(ResourceKind::GlyphRun { runs, .. }) => runs.clone(),
         other => panic!("expected a glyph-run resource, got {other:?}"),
     }
 }

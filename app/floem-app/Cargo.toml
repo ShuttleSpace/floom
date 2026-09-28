@@ -40,6 +40,7 @@ smallvec = "1.15"
 floem-legacy-reactive = { path = "../../legacy/floem-reactive", version = "0.2.0" }
 floem-forms = { path = "../../framework/floem-forms", version = "0.2.0" }
 floem-renderer-software = { path = "../../render/floem-renderer-software", version = "0.2.0" }
+floem-renderer-tui = { path = "../../render/floem-renderer-tui", version = "0.2.0" }
 floem-text = { path = "../../text/floem-text", version = "0.2.0" }
 # The integration suites drive the app through the shared harness rather than
 # each growing their own copy of it.

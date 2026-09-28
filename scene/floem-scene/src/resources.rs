@@ -3,6 +3,7 @@
 use floem_text::GlyphRun;
 use floem_types::ResourceId;
 use std::collections::VecDeque;
+use std::sync::Arc;
 
 /// Kind of retained resource (renderer backends map these to GPU objects later).
 ///
@@ -21,12 +22,45 @@ pub enum ResourceKind {
     /// Fully shaped text. The node referencing this resource only carries the
     /// resource id; everything a renderer needs (font data, size, glyph ids and
     /// positions) lives here.
+    ///
+    /// `text` is the source string the runs were shaped from, retained because
+    /// the shaped form is *lossy*: a skia/vello-style backend can rasterise a
+    /// glyph from the font blob, but nothing downstream can recover the
+    /// characters from glyph ids alone (ligatures and fallback fonts make the
+    /// mapping many-to-many). Anything that needs characters rather than ink —
+    /// the terminal backend, text extraction, an accessibility tree — reads
+    /// them here instead of re-implementing a `cmap` reverse lookup. It is an
+    /// `Arc<str>` because the resource is cloned on every frame the text is
+    /// referenced.
     GlyphRun {
         runs: Vec<GlyphRun>,
+        text: Arc<str>,
     },
     Blob {
         bytes: usize,
     },
+}
+
+impl ResourceKind {
+    /// Glyph runs with no retained source text.
+    ///
+    /// For callers that have shaped `runs` but no string to go with them —
+    /// every existing test fixture, and any future backend that only ever
+    /// rasterises ink. See [`ResourceKind::GlyphRun`] for who needs the text.
+    pub fn glyph_runs(runs: Vec<GlyphRun>) -> Self {
+        Self::GlyphRun {
+            runs,
+            text: Arc::from(""),
+        }
+    }
+
+    /// Glyph runs plus the string they were shaped from.
+    pub fn glyph_runs_with_text(runs: Vec<GlyphRun>, text: impl Into<Arc<str>>) -> Self {
+        Self::GlyphRun {
+            runs,
+            text: text.into(),
+        }
+    }
 }
 
 /// A registry-owned resource payload.
@@ -184,11 +218,16 @@ fn resource_cost(resource: &Resource) -> u64 {
         // how many bytes the pixels happen to occupy.
         ResourceKind::Image { width, height, .. } => u64::from(*width) * u64::from(*height),
         // Same per-glyph accounting the `glyph_count` variant used before runs
-        // were retained (16 units per glyph, plus a fixed run overhead).
-        ResourceKind::GlyphRun { runs } => runs
-            .iter()
-            .map(|run| u64::from(run.glyphs.len() as u32) * 16 + 64)
-            .sum(),
+        // were retained (16 units per glyph, plus a fixed run overhead). The
+        // retained string is charged by the byte: it sits in the budget like
+        // any other resident resource payload, so a grid of long labels cannot
+        // grow without bound under a budget that believes text is free.
+        ResourceKind::GlyphRun { runs, text } => {
+            runs.iter()
+                .map(|run| u64::from(run.glyphs.len() as u32) * 16 + 64)
+                .sum::<u64>()
+                + u64::from(text.len() as u32)
+        }
         ResourceKind::Blob { bytes } => *bytes as u64,
     }
 }
