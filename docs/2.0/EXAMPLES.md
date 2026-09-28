@@ -15,6 +15,7 @@ something stale.
 | `floem2-demo` | the demo gallery: every section (primitives, controls, composites, motion, navigation, data, forms, styling) in one app — the same tree runs headless, in a real window, and on Android | all / desktop / Android | headless (default); `--features macos` opens a window, `--features android` produces the APK |
 | `floem2-chart` | self-drawn content: a line chart on a `Canvas`, clipped to its own box, redrawn from data | all | headless |
 | `floem2-hello` | the smallest app: everything from `floem2::prelude` | all | headless |
+| `floem2-run-desktop` | the same tree in a real OS window through the facade's one-call `floem2::run_desktop` — no `WinitApp` impl, no `AppRunner` wiring in the example | macOS / desktop | **display-gated** — `--features desktop,renderer-gpu`; see the known text-ink defect in [`vello-gpu-text-ink-defect.md`](./vello-gpu-text-ink-defect.md) |
 | `floem2-counter` | composites (`Stack`/`List`/`Grid`/`Tabs`/`Dialog`/`NavBar`) + reconciliation | all | headless |
 | `floem2-list` | a keyed list: append / remove / reorder without rebuilding rows | all | headless |
 | `floem2-virtual-list` | virtual scrolling: bounded element pool over 100 000 items | all | headless |

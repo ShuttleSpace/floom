@@ -60,6 +60,10 @@ floem-legacy-reactive = { path = "../../legacy/floem-reactive", version = "0.2.0
 # depends on it, so the headless graph gains no new crate.
 floem-scene = { path = "../../scene/floem-scene", version = "0.2.0" }
 floem-types = { path = "../../foundation/floem-types", version = "0.2.0" }
+# The neutral L4 contract (`Platform`, `WindowConfig`, `PlatformEvent`). The
+# facade needs `WindowConfig` to describe a window for whichever backend the
+# `run_*` entries drive, so this is a plain dependency, not a per-backend one.
+floem-platform = { path = "../../platform/floem-platform", version = "0.2.0" }
 floem-widgets = { path = "../../widgets/floem-widgets", version = "0.2.0" }
 floem-platform-desktop = { path = "../../platform/floem-platform-desktop", version = "0.2.0", optional = true }
 floem-platform-android = { path = "../../platform/floem-platform-android", version = "0.2.0", optional = true }

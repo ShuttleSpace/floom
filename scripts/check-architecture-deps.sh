@@ -235,7 +235,7 @@ for _names, _level in [
     (
         [
             "floem-renderer", "floem-renderer-software", "floem-renderer-vello",
-            "floem-renderer-skia", "floem-renderer-tui",
+            "floem-renderer-skia", "floem-renderer-tui", "floem-renderer-web",
             "floem-platform", "floem-platform-desktop", "floem-platform-android",
             "floem-platform-ios", "floem-platform-harmony", "floem-platform-web",
             "floem-platform-embedded", "floem-platform-tui", "floem-platform-mobile",

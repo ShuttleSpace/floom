@@ -87,18 +87,109 @@ pub use floem_platform_embedded;
 pub use floem_platform_harmony;
 #[cfg(feature = "mobile")]
 pub use floem_platform_ios;
-#[cfg(feature = "web")]
-pub use floem_platform_web;
-#[cfg(feature = "web")]
-pub use floem_renderer_web::WebPresenter;
-#[cfg(feature = "renderer-software")]
-pub use floem_renderer_software;
-#[cfg(feature = "renderer-gpu")]
-pub use floem_renderer_vello;
 #[cfg(feature = "tui")]
 pub use floem_platform_tui::{TuiApp, TuiPlatform};
+#[cfg(feature = "web")]
+pub use floem_platform_web;
+#[cfg(feature = "renderer-software")]
+pub use floem_renderer_software;
 #[cfg(feature = "tui")]
 pub use floem_renderer_tui::TuiPresenter;
+#[cfg(feature = "renderer-gpu")]
+pub use floem_renderer_vello;
+#[cfg(feature = "web")]
+pub use floem_renderer_web::WebPresenter;
+
+/// Run a Floem app in a real OS window — the desktop backend's one-call entry.
+///
+/// `build` mounts the app's widget tree into the host; the rest (the winit event
+/// loop, window realisation, input mapping, the GPU frame loop) is handled by
+/// the backend. Requires `--features desktop,renderer-gpu`.
+///
+/// The window is created before the loop starts, so `title`/`size`/`resizable`
+/// describe the first and only window. The presenter is
+/// [`VelloGpuPresenter`](floem_renderer_vello::VelloGpuPresenter); if no GPU
+/// adapter is usable the call fails with a message rather than panicking,
+/// because a window that can never paint is not a degraded app — it is a
+/// broken one.
+///
+/// ```
+/// use floem2::prelude::*;
+/// # #[cfg(all(feature = "desktop", feature = "renderer-gpu"))]
+/// # fn doc() -> Result<(), String> {
+/// // floem2::run_desktop("my app", Size::new(480.0, 320.0), |host| {
+/// //     host.mount_root(LayoutStyle::default(), Text::new("hello window"));
+/// // });
+/// # Ok(())
+/// # }
+/// ```
+#[cfg(all(feature = "desktop", feature = "renderer-gpu"))]
+pub fn run_desktop<F>(title: &str, size: floem_types::Size, build: F) -> Result<(), String>
+where
+    F: FnOnce(&mut floem_app::WidgetHost) + 'static,
+{
+    use floem_app::{AppRunner, WidgetHost};
+    use floem_platform_desktop::winit_backend::{WinitApp, WinitPlatform, run};
+    use floem_renderer_vello::VelloGpuPresenter;
+
+    struct ClosureApp<F> {
+        build: Option<F>,
+        runner: Option<AppRunner<VelloGpuPresenter>>,
+    }
+
+    impl<F: FnOnce(&mut WidgetHost)> WinitApp for ClosureApp<F> {
+        fn window_created(
+            &mut self,
+            _platform: &mut WinitPlatform,
+            _window: floem_types::WindowId,
+        ) {
+            let Some(build) = self.build.take() else {
+                return;
+            };
+            let mut host = WidgetHost::new();
+            build(&mut host);
+            // `WinitApp` has no error channel, so a machine with no usable
+            // adapter is reported on stderr and the window is left unpainted
+            // rather than panicking inside the event loop.
+            let Some(presenter) = VelloGpuPresenter::new() else {
+                eprintln!(
+                    "floem2::run_desktop: no usable GPU adapter; a desktop window needs one to paint"
+                );
+                return;
+            };
+            self.runner = Some(AppRunner::new(host, presenter));
+        }
+
+        fn events(&mut self, platform: &mut WinitPlatform) {
+            if let Some(runner) = self.runner.as_mut() {
+                runner.pump(platform);
+            }
+        }
+
+        fn about_to_wait(&mut self, platform: &mut WinitPlatform) {
+            // Drain once more so redraws the runner requested during the last
+            // `events` call are picked up before the loop blocks. Without this
+            // a state change made during dispatch would wait for the next
+            // external event to be noticed.
+            if let Some(runner) = self.runner.as_mut() {
+                runner.pump(platform);
+            }
+        }
+    }
+
+    let windows = vec![floem_platform::WindowConfig {
+        title: title.to_string(),
+        size,
+        resizable: true,
+    }];
+    run(
+        ClosureApp {
+            build: Some(build),
+            runner: None,
+        },
+        windows,
+    )
+}
 
 /// Run a Floem app in a terminal — the character-grid backend's one-call entry.
 ///
@@ -152,6 +243,89 @@ where
         build: Some(build),
         runner: None,
     })
+}
+
+/// Run a Floem app on Android — the Android backend's one-call entry.
+///
+/// `build` mounts the app's widget tree into the host; the rest (the winit
+/// event loop, surface realisation, input and soft-keyboard plumbing) is
+/// handled by the backend. Requires `--features mobile,renderer-gpu`.
+///
+/// # The `android_main` seam
+///
+/// Unlike every other `run_*` entry, this one is not called from `main`. Android
+/// hands the app an `AndroidApp` before any Rust entry point runs, and winit
+/// insists on receiving it while building the event loop, so the glue must call
+/// [`floem_platform_android::set_android_app`] **exactly once** before
+/// [`run_android`] — this is the seam `run_android` cannot paper over for you.
+/// In a `native-activity` app that looks like:
+///
+/// ```ignore
+/// #[no_mangle]
+/// fn android_main(app: AndroidApp) -> Result<(), String> {
+///     floem_platform_android::set_android_app(app);
+///     floem2::run_android("my app", Size::new(360.0, 640.0), |host| {
+///         host.mount_root(LayoutStyle::default(), Text::new("hello android"));
+///     })
+/// }
+/// ```
+///
+/// [`run_android`]: fn.run_android.html
+#[cfg(all(feature = "mobile", feature = "renderer-gpu", target_os = "android"))]
+pub fn run_android<F>(title: &str, size: floem_types::Size, build: F) -> Result<(), String>
+where
+    F: FnOnce(&mut floem_app::WidgetHost) + 'static,
+{
+    use floem_app::{AppRunner, WidgetHost};
+    use floem_platform_android::{AndroidPlatform, AndroidRunner, run};
+    use floem_renderer_vello::VelloGpuPresenter;
+
+    struct ClosureApp<F> {
+        build: Option<F>,
+        runner: Option<AppRunner<VelloGpuPresenter>>,
+    }
+
+    impl<F: FnOnce(&mut WidgetHost)> AndroidRunner for ClosureApp<F> {
+        fn events(&mut self, platform: &mut AndroidPlatform) {
+            if let Some(build) = self.build.take() {
+                let mut host = WidgetHost::new();
+                build(&mut host);
+                let Some(presenter) = VelloGpuPresenter::new() else {
+                    eprintln!(
+                        "floem2::run_android: no usable GPU adapter; an Android surface needs one to paint"
+                    );
+                    return;
+                };
+                self.runner = Some(AppRunner::new(host, presenter));
+            }
+            if let Some(runner) = self.runner.as_mut() {
+                runner.pump(platform);
+            }
+        }
+
+        fn about_to_wait(&mut self, platform: &mut AndroidPlatform) {
+            // Drain once more so redraws queued during the last `events` call are
+            // honoured. Deliberately no `request_frame` here: that would make
+            // every `about_to_wait` emit another `RedrawRequested`, so the loop
+            // would never park (measured on the emulator: 2.7M redraws in 8s).
+            if let Some(runner) = self.runner.as_mut() {
+                runner.pump(platform);
+            }
+        }
+    }
+
+    let windows = vec![floem_platform::WindowConfig {
+        title: title.to_string(),
+        size,
+        resizable: false,
+    }];
+    run(
+        ClosureApp {
+            build: Some(build),
+            runner: None,
+        },
+        windows,
+    )
 }
 
 /// Run a Floem app in a web browser — the Web backend's one-call entry.
