@@ -17,6 +17,8 @@ set -euo pipefail
 
 # Keep the list alphabetical and in sync with docs/2.0/EXAMPLES.md.
 EXAMPLES=(
+  floem2-calculator
+  floem2-capabilities
   floem2-chart
   floem2-counter
   floem2-datagrid

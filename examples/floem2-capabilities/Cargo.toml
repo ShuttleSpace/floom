@@ -1,0 +1,82 @@
+[package]
+name = "floem2-capabilities"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+description = "Floem 2.0 platform-capability showcase: the same tree on every platform, reporting what the OS actually returned"
+
+# One crate, one capability gallery, one command per platform — the same shape
+# as `floem2-demo`, but the subject is the *platform surface* rather than the
+# widget vocabulary.
+#
+# The point of this example is honesty about reach. Every capability row calls
+# the real `floem-platform-mobile` API and shows what came back, including
+# "unavailable on this platform" where the host arm is inert. A gallery that
+# printed "OK" everywhere would be worth less than none: on a desktop host 15 of
+# the 18 capabilities genuinely cannot work, and the example should say so in the
+# same typeface as the ones that can.
+#
+# `headless` is the default so the golden-example harness can run it with no
+# windowing, exactly like `floem2-demo`.
+
+[lib]
+name = "floem2_capabilities"
+path = "src/lib.rs"
+crate-type = ["cdylib", "rlib"]
+
+[features]
+default = ["headless"]
+
+# Pump the `WidgetHost` by hand and print every capability's answer. No window,
+# no GPU — this is the mode CI and the golden harness run.
+headless = []
+
+# A real window: winit + vello over wgpu.
+macos = [
+    "dep:floem-platform-desktop",
+    "dep:floem-renderer-vello",
+    "floem-platform-desktop/winit",
+    "floem-renderer-vello/gpu",
+]
+
+# A real APK: `native-activity` + vello GPU. The capability packages are the
+# whole point here — they are real JNI on this target.
+android = [
+    "dep:floem-platform-android",
+    "dep:floem-renderer-vello",
+    "floem-renderer-vello/gpu",
+]
+
+# Turn the backend crate on so the gallery can be `cargo check`ed for the
+# target. The v2 backends for these are still in-memory skeletons
+# (see `docs/2.0/EXAMPLES.md`), so no artifact is claimed for them.
+ios = ["dep:floem-platform-ios"]
+web = ["dep:floem-platform-web"]
+
+[dependencies]
+floem-app = { path = "../../app/floem-app", version = "0.2.0" }
+floem-core = { path = "../../foundation/floem-core", version = "0.2.0" }
+floem-layout = { path = "../../layout/floem-layout", version = "0.2.0" }
+floem-platform = { path = "../../platform/floem-platform", version = "0.2.0" }
+# The 18 capability packages this example demonstrates. Same layer (L4) as the
+# platform backends, so the architecture gate permits the edge.
+floem-platform-mobile = { path = "../../platform/floem-platform-mobile", version = "0.2.0" }
+floem-types = { path = "../../foundation/floem-types", version = "0.2.0" }
+floem-widgets = { path = "../../widgets/floem-widgets", version = "0.2.0" }
+
+floem-platform-desktop = { path = "../../platform/floem-platform-desktop", version = "0.2.0", optional = true }
+floem-platform-android = { path = "../../platform/floem-platform-android", version = "0.2.0", optional = true }
+floem-platform-ios = { path = "../../platform/floem-platform-ios", version = "0.2.0", optional = true }
+floem-platform-web = { path = "../../platform/floem-platform-web", version = "0.2.0", optional = true }
+floem-renderer-vello = { path = "../../render/floem-renderer-vello", version = "0.2.0", optional = true }
+
+# On Android the winit fork must be Floem's own, so the `AndroidApp` type lines
+# up with `floem_platform_android::set_android_app`.
+[target.'cfg(target_os = "android")'.dependencies]
+winit = { git = "https://github.com/lapce/winit", rev = "133268de675a4fda70816d78a7a1435eb972fea1", package = "floem-winit", features = ["android-native-activity"] }
+
+[[bin]]
+name = "floem2-capabilities"
+path = "src/main.rs"
+required-features = ["headless"]
