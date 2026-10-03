@@ -148,49 +148,43 @@ with no `.child()` builder, because composition moved to the parent via
 `Child::new(ChildKey, LayoutRequest, || Box::new(..))`. So both now only install
 their signal, and wrapping is the caller's job.
 
-#### `Ripple` — the one engine gap, precisely located
+#### `Ripple` — no engine gap at all
 
-`Ripple` (the Material press ripple) is **not** ported. My first description of
-why was too broad — it said 2.0 "cannot express a two-phase pointer-driven
-interaction". Having read the animation contract, that is wrong: the model does
-support it. What follows is what the code actually shows.
+`Ripple` (the Material press ripple) was described here twice as blocked by an
+engine limitation. **It is not.** `crates/floom-app/tests/event_animation.rs`
+proves the two-phase pointer-driven case works today, and I twice misread the
+code before checking; recording the proof so it does not get re-litigated.
 
-**The contract is fine.** `Widget::animation` returns an `AnimationSpec`, and
-`WidgetHost::sync_declared_animation` compares it to the last declared spec with
-`declared.matches(&spec)`; on a difference it cancels and starts a new
-`AnimKind`. So a widget that *re-arms* its spec gets a restart — which is
-exactly what a two-phase ripple needs. A ripple needs only one animated scalar
-at a time (radius while expanding, alpha while fading), `AnimationSpec` with
-empty `channels` already means "the widget reads the value itself" via
-`cx.animation_value()`, and `Spinner` demonstrates that read. Two phases are
-sequential, so one scalar suffices.
+A two-phase ripple is: a press starts an *expand*, a release starts a *fade*.
+All three links work:
 
-**The gap is narrower: a widget cannot invalidate itself from an event.**
-`EventContext` exposes `target`, `bounds`, `cursor_position`, `event`,
-`request_focus` and `open_overlay` — and no way to mark itself dirty. The
-host's routing loop (`WidgetHost::dispatch`) walks the capture/bubble route,
-sets `handled`, breaks, and then applies focus and overlay requests — it never
-marks the routed node dirty. Dirtiness in this host is *reported by*
-`update()` (`cx.dirty` from `Revision::sync` / `mark_dirty`), and
-`reconcile_declared_animations` only runs for nodes already in the update pass.
+1. **A widget can change its declared animation.** `WidgetHost::sync_declared_animation`
+   compares the newly declared `AnimationSpec` with the previous one via
+   `declared.matches(&spec)` and, on a difference, cancels and restarts.
+2. **One animated scalar is enough.** `AnimationSpec::new` is a tween that
+   drives nothing by itself, which means "the widget reads the value" via
+   `cx.animation_value()` — `Spinner` already does. The phases are *sequential*,
+   so one scalar at a time covers radius-then-alpha.
+3. **A state change made during `event()` does reach the reconciler.** This is
+   the link I misread twice. `EventContext` has no `mark_dirty`, and the routing
+   loop never marks the routed node — but that does not matter, because the
+   update pass visits **every** node every frame and dirtiness is *reported by*
+   `update()` (`Revision::sync` compares against the last synced revision) rather
+   than gating which nodes run. So a widget that bumps its own revision in
+   `event()` is reported dirty on the next frame, joins the reconcile set, and
+   its new spec restarts the animation.
 
-So a widget that changes its own state inside `event()` has that state read
-never, or much later. The ripple is the case that needs it: a press must start
-the expand phase, a release the fade phase.
+**The one requirement: bump the revision when the phase changes.** Without it the
+spec change is never noticed. The test asserts this negatively — deleting the
+`self.revision += 1` line fails `the_new_phase_starts_a_running_animation` and
+nothing else, which is what makes it a real control rather than a passing
+vacuum.
 
-**The fix is small and follows an existing pattern.** `request_focus` and
-`open_overlay` are already deferred out of `event()` precisely because "the
-widget is borrowed out of the host for the duration of the call". A
-`dirty_requests: Vec<usize>` collected by the event context and drained after
-the route loop is the same shape, and `NodeEventContext` already knows its own
-node index. Adding `fn mark_dirty(&mut self, _id: ElementId)` (default no-op,
-like the other `EventContext` methods) to the trait is the API half.
-
-Until that lands, the ten components that use `Ripple` do not build:
-`{material,cupertino,fluent}-card`, `-list_item`, `-icon_button`, and
-`material-button`. Everything else in `floom-widget-runtime` is live and
-verified (a non-`Ripple` consumer, `floom-widget-md-avatar`, builds against it),
-and `md-card` is ported with its ripple simply absent.
+There is therefore no core change to make. What remains for `Ripple` is ordinary
+port work: a widget that tracks phase and pointer origin, declares the matching
+spec, and paints a clipped ink circle. The ten components that use it
+(`{material,cupertino,fluent}-card`, `-list_item`, `-icon_button`,
+`material-button`) are blocked only on that widget existing, not on the engine.
 
 ### Stage B — superseded
 
