@@ -69,7 +69,7 @@ meaningful until the base exists on 2.0.
 |---|---|---|---|
 | `floom-core-theme` | 7,711 | trivial — tokens only | **done** |
 | `floom-elements` | 8,293 | heavy — `View`, `IntoView`, reactive reads | todo |
-| `floom-widget-runtime` | 351 | light | todo |
+| `floom-widget-runtime` | 351 | three subsystems, not one | todo |
 | `floom-testing` | 22 | none | todo |
 
 `floom-core-theme` turned out to need almost nothing from v1: theme state is
@@ -77,6 +77,16 @@ just `RwSignal` + `create_global_rw_signal` (which live in `floom-legacy-reactiv
 and are already re-exported by the 2.0 prelude), plus two value conversions.
 It now depends on `floom-legacy-reactive`, `peniko` and `parley` directly — no
 widget layer, no `floom`.
+
+`floom-widget-runtime` looked small enough to be a find-and-replace and is not:
+it is the Material ripple and reaches into three subsystems at once —
+`floom::animate::Animation` (2.0 has `floom_animation` with a different
+`AnimId`/`AnimKind`/`Tween` model driven from `WidgetHost::animate`),
+`floom::context::{LayoutChanged, LayoutChangedListener}` (layout-change
+observation, with no 2.0 equivalent yet), and `floom::event::EventPropagation`.
+Its widgets move to the `Child`-based composition model. At 351 LOC it is cheap
+in volume but needs all three of those answered first — which makes it a poor
+second step and a good Stage-B dependency check.
 
 The mapping table established there is the template for the rest:
 
