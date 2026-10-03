@@ -23,16 +23,50 @@ So components are rebuilt, not edited. The reusable part is the **design logic**
 — tokens, spacing, state machines, variants — which is why this is tractable but
 still large.
 
-## The gap that gates everything
+## The gap that gates everything — corrected
 
-`floom-ui` needs 98 distinct components. 2.0 currently ships **39 widget types**,
-of which only **19** cover a `floom-ui` component:
+My first estimate here was wrong, and it mattered, so this section records the
+correction rather than quietly replacing it.
 
-> **19 components can be ported now. 79 need a widget that does not exist yet.**
+The original claim was "2.0 ships 39 widget types covering only 19 of floem-ui's
+98 components, so **79 widgets must be built** before the kits can be ported".
+That conflated a *component* with a *widget type*. Measured against the tree:
 
-Already covered: `button`, `checkbox`, `container`, `dialog`, `divider`, `grid`,
-`icon`, `image`, `list`, `navigation_drawer`, `overlay`, `radio`, `select`,
-`slider`, `spacer`, `switch`, `tabs`, `text`, `text-field`.
+- **`impl View for` appears zero times across all three kits.** floem-ui contains
+  no custom widgets at all.
+- Every one of the 79 components is a **declarative composition** of four v1
+  built-ins — `Container::new` (165 uses), `Label::new` (95), `Stack::new` (11),
+  `Button::new` (1).
+- Even the components that look like they need new machinery are compositions:
+  `md-calendar` is `Label::new("‹")` plus nested containers; `md-datatable` is
+  `Label::new(..)` inside `Container::new(..)`.
+
+So **Stage B requires zero new widget types to port floom-ui.** 2.0's
+`Container` / `Text` / `Stack` plus `Child::new(ChildKey, LayoutRequest, ..)`
+composition can express everything floem-ui expresses today.
+
+What is left is therefore *volume and translation*, not architecture:
+
+- **The real translation cost** is the v1 style closure
+  (`.style(|s| s.padding(..).background(..).rounded(..))`) becoming 2.0's
+  explicit builder calls (`Container::new().background(..).radius(..)`).
+  Mechanical, per component, but it is the bulk of the work.
+- **The three kits are not duplicates** — material/cupertino/fluent differ by
+  ~60% of their lines (e.g. `card` differs on 71–75 of 115 lines), so this is
+  genuinely 3× work despite a shared shape.
+- **The one genuinely new capability is interaction animation**, needed for
+  `Ripple` (see below). Everything else is composition.
+
+Scale: 98 components × 3 kits ≈ 50,000 LOC of composition to rewrite.
+
+Already covered by an existing 2.0 widget (19): `button`, `checkbox`,
+`container`, `dialog`, `divider`, `grid`, `icon`, `image`, `list`,
+`navigation_drawer`, `overlay`, `radio`, `select`, `slider`, `spacer`, `switch`,
+`tabs`, `text`, `text-field`.
+
+**Started:** `badge` (`crates/floom-widgets/src/badge.rs`, 10 tests). Note this
+one genuinely *was* worth a widget type — it is small, self-contained, and sets
+the pattern; the remaining 78 do not each need one.
 
 **Started:** `badge` (done — `crates/floom-widgets/src/badge.rs`, 10 tests).
 
@@ -66,27 +100,22 @@ half its height (so it reads as a stadium, not a rectangle), and an unchanged
 widget must mark **nothing** dirty on re-sync, or every frame would invalidate
 the whole subtree.
 
-Missing (79): `alert`, `app_bar`, `autocomplete`, `avatar`, `badge`, `banner`,
-`bottom_navigation`, `breadcrumbs`, `button_group`, `calendar`, `card`,
-`carousel`, `chip`, `chip_group`, `code`, `color_picker`, `combobox`,
-`confirm_edit`, `counter`, `data_iterator`, `datatable`, `date_adapter_provider`,
-`date_picker`, `defaults_provider`, `display_provider`, `empty_state`,
-`expand_transition`, `expansion_panels`, `fade_transition`, `file_input`,
-`floating_action_button`, `footer`, `form`, `hover`, `icon_button`,
-`icons_provider`, `infinite_scroller`, `item_group`, `kbd`, `list_group`,
-`list_item`, `list_subheader`, `locale_provider`, `main`, `menu`,
-`number_input`, `otp_input`, `pagination`, `parallax`, `progress_circular`,
-`progress_linear`, `pull_to_refresh`, `radio_group`, `range_slider`, `rating`,
-`responsive`, `scale_transition`, `sheet`, `skeleton_loader`, `slide_group`,
-`slide_transition`, `snackbar`, `sparkline`, `speed_dial`, `stepper`,
-`system_bar`, `table`, `textarea`, `theme_provider`, `time_picker`, `timeline`,
-`toolbar`, `tooltip`, `treeview`, `validation_messages`, `virtual_scroller`,
-`window`.
+None of the 79 is missing a *widget type* — see the correction above. The list
+is retained only as the porting backlog, ordered so the pieces other components
+depend on land first.
 
-Many are trivial compositions of what exists (`card`, `footer`, `item_group`,
-`toolbar`). Several are substantial and carry native dependencies
-(`file_input`, `color_picker`, `autocomplete`, `combobox`, `calendar`,
-`date_picker`, `time_picker`).
+### Stage B — the kits
+
+1. **Establish the style translation** on one component per shape: a surface
+   (`card`), a bar (`toolbar`/`footer`), a group (`item_group`), and one
+   stateful piece. Each becomes: resolve tokens from `floom-core-theme` into a
+   style struct, then build 2.0 `Container`/`Text`/`Stack` with explicit
+   builders.
+2. **Interaction animation** for `Ripple` — the only new capability needed.
+3. **Port one kit end to end** (material, 98 components), then cupertino and
+   fluent, which follow the same shape with their own tokens.
+4. **`floom-elements`** last: its 800 lines of re-exports and 6,220 lines of v1
+   `multi` dispatch can only be rewritten once the underlying components exist.
 
 ## Stages
 
@@ -154,9 +183,11 @@ Porting it also surfaced a latent `cfg` bug: `global()` is gated on a
 design-system feature but three public wrappers that call it were not, so
 `cargo check -p floom-core-theme` with no features had never compiled. Fixed.
 
-### Stage B — the 79 missing widgets
+### Stage B — superseded
 
-Build them in `floom-widgets`, ordered by how many components unblock:
+The original plan here was to build 79 widgets in `floom-widgets`. Measurement showed
+that is unnecessary (see the correction above); the ordered widget list that
+followed has been removed in favour of the kit-porting order.
 
 1. *Composites over existing widgets* — `card`, `footer`, `item_group`,
    `list_group`, `list_item`, `list_subheader`, `toolbar`, `app`, `main`,
