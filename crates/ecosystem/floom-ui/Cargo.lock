@@ -1410,6 +1410,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "floom-accessibility"
+version = "0.2.0"
+dependencies = [
+ "bitflags 2.13.1",
+ "floom-types",
+]
+
+[[package]]
+name = "floom-core"
+version = "0.2.0"
+dependencies = [
+ "floom-types",
+]
+
+[[package]]
 name = "floom-core-theme"
 version = "0.1.0"
 dependencies = [
@@ -1731,6 +1746,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "floom-ime"
+version = "0.2.0"
+
+[[package]]
 name = "floom-legacy-reactive"
 version = "0.2.0"
 dependencies = [
@@ -1783,6 +1802,33 @@ dependencies = [
  "swash",
  "wgpu",
 ]
+
+[[package]]
+name = "floom-navigation"
+version = "0.2.0"
+
+[[package]]
+name = "floom-scene"
+version = "0.2.0"
+dependencies = [
+ "floom-text",
+ "floom-types",
+ "smallvec",
+]
+
+[[package]]
+name = "floom-text"
+version = "0.2.0"
+dependencies = [
+ "floom-types",
+ "parley",
+ "peniko",
+ "rustc-hash 2.1.3",
+]
+
+[[package]]
+name = "floom-types"
+version = "0.2.0"
 
 [[package]]
 name = "floom-ui-events-winit"
@@ -3508,9 +3554,12 @@ dependencies = [
 name = "floom-widget-md-card"
 version = "0.1.0"
 dependencies = [
- "floom",
+ "floom-core",
  "floom-core-theme",
+ "floom-legacy-reactive",
+ "floom-types",
  "floom-widget-runtime",
+ "floom-widgets",
 ]
 
 [[package]]
@@ -4289,6 +4338,20 @@ version = "0.1.0"
 dependencies = [
  "floom-core-theme",
  "floom-legacy-reactive",
+]
+
+[[package]]
+name = "floom-widgets"
+version = "0.2.0"
+dependencies = [
+ "floom-accessibility",
+ "floom-core",
+ "floom-ime",
+ "floom-legacy-reactive",
+ "floom-navigation",
+ "floom-scene",
+ "floom-text",
+ "floom-types",
 ]
 
 [[package]]
