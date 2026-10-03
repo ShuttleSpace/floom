@@ -145,6 +145,47 @@ impl Ripple {
         self
     }
 
+    /// Re-clip the ink to a new corner radius.
+    ///
+    /// The builder form takes a plain value because this widget is
+    /// theme-agnostic, but a kit still has to follow a theme change: v1's
+    /// `radius_fn` re-evaluated against the theme on every use. In 2.0 the tree
+    /// is mounted once and mutated through `WidgetHost::widget_mut`, so the kit
+    /// resolves the theme and pushes the new value in here. Same for
+    /// [`Ripple::set_ink`] and [`Ripple::set_disabled`].
+    pub fn set_radius(&mut self, radius: f64) {
+        if self.radius != radius {
+            self.radius = radius;
+            self.revision.bump();
+        }
+    }
+
+    /// Replace the ink colour (given at full opacity).
+    pub fn set_ink(&mut self, ink: Color) {
+        if self.ink != ink {
+            self.ink = ink;
+            self.revision.bump();
+        }
+    }
+
+    /// Turn the ripple on or off without rebuilding it.
+    pub fn set_disabled(&mut self, disabled: bool) {
+        if self.disabled != disabled {
+            self.disabled = disabled;
+            self.revision.bump();
+        }
+    }
+
+    /// The clip radius currently in force.
+    pub fn clip_radius(&self) -> f64 {
+        self.radius
+    }
+
+    /// Whether the ripple is suppressed.
+    pub fn is_disabled(&self) -> bool {
+        self.disabled
+    }
+
     /// Which phase the ripple is in.
     pub fn phase(&self) -> Phase {
         self.phase

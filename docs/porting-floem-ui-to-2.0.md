@@ -106,11 +106,39 @@ depend on land first.
 
 ### Stage B — the kits
 
-1. **Establish the style translation** on one component per shape: a surface
-   (`card`), a bar (`toolbar`/`footer`), a group (`item_group`), and one
-   stateful piece. Each becomes: resolve tokens from `floom-core-theme` into a
-   style struct, then build 2.0 `Container`/`Text`/`Stack` with explicit
-   builders.
+Shake the widget API out with one component per *shape* before translating in
+bulk — a bulk port on top of an unexercised widget API just relocates the
+mistakes.
+
+| Shape | Example | Status |
+|---|---|---|
+| surface | `md-card` | ported, 7 tests |
+| interactive | `md-button` | ported, 10 tests |
+| stateful | (`carousel`, `expansion_panels`, …) | **next** |
+
+What porting `md-button` turned up, all of it a real gap rather than a
+translation nuisance:
+
+* **`Ripple` had no mutators.** v1 passed `radius_fn` and `color` closures that
+  re-read the theme on every use. 2.0 mounts once, so a kit must push new values
+  in — `set_radius` / `set_ink` / `set_disabled` were added for exactly this, and
+  they are idempotent so a theme signal firing on unrelated changes does not
+  repaint every frame.
+* **A click is a press *and* a release.** `Button` activates only on a matched
+  pair, so a test that sends one half is not testing a weaker click, it is not
+  testing a click.
+* **2.0's `Child` builder closure must be `Send + Sync + 'static`.** A callback
+  therefore cannot be `Rc<dyn Fn()>`; it has to be `Arc<dyn Fn() + Send + Sync>`,
+  which is a visible API constraint on `MdButton::on_click` and is documented
+  there. `Button` is correspondingly not `Clone`, so the tree rebuilds a fresh
+  one per call from captured plain data.
+* **Geometry types disagree.** `Ripple::radius` takes `f64` while button tokens
+  are `f32` — the source of the kit's `f32`/`f64` mismatch.
+
+Then:
+
+1. **Batch the surface components** (`footer`, `toolbar`, `item_group`) — these
+   should now be uneventful.
 2. **Interaction animation** for `Ripple` — the only new capability needed.
 3. **Port one kit end to end** (material, 98 components), then cupertino and
    fluent, which follow the same shape with their own tokens.

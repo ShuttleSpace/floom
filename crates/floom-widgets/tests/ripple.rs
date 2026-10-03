@@ -201,6 +201,49 @@ fn the_diameter_covers_the_whole_box_from_the_pointer() {
 }
 
 #[test]
+fn the_setters_follow_a_theme_change() {
+    // v1 re-evaluated `radius_fn` against the theme on every use. 2.0 mounts the
+    // tree once, so a kit pushes the new value in through these instead -- which
+    // only works if each one bumps the revision, or the change would sit unread.
+    let mut ripple = Ripple::new().radius(4.0).ink(Color::rgba(1, 2, 3, 4));
+    assert_eq!(ripple.clip_radius(), 4.0);
+
+    ripple.set_radius(12.0);
+    ripple.set_ink(Color::rgba(9, 9, 9, 40));
+    ripple.set_disabled(true);
+
+    assert_eq!(ripple.clip_radius(), 12.0);
+    assert!(ripple.is_disabled());
+    assert_eq!(
+        ripple.clip(),
+        Some(ClipShape::RoundedBox { radius: 12.0 }),
+        "the new radius must reach the clip declaration"
+    );
+
+    // The changes above must be picked up once...
+    let (id, _create) = allocate(&ripple);
+    let mut first = floom_widgets::testkit::RecordingUpdateContext::new();
+    ripple.update(&mut first, id);
+    assert!(
+        first.dirty_count() > 0,
+        "a radius/ink/disabled change must invalidate the element"
+    );
+
+    // ...and then stop: setting the same values again must dirty nothing, or a
+    // theme signal firing on every unrelated change would repaint constantly.
+    ripple.set_radius(12.0);
+    ripple.set_ink(Color::rgba(9, 9, 9, 40));
+    ripple.set_disabled(true);
+    let mut second = floom_widgets::testkit::RecordingUpdateContext::new();
+    ripple.update(&mut second, id);
+    assert_eq!(
+        second.dirty_count(),
+        0,
+        "an idempotent setter must not mark the element dirty"
+    );
+}
+
+#[test]
 fn it_holds_exactly_one_child() {
     let ripple = Ripple::new().child(LayoutRequest::new(), || Box::new(Text::new("x")));
     assert_eq!(ripple.children().len(), 1);
