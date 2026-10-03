@@ -47,7 +47,8 @@ pub struct Shadow {
     pub spread: f64,
 }
 
-/// Backend support for `spread`.
+/// Backend support for `spread`, and the ledger of which backends answer a
+/// shadow request at all: `docs/renderer-backend-support.md`.
 ///
 /// `floom-renderer-software` is the reference: it folds `spread` into the
 /// silhouette's signed distance field, so the shape is genuinely dilated (or

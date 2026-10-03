@@ -291,7 +291,15 @@ fn node_fingerprint(node: &SceneNode) -> u64 {
                 Some(shadow) => {
                     hasher.write_u8(1);
                     hash_color(&mut hasher, &shadow.color);
-                    for v in [shadow.blur, shadow.offset_x, shadow.offset_y] {
+                    // `spread` belongs in this key: it is part of the request,
+                    // so two nodes differing only in it must not collide in
+                    // the render cache.
+                    for v in [
+                        shadow.blur,
+                        shadow.offset_x,
+                        shadow.offset_y,
+                        shadow.spread,
+                    ] {
                         hasher.write_u64(v.to_bits());
                     }
                 }
