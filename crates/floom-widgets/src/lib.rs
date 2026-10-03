@@ -20,6 +20,7 @@ pub mod native;
 pub mod nav;
 pub mod navigation;
 pub mod primitives;
+pub mod ripple;
 pub mod testkit;
 mod widget_any;
 
@@ -44,6 +45,7 @@ pub use labeled::Labeled;
 pub use native::NativeSurface;
 pub use nav::{NavHandle, NavHost};
 pub use navigation::{NavDestination, NavigationBar, NavigationDrawer, NavigationRail};
+pub use ripple::{Phase, Ripple, ripple};
 pub use primitives::{
     Axis, Container, Divider, Icon, Image, ImageFit, SemanticsHint, Spacer, Text,
 };

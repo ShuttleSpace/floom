@@ -124,16 +124,16 @@ pub fn layout_provider() {
     let _ = layout_signal();
 }
 
-// `Ripple` is not yet ported. The v1 implementation was a `View` wrapper that
-// animated a growing ink circle on pointer-down and faded it on pointer-up,
-// clipped to the wrapper's rounded bounds. 2.0 has the pieces it needs --
-// `WidgetHost::bounds` / `dispatch` / `animate`, and `Widget::clip` -- but the
-// animation contract is *declarative* (a widget returns one `AnimationSpec`
-// from `Widget::animation` and the host owns the running state), which does not
-// express a two-phase pointer-driven interaction: expand on press, fade on
-// release. That gap is the first item in Stage B of
-// `docs/porting-floem-ui-to-2.0.md`.
+// The press ripple now lives in the engine crate (`floom_widgets::Ripple`),
+// ported from the v1 wrapper this crate used to hold.
 //
-// The ten components that use it (`{material,cupertino,fluent}-card`,
-// `-list_item`, `-icon_button`, and `material-button`) will not build until it
-// lands; everything else in this crate is live.
+// The v1 version was a `View` wrapper that needed a `LayoutChangedListener` to
+// learn its own box before it could size the ink. 2.0 hands `paint` and `event`
+// `cx.bounds()` directly, so that listener is gone, and the two-phase
+// pointer-driven animation it needed is expressible through the declarative
+// contract -- see `floom-widgets/src/ripple.rs` and
+// `floom-app/tests/event_animation.rs` for the proof and the control.
+//
+// Re-exported here rather than reimplemented, because 91 of the 99 crates that
+// depend on this one reach it through this path.
+pub use floom_widgets::{Phase as RipplePhase, Ripple, ripple};

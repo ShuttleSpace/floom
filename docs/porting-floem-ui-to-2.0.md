@@ -180,11 +180,20 @@ spec change is never noticed. The test asserts this negatively — deleting the
 nothing else, which is what makes it a real control rather than a passing
 vacuum.
 
-There is therefore no core change to make. What remains for `Ripple` is ordinary
-port work: a widget that tracks phase and pointer origin, declares the matching
-spec, and paints a clipped ink circle. The ten components that use it
-(`{material,cupertino,fluent}-card`, `-list_item`, `-icon_button`,
-`material-button`) are blocked only on that widget existing, not on the engine.
+**Ported.** `floom-widgets/src/ripple.rs` (11 tests) and re-exported from
+`floom-widget-runtime`, which is where the 99 kit crates reach it. Two things
+got simpler in the port: 2.0 hands `paint` and `event` `cx.bounds()` directly,
+so v1's `LayoutChangedListener` (which existed only to learn its own box before
+it could size the ink) is gone; and clipping is a declaration
+(`Widget::clip` -> `ClipShape::RoundedBox`) rather than a style closure.
+
+The ripple **never consumes the event** — wrapping a button in one must not
+disable the button — and a release with no press in flight starts nothing, or a
+stray release would conjure ink from nowhere.
+
+Remaining callers still on the v1 call shape (`Ripple::new(x).view()`): the kit
+crates, which is ordinary port work — `Ripple` *is* the widget now, so the
+`.view()` terminal call goes away.
 
 ### Stage B — superseded
 
