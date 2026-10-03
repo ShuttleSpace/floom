@@ -1,0 +1,30 @@
+[package]
+name = "floem-widgets-data"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Tier-2 advanced data widgets for Floem 2.0 (virtualized grids, trees, charts, media)"
+rust-version.workspace = true
+
+[dependencies]
+floem-core = { path = "../floom-core", version = "0.2.0" }
+floem-types = { path = "../floom-types", version = "0.2.0" }
+floem-accessibility = { path = "../floom-accessibility", version = "0.2.0" }
+floem-virtual = { path = "../floom-virtual", version = "0.2.0" }
+floem-text = { path = "../floom-text", version = "0.2.0" }
+# The Tier-1 crate: a data grid is built *out of* primitives (its labels are
+# `Text`-shaped, its semantics vocabulary is the same `SemanticsHint`), and the
+# accessibility bridge lives there rather than being copied per widget crate.
+floem-widgets = { path = "../floom-widgets", version = "0.2.0" }
+
+[dev-dependencies]
+# The deterministic context recorders live in the Tier-1 crate's `testkit`;
+# a data widget's tests are ordinary widget tests, so they reuse it rather than
+# growing a second copy of the same recorders.
+floem-scene = { path = "../floom-scene", version = "0.2.0" }
+criterion = { version = "0.8.1", features = ["html_reports"] }
+
+[[bench]]
+name = "virtual_rows"
+harness = false

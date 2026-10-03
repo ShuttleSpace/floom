@@ -12,4 +12,4 @@ description = "Minimal Floem 2.0 app: everything comes from the floem2 facade pr
 # level). Phase 29.3 measures this binary as the floor of the release-size
 # table.
 [dependencies]
-floem2 = { path = "../../app/floem2", version = "0.2.0" }
+floem2 = { path = "../../crates/floom2", version = "0.2.0" }

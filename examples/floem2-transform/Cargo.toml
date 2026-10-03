@@ -10,7 +10,7 @@ description = "Subtree transforms: a card that scales and rotates as one picture
 # floem2-chart): the pixel goldens here render real pixels through it, and a
 # facade consumer that never draws pays nothing for that.
 [dependencies]
-floem2 = { path = "../../app/floem2", version = "0.2.0", features = [
+floem2 = { path = "../../crates/floom2", version = "0.2.0", features = [
     "renderer-software",
 ] }
-floem-renderer = { path = "../../render/floem-renderer", version = "0.2.0" }
+floem-renderer = { path = "../../crates/floom-renderer", version = "0.2.0" }

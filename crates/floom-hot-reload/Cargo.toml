@@ -1,0 +1,18 @@
+[package]
+name = "floem-hot-reload"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+floem-types = { path = "../floom-types", version = "0.2.0" }
+floem-core = { path = "../floom-core", version = "0.2.0" }
+floem-style = { path = "../floom-style", version = "0.2.0" }
+floem-runtime-core = { path = "../floom-runtime-core", version = "0.2.0" }
+floem-ui-ir = { path = "../floom-ui-ir", version = "0.2.0" }
+
+[dev-dependencies]
+# Test documents read better as DSL source than as struct literals.
+floem-dsl = { path = "../floom-dsl", version = "0.2.0" }

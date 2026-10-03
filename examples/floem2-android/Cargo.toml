@@ -23,15 +23,15 @@ default = []
 real = ["floem-renderer-vello/gpu"]
 
 [dependencies]
-floem-app = { path = "../../app/floem-app" }
-floem-core = { path = "../../foundation/floem-core" }
-floem-layout = { path = "../../layout/floem-layout" }
-floem-platform = { path = "../../platform/floem-platform" }
-floem-platform-android = { path = "../../platform/floem-platform-android" }
-floem-platform-mobile = { path = "../../platform/floem-platform-mobile" }
-floem-renderer-vello = { path = "../../render/floem-renderer-vello", optional = true }
-floem-types = { path = "../../foundation/floem-types" }
-floem-widgets = { path = "../../widgets/floem-widgets" }
+floem-app = { path = "../../crates/floom-app" }
+floem-core = { path = "../../crates/floom-core" }
+floem-layout = { path = "../../crates/floom-layout" }
+floem-platform = { path = "../../crates/floom-platform" }
+floem-platform-android = { path = "../../crates/floom-platform-android" }
+floem-platform-mobile = { path = "../../crates/floom-platform-mobile" }
+floem-renderer-vello = { path = "../../crates/floom-renderer-vello", optional = true }
+floem-types = { path = "../../crates/floom-types" }
+floem-widgets = { path = "../../crates/floom-widgets" }
 
 # On Android we need the *same* winit fork Floem uses so the `AndroidApp`
 # type lines up with `floem_platform_android::set_android_app`. The rev must

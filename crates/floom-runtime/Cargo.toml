@@ -1,0 +1,17 @@
+[package]
+name = "floem-runtime"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Frame runtime integrating widgets, arena, and scheduler for Floem 2.0"
+rust-version.workspace = true
+
+[dependencies]
+floem-types = { path = "../floom-types", version = "0.2.0" }
+floem-core = { path = "../floom-core", version = "0.2.0" }
+floem-runtime-core = { path = "../floom-runtime-core", version = "0.2.0" }
+floem-scheduler = { path = "../floom-scheduler", version = "0.2.0" }
+floem-legacy-reactive = { path = "../floom-legacy-reactive", version = "0.2.0" }
+
+[dev-dependencies]

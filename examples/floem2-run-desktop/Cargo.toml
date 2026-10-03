@@ -10,7 +10,7 @@ description = "Floem 2.0 desktop window via the one-call floem2::run_desktop ent
 # `desktop` pulls the winit backend; `renderer-gpu` pulls the vello/wgpu
 # presenter that `run_desktop` drives. Both are what the facade entry needs, so
 # the example declares exactly the features the entry documents.
-floem2 = { path = "../../app/floem2", version = "0.2.0", features = [
+floem2 = { path = "../../crates/floom2", version = "0.2.0", features = [
     "desktop",
     "renderer-gpu",
 ] }

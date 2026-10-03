@@ -7,4 +7,4 @@ publish = false
 description = "Keyed list golden example: mount, reconcile and reconcile-only-what-changed"
 
 [dependencies]
-floem2 = { path = "../../app/floem2", version = "0.2.0" }
+floem2 = { path = "../../crates/floom2", version = "0.2.0" }

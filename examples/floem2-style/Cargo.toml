@@ -10,10 +10,10 @@ description = "Gradients, real elevation, and an implicit hover fade armed with 
 # and 2 assert rendered pixels, and a facade consumer that never draws pays
 # nothing for that.
 [dependencies]
-floem2 = { path = "../../app/floem2", version = "0.2.0", features = [
+floem2 = { path = "../../crates/floom2", version = "0.2.0", features = [
     "renderer-software",
 ] }
-floem-renderer = { path = "../../render/floem-renderer", version = "0.2.0" }
+floem-renderer = { path = "../../crates/floom-renderer", version = "0.2.0" }
 # Act 4 arms a button with the Material motion tokens themselves: the design
 # system decides the timing, and nothing below restates it.
-floem-material = { path = "../../design-systems/floem-material", version = "0.2.0" }
+floem-material = { path = "../../crates/floom-material", version = "0.2.0" }

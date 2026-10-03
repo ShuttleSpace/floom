@@ -15,7 +15,7 @@ path = "src/lib.rs"
 crate-type = ["cdylib"]
 
 [dependencies]
-floem = { path = "../.." }
+floem = { path = "../../crates/floom" }
 
 # On Android we need the *same* winit fork Floem uses so the `AndroidApp`
 # type lines up with `floem::Application::new_android`. The rev must match the

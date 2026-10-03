@@ -1,0 +1,16 @@
+[package]
+name = "floem-profiler"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Stage profiler for Floem 2.0: frame timeline, allocation counters, cache statistics (Phase 23.3)"
+
+[dependencies]
+# The timeline's wire format IS the protocol's performance snapshot — one
+# definition, not two.
+floem-inspector = { path = "../floom-inspector", version = "0.2.0" }
+serde_json = { workspace = true }
+
+[dev-dependencies]

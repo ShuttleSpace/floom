@@ -1,0 +1,25 @@
+[package]
+name = "floem-renderer-software"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Software/CPU Scene renderer adapter for Floem 2.0"
+rust-version.workspace = true
+
+[dependencies]
+floem-renderer = { path = "../floom-renderer", version = "0.2.0" }
+floem-scene = { path = "../floom-scene", version = "0.2.0" }
+floem-types = { path = "../floom-types", version = "0.2.0" }
+# CPU glyph rasterisation for the software text path (same engine vger and
+# tiny-skia use on their cache misses).
+swash.workspace = true
+peniko.workspace = true
+
+[dev-dependencies]
+floem-text = { path = "../floom-text", version = "0.2.0" }
+criterion = { version = "0.8.1", features = ["html_reports"] }
+
+[[bench]]
+name = "self_draw"
+harness = false

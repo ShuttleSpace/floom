@@ -1,0 +1,18 @@
+[package]
+name = "floem-cupertino"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Cupertino (iOS) design system tokens and touch-first control variants for Floem 2.0"
+rust-version.workspace = true
+
+[dependencies]
+floem-types = { path = "../floom-types", version = "0.2.0" }
+floem-style = { path = "../floom-style", version = "0.2.0" }
+floem-theme = { path = "../floom-theme", version = "0.2.0" }
+floem-scene = { path = "../floom-scene", version = "0.2.0" }
+floem-design = { path = "../floom-design", version = "0.2.0" }
+
+[dev-dependencies]
+floem-snapshot = { path = "../floom-snapshot", version = "0.2.0" }

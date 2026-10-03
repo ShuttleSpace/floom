@@ -10,7 +10,7 @@ description = "Custom WGSL shaders: a box whose ink is a program, and the degrad
 # renders the same scene a GPU backend would and reads what the CPU rasteriser
 # did with it — the skip has to be counted, not silent.
 [dependencies]
-floem2 = { path = "../../app/floem2", version = "0.2.0", features = [
+floem2 = { path = "../../crates/floom2", version = "0.2.0", features = [
     "renderer-software",
 ] }
-floem-renderer = { path = "../../render/floem-renderer", version = "0.2.0" }
+floem-renderer = { path = "../../crates/floom-renderer", version = "0.2.0" }

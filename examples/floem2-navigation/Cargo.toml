@@ -7,4 +7,4 @@ publish = false
 description = "Typed routing golden example: routes, history, page transitions and nav containers"
 
 [dependencies]
-floem-navigation = { path = "../../framework/floem-navigation", version = "0.2.0" }
+floem-navigation = { path = "../../crates/floom-navigation", version = "0.2.0" }

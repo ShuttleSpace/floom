@@ -7,5 +7,5 @@ publish = false
 description = "Native plugin golden example: capability negotiation, slot lifecycle and pooling"
 
 [dependencies]
-floem-native = { path = "../../native/floem-native", version = "0.2.0" }
-floem-types = { path = "../../foundation/floem-types", version = "0.2.0" }
+floem-native = { path = "../../crates/floom-native", version = "0.2.0" }
+floem-types = { path = "../../crates/floom-types", version = "0.2.0" }

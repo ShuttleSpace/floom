@@ -1,0 +1,13 @@
+[package]
+name = "floem-task"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Task and Resource primitives for Floem 2.0"
+rust-version.workspace = true
+
+[dependencies]
+floem-legacy-reactive = { path = "../floom-legacy-reactive", version = "0.2.0" }
+
+[dev-dependencies]

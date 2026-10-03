@@ -16,7 +16,7 @@ publish = false
 crate-type = ["cdylib"]
 
 [dependencies]
-floem = { path = "../.." }
+floem = { path = "../../crates/floom" }
 
 [target.'cfg(target_env = "ohos")'.dependencies]
 floem-winit-ohos = { workspace = true }

@@ -4,6 +4,6 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-floem = { path = "../.." }
+floem = { path = "../../crates/floom" }
 image = "0.25"
 nsvg = "0.5"

@@ -1,0 +1,65 @@
+[package]
+name = "floem-platform-desktop"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Desktop platform adapter for Floem 2.0 (Winit lifecycle mapping)"
+rust-version.workspace = true
+
+[features]
+default = []
+# The real OS window + event loop. Off by default so the adapter (and the rest
+# of the headless workspace build) stays free of winit unless an app asks for a
+# window. `winit::raw_window_handle` is used for the surface handles, so no
+# separate handle dependency is declared here.
+winit = ["dep:winit"]
+
+[dependencies]
+floem-accessibility = { path = "../floom-accessibility", version = "0.2.0" }
+# Same layer (L4), so the architecture gate permits this edge: the desktop
+# backend implements the native-view provider ABI, and `floem-native` stays a
+# leaf that knows nothing about an OS.
+floem-native = { path = "../floom-native", version = "0.2.0" }
+floem-platform = { path = "../floom-platform", version = "0.2.0" }
+floem-types = { path = "../floom-types", version = "0.2.0" }
+winit = { workspace = true, optional = true }
+
+# The native-view host (Phase 16, task 16.2, step 7). AppKit is reached through
+# `objc2`, at the versions the workspace already pins for the legacy crate and
+# for `floem-winit-appkit` — no new major, no second runtime. Not inheritable
+# from `[workspace.dependencies]`, which does not carry them; the versions here
+# are the same numbers and the lock file keeps them aligned.
+#
+# `NSResponder` is here for the first-responder type in the focus path and
+# `NSWindow` for `makeFirstResponder:` and the backing scale factor, so both are
+# load-bearing rather than transitive.
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2 = { version = "0.6", default-features = false, features = ["std"] }
+objc2-app-kit = { version = "0.3", default-features = false, features = [
+    "std",
+    "objc2-core-foundation",
+    # The system clipboard (NSPasteboard) — see `src/clipboard.rs`.
+    "NSPasteboard",
+    "NSView",
+    "NSResponder",
+    "NSWindow",
+    # Freezing a participant into a texture (Phase 16, task 16.4 step 3) needs
+    # to read the view's rendered pixels back out of the window server. Both
+    # features are required together: `bitmapImageRepForCachingDisplayInRect`
+    # and `cacheDisplayInRect:toBitmapImageRep:` are gated on
+    # `NSBitmapImageRep && NSImageRep`, and `pixelsWide`/`pixelsHigh` live on
+    # `NSImageRep`.
+    "NSBitmapImageRep",
+    "NSImageRep",
+] }
+objc2-foundation = { version = "0.3", default-features = false, features = [
+    "std",
+    "objc2-core-foundation",
+    # `NSString` is how pasteboard text crosses the bridge.
+    "NSString",
+    "NSGeometry",
+    "NSObject",
+] }
+
+[dev-dependencies]

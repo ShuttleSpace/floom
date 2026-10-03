@@ -54,29 +54,29 @@ ohos = ["dep:floem-platform-harmony"]
 web = ["dep:floem-platform-web"]
 
 [dependencies]
-floem-app = { path = "../../app/floem-app", version = "0.2.0" }
-floem-core = { path = "../../foundation/floem-core", version = "0.2.0" }
-floem-layout = { path = "../../layout/floem-layout", version = "0.2.0" }
-floem-platform = { path = "../../platform/floem-platform", version = "0.2.0" }
-floem-types = { path = "../../foundation/floem-types", version = "0.2.0" }
-floem-widgets = { path = "../../widgets/floem-widgets", version = "0.2.0" }
+floem-app = { path = "../../crates/floom-app", version = "0.2.0" }
+floem-core = { path = "../../crates/floom-core", version = "0.2.0" }
+floem-layout = { path = "../../crates/floom-layout", version = "0.2.0" }
+floem-platform = { path = "../../crates/floom-platform", version = "0.2.0" }
+floem-types = { path = "../../crates/floom-types", version = "0.2.0" }
+floem-widgets = { path = "../../crates/floom-widgets", version = "0.2.0" }
 
 # The sections the gallery's richer demos come from: the virtualized data
 # widgets, the forms controller, and the four design-system token tables.
-floem-widgets-data = { path = "../../widgets/floem-widgets-data", version = "0.2.0" }
-floem-forms = { path = "../../framework/floem-forms", version = "0.2.0" }
-floem-material = { path = "../../design-systems/floem-material", version = "0.2.0" }
-floem-cupertino = { path = "../../design-systems/floem-cupertino", version = "0.2.0" }
-floem-fluent = { path = "../../design-systems/floem-fluent", version = "0.2.0" }
-floem-harmony = { path = "../../design-systems/floem-harmony", version = "0.2.0" }
+floem-widgets-data = { path = "../../crates/floom-widgets-data", version = "0.2.0" }
+floem-forms = { path = "../../crates/floom-forms", version = "0.2.0" }
+floem-material = { path = "../../crates/floom-material", version = "0.2.0" }
+floem-cupertino = { path = "../../crates/floom-cupertino", version = "0.2.0" }
+floem-fluent = { path = "../../crates/floom-fluent", version = "0.2.0" }
+floem-harmony = { path = "../../crates/floom-harmony", version = "0.2.0" }
 
-floem-platform-desktop = { path = "../../platform/floem-platform-desktop", version = "0.2.0", optional = true }
-floem-platform-android = { path = "../../platform/floem-platform-android", version = "0.2.0", optional = true }
-floem-platform-mobile = { path = "../../platform/floem-platform-mobile", version = "0.2.0", optional = true }
-floem-platform-ios = { path = "../../platform/floem-platform-ios", version = "0.2.0", optional = true }
-floem-platform-harmony = { path = "../../platform/floem-platform-harmony", version = "0.2.0", optional = true }
-floem-platform-web = { path = "../../platform/floem-platform-web", version = "0.2.0", optional = true }
-floem-renderer-vello = { path = "../../render/floem-renderer-vello", version = "0.2.0", optional = true }
+floem-platform-desktop = { path = "../../crates/floom-platform-desktop", version = "0.2.0", optional = true }
+floem-platform-android = { path = "../../crates/floom-platform-android", version = "0.2.0", optional = true }
+floem-platform-mobile = { path = "../../crates/floom-platform-mobile", version = "0.2.0", optional = true }
+floem-platform-ios = { path = "../../crates/floom-platform-ios", version = "0.2.0", optional = true }
+floem-platform-harmony = { path = "../../crates/floom-platform-harmony", version = "0.2.0", optional = true }
+floem-platform-web = { path = "../../crates/floom-platform-web", version = "0.2.0", optional = true }
+floem-renderer-vello = { path = "../../crates/floom-renderer-vello", version = "0.2.0", optional = true }
 
 # On Android the winit fork must be the same one Floem uses, so the
 # `AndroidApp` type lines up with `floem_platform_android::set_android_app`.

@@ -6,7 +6,7 @@ publish = false
 license = "MIT"
 
 [dependencies]
-floem = { path = "../.." }
+floem = { path = "../../crates/floom" }
 
 # On iOS we rely on the *same* winit fork Floem uses, but unlike Android the
 # example does not touch winit's API directly — `Application::new_ios` builds

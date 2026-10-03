@@ -7,8 +7,8 @@ publish = false
 description = "Data grid golden example: virtualized rows, sorting, selection and editing"
 
 [dependencies]
-floem-core = { path = "../../foundation/floem-core", version = "0.2.0" }
-floem-types = { path = "../../foundation/floem-types", version = "0.2.0" }
-floem-virtual = { path = "../../layout/floem-virtual", version = "0.2.0" }
-floem-widgets = { path = "../../widgets/floem-widgets", version = "0.2.0" }
-floem-widgets-data = { path = "../../widgets/floem-widgets-data", version = "0.2.0" }
+floem-core = { path = "../../crates/floom-core", version = "0.2.0" }
+floem-types = { path = "../../crates/floom-types", version = "0.2.0" }
+floem-virtual = { path = "../../crates/floom-virtual", version = "0.2.0" }
+floem-widgets = { path = "../../crates/floom-widgets", version = "0.2.0" }
+floem-widgets-data = { path = "../../crates/floom-widgets-data", version = "0.2.0" }

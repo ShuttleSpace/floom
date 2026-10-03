@@ -1,0 +1,323 @@
+# The `floom` package manifest.
+#
+# This crate used to be the repository root; it now lives under crates/
+# alongside every other crate. Its benches/ and tests/ remain at the repo
+# top level, hence the explicit `../../benches` / `../../tests` target paths.
+[package]
+name = "floom"
+version.workspace = true
+authors = ["The Floem contributors"]
+readme = "../../README.md"
+repository.workspace = true
+description = "A native Rust UI library with fine-grained reactivity"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+slotmap = "1.0"
+sha2 = "0.10"
+bitflags = "2.9"
+indexmap = "2"
+rustc-hash.workspace = true
+smallvec = "1.15"
+educe = "0.6"
+taffy = { version = "0.9.2", features = ["grid"] }
+tokio = { version = "1", features = ["sync", "rt"], optional = true }
+raw-window-handle = { workspace = true }
+unicode-segmentation = { workspace = true }
+peniko = { workspace = true }
+imbl.workspace = true
+parley = { workspace = true }
+serde = { workspace = true, optional = true }
+serde_json = { workspace = true }
+paste = "1.0"
+floem-legacy-renderer = { path = "../floom-legacy-renderer", version = "0.2.0" }
+floem-legacy-renderer-skia = { path = "../floom-legacy-renderer-skia", version = "0.2.0", optional = true }
+floem-legacy-renderer-vello = { path = "../floom-legacy-renderer-vello", version = "0.2.0", optional = true }
+floem-legacy-renderer-vger = { path = "../floom-legacy-renderer-vger", version = "0.2.0", optional = true }
+floem-legacy-renderer-tiny-skia = { path = "../floom-legacy-renderer-tiny-skia", version = "0.2.0" }
+floem-legacy-reactive = { path = "../floom-legacy-reactive", version = "0.2.0" }
+parking_lot = { workspace = true }
+image = { workspace = true }
+winit = { workspace = true }
+futures = { version = "0.3.31" }
+crossbeam = { version = "0.8", optional = true }
+ui-events.workspace = true
+floem-ui-events-winit.workspace = true
+dpi.workspace = true
+wgpu.workspace = true
+fluent-bundle = { version = "0.16", optional = true }
+unic-langid = { version = "0.9", optional = true }
+sys-locale = { version = "0.3.2", optional = true }
+ouroboros = { version = "0.18", optional = true }
+understory_box_tree = { git = "https://github.com/jrmoulton/understory", rev = "2c2abb8c4bd9", package = "understory_box_tree" }
+understory_event_state = { git = "https://github.com/jrmoulton/understory", rev = "2c2abb8c4bd9", package = "understory_event_state" }
+understory_index = { git = "https://github.com/jrmoulton/understory", rev = "2c2abb8c4bd9", package = "understory_index" }
+understory_focus = { git = "https://github.com/jrmoulton/understory", rev = "2c2abb8c4bd9", package = "understory_focus" }
+understory_virtual_list = { git = "https://github.com/jrmoulton/understory", rev = "2c2abb8c4bd9", package = "understory_virtual_list" }
+
+[target.'cfg(any(target_os = "windows", target_os = "macos"))'.dependencies]
+muda = { workspace = true }
+
+[target.'cfg(all(target_os = "linux", not(target_env = "ohos")))'.dependencies]
+muda = { workspace = true, default-features = false, features = ["gtk"] }
+# `accesskit_unix` wraps AT-SPI2 over D-Bus (Phase 4 Step 2 a11y backend).
+# NOTE: OHOS reports `target_os = "linux"` but is NOT desktop Linux — its
+# a11y bridge is the N-API backend (`backend_ohos`), so AT-SPI/glib must be
+# excluded via `not(target_env = "ohos")` or the OHOS build dies at glib-sys
+# (pkg-config cross-compilation has no sysroot for OHOS).
+accesskit_unix = "0.22"
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+wasm-bindgen-futures = { version = "0.4" }
+web-time = "1"
+wgpu = { workspace = true }
+
+[target.'cfg(target_os = "windows")'.dependencies]
+clipboard-win = "5.4"
+# `accesskit_windows` wraps UI Automation (Phase 4 Step 2 a11y backend).
+accesskit_windows = "0.34"
+# `windows-sys` provides the raw Win32 calls needed to subclass the window
+# and forward `WM_GETOBJECT` to `accesskit_windows::Adapter` (Phase 4 Step 1
+# residual: Narrator can only connect once the message reaches the adapter).
+windows-sys = { version = "0.59", features = [
+    "Win32_Foundation",
+    "Win32_UI_WindowsAndMessaging",
+] }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2 = { version = "0.6", default-features = false }
+objc2-foundation = { version = "0.3", default-features = false }
+objc2-app-kit = { version = "0.3", features = [
+  "NSApplication",
+  "NSResponder",
+  "NSView",
+  # Accessibility bridge (src/accessibility/backend_nsaccessibility.rs)
+  "NSAccessibility",
+  "NSAccessibilityConstants",
+  "NSAccessibilityElement",
+  "NSAccessibilityProtocols",
+] }
+dispatch2 = {version = "0.3.0"}
+# `accesskit_macos` wraps NSAccessibility and pulls its own `objc2 0.5`
+# (floem's windowing keeps `objc2 0.6`); both majors coexist in the graph.
+accesskit_macos = "0.26"
+
+# Accessibility: accesskit provider transport for the three desktop platforms.
+# Replaces the hand-rolled per-platform bridges (Phase 4 Step 2): accesskit
+# wraps AT-SPI2 (Linux), UI Automation (Windows) and NSAccessibility (macOS).
+# `accesskit_macos` pulls its own `objc2 0.5`; floem's windowing keeps
+# `objc2 0.6`, so both majors coexist in the dependency graph. The per-OS
+# crates are merged into the existing target-specific dependency blocks above.
+[target.'cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))'.dependencies]
+accesskit = "0.24"
+
+# Desktop-only dependencies: excluded from Android, iOS and OpenHarmony so the
+# mobile/embedded builds pull no rfd (file dialog) crate — all three use native
+# pickers instead (UIDocumentPickerViewController on iOS, SAF on Android, the
+# N-API file picker bridge on OHOS). `copypasta` is also dropped on these
+# platforms: Android uses the JNI ClipboardManager bridge, iOS uses UIPasteboard
+# directly, and OHOS uses the N-API pasteboard bridge — none want the
+# desktop/wasm clipboard context.
+[target.'cfg(not(any(target_os = "android", target_os = "ios", target_env = "ohos")))'.dependencies]
+rfd = { version = "0.17.1", default-features = true }
+copypasta = { version = "0.10", default-features = false, features = ["wayland", "x11"] }
+
+# Android backend dependencies. `winit`'s `android-native-activity` feature pulls
+# in floem-winit-android + android-activity (native-activity), which is required
+# for the `android_main` entry point. `ndk` gives access to the native window for
+# the renderer surface; `android_logger` routes logs to logcat.
+[target.'cfg(target_os = "android")'.dependencies]
+winit = { workspace = true, features = ["android-native-activity"] }
+ndk = "0.9"
+android_logger = "0.14"
+# JNI bridge for the system ClipboardManager (read/write clipboard from Rust).
+jni = "0.21"
+
+# iOS backend dependencies. FFI to UIKit is via objc2 (no JNI; the lapce winit
+# fork's iOS backend turns the Rust `fn main` into a UIKit app). `copypasta` is
+# intentionally NOT used on iOS — the clipboard is handled by UIPasteboard via
+# the objc2 bridge in `platform/ios_clipboard.rs` (Step 4), mirroring how
+# Android's JNI bridge supersedes copypasta. `muda` is absent (no iOS backend);
+# iOS uses the in-UI context menu like Android.
+[target.'cfg(target_os = "ios")'.dependencies]
+objc2 = { version = "0.6", default-features = false }
+objc2-foundation = { version = "0.3", default-features = false, features = ["NSString", "NSURL", "NSArray"] }
+objc2-uniform-type-identifiers = { version = "0.3", default-features = false, features = ["UTType"] }
+objc2-ui-kit = { version = "0.3", features = [
+  "UIApplication",
+  "UIWindow",
+  "UIView",
+  "UIViewController",
+  "UIPasteboard",
+  "UIDocumentPickerViewController",
+  "UIResponder",
+  "objc2-uniform-type-identifiers",
+  "block2",
+  "UIGeometry",
+  "objc2-core-foundation",
+  # Phase 4 Step 3 — iOS VoiceOver bridge (backend_ios.rs).
+  "UIAccessibility",
+  "UIAccessibilityContainer",
+  "UIAccessibilityConstants",
+  "UIAccessibilityElement",
+] }
+
+# OpenHarmony (HarmonyOS) backend. The event loop / windowing is provided by
+# `floem-winit-ohos`, a vendored fork of `tgui-winit-ohos` (a split-architecture
+# winit backend for OHOS) whose `winit-core` dependency is retargeted onto
+# `floem-winit-core`. That retarget is what lets Floem's `Application` satisfy
+# the crate's `RuntimeApplication` trait at all. The drift is near-zero (the
+# `ApplicationHandler` trait is byte-identical and the OHOS backend only uses
+# the unchanged subset), so the retarget is a pure `winit_core ->
+# floem_winit_core` rename — see
+# `vendor/floem-winit-ohos/patch/retarget-to-floem-winit-core.patch` and
+# `docs/ohos.md`. The fork is declared in `[workspace.dependencies]`.
+[target.'cfg(target_env = "ohos")'.dependencies]
+floem-winit-ohos = { workspace = true }
+# N-API bridge for clipboard / file_dialog / open_external / receive_files.
+# napi-rs compiles the Rust<->ArkTS FFI; the OpenHarmony N-API lib is linked
+# into libentry.so by cargo-ohos-app. TODO(OHOS): confirm the napi version and
+# that the module registers alongside the winit C-ABI entry (docs/ohos.md).
+napi = "2"
+# `#[napi]` attribute macro lives in `napi-derive` (napi 2.x does NOT re-export
+# it); every OHOS module that uses `#[napi]` must depend on it and
+# `use napi_derive::napi;`.
+napi-derive = "2"
+
+[features]
+default = ["default-image-formats", "vger", "serde"]
+skia = ["dep:floem-legacy-renderer-skia"]
+vello = ["dep:floem-legacy-renderer-vello"]
+vger = ["dep:floem-legacy-renderer-vger"]
+# tiny-skia = ["dep:floem-legacy-renderer-tiny-skia"]
+serde = [
+  "dep:serde",
+  "winit/serde",
+  "peniko/serde",
+  "smallvec/serde",
+]
+# Image support
+# From: https://github.com/image-rs/image/blob/main/Cargo.toml
+default-image-formats = ["image-jpeg", "image-ico", "image-png", "image-webp"]
+image-avif = ["image/avif"]
+image-bmp = ["image/bmp"]
+image-dds = ["image/dds"]
+image-exr = ["image/exr"]
+image-ff = ["image/ff"]
+image-gif = ["image/gif"]
+image-hdr = ["image/hdr"]
+image-ico = ["image/ico"]
+image-jpeg = ["image/jpeg"]
+image-png = ["image/png"]
+image-pnm = ["image/pnm"]
+image-qoi = ["image/qoi"]
+image-tga = ["image/tga"]
+image-tiff = ["image/tiff"]
+image-webp = ["image/webp"]
+tokio = ["dep:tokio"]
+# rfd (file dialog) async runtime
+crossbeam = ["dep:crossbeam", "floem-legacy-renderer/crossbeam"]
+localization = ["dep:fluent-bundle", "dep:unic-langid", "dep:sys-locale", "dep:ouroboros"]
+
+[dev-dependencies]
+criterion = { version = "0.8.1", features = ["html_reports"] }
+floem-legacy-renderer = { path = "../floom-legacy-renderer" }
+peniko = { workspace = true }
+# Doc examples in `views::dropdown` show the enum-driven dropdown workflow,
+# which is the one place the docs ask users to reach for `strum`.
+strum = { workspace = true }
+
+[[bench]]
+name = "event_dispatch"
+path = "../../benches/event_dispatch.rs"
+harness = false
+
+[[bench]]
+name = "style_computation"
+path = "../../benches/style_computation.rs"
+harness = false
+
+[[bench]]
+name = "painting"
+path = "../../benches/painting.rs"
+harness = false
+
+[[bench]]
+name = "layout"
+path = "../../benches/layout.rs"
+harness = false
+
+[[bench]]
+name = "animation"
+path = "../../benches/animation.rs"
+harness = false
+
+[[bench]]
+name = "text"
+path = "../../benches/text.rs"
+harness = false
+
+[[bench]]
+name = "view_creation"
+path = "../../benches/view_creation.rs"
+harness = false
+
+[[bench]]
+name = "runtime_baseline"
+path = "../../benches/runtime_baseline.rs"
+harness = false
+
+[[bench]]
+name = "scene_baseline"
+path = "../../benches/scene_baseline.rs"
+harness = false
+
+[[bench]]
+name = "render_baseline"
+path = "../../benches/render_baseline.rs"
+harness = false
+
+# --- OHOS: the retargeted fork is a plain dependency, not a `[patch]` ---
+# A `[patch.crates-io] tgui-winit-ohos = { path = ... }` entry used to live
+# here. The fork is now package-renamed to `floem-winit-ohos`, and a `[patch]`
+# entry must keep the name of the package it replaces, so it became a plain
+# path dependency in `[workspace.dependencies]`. The retarget rationale
+# (`winit_core -> floem_winit_core`, zero logic change) is recorded in the
+# OHOS dependency block above.
+
+# --- lapce/winit: pin every member of the vendor fork to the local tree ---
+#
+# Two reasons, and the second is a correctness fix:
+#
+# 1. iOS (#109). lapce/winit @ 133268de owns the `WinitApplicationDelegate` and
+#    used to drop both cold-start (`application:didFinishLaunchingWithOptions:`)
+#    and warm-start (`application:openURL:options:`) shares. This local fork
+#    (built from the published `floem-winit 0.29.5`, which is that exact rev)
+#    adds a `set_on_open_url` C callback that floem registers at startup; the
+#    delegate forwards every shared `NSURL` through it. No drift risk — same
+#    rev, same version (25.10.0). The fork's root `Cargo.toml` is a virtual
+#    workspace, so the patch must point at member packages, not at the root.
+#    See docs/ios.md "Step 8b".
+#
+# 2. OHOS trait identity. `vendor/floem-winit-ohos` used to depend on the *git*
+#    `floem-winit-core` / `dpi` while the patched `floem-winit` facade depends
+#    on the vendored *path* copies. Cargo treats those as different packages, so
+#    the resolve graph carried two `floem-winit-core` and three `dpi` instances
+#    (`cargo metadata`). Floem's `Application` implements the local
+#    `ApplicationHandler` while the OHOS backend required the git one — meaning
+#    `export_ohos_winit_app!(floem_app_factory)` could not type-check. Every
+#    member is now redirected to the vendored tree, so one instance is left.
+#    This is only observable on an OHOS target, which is why macOS never
+#    noticed.
+
+[[test]]
+name = "compat_prelude"
+path = "../../tests/compat_prelude.rs"
+[[test]]
+name = "img_layout"
+path = "../../tests/img_layout.rs"
+[[test]]
+name = "svg_layout"
+path = "../../tests/svg_layout.rs"

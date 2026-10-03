@@ -7,4 +7,4 @@ publish = false
 description = "Self-drawn motion: an animated progress ring on a Canvas, plus a Spinner that animates itself"
 
 [dependencies]
-floem2 = { path = "../../app/floem2", version = "0.2.0" }
+floem2 = { path = "../../crates/floom2", version = "0.2.0" }

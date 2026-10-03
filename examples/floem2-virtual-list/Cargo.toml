@@ -7,6 +7,6 @@ publish = false
 description = "Virtual scrolling golden example: bounded element pool over a 100k item list"
 
 [dependencies]
-floem-core = { path = "../../foundation/floem-core", version = "0.2.0" }
-floem-types = { path = "../../foundation/floem-types", version = "0.2.0" }
-floem-virtual = { path = "../../layout/floem-virtual", version = "0.2.0" }
+floem-core = { path = "../../crates/floom-core", version = "0.2.0" }
+floem-types = { path = "../../crates/floom-types", version = "0.2.0" }
+floem-virtual = { path = "../../crates/floom-virtual", version = "0.2.0" }
