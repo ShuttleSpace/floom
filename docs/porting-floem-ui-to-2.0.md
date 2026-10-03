@@ -67,10 +67,10 @@ meaningful until the base exists on 2.0.
 
 | Crate | LOC | v1 coupling | Status |
 |---|---|---|---|
-| `floom-core-theme` | 7,711 | trivial — tokens only | **done** |
+| `floom-core-theme` | 7,711 | trivial — tokens only | **ported** |
+| `floom-testing` | 22 | none (zero dependencies) | **no port needed** |
+| `floom-widget-runtime` | 351 | theme plumbing ported; `Ripple` not | **ported, minus `Ripple`** |
 | `floom-elements` | 8,293 | heavy — `View`, `IntoView`, reactive reads | todo |
-| `floom-widget-runtime` | 351 | three subsystems, not one | todo |
-| `floom-testing` | 22 | none | todo |
 
 `floom-core-theme` turned out to need almost nothing from v1: theme state is
 just `RwSignal` + `create_global_rw_signal` (which live in `floom-legacy-reactive`
@@ -78,15 +78,36 @@ and are already re-exported by the 2.0 prelude), plus two value conversions.
 It now depends on `floom-legacy-reactive`, `peniko` and `parley` directly — no
 widget layer, no `floom`.
 
-`floom-widget-runtime` looked small enough to be a find-and-replace and is not:
-it is the Material ripple and reaches into three subsystems at once —
-`floom::animate::Animation` (2.0 has `floom_animation` with a different
-`AnimId`/`AnimKind`/`Tween` model driven from `WidgetHost::animate`),
-`floom::context::{LayoutChanged, LayoutChangedListener}` (layout-change
-observation, with no 2.0 equivalent yet), and `floom::event::EventPropagation`.
-Its widgets move to the `Child`-based composition model. At 351 LOC it is cheap
-in volume but needs all three of those answered first — which makes it a poor
-second step and a good Stage-B dependency check.
+`floom-widget-runtime` is the crate 99 others depend on, and **91 of them use
+only `theme_signal`**, so porting it was high leverage. Its theme plumbing is now
+2.0-native. Two of its helpers changed shape because 2.0 has no wrapper widget:
+`theme_provider` and `layout_provider` used to take a child and return
+`impl View`; 2.0's `Container` is a leaf (paint, background, padding, filters)
+with no `.child()` builder, because composition moved to the parent via
+`Child::new(ChildKey, LayoutRequest, || Box::new(..))`. So both now only install
+their signal, and wrapping is the caller's job.
+
+#### `Ripple` is the first Stage B item
+
+`Ripple` (the Material press ripple) is **not** ported. It is not a find-and-
+replace problem, and the reason is a genuine 2.0 gap:
+
+- The v1 ripple was a `View` wrapper that animated a growing ink circle on
+  pointer-down and faded it on pointer-up, clipped to rounded bounds.
+- 2.0 has every *piece*: `WidgetHost::bounds` / `dispatch` / `animate`, and
+  `Widget::clip`.
+- But 2.0's animation contract is **declarative** — a widget returns one
+  `AnimationSpec` from `Widget::animation` and the host owns the running state
+  ("a widget has no host handle… so it cannot start anything itself"). That
+  cannot express a **two-phase, pointer-driven** interaction: expand on press,
+  fade on release, driven by event timing rather than a declared spec.
+
+So Stage B needs an interaction-animation capability (per-widget animation
+state machines started and advanced from `Widget::event`) before `Ripple` can
+exist. Ten components depend on it and do not build until then:
+`{material,cupertino,fluent}-card`, `-list_item`, `-icon_button`, and
+`material-button`. Everything else in `floom-widget-runtime` is live, and
+verified: a non-`Ripple` consumer (`floom-widget-md-avatar`) builds against it.
 
 The mapping table established there is the template for the rest:
 

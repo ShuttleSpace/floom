@@ -4287,8 +4287,8 @@ dependencies = [
 name = "floom-widget-runtime"
 version = "0.1.0"
 dependencies = [
- "floom",
  "floom-core-theme",
+ "floom-legacy-reactive",
 ]
 
 [[package]]
