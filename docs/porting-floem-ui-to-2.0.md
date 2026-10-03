@@ -1,5 +1,42 @@
 # Porting `floem-ui` from the v1 API to the Floom 2.0 API
 
+## Resume here
+
+Branch `floem2.0`. The next task is the **stateful** shape — port
+`md-expansion_panels` (chosen over `carousel`: expand/collapse needs only a
+height transition, and its state-machine shape is the one more components are
+likely to reuse).
+
+Verification commands that must stay green:
+
+    # the whole core workspace
+    cargo check --workspace --exclude calculator --exclude floom2-capabilities \
+          --exclude floem-legacy-renderer-skia --all-targets
+
+    # the engine widget crate
+    cargo test -p floom-widgets
+
+    # the nested floem-ui workspace (separate workspace, needs a design feature)
+    cd crates/ecosystem/floom-ui
+    cargo check -p floem-elements --features material
+
+The three `--exclude`d packages are **pre-existing** breakages, proved against a
+clean `origin/floem-2.0` worktree, not regressions:
+`examples/calculator` (manifest points at `src/lib.rs`, the file is `src/librs`),
+`floom2-capabilities` (7 Android/iOS errors `cfg`'d out on macOS), and
+`floom-legacy-renderer-skia` (its `skia-bindings` build script needs network).
+
+Three claims this document has had to correct about itself. Each is recorded with
+its evidence rather than quietly overwritten, because all three were confident
+assertions made from reading code instead of testing:
+
+1. "79 components need new widgets" — wrong: `impl View for` appears **zero**
+   times across all three kits. All 98 are declarative compositions.
+2. "`Ripple` needs an interaction-animation capability in the engine" — wrong,
+   twice. `floom-app/tests/event_animation.rs` proves it works today.
+3. "the v1 monolith can be deleted without porting `floem-ui`" — wrong: 298 of
+   its 299 crates depend on v1.
+
 `floem-ui` is the design-system component library: **298 crates, 66,729 LOC**
 (98 distinct components × 3 kits — Material, Cupertino, Fluent — plus the shared
 base crates). It is written against the **v1** API throughout. Because the plan
