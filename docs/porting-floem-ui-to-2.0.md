@@ -34,6 +34,38 @@ Already covered: `button`, `checkbox`, `container`, `dialog`, `divider`, `grid`,
 `icon`, `image`, `list`, `navigation_drawer`, `overlay`, `radio`, `select`,
 `slider`, `spacer`, `switch`, `tabs`, `text`, `text-field`.
 
+**Started:** `badge` (done — `crates/floom-widgets/src/badge.rs`, 10 tests).
+
+### The pattern a Stage B widget follows
+
+`Badge` is the reference implementation for the other 78, because it fixes the
+seam between 2.0 and floom-ui:
+
+- **A 2.0 widget is theme-agnostic.** It takes explicit values
+  (`background`, `foreground`, `font_size`, `min_size`, `padding`,
+  `dot_size`, `radius`). Resolving "which design system, which palette" is the
+  *kit's* job — so the v1 pattern of a widget reading a global
+  `theme_signal()` does not carry over, and the kits get thinner as they port.
+- **Impl `floom_core::Widget`** with the defaults doing the work: `create` is
+  `cx.alloc_child()`, `update` is `self.revision.sync(cx, id)`, and a leaf only
+  adds `layout_request` (intrinsic size), `paint`, and `semantics`.
+- **Paint respects layout.** `paint` fills `cx.bounds()`, not its own intrinsic
+  size — `dot_size` and friends only feed `layout_request`, and the host wins
+  if a parent stretches the box.
+- **Semantics go through the crate's vocabulary.** `floom-widgets` has its own
+  `primitives::SemanticsHint` (naming `floom-accessibility` types) and
+  `widget_any.rs` bridges it into the engine-neutral `floom_core::SemanticsHint`.
+  Register the widget in `impl_widget_any!` rather than hand-writing
+  `WidgetAny`.
+- **Geometry types are `f64`.** `Rect::width()/height()`, `Point::new` and
+  `LayoutRequest.width/height` are `f64` / `Option<f32>` respectively — the
+  mismatch is the most common first-compile error.
+
+Two behaviours worth keeping, both covered by tests: a pill's radius defaults to
+half its height (so it reads as a stadium, not a rectangle), and an unchanged
+widget must mark **nothing** dirty on re-sync, or every frame would invalidate
+the whole subtree.
+
 Missing (79): `alert`, `app_bar`, `autocomplete`, `avatar`, `badge`, `banner`,
 `bottom_navigation`, `breadcrumbs`, `button_group`, `calendar`, `card`,
 `carousel`, `chip`, `chip_group`, `code`, `color_picker`, `combobox`,

@@ -11,6 +11,7 @@
 
 #![forbid(unsafe_code)]
 
+pub mod badge;
 pub mod canvas;
 pub mod compose;
 pub mod controls;
@@ -30,6 +31,7 @@ pub use widget_any::{to_core_role, to_core_state};
 
 /// Self-drawn surfaces: a closure-driven drawing board, a WGSL shader box and
 /// a loading spinner.
+pub use badge::Badge;
 pub use canvas::{Canvas, ShaderBox, Spinner};
 pub use compose::{
     AnimatedContent, BottomSheet, Conditional, Crossfade, Dialog, Grid, List, Opacity, Overlay,

@@ -18,3 +18,4 @@ floom-ime = { path = "../floom-ime", version = "0.2.0" }
 floom-legacy-reactive = { path = "../floom-legacy-reactive", version = "0.2.0" }
 
 [dev-dependencies]
+floom-text = { path = "../floom-text", version = "0.2.0" }
