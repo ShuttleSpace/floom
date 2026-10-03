@@ -39,7 +39,7 @@ mutate_one() {
   touch "$file"
 }
 
-COMPOSE=widgets/floem-widgets/src/compose.rs
+COMPOSE=crates/floom-widgets/src/compose.rs
 
 # 1. a switch stops spawning the arriving side — the departure is never answered,
 #    so the scene holds one mounted child mid-switch instead of two.
@@ -66,7 +66,7 @@ mutate_one "$COMPOSE" \
                 }
             }
         }" \
-  "cargo test -q -p floem-app --test motion_host an_animated_content_keeps_both_sides_live_while_it_switches" \
+  "cargo test -q -p floom-app --test motion_host an_animated_content_keeps_both_sides_live_while_it_switches" \
   "switch-spawns-the-arriving-side"
 
 # 2. a switch stops flipping the resting side to exit — the departure never
@@ -74,7 +74,7 @@ mutate_one "$COMPOSE" \
 mutate_one "$COMPOSE" \
 "                    slot.leaf.inner.when_signal.store(false, Ordering::Relaxed);" \
 "                    slot.leaf.inner.when_signal.store(true, Ordering::Relaxed);" \
-  "cargo test -q -p floem-app --test motion_host an_animated_content_swaps_instantly_without_a_transition" \
+  "cargo test -q -p floom-app --test motion_host an_animated_content_swaps_instantly_without_a_transition" \
   "switch-flips-the-resting-side-to-exit"
 
 # 3. the arriving side stops entering — a freshly mounted side is created hidden
@@ -82,7 +82,7 @@ mutate_one "$COMPOSE" \
 mutate_one "$COMPOSE" \
 "        let leaf = AnimatedContentLeaf::new(child, self.transition, true);" \
 "        let leaf = AnimatedContentLeaf::new(child, self.transition, false);" \
-  "cargo test -q -p floem-app --test motion_host an_animated_content_replays_enter_when_a_value_returns" \
+  "cargo test -q -p floom-app --test motion_host an_animated_content_replays_enter_when_a_value_returns" \
   "arriving-side-enters"
 
 # A restore-by-copy can land inside the same second as the mutated build, and

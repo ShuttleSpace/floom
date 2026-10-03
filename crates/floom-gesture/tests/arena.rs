@@ -1,5 +1,5 @@
-use floem_gesture::{GestureArena, GestureKind, PointerSample, RecognizerState};
-use floem_types::{ElementId, Point};
+use floom_gesture::{GestureArena, GestureKind, PointerSample, RecognizerState};
+use floom_types::{ElementId, Point};
 
 fn eid(i: u32) -> ElementId {
     ElementId::new(i, 1)

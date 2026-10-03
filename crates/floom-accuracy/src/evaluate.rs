@@ -10,15 +10,15 @@
 //! against the measurements directly, because a floor is a ">= " claim, not an
 //! exact value.
 
-use floem_design::contrast_ratio;
-use floem_snapshot::PixelSnapshot;
-use floem_testkit::{Selector, TestApp};
-use floem_types::{Point, Rect};
-use floem_ui_ir::{
+use floom_design::contrast_ratio;
+use floom_snapshot::PixelSnapshot;
+use floom_testkit::{Selector, TestApp};
+use floom_types::{Point, Rect};
+use floom_ui_ir::{
     ColorRole, ContractDiff, ContractVersion, DesignContract, Dimensions, Radius, Spacing,
     TypeStyle, compare,
 };
-use floem_widgets::Text;
+use floom_widgets::Text;
 
 use crate::screens::{Screen, screen_size};
 use crate::tokens::ScreenTokens;
@@ -45,11 +45,11 @@ pub struct Observation {
     pub title_line_height: f64,
     pub body_line_height: f64,
     pub primary_height: f64,
-    pub surface: floem_ui_ir::Rgba,
-    pub card: floem_ui_ir::Rgba,
-    pub accent: floem_ui_ir::Rgba,
-    pub on_accent: floem_ui_ir::Rgba,
-    pub text: floem_ui_ir::Rgba,
+    pub surface: floom_ui_ir::Rgba,
+    pub card: floom_ui_ir::Rgba,
+    pub accent: floom_ui_ir::Rgba,
+    pub on_accent: floom_ui_ir::Rgba,
+    pub text: floom_ui_ir::Rgba,
 }
 
 /// The evaluation result: the contract diff, the floor failures, the missing
@@ -131,7 +131,7 @@ fn measure(screen: Screen, app: &TestApp) -> EvaluationReport {
     // that does *not* cover the window — a dialog scrim is full-window and so
     // excluded by the same rule, no special case needed.
     let surface_fill = nodes.iter().find_map(|node| match node {
-        floem_scene::SceneNode::Rect { bounds, fill, .. }
+        floom_scene::SceneNode::Rect { bounds, fill, .. }
             if covers_window(bounds) && fill.solid().is_some_and(|c| c.a == 255) =>
         {
             fill.solid()
@@ -141,7 +141,7 @@ fn measure(screen: Screen, app: &TestApp) -> EvaluationReport {
     let card = nodes
         .iter()
         .filter_map(|node| match node {
-            floem_scene::SceneNode::Rect {
+            floom_scene::SceneNode::Rect {
                 bounds,
                 fill,
                 radius,
@@ -167,7 +167,7 @@ fn measure(screen: Screen, app: &TestApp) -> EvaluationReport {
     let accent = nodes
         .iter()
         .find_map(|node| match node {
-            floem_scene::SceneNode::Rect { bounds, fill, .. }
+            floom_scene::SceneNode::Rect { bounds, fill, .. }
                 if same_rect(bounds, &primary_bounds) =>
             {
                 fill.solid()
@@ -185,7 +185,7 @@ fn measure(screen: Screen, app: &TestApp) -> EvaluationReport {
     let on_accent = nodes
         .iter()
         .find_map(|node| match node {
-            floem_scene::SceneNode::Text {
+            floom_scene::SceneNode::Text {
                 origin,
                 size,
                 color,
@@ -288,7 +288,7 @@ fn measure(screen: Screen, app: &TestApp) -> EvaluationReport {
         ],
         states: Vec::new(),
         animation: reference.animation.clone(),
-        accessibility: floem_ui_ir::Accessibility {
+        accessibility: floom_ui_ir::Accessibility {
             role: reference.accessibility.role.clone(),
             label: reference.accessibility.label.clone(),
             min_contrast: reference.accessibility.min_contrast,
@@ -353,13 +353,13 @@ fn measure(screen: Screen, app: &TestApp) -> EvaluationReport {
 
 /// A small record of one painted text run, extracted from the scene.
 struct TextRun {
-    color: floem_types::Color,
+    color: floom_types::Color,
     height: f64,
 }
 
-fn text_node_at(nodes: &[floem_scene::SceneNode], origin: Point) -> Option<TextRun> {
+fn text_node_at(nodes: &[floom_scene::SceneNode], origin: Point) -> Option<TextRun> {
     nodes.iter().find_map(|node| match node {
-        floem_scene::SceneNode::Text {
+        floom_scene::SceneNode::Text {
             origin: at,
             size,
             color,

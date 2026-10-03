@@ -20,7 +20,7 @@ use crate::{
     },
     window::WindowConfig,
 };
-use floem_legacy_reactive::{Effect, Memo, RwSignal, SignalGet, SignalUpdate};
+use floom_legacy_reactive::{Effect, Memo, RwSignal, SignalGet, SignalUpdate};
 use peniko::{
     Color,
     color::palette::{self, css},
@@ -159,7 +159,7 @@ fn inspector_view(
     };
 
     view.container()
-        .window_title(|| "Floem Inspector".to_owned())
+        .window_title(|| "Floom Inspector".to_owned())
         .style(|s| {
             s.width_full()
                 .height_full()

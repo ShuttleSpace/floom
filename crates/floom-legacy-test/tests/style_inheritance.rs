@@ -5,11 +5,11 @@
 //! - Non-inherited props don't flow to children
 //! - Nested views can override inherited props
 
-use floem::peniko::{Brush, Color};
-use floem::prelude::*;
-use floem::prop;
-use floem::style::{Background, Style};
-use floem_legacy_test::prelude::*;
+use floom::peniko::{Brush, Color};
+use floom::prelude::*;
+use floom::prop;
+use floom::style::{Background, Style};
+use floom_legacy_test::prelude::*;
 
 // Define an inherited prop
 prop!(

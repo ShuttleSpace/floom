@@ -1,0 +1,10 @@
+[package]
+name = "floom2-editor"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+description = "Text editor golden example: transactions, selection and undo/redo history"
+
+[dependencies]
+floom-editor = { path = "../../crates/floom-editor", version = "0.2.0" }

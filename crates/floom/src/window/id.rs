@@ -193,10 +193,10 @@ pub trait WindowIdExt: WindowIdExtSealed {
     }
 
     /// Force a repaint of this window through the native window's repaint mechanism,
-    /// bypassing floem's normal repaint mechanism.
+    /// bypassing floom's normal repaint mechanism.
     ///
     /// This method may be removed or deprecated in the future, but has been needed
-    /// in [some situations](https://github.com/lapce/floem/issues/463), and to
+    /// in [some situations](https://github.com/lapce/floom/issues/463), and to
     /// address a few ongoing issues in `winit` (window unmaximize is delayed until
     /// an external event triggers a repaint of the requesting window), and may
     /// be needed as a workaround if other such issues are discovered until they
@@ -221,9 +221,9 @@ pub trait WindowIdExt: WindowIdExtSealed {
     /// closure's result, or `None` if there is no live OS window for this id (or the platform could
     /// not produce a handle).
     ///
-    /// This is a backend-neutral handle (`raw-window-handle` is a crate Floem already depends on),
+    /// This is a backend-neutral handle (`raw-window-handle` is a crate Floom already depends on),
     /// so embedders can integrate native children — e.g. attaching a child webview via `wry`'s
-    /// `build_as_child` — against the parent window without Floem exposing its windowing-backend
+    /// `build_as_child` — against the parent window without Floom exposing its windowing-backend
     /// types. The handle is only valid for the duration of `f`.
     fn with_window_handle<F, T>(&self, f: F) -> Option<T>
     where
@@ -297,7 +297,7 @@ impl WindowIdExt for WindowId {
         F: FnOnce(raw_window_handle::WindowHandle<'_>) -> T,
     {
         use raw_window_handle::HasWindowHandle;
-        // `Window: HasWindowHandle` (Floem already relies on this internally to build its render
+        // `Window: HasWindowHandle` (Floom already relies on this internally to build its render
         // surface); hand the closure the resulting `WindowHandle`, which itself impls
         // `HasWindowHandle` for use with e.g. `wry`'s `build_as_child`.
         with_window(self, move |window| window.window_handle().ok().map(f)).flatten()
@@ -354,7 +354,7 @@ pub(crate) fn process_window_updates(id: &WindowId) -> bool {
                             // If we don't trigger a repaint on macOS,
                             // unminimize doesn't happen until an input
                             // event arrives. Unrelated to
-                            // https://github.com/lapce/floem/issues/463 -
+                            // https://github.com/lapce/floom/issues/463 -
                             // this is in winit or below.
                             maybe_yield_with_repaint(window);
                         }
@@ -455,7 +455,7 @@ fn bounds_to_logical_outer_position_and_inner_size(
 
 /// Some operations - notably minimize and restoring visibility - don't take
 /// effect on macOS until something triggers a repaint in the target window - the
-/// issue is below the level of floem's event loops and seems to be in winit or
+/// issue is below the level of floom's event loops and seems to be in winit or
 /// deeper.  Workaround is to force the window to repaint.
 #[allow(unused_variables)] // non mac builds see `window` as unused
 fn maybe_yield_with_repaint(window: &Arc<dyn Window>) {

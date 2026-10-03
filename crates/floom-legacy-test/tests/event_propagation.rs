@@ -4,8 +4,8 @@
 //! - `on_click_stop` prevents events from bubbling to parent views
 //! - `on_click_cont` allows events to bubble to parent views
 
-use floem::views::OverlayExt;
-use floem_legacy_test::prelude::*;
+use floom::views::OverlayExt;
+use floom_legacy_test::prelude::*;
 use serial_test::serial;
 
 #[test]
@@ -824,7 +824,7 @@ fn test_interaction_state_reflects_clicking() {
 #[serial]
 fn test_interaction_state_after_style_recomputation() {
     // After recomputing styles, the interaction state should still be correct
-    use floem::peniko::color::palette::css;
+    use floom::peniko::color::palette::css;
 
     let root = TestRoot::new();
     let view = Empty::new().style(|s| s.size(100.0, 100.0).active(|s| s.background(css::RED)));
@@ -864,8 +864,8 @@ fn test_interaction_state_after_style_recomputation() {
 #[serial]
 fn test_active_style_with_full_click_cycle() {
     // Test a complete click cycle with Active style handling
-    use floem::peniko::color::palette::css;
-    use floem::style::StyleSelector;
+    use floom::peniko::color::palette::css;
+    use floom::style::StyleSelector;
 
     let root = TestRoot::new();
     let view = Empty::new().style(|s| s.size(100.0, 100.0).active(|s| s.background(css::RED)));
@@ -946,7 +946,7 @@ fn test_clicking_state_persists_when_pointer_leaves_view() {
 #[serial]
 fn test_clicking_state_after_pointer_move_and_style_update() {
     // After pointer move out and style recalculation, clicking should still be set
-    use floem::peniko::color::palette::css;
+    use floom::peniko::color::palette::css;
 
     let root = TestRoot::new();
     let view = Empty::new().style(|s| s.size(50.0, 50.0).active(|s| s.background(css::RED)));
@@ -1018,9 +1018,9 @@ fn test_hover_state_cleared_on_pointer_leave() {
 #[serial]
 fn test_active_style_applied_during_click() {
     // Verify that the :active style is actually applied to the computed style
-    use floem::peniko::Brush;
-    use floem::peniko::color::palette::css;
-    use floem::style::{Background, StyleSelector};
+    use floom::peniko::Brush;
+    use floom::peniko::color::palette::css;
+    use floom::style::{Background, StyleSelector};
 
     let root = TestRoot::new();
     let view = Empty::new().style(|s| {
@@ -1147,7 +1147,7 @@ fn test_nested_stack_click_no_z_index() {
 //   - Both visually overlap
 //   - Clicking DialogContent should NOT trigger Backdrop's click handler
 //
-// These tests verify that Floem implements DOM-style tree-based bubbling,
+// These tests verify that Floom implements DOM-style tree-based bubbling,
 // not spatial bubbling where overlapping views can intercept each other's events.
 
 /// Test that overlapping siblings don't receive each other's click events.
@@ -1162,7 +1162,7 @@ fn test_nested_stack_click_no_z_index() {
 #[test]
 #[serial]
 fn test_overlapping_siblings_no_cross_propagation() {
-    use floem::reactive::{RwSignal, SignalGet, SignalUpdate};
+    use floom::reactive::{RwSignal, SignalGet, SignalUpdate};
 
     let root = TestRoot::new();
     let backdrop_clicked = RwSignal::new(false);
@@ -1205,8 +1205,8 @@ fn test_overlapping_siblings_no_cross_propagation() {
 #[test]
 #[serial]
 fn test_overlapping_siblings_click_outside_content() {
-    use floem::HasViewId;
-    use floem::reactive::{RwSignal, SignalGet, SignalUpdate};
+    use floom::HasViewId;
+    use floom::reactive::{RwSignal, SignalGet, SignalUpdate};
 
     let root = TestRoot::new();
     let backdrop_clicked = RwSignal::new(false);
@@ -1275,7 +1275,7 @@ fn test_overlapping_siblings_click_outside_content() {
 #[test]
 #[serial]
 fn test_dialog_structure_content_click_no_backdrop() {
-    use floem::reactive::{RwSignal, SignalGet, SignalUpdate};
+    use floom::reactive::{RwSignal, SignalGet, SignalUpdate};
 
     let root = TestRoot::new();
     let dialog_open = RwSignal::new(true);
@@ -1323,7 +1323,7 @@ fn test_dialog_structure_content_click_no_backdrop() {
 #[test]
 #[serial]
 fn test_dialog_structure_backdrop_click_closes() {
-    use floem::reactive::{RwSignal, SignalGet, SignalUpdate};
+    use floom::reactive::{RwSignal, SignalGet, SignalUpdate};
 
     let root = TestRoot::new();
     let dialog_open = RwSignal::new(true);
@@ -1360,7 +1360,7 @@ fn test_dialog_structure_backdrop_click_closes() {
 #[test]
 #[serial]
 fn test_multiple_overlapping_layers_topmost_wins() {
-    use floem::reactive::{RwSignal, SignalGet, SignalUpdate};
+    use floom::reactive::{RwSignal, SignalGet, SignalUpdate};
 
     let root = TestRoot::new();
     let layer1_clicked = RwSignal::new(false);
@@ -1371,19 +1371,19 @@ fn test_multiple_overlapping_layers_topmost_wins() {
     let view = Stack::new((
         Empty::new()
             .style(|s| s.absolute().inset(0.0).size(100.0, 100.0).z_index(1))
-            .on_event_stop(floem::event::listener::Click, {
+            .on_event_stop(floom::event::listener::Click, {
                 let clicked = layer1_clicked;
                 move |_, _| clicked.set(true)
             }),
         Empty::new()
             .style(|s| s.absolute().inset(0.0).size(100.0, 100.0).z_index(5))
-            .on_event_stop(floem::event::listener::Click, {
+            .on_event_stop(floom::event::listener::Click, {
                 let clicked = layer2_clicked;
                 move |_, _| clicked.set(true)
             }),
         Empty::new()
             .style(|s| s.absolute().inset(0.0).size(100.0, 100.0).z_index(10))
-            .on_event_stop(floem::event::listener::Click, {
+            .on_event_stop(floom::event::listener::Click, {
                 let clicked = layer3_clicked;
                 move |_, _| clicked.set(true)
             }),
@@ -1416,7 +1416,7 @@ fn test_multiple_overlapping_layers_topmost_wins() {
 #[test]
 #[serial]
 fn test_click_cont_bubbles_to_parent_not_siblings() {
-    use floem::reactive::{RwSignal, SignalGet, SignalUpdate};
+    use floom::reactive::{RwSignal, SignalGet, SignalUpdate};
     use std::cell::RefCell;
     use std::rc::Rc;
 
@@ -1431,7 +1431,7 @@ fn test_click_cont_bubbles_to_parent_not_siblings() {
     let view = Stack::new((
         Empty::new()
             .style(|s| s.absolute().inset(0.0).size(100.0, 100.0).z_index(1))
-            .on_event_stop(floem::event::listener::Click, {
+            .on_event_stop(floom::event::listener::Click, {
                 let clicked = backdrop_clicked;
                 move |_, _| clicked.set(true)
             }),
@@ -1444,12 +1444,12 @@ fn test_click_cont_bubbles_to_parent_not_siblings() {
                     .size(50.0, 50.0)
                     .z_index(10)
             })
-            .on_event_cont(floem::event::listener::Click, move |_, _| {
+            .on_event_cont(floom::event::listener::Click, move |_, _| {
                 order_clone.borrow_mut().push("content".to_string());
             }),
     ))
     .style(|s| s.size(100.0, 100.0))
-    .on_event_cont(floem::event::listener::Click, move |_, _| {
+    .on_event_cont(floom::event::listener::Click, move |_, _| {
         order_clone2.borrow_mut().push("parent".to_string());
     });
 
@@ -1472,12 +1472,12 @@ fn test_click_cont_bubbles_to_parent_not_siblings() {
 /// Test what happens when topmost view has NO click handler.
 ///
 /// This tests whether the event falls through to sibling (spatial) or
-/// bubbles to parent (DOM-style). If Floem is truly DOM-style, the
+/// bubbles to parent (DOM-style). If Floom is truly DOM-style, the
 /// backdrop sibling should NOT receive the click.
 #[test]
 #[serial]
 fn test_no_handler_on_topmost_does_not_fall_through_to_sibling() {
-    use floem::reactive::{RwSignal, SignalGet, SignalUpdate};
+    use floom::reactive::{RwSignal, SignalGet, SignalUpdate};
 
     let root = TestRoot::new();
     let backdrop_clicked = RwSignal::new(false);
@@ -1486,7 +1486,7 @@ fn test_no_handler_on_topmost_does_not_fall_through_to_sibling() {
         // Backdrop with handler
         Empty::new()
             .style(|s| s.absolute().inset(0.0).size(100.0, 100.0).z_index(1))
-            .on_event_stop(floem::event::listener::Click, {
+            .on_event_stop(floom::event::listener::Click, {
                 let clicked = backdrop_clicked;
                 move |_, _| clicked.set(true)
             }),
@@ -1521,7 +1521,7 @@ fn test_no_handler_on_topmost_does_not_fall_through_to_sibling() {
 #[test]
 #[serial]
 fn test_overlapping_siblings_no_z_index_dom_order() {
-    use floem::reactive::{RwSignal, SignalGet, SignalUpdate};
+    use floom::reactive::{RwSignal, SignalGet, SignalUpdate};
 
     let root = TestRoot::new();
     let backdrop_clicked = RwSignal::new(false);
@@ -1532,7 +1532,7 @@ fn test_overlapping_siblings_no_z_index_dom_order() {
         // Backdrop - comes first, so it's BELOW content
         Empty::new()
             .style(|s| s.absolute().inset(0.0).size(100.0, 100.0))
-            .on_event_stop(floem::event::listener::Click, {
+            .on_event_stop(floom::event::listener::Click, {
                 let clicked = backdrop_clicked;
                 move |_, _| clicked.set(true)
             }),
@@ -1544,7 +1544,7 @@ fn test_overlapping_siblings_no_z_index_dom_order() {
                     .inset_top(25.0)
                     .size(50.0, 50.0)
             })
-            .on_event_stop(floem::event::listener::Click, {
+            .on_event_stop(floom::event::listener::Click, {
                 let clicked = content_clicked;
                 move |_, _| clicked.set(true)
             }),
@@ -1580,7 +1580,7 @@ fn test_overlapping_siblings_no_z_index_dom_order() {
 #[test]
 #[serial]
 fn test_dialog_with_overlay() {
-    use floem::reactive::{RwSignal, SignalGet, SignalUpdate};
+    use floom::reactive::{RwSignal, SignalGet, SignalUpdate};
 
     let root = TestRoot::new();
     let dialog_open = RwSignal::new(true);
@@ -1628,7 +1628,7 @@ fn test_dialog_with_overlay() {
 #[test]
 #[serial]
 fn test_dialog_with_container_derived() {
-    use floem::reactive::{RwSignal, SignalGet, SignalUpdate};
+    use floom::reactive::{RwSignal, SignalGet, SignalUpdate};
 
     let root = TestRoot::new();
     let dialog_open = RwSignal::new(true);
@@ -1682,7 +1682,7 @@ fn test_dialog_with_container_derived() {
 #[test]
 #[serial]
 fn test_dialog_click_on_nested_button() {
-    use floem::reactive::{RwSignal, SignalGet, SignalUpdate};
+    use floom::reactive::{RwSignal, SignalGet, SignalUpdate};
 
     let root = TestRoot::new();
     let dialog_open = RwSignal::new(true);
@@ -1736,7 +1736,7 @@ fn test_dialog_click_on_nested_button() {
 #[test]
 #[serial]
 fn test_exact_dialog_structure() {
-    use floem::reactive::{RwSignal, SignalGet, SignalUpdate};
+    use floom::reactive::{RwSignal, SignalGet, SignalUpdate};
 
     let root = TestRoot::new();
     let dialog_open = RwSignal::new(true);
@@ -1755,8 +1755,8 @@ fn test_exact_dialog_structure() {
             Stack::new((
                 // DialogHeader
                 Stack::new((
-                    floem::views::Label::new("Title"),
-                    floem::views::Label::new("Description"),
+                    floom::views::Label::new("Title"),
+                    floom::views::Label::new("Description"),
                 ))
                 .style(|s| s.flex_col().gap(2.0)),
                 // DialogFooter with buttons
@@ -1804,7 +1804,7 @@ fn test_exact_dialog_structure() {
 #[test]
 #[serial]
 fn test_dialog_content_no_handler() {
-    use floem::reactive::{RwSignal, SignalGet, SignalUpdate};
+    use floom::reactive::{RwSignal, SignalGet, SignalUpdate};
 
     let root = TestRoot::new();
     let dialog_open = RwSignal::new(true);
@@ -1819,7 +1819,7 @@ fn test_dialog_content_no_handler() {
         // Content - NO click handler!
         Container::derived(move || {
             Stack::new((
-                floem::views::Label::new("Title"),
+                floom::views::Label::new("Title"),
                 Empty::new().style(|s| s.size(30.0, 20.0)),
             ))
             .style(|s| s.flex_col().gap(8.0))
@@ -1854,8 +1854,8 @@ fn test_dialog_content_no_handler() {
 #[test]
 #[serial]
 fn test_dialog_with_translate_centering() {
-    use floem::reactive::{RwSignal, SignalGet, SignalUpdate};
-    use floem::unit::Pct;
+    use floom::reactive::{RwSignal, SignalGet, SignalUpdate};
+    use floom::unit::Pct;
 
     let root = TestRoot::new();
     let dialog_open = RwSignal::new(true);
@@ -1906,8 +1906,8 @@ fn test_dialog_with_translate_centering() {
 #[test]
 #[serial]
 fn test_dialog_with_translate_no_handler() {
-    use floem::reactive::{RwSignal, SignalGet, SignalUpdate};
-    use floem::unit::Pct;
+    use floom::reactive::{RwSignal, SignalGet, SignalUpdate};
+    use floom::unit::Pct;
 
     let root = TestRoot::new();
     let dialog_open = RwSignal::new(true);
@@ -2012,8 +2012,8 @@ fn test_counter_example_structure() {
 #[test]
 #[serial]
 fn test_overlay_fixed_translate_click_offset_bug() {
-    use floem::reactive::{RwSignal, SignalGet, SignalUpdate};
-    use floem::unit::Pct;
+    use floom::reactive::{RwSignal, SignalGet, SignalUpdate};
+    use floom::unit::Pct;
 
     let root = TestRoot::new();
     let backdrop_clicked = RwSignal::new(false);
@@ -2071,7 +2071,7 @@ fn test_overlay_fixed_translate_click_offset_bug() {
 #[test]
 #[serial]
 fn test_overlay_fixed_no_translate() {
-    use floem::reactive::{RwSignal, SignalGet, SignalUpdate};
+    use floom::reactive::{RwSignal, SignalGet, SignalUpdate};
 
     let root = TestRoot::new();
     let backdrop_clicked = RwSignal::new(false);
@@ -2113,8 +2113,8 @@ fn test_overlay_fixed_no_translate() {
 #[test]
 #[serial]
 fn test_fixed_translate_no_overlay() {
-    use floem::reactive::{RwSignal, SignalGet, SignalUpdate};
-    use floem::unit::Pct;
+    use floom::reactive::{RwSignal, SignalGet, SignalUpdate};
+    use floom::unit::Pct;
 
     let root = TestRoot::new();
     let backdrop_clicked = RwSignal::new(false);
@@ -2165,7 +2165,7 @@ fn test_fixed_translate_no_overlay() {
 #[test]
 #[serial]
 fn test_overlay_fixed_click_corners() {
-    use floem::reactive::{RwSignal, SignalGet, SignalUpdate};
+    use floom::reactive::{RwSignal, SignalGet, SignalUpdate};
 
     // Test each corner separately
     for (name, x, y) in [
@@ -2235,8 +2235,8 @@ fn test_overlay_fixed_click_corners() {
 #[test]
 #[serial]
 fn test_overlay_fixed_translate_click_corners() {
-    use floem::reactive::{RwSignal, SignalGet, SignalUpdate};
-    use floem::unit::Pct;
+    use floom::reactive::{RwSignal, SignalGet, SignalUpdate};
+    use floom::unit::Pct;
 
     // Content visual bounds: (60, 60) to (140, 140)
     for (name, x, y) in [
@@ -2303,7 +2303,7 @@ fn test_overlay_fixed_translate_click_corners() {
 #[test]
 #[serial]
 fn test_overlay_fixed_click_outside_content() {
-    use floem::reactive::{RwSignal, SignalGet, SignalUpdate};
+    use floom::reactive::{RwSignal, SignalGet, SignalUpdate};
 
     // Content is at (50, 50) to (150, 150)
     // These clicks should hit backdrop
@@ -2362,8 +2362,8 @@ fn test_overlay_fixed_click_outside_content() {
 #[test]
 #[serial]
 fn test_no_overlay_fixed_translate_probe_boundary() {
-    use floem::reactive::{RwSignal, SignalGet, SignalUpdate};
-    use floem::unit::Pct;
+    use floom::reactive::{RwSignal, SignalGet, SignalUpdate};
+    use floom::unit::Pct;
 
     // Same structure but without Overlay wrapper
     let test_points = [
@@ -2420,8 +2420,8 @@ fn test_no_overlay_fixed_translate_probe_boundary() {
 #[test]
 #[serial]
 fn test_overlay_fixed_translate_probe_boundary() {
-    use floem::reactive::{RwSignal, SignalGet, SignalUpdate};
-    use floem::unit::Pct;
+    use floom::reactive::{RwSignal, SignalGet, SignalUpdate};
+    use floom::unit::Pct;
 
     // Content visual bounds should be: (60, 60) to (140, 140)
     // Test clicks at various x positions along y=100 (horizontal center line)
@@ -2540,9 +2540,9 @@ fn test_overlay_fixed_translate_probe_boundary() {
 #[test]
 #[serial]
 fn test_overlay_fixed_translate_debug_layout() {
-    use floem::ViewId;
-    use floem::reactive::{RwSignal, SignalGet, SignalUpdate};
-    use floem::unit::Pct;
+    use floom::ViewId;
+    use floom::reactive::{RwSignal, SignalGet, SignalUpdate};
+    use floom::unit::Pct;
 
     let root = TestRoot::new();
     let content_id = ViewId::new();
@@ -2557,7 +2557,7 @@ fn test_overlay_fixed_translate_debug_layout() {
                 backdrop_clicked.set(true);
             }),
         // Content with known ID
-        floem::views::Container::with_id(content_id, Empty::new().style(|s| s.size(60.0, 40.0)))
+        floom::views::Container::with_id(content_id, Empty::new().style(|s| s.size(60.0, 40.0)))
             .style(|s| {
                 s.absolute()
                     .inset_left(Pct(50.0))
@@ -2627,7 +2627,7 @@ fn test_overlay_fixed_translate_debug_layout() {
 #[test]
 #[serial]
 fn test_events_do_not_bubble_to_parents_sibling() {
-    use floem::reactive::{RwSignal, SignalGet, SignalUpdate};
+    use floom::reactive::{RwSignal, SignalGet, SignalUpdate};
 
     let root = TestRoot::new();
     let sibling1_clicked = RwSignal::new(false);
@@ -2686,7 +2686,7 @@ fn test_events_do_not_bubble_to_parents_sibling() {
 #[test]
 #[serial]
 fn test_dialog_header_click_does_not_close() {
-    use floem::reactive::{RwSignal, SignalGet, SignalUpdate};
+    use floom::reactive::{RwSignal, SignalGet, SignalUpdate};
 
     let root = TestRoot::new();
     let dialog_open = RwSignal::new(true);
@@ -2748,7 +2748,7 @@ fn test_dialog_header_click_does_not_close() {
 #[test]
 #[serial]
 fn test_deeply_nested_no_cross_branch_bubbling() {
-    use floem::reactive::{RwSignal, SignalGet, SignalUpdate};
+    use floom::reactive::{RwSignal, SignalGet, SignalUpdate};
 
     let root = TestRoot::new();
     let branch_a_clicked = RwSignal::new(false);
@@ -2801,7 +2801,7 @@ fn test_deeply_nested_no_cross_branch_bubbling() {
 #[test]
 #[serial]
 fn test_bubbling_through_handler_less_child() {
-    use floem::reactive::{RwSignal, SignalGet, SignalUpdate};
+    use floom::reactive::{RwSignal, SignalGet, SignalUpdate};
 
     let root = TestRoot::new();
     let sibling1_clicked = RwSignal::new(false);
@@ -2853,8 +2853,8 @@ fn test_bubbling_through_handler_less_child() {
 #[test]
 #[serial]
 fn test_fixed_overlay_child_receives_click() {
-    use floem::reactive::{RwSignal, SignalGet, SignalUpdate};
-    use floem::unit::Pct;
+    use floom::reactive::{RwSignal, SignalGet, SignalUpdate};
+    use floom::unit::Pct;
 
     let root = TestRoot::new();
     let backdrop_clicked = RwSignal::new(false);
@@ -2926,9 +2926,9 @@ fn test_fixed_overlay_child_receives_click() {
 #[test]
 #[serial]
 fn test_fixed_overlay_child_click_bounds() {
-    use floem::ViewId;
-    use floem::reactive::{RwSignal, SignalGet, SignalUpdate};
-    use floem::unit::Pct;
+    use floom::ViewId;
+    use floom::reactive::{RwSignal, SignalGet, SignalUpdate};
+    use floom::unit::Pct;
 
     let root = TestRoot::new();
     let child_id = ViewId::new();
@@ -2946,11 +2946,11 @@ fn test_fixed_overlay_child_click_bounds() {
                 backdrop_clicks.update(|c| *c += 1);
             }),
         // Content - centered with translate
-        floem::views::Container::with_id(
+        floom::views::Container::with_id(
             content_id,
             Stack::vertical((
                 // Clickable child with known ID
-                floem::views::Container::with_id(
+                floom::views::Container::with_id(
                     child_id,
                     Empty::new().style(|s| s.size(60.0, 30.0)),
                 )
@@ -3042,8 +3042,8 @@ fn test_fixed_overlay_child_click_bounds() {
 #[serial]
 fn test_fixed_overlay_deeply_nested_child() {
     let root = TestRoot::new();
-    use floem::reactive::{RwSignal, SignalGet, SignalUpdate};
-    use floem::unit::Pct;
+    use floom::reactive::{RwSignal, SignalGet, SignalUpdate};
+    use floom::unit::Pct;
 
     let backdrop_clicked = RwSignal::new(false);
     let level1_clicked = RwSignal::new(false);
@@ -3119,9 +3119,9 @@ fn test_fixed_overlay_deeply_nested_child() {
 #[serial]
 fn test_fixed_overlay_child_probe_bounds() {
     let root = TestRoot::new();
-    use floem::ViewId;
-    use floem::reactive::{RwSignal, SignalGet, SignalUpdate};
-    use floem::unit::Pct;
+    use floom::ViewId;
+    use floom::reactive::{RwSignal, SignalGet, SignalUpdate};
+    use floom::unit::Pct;
 
     let child_id = ViewId::new();
 
@@ -3136,7 +3136,7 @@ fn test_fixed_overlay_child_probe_bounds() {
             .action(move || {
                 backdrop_clicks.update(|c| *c += 1);
             }),
-        Stack::vertical((floem::views::Container::with_id(
+        Stack::vertical((floom::views::Container::with_id(
             child_id,
             Empty::new().style(|s| s.size(60.0, 30.0)),
         )

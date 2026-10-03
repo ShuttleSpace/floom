@@ -9,8 +9,8 @@
 
 use anyhow::{Result, anyhow};
 
-use floem_legacy_renderer::gpu_resources::GpuResources;
-use floem_legacy_renderer::tiny_skia::Pixmap;
+use floom_legacy_renderer::gpu_resources::GpuResources;
+use floom_legacy_renderer::tiny_skia::Pixmap;
 
 const BLIT_WGSL: &str = r#"
 @group(0) @binding(0) var tex: texture_2d<f32>;
@@ -107,13 +107,13 @@ impl WgpuPresent {
         surface.configure(&device, &config);
 
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-            label: Some("floem-tiny-skia-blit"),
+            label: Some("floom-tiny-skia-blit"),
             source: wgpu::ShaderSource::Wgsl(BLIT_WGSL.into()),
         });
 
         let bind_group_layout =
             device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                label: Some("floem-tiny-skia-blit-bgl"),
+                label: Some("floom-tiny-skia-blit-bgl"),
                 entries: &[
                     wgpu::BindGroupLayoutEntry {
                         binding: 0,
@@ -139,13 +139,13 @@ impl WgpuPresent {
             });
 
         let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-            label: Some("floem-tiny-skia-blit-pl"),
+            label: Some("floom-tiny-skia-blit-pl"),
             bind_group_layouts: &[&bind_group_layout],
             push_constant_ranges: &[],
         });
 
         let pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-            label: Some("floem-tiny-skia-blit-pipeline"),
+            label: Some("floom-tiny-skia-blit-pipeline"),
             layout: Some(&pipeline_layout),
             vertex: wgpu::VertexState {
                 module: &shader,
@@ -167,7 +167,7 @@ impl WgpuPresent {
         });
 
         let sampler = device.create_sampler(&wgpu::SamplerDescriptor {
-            label: Some("floem-tiny-skia-blit-sampler"),
+            label: Some("floom-tiny-skia-blit-sampler"),
             address_mode_u: wgpu::AddressMode::ClampToEdge,
             address_mode_v: wgpu::AddressMode::ClampToEdge,
             address_mode_w: wgpu::AddressMode::ClampToEdge,
@@ -184,7 +184,7 @@ impl WgpuPresent {
         let texture = Self::create_texture(&device, config.width, config.height);
         let staging_len = staging_len(config.width, config.height);
         let staging = device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("floem-tiny-skia-blit-staging"),
+            label: Some("floom-tiny-skia-blit-staging"),
             size: staging_len,
             usage: wgpu::BufferUsages::COPY_SRC | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
@@ -208,7 +208,7 @@ impl WgpuPresent {
 
     fn create_texture(device: &wgpu::Device, width: u32, height: u32) -> wgpu::Texture {
         device.create_texture(&wgpu::TextureDescriptor {
-            label: Some("floem-tiny-skia-blit-texture"),
+            label: Some("floom-tiny-skia-blit-texture"),
             size: wgpu::Extent3d {
                 width: width.max(1),
                 height: height.max(1),
@@ -242,7 +242,7 @@ impl WgpuPresent {
             if staging_len > self.staging_len {
                 self.staging_len = staging_len;
                 self.staging = self.device.create_buffer(&wgpu::BufferDescriptor {
-                    label: Some("floem-tiny-skia-blit-staging"),
+                    label: Some("floom-tiny-skia-blit-staging"),
                     size: staging_len,
                     usage: wgpu::BufferUsages::COPY_SRC | wgpu::BufferUsages::COPY_DST,
                     mapped_at_creation: false,
@@ -277,7 +277,7 @@ impl WgpuPresent {
         let mut encoder = self
             .device
             .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("floem-tiny-skia-blit-encoder"),
+                label: Some("floom-tiny-skia-blit-encoder"),
             });
         encoder.copy_buffer_to_texture(
             wgpu::TexelCopyBufferInfo {
@@ -303,7 +303,7 @@ impl WgpuPresent {
         {
             let view = frame.texture.create_view(&Default::default());
             let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                label: Some("floem-tiny-skia-blit-pass"),
+                label: Some("floom-tiny-skia-blit-pass"),
                 color_attachments: &[Some(wgpu::RenderPassColorAttachment {
                     view: &view,
                     resolve_target: None,
@@ -335,7 +335,7 @@ fn texture_bind_group(
 ) -> wgpu::BindGroup {
     let view = texture.create_view(&Default::default());
     device.create_bind_group(&wgpu::BindGroupDescriptor {
-        label: Some("floem-tiny-skia-blit-bg"),
+        label: Some("floom-tiny-skia-blit-bg"),
         layout: bind_group_layout,
         entries: &[
             wgpu::BindGroupEntry {

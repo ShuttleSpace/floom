@@ -1,11 +1,11 @@
 [package]
-name = "floem-gesture"
+name = "floom-gesture"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
-description = "Gesture arena for Floem 2.0"
+description = "Gesture arena for Floom 2.0"
 rust-version.workspace = true
 
 [dependencies]
-floem-types = { path = "../floom-types", version = "0.2.0" }
+floom-types = { path = "../floom-types", version = "0.2.0" }

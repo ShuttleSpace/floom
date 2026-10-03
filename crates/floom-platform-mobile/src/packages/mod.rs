@@ -9,14 +9,14 @@
 //!
 //! * [`vibration`] — haptics and device vibration. Both backends wired
 //!   (iOS `UIKit`/`AudioToolbox`, Android `Vibrator`/`performHapticFeedback`).
-//! * [`keyboard`] — Android NDK `AKeyEvent` → Floem `Key` (pure, always
+//! * [`keyboard`] — Android NDK `AKeyEvent` → Floom `Key` (pure, always
 //!   compiled — see [`keyboard::android_table`]) plus soft-keyboard
 //!   visibility/height with hysteresis ([`keyboard::soft_input`]).
-//! * [`safe_area`] — OS-reserved insets as `floem_types::Insets`.
+//! * [`safe_area`] — OS-reserved insets as `floom_types::Insets`.
 //! * [`system_chrome`] — status/navigation bar appearance (`SystemChromeStyle`).
 //! * [`clipboard`] — system clipboard read/write. The Android arm is **real**
 //!   JNI (`ClipboardManager`); there is no NDK clipboard API, so this is what
-//!   `floem-platform-android` uses to implement `floem_platform::Clipboard`.
+//!   `floom-platform-android` uses to implement `floom_platform::Clipboard`.
 //! * [`device_info`], [`battery`], [`connectivity`], [`location`],
 //!   [`sensors`], [`local_auth`], [`notifications`], [`share`] — typed
 //!   capability APIs with a `#[cfg]`-dispatched public surface. The data types
@@ -31,6 +31,11 @@
 //! Android `Camera2`/`CameraX`) is intentionally deferred — it is a streaming
 //! media surface, not a single-shot device query, and belongs behind its own
 //! feature gate.
+//!
+//! The core-vs-plugin boundary these packages sit behind — what must live in
+//! `floom-platform*` versus what must be a capability plugin reaching the OS
+//! through a Kotlin/Java or Swift host library — is specified in
+//! `docs/platform-and-plugins.md`.
 
 pub mod battery;
 pub mod clipboard;

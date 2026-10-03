@@ -6,7 +6,7 @@
 
 use std::cmp::Ordering;
 
-use floem_widgets_data::model::{
+use floom_widgets_data::model::{
     CellEdit, CellValue, Column, ColumnId, ColumnKind, EditHistory, EditSession, RowId,
     SelectionMode, SelectionModel, SortDirection, SortSpec, TableModel, VecTable, sorted_order,
 };

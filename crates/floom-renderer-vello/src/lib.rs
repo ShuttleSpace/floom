@@ -18,9 +18,9 @@ pub use budget::{CacheTrimTelemetry, GpuCacheBudget, MemoryPressure};
 #[cfg(feature = "gpu")]
 pub use gpu::{GpuFrameStats, VelloGpuPresenter};
 
-use floem_renderer::{FrameInfo, Renderer};
-use floem_scene::{DamageRegion, Scene, SceneNode};
-use floem_types::{Filter, Rect};
+use floom_renderer::{FrameInfo, Renderer};
+use floom_scene::{DamageRegion, Scene, SceneNode};
+use floom_types::{Filter, Rect};
 
 /// Recorded draw command (Vello backend consumes this later).
 #[derive(Debug, Clone, PartialEq)]
@@ -30,13 +30,13 @@ pub enum VelloCommand {
         /// What the rect is filled with — a solid or a gradient brush. The
         /// brush is carried as the scene's own vocabulary; the GPU encoder is
         /// where it becomes a peniko gradient.
-        brush: floem_types::Brush,
+        brush: floom_types::Brush,
         /// Corner radius in logical px; `0.0` is a plain right-angle rect.
         radius: f32,
         /// The drop shadow requested behind the fill, if any. Vello has no
         /// blur primitive yet, so the encoder skips it and counts the skip —
         /// recorded here so the request is never silently dropped.
-        shadow: Option<floem_types::Shadow>,
+        shadow: Option<floom_types::Shadow>,
     },
     DrawImage {
         bounds: Rect,
@@ -75,7 +75,7 @@ pub enum VelloCommand {
     /// to explain why.
     Shader {
         bounds: Rect,
-        shader: floem_types::Shader,
+        shader: floom_types::Shader,
     },
     /// Opens a clip. Every command recorded after it is confined to
     /// `bounds` until the matching [`VelloCommand::PopClip`].
@@ -87,7 +87,7 @@ pub enum VelloCommand {
     /// Opens a transform scope: every command recorded after it is drawn
     /// through `transform` until the matching [`VelloCommand::PopTransform`].
     PushTransform {
-        transform: floem_types::Transform,
+        transform: floom_types::Transform,
     },
     /// Closes the innermost transform scope.
     PopTransform,
@@ -207,9 +207,9 @@ impl Renderer for VelloRendererAdapter {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use floem_renderer::{FrameInfo, render_once};
-    use floem_scene::{Point, SceneNode, Size};
-    use floem_types::Color;
+    use floom_renderer::{FrameInfo, render_once};
+    use floom_scene::{Point, SceneNode, Size};
+    use floom_types::Color;
 
     #[test]
     fn records_rect_image_text_fast_paths() {
@@ -217,18 +217,18 @@ mod tests {
         scene.begin_update();
         let _ = scene.insert(SceneNode::Rect {
             bounds: Rect::from_origin_size(Point::ZERO, Size::new(10.0, 10.0)),
-            fill: floem_types::Brush::from(Color::BLACK),
+            fill: floom_types::Brush::from(Color::BLACK),
             radius: 0.0,
             shadow: None,
         });
         let _ = scene.insert(SceneNode::image(
             Rect::from_origin_size(Point::ZERO, Size::new(8.0, 8.0)),
-            floem_types::ResourceId::new(0, 1),
+            floom_types::ResourceId::new(0, 1),
         ));
         let _ = scene.insert(SceneNode::Text {
             origin: Point::ZERO,
             size: Size::new(20.0, 12.0),
-            glyphs: floem_types::ResourceId::new(1, 1),
+            glyphs: floom_types::ResourceId::new(1, 1),
             color: Color::WHITE,
         });
         scene.finish_update();
@@ -253,18 +253,18 @@ mod tests {
         let mut scene = Scene::new();
         scene.begin_update();
         let _ = scene.insert(SceneNode::FilterPush {
-            filter: floem_types::Filter::blur(3.0),
+            filter: floom_types::Filter::blur(3.0),
         });
         let _ = scene.insert(SceneNode::Rect {
             bounds: Rect::from_origin_size(Point::new(4.0, 4.0), Size::new(8.0, 8.0)),
-            fill: floem_types::Brush::from(Color::BLACK),
+            fill: floom_types::Brush::from(Color::BLACK),
             radius: 0.0,
             shadow: None,
         });
         let _ = scene.insert(SceneNode::FilterPop);
         let _ = scene.insert(SceneNode::BackdropFilter {
             rect: Rect::from_origin_size(Point::new(2.0, 2.0), Size::new(12.0, 12.0)),
-            filter: floem_types::Filter::blur_xy(5.0, 1.0),
+            filter: floom_types::Filter::blur_xy(5.0, 1.0),
         });
         scene.finish_update();
 
@@ -274,18 +274,18 @@ mod tests {
             vello.commands,
             vec![
                 VelloCommand::PushFilter {
-                    filter: floem_types::Filter::blur(3.0)
+                    filter: floom_types::Filter::blur(3.0)
                 },
                 VelloCommand::FillRect {
                     bounds: Rect::from_origin_size(Point::new(4.0, 4.0), Size::new(8.0, 8.0)),
-                    brush: floem_types::Brush::from(Color::BLACK),
+                    brush: floom_types::Brush::from(Color::BLACK),
                     radius: 0.0,
                     shadow: None,
                 },
                 VelloCommand::PopFilter,
                 VelloCommand::BackdropFilter {
                     rect: Rect::from_origin_size(Point::new(2.0, 2.0), Size::new(12.0, 12.0)),
-                    filter: floem_types::Filter::blur_xy(5.0, 1.0),
+                    filter: floom_types::Filter::blur_xy(5.0, 1.0),
                 },
             ],
             "the scope brackets its draw and the backdrop keeps its own rect"
@@ -299,15 +299,15 @@ mod tests {
         let mut scene = Scene::new();
         scene.begin_update();
         let _ = scene.insert(SceneNode::GroupPush {
-            transform: floem_types::Transform::scale_around(
+            transform: floom_types::Transform::scale_around(
                 2.0,
                 2.0,
-                floem_types::Point::new(16.0, 16.0),
+                floom_types::Point::new(16.0, 16.0),
             ),
         });
         let _ = scene.insert(SceneNode::Rect {
             bounds: Rect::from_origin_size(Point::new(4.0, 4.0), Size::new(8.0, 8.0)),
-            fill: floem_types::Brush::from(Color::BLACK),
+            fill: floom_types::Brush::from(Color::BLACK),
             radius: 0.0,
             shadow: None,
         });
@@ -324,10 +324,10 @@ mod tests {
                     VelloCommand::FillRect { .. },
                     VelloCommand::PopTransform,
                 ] if *transform
-                    == floem_types::Transform::scale_around(
+                    == floom_types::Transform::scale_around(
                         2.0,
                         2.0,
-                        floem_types::Point::new(16.0, 16.0)
+                        floom_types::Point::new(16.0, 16.0)
                     )
             ),
             "the scope brackets its draws and carries the transform: {:?}",
@@ -341,7 +341,7 @@ mod tests {
         scene.begin_update();
         let _ = scene.insert(SceneNode::Rect {
             bounds: Rect::from_origin_size(Point::ZERO, Size::new(1.0, 1.0)),
-            fill: floem_types::Brush::from(Color::BLACK),
+            fill: floom_types::Brush::from(Color::BLACK),
             radius: 0.0,
             shadow: None,
         });
@@ -362,14 +362,14 @@ mod tests {
         scene.begin_update();
         let _ = scene.insert(SceneNode::Rect {
             bounds: Rect::from_origin_size(Point::ZERO, Size::new(10.0, 10.0)),
-            fill: floem_types::Brush::from(Color::BLACK),
+            fill: floom_types::Brush::from(Color::BLACK),
             radius: 6.0,
 
             shadow: None,
         });
         let _ = scene.insert(SceneNode::Rect {
             bounds: Rect::from_origin_size(Point::new(0.0, 20.0), Size::new(10.0, 10.0)),
-            fill: floem_types::Brush::from(Color::BLACK),
+            fill: floom_types::Brush::from(Color::BLACK),
             radius: -3.0, // clamped to 0 at the adapter boundary
             shadow: None,
         });
@@ -395,7 +395,7 @@ mod tests {
     /// allowed to turn a brush into pixels.
     #[test]
     fn a_gradient_reaches_the_command_list_as_a_brush() {
-        let ramp = floem_types::Brush::linear(
+        let ramp = floom_types::Brush::linear(
             &[(0.0, Color::BLACK), (1.0, Color::WHITE)],
             Point::new(0.0, 0.0),
             Point::new(10.0, 0.0),
@@ -425,7 +425,7 @@ mod tests {
     /// that if the request survives to reach it.
     #[test]
     fn a_shadow_request_is_carried_rather_than_dropped() {
-        let shadow = floem_types::Shadow {
+        let shadow = floom_types::Shadow {
             color: Color::rgba(0, 0, 0, 128),
             blur: 6.0,
             offset_x: 0.0,
@@ -435,7 +435,7 @@ mod tests {
         scene.begin_update();
         let _ = scene.insert(SceneNode::Rect {
             bounds: Rect::from_origin_size(Point::ZERO, Size::new(10.0, 10.0)),
-            fill: floem_types::Brush::from(Color::WHITE),
+            fill: floom_types::Brush::from(Color::WHITE),
             radius: 4.0,
             shadow: Some(shadow),
         });
@@ -465,7 +465,7 @@ mod tests {
     /// reading as plain transparency with nothing to explain why.
     #[test]
     fn records_a_shader_request_instead_of_dropping_it() {
-        let shader = floem_types::Shader::new(
+        let shader = floom_types::Shader::new(
             "@fragment fn fs_main(in: VsOut) -> @location(0) vec4<f32> { \
              return vec4<f32>(in.uv, 0.0, 1.0); }",
             [0.5, 0.25],

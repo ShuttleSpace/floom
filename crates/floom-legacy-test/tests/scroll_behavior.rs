@@ -8,8 +8,8 @@
 //! - Nested scroll views behave correctly
 //! - Scroll to specific positions works
 
-use floem_legacy_test::TestRoot;
-use floem_legacy_test::prelude::*;
+use floom_legacy_test::TestRoot;
+use floom_legacy_test::prelude::*;
 use serial_test::serial;
 
 // =============================================================================

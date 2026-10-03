@@ -1,7 +1,7 @@
 //! Shared scene resources with ref-count tracking.
 
-use floem_text::GlyphRun;
-use floem_types::ResourceId;
+use floom_text::GlyphRun;
+use floom_types::ResourceId;
 use std::collections::VecDeque;
 use std::sync::Arc;
 

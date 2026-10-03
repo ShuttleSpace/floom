@@ -1,6 +1,6 @@
 use std::{cell::RefCell, rc::Rc, time::Instant};
 
-use floem::{
+use floom::{
     ViewId,
     context::{EventCx, LayoutChanged, LayoutChangedListener, PaintCx},
     easing::Spring,
@@ -202,7 +202,7 @@ impl View for SatValuePicker {
         self.id
     }
 
-    fn update(&mut self, _cx: &mut floem::context::UpdateCx, state: Box<dyn std::any::Any>) {
+    fn update(&mut self, _cx: &mut floom::context::UpdateCx, state: Box<dyn std::any::Any>) {
         if let Ok(color) = state.downcast::<Color>() {
             self.current_color = color.convert();
         }
@@ -346,7 +346,7 @@ impl View for HuePicker {
         self.id
     }
 
-    fn update(&mut self, _cx: &mut floem::context::UpdateCx, state: Box<dyn std::any::Any>) {
+    fn update(&mut self, _cx: &mut floom::context::UpdateCx, state: Box<dyn std::any::Any>) {
         if let Ok(color) = state.downcast::<Color>() {
             self.current_color = color.convert();
         }
@@ -398,7 +398,7 @@ impl View for HuePicker {
             (0.0, AlphaColor::<Hsl>::new([0.0, 100.0, 50.0, 1.0])),
             (1.0, AlphaColor::<Hsl>::new([360.0, 100.0, 50.0, 1.0])),
         ])
-        .with_hue_direction(floem::peniko::color::HueDirection::Longer)
+        .with_hue_direction(floom::peniko::color::HueDirection::Longer)
         .with_interpolation_cs(ColorSpaceTag::Hsl);
 
         cx.fill(&rect_path, &hue_gradient, 0.);
@@ -465,7 +465,7 @@ impl View for OpacityPicker {
         self.id
     }
 
-    fn update(&mut self, _cx: &mut floem::context::UpdateCx, state: Box<dyn std::any::Any>) {
+    fn update(&mut self, _cx: &mut floom::context::UpdateCx, state: Box<dyn std::any::Any>) {
         if let Ok(color) = state.downcast::<Color>() {
             self.current_color = *color;
         }

@@ -6,7 +6,7 @@
 //! restart agree on where the animation ends up, and a repeat and a long tween
 //! agree on how long they take. Only the values in between tell them apart.
 
-use floem_animation::{
+use floom_animation::{
     AnimKind, AnimationScheduler, Clock, CompositorProp, Easing, FakeClock, RepeatMode, Tween,
 };
 

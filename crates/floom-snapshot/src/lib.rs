@@ -1,12 +1,12 @@
-//! Deterministic snapshots for Floem 2.0 visual-regression and a11y tests.
+//! Deterministic snapshots for Floom 2.0 visual-regression and a11y tests.
 //!
 //! Three snapshot kinds, each a stable fingerprint of a different layer:
 //!
-//! * [`SceneSnapshot`] — the retained scene graph (`floem-scene`), so a widget
+//! * [`SceneSnapshot`] — the retained scene graph (`floom-scene`), so a widget
 //!   that paints differently shows up even when no pixel is compared.
-//! * [`SemanticsSnapshot`] — the accessibility tree (`floem-accessibility`), so
+//! * [`SemanticsSnapshot`] — the accessibility tree (`floom-accessibility`), so
 //!   a role/label/state change is caught independent of rendering.
-//! * [`PixelSnapshot`] — the software renderer's RGBA buffer (`floem-renderer-
+//! * [`PixelSnapshot`] — the software renderer's RGBA buffer (`floom-renderer-
 //!   software`), the real visual-regression layer.
 //!
 //! Every snapshot serialises to plain text and carries a deterministic hash
@@ -21,11 +21,11 @@
 
 use std::path::PathBuf;
 
-use floem_accessibility::{SemanticsNode, SemanticsTree};
-use floem_renderer::{AttachedSurface, Presenter};
-use floem_renderer_software::SoftwarePresenter;
-use floem_scene::{ResourceRegistry, Scene};
-use floem_types::{Color, Point, Rect, Size, SurfaceId, WindowId};
+use floom_accessibility::{SemanticsNode, SemanticsTree};
+use floom_renderer::{AttachedSurface, Presenter};
+use floom_renderer_software::SoftwarePresenter;
+use floom_scene::{ResourceRegistry, Scene};
+use floom_types::{Color, Point, Rect, Size, SurfaceId, WindowId};
 
 pub mod frames;
 pub use frames::{FrameDigest, FrameDiff, GoldenFrames, parse_sequence};
@@ -55,7 +55,7 @@ pub struct SceneSnapshot {
 
 impl SceneSnapshot {
     /// Build a snapshot from a scene. The `Debug` representation of each node is
-    /// used (floem types are float-stable); slot order is preserved by
+    /// used (floom types are float-stable); slot order is preserved by
     /// [`Scene::iter`].
     pub fn of(scene: &Scene) -> Self {
         let mut lines = Vec::new();
@@ -157,7 +157,7 @@ impl PixelSnapshot {
 /// A golden file belongs to the crate whose test asserts it, and the caller is
 /// the only one that knows where that is: `env!` inside this crate expands to
 /// *this* crate's manifest, so a `snapshot_path` that used it would drop every
-/// downstream crate's goldens into `tooling/floem-snapshot/snapshots/` — which
+/// downstream crate's goldens into `crates/floom-snapshot/snapshots/` — which
 /// is exactly what happened before this macro existed, and why two crates could
 /// collide on a snapshot name. A macro expands at the call site, so it resolves
 /// to the right directory.
@@ -209,11 +209,11 @@ pub fn snapshot_path(manifest_dir: &str, name: &str) -> PathBuf {
 
 // Re-export the few builders a snapshot test wants, so callers depend on this
 // crate alone rather than reaching into the scene/semantics crates.
-pub use floem_scene::SceneNode;
-pub use floem_types::{ElementId, SceneNodeId};
+pub use floom_scene::SceneNode;
+pub use floom_types::{ElementId, SceneNodeId};
 
 /// Convenience: a filled axis-aligned rect node (radius 0 → crisp edges).
-pub fn rect(bounds: Rect, fill: impl Into<floem_types::Brush>) -> SceneNode {
+pub fn rect(bounds: Rect, fill: impl Into<floom_types::Brush>) -> SceneNode {
     SceneNode::Rect {
         bounds,
         fill: fill.into(),
@@ -223,7 +223,7 @@ pub fn rect(bounds: Rect, fill: impl Into<floem_types::Brush>) -> SceneNode {
 }
 
 /// Convenience: opens a transform scope around the scene nodes that follow.
-pub fn group_push(transform: floem_types::Transform) -> SceneNode {
+pub fn group_push(transform: floom_types::Transform) -> SceneNode {
     SceneNode::GroupPush { transform }
 }
 
@@ -245,14 +245,14 @@ pub fn single_rect_scene(size: Size, fill: Color) -> Scene {
 }
 
 /// A semantics node with the most common fields set, for snapshot fixtures.
-pub fn semantics_node(role: floem_accessibility::SemanticsRole, label: &str) -> SemanticsNode {
+pub fn semantics_node(role: floom_accessibility::SemanticsRole, label: &str) -> SemanticsNode {
     SemanticsNode::new(role).with_label(label)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use floem_accessibility::{SemanticsRole, SemanticsTree};
+    use floom_accessibility::{SemanticsRole, SemanticsTree};
 
     #[test]
     fn scene_snapshot_is_stable_and_sensitive() {

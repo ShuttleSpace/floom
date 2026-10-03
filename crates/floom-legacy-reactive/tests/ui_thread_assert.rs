@@ -1,4 +1,4 @@
-use floem_legacy_reactive::Runtime;
+use floom_legacy_reactive::Runtime;
 
 fn panic_message(err: Box<dyn std::any::Any + Send + 'static>) -> String {
     match err.downcast::<String>() {

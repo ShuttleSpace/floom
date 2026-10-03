@@ -1,15 +1,15 @@
-//! Web/WASM canvas presenter for Floem 2.0.
+//! Web/WASM canvas presenter for Floom 2.0.
 //!
-//! The scene is rasterized on the CPU by [`floem_renderer_software`] into an
+//! The scene is rasterized on the CPU by [`floom_renderer_software`] into an
 //! RGBA8 buffer (which handles rects, paths, gradients, shadows, filters,
 //! images and swash-rasterized text), then blitted to a real `<canvas>` 2D
 //! context on `present`. This keeps the web backend's pixel output identical to
 //! the headless software presenter while giving it a live on-screen surface.
 
-use floem_renderer::{AttachedSurface, FrameInfo, Presenter, RenderTarget, Renderer};
-use floem_renderer_software::SoftwareRenderer;
-use floem_scene::{ResourceRegistry, Scene};
-use floem_types::Size;
+use floom_renderer::{AttachedSurface, FrameInfo, Presenter, RenderTarget, Renderer};
+use floom_renderer_software::SoftwareRenderer;
+use floom_scene::{ResourceRegistry, Scene};
+use floom_types::Size;
 
 /// [`Presenter`] that draws into a CPU buffer and blits it to a web canvas.
 pub struct WebPresenter {
@@ -84,7 +84,7 @@ impl Presenter for WebPresenter {
     /// blit time), so the same presenter serves a real window and a headless
     /// harness.
     fn attach(&mut self, surface: AttachedSurface) -> bool {
-        let _: Option<floem_renderer::SurfaceHandles> = surface.handles;
+        let _: Option<floom_renderer::SurfaceHandles> = surface.handles;
         self.set_extent(surface.size, surface.scale);
         self.attached = true;
         true
@@ -142,7 +142,7 @@ mod canvas {
         use wasm_bindgen::JsCast;
         let window = web_sys::window()?;
         let doc = window.document()?;
-        if let Some(el) = doc.get_element_by_id("floem-canvas") {
+        if let Some(el) = doc.get_element_by_id("floom-canvas") {
             return el.dyn_into::<web_sys::HtmlCanvasElement>().ok();
         }
         doc.query_selector("canvas")
@@ -153,7 +153,7 @@ mod canvas {
     }
 
     #[cfg(target_arch = "wasm32")]
-    pub(super) fn resize_canvas(width: u32, height: u32, logical: floem_types::Size) {
+    pub(super) fn resize_canvas(width: u32, height: u32, logical: floom_types::Size) {
         let Some(canvas) = canvas_element() else {
             return;
         };
@@ -191,7 +191,7 @@ mod canvas {
     }
 
     #[cfg(not(target_arch = "wasm32"))]
-    pub(super) fn resize_canvas(_width: u32, _height: u32, _logical: floem_types::Size) {}
+    pub(super) fn resize_canvas(_width: u32, _height: u32, _logical: floom_types::Size) {}
 
     #[cfg(not(target_arch = "wasm32"))]
     pub(super) fn blit(_pixels: &[u8], _width: u32, _height: u32) {}

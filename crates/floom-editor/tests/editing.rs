@@ -1,4 +1,4 @@
-use floem_editor::{Selection, TextDocument, Transaction};
+use floom_editor::{Selection, TextDocument, Transaction};
 
 #[test]
 fn insert_and_selection() {

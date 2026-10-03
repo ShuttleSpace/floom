@@ -1,4 +1,4 @@
-//! The agent protocol over a running Floem 2.0 app (Phase 25).
+//! The agent protocol over a running Floom 2.0 app (Phase 25).
 //!
 //! Three pieces, each testable alone:
 //!
@@ -6,7 +6,7 @@
 //!   and control commands, and an error type that tells an agent what to do
 //!   next (a missed selector comes back with what *is* on screen).
 //! * [`schema`] — the AI-friendly component schema, emitted from the same
-//!   `floem_ui_ir` tables the validator enforces, so an agent that reads it
+//!   `floom_ui_ir` tables the validator enforces, so an agent that reads it
 //!   authors documents that validate.
 //! * [`session`] + [`transport`] — the running-app loop (Task 25.3): a
 //!   session drives a headless app through the testkit's own actors, and two

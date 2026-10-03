@@ -1,15 +1,15 @@
-//! Floem 2.0 Phase 0 — runtime baseline (existing View/reactive path).
+//! Floom 2.0 Phase 0 — runtime baseline (existing View/reactive path).
 //!
 //! Measures signal-driven updates and large trees via `HeadlessHarness`.
-//! Replace / extend once `floem-runtime-core` lands.
+//! Replace / extend once `floom-runtime-core` lands.
 
 use std::hint::black_box;
 use std::time::Duration;
 
 use criterion::{Criterion, criterion_group, criterion_main};
-use floem::headless::{HeadlessHarness, TestRoot};
-use floem::prelude::*;
-use floem::views::{Decorators, Label, Stack};
+use floom::headless::{HeadlessHarness, TestRoot};
+use floom::prelude::*;
+use floom::views::{Decorators, Label, Stack};
 
 fn tree_of_labels(count: usize) -> impl IntoView {
     let labels: Vec<_> = (0..count)

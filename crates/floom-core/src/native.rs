@@ -10,7 +10,7 @@
 //! be destroyed exactly once. A widget that owned one directly would leak it
 //! on every unmount.
 
-use floem_types::{InputMode, NativeCompositionMode, NativeViewKind};
+use floom_types::{InputMode, NativeCompositionMode, NativeViewKind};
 
 /// A request to put a native view in this node's box.
 ///

@@ -1,6 +1,6 @@
-//! Central store with fine-grained selectors over Floem reactive signals.
+//! Central store with fine-grained selectors over Floom reactive signals.
 
-use floem_legacy_reactive::{Memo, RwSignal, SignalGet, SignalUpdate, SignalWith};
+use floom_legacy_reactive::{Memo, RwSignal, SignalGet, SignalUpdate, SignalWith};
 
 /// A reactive store holding a single root value.
 #[derive(Debug)]

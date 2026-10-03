@@ -3,7 +3,7 @@
 //! The host paints every mounted node on every frame it draws; what is lazy
 //! is *drawing a frame at all*. So "my data changed" has exactly one hard
 //! problem: waking the loop. The bridge is a reactive effect that turns the
-//! signal bump into `floem_core::request_repaint(element)`, the host folds
+//! signal bump into `floom_core::request_repaint(element)`, the host folds
 //! the request into that element's dirty flag at the top of its next frame,
 //! and `needs_frame` polls the channel so a runner keying off it wakes —
 //! once: the request is consumed by the frame that serves it.
@@ -21,12 +21,12 @@
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-use floem_app::WidgetHost;
-use floem_layout::LayoutStyle;
-use floem_legacy_reactive::{RwSignal, SignalGet, SignalUpdate, SyncRwSignal};
-use floem_scene::SceneNode;
-use floem_types::{Point, Rect, Size};
-use floem_widgets::Canvas;
+use floom_app::WidgetHost;
+use floom_layout::LayoutStyle;
+use floom_legacy_reactive::{RwSignal, SignalGet, SignalUpdate, SyncRwSignal};
+use floom_scene::SceneNode;
+use floom_types::{Point, Rect, Size};
+use floom_widgets::Canvas;
 
 /// A canvas that draws one bar whose width is `data`, in logical px.
 ///
@@ -43,7 +43,7 @@ fn bar(data: SyncRwSignal<f64>, runs: Arc<AtomicUsize>) -> Canvas {
             Point::new(cx.bounds().x0, cx.bounds().y0),
             Size::new(width, 10.0),
         );
-        cx.fill_rect(rect, floem_types::Color::rgb(30, 30, 30));
+        cx.fill_rect(rect, floom_types::Color::rgb(30, 30, 30));
     })
 }
 
@@ -164,11 +164,11 @@ fn bursts_coalesce_into_one_repaint() {
 fn a_request_for_an_unknown_element_is_dropped_without_a_sound() {
     let mut host = WidgetHost::new();
     host.set_size(Size::new(100.0, 100.0));
-    host.mount_root(LayoutStyle::default(), floem_widgets::Text::new("static"));
+    host.mount_root(LayoutStyle::default(), floom_widgets::Text::new("static"));
     host.frame();
 
     // No host minted this id; the drain must ignore it, not panic.
-    floem_core::request_repaint(floem_types::ElementId::new(9_999, 9));
+    floom_core::request_repaint(floom_types::ElementId::new(9_999, 9));
     let stats = host.frame();
     assert_eq!(stats.updated, 0, "an unknown id matches nothing");
     assert!(!host.needs_frame(), "and the channel is empty again");

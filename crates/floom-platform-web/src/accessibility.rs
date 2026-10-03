@@ -5,7 +5,7 @@
 //! is not wired in this fork, so `NATIVE_BRIDGE` stays unset; the adapter only
 //! retains the published tree.
 
-use floem_accessibility::{AccessibilityCapabilities, CapabilityLimitedAccessibilityAdapter};
+use floom_accessibility::{AccessibilityCapabilities, CapabilityLimitedAccessibilityAdapter};
 
 /// Capabilities the web backend reports once the DOM bridge lands.
 pub fn accessibility_capabilities() -> AccessibilityCapabilities {
@@ -23,10 +23,10 @@ pub fn web_accessibility() -> CapabilityLimitedAccessibilityAdapter {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use floem_accessibility::{
+    use floom_accessibility::{
         AccessibilityAdapter, SemanticsAction, SemanticsDiff, SemanticsNode, SemanticsRole,
     };
-    use floem_types::ElementId;
+    use floom_types::ElementId;
 
     #[test]
     fn reports_capability_profile() {

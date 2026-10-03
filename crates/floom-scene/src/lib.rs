@@ -5,11 +5,11 @@ mod node;
 mod resources;
 
 pub use damage::DamageRegion;
-pub use floem_types::{Color, Point, Rect, ResourceId, SceneNodeId, Size, Transform};
+pub use floom_types::{Color, Point, Rect, ResourceId, SceneNodeId, Size, Transform};
 pub use node::SceneNode;
 pub use resources::{Resource, ResourceKind, ResourceRegistry};
 
-use floem_types::SceneNodeId as Id;
+use floom_types::SceneNodeId as Id;
 use std::collections::VecDeque;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

@@ -2,16 +2,16 @@
 
 //! Receiving files/URLs shared into the app from another iOS app.
 //!
-//! When the user shares a file (or opens a file / URL with Floem via the iOS
+//! When the user shares a file (or opens a file / URL with Floom via the iOS
 //! share sheet / "Open In"), the system delivers it to the app through the
 //! `UIApplicationDelegate` methods `application:didFinishLaunchingWithOptions:`
 //! (cold-start — the app is launched *via* the share sheet) and
 //! `application:openURL:options:` (warm-start — the app is already running).
 //!
 //! winit's fork ([`floem-winit`]) owns the `UIApplicationDelegate` (class
-//! `WinitApplicationDelegate`). It used to ignore both share paths, so floem
+//! `WinitApplicationDelegate`). It used to ignore both share paths, so floom
 //! patches the fork to forward the shared URL through a C callback registered
-//! via `winit::set_on_open_url` (see floem issue #109). This module registers
+//! via `winit::set_on_open_url` (see floom issue #109). This module registers
 //! that callback (`install_openurl_hook`, called from `Application::new_ios`)
 //! and converts the forwarded `NSURL` into a [`SharedFile`].
 //!
@@ -32,7 +32,7 @@ type SharedFilesHandler = Box<dyn Fn(Vec<SharedFile>) + 'static>;
 
 // iOS delivers shared files on the main thread only, so the handler is not
 // required to be `Send`. A `thread_local` avoids the `Sync` bound a `static`
-// would impose on a `!Send` handler (Floem's UI signals such as `RwSignal` are
+// would impose on a `!Send` handler (Floom's UI signals such as `RwSignal` are
 // `!Send`), while still giving a single global registration point per thread.
 thread_local! {
     static HANDLER: RefCell<Option<SharedFilesHandler>> = RefCell::new(None);
@@ -79,7 +79,7 @@ fn invoke_handler(files: &[SharedFile]) {
     });
 }
 
-/// Install the shared-files hook by registering floem's callback with winit's
+/// Install the shared-files hook by registering floom's callback with winit's
 /// fork (see `winit::set_on_open_url`). Safe to call multiple times; registers
 /// once.
 ///

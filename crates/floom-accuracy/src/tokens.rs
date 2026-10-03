@@ -6,7 +6,7 @@
 //! agent repairs an implementation by naming a token path and the value the
 //! design contract expects there.
 
-use floem_types::Color;
+use floom_types::Color;
 
 /// Every visual decision a gallery screen takes, in design-token form.
 #[derive(Debug, Clone, PartialEq)]
@@ -147,10 +147,10 @@ impl TokenEdit {
     /// entry parses deterministically. Paths outside the token vocabulary
     /// (dimensions, the copied animation/accessibility blocks) return `None`:
     /// they are not things a token edit can repair.
-    pub fn from_diff_entry(entry: &floem_ui_ir::DiffEntry) -> Option<Self> {
+    pub fn from_diff_entry(entry: &floom_ui_ir::DiffEntry) -> Option<Self> {
         let parse_number = |text: &str| text.parse::<f32>().ok();
         let parse_color = |text: &str| {
-            floem_ui_ir::Rgba::from_hex(text)
+            floom_ui_ir::Rgba::from_hex(text)
                 .map(|rgba| Color::rgba(rgba.r, rgba.g, rgba.b, rgba.a))
         };
         match entry.path.as_str() {
@@ -187,7 +187,7 @@ mod tests {
 
     #[test]
     fn edits_parse_back_from_the_diff_vocabulary() {
-        let entry = |path: &str, expected: &str| floem_ui_ir::DiffEntry {
+        let entry = |path: &str, expected: &str| floom_ui_ir::DiffEntry {
             path: path.into(),
             expected: expected.into(),
             actual: String::new(),
@@ -227,7 +227,7 @@ mod tests {
             TokenEdit::Text(Color::rgb(0, 0, 0)),
         ];
         for edit in edits {
-            assert!(floem_ui_ir::prop_is_declared(edit.property_name()));
+            assert!(floom_ui_ir::prop_is_declared(edit.property_name()));
         }
     }
 }

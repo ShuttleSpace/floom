@@ -26,5 +26,5 @@ pub use button::{ButtonMetrics, button_metrics, button_style, button_styles};
 pub use gallery::{GALLERY_COLUMNS, button_gallery, button_gallery_labels};
 pub use tokens::{HarmonyColors, HarmonyTheme};
 
-pub use floem_design::{ControlSize, InteractionState, Variant};
-pub use floem_theme::ColorScheme;
+pub use floom_design::{ControlSize, InteractionState, Variant};
+pub use floom_theme::ColorScheme;

@@ -1,4 +1,4 @@
-# Floem 1.0 platform gates (tier B)
+# Floom 1.0 platform gates (tier B)
 
 Status values: `pass` | `fail` | `n/a`.
 

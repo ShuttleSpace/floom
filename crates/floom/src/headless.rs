@@ -1,14 +1,14 @@
 //! Headless harness for UI testing and benchmarking.
 //!
-//! This module provides utilities for running Floem views without creating
+//! This module provides utilities for running Floom views without creating
 //! an actual window. It allows simulating user interactions and verifying
 //! view behavior in tests and benchmarks.
 //!
 //! # Example
 //!
 //! ```rust,ignore
-//! use floem::headless::HeadlessHarness;
-//! use floem::views::*;
+//! use floom::headless::HeadlessHarness;
+//! use floom::views::*;
 //!
 //! let harness = HeadlessHarness::new(
 //!     stack((
@@ -47,8 +47,8 @@ use crate::{ElementId, View};
 /// # Example
 ///
 /// ```rust,ignore
-/// use floem::headless::{TestRoot, HeadlessHarness};
-/// use floem::views::Empty;
+/// use floom::headless::{TestRoot, HeadlessHarness};
+/// use floom::views::Empty;
 ///
 /// let root = TestRoot::new();
 /// let view = Empty::new().style(|s| s.size(100.0, 100.0));
@@ -110,8 +110,8 @@ impl HeadlessHarness {
     /// # Example
     ///
     /// ```rust,ignore
-    /// use floem::headless::{TestRoot, HeadlessHarness};
-    /// use floem::views::Empty;
+    /// use floom::headless::{TestRoot, HeadlessHarness};
+    /// use floom::views::Empty;
     ///
     /// let root = TestRoot::new();
     /// let view = Empty::new().style(|s| s.size(100.0, 100.0));
@@ -128,8 +128,8 @@ impl HeadlessHarness {
     /// # Example
     ///
     /// ```rust,ignore
-    /// use floem::headless::{TestRoot, HeadlessHarness};
-    /// use floem::views::Empty;
+    /// use floom::headless::{TestRoot, HeadlessHarness};
+    /// use floom::views::Empty;
     ///
     /// let root = TestRoot::new();
     /// let view = Empty::new().style(|s| s.size(100.0, 100.0));
@@ -213,7 +213,7 @@ impl HeadlessHarness {
     /// - Layout passes
     pub fn dispatch_event(&mut self, event: Event) -> EventResult {
         self.window_handle.event(event);
-        // the normal floem window will drive updates when rendering frames. the headless window processes updates after all events
+        // the normal floom window will drive updates when rendering frames. the headless window processes updates after all events
         self.process_update_no_paint();
 
         // Note: WindowHandle::event() doesn't return propagation info,
@@ -390,7 +390,7 @@ impl HeadlessHarness {
     ///
     /// # Example
     /// ```rust,ignore
-    /// use floem::style::Background;
+    /// use floom::style::Background;
     ///
     /// harness.pointer_down(50.0, 50.0);
     /// let style = harness.get_computed_style(id);

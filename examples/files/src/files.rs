@@ -1,4 +1,4 @@
-use floem::{
+use floom::{
     action::{open_file, save_as},
     file::{FileDialogOptions, FileInfo, FileSpec},
     reactive::{RwSignal, SignalGet, SignalUpdate},
@@ -74,7 +74,7 @@ pub fn files_view() -> impl IntoView {
         Button::new("Save file").action(move || {
             save_as(
                 FileDialogOptions::new()
-                    .default_name("floem.file")
+                    .default_name("floom.file")
                     .title("Save file"),
                 move |file_info| {
                     if let Some(file) = file_info {

@@ -6,10 +6,10 @@
 //! - Painted without parent transforms applied
 //! - Able to receive events at their viewport-relative positions
 
-use floem::HasViewId;
-use floem::headless::HeadlessHarness;
-use floem::views::{Clip, ContainerExt, Decorators, Empty, OverlayExt, Stack};
-use floem_legacy_test::TestRoot;
+use floom::HasViewId;
+use floom::headless::HeadlessHarness;
+use floom::views::{Clip, ContainerExt, Decorators, Empty, OverlayExt, Stack};
+use floom_legacy_test::TestRoot;
 use serial_test::serial;
 use std::cell::Cell;
 use std::rc::Rc;
@@ -235,7 +235,7 @@ fn test_fixed_element_blocks_events_to_views_behind() {
             }),
         Empty::new()
             .style(|s| s.fixed().inset(0.0))
-            .on_event_stop(floem::event::listener::Click, move |_, _| {
+            .on_event_stop(floom::event::listener::Click, move |_, _| {
                 fixed_clone.set(true);
             })
             .overlay(),
@@ -342,7 +342,7 @@ fn test_hidden_fixed_element_does_not_block_events() {
                 bg_clone.set(true);
             }),
         Empty::new()
-            .style(|s| s.fixed().inset(0.0).display(floem::taffy::Display::None))
+            .style(|s| s.fixed().inset(0.0).display(floom::taffy::Display::None))
             .action(move || {
                 fixed_clone.set(true);
             })
@@ -493,7 +493,7 @@ fn test_fixed_container_child_percentage_positioning() {
     // - centered_child should be at (200, 150) = 50% of viewport
     // - NOT at (25, 25) = 50% of nested_parent
 
-    use floem::unit::Pct;
+    use floom::unit::Pct;
 
     let centered_child = Empty::new().style(|s| {
         s.absolute()
@@ -586,7 +586,7 @@ fn test_fixed_container_centered_child_receives_click() {
     // Click at (250, 190) = center of child at (200,150) with size 100x80
     // Should hit the child, not miss due to wrong coordinate mapping
 
-    use floem::unit::Pct;
+    use floom::unit::Pct;
 
     let clicked = Rc::new(Cell::new(false));
     let clicked_clone = clicked.clone();
@@ -634,7 +634,7 @@ fn test_fixed_container_with_translate_centering() {
     //
     // This should center the element visually in the viewport, not in the DOM parent.
 
-    use floem::unit::Pct;
+    use floom::unit::Pct;
 
     let centered_child = Empty::new().style(|s| {
         s.absolute()
@@ -974,7 +974,7 @@ fn test_fixed_overlay_child_with_scroll_offset() {
     //               └── fixed_container (should fill viewport, not scroll area)
     //                   └── clickable_child
 
-    use floem::unit::Pct;
+    use floom::unit::Pct;
 
     let clicked = Rc::new(Cell::new(false));
     let clicked_clone = clicked.clone();
@@ -1170,7 +1170,7 @@ fn test_fixed_overlay_with_non_fixed_sibling() {
 
     let clicked1 = Rc::new(Cell::new(false));
     let clicked1_clone = clicked1.clone();
-    use floem::prelude::palette::css::*;
+    use floom::prelude::palette::css::*;
 
     // Fixed element at (10, 10) with size 50x50
     let fixed1 = Empty::new()
@@ -1185,7 +1185,7 @@ fn test_fixed_overlay_with_non_fixed_sibling() {
             clicked1_clone.set(true);
         });
 
-    use floem::View;
+    use floom::View;
     let id = fixed1.id();
 
     // Non-fixed element at (300, 200) - this should NOT block the fixed element
@@ -1418,7 +1418,7 @@ fn test_fixed_element_percentage_children_resize() {
     //
     // Example: Dialog content at left: 50%, top: 50% should move when viewport changes.
 
-    use floem::unit::Pct;
+    use floom::unit::Pct;
 
     let centered_child = Empty::new().style(|s| {
         s.absolute()
@@ -1489,7 +1489,7 @@ fn test_fixed_element_percentage_children_resize() {
 #[serial]
 fn test_fixed_element_unregisters_when_style_changes() {
     let root = TestRoot::new();
-    use floem::reactive::{RwSignal, SignalGet, SignalUpdate};
+    use floom::reactive::{RwSignal, SignalGet, SignalUpdate};
 
     // Signal to control whether the element is fixed
     let is_fixed = RwSignal::new(true);
@@ -1573,7 +1573,7 @@ fn test_fixed_element_unregisters_when_style_changes() {
 #[serial]
 fn test_element_registers_when_becoming_fixed() {
     let root = TestRoot::new();
-    use floem::reactive::{RwSignal, SignalGet, SignalUpdate};
+    use floom::reactive::{RwSignal, SignalGet, SignalUpdate};
 
     // Start as non-fixed
     let is_fixed = RwSignal::new(false);

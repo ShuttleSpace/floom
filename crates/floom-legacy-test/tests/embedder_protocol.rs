@@ -5,13 +5,13 @@
 //! surface, and IME protocol types. Backends translate their native types
 //! into these neutral values, so they must be cheap to build and compare.
 
-use floem::embedder::{
+use floom::embedder::{
     BackendCapabilities, CommandBatch, CommandSink, DragDropEvent, EmbedderCommand, EmbedderEvent,
     EmbedderPointerId, EmbedderWindowId, FocusEvent, GestureEvent, ImeEvent, ImeHint, ImePurpose,
     ImeState, SurfaceDescriptor, SurfaceEvent, SurfaceKind, Theme, VecCommandSink,
     WindowLifecycleEvent,
 };
-use floem::peniko::kurbo::{Point, Rect, Size};
+use floom::peniko::kurbo::{Point, Rect, Size};
 
 #[test]
 fn window_id_is_u64_alias() {

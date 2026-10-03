@@ -1,7 +1,7 @@
-use floem::prelude::*;
+use floom::prelude::*;
 
 fn main() {
-    floem::launch(counter_view);
+    floom::launch(counter_view);
 }
 
 fn counter_view() -> impl IntoView {

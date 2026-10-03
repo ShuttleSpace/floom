@@ -1,8 +1,8 @@
 //! iOS system chrome styling.
 //!
-//! TODO(floem): apply via `UIApplication.statusBarStyle` and
+//! TODO(floom): apply via `UIApplication.statusBarStyle` and
 //! `UINavigationBar.standardAppearance` / `UIViewController`
-//! `setNeedsStatusBarAppearanceUpdate` in the `floem-platform-ios` backend.
+//! `setNeedsStatusBarAppearanceUpdate` in the `floom-platform-ios` backend.
 
 use super::SystemChromeStyle;
 

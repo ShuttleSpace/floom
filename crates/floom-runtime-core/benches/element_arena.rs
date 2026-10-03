@@ -2,9 +2,9 @@ use std::hint::black_box;
 use std::time::Duration;
 
 use criterion::{BenchmarkId, Criterion, criterion_group, criterion_main};
-use floem_core::{Element, ElementKind};
-use floem_runtime_core::{DirtyFlags, DirtySet, ElementArena, ElementTree};
-use floem_types::ElementId;
+use floom_core::{Element, ElementKind};
+use floom_runtime_core::{DirtyFlags, DirtySet, ElementArena, ElementTree};
+use floom_types::ElementId;
 
 fn bench_arena(c: &mut Criterion) {
     let mut group = c.benchmark_group("element_arena");

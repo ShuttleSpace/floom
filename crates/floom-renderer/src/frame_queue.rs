@@ -1,6 +1,6 @@
 //! Single-producer / single-consumer scene handoff for a render thread.
 
-use floem_scene::Scene;
+use floom_scene::Scene;
 use std::collections::VecDeque;
 use std::sync::{Arc, Condvar, Mutex};
 use std::time::{Duration, Instant};

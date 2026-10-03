@@ -1,19 +1,19 @@
 //! Deterministic recorders for widget snapshot tests.
 //!
-//! These implement the [`floem_core`] context traits and capture what a widget
+//! These implement the [`floom_core`] context traits and capture what a widget
 //! emits, so primitives can be asserted against a stable textual snapshot
 //! without a renderer or a window. The paint recorder additionally lowers every
 //! op into a real [`Scene`], which proves the widget output can be retained.
 
 use std::any::Any;
 
-use floem_core::{
+use floom_core::{
     Color, CreateContext, ElementId, Event, EventContext, OverlayHandle, OverlayKind, PaintContext,
     Point, Rect, ResourceId, SemanticsContext, SemanticsRole, Size, UpdateContext, Widget,
     WidgetAny,
 };
-use floem_scene::{Resource, ResourceKind, ResourceRegistry, Scene, SceneNode};
-use floem_types::PointerEvent;
+use floom_scene::{Resource, ResourceKind, ResourceRegistry, Scene, SceneNode};
+use floom_types::PointerEvent;
 
 /// A renderer-neutral record of a single paint operation.
 #[derive(Debug, Clone, PartialEq)]
@@ -236,19 +236,19 @@ impl SceneRecorder {
     /// never had to print.
     fn record_path(
         &mut self,
-        path: &floem_types::Path,
+        path: &floom_types::Path,
         fill: Option<Color>,
         stroke: Option<(f64, Color)>,
     ) {
         let node = match (fill, stroke) {
             (Some(fill), None) => SceneNode::filled_path(path.clone(), fill),
             (None, Some((width, color))) => {
-                SceneNode::stroked_path(path.clone(), floem_types::Stroke::new(width, color))
+                SceneNode::stroked_path(path.clone(), floom_types::Stroke::new(width, color))
             }
             _ => SceneNode::Path {
                 path: std::sync::Arc::new(path.clone()),
-                fill: fill.map(floem_types::Brush::from),
-                stroke: stroke.map(|(width, color)| floem_types::Stroke::new(width, color)),
+                fill: fill.map(floom_types::Brush::from),
+                stroke: stroke.map(|(width, color)| floom_types::Stroke::new(width, color)),
             },
         };
         self.scene.insert(node);
@@ -326,7 +326,7 @@ impl PaintContext for SceneRecorder {
         });
     }
 
-    fn fill_rect_brush(&mut self, rect: Rect, brush: &floem_types::Brush) {
+    fn fill_rect_brush(&mut self, rect: Rect, brush: &floom_types::Brush) {
         let sampled = brush.sample(rect.center());
         self.scene.insert(SceneNode::Rect {
             bounds: rect,
@@ -341,7 +341,7 @@ impl PaintContext for SceneRecorder {
         });
     }
 
-    fn fill_rounded_rect_brush(&mut self, rect: Rect, radius: f32, brush: &floem_types::Brush) {
+    fn fill_rounded_rect_brush(&mut self, rect: Rect, radius: f32, brush: &floom_types::Brush) {
         let sampled = brush.sample(rect.center());
         self.scene.insert(SceneNode::Rect {
             bounds: rect,
@@ -356,7 +356,7 @@ impl PaintContext for SceneRecorder {
         });
     }
 
-    fn fill_path_brush(&mut self, path: &floem_types::Path, brush: &floem_types::Brush) {
+    fn fill_path_brush(&mut self, path: &floom_types::Path, brush: &floom_types::Brush) {
         self.scene
             .insert(SceneNode::filled_path(path.clone(), brush.clone()));
         self.ops.push(PaintOp::Path {
@@ -367,7 +367,7 @@ impl PaintContext for SceneRecorder {
         });
     }
 
-    fn draw_shadow(&mut self, rect: Rect, radius: f32, shadow: &floem_types::Shadow) {
+    fn draw_shadow(&mut self, rect: Rect, radius: f32, shadow: &floom_types::Shadow) {
         self.scene.insert(SceneNode::Rect {
             bounds: rect,
             fill: Color::TRANSPARENT.into(),
@@ -384,13 +384,13 @@ impl PaintContext for SceneRecorder {
     }
 
     fn fill_text(&mut self, origin: Point, text: &str, size: f32, color: Color) {
-        // No shaping happens here (`floem-text` owns that); an empty run list
+        // No shaping happens here (`floom-text` owns that); an empty run list
         // keeps the resource present without pulling a text dependency into
         // the widget layer.
         let glyphs = self.registry.insert(Resource {
             kind: ResourceKind::glyph_runs(Vec::new()),
         });
-        // No shaping happens here (`floem-text` owns that), so the retained
+        // No shaping happens here (`floom-text` owns that), so the retained
         // node gets a placeholder advance box just to keep a bounds hint.
         let advance = Size::new(
             text.chars().count() as f64 * f64::from(size) * 0.5,
@@ -410,11 +410,11 @@ impl PaintContext for SceneRecorder {
         });
     }
 
-    fn fill_path(&mut self, path: &floem_types::Path, color: Color) {
+    fn fill_path(&mut self, path: &floom_types::Path, color: Color) {
         self.record_path(path, Some(color), None);
     }
 
-    fn stroke_path(&mut self, path: &floem_types::Path, stroke: &floem_types::Stroke) {
+    fn stroke_path(&mut self, path: &floom_types::Path, stroke: &floom_types::Stroke) {
         self.record_path(path, None, Some((stroke.width, stroke.color)));
     }
 
@@ -426,8 +426,8 @@ impl PaintContext for SceneRecorder {
         });
     }
 
-    fn backdrop_filter(&mut self, rect: Rect, filter: &floem_types::Filter) {
-        let floem_types::Filter::Blur { radius_x, radius_y } = *filter;
+    fn backdrop_filter(&mut self, rect: Rect, filter: &floom_types::Filter) {
+        let floom_types::Filter::Blur { radius_x, radius_y } = *filter;
         self.scene.insert(SceneNode::BackdropFilter {
             rect,
             filter: *filter,
@@ -674,7 +674,7 @@ impl TestEventContext {
 /// Stands in for content a test has taken ownership of.
 struct NoContent;
 
-impl floem_core::Widget for NoContent {
+impl floom_core::Widget for NoContent {
     fn create(&self, cx: &mut dyn CreateContext) -> ElementId {
         cx.alloc_child()
     }
@@ -691,7 +691,7 @@ impl WidgetAny for NoContent {
         self
     }
 
-    fn semantics_hint(&self) -> Option<floem_core::SemanticsHint> {
+    fn semantics_hint(&self) -> Option<floom_core::SemanticsHint> {
         None
     }
 }
@@ -720,7 +720,7 @@ impl EventContext for TestEventContext {
         self.focus_requests.push(id);
     }
 
-    fn open_overlay(&mut self, request: floem_core::OverlayRequest) -> bool {
+    fn open_overlay(&mut self, request: floom_core::OverlayRequest) -> bool {
         let handle = OverlayHandle::new(self.next_handle);
         self.next_handle += 1;
         let content = (request.content)(handle);

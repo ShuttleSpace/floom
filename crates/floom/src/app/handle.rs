@@ -1,5 +1,5 @@
 use dpi::PhysicalPosition;
-use floem_legacy_renderer::gpu_resources::GpuResources;
+use floom_legacy_renderer::gpu_resources::GpuResources;
 #[cfg(not(target_arch = "wasm32"))]
 use std::time::Instant;
 #[cfg(target_arch = "wasm32")]
@@ -8,7 +8,7 @@ use web_time::Instant;
 #[cfg(target_arch = "wasm32")]
 use wgpu::web_sys;
 
-use floem_legacy_reactive::{Runtime, SignalUpdate};
+use floom_legacy_reactive::{Runtime, SignalUpdate};
 use peniko::kurbo::{Point, Size};
 use std::{collections::HashMap, rc::Rc, time::Duration};
 use winit::{
@@ -111,7 +111,7 @@ impl ApplicationHandle {
             #[cfg(not(feature = "skia"))]
             UserEvent::GpuResourcesUpdate { window_id } => {
                 #[cfg(target_env = "ohos")]
-                floem_winit_ohos::deveco_log("app: GpuResourcesUpdate received");
+                floom_winit_ohos::deveco_log("app: GpuResourcesUpdate received");
                 let handle = self.window_handles.get_mut(&window_id).unwrap();
                 if let PaintState::PendingGpuResources {
                     window,
@@ -158,7 +158,7 @@ impl ApplicationHandle {
                 // Route the iOS keyboard edit to the focused window as a plain
                 // `Event::Ime` (bypassing winit, which has no iOS IME support).
                 if let Some(window_handle) = self.window_handles.get_mut(&window_id) {
-                    window_handle.event(crate::event::Event::Ime(event.to_floem()));
+                    window_handle.event(crate::event::Event::Ime(event.to_floom()));
                 }
             }
         }
@@ -447,7 +447,7 @@ impl ApplicationHandle {
             }
             WindowEvent::ModifiersChanged(modifiers) => {
                 window_handle.modifiers_changed(
-                    floem_ui_events_winit::keyboard::from_winit_modifier_state(modifiers.state()),
+                    floom_ui_events_winit::keyboard::from_winit_modifier_state(modifiers.state()),
                 );
             }
             WindowEvent::Ime(ime) => {
@@ -767,11 +767,11 @@ impl ApplicationHandle {
         // Capture the raw `OH_NativeXComponent*` so the OHOS accessibility
         // backend (#122, Route A) can register its provider on the XComponent.
         // `window` is a `Box<dyn winit::window::Window>` (= `floem_winit_core`'s
-        // `Window`, the same trait `floem-winit-ohos`' `WindowExtOhos` is
+        // `Window`, the same trait `floom-winit-ohos`' `WindowExtOhos` is
         // implemented for), so `xcomponent_ptr()` is reachable via that trait.
         #[cfg(target_env = "ohos")]
         let a11y_xcomponent = {
-            use floem_winit_ohos::WindowExtOhos;
+            use floom_winit_ohos::WindowExtOhos;
             window.as_ref().xcomponent_ptr()
         };
 

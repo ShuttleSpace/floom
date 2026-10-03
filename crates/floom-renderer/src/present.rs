@@ -21,8 +21,8 @@
 //! the problem* (the handle is a raw pointer into another subsystem) and is
 //! confined to one place per backend rather than spread through the runner.
 
-use floem_scene::{ResourceRegistry, Scene};
-use floem_types::{Size, SurfaceId, WindowId};
+use floom_scene::{ResourceRegistry, Scene};
+use floom_types::{Size, SurfaceId, WindowId};
 
 use raw_window_handle::{RawDisplayHandle, RawWindowHandle};
 
@@ -133,7 +133,7 @@ pub trait Presenter {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use floem_types::Point;
+    use floom_types::Point;
 
     fn window() -> WindowId {
         WindowId::new(0, 1)

@@ -1,0 +1,91 @@
+[package]
+name = "floom2-demo"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+description = "Floom 2.0 demo app: one crate, one gallery, one command per platform"
+
+# One crate, one gallery: the same tree is mounted headless in CI, into a real
+# winit window on the desktop, and inside a `native-activity` shared library on
+# Android. The platform features are the *only* thing that varies, so
+# `scripts/build.sh floom2-demo <platform>` has a single crate to point at.
+#
+# `headless` is the default so `cargo run -p floom2-demo` works with no flags
+# (the golden-example harness runs exactly that); a platform build adds its own
+# feature on top, and `src/main.rs` picks the real backend when present.
+
+# Android's `native-activity` loads a shared library named by the manifest's
+# `android.app.lib_name` (`floom2_demo`), so the entry point must live in a
+# `cdylib` — a bin-only crate makes `cargo ndk` copy nothing into `jniLibs/`.
+[lib]
+name = "floom2_demo"
+path = "src/lib.rs"
+crate-type = ["cdylib", "rlib"]
+
+[features]
+default = ["headless"]
+
+# Pump a `WidgetHost` by hand and assert each demo mounted and painted. No
+# windowing, no GPU — this is the mode `scripts/run-golden-examples.sh` runs.
+headless = []
+
+# Real window + GPU (winit + vello over wgpu). Verified on macOS.
+macos = [
+    "dep:floom-platform-desktop",
+    "dep:floom-renderer-vello",
+    "floom-platform-desktop/winit",
+    "floom-renderer-vello/gpu",
+]
+
+# Real Android app: `native-activity` + vello GPU in one APK.
+android = [
+    "dep:floom-platform-android",
+    "dep:floom-platform-mobile",
+    "dep:floom-renderer-vello",
+    "floom-renderer-vello/gpu",
+]
+
+# The v2 backends for these targets are still in-memory skeletons (see
+# docs/2.0/EXAMPLES.md): the features exist so a target-appropriate `cargo
+# check` has something to turn on, and nothing is reported as an artifact.
+ios = ["dep:floom-platform-ios"]
+ohos = ["dep:floom-platform-harmony"]
+web = ["dep:floom-platform-web"]
+
+[dependencies]
+floom-app = { path = "../../crates/floom-app", version = "0.2.0" }
+floom-core = { path = "../../crates/floom-core", version = "0.2.0" }
+floom-layout = { path = "../../crates/floom-layout", version = "0.2.0" }
+floom-platform = { path = "../../crates/floom-platform", version = "0.2.0" }
+floom-types = { path = "../../crates/floom-types", version = "0.2.0" }
+floom-widgets = { path = "../../crates/floom-widgets", version = "0.2.0" }
+
+# The sections the gallery's richer demos come from: the virtualized data
+# widgets, the forms controller, and the four design-system token tables.
+floom-widgets-data = { path = "../../crates/floom-widgets-data", version = "0.2.0" }
+floom-forms = { path = "../../crates/floom-forms", version = "0.2.0" }
+floom-material = { path = "../../crates/floom-material", version = "0.2.0" }
+floom-cupertino = { path = "../../crates/floom-cupertino", version = "0.2.0" }
+floom-fluent = { path = "../../crates/floom-fluent", version = "0.2.0" }
+floom-harmony = { path = "../../crates/floom-harmony", version = "0.2.0" }
+
+floom-platform-desktop = { path = "../../crates/floom-platform-desktop", version = "0.2.0", optional = true }
+floom-platform-android = { path = "../../crates/floom-platform-android", version = "0.2.0", optional = true }
+floom-platform-mobile = { path = "../../crates/floom-platform-mobile", version = "0.2.0", optional = true }
+floom-platform-ios = { path = "../../crates/floom-platform-ios", version = "0.2.0", optional = true }
+floom-platform-harmony = { path = "../../crates/floom-platform-harmony", version = "0.2.0", optional = true }
+floom-platform-web = { path = "../../crates/floom-platform-web", version = "0.2.0", optional = true }
+floom-renderer-vello = { path = "../../crates/floom-renderer-vello", version = "0.2.0", optional = true }
+
+# On Android the winit fork must be the same one Floom uses, so the
+# `AndroidApp` type lines up with `floom_platform_android::set_android_app`.
+[target.'cfg(target_os = "android")'.dependencies]
+winit = { git = "https://github.com/lapce/winit", rev = "133268de675a4fda70816d78a7a1435eb972fea1", package = "floem-winit", features = ["android-native-activity"] }
+
+# `src/main.rs` mounts into a window (with `macos`) or pumps the host headless;
+# it is skipped entirely when there is no runnable backend for the feature set.
+[[bin]]
+name = "floom2-demo"
+path = "src/main.rs"
+required-features = ["headless"]

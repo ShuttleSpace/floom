@@ -1,10 +1,10 @@
 [package]
-name = "floem-types"
+name = "floom-types"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
-description = "Platform-neutral value types and IDs for Floem 2.0"
+description = "Platform-neutral value types and IDs for Floom 2.0"
 rust-version.workspace = true
 
 [dependencies]

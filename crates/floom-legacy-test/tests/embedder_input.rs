@@ -1,17 +1,17 @@
 //! Embedder input translation tests.
 //!
 //! These verify that neutral [`EmbedderEvent`] values fed through
-//! [`HeadlessEmbedder`] drive the real Floem runtime the same way native
+//! [`HeadlessEmbedder`] drive the real Floom runtime the same way native
 //! events would: focus navigation, text insertion, IME composition commit,
 //! and pointer (touch) capture. This is the contract every backend
 //! (Android, iOS, HarmonyOS, winit) must satisfy.
 
-use floem::embedder::{
+use floom::embedder::{
     EmbedderEvent, EmbedderWindowId, FocusEvent, ImeEvent, Theme, WindowLifecycleEvent,
 };
-use floem::headless::TestRoot;
-use floem::prelude::*;
-use floem::views::TextInput;
+use floom::headless::TestRoot;
+use floom::prelude::*;
+use floom::views::TextInput;
 use ui_events::keyboard::{Code, Key, KeyState, KeyboardEvent, Location, Modifiers, NamedKey};
 
 fn tab_down() -> KeyboardEvent {
@@ -46,7 +46,7 @@ fn keyboard_tab_event_focuses_first_navigable() {
     let b = Empty::new().style(|s| s.size(80.0, 40.0).keyboard_navigable());
     let b_id = b.view_id();
     let view = Stack::horizontal((a, b)).style(|s| s.size(160.0, 40.0));
-    let mut embedder = floem::embedder::HeadlessEmbedder::new(root, view);
+    let mut embedder = floom::embedder::HeadlessEmbedder::new(root, view);
 
     embedder.send(EmbedderEvent::Keyboard {
         window_id: embedder.window_id(),
@@ -66,7 +66,7 @@ fn keyboard_character_event_inserts_text_into_focused_input() {
     let text = RwSignal::new(String::new());
     let root = TestRoot::new();
     let view = TextInput::new(text).style(|s| s.size(200.0, 40.0));
-    let mut embedder = floem::embedder::HeadlessEmbedder::new(root, view);
+    let mut embedder = floom::embedder::HeadlessEmbedder::new(root, view);
 
     // Focus the text input by tapping it.
     embedder.touch_down_for_test(20.0, 20.0);
@@ -90,7 +90,7 @@ fn synthetic_keyboard_events_are_ignored() {
     let text = RwSignal::new(String::new());
     let root = TestRoot::new();
     let view = TextInput::new(text).style(|s| s.size(200.0, 40.0));
-    let mut embedder = floem::embedder::HeadlessEmbedder::new(root, view);
+    let mut embedder = floom::embedder::HeadlessEmbedder::new(root, view);
 
     embedder.touch_down_for_test(20.0, 20.0);
     embedder.touch_up_for_test(20.0, 20.0);
@@ -113,7 +113,7 @@ fn ime_commit_event_updates_focused_input() {
     let text = RwSignal::new(String::new());
     let root = TestRoot::new();
     let view = TextInput::new(text).style(|s| s.size(200.0, 40.0));
-    let mut embedder = floem::embedder::HeadlessEmbedder::new(root, view);
+    let mut embedder = floom::embedder::HeadlessEmbedder::new(root, view);
 
     // Focus the input so IME commits are accepted.
     embedder.touch_down_for_test(20.0, 20.0);
@@ -136,7 +136,7 @@ fn ime_preedit_event_does_not_panic() {
     let text = RwSignal::new(String::new());
     let root = TestRoot::new();
     let view = TextInput::new(text).style(|s| s.size(200.0, 40.0));
-    let mut embedder = floem::embedder::HeadlessEmbedder::new(root, view);
+    let mut embedder = floom::embedder::HeadlessEmbedder::new(root, view);
 
     embedder.touch_down_for_test(20.0, 20.0);
     embedder.touch_up_for_test(20.0, 20.0);
@@ -161,7 +161,7 @@ fn ime_preedit_event_does_not_panic() {
 fn touch_pointer_capture_lifecycle() {
     let root = TestRoot::new();
     let view = Empty::new().style(|s| s.size(200.0, 200.0));
-    let mut embedder = floem::embedder::HeadlessEmbedder::new(root, view);
+    let mut embedder = floom::embedder::HeadlessEmbedder::new(root, view);
 
     embedder.touch_down_for_test(50.0, 50.0);
     assert!(
@@ -180,7 +180,7 @@ fn touch_pointer_capture_lifecycle() {
 fn focus_event_routes_without_emitting_commands() {
     let root = TestRoot::new();
     let view = Empty::new().style(|s| s.size(100.0, 100.0));
-    let mut embedder = floem::embedder::HeadlessEmbedder::new(root, view);
+    let mut embedder = floom::embedder::HeadlessEmbedder::new(root, view);
 
     embedder.send(EmbedderEvent::Focus {
         window_id: embedder.window_id(),
@@ -199,7 +199,7 @@ fn focus_event_routes_without_emitting_commands() {
 fn window_theme_and_resize_events_route() {
     let root = TestRoot::new();
     let view = Empty::new().style(|s| s.size(100.0, 100.0));
-    let mut embedder = floem::embedder::HeadlessEmbedder::new(root, view);
+    let mut embedder = floom::embedder::HeadlessEmbedder::new(root, view);
 
     embedder.send(EmbedderEvent::Window {
         window_id: embedder.window_id(),
@@ -207,7 +207,7 @@ fn window_theme_and_resize_events_route() {
     });
     embedder.send(EmbedderEvent::Window {
         window_id: embedder.window_id(),
-        event: WindowLifecycleEvent::Resized(floem::peniko::kurbo::Size::new(320.0, 480.0)),
+        event: WindowLifecycleEvent::Resized(floom::peniko::kurbo::Size::new(320.0, 480.0)),
     });
 
     // No command emission expected for these lifecycle events yet.
@@ -218,7 +218,7 @@ fn window_theme_and_resize_events_route() {
 fn close_requested_event_routes_without_panic() {
     let root = TestRoot::new();
     let view = Empty::new().style(|s| s.size(100.0, 100.0));
-    let mut embedder = floem::embedder::HeadlessEmbedder::new(root, view);
+    let mut embedder = floom::embedder::HeadlessEmbedder::new(root, view);
 
     embedder.send(EmbedderEvent::Window {
         window_id: embedder.window_id(),
@@ -232,7 +232,7 @@ fn close_requested_event_routes_without_panic() {
 fn redraw_requested_event_routes_without_panic() {
     let root = TestRoot::new();
     let view = Empty::new().style(|s| s.size(100.0, 100.0));
-    let mut embedder = floem::embedder::HeadlessEmbedder::new(root, view);
+    let mut embedder = floom::embedder::HeadlessEmbedder::new(root, view);
     let id: EmbedderWindowId = embedder.window_id();
 
     embedder.send(EmbedderEvent::RedrawRequested { window_id: id });

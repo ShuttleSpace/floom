@@ -13,7 +13,7 @@
 //! `winit` / `wgpu` / `vello` are not. Backends fill [`Surface::target`] in;
 //! renderer backends consume it in the render layer.
 
-use floem_types::{Size, SurfaceId};
+use floom_types::{Size, SurfaceId};
 
 use raw_window_handle::{RawDisplayHandle, RawWindowHandle};
 

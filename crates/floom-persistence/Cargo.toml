@@ -1,10 +1,10 @@
 [package]
-name = "floem-persistence"
+name = "floom-persistence"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
-description = "Key-value persistence and restoration snapshots for Floem 2.0"
+description = "Key-value persistence and restoration snapshots for Floom 2.0"
 rust-version.workspace = true
 
 [dependencies]

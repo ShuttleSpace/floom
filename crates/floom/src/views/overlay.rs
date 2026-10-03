@@ -3,7 +3,7 @@
 //! This module provides a declarative overlay that automatically manages
 //! the overlay lifecycle, without requiring manual `add_overlay`/`remove_overlay` calls.
 
-use floem_legacy_reactive::Scope;
+use floom_legacy_reactive::Scope;
 
 use crate::{
     style::Style,
@@ -13,7 +13,7 @@ use crate::{
 /// A declarative overlay that renders content above all other views.
 ///
 /// The overlay content remains in the view tree as a child of this view,
-/// maintaining proper parent-child lifetime semantics. Floem reparents overlay
+/// maintaining proper parent-child lifetime semantics. Floom reparents overlay
 /// nodes in the box tree to the window root so they participate in normal
 /// z-index ordering above regular content.
 ///
@@ -21,8 +21,8 @@ use crate::{
 ///
 /// ## Example
 /// ```rust
-/// use floem::prelude::*;
-/// use floem::views::{Label, Overlay, Decorators};
+/// use floom::prelude::*;
+/// use floom::views::{Label, Overlay, Decorators};
 ///
 /// let show_dialog = RwSignal::new(false);
 ///
@@ -60,8 +60,8 @@ impl Overlay {
     ///
     /// # Example
     /// ```rust
-    /// use floem::prelude::*;
-    /// use floem::views::{Overlay, Label};
+    /// use floom::prelude::*;
+    /// use floom::views::{Overlay, Label};
     ///
     /// Overlay::new("Static overlay content");
     /// ```
@@ -76,8 +76,8 @@ impl Overlay {
     ///
     /// # Example
     /// ```rust
-    /// use floem::prelude::*;
-    /// use floem::views::Overlay;
+    /// use floom::prelude::*;
+    /// use floom::views::Overlay;
     ///
     /// Overlay::base();
     /// ```
@@ -90,8 +90,8 @@ impl Overlay {
     ///
     /// # Example
     /// ```rust
-    /// use floem::prelude::*;
-    /// use floem::views::{Label, Overlay};
+    /// use floom::prelude::*;
+    /// use floom::views::{Label, Overlay};
     ///
     /// let message = RwSignal::new("Loading...".to_string());
     ///

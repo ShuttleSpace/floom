@@ -395,7 +395,7 @@ pub fn parse_sequence(text: &str) -> Option<Vec<(String, FrameDigest)>> {
 mod tests {
     use super::*;
     use crate::{PixelSnapshot, single_rect_scene};
-    use floem_types::{Color, Size};
+    use floom_types::{Color, Size};
 
     fn solid(w: u32, h: u32, color: Color) -> PixelSnapshot {
         PixelSnapshot::of(
@@ -465,13 +465,13 @@ mod tests {
         // the *straight* RGB of its clear pixels — usually (0,0,0) — and a
         // region that is simply empty reports a colour that drifts with
         // whatever the renderer left behind.
-        let mut scene = floem_scene::Scene::new();
+        let mut scene = floom_scene::Scene::new();
         scene.begin_update();
         // 36 of the frame's 48 columns: on a 2x2 lattice the right-hand blocks
         // are half covered (24..36 of 24..48) and the bottom ones are clear.
         let _ = scene.insert(crate::rect(
-            floem_types::Rect::from_origin_size(
-                floem_types::Point::new(0.0, 0.0),
+            floom_types::Rect::from_origin_size(
+                floom_types::Point::new(0.0, 0.0),
                 Size::new(36.0, 24.0),
             ),
             Color::rgb(200, 40, 40),

@@ -6,12 +6,12 @@
 // Ctrl+D duplicates the current line.
 // All other keys are handled by the default keymap.
 
-use floem::{
+use floom::{
     prelude::{Key, Modifiers},
     views::Decorators,
     IntoView,
 };
-use floem_editor::{
+use floom_editor::{
     editor::{
         command::{Command, CommandExecuted},
         core::command::EditCommand,
@@ -54,5 +54,5 @@ fn app_view() -> impl IntoView {
 }
 
 fn main() {
-    floem::launch(app_view);
+    floom::launch(app_view);
 }

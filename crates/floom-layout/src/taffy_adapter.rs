@@ -2,7 +2,7 @@
 
 use std::collections::HashMap;
 
-use floem_types::{Point, Rect, Size as GeoSize};
+use floom_types::{Point, Rect, Size as GeoSize};
 use taffy::prelude::{
     AlignItems as TAlign, AvailableSpace, Dimension, Display, FlexDirection as TFlex,
     JustifyContent as TJustify, LengthPercentage, LengthPercentageAuto, NodeId,

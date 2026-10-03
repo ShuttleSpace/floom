@@ -1,8 +1,0 @@
-[package]
-name = "floem-widget-fluent-button"
-version = "0.1.0"
-edition = "2021"
-
-[dependencies]
-floem-core-theme = { workspace = true }
-floem = { workspace = true }

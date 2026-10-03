@@ -1,10 +1,10 @@
 #![deny(missing_docs)]
-//! A toggle button widget. An example can be found in [widget-gallery/button](https://github.com/lapce/floem/tree/main/examples/widget-gallery)
-//! in the floem examples.
+//! A toggle button widget. An example can be found in [widget-gallery/button](https://github.com/lapce/floom/tree/main/examples/widget-gallery)
+//! in the floom examples.
 
 use std::{cell::RefCell, rc::Rc, time::Duration};
 
-use floem_legacy_reactive::{Effect, SignalGet, SignalUpdate};
+use floom_legacy_reactive::{Effect, SignalGet, SignalUpdate};
 use peniko::Brush;
 use peniko::kurbo::{Point, Rect, Size};
 use ui_events::pointer::PointerEvent;
@@ -175,8 +175,8 @@ pub struct ToggleButton {
 /// with a default style provided.
 /// ### Examples
 /// ```rust
-/// # use floem::reactive::{SignalGet, SignalUpdate, RwSignal};
-/// # use floem::views::toggle_button;
+/// # use floom::reactive::{SignalGet, SignalUpdate, RwSignal};
+/// # use floom::views::toggle_button;
 /// // An example using read-write signal
 /// let state = RwSignal::new(true);
 /// let toggle = toggle_button(move || state.get())
@@ -236,8 +236,8 @@ impl ToggleButton {
     /// with a default style provided.
     /// ### Examples
     /// ```rust
-    /// # use floem::reactive::{SignalGet, SignalUpdate, RwSignal};
-    /// # use floem::views::toggle_button;
+    /// # use floom::reactive::{SignalGet, SignalUpdate, RwSignal};
+    /// # use floom::views::toggle_button;
     /// // An example using read-write signal
     /// let state = RwSignal::new(true);
     /// let toggle = toggle_button(move || state.get())
@@ -266,8 +266,8 @@ impl ToggleButton {
     /// Create new [ToggleButton] with read-write signal.
     /// ### Examples
     /// ```rust
-    /// # use floem::prelude::*;
-    /// # use floem::prelude::palette::css;
+    /// # use floom::prelude::*;
+    /// # use floom::prelude::palette::css;
     /// // Create read-write signal that will hold toggle button state
     /// let state = RwSignal::new(false);
     /// let simple = ToggleButton::new_rw(state);

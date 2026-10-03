@@ -1,12 +1,12 @@
-//! `floem-forms` × the widget controls.
+//! `floom-forms` × the widget controls.
 //!
-//! `floem-forms` lives below the widget layer, so it never names a control.
+//! `floom-forms` lives below the widget layer, so it never names a control.
 //! This test supplies the missing half at the app layer: three [`FieldBinding`]s
 //! that read and write a real `TextField`, `Switch` and `Select`, then drives a
 //! whole form through validation.
 
-use floem_forms::{FieldBinding, FormController, rules};
-use floem_widgets::{Select, Switch, TextField};
+use floom_forms::{FieldBinding, FormController, rules};
+use floom_widgets::{Select, Switch, TextField};
 
 fn name_binding() -> FieldBinding<TextField> {
     FieldBinding::new(

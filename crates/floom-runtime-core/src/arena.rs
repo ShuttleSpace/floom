@@ -1,7 +1,7 @@
 //! Generational element arena.
 
-use floem_core::{Element, ElementKind};
-use floem_types::ElementId;
+use floom_core::{Element, ElementKind};
+use floom_types::ElementId;
 
 use crate::id::IdAllocator;
 

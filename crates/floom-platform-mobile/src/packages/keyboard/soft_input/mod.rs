@@ -7,7 +7,7 @@
 //! iOS/Android (host returns zero / false).
 //!
 //! The native arms live in `android.rs` / `ios.rs`; the real values come from
-//! the platform window backend (`floem-platform-{android,ios}`), which owns
+//! the platform window backend (`floom-platform-{android,ios}`), which owns
 //! the `WindowInsets` / `keyboardWillShow` context.
 //!
 //! # Ported from
@@ -20,7 +20,7 @@ mod android;
 #[cfg(target_os = "ios")]
 mod ios;
 
-use floem_types::Insets;
+use floom_types::Insets;
 
 /// Stable keyboard state reported to the app.
 #[derive(Debug, Clone, Copy, PartialEq, Default)]

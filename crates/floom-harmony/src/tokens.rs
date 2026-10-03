@@ -1,7 +1,7 @@
 //! HarmonyOS colour and metric tokens.
 
-use floem_theme::{ColorScheme, Theme};
-use floem_types::Color;
+use floom_theme::{ColorScheme, Theme};
+use floom_types::Color;
 
 /// The HarmonyOS colour roles this crate styles against.
 ///
@@ -41,25 +41,25 @@ impl HarmonyColors {
                 "on_brand/brand",
                 self.on_brand,
                 self.brand,
-                floem_design::WCAG_AA_LARGE,
+                floom_design::WCAG_AA_LARGE,
             ),
             (
                 "text/card",
                 self.text,
                 self.card,
-                floem_design::WCAG_AA_NORMAL,
+                floom_design::WCAG_AA_NORMAL,
             ),
             (
                 "text_secondary/card",
                 self.text_secondary,
                 self.card,
-                floem_design::WCAG_AA_NORMAL,
+                floom_design::WCAG_AA_NORMAL,
             ),
             (
                 "text/background",
                 self.text,
                 self.background,
-                floem_design::WCAG_AA_NORMAL,
+                floom_design::WCAG_AA_NORMAL,
             ),
         ]
     }
@@ -123,7 +123,7 @@ impl HarmonyTheme {
     /// applies at low opacity. Materialising it here keeps the state-layer maths
     /// in one place instead of at each call site.
     pub fn neutral_fill(&self) -> Color {
-        floem_design::composite_over(self.colors.card, self.colors.fill, 0.05)
+        floom_design::composite_over(self.colors.card, self.colors.fill, 0.05)
     }
 
     fn assemble(scheme: ColorScheme, colors: HarmonyColors) -> Self {

@@ -1,4 +1,4 @@
-use floem_legacy_reactive::SignalTracker;
+use floom_legacy_reactive::SignalTracker;
 use peniko::kurbo::Size;
 
 use crate::{
@@ -25,7 +25,7 @@ pub struct Canvas {
 ///
 /// # Example
 /// ```rust
-/// use floem::prelude::*;
+/// use floom::prelude::*;
 /// use palette::css;
 /// use peniko::kurbo::Rect;
 /// canvas(move |cx, size| {

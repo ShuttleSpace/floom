@@ -1,17 +1,17 @@
 //! A3/A4 through the real host: what a widget asks for is what the retained
 //! scene carries.
 //!
-//! The renderers prove the pixels (`floem-renderer-software/tests/brush.rs`);
+//! The renderers prove the pixels (`floom-renderer-software/tests/brush.rs`);
 //! this file proves the *plumbing a widget actually uses* — `Container`'s
 //! gradient background and elevation, and a `Canvas` painter drawing with a
 //! brush — survives the whole way into scene nodes, in the order the draw
 //! call made them.
 
-use floem_app::WidgetHost;
-use floem_layout::LayoutStyle;
-use floem_scene::SceneNode;
-use floem_types::{Brush, Color, Path, Point, Rect, Shadow, Size};
-use floem_widgets::{Canvas, Container};
+use floom_app::WidgetHost;
+use floom_layout::LayoutStyle;
+use floom_scene::SceneNode;
+use floom_types::{Brush, Color, Path, Point, Rect, Shadow, Size};
+use floom_widgets::{Canvas, Container};
 
 const RAMP: fn() -> Brush = || {
     Brush::linear(
@@ -33,7 +33,7 @@ fn box_style(width: f32, height: f32) -> LayoutStyle {
 }
 
 /// Mounts `widget` as the root of a 200×200 host and settles the frame loop.
-fn host_with(widget: impl floem_core::WidgetAny + 'static) -> WidgetHost {
+fn host_with(widget: impl floom_core::WidgetAny + 'static) -> WidgetHost {
     let mut host = WidgetHost::new();
     host.set_size(Size::new(200.0, 200.0));
     host.mount_root(box_style(200.0, 200.0), widget);

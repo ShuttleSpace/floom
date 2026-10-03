@@ -1,7 +1,7 @@
-//! Neutral input, lifecycle, and surface events sent from a backend into Floem.
+//! Neutral input, lifecycle, and surface events sent from a backend into Floom.
 //!
 //! These do not depend on `winit`. Backends translate their native events into
-//! [`EmbedderEvent`] values; Floem's runtime converts them into its existing
+//! [`EmbedderEvent`] values; Floom's runtime converts them into its existing
 //! event dispatch, focus, style, and reactive update systems.
 
 use std::path::PathBuf;
@@ -114,7 +114,7 @@ pub enum DragDropEvent {
     Left,
 }
 
-/// The single event type a backend feeds into Floem.
+/// The single event type a backend feeds into Floom.
 ///
 /// `PartialEq` is implemented manually because `ui_events::pointer::PointerEvent`
 /// does not implement `PartialEq`; for the `Pointer` variant we compare only the
@@ -180,7 +180,7 @@ pub enum EmbedderEvent {
         /// Drag/drop event.
         event: DragDropEvent,
     },
-    /// The backend is ready for Floem to render a frame.
+    /// The backend is ready for Floom to render a frame.
     RedrawRequested {
         /// Target window.
         window_id: EmbedderWindowId,

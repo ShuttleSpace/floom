@@ -4,9 +4,9 @@
 //! - When an overlay wrapper has display:none, its content should not receive events
 //! - When overlay content has display:none, background views should receive events
 
-use floem::headless::{HeadlessHarness, TestRoot};
-use floem::reactive::{RwSignal, SignalGet, SignalUpdate};
-use floem::views::{Decorators, Empty, OverlayExt, Stack};
+use floom::headless::{HeadlessHarness, TestRoot};
+use floom::reactive::{RwSignal, SignalGet, SignalUpdate};
+use floom::views::{Decorators, Empty, OverlayExt, Stack};
 use std::cell::Cell;
 use std::rc::Rc;
 
@@ -34,7 +34,7 @@ fn test_overlay_wrapper_display_none() {
                 overlay_clone.set(true);
             })
             .overlay()
-            .style(move |s| s.apply_if(!visible.get(), |s| s.display(floem::taffy::Display::None))),
+            .style(move |s| s.apply_if(!visible.get(), |s| s.display(floom::taffy::Display::None))),
     ))
     .style(|s| s.size(100.0, 100.0));
 
@@ -92,7 +92,7 @@ fn test_overlay_content_display_none() {
                 s.absolute()
                     .inset(0.0)
                     .size(100.0, 100.0)
-                    .apply_if(!visible.get(), |s| s.display(floem::taffy::Display::None))
+                    .apply_if(!visible.get(), |s| s.display(floom::taffy::Display::None))
             })
             .action(move || {
                 overlay_clone.set(true);

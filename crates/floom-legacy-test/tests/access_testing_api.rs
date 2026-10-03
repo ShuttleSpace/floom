@@ -1,7 +1,7 @@
-use floem::accessibility::{AccessAction, AccessRole};
-use floem::headless::{HeadlessHarness, TestRoot};
-use floem::reactive::{RwSignal, SignalGet, SignalUpdate};
-use floem::views::{button, Decorators};
+use floom::accessibility::{AccessAction, AccessRole};
+use floom::headless::{HeadlessHarness, TestRoot};
+use floom::reactive::{RwSignal, SignalGet, SignalUpdate};
+use floom::views::{button, Decorators};
 
 #[test]
 fn find_by_accessible_label_clicks_button() {

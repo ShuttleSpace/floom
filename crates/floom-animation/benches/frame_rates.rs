@@ -1,7 +1,7 @@
 use std::hint::black_box;
 
 use criterion::{Criterion, criterion_group, criterion_main};
-use floem_animation::{AnimKind, AnimationScheduler, CompositorProp, Easing, Tween};
+use floom_animation::{AnimKind, AnimationScheduler, CompositorProp, Easing, Tween};
 
 fn tick_many(c: &mut Criterion) {
     let mut group = c.benchmark_group("animation_tick");

@@ -9,7 +9,7 @@ use crate::views::resizable::Resizable;
 use crate::views::{
     Button, Clip, Container, ContainerExt, Decorators, Label, Scroll, Stack, dyn_container, list,
 };
-use floem_legacy_reactive::{RwSignal, Scope, SignalGet, SignalUpdate};
+use floom_legacy_reactive::{RwSignal, Scope, SignalGet, SignalUpdate};
 use std::fmt::Display;
 use std::mem;
 use std::rc::Rc;

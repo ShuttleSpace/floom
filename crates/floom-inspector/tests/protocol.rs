@@ -5,7 +5,7 @@
 //! *concrete* compatibility semantics, they round-trip through JSON, and an
 //! inconsistent tree is rejected rather than served.
 
-use floem_inspector::{
+use floom_inspector::{
     AllocSummary, CacheStats, FrameSummary, JsonSnapshot, LayoutDto, LayoutEntry,
     PerformanceSnapshot, ProtocolError, ProtocolVersion, Rgba, SceneLines, SourceLocation,
     StageSpan, StyleEntry, StylePropsDto, TreeNodeInfo, TreeSnapshot,
@@ -79,7 +79,7 @@ fn a_tree_snapshot_round_trips_through_json() {
 
 #[test]
 fn every_snapshot_kind_round_trips() {
-    let style = floem_inspector::StyleSnapshot {
+    let style = floom_inspector::StyleSnapshot {
         version: ProtocolVersion::current(),
         entries: vec![StyleEntry {
             id: 2,
@@ -97,7 +97,7 @@ fn every_snapshot_kind_round_trips() {
             },
         }],
     };
-    let layout = floem_inspector::LayoutSnapshot {
+    let layout = floom_inspector::LayoutSnapshot {
         version: ProtocolVersion::current(),
         entries: vec![LayoutEntry {
             id: 2,
@@ -160,15 +160,15 @@ fn every_snapshot_kind_round_trips() {
         );
     }
     assert_eq!(
-        floem_inspector::StyleSnapshot::from_json(&style.to_json().unwrap()).unwrap(),
+        floom_inspector::StyleSnapshot::from_json(&style.to_json().unwrap()).unwrap(),
         style
     );
     assert_eq!(
-        floem_inspector::LayoutSnapshot::from_json(&layout.to_json().unwrap()).unwrap(),
+        floom_inspector::LayoutSnapshot::from_json(&layout.to_json().unwrap()).unwrap(),
         layout
     );
     assert_eq!(
-        floem_inspector::SceneLines::from_json(&scene.to_json().unwrap()).unwrap(),
+        floom_inspector::SceneLines::from_json(&scene.to_json().unwrap()).unwrap(),
         scene
     );
     assert_eq!(
@@ -223,13 +223,13 @@ fn the_root_must_be_one_of_the_nodes() {
 
 #[test]
 fn style_state_names_are_a_closed_set() {
-    assert!(floem_inspector::is_known_style_state("normal"));
-    assert!(floem_inspector::is_known_style_state("hover"));
-    assert!(floem_inspector::is_known_style_state("pressed"));
-    assert!(floem_inspector::is_known_style_state("focused"));
-    assert!(floem_inspector::is_known_style_state("selected"));
-    assert!(floem_inspector::is_known_style_state("disabled"));
-    assert!(!floem_inspector::is_known_style_state("shimmering"));
+    assert!(floom_inspector::is_known_style_state("normal"));
+    assert!(floom_inspector::is_known_style_state("hover"));
+    assert!(floom_inspector::is_known_style_state("pressed"));
+    assert!(floom_inspector::is_known_style_state("focused"));
+    assert!(floom_inspector::is_known_style_state("selected"));
+    assert!(floom_inspector::is_known_style_state("disabled"));
+    assert!(!floom_inspector::is_known_style_state("shimmering"));
 }
 
 #[test]

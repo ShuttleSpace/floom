@@ -6,14 +6,14 @@
 //! builders that bump the internal revision, keeping a single invalidation
 //! model across all widgets.
 
-use floem_accessibility::{SemanticsRole, SemanticsState};
-use floem_core::{
+use floom_accessibility::{SemanticsRole, SemanticsState};
+use floom_core::{
     AnimationSpec, Brush, Color, CreateContext, Easing, ElementId, Event, EventContext, Key,
     KeyEvent, KeyPhase, NamedKey, OverlayHandle, OverlayKind, OverlayRequest, PaintContext, Point,
     Rect, RepeatSpec, SemanticsContext, Size, Transition, UpdateContext, Widget, WidgetAny,
 };
-use floem_ime::{CompositionState, ImeEvent, ImeState};
-use floem_types::{ImeUpdate, PointerButton, PointerPhase};
+use floom_ime::{CompositionState, ImeEvent, ImeState};
+use floom_types::{ImeUpdate, PointerButton, PointerPhase};
 
 use crate::primitives::{Revision, SemanticsHint};
 
@@ -61,7 +61,7 @@ fn label_width(label: &str) -> f32 {
     if label.is_empty() {
         0.0
     } else {
-        floem_text::measure_text(label, LABEL_FONT_SIZE, f64::INFINITY).width as f32
+        floom_text::measure_text(label, LABEL_FONT_SIZE, f64::INFINITY).width as f32
     }
 }
 
@@ -69,7 +69,7 @@ fn label_width(label: &str) -> f32 {
 /// glyph so it is well-defined even for empty strings (an empty text field
 /// still needs a row tall enough to type into).
 fn line_height() -> f32 {
-    floem_text::measure_text(" ", LABEL_FONT_SIZE, f64::INFINITY).height as f32
+    floom_text::measure_text(" ", LABEL_FONT_SIZE, f64::INFINITY).height as f32
 }
 
 /// Intrinsic height of a label at the controls' shared font size.
@@ -77,7 +77,7 @@ fn label_height(label: &str) -> f32 {
     if label.is_empty() {
         0.0
     } else {
-        floem_text::measure_text(label, LABEL_FONT_SIZE, f64::INFINITY).height as f32
+        floom_text::measure_text(label, LABEL_FONT_SIZE, f64::INFINITY).height as f32
     }
 }
 
@@ -383,12 +383,12 @@ impl Widget for Button {
     /// Intrinsic size: the label's measured extent plus the padding paint
     /// applies. The host treats this as default sizing — an explicit mount
     /// style still pins the button, while unpinned ones shrink-wrap.
-    fn layout_request(&self) -> Option<floem_core::LayoutRequest> {
+    fn layout_request(&self) -> Option<floom_core::LayoutRequest> {
         if self.label.is_empty() {
             return None;
         }
         Some(
-            floem_core::LayoutRequest::new()
+            floom_core::LayoutRequest::new()
                 .width(label_width(&self.label) + BUTTON_PADDING * 2.0)
                 .height(label_height(&self.label) + BUTTON_VERTICAL_PADDING * 2.0),
         )
@@ -547,7 +547,7 @@ pub struct TextField {
     on_submit: Option<TextCallback>,
     state: InteractionState,
     revision: Revision,
-    /// Live IME composition state (`floem-ime`). Empty / `Inactive` when no
+    /// Live IME composition state (`floom-ime`). Empty / `Inactive` when no
     /// composition is in flight.
     ime: ImeState,
     /// Last composition caret rectangle reported to the host, in logical
@@ -667,10 +667,10 @@ impl TextField {
     /// when composing, so the popup sits just past the last candidate glyph.
     fn caret_rect(&self, bounds: Rect) -> Rect {
         let prefix = &self.value[..self.byte_caret()];
-        let mut width = floem_text::measure_text(prefix, LABEL_FONT_SIZE, f64::INFINITY).width;
+        let mut width = floom_text::measure_text(prefix, LABEL_FONT_SIZE, f64::INFINITY).width;
         if self.ime.is_composing() {
             width +=
-                floem_text::measure_text(&self.ime.preedit, LABEL_FONT_SIZE, f64::INFINITY).width;
+                floom_text::measure_text(&self.ime.preedit, LABEL_FONT_SIZE, f64::INFINITY).width;
         }
         let x = bounds.x0 + f64::from(BUTTON_PADDING) + width;
         let top = bounds.y0 + (bounds.height() - f64::from(LABEL_FONT_SIZE)) / 2.0;
@@ -802,14 +802,14 @@ impl Widget for TextField {
     /// padding paint applies, floored at [`TEXTFIELD_MIN_WIDTH`] so an empty
     /// input stays usable. Height rests on the line height even when both
     /// value and placeholder are empty.
-    fn layout_request(&self) -> Option<floem_core::LayoutRequest> {
+    fn layout_request(&self) -> Option<floom_core::LayoutRequest> {
         let shown = if self.value.is_empty() {
             &self.placeholder
         } else {
             &self.value
         };
         Some(
-            floem_core::LayoutRequest::new()
+            floom_core::LayoutRequest::new()
                 .width((label_width(shown) + BUTTON_PADDING * 2.0).max(TEXTFIELD_MIN_WIDTH))
                 .height(line_height() + BUTTON_VERTICAL_PADDING * 2.0),
         )
@@ -912,12 +912,12 @@ impl Widget for TextField {
         let mut x = bounds.x0 + pad;
         if !left.is_empty() {
             cx.fill_text(Point::new(x, origin_y), left, LABEL_FONT_SIZE, committed);
-            x += floem_text::measure_text(left, LABEL_FONT_SIZE, f64::INFINITY).width;
+            x += floom_text::measure_text(left, LABEL_FONT_SIZE, f64::INFINITY).width;
         }
         if !preedit.is_empty() {
             let accent = Color::rgb(0x2B, 0x6C, 0xB0);
             cx.fill_text(Point::new(x, origin_y), &preedit, LABEL_FONT_SIZE, accent);
-            let width = floem_text::measure_text(&preedit, LABEL_FONT_SIZE, f64::INFINITY).width;
+            let width = floom_text::measure_text(&preedit, LABEL_FONT_SIZE, f64::INFINITY).width;
             // Underline the composition so it reads as provisional text.
             let underline =
                 Rect::from_origin_size(Point::new(x, origin_y + size - 1.0), Size::new(width, 1.0));
@@ -1044,12 +1044,12 @@ impl Widget for Checkbox {
     /// Intrinsic size: indicator square + gap + label extent. The requested
     /// height keeps the box at its full 16px side (paint shrinks it to fit
     /// shorter bounds).
-    fn layout_request(&self) -> Option<floem_core::LayoutRequest> {
+    fn layout_request(&self) -> Option<floom_core::LayoutRequest> {
         if self.label.is_empty() {
             return None;
         }
         Some(
-            floem_core::LayoutRequest::new()
+            floom_core::LayoutRequest::new()
                 .width(INDICATOR_SIDE + INDICATOR_LABEL_GAP + label_width(&self.label))
                 .height(INDICATOR_SIDE.max(label_height(&self.label))),
         )
@@ -1201,12 +1201,12 @@ impl Widget for Radio {
 
     /// Intrinsic size: indicator circle + gap + label extent (same geometry
     /// as [`Checkbox`]).
-    fn layout_request(&self) -> Option<floem_core::LayoutRequest> {
+    fn layout_request(&self) -> Option<floom_core::LayoutRequest> {
         if self.label.is_empty() {
             return None;
         }
         Some(
-            floem_core::LayoutRequest::new()
+            floom_core::LayoutRequest::new()
                 .width(INDICATOR_SIDE + INDICATOR_LABEL_GAP + label_width(&self.label))
                 .height(INDICATOR_SIDE.max(label_height(&self.label))),
         )
@@ -1410,7 +1410,7 @@ impl Widget for Switch {
 
     /// Intrinsic size: track (width × width/2) + gap + label extent; the
     /// height also fits the label so the track never clips it.
-    fn layout_request(&self) -> Option<floem_core::LayoutRequest> {
+    fn layout_request(&self) -> Option<floom_core::LayoutRequest> {
         if self.label.is_empty() {
             return None;
         }
@@ -1421,7 +1421,7 @@ impl Widget for Switch {
         };
         let track_h = track_w * 0.5;
         Some(
-            floem_core::LayoutRequest::new()
+            floom_core::LayoutRequest::new()
                 .width(track_w + INDICATOR_LABEL_GAP + label_width(&self.label))
                 .height(track_h.max(label_height(&self.label))),
         )
@@ -1651,9 +1651,9 @@ impl Widget for Slider {
     /// slider paints) and a default track length wide — a track is
     /// meaningless at zero width, and callers who want it to fill their
     /// container pin the width explicitly.
-    fn layout_request(&self) -> Option<floem_core::LayoutRequest> {
+    fn layout_request(&self) -> Option<floom_core::LayoutRequest> {
         Some(
-            floem_core::LayoutRequest::new()
+            floom_core::LayoutRequest::new()
                 .width(SLIDER_TRACK_WIDTH)
                 .height(SLIDER_THUMB),
         )
@@ -1896,9 +1896,9 @@ impl Widget for Progress {
 
     /// Intrinsic size: the bar fills its box, so its extent is a convention —
     /// a thin bar of default length. A pinned style still wins.
-    fn layout_request(&self) -> Option<floem_core::LayoutRequest> {
+    fn layout_request(&self) -> Option<floom_core::LayoutRequest> {
         Some(
-            floem_core::LayoutRequest::new()
+            floom_core::LayoutRequest::new()
                 .width(PROGRESS_WIDTH)
                 .height(PROGRESS_HEIGHT),
         )
@@ -2417,7 +2417,7 @@ impl Widget for Select {
     /// open list is an overlay sized from this box, so it deliberately does not
     /// contribute to the intrinsic extent — otherwise the control would grow a
     /// list-height hole in its parent's flow every time it opened.
-    fn layout_request(&self) -> Option<floem_core::LayoutRequest> {
+    fn layout_request(&self) -> Option<floom_core::LayoutRequest> {
         let widest = self
             .options
             .iter()
@@ -2425,7 +2425,7 @@ impl Widget for Select {
             .chain(std::iter::once(label_width(self.selected_label())))
             .fold(0.0_f32, f32::max);
         Some(
-            floem_core::LayoutRequest::new()
+            floom_core::LayoutRequest::new()
                 .width(widest + SELECT_PADDING * 2.0)
                 .height(self.row_height as f32),
         )

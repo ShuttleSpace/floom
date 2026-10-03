@@ -14,7 +14,7 @@
 //! [`TuiGrid`]: crate::TuiGrid
 //! [`TuiPresenter`]: crate::TuiPresenter
 
-use floem_types::Color;
+use floom_types::Color;
 
 use crate::{Cell, TuiGrid};
 
@@ -181,7 +181,7 @@ pub fn encode_cell(
 mod tests {
     use super::*;
     use crate::grid::rect;
-    use floem_scene::Size;
+    use floom_scene::Size;
 
     fn grid(cols: usize, rows: usize) -> TuiGrid {
         TuiGrid::new(

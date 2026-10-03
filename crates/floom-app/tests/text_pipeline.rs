@@ -1,4 +1,4 @@
-//! Text pipeline tests: WidgetHost shapes via floem-text, interns glyph-run
+//! Text pipeline tests: WidgetHost shapes via floom-text, interns glyph-run
 //! resources, and scene text nodes carry the real laid-out extent.
 //!
 //! These are the resource-side counterpart to the GPU presenter contract: a
@@ -6,11 +6,11 @@
 //! `WidgetHost::resources()` gets everything it needs to rasterise — font
 //! blob, font size, glyph ids and pixel-space positions.
 
-use floem_app::WidgetHost;
-use floem_layout::LayoutStyle;
-use floem_scene::{ResourceKind, SceneNode};
-use floem_types::ResourceId;
-use floem_widgets::Text;
+use floom_app::WidgetHost;
+use floom_layout::LayoutStyle;
+use floom_scene::{ResourceKind, SceneNode};
+use floom_types::ResourceId;
+use floom_widgets::Text;
 
 fn fixed(width: f64, height: f64) -> LayoutStyle {
     LayoutStyle {
@@ -28,7 +28,7 @@ fn host_with_text(content: &str, size: f32) -> WidgetHost {
 }
 
 /// Finds the first text scene node and its glyph resource id.
-fn first_text_node(host: &WidgetHost) -> (floem_types::Size, ResourceId) {
+fn first_text_node(host: &WidgetHost) -> (floom_types::Size, ResourceId) {
     for (_id, node) in host.scene().iter() {
         if let SceneNode::Text { size, glyphs, .. } = node {
             return (*size, *glyphs);
@@ -37,7 +37,7 @@ fn first_text_node(host: &WidgetHost) -> (floem_types::Size, ResourceId) {
     panic!("no text node in the scene");
 }
 
-fn glyph_runs(host: &WidgetHost, id: ResourceId) -> Vec<floem_text::GlyphRun> {
+fn glyph_runs(host: &WidgetHost, id: ResourceId) -> Vec<floom_text::GlyphRun> {
     match host.resources().get(id).map(|r| &r.kind) {
         Some(ResourceKind::GlyphRun { runs, .. }) => runs.clone(),
         other => panic!("expected a glyph-run resource, got {other:?}"),
@@ -86,8 +86,8 @@ fn different_font_sizes_get_different_resources() {
     // Two texts, same string, different sizes, mounted with fixed bounds so
     // both actually paint (the shell sizes imperative children explicitly).
     let mut host = WidgetHost::new();
-    host.set_size(floem_core::Size::new(240.0, 160.0));
-    let root = host.mount_root(LayoutStyle::default(), floem_widgets::Container::new());
+    host.set_size(floom_core::Size::new(240.0, 160.0));
+    let root = host.mount_root(LayoutStyle::default(), floom_widgets::Container::new());
     host.mount(root, fixed(200.0, 24.0), Text::new("same text").size(14.0));
     host.mount(root, fixed(200.0, 40.0), Text::new("same text").size(28.0));
     host.frame();
@@ -113,9 +113,9 @@ fn different_font_sizes_get_different_resources() {
 /// reporting the measured extent, the rows shrink-wrap their content.
 #[test]
 fn stack_child_text_sizes_itself_without_explicit_extent() {
-    let stack = floem_widgets::Stack::new(floem_core::Axis::Vertical)
-        .push(|| Box::new(Text::new("auto sized row")) as Box<dyn floem_core::WidgetAny>)
-        .push(|| Box::new(Text::new("second row").size(20.0)) as Box<dyn floem_core::WidgetAny>);
+    let stack = floom_widgets::Stack::new(floom_core::Axis::Vertical)
+        .push(|| Box::new(Text::new("auto sized row")) as Box<dyn floom_core::WidgetAny>)
+        .push(|| Box::new(Text::new("second row").size(20.0)) as Box<dyn floom_core::WidgetAny>);
     let mut host = WidgetHost::new();
     host.mount_root(LayoutStyle::default(), stack);
     host.frame();
@@ -141,8 +141,8 @@ fn stack_child_text_sizes_itself_without_explicit_extent() {
 #[test]
 fn explicit_sizing_still_beats_intrinsic() {
     let mut host = WidgetHost::new();
-    host.set_size(floem_core::Size::new(240.0, 160.0));
-    let root = host.mount_root(LayoutStyle::default(), floem_widgets::Container::new());
+    host.set_size(floom_core::Size::new(240.0, 160.0));
+    let root = host.mount_root(LayoutStyle::default(), floom_widgets::Container::new());
     let label = host.mount(
         root,
         fixed(200.0, 24.0),

@@ -7,12 +7,12 @@
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 
-use floem_app::{AppRunner, RunStats, WidgetHost};
-use floem_layout::LayoutStyle;
-use floem_platform::{FakePlatform, KeyCode, Platform, PlatformEvent, WindowConfig};
-use floem_renderer_software::SoftwarePresenter;
-use floem_types::{Color, Point, Size};
-use floem_widgets::{Button, Container, Stack, Text, TextField};
+use floom_app::{AppRunner, RunStats, WidgetHost};
+use floom_layout::LayoutStyle;
+use floom_platform::{FakePlatform, KeyCode, Platform, PlatformEvent, WindowConfig};
+use floom_renderer_software::SoftwarePresenter;
+use floom_types::{Color, Point, Size};
+use floom_widgets::{Button, Container, Stack, Text, TextField};
 
 /// A tiny window (64×48 logical, scale 1) so pixel arithmetic stays trivial.
 fn small_window() -> WindowConfig {
@@ -220,7 +220,7 @@ fn closing_the_window_detaches_the_surface() {
     let mut host = WidgetHost::new();
     host.mount_root(
         LayoutStyle::default(),
-        Container::new().background(floem_types::Color::WHITE),
+        Container::new().background(floom_types::Color::WHITE),
     );
     let mut runner = AppRunner::new(host, SoftwarePresenter::new());
 
@@ -243,7 +243,7 @@ fn keyboard_ime_and_suspend_flow_through() {
     let mut host = WidgetHost::new();
     host.mount_root(
         LayoutStyle::default(),
-        Container::new().background(floem_types::Color::WHITE),
+        Container::new().background(floom_types::Color::WHITE),
     );
     let mut runner = AppRunner::new(host, SoftwarePresenter::new());
 
@@ -257,7 +257,7 @@ fn keyboard_ime_and_suspend_flow_through() {
         code: KeyCode::from_char('a'),
         pressed: true,
         repeat: false,
-        modifiers: floem_types::Modifiers::NONE,
+        modifiers: floom_types::Modifiers::NONE,
     });
     // …and committed IME text ("hi" → two character key-downs).
     platform.push_event(PlatformEvent::ImeCommit {
@@ -287,7 +287,7 @@ fn keyboard_ime_and_suspend_flow_through() {
 ///
 /// This is the gap R1 closes: the runner used to drop `ImePreedit` entirely,
 /// so a composition could never reach a widget. Now the runner routes the
-/// preedit to the focused field, which owns the `floem_ime` state machine and
+/// preedit to the focused field, which owns the `floom_ime` state machine and
 /// renders the marked text inline, and hands the OS the caret rect to anchor
 /// its popup — then clears that area when the composition commits.
 #[test]
@@ -374,7 +374,7 @@ fn ime_preedit_updates_focused_field_then_commit_finalizes() {
 
 mod boundary {
     use super::*;
-    use floem_error::ErrorBoundary;
+    use floom_error::ErrorBoundary;
 
     #[test]
     fn a_panicking_button_callback_becomes_a_report_not_a_crash() {
@@ -387,22 +387,22 @@ mod boundary {
         let mut host = WidgetHost::new();
         host.mount_root(
             LayoutStyle::default(),
-            Stack::new(floem_core::Axis::Vertical)
+            Stack::new(floom_core::Axis::Vertical)
                 .push_layout(
-                    floem_core::LayoutRequest::new().height(24.0).grow(1.0),
+                    floom_core::LayoutRequest::new().height(24.0).grow(1.0),
                     || {
                         Box::new(Button::new("boom").on_click(|| {
                             panic!("view blew up");
-                        })) as Box<dyn floem_core::WidgetAny>
+                        })) as Box<dyn floom_core::WidgetAny>
                     },
                 )
                 .push_layout(
-                    floem_core::LayoutRequest::new().height(24.0).grow(1.0),
+                    floom_core::LayoutRequest::new().height(24.0).grow(1.0),
                     move || {
                         let flag = worked_flag.clone();
                         Box::new(Button::new("ok").on_click(move || {
                             flag.store(true, Ordering::SeqCst);
-                        })) as Box<dyn floem_core::WidgetAny>
+                        })) as Box<dyn floom_core::WidgetAny>
                     },
                 ),
         );
@@ -474,7 +474,7 @@ mod boundary {
 
 mod services {
     use super::*;
-    use floem_services::Scope;
+    use floom_services::Scope;
     use std::cell::RefCell;
     use std::rc::Rc;
 

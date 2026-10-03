@@ -18,13 +18,13 @@
 
 use std::any::Any;
 
-use floem_accessibility::{SemanticsRole, SemanticsState};
-use floem_core::{
+use floom_accessibility::{SemanticsRole, SemanticsState};
+use floom_core::{
     Color, CreateContext, ElementId, Event, EventContext, Key, KeyPhase, LayoutRequest, NamedKey,
     PaintContext, Point, Rect, SemanticsContext, UpdateContext, Widget, WidgetAny,
 };
-use floem_types::{PointerButton, PointerPhase};
-use floem_widgets::{SemanticsHint, to_core_role, to_core_state};
+use floom_types::{PointerButton, PointerPhase};
+use floom_widgets::{SemanticsHint, to_core_role, to_core_state};
 
 const PLAY_WIDTH: f64 = 32.0;
 const TIME_WIDTH: f64 = 72.0;
@@ -382,7 +382,7 @@ impl MediaControls {
 
     fn pointer(
         &mut self,
-        pointer: &floem_types::PointerEvent,
+        pointer: &floom_types::PointerEvent,
         bounds: Rect,
         cx: &mut dyn EventContext,
     ) -> bool {
@@ -410,7 +410,7 @@ impl MediaControls {
         true
     }
 
-    fn key_event(&mut self, key: &floem_types::KeyEvent, cx: &mut dyn EventContext) -> bool {
+    fn key_event(&mut self, key: &floom_types::KeyEvent, cx: &mut dyn EventContext) -> bool {
         if key.phase == KeyPhase::Up {
             return false;
         }
@@ -545,9 +545,9 @@ impl WidgetAny for MediaControls {
         self
     }
 
-    fn semantics_hint(&self) -> Option<floem_core::SemanticsHint> {
+    fn semantics_hint(&self) -> Option<floom_core::SemanticsHint> {
         let hint = self.semantics_hint();
-        Some(floem_core::SemanticsHint {
+        Some(floom_core::SemanticsHint {
             role: to_core_role(hint.role),
             label: hint.label,
             state: to_core_state(hint.state),

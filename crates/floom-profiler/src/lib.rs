@@ -27,7 +27,7 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use floem_inspector::{
+use floom_inspector::{
     AllocSummary, CacheStats, FrameSummary, JsonSnapshot, PerformanceSnapshot, ProtocolVersion,
     StageSpan,
 };

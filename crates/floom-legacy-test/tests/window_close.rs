@@ -6,9 +6,9 @@
 //! - `on_event_stop` (stop propagation only) does NOT prevent the close
 //! - Close prevention on one window does not affect another
 
-use floem::event::{Event, WindowEvent};
-use floem::take_close_window_event_count;
-use floem_legacy_test::prelude::*;
+use floom::event::{Event, WindowEvent};
+use floom::take_close_window_event_count;
+use floom_legacy_test::prelude::*;
 use serial_test::serial;
 
 #[test]
@@ -36,7 +36,7 @@ fn close_requested_defaults_to_closing() {
 fn close_requested_can_be_prevented() {
     let root = TestRoot::new();
     let view = Empty::new().style(|s| s.size(100.0, 100.0)).on_event_cont(
-        floem::event::listener::WindowCloseRequested,
+        floom::event::listener::WindowCloseRequested,
         |cx, _| {
             cx.prevent_default();
         },
@@ -61,7 +61,7 @@ fn stop_propagation_without_prevent_default_still_closes() {
     let root = TestRoot::new();
     let view = Empty::new()
         .style(|s| s.size(100.0, 100.0))
-        .on_event_stop(floem::event::listener::WindowCloseRequested, |_cx, _| {});
+        .on_event_stop(floom::event::listener::WindowCloseRequested, |_cx, _| {});
     let mut harness = HeadlessHarness::new_with_size(root, view, 400.0, 300.0);
 
     let wid = harness.window_id();
@@ -82,7 +82,7 @@ fn preventing_one_window_close_does_not_affect_another() {
     // Window 1: has prevent_default handler
     let root1 = TestRoot::new();
     let view1 = Empty::new().style(|s| s.size(100.0, 100.0)).on_event_cont(
-        floem::event::listener::WindowCloseRequested,
+        floom::event::listener::WindowCloseRequested,
         |cx, _| {
             cx.prevent_default();
         },

@@ -1,6 +1,6 @@
 //! Damage region tracking for partial redraws.
 
-use floem_types::Rect;
+use floom_types::Rect;
 use smallvec::SmallVec;
 
 /// Accumulated damage for a scene update transaction.

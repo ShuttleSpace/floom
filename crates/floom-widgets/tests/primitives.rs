@@ -1,9 +1,9 @@
 //! Scene and semantics snapshots for the Tier-0 primitives.
 
-use floem_core::{Brush, Color, Point, Rect, ResourceId, Shadow, Size, Widget};
-use floem_scene::SceneNode;
-use floem_widgets::primitives::{Axis, Container, Divider, Icon, Image, ImageFit, Spacer, Text};
-use floem_widgets::testkit::{
+use floom_core::{Brush, Color, Point, Rect, ResourceId, Shadow, Size, Widget};
+use floom_scene::SceneNode;
+use floom_widgets::primitives::{Axis, Container, Divider, Icon, Image, ImageFit, Spacer, Text};
+use floom_widgets::testkit::{
     AllocatingCreateContext, RecordingUpdateContext, SceneRecorder, paint_snapshot,
     semantics_snapshot,
 };
@@ -22,7 +22,7 @@ const SQUARE: Rect = Rect {
     y1: 100.0,
 };
 
-fn allocate(widget: &dyn Widget) -> (floem_core::ElementId, AllocatingCreateContext) {
+fn allocate(widget: &dyn Widget) -> (floom_core::ElementId, AllocatingCreateContext) {
     let mut create = AllocatingCreateContext::new();
     let id = widget.create(&mut create);
     (id, create)
@@ -440,8 +440,8 @@ fn a_content_blur_is_declared_not_painted() {
     );
     assert_eq!(
         widget.filter(),
-        Some(floem_core::Filter::blur(4.0)),
+        Some(floom_core::Filter::blur(4.0)),
         "but the widget declares one, which is where the host reads it"
     );
-    assert_eq!(widget.content_filter(), Some(floem_core::Filter::blur(4.0)));
+    assert_eq!(widget.content_filter(), Some(floom_core::Filter::blur(4.0)));
 }

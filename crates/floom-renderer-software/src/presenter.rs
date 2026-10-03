@@ -13,11 +13,11 @@
 //! inspect or copy. That is the whole point: an offscreen frame the harness can
 //! assert on.
 
-use floem_renderer::{
+use floom_renderer::{
     AttachedSurface, FrameInfo, Presenter, RenderTarget, Renderer, SurfaceHandles,
 };
-use floem_scene::{ResourceRegistry, Scene};
-use floem_types::Size;
+use floom_scene::{ResourceRegistry, Scene};
+use floom_types::Size;
 
 use crate::SoftwareRenderer;
 
@@ -149,8 +149,8 @@ impl Presenter for SoftwarePresenter {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use floem_scene::{Point, Rect, SceneNode};
-    use floem_types::{Color, SurfaceId, WindowId};
+    use floom_scene::{Point, Rect, SceneNode};
+    use floom_types::{Color, SurfaceId, WindowId};
 
     fn attached(size: Size) -> AttachedSurface {
         AttachedSurface::new(WindowId::new(0, 1), SurfaceId::new(0, 1), size, 1.0, None)
@@ -161,7 +161,7 @@ mod tests {
         scene.begin_update();
         let _ = scene.insert(SceneNode::Rect {
             bounds: Rect::from_origin_size(Point::new(0.0, 0.0), Size::new(4.0, 4.0)),
-            fill: floem_types::Brush::from(Color::rgb(200, 100, 50)),
+            fill: floom_types::Brush::from(Color::rgb(200, 100, 50)),
             radius: 0.0,
 
             shadow: None,
@@ -229,7 +229,7 @@ mod tests {
         scene.begin_update();
         let _ = scene.insert(SceneNode::Rect {
             bounds: Rect::from_origin_size(Point::new(0.0, 0.0), Size::new(4.0, 4.0)),
-            fill: floem_types::Brush::from(Color::rgb(200, 100, 50)),
+            fill: floom_types::Brush::from(Color::rgb(200, 100, 50)),
             radius: 0.0,
 
             shadow: None,

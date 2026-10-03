@@ -14,11 +14,11 @@
 //! The correct transformation should use just `visual_origin` (matching
 //! how `visual_transform` is computed during layout).
 
-use floem::event::EventPropagation;
-use floem::prelude::*;
-use floem::views::slider;
-use floem::views::slider::SliderChanged;
-use floem_legacy_test::prelude::*;
+use floom::event::EventPropagation;
+use floom::prelude::*;
+use floom::views::slider;
+use floom::views::slider::SliderChanged;
+use floom_legacy_test::prelude::*;
 use serial_test::serial;
 use std::cell::Cell;
 use std::rc::Rc;

@@ -1,6 +1,6 @@
 # Experimental Embedder API
 
-`floem::embedder` is an experimental API for integrating Floem with platform
+`floom::embedder` is an experimental API for integrating Floom with platform
 backends other than the default winit desktop backend.
 
 The API has two layers:
@@ -10,16 +10,16 @@ The API has two layers:
 - Rust adapter traits such as `EmbedderRuntime`, `EmbedderWindow`,
   `SurfaceHandle`, and `PlatformServices`.
 
-Ordinary application code should continue to use `floem::launch(...)`.
+Ordinary application code should continue to use `floom::launch(...)`.
 
 Backend authors can either implement the Rust adapter traits or feed
-`EmbedderEvent` values into Floem and execute returned `EmbedderCommand`
+`EmbedderEvent` values into Floom and execute returned `EmbedderCommand`
 values.
 
 ## Why a neutral protocol
 
-The default desktop path (`floem::launch`) routes its winit window events
-through `floem::app::winit_embedder::translate_window_event`, which produces
+The default desktop path (`floom::launch`) routes its winit window events
+through `floom::app::winit_embedder::translate_window_event`, which produces
 `EmbedderEvent` values. Those same neutral events are what every other backend
 (Android, iOS, HarmonyOS, a headless test backend, a future TUI backend) must
 produce. Keeping one event model means input handling, focus navigation, IME,
@@ -37,10 +37,10 @@ understand the protocol — never a specific windowing toolkit.
 
 ## Current Implementations
 
-- **winit desktop backend**: the default path used by `floem::launch(...)`.
-  Translation lives in `src/app/winit_embedder.rs`.
+- **winit desktop backend**: the default path used by `floom::launch(...)`.
+  Translation lives in `crates/floom/src/app/winit_embedder.rs`.
 - **headless backend**: a testing proof of concept (`HeadlessEmbedder`) with no
-  real platform window or paint surface. It drives the real Floem runtime from
+  real platform window or paint surface. It drives the real Floom runtime from
   neutral events so input, focus, IME, and layout can be unit tested without a
   display.
 
@@ -58,5 +58,5 @@ downgraded, or a no-op.
 
 The module is public for experimentation, but it is **not stable**. Type names,
 enum variants, and trait methods may change while Android, iOS, TUI, and
-HarmonyOS backends are explored. Pin a specific Floem version if you build
+HarmonyOS backends are explored. Pin a specific Floom version if you build
 against it.

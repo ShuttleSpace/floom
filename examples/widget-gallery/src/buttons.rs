@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use floem::{
+use floom::{
     IntoView,
     easing::Spring,
     peniko::{Color, color::palette},

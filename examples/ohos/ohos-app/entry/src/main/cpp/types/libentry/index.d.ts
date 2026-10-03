@@ -4,7 +4,7 @@
 //   - the C++ shell (entry/src/main/cpp/napi_init.cpp), and
 //   - the Rust bridge, compiled into the cdylib `libohos.so` and merged in by
 //     napi_init.cpp forwarding to its `napi_register_module_v1`
-//     (see ets/FloemBridge.ets and src/platform/ohos_bridge.rs).
+//     (see ets/FloomBridge.ets and crates/floom/src/platform/ohos_bridge.rs).
 //
 // napi-rs renames every Rust `snake_case` export to a `camelCase` JS name, so the
 // Rust `register_platform_bridge` / `on_file_picked` / `on_shared_files` /
@@ -20,26 +20,26 @@ declare const bridge: {
   setFontScale(fontScale: number): void;
 
   // ---- Rust bridge (libohos.so, forwarded) -----------------------------
-  // src/platform/ohos_bridge.rs — ArkTS hands Rust one object wrapping every
+  // crates/floom/src/platform/ohos_bridge.rs — ArkTS hands Rust one object wrapping every
   // capability (getText/setText/openUrl/openFile/saveFile/setAccessibilityTree/
   // showKeyboard/hideKeyboard + IME caret/purpose), which Rust keeps a
   // reference to and calls back into on demand.
   registerPlatformBridge(bridge: object): void;
 
-  // src/platform/ohos_file.rs — ArkTS answers an openFile/saveFile request.
+  // crates/floom/src/platform/ohos_file.rs — ArkTS answers an openFile/saveFile request.
   onFilePicked(requestId: number, uris: Array<string> | null): void;
 
-  // src/platform/ohos_receive.rs — ArkTS forwards a share / "open with" intent.
+  // crates/floom/src/platform/ohos_receive.rs — ArkTS forwards a share / "open with" intent.
   onSharedFiles(
     uris: Array<string>,
     mimeTypes: Array<string | null> | null,
     displayNames: Array<string | null> | null
   ): void;
 
-  // src/accessibility/backend_ohos.rs — a screen-reader action on a floem node.
+  // crates/floom/src/accessibility/backend_ohos.rs — a screen-reader action on a floom node.
   onAccessibilityAction(nodeId: number, action: string, payload: string | null): void;
 
-  // src/platform/ohos_ime.rs — Input Method Extension → floem IME queue.
+  // crates/floom/src/platform/ohos_ime.rs — Input Method Extension → floom IME queue.
   onImeCommit(text: string): void;
   onImePreedit(text: string, cursorStart: number, cursorEnd: number): void;
   onImeCompositionEnd(): void;

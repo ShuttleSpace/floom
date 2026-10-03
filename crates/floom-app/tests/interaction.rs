@@ -1,14 +1,14 @@
 //! End-to-end interaction tests: real platform events in, real control state
 //! out.
 //!
-//! `widgets/floem-widgets/tests/controls.rs` drives the widgets directly, so
+//! `crates/floom-widgets/tests/controls.rs` drives the widgets directly, so
 //! it proves each control's own logic. What it cannot prove is the wiring
 //! *around* them: that a pointer button the platform reports reaches the
 //! widget under the cursor, that a key reaches whatever holds focus at that
 //! moment, and that the resulting state change actually reaches the screen
 //! instead of stopping inside the widget.
 //!
-//! `floem-testkit::TestApp` is that whole chain: `FakePlatform` →
+//! `floom-testkit::TestApp` is that whole chain: `FakePlatform` →
 //! `AppRunner` → `WidgetHost` → control, driven with the same `PlatformEvent`s
 //! a real windowing backend would deliver. Every interaction asserts on two
 //! things: the control's state moved, and the frame that followed had damage to
@@ -17,10 +17,10 @@
 use std::cell::Cell;
 use std::rc::Rc;
 
-use floem_platform::KeyCode;
-use floem_testkit::TestApp;
-use floem_types::{Point, Size};
-use floem_widgets::{Checkbox, Select, Slider, Switch, TextField};
+use floom_platform::KeyCode;
+use floom_testkit::TestApp;
+use floom_types::{Point, Size};
+use floom_widgets::{Checkbox, Select, Slider, Switch, TextField};
 
 #[test]
 fn dragging_a_slider_moves_its_value_and_repaints() {

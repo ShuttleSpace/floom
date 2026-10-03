@@ -8,7 +8,7 @@
 //! survive the IR's own validator, because a document an agent cannot load is
 //! worse than no document at all.
 
-use floem_ui_ir::{
+use floom_ui_ir::{
     DesignAxis, DesignContract, DesignFile, DesignNode, DesignRole, NodeKind, PropValue, Rgba,
     compare, import,
 };
@@ -19,7 +19,7 @@ fn fixture_file() -> DesignFile {
     serde_json::from_str(FIXTURE).expect("the fixture is normalized design data")
 }
 
-fn imported() -> floem_ui_ir::ImportedDesign {
+fn imported() -> floom_ui_ir::ImportedDesign {
     import(&fixture_file()).expect("the fixture imports")
 }
 
@@ -118,7 +118,7 @@ fn an_unknown_variant_is_refused_with_the_allowed_set() {
     file.root.children[2].variants = vec!["ghost".into()];
     let error = import(&file).expect_err("ghost is not a semantic variant");
     match error {
-        floem_ui_ir::ImporterError::UnknownVariant {
+        floom_ui_ir::ImporterError::UnknownVariant {
             node,
             variant,
             allowed,
@@ -194,7 +194,7 @@ fn axis_names_come_from_the_design_not_the_ir() {
     // The normalized vocabulary says "horizontal"; the IR's domain says the
     // same word. The mapping is a rename check, and this pins it.
     let mut file = fixture_file();
-    file.root.auto_layout = Some(floem_ui_ir::AutoLayout {
+    file.root.auto_layout = Some(floom_ui_ir::AutoLayout {
         axis: DesignAxis::Horizontal,
         gap: 4.0,
         padding: 0.0,
@@ -215,7 +215,7 @@ fn a_child_node_needs_a_name_its_key_can_be_built_from() {
     let mut file = fixture_file();
     file.root.children[0].name = "has space!".into();
     let error = import(&file).expect_err("not a legal key segment");
-    assert!(matches!(error, floem_ui_ir::ImporterError::BadName { .. }));
+    assert!(matches!(error, floom_ui_ir::ImporterError::BadName { .. }));
 }
 
 /// A node needs `text` exactly when its role says so.
@@ -226,7 +226,7 @@ fn a_button_without_text_is_refused() {
     let error = import(&file).expect_err("a button has nothing to announce");
     assert!(matches!(
         error,
-        floem_ui_ir::ImporterError::MissingText { node } if node == "follow"
+        floom_ui_ir::ImporterError::MissingText { node } if node == "follow"
     ));
 }
 
@@ -239,7 +239,7 @@ fn duplicate_names_are_refused() {
     let error = import(&file).expect_err("two nodes named `name`");
     assert!(matches!(
         error,
-        floem_ui_ir::ImporterError::DuplicateKey { key } if key == "name"
+        floom_ui_ir::ImporterError::DuplicateKey { key } if key == "name"
     ));
 }
 
@@ -249,7 +249,7 @@ fn duplicate_names_are_refused() {
 fn shape_documentation() {
     let _ = DesignNode {
         name: "x".into(),
-        role: floem_ui_ir::DesignRole::Frame,
+        role: floom_ui_ir::DesignRole::Frame,
         auto_layout: None,
         size: None,
         fill: None,

@@ -21,7 +21,7 @@ pub struct FrameSummary {
     pub stages: Vec<StageSpan>,
 }
 
-/// Explicit allocation counters (see `floem-profiler` for why they are
+/// Explicit allocation counters (see `floom-profiler` for why they are
 /// API-driven rather than a global allocator hook).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub struct AllocSummary {

@@ -4,7 +4,7 @@
 //!
 //! The decorator trait is the primary interface for extending the appearance and functionality of ['View']s.
 
-use floem_legacy_reactive::{Effect, SignalUpdate, UpdaterEffect};
+use floom_legacy_reactive::{Effect, SignalUpdate, UpdaterEffect};
 use std::rc::Rc;
 use ui_events::keyboard::{Key, KeyboardEvent, Modifiers};
 
@@ -33,7 +33,7 @@ pub trait Decorators: IntoView {
     ///
     /// Ensure that if you are using signals inside of the style that you track them at the top level
     ///
-    /// The Floem style system provides comprehensive styling capabilities including:
+    /// The Floom style system provides comprehensive styling capabilities including:
     ///
     /// ## Layout & Sizing
     /// - **Flexbox & Grid**: Full CSS-style layout with `flex()`, `grid()`, alignment, and gap controls
@@ -63,7 +63,7 @@ pub trait Decorators: IntoView {
     /// Styles are reactive and will automatically update when dependencies change.
     /// Subsequent calls to `style` will overwrite previous ones.
     /// ```rust
-    /// # use floem::{peniko::color::palette, View, views::{Decorators, label, stack}};
+    /// # use floom::{peniko::color::palette, View, views::{Decorators, label, stack}};
     /// fn view() -> impl View {
     ///     label(|| "Hello".to_string())
     ///         .style(|s| s.font_size(20.0).color(palette::css::RED))
@@ -220,8 +220,8 @@ pub trait Decorators: IntoView {
     ///
     /// # Example
     /// ```rust
-    /// # use floem::prelude::*;
-    /// use floem::event::DragConfig;
+    /// # use floom::prelude::*;
+    /// use floom::event::DragConfig;
     /// use std::time::Duration;
     ///
     /// let _view = empty().draggable_with_config(|| {

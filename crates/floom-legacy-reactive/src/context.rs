@@ -9,7 +9,7 @@ use crate::runtime::RUNTIME;
 ///
 /// # Example
 /// ```rust
-/// # use floem_legacy_reactive::{Context, Scope};
+/// # use floom_legacy_reactive::{Context, Scope};
 /// let scope = Scope::new();
 /// scope.enter(|| {
 ///     Context::provide(42i32);
@@ -32,7 +32,7 @@ impl Context {
     ///
     /// # Example
     /// ```rust
-    /// # use floem_legacy_reactive::{Context, Scope};
+    /// # use floom_legacy_reactive::{Context, Scope};
     /// let scope = Scope::new();
     /// scope.enter(|| {
     ///     Context::provide(42i32);
@@ -64,7 +64,7 @@ impl Context {
     ///
     /// # Example
     /// ```rust
-    /// # use floem_legacy_reactive::{Context, Scope};
+    /// # use floom_legacy_reactive::{Context, Scope};
     /// let parent = Scope::new();
     /// parent.enter(|| {
     ///     Context::provide(42i32);
@@ -111,14 +111,14 @@ impl Context {
 /// # Example
 /// In a parent component:
 /// ```rust
-/// # use floem_legacy_reactive::provide_context;
+/// # use floom_legacy_reactive::provide_context;
 /// provide_context(42);
 /// provide_context(String::from("Hello world"));
 /// ```
 ///
 /// And so in a child component you can retrieve each context data by specifying the type:
 /// ```rust
-/// # use floem_legacy_reactive::use_context;
+/// # use floom_legacy_reactive::use_context;
 /// let foo: Option<i32> = use_context();
 /// let bar: Option<String> = use_context();
 /// ```
@@ -163,14 +163,14 @@ where
 /// # Example
 /// In a parent component:
 /// ```rust
-/// # use floem_legacy_reactive::provide_context;
+/// # use floom_legacy_reactive::provide_context;
 /// provide_context(42);
 /// provide_context(String::from("Hello world"));
 /// ```
 ///
 /// And so in a child component you can retrieve each context data by specifying the type:
 /// ```rust
-/// # use floem_legacy_reactive::use_context;
+/// # use floom_legacy_reactive::use_context;
 /// let foo: Option<i32> = use_context();
 /// let bar: Option<String> = use_context();
 /// ```

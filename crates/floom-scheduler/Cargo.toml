@@ -1,10 +1,10 @@
 [package]
-name = "floem-scheduler"
+name = "floom-scheduler"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
-description = "Priority frame scheduler for Floem 2.0"
+description = "Priority frame scheduler for Floom 2.0"
 rust-version.workspace = true
 
 [dependencies]

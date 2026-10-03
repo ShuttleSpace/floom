@@ -1,4 +1,4 @@
-use floem::{action::inspect, kurbo, prelude::*, reactive::Effect};
+use floom::{action::inspect, kurbo, prelude::*, reactive::Effect};
 
 mod pan_zoom_view;
 
@@ -64,5 +64,5 @@ fn app_view() -> impl IntoView {
 }
 
 fn main() {
-    floem::launch(app_view);
+    floom::launch(app_view);
 }

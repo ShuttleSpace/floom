@@ -1,6 +1,6 @@
 //! Theme tokens: color, typography, spacing, radius, elevation, motion.
 
-use floem_types::Color;
+use floom_types::Color;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub enum ColorScheme {

@@ -7,11 +7,11 @@
 //! because context mappings are resolved at style time, but layout props need
 //! to be available during taffy style computation.
 
-use floem::peniko::Color;
-use floem::prelude::*;
-use floem::prop;
-use floem::style::{ContextRef, ExprStyle, Style};
-use floem_legacy_test::prelude::*;
+use floom::peniko::Color;
+use floom::prelude::*;
+use floom::prop;
+use floom::style::{ContextRef, ExprStyle, Style};
+use floom_legacy_test::prelude::*;
 use serial_test::serial;
 
 // Define a simple theme prop for testing
@@ -34,7 +34,7 @@ impl Default for TestTheme {
     }
 }
 
-impl floem::style::StylePropValue for TestTheme {
+impl floom::style::StylePropValue for TestTheme {
     fn interpolate(&self, _other: &Self, _value: f64) -> Option<Self> {
         None
     }
@@ -188,7 +188,7 @@ fn test_layout_outside_color_inside_with_context() {
 
     // Color should also work (set inside with_context)
     let style = harness.get_computed_style(id);
-    let bg = style.get(floem::style::Background);
+    let bg = style.get(floom::style::Background);
     assert!(bg.is_some(), "Background should be set from with_context");
 }
 

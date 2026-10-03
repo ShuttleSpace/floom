@@ -1,11 +1,11 @@
-//! Form state and validation for Floem 2.0.
+//! Form state and validation for Floom 2.0.
 //!
-//! `floem-forms` is deliberately widget-free. It sits in `framework/`, *below*
+//! `floom-forms` is deliberately widget-free. It sits in `framework/`, *below*
 //! the widget layer, so it models a form as plain data — fields, values,
 //! touched flags and validation state — and exposes a closure-based
-//! [`FieldBinding`] seam that a widgets-layer caller (or `floem-app`) uses to
+//! [`FieldBinding`] seam that a widgets-layer caller (or `floom-app`) uses to
 //! read a control into the controller and push a value back out. Nothing here
-//! reaches a renderer, a platform, or even `floem-widgets`.
+//! reaches a renderer, a platform, or even `floom-widgets`.
 //!
 //! Validation has two halves:
 //!
@@ -411,7 +411,7 @@ impl FormController {
 /// Reads a control of type `C` into, and writes back from, a form field.
 ///
 /// Held as two closures so the binding can live in the widgets/app layer where
-/// the concrete control type is known — `floem-forms` itself never names a
+/// the concrete control type is known — `floom-forms` itself never names a
 /// widget.
 pub struct FieldBinding<C> {
     get: Box<dyn Fn(&C) -> String + Send + Sync>,

@@ -1,7 +1,7 @@
 //! Style property bag and interaction states.
 
 use bitflags::bitflags;
-use floem_types::Color;
+use floom_types::Color;
 
 bitflags! {
     #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]

@@ -1,9 +1,9 @@
-//! Material Design 3 scale tokens carried by `floem-material`.
+//! Material Design 3 scale tokens carried by `floom-material`.
 //!
 //! [`MaterialTheme`] (in `tokens.rs`) already owns the colour *roles* and the
 //! baseline/derived schemes. This module adds the remaining MD3 token
 //! dimensions that the upstream [`gpui-mobile`] project ships as a standalone
-//! `theme.rs` but which `floem-material` had not yet expressed:
+//! `theme.rs` but which `floom-material` had not yet expressed:
 //!
 //! * [`TypeScale`] — the display/headline/title/body/label size ladder,
 //! * [`ShapeScale`] — the corner-radius ladder,
@@ -17,16 +17,16 @@
 //!
 //! [`gpui-mobile`]: https://github.com/itsbalamurali/gpui-mobile
 
-use floem_types::{Color, Easing, Transition};
+use floom_types::{Color, Easing, Transition};
 
 /// Convert a `0xRRGGBB` integer to a [`Color`].
 ///
 /// MD3 palette constants are conventionally written as hex; this is the
-/// canonical adapter into Floem's `u8` colour type. Alpha defaults to 255.
+/// canonical adapter into Floom's `u8` colour type. Alpha defaults to 255.
 ///
 /// ```rust
-/// use floem_material::hex_color;
-/// use floem_types::Color;
+/// use floom_material::hex_color;
+/// use floom_types::Color;
 /// assert_eq!(hex_color(0x6750A4), Color::rgb(0x67, 0x50, 0xA4));
 /// ```
 pub const fn hex_color(hex: u32) -> Color {
@@ -173,7 +173,7 @@ impl MotionDuration {
 /// <https://m3.material.io/styles/motion/easing-and-duration/tokens-specs>
 ///
 /// The curves are the M3 "standard" and "emphasized" families, expressed as
-/// Floem's own [`Easing`] vocabulary. They are what make the [`MotionDuration`]
+/// Floom's own [`Easing`] vocabulary. They are what make the [`MotionDuration`]
 /// tokens a *transition* rather than a bare number: a duration alone says how
 /// long, and the easing here says how it feels on the way.
 pub struct MotionEasing;
@@ -194,7 +194,7 @@ impl MotionEasing {
 /// This is the *consumer* that ends the "motion token has zero consumers"
 /// state: a Material control that wants an implicit transition asks for
 /// [`MotionTransition::state_change`] and gets a [`Transition`] ready to hand
-/// to `floem_widgets::Button::transition` — the design system's tokens decide
+/// to `floom_widgets::Button::transition` — the design system's tokens decide
 /// the timing, and the engine only has to play it.
 pub struct MotionTransition;
 

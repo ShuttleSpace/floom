@@ -1,8 +1,8 @@
-use floem::peniko::Brush;
-use floem::prelude::*;
-use floem::responsive::ScreenSize;
-use floem::style::Background;
-use floem_legacy_test::prelude::*;
+use floom::peniko::Brush;
+use floom::prelude::*;
+use floom::responsive::ScreenSize;
+use floom::style::Background;
+use floom_legacy_test::prelude::*;
 
 #[test]
 fn test_responsive_api_compatibility() {

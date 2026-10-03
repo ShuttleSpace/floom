@@ -1,12 +1,12 @@
-//! Core translation boundary from [`EmbedderEvent`] into the Floem runtime.
+//! Core translation boundary from [`EmbedderEvent`] into the Floom runtime.
 //!
 //! This is the single place where neutral embedder events are turned into
-//! Floem's existing window/event APIs. Backends (and the headless proof of
-//! concept) drive Floem through [`EmbedderRuntimeState::handle_event`].
+//! Floom's existing window/event APIs. Backends (and the headless proof of
+//! concept) drive Floom through [`EmbedderRuntimeState::handle_event`].
 
 use super::{CommandSink, EmbedderEvent};
 
-/// Stateless translation state for routing embedder events into Floem.
+/// Stateless translation state for routing embedder events into Floom.
 ///
 /// Kept as a struct so future phases can carry per-runtime caches without
 /// changing the call sites.
@@ -20,7 +20,7 @@ impl EmbedderRuntimeState {
     }
 
     /// Route a single embedder event into the given window, collecting any
-    /// commands Floem wants the backend to execute.
+    /// commands Floom wants the backend to execute.
     pub fn handle_event(
         &mut self,
         window: &mut crate::window::handle::WindowHandle,

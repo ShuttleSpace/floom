@@ -7,7 +7,7 @@ use std::{
     rc::Rc,
 };
 
-use floem_legacy_reactive::{
+use floom_legacy_reactive::{
     Effect, ReadSignal, RwSignal, Scope, SignalGet, SignalTrack, SignalUpdate, SignalWith,
 };
 use peniko::kurbo::Rect;
@@ -249,7 +249,7 @@ pub(crate) struct VirtualStackState<T> {
 ///
 /// ## Example
 /// ```
-/// use floem::prelude::*;
+/// use floom::prelude::*;
 ///
 /// let _list = VirtualStack::new(move || 1..=1000000)
 ///     .style(|s| {

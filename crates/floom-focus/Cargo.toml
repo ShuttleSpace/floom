@@ -1,11 +1,11 @@
 [package]
-name = "floem-focus"
+name = "floom-focus"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
-description = "Focus manager and traversal for Floem 2.0"
+description = "Focus manager and traversal for Floom 2.0"
 rust-version.workspace = true
 
 [dependencies]
-floem-types = { path = "../floom-types", version = "0.2.0" }
+floom-types = { path = "../floom-types", version = "0.2.0" }

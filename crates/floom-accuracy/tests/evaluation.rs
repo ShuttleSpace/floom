@@ -6,7 +6,7 @@
 //! tests here pin both directions: the reference implementation must be clean,
 //! and every introduced drift must be caught at a named path.
 
-use floem_accuracy::{EvaluationReport, Screen, ScreenTokens, evaluate_screen};
+use floom_accuracy::{EvaluationReport, Screen, ScreenTokens, evaluate_screen};
 
 #[test]
 fn the_reference_implementation_matches_its_contract() {

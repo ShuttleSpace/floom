@@ -7,11 +7,11 @@
 //! those absences with a positive control — the work happens again the moment
 //! it should.
 
-use floem_app::{AppRunner, NOMINAL_FRAME_SECS, RunStats, WidgetHost};
-use floem_layout::LayoutStyle;
-use floem_platform::{FakePlatform, Platform, WindowConfig};
-use floem_renderer_software::SoftwarePresenter;
-use floem_widgets::Text;
+use floom_app::{AppRunner, NOMINAL_FRAME_SECS, RunStats, WidgetHost};
+use floom_layout::LayoutStyle;
+use floom_platform::{FakePlatform, Platform, WindowConfig};
+use floom_renderer_software::SoftwarePresenter;
+use floom_widgets::Text;
 
 fn small_window() -> WindowConfig {
     WindowConfig {
@@ -21,7 +21,7 @@ fn small_window() -> WindowConfig {
     }
 }
 
-use floem_types::Size;
+use floom_types::Size;
 
 /// Pumps until the queue drains and requested frames are presented.
 fn settle(platform: &mut FakePlatform, runner: &mut AppRunner<SoftwarePresenter>) -> RunStats {

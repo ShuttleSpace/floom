@@ -2,10 +2,10 @@
 
 pub mod accessibility;
 
-use floem_platform::{Capability, HostPlatform, PlatformCapabilities};
-use floem_types::PlatformId;
+use floom_platform::{Capability, HostPlatform, PlatformCapabilities};
+use floom_types::PlatformId;
 
-pub use floem_platform::{Clipboard, Ime, Platform, PlatformEvent, WindowConfig};
+pub use floom_platform::{Clipboard, Ime, Platform, PlatformEvent, WindowConfig};
 
 pub fn harmony_platform() -> HostPlatform {
     // Distinct capability profile from Android: marks NATIVE_VIEW for ArkUI embedding hooks.
@@ -19,8 +19,8 @@ pub fn harmony_platform() -> HostPlatform {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use floem_platform::{Capability, Platform, WindowConfig};
-    use floem_types::PlatformId;
+    use floom_platform::{Capability, Platform, WindowConfig};
+    use floom_types::PlatformId;
 
     #[test]
     fn independent_from_android_profile() {

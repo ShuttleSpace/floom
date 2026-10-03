@@ -9,10 +9,10 @@
 //! interact_state.is_disabled which is computed from the OLD computed_style,
 //! not the NEW style being computed.
 
-use floem::peniko::Brush;
-use floem::prelude::*;
-use floem::style::{Background, Disabled, Selected};
-use floem_legacy_test::prelude::*;
+use floom::peniko::Brush;
+use floom::prelude::*;
+use floom::style::{Background, Disabled, Selected};
+use floom_legacy_test::prelude::*;
 use serial_test::serial;
 
 /// Test that a reactive style closure re-runs when its signal changes.
@@ -333,7 +333,7 @@ fn test_counter_example_repaint_scenario() {
     // Create views similar to the counter example
     let increment_btn = Empty::new()
         .style(|s| s.size(80.0, 30.0).background(palette::css::WHITE))
-        .on_event_stop(floem::event::listener::Click, {
+        .on_event_stop(floom::event::listener::Click, {
             move |_, _| {
                 counter.update(|value| *value += 1);
             }

@@ -2,9 +2,9 @@
 //! the one a caller opened.
 //!
 //! Three crates have to name the same overlay without depending on each other:
-//! a control asks its host to open one ([`floem-core`]), the framework crate
-//! keeps the z-ordered stack ([`floem-overlay`]), and the host owns the widget
-//! subtree. `floem-types` is the one crate all of them already depend on, so
+//! a control asks its host to open one ([`floom-core`]), the framework crate
+//! keeps the z-ordered stack ([`floom-overlay`]), and the host owns the widget
+//! subtree. `floom-types` is the one crate all of them already depend on, so
 //! the shared nouns live here — the same reason [`crate::ElementId`] does.
 
 /// What an overlay is for.

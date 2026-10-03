@@ -1,6 +1,6 @@
-//! Platform-neutral IME (input method) state machine for Floem 2.0.
+//! Platform-neutral IME (input method) state machine for Floom 2.0.
 //!
-//! `floem-platform::Ime` is the *bridge* to an OS text-input surface; this crate
+//! `floom-platform::Ime` is the *bridge* to an OS text-input surface; this crate
 //! is the platform-neutral *state* that bridge and widgets agree on. Editors own
 //! an [`ImeState`], feed platform events through [`ImeState::apply`], and render
 //! preedit / candidate UI from the resulting state.

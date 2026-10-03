@@ -1,10 +1,10 @@
 //! macOS accessibility backend (via `accesskit_macos`).
 //!
-//! Bridges Floem's neutral [`AccessTreeUpdate`] to VoiceOver / the macOS
+//! Bridges Floom's neutral [`AccessTreeUpdate`] to VoiceOver / the macOS
 //! Accessibility API. Rather than speaking `NSAccessibility` directly, we feed
 //! the tree to `accesskit_macos::Adapter`, which owns the `NSView` subclassing
 //! and `NSAccessibility` plumbing. Actions requested by VoiceOver arrive via
-//! the [`ActionHandler`] we install and are forwarded to Floem core through a
+//! the [`ActionHandler`] we install and are forwarded to Floom core through a
 //! channel (drained by `WindowState`).
 //!
 //! Wiring happens in `WindowHandle::new` (desktop only). The backend keeps the
@@ -50,7 +50,7 @@ impl ActionHandler for MacOSActionHandler {
     }
 }
 
-/// Bridges Floem's neutral accessibility tree to macOS VoiceOver via accesskit.
+/// Bridges Floom's neutral accessibility tree to macOS VoiceOver via accesskit.
 pub(crate) struct MacOSAccessibilityBackend {
     adapter: Adapter,
     /// Neutral cache powering `focused_node` / `node_at_point`.
@@ -111,7 +111,7 @@ impl AccessibilityBackend for MacOSAccessibilityBackend {
     }
 
     fn update_focus_state(&mut self, focused: bool) {
-        // Keep VoiceOver's notion of window focus in sync with Floem's. The
+        // Keep VoiceOver's notion of window focus in sync with Floom's. The
         // adapter was created with `is_view_focused = true`; this corrects it
         // whenever the window gains or loses keyboard focus.
         if let Some(events) = self.adapter.update_view_focus_state(focused) {

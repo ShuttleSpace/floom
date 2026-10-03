@@ -1,30 +1,30 @@
 //! Opt-in downcasting for widgets stored behind a trait object.
 //!
-//! `WidgetAny` itself now lives in `floem-core` (it is the type-erasure
+//! `WidgetAny` itself now lives in `floom-core` (it is the type-erasure
 //! contract, not widget-specific). This module implements it for every shipped
 //! widget and bridges the crate's accessibility vocabulary
-//! ([`crate::primitives::SemanticsHint`], which names `floem-accessibility`
-//! types) into the engine-neutral [`floem_core::SemanticsHint`] that `floem-core`
+//! ([`crate::primitives::SemanticsHint`], which names `floom-accessibility`
+//! types) into the engine-neutral [`floom_core::SemanticsHint`] that `floom-core`
 //! owns. The host lowers that neutral hint into the concrete accessibility
 //! schema when it builds the semantics tree.
 
 use std::any::Any;
 
-use floem_accessibility::SemanticsState as A11yState;
-use floem_core::{
+use floom_accessibility::SemanticsState as A11yState;
+use floom_core::{
     SemanticsHint as CoreHint, SemanticsRole as CoreRole, SemanticsState as CoreState,
 };
 
 use crate::primitives::SemanticsHint;
 
 /// Lowers this crate's accessibility role vocabulary into the engine-neutral
-/// one `floem-core` owns.
+/// one `floom-core` owns.
 ///
 /// Public so a sibling widget crate can publish semantics through the same
 /// mapping instead of keeping a second copy of the table — two copies is how
 /// the two vocabularies drift apart.
-pub fn to_core_role(role: floem_accessibility::SemanticsRole) -> CoreRole {
-    use floem_accessibility::SemanticsRole as A;
+pub fn to_core_role(role: floom_accessibility::SemanticsRole) -> CoreRole {
+    use floom_accessibility::SemanticsRole as A;
     match role {
         A::None => CoreRole::None,
         A::Button => CoreRole::Button,
@@ -89,7 +89,7 @@ impl From<SemanticsHint> for CoreHint {
 macro_rules! impl_widget_any {
     ($($ty:ty),* $(,)?) => {
         $(
-            impl floem_core::WidgetAny for $ty {
+            impl floom_core::WidgetAny for $ty {
                 fn as_any(&self) -> &dyn Any {
                     self
                 }

@@ -1,4 +1,4 @@
-use floem::{
+use floom::{
     peniko::{color::palette, Color},
     prelude::*,
     style::{
@@ -145,11 +145,11 @@ fn app_view() -> impl IntoView {
     .window_title(|| "Themes Example".to_string())
     .on_event_stop(listener::KeyUp, move |_cx, KeyboardEvent { key, .. }| {
         if let Key::Named(NamedKey::F11) = key {
-            floem::action::inspect();
+            floom::action::inspect();
         }
     })
 }
 
 fn main() {
-    floem::launch(app_view);
+    floom::launch(app_view);
 }

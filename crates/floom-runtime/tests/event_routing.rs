@@ -1,5 +1,5 @@
-use floem_runtime::{EventPhase, EventRouter, HitRegion, PointerCapture};
-use floem_types::{ElementId, NativeViewId, Point, Rect};
+use floom_runtime::{EventPhase, EventRouter, HitRegion, PointerCapture};
+use floom_types::{ElementId, NativeViewId, Point, Rect};
 
 fn eid(i: u32) -> ElementId {
     ElementId::new(i, 1)
@@ -11,7 +11,7 @@ fn hit_test_picks_frontmost_z() {
     router.hits.set_region(
         eid(1),
         HitRegion {
-            bounds: Rect::from_origin_size(Point::ZERO, floem_types::Size::new(100.0, 100.0)),
+            bounds: Rect::from_origin_size(Point::ZERO, floom_types::Size::new(100.0, 100.0)),
             native: None,
             z: 0,
         },
@@ -21,7 +21,7 @@ fn hit_test_picks_frontmost_z() {
         HitRegion {
             bounds: Rect::from_origin_size(
                 Point::new(10.0, 10.0),
-                floem_types::Size::new(20.0, 20.0),
+                floom_types::Size::new(20.0, 20.0),
             ),
             native: None,
             z: 1,
@@ -37,7 +37,7 @@ fn native_region_wins_same_z() {
     router.hits.set_region(
         eid(1),
         HitRegion {
-            bounds: Rect::from_origin_size(Point::ZERO, floem_types::Size::new(50.0, 50.0)),
+            bounds: Rect::from_origin_size(Point::ZERO, floom_types::Size::new(50.0, 50.0)),
             native: None,
             z: 5,
         },
@@ -45,7 +45,7 @@ fn native_region_wins_same_z() {
     router.hits.set_region(
         eid(2),
         HitRegion {
-            bounds: Rect::from_origin_size(Point::ZERO, floem_types::Size::new(50.0, 50.0)),
+            bounds: Rect::from_origin_size(Point::ZERO, floom_types::Size::new(50.0, 50.0)),
             native: Some(NativeViewId::new(1, 1)),
             z: 5,
         },
@@ -64,7 +64,7 @@ fn native_region_wins_same_z() {
 #[test]
 fn native_region_wins_over_a_higher_framework_z() {
     let mut router = EventRouter::new();
-    let bounds = Rect::from_origin_size(Point::ZERO, floem_types::Size::new(50.0, 50.0));
+    let bounds = Rect::from_origin_size(Point::ZERO, floom_types::Size::new(50.0, 50.0));
     router.hits.set_region(
         eid(1),
         HitRegion {
@@ -94,7 +94,7 @@ fn native_region_wins_over_a_higher_framework_z() {
 #[test]
 fn z_still_orders_two_native_regions() {
     let mut router = EventRouter::new();
-    let bounds = Rect::from_origin_size(Point::ZERO, floem_types::Size::new(50.0, 50.0));
+    let bounds = Rect::from_origin_size(Point::ZERO, floom_types::Size::new(50.0, 50.0));
     for (id, z) in [(1, 5), (2, 9)] {
         router.hits.set_region(
             eid(id),
@@ -135,7 +135,7 @@ fn pointer_capture_overrides_hit() {
     router.hits.set_region(
         eid(1),
         HitRegion {
-            bounds: Rect::from_origin_size(Point::ZERO, floem_types::Size::new(10.0, 10.0)),
+            bounds: Rect::from_origin_size(Point::ZERO, floom_types::Size::new(10.0, 10.0)),
             native: None,
             z: 0,
         },
@@ -145,7 +145,7 @@ fn pointer_capture_overrides_hit() {
         HitRegion {
             bounds: Rect::from_origin_size(
                 Point::new(100.0, 100.0),
-                floem_types::Size::new(10.0, 10.0),
+                floom_types::Size::new(10.0, 10.0),
             ),
             native: None,
             z: 99,
@@ -195,7 +195,7 @@ fn unmounting_a_captured_node_releases_the_capture() {
         HitRegion {
             bounds: Rect::from_origin_size(
                 Point::new(0.0, 0.0),
-                floem_types::Size::new(10.0, 10.0),
+                floom_types::Size::new(10.0, 10.0),
             ),
             native: None,
             z: 0,

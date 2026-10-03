@@ -116,7 +116,7 @@ use serde::{Deserialize, Serialize};
 use winit_core::monitor::{MonitorHandle, VideoMode};
 use winit_core::window::{PlatformWindowAttributes, Window};
 
-// floem #109: expose the shared-file/URL callback registration so floem's
+// floom #109: expose the shared-file/URL callback registration so floom's
 // `winit::set_on_open_url` resolves against the patched `floem-winit` crate.
 pub use self::app_delegate::set_on_open_url;
 pub use self::event_loop::{EventLoop, PlatformSpecificEventLoopAttributes};

@@ -1,5 +1,5 @@
-use floem_legacy_reactive::Scope;
-use floem_task::{CancelToken, ResourceState, SyncExecutor, resource, spawn, ui_spawn};
+use floom_legacy_reactive::Scope;
+use floom_task::{CancelToken, ResourceState, SyncExecutor, resource, spawn, ui_spawn};
 use std::cell::Cell;
 use std::rc::Rc;
 use std::sync::Arc;
@@ -34,7 +34,7 @@ fn cancelled_loader_does_not_commit() {
         queue: Rc<Cell<Vec<Box<dyn FnOnce()>>>>,
     }
 
-    impl floem_task::TaskExecutor for DeferredExecutor {
+    impl floom_task::TaskExecutor for DeferredExecutor {
         fn spawn_ui(&self, task: Box<dyn FnOnce()>) {
             let mut q = self.queue.take();
             q.push(task);

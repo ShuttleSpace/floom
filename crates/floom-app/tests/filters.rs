@@ -2,7 +2,7 @@
 //! retained scene carries, in the order the draw made it.
 //!
 //! The software renderer proves the *pixels*
-//! (`floem-renderer-software/tests/filters.rs`); this file proves the plumbing
+//! (`floom-renderer-software/tests/filters.rs`); this file proves the plumbing
 //! a control can actually reach. Two different doors, and the distinction is
 //! the whole slice:
 //!
@@ -18,11 +18,11 @@
 //! ship, because slot order is draw order and a filter declared mid-life is
 //! minted after the picture already exists.
 
-use floem_app::WidgetHost;
-use floem_layout::LayoutStyle;
-use floem_scene::SceneNode;
-use floem_types::{Color, Filter, Size};
-use floem_widgets::Container;
+use floom_app::WidgetHost;
+use floom_layout::LayoutStyle;
+use floom_scene::SceneNode;
+use floom_types::{Color, Filter, Size};
+use floom_widgets::Container;
 
 const INK: Color = Color::rgb(20, 30, 40);
 
@@ -37,7 +37,7 @@ fn box_style(width: f32, height: f32) -> LayoutStyle {
 /// Mounts a 120×80 card (optionally with a filter) holding one child card, and
 /// settles the frame loop. Returns the host with the card's own id, so a test
 /// can mutate it and watch the scene change.
-fn host_with_card(card: Container) -> (WidgetHost, floem_app::NodeId) {
+fn host_with_card(card: Container) -> (WidgetHost, floom_app::NodeId) {
     let mut host = WidgetHost::new();
     host.set_size(Size::new(120.0, 80.0));
     let root = host.mount_root(box_style(120.0, 80.0), card);

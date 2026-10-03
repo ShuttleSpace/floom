@@ -1,26 +1,26 @@
-//! Unit types and helpers for Floem styles.
+//! Unit types and helpers for Floom styles.
 //!
-//! Floem's length model is intentionally small:
+//! Floom's length model is intentionally small:
 //! - [`Pt`] is the primary absolute length unit exposed by the style API.
 //! - [`Pct`] resolves against a property-specific basis such as parent size.
 //! - [`Em`] resolves against the current element's computed font size.
 //! - [`Lh`] resolves against the current element's computed line height.
 //!
-//! Floem treats absolute lengths as logical layout points rather than device pixels.
+//! Floom treats absolute lengths as logical layout points rather than device pixels.
 //! The renderer later maps those logical values through the window scale factor, so
 //! callers should generally think in view-space measurements, not physical screen
 //! pixels.
 //!
-//! Relative text units are scoped to the current element. Floem does not currently
+//! Relative text units are scoped to the current element. Floom does not currently
 //! define a separate root-level font-size or line-height unit in this module.
 //!
 #![allow(deprecated)]
 use std::{ops::Neg, time::Duration};
 
-pub use floem_legacy_renderer::text::LineHeightValue;
+pub use floom_legacy_renderer::text::LineHeightValue;
 use taffy::style::{Dimension, LengthPercentage, LengthPercentageAuto};
 
-/// An absolute length value in Floem layout points.
+/// An absolute length value in Floom layout points.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Pt(pub f64);
 
@@ -696,9 +696,9 @@ pub trait UnitExt {
     /// The final basis depends on the property being styled.
     fn pct(self) -> Pct;
 
-    /// Create an absolute Floem point unit.
+    /// Create an absolute Floom point unit.
     ///
-    /// Floem resolves points in logical view space. The renderer applies the
+    /// Floom resolves points in logical view space. The renderer applies the
     /// window scale factor later when drawing to the target surface.
     fn pt(self) -> Pt;
 

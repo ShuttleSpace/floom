@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
-# Architecture dependency boundary checks for Floem 2.0.
+# Architecture dependency boundary checks for Floom 2.0.
 #
 # Forbidden edges (once both crates exist in the workspace graph):
-#   floem-scene            → concrete platform / windowing crates
-#   floem-types            → platform / GPU crates
-#   floem-*-widgets / floem-widgets → concrete renderer backends
-#   floem-legacy-renderer-* / floem-renderer-* → widget crates
+#   floom-scene            → concrete platform / windowing crates
+#   floom-types            → platform / GPU crates
+#   floom-*-widgets / floom-widgets → concrete renderer backends
+#   floom-legacy-renderer-* / floom-renderer-* → widget crates
 #
-# Pre-migration: the monolithic `floem` crate still mixes these concerns.
+# Pre-migration: the monolithic `floom` crate still mixes these concerns.
 # Those paths are allowlisted below until the corresponding Phase tasks land.
 # New crates must not add forbidden edges; allowlist entries must shrink over time.
 
@@ -23,11 +23,11 @@ fi
 
 META_JSON="$(cargo metadata --format-version 1 --no-deps 2>/dev/null)"
 # Prefer full metadata (with deps) for edge checks; fall back if fetch fails.
-if cargo metadata --format-version 1 >/tmp/floem-arch-meta.json 2>/dev/null; then
-  META_FILE=/tmp/floem-arch-meta.json
+if cargo metadata --format-version 1 >/tmp/floom-arch-meta.json 2>/dev/null; then
+  META_FILE=/tmp/floom-arch-meta.json
 else
-  echo "$META_JSON" >/tmp/floem-arch-meta-nodeps.json
-  META_FILE=/tmp/floem-arch-meta-nodeps.json
+  echo "$META_JSON" >/tmp/floom-arch-meta-nodeps.json
+  META_FILE=/tmp/floom-arch-meta-nodeps.json
   echo "warning: using --no-deps metadata; dependency edges limited" >&2
 fi
 
@@ -42,7 +42,7 @@ nodes = {n["id"]: n for n in resolve["nodes"]} if resolve else {}
 
 def norm(name: str) -> str:
     """Cargo's resolve graph spells dependencies the way the *lib target* is
-    spelled — `floem_core`, not `floem-core` — while manifests and this script
+    spelled — `floom_core`, not `floom-core` — while manifests and this script
     use hyphens. Comparing the two without normalising makes every set
     intersection below empty, i.e. the check reports PASS while checking
     nothing. Everything is compared normalised.
@@ -97,7 +97,7 @@ def shipped_deps(name: str) -> set[str]:
 
     Layering is a property of what a crate *ships*: a test-only dependency does
     not make the crate's architecture depend on the thing it tests with. The app
-    dev-depending on `floem-testkit` while `floem-testkit` depends on the app is
+    dev-depending on `floom-testkit` while `floom-testkit` depends on the app is
     the normal shape of an integration harness, not an upward edge.
     """
     node = resolve_node(name)
@@ -122,25 +122,25 @@ GPU_HINTS = {
     "wgpu", "vello", "vger", "floem-vger", "skia-safe", "metal", "ash",
 }
 RENDERER_PACKAGES = {
-    # Legacy v1 renderers, relocated under `legacy/` with a `floem-legacy-`
-    # package prefix (e.g. the old `floem_renderer` is now `floem-legacy-renderer`).
-    "floem-legacy-renderer", "floem-legacy-renderer-vello",
-    "floem-legacy-renderer-skia", "floem-legacy-renderer-vger",
-    "floem-legacy-renderer-tiny-skia",
-    # 2.0 renderer ABI + backends, under `render/`. `floem-renderer` is the
+    # Legacy v1 renderers, relocated under `legacy/` with a `floom-legacy-`
+    # package prefix (e.g. the old `floom_renderer` is now `floom-legacy-renderer`).
+    "floom-legacy-renderer", "floom-legacy-renderer-vello",
+    "floom-legacy-renderer-skia", "floom-legacy-renderer-vger",
+    "floom-legacy-renderer-tiny-skia",
+    # 2.0 renderer ABI + backends, under `render/`. `floom-renderer` is the
     # abstract ABI (the one widgets are allowed to name); the rest are concrete.
-    "floem-renderer", "floem-renderer-vello", "floem-renderer-software",
-    "floem-renderer-skia", "floem-renderer-tui",
+    "floom-renderer", "floom-renderer-vello", "floom-renderer-software",
+    "floom-renderer-skia", "floom-renderer-tui",
 }
-WIDGET_HINTS = {"floem-widgets", "floem-widgets-data", "floem-widgets-media"}
+WIDGET_HINTS = {"floom-widgets", "floom-widgets-data", "floom-widgets-media"}
 # Legacy underscore spelling still referenced by pre-2.0 crates.
-WIDGET_ALIASES = {"floem_widgets"}
+WIDGET_ALIASES = {"floom_widgets"}
 
 # Crates that do not exist yet — checked when present
 FUTURE = [
-    ("floem-types", PLATFORM_HINTS | GPU_HINTS, "types must stay platform/GPU free"),
-    ("floem-scene", PLATFORM_HINTS | {"winit", "floem-winit"}, "scene must not depend on OS windowing"),
-    ("floem-platform", PLATFORM_HINTS | GPU_HINTS, "platform ABI must stay free of concrete OS/GPU crates"),
+    ("floom-types", PLATFORM_HINTS | GPU_HINTS, "types must stay platform/GPU free"),
+    ("floom-scene", PLATFORM_HINTS | {"winit", "floem-winit"}, "scene must not depend on OS windowing"),
+    ("floom-platform", PLATFORM_HINTS | GPU_HINTS, "platform ABI must stay free of concrete OS/GPU crates"),
 ]
 
 failures = []
@@ -174,10 +174,10 @@ for r in RENDERER_PACKAGES:
     deps = pkg_deps(r)
     bad = deps & (WIDGET_HINTS | WIDGET_ALIASES)
     # Also forbid depending on the monolith once widgets live elsewhere;
-    # today renderers correctly do not depend on `floem`.
-    if "floem" in deps and r != "floem":
+    # today renderers correctly do not depend on `floom`.
+    if "floom" in deps and r != "floom":
         # soft note: unexpected
-        failures.append(f"FORBIDDEN {r} → floem (renderer must not depend on widgets/app)")
+        failures.append(f"FORBIDDEN {r} → floom (renderer must not depend on widgets/app)")
     if bad:
         failures.append(f"FORBIDDEN {r} → {sorted(bad)}")
 
@@ -188,7 +188,7 @@ for w in sorted(WIDGET_HINTS):
         continue
     deps = pkg_deps(w)
     # Abstract trait crate OK later; concrete backends are not.
-    bad_renderer = deps & (RENDERER_PACKAGES - {"floem_renderer"})
+    bad_renderer = deps & (RENDERER_PACKAGES - {"floom_renderer"})
     bad_platform = deps & PLATFORM_HINTS
     if bad_renderer:
         failures.append(f"FORBIDDEN {w} → concrete renderer {sorted(bad_renderer)}")
@@ -204,7 +204,7 @@ for w in sorted(WIDGET_HINTS):
 # allows the *directory* layout to be adapted; the dependency directions are the
 # normative part, and this is where they become mechanically checkable.
 #
-# `floem-accessibility` sits at L3 rather than with the rest of `framework/`
+# `floom-accessibility` sits at L3 rather than with the rest of `framework/`
 # because the platform backends depend on it to publish semantics: it is a
 # neutral schema crate that happens to live under framework/.
 LAYERS: dict[str, int] = {}
@@ -215,64 +215,64 @@ for _names, _level in [
     # silently skipped dependency.
     (
         [
-            "floem-legacy-renderer", "floem-legacy-renderer-vello",
-            "floem-legacy-renderer-skia", "floem-legacy-renderer-vger",
-            "floem-legacy-renderer-tiny-skia", "floem-legacy-reactive",
-            "floem-legacy-test",
+            "floom-legacy-renderer", "floom-legacy-renderer-vello",
+            "floom-legacy-renderer-skia", "floom-legacy-renderer-vger",
+            "floom-legacy-renderer-tiny-skia", "floom-legacy-reactive",
+            "floom-legacy-test",
         ],
         0,
     ),
-    (["floem-types"], 0),
-    (["floem-core"], 1),
-    (["floem-runtime-core", "floem-runtime", "floem-scheduler"], 2),
+    (["floom-types"], 0),
+    (["floom-core"], 1),
+    (["floom-runtime-core", "floom-runtime", "floom-scheduler"], 2),
     (
         [
-            "floem-layout", "floem-style", "floem-text", "floem-scene",
-            "floem-virtual", "floem-accessibility",
+            "floom-layout", "floom-style", "floom-text", "floom-scene",
+            "floom-virtual", "floom-accessibility",
         ],
         3,
     ),
     (
         [
-            "floem-renderer", "floem-renderer-software", "floem-renderer-vello",
-            "floem-renderer-skia", "floem-renderer-tui", "floem-renderer-web",
-            "floem-platform", "floem-platform-desktop", "floem-platform-android",
-            "floem-platform-ios", "floem-platform-harmony", "floem-platform-web",
-            "floem-platform-embedded", "floem-platform-tui", "floem-platform-mobile",
-            "floem-native",
-            # winit event-loop adapter; no internal floem deps, consumed by the
+            "floom-renderer", "floom-renderer-software", "floom-renderer-vello",
+            "floom-renderer-skia", "floom-renderer-tui", "floom-renderer-web",
+            "floom-platform", "floom-platform-desktop", "floom-platform-android",
+            "floom-platform-ios", "floom-platform-harmony", "floom-platform-web",
+            "floom-platform-embedded", "floom-platform-tui", "floom-platform-mobile",
+            "floom-native",
+            # winit event-loop adapter; no internal floom deps, consumed by the
             # desktop platform layer above.
-            "floem-ui-events-winit",
+            "floom-ui-events-winit",
         ],
         4,
     ),
     (
         [
-            "floem-animation", "floem-focus", "floem-gesture", "floem-overlay",
-            "floem-theme", "floem-store", "floem-task", "floem-forms",
-            "floem-navigation", "floem-persistence", "floem-services",
-            "floem-error", "floem-ime", "floem-editor",
-            # Design systems sit beside `floem-theme` (which they extend) and
+            "floom-animation", "floom-focus", "floom-gesture", "floom-overlay",
+            "floom-theme", "floom-store", "floom-task", "floom-forms",
+            "floom-navigation", "floom-persistence", "floom-services",
+            "floom-error", "floom-ime", "floom-editor",
+            # Design systems sit beside `floom-theme` (which they extend) and
             # below the widgets they style. They are renderer-neutral: their
-            # output is `floem_style` property values, not paint calls.
-            "floem-design", "floem-material", "floem-cupertino", "floem-fluent",
-            "floem-harmony",
+            # output is `floom_style` property values, not paint calls.
+            "floom-design", "floom-material", "floom-cupertino", "floom-fluent",
+            "floom-harmony",
         ],
         5,
     ),
-    (["floem-widgets", "floem-widgets-data"], 6),
-    (["floem-app"], 7),
+    (["floom-widgets", "floom-widgets-data"], 6),
+    (["floom-app"], 7),
     # Tooling/compiler tier: these may depend on anything below them and are not
-    # shipped as part of an application binary. `floem-testkit` is the runtime
-    # test harness; `floem-snapshot` is the golden-image engine (Phase 24.2);
-    # `floem-codegen` is the native-glue compiler (Phase 18); `floem-ui-ir` is
+    # shipped as part of an application binary. `floom-testkit` is the runtime
+    # test harness; `floom-snapshot` is the golden-image engine (Phase 24.2);
+    # `floom-codegen` is the native-glue compiler (Phase 18); `floom-ui-ir` is
     # the versioned UI intermediate representation (Phase 22.1).
-    (["floem-testkit", "floem-snapshot", "floem-codegen", "floem-ui-ir", "floem-dsl", "floem-hot-reload", "floem-inspector", "floem-devtools", "floem-profiler", "floem-agent", "floem-accuracy"], 8),
-    # L9: the public facade (`floem2::prelude`), Phase 29.1. It aggregates the
+    (["floom-testkit", "floom-snapshot", "floom-codegen", "floom-ui-ir", "floom-dsl", "floom-hot-reload", "floom-inspector", "floom-devtools", "floom-profiler", "floom-agent", "floom-accuracy"], 8),
+    # L9: the public facade (`floom2::prelude`), Phase 29.1. It aggregates the
     # whole stack — including the L8 devtools bundle behind a feature — so it
     # sits above everything it re-exports. Unlike the L8 tooling tier it IS
     # shipped as part of an application binary.
-    (["floem2"], 9),
+    (["floom2"], 9),
 ]:
     for _n in _names:
         LAYERS[_n] = _level
@@ -311,13 +311,18 @@ for crate, level in sorted(LAYERS.items()):
 # genuine upward edge can still be reported "OK" by simply not being listed.
 # (This is the same class of defect as the `norm()` miss that once let three
 # rules skip: a check that cannot fire.) Scope the guard to the 2.0 library
-# directories; `examples/` and the legacy monolith (`src/`) are deliberately not
-# layered, and `vendor/` + `ecosystem/` are excluded from the workspace.
-LIB_DIRS = (
-    "foundation/", "runtime/", "layout/", "scene/", "text/", "render/",
-    "platform/", "framework/", "widgets/", "app/", "native/", "compiler/",
-    "tooling/", "ui-events/", "design-systems/",
+# crates, which now all sit directly under `crates/` since the domain
+# directories were dissolved. Out of scope: `examples/`, the separate
+# workspaces under `crates/vendor/` + `crates/ecosystem/`, the legacy v1 crates
+# (`crates/floom-legacy-*`, not layered), and the monolithic `crates/floom`
+# (handled by LEGACY_ALLOW below).
+LIB_DIR = "crates/"
+LIB_DIR_SKIP_PREFIXES = (
+    "crates/vendor/",
+    "crates/ecosystem/",
+    "crates/floom-legacy-",
 )
+LIB_DIR_SKIP_EXACT = {"crates/floom/"}
 workspace_root = Path(meta["workspace_root"])
 unregistered = []
 for _pid in workspace_members:
@@ -330,7 +335,12 @@ for _pid in workspace_members:
     except ValueError:
         continue
     _rel = _rel.as_posix() + "/"
-    if any(_rel.startswith(d) for d in LIB_DIRS) and _name not in LAYERS:
+    if (
+        _rel.startswith(LIB_DIR)
+        and not _rel.startswith(LIB_DIR_SKIP_PREFIXES)
+        and _rel not in LIB_DIR_SKIP_EXACT
+        and _name not in LAYERS
+    ):
         unregistered.append(f"{_name} ({_rel})")
 if unregistered:
     failures.append(
@@ -340,7 +350,7 @@ if unregistered:
 
 # Legacy v1 crates a 2.0 crate still depends on: the v1 reactive graph.
 # Reported, not failed — see the topology decision doc.
-LEGACY_DEPS = {norm(x) for x in ("floem_legacy_reactive",)}
+LEGACY_DEPS = {norm(x) for x in ("floom_legacy_reactive",)}
 reach = sorted(
     {d for c in LAYERS if c in packages for d in shipped_deps(c)} & LEGACY_DEPS
 )
@@ -351,19 +361,19 @@ if reach:
         f"{', '.join(reach)} (the v1 reactive crate, not a 2.0 layer)"
     )
 
-# --- Legacy allowlist: monolithic floem mixes concerns ---
+# --- Legacy allowlist: monolithic floom mixes concerns ---
 LEGACY_ALLOW = {
-    "floem",  # app+widgets+platform+paint until migration
+    "floom",  # app+widgets+platform+paint until migration
 }
-if "floem" in packages:
-    deps = pkg_deps("floem")
+if "floom" in packages:
+    deps = pkg_deps("floom")
     mixed = sorted((deps & PLATFORM_HINTS) | (deps & GPU_HINTS) | (deps & RENDERER_PACKAGES))
     notes.append(
-        "ALLOWLIST floem (legacy monolith): mixes platform/GPU/renderer — "
+        "ALLOWLIST floom (legacy monolith): mixes platform/GPU/renderer — "
         f"sample deps present: {mixed[:12]}{'...' if len(mixed) > 12 else ''}"
     )
 
-print("=== Floem architecture dependency check ===")
+print("=== Floom architecture dependency check ===")
 for n in notes:
     print(f"  · {n}")
 if failures:

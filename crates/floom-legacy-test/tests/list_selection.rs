@@ -5,12 +5,12 @@
 //! - `parent_set_selected` properly propagates to style computation
 //! - The `.selected()` style selector works with list items
 
-use floem::headless::TestRoot;
-use floem::peniko::Brush;
-use floem::prelude::*;
-use floem::style::Background;
-use floem::views::list;
-use floem_legacy_test::prelude::*;
+use floom::headless::TestRoot;
+use floom::peniko::Brush;
+use floom::prelude::*;
+use floom::style::Background;
+use floom::views::list;
+use floom_legacy_test::prelude::*;
 use serial_test::serial;
 
 /// Test that list items have correct selected styling.

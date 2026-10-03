@@ -1,4 +1,4 @@
-use floem::{animate::Animation, prelude::*, reactive::Trigger};
+use floom::{animate::Animation, prelude::*, reactive::Trigger};
 
 pub fn animation_view() -> impl IntoView {
     let animation = RwSignal::new(

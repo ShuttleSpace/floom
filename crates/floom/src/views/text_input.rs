@@ -14,9 +14,9 @@ use crate::{
     style_class,
     view::LayoutNodeCx,
 };
-use floem_legacy_reactive::{Effect, SignalGet, SignalTrack, SignalUpdate, SignalWith};
+use floom_legacy_reactive::{Effect, SignalGet, SignalTrack, SignalUpdate, SignalWith};
 
-use floem_legacy_renderer::Renderer;
+use floom_legacy_renderer::Renderer;
 use taffy::Dimension;
 use ui_events::keyboard::{Key, KeyState, KeyboardEvent, Modifiers, NamedKey};
 use ui_events::pointer::{PointerButton, PointerButtonEvent, PointerEvent};
@@ -109,9 +109,9 @@ impl BufferState {
 ///
 /// Useful for submitting forms using a keyboard.
 /// ```
-/// # use floem::views::{Decorators, TextInput, TextInputEnter};
-/// # use floem_legacy_reactive::RwSignal;
-/// # use floem_legacy_reactive::SignalGet;
+/// # use floom::views::{Decorators, TextInput, TextInputEnter};
+/// # use floom_legacy_reactive::RwSignal;
+/// # use floom_legacy_reactive::SignalGet;
 /// let form = RwSignal::new(String::new());
 /// TextInput::new(form)
 ///     .placeholder("fill the form")
@@ -181,11 +181,11 @@ pub enum TextDirection {
 /// Creates a [TextInput] view. This can be used for basic text input.
 /// ### Examples
 /// ```rust
-/// # use floem::prelude::*;
-/// # use floem::prelude::palette::css;
-/// # use floem::text::FontWeight;
-/// # use floem::style::SelectionCornerRadius;
-/// # use floem::views::TextInput;
+/// # use floom::prelude::*;
+/// # use floom::prelude::palette::css;
+/// # use floom::text::FontWeight;
+/// # use floom::style::SelectionCornerRadius;
+/// # use floom::views::TextInput;
 /// // Create empty `String` as a text buffer in the read-write signal
 /// let text = RwSignal::new(String::new());
 /// // Create simple text imput from it
@@ -221,7 +221,7 @@ pub enum TextDirection {
 ///         // Apply class and override some of its styles.
 ///         .class(PlaceholderTextClass, |s| s
 ///             .color(css::SKY_BLUE)
-///             .font_style(floem::text::FontStyle::Italic)
+///             .font_style(floom::text::FontStyle::Italic)
 ///             .font_weight(FontWeight::BOLD)
 ///         )
 ///         .font_family("monospace".to_owned())
@@ -231,7 +231,7 @@ pub enum TextDirection {
 /// ### Reactivity
 /// The view is reactive and will track updates on buffer signal.
 /// ### Info
-/// For more advanced editing see the `floem-editor` satellite crate.
+/// For more advanced editing see the `floom-editor` satellite crate.
 #[deprecated(note = "use `TextInput::new(buffer)` instead")]
 pub fn text_input(buffer: RwSignal<String>) -> TextInput {
     TextInput::new(buffer)
@@ -333,8 +333,8 @@ impl TextInput {
 
     /// Add placeholder text visible when buffer is empty.
     /// ```
-    /// # use floem::views::TextInput;
-    /// # use floem_legacy_reactive::RwSignal;
+    /// # use floom::views::TextInput;
+    /// # use floom_legacy_reactive::RwSignal;
     /// let text = RwSignal::new(String::new());
     /// let simple = TextInput::new(text)
     ///     // Optional placeholder text
@@ -1171,12 +1171,12 @@ impl TextInput {
 fn replace_range(buff: &mut String, del_range: Range<usize>, replacement: Option<&str>) {
     assert!(del_range.start <= del_range.end);
     if !buff.is_char_boundary(del_range.end) {
-        eprintln!("[Floem] Tried to delete range with invalid end: {del_range:?}");
+        eprintln!("[Floom] Tried to delete range with invalid end: {del_range:?}");
         return;
     }
 
     if !buff.is_char_boundary(del_range.start) {
-        eprintln!("[Floem] Tried to delete range with invalid start: {del_range:?}");
+        eprintln!("[Floom] Tried to delete range with invalid start: {del_range:?}");
         return;
     }
 

@@ -5,19 +5,19 @@
 //! agent only ever sees protocol responses. Every assertion is made from what
 //! crossed the wire: a screenshot hash, a semantics entry, a counter.
 
-use floem_agent::{
+use floom_agent::{
     AgentError, AgentSession, Command, Command::*, LocalClient, LocalServer, Payload, Selector,
 };
-use floem_core::Axis;
-use floem_testkit::TestApp;
-use floem_widgets::{Checkbox, Stack, TextField};
+use floom_core::Axis;
+use floom_testkit::TestApp;
+use floom_widgets::{Checkbox, Stack, TextField};
 
 fn fixture() -> TestApp {
     let stack = Stack::new(Axis::Vertical)
         .gap(12.0)
         .push(|| Box::new(Checkbox::new("Agree")))
         .push(|| Box::new(TextField::new().placeholder("Name")));
-    TestApp::new(floem_types::Size::new(320.0, 160.0), stack)
+    TestApp::new(floom_types::Size::new(320.0, 160.0), stack)
 }
 
 /// One request in, one response out, through the channel transport.
@@ -54,7 +54,7 @@ fn checked(
 #[test]
 fn tap_flips_the_checkbox_and_the_screen_changes() {
     let mut app = fixture();
-    let (client, mut server) = floem_agent::local_channel();
+    let (client, mut server) = floom_agent::local_channel();
     let mut session = AgentSession::new(&mut app);
 
     let before = {
@@ -91,7 +91,7 @@ fn tap_flips_the_checkbox_and_the_screen_changes() {
 #[test]
 fn type_text_reaches_the_field_over_the_wire() {
     let mut app = fixture();
-    let (client, mut server) = floem_agent::local_channel();
+    let (client, mut server) = floom_agent::local_channel();
     let mut session = AgentSession::new(&mut app);
 
     let repainted = match call(
@@ -123,7 +123,7 @@ fn type_text_reaches_the_field_over_the_wire() {
 #[test]
 fn a_missing_selector_is_refused_with_the_screen_contents() {
     let mut app = fixture();
-    let (client, mut server) = floem_agent::local_channel();
+    let (client, mut server) = floom_agent::local_channel();
     let mut session = AgentSession::new(&mut app);
 
     let miss = call(
@@ -152,7 +152,7 @@ fn a_missing_selector_is_refused_with_the_screen_contents() {
 #[test]
 fn the_tree_reports_live_nodes_with_geometry() {
     let mut app = fixture();
-    let (client, mut server) = floem_agent::local_channel();
+    let (client, mut server) = floom_agent::local_channel();
     let mut session = AgentSession::new(&mut app);
 
     match call(&client, &mut server, &mut session, Tree) {
@@ -172,7 +172,7 @@ fn the_tree_reports_live_nodes_with_geometry() {
 #[test]
 fn performance_counters_add_up_over_the_session() {
     let mut app = fixture();
-    let (client, mut server) = floem_agent::local_channel();
+    let (client, mut server) = floom_agent::local_channel();
     let mut session = AgentSession::new(&mut app);
 
     for _ in 0..2 {
@@ -211,7 +211,7 @@ fn performance_counters_add_up_over_the_session() {
 #[test]
 fn a_wrong_or_missing_token_is_refused_and_the_right_one_passes() {
     let mut app = fixture();
-    let (client, mut server) = floem_agent::local_channel();
+    let (client, mut server) = floom_agent::local_channel();
     let mut session = AgentSession::new(&mut app).with_token("s3cret");
 
     let refused = call(&client, &mut server, &mut session, Tree);

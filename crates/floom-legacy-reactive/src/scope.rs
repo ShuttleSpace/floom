@@ -71,7 +71,7 @@ impl Scope {
     ///
     /// # Example
     /// ```rust
-    /// # use floem_legacy_reactive::Scope;
+    /// # use floom_legacy_reactive::Scope;
     /// let parent = Scope::new();
     /// let child = Scope::new(); // Initially has no parent
     ///
@@ -219,7 +219,7 @@ impl Scope {
     ///
     /// # Example
     /// ```rust
-    /// # use floem_legacy_reactive::Scope;
+    /// # use floom_legacy_reactive::Scope;
     /// let scope = Scope::new();
     /// scope.provide_context(42i32);
     /// scope.enter(|| {
@@ -243,7 +243,7 @@ impl Scope {
     ///
     /// # Example
     /// ```rust
-    /// # use floem_legacy_reactive::Scope;
+    /// # use floom_legacy_reactive::Scope;
     /// let parent = Scope::new();
     /// parent.provide_context(42i32);
     ///
@@ -391,7 +391,7 @@ where
 ///
 /// # Example
 /// ```rust
-/// # use floem_legacy_reactive::{root_scope, create_global_rw_signal, SignalGet};
+/// # use floom_legacy_reactive::{root_scope, create_global_rw_signal, SignalGet};
 /// let counter = create_global_rw_signal(0);
 /// root_scope().enter(|| {
 ///     assert_eq!(counter.get(), 0);
@@ -410,7 +410,7 @@ pub fn root_scope() -> Scope {
 ///
 /// # Example
 /// ```rust
-/// # use floem_legacy_reactive::create_global_rw_signal;
+/// # use floom_legacy_reactive::create_global_rw_signal;
 /// let theme = create_global_rw_signal(String::from("dark"));
 /// ```
 #[cfg_attr(debug_assertions, track_caller)]

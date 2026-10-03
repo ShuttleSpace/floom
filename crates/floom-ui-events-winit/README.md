@@ -1,6 +1,6 @@
 <div align="center">
 
-# UI Events for Winit - Forked for usage in Floem
+# UI Events for Winit - Forked for usage in Floom
 
 A library for working with canvas-like scenes.
 

@@ -1,10 +1,10 @@
 [package]
-name = "floem-platform-desktop"
+name = "floom-platform-desktop"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
-description = "Desktop platform adapter for Floem 2.0 (Winit lifecycle mapping)"
+description = "Desktop platform adapter for Floom 2.0 (Winit lifecycle mapping)"
 rust-version.workspace = true
 
 [features]
@@ -16,13 +16,13 @@ default = []
 winit = ["dep:winit"]
 
 [dependencies]
-floem-accessibility = { path = "../floom-accessibility", version = "0.2.0" }
+floom-accessibility = { path = "../floom-accessibility", version = "0.2.0" }
 # Same layer (L4), so the architecture gate permits this edge: the desktop
-# backend implements the native-view provider ABI, and `floem-native` stays a
+# backend implements the native-view provider ABI, and `floom-native` stays a
 # leaf that knows nothing about an OS.
-floem-native = { path = "../floom-native", version = "0.2.0" }
-floem-platform = { path = "../floom-platform", version = "0.2.0" }
-floem-types = { path = "../floom-types", version = "0.2.0" }
+floom-native = { path = "../floom-native", version = "0.2.0" }
+floom-platform = { path = "../floom-platform", version = "0.2.0" }
+floom-types = { path = "../floom-types", version = "0.2.0" }
 winit = { workspace = true, optional = true }
 
 # The native-view host (Phase 16, task 16.2, step 7). AppKit is reached through

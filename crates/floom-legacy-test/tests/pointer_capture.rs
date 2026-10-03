@@ -7,11 +7,11 @@
 //! - Automatic release on pointer up
 //! - Two-phase capture (pending → active) model
 
-use floem::event::{
+use floom::event::{
     PointerId,
     listener::{PointerDown, PointerMove, PointerUp},
 };
-use floem_legacy_test::prelude::*;
+use floom_legacy_test::prelude::*;
 use serial_test::serial;
 
 // =============================================================================
@@ -33,7 +33,7 @@ fn test_set_pointer_capture_fires_got_capture_event() {
         if let Some(pointer_id) = e.pointer.pointer_id {
             cx.request_pointer_capture(pointer_id);
         }
-        floem::event::EventPropagation::Continue
+        floom::event::EventPropagation::Continue
     });
 
     let mut harness = HeadlessHarness::new_with_size(root, view, 100.0, 100.0);
@@ -77,7 +77,7 @@ fn test_pointer_capture_routes_events_to_captured_view() {
         if let Some(pointer_id) = e.pointer.pointer_id {
             cx.request_pointer_capture(pointer_id);
         }
-        floem::event::EventPropagation::Continue
+        floom::event::EventPropagation::Continue
     });
 
     let view = Stack::new((left_with_capture, right)).style(|s| s.size(100.0, 100.0));
@@ -114,7 +114,7 @@ fn test_pointer_capture_auto_released_on_pointer_up() {
         if let Some(pointer_id) = e.pointer.pointer_id {
             cx.request_pointer_capture(pointer_id);
         }
-        floem::event::EventPropagation::Continue
+        floom::event::EventPropagation::Continue
     });
 
     let mut harness = HeadlessHarness::new_with_size(root, view, 100.0, 100.0);
@@ -164,7 +164,7 @@ fn test_release_pointer_capture_fires_lost_capture_event() {
             if let Some(pointer_id) = e.pointer.pointer_id {
                 cx.request_pointer_capture(pointer_id);
             }
-            floem::event::EventPropagation::Continue
+            floom::event::EventPropagation::Continue
         })
         .on_event(PointerMove, move |_cx, e| {
             if let Some(pointer_id) = e.pointer.pointer_id {
@@ -176,7 +176,7 @@ fn test_release_pointer_capture_fires_lost_capture_event() {
                     captured.set(true);
                 }
             }
-            floem::event::EventPropagation::Continue
+            floom::event::EventPropagation::Continue
         });
 
     let mut harness = HeadlessHarness::new_with_size(root, view, 100.0, 100.0);
@@ -227,7 +227,7 @@ fn test_capture_transfer_fires_lost_then_got() {
         if let Some(pointer_id) = e.pointer.pointer_id {
             cx.request_pointer_capture(pointer_id);
         }
-        floem::event::EventPropagation::Continue
+        floom::event::EventPropagation::Continue
     });
 
     // view2 steals capture on up
@@ -235,7 +235,7 @@ fn test_capture_transfer_fires_lost_then_got() {
         if let Some(pointer_id) = e.pointer.pointer_id {
             cx.request_pointer_capture(pointer_id);
         }
-        floem::event::EventPropagation::Continue
+        floom::event::EventPropagation::Continue
     });
 
     let view = Stack::new((view1_with_capture, view2_with_capture)).style(|s| s.size(100.0, 100.0));
@@ -294,7 +294,7 @@ fn test_capture_prevents_sibling_from_receiving_events() {
         if let Some(pointer_id) = e.pointer.pointer_id {
             cx.request_pointer_capture(pointer_id);
         }
-        floem::event::EventPropagation::Continue
+        floom::event::EventPropagation::Continue
     });
 
     let view = Stack::new((left_with_capture, right)).style(|s| s.size(100.0, 100.0));
@@ -372,7 +372,7 @@ fn test_multiple_pointer_down_up_cycles() {
         if let Some(pointer_id) = e.pointer.pointer_id {
             cx.request_pointer_capture(pointer_id);
         }
-        floem::event::EventPropagation::Continue
+        floom::event::EventPropagation::Continue
     });
 
     let mut harness = HeadlessHarness::new_with_size(root, view, 100.0, 100.0);
@@ -519,7 +519,7 @@ fn test_explicit_capture_overrides_implicit_touch_capture() {
             // Explicit capture to left view
             cx.request_pointer_capture(pointer_id);
         }
-        floem::event::EventPropagation::Continue
+        floom::event::EventPropagation::Continue
     });
 
     let view = Stack::new((left_with_capture, right)).style(|s| s.size(100.0, 100.0));
@@ -567,14 +567,14 @@ fn test_handler_sees_capture_during_pointer_up() {
             if let Some(pointer_id) = e.pointer.pointer_id {
                 cx.request_pointer_capture(pointer_id);
             }
-            floem::event::EventPropagation::Continue
+            floom::event::EventPropagation::Continue
         })
         .on_event(PointerUp, move |_cx, _e| {
             // During PointerUp, capture should still be active
             // We can verify this by checking if we received the event at all
             // (captured views receive events even when pointer is elsewhere)
             saw_capture_during_up_clone.set(true);
-            floem::event::EventPropagation::Continue
+            floom::event::EventPropagation::Continue
         });
 
     let mut harness = HeadlessHarness::new_with_size(root, view, 100.0, 100.0);

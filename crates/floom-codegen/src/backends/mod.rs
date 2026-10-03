@@ -8,7 +8,7 @@
 //! The generated files describe the *native side* of a native component: the
 //! opaque handle, its property accessors, the commands the framework issues
 //! into native code, and the event callbacks native code raises back. They are
-//! the counterpart of the Rust [`floem_types`] native-composition ABI.
+//! the counterpart of the Rust [`floom_types`] native-composition ABI.
 
 use crate::schema::{ComponentSchema, SchemaError, TypeRef};
 
@@ -131,14 +131,14 @@ pub fn upper_snake(s: &str) -> String {
     snake_case(s).to_ascii_uppercase()
 }
 
-/// The symbol prefix for a component: `floem_` + snake-cased name.
+/// The symbol prefix for a component: `floom_` + snake-cased name.
 pub fn symbol_prefix(schema: &ComponentSchema) -> String {
-    format!("floem_{}", snake_case(&schema.name.0))
+    format!("floom_{}", snake_case(&schema.name.0))
 }
 
-/// The macro prefix for a component: `FLOEM_` + upper-snake-cased name.
+/// The macro prefix for a component: `FLOOM_` + upper-snake-cased name.
 pub fn macro_prefix(schema: &ComponentSchema) -> String {
-    format!("FLOEM_{}", upper_snake(&schema.name.0))
+    format!("FLOOM_{}", upper_snake(&schema.name.0))
 }
 
 // --- shared traversal helpers ---------------------------------------------
@@ -220,8 +220,8 @@ mod tests {
     #[test]
     fn prefixes_are_derived_consistently() {
         let s = fixtures::demo_video_player();
-        assert_eq!(symbol_prefix(&s), "floem_video_player");
-        assert_eq!(macro_prefix(&s), "FLOEM_VIDEO_PLAYER");
+        assert_eq!(symbol_prefix(&s), "floom_video_player");
+        assert_eq!(macro_prefix(&s), "FLOOM_VIDEO_PLAYER");
     }
 
     #[test]
@@ -236,8 +236,8 @@ mod tests {
             files.iter().map(|f| &f.path).collect::<Vec<_>>()
         );
         let paths: Vec<&str> = files.iter().map(|f| f.path.as_str()).collect();
-        assert!(paths.contains(&"floem_video_player_abi.h"));
-        assert!(paths.contains(&"floem_video_player_glue.hpp"));
+        assert!(paths.contains(&"floom_video_player_abi.h"));
+        assert!(paths.contains(&"floom_video_player_glue.hpp"));
         assert!(paths.contains(&"VideoPlayer.swift"));
         assert!(paths.contains(&"VideoPlayerShims.swift"));
         assert!(paths.contains(&"VideoPlayer.kt"));

@@ -71,7 +71,7 @@ impl Default for WindowConfig {
             title: std::env::current_exe()
                 .ok()
                 .and_then(|p| p.file_name().map(|f| f.to_string_lossy().into_owned()))
-                .unwrap_or("Floem Window".to_string()),
+                .unwrap_or("Floom Window".to_string()),
             enabled_buttons: WindowButtons::all(),
             resizable: true,
             undecorated: false,
@@ -177,7 +177,7 @@ impl WindowConfig {
 
     /// Sets the initial title of the window in the title bar.
     ///
-    /// The default is `"Floem window"`.
+    /// The default is `"Floom window"`.
     #[inline]
     pub fn title(mut self, title: impl Into<String>) -> Self {
         self.title = title.into();
@@ -654,12 +654,12 @@ pub(super) fn convert_to_win(c: Option<peniko::Color>) -> Option<winit::platform
 /// `WindowConfig::with_web_config( WebWindowConfig )`.
 #[derive(Default, Debug, Clone)]
 pub struct WebWindowConfig {
-    /// The id of the HTML canvas element that floem should render to.
+    /// The id of the HTML canvas element that floom should render to.
     pub(crate) canvas_id: String,
 }
 
 impl WebWindowConfig {
-    /// Specify the id of the HTML canvas element that floem should render to.
+    /// Specify the id of the HTML canvas element that floom should render to.
     pub fn canvas_id(mut self, val: impl Into<String>) -> Self {
         self.canvas_id = val.into();
         self

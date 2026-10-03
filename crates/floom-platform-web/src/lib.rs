@@ -4,18 +4,18 @@
 //! pointer/keyboard/wheel events and drives an `AppRunner` through
 //! `requestAnimationFrame` — plus the [`run`](crate::run) entry that wires a
 //! `WebApp` to a `<canvas>`. The pixels are produced by
-//! `floem-renderer-web`'s `WebPresenter`, which rasterises the scene on the CPU
-//! (reusing `floem-renderer-software`) and blits the buffer to the canvas.
+//! `floom-renderer-web`'s `WebPresenter`, which rasterises the scene on the CPU
+//! (reusing `floom-renderer-software`) and blits the buffer to the canvas.
 
 pub mod accessibility;
 pub mod runloop;
 
-use floem_platform::{
+use floom_platform::{
     HostPlatform, Ime, Platform, PlatformCapabilities, PlatformEvent, Window, WindowConfig,
 };
-use floem_types::{PlatformId, Size, WindowId};
+use floom_types::{PlatformId, Size, WindowId};
 
-pub use floem_platform::{Capability, Clipboard, Platform as _};
+pub use floom_platform::{Capability, Clipboard, Platform as _};
 pub use runloop::{WebApp, run};
 
 /// Detect WebGPU availability.
@@ -45,7 +45,7 @@ impl DomBridge {
 }
 
 /// [`Platform`] backend that turns DOM input + `requestAnimationFrame` into a
-/// live Floem window.
+/// live Floom window.
 ///
 /// It delegates the in-memory window/surface bookkeeping to [`HostPlatform`]
 /// (exactly the pattern the embedded and TUI backends use) and only adds the
@@ -53,7 +53,7 @@ impl DomBridge {
 /// frame clock implemented via [`Platform::request_frame`] + `pending_frame`,
 /// which the [`run`](crate::run) loop reads to decide whether to keep animating.
 ///
-/// [`Platform::request_frame`]: floem_platform::Platform::request_frame
+/// [`Platform::request_frame`]: floom_platform::Platform::request_frame
 #[derive(Debug)]
 pub struct WebPlatform {
     host: HostPlatform,
@@ -176,13 +176,13 @@ impl Platform for WebPlatform {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use floem_platform::{Platform, WindowConfig};
-    use floem_types::Size;
+    use floom_platform::{Platform, WindowConfig};
+    use floom_types::Size;
 
     #[test]
     fn webgpu_fallback_and_frame_clock() {
         assert!(!detect_webgpu());
-        let mut p = WebPlatform::new("floem-canvas");
+        let mut p = WebPlatform::new("floom-canvas");
         assert!(!p.capabilities().supports(Capability::WEBGPU));
         assert!(p.capabilities().supports(Capability::SOFTWARE_RENDER));
         assert!(p.capabilities().supports(Capability::NATIVE_VIEW));
@@ -211,7 +211,7 @@ mod tests {
 
     #[test]
     fn resize_queues_window_resized() {
-        let mut p = WebPlatform::new("floem-canvas");
+        let mut p = WebPlatform::new("floom-canvas");
         let win = p.create_window(WindowConfig::default());
         p.resize_to(Size::new(640.0, 480.0));
         let mut events = Vec::new();
@@ -228,7 +228,7 @@ mod tests {
     #[test]
     fn dom_bridge_hook() {
         let mut bridge = DomBridge::default();
-        bridge.attach("#floem-root");
-        assert_eq!(bridge.root_selector.as_deref(), Some("#floem-root"));
+        bridge.attach("#floom-root");
+        assert_eq!(bridge.root_selector.as_deref(), Some("#floom-root"));
     }
 }

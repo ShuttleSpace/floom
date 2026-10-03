@@ -1,5 +1,5 @@
 [package]
-name = "floem-accuracy"
+name = "floom-accuracy"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -10,25 +10,25 @@ description = "AI/design accuracy loop: a reference screen gallery, a render-and
 [dependencies]
 # The gallery screens are real widget trees, not mock-ups: the loop is only
 # worth automating if what it measures is what a user would see.
-floem-widgets = { path = "../floom-widgets", version = "0.2.0" }
-floem-testkit = { path = "../floom-testkit", version = "0.2.0" }
+floom-widgets = { path = "../floom-widgets", version = "0.2.0" }
+floom-testkit = { path = "../floom-testkit", version = "0.2.0" }
 # Pixels, scenes and semantics come from the snapshot engine, so an evaluation
 # fingerprint is the same one `assert_snapshot` would pin.
-floem-snapshot = { path = "../floom-snapshot", version = "0.2.0" }
+floom-snapshot = { path = "../floom-snapshot", version = "0.2.0" }
 # Inspection goes through the agent protocol (Phase 25) and the design
 # contract (Phase 26) — the loop closes over vocabulary that already exists.
-floem-agent = { path = "../floom-agent", version = "0.2.0" }
-floem-ui-ir = { path = "../floom-ui-ir", version = "0.2.0" }
-floem-design = { path = "../floom-design", version = "0.2.0" }
+floom-agent = { path = "../floom-agent", version = "0.2.0" }
+floom-ui-ir = { path = "../floom-ui-ir", version = "0.2.0" }
+floom-design = { path = "../floom-design", version = "0.2.0" }
 # Scene nodes are read directly out of the retained graph for geometry and
 # colour probes.
-floem-scene = { path = "../floom-scene", version = "0.2.0" }
+floom-scene = { path = "../floom-scene", version = "0.2.0" }
 # The `Labeled` box the screens use declares its role in the a11y vocabulary.
-floem-accessibility = { path = "../floom-accessibility", version = "0.2.0" }
+floom-accessibility = { path = "../floom-accessibility", version = "0.2.0" }
 # The screen builder sizes cards from the text engine's own measurements, so
 # the layout adapts to whatever font metrics the host resolves.
-floem-text = { path = "../floom-text", version = "0.2.0" }
-floem-core = { path = "../floom-core", version = "0.2.0" }
-floem-types = { path = "../floom-types", version = "0.2.0" }
+floom-text = { path = "../floom-text", version = "0.2.0" }
+floom-core = { path = "../floom-core", version = "0.2.0" }
+floom-types = { path = "../floom-types", version = "0.2.0" }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }

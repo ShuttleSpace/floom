@@ -60,10 +60,10 @@ use objc2::{DefinedClass, MainThreadMarker, define_class, msg_send};
 use objc2_app_kit::{NSBitmapFormat, NSResponder, NSView};
 use objc2_foundation::{NSObject, NSPoint, NSRect, NSSize};
 
-use floem_native::{
+use floom_native::{
     ClipSupport, InputMode, InputModes, NativeError, NativeSlot, NativeSnapshot, NativeViewKind,
 };
-use floem_types::{NativeCapture, ResourceId, Size};
+use floom_types::{NativeCapture, ResourceId, Size};
 
 use crate::native::{
     NativeViewHost, Origin, ViewPlacement, device_to_points, os_frame, split_placement,
@@ -83,7 +83,7 @@ struct ContainerIvars {
 define_class!(
     #[unsafe(super(NSView, NSResponder, NSObject))]
     #[ivars = ContainerIvars]
-    #[name = "FloemNativeViewContainer"]
+    #[name = "FloomNativeViewContainer"]
     struct Container;
 
     impl Container {
@@ -300,7 +300,7 @@ pub struct ViewFrame {
 /// The view participants are added to, plus the queries a device check needs.
 ///
 /// A handle rather than a bare `NSView` so that the AppKit types stay in this
-/// crate: the probe in `examples/floem2-probe` is not a macOS crate and should
+/// crate: the probe in `examples/floom2-probe` is not a macOS crate and should
 /// not have to be one to ask where a participant landed.
 #[derive(Debug)]
 pub struct NativeParent(Retained<NSView>);

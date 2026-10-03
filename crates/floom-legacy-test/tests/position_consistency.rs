@@ -13,10 +13,10 @@
 //! - layout_rect.origin() == visual_origin (for views without CSS transforms)
 //! - layout_rect union includes all descendants' bounds
 
-use floem::kurbo::{Point, Size};
-use floem::prelude::*;
-use floem_legacy_test::TestRoot;
-use floem_legacy_test::prelude::*;
+use floom::kurbo::{Point, Size};
+use floom::prelude::*;
+use floom_legacy_test::TestRoot;
+use floom_legacy_test::prelude::*;
 use serial_test::serial;
 
 // =============================================================================
@@ -203,5 +203,5 @@ fn test_transform_is_identity_without_css_transforms() {
     let mut harness = HeadlessHarness::new_with_size(root, view, 100.0, 100.0);
     harness.rebuild();
 
-    assert!(id.get_visual_rect() == floem::kurbo::Rect::from_origin_size(Point::ZERO, size));
+    assert!(id.get_visual_rect() == floom::kurbo::Rect::from_origin_size(Point::ZERO, size));
 }

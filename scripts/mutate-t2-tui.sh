@@ -36,10 +36,10 @@ mutate_one() {
   touch "$file"
 }
 
-UNIT="cargo test -q -p floem-platform-tui --lib"
-DIFF="cargo test -q -p floem-renderer-tui --lib"
-ANSI=render/floem-renderer-tui/src/ansi.rs
-INPUT=platform/floem-platform-tui/src/input.rs
+UNIT="cargo test -q -p floom-platform-tui --lib"
+DIFF="cargo test -q -p floom-renderer-tui --lib"
+ANSI=crates/floom-renderer-tui/src/ansi.rs
+INPUT=crates/floom-platform-tui/src/input.rs
 
 # 1. Diff: drop the leading reset that establishes a known colour baseline.
 #    (The bare `out.push_str(RESET);` also appears in encode_with_stats, so the

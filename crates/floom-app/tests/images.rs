@@ -3,10 +3,10 @@
 //! the resource-side contract the GPU presenter resolves through
 //! `WidgetHost::resources()`.
 
-use floem_app::WidgetHost;
-use floem_layout::LayoutStyle;
-use floem_scene::{ResourceKind, SceneNode};
-use floem_widgets::{Container, Image};
+use floom_app::WidgetHost;
+use floom_layout::LayoutStyle;
+use floom_scene::{ResourceKind, SceneNode};
+use floom_widgets::{Container, Image};
 
 fn fixed(width: f64, height: f64) -> LayoutStyle {
     LayoutStyle {
@@ -43,7 +43,7 @@ fn register_image_validates_pixel_extent() {
 #[test]
 fn image_widget_paints_a_node_referencing_its_resource() {
     let mut host = WidgetHost::new();
-    host.set_size(floem_core::Size::new(240.0, 160.0));
+    host.set_size(floom_core::Size::new(240.0, 160.0));
     let img = host
         .register_image(8, 4, vec![255; 8 * 4 * 4])
         .expect("valid extent");
@@ -51,7 +51,7 @@ fn image_widget_paints_a_node_referencing_its_resource() {
     host.mount(
         root,
         fixed(64.0, 32.0),
-        Image::new(img).intrinsic_size(floem_core::Size::new(8.0, 4.0)),
+        Image::new(img).intrinsic_size(floom_core::Size::new(8.0, 4.0)),
     );
     host.frame();
 

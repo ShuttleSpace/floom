@@ -3,11 +3,11 @@
 
 use std::collections::HashMap;
 
-use floem_core::{Align, Axis, Element, ElementKind, LayoutRequest, Position};
-use floem_runtime_core::{ElementArena, ElementTree};
-use floem_style::{StyleMap, StyleProps, StyleSet, StyleState};
-use floem_types::ElementId;
-use floem_ui_ir::{EventBinding, NodeKey, NodeKind, Prop, UiDocument};
+use floom_core::{Align, Axis, Element, ElementKind, LayoutRequest, Position};
+use floom_runtime_core::{ElementArena, ElementTree};
+use floom_style::{StyleMap, StyleProps, StyleSet, StyleState};
+use floom_types::ElementId;
+use floom_ui_ir::{EventBinding, NodeKey, NodeKind, Prop, UiDocument};
 
 /// A mounted document: the element tree it produced and the tables keyed by
 /// the stable [`NodeKey`]s that produced it.
@@ -66,7 +66,7 @@ impl LiveTree {
     /// Takes a validated document (the IR's `validate` guarantees the root
     /// exists and every slot child resolves).
     pub fn mount(&mut self, document: &UiDocument) {
-        let by_key: HashMap<&NodeKey, &floem_ui_ir::UiNode> =
+        let by_key: HashMap<&NodeKey, &floom_ui_ir::UiNode> =
             document.nodes.iter().map(|n| (&n.key, n)).collect();
         let Some(root) = by_key.get(&document.root) else {
             return;
@@ -76,9 +76,9 @@ impl LiveTree {
 
     fn mount_node(
         &mut self,
-        node: &floem_ui_ir::UiNode,
+        node: &floom_ui_ir::UiNode,
         parent: Option<ElementId>,
-        by_key: &HashMap<&NodeKey, &floem_ui_ir::UiNode>,
+        by_key: &HashMap<&NodeKey, &floom_ui_ir::UiNode>,
     ) -> ElementId {
         let id = self
             .arena
@@ -375,7 +375,7 @@ impl LiveTree {
 }
 
 fn set_style_prop(props: &mut StyleProps, prop: &Prop) {
-    use floem_ui_ir::PropValue;
+    use floom_ui_ir::PropValue;
     match (prop.name.as_str(), &prop.value) {
         ("background", PropValue::Color(c)) => props.background = Some((*c).into()),
         ("foreground", PropValue::Color(c)) => props.foreground = Some((*c).into()),
@@ -391,7 +391,7 @@ fn set_style_prop(props: &mut StyleProps, prop: &Prop) {
 }
 
 fn set_layout_prop(layout: &mut LayoutRequest, prop: &Prop) {
-    use floem_ui_ir::PropValue;
+    use floom_ui_ir::PropValue;
     match (prop.name.as_str(), &prop.value) {
         ("width", PropValue::Number(n)) => layout.width = Some(*n as f32),
         ("height", PropValue::Number(n)) => layout.height = Some(*n as f32),
@@ -458,15 +458,15 @@ pub(crate) fn seat_props(kind: NodeKind, props: &[Prop]) -> (StyleProps, LayoutR
     let mut style = StyleProps::default();
     let mut layout = LayoutRequest::new();
     for prop in props {
-        let Some(spec) = floem_ui_ir::prop_spec(kind, &prop.name) else {
+        let Some(spec) = floom_ui_ir::prop_spec(kind, &prop.name) else {
             continue;
         };
         match spec.class {
-            floem_ui_ir::PropClass::Style => set_style_prop(&mut style, prop),
-            floem_ui_ir::PropClass::Layout => set_layout_prop(&mut layout, prop),
+            floom_ui_ir::PropClass::Style => set_style_prop(&mut style, prop),
+            floom_ui_ir::PropClass::Layout => set_layout_prop(&mut layout, prop),
             // Widget properties belong to the widget instance, which this
             // headless tree does not instantiate. Documented boundary.
-            floem_ui_ir::PropClass::Widget => {}
+            floom_ui_ir::PropClass::Widget => {}
         }
     }
     (style, layout)

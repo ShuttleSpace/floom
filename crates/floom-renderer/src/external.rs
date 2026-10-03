@@ -28,7 +28,7 @@
 
 use std::collections::{HashMap, HashSet};
 
-use floem_types::ResourceId;
+use floom_types::ResourceId;
 
 /// One frame of a texture the framework does not own.
 #[derive(Debug, Clone, PartialEq)]

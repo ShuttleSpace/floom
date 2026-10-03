@@ -1,10 +1,10 @@
 [package]
-name = "floem-editor"
+name = "floom-editor"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
-description = "Shared text editing model for Floem 2.0"
+description = "Shared text editing model for Floom 2.0"
 rust-version.workspace = true
 
 [dependencies]

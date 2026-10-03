@@ -1,6 +1,6 @@
 //! Presentation: scenes onto a character grid, and bytes onto a terminal.
 //!
-//! [`Presenter`] is the seam floem's app runner uses to hand a finished scene
+//! [`Presenter`] is the seam floom's app runner uses to hand a finished scene
 //! to "wherever pixels go". Here they go into [`TuiGrid`] cells and then out as
 //! ANSI text — to whichever writer the presenter was built with.
 //!
@@ -13,13 +13,13 @@
 //! homes the cursor, because only the caller knows whether it owns the whole
 //! screen or one pane of it.
 //!
-//! [`SoftwarePresenter`]: floem_renderer_software::SoftwarePresenter
+//! [`SoftwarePresenter`]: floom_renderer_software::SoftwarePresenter
 
 use std::io::Write;
 
-use floem_renderer::{AttachedSurface, FrameInfo, Presenter};
-use floem_scene::{ResourceRegistry, Scene};
-use floem_types::Size;
+use floom_renderer::{AttachedSurface, FrameInfo, Presenter};
+use floom_scene::{ResourceRegistry, Scene};
+use floom_types::Size;
 
 use crate::{
     DiffStats, PaintStats, TuiGrid, diff_encode, encode_with_stats, paint_scene,
@@ -181,7 +181,7 @@ impl<W: Write> TuiPresenter<W> {
 /// want one without going through a platform.
 pub fn frame_info(logical: Size, frame_number: u64) -> FrameInfo {
     FrameInfo {
-        target: floem_renderer::RenderTarget::Software {
+        target: floom_renderer::RenderTarget::Software {
             width: logical.width.ceil() as u32,
             height: logical.height.ceil() as u32,
         },
@@ -195,13 +195,13 @@ pub fn frame_info(logical: Size, frame_number: u64) -> FrameInfo {
 mod tests {
     use super::*;
     use crate::grid::rect;
-    use floem_scene::{Resource, ResourceKind, SceneNode};
-    use floem_types::{Color, Point, Rect};
+    use floom_scene::{Resource, ResourceKind, SceneNode};
+    use floom_types::{Color, Point, Rect};
 
     fn attached(size: Size) -> AttachedSurface {
         AttachedSurface::new(
-            floem_types::WindowId::new(0, 1),
-            floem_types::SurfaceId::new(0, 1),
+            floom_types::WindowId::new(0, 1),
+            floom_types::SurfaceId::new(0, 1),
             size,
             1.0,
             None,
@@ -214,7 +214,7 @@ mod tests {
         scene.begin_update();
         let _ = scene.insert(SceneNode::Rect {
             bounds,
-            fill: floem_types::Brush::from(color),
+            fill: floom_types::Brush::from(color),
             radius: 0.0,
             shadow: None,
         });
@@ -278,7 +278,7 @@ mod tests {
         scene.begin_update();
         let _ = scene.insert(SceneNode::Rect {
             bounds: Rect::from_origin_size(Point::new(8.0, 0.0), Size::new(8.0, 2.0)),
-            fill: floem_types::Brush::from(Color::rgb(9, 9, 9)),
+            fill: floom_types::Brush::from(Color::rgb(9, 9, 9)),
             radius: 0.0,
             shadow: None,
         });

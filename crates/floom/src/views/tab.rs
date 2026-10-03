@@ -1,7 +1,7 @@
 #![deny(missing_docs)]
 use std::{hash::Hash, marker::PhantomData};
 
-use floem_legacy_reactive::{Effect, Scope};
+use floom_legacy_reactive::{Effect, Scope};
 use smallvec::SmallVec;
 
 use crate::{
@@ -44,8 +44,8 @@ where
 ///
 /// ### Simple example
 /// ```rust
-/// # use floem::prelude::*;
-/// # use floem::theme;
+/// # use floom::prelude::*;
+/// # use floom::theme;
 /// // Tabs from static list:
 /// let tabs = RwSignal::new(vec!["tab1, tab2, tab3"]);
 /// let active_tab = RwSignal::new(0);
@@ -80,10 +80,10 @@ where
 /// ```
 /// ### Complex example
 /// ```rust
-/// # use floem::prelude::*;
-/// # use floem::event::listener;
-/// # use floem::reactive::Effect;
-/// # use floem::views::{Button, Label, Stack, dyn_stack};
+/// # use floom::prelude::*;
+/// # use floom::event::listener;
+/// # use floom::reactive::Effect;
+/// # use floom::views::{Button, Label, Stack, dyn_stack};
 /// // Tabs from a dynamic list using current APIs.
 /// #[derive(Clone)]
 /// struct TabContent {

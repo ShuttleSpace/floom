@@ -1,6 +1,6 @@
 //! Custom shader programs: a single GPU language (WGSL) the caller supplies.
 //!
-//! WGSL is the one shader language floem speaks. vello/wgpu compiles it
+//! WGSL is the one shader language floom speaks. vello/wgpu compiles it
 //! natively (no transpile — WGSL is wgpu's own shading language), a software
 //! rasteriser cannot run it and so skips it and counts the skip, and skia
 //! likewise degrades — the degradation is recorded, never silent. We

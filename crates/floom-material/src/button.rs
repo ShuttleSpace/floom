@@ -1,11 +1,11 @@
 //! Material 3 button variants across the six interaction states.
 
-use floem_design::{
+use floom_design::{
     ControlSize, InteractionState, Props, StyleSetBuilder, Variant, composite_over,
     most_contrasting, with_alpha,
 };
-use floem_style::{StyleProps, StyleSet};
-use floem_types::Color;
+use floom_style::{StyleProps, StyleSet};
+use floom_types::Color;
 
 use crate::tokens::MaterialTheme;
 
@@ -211,7 +211,7 @@ pub fn button_style(
     size: ControlSize,
     state: InteractionState,
 ) -> StyleProps {
-    use floem_design::StyleSetExt;
+    use floom_design::StyleSetExt;
     button_styles(theme, variant, size).resolve_state(state)
 }
 
@@ -312,9 +312,9 @@ mod tests {
                 } else {
                     behind
                 };
-                let ratio = floem_design::contrast_ratio(ring, behind);
+                let ratio = floom_design::contrast_ratio(ring, behind);
                 assert!(
-                    ratio >= floem_design::WCAG_AA_LARGE,
+                    ratio >= floom_design::WCAG_AA_LARGE,
                     "{variant:?}/{size:?}: ring {ring:?} on {behind:?} is {ratio:.2}:1"
                 );
             }
@@ -398,8 +398,8 @@ mod tests {
         // Dark mode inverts the relationship: a light fill with dark content.
         assert_eq!(d.foreground, Some(dark.roles.on_primary));
         assert!(
-            floem_design::relative_luminance(dark.roles.primary)
-                > floem_design::relative_luminance(dark.roles.on_primary),
+            floom_design::relative_luminance(dark.roles.primary)
+                > floom_design::relative_luminance(dark.roles.on_primary),
             "a dark-scheme primary should be the lighter of the pair"
         );
     }

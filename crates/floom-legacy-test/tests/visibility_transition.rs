@@ -7,9 +7,9 @@
 
 use std::time::Duration;
 
-use floem::prelude::*;
-use floem::taffy::Display;
-use floem_legacy_test::prelude::*;
+use floom::prelude::*;
+use floom::taffy::Display;
+use floom_legacy_test::prelude::*;
 
 // =============================================================================
 // Integration Tests with Views

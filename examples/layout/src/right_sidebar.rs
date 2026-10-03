@@ -1,4 +1,4 @@
-use floem::{imbl, prelude::*, style::Position};
+use floom::{imbl, prelude::*, style::Position};
 
 const SIDEBAR_WIDTH: f64 = 140.0;
 const TOPBAR_HEIGHT: f64 = 30.0;
@@ -63,7 +63,7 @@ pub fn right_sidebar_view() -> impl IntoView {
         .style(|s| s.width_full().height_full())
         .on_event_stop(listener::KeyUp, move |_cx, KeyboardEvent { key, .. }| {
             if *key == Key::Named(NamedKey::F11) {
-                floem::action::inspect();
+                floom::action::inspect();
             }
         })
 }

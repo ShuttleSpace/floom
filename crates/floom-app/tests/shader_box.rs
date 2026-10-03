@@ -15,13 +15,13 @@
 //! * **the degradation is recorded** — the software backend cannot run WGSL,
 //!   and says so with a counter instead of leaving an empty box behind.
 
-use floem_app::WidgetHost;
-use floem_layout::LayoutStyle;
-use floem_renderer::{AttachedSurface, Presenter};
-use floem_renderer_software::SoftwarePresenter;
-use floem_scene::SceneNode;
-use floem_types::{Color, Shader, Size, SurfaceId, WindowId};
-use floem_widgets::{Container, ShaderBox};
+use floom_app::WidgetHost;
+use floom_layout::LayoutStyle;
+use floom_renderer::{AttachedSurface, Presenter};
+use floom_renderer_software::SoftwarePresenter;
+use floom_scene::SceneNode;
+use floom_types::{Color, Shader, Size, SurfaceId, WindowId};
+use floom_widgets::{Container, ShaderBox};
 
 const WGSL: &str = "@fragment fn fs_main(in: VsOut) -> @location(0) vec4<f32> { \
      return vec4<f32>(in.uv.x, in.uv.y, 0.5, 1.0); }";
@@ -31,7 +31,7 @@ const WGSL_SWAP: &str = "@fragment fn fs_main(in: VsOut) -> @location(0) vec4<f3
 
 /// A 300×200 window holding one 120×60 shader box. Returns the box's own id,
 /// so a test can reach the mounted widget (the caller's builder is a copy).
-fn host_with_shader_box() -> (WidgetHost, floem_app::NodeId) {
+fn host_with_shader_box() -> (WidgetHost, floom_app::NodeId) {
     let mut host = WidgetHost::new();
     host.set_size(Size::new(300.0, 200.0));
     let root = host.mount_root(
@@ -63,7 +63,7 @@ fn settle(host: &mut WidgetHost) {
 }
 
 /// The one `Shader` node the scene holds.
-fn shader_of(host: &WidgetHost) -> (floem_types::Rect, Shader) {
+fn shader_of(host: &WidgetHost) -> (floom_types::Rect, Shader) {
     let found: Vec<_> = host
         .scene()
         .iter()

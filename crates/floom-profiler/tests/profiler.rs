@@ -6,8 +6,8 @@
 //! got which span), *the budget verdict*, and *the counters' arithmetic* —
 //! not about nanoseconds observed.
 
-use floem_inspector::JsonSnapshot;
-use floem_profiler::{CacheTracker, Profiler, Stage};
+use floom_inspector::JsonSnapshot;
+use floom_profiler::{CacheTracker, Profiler, Stage};
 
 /// A clock that replays a script of nanosecond readings.
 #[derive(Clone, Default)]
@@ -129,7 +129,7 @@ fn the_timeline_serializes_to_the_protocol_snapshot() {
     assert_eq!(json_a, json_b);
 
     // And it parses as the protocol's own performance snapshot.
-    let snapshot = floem_inspector::PerformanceSnapshot::from_json(&json_a).expect("parses");
+    let snapshot = floom_inspector::PerformanceSnapshot::from_json(&json_a).expect("parses");
     assert_eq!(snapshot.frames.len(), 1);
     assert_eq!(snapshot.frames[0].stages.len(), 2);
     // Closed spans are appended as they close: input closed before layout.

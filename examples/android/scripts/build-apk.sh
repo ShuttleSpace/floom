@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# Build the Floem (v1) Android example and package it into an APK.
+# Build the Floom (v1) Android example and package it into an APK.
 #
 # Thin wrapper: the aapt2 -> bundle -> zipalign -> apksigner pipeline lives in
 # `scripts/build-apk.sh` at the workspace root (one copy to maintain). This
 # wrapper only pins the example's package name and manifest location — the
 # crate lives in `examples/android/` rather than the default
-# `examples/<package>/`, and `FloemNativeActivity.java` next to it is picked up
+# `examples/<package>/`, and `FloomNativeActivity.java` next to it is picked up
 # automatically to produce `classes.dex` (needed for runtime file shares and
 # file-dialog results).
 #
@@ -28,6 +28,6 @@ ROOT="$(git -C "$SCRIPT_DIR" rev-parse --show-toplevel 2>/dev/null)"
 [[ -n "$ROOT" ]] || ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 
 exec "$ROOT/scripts/build-apk.sh" \
-  -p floem-android-example \
+  -p floom-android-example \
   --manifest "$SCRIPT_DIR/../AndroidManifest.xml" \
   "$@"

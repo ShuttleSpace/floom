@@ -4,7 +4,7 @@
 //! is the one vello recommends, and it has three stages:
 //!
 //! ```text
-//!   floem Scene ──▶ vello Scene ──▶ Rgba8Unorm texture ──▶ swap-chain ──▶ screen
+//!   floom Scene ──▶ vello Scene ──▶ Rgba8Unorm texture ──▶ swap-chain ──▶ screen
 //!                  (translation)     (vello computes)      (blit)         (present)
 //! ```
 //!
@@ -28,7 +28,7 @@
 //! ## Not yet implemented
 //!
 //! Nothing: rects, shaped text and images all render. Text goes through the
-//! glyph-run resource (see `floem-text`); image uploads are cached per
+//! glyph-run resource (see `floom-text`); image uploads are cached per
 //! resource id (see "Image texture caching" below).
 
 //! ## Image texture caching
@@ -53,12 +53,12 @@
 //! also pin the image brushes their commands were built from, so a reused
 //! fragment never has its texture evicted from under it.
 
-use floem_renderer::{
+use floom_renderer::{
     AttachedSurface, ExternalFrame, ExternalTextureCache, ExternalTextureStats, ImportDecision,
     Presenter, SurfaceHandles,
 };
-use floem_scene::{ResourceKind, ResourceRegistry, Scene, SceneNode};
-use floem_types::{ClipRegion, PathSeg, Rect, Shader, Size, SurfaceId, WindowId};
+use floom_scene::{ResourceKind, ResourceRegistry, Scene, SceneNode};
+use floom_types::{ClipRegion, PathSeg, Rect, Shader, Size, SurfaceId, WindowId};
 use std::collections::{HashMap, HashSet};
 
 use crate::budget::{CacheTrimTelemetry, GpuCacheBudget, MemoryPressure, TrimPlan, plan_trim};
@@ -487,18 +487,18 @@ fn hash_clip_region(hasher: &mut impl std::hash::Hasher, region: &ClipRegion) {
     }
 }
 
-fn hash_point(hasher: &mut impl std::hash::Hasher, p: floem_types::Point) {
+fn hash_point(hasher: &mut impl std::hash::Hasher, p: floom_types::Point) {
     hasher.write_u64(p.x.to_bits());
     hasher.write_u64(p.y.to_bits());
 }
 
-fn hash_rect(hasher: &mut impl std::hash::Hasher, r: floem_types::Rect) {
+fn hash_rect(hasher: &mut impl std::hash::Hasher, r: floom_types::Rect) {
     for v in [r.x0, r.y0, r.x1, r.y1] {
         hasher.write_u64(v.to_bits());
     }
 }
 
-fn hash_color(hasher: &mut impl std::hash::Hasher, c: &floem_types::Color) {
+fn hash_color(hasher: &mut impl std::hash::Hasher, c: &floom_types::Color) {
     hasher.write_u32(
         u32::from(c.r) << 24 | u32::from(c.g) << 16 | u32::from(c.b) << 8 | u32::from(c.a),
     );
@@ -506,20 +506,20 @@ fn hash_color(hasher: &mut impl std::hash::Hasher, c: &floem_types::Color) {
 
 /// Fingerprint of a brush: kind tag, geometry, every stop. Two different
 /// gradients must never share a fragment cache entry.
-fn hash_brush(hasher: &mut impl std::hash::Hasher, b: &floem_types::Brush) {
+fn hash_brush(hasher: &mut impl std::hash::Hasher, b: &floom_types::Brush) {
     match b {
-        floem_types::Brush::Solid(c) => {
+        floom_types::Brush::Solid(c) => {
             hasher.write_u8(0);
             hash_color(hasher, c);
         }
-        floem_types::Brush::Linear { stops, from, to } => {
+        floom_types::Brush::Linear { stops, from, to } => {
             hasher.write_u8(1);
             for p in [from.x, from.y, to.x, to.y] {
                 hasher.write_u64(p.to_bits());
             }
             hash_stops(hasher, stops);
         }
-        floem_types::Brush::Radial {
+        floom_types::Brush::Radial {
             stops,
             center,
             radius,
@@ -537,9 +537,9 @@ fn hash_brush(hasher: &mut impl std::hash::Hasher, b: &floem_types::Brush) {
 /// Hashes a filter the way [`hash_brush`] hashes a brush: field bits, so a
 /// changed radius invalidates the cached fragment instead of drawing last
 /// frame's blur.
-fn hash_filter(hasher: &mut impl std::hash::Hasher, filter: &floem_types::Filter) {
+fn hash_filter(hasher: &mut impl std::hash::Hasher, filter: &floom_types::Filter) {
     match filter {
-        floem_types::Filter::Blur { radius_x, radius_y } => {
+        floom_types::Filter::Blur { radius_x, radius_y } => {
             hasher.write_u8(0);
             hasher.write_u64(radius_x.to_bits());
             hasher.write_u64(radius_y.to_bits());
@@ -547,7 +547,7 @@ fn hash_filter(hasher: &mut impl std::hash::Hasher, filter: &floem_types::Filter
     }
 }
 
-fn hash_stops(hasher: &mut impl std::hash::Hasher, stops: &[(f32, floem_types::Color)]) {
+fn hash_stops(hasher: &mut impl std::hash::Hasher, stops: &[(f32, floom_types::Color)]) {
     hasher.write_u64(stops.len() as u64);
     for (offset, color) in stops {
         hasher.write_u32(offset.to_bits());
@@ -560,25 +560,25 @@ fn hash_stops(hasher: &mut impl std::hash::Hasher, stops: &[(f32, floem_types::C
 fn fill_with_brush(
     target: &mut VelloScene,
     shape: &impl vello::kurbo::Shape,
-    brush: &floem_types::Brush,
+    brush: &floom_types::Brush,
 ) {
     // The gradient is built per call and borrowed for exactly that one `fill`:
     // vello's brush parameter takes the gradient by reference (`&Gradient`),
     // so the ramp cannot outlive the arm that built it.
-    let to_peniko = |ramp: &[(f32, floem_types::Color)]| -> Vec<(f32, PenikoColor)> {
+    let to_peniko = |ramp: &[(f32, floom_types::Color)]| -> Vec<(f32, PenikoColor)> {
         ramp.iter()
             .map(|(offset, c)| (*offset, PenikoColor::from_rgba8(c.r, c.g, c.b, c.a)))
             .collect()
     };
     match brush {
-        floem_types::Brush::Solid(c) => target.fill(
+        floom_types::Brush::Solid(c) => target.fill(
             Fill::NonZero,
             Affine::IDENTITY,
             PenikoColor::from_rgba8(c.r, c.g, c.b, c.a),
             None,
             shape,
         ),
-        floem_types::Brush::Linear { stops, from, to } => {
+        floom_types::Brush::Linear { stops, from, to } => {
             let mut gradient = Gradient::default();
             gradient.kind = GradientKind::Linear(LinearGradientPosition {
                 start: KurboPoint::new(from.x, from.y),
@@ -594,7 +594,7 @@ fn fill_with_brush(
                 shape,
             )
         }
-        floem_types::Brush::Radial {
+        floom_types::Brush::Radial {
             stops,
             center,
             radius,
@@ -619,8 +619,8 @@ fn fill_with_brush(
     }
 }
 
-/// Translates a path in Floem's vocabulary into kurbo's.
-fn bez_path(path: &floem_types::Path) -> BezPath {
+/// Translates a path in Floom's vocabulary into kurbo's.
+fn bez_path(path: &floom_types::Path) -> BezPath {
     let mut bez = BezPath::new();
     for seg in path.segments() {
         match *seg {
@@ -636,23 +636,23 @@ fn bez_path(path: &floem_types::Path) -> BezPath {
     bez
 }
 
-fn kurbo_rect(bounds: floem_types::Rect) -> KurboRect {
+fn kurbo_rect(bounds: floom_types::Rect) -> KurboRect {
     KurboRect::new(bounds.x0, bounds.y0, bounds.x1, bounds.y1)
 }
 
-fn kurbo_cap(cap: floem_types::LineCap) -> KurboLineCap {
+fn kurbo_cap(cap: floom_types::LineCap) -> KurboLineCap {
     match cap {
-        floem_types::LineCap::Butt => KurboLineCap::Butt,
-        floem_types::LineCap::Round => KurboLineCap::Round,
-        floem_types::LineCap::Square => KurboLineCap::Square,
+        floom_types::LineCap::Butt => KurboLineCap::Butt,
+        floom_types::LineCap::Round => KurboLineCap::Round,
+        floom_types::LineCap::Square => KurboLineCap::Square,
     }
 }
 
-fn kurbo_join(join: floem_types::LineJoin) -> KurboLineJoin {
+fn kurbo_join(join: floom_types::LineJoin) -> KurboLineJoin {
     match join {
-        floem_types::LineJoin::Miter => KurboLineJoin::Miter,
-        floem_types::LineJoin::Round => KurboLineJoin::Round,
-        floem_types::LineJoin::Bevel => KurboLineJoin::Bevel,
+        floom_types::LineJoin::Miter => KurboLineJoin::Miter,
+        floom_types::LineJoin::Round => KurboLineJoin::Round,
+        floom_types::LineJoin::Bevel => KurboLineJoin::Bevel,
     }
 }
 
@@ -684,7 +684,7 @@ fn push_clip_region(scene: &mut VelloScene, region: &ClipRegion) {
 
 /// WGSL prologue the host prepends to every custom-shader program. It owns the
 /// vertex stage (a fullscreen triangle) and the uniform block; the caller's
-/// source is only the body of `fn fs_main`. See [`floem_types::Shader`] for the
+/// source is only the body of `fn fs_main`. See [`floom_types::Shader`] for the
 /// contract the fragment sees — `u.resolution`, `u.time`, `u.params[0..1]`
 /// (two `vec4<f32>`), and `frag.uv` (0..1, y down).
 const SHADER_PROLOGUE: &str = r#"
@@ -846,7 +846,7 @@ impl VelloGpuPresenter {
         // they all share the same uniform shape (resolution, time, params).
         let shader_bind_group_layout =
             device.create_bind_group_layout(&BindGroupLayoutDescriptor {
-                label: Some("floem-shader-bgl"),
+                label: Some("floom-shader-bgl"),
                 entries: &[BindGroupLayoutEntry {
                     binding: 0,
                     visibility: ShaderStages::VERTEX | ShaderStages::FRAGMENT,
@@ -859,7 +859,7 @@ impl VelloGpuPresenter {
                 }],
             });
         let shader_pipeline_layout = device.create_pipeline_layout(&PipelineLayoutDescriptor {
-            label: Some("floem-shader-pl"),
+            label: Some("floom-shader-pl"),
             bind_group_layouts: &[&shader_bind_group_layout],
             push_constant_ranges: &[],
         });
@@ -961,7 +961,7 @@ impl VelloGpuPresenter {
         self.trim_telemetry.trims += 1;
         #[cfg(debug_assertions)]
         eprintln!(
-            "[floem-gpu] trim({pressure:?}): fragments_dropped={} resources_dropped={} \
+            "[floom-gpu] trim({pressure:?}): fragments_dropped={} resources_dropped={} \
              (telemetry: {:?})",
             self.trim_telemetry.fragments_dropped,
             self.trim_telemetry.resources_dropped,
@@ -1018,7 +1018,7 @@ impl VelloGpuPresenter {
     }
 
     /// Whether the presenter is holding this resource as an external texture.
-    pub fn has_external_texture(&self, resource: floem_types::ResourceId) -> bool {
+    pub fn has_external_texture(&self, resource: floom_types::ResourceId) -> bool {
         self.external.contains(resource)
     }
 
@@ -1173,7 +1173,7 @@ impl VelloGpuPresenter {
         surface.surface.configure(&self.device, &surface.config);
     }
 
-    /// Translate the retained Floem scene into a vello scene, incrementally.
+    /// Translate the retained Floom scene into a vello scene, incrementally.
     ///
     /// Each node's commands live in a cached [`SceneFragment`] keyed by the
     /// node's stable id: a node whose payload hash is unchanged is *appended*
@@ -1580,7 +1580,7 @@ impl VelloGpuPresenter {
                     let module = self
                         .device
                         .create_shader_module(wgpu::ShaderModuleDescriptor {
-                            label: Some("floem-shader"),
+                            label: Some("floom-shader"),
                             source: wgpu::ShaderSource::Wgsl(
                                 format!("{SHADER_PROLOGUE}\n{}", shader.wgsl).into(),
                             ),
@@ -1588,7 +1588,7 @@ impl VelloGpuPresenter {
                     let pipeline =
                         self.device
                             .create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-                                label: Some("floem-shader-pipeline"),
+                                label: Some("floom-shader-pipeline"),
                                 layout: Some(&self.shader_pipeline_layout),
                                 vertex: wgpu::VertexState {
                                     module: &module,
@@ -1690,7 +1690,7 @@ impl VelloGpuPresenter {
             return None;
         }
         let texture = self.device.create_texture(&wgpu::TextureDescriptor {
-            label: Some("floem-shader-output"),
+            label: Some("floom-shader-output"),
             size: wgpu::Extent3d {
                 width: pw,
                 height: ph,
@@ -1718,7 +1718,7 @@ impl VelloGpuPresenter {
             i += 1;
         }
         let uniform = self.device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("floem-shader-uniforms"),
+            label: Some("floom-shader-uniforms"),
             size: (uniforms.len() * 4) as u64,
             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
@@ -1733,7 +1733,7 @@ impl VelloGpuPresenter {
         });
 
         let bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("floem-shader-bind"),
+            label: Some("floom-shader-bind"),
             layout: &self.shader_bind_group_layout,
             entries: &[wgpu::BindGroupEntry {
                 binding: 0,
@@ -1744,11 +1744,11 @@ impl VelloGpuPresenter {
         let mut encoder = self
             .device
             .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("floem-shader-encode"),
+                label: Some("floom-shader-encode"),
             });
         {
             let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                label: Some("floem-shader-pass"),
+                label: Some("floom-shader-pass"),
                 color_attachments: &[Some(wgpu::RenderPassColorAttachment {
                     view: &view,
                     depth_slice: None,
@@ -1774,7 +1774,7 @@ impl VelloGpuPresenter {
         let row_bytes = pw * 4;
         let stride = 256u32 * row_bytes.div_ceil(256);
         let staging = self.device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("floem-shader-staging"),
+            label: Some("floom-shader-staging"),
             size: u64::from(stride) * u64::from(ph),
             usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::MAP_READ,
             mapped_at_creation: false,
@@ -1869,7 +1869,7 @@ impl VelloGpuPresenter {
     /// anti-aliased edge that straddles the reported bounds is still
     /// repainted.
     fn damage_region(
-        damage: &floem_scene::DamageRegion,
+        damage: &floom_scene::DamageRegion,
         width: u32,
         height: u32,
         scale: f64,
@@ -1931,7 +1931,7 @@ fn create_target(
     height: u32,
 ) -> (wgpu::Texture, wgpu::TextureView) {
     let texture = device.create_texture(&wgpu::TextureDescriptor {
-        label: Some("floem-vello-target"),
+        label: Some("floom-vello-target"),
         size: wgpu::Extent3d {
             width,
             height,
@@ -1956,7 +1956,7 @@ fn create_scratch(
     height: u32,
 ) -> (wgpu::Texture, wgpu::TextureView) {
     let texture = device.create_texture(&wgpu::TextureDescriptor {
-        label: Some("floem-vello-scratch"),
+        label: Some("floom-vello-scratch"),
         size: wgpu::Extent3d {
             width,
             height,
@@ -2160,7 +2160,7 @@ impl Presenter for VelloGpuPresenter {
                 let mut encoder =
                     self.device
                         .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                            label: Some("floem damage copy"),
+                            label: Some("floom damage copy"),
                         });
                 encoder.copy_texture_to_texture(
                     wgpu::TexelCopyTextureInfo {
@@ -2210,7 +2210,7 @@ impl Presenter for VelloGpuPresenter {
         let mut encoder = self
             .device
             .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("floem surface blit"),
+                label: Some("floom surface blit"),
             });
         surface.blitter.copy(
             &self.device,
@@ -2291,17 +2291,17 @@ mod tests {
     fn a_filters_radii_are_part_of_its_fingerprint() {
         let push = |filter| node_fingerprint(&SceneNode::FilterPush { filter });
         assert_ne!(
-            push(floem_types::Filter::blur(3.0)),
-            push(floem_types::Filter::blur(6.0)),
+            push(floom_types::Filter::blur(3.0)),
+            push(floom_types::Filter::blur(6.0)),
             "a deeper blur is a different encoding"
         );
         assert_ne!(
-            push(floem_types::Filter::blur_xy(6.0, 1.0)),
-            push(floem_types::Filter::blur_xy(1.0, 6.0)),
+            push(floom_types::Filter::blur_xy(6.0, 1.0)),
+            push(floom_types::Filter::blur_xy(1.0, 6.0)),
             "and the two axes are not interchangeable"
         );
         assert_ne!(
-            push(floem_types::Filter::blur(4.0)),
+            push(floom_types::Filter::blur(4.0)),
             node_fingerprint(&SceneNode::FilterPop),
             "a push and a pop are different nodes"
         );
@@ -2309,11 +2309,11 @@ mod tests {
 
     #[test]
     fn an_images_alpha_is_part_of_its_fingerprint() {
-        let bounds = floem_types::Rect::from_origin_size(
-            floem_types::Point::new(1.0, 2.0),
+        let bounds = floom_types::Rect::from_origin_size(
+            floom_types::Point::new(1.0, 2.0),
             Size::new(8.0, 4.0),
         );
-        let image = floem_types::ResourceId::new(0, 1);
+        let image = floom_types::ResourceId::new(0, 1);
         let at = |alpha| {
             node_fingerprint(&SceneNode::Image {
                 bounds,
@@ -2354,11 +2354,11 @@ mod tests {
         let mut scene = Scene::new();
         scene.begin_update();
         let _ = scene.insert(SceneNode::Rect {
-            bounds: floem_types::Rect::from_origin_size(
-                floem_types::Point::new(0.0, 0.0),
+            bounds: floom_types::Rect::from_origin_size(
+                floom_types::Point::new(0.0, 0.0),
                 Size::new(4.0, 4.0),
             ),
-            fill: floem_types::Brush::from(floem_types::Color::rgb(1, 2, 3)),
+            fill: floom_types::Brush::from(floom_types::Color::rgb(1, 2, 3)),
             radius: 0.0,
 
             shadow: None,
@@ -2404,7 +2404,7 @@ mod tests {
             return;
         };
         let mut registry = ResourceRegistry::new();
-        let img = registry.insert(floem_scene::Resource {
+        let img = registry.insert(floom_scene::Resource {
             kind: ResourceKind::Image {
                 width: 2,
                 height: 2,
@@ -2414,8 +2414,8 @@ mod tests {
         let mut scene = Scene::new();
         scene.begin_update();
         let _ = scene.insert(SceneNode::image(
-            floem_types::Rect::from_origin_size(
-                floem_types::Point::new(1.0, 2.0),
+            floom_types::Rect::from_origin_size(
+                floom_types::Point::new(1.0, 2.0),
                 Size::new(8.0, 4.0),
             ),
             img,
@@ -2441,7 +2441,7 @@ mod tests {
             return;
         };
         let mut registry = ResourceRegistry::new();
-        let img = registry.insert(floem_scene::Resource {
+        let img = registry.insert(floom_scene::Resource {
             kind: ResourceKind::Image {
                 width: 4,
                 height: 4,
@@ -2451,8 +2451,8 @@ mod tests {
         let mut scene = Scene::new();
         scene.begin_update();
         let _ = scene.insert(SceneNode::image(
-            floem_types::Rect::from_origin_size(
-                floem_types::Point::new(0.0, 0.0),
+            floom_types::Rect::from_origin_size(
+                floom_types::Point::new(0.0, 0.0),
                 Size::new(8.0, 8.0),
             ),
             img,
@@ -2482,14 +2482,14 @@ mod tests {
             return;
         };
         let mut registry = ResourceRegistry::new();
-        let img_a = registry.insert(floem_scene::Resource {
+        let img_a = registry.insert(floom_scene::Resource {
             kind: ResourceKind::Image {
                 width: 2,
                 height: 2,
                 pixels: std::sync::Arc::from(vec![1u8; 16].into_boxed_slice()),
             },
         });
-        let img_b = registry.insert(floem_scene::Resource {
+        let img_b = registry.insert(floom_scene::Resource {
             kind: ResourceKind::Image {
                 width: 3,
                 height: 2,
@@ -2501,8 +2501,8 @@ mod tests {
         both.begin_update();
         for image in [img_a, img_b] {
             let _ = both.insert(SceneNode::image(
-                floem_types::Rect::from_origin_size(
-                    floem_types::Point::new(0.0, 0.0),
+                floom_types::Rect::from_origin_size(
+                    floom_types::Point::new(0.0, 0.0),
                     Size::new(6.0, 4.0),
                 ),
                 image,
@@ -2523,8 +2523,8 @@ mod tests {
         let mut only_b = Scene::new();
         only_b.begin_update();
         let _ = only_b.insert(SceneNode::image(
-            floem_types::Rect::from_origin_size(
-                floem_types::Point::new(0.0, 0.0),
+            floom_types::Rect::from_origin_size(
+                floom_types::Point::new(0.0, 0.0),
                 Size::new(6.0, 4.0),
             ),
             img_b,
@@ -2553,11 +2553,11 @@ mod tests {
         scene.begin_update();
         // A resource id that resolves to nothing (empty registry).
         let _ = scene.insert(SceneNode::image(
-            floem_types::Rect::from_origin_size(
-                floem_types::Point::new(0.0, 0.0),
+            floom_types::Rect::from_origin_size(
+                floom_types::Point::new(0.0, 0.0),
                 Size::new(8.0, 4.0),
             ),
-            floem_types::ResourceId::new(99, 1),
+            floom_types::ResourceId::new(99, 1),
         ));
         scene.finish_update();
 
@@ -2717,7 +2717,7 @@ mod tests {
         scene.upsert(
             group,
             SceneNode::GroupPush {
-                transform: floem_types::Transform::IDENTITY,
+                transform: floom_types::Transform::IDENTITY,
             },
         );
         scene.finish_update();
@@ -2732,11 +2732,11 @@ mod tests {
 
     fn rect_node(x: f64) -> SceneNode {
         SceneNode::Rect {
-            bounds: floem_types::Rect::from_origin_size(
-                floem_types::Point::new(x, 0.0),
+            bounds: floom_types::Rect::from_origin_size(
+                floom_types::Point::new(x, 0.0),
                 Size::new(4.0, 4.0),
             ),
-            fill: floem_types::Brush::from(floem_types::Color::rgb(1, 2, 3)),
+            fill: floom_types::Brush::from(floom_types::Color::rgb(1, 2, 3)),
             radius: 0.0,
 
             shadow: None,
@@ -2749,7 +2749,7 @@ mod tests {
             return;
         };
         let mut registry = ResourceRegistry::new();
-        let img = registry.insert(floem_scene::Resource {
+        let img = registry.insert(floom_scene::Resource {
             kind: ResourceKind::Image {
                 width: 2,
                 height: 2,
@@ -2759,8 +2759,8 @@ mod tests {
         let mut scene = Scene::new();
         scene.begin_update();
         let _ = scene.insert(SceneNode::image(
-            floem_types::Rect::from_origin_size(
-                floem_types::Point::new(0.0, 0.0),
+            floom_types::Rect::from_origin_size(
+                floom_types::Point::new(0.0, 0.0),
                 Size::new(6.0, 6.0),
             ),
             img,
@@ -2846,7 +2846,7 @@ mod tests {
             ..crate::budget::GpuCacheBudget::for_platform(crate::budget::PlatformClass::Desktop)
         });
         let mut registry = ResourceRegistry::new();
-        let img = registry.insert(floem_scene::Resource {
+        let img = registry.insert(floom_scene::Resource {
             kind: ResourceKind::Image {
                 width: 2,
                 height: 2,
@@ -2856,8 +2856,8 @@ mod tests {
         let mut scene = Scene::new();
         scene.begin_update();
         let _ = scene.insert(SceneNode::image(
-            floem_types::Rect::from_origin_size(
-                floem_types::Point::new(0.0, 0.0),
+            floom_types::Rect::from_origin_size(
+                floom_types::Point::new(0.0, 0.0),
                 Size::new(6.0, 6.0),
             ),
             img,
@@ -2904,12 +2904,12 @@ mod tests {
 
     /// A scene whose only node draws `texture` — the shape a `Texture`-mode
     /// participant has.
-    fn scene_drawing(texture: floem_types::ResourceId) -> Scene {
+    fn scene_drawing(texture: floom_types::ResourceId) -> Scene {
         let mut scene = Scene::new();
         scene.begin_update();
         let _ = scene.insert(SceneNode::image(
-            floem_types::Rect::from_origin_size(
-                floem_types::Point::new(0.0, 0.0),
+            floom_types::Rect::from_origin_size(
+                floom_types::Point::new(0.0, 0.0),
                 Size::new(8.0, 8.0),
             ),
             texture,
@@ -2920,7 +2920,7 @@ mod tests {
 
     /// A producer's frame: the pixels are the producer's, so the registry holds
     /// no `Image` for this id at all.
-    fn external(texture: floem_types::ResourceId, sequence: u64) -> ExternalFrame {
+    fn external(texture: floom_types::ResourceId, sequence: u64) -> ExternalFrame {
         ExternalFrame {
             resource: texture,
             sequence,
@@ -2945,7 +2945,7 @@ mod tests {
         let mut registry = ResourceRegistry::new();
         // A placeholder with no pixels behind it: the participant's contents are
         // the producer's, not the registry's.
-        let texture = registry.insert(floem_scene::Resource {
+        let texture = registry.insert(floom_scene::Resource {
             kind: ResourceKind::Blob { bytes: 0 },
         });
         let scene = scene_drawing(texture);
@@ -3005,7 +3005,7 @@ mod tests {
             return;
         };
         let mut registry = ResourceRegistry::new();
-        let texture = registry.insert(floem_scene::Resource {
+        let texture = registry.insert(floom_scene::Resource {
             kind: ResourceKind::Blob { bytes: 0 },
         });
         let scene = scene_drawing(texture);
@@ -3049,7 +3049,7 @@ mod tests {
             return;
         };
         let mut registry = ResourceRegistry::new();
-        let texture = registry.insert(floem_scene::Resource {
+        let texture = registry.insert(floom_scene::Resource {
             kind: ResourceKind::Blob { bytes: 0 },
         });
         let scene = scene_drawing(texture);
@@ -3077,8 +3077,8 @@ mod tests {
     /// serving a stale fragment. Pure arithmetic — no adapter needed.
     #[test]
     fn a_shaders_source_and_params_are_part_of_its_fingerprint() {
-        let bounds = floem_types::Rect::from_origin_size(
-            floem_types::Point::new(0.0, 0.0),
+        let bounds = floom_types::Rect::from_origin_size(
+            floom_types::Point::new(0.0, 0.0),
             Size::new(8.0, 4.0),
         );
         let at = |wgsl: &str, params: Vec<f32>| {
@@ -3141,8 +3141,8 @@ mod tests {
         let mut scene = Scene::new();
         scene.begin_update();
         let _ = scene.insert(SceneNode::shader(
-            floem_types::Rect::from_origin_size(
-                floem_types::Point::new(0.0, 0.0),
+            floom_types::Rect::from_origin_size(
+                floom_types::Point::new(0.0, 0.0),
                 Size::new(4.0, 4.0),
             ),
             Shader::new(

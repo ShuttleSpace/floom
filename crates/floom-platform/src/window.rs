@@ -1,6 +1,6 @@
 //! Window contract.
 
-use floem_types::{DisplayInfo, Size, SurfaceId, WindowId};
+use floom_types::{DisplayInfo, Size, SurfaceId, WindowId};
 
 use crate::surface::{SurfaceConfig, SurfaceTarget};
 
@@ -23,7 +23,7 @@ pub struct WindowConfig {
 impl Default for WindowConfig {
     fn default() -> Self {
         Self {
-            title: "Floem".into(),
+            title: "Floom".into(),
             size: Size::new(800.0, 600.0),
             resizable: true,
         }

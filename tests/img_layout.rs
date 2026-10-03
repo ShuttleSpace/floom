@@ -1,8 +1,8 @@
-use floem::HasViewId;
-use floem::headless::{HeadlessHarness, TestRoot};
-use floem::style::{ObjectFit, ObjectPosition, Style};
-use floem::unit::UnitExt;
-use floem::views::{Decorators, Stack, img};
+use floom::HasViewId;
+use floom::headless::{HeadlessHarness, TestRoot};
+use floom::style::{ObjectFit, ObjectPosition, Style};
+use floom::unit::UnitExt;
+use floom::views::{Decorators, Stack, img};
 use image::{ColorType, ImageEncoder, RgbaImage, codecs::png::PngEncoder};
 use peniko::kurbo::Rect;
 use std::io::Cursor;

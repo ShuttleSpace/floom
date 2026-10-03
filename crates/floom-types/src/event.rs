@@ -2,8 +2,8 @@
 //!
 //! These are pure value types shared by every layer that touches input:
 //! platform backends mint them, the runtime routes them, and widgets consume
-//! them. Keeping them here (instead of in `floem-runtime`) is what lets
-//! `floem-core`'s [`EventContext`] expose an event without depending on the
+//! them. Keeping them here (instead of in `floom-runtime`) is what lets
+//! `floom-core`'s [`EventContext`] expose an event without depending on the
 //! runtime — the dependency arrow must point types → core → runtime, never
 //! the other way.
 //!
@@ -13,7 +13,7 @@ use crate::Point;
 
 /// Keyboard modifier state held during an event.
 ///
-/// Hand-rolled bit set rather than `bitflags`: `floem-types` is required to
+/// Hand-rolled bit set rather than `bitflags`: `floom-types` is required to
 /// stay dependency-free.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub struct Modifiers(u8);
@@ -245,13 +245,13 @@ impl KeyEvent {
 /// A platform-neutral IME (input-method) update delivered to a focused text
 /// widget.
 ///
-/// `floem-ime` owns the state machine; this is the wire payload the platform
-/// and widgets agree on. It lives in `floem-types` (rather than referencing
-/// `floem-ime` directly) precisely so `floem-types` can stay dependency-free —
-/// the widget layer maps an `ImeUpdate` into a `floem_ime::ImeEvent` and feeds
-/// it to its own [`floem_ime::ImeState`].
+/// `floom-ime` owns the state machine; this is the wire payload the platform
+/// and widgets agree on. It lives in `floom-types` (rather than referencing
+/// `floom-ime` directly) precisely so `floom-types` can stay dependency-free —
+/// the widget layer maps an `ImeUpdate` into a `floom_ime::ImeEvent` and feeds
+/// it to its own [`floom_ime::ImeState`].
 ///
-/// [`floem_ime::ImeState`]: https://docs.rs/floem-ime
+/// [`floom_ime::ImeState`]: https://docs.rs/floom-ime
 #[derive(Debug, Clone, PartialEq)]
 pub enum ImeUpdate {
     /// The IME composition panel opened (`true`) or closed (`false`).

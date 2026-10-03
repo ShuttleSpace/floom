@@ -2,7 +2,7 @@
 //!
 //! First cut at implementing the embedder adapter traits for iOS. Like Android,
 //! the lapce winit fork already translates iOS touch/keyboard into standard
-//! winit `WindowEvent`s — so event handling reuses Floem's existing winit path
+//! winit `WindowEvent`s — so event handling reuses Floom's existing winit path
 //! with no custom input translation. The iOS-specific work is:
 //!
 //! - reporting iOS [`BackendCapabilities`] (no muda native menu bar, no window
@@ -59,17 +59,17 @@ use winit::dpi::PhysicalInsets;
 ///   reads `UIView.safeAreaInsets` from the key window and converts points to
 ///   physical pixels via `UIScreen.scale`. The `safe_area` capability is now
 ///   `true` on iOS. Note: there is still **no layout consumer** of these insets
-///   in Floem core yet (same gap as Android, which also reports `safe_area:
+///   in Floom core yet (same gap as Android, which also reports `safe_area:
 ///   true`) — a follow-up core change must surface `safe_area()` to layout so
 ///   content clears the notch / Home Indicator.
 /// - `accessibility` — **implemented (Phase 4 Step 3)**: a VoiceOver bridge
 ///   (`accessibility/backend_ios.rs`) subclasses `UIAccessibilityElement` per
-///   Floem a11y node, mirrors the neutral tree under the window's `UIView`, and
+///   Floom a11y node, mirrors the neutral tree under the window's `UIView`, and
 ///   routes VoiceOver actions (activate / increment / decrement / scroll) back
 ///   to core through the same `PendingAction` channel the desktop backends
 ///   use. The capability is now `true` on iOS.
 /// - `drag_drop` — by design `false` (the winit-ios backend emits no OS file
-///   drag-and-drop; Floem's in-app drag works unchanged, as on Android).
+///   drag-and-drop; Floom's in-app drag works unchanged, as on Android).
 ///
 /// Already enabled: `context_menu` (in-UI renderer, no muda iOS backend —
 /// same as Android), `gpu_surface` (Metal, stable, no surface-lifecycle

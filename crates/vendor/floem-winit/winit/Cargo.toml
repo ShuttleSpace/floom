@@ -1,6 +1,6 @@
 [package]
 categories = ["gui"]
-description = "Unofficial winit fork for Floem"
+description = "Unofficial winit fork for Floom"
 documentation = "https://docs.rs/floem-winit"
 edition.workspace = true
 keywords = ["windowing"]

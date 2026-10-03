@@ -1,4 +1,4 @@
-//! Benchmarks for event dispatch and propagation in Floem.
+//! Benchmarks for event dispatch and propagation in Floom.
 //!
 //! These benchmarks measure the performance of:
 //! - Event dispatch through flat view trees (varying widths)
@@ -10,9 +10,9 @@
 use std::hint::black_box;
 
 use criterion::{BenchmarkId, Criterion, criterion_group, criterion_main};
-use floem::headless::{HeadlessHarness, TestRoot};
-use floem::prelude::*;
-use floem::views::{Container, Decorators, Empty, Stack};
+use floom::headless::{HeadlessHarness, TestRoot};
+use floom::prelude::*;
+use floom::views::{Container, Decorators, Empty, Stack};
 
 /// Create a flat tree with N children at the same level.
 /// All children are positioned absolutely and overlap.
@@ -520,7 +520,7 @@ fn bench_no_listeners_path(c: &mut Criterion) {
 ///
 /// Uses real Slider widget which calls cx.update_active() on pointer down.
 fn bench_active_view_dispatch(c: &mut Criterion) {
-    use floem::views::slider;
+    use floom::views::slider;
 
     let mut group = c.benchmark_group("active_view_dispatch");
 

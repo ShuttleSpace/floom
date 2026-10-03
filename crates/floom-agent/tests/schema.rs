@@ -1,16 +1,16 @@
 //! The AI-friendly component schema (Task 25.2).
 //!
 //! The schema is *emitted*, not hand-written: every widget row, domain value
-//! and event comes out of the same `floem-ui-ir` tables the validator enforces.
+//! and event comes out of the same `floom-ui-ir` tables the validator enforces.
 //! These tests pin that derivation — if a table gains a property and the
 //! schema does not show it, an AI consumer would author documents the
 //! validator rejects, which is exactly the failure the single-table rule
 //! exists to prevent.
 
-use floem_agent::component_schema;
-use floem_ui_ir::{NodeKind, prop_spec};
+use floom_agent::component_schema;
+use floom_ui_ir::{NodeKind, prop_spec};
 
-fn widget_named(name: &str) -> floem_agent::WidgetInfo {
+fn widget_named(name: &str) -> floom_agent::WidgetInfo {
     component_schema()
         .widgets
         .into_iter()

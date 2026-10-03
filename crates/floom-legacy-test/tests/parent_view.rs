@@ -5,10 +5,10 @@
 //! - derived_children() updates when signals change
 //! - Old children are properly cleaned up when new children are set
 
-use floem::headless::TestRoot;
-use floem::prelude::*;
-use floem::views::{Decorators, Empty, Label, Stem};
-use floem_legacy_test::prelude::*;
+use floom::headless::TestRoot;
+use floom::prelude::*;
+use floom::views::{Decorators, Empty, Label, Stem};
+use floom_legacy_test::prelude::*;
 use serial_test::serial;
 
 /// Test that Stem::new() creates an empty view with no children.
@@ -307,17 +307,17 @@ fn test_derived_children_with_styled_children() {
 
     // Verify first child has RED background
     let style = harness.get_computed_style(children[0]);
-    let bg = style.get(floem::style::Background);
+    let bg = style.get(floom::style::Background);
     assert!(
-        matches!(bg, Some(floem::peniko::Brush::Solid(c)) if c == palette::css::RED),
+        matches!(bg, Some(floom::peniko::Brush::Solid(c)) if c == palette::css::RED),
         "First child should be RED"
     );
 
     // Verify second child has BLUE background
     let style = harness.get_computed_style(children[1]);
-    let bg = style.get(floem::style::Background);
+    let bg = style.get(floom::style::Background);
     assert!(
-        matches!(bg, Some(floem::peniko::Brush::Solid(c)) if c == palette::css::BLUE),
+        matches!(bg, Some(floom::peniko::Brush::Solid(c)) if c == palette::css::BLUE),
         "Second child should be BLUE"
     );
 }
@@ -1111,8 +1111,8 @@ fn test_stateful_child_with_static_children() {
 // ParentView::scope() tests - Context propagation from parent to children
 // =============================================================================
 
-use floem::reactive::Scope;
-use floem::view::ParentView;
+use floom::reactive::Scope;
+use floom::view::ParentView;
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -1142,7 +1142,7 @@ impl<T: Clone + 'static> ContextProvider<T> {
     }
 }
 
-impl<T: Clone + 'static> floem::View for ContextProvider<T> {
+impl<T: Clone + 'static> floom::View for ContextProvider<T> {
     fn id(&self) -> ViewId {
         self.id
     }
@@ -1207,7 +1207,7 @@ impl ContextCapturingView {
     }
 }
 
-impl floem::View for ContextCapturingView {
+impl floom::View for ContextCapturingView {
     fn id(&self) -> ViewId {
         self.id
     }
@@ -1262,7 +1262,7 @@ impl ContextCapturingStringView {
     }
 }
 
-impl floem::View for ContextCapturingStringView {
+impl floom::View for ContextCapturingStringView {
     fn id(&self) -> ViewId {
         self.id
     }

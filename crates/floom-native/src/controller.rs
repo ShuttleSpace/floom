@@ -18,7 +18,7 @@
 
 use std::collections::{HashMap, HashSet};
 
-use floem_types::NativeCapture;
+use floom_types::NativeCapture;
 
 use crate::abi::{
     NativeCapabilities, NativeCompositionMode, NativeError, NativeSnapshot, NativeState,

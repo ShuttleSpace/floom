@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use floem_legacy_reactive::Scope;
+use floom_legacy_reactive::Scope;
 
 use crate::ext_event::create_ext_action;
 

@@ -136,7 +136,7 @@ pub(crate) struct DraggingPreview {
 /// # Example
 ///
 /// ```rust
-/// use floem::event::{
+/// use floom::event::{
 ///     DragConfig, DragEvent, DragSourceEvent, DragTargetEvent, Event, EventCx, EventPropagation,
 ///     PointerCaptureEvent,
 /// };
@@ -191,7 +191,7 @@ pub(crate) struct PendingDragState {
     pub button: Option<PointerButton>,
     /// Minimum distance (in logical pixels) pointer must move before drag starts.
     pub threshold: f64,
-    /// When true, the view will be moved to be under the cursor automatically by floem.
+    /// When true, the view will be moved to be under the cursor automatically by floom.
     pub use_default_preview: bool,
     /// Duration of return animation
     pub animation_duration: Duration,

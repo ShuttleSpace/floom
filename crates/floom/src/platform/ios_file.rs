@@ -30,7 +30,7 @@ use objc2_foundation::{NSArray, NSString, NSURL};
 use objc2_ui_kit::{UIApplication, UIDocumentPickerViewController, UIWindow};
 use objc2_uniform_type_identifiers::UTType;
 
-use floem_legacy_reactive::Scope;
+use floom_legacy_reactive::Scope;
 
 use crate::ext_event::create_ext_action;
 use crate::platform::file::{FileDialogOptions, FileInfo};
@@ -184,8 +184,8 @@ fn build_picker(
 fn make_delegate() -> Retained<NSObject> {
     static CLASS: OnceLock<&'static AnyClass> = OnceLock::new();
     let cls = *CLASS.get_or_init(|| {
-        let mut builder = ClassBuilder::new(c"FloemDocPickerDelegate", NSObject::class())
-            .expect("FloemDocPickerDelegate class already registered");
+        let mut builder = ClassBuilder::new(c"FloomDocPickerDelegate", NSObject::class())
+            .expect("FloomDocPickerDelegate class already registered");
         unsafe {
             builder.add_method(
                 sel!(documentPicker:didPickDocumentsAtURLs:),
@@ -200,7 +200,7 @@ fn make_delegate() -> Retained<NSObject> {
     });
     let obj: Option<Retained<NSObject>> =
         unsafe { msg_send![msg_send![cls, alloc], init] };
-    obj.expect("failed to allocate FloemDocPickerDelegate")
+    obj.expect("failed to allocate FloomDocPickerDelegate")
 }
 
 /// Deliver the result (or cancellation) to the pending caller callback.

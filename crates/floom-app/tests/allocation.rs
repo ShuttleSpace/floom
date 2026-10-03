@@ -11,11 +11,11 @@ use std::alloc::{GlobalAlloc, Layout, System};
 use std::cell::Cell;
 use std::sync::atomic::Ordering::Relaxed;
 
-use floem_animation::{AnimKind, CompositorProp, Tween};
-use floem_app::{NodeId, WidgetHost};
-use floem_layout::LayoutStyle;
-use floem_types::Size;
-use floem_widgets::{Container, Text};
+use floom_animation::{AnimKind, CompositorProp, Tween};
+use floom_app::{NodeId, WidgetHost};
+use floom_layout::LayoutStyle;
+use floom_types::Size;
+use floom_widgets::{Container, Text};
 
 thread_local! {
     /// `const` initializers: touching these from inside `alloc` can never
@@ -173,7 +173,7 @@ fn relayout_allocation_audit_record() {
         let (mut host, _) = wide_tree(groups, leaves);
         host.frame();
         host.frame();
-        let (allocs, stats): (u64, floem_app::FrameStats) = measure(|| {
+        let (allocs, stats): (u64, floom_app::FrameStats) = measure(|| {
             host.invalidate_layout();
             host.frame()
         });
@@ -190,7 +190,7 @@ fn first_text_alpha(host: &WidgetHost) -> u8 {
     host.scene()
         .iter()
         .find_map(|(_, node)| match node {
-            floem_scene::SceneNode::Text { color, .. } => Some(color.a),
+            floom_scene::SceneNode::Text { color, .. } => Some(color.a),
             _ => None,
         })
         .expect("the tree painted a text node")

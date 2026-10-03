@@ -1,8 +1,8 @@
 //! Versioned, serializable UI intermediate representation (Phase 22.1).
 //!
 //! The IR is the *source of truth* a UI is authored in when it does not come
-//! from Rust source: the DSL lowers into it ([`floem-dsl`]), the hot-reload
-//! protocol diffs two of them ([`floem-hot-reload`]), and the inspector walks
+//! from Rust source: the DSL lowers into it ([`floom-dsl`]), the hot-reload
+//! protocol diffs two of them ([`floom-hot-reload`]), and the inspector walks
 //! it to explain a running tree. It therefore has to be two things at once:
 //!
 //! - **Stable on the wire.** Every document carries its [`IrVersion`], and the
@@ -13,8 +13,8 @@
 //!   stable string the runtime can match across a reload — not an index, which
 //!   would silently move when a sibling is inserted.
 //!
-//! Like `floem-codegen`, this crate is runtime-free: it depends on the L0
-//! vocabulary ([`floem_types::Color`], for the bridge) and nothing else, so a
+//! Like `floom-codegen`, this crate is runtime-free: it depends on the L0
+//! vocabulary ([`floom_types::Color`], for the bridge) and nothing else, so a
 //! tool that only reads documents never links a window.
 
 #![forbid(unsafe_code)]

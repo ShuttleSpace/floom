@@ -6,7 +6,7 @@
 //!   diagnostic. The lexer and parser are hand-written: the grammar is small
 //!   enough that a parser generator would add a build step and a dependency
 //!   without buying anything.
-//! - [`lower`] — AST to a validated [`floem_ui_ir::UiDocument`]. This stage owns
+//! - [`lower`] — AST to a validated [`floom_ui_ir::UiDocument`]. This stage owns
 //!   no vocabulary at all: it builds the IR and asks the IR's own tables to
 //!   validate, so a property added to the IR is immediately usable in the DSL
 //!   and a property the IR rejects is rejected here too. Errors are reported
@@ -21,7 +21,7 @@
 //!         title = text label="hello" size=16
 //!     }
 //! "#;
-//! let compiled = floem_dsl::compile(source).expect("valid");
+//! let compiled = floom_dsl::compile(source).expect("valid");
 //! assert_eq!(compiled.document.nodes.len(), 2);
 //! ```
 
@@ -41,7 +41,7 @@ pub use lexer::{Span, Token, lex};
 pub use lower::{Bound, lower};
 pub use parser::parse;
 
-use floem_ui_ir::{IrError, UiDocument};
+use floom_ui_ir::{IrError, UiDocument};
 
 /// Anything that can go wrong compiling DSL source.
 #[derive(Debug, Clone, PartialEq)]

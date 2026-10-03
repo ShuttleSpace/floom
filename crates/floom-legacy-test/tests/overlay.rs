@@ -3,10 +3,10 @@
 //! These tests verify that the Overlay view correctly manages overlays,
 //! including event dispatch order and paint order.
 
-use floem::HasViewId;
-use floem::headless::{HeadlessHarness, TestRoot};
-use floem::reactive::{RwSignal, SignalGet, SignalUpdate};
-use floem::views::{
+use floom::HasViewId;
+use floom::headless::{HeadlessHarness, TestRoot};
+use floom::reactive::{RwSignal, SignalGet, SignalUpdate};
+use floom::views::{
     Clip, ClipExt, ContainerExt, Decorators, Empty, Label, Overlay, OverlayExt, Stack,
 };
 use serial_test::serial;
@@ -134,7 +134,7 @@ fn test_overlay_with_styled_content() {
         Label::new("Main content"),
         Label::new("Styled overlay")
             .style(|s| {
-                s.background(floem::peniko::Color::WHITE)
+                s.background(floom::peniko::Color::WHITE)
                     .padding(20.0)
                     .border_radius(8.0)
             })
@@ -390,7 +390,7 @@ fn test_hidden_overlay_does_not_block_events() {
                 s.absolute()
                     .inset(0.0)
                     .size(100.0, 100.0)
-                    .display(floem::taffy::Display::None)
+                    .display(floom::taffy::Display::None)
             })
             .action(move || {
                 overlay_clone.set(true);
@@ -781,7 +781,7 @@ fn test_overlay_with_container_derived_rebuild() {
     // This reproduces a bug where taffy layout nodes become invalid
     // after Container::derived rebuilds its children.
 
-    use floem::views::Container;
+    use floom::views::Container;
 
     let root = TestRoot::new();
     let counter = RwSignal::new(0);
@@ -820,7 +820,7 @@ fn test_overlay_with_nested_container_derived() {
     // More complex case: nested Container::derived inside Overlay
     // This tests the pattern used in Dialog component.
 
-    use floem::views::Container;
+    use floom::views::Container;
 
     let root = TestRoot::new();
     let open = RwSignal::new(true);
@@ -834,7 +834,7 @@ fn test_overlay_with_nested_container_derived() {
                 s.absolute()
                     .inset(0.0)
                     .size(100.0, 100.0)
-                    .apply_if(!is_open, |s| s.display(floem::taffy::Display::None))
+                    .apply_if(!is_open, |s| s.display(floom::taffy::Display::None))
             }),
             // Centering container with derived content
             Container::new(Container::derived(move || {
@@ -842,7 +842,7 @@ fn test_overlay_with_nested_container_derived() {
                 Stack::new((Label::new("Dialog Title"), Label::new("Dialog Description"))).style(
                     move |s| {
                         s.size(80.0, 60.0)
-                            .apply_if(!is_open, |s| s.display(floem::taffy::Display::None))
+                            .apply_if(!is_open, |s| s.display(floom::taffy::Display::None))
                     },
                 )
             }))
@@ -851,7 +851,7 @@ fn test_overlay_with_nested_container_derived() {
                 s.absolute()
                     .inset(0.0)
                     .size(100.0, 100.0)
-                    .apply_if(!is_open, |s| s.display(floem::taffy::Display::None))
+                    .apply_if(!is_open, |s| s.display(floom::taffy::Display::None))
             }),
         ))
         .style(|s| s.absolute().inset(0.0).size(100.0, 100.0))

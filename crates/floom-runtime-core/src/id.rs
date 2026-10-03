@@ -1,6 +1,6 @@
 //! Generational `ElementId` allocator with stale-ID rejection.
 
-use floem_types::ElementId;
+use floom_types::ElementId;
 
 #[derive(Debug, Clone, Copy)]
 enum IdSlotState {

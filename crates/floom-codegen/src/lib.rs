@@ -1,6 +1,6 @@
-//! Native-component code generation for Floem 2.0 (Phase 18).
+//! Native-component code generation for Floom 2.0 (Phase 18).
 //!
-//! `floem-codegen` is the compiler that turns a declarative
+//! `floom-codegen` is the compiler that turns a declarative
 //! [`schema::ComponentSchema`] into native glue (Swift/Kotlin/C/C++), so a
 //! Rust-defined native participant can be driven from the framework and from
 //! OS code without hand-written FFI boilerplate.

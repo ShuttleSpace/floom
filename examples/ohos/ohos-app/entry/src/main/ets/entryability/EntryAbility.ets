@@ -5,9 +5,9 @@ import bridge from 'libentry.so';
 import {
   setAppContext,
   registerPlatformBridge,
-  registerFloemA11yProvider,
+  registerFloomA11yProvider,
   onSharedFiles,
-} from '../FloemBridge';
+} from '../FloomBridge';
 
 const DOMAIN = 0x3433;
 
@@ -83,7 +83,7 @@ export default class EntryAbility extends UIAbility {
     }
   }
 
-  // Register the ArkTS half of floem's platform bridge (clipboard, file picker,
+  // Register the ArkTS half of floom's platform bridge (clipboard, file picker,
   // external URL, a11y feed, IME). Rendering does not depend on it: the
   // XComponent page loads libentry.so on its own, so a bridge failure is logged
   // and swallowed rather than allowed to take the surface down with it.
@@ -91,7 +91,7 @@ export default class EntryAbility extends UIAbility {
     try {
       setAppContext(this.context);
       registerPlatformBridge();
-      registerFloemA11yProvider();
+      registerFloomA11yProvider();
     } catch (err) {
       const e = err as Error;
       hilog.error(
@@ -152,7 +152,7 @@ export default class EntryAbility extends UIAbility {
 // Extract URIs shared into the app via a share sheet / "open with".
 // OHOS delivers a single uri on `want.uri` and batch shares as an array under
 // `ability.params.stream`. MIME types / display names are not always present,
-// so they are forwarded as null and floem fills them in from the URI.
+// so they are forwarded as null and floom fills them in from the URI.
 function extractSharedFiles(want: Want): SharedFiles {
   const uris: Array<string> = [];
   const mimeTypes: Array<string | null> = [];

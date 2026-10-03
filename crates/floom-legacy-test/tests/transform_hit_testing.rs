@@ -8,14 +8,14 @@
 //! - Hit testing uses layout_rect which includes transform effects
 //! - Event coordinates are transformed to local space using visual_transform inverse
 //!
-//! Note: CSS transforms in Floem are center-based, meaning scale/rotate happen around
+//! Note: CSS transforms in Floom are center-based, meaning scale/rotate happen around
 //! the element's center, not its origin.
 
-use floem::kurbo::Point;
-use floem::prelude::*;
-use floem::unit::Pct;
-use floem_legacy_test::TestRoot;
-use floem_legacy_test::prelude::*;
+use floom::kurbo::Point;
+use floom::prelude::*;
+use floom::unit::Pct;
+use floom_legacy_test::TestRoot;
+use floom_legacy_test::prelude::*;
 use serial_test::serial;
 use std::cell::Cell;
 use std::rc::Rc;
@@ -328,7 +328,7 @@ fn test_scaled_view_receives_correct_local_coordinates() {
 
     let view = Empty::new()
         .style(|s| s.size(100.0, 100.0).scale(Pct(200.0)))
-        .on_event_stop(floem::event::listener::Click, move |cx, _| {
+        .on_event_stop(floom::event::listener::Click, move |cx, _| {
             let pointer_up = cx.triggered_by.unwrap();
             let pointer_up_point = pointer_up.clone().transform(cx.world_transform).point();
             received_point_clone.set(pointer_up_point);
@@ -361,7 +361,7 @@ fn test_nested_transformed_view_receives_correct_local_coordinates() {
     let received_point_clone = received_point.clone();
 
     let inner = Empty::new().style(|s| s.size(40.0, 40.0)).on_event_stop(
-        floem::event::listener::Click,
+        floom::event::listener::Click,
         move |cx, _| {
             let pointer_up = cx.triggered_by.unwrap();
             let pointer_up_point = pointer_up.clone().transform(cx.world_transform).point();

@@ -2,11 +2,11 @@
 //! scene rect that carries the radius, so both command-recording and GPU
 //! backends can shape the corners instead of silently squaring them off.
 
-use floem_app::WidgetHost;
-use floem_layout::LayoutStyle;
-use floem_scene::SceneNode;
-use floem_types::Color;
-use floem_widgets::Container;
+use floom_app::WidgetHost;
+use floom_layout::LayoutStyle;
+use floom_scene::SceneNode;
+use floom_types::Color;
+use floom_widgets::Container;
 
 fn fixed(width: f64, height: f64) -> LayoutStyle {
     LayoutStyle {
@@ -20,7 +20,7 @@ fn fixed(width: f64, height: f64) -> LayoutStyle {
 #[test]
 fn container_radius_reaches_the_scene_rect() {
     let mut host = WidgetHost::new();
-    host.set_size(floem_core::Size::new(240.0, 160.0));
+    host.set_size(floom_core::Size::new(240.0, 160.0));
     host.mount_root(
         fixed(120.0, 48.0),
         Container::new()
@@ -44,7 +44,7 @@ fn container_radius_reaches_the_scene_rect() {
 #[test]
 fn plain_container_keeps_zero_radius() {
     let mut host = WidgetHost::new();
-    host.set_size(floem_core::Size::new(120.0, 80.0));
+    host.set_size(floom_core::Size::new(120.0, 80.0));
     host.mount_root(
         fixed(60.0, 24.0),
         Container::new().background(Color::rgb(9, 9, 9)),

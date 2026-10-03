@@ -2,10 +2,10 @@
 //!
 //! Two guarantees are pinned here:
 //!
-//! 1. **Preservation**: `floem::prelude` still carries the full v1 API, so
+//! 1. **Preservation**: `floom::prelude` still carries the full v1 API, so
 //!    existing v1 applications compile unchanged (the preservation policy for
 //!    the current major version).
-//! 2. **Mirror**: `floem::compat::v1_prelude` exposes the *same items* — the
+//! 2. **Mirror**: `floom::compat::v1_prelude` exposes the *same items* — the
 //!    stable v1 path a v1 app can migrate to before any future narrowing of
 //!    `prelude`. Re-exported items have identical types through both paths;
 //!    if `v1_prelude` ever diverges, the `same_type` assertions below stop
@@ -13,8 +13,8 @@
 
 use std::any::TypeId;
 
-use floem::compat::v1_prelude as v1;
-use floem::prelude as p;
+use floom::compat::v1_prelude as v1;
+use floom::prelude as p;
 
 /// Compiles only when both expressions have the same type.
 #[allow(deprecated)]
@@ -52,8 +52,8 @@ fn reactive_and_view_types_are_identical_through_both_paths() {
 #[allow(deprecated)]
 fn the_compat_path_runs_a_v1_app_snippet() {
     // The full v1 idiom, through the compat path only: a signal, an effect
-    // reading it, and a colour constant — no `floem::prelude` import.
-    use floem::compat::v1_prelude::*;
+    // reading it, and a colour constant — no `floom::prelude` import.
+    use floom::compat::v1_prelude::*;
 
     let counter = create_rw_signal(0_i32);
     assert_eq!(counter.get(), 0);
@@ -67,7 +67,7 @@ fn the_compat_path_runs_a_v1_app_snippet() {
 #[test]
 #[allow(deprecated)]
 fn unit_and_event_extensions_resolve_through_the_compat_path() {
-    use floem::compat::v1_prelude::*;
+    use floom::compat::v1_prelude::*;
 
     // `UnitExt` (styling ergonomics) and the keyboard event types are part
     // of the frozen surface too.

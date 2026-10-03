@@ -9,7 +9,7 @@ use crate::{
         value_container,
     },
 };
-use floem_legacy_reactive::{SignalGet, SignalUpdate};
+use floom_legacy_reactive::{SignalGet, SignalUpdate};
 use std::fmt::Display;
 
 style_class!(

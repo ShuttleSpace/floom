@@ -4,7 +4,7 @@
 # The golden net is only worth having if it actually *bites*: if a frame
 # changes and the golden does not go red, the net is decoration. So we break
 # the thing under test on purpose and watch the right test fail. Four mutations
-# hit the novel comparison/freeze logic in tooling/floem-snapshot/src/frames.rs
+# hit the novel comparison/freeze logic in crates/floom-snapshot/src/frames.rs
 # (these are the parts a plain hash could never have caught), and one hits the
 # pixel layer the net guards — disabling the software blur, which must fail the
 # blurred-card golden. A mutation a test does not catch is a test with no teeth.
@@ -43,15 +43,15 @@ mutate_one() {
   touch "$file"
 }
 
-FRAMES=tooling/floem-snapshot/src/frames.rs
-SW=render/floem-renderer-software/src/lib.rs
+FRAMES=crates/floom-snapshot/src/frames.rs
+SW=crates/floom-renderer-software/src/lib.rs
 
 # 1. frozen() lies and says every sequence moves — a still would pass as an
 #    animation, so the test that asserts a moving sequence is NOT frozen must go.
 mutate_one "$FRAMES" \
 "            .all(|(_, d)| !d.diff(first, self.tol).moved())" \
 "            .all(|(_, _)| true)" \
-"cargo test -q -p floem-snapshot --lib a_sequence_that_moves_is_not_frozen" \
+"cargo test -q -p floom-snapshot --lib a_sequence_that_moves_is_not_frozen" \
 "frozen-lies-and-says-moving"
 
 # 2. the other way: frozen() lies and says nothing moves — a still would pass as
@@ -60,7 +60,7 @@ mutate_one "$FRAMES" \
 mutate_one "$FRAMES" \
 "            .all(|(_, d)| !d.diff(first, self.tol).moved())" \
 "            .all(|(_, _)| false)" \
-"cargo test -q -p floem-snapshot --lib a_sequence_that_never_moves_is_frozen" \
+"cargo test -q -p floom-snapshot --lib a_sequence_that_never_moves_is_frozen" \
 "frozen-lies-and-says-still"
 
 # 3. the tolerance stops being a tolerance: nothing is ever "over", so a change
@@ -68,7 +68,7 @@ mutate_one "$FRAMES" \
 mutate_one "$FRAMES" \
 "        if d > tol {" \
 "        if d > 255 {" \
-"cargo test -q -p floem-snapshot --lib a_shift_far_outside_the_tolerance_is_caught" \
+"cargo test -q -p floom-snapshot --lib a_shift_far_outside_the_tolerance_is_caught" \
 "tolerance-swallowed"
 
 # 4. the alpha-weighted averaging stops premultiplying: a half-covered block now
@@ -81,7 +81,7 @@ mutate_one "$FRAMES" \
 "                } else {
                     [(sr / count) as u8, (sg / count) as u8, (sb / count) as u8]
                 };" \
-"cargo test -q -p floem-snapshot --lib a_transparent_block_reports_no_colour" \
+"cargo test -q -p floom-snapshot --lib a_transparent_block_reports_no_colour" \
 "premultiply-dropped"
 
 # 5. the pixel layer the net guards: disable the software blur entirely. The
@@ -90,7 +90,7 @@ mutate_one "$FRAMES" \
 mutate_one "$SW" \
 "    if w == 0 || h == 0 || (rx == 0 && ry == 0) {" \
 "    if true {" \
-"cargo test -q -p floem-snapshot --test golden_frames a_fading_blurred_card_is_golden_frame_by_frame" \
+"cargo test -q -p floom-snapshot --test golden_frames a_fading_blurred_card_is_golden_frame_by_frame" \
 "blur-disabled-pixel-layer"
 
 # A restore-by-copy can land inside the same second as the mutated build, and

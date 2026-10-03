@@ -4,5 +4,5 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-floem = { path = "../../crates/floom" }
-floem-editor = { path = "../../crates/ecosystem/floem-editor/floem-editor" }
+floom = { path = "../../crates/floom" }
+floom-editor = { path = "../../crates/ecosystem/floom-editor/floom-editor" }

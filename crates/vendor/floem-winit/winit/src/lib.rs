@@ -297,8 +297,8 @@ pub use winit_core::{application, cursor, error, event, icon, keyboard, monitor,
 mod os_error;
 mod platform_impl;
 
-// floem #109: forward the shared-file/URL callback registration from the
-// iOS backend so floem can call `winit::set_on_open_url`. `winit-uikit` only
+// floom #109: forward the shared-file/URL callback registration from the
+// iOS backend so floom can call `winit::set_on_open_url`. `winit-uikit` only
 // exists on the iOS-family targets, hence the cfg gate.
 #[cfg(target_os = "ios")]
 pub use winit_uikit::set_on_open_url;

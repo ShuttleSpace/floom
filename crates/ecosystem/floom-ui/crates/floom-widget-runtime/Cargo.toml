@@ -1,0 +1,13 @@
+[package]
+name = "floom-widget-runtime"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+floom = { workspace = true }
+floom-core-theme = { workspace = true }
+
+[features]
+material = ["floom-core-theme/material"]
+cupertino = ["floom-core-theme/cupertino"]
+fluent = ["floom-core-theme/fluent"]

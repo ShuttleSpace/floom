@@ -1,11 +1,11 @@
-//! # Floem
-//! Floem is a cross-platform GUI library for Rust. It aims to be extremely performant while providing world-class developer ergonomics.
+//! # Floom
+//! Floom is a cross-platform GUI library for Rust. It aims to be extremely performant while providing world-class developer ergonomics.
 //!
-//! The following is a simple example to demonstrate Floem's API and capabilities.
+//! The following is a simple example to demonstrate Floom's API and capabilities.
 //!
 //! ## Example: Counter
 //! ```rust
-//! use floem::prelude::*;
+//! use floom::prelude::*;
 //!
 //! let mut counter = RwSignal::new(0);
 //!
@@ -17,25 +17,25 @@
 //!     )),
 //! ));
 //! ```
-//! This example demonstrates the core concepts of building a reactive GUI with Floem:
+//! This example demonstrates the core concepts of building a reactive GUI with Floom:
 //!
 //! - State Management: The `RwSignal` provides a reactive way to manage the counter's state.
 //! - Widgets: Common UI elements like `stack`, `label`, and `button` are easily implemented.
 //! - Reactivity: The label automatically updates when the counter changes.
 //! - Event Handling: Button clicks are handled with simple closures that modify the state.
 //!
-//! Floem's objectives prioritize simplicity and performance, enabling the development of complex graphical user interfaces with minimal boilerplate.
+//! Floom's objectives prioritize simplicity and performance, enabling the development of complex graphical user interfaces with minimal boilerplate.
 //!
 //! ## Views
-//! Floem models the UI using a tree of [Views](view::View). Views, such as the `h_stack`, `label`, and
-//! `button` elements are the building blocks of UI in Floem.
+//! Floom models the UI using a tree of [Views](view::View). Views, such as the `h_stack`, `label`, and
+//! `button` elements are the building blocks of UI in Floom.
 //!
-//! Floem's main view tree is constructed only once.
+//! Floom's main view tree is constructed only once.
 //! This guards against unnecessary and expensive rebuilds of your views;
 //! however, even though the tree is built only once, views can still receive reactive updates.
 //!
 //! ### Composition and Flexibility
-//! Views in Floem are composable, allowing for the construction of complex user interfaces by integrating simpler components.
+//! Views in Floom are composable, allowing for the construction of complex user interfaces by integrating simpler components.
 //! In the counter example, label and button views were combined within vertical (`v_stack`) and horizontal (`h_stack`) layouts to create a more intricate interface.
 //!
 //! This compositional approach provides the following benefits:
@@ -43,20 +43,20 @@
 //! - Easy and consistent refactoring
 //!
 //! ### Learn More
-//! Floem provides a set of built-in views to help you create UIs quickly.
+//! Floom provides a set of built-in views to help you create UIs quickly.
 //! To learn more about the built-in views, check out the [views module](crate::views) documentation.
 //!
 //! ## State management
 //!
-//! Floem uses a reactive system built on signals and effects for its state management.
+//! Floom uses a reactive system built on signals and effects for its state management.
 //!
-//! Floem uses its own reactive system with an API that is similar to the one in the [leptos_reactive](https://docs.rs/leptos_reactive/latest/leptos_reactive/index.html) crate.
+//! Floom uses its own reactive system with an API that is similar to the one in the [leptos_reactive](https://docs.rs/leptos_reactive/latest/leptos_reactive/index.html) crate.
 //!
 //! ### Signals as State
 //!
-//! You can create reactive state by creating a signal anywhere in the program using [`RwSignal::new()`](floem_legacy_reactive::RwSignal::new), [`RwSignal::new_split()`](floem_legacy_reactive::RwSignal::new_split), or use a [different signal type](floem_legacy_reactive).
+//! You can create reactive state by creating a signal anywhere in the program using [`RwSignal::new()`](floom_legacy_reactive::RwSignal::new), [`RwSignal::new_split()`](floom_legacy_reactive::RwSignal::new_split), or use a [different signal type](floom_legacy_reactive).
 //!
-//! When you use a signal by calling the [`get`](floem_legacy_reactive::SignalGet::get) or [`with`](floem_legacy_reactive::SignalWith::with) methods, (which are also called when you use an operator such as `==`)
+//! When you use a signal by calling the [`get`](floom_legacy_reactive::SignalGet::get) or [`with`](floom_legacy_reactive::SignalWith::with) methods, (which are also called when you use an operator such as `==`)
 //! the runtime will automatically subscribe the correct side effects
 //! to changes in that signal, creating reactivity. To the programmer this is transparent.
 //! By simply accessing the value where you want to use it, the reactivity will "just work" and
@@ -65,9 +65,9 @@
 //!
 //! #### Example: Changing Text
 //! ```rust
-//! # use floem::reactive::*;
-//! # use floem::views::*;
-//! # use floem::IntoView;
+//! # use floom::reactive::*;
+//! # use floom::views::*;
+//! # use floom::IntoView;
 //! fn app_view() -> impl IntoView {
 //!
 //!     // All signal types implement `Copy`, so they can be easily used without needing to manually clone them.
@@ -75,7 +75,7 @@
 //!
 //!     let label_view = label(move || text.get());
 //!
-//!     let button = button("Change Text").action(move || text.set("Hello, Floem!".to_string()));
+//!     let button = button("Change Text").action(move || text.set("Hello, Floom!".to_string()));
 //!
 //!     v_stack((button, label_view))
 //! }
@@ -88,9 +88,9 @@
 //! ### Functions as a Primitive of Reactivity
 //!
 //! The most fundamental primitive of reactivity is a function that can be re-run in response to changes in a signal.
-//! For this reason, many of Floem's APIs accept functions as arguments (such as in the label view in the `Changing Text` example above).
-//! Most of the functions is Floem's API will
-//! update reactively, but not all of them do. For this reason, all arguments in Floem's API that are functions will
+//! For this reason, many of Floom's APIs accept functions as arguments (such as in the label view in the `Changing Text` example above).
+//! Most of the functions is Floom's API will
+//! update reactively, but not all of them do. For this reason, all arguments in Floom's API that are functions will
 //! be marked with a `# Reactivity` section that will inform you if the function will be re-run in response to reactive updates.
 //!
 //! ### Learn More
@@ -100,16 +100,16 @@
 //!
 //! ## Style: Customizing Appearance
 //!
-//! Floem has a powerful, built-in styling system that allows you to customize the appearance of your UI.
+//! Floom has a powerful, built-in styling system that allows you to customize the appearance of your UI.
 //!
 //! Example:
 //! ```
-//! #  use floem::peniko::color::palette;
-//! #  use floem::reactive::*;
-//! #  use floem::style::Style;
-//! #  use floem::unit::UnitExt;
-//! #  use floem::View;
-//! #  use floem::views::{text, Decorators};
+//! #  use floom::peniko::color::palette;
+//! #  use floom::reactive::*;
+//! #  use floom::style::Style;
+//! #  use floom::unit::UnitExt;
+//! #  use floom::View;
+//! #  use floom::views::{text, Decorators};
 //! #
 //! text("Some text").style(|s| s.font_size(21.).color(palette::css::DARK_GRAY));
 //! ```
@@ -121,7 +121,7 @@
 //! such as font size are `inherited` and will apply to all of a view's children until overridden.
 // TODO: Add links on these
 //!
-//! In this same style value, floem supports:
+//! In this same style value, floom supports:
 //! - themeing with [classes](style::Style::class)
 //! - [property transitions](style::Style::transition)
 //! - defining styles on different [interaction states](style::Style::hover)
@@ -135,19 +135,19 @@
 //! ## Animation
 //!
 //! In addition to [property transitions](style::Style::transition) that can be added to `Style`s,
-//! Floem has a full keyframe animation system that allows you to animate any property that can be [interpolated](style::StylePropValue::interpolate) and builds on the capabilities and ergonomics of the style system.
+//! Floom has a full keyframe animation system that allows you to animate any property that can be [interpolated](style::StylePropValue::interpolate) and builds on the capabilities and ergonomics of the style system.
 //!
-//! Animations in Floem, by default, have keyframes ranging from 0-100.
+//! Animations in Floom, by default, have keyframes ranging from 0-100.
 //!
 //! #### Example: Rectangle to Square
 //!
 //! ```
-//! #  use floem::peniko::color::palette;
-//! #  use floem::reactive::*;
-//! #  use floem::style::Style;
-//! #  use floem::unit::{UnitExt, DurationUnitExt};
-//! #  use floem::View;
-//! #  use floem::views::*;
+//! #  use floom::peniko::color::palette;
+//! #  use floom::reactive::*;
+//! #  use floom::style::Style;
+//! #  use floom::unit::{UnitExt, DurationUnitExt};
+//! #  use floom::View;
+//! #  use floom::views::*;
 //! #
 //! empty()
 //!     .style(|s| s.background(palette::css::RED).size(500, 100))
@@ -226,19 +226,19 @@ pub use box_tree::{BoxTree, ElementId, ElementMeta, FocusNavMeta};
 pub(crate) use box_tree::{bump_focus_nav_meta_revision, focus_nav_meta_revision};
 
 pub use app::{AppConfig, AppEvent, Application, launch, quit_app, reopen};
-pub use floem_legacy_reactive as reactive;
+pub use floom_legacy_reactive as reactive;
 // Re-export the most commonly used reactive primitives at the crate root so they
-// can be reached as `floem::Scope`, `floem::create_global_rw_signal`, etc. without
+// can be reached as `floom::Scope`, `floom::create_global_rw_signal`, etc. without
 // going through the `reactive` module path. The full set remains available under
-// `floem::reactive::*`.
-pub use floem_legacy_reactive::{
+// `floom::reactive::*`.
+pub use floom_legacy_reactive::{
     Memo, RwSignal, Scope, Trigger, create_effect, create_global_memo, create_global_rw_signal,
     create_global_signal, create_global_trigger, create_memo, create_rw_signal, create_signal,
     create_trigger, root_scope,
 };
-pub use floem_legacy_renderer::Renderer;
-pub use floem_legacy_renderer::Svg as RendererSvg;
-pub use floem_legacy_renderer::gpu_resources::GpuResources;
+pub use floom_legacy_renderer::Renderer;
+pub use floom_legacy_renderer::Svg as RendererSvg;
+pub use floom_legacy_renderer::gpu_resources::GpuResources;
 pub use imbl;
 pub use layout::ScreenLayout;
 #[cfg(not(any(
@@ -283,7 +283,7 @@ pub mod prelude {
     pub use crate::views::*;
     pub use crate::{HasViewId, IntoView, ParentView, View};
     #[allow(deprecated)]
-    pub use floem_legacy_reactive::{
+    pub use floom_legacy_reactive::{
         Memo, RwSignal, Scope, SignalGet, SignalTrack, SignalUpdate, SignalWith, Trigger,
         create_effect, create_global_memo, create_global_rw_signal, create_global_signal,
         create_global_trigger, create_memo, create_rw_signal, create_signal, create_trigger,
@@ -304,11 +304,11 @@ pub mod prelude {
 /// [`crate::prelude`] still re-exports exactly this API today, so existing v1
 /// applications compile unchanged — that is the preservation policy for the
 /// current major version. [`compat::v1_prelude`] pins that path *now*: if a
-/// future minor release narrows `prelude` toward the Floem 2.0 surface (see
-/// the `floem2` facade crate), this module will not move or change.
+/// future minor release narrows `prelude` toward the Floom 2.0 surface (see
+/// the `floom2` facade crate), this module will not move or change.
 ///
 /// Migration diagnostics: the 2.0 mount point rejects v1 views with a
-/// targeted message — `floem_core::Widget` carries an
+/// targeted message — `floom_core::Widget` carries an
 /// `#[diagnostic::on_unimplemented]` note naming the v1-to-2.0 migration
 /// path, so an accidental cross-version mix-up reports where and how to fix
 /// it instead of a bare "trait bound not satisfied".
@@ -320,7 +320,7 @@ pub mod compat {
     /// [`crate::prelude`] exports today.
     ///
     /// ```
-    /// use floem::compat::v1_prelude::*;
+    /// use floom::compat::v1_prelude::*;
     ///
     /// // The v1 reactive + view API, exactly as it has always been.
     /// let counter = create_rw_signal(0_i32);
@@ -338,7 +338,7 @@ pub mod compat {
         pub use crate::views::*;
         pub use crate::{HasViewId, IntoView, ParentView, View};
         #[allow(deprecated)]
-        pub use floem_legacy_reactive::{
+        pub use floom_legacy_reactive::{
             Memo, RwSignal, Scope, SignalGet, SignalTrack, SignalUpdate, SignalWith, Trigger,
             create_effect, create_global_memo, create_global_rw_signal, create_global_signal,
             create_global_trigger, create_memo, create_rw_signal, create_signal, create_trigger,

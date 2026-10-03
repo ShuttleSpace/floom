@@ -1,4 +1,4 @@
-use floem::{
+use floom::{
     animate::Animation,
     reactive::{RwSignal, SignalGet, SignalUpdate},
     views::*,
@@ -29,7 +29,7 @@ impl ViewSwitcher {
 }
 
 fn main() {
-    floem::launch(app_view);
+    floom::launch(app_view);
 }
 
 fn app_view() -> impl IntoView {

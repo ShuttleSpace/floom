@@ -6,13 +6,13 @@
 //! reuses scene nodes positionally (`Scene::upsert`), which makes
 //! `Scene::damage()` reflect exactly the region that changed this frame.
 
-use floem_app::WidgetHost;
-use floem_layout::LayoutStyle;
-use floem_scene::SceneNode;
-use floem_types::{Rect, Size};
-use floem_widgets::{Container, Text};
+use floom_app::WidgetHost;
+use floom_layout::LayoutStyle;
+use floom_scene::SceneNode;
+use floom_types::{Rect, Size};
+use floom_widgets::{Container, Text};
 
-fn text_bounds(host: &WidgetHost, node: floem_app::NodeId) -> Rect {
+fn text_bounds(host: &WidgetHost, node: floom_app::NodeId) -> Rect {
     host.scene()
         .iter()
         .find_map(|(_id, scene_node)| match scene_node {
@@ -22,7 +22,7 @@ fn text_bounds(host: &WidgetHost, node: floem_app::NodeId) -> Rect {
         .unwrap_or_else(|| panic!("no text node in the scene"))
 }
 
-fn node_bounds(host: &WidgetHost, node: floem_app::NodeId) -> Rect {
+fn node_bounds(host: &WidgetHost, node: floom_app::NodeId) -> Rect {
     host.bounds(node)
 }
 
@@ -39,7 +39,7 @@ fn text_reflows_when_the_viewport_shrinks() {
     // (so wrapping is visible in the extent).
     let root = host.mount_root(
         LayoutStyle {
-            flex_direction: floem_layout::FlexDirection::Column,
+            flex_direction: floom_layout::FlexDirection::Column,
             ..LayoutStyle::default()
         },
         Container::new(),
@@ -80,7 +80,7 @@ fn content_edit_remeasures_on_the_next_frame() {
     host.set_size(Size::new(300.0, 200.0));
     let root = host.mount_root(
         LayoutStyle {
-            flex_direction: floem_layout::FlexDirection::Column,
+            flex_direction: floom_layout::FlexDirection::Column,
             ..LayoutStyle::default()
         },
         Container::new(),

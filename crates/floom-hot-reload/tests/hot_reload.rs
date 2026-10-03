@@ -6,10 +6,10 @@
 //! mean the diff matched nothing), and a failed patch must leave no trace
 //! (otherwise "transactional" would be a word, not a behaviour).
 
-use floem_hot_reload::{LiveTree, NodeKey, PatchOp, UiPatch};
-use floem_runtime_core::{DirtyFlags, DirtySet};
-use floem_style::StyleState;
-use floem_types::Color;
+use floom_hot_reload::{LiveTree, NodeKey, PatchOp, UiPatch};
+use floom_runtime_core::{DirtyFlags, DirtySet};
+use floom_style::StyleState;
+use floom_types::Color;
 
 const BEFORE: &str = r#"
 root = stack axis=vertical gap=8 {
@@ -43,8 +43,8 @@ root2 = stack axis=vertical gap=8 {
 }
 "#;
 
-fn compile(source: &str) -> floem_ui_ir::UiDocument {
-    floem_dsl::compile(source).expect("valid document").document
+fn compile(source: &str) -> floom_ui_ir::UiDocument {
+    floom_dsl::compile(source).expect("valid document").document
 }
 
 fn key(name: &str) -> NodeKey {
@@ -63,7 +63,7 @@ fn ids_and_stashed_state_survive_a_compatible_patch() {
     let body_before = tree.id_of(&key("body")).expect("body mounted");
     let heading_before = tree.id_of(&key("heading")).expect("heading mounted");
 
-    let patch = floem_hot_reload::diff(&before, &after);
+    let patch = floom_hot_reload::diff(&before, &after);
     let mut dirty = DirtySet::new();
     let report = tree.apply(&patch, &mut dirty).expect("applies");
 
@@ -106,7 +106,7 @@ fn the_control_group_renamed_keys_do_not_preserve() {
     assert!(tree.set_stash(&key("body"), "scroll=42"));
     let root_before = tree.id_of(&key("root")).expect("root mounted");
 
-    let patch = floem_hot_reload::diff(&before, &renamed);
+    let patch = floom_hot_reload::diff(&before, &renamed);
     assert!(
         patch
             .ops
@@ -139,7 +139,7 @@ fn a_failing_patch_leaves_no_trace() {
     let patch = UiPatch::new(vec![
         PatchOp::SetStyle {
             key: key("heading"),
-            props: floem_style::StyleProps {
+            props: floom_style::StyleProps {
                 background: Some(Color::rgba(1, 2, 3, 255)),
                 ..Default::default()
             },
@@ -148,7 +148,7 @@ fn a_failing_patch_leaves_no_trace() {
             key: key("stray"),
             parent: Some(key("nowhere")),
             index: 0,
-            kind: floem_ui_ir::NodeKind::Text,
+            kind: floom_ui_ir::NodeKind::Text,
             props: vec![],
         },
     ]);
@@ -179,7 +179,7 @@ fn style_and_layout_changes_reach_the_dirty_set() {
     let body_id = tree.id_of(&key("body")).unwrap();
     let heading_id = tree.id_of(&key("heading")).unwrap();
 
-    let patch = floem_hot_reload::diff(&before, &after);
+    let patch = floom_hot_reload::diff(&before, &after);
     let mut dirty = DirtySet::new();
     tree.apply(&patch, &mut dirty).expect("applies");
 
@@ -218,7 +218,7 @@ root = stack axis=vertical gap=8 {
     let count_before = tree.element_count();
     let root_id = tree.id_of(&key("root")).unwrap();
 
-    let patch = floem_hot_reload::diff(&before, &after);
+    let patch = floom_hot_reload::diff(&before, &after);
     let mut dirty = DirtySet::new();
     let report = tree.apply(&patch, &mut dirty).expect("applies");
 

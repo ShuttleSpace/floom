@@ -15,7 +15,7 @@
 use std::sync::Arc;
 
 // `fontique` is a transitive dependency surfaced through `parley`, not a direct
-// dependency of the `floem` lib crate (see root Cargo.toml). Reference it via
+// dependency of the `floom` lib crate (see root Cargo.toml). Reference it via
 // the re-export so the import resolves on every toolchain.
 use parley::fontique::{Blob, Collection, FamilyId, GenericFamily};
 
@@ -40,7 +40,7 @@ const SYSTEM_FONT_PREFIX: &str = "HarmonyOS_Sans";
 
 /// Register the bundled and system fonts into `collection` and set the generic
 /// families. Call once, immediately after the global `FONT_CONTEXT` is created
-/// (see `src/text/layout.rs`).
+/// (see `crates/floom/src/text/layout.rs`).
 pub fn register_bundled_fonts(collection: &mut Collection) {
     // (family id, family name) in registration order.
     let mut families: Vec<(FamilyId, String)> = Vec::new();
@@ -64,7 +64,7 @@ pub fn register_bundled_fonts(collection: &mut Collection) {
     for path in BUNDLED_FONT_PATHS {
         match std::fs::read(path) {
             Ok(bytes) => register_bytes(collection, bytes),
-            Err(err) => eprintln!("[floem] OHOS font: cannot read {path}: {err}; skipping"),
+            Err(err) => eprintln!("[floom] OHOS font: cannot read {path}: {err}; skipping"),
         }
     }
 
@@ -72,7 +72,7 @@ pub fn register_bundled_fonts(collection: &mut Collection) {
     let entries = match std::fs::read_dir(SYSTEM_FONT_DIR) {
         Ok(entries) => entries,
         Err(err) => {
-            eprintln!("[floem] OHOS font: cannot read {SYSTEM_FONT_DIR}: {err}");
+            eprintln!("[floom] OHOS font: cannot read {SYSTEM_FONT_DIR}: {err}");
             return;
         }
     };
@@ -94,7 +94,7 @@ pub fn register_bundled_fonts(collection: &mut Collection) {
     for path in paths {
         match std::fs::read(&path) {
             Ok(bytes) => register_bytes(collection, bytes),
-            Err(err) => eprintln!("[floem] OHOS font: cannot read {}: {err}; skipping", path.display()),
+            Err(err) => eprintln!("[floom] OHOS font: cannot read {}: {err}; skipping", path.display()),
         }
     }
 

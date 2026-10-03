@@ -6,7 +6,7 @@
 # `benches/memory_baseline.md` said CI must not fail on absolute Criterion times
 # "until calibration numbers are checked in", and the numbers never were. This
 # script is the enforcement half, and
-# `docs/superpowers/benchmarks/floem-2-budget-baseline.json` is the calibration
+# `docs/superpowers/benchmarks/floom-2-budget-baseline.json` is the calibration
 # half.
 #
 # Two things it does that a naive `cargo bench | grep change` does not:
@@ -34,7 +34,7 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
-BASELINE="docs/superpowers/benchmarks/floem-2-budget-baseline.json"
+BASELINE="docs/superpowers/benchmarks/floom-2-budget-baseline.json"
 UPDATE=0
 RUNS=2
 while [ $# -gt 0 ]; do

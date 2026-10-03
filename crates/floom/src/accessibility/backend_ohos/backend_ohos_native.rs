@@ -4,7 +4,7 @@
 //! This module binds the C API declared in
 //! `arkui/native_interface_accessibility.h` (shipped with the OHOS NDK,
 //! implemented by `libace_ndk.z.so`) and registers an
-//! `ArkUI_AccessibilityProvider` whose callbacks serve Floem's neutral
+//! `ArkUI_AccessibilityProvider` whose callbacks serve Floom's neutral
 //! `AccessTree` to the OpenHarmony accessibility service.
 //!
 //! # Why native C (not ArkTS) (#113)
@@ -17,9 +17,9 @@
 //! # Threading model
 //!
 //! The OpenHarmony accessibility service invokes the registered callbacks on
-//! its **own system thread**, not Floem's main thread. We therefore keep a
+//! its **own system thread**, not Floom's main thread. We therefore keep a
 //! thread-safe [`Snapshot`] of the current `AccessTree` (plus a bidirectional
-//! id map between Floem `AccessNodeId` and the `int32` ids the C API requires)
+//! id map between Floom `AccessNodeId` and the `int32` ids the C API requires)
 //! behind a global `Mutex`. `update_snapshot` (called from
 //! [`crate::accessibility::backend_ohos::OhosAccessibilityBackend::update_tree`]
 //! on the main thread) writes it; the callbacks read it.
@@ -219,7 +219,7 @@ pub enum ArkUI_AccessibilityActionArguments {}
 pub enum ArkUI_Node {}
 
 /// Opaque OHOS XComponent (from the NDK `ace/xcomponent/native_interface_xcomponent.h`).
-/// `floem-winit-ohos` hands us this as a raw `*mut c_void` via
+/// `floom-winit-ohos` hands us this as a raw `*mut c_void` via
 /// `WindowExtOhos::xcomponent_ptr`; we cast it back here to call the NDK.
 pub enum OH_NativeXComponent {}
 
@@ -307,9 +307,9 @@ const ARKUI_NODE_CUSTOM: c_int = 0;
 // ─────────────────────────────────────────────────────────────────────
 struct Snapshot {
     tree: AccessTree,
-    /// floem id → native `int32` id (stable across updates; never reused).
+    /// floom id → native `int32` id (stable across updates; never reused).
     to_native: HashMap<AccessNodeId, c_int>,
-    /// native `int32` id → floem id.
+    /// native `int32` id → floom id.
     from_native: HashMap<c_int, AccessNodeId>,
     /// monotonic allocator for native ids.
     next_native: c_int,
@@ -715,7 +715,7 @@ unsafe extern "C" fn cb_execute_action(
     _requestId: c_int,
 ) -> c_int {
     let native = elementId as c_int;
-    let floem_id = {
+    let floom_id = {
         let Ok(snap) = snapshot().lock() else {
             return RESULT_FAILED;
         };
@@ -746,7 +746,7 @@ unsafe extern "C" fn cb_execute_action(
 
     if let Some(tx) = crate::accessibility::backend_ohos::ACTION_TX.get() {
         if let Ok(tx) = tx.lock() {
-            let _ = tx.send((floem_id, access_action, payload));
+            let _ = tx.send((floom_id, access_action, payload));
         }
     }
     RESULT_SUCCESSFUL
@@ -774,7 +774,7 @@ unsafe extern "C" fn cb_cursor_position(
 // ─────────────────────────────────────────────────────────────────────
 // Registration entry points.
 // ─────────────────────────────────────────────────────────────────────
-/// Register the Floem accessibility callbacks on an existing native provider.
+/// Register the Floom accessibility callbacks on an existing native provider.
 ///
 /// `provider` must be a valid `ArkUI_AccessibilityProvider*` obtained by the
 /// embedder (e.g. via [`try_create_and_register_provider`] / the custom-node
@@ -808,7 +808,7 @@ pub(crate) unsafe fn register_native_provider(provider: *mut ArkUI_Accessibility
 }
 
 /// Convenience helper that creates an `ARKUI_NODE_CUSTOM` node and obtains its
-/// provider, then registers Floem's callbacks.
+/// provider, then registers Floom's callbacks.
 ///
 /// **Integration gap (#122):** the created node is NOT mounted into the
 /// window's ArkUI tree here — without a mounting point the accessibility
@@ -832,10 +832,10 @@ pub(crate) unsafe fn try_create_and_register_provider() -> bool {
     register_native_provider(provider)
 }
 
-/// Register Floem's accessibility callbacks on the XComponent's native
+/// Register Floom's accessibility callbacks on the XComponent's native
 /// provider. This is the **#122 Route A** entry point: the embedder passes the
 /// `OH_NativeXComponent*` it already holds (from
-/// `floem_winit_ohos::WindowExtOhos::xcomponent_ptr`), and we obtain the
+/// `floom_winit_ohos::WindowExtOhos::xcomponent_ptr`), and we obtain the
 /// provider directly via `OH_NativeXComponent_GetNativeAccessibilityProvider`
 /// (API 13) — no custom ArkUI node or window-tree mount needed. Returns `true`
 /// on success.

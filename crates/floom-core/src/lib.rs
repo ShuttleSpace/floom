@@ -15,7 +15,7 @@ mod widget_any;
 pub use compose::{Align, Axis, Child, ChildBuilder, ChildKey, Inset, LayoutRequest, Position};
 pub use context::{CreateContext, EventContext, PaintContext, SemanticsContext, UpdateContext};
 pub use element::{Element, ElementKind};
-pub use floem_types::{
+pub use floom_types::{
     AnimationSpec, Brush, Color, CompositorProp, Easing, ElementId, Event, Filter, ImeUpdate,
     InputMode, Key, KeyEvent, KeyPhase, Modifiers, NamedKey, NativeCompositionMode, NativeSnapshot,
     NativeViewKind, OverlayHandle, OverlayKind, Point, PointerButton, PointerEvent, PointerKind,

@@ -9,7 +9,7 @@ use crate::value::PropValue;
 /// The slot every container has unless it says otherwise.
 pub const DEFAULT_SLOT: &str = "default";
 
-/// A native participant kind — mirror of `floem_types::NativeViewKind`.
+/// A native participant kind — mirror of `floom_types::NativeViewKind`.
 ///
 /// The IR keeps its own copy so a document is readable by tools that never link
 /// the compositor.

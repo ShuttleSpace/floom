@@ -13,12 +13,12 @@
 //! would leak it silently, because a leaked native view looks exactly like a
 //! working one until the device runs out of them.
 
-use floem_accessibility::{SemanticsRole, SemanticsState};
-use floem_core::{
+use floom_accessibility::{SemanticsRole, SemanticsState};
+use floom_core::{
     CreateContext, ElementId, LayoutRequest, NativeGrant, NativeRequest, PaintContext,
     SemanticsContext, UpdateContext, Widget,
 };
-use floem_types::{InputMode, NativeCompositionMode, NativeSnapshot, NativeViewKind};
+use floom_types::{InputMode, NativeCompositionMode, NativeSnapshot, NativeViewKind};
 
 use crate::primitives::{SemanticsHint, emit_semantics};
 

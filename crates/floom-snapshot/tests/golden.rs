@@ -4,12 +4,12 @@
 //! plain `cargo test` holds them. The unit tests in `lib.rs` assert stability
 //! in-process; these assert the file round-trip and the mismatch path.
 
-use floem_accessibility::{SemanticsRole, SemanticsTree};
-use floem_snapshot::{
+use floom_accessibility::{SemanticsRole, SemanticsTree};
+use floom_snapshot::{
     PixelSnapshot, SceneSnapshot, SemanticsSnapshot, assert_snapshot, semantics_node,
     single_rect_scene, snapshots_dir,
 };
-use floem_types::{Color, ElementId, Size};
+use floom_types::{Color, ElementId, Size};
 
 #[test]
 fn scene_golden_roundtrip() {
@@ -43,9 +43,9 @@ fn pixel_golden_roundtrip() {
 fn goldens_land_in_the_asserting_crates_own_directory() {
     // The defect this pins: `snapshot_path` used to call `env!` inside the
     // engine crate, so every downstream crate's goldens were written into
-    // `tooling/floem-snapshot/snapshots/` and two crates could collide on a
+    // `crates/floom-snapshot/snapshots/` and two crates could collide on a
     // name. The macro must resolve to *this* crate.
-    let path = floem_snapshot::snapshot_path(snapshots_dir!(), "example");
+    let path = floom_snapshot::snapshot_path(snapshots_dir!(), "example");
     assert_eq!(
         path,
         std::path::Path::new(env!("CARGO_MANIFEST_DIR"))

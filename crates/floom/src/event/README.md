@@ -1,6 +1,6 @@
 # Event Handling Requirements
 
-This document specifies the complete requirements for event handling in Floem. These requirements define what must be implemented to maintain 100% compatibility when replacing the current event system implementation.
+This document specifies the complete requirements for event handling in Floom. These requirements define what must be implemented to maintain 100% compatibility when replacing the current event system implementation.
 
 ## Architecture Overview
 

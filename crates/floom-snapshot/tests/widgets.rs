@@ -3,35 +3,35 @@
 //! Task 24.2 built the engine (`SceneSnapshot` / `SemanticsSnapshot` /
 //! `PixelSnapshot` + a golden-file workflow) and proved it on hand-built scenes.
 //! The P1 line "snapshot/interaction tests cover core widgets" stayed PARTIAL
-//! because nothing pointed it at `floem-widgets`. This suite is that wiring:
+//! because nothing pointed it at `floom-widgets`. This suite is that wiring:
 //! every fixture is a widget mounted in a real `WidgetHost`, laid out and
 //! painted by the same code path a running app uses.
 //!
 //! Which layer carries which golden is deliberate, and the honest caveat comes
 //! first: **any golden that touches text is pinned to the font stack of the host
 //! that generated it.** A scene node records the shaped advance width (`width:
-//! 78.5791…` for "Hello, Floem"), and that number comes from the system font the
+//! 78.5791…` for "Hello, Floom"), and that number comes from the system font the
 //! shaper picked. These goldens are reproducible on the reference host — macOS
 //! arm64, the only target the release policy claims as tested — and would need
-//! `UPDATE_SNAPSHOTS=1` on a machine with a different default font. Floem
+//! `UPDATE_SNAPSHOTS=1` on a machine with a different default font. Floom
 //! shipping a bundled fallback font would remove the caveat; until then it is
 //! written down rather than assumed away.
 //!
 //! * **Semantics goldens** are the portable ones: role, label and state are
-//!   decided by Floem, never by the font stack.
+//!   decided by Floom, never by the font stack.
 //! * **Pixel goldens are restricted to glyph-free widgets**, because a pixel
 //!   hash over glyphs is one step further down the same dependency. Text reaches
 //!   the pixel layer in the *within-run* comparisons below, which hold anywhere
 //!   because both sides are shaped on the same host.
 //!
-//! Regenerate with `UPDATE_SNAPSHOTS=1 cargo test -p floem-snapshot --test widgets`.
+//! Regenerate with `UPDATE_SNAPSHOTS=1 cargo test -p floom-snapshot --test widgets`.
 
-use floem_app::WidgetHost;
-use floem_core::Axis;
-use floem_layout::LayoutStyle;
-use floem_snapshot::{PixelSnapshot, SceneSnapshot, SemanticsSnapshot, snapshots_dir};
-use floem_types::{Color, Size};
-use floem_widgets::{Button, Checkbox, Container, Stack, Text, WidgetAny};
+use floom_app::WidgetHost;
+use floom_core::Axis;
+use floom_layout::LayoutStyle;
+use floom_snapshot::{PixelSnapshot, SceneSnapshot, SemanticsSnapshot, snapshots_dir};
+use floom_types::{Color, Size};
+use floom_widgets::{Button, Checkbox, Container, Stack, Text, WidgetAny};
 
 /// Mount `widget` as the root of a host of `size`, run one frame, and hand the
 /// host back. One frame is enough: layout, paint and semantics are all filled in
@@ -58,7 +58,7 @@ const BOX: Size = Size::new(160.0, 40.0);
 
 #[test]
 fn text_scene_matches_golden() {
-    let host = mounted(BOX, Text::new("Hello, Floem"));
+    let host = mounted(BOX, Text::new("Hello, Floom"));
     let snap = SceneSnapshot::of(host.scene());
     assert!(
         !snap.text.trim().is_empty(),

@@ -2,7 +2,7 @@
 //!
 //! Until this module existed, [`crate::winit_backend::WinitPlatform`]
 //! implemented [`Clipboard`] as a `String` field. That satisfies the trait and
-//! every unit test, and proves nothing: text written by a Floem app could not
+//! every unit test, and proves nothing: text written by a Floom app could not
 //! be pasted anywhere else, and text copied in another app could not be read
 //! back. A clipboard that only one process can see is not a clipboard.
 //!
@@ -85,10 +85,10 @@ mod tests {
     #[test]
     fn text_round_trips_through_the_pasteboard() {
         let pasteboard = private_pasteboard();
-        assert!(write_text(&pasteboard, "floem2 clipboard probe 4b9e"));
+        assert!(write_text(&pasteboard, "floom2 clipboard probe 4b9e"));
         assert_eq!(
             read_text(&pasteboard).as_deref(),
-            Some("floem2 clipboard probe 4b9e")
+            Some("floom2 clipboard probe 4b9e")
         );
 
         assert!(write_text(&pasteboard, "你好，世界"));

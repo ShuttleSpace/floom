@@ -1,4 +1,4 @@
-use floem::{prelude::*, style::Style, taffy::FlexWrap, IntoView};
+use floom::{prelude::*, style::Style, taffy::FlexWrap, IntoView};
 mod music_player;
 
 #[derive(Clone, Copy, PartialEq)]
@@ -31,7 +31,7 @@ impl ViewSwitcher {
 }
 
 fn main() {
-    floem::launch(app_view);
+    floom::launch(app_view);
 }
 
 fn app_view() -> impl IntoView {

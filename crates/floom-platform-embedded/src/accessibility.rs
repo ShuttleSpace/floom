@@ -4,7 +4,7 @@
 //! capability set is empty. The adapter still accepts updates so the same
 //! publishing path runs everywhere and stays exercised by tests.
 
-use floem_accessibility::{AccessibilityCapabilities, CapabilityLimitedAccessibilityAdapter};
+use floom_accessibility::{AccessibilityCapabilities, CapabilityLimitedAccessibilityAdapter};
 
 /// Embedded targets expose no accessibility capabilities.
 pub fn accessibility_capabilities() -> AccessibilityCapabilities {
@@ -19,10 +19,10 @@ pub fn embedded_accessibility() -> CapabilityLimitedAccessibilityAdapter {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use floem_accessibility::{
+    use floom_accessibility::{
         AccessibilityAdapter, SemanticsAction, SemanticsDiff, SemanticsNode, SemanticsRole,
     };
-    use floem_types::ElementId;
+    use floom_types::ElementId;
 
     #[test]
     fn reports_no_capabilities() {

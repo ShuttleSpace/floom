@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use floem_legacy_renderer::tiny_skia::{FilterQuality, Path, Pixmap};
+use floom_legacy_renderer::tiny_skia::{FilterQuality, Path, Pixmap};
 use peniko::{
     BlendMode, Brush, ImageQuality,
     kurbo::{Affine, Rect, Stroke},

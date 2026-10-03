@@ -5,7 +5,7 @@
 //! would see; a screen that fails to mount or loses a label is a fixture bug,
 //! and these tests are the fixture's own gate.
 
-use floem_accuracy::{Screen, ScreenTokens, evaluate_screen};
+use floom_accuracy::{Screen, ScreenTokens, evaluate_screen};
 
 #[test]
 fn every_screen_mounts_and_publishes_its_labels() {
@@ -21,12 +21,12 @@ fn every_screen_mounts_and_publishes_its_labels() {
 #[test]
 fn every_screen_has_a_reference_contract() {
     for screen in Screen::ALL {
-        let contract = floem_accuracy::reference_contract(screen);
+        let contract = floom_accuracy::reference_contract(screen);
         assert_eq!(contract.name, screen.title());
         assert!(
             contract
                 .version
-                .accepts(floem_ui_ir::ContractVersion::CURRENT),
+                .accepts(floom_ui_ir::ContractVersion::CURRENT),
             "{screen:?} fixture was written for an older contract"
         );
         // The floors the evaluation enforces are part of the fixture, not

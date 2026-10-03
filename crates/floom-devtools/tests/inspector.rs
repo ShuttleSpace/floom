@@ -8,14 +8,14 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use floem_accessibility::{SemanticsNode, SemanticsRole, SemanticsTree};
-use floem_devtools::Inspector;
-use floem_hot_reload::{LiveTree, NodeKey};
-use floem_inspector::JsonSnapshot;
-use floem_legacy_reactive::{RwSignal, SignalUpdate};
-use floem_runtime_core::{BindingRegistry, DirtyFlags, DirtySet, ReactiveBinding, SignalSource};
-use floem_style::StyleState;
-use floem_types::ElementId;
+use floom_accessibility::{SemanticsNode, SemanticsRole, SemanticsTree};
+use floom_devtools::Inspector;
+use floom_hot_reload::{LiveTree, NodeKey};
+use floom_inspector::JsonSnapshot;
+use floom_legacy_reactive::{RwSignal, SignalUpdate};
+use floom_runtime_core::{BindingRegistry, DirtyFlags, DirtySet, ReactiveBinding, SignalSource};
+use floom_style::StyleState;
+use floom_types::ElementId;
 
 const DOC: &str = r#"
 root = stack axis=vertical gap=8 {
@@ -31,7 +31,7 @@ fn key(name: &str) -> NodeKey {
 }
 
 fn mounted() -> LiveTree {
-    let document = floem_dsl::compile(DOC).expect("valid document").document;
+    let document = floom_dsl::compile(DOC).expect("valid document").document;
     let mut tree = LiveTree::new();
     tree.mount(&document);
     tree
@@ -91,20 +91,20 @@ fn the_property_inspector_resolves_style_and_layout() {
         .expect("body has a layout");
     assert_eq!(layout.width, Some(100.0));
     assert_eq!(layout.gap, Some(4.0));
-    assert_eq!(layout.axis, Some(floem_core::Axis::Horizontal));
+    assert_eq!(layout.axis, Some(floom_core::Axis::Horizontal));
 }
 
 #[test]
 fn kind_filters_find_every_element_of_a_kind() {
     let live = mounted();
     let inspector = Inspector::new(&live);
-    let stacks = inspector.find_by_kind(floem_core::ElementKind::Host);
+    let stacks = inspector.find_by_kind(floom_core::ElementKind::Host);
     let names: Vec<&str> = stacks.iter().map(|k| k.as_str()).collect();
     assert!(
         names.contains(&"root") && names.contains(&"body"),
         "both stacks are hosts: {names:?}"
     );
-    let texts = inspector.find_by_kind(floem_core::ElementKind::Primitive);
+    let texts = inspector.find_by_kind(floom_core::ElementKind::Primitive);
     let names: Vec<&str> = texts.iter().map(|k| k.as_str()).collect();
     assert!(
         names.contains(&"heading") && names.contains(&"ok"),
@@ -122,7 +122,7 @@ fn source_mapping_says_where_a_node_was_written() {
     );
     inspector.set_source(
         key("heading"),
-        floem_inspector::SourceLocation {
+        floom_inspector::SourceLocation {
             file: "ui/app.dsl".into(),
             line: 3,
             column: 5,
@@ -173,7 +173,7 @@ fn why_did_update_names_the_signal_and_the_ancestors() {
     // element id, the inspector's ancestor walk is keyed by the tree, and the
     // two meet at the id.
     let heading_id = inspector.id_of(&key("heading")).expect("mounted");
-    let arena = Rc::new(RefCell::new(floem_runtime_core::ElementArena::new()));
+    let arena = Rc::new(RefCell::new(floom_runtime_core::ElementArena::new()));
     let el = loop {
         let id = arena.borrow_mut().insert_primitive();
         if id == heading_id {
@@ -240,7 +240,7 @@ fn the_tree_snapshot_serves_the_protocol() {
 
     // Round-trip: a frontend can parse what the inspector serves.
     let json = snapshot.to_json().expect("serializes");
-    let back = floem_inspector::TreeSnapshot::from_json(&json).expect("parses");
+    let back = floom_inspector::TreeSnapshot::from_json(&json).expect("parses");
     assert_eq!(back, snapshot);
     let _ = ElementId::INVALID; // keep the import honest if ids change shape
 }

@@ -1,0 +1,40 @@
+[package]
+name = "floom2-macos"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+description = "Floom 2.0 macOS gate probe: real window, text field, system clipboard, feature-gated"
+
+# The desktop counterpart of `floom2-android`: it exists to produce the evidence
+# `docs/gates/macos.md` records — a tree an external driver can click, a text
+# field an input method can type into, and a clipboard whose far end is the
+# system pasteboard. `floom2-window` covers "the stack runs in a window"; this
+# covers "the OS-facing services actually reach it".
+#
+# Everything real (winit + wgpu) is optional so the default workspace build and
+# CI stay dependency-light; `--features real` activates the desktop stack, and
+# the bin declares it required so nothing tries to build a window without it.
+[features]
+default = []
+real = [
+    "dep:floom-platform-desktop",
+    "dep:floom-renderer-vello",
+    "floom-platform-desktop/winit",
+    "floom-renderer-vello/gpu",
+]
+
+[dependencies]
+floom-app = { path = "../../crates/floom-app", version = "0.2.0" }
+floom-core = { path = "../../crates/floom-core", version = "0.2.0" }
+floom-layout = { path = "../../crates/floom-layout", version = "0.2.0" }
+floom-platform = { path = "../../crates/floom-platform", version = "0.2.0" }
+floom-platform-desktop = { path = "../../crates/floom-platform-desktop", version = "0.2.0", optional = true }
+floom-renderer-vello = { path = "../../crates/floom-renderer-vello", version = "0.2.0", optional = true }
+floom-types = { path = "../../crates/floom-types", version = "0.2.0" }
+floom-widgets = { path = "../../crates/floom-widgets", version = "0.2.0" }
+
+[[bin]]
+name = "floom2-macos"
+path = "src/main.rs"
+required-features = ["real"]

@@ -8,10 +8,10 @@
 //! really being varied.
 
 use criterion::{BenchmarkId, Criterion, criterion_group, criterion_main};
-use floem_core::{ElementId, Rect, Widget};
-use floem_widgets::testkit::SceneRecorder;
-use floem_widgets_data::data_grid::{DataGrid, RowPool};
-use floem_widgets_data::model::{CellValue, Column, VecTable};
+use floom_core::{ElementId, Rect, Widget};
+use floom_widgets::testkit::SceneRecorder;
+use floom_widgets_data::data_grid::{DataGrid, RowPool};
+use floom_widgets_data::model::{CellValue, Column, VecTable};
 
 const ROW_H: f64 = 20.0;
 const HEADER: f64 = 24.0;

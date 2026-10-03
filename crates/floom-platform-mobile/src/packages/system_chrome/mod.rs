@@ -16,7 +16,7 @@ mod android;
 #[cfg(target_os = "ios")]
 mod ios;
 
-use floem_types::Color;
+use floom_types::Color;
 
 /// Brightness of the icons drawn inside a system bar (status bar / nav bar).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]

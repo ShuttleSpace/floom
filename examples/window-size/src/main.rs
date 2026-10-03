@@ -1,4 +1,4 @@
-use floem::{context::LayoutChanged, kurbo::Size, prelude::*, window::WindowConfig, Application};
+use floom::{context::LayoutChanged, kurbo::Size, prelude::*, window::WindowConfig, Application};
 
 fn app_view() -> impl IntoView {
     let size = RwSignal::new(Size::default());
@@ -16,7 +16,7 @@ fn app_view() -> impl IntoView {
         })
         .on_event_stop(listener::KeyUp, move |_cx, KeyboardEvent { key, .. }| {
             if let Key::Named(NamedKey::F11) = key {
-                floem::action::inspect();
+                floom::action::inspect();
             }
         })
         .on_event_stop(

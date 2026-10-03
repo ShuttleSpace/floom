@@ -4,8 +4,8 @@
 //! platforms (accesskit), Android exposes accessibility through an
 //! [`android.view.accessibility.AccessibilityNodeProvider`] attached to a Java
 //! `View`. Because that provider *must* be a Java object living in the view
-//! hierarchy, this backend cannot be pure Rust: floem ships a tiny Java helper
-//! (`FloemAccessibilityView.java`, package `dev.floem.android`) and injects an
+//! hierarchy, this backend cannot be pure Rust: floom ships a tiny Java helper
+//! (`FloomAccessibilityView.java`, package `dev.floom.android`) and injects an
 //! instance of it into the Android `Activity`'s decor view from Rust (see
 //! [`inject_a11y_view`]). The Java view is transparent, does not consume touch
 //! events (so it never steals input from the rendering surface below it), and
@@ -16,7 +16,7 @@
 //! Those native entry points read the shared neutral tree ([`ANDROID_A11Y`])
 //! and translate it into `AccessibilityNodeInfo` objects on demand, and route
 //! TalkBack actions (`ACTION_CLICK`, `ACTION_SET_TEXT`, `ACTION_SCROLL_*`, …)
-//! back to Floem core through the **same** [`PendingAction`] channel the
+//! back to Floom core through the **same** [`PendingAction`] channel the
 //! desktop and iOS backends use.
 //!
 //! ## Tree sync
@@ -105,14 +105,14 @@ impl ActionConsts {
     }
 }
 
-/// Shared, single-window a11y state. On Android there is exactly one Floem
+/// Shared, single-window a11y state. On Android there is exactly one Floom
 /// window, so a module-level singleton (reachable from both the
 /// `AccessibilityBackend` impl and the JNI entry points) is the natural shape.
 struct AndroidA11yInner {
     tree: AccessTree,
     tx: mpsc::Sender<PendingAction>,
     rx: mpsc::Receiver<PendingAction>,
-    /// Global ref to the Java `FloemAccessibilityView`, used to fire content
+    /// Global ref to the Java `FloomAccessibilityView`, used to fire content
     /// changed events. `None` until the view is injected/registered.
     view: Option<GlobalRef>,
     root: Option<AccessNodeId>,
@@ -251,16 +251,16 @@ fn notify_changed() {
 }
 
 // ─────────────────────────────────────────────────────────────────────
-// JNI entry points — called by `FloemAccessibilityView.java`.
+// JNI entry points — called by `FloomAccessibilityView.java`.
 //
 // Symbol names follow the JNI auto-resolution convention
 // `Java_<fully_qualified_class_with_underscores>_<method>`; the class is
-// `dev.floem.android.FloemAccessibilityView`. Each function converts any
+// `dev.floom.android.FloomAccessibilityView`. Each function converts any
 // `jni` error into a safe default (null / empty / false) instead of panicking.
 // ─────────────────────────────────────────────────────────────────────
 
 #[unsafe(no_mangle)]
-pub extern "C" fn Java_dev_floem_android_FloemAccessibilityView_nativeRegisterView(
+pub extern "C" fn Java_dev_floom_android_FloomAccessibilityView_nativeRegisterView(
     env: *mut jni::sys::JNIEnv,
     this: jobject,
 ) {
@@ -280,7 +280,7 @@ pub extern "C" fn Java_dev_floem_android_FloemAccessibilityView_nativeRegisterVi
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn Java_dev_floem_android_FloemAccessibilityView_nativeCreateNodeInfo(
+pub extern "C" fn Java_dev_floom_android_FloomAccessibilityView_nativeCreateNodeInfo(
     env: *mut jni::sys::JNIEnv,
     this: jobject,
     virtual_view_id: jint,
@@ -304,7 +304,7 @@ pub extern "C" fn Java_dev_floem_android_FloemAccessibilityView_nativeCreateNode
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn Java_dev_floem_android_FloemAccessibilityView_nativePerformAction(
+pub extern "C" fn Java_dev_floom_android_FloomAccessibilityView_nativePerformAction(
     env: *mut jni::sys::JNIEnv,
     this: jobject,
     virtual_view_id: jint,
@@ -332,7 +332,7 @@ pub extern "C" fn Java_dev_floem_android_FloemAccessibilityView_nativePerformAct
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn Java_dev_floem_android_FloemAccessibilityView_nativeFindNodesByText(
+pub extern "C" fn Java_dev_floom_android_FloomAccessibilityView_nativeFindNodesByText(
     env: *mut jni::sys::JNIEnv,
     this: jobject,
     text: jni::sys::jstring,
@@ -755,7 +755,7 @@ fn class_name_for(role: AccessRole) -> &'static str {
 }
 
 /// Best-effort: inject a transparent, non-touch-consuming
-/// `FloemAccessibilityView` into the running `Activity`'s decor view so
+/// `FloomAccessibilityView` into the running `Activity`'s decor view so
 /// TalkBack can find an `AccessibilityNodeProvider`. If the app did not ship
 /// the Java class (or the activity isn't ready), this silently no-ops — the
 /// app still runs, it just won't expose an a11y tree.
@@ -769,7 +769,7 @@ fn inject_a11y_view() {
             }
         }
         let view = match env.new_object(
-            "dev/floem/android/FloemAccessibilityView",
+            "dev/floom/android/FloomAccessibilityView",
             "(Landroid/content/Context;)V",
             &[JValue::Object(activity)],
         ) {

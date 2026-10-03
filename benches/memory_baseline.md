@@ -1,16 +1,16 @@
-# Memory / allocation baseline (Floem 2.0 Phase 0)
+# Memory / allocation baseline (Floom 2.0 Phase 0)
 
 **Date:** 2026-09-04  
-**Branch:** `floem-2.0`  
-**Status:** Process notes only — automate once `floem-runtime-core` exists.
+**Branch:** `floom-2.0`  
+**Status:** Process notes only — automate once `floom-runtime-core` exists.
 
 ## Commands (desktop macOS/Linux)
 
 ```bash
 # Criterion benches (HTML under target/criterion/)
-cargo bench -p floem --bench runtime_baseline
-cargo bench -p floem --bench scene_baseline
-cargo bench -p floem --bench render_baseline
+cargo bench -p floom --bench runtime_baseline
+cargo bench -p floom --bench scene_baseline
+cargo bench -p floom --bench render_baseline
 
 # Optional: instrument with Instruments / heaptrack on a single demo
 cargo run -p counter --release
@@ -30,8 +30,8 @@ Until calibration numbers are checked in under `docs/superpowers/benchmarks/`, C
 
 After calibration:
 
-1. Store JSON summaries from `cargo bench -- --save-baseline floem2-p0`.
-2. Compare with `--baseline floem2-p0` and fail on >10% for named hot benches only.
+1. Store JSON summaries from `cargo bench -- --save-baseline floom2-p0`.
+2. Compare with `--baseline floom2-p0` and fail on >10% for named hot benches only.
 3. Wire that job in `.github/workflows/ci.yml` on `macos-latest` only.
 
 ## Known gaps

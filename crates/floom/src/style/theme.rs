@@ -18,7 +18,7 @@ use crate::{
         slider::{SliderClass, SliderCustomExprStyle, SliderCustomStyle},
     },
 };
-use floem_legacy_renderer::text::FontWeight;
+use floom_legacy_renderer::text::FontWeight;
 use peniko::{Brush, Color, color::palette::css};
 use smallvec::smallvec;
 

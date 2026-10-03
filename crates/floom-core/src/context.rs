@@ -1,6 +1,6 @@
 //! Context objects passed into widget lifecycle methods.
 
-use floem_types::{Brush, Color, ElementId, Event, Filter, Point, Rect, ResourceId, Shadow, Size};
+use floom_types::{Brush, Color, ElementId, Event, Filter, Point, Rect, ResourceId, Shadow, Size};
 
 /// Context available while creating an element from a widget.
 pub trait CreateContext {
@@ -245,7 +245,7 @@ pub trait PaintContext {
     /// box is the shader's whole output, so a caller does not also fill a rect
     /// behind it. What the shader sees is one normalised coordinate space over
     /// that box plus the caller's own scalars, which is why the request is a
-    /// program and not a colour — see [`floem_types::Shader`] for the uniform
+    /// program and not a colour — see [`floom_types::Shader`] for the uniform
     /// contract it is compiled against.
     ///
     /// Defaults to nothing, and for the same reason [`Self::backdrop_filter`]
@@ -254,13 +254,13 @@ pub trait PaintContext {
     /// like a shader that produced grey, which is worse than the absence.
     /// Backends that skip are expected to say so in their own frame stats
     /// (the software renderer counts `shaders_skipped`) rather than stay quiet.
-    fn draw_shader(&mut self, shader: &floem_types::Shader) {
+    fn draw_shader(&mut self, shader: &floom_types::Shader) {
         let _ = shader;
     }
 
     /// A single run of text. `size` is the font size in logical pixels.
     ///
-    /// Multi-paragraph / shaped text goes through `floem-text`; this op carries
+    /// Multi-paragraph / shaped text goes through `floom-text`; this op carries
     /// the unshaped string so renderer backends can intern a glyph run.
     fn fill_text(&mut self, origin: Point, text: &str, size: f32, color: Color) {
         let _ = (origin, text, size, color);
@@ -275,7 +275,7 @@ pub trait PaintContext {
     ///
     /// Defaults to a no-op, matching [`PaintContext::fill_text`]: a host with no
     /// path support draws nothing rather than guessing at a bounding box.
-    fn fill_path(&mut self, path: &floem_types::Path, color: Color) {
+    fn fill_path(&mut self, path: &floom_types::Path, color: Color) {
         let _ = (path, color);
     }
 
@@ -286,7 +286,7 @@ pub trait PaintContext {
     /// different questions — a fill is "what is inside this shape", a stroke is
     /// "trace this shape" — and a caller that wants both calls both, in that
     /// order. Defaults to a no-op.
-    fn stroke_path(&mut self, path: &floem_types::Path, stroke: &floem_types::Stroke) {
+    fn stroke_path(&mut self, path: &floom_types::Path, stroke: &floom_types::Stroke) {
         let _ = (path, stroke);
     }
 
@@ -295,7 +295,7 @@ pub trait PaintContext {
     /// The same trade as [`PaintContext::fill_rect_brush`], and the one that
     /// lets a self-drawn chart paint its area with a ramp rather than a flat
     /// colour. Defaults to the representative colour.
-    fn fill_path_brush(&mut self, path: &floem_types::Path, brush: &Brush) {
+    fn fill_path_brush(&mut self, path: &floom_types::Path, brush: &Brush) {
         self.fill_path(path, brush.sample(path.bounds().center()));
     }
 

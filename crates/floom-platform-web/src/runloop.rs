@@ -1,24 +1,24 @@
-//! The real run loop: turn a browser tab into a live Floem window.
+//! The real run loop: turn a browser tab into a live Floom window.
 //!
-//! `floem-platform-desktop` owns a winit loop; this is the web analogue. The
+//! `floom-platform-desktop` owns a winit loop; this is the web analogue. The
 //! loop is thin and generic: it owns the DOM machinery (event listeners +
 //! `requestAnimationFrame`) but not the app. The app is any [`WebApp`], which
 //! drains [`Platform::poll_events`] into its own `AppRunner`. That keeps this
-//! crate at L4 — it never names `floem-app`; the beginner-facing entry
-//! (`floem2::run_web`) lives in the facade above everything.
+//! crate at L4 — it never names `floom-app`; the beginner-facing entry
+//! (`floom2::run_web`) lives in the facade above everything.
 //!
-//! [`Platform::poll_events`]: floem_platform::Platform::poll_events
+//! [`Platform::poll_events`]: floom_platform::Platform::poll_events
 
 use crate::WebPlatform;
 
-/// The application side of a web-hosted Floem app.
+/// The application side of a web-hosted Floom app.
 ///
 /// Implementors get called from inside the rAF loop's frame hook, with the
 /// platform handy, and are expected to drain [`Platform::poll_events`] — i.e.
 /// call `runner.pump(&mut platform)`. The loop owns the DOM; the app owns the
 /// runner.
 ///
-/// [`Platform::poll_events`]: floem_platform::Platform::poll_events
+/// [`Platform::poll_events`]: floom_platform::Platform::poll_events
 pub trait WebApp {
     /// One frame is ready to be serviced. Drain platform events into the runner.
     fn events(&mut self, platform: &mut WebPlatform);
@@ -34,7 +34,7 @@ pub use wasm::run;
 #[cfg(not(target_arch = "wasm32"))]
 pub fn run<A: WebApp>(_app: A, _canvas_id: &str) -> Result<(), String> {
     Err(
-        "floem-platform-web `run` requires the wasm32 target (build with --target wasm32-unknown-unknown)"
+        "floom-platform-web `run` requires the wasm32 target (build with --target wasm32-unknown-unknown)"
             .into(),
     )
 }
@@ -52,8 +52,8 @@ mod wasm {
         EventTarget, KeyboardEvent, PointerEvent as DomPointerEvent, WheelEvent,
     };
 
-    use floem_platform::{KeyCode, Platform, PlatformEvent, PointerButton, WindowConfig};
-    use floem_types::{Modifiers, Point, Size};
+    use floom_platform::{KeyCode, Platform, PlatformEvent, PointerButton, WindowConfig};
+    use floom_types::{Modifiers, Point, Size};
 
     /// Pixels per notch of a legacy line-based wheel delta. Mirrors the desktop
     /// backend's `PIXELS_PER_SCROLL_LINE` so a scroll view feels the same.
@@ -73,7 +73,7 @@ mod wasm {
         static FRAME: RefCell<Option<Closure<dyn FnMut()>>> = RefCell::new(None);
     }
 
-    /// Run a Floem app in a browser tab. Blocks the caller (it returns
+    /// Run a Floom app in a browser tab. Blocks the caller (it returns
     /// immediately; the loop is driven by `requestAnimationFrame`).
     pub fn run<A: WebApp + 'static>(app: A, canvas_id: &str) -> Result<(), String> {
         let mut platform = WebPlatform::new(canvas_id);
@@ -84,7 +84,7 @@ mod wasm {
         platform.set_scale(scale);
         let size = initial_window_size();
         let window_id = platform.create_window(WindowConfig {
-            title: "floem".into(),
+            title: "floom".into(),
             size,
             resizable: true,
         });

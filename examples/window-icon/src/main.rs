@@ -1,4 +1,4 @@
-use floem::{
+use floom::{
     close_window,
     kurbo::Size,
     new_window,
@@ -51,7 +51,7 @@ fn app_view() -> impl IntoView {
     })
     .on_event_stop(listener::KeyUp, move |_cx, KeyboardEvent { key, .. }| {
         if let Key::Named(NamedKey::F11) = key {
-            floem::action::inspect();
+            floom::action::inspect();
         }
     })
 }

@@ -18,7 +18,7 @@ pub mod slider;
 pub mod tabs;
 pub mod texteditor;
 
-use floem::{
+use floom::{
     action::{set_theme, set_window_menu, toggle_global_theme, toggle_window_theme},
     kurbo::Size,
     menu::*,
@@ -131,7 +131,7 @@ fn app_view(window_id: WindowId) -> impl IntoView {
                 .class(LabelClass, |s| s.selectable(false))
         });
 
-    let inspector = Button::new("Open Inspector").action(floem::action::inspect);
+    let inspector = Button::new("Open Inspector").action(floom::action::inspect);
 
     let new_window_button = Button::new("Open In Window").action(move || {
         let name = tabs.with(|tabs| tabs.get(active_tab.get().unwrap_or(0)).copied());
@@ -164,7 +164,7 @@ fn app_view(window_id: WindowId) -> impl IntoView {
 
     let tab = tab.scroll().style(|s| s.size_full());
 
-    let floem_logo = svg(include_str!("../assets/floem.svg"))
+    let floom_logo = svg(include_str!("../assets/floom.svg"))
         .style(|s| s.unset_color().size_full().size(50, 50))
         .overlay()
         .style(|s| {
@@ -175,7 +175,7 @@ fn app_view(window_id: WindowId) -> impl IntoView {
                 .inset_right(15.)
         });
 
-    let view = Stack::horizontal((left_side_bar, tab, floem_logo))
+    let view = Stack::horizontal((left_side_bar, tab, floom_logo))
         .style(|s| s.padding(5.0).width_full().height_full().col_gap(5.0))
         .window_title(|| "Widget Gallery".to_owned());
 
@@ -188,12 +188,12 @@ fn app_view(window_id: WindowId) -> impl IntoView {
         .separator()
         .item("Close Window", |i| {
             i.action(move || {
-                floem::close_window(window_id);
+                floom::close_window(window_id);
             })
         })
         .item("Quit Widget Gallery", |i| {
             i.action(|| {
-                floem::quit_app();
+                floom::quit_app();
             })
         })
     };
@@ -209,7 +209,7 @@ fn app_view(window_id: WindowId) -> impl IntoView {
     let view_submenu = |m: SubMenu| {
         m.item("Inspector", |i| {
             i.action(|| {
-                floem::action::inspect();
+                floom::action::inspect();
             })
         })
         .separator()
@@ -277,13 +277,13 @@ fn app_view(window_id: WindowId) -> impl IntoView {
     let help_submenu = |m: SubMenu| {
         m.item("About Widget Gallery", |i| {
             i.action(|| {
-                println!("Floem Widget Gallery - A showcase of UI components built with Floem");
+                println!("Floom Widget Gallery - A showcase of UI components built with Floom");
             })
         })
         .separator()
-        .item("Floem Documentation", |i| {
+        .item("Floom Documentation", |i| {
             i.action(|| {
-                println!("Opening Floem documentation...");
+                println!("Opening Floom documentation...");
             })
         })
         .item("GitHub Repository", |i| {
@@ -307,7 +307,7 @@ fn app_view(window_id: WindowId) -> impl IntoView {
                             .name(Some("widget-gallery"))
                             .license(Some("MIT"))
                             .version(Some("0.1.0"))
-                            .copyright(Some("Floem Authors"))
+                            .copyright(Some("Floom Authors"))
                             .build(),
                     ),
                 ))
@@ -320,11 +320,11 @@ fn app_view(window_id: WindowId) -> impl IntoView {
         listener::KeyUp,
         move |_cx, KeyboardEvent { modifiers, key, .. }| {
             if *key == Key::Named(NamedKey::F11) {
-                floem::action::inspect();
+                floom::action::inspect();
             } else if *key == Key::Character("q".into()) && modifiers.contains(OS_MOD) {
-                floem::quit_app();
+                floom::quit_app();
             } else if *key == Key::Character("w".into()) && modifiers.contains(OS_MOD) {
-                floem::close_window(window_id);
+                floom::close_window(window_id);
             }
         },
     )
@@ -333,17 +333,17 @@ fn app_view(window_id: WindowId) -> impl IntoView {
         move |_, KeyboardEvent { key, modifiers, .. }| match key {
             Key::Character(ch) if (ch == "=" || ch == "+") && modifiers.contains(OS_MOD) => {
                 window_scale *= 1.1;
-                floem::action::set_window_scale(window_scale.get());
+                floom::action::set_window_scale(window_scale.get());
             }
 
             Key::Character(ch) if ch == "-" && *modifiers == OS_MOD => {
                 window_scale /= 1.1;
-                floem::action::set_window_scale(window_scale.get());
+                floom::action::set_window_scale(window_scale.get());
             }
 
             Key::Character(ch) if ch == "0" && *modifiers == OS_MOD => {
                 window_scale.set(1.);
-                floem::action::set_window_scale(window_scale.get());
+                floom::action::set_window_scale(window_scale.get());
             }
             _ => {}
         },
@@ -351,13 +351,13 @@ fn app_view(window_id: WindowId) -> impl IntoView {
 }
 
 fn main() {
-    floem::Application::new()
+    floom::Application::new()
         .window(app_view, Some(WindowConfig::default().size((1200., 800.))))
         .on_event(|ae| match ae {
-            floem::AppEvent::WillTerminate => {
+            floom::AppEvent::WillTerminate => {
                 println!("terminating");
             }
-            floem::AppEvent::Reopen {
+            floom::AppEvent::Reopen {
                 has_visible_windows,
             } => {
                 if !has_visible_windows {

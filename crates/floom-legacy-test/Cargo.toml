@@ -1,14 +1,14 @@
 [package]
-name = "floem-legacy-test"
+name = "floom-legacy-test"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
-description = "Testing utilities for Floem UI applications"
+description = "Testing utilities for Floom UI applications"
 repository.workspace = true
 
 [dependencies]
-floem = { path = "../floom" }
+floom = { path = "../floom" }
 ui-events.workspace = true
 
 [dev-dependencies]

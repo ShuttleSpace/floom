@@ -2,15 +2,15 @@
 //!
 //! These confirm the headless backend can stand in for a real platform
 //! backend: it owns a window id, drives layout without any real window or
-//! paint surface, and records the commands Floem asks the backend to run via
-//! its [`floem::embedder::CommandSink`]. This is the canonical harness for
+//! paint surface, and records the commands Floom asks the backend to run via
+//! its [`floom::embedder::CommandSink`]. This is the canonical harness for
 //! every future backend integration test.
 
-use floem::embedder::{
+use floom::embedder::{
     EmbedderCommand, EmbedderWindowId, HeadlessEmbedder, ImeHint, ImePurpose, ImeState,
 };
-use floem::headless::TestRoot;
-use floem::prelude::*;
+use floom::headless::TestRoot;
+use floom::prelude::*;
 
 fn make_embedder() -> HeadlessEmbedder {
     let root = TestRoot::new();
@@ -128,7 +128,7 @@ fn processes_pointer_events_without_window() {
 fn headless_backend_is_capability_aware() {
     // The headless backend only advertises headless operation; a real mobile
     // backend would advertise ime / safe_area / virtual_keyboard instead.
-    use floem::embedder::BackendCapabilities;
+    use floom::embedder::BackendCapabilities;
     let caps = BackendCapabilities::headless();
     assert!(caps.headless);
     assert!(!caps.ime);

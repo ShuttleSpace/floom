@@ -2,9 +2,9 @@ use std::hint::black_box;
 use std::time::Duration;
 
 use criterion::{Criterion, criterion_group, criterion_main};
-use floem_renderer::{FrameInfo, render_once};
-use floem_renderer_vello::VelloRendererAdapter;
-use floem_scene::{Color, Point, Rect, Scene, SceneNode, Size};
+use floom_renderer::{FrameInfo, render_once};
+use floom_renderer_vello::VelloRendererAdapter;
+use floom_scene::{Color, Point, Rect, Scene, SceneNode, Size};
 
 fn build_scene(n: usize) -> Scene {
     let mut scene = Scene::new();
@@ -15,7 +15,7 @@ fn build_scene(n: usize) -> Scene {
                 Point::new((i % 100) as f64, (i / 100) as f64),
                 Size::new(4.0, 4.0),
             ),
-            fill: floem_types::Brush::from(Color::BLACK),
+            fill: floom_types::Brush::from(Color::BLACK),
             radius: 0.0,
 
             shadow: None,
@@ -51,7 +51,7 @@ fn bench_scene_render(c: &mut Criterion) {
             id,
             SceneNode::Rect {
                 bounds: Rect::from_origin_size(Point::ZERO, Size::new(4.0, 4.0)),
-                fill: floem_types::Brush::from(Color::WHITE),
+                fill: floom_types::Brush::from(Color::WHITE),
                 radius: 0.0,
 
                 shadow: None,

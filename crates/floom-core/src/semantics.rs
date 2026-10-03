@@ -1,6 +1,6 @@
 //! Neutral accessibility description carried by widgets through the core contract.
 //!
-//! `floem-core` must not depend on `floem-accessibility` (the framework layer
+//! `floom-core` must not depend on `floom-accessibility` (the framework layer
 //! depends on core, not the reverse), so the role/state vocabulary lives here in
 //! engine-neutral form. The host lowers these into the concrete accessibility
 //! schema when it builds the semantics tree.
@@ -38,7 +38,7 @@ pub enum SemanticsRole {
 /// State flags reported to assistive technology.
 ///
 /// A plain `u32` newtype (not `bitflags`) so core stays dependency-free; the
-/// flags mirror `floem-accessibility::SemanticsState` one-for-one.
+/// flags mirror `floom-accessibility::SemanticsState` one-for-one.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct SemanticsState(u32);
 

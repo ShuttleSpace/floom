@@ -2,7 +2,7 @@
 //!
 //! A syntax check (`syn`-style) proves the output *parses*; this fixture
 //! proves it *means something*: the builder calls type-check against the
-//! actual `floem-widgets` API. The scratch crate lives under the workspace
+//! actual `floom-widgets` API. The scratch crate lives under the workspace
 //! `target/` directory with its own target dir, so nothing collides with the
 //! outer build's file lock and the dependency stack compiles once and is
 //! cached across runs.
@@ -51,9 +51,9 @@ fn scratch_crate(name: &str, lib_rs: &str) -> PathBuf {
     let manifest = format!(
         "[package]\nname = \"dsl-fixture-{name}\"\nversion = \"0.0.0\"\nedition = \"2024\"\n\n\
          [dependencies]\n\
-         floem-core = {{ path = \"{}/foundation/floem-core\" }}\n\
-         floem-types = {{ path = \"{}/foundation/floem-types\" }}\n\
-         floem-widgets = {{ path = \"{}/widgets/floem-widgets\" }}\n\n\
+         floom-core = {{ path = \"{}/crates/floom-core\" }}\n\
+         floom-types = {{ path = \"{}/crates/floom-types\" }}\n\
+         floom-widgets = {{ path = \"{}/crates/floom-widgets\" }}\n\n\
          [workspace]\n",
         root.display(),
         root.display(),
@@ -84,9 +84,9 @@ fn cargo_check(crate_dir: &PathBuf) -> Result<String, String> {
 
 #[test]
 fn the_emitted_program_type_checks_against_the_real_widget_api() {
-    let compiled = floem_dsl::compile(SAMPLE).expect("the sample is valid");
+    let compiled = floom_dsl::compile(SAMPLE).expect("the sample is valid");
     let emitted =
-        floem_dsl::emit(&compiled.document, &floem_dsl::EmitOptions::default()).expect("emits");
+        floom_dsl::emit(&compiled.document, &floom_dsl::EmitOptions::default()).expect("emits");
     // `variant` has no seat in the widget builder and a named handler becomes
     // an empty closure — both are documented approximations, reported in
     // `unmapped`. They still emit compilable code, which is what this fixture
@@ -101,9 +101,9 @@ fn the_emitted_program_type_checks_against_the_real_widget_api() {
 fn a_mutated_emission_turns_the_check_red() {
     // The control: the check above is only evidence if it can fail. Break one
     // emitted token and the toolchain must refuse.
-    let compiled = floem_dsl::compile(SAMPLE).expect("the sample is valid");
+    let compiled = floom_dsl::compile(SAMPLE).expect("the sample is valid");
     let emitted =
-        floem_dsl::emit(&compiled.document, &floem_dsl::EmitOptions::default()).expect("emits");
+        floom_dsl::emit(&compiled.document, &floom_dsl::EmitOptions::default()).expect("emits");
     let broken = emitted.code.replace("Axis::Vertical", "Axis::Sideways");
     assert_ne!(broken, emitted.code, "the mutation must change something");
 

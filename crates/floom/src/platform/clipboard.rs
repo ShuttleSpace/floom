@@ -107,7 +107,7 @@ mod android_clipboard {
         contents: &str,
     ) -> Result<(), ClipboardError> {
         let label = env
-            .new_string("floem")
+            .new_string("floom")
             .map_err(|e| ClipboardError::ProviderError(e.to_string()))?;
         let text = env
             .new_string(contents)

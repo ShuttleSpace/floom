@@ -1,24 +1,24 @@
 //! Touch gesture classifier — turn a raw touch stream into semantic gestures.
 //!
 //! Mobile platforms deliver a stream of low-level touch samples (finger down,
-//! move, up/cancel). Floem widgets want higher-level intent: "this was a tap"
+//! move, up/cancel). Floom widgets want higher-level intent: "this was a tap"
 //! vs "this was a scroll/drag". This module classifies the two, mirroring the
 //! `TouchState` machine in gpui-mobile's `ios/window.rs`.
 //!
 //! It is framework-agnostic: it consumes [`TouchSample`]s and emits neutral
 //! [`GestureEvent`]s. The platform backend is responsible for mapping those to
-//! Floem [`Event`]s (see [`GestureEvent::to_floem`]) and for feeding a fling
+//! Floom [`Event`]s (see [`GestureEvent::to_floom`]) and for feeding a fling
 //! velocity into a [`MomentumScroller`](crate::momentum::MomentumScroller).
 //!
 //! # Usage
 //!
 //! ```ignore
-//! use floem_gesture::{TouchRecognizer, TouchSample, TouchPhase};
+//! use floom_gesture::{TouchRecognizer, TouchSample, TouchPhase};
 //!
 //! let mut rec = TouchRecognizer::new();
 //! // On each native touch:
 //! for g in rec.handle(TouchSample { phase, x, y, tap_count: 1 }) {
-//!     for event in g.to_floem(modifiers) {
+//!     for event in g.to_floom(modifiers) {
 //!         window.dispatch(event);
 //!     }
 //!     if let GestureEvent::Fling { vx, vy } = g {
@@ -32,11 +32,11 @@
 //! Adapted from [`gpui-mobile`](https://github.com/itsbalamurali/gpui-mobile)
 //! (`src/ios/window.rs`, the `TouchState` machine), used under its Apache-2.0
 //! option. The physics/tracking were removed so the module lives in
-//! `floem-gesture` and only depends on `floem-types` + the in-crate
+//! `floom-gesture` and only depends on `floom-types` + the in-crate
 //! `VelocityTracker`.
 
 use crate::momentum::VelocityTracker;
-use floem_types::{
+use floom_types::{
     Event, Modifiers, PointerButton, PointerEvent, PointerKind, PointerPhase, ScrollEvent,
 };
 
@@ -233,17 +233,17 @@ impl Default for TouchRecognizer {
 }
 
 impl GestureEvent {
-    /// Map a classified gesture to zero or more Floem [`Event`]s.
+    /// Map a classified gesture to zero or more Floom [`Event`]s.
     ///
-    /// `ScrollEnd` and `Fling` carry no direct Floem event — `ScrollEnd` tells
+    /// `ScrollEnd` and `Fling` carry no direct Floom event — `ScrollEnd` tells
     /// the backend to stop accumulating raw deltas and `Fling` is the cue to
     /// start inertia. They are returned via [`TouchRecognizer::handle`] so the
-    /// backend can act on them; this method emits the events Floem understands
+    /// backend can act on them; this method emits the events Floom understands
     /// natively (pointer taps, scroll deltas).
-    pub fn to_floem(self, modifiers: Modifiers) -> Vec<Event> {
+    pub fn to_floom(self, modifiers: Modifiers) -> Vec<Event> {
         match self {
             GestureEvent::Tap { x, y, tap_count } => {
-                let pos = floem_types::Point::new(x as f64, y as f64);
+                let pos = floom_types::Point::new(x as f64, y as f64);
                 vec![
                     Event::Pointer(PointerEvent {
                         phase: PointerPhase::Down,
@@ -267,7 +267,7 @@ impl GestureEvent {
                 vec![Event::Scroll(ScrollEvent {
                     delta_x: 0.0,
                     delta_y: 0.0,
-                    position: floem_types::Point::new(x as f64, y as f64),
+                    position: floom_types::Point::new(x as f64, y as f64),
                     modifiers,
                 })]
             }
@@ -275,7 +275,7 @@ impl GestureEvent {
                 vec![Event::Scroll(ScrollEvent {
                     delta_x: dx as f64,
                     delta_y: dy as f64,
-                    position: floem_types::Point::new(x as f64, y as f64),
+                    position: floom_types::Point::new(x as f64, y as f64),
                     modifiers,
                 })]
             }
@@ -418,19 +418,19 @@ mod tests {
     }
 
     #[test]
-    fn to_floem_tap_is_down_then_up_at_same_point() {
+    fn to_floom_tap_is_down_then_up_at_same_point() {
         let g = GestureEvent::Tap {
             x: 4.0,
             y: 7.0,
             tap_count: 1,
         };
-        let events = g.to_floem(Modifiers::NONE);
+        let events = g.to_floom(Modifiers::NONE);
         assert_eq!(events.len(), 2);
         match (&events[0], &events[1]) {
             (Event::Pointer(d), Event::Pointer(u)) => {
                 assert_eq!(d.phase, PointerPhase::Down);
                 assert_eq!(u.phase, PointerPhase::Up);
-                assert_eq!(d.position, floem_types::Point::new(4.0, 7.0));
+                assert_eq!(d.position, floom_types::Point::new(4.0, 7.0));
                 assert_eq!(d.position, u.position);
                 assert_eq!(d.kind, PointerKind::Touch);
                 assert_eq!(d.click_count, 1);
@@ -440,19 +440,19 @@ mod tests {
     }
 
     #[test]
-    fn to_floem_scroll_delta_uses_f64_position() {
+    fn to_floom_scroll_delta_uses_f64_position() {
         let g = GestureEvent::ScrollDelta {
             dx: -3.0,
             dy: 12.0,
             x: 100.0,
             y: 200.0,
         };
-        let events = g.to_floem(Modifiers::NONE);
+        let events = g.to_floom(Modifiers::NONE);
         match &events[0] {
             Event::Scroll(s) => {
                 assert_eq!(s.delta_x, -3.0);
                 assert_eq!(s.delta_y, 12.0);
-                assert_eq!(s.position, floem_types::Point::new(100.0, 200.0));
+                assert_eq!(s.position, floom_types::Point::new(100.0, 200.0));
             }
             other => panic!("expected Scroll, got {other:?}"),
         }

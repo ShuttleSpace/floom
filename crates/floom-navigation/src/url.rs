@@ -145,7 +145,7 @@ mod tests {
 
     #[test]
     fn parses_full_and_bare_urls() {
-        let full = parse("floem://app/profile/42?ref=push&tab=info").expect("valid");
+        let full = parse("floom://app/profile/42?ref=push&tab=info").expect("valid");
         assert_eq!(full.path, "/profile/42");
         assert_eq!(full.query("ref"), Some("push"));
         assert_eq!(full.query("tab"), Some("info"));

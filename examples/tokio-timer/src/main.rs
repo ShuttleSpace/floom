@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use floem::{
+use floom::{
     action::inspect,
     prelude::*,
     reactive::{DerivedRwSignal, Memo},
@@ -18,7 +18,7 @@ fn main() {
 
     // We must make it so that the main task is under the tokio runtime so that APIs like
     // tokio::spawn work
-    runtime.block_on(async { tokio::task::block_in_place(|| floem::launch(app_view)) })
+    runtime.block_on(async { tokio::task::block_in_place(|| floom::launch(app_view)) })
 }
 
 fn app_view() -> impl IntoView {

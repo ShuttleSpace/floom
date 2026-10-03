@@ -1,13 +1,13 @@
-//! Rendering abstraction layer for the Floem UI framework.
+//! Rendering abstraction layer for the Floom UI framework.
 //!
-//! This crate defines the [`Renderer`] trait that all Floem rendering backends must
+//! This crate defines the [`Renderer`] trait that all Floom rendering backends must
 //! implement, along with supporting types for passing images and SVGs to the renderer.
-//! Floem ships with three backend implementations:
+//! Floom ships with three backend implementations:
 //!
-//! - **Vello** (`floem_legacy_renderer_vello`) — GPU-accelerated renderer using the Vello scene graph (default).
-//! - **Skia** (`floem_legacy_renderer_skia`) — GPU-accelerated renderer using AnyRender's Skia backend.
-//! - **Vger** (`floem_legacy_renderer_vger`) — GPU-accelerated renderer using the Vger library.
-//! - **tiny-skia** (`floem_legacy_renderer_tiny_skia`) — CPU software renderer using tiny-skia.
+//! - **Vello** (`floom_legacy_renderer_vello`) — GPU-accelerated renderer using the Vello scene graph (default).
+//! - **Skia** (`floom_legacy_renderer_skia`) — GPU-accelerated renderer using AnyRender's Skia backend.
+//! - **Vger** (`floom_legacy_renderer_vger`) — GPU-accelerated renderer using the Vger library.
+//! - **tiny-skia** (`floom_legacy_renderer_tiny_skia`) — CPU software renderer using tiny-skia.
 //!
 //! # Modules
 //!
@@ -35,7 +35,7 @@ pub mod gpu_resources;
 /// # Example
 ///
 /// ```no_run
-/// use floem_legacy_renderer::{Svg, usvg};
+/// use floom_legacy_renderer::{Svg, usvg};
 ///
 /// let svg_text = r#"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
 ///   <circle cx="12" cy="12" r="10" fill="currentColor"/>
@@ -61,7 +61,7 @@ pub struct Svg<'a> {
 /// # Example
 ///
 /// ```no_run
-/// use floem_legacy_renderer::Img;
+/// use floom_legacy_renderer::Img;
 ///
 /// # fn make_image_brush() -> peniko::ImageBrush { todo!() }
 /// let brush = make_image_brush();
@@ -79,7 +79,7 @@ pub struct Img<'a> {
     pub hash: &'a [u8],
 }
 
-/// The core rendering trait that every Floem backend must implement.
+/// The core rendering trait that every Floom backend must implement.
 ///
 /// A frame is bracketed by [`begin`](Renderer::begin) and [`finish`](Renderer::finish).
 /// Between those calls the framework issues drawing commands — fills, strokes, text,
@@ -106,7 +106,7 @@ pub trait Renderer {
     /// Must be called exactly once before any drawing commands.
     /// When `capture` is `true` the renderer should record the frame into an
     /// off-screen buffer so that [`finish`](Renderer::finish) can return it as
-    /// an [`ImageBrush`](peniko::ImageBrush). This is used by the Floem
+    /// an [`ImageBrush`](peniko::ImageBrush). This is used by the Floom
     /// inspector to take snapshots.
     fn begin(&mut self, capture: bool);
 
@@ -191,7 +191,7 @@ pub trait Renderer {
     /// Draw an SVG image inside `rect`.
     ///
     /// When `brush` is `Some`, the SVG is rendered as a mask and filled with
-    /// the given brush — this is how Floem applies a color override to icons.
+    /// the given brush — this is how Floom applies a color override to icons.
     fn draw_svg<'b>(&mut self, svg: Svg<'b>, rect: Rect, brush: Option<impl Into<BrushRef<'b>>>);
 
     /// Draw a raster image inside `rect`.
@@ -208,7 +208,7 @@ pub trait Renderer {
 
     /// Return a human-readable string identifying the renderer backend.
     ///
-    /// Used by the Floem inspector. Implementations typically return a string
+    /// Used by the Floom inspector. Implementations typically return a string
     /// like `"name: Vello\ninfo: …"`.
     fn debug_info(&self) -> String {
         "Unknown".into()

@@ -6,7 +6,7 @@ use std::rc::Rc;
 use crate::style::{CustomStylable, CustomStyle, Style, StylePropValue};
 use crate::views::Decorators;
 use crate::{AnyView, IntoView, View, ViewId, prop, prop_extractor, style_class};
-use floem_legacy_reactive::UpdaterEffect;
+use floom_legacy_reactive::UpdaterEffect;
 use fluent_bundle::{FluentBundle, FluentResource};
 use ouroboros::self_referencing;
 use parley::Alignment;
@@ -67,7 +67,7 @@ impl StylePropValue for LocaleMap {
         let view = Stack::new((
             format!("Languages ({count})").style(|s| {
                 s.font_size(12.0)
-                    .font_weight(floem_legacy_renderer::text::FontWeight::SEMI_BOLD)
+                    .font_weight(floom_legacy_renderer::text::FontWeight::SEMI_BOLD)
             }),
             Stack::vertical_from_iter(languages.into_iter().map(|lang| {
                 lang.style(|s| {
@@ -111,7 +111,7 @@ impl LocaleMap {
     /// containing tuple of (<language_name>, <localization_file>) string slices.
     /// ### Example
     /// ```rust
-    /// # use floem::views::localization::LocaleMap;
+    /// # use floom::views::localization::LocaleMap;
     /// let locales = LocaleMap::from_resources([
     ///     ("en-US", include_str!("../../examples/localization/locales/en-US/app.ftl")),
     ///     ("pl-PL", include_str!("../../examples/localization/locales/pl-PL/app.ftl"))
@@ -282,8 +282,8 @@ impl L10n {
     /// reactively update the value.
     /// ### Example
     /// ```rust
-    /// # use floem::prelude::{RwSignal, SignalGet};
-    /// # use floem::views::localization::l10n;
+    /// # use floom::prelude::{RwSignal, SignalGet};
+    /// # use floom::views::localization::l10n;
     ///
     /// let username = RwSignal::new("John");
     /// let localized_label = l10n("Hello").arg("user", move || username.get());
@@ -313,8 +313,8 @@ impl L10n {
     /// be missing.
     /// ### Example
     /// ```rust
-    /// # use floem::prelude::{RwSignal, SignalGet};
-    /// # use floem::views::localization::l10n;
+    /// # use floom::prelude::{RwSignal, SignalGet};
+    /// # use floom::views::localization::l10n;
     /// let localized_with_fallback = l10n("greet").fallback(|| "Hello user!");
     /// let username = RwSignal::new("John");
     /// let localized_with_fallback_and_args = l10n("greet")
@@ -371,8 +371,8 @@ impl L10n {
 ///
 /// ### Example
 /// ```rust
-/// # use floem::prelude::*;
-/// # use floem::views::localization::*;
+/// # use floom::prelude::*;
+/// # use floom::views::localization::*;
 /// // Simple label:
 /// let simple = l10n("greet");
 /// // With arg (variables):

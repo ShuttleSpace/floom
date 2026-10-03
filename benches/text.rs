@@ -1,6 +1,6 @@
-//! Benchmarks for text layout performance in Floem.
+//! Benchmarks for text layout performance in Floom.
 //!
-//! These benchmarks measure the performance of floem's `TextLayout` abstraction
+//! These benchmarks measure the performance of floom's `TextLayout` abstraction
 //! (which wraps Parley 0.7), including:
 //! - Layout creation with varying text sizes and scripts
 //! - Styled text with attribute spans
@@ -17,7 +17,7 @@ use std::hint::black_box;
 use std::sync::Once;
 
 use criterion::{Criterion, criterion_group, criterion_main};
-use floem::text::{
+use floom::text::{
     Affinity, Attrs, AttrsList, FONT_CONTEXT, FamilyOwned, FontStyle, FontWeight, TextLayout,
 };
 use peniko::Color;

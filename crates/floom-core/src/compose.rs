@@ -1,6 +1,6 @@
 //! Composite widget composition.
 //!
-//! `floem-core` deliberately does not depend on a layout engine, so this module
+//! `floom-core` deliberately does not depend on a layout engine, so this module
 //! expresses *intent* in vocabulary any engine understands (axis, alignment,
 //! grow) rather than in engine types. [`crate::Widget::children`] hands these
 //! to whichever layer owns the tree; that layer lowers each

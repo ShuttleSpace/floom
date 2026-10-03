@@ -37,28 +37,28 @@ mutate_one() {
   touch "$file"
 }
 
-COMPOSE=widgets/floem-widgets/src/compose.rs
-MOTION=foundation/floem-types/src/motion.rs
+COMPOSE=crates/floom-widgets/src/compose.rs
+MOTION=crates/floom-types/src/motion.rs
 
 # 1. the exit arm stops keeping the child mounted — the departure is invisible
 mutate_one "$COMPOSE" \
   "        Some(child) if self.phase != PresencePhase::Hidden => vec![child.clone()]," \
   "        Some(child) if self.phase != PresencePhase::Hidden && self.phase != PresencePhase::Exiting => vec![child.clone()]," \
-  "cargo test -q -p floem-app --test motion_host presence" \
+  "cargo test -q -p floom-app --test motion_host presence" \
   "exit-keeps-the-child-mounted"
 
 # 2. the host's "it finished" flag is never folded in — an exit never ends
 mutate_one "$COMPOSE" \
   "        if self.finished {" \
   "        if false {" \
-  "cargo test -q -p floem-app --test motion_host presence" \
+  "cargo test -q -p floom-app --test motion_host presence" \
   "finished-transition-is-folded-in"
 
 # 3. animation_finished stops flagging completion (the event door is deaf)
 mutate_one "$COMPOSE" \
   "        self.finished = true;" \
   "        self.finished = false;" \
-  "cargo test -q -p floem-app --test motion_host presence" \
+  "cargo test -q -p floom-app --test motion_host presence" \
   "animation-finished-flags-the-end"
 
 # 4. a re-appearance stops replaying its enter (the restart key is not bumped)
@@ -72,42 +72,42 @@ mutate_one "$COMPOSE" \
                     Some(transition) if !transition.is_instant() => {
                         self.phase = PresencePhase::Entering;
                     }" \
-  "cargo test -q -p floem-app --test motion_host presence" \
+  "cargo test -q -p floom-app --test motion_host presence" \
   "reappearance-bumps-the-restart-key"
 
 # 5. the presence leaf stops reading its signal — a crossfade never swaps
 mutate_one "$COMPOSE" \
   "        let want = self.when_signal.load(Ordering::Relaxed);" \
   "        let want = true;" \
-  "cargo test -q -p floem-app --test motion_host crossfade" \
+  "cargo test -q -p floom-app --test motion_host crossfade" \
   "presence-leaf-reads-its-signal"
 
 # 6. the crossfade stops flipping one of its signals — that side never arrives
 mutate_one "$COMPOSE" \
   "            self.signal_b.store(!self.show_a, Ordering::Relaxed);" \
   "            self.signal_b.store(false, Ordering::Relaxed);" \
-  "cargo test -q -p floem-app --test motion_host crossfade" \
+  "cargo test -q -p floom-app --test motion_host crossfade" \
   "crossfade-flips-both-signals"
 
 # 7. the endpoints stop being reversed on the way out — an exit fades *in*
 mutate_one "$MOTION" \
   "        let (from, to) = if entering { (from, to) } else { (to, from) };" \
   "        let (from, to) = if entering { (from, to) } else { (from, to) };" \
-  "cargo test -q -p floem-types --lib" \
+  "cargo test -q -p floom-types --lib" \
   "exit-endpoints-are-reversed"
 
 # 8. a zero-duration presence stops counting as instant
 mutate_one "$MOTION" \
   "        self.duration_secs <= 0.0" \
   "        false" \
-  "cargo test -q -p floem-types --lib" \
+  "cargo test -q -p floom-types --lib" \
   "zero-duration-presence-is-instant"
 
 # 9. the golden example's own claims: run it against an exit that unmounts now
 mutate_one "$COMPOSE" \
   "        Some(child) if self.phase != PresencePhase::Hidden => vec![child.clone()]," \
   "        Some(child) if self.phase != PresencePhase::Hidden && self.phase != PresencePhase::Exiting => vec![child.clone()]," \
-  "cargo run -q -p floem2-motion" \
+  "cargo run -q -p floom2-motion" \
   "example-presence-act-has-teeth"
 
 # A restore-by-copy can land inside the same second as the mutated build, and

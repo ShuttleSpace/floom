@@ -1,4 +1,4 @@
-//! Terminal Scene renderer for Floem 2.0.
+//! Terminal Scene renderer for Floom 2.0.
 //!
 //! A terminal is not a pixel grid — it is a **character grid**. This crate
 //! therefore does not downsample a rasterised picture into coloured blocks (the
@@ -21,7 +21,7 @@
 //! a screenshot. Approximating them (a gradient's first stop, say) would be a
 //! silent lie about what the scene asked for.
 //!
-//! [`ResourceKind::GlyphRun`]: floem_scene::ResourceKind::GlyphRun
+//! [`ResourceKind::GlyphRun`]: floom_scene::ResourceKind::GlyphRun
 
 mod ansi;
 mod grid;

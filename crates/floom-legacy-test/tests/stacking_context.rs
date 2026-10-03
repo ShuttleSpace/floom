@@ -1,6 +1,6 @@
 //! Tests for simplified stacking semantics.
 //!
-//! These tests verify that floem correctly implements simplified stacking behavior
+//! These tests verify that floom correctly implements simplified stacking behavior
 //! for event dispatch:
 //! - Every view is implicitly a stacking context
 //! - z-index only competes with siblings (children never escape parent boundaries)
@@ -8,11 +8,11 @@
 //! - DOM order is used as a tiebreaker when z-index values are equal
 //! - Event bubbling follows DOM tree
 
-use floem::headless::{HeadlessHarness, TestRoot};
-use floem::prelude::el;
-use floem::taffy;
-use floem::unit::UnitExt;
-use floem::views::{Decorators, Empty, Stack};
+use floom::headless::{HeadlessHarness, TestRoot};
+use floom::prelude::el;
+use floom::taffy;
+use floom::unit::UnitExt;
+use floom::views::{Decorators, Empty, Stack};
 use serial_test::serial;
 use std::cell::Cell;
 use std::rc::Rc;

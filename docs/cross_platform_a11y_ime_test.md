@@ -6,9 +6,9 @@ screen-reader (a11y) and soft-keyboard (IME) paths on the three mobile targets
 after the automated tests pass:
 
 ```
-cargo test -p floem --lib accessibility      # neutral tree build + action routing (green)
-cargo check -p floem                          # host build (green)
-cargo check -p floem --target <mobile target> # per-target compile (green where applicable)
+cargo test -p floom --lib accessibility      # neutral tree build + action routing (green)
+cargo check -p floom                          # host build (green)
+cargo check -p floom --target <mobile target> # per-target compile (green where applicable)
 ```
 
 Automated tests cover the **neutral** layer (tree construction, `AccessAction`
@@ -37,8 +37,8 @@ pointer click (routed through the identical `PendingAction` channel).
 
 ## 1. iOS — VoiceOver + IME
 
-Backend: `src/accessibility/backend_ios.rs` (UIAccessibility element mirror).
-IME: `src/platform/ohos_ime.rs` is OHOS-only; iOS IME is `src/platform/…ios_ime.rs`
+Backend: `crates/floom/src/accessibility/backend_ios.rs` (UIAccessibility element mirror).
+IME: `crates/floom/src/platform/ohos_ime.rs` is OHOS-only; iOS IME is `crates/floom/src/platform/…ios_ime.rs`
 (UITextField delegate + `UserEvent::IosIme`).
 
 ### 1.1 VoiceOver
@@ -73,9 +73,9 @@ IME: `src/platform/ohos_ime.rs` is OHOS-only; iOS IME is `src/platform/…ios_im
 
 ## 2. Android — TalkBack + IME
 
-Backend: `src/accessibility/backend_android.rs` (`AccessibilityNodeInfo` + JNI
+Backend: `crates/floom/src/accessibility/backend_android.rs` (`AccessibilityNodeInfo` + JNI
 `nativePerformAction`). IME: Android uses the system IME via the winit/Android
-text-input path (no special floem bridge beyond the focus signal).
+text-input path (no special floom bridge beyond the focus signal).
 
 ### 2.1 TalkBack
 - [ ] Enable TalkBack (Settings → Accessibility → TalkBack). Explore-by-touch
@@ -95,7 +95,7 @@ text-input path (no special floem bridge beyond the focus signal).
 ### 2.2 IME
 - [ ] Focus `TextField` → Gboard/selected IME appears.
 - [ ] Composition (CJK) + commit + delete behave as on iOS.
-- [ ] `inputType` reflects floem `ImePurpose` (password → dots, number →
+- [ ] `inputType` reflects floom `ImePurpose` (password → dots, number →
       numeric, email/url → corresponding variants).
 - [ ] Commit text lands in the focused field; no duplicate/garbled input.
 
@@ -103,7 +103,7 @@ text-input path (no special floem bridge beyond the focus signal).
 
 ## 3. OpenHarmony — screen reader + IME
 
-IME: `src/platform/ohos_ime.rs` (`showKeyboard`/`hideKeyboard` +
+IME: `crates/floom/src/platform/ohos_ime.rs` (`showKeyboard`/`hideKeyboard` +
 `updateImeCursorArea`/`updateImeConfig`, #112) — wired and `cargo check`
 green, but **best-effort** (depends on a focused ArkTS input / IME extension).
 **a11y: BLOCKED** — see §3.1.
@@ -116,7 +116,7 @@ green, but **best-effort** (depends on a focused ArkTS input / IME extension).
       (`native_interface_accessibility.h`), which is not yet wired (#121).
 - [ ] Until #121 lands, the only a11y signal on-device is the debug feed:
       `setAccessibilityTree` stores `currentA11yTree` (inspect via `hilog`
-      `[floem] a11y tree updated: …`). Use this to confirm the tree shape
+      `[floom] a11y tree updated: …`). Use this to confirm the tree shape
       (ids/roles/bounds/actions) is correct even though it is not yet exposed.
 - [ ] Checklist to run **after #121**: enable the OHOS screen reader
       (Settings → Accessibility → ScreenReader); swipe/touch-explore announces
@@ -145,11 +145,11 @@ green, but **best-effort** (depends on a focused ArkTS input / IME extension).
 ## 4. Regression guardrails
 
 - [ ] After any a11y backend change, re-run
-      `cargo test -p floem --lib accessibility` — must stay green (15 tests).
+      `cargo test -p floom --lib accessibility` — must stay green (15 tests).
 - [ ] After any IME change, exercise at least one CJK + one Latin field on each
       target (composition path differs from plain commit).
 - [ ] Neutral `AccessAction` names must stay in sync between
-      `src/accessibility/{backend_ohos.rs,translate.rs}` and every platform
+      `crates/floom/src/accessibility/{backend_ohos.rs,translate.rs}` and every platform
       backend's name→action map (the `action_name`/`action_from_name` pair and
       the iOS/Android/native enums).
 - [ ] New mobile target? Add its backend to the capability matrix in

@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use floem::{
+use floom::{
     action::debounce_action,
     prelude::{palette::css, *},
     reactive::Trigger,
@@ -53,7 +53,7 @@ async fn fetch_github_user(username: String, token: Option<String>) -> UserResul
 
     let url = format!("https://api.github.com/users/{}", username.trim());
     let client = reqwest::Client::new();
-    let mut request = client.get(&url).header("User-Agent", "floem-github-search");
+    let mut request = client.get(&url).header("User-Agent", "floom-github-search");
 
     // Add authorization header if token is provided
     if let Some(token) = &token
@@ -258,7 +258,7 @@ fn user_display(user_resource: Resource<Option<UserResult>>) -> impl IntoView {
             None => "Enter a GitHub username to search"
                 .style(|s| {
                     s.color(css::GRAY)
-                        .font_style(floem::text::FontStyle::Italic)
+                        .font_style(floom::text::FontStyle::Italic)
                 })
                 .into_any(),
         },
@@ -411,7 +411,7 @@ fn app_view() -> impl IntoView {
         s.font_size(12.0)
             .color(css::GRAY)
             .margin_top(20.0)
-            .font_style(floem::text::FontStyle::Italic)
+            .font_style(floom::text::FontStyle::Italic)
     });
 
     Stack::vertical((
@@ -429,7 +429,7 @@ fn app_view() -> impl IntoView {
             .items_center()
             .justify_center()
             .padding(20.0)
-            .background(floem::peniko::Color::from_rgb8(248, 249, 250))
+            .background(floom::peniko::Color::from_rgb8(248, 249, 250))
     })
     .window_title(|| "GitHub User Search".to_owned())
     .style(|s| {
@@ -445,5 +445,5 @@ fn main() {
 
     // We must make it so that the main task is under the tokio runtime so that APIs like
     // tokio::spawn work
-    runtime.block_on(async { tokio::task::block_in_place(|| floem::launch(app_view)) })
+    runtime.block_on(async { tokio::task::block_in_place(|| floom::launch(app_view)) })
 }

@@ -1,6 +1,6 @@
 use std::any::Any;
 
-use floem_legacy_reactive::{Effect, RwSignal, SignalGet, SignalUpdate, UpdaterEffect};
+use floom_legacy_reactive::{Effect, RwSignal, SignalGet, SignalUpdate, UpdaterEffect};
 
 use crate::{
     context::UpdateCx,

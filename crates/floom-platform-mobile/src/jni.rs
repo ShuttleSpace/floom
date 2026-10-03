@@ -2,7 +2,7 @@
 //!
 //! Stores the `JavaVM` and the activity `jobject` globally so capability
 //! packages (vibration, camera, location, …) can reach the JVM from any thread.
-//! The concrete `floem-platform-android` backend is expected to call
+//! The concrete `floom-platform-android` backend is expected to call
 //! [`set_java_vm`] and [`set_activity`] during application startup — before any
 //! capability is invoked — to hand over the handles it already obtained from
 //! `android-activity`.

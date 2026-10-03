@@ -12,7 +12,7 @@ DevEco Studio 在 macOS/Linux 上的包装器是 `hvigorw`（无扩展名），`
 | `src/sdk.rs` | `HvigorInfo` 新增 `wrapper: PathBuf` 字段；`discover_hvigor` 按 `target_os` 选择 `hvigorw`（Unix）/ `hvigorw.bat`（Windows），并把 `hvigorw.bat` 从「全平台必填」降为「仅 Windows 必填」。 |
 | `src/commands/package.rs` | hvigor 命令程序由 `app.hvigor.wrapper_bat` 改为 `app.hvigor.wrapper`（即用上面选出的正确包装器）；`ohpm install` 失败回退由写死的 `npm.cmd` 改为按平台选 `npm` / `npm.cmd`。 |
 | `src/commands/mod.rs` | 链接器 `clang` / `clang++` / `llvm-ar` 原版硬编码 `.exe` 后缀（Windows-only），改为 `std::env::consts::EXE_SUFFIX`，macOS/Linux 上不再找 `clang.exe`。 |
-| `src/commands/build.rs` + `package.rs` | staticlib 产物解析增加 `deps/` 回退：manifest 未声明 `staticlib` 时（如 floem 的 `examples/ohos` 是 cdylib），`cargo rustc -- --crate-type staticlib` 产出的 `.a` 只落在 `<profile>/deps/`，不会被 cargo 硬链到 `<profile>/` 根。 |
+| `src/commands/build.rs` + `package.rs` | staticlib 产物解析增加 `deps/` 回退：manifest 未声明 `staticlib` 时（如 floom 的 `examples/ohos` 是 cdylib），`cargo rustc -- --crate-type staticlib` 产出的 `.a` 只落在 `<profile>/deps/`，不会被 cargo 硬链到 `<profile>/` 根。 |
 | `src/template.rs` | ① `build-profile.json5` 的 `compileSdkVersion` 等三个字段加引号（裸 `26.0.0` 不是合法 JSON 数字，hvigor 报 JSON5 Syntax Error）；② 工程级 `oh-package.json5` 与 `hvigor/hvigor-config.json5` 的 `modelVersion` 由 `5.0.0` 升到 `6.0.0`——API 26+ 要求 modelVersion ≥ 6.0.0 才接受字符串形式的 SDK 版本。 |
 
 `src/runner.rs` 是平台无关的 `Command` 封装，无需改。
@@ -62,6 +62,6 @@ cargo install --path . --bin cargo-ohos-app
 
 ## 验证建议
 
-补丁应用后，在 floem 的 OHOS 集成完成前，可先用上游 `examples/winit-smoke` 验证整条
+补丁应用后，在 floom 的 OHOS 集成完成前，可先用上游 `examples/winit-smoke` 验证整条
 打包链路在 macOS 上是否通：能生成壳 → 编出 `lib{name}.a` → `ohpm install` →
 `hvigorw` 调起出 HAP。能通过即说明本补丁生效、工具链可用。

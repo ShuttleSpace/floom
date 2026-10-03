@@ -3,9 +3,9 @@ project(ohos_app_bridge)
 
 set(NATIVERENDER_ROOT_PATH ${CMAKE_CURRENT_SOURCE_DIR})
 
-# The floem Rust runtime is linked as a *shared* library on purpose:
+# The floom Rust runtime is linked as a *shared* library on purpose:
 # `libohos.so` carries both the winit C-ABI entry (`ohos_winit_runtime_*`) and
-# the floem `#[napi]` exports, and napi_init.cpp merges libohos.so's
+# the floom `#[napi]` exports, and napi_init.cpp merges libohos.so's
 # `napi_register_module_v1` into this module's exports (see its file header).
 # Linking the staticlib here would duplicate that registration symbol.
 add_library(ohos_runtime SHARED IMPORTED)

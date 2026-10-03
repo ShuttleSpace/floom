@@ -1,7 +1,7 @@
-//! OS-neutral platform contracts for Floem 2.0.
+//! OS-neutral platform contracts for Floom 2.0.
 //!
 //! Concrete backends (desktop/mobile/web/embedded) live in sibling crates and
-//! must not leak into `floem-types` / `floem-scene` / widgets.
+//! must not leak into `floom-types` / `floom-scene` / widgets.
 
 mod capabilities;
 mod event;
@@ -13,12 +13,12 @@ mod window;
 pub use capabilities::{Capability, PlatformCapabilities};
 pub use event::{PlatformEvent, PointerButton};
 pub use fake::{FakePlatform, HostPlatform};
-pub use floem_types::{DisplayInfo, Modifiers, Point, ScaleFactor, Size, SurfaceId, WindowId};
+pub use floom_types::{DisplayInfo, Modifiers, Point, ScaleFactor, Size, SurfaceId, WindowId};
 pub use keymap::KeyCode;
 pub use surface::{Surface, SurfaceConfig, SurfaceTarget};
 pub use window::{Window, WindowConfig, WindowState};
 
-use floem_types::PlatformId;
+use floom_types::PlatformId;
 
 /// Top-level platform backend.
 pub trait Platform {

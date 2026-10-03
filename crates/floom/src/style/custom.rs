@@ -8,7 +8,7 @@
 
 use std::rc::Rc;
 
-use floem_legacy_reactive::UpdaterEffect;
+use floom_legacy_reactive::UpdaterEffect;
 
 use crate::layout::responsive::ScreenSize;
 use crate::view::{IntoView, View};
@@ -24,8 +24,8 @@ use super::{
 ///
 /// # Example
 /// ```rust
-/// use floem::prelude::*;
-/// use floem::style::CustomStylable;
+/// use floom::prelude::*;
+/// use floom::style::CustomStylable;
 /// use palette::css;
 ///
 /// // Using custom styling on a text view
@@ -44,8 +44,8 @@ pub trait CustomStyle: Default + Clone + Into<Style> + From<Style> {
     ///
     /// # Example
     /// ```rust
-    /// # use floem::prelude::*;
-    /// # use floem::style::CustomStyle;
+    /// # use floom::prelude::*;
+    /// # use floom::style::CustomStyle;
     /// # use palette::css;
     /// # let label_custom_style = LabelCustomStyle::new();
     /// label_custom_style.style(|s| s.padding(10.0).background(css::RED))
@@ -64,8 +64,8 @@ pub trait CustomStyle: Default + Clone + Into<Style> + From<Style> {
     ///
     /// # Example
     /// ```rust
-    /// # use floem::prelude::*;
-    /// # use floem::style::CustomStyle;
+    /// # use floom::prelude::*;
+    /// # use floom::style::CustomStyle;
     /// # use palette::css;
     /// # let label_custom_style = LabelCustomStyle::new();
     /// label_custom_style.hover(|s| s.selection_color(css::BLUE))
@@ -84,8 +84,8 @@ pub trait CustomStyle: Default + Clone + Into<Style> + From<Style> {
     ///
     /// # Example
     /// ```rust
-    /// # use floem::prelude::*;
-    /// # use floem::style::CustomStyle;
+    /// # use floom::prelude::*;
+    /// # use floom::style::CustomStyle;
     /// # use palette::css;
     /// # let label_custom_style = LabelCustomStyle::new();
     /// label_custom_style.focus(|s| s.selection_color(css::GREEN))
@@ -150,8 +150,8 @@ pub trait CustomStyle: Default + Clone + Into<Style> + From<Style> {
     ///
     /// # Example
     /// ```rust
-    /// # use floem::prelude::*;
-    /// # use floem::style::CustomStyle;
+    /// # use floom::prelude::*;
+    /// # use floom::style::CustomStyle;
     /// # use palette::css;
     /// # let label_custom_style = LabelCustomStyle::new();
     /// label_custom_style.selected(|s| s.selection_color(css::ORANGE))
@@ -170,8 +170,8 @@ pub trait CustomStyle: Default + Clone + Into<Style> + From<Style> {
     ///
     /// # Example
     /// ```rust
-    /// # use floem::prelude::*;
-    /// # use floem::style::CustomStyle;
+    /// # use floom::prelude::*;
+    /// # use floom::style::CustomStyle;
     /// # use palette::css;
     /// # let label_custom_style = LabelCustomStyle::new();
     /// label_custom_style.disabled(|s| s.selection_color(css::GRAY))
@@ -190,8 +190,8 @@ pub trait CustomStyle: Default + Clone + Into<Style> + From<Style> {
     ///
     /// # Example
     /// ```rust
-    /// # use floem::prelude::*;
-    /// # use floem::style::CustomStyle;
+    /// # use floom::prelude::*;
+    /// # use floom::style::CustomStyle;
     /// # use palette::css;
     /// # let label_custom_style = LabelCustomStyle::new();
     /// label_custom_style.dark_mode(|s| s.selection_color(css::WHITE))
@@ -210,8 +210,8 @@ pub trait CustomStyle: Default + Clone + Into<Style> + From<Style> {
     ///
     /// # Example
     /// ```rust
-    /// # use floem::prelude::*;
-    /// # use floem::style::CustomStyle;
+    /// # use floom::prelude::*;
+    /// # use floom::style::CustomStyle;
     /// # use palette::css;
     /// # let label_custom_style = LabelCustomStyle::new();
     /// label_custom_style.active(|s| s.selection_color(css::RED))
@@ -230,9 +230,9 @@ pub trait CustomStyle: Default + Clone + Into<Style> + From<Style> {
     ///
     /// # Example
     /// ```rust
-    /// # use floem::prelude::*;
-    /// # use floem::style::CustomStyle;
-    /// # use floem::layout::responsive::ScreenSize;
+    /// # use floom::prelude::*;
+    /// # use floom::style::CustomStyle;
+    /// # use floom::layout::responsive::ScreenSize;
     /// # use palette::css;
     /// # let label_custom_style = LabelCustomStyle::new();
     /// label_custom_style.responsive(ScreenSize::SM, |s| s.selection_color(css::PURPLE))
@@ -284,8 +284,8 @@ pub trait CustomStyle: Default + Clone + Into<Style> + From<Style> {
     ///
     /// # Example
     /// ```rust
-    /// # use floem::prelude::*;
-    /// # use floem::style::CustomStyle;
+    /// # use floom::prelude::*;
+    /// # use floom::style::CustomStyle;
     /// # use palette::css;
     /// # let label_custom_style = LabelCustomStyle::new();
     /// # let is_highlighted = true;
@@ -303,8 +303,8 @@ pub trait CustomStyle: Default + Clone + Into<Style> + From<Style> {
     ///
     /// # Example
     /// ```rust
-    /// # use floem::prelude::*;
-    /// # use floem::style::CustomStyle;
+    /// # use floom::prelude::*;
+    /// # use floom::style::CustomStyle;
     /// # use palette::css;
     /// # let label_custom_style = LabelCustomStyle::new();
     /// # let maybe_color = Some(css::BLUE);
@@ -322,8 +322,8 @@ pub trait CustomStyle: Default + Clone + Into<Style> + From<Style> {
     ///
     /// # Example
     /// ```rust
-    /// # use floem::prelude::*;
-    /// # use floem::style::CustomStyle;
+    /// # use floom::prelude::*;
+    /// # use floom::style::CustomStyle;
     /// # use std::time::Duration;
     /// # let label_custom_style = LabelCustomStyle::new();
     /// // Note: Actual property types vary by custom style implementation
@@ -351,8 +351,8 @@ pub trait CustomStyle: Default + Clone + Into<Style> + From<Style> {
 /// # Example
 ///
 /// ```rust
-/// use floem::prelude::*;
-/// use floem::style::CustomStylable;
+/// use floom::prelude::*;
+/// use floom::style::CustomStylable;
 /// use palette::css;
 ///
 /// // Using custom styling on a view that implements CustomStylable
@@ -384,8 +384,8 @@ pub trait CustomStylable<S: CustomStyle + 'static>: IntoView<V = Self::DV> + Siz
     /// # Example
     ///
     /// ```rust
-    /// use floem::prelude::*;
-    /// use floem::style::CustomStylable;
+    /// use floom::prelude::*;
+    /// use floom::style::CustomStylable;
     ///
     /// // Custom styling with theme integration
     /// text("Status")

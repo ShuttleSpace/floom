@@ -12,11 +12,11 @@
 use std::cell::Cell;
 use std::rc::Rc;
 
-use floem::headless::TestRoot;
-use floem::prelude::*;
-use floem::reactive::{Context, Scope};
-use floem::views::{Decorators, Empty, Stem};
-use floem_legacy_test::prelude::*;
+use floom::headless::TestRoot;
+use floom::prelude::*;
+use floom::reactive::{Context, Scope};
+use floom::views::{Decorators, Empty, Stem};
+use floom_legacy_test::prelude::*;
 use serial_test::serial;
 
 // ============================================================================
@@ -255,7 +255,7 @@ fn test_deferred_child_gets_parent_scope() {
     // Use deferred child - it should be built in parent's scope context
     let view = parent.child(
         Empty::new()
-            .on_event_stop(floem::event::listener::PointerDown, move |_cx, _| {
+            .on_event_stop(floom::event::listener::PointerDown, move |_cx, _| {
                 // This closure captures context at build time
                 let ctx = Context::get::<i32>();
                 context_value_clone.set(ctx);

@@ -1,36 +1,36 @@
-//! Android NDK key-code → Floem key mapping.
+//! Android NDK key-code → Floom key mapping.
 //!
 //! This is the pure, platform-neutral half of Android keyboard support: it
 //! translates an Android `AKeyEvent`'s integer key code and meta-state bitmask
-//! into Floem's [`Key`]/[`Modifiers`]/[`KeyEvent`] types. It contains no JNI —
-//! the Android platform backend (the real `floem-platform-android` window)
+//! into Floom's [`Key`]/[`Modifiers`]/[`KeyEvent`] types. It contains no JNI —
+//! the Android platform backend (the real `floom-platform-android` window)
 //! reads the raw `AKeyEvent` fields and calls these functions.
 //!
 //! The constant values match `<android/input.h>` / `android.view.KeyEvent`.
-//! Only the subset Floem cares about is listed (the same scope gpui-mobile
+//! Only the subset Floom cares about is listed (the same scope gpui-mobile
 //! covers).
 //!
 //! # Caveats vs the upstream table
 //!
-//! * Floem's [`Modifiers`] is a 4-bit set (`SHIFT`/`CONTROL`/`ALT`/`META`) and
+//! * Floom's [`Modifiers`] is a 4-bit set (`SHIFT`/`CONTROL`/`ALT`/`META`) and
 //!   has **no** `FUNCTION` flag, so `AMETA_FUNCTION_ON` is dropped. Caps Lock
 //!   is also not modelled — `AMETA_CAPS_LOCK_ON` does not surface.
-//! * Floem's [`NamedKey`] does **not** include function keys `F1`–`F12`, so
-//!   those key codes currently map to `None`. TODO(floem): extend `NamedKey`
+//! * Floom's [`NamedKey`] does **not** include function keys `F1`–`F12`, so
+//!   those key codes currently map to `None`. TODO(floom): extend `NamedKey`
 //!   with `Function(u8)` and wire them here.
-//! * Floem normalises letter keys to lower case and carries case in
-//!   `Modifiers::SHIFT` (see `floem-types`). This table follows that rule:
+//! * Floom normalises letter keys to lower case and carries case in
+//!   `Modifiers::SHIFT` (see `floom-types`). This table follows that rule:
 //!   `AKEYCODE_A` → `Key::Char('a')`, and a shifted press adds `SHIFT`.
 //!
 //! # Ported from
 //!
 //! Adapted from [`gpui-mobile`](https://github.com/itsbalamurali/gpui-mobile)
 //! (`src/android/keyboard.rs`), used under its Apache-2.0 option. The GPUI
-//! `Keystroke`/`Modifiers` types were replaced with the Floem 2.0 equivalents
-//! and the GPUI-trait `AndroidKeyboardLayout` was dropped (Floem has its own
+//! `Keystroke`/`Modifiers` types were replaced with the Floom 2.0 equivalents
+//! and the GPUI-trait `AndroidKeyboardLayout` was dropped (Floom has its own
 //! keyboard-layout abstraction).
 
-use floem_types::{Key, KeyEvent, KeyPhase, Modifiers, NamedKey};
+use floom_types::{Key, KeyEvent, KeyPhase, Modifiers, NamedKey};
 
 // ── Android meta-state flags (from <android/input.h>) ────────────────────────
 
@@ -44,13 +44,13 @@ pub const AMETA_ALT_ON: i32 = 0x02;
 pub const AMETA_CTRL_ON: i32 = 0x1000;
 /// Meta (Windows/Command) key is pressed.
 pub const AMETA_META_ON: i32 = 0x10000;
-/// Caps Lock is on (not modelled by Floem's `Modifiers`).
+/// Caps Lock is on (not modelled by Floom's `Modifiers`).
 pub const AMETA_CAPS_LOCK_ON: i32 = 0x100000;
-/// Function key is pressed (no Floem equivalent).
+/// Function key is pressed (no Floom equivalent).
 pub const AMETA_FUNCTION_ON: i32 = 0x08;
 
 // ── Android key codes (from <android/keycodes.h>) ────────────────────────────
-// Only the subset Floem cares about is listed here.
+// Only the subset Floom cares about is listed here.
 
 pub const AKEYCODE_UNKNOWN: i32 = 0;
 pub const AKEYCODE_SOFT_LEFT: i32 = 1;
@@ -181,9 +181,9 @@ pub const AKEY_EVENT_ACTION_MULTIPLE: i32 = 2;
 
 // ── Conversion helpers ───────────────────────────────────────────────────────
 
-/// Convert an Android `meta_state` bitmask to Floem [`Modifiers`].
+/// Convert an Android `meta_state` bitmask to Floom [`Modifiers`].
 ///
-/// `AMETA_FUNCTION_ON` and `AMETA_CAPS_LOCK_ON` have no Floem equivalent and
+/// `AMETA_FUNCTION_ON` and `AMETA_CAPS_LOCK_ON` have no Floom equivalent and
 /// are intentionally dropped.
 pub fn android_meta_to_modifiers(meta_state: i32) -> Modifiers {
     let mut m = Modifiers::empty();
@@ -204,16 +204,16 @@ pub fn android_meta_to_modifiers(meta_state: i32) -> Modifiers {
 
 /// Check whether Caps Lock is active from a raw meta-state bitmask.
 ///
-/// Floem's [`Modifiers`] cannot represent this; the backend may consult it
+/// Floom's [`Modifiers`] cannot represent this; the backend may consult it
 /// separately if it needs the state.
 pub fn android_meta_caps_lock(meta_state: i32) -> bool {
     meta_state & AMETA_CAPS_LOCK_ON != 0
 }
 
-/// Convert an Android key code to a Floem [`Key`].
+/// Convert an Android key code to a Floom [`Key`].
 ///
 /// Returns `None` for key codes that should be ignored (pure modifier keys,
-/// volume buttons, function keys `F1`–`F12` — Floem has no `NamedKey` for
+/// volume buttons, function keys `F1`–`F12` — Floom has no `NamedKey` for
 /// them yet — and unknown codes).
 pub fn android_keycode_to_key(key_code: i32) -> Option<Key> {
     let key = match key_code {
@@ -287,7 +287,7 @@ pub fn android_keycode_to_key(key_code: i32) -> Option<Key> {
         AKEYCODE_DPAD_CENTER => Key::Named(NamedKey::Enter),
         AKEYCODE_MOVE_HOME => Key::Named(NamedKey::Home),
         AKEYCODE_MOVE_END => Key::Named(NamedKey::End),
-        // No Floem `Insert` named key yet → ignored.
+        // No Floom `Insert` named key yet → ignored.
         AKEYCODE_PAGE_UP => Key::Named(NamedKey::PageUp),
         AKEYCODE_PAGE_DOWN => Key::Named(NamedKey::PageDown),
 
@@ -309,11 +309,11 @@ pub fn android_keycode_to_key(key_code: i32) -> Option<Key> {
         AKEYCODE_NUMPAD_DOT => Key::Char('.'),
         AKEYCODE_NUMPAD_ENTER => Key::Named(NamedKey::Enter),
 
-        // Menu / Back. No Floem `Menu` named key yet → ignored.
+        // Menu / Back. No Floom `Menu` named key yet → ignored.
         AKEYCODE_MENU => return None,
         AKEYCODE_BACK => Key::Named(NamedKey::Escape), // Android back → escape
 
-        // Function keys F1–F12: Floem has no NamedKey for them yet.
+        // Function keys F1–F12: Floom has no NamedKey for them yet.
         AKEYCODE_F1..=AKEYCODE_F12 => return None,
 
         // Pure modifier keys, volume, system keys, and anything unknown → ignore.
@@ -351,12 +351,12 @@ fn is_ignored_modifier(key_code: i32) -> bool {
     )
 }
 
-/// Build a Floem [`KeyEvent`] (phase [`KeyPhase::Down`]) from an Android key
+/// Build a Floom [`KeyEvent`] (phase [`KeyPhase::Down`]) from an Android key
 /// event. Returns `None` if the key code should be ignored.
 ///
 /// `unicode_char` — the Unicode character produced by the key event (from
 /// `AKeyEvent_getUnicodeChar()`). This is currently unused by the table because
-/// Floem carries case in [`Modifiers::SHIFT`]; the backend may pass `0`.
+/// Floom carries case in [`Modifiers::SHIFT`]; the backend may pass `0`.
 pub fn android_key_to_key_event(
     key_code: i32,
     meta_state: i32,
@@ -374,7 +374,7 @@ pub fn android_key_to_key_event(
 /// character delivered as a string rather than a key event).
 ///
 /// Letters are normalized to lower case with the case moved into
-/// [`Modifiers::SHIFT`], matching Floem's key convention.
+/// [`Modifiers::SHIFT`], matching Floom's key convention.
 pub fn character_to_key_event(c: char) -> KeyEvent {
     let mut modifiers = Modifiers::empty();
     let key = if c.is_ascii_alphabetic() {
@@ -429,7 +429,7 @@ mod tests {
         assert!(m.contains(Modifiers::ALT));
         assert!(m.contains(Modifiers::SHIFT));
         assert!(m.contains(Modifiers::META));
-        // FUNCTION has no Floem equivalent and must not leak into the bits.
+        // FUNCTION has no Floom equivalent and must not leak into the bits.
         assert_eq!(m.bits(), (1 << 0) | (1 << 1) | (1 << 2) | (1 << 3));
     }
 
@@ -495,7 +495,7 @@ mod tests {
 
     #[test]
     fn function_keys_unmapped() {
-        // Floem's NamedKey lacks F1–F12; they must map to None.
+        // Floom's NamedKey lacks F1–F12; they must map to None.
         assert_eq!(android_keycode_to_key(AKEYCODE_F1), None);
         assert_eq!(android_keycode_to_key(AKEYCODE_F12), None);
     }

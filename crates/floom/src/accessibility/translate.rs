@@ -1,4 +1,4 @@
-//! Translation from Floem's neutral accessibility model to `accesskit`.
+//! Translation from Floom's neutral accessibility model to `accesskit`.
 //!
 //! This module is the single bridge between [`crate::accessibility`]'s
 //! platform-neutral [`AccessNode`]/[`AccessTree`] protocol and `accesskit`'s

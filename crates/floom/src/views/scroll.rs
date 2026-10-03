@@ -1,7 +1,7 @@
 #![deny(missing_docs)]
 //! Scroll View
 
-use floem_legacy_reactive::Effect;
+use floom_legacy_reactive::Effect;
 use peniko::kurbo::{Affine, Axis, Point, Rect, RoundedRect, RoundedRectRadii, Stroke, Vec2};
 use peniko::{Brush, Color};
 use std::time::Duration;
@@ -573,7 +573,7 @@ impl Scroll {
     ///
     /// ## Example
     /// ```rust
-    /// use floem::views::*;
+    /// use floom::views::*;
     ///
     /// let content = Label::new("Scrollable content");
     /// let scrollable = Scroll::new(content);

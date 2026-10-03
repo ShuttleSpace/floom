@@ -3,17 +3,17 @@
 //! A migration guide whose examples do not compile is worse than none, so the
 //! snippets in that document are the snippets in this file. Two rules:
 //!
-//! - The **before** half imports `floem::compat::v1_prelude` (Phase 29.2's
+//! - The **before** half imports `floom::compat::v1_prelude` (Phase 29.2's
 //!   frozen v1 surface), which is what a v1 app should switch to *before* it
 //!   starts porting. It proves the app still builds the way it always did.
-//! - The **after** half imports `floem2::prelude` and does the same job in the
+//! - The **after** half imports `floom2::prelude` and does the same job in the
 //!   2.0 model, asserting the behaviour the guide claims (a click fires once,
 //!   the label updates, node handles come from the host).
 //!
 //! What is *not* here: mixing the two trees. There is no adapter that mounts a
 //! v1 `View` inside a 2.0 host — that is what the `on_unimplemented`
 //! diagnostic on `Widget`/`WidgetAny` tells you at the mount point, and it is
-//! pinned as a compile-fail doctest in `floem2`'s crate docs.
+//! pinned as a compile-fail doctest in `floom2`'s crate docs.
 
 use std::sync::Arc;
 use std::sync::atomic::{AtomicI32, Ordering};
@@ -22,8 +22,8 @@ use std::sync::atomic::{AtomicI32, Ordering};
 // BEFORE — the v1 application, unchanged.
 // ---------------------------------------------------------------------------
 mod before {
-    use floem::ViewId;
-    use floem::compat::v1_prelude::*;
+    use floom::ViewId;
+    use floom::compat::v1_prelude::*;
 
     /// The v1 counter: state is a signal, the tree is a value, and the label
     /// re-runs when the signal changes.
@@ -67,11 +67,11 @@ mod before {
 }
 
 // ---------------------------------------------------------------------------
-// AFTER — the same counter in Floem 2.0.
+// AFTER — the same counter in Floom 2.0.
 // ---------------------------------------------------------------------------
 mod after {
     use super::*;
-    use floem2::prelude::*;
+    use floom2::prelude::*;
 
     /// The 2.0 counter: the tree is mounted in a host, children are keyed, and
     /// the application owns the state.

@@ -251,8 +251,8 @@ impl EventLoop {
 
         // Install our custom delegate so iOS delivers cold-start
         // (`application:didFinishLaunchingWithOptions:`) and warm-start
-        // (`application:openURL:options:`) shared files/URLs to floem via the
-        // `set_on_open_url` callback (floem issue #109). winit's own lifecycle
+        // (`application:openURL:options:`) shared files/URLs to floom via the
+        // `set_on_open_url` callback (floom issue #109). winit's own lifecycle
         // handling is notification-driven (see above), so this does not
         // interfere with resume/suspend events.
         let delegate_class = delegate_class();

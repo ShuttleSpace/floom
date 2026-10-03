@@ -1,6 +1,6 @@
 //! A real winit-backed [`Platform`].
 //!
-//! This is the crate's reason to exist: the rest of `floem-platform-desktop`
+//! This is the crate's reason to exist: the rest of `floom-platform-desktop`
 //! maps *samples* of desktop input onto the ABI, while this module owns an
 //! actual OS window and event loop.
 //!
@@ -46,11 +46,11 @@ use std::collections::{HashMap, VecDeque};
 use std::sync::Arc;
 use std::time::Instant;
 
-use floem_platform::{
+use floom_platform::{
     Clipboard, Ime, KeyCode, Modifiers, Platform, PlatformCapabilities, PlatformEvent,
     SurfaceConfig, SurfaceTarget, Window, WindowConfig, WindowState,
 };
-use floem_types::{DisplayInfo, PlatformId, Point, ScaleFactor, Size, SurfaceId, WindowId};
+use floom_types::{DisplayInfo, PlatformId, Point, ScaleFactor, Size, SurfaceId, WindowId};
 
 use winit::application::ApplicationHandler;
 use winit::event::{Ime as WinitIme, StartCause, WindowEvent};
@@ -200,7 +200,7 @@ pub struct WinitPlatform {
     /// one source: the bridge's own
     /// [`DesktopNativeBridge::platform_capabilities`](crate::DesktopNativeBridge::platform_capabilities).
     /// The distinction matters because advertising
-    /// [`Capability::NATIVE_VIEW`](floem_platform::Capability::NATIVE_VIEW) makes
+    /// [`Capability::NATIVE_VIEW`](floom_platform::Capability::NATIVE_VIEW) makes
     /// every `NativeSurface` mount try to composite, so a session that never
     /// built a bridge must not advertise it.
     native_caps: Option<PlatformCapabilities>,
@@ -244,7 +244,7 @@ impl WinitPlatform {
     /// The caller installs it — `WidgetHost::set_native_provider` — because the
     /// provider is the app's to own: this crate knows how to make an AppKit one
     /// and nothing above it needs to know that AppKit was involved. Handing one
-    /// out is what flips [`Platform::capabilities`](floem_platform::Platform::capabilities)
+    /// out is what flips [`Platform::capabilities`](floom_platform::Platform::capabilities)
     /// to advertising [`Capability::NATIVE_VIEW`], which is why the flag is set
     /// here and not at construction.
     ///
@@ -257,7 +257,7 @@ impl WinitPlatform {
         &mut self,
         window: WindowId,
     ) -> Result<
-        Box<dyn floem_native::NativeViewProvider>,
+        Box<dyn floom_native::NativeViewProvider>,
         crate::native_appkit::NativeViewUnavailable,
     > {
         use objc2::MainThreadMarker;
@@ -724,7 +724,7 @@ impl Ime for WinitPlatform {
     }
 }
 
-/// The application side of a winit-hosted Floem app.
+/// The application side of a winit-hosted Floom app.
 ///
 /// Implementors get called from inside winit callbacks, with the backend handy,
 /// and are expected to drain [`Platform::poll_events`] in [`events`](Self::events).
@@ -838,7 +838,7 @@ impl<A: WinitApp> WinitDriver<A> {
     }
 }
 
-/// Run a Floem app on the real winit event loop. Blocks until the loop exits.
+/// Run a Floom app on the real winit event loop. Blocks until the loop exits.
 ///
 /// `windows` are queued before the loop starts and realised as soon as the OS
 /// allows window creation. Must be called from the main thread on macOS/iOS.

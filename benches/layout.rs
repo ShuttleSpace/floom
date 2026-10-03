@@ -1,4 +1,4 @@
-//! Benchmarks for layout performance in Floem.
+//! Benchmarks for layout performance in Floom.
 //!
 //! These benchmarks measure the performance of:
 //! - Layout computation for different tree structures
@@ -12,11 +12,11 @@
 use std::hint::black_box;
 
 use criterion::{BenchmarkId, Criterion, criterion_group, criterion_main};
-use floem::ViewId;
-use floem::headless::{HeadlessHarness, TestRoot};
-use floem::prelude::*;
-use floem::unit::Pct;
-use floem::views::{Container, Decorators, Empty, Stack};
+use floom::ViewId;
+use floom::headless::{HeadlessHarness, TestRoot};
+use floom::prelude::*;
+use floom::unit::Pct;
+use floom::views::{Container, Decorators, Empty, Stack};
 
 // =============================================================================
 // View tree creation helpers

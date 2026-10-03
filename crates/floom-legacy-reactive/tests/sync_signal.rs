@@ -1,6 +1,6 @@
 use std::thread;
 
-use floem_legacy_reactive::{SignalGet, SignalUpdate, SyncRwSignal};
+use floom_legacy_reactive::{SignalGet, SignalUpdate, SyncRwSignal};
 
 #[test]
 fn sync_signal_reads_and_writes_across_threads() {

@@ -1,4 +1,4 @@
-use floem::{imbl, prelude::*};
+use floom::{imbl, prelude::*};
 
 pub fn virtual_stack_view() -> impl IntoView {
     // A virtual list is optimized to only render the views that are visible

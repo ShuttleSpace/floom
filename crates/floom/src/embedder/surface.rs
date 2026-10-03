@@ -2,7 +2,7 @@
 
 use peniko::kurbo::Size;
 
-/// The kind of drawing surface a backend provides to Floem.
+/// The kind of drawing surface a backend provides to Floom.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum SurfaceKind {
     /// GPU-accelerated surface (wgpu / Skia / Metal / Vulkan / OpenGL ES).
@@ -32,7 +32,7 @@ pub struct SurfaceDescriptor {
     pub transparent: bool,
 }
 
-/// Surface lifecycle events sent from a backend into Floem.
+/// Surface lifecycle events sent from a backend into Floom.
 #[derive(Clone, Debug, PartialEq)]
 pub enum SurfaceEvent {
     /// A surface was created and is ready to present to.

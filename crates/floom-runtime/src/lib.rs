@@ -8,13 +8,13 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use std::time::Instant;
 
-use floem_core::{CreateContext, ElementKind, Widget};
-use floem_legacy_reactive::RwSignal;
-use floem_runtime_core::{
+use floom_core::{CreateContext, ElementKind, Widget};
+use floom_legacy_reactive::RwSignal;
+use floom_runtime_core::{
     BindingRegistry, DirtyFlags, DirtySet, ElementArena, ElementTree, ReactiveBinding,
 };
-use floem_scheduler::{Priority, Scheduler, TaskId};
-use floem_types::{ElementId, Point};
+use floom_scheduler::{Priority, Scheduler, TaskId};
+use floom_types::{ElementId, Point};
 
 /// Minimal input events for the new runtime path.
 #[derive(Debug, Clone)]
@@ -60,7 +60,7 @@ impl CreateContext for CreateCx<'_> {
     }
 }
 
-/// Floem 2.0 frame runtime.
+/// Floom 2.0 frame runtime.
 pub struct Runtime {
     arena: Rc<RefCell<ElementArena>>,
     tree: ElementTree,
@@ -125,7 +125,7 @@ impl Runtime {
     pub fn mount(&mut self, widget: &dyn Widget) -> RootHandle {
         let host = {
             let mut arena = self.arena.borrow_mut();
-            arena.insert(floem_core::Element::new(
+            arena.insert(floom_core::Element::new(
                 ElementId::INVALID,
                 ElementKind::Host,
             ))
@@ -153,7 +153,7 @@ impl Runtime {
         element: ElementId,
         flags: DirtyFlags,
         signal: RwSignal<T>,
-    ) -> floem_runtime_core::ReactiveBindingId {
+    ) -> floom_runtime_core::ReactiveBindingId {
         self.bindings.bind_signal(
             self.arena.clone(),
             self.dirty.clone(),
@@ -197,7 +197,7 @@ impl Runtime {
         self.stats.last_frame_tasks = ran as u64;
     }
 
-    pub fn schedule(&mut self, priority: Priority, id: TaskId, run: floem_scheduler::TaskFn) {
+    pub fn schedule(&mut self, priority: Priority, id: TaskId, run: floom_scheduler::TaskFn) {
         self.scheduler.schedule(priority, id, run);
     }
 

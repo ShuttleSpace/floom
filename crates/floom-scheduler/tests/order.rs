@@ -1,4 +1,4 @@
-use floem_scheduler::{Priority, Scheduler, TaskId};
+use floom_scheduler::{Priority, Scheduler, TaskId};
 use std::cell::RefCell;
 use std::rc::Rc;
 use std::thread;

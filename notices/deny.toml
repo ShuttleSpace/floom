@@ -4,7 +4,7 @@
 #   cargo install cargo-deny
 #   cargo deny --config notices/deny.toml check
 #
-# The allow-lists below cover the licenses Floem and its direct dependencies use.
+# The allow-lists below cover the licenses Floom and its direct dependencies use.
 # Run `cargo deny check` once after install to surface any crate that needs a
 # license exception added here.
 
@@ -42,7 +42,7 @@ multiple-versions = "warn"
 wildcards = "allow"
 highlight = "all"
 # Two `objc2` majors coexist on purpose: `accesskit_macos` pulls `objc2` 0.5,
-# Floem's windowing keeps `objc2` 0.6 (see root Cargo.toml).
+# Floom's windowing keeps `objc2` 0.6 (see root Cargo.toml).
 exceptions = []
 
 [sources]

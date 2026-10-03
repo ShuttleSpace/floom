@@ -16,17 +16,17 @@
 
 use std::collections::HashMap;
 
-use floem_accessibility::{SemanticsRole, SemanticsTree};
-use floem_core::{Align, Axis, ElementKind, LayoutRequest, Position};
-use floem_hot_reload::{ElementRef, LiveTree, NodeKey};
-use floem_inspector::{
+use floom_accessibility::{SemanticsRole, SemanticsTree};
+use floom_core::{Align, Axis, ElementKind, LayoutRequest, Position};
+use floom_hot_reload::{ElementRef, LiveTree, NodeKey};
+use floom_inspector::{
     LayoutDto, LayoutEntry, LayoutSnapshot, ProtocolVersion, SceneLines, SourceLocation,
     StyleEntry, StylePropsDto, StyleSnapshot, TreeNodeInfo, TreeSnapshot,
 };
-use floem_runtime_core::{BindingRegistry, BindingReport};
-use floem_style::{StyleProps, StyleState};
-use floem_types::ElementId;
-use floem_ui_ir::NodeKind;
+use floom_runtime_core::{BindingRegistry, BindingReport};
+use floom_style::{StyleProps, StyleState};
+use floom_types::ElementId;
+use floom_ui_ir::NodeKind;
 
 /// The style states an inspector reports, in precedence order.
 pub const INSPECTED_STATES: [StyleState; 6] = [

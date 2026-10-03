@@ -8,7 +8,7 @@
 
 use std::collections::HashSet;
 
-use floem_ui_ir::DesignContract;
+use floom_ui_ir::DesignContract;
 
 use crate::evaluate::{EvaluationReport, evaluate_screen, reference_contract};
 use crate::screens::Screen;
@@ -138,21 +138,21 @@ fn comparable_paths(screen: Screen) -> Vec<String> {
     let probe = DesignContract {
         version: reference.version,
         name: reference.name.clone(),
-        dimensions: floem_ui_ir::Dimensions {
+        dimensions: floom_ui_ir::Dimensions {
             width: perturb(reference.dimensions.width),
             height: perturb(reference.dimensions.height),
         },
-        spacing: floem_ui_ir::Spacing {
+        spacing: floom_ui_ir::Spacing {
             gap: perturb(reference.spacing.gap),
             padding: reference.spacing.padding.map(perturb),
         },
-        radius: floem_ui_ir::Radius {
+        radius: floom_ui_ir::Radius {
             corner: perturb(reference.radius.corner),
         },
         typography: reference
             .typography
             .iter()
-            .map(|style| floem_ui_ir::TypeStyle {
+            .map(|style| floom_ui_ir::TypeStyle {
                 name: style.name.clone(),
                 font_size: perturb(style.font_size),
                 line_height: style.line_height.map(perturb),
@@ -166,9 +166,9 @@ fn comparable_paths(screen: Screen) -> Vec<String> {
         colors: reference
             .colors
             .iter()
-            .map(|role| floem_ui_ir::ColorRole {
+            .map(|role| floom_ui_ir::ColorRole {
                 name: role.name.clone(),
-                value: floem_ui_ir::Rgba::new(
+                value: floom_ui_ir::Rgba::new(
                     role.value.r.saturating_add(7),
                     role.value.g.saturating_add(7),
                     role.value.b.saturating_add(7),
@@ -177,18 +177,18 @@ fn comparable_paths(screen: Screen) -> Vec<String> {
             })
             .collect(),
         states: reference.states.clone(),
-        animation: floem_ui_ir::Animation {
+        animation: floom_ui_ir::Animation {
             duration_ms: reference.animation.duration_ms + 1,
             easing: format!("{}x", reference.animation.easing),
         },
-        accessibility: floem_ui_ir::Accessibility {
+        accessibility: floom_ui_ir::Accessibility {
             role: format!("{}x", reference.accessibility.role),
             label: format!("{}x", reference.accessibility.label),
             min_contrast: reference.accessibility.min_contrast + 1.0,
             min_touch_target: perturb(reference.accessibility.min_touch_target),
         },
     };
-    floem_ui_ir::compare(&reference, &probe)
+    floom_ui_ir::compare(&reference, &probe)
         .entries
         .into_iter()
         .map(|entry| entry.path)

@@ -5,11 +5,11 @@
 //! - The default theme's ListClass -> ListItemClass selected styling is applied
 //! - Class styling from ancestors reaches descendant views
 
-use floem::peniko::Brush;
-use floem::prelude::*;
-use floem::style::Background;
-use floem::views::list;
-use floem_legacy_test::prelude::*;
+use floom::peniko::Brush;
+use floom::prelude::*;
+use floom::style::Background;
+use floom::views::list;
+use floom_legacy_test::prelude::*;
 use serial_test::serial;
 
 /// Test that nested class styling from a parent flows to children.
@@ -21,7 +21,7 @@ use serial_test::serial;
 fn test_parent_class_styling_flows_to_child() {
     let root = TestRoot::new();
     // Define a custom class for testing
-    floem::style_class!(TestChildClass);
+    floom::style_class!(TestChildClass);
 
     // Create a parent that defines styling for TestChildClass
     let child = Empty::new()
@@ -134,7 +134,7 @@ fn test_theme_list_item_hover_styling() {
 #[serial]
 fn test_deeply_nested_class_styling() {
     let root = TestRoot::new();
-    floem::style_class!(DeepClass);
+    floom::style_class!(DeepClass);
 
     let grandchild = Empty::new().class(DeepClass).style(|s| s.size(20.0, 20.0));
     let grandchild_id = grandchild.view_id();
@@ -163,7 +163,7 @@ fn test_deeply_nested_class_styling() {
 #[serial]
 fn test_class_styling_with_selectors() {
     let root = TestRoot::new();
-    floem::style_class!(SelectorClass);
+    floom::style_class!(SelectorClass);
 
     let child = Empty::new()
         .class(SelectorClass)
@@ -197,7 +197,7 @@ fn test_class_styling_with_selectors() {
 #[serial]
 fn test_child_style_overrides_parent_class_style() {
     let root = TestRoot::new();
-    floem::style_class!(OverrideClass);
+    floom::style_class!(OverrideClass);
 
     // Child has its own .selected() styling that should override parent's class styling
     let child = Empty::new().class(OverrideClass).style(|s| {

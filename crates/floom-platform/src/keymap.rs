@@ -7,7 +7,7 @@
 //! which backend produced it.
 //!
 //! So `KeyCode` is a small canonical space defined here, in the OS-neutral
-//! contract crate, together with the mapping to [`floem_types::Key`]. Backends
+//! contract crate, together with the mapping to [`floom_types::Key`]. Backends
 //! do one `match` into this space; the app layer does one `to_key()`.
 //!
 //! The numbering is deliberately readable rather than arbitrary:
@@ -21,9 +21,9 @@
 //!
 //! Using ASCII for the printable range means `KeyCode::from_char('a')` and a
 //! letter pressed with Shift produce the same code; case is carried by
-//! [`Modifiers`](floem_types::Modifiers), exactly as [`Key::Char`] expects.
+//! [`Modifiers`](floom_types::Modifiers), exactly as [`Key::Char`] expects.
 
-use floem_types::{Key, NamedKey};
+use floom_types::{Key, NamedKey};
 
 /// Canonical key identifier (see the module docs for the numbering scheme).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]

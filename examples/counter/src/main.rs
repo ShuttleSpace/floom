@@ -1,4 +1,4 @@
-use floem::{action::inspect, prelude::*, unit::UnitExt};
+use floom::{action::inspect, prelude::*, unit::UnitExt};
 
 fn app_view() -> impl IntoView {
     let counter = RwSignal::new(0);
@@ -76,5 +76,5 @@ fn app_view() -> impl IntoView {
 }
 
 fn main() {
-    floem::launch(app_view);
+    floom::launch(app_view);
 }

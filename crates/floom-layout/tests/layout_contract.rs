@@ -1,5 +1,5 @@
-use floem_layout::{FlexDirection, JustifyContent, LayoutEngine, LayoutStyle, MeasureFn};
-use floem_types::{Point, Size};
+use floom_layout::{FlexDirection, JustifyContent, LayoutEngine, LayoutStyle, MeasureFn};
+use floom_types::{Point, Size};
 
 #[test]
 fn flex_row_places_children() {
@@ -65,7 +65,7 @@ fn measure_fn_leaf() {
         LayoutStyle {
             width: Some(200.0),
             height: Some(100.0),
-            align_items: floem_layout::AlignItems::Start,
+            align_items: floom_layout::AlignItems::Start,
             ..Default::default()
         },
         &[leaf],
@@ -95,8 +95,8 @@ fn absolute_child_escapes_parent_flow() {
     });
     // Overlay anchored to all four sides of the containing block.
     let overlay = eng.new_leaf(LayoutStyle {
-        position: floem_layout::Position::Absolute,
-        inset: floem_layout::AbsoluteInset::fill(),
+        position: floom_layout::Position::Absolute,
+        inset: floom_layout::AbsoluteInset::fill(),
         ..Default::default()
     });
     let root = eng.new_with_children(
@@ -124,7 +124,7 @@ fn absolute_child_uses_parent_alignment_as_static_position() {
     let panel = eng.new_leaf(LayoutStyle {
         width: Some(120.0),
         height: Some(60.0),
-        position: floem_layout::Position::Absolute,
+        position: floom_layout::Position::Absolute,
         ..Default::default()
     });
     // With every inset `auto` the box falls back to its static position, which
@@ -134,7 +134,7 @@ fn absolute_child_uses_parent_alignment_as_static_position() {
             width: Some(200.0),
             height: Some(100.0),
             justify_content: JustifyContent::Center,
-            align_items: floem_layout::AlignItems::Center,
+            align_items: floom_layout::AlignItems::Center,
             ..Default::default()
         },
         &[panel],
@@ -152,8 +152,8 @@ fn absolute_inset_pins_to_one_edge() {
     // A bottom-anchored sheet: pinned down, stretched sideways.
     let sheet = eng.new_leaf(LayoutStyle {
         height: Some(50.0),
-        position: floem_layout::Position::Absolute,
-        inset: floem_layout::AbsoluteInset {
+        position: floom_layout::Position::Absolute,
+        inset: floom_layout::AbsoluteInset {
             left: Some(0.0),
             right: Some(0.0),
             bottom: Some(0.0),

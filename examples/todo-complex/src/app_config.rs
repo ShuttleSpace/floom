@@ -1,4 +1,4 @@
-use floem::{
+use floom::{
     action::set_window_scale,
     event::EventPropagation,
     kurbo::{Point, Size},
@@ -20,7 +20,7 @@ pub enum AppTheme {
 
 #[derive(Deserialize, Serialize, Clone, Copy, PartialEq, Eq, Debug)]
 pub struct AppThemeState {
-    pub system: floem::window::Theme,
+    pub system: floom::window::Theme,
     pub theme: AppTheme,
 }
 
@@ -41,7 +41,7 @@ impl std::default::Default for AppConfig {
                 height: 650.0,
             },
             app_theme: AppThemeState {
-                system: floem::window::Theme::Dark,
+                system: floom::window::Theme::Dark,
                 theme: AppTheme::FollowSystem,
             },
             window_scale: 1.,
@@ -50,7 +50,7 @@ impl std::default::Default for AppConfig {
 }
 
 pub fn launch_with_track<V: IntoView + 'static>(app_view: impl FnOnce() -> V + 'static) {
-    let config: AppConfig = confy::load("my_app", "floem-defaults").unwrap_or_default();
+    let config: AppConfig = confy::load("my_app", "floom-defaults").unwrap_or_default();
 
     let app = Application::new();
 
@@ -63,7 +63,7 @@ pub fn launch_with_track<V: IntoView + 'static>(app_view: impl FnOnce() -> V + '
     UpdaterEffect::new(
         move || app_config.get(),
         |config| {
-            let _ = confy::store("my_app", "floem-defaults", config);
+            let _ = confy::store("my_app", "floom-defaults", config);
         },
     );
 
@@ -83,7 +83,7 @@ pub fn launch_with_track<V: IntoView + 'static>(app_view: impl FnOnce() -> V + '
                         {
                             app_config.update(|ac| {
                                 ac.window_scale *= 1.1;
-                                floem::action::set_window_scale(ac.window_scale);
+                                floom::action::set_window_scale(ac.window_scale);
                             });
                             EventPropagation::Stop
                         }
@@ -91,7 +91,7 @@ pub fn launch_with_track<V: IntoView + 'static>(app_view: impl FnOnce() -> V + '
                         Key::Character(ch) if ch == "-" && *modifiers == OS_MOD => {
                             app_config.update(|ac| {
                                 ac.window_scale /= 1.1;
-                                floem::action::set_window_scale(ac.window_scale);
+                                floom::action::set_window_scale(ac.window_scale);
                             });
                             EventPropagation::Stop
                         }
@@ -99,7 +99,7 @@ pub fn launch_with_track<V: IntoView + 'static>(app_view: impl FnOnce() -> V + '
                         Key::Character(ch) if ch == "0" && *modifiers == OS_MOD => {
                             app_config.update(|ac| {
                                 ac.window_scale = 1.;
-                                floem::action::set_window_scale(ac.window_scale);
+                                floom::action::set_window_scale(ac.window_scale);
                             });
                             EventPropagation::Stop
                         }

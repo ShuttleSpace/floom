@@ -3,7 +3,7 @@
 //! This is the OHOS counterpart of the desktop a11y backends
 //! (`backend_nsaccessibility` / `backend_atspi` / `backend_uia`) and of the
 //! iOS `backend_ios`. Like those, it implements [`AccessibilityBackend`] so
-//! Floem core can hand it diffable [`AccessTreeUpdate`]s through
+//! Floom core can hand it diffable [`AccessTreeUpdate`]s through
 //! [`AccessibilityBackend::update_tree`].
 //!
 //! # Bridge status — IMPORTANT (#113 / #121)
@@ -59,7 +59,7 @@ pub(crate) use backend_ohos_native::{
 };
 
 /// Called once at window creation with the XComponent pointer obtained from
-/// `floem_winit_ohos::WindowExtOhos::xcomponent_ptr`. Registers Floem's
+/// `floom_winit_ohos::WindowExtOhos::xcomponent_ptr`. Registers Floom's
 /// accessibility callbacks on the XComponent's native provider so the OHOS
 /// screen reader can traverse the neutral tree (#122, Route A).
 ///
@@ -76,7 +76,7 @@ pub(crate) fn attach_xcomponent_provider(xcomponent: *mut std::ffi::c_void) {
 }
 
 // ─────────────────────────────────────────────────────────────────────
-// Reverse channel: OHOS screen-reader actions → Floem core.
+// Reverse channel: OHOS screen-reader actions → Floom core.
 //
 // OHOS apps are effectively single-window, so a single global action sender
 // is sufficient. The first backend instance registers its sender; any later
@@ -87,7 +87,7 @@ pub(crate) static ACTION_TX: OnceLock<Mutex<mpsc::Sender<PendingAction>>> = Once
 
 /// Called by ArkTS when the OHOS accessibility service performs an action on a
 /// node (e.g. a VoiceAssistant "activate"). Maps the string action name back
-/// to the neutral [`AccessAction`] and forwards it to Floem core.
+/// to the neutral [`AccessAction`] and forwards it to Floom core.
 // TODO(OHOS): verify the `#[napi]` import path and that `cargo-ohos-app`
 // registers this function alongside `register_platform_bridge`.
 // `node_id` is `i64` at the boundary: ArkTS numbers are f64 and napi reads them
@@ -108,7 +108,7 @@ pub fn on_accessibility_action(node_id: i64, action: String, payload: Option<Str
     let _ = tx.send((AccessNodeId(node_id as u64), action, payload));
 }
 
-/// Serializes Floem's neutral accessibility tree and pushes it to ArkTS via the
+/// Serializes Floom's neutral accessibility tree and pushes it to ArkTS via the
 /// shared N-API platform bridge (`setAccessibilityTree`). NOTE (#113/#121):
 /// this is a debug/data feed only — the tree is NOT exposed to the screen
 /// reader from ArkTS. The real exposure is the native C ArkUI_Accessibility
@@ -325,7 +325,7 @@ fn action_name(action: AccessAction) -> &'static str {
 }
 
 /// Inverse of [`action_name`]. Returns `None` for unknown action names so the
-/// backend does not propagate a bogus action into Floem core.
+/// backend does not propagate a bogus action into Floom core.
 fn action_from_name(name: &str) -> Option<AccessAction> {
     Some(match name {
         "focus" => AccessAction::Focus,

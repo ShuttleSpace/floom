@@ -1,6 +1,6 @@
 //! Persistent parent/child element tree over [`ElementArena`].
 
-use floem_types::ElementId;
+use floom_types::ElementId;
 use smallvec::SmallVec;
 
 use crate::arena::ElementArena;

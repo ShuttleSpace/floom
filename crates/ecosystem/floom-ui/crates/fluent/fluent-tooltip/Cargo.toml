@@ -1,0 +1,8 @@
+[package]
+name = "floom-widget-fluent-tooltip"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+floom = { workspace = true }
+floom-core-theme = { workspace = true }

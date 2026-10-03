@@ -1,4 +1,4 @@
-//! Benchmarks for painting performance in Floem.
+//! Benchmarks for painting performance in Floom.
 //!
 //! These benchmarks measure the performance of:
 //! - Painting flat view trees (varying widths)
@@ -12,11 +12,11 @@
 use std::hint::black_box;
 
 use criterion::{BenchmarkId, Criterion, criterion_group, criterion_main};
-use floem::headless::{HeadlessHarness, TestRoot};
-use floem::prelude::*;
-use floem::style::FlexWrap;
-use floem::unit::Pct;
-use floem::views::{Container, Decorators, Empty, Stack};
+use floom::headless::{HeadlessHarness, TestRoot};
+use floom::prelude::*;
+use floom::style::FlexWrap;
+use floom::unit::Pct;
+use floom::views::{Container, Decorators, Empty, Stack};
 
 // =============================================================================
 // View tree creation helpers

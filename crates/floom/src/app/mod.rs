@@ -17,7 +17,7 @@ use peniko::kurbo::Point;
 #[cfg(not(feature = "crossbeam"))]
 use std::sync::mpsc::{Receiver, Sender, channel};
 
-use floem_legacy_reactive::{Runtime, WriteSignal};
+use floom_legacy_reactive::{Runtime, WriteSignal};
 use parking_lot::Mutex;
 use raw_window_handle::HasDisplayHandle;
 use winit::{
@@ -95,7 +95,7 @@ impl AppConfig {
 ///
 /// Example:
 /// ```no_run
-/// floem::launch(|| "Hello, World!")
+/// floom::launch(|| "Hello, World!")
 /// ```
 ///
 /// To build an application and windows with more configuration, see [`Application`].
@@ -214,7 +214,7 @@ pub fn take_close_window_event_count(window_id: WindowId) -> usize {
     })
 }
 
-/// Floem top level application
+/// Floom top level application
 /// This is the entry point of the application.
 pub struct Application {
     receiver: Receiver<UserEvent>,
@@ -382,7 +382,7 @@ impl Application {
     /// Unlike [`Application::new_with_config`], this builds a plain
     /// `EventLoop` with no `AndroidApp`/JNI handle: the lapce winit fork's iOS
     /// backend turns the Rust `fn main` into a proper UIKit app — `EventLoop::run`
-    /// calls `UIApplicationMain` with winit's own `UIApplicationDelegate`. Floem's
+    /// calls `UIApplicationMain` with winit's own `UIApplicationDelegate`. Floom's
     /// existing winit event path (pointer/keyboard/IME) therefore reuses with no
     /// custom input translation. (No `EventLoopBuilderExtIOS` exists in this
     /// fork; a plain `EventLoop` is sufficient.) See `docs/ios.md`.
@@ -424,26 +424,26 @@ impl Application {
     /// Create an `Application` for OpenHarmony (HarmonyOS).
     ///
     /// Unlike Android/iOS/macOS, the event loop is **not** created here. The
-    /// `floem-winit-ohos` runtime owns the OHOS event loop: its `runtime_new`
+    /// `floom-winit-ohos` runtime owns the OHOS event loop: its `runtime_new`
     /// calls `EventLoop::bootstrap()` and then drives this `Application` as the
     /// `ApplicationHandler` from a worker thread via `pump_app_events`. So this
     /// constructor only builds the handler state (`event_loop` stays `None`);
-    /// the real loop lives inside `floem-winit-ohos`.
+    /// the real loop lives inside `floom-winit-ohos`.
     ///
     /// # Compile-time note
     ///
-    /// `floem-winit-ohos`'s `RuntimeApplication` requires
+    /// `floom-winit-ohos`'s `RuntimeApplication` requires
     /// `floem_winit_core::application::ApplicationHandler`. That is the **same**
-    /// trait Floem implements: `floem-winit` (the facade Floem depends on)
+    /// trait Floom implements: `floem-winit` (the facade Floom depends on)
     /// re-exports `floem-winit-core::application::ApplicationHandler`, and
     /// `floem-winit-core` is a single shared crate instance used by both
-    /// `floem-winit` and `floem-winit-ohos`. So the `ApplicationHandler` bound
+    /// `floem-winit` and `floom-winit-ohos`. So the `ApplicationHandler` bound
     /// is satisfied — the two traits unify through `floem-winit-core`.
     ///
     /// The fork's runtime owns the OHOS event loop **and** the `ApplicationHandler`
     /// entirely on its worker thread: the handler is created inside the thread
     /// via `AppFactory` and never crosses a thread boundary, so `RuntimeApplication`
-    /// does **not** require `Send`. Floem's `Application` is intentionally
+    /// does **not** require `Send`. Floom's `Application` is intentionally
     /// `!Send` (its reactivity layer uses `Rc`-backed signals and
     /// `Box<dyn Fn>` callbacks), so the fork's `Send` bound was relaxed to
     /// match. The method set (`can_create_surfaces` / `window_event` /
@@ -458,7 +458,7 @@ impl Application {
             config.wgpu_backends = Some(wgpu::Backends::VULKAN | wgpu::Backends::GL);
         }
 
-        // This constructor runs on the floem-winit-ohos runtime's worker thread
+        // This constructor runs on the floom-winit-ohos runtime's worker thread
         // (the runtime invokes the app factory there) and `run()` is never
         // called on OHOS, so mirror `run()`'s reactive init here.
         Runtime::init_on_ui_thread();
@@ -471,12 +471,12 @@ impl Application {
         // dropped silently, the `PaintState` stays pending forever and the
         // window never renders anything (black screen).
         let (sender, receiver) = channel();
-        if let Some(proxy) = floem_winit_ohos::runtime_event_loop_proxy() {
+        if let Some(proxy) = floom_winit_ohos::runtime_event_loop_proxy() {
             *EVENT_LOOP_PROXY.lock() = Some((proxy, sender));
         } else {
             // The runtime's 16ms pump still drains queued events; wake-ups
             // from other threads are lost until the proxy is available.
-            floem_winit_ohos::deveco_log("ohos: runtime event loop proxy unavailable");
+            floom_winit_ohos::deveco_log("ohos: runtime event loop proxy unavailable");
         }
 
         let handle = ApplicationHandle::new(config);
@@ -489,7 +489,7 @@ impl Application {
         }
     }
 
-    /// Factory handed to `floem_winit_ohos::export_ohos_winit_app!`.
+    /// Factory handed to `floom_winit_ohos::export_ohos_winit_app!`.
     ///
     /// `runtime_new` calls this once to obtain the `ApplicationHandler` it
     /// pumps. Returns an `Application` built by [`Application::new_ohos`].
@@ -501,7 +501,7 @@ impl Application {
     /// handler on its worker thread, so `Application`'s `!Send` reactivity
     /// layer is not a problem.
     #[cfg(target_env = "ohos")]
-    pub fn floem_app_factory() -> Self {
+    pub fn floom_app_factory() -> Self {
         Self::new_ohos(AppConfig::default())
     }
 

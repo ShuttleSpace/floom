@@ -6,8 +6,8 @@ use std::{
     sync::LazyLock,
 };
 
-use floem_legacy_renderer::Renderer as _;
-use floem_legacy_renderer::text::{AttrsList, GlyphRunProps, TextBrush};
+use floom_legacy_renderer::Renderer as _;
+use floom_legacy_renderer::text::{AttrsList, GlyphRunProps, TextBrush};
 use parking_lot::Mutex;
 use parley::swash::{FontRef, scale::ScaleContext, zeno};
 use parley::{
@@ -22,14 +22,14 @@ use peniko::{
 
 use crate::paint::Renderer;
 
-/// Shared Parley font context used by Floem text layout construction.
+/// Shared Parley font context used by Floom text layout construction.
 ///
 /// This is exposed so callers that need to register or inspect fonts can work
 /// with the same font database used by [`TextLayout`].
 pub static FONT_CONTEXT: LazyLock<Mutex<FontContext>> = LazyLock::new(|| {
     let mut ctx = FontContext::new();
     // OHOS has no fontconfig, so the system-font scan yields nothing. Inject
-    // bundled fonts so default text renders (see src/platform/ohos_font.rs).
+    // bundled fonts so default text renders (see crates/floom/src/platform/ohos_font.rs).
     #[cfg(target_env = "ohos")]
     crate::platform::ohos_font::register_bundled_fonts(&mut ctx.collection);
     Mutex::new(ctx)
@@ -145,17 +145,17 @@ fn expand_tabs(text: &str, tab_width: usize) -> Option<TabInfo> {
 }
 
 #[derive(Clone)]
-/// A Floem wrapper around a Parley text layout.
+/// A Floom wrapper around a Parley text layout.
 ///
 /// This type owns the source text, shaping result, wrapping configuration, and
-/// the tab-expansion mapping Floem uses for editor-style tab handling.
+/// the tab-expansion mapping Floom uses for editor-style tab handling.
 ///
 /// Use this when you need:
 /// - shaping and wrapping text for painting
 /// - hit testing and cursor geometry
 /// - visual-line text ranges and metrics
 ///
-/// This is a higher-level Floem wrapper, not a direct re-export of Parley's
+/// This is a higher-level Floom wrapper, not a direct re-export of Parley's
 /// layout type.
 pub struct TextLayout {
     layout: Layout<TextBrush>,
@@ -197,7 +197,7 @@ impl TextLayout {
 
     /// Clears the cached glyph outline bounds used for selection geometry.
     ///
-    /// Floem uses this cache to avoid repeatedly scaling glyph outlines when
+    /// Floom uses this cache to avoid repeatedly scaling glyph outlines when
     /// selection rectangles need ink-tight horizontal bounds. Callers that
     /// treat selection as a short-lived interaction can clear it when starting
     /// a new selection to keep the cache from growing across unrelated
@@ -367,7 +367,7 @@ impl TextLayout {
         }
     }
 
-    /// Creates an empty text layout with Floem's default wrapping settings.
+    /// Creates an empty text layout with Floom's default wrapping settings.
     pub fn new() -> Self {
         Self {
             layout: Layout::new(),
@@ -446,7 +446,7 @@ impl TextLayout {
 
     /// Sets the visual width of tab characters in spaces.
     ///
-    /// When set, Floem expands tabs before shaping and keeps a mapping between
+    /// When set, Floom expands tabs before shaping and keeps a mapping between
     /// original and display byte indices so hit-testing still refers back to
     /// the source text.
     pub fn set_tab_width(&mut self, tab_width: usize) {
@@ -616,7 +616,7 @@ impl TextLayout {
 
     /// Converts a Parley cursor back into a byte index in the original source text.
     ///
-    /// This reverses Floem's internal tab-expansion mapping when tab handling is
+    /// This reverses Floom's internal tab-expansion mapping when tab handling is
     /// enabled.
     pub fn cursor_to_byte_index(&self, cursor: &Cursor) -> usize {
         let idx = cursor.index();
@@ -657,7 +657,7 @@ impl TextLayout {
     ///
     /// Complexity:
     /// - baseline Parley selection coverage is proportional to the number of selected line fragments
-    /// - the additional Floem work here is proportional to the number of selected runs/clusters/glyphs
+    /// - the additional Floom work here is proportional to the number of selected runs/clusters/glyphs
     ///   on the affected lines
     /// - outline extraction itself is cached by font blob, font index, glyph id, size,
     ///   normalized coords, and skew, so repeated paints normally pay lookup cost rather than
@@ -785,7 +785,7 @@ impl TextLayout {
         (min_y.is_finite() && max_y.is_finite()).then_some((min_y, max_y))
     }
 
-    /// Draws the layout at the given origin using Floem's renderer wrapper.
+    /// Draws the layout at the given origin using Floom's renderer wrapper.
     pub fn draw(&self, renderer: &mut Renderer, origin: impl Into<Point>) {
         let origin = origin.into();
         for line in self.layout.lines() {

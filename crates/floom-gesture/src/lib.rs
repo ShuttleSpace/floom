@@ -6,7 +6,7 @@
 //! scroll recognizer: feed it pointer velocities on lift, then drain
 //! decelerating deltas on each frame.
 
-use floem_types::{ElementId, Point};
+use floom_types::{ElementId, Point};
 
 pub mod momentum;
 pub mod touch;

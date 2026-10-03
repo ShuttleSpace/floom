@@ -4,8 +4,8 @@ use std::sync::Arc;
 use anyhow::{Result, anyhow};
 use anyrender::{ImageRenderer as _, WindowRenderer as _};
 use anyrender_skia::{SkiaImageRenderer, SkiaWindowRenderer};
-use floem_legacy_renderer::text::{Glyph, GlyphRunProps};
-use floem_legacy_renderer::{Img, Renderer, Svg};
+use floom_legacy_renderer::text::{Glyph, GlyphRunProps};
+use floom_legacy_renderer::{Img, Renderer, Svg};
 use peniko::kurbo::{Affine, BezPath, Point, Rect, Shape, Size, Stroke};
 use peniko::{
     Blob, Brush, BrushRef, Compose, Fill, ImageAlphaType, ImageData, ImageFormat, Mix, Style,

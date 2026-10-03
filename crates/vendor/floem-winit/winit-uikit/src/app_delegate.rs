@@ -1,4 +1,4 @@
-//! Custom `UIApplicationDelegate` that forwards shared files/URLs to floem,
+//! Custom `UIApplicationDelegate` that forwards shared files/URLs to floom,
 //! and adopts the UIKit scene lifecycle.
 //!
 //! winit 25.10.0 drives `UIApplication::main(None, None, _)` and never installs
@@ -10,8 +10,8 @@
 //!   * warm-start -> `application:openURL:options:` (app already running).
 //!
 //! We install a minimal delegate (passed by name to `UIApplication::main`) that
-//! forwards the `NSURL` from both paths through a single C callback that floem
-//! registers via `set_on_open_url`. This closes floem issue #109 (cold-start
+//! forwards the `NSURL` from both paths through a single C callback that floom
+//! registers via `set_on_open_url`. This closes floom issue #109 (cold-start
 //! share drop) and also covers the warm-start path.
 //!
 //! The delegate additionally adopts the **scene lifecycle**, which is mandatory
@@ -46,8 +46,8 @@ use objc2_ui_kit::{
     UISceneConnectionOptions, UISceneDelegate, UISceneSession, UIWindowScene,
 };
 
-// floem registers a single `unsafe extern "C" fn(*mut c_void)` callback. The
-// `c_void` pointer is the borrowed `NSURL`; floem's trampoline reads it as
+// floom registers a single `unsafe extern "C" fn(*mut c_void)` callback. The
+// `c_void` pointer is the borrowed `NSURL`; floom's trampoline reads it as
 // `&NSURL`.
 type OnOpenUrl = unsafe extern "C" fn(*mut c_void);
 
@@ -98,7 +98,7 @@ pub(crate) fn current_window_scene(mtm: MainThreadMarker) -> Option<Retained<UIW
     scene
 }
 
-/// Register (or clear with `None`) the callback floem receives shared URLs
+/// Register (or clear with `None`) the callback floom receives shared URLs
 /// through. Must be called on the main thread, before `EventLoop::run`.
 ///
 /// # Safety
@@ -112,7 +112,7 @@ pub unsafe fn set_on_open_url(callback: Option<OnOpenUrl>) {
 fn forward_open_url(url: &NSURL) {
     if let Some(callback) = *ON_OPEN_URL.lock().unwrap() {
         // The NSURL is owned by the caller (UIKit) for the selector's scope, so
-        // it is safe to hand a borrowed pointer that floem reads synchronously.
+        // it is safe to hand a borrowed pointer that floom reads synchronously.
         unsafe { callback(url as *const NSURL as *mut c_void) };
     }
 }
@@ -120,7 +120,7 @@ fn forward_open_url(url: &NSURL) {
 define_class!(
     #[unsafe(super(NSObject))]
     #[thread_kind = MainThreadOnly]
-    #[name = "FloemWinitApplicationDelegate"]
+    #[name = "FloomWinitApplicationDelegate"]
     pub(crate) struct AppDelegate;
 
     unsafe impl NSObjectProtocol for AppDelegate {}
@@ -194,7 +194,7 @@ define_class!(
 define_class!(
     #[unsafe(super(NSObject))]
     #[thread_kind = MainThreadOnly]
-    #[name = "FloemWinitSceneDelegate"]
+    #[name = "FloomWinitSceneDelegate"]
     pub(crate) struct SceneDelegate;
 
     unsafe impl NSObjectProtocol for SceneDelegate {}

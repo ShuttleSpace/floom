@@ -1,13 +1,13 @@
 //! Overlay tree with z-order hit priority, focus scopes, and enter/exit animation.
 
-use floem_animation::{AnimId, AnimKind, AnimationScheduler, Easing, Tween};
-use floem_focus::{FocusManager, FocusScopeId};
-use floem_types::{ElementId, Point, Rect, Size};
+use floom_animation::{AnimId, AnimKind, AnimationScheduler, Easing, Tween};
+use floom_focus::{FocusManager, FocusScopeId};
+use floom_types::{ElementId, Point, Rect, Size};
 
 /// Re-exported so the painter can apply what the scheduler sampled without
-/// depending on `floem-animation` directly.
-pub use floem_animation::CompositorProp;
-pub use floem_types::{OverlayHandle, OverlayKind};
+/// depending on `floom-animation` directly.
+pub use floom_animation::CompositorProp;
+pub use floom_types::{OverlayHandle, OverlayKind};
 
 /// How long an overlay takes to enter when it is pushed.
 ///

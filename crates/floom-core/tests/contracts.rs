@@ -1,11 +1,11 @@
 //! Contract compilation and primitive widget smoke tests.
 
-use floem_core::{
+use floom_core::{
     Axis, Child, ChildKey, Color, CreateContext, Element, ElementId, ElementKind, Event,
     EventContext, LayoutRequest, PaintContext, Point, Rect, SemanticsContext, SemanticsHint, Size,
     UpdateContext, Widget, WidgetAny,
 };
-use floem_types::{Modifiers, PointerEvent};
+use floom_types::{Modifiers, PointerEvent};
 use std::any::Any;
 use std::cell::RefCell;
 use std::sync::Arc;

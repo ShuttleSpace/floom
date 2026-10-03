@@ -5,14 +5,14 @@
 #   cargo install cargo-about
 #   cargo about generate --config notices/about.toml -o THIRD-PARTY.html
 #
-# Vendored / forked crates (under `vendor/`) have their licenses recorded in
+# Vendored / forked crates (under `crates/vendor/`) have their licenses recorded in
 # `manual-additions.toml` because they are not published to crates.io.
 
 [invariants]
 upload-urls = false
 
 [licenses]
-# Accept the licenses Floem and its dependencies use. Extend after the first
+# Accept the licenses Floom and its dependencies use. Extend after the first
 # `cargo about generate` surfaces an unlisted license.
 allow = [
     "MIT",

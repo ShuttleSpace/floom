@@ -1,7 +1,7 @@
 //! Per-view accessibility attribute overrides.
 //!
 //! These are the *declared* attributes a view author sets through the
-//! [`crate::ViewId`] builder API. Floem core reads them at layout-commit time
+//! [`crate::ViewId`] builder API. Floom core reads them at layout-commit time
 //! (see [`crate::accessibility::bridge`]) and folds them into the neutral
 //! [`crate::accessibility::AccessNode`] produced for that view.
 //!
@@ -16,7 +16,7 @@ use crate::accessibility::{AccessAction, AccessRole};
 
 /// A handler invoked when a screen reader requests a semantic action on a view.
 ///
-/// Floem routes platform accessibility actions (e.g. a VoiceOver/ORCA/Narrator
+/// Floom routes platform accessibility actions (e.g. a VoiceOver/ORCA/Narrator
 /// "increment" on a slider) back to the originating view through this hook.
 /// Controls that own a value (slider, spinbutton) or a disclosure state (tree
 /// row) register one via [`crate::ViewId::accessibility_action`] to make
@@ -50,10 +50,10 @@ pub struct AccessibilityAttrs {
     /// its children are re-parented to the nearest exposed ancestor.
     pub hidden: bool,
     /// Optional semantic-action handler (see [`AccessibilityActionHandler`]).
-    /// When set, Floem routes semantic [`AccessAction`]s (Increment,
+    /// When set, Floom routes semantic [`AccessAction`]s (Increment,
     /// Decrement, Expand, Collapse, SetValue, ScrollIntoView) to this closure
     /// instead of ignoring them. Generic actions (Focus, Default,
-    /// ShowContextMenu) are routed through Floem's normal focus/event paths
+    /// ShowContextMenu) are routed through Floom's normal focus/event paths
     /// and do not need this hook.
     pub on_action: Option<AccessibilityActionHandler>,
 }

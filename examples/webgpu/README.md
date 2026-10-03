@@ -1,4 +1,4 @@
-# Floem on WebGPU
+# Floom on WebGPU
 
 **WARNING**: WebGPU support is highly experimental right now. Expect missing features, bugs, or performance issues.
 
@@ -32,7 +32,7 @@ Specify an id for the canvas.
 
 ## Resizing the canvas
 
-By default, the floem window should automatically resize to fit the HTML canvas.
+By default, the floom window should automatically resize to fit the HTML canvas.
 This is usually the desired behavior, as the canvas will thereby integrate with the rest of the web application.
 You can change this behavior by specifying an explicit `size` in the `WindowConfig`.
 

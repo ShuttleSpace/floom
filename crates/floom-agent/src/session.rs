@@ -8,15 +8,15 @@
 //! accounting, same damage answer.
 //!
 //! Boundary: this crate drives and observes; it does not inspect the retained
-//! hot-reload tree (that is `floem-devtools`, Phase 23). The two protocols
-//! share a wire vocabulary through `floem-inspector` — versions, the scene
+//! hot-reload tree (that is `floom-devtools`, Phase 23). The two protocols
+//! share a wire vocabulary through `floom-inspector` — versions, the scene
 //! line format — and nothing else.
 
-use floem_core::{SemanticsHint, SemanticsState};
-use floem_inspector::SceneLines;
-use floem_snapshot::PixelSnapshot;
-use floem_testkit::TestApp;
-use floem_types::Point;
+use floom_core::{SemanticsHint, SemanticsState};
+use floom_inspector::SceneLines;
+use floom_snapshot::PixelSnapshot;
+use floom_testkit::TestApp;
+use floom_types::Point;
 
 use crate::protocol::{
     AgentError, AgentRequest, AgentResponse, Command, PROTOCOL_VERSION, Payload,
@@ -110,11 +110,11 @@ impl<'a> AgentSession<'a> {
     fn resolve(
         &self,
         selector: &crate::protocol::Selector,
-    ) -> Result<floem_testkit::Selector, AgentError> {
+    ) -> Result<floom_testkit::Selector, AgentError> {
         let on_screen = || self.app.labels();
         let candidate = match selector {
             crate::protocol::Selector::Label(label) => {
-                floem_testkit::Selector::Label(label.clone())
+                floom_testkit::Selector::Label(label.clone())
             }
             crate::protocol::Selector::Role(name) => {
                 let Some(role) = self.find_role(name) else {
@@ -123,7 +123,7 @@ impl<'a> AgentSession<'a> {
                         on_screen: on_screen(),
                     });
                 };
-                floem_testkit::Selector::Role(role)
+                floom_testkit::Selector::Role(role)
             }
         };
         if self.app.find(candidate.clone()).is_some() {
@@ -138,7 +138,7 @@ impl<'a> AgentSession<'a> {
 
     /// The role name of the first live node publishing one that matches
     /// `name` case-insensitively, so the wire can say `"checkbox"`.
-    fn find_role(&self, name: &str) -> Option<floem_core::SemanticsRole> {
+    fn find_role(&self, name: &str) -> Option<floom_core::SemanticsRole> {
         let host = self.app.host();
         (0..host.node_count())
             .filter_map(|index| host.node_at(index))
@@ -149,7 +149,7 @@ impl<'a> AgentSession<'a> {
 
     // --- inspection -----------------------------------------------------------
 
-    fn live_nodes(&self) -> Vec<(u64, SemanticsHint, floem_types::Rect)> {
+    fn live_nodes(&self) -> Vec<(u64, SemanticsHint, floom_types::Rect)> {
         let host = self.app.host();
         (0..host.node_count())
             .filter_map(|index| host.node_at(index))
@@ -219,7 +219,7 @@ impl<'a> AgentSession<'a> {
 
 /// The wire spelling of a role: the Debug name, lowercased, so
 /// `SemanticsRole::CheckBox` is served as `"checkbox"`.
-fn role_name(role: floem_core::SemanticsRole) -> String {
+fn role_name(role: floom_core::SemanticsRole) -> String {
     format!("{role:?}").to_lowercase()
 }
 

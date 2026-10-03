@@ -8,11 +8,11 @@
 
 use std::collections::HashMap;
 
-use floem_accessibility::{
+use floom_accessibility::{
     AccessibilityAdapter, AccessibilityCapabilities, AccessibilityFrame, SemanticsAction,
     SemanticsDiff,
 };
-use floem_types::ElementId;
+use floom_types::ElementId;
 
 /// Full desktop a11y adapter: retained frame plus per-node action handlers.
 pub struct DesktopAccessibilityAdapter {

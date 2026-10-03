@@ -1,6 +1,6 @@
 use std::ops::RangeInclusive;
 
-use floem::{
+use floom::{
     prelude::{SignalGet, SignalUpdate},
     reactive::RwSignal,
     unit::{Pct, UnitExt},
@@ -12,7 +12,7 @@ use floem::{
 };
 
 fn main() {
-    floem::launch(app_view);
+    floom::launch(app_view);
 }
 
 fn app_view() -> impl IntoView {

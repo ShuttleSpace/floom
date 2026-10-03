@@ -1,9 +1,9 @@
 //! Tween / spring / keyframe / repeat kinds + compositor-only props.
 
-// The vocabulary itself lives in `floem-types`, so that layers which cannot
-// depend on this crate (`floem-core`, where a widget declares what it wants)
+// The vocabulary itself lives in `floom-types`, so that layers which cannot
+// depend on this crate (`floom-core`, where a widget declares what it wants)
 // can still name it. The crate root re-exports all of it.
-use floem_types::{damped_spring, CompositorChannel, CompositorProp, Easing, RepeatMode};
+use floom_types::{damped_spring, CompositorChannel, CompositorProp, Easing, RepeatMode};
 use smallvec::SmallVec;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -297,8 +297,8 @@ impl AnimKind {
 /// wrapped in a repeat, and nothing else — the parameters a spring or a keyframe
 /// needs (velocity, key tracks) are ones a widget has no business inventing on
 /// its own element.
-impl From<&floem_types::AnimationSpec> for AnimKind {
-    fn from(spec: &floem_types::AnimationSpec) -> Self {
+impl From<&floom_types::AnimationSpec> for AnimKind {
+    fn from(spec: &floom_types::AnimationSpec) -> Self {
         let tween = Tween {
             from: spec.from,
             to: spec.to,
@@ -425,7 +425,7 @@ mod tests {
     /// the wrong thing, which no "did it move" assertion can see.
     #[test]
     fn a_declared_spec_becomes_the_kind_it_describes() {
-        use floem_types::{AnimationSpec, RepeatSpec};
+        use floom_types::{AnimationSpec, RepeatSpec};
 
         let spec = AnimationSpec::repeating(0.25, 1.0, 0.8, RepeatSpec::reverse(4))
             .with_easing(Easing::EASE_OUT)

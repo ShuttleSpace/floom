@@ -1,10 +1,10 @@
 //! Fluent control variants and their pointer-first interaction semantics.
 
-use floem_design::{
+use floom_design::{
     ControlSize, InteractionState, Props, StyleSetBuilder, StyleSetExt, Variant, composite_over,
 };
-use floem_style::{StyleProps, StyleSet};
-use floem_types::Color;
+use floom_style::{StyleProps, StyleSet};
+use floom_types::Color;
 
 use crate::tokens::FluentTheme;
 
@@ -265,9 +265,9 @@ mod tests {
                 Some(bg) => composite_over(t.colors.card_background, bg, 1.0),
                 None => t.colors.card_background,
             };
-            let ratio = floem_design::contrast_ratio(ring, behind);
+            let ratio = floom_design::contrast_ratio(ring, behind);
             assert!(
-                ratio >= floem_design::WCAG_AA_LARGE,
+                ratio >= floom_design::WCAG_AA_LARGE,
                 "{variant:?}: ring {ring:?} on {behind:?} is {ratio:.2}:1"
             );
         }
@@ -323,7 +323,7 @@ mod tests {
             InteractionState::Hovered,
         );
 
-        let lum = |c: Option<Color>| floem_design::relative_luminance(c.unwrap());
+        let lum = |c: Option<Color>| floom_design::relative_luminance(c.unwrap());
         assert!(
             lum(l_hover.background) < lum(l_rest.background),
             "light hover should darken the accent"

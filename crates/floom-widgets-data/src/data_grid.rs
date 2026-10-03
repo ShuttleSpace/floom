@@ -15,14 +15,14 @@
 
 use std::any::Any;
 
-use floem_accessibility::{SemanticsRole, SemanticsState};
-use floem_core::{
+use floom_accessibility::{SemanticsRole, SemanticsState};
+use floom_core::{
     Color, CreateContext, ElementId, Event, EventContext, Key, KeyPhase, LayoutRequest, NamedKey,
     PaintContext, Point, Rect, SemanticsContext, UpdateContext, Widget, WidgetAny,
 };
-use floem_types::{Modifiers, PointerButton, PointerPhase};
-use floem_virtual::{ItemSizes, Overscan, VirtualViewport};
-use floem_widgets::{SemanticsHint, to_core_role, to_core_state};
+use floom_types::{Modifiers, PointerButton, PointerPhase};
+use floom_virtual::{ItemSizes, Overscan, VirtualViewport};
+use floom_widgets::{SemanticsHint, to_core_role, to_core_state};
 
 use crate::model::{
     CellEdit, CellValue, Column, ColumnId, EditHistory, EditSession, RowId, SelectionMode,
@@ -636,7 +636,7 @@ impl DataGrid {
 
     fn pointer(
         &mut self,
-        pointer: &floem_types::PointerEvent,
+        pointer: &floom_types::PointerEvent,
         bounds: Rect,
         cx: &mut dyn EventContext,
         id: ElementId,
@@ -687,7 +687,7 @@ impl DataGrid {
 
     fn key_event(
         &mut self,
-        key: &floem_types::KeyEvent,
+        key: &floom_types::KeyEvent,
         cx: &mut dyn EventContext,
         id: ElementId,
     ) -> bool {
@@ -945,9 +945,9 @@ impl WidgetAny for DataGrid {
         self
     }
 
-    fn semantics_hint(&self) -> Option<floem_core::SemanticsHint> {
+    fn semantics_hint(&self) -> Option<floom_core::SemanticsHint> {
         let hint = DataGrid::semantics_hint(self);
-        Some(floem_core::SemanticsHint {
+        Some(floom_core::SemanticsHint {
             role: to_core_role(hint.role),
             label: hint.label,
             state: to_core_state(hint.state),

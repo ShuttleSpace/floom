@@ -1,4 +1,4 @@
-//! Text layout, shaping, and font management for Floem.
+//! Text layout, shaping, and font management for Floom.
 //!
 //! This module provides the renderer-facing text vocabulary built on
 //! [Parley](https://docs.rs/parley).

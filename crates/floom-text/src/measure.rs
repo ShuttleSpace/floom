@@ -7,7 +7,7 @@
 
 use std::cell::RefCell;
 
-use floem_types::Size;
+use floom_types::Size;
 
 use crate::LayoutCache;
 use crate::layout::{TextAlign, TextLayoutOptions, TextShaper};

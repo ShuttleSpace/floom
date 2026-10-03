@@ -1,4 +1,4 @@
-// Index — the ArkTS host page for the Floem OHOS backend.
+// Index — the ArkTS host page for the Floom OHOS backend.
 //
 // It draws nothing. The page is a single full-window `XComponent` of type
 // SURFACE; `libraryname: 'entry'` makes the framework load libentry.so, whose
@@ -11,10 +11,10 @@
 //
 // libentry.so in turn links libohos.so, the Rust cdylib whose
 // `export_ohos_winit_app!` entry point owns the real (winit + wgpu) window and
-// renders the floem app into this surface. All pixels come from Rust.
+// renders the floom app into this surface. All pixels come from Rust.
 //
 // The platform bridge (clipboard / file picker / external URL / a11y / IME) is
-// registered separately by EntryAbility via `FloemBridge.ets`.
+// registered separately by EntryAbility via `FloomBridge.ets`.
 
 @Entry
 @Component
@@ -22,7 +22,7 @@ struct Index {
   build() {
     Column() {
       XComponent({
-        id: 'floem_surface',
+        id: 'floom_surface',
         type: XComponentType.SURFACE,
         libraryname: 'entry',
       })

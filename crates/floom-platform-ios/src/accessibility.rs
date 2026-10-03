@@ -4,7 +4,7 @@
 //! wired yet, so `NATIVE_BRIDGE` stays unset and `perform_action` cannot deliver
 //! to the OS. The adapter still retains the published tree.
 
-use floem_accessibility::{AccessibilityCapabilities, CapabilityLimitedAccessibilityAdapter};
+use floom_accessibility::{AccessibilityCapabilities, CapabilityLimitedAccessibilityAdapter};
 
 /// Capabilities iOS reports once a native bridge lands.
 pub fn accessibility_capabilities() -> AccessibilityCapabilities {
@@ -21,10 +21,10 @@ pub fn ios_accessibility() -> CapabilityLimitedAccessibilityAdapter {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use floem_accessibility::{
+    use floom_accessibility::{
         AccessibilityAdapter, SemanticsAction, SemanticsDiff, SemanticsNode, SemanticsRole,
     };
-    use floem_types::ElementId;
+    use floom_types::ElementId;
 
     #[test]
     fn reports_capability_profile() {

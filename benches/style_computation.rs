@@ -1,4 +1,4 @@
-//! Benchmarks for style computation in Floem.
+//! Benchmarks for style computation in Floom.
 //!
 //! These benchmarks measure the performance of:
 //! - Style computation for views with simple styles (first-pass, cold cache)
@@ -11,10 +11,10 @@
 use std::hint::black_box;
 
 use criterion::{BenchmarkId, Criterion, criterion_group, criterion_main};
-use floem::headless::{HeadlessHarness, TestRoot};
-use floem::prelude::*;
-use floem::style::Background;
-use floem::views::{Container, Decorators, Empty, Stack};
+use floom::headless::{HeadlessHarness, TestRoot};
+use floom::prelude::*;
+use floom::style::Background;
+use floom::views::{Container, Decorators, Empty, Stack};
 
 /// Create N views with identical styles (good candidate for caching).
 fn create_identical_styled_views(n: usize) -> impl IntoView {
@@ -132,8 +132,8 @@ fn bench_identical_styles(c: &mut Criterion) {
 
             b.iter(|| {
                 for id in &ids {
-                    id.request_style(floem::style::recalc::StyleReason::with_selector(
-                        floem::style::StyleSelector::Hover,
+                    id.request_style(floom::style::recalc::StyleReason::with_selector(
+                        floom::style::StyleSelector::Hover,
                     ));
                 }
                 harness.recompute_styles();
@@ -271,8 +271,8 @@ fn bench_restyle_views(c: &mut Criterion) {
         b.iter(|| {
             // Request style recomputation for all views
             for id in &ids {
-                id.request_style(floem::style::recalc::StyleReason::with_selector(
-                    floem::style::StyleSelector::Hover,
+                id.request_style(floom::style::recalc::StyleReason::with_selector(
+                    floom::style::StyleSelector::Hover,
                 ));
             }
             // Process the style recomputation
@@ -314,8 +314,8 @@ fn bench_restyle_with_selectors(c: &mut Criterion) {
         b.iter(|| {
             // Request style recomputation for all views
             for id in &ids {
-                id.request_style(floem::style::recalc::StyleReason::with_selector(
-                    floem::style::StyleSelector::Hover,
+                id.request_style(floom::style::recalc::StyleReason::with_selector(
+                    floom::style::StyleSelector::Hover,
                 ));
             }
             // Process the style recomputation
@@ -333,8 +333,8 @@ fn bench_restyle_with_selectors(c: &mut Criterion) {
 /// use it. When the prop updates, views without selectors can use the inherited-only
 /// fast path instead of full selector resolution.
 fn bench_inherited_prop_updates(c: &mut Criterion) {
-    use floem::peniko::Color;
-    use floem::prop;
+    use floom::peniko::Color;
+    use floom::prop;
 
     // Define an inherited prop for this benchmark
     prop!(
@@ -428,9 +428,9 @@ fn bench_inherited_prop_updates(c: &mut Criterion) {
 /// This tests views that have hover/active selectors which cannot use the
 /// inherited-only fast path and must do full style resolution.
 fn bench_inherited_with_selectors(c: &mut Criterion) {
-    use floem::peniko::Color;
-    use floem::prop;
-    use floem::style::Style;
+    use floom::peniko::Color;
+    use floom::prop;
+    use floom::style::Style;
 
     prop!(
         pub BenchInheritedColor2: Color { inherited } = palette::css::BLACK
@@ -523,8 +523,8 @@ fn bench_inherited_stable_context(c: &mut Criterion) {
 
                 b.iter(|| {
                     for id in &ids {
-                        id.request_style(floem::style::recalc::StyleReason::with_selector(
-                            floem::style::StyleSelector::Hover,
+                        id.request_style(floom::style::recalc::StyleReason::with_selector(
+                            floom::style::StyleSelector::Hover,
                         ));
                     }
                     harness.recompute_styles();

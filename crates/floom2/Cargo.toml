@@ -1,10 +1,10 @@
 [package]
-name = "floem2"
+name = "floom2"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
-description = "Floem 2.0 public facade: the beginner-facing prelude and feature bundles"
+description = "Floom 2.0 public facade: the beginner-facing prelude and feature bundles"
 
 # Phase 29.3 — feature bundles.
 #
@@ -22,65 +22,65 @@ description = "Floem 2.0 public facade: the beginner-facing prelude and feature 
 # (tiny-skia), `devtools` (the L8 inspector/devtools tier — reachable from the
 # facade because the facade sits at L9, above the tooling it re-exports).
 #
-# `native` needs no bundle: native view composition is part of the `floem-app`
+# `native` needs no bundle: native view composition is part of the `floom-app`
 # shell itself (Phase 16), not an optional backend.
 [features]
 default = []
-desktop = ["dep:floem-platform-desktop", "floem-platform-desktop/winit"]
+desktop = ["dep:floom-platform-desktop", "floom-platform-desktop/winit"]
 mobile = [
-    "dep:floem-platform-android",
-    "dep:floem-platform-ios",
-    "dep:floem-platform-harmony",
+    "dep:floom-platform-android",
+    "dep:floom-platform-ios",
+    "dep:floom-platform-harmony",
 ]
-web = ["dep:floem-platform-web", "dep:floem-renderer-web"]
-embedded = ["dep:floem-platform-embedded"]
+web = ["dep:floom-platform-web", "dep:floom-renderer-web"]
+embedded = ["dep:floom-platform-embedded"]
 # Terminal (character-grid) backend: the L4 platform + renderer that turn a
-# terminal into a live Floem window. Off by default so a default build stays
+# terminal into a live Floom window. Off by default so a default build stays
 # headless; `--features tui` adds exactly these two crates.
-tui = ["dep:floem-platform-tui", "dep:floem-renderer-tui"]
-renderer-gpu = ["dep:floem-renderer-vello", "floem-renderer-vello/gpu"]
-renderer-software = ["dep:floem-renderer-software"]
-devtools = ["dep:floem-devtools"]
+tui = ["dep:floom-platform-tui", "dep:floom-renderer-tui"]
+renderer-gpu = ["dep:floom-renderer-vello", "floom-renderer-vello/gpu"]
+renderer-software = ["dep:floom-renderer-software"]
+devtools = ["dep:floom-devtools"]
 
 [dependencies]
-floem-app = { path = "../floom-app", version = "0.2.0" }
-floem-core = { path = "../floom-core", version = "0.2.0" }
+floom-app = { path = "../floom-app", version = "0.2.0" }
+floom-core = { path = "../floom-core", version = "0.2.0" }
 # Only the motion *vocabulary* is taken from here (the kind space and the
-# tween builder); the scheduler itself stays behind `floem-app`. It is a new
-# edge for the facade but not a new crate in the graph — `floem-app` already
-# depends on it, so the headless floor `floem2-hello` measures is unchanged.
-floem-animation = { path = "../floom-animation", version = "0.2.0" }
-floem-layout = { path = "../floom-layout", version = "0.2.0" }
+# tween builder); the scheduler itself stays behind `floom-app`. It is a new
+# edge for the facade but not a new crate in the graph — `floom-app` already
+# depends on it, so the headless floor `floom2-hello` measures is unchanged.
+floom-animation = { path = "../floom-animation", version = "0.2.0" }
+floom-layout = { path = "../floom-layout", version = "0.2.0" }
 # The repaint-ping vocabulary (`RwSignal`) a `Canvas::repaint_on` app writes.
-# Same story as floem-animation: a new facade edge but no new crate —
-# `floem-widgets` already depends on it.
-floem-legacy-reactive = { path = "../floom-legacy-reactive", version = "0.2.0" }
-# Re-exported whole (`floem2::floem_scene`): the retained scene is the IR an
-# app inspects when it asserts on what it drew, and `floem-app` already
+# Same story as floom-animation: a new facade edge but no new crate —
+# `floom-widgets` already depends on it.
+floom-legacy-reactive = { path = "../floom-legacy-reactive", version = "0.2.0" }
+# Re-exported whole (`floom2::floom_scene`): the retained scene is the IR an
+# app inspects when it asserts on what it drew, and `floom-app` already
 # depends on it, so the headless graph gains no new crate.
-floem-scene = { path = "../floom-scene", version = "0.2.0" }
-floem-types = { path = "../floom-types", version = "0.2.0" }
+floom-scene = { path = "../floom-scene", version = "0.2.0" }
+floom-types = { path = "../floom-types", version = "0.2.0" }
 # The neutral L4 contract (`Platform`, `WindowConfig`, `PlatformEvent`). The
 # facade needs `WindowConfig` to describe a window for whichever backend the
 # `run_*` entries drive, so this is a plain dependency, not a per-backend one.
-floem-platform = { path = "../floom-platform", version = "0.2.0" }
-floem-widgets = { path = "../floom-widgets", version = "0.2.0" }
-floem-platform-desktop = { path = "../floom-platform-desktop", version = "0.2.0", optional = true }
-floem-platform-android = { path = "../floom-platform-android", version = "0.2.0", optional = true }
-floem-platform-ios = { path = "../floom-platform-ios", version = "0.2.0", optional = true }
-floem-platform-harmony = { path = "../floom-platform-harmony", version = "0.2.0", optional = true }
-floem-platform-web = { path = "../floom-platform-web", version = "0.2.0", optional = true }
-floem-renderer-web = { path = "../floom-renderer-web", version = "0.2.0", optional = true }
-floem-platform-embedded = { path = "../floom-platform-embedded", version = "0.2.0", optional = true }
-floem-platform-tui = { path = "../floom-platform-tui", version = "0.2.0", optional = true }
-floem-renderer-tui = { path = "../floom-renderer-tui", version = "0.2.0", optional = true }
-floem-renderer-vello = { path = "../floom-renderer-vello", version = "0.2.0", optional = true }
-floem-renderer-software = { path = "../floom-renderer-software", version = "0.2.0", optional = true }
-floem-devtools = { path = "../floom-devtools", version = "0.2.0", optional = true }
+floom-platform = { path = "../floom-platform", version = "0.2.0" }
+floom-widgets = { path = "../floom-widgets", version = "0.2.0" }
+floom-platform-desktop = { path = "../floom-platform-desktop", version = "0.2.0", optional = true }
+floom-platform-android = { path = "../floom-platform-android", version = "0.2.0", optional = true }
+floom-platform-ios = { path = "../floom-platform-ios", version = "0.2.0", optional = true }
+floom-platform-harmony = { path = "../floom-platform-harmony", version = "0.2.0", optional = true }
+floom-platform-web = { path = "../floom-platform-web", version = "0.2.0", optional = true }
+floom-renderer-web = { path = "../floom-renderer-web", version = "0.2.0", optional = true }
+floom-platform-embedded = { path = "../floom-platform-embedded", version = "0.2.0", optional = true }
+floom-platform-tui = { path = "../floom-platform-tui", version = "0.2.0", optional = true }
+floom-renderer-tui = { path = "../floom-renderer-tui", version = "0.2.0", optional = true }
+floom-renderer-vello = { path = "../floom-renderer-vello", version = "0.2.0", optional = true }
+floom-renderer-software = { path = "../floom-renderer-software", version = "0.2.0", optional = true }
+floom-devtools = { path = "../floom-devtools", version = "0.2.0", optional = true }
 
 [dev-dependencies]
 # The v1 monolith, used only by the compile-fail doctest that proves a legacy
 # `View` is rejected at the 2.0 mount point (with the migration diagnostic).
 # Dev-only: a shipped facade never links the legacy stack, and the
 # architecture gate ignores dev dependencies for exactly this reason.
-floem = { path = "../floom" }
+floom = { path = "../floom" }

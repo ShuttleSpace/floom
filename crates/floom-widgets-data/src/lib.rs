@@ -1,4 +1,4 @@
-//! Tier-2 advanced data widgets for Floem 2.0 (Phase 20).
+//! Tier-2 advanced data widgets for Floom 2.0 (Phase 20).
 //!
 //! The phase splits in two:
 //!
@@ -6,7 +6,7 @@
 //!   selection, an edit history) and [`data_grid`] / [`tree`] are its
 //!   virtualized views. Both draw only their visible window, and both report
 //!   the window explicitly so a retained-mode host can recycle a bounded pool
-//!   of element-backed rows via [`floem_virtual`].
+//!   of element-backed rows via [`floom_virtual`].
 //! - **Visualization and transport** — [`chart`] computes renderer-neutral
 //!   geometry and an accessible summary; [`media`] is the transport control
 //!   cluster and its semantic parts.

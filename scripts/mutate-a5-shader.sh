@@ -45,8 +45,8 @@ mutate_one() {
   touch "$file"
 }
 
-SOFT=render/floem-renderer-software/src/lib.rs
-VELLO=render/floem-renderer-vello/src/gpu.rs
+SOFT=crates/floom-renderer-software/src/lib.rs
+VELLO=crates/floom-renderer-vello/src/gpu.rs
 
 # 1. software backend: dropping the skip counter makes the degradation silent.
 mutate_one "$SOFT" \
@@ -54,7 +54,7 @@ mutate_one "$SOFT" \
                     self.shaders_skipped += 1;
                 }" \
 "                SceneNode::Shader { .. } => {}" \
-  "cargo test -q -p floem-renderer-software software_skips_and_counts_shader_nodes" \
+  "cargo test -q -p floom-renderer-software software_skips_and_counts_shader_nodes" \
   "software-counts-shader-skip"
 
 # 2. vello fingerprint: dropping the WGSL from the hash means two different
@@ -67,7 +67,7 @@ mutate_one "$VELLO" \
 "            for p in shader.params.iter().copied() {
                 hasher.write_u32(p.to_bits());
             }" \
-  "cargo test -q -p floem-renderer-vello --features gpu a_shaders_source_and_params_are_part_of_its_fingerprint" \
+  "cargo test -q -p floom-renderer-vello --features gpu a_shaders_source_and_params_are_part_of_its_fingerprint" \
   "vello-fingerprint-includes-wgsl"
 
 # 3. vello readback key: dropping the height means a resize reuses the brush
@@ -76,7 +76,7 @@ mutate_one "$VELLO" \
 "    hasher.write_u32(pw);
     hasher.write_u32(ph);" \
 "    hasher.write_u32(pw);" \
-  "cargo test -q -p floem-renderer-vello --features gpu a_shader_cache_key_separates_source_from_size" \
+  "cargo test -q -p floom-renderer-vello --features gpu a_shader_cache_key_separates_source_from_size" \
   "vello-cache-key-includes-height"
 
 # 4. vello encode: trading the draw for a skip means a shader is silently
@@ -100,36 +100,36 @@ mutate_one "$VELLO" \
                     } else {
                         stats.shader_skips += 1;
                     }" \
-  "cargo test -q -p floem-renderer-vello --features gpu shader_nodes_encode_through_the_gpu_backend" \
+  "cargo test -q -p floom-renderer-vello --features gpu shader_nodes_encode_through_the_gpu_backend" \
   "vello-shader-actually-awaited-draw"
 
 # 5. the widget door: a host that swallows `draw_shader` leaves the whole
 #    widget surface drawing nothing, while every renderer-side test stays green
 #    (they build their scenes by hand). This is the mutation that says whether
 #    A5 is reachable from an app at all.
-HOST=app/floem-app/src/lib.rs
+HOST=crates/floom-app/src/lib.rs
 mutate_one "$HOST" \
-"        self.push(floem_scene::SceneNode::shader(self.bounds, shader.clone()));" \
+"        self.push(floom_scene::SceneNode::shader(self.bounds, shader.clone()));" \
 "        let _ = shader;" \
-  "cargo test -q -p floem-app --test shader_box a_shader_box_carries_its_program_over_its_own_box" \
+  "cargo test -q -p floom-app --test shader_box a_shader_box_carries_its_program_over_its_own_box" \
   "host-carries-the-shader-request"
 
 # 6. the box: a shader that claims the window instead of the element paints
 #    over everything around it. The renderer cannot tell — both are valid
 #    rects — so only the host-side assertion can.
 mutate_one "$HOST" \
-"        self.push(floem_scene::SceneNode::shader(self.bounds, shader.clone()));" \
+"        self.push(floom_scene::SceneNode::shader(self.bounds, shader.clone()));" \
 "        let mut box_bounds = self.bounds;
         box_bounds.x1 = box_bounds.x0 + 300.0;
         box_bounds.y1 = box_bounds.y0 + 200.0;
-        self.push(floem_scene::SceneNode::shader(box_bounds, shader.clone()));" \
-  "cargo test -q -p floem-app --test shader_box a_shader_box_carries_its_program_over_its_own_box" \
+        self.push(floom_scene::SceneNode::shader(box_bounds, shader.clone()));" \
+  "cargo test -q -p floom-app --test shader_box a_shader_box_carries_its_program_over_its_own_box" \
   "host-uses-the-laid-out-box-not-the-window"
 
 # 7/8. The in-place setters: a builder is cloned into the tree, so a setter
 #      that swaps the value without bumping the revision paints the *old*
 #      program forever — the silent no-op this widget is most likely to ship.
-CANVAS=widgets/floem-widgets/src/canvas.rs
+CANVAS=crates/floom-widgets/src/canvas.rs
 mutate_one "$CANVAS" \
 "    pub fn set_shader(&mut self, shader: Shader) {
         self.shader = shader;
@@ -139,7 +139,7 @@ mutate_one "$CANVAS" \
         let _ = shader;
         self.revision.bump();
     }" \
-  "cargo test -q -p floem-app --test shader_box replacing_the_program_on_the_mounted_box_repaints_the_new_source" \
+  "cargo test -q -p floom-app --test shader_box replacing_the_program_on_the_mounted_box_repaints_the_new_source" \
   "set_shader-asks-for-a-frame"
 
 mutate_one "$CANVAS" \
@@ -151,7 +151,7 @@ mutate_one "$CANVAS" \
         let _ = params;
         self.revision.bump();
     }" \
-  "cargo test -q -p floem-app --test shader_box changing_only_the_scalars_repaints_them" \
+  "cargo test -q -p floom-app --test shader_box changing_only_the_scalars_repaints_them" \
   "set_params-asks-for-a-frame"
 
 # Restore-by-copy can land inside the same second as the mutated build, and

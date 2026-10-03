@@ -1,6 +1,6 @@
 //! Headless embedder proof of concept.
 //!
-//! Drives a Floem view through the same [`EmbedderEvent`]/[`EmbedderCommand`]
+//! Drives a Floom view through the same [`EmbedderEvent`]/[`EmbedderCommand`]
 //! contract a real backend would use, but without a real platform window or a
 //! paint surface. It is the canonical test harness for the embedder API.
 
@@ -26,7 +26,7 @@ impl HeadlessEmbedder {
         }
     }
 
-    /// Feed an embedder event into Floem and process updates (no paint).
+    /// Feed an embedder event into Floom and process updates (no paint).
     pub fn send(&mut self, event: EmbedderEvent) {
         self.runtime
             .handle_event(self.harness.window_handle_mut(), event, &mut self.commands);

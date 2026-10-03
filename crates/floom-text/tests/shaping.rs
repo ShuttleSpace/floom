@@ -1,4 +1,4 @@
-use floem_text::{LayoutCache, TextAlign, TextLayoutOptions, TextShaper};
+use floom_text::{LayoutCache, TextAlign, TextLayoutOptions, TextShaper};
 
 /// A glyph run is a *positioned* sequence: the pen advances across the run and
 /// each glyph carries its own offset from that pen.
@@ -41,7 +41,7 @@ fn ascii_wraps_to_multiple_lines() {
         font_size: 14.0,
         align: TextAlign::Start,
     };
-    let laid = shaper.shape("hello world from floem text", &opts);
+    let laid = shaper.shape("hello world from floom text", &opts);
     assert!(
         laid.lines.len() >= 2,
         "expected wrapping, got {} lines",

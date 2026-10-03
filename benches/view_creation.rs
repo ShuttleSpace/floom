@@ -1,15 +1,15 @@
 use std::hint::black_box;
 
 use criterion::{Criterion, criterion_group, criterion_main};
-use floem::ViewId;
-use floem::headless::{HeadlessHarness, TestRoot};
-use floem::prelude::*;
-use floem::views::{Decorators, Empty, Label, LabelClass, Stack};
+use floom::ViewId;
+use floom::headless::{HeadlessHarness, TestRoot};
+use floom::prelude::*;
+use floom::views::{Decorators, Empty, Label, LabelClass, Stack};
 
 const LABEL_COUNT: usize = 100;
 const EMPTY_COUNT: usize = 100;
 
-floem::style_class!(pub BenchEmptyClass);
+floom::style_class!(pub BenchEmptyClass);
 
 fn create_themed_labels(count: usize) -> (impl IntoView, Vec<ViewId>) {
     let labels: Vec<_> = (0..count)

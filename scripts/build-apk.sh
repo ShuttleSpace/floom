@@ -15,12 +15,12 @@
 #   scripts/build-apk.sh -p <crate> [options]
 #
 #   -p, --package <crate>   Cargo package to build (required), e.g.
-#                           `floem2-android-example`.
+#                           `floom2-android-example`.
 #   --manifest <path>       AndroidManifest.xml (default:
 #                           examples/<crate>/AndroidManifest.xml).
 #   --features <list>       Extra cargo features (may be repeated). Pass the
 #                           crate's own feature if it gates its `android_main`
-#                           (the floem 2.0 example needs `real`; the v1 example
+#                           (the floom 2.0 example needs `real`; the v1 example
 #                           needs none).
 #   -t, --target <abi>      arm64-v8a (default) | armeabi-v7a | x86 | x86_64
 #   --debug | --release     Profile (default: release).
@@ -187,15 +187,15 @@ else
 fi
 
 # ------------------------------------------- optional Java activity -> DEX
-# A Java activity subclass (e.g. `FloemNativeActivity`, which forwards
-# onActivityResult / onNewIntent to Floem) lets the app receive runtime
+# A Java activity subclass (e.g. `FloomNativeActivity`, which forwards
+# onActivityResult / onNewIntent to Floom) lets the app receive runtime
 # file-dialog results and runtime file shares. `cargo ndk` never touches Java,
 # so we compile it here with `javac` and turn the class into a `classes.dex`
 # with `d8` (falling back to the legacy `dx`). Without a Java subclass the
 # manifest must keep `android:name="android.app.NativeActivity"` and
 # `android:hasCode="false"`.
-if [[ -z "$JAVA_SRC" && -f "$CRATE_DIR/FloemNativeActivity.java" ]]; then
-  JAVA_SRC="$CRATE_DIR/FloemNativeActivity.java"
+if [[ -z "$JAVA_SRC" && -f "$CRATE_DIR/FloomNativeActivity.java" ]]; then
+  JAVA_SRC="$CRATE_DIR/FloomNativeActivity.java"
 fi
 if [[ -n "$JAVA_SRC" ]]; then
   [[ -f "$JAVA_SRC" ]] || die "java source not found: $JAVA_SRC"

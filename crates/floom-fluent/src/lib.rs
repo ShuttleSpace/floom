@@ -1,6 +1,6 @@
 //! Fluent: the Windows desktop design system.
 //!
-//! Fluent is the counterweight to [`floem_cupertino`]. Same vocabulary, three
+//! Fluent is the counterweight to [`floom_cupertino`]. Same vocabulary, three
 //! opposite answers, each asserted here:
 //!
 //! 1. **Pointing, not touch.** A mouse exists, so `Hovered` *must* differ from
@@ -23,5 +23,5 @@ pub use button::{ButtonMetrics, button_metrics, button_style, button_styles};
 pub use gallery::{GALLERY_COLUMNS, button_gallery, button_gallery_labels};
 pub use tokens::{FluentColors, FluentTheme};
 
-pub use floem_design::{ControlSize, InteractionState, Variant};
-pub use floem_theme::ColorScheme;
+pub use floom_design::{ControlSize, InteractionState, Variant};
+pub use floom_theme::ColorScheme;

@@ -1,4 +1,4 @@
-use floem::{imbl, prelude::*, style::CursorStyle, text::FontWeight, LazyView};
+use floom::{imbl, prelude::*, style::CursorStyle, text::FontWeight, LazyView};
 
 #[derive(Clone, Copy, Eq, Hash, PartialEq)]
 enum Tab {
@@ -98,7 +98,7 @@ pub fn tab_navigation_view() -> impl IntoView {
         .style(|s| s.width_full().height_full())
         .on_event_stop(listener::KeyUp, move |_cx, KeyboardEvent { key, .. }| {
             if *key == Key::Named(NamedKey::F11) {
-                floem::action::inspect();
+                floom::action::inspect();
             }
         })
 }

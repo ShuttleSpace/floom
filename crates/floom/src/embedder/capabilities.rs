@@ -1,13 +1,13 @@
 //! Capability reporting for embedder backends.
 //!
-//! Floem queries [`BackendCapabilities`] at startup (and when a window is
+//! Floom queries [`BackendCapabilities`] at startup (and when a window is
 //! created) to decide whether a feature is available, downgraded, or a no-op.
 //! Unsupported functionality must degrade explicitly instead of failing
 //! implicitly.
 
 /// Declares which platform services and surfaces a backend supports.
 ///
-/// This is the contract that lets `floem::launch` keep working on a minimal
+/// This is the contract that lets `floom::launch` keep working on a minimal
 /// headless backend while a full winit backend advertises everything.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct BackendCapabilities {
@@ -25,7 +25,7 @@ pub struct BackendCapabilities {
     pub window_title: bool,
     /// Accessibility tree updates and actions.
     ///
-    /// Set via [`BackendCapabilities::with_accessibility`]. Floem's neutral
+    /// Set via [`BackendCapabilities::with_accessibility`]. Floom's neutral
     /// a11y protocol lives in [`crate::accessibility`]; a backend advertises
     /// support here once it bridges that protocol to a native screen reader.
     pub accessibility: bool,

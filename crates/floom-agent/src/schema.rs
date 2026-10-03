@@ -1,15 +1,15 @@
 //! The AI-friendly component schema (Task 25.2).
 //!
 //! Emitted, never hand-written. Every row comes out of the same
-//! `floem_ui_ir` tables the validator enforces, so an agent that reads this
+//! `floom_ui_ir` tables the validator enforces, so an agent that reads this
 //! schema authors documents the validator accepts — the two can never
 //! disagree, because there is only one table. Examples and token
 //! relationships are derived the same way: a token exists because the
 //! resolved properties say the widget is styled by it, with the values the
 //! domain allows.
 
-use floem_inspector::{ProtocolVersion, STYLE_STATES};
-use floem_ui_ir::{NodeKind, PropClass, all_prop_names, events_for, prop_spec};
+use floom_inspector::{ProtocolVersion, STYLE_STATES};
+use floom_ui_ir::{NodeKind, PropClass, all_prop_names, events_for, prop_spec};
 
 use crate::protocol::PROTOCOL_VERSION;
 

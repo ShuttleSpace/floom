@@ -1,5 +1,5 @@
-use floem_style::{StyleMap, StyleProps, StyleSet, StyleState};
-use floem_types::Color;
+use floom_style::{StyleMap, StyleProps, StyleSet, StyleState};
+use floom_types::Color;
 
 #[test]
 fn state_precedence_pressed_over_hover() {

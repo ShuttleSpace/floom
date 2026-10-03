@@ -1,6 +1,6 @@
 use std::any::Any;
 
-use floem_legacy_reactive::{Scope, UpdaterEffect};
+use floom_legacy_reactive::{Scope, UpdaterEffect};
 
 use crate::{
     IntoView, ViewId,
@@ -15,7 +15,7 @@ macro_rules! dyn_view {
     ($signal:ident, $new:ident => $body:expr) => {
         dyn_container(
             move || {
-                use floem::reactive::SignalGet;
+                use floom::reactive::SignalGet;
                 $signal.get()
             },
             move |$new| $body,
@@ -25,7 +25,7 @@ macro_rules! dyn_view {
     ($signal:ident => $body:expr) => {
         dyn_container(
             move || {
-                use floem::reactive::SignalGet;
+                use floom::reactive::SignalGet;
                 $signal.get()
             },
             move |$signal| $body,
@@ -49,7 +49,7 @@ pub struct DynamicContainer<T: 'static> {
 ///
 /// ## Example
 /// ```
-/// use floem::{
+/// use floom::{
 ///     reactive::{create_rw_signal, SignalGet, SignalUpdate},
 ///     views::{dyn_container, label, toggle_button, v_stack, Decorators},
 ///     IntoView, View,

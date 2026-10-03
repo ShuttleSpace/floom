@@ -18,7 +18,7 @@ use crate::{
     },
     view::LayoutTree,
 };
-use floem_legacy_reactive::Scope;
+use floom_legacy_reactive::Scope;
 use imbl::HashSet;
 use peniko::kurbo::{Affine, Vec2};
 use rustc_hash::FxHashMap;
@@ -317,7 +317,7 @@ impl StyleStack {
     }
 }
 
-/// View state stores internal state associated with a view which is owned and managed by Floem.
+/// View state stores internal state associated with a view which is owned and managed by Floom.
 pub struct ViewState {
     pub(crate) layout_id: NodeId,
     pub(crate) element_id: crate::ElementId,

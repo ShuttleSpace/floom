@@ -8,10 +8,10 @@
 //! - CSS transforms (scale, rotate, translate) affect coordinate transformation
 //! - The inverse of `visual_transform` is used to convert window coords to local
 
-use floem::kurbo::Point;
-use floem::prelude::*;
-use floem::unit::{AnchorAbout, Pct};
-use floem_legacy_test::prelude::*;
+use floom::kurbo::Point;
+use floom::prelude::*;
+use floom::unit::{AnchorAbout, Pct};
+use floom_legacy_test::prelude::*;
 use serial_test::serial;
 use std::cell::Cell;
 use std::rc::Rc;
@@ -29,7 +29,7 @@ fn test_event_point_at_origin() {
     let received_point_clone = received_point.clone();
 
     let view = Empty::new().style(|s| s.size(100.0, 100.0)).on_event_stop(
-        floem::event::listener::PointerDown,
+        floom::event::listener::PointerDown,
         move |_, pbe| {
             received_point_clone.set(Some(pbe.state.logical_point()));
         },
@@ -57,7 +57,7 @@ fn test_event_point_with_padding() {
     let received_point_clone = received_point.clone();
 
     let inner = Empty::new().style(|s| s.size(50.0, 50.0)).on_event_stop(
-        floem::event::listener::PointerDown,
+        floom::event::listener::PointerDown,
         move |_, pbe| {
             received_point_clone.set(Some(pbe.state.logical_point()));
         },
@@ -88,7 +88,7 @@ fn test_event_point_nested_padding() {
     let received_point_clone = received_point.clone();
 
     let inner = Empty::new().style(|s| s.size(40.0, 40.0)).on_event_stop(
-        floem::event::listener::PointerDown,
+        floom::event::listener::PointerDown,
         move |_, pbe| {
             received_point_clone.set(Some(pbe.state.logical_point()));
         },
@@ -128,7 +128,7 @@ fn test_event_point_with_translate() {
 
     let view = Empty::new()
         .style(|s| s.size(50.0, 50.0).translate_x(30.0).translate_y(20.0))
-        .on_event_stop(floem::event::listener::PointerDown, move |_, pbe| {
+        .on_event_stop(floom::event::listener::PointerDown, move |_, pbe| {
             received_point_clone.set(Some(pbe.state.logical_point()));
         });
 
@@ -161,7 +161,7 @@ fn test_event_point_with_scale_at_center() {
 
     let view = Empty::new()
         .style(|s| s.size(100.0, 100.0).scale(Pct(200.0)))
-        .on_event_stop(floem::event::listener::PointerDown, move |_, pbe| {
+        .on_event_stop(floom::event::listener::PointerDown, move |_, pbe| {
             received_point_clone.set(Some(pbe.state.logical_point()));
         });
 
@@ -191,7 +191,7 @@ fn test_event_point_with_scale_offset() {
     // Center is (50, 50), which stays fixed during scale
     let view = Empty::new()
         .style(|s| s.size(100.0, 100.0).scale(Pct(200.0)))
-        .on_event_stop(floem::event::listener::PointerDown, move |_, pbe| {
+        .on_event_stop(floom::event::listener::PointerDown, move |_, pbe| {
             received_point_clone.set(Some(pbe.state.logical_point()));
         });
 
@@ -223,7 +223,7 @@ fn test_event_point_with_scale_down() {
     // 100x100 view with 0.5x scale
     let view = Empty::new()
         .style(|s| s.size(100.0, 100.0).scale(Pct(50.0)))
-        .on_event_stop(floem::event::listener::PointerDown, move |_, pbe| {
+        .on_event_stop(floom::event::listener::PointerDown, move |_, pbe| {
             received_point_clone.set(Some(pbe.state.logical_point()));
         });
 
@@ -255,7 +255,7 @@ fn test_event_point_with_rotate_at_center() {
 
     let view = Empty::new()
         .style(|s| s.size(100.0, 100.0).rotate(45.0.deg()))
-        .on_event_stop(floem::event::listener::PointerDown, move |_, pbe| {
+        .on_event_stop(floom::event::listener::PointerDown, move |_, pbe| {
             received_point_clone.set(Some(pbe.state.logical_point()));
         });
 
@@ -287,7 +287,7 @@ fn test_event_point_with_nested_transforms() {
 
     let inner = Empty::new()
         .style(|s| s.size(40.0, 40.0).translate_x(5.0))
-        .on_event_stop(floem::event::listener::PointerDown, move |_, pbe| {
+        .on_event_stop(floom::event::listener::PointerDown, move |_, pbe| {
             received_point_clone.set(Some(pbe.state.logical_point()));
         });
 
@@ -322,7 +322,7 @@ fn test_event_point_padding_plus_scale() {
                 .scale(Pct(200.0))
                 .scale_about(AnchorAbout::CENTER)
         })
-        .on_event_stop(floem::event::listener::PointerDown, move |_, pbe| {
+        .on_event_stop(floom::event::listener::PointerDown, move |_, pbe| {
             received_point_clone.set(Some(pbe.state.logical_point()));
         });
 
@@ -357,7 +357,7 @@ fn test_pointer_move_coordinates() {
     let received_points_clone = received_points.clone();
 
     let view = Empty::new().style(|s| s.size(100.0, 100.0)).on_event_cont(
-        floem::event::listener::PointerMove,
+        floom::event::listener::PointerMove,
         move |_cx, event| {
             let pt = event.current.logical_point();
             received_points_clone.borrow_mut().push(pt);

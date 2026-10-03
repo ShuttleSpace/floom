@@ -6,9 +6,9 @@
 //! 3. Absolute positioned elements with z-index can escape parent clips
 //! 4. Nested clips accumulate (intersect) properly
 
-use floem::prelude::*;
-use floem::views::{Container, Empty, Scroll, Stack};
-use floem_legacy_test::{ClickTracker, HeadlessHarness, TestRoot, layers};
+use floom::prelude::*;
+use floom::views::{Container, Empty, Scroll, Stack};
+use floom_legacy_test::{ClickTracker, HeadlessHarness, TestRoot, layers};
 use serial_test::serial;
 
 // =============================================================================
@@ -184,7 +184,7 @@ fn test_nested_scroll_with_offset() {
 #[test]
 #[serial]
 #[should_panic]
-// Floem assumes all views create a stacking context and cannot escape. if we allow escaping in the future, this test would be expected to pass
+// Floom assumes all views create a stacking context and cannot escape. if we allow escaping in the future, this test would be expected to pass
 fn test_absolute_with_z_index_escapes_clip() {
     let root = TestRoot::new();
     let tracker = ClickTracker::new();
@@ -228,7 +228,7 @@ fn test_absolute_with_z_index_escapes_clip() {
 #[test]
 #[serial]
 #[should_panic]
-//Floem assumes all views create a stacking context and cannot escape. if we allow escaping in the future, this test would be expected to pass
+//Floom assumes all views create a stacking context and cannot escape. if we allow escaping in the future, this test would be expected to pass
 fn test_trigger_and_dropdown_click_dispatch() {
     let root = TestRoot::new();
     let tracker = ClickTracker::new();

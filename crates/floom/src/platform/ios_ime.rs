@@ -3,10 +3,10 @@
 //! iOS soft-keyboard / IME bridge.
 //!
 //! The lapce winit fork's iOS backend has no software-keyboard or IME support:
-//! it never emits `WindowEvent::Ime`, so Floem must drive the iOS keyboard
+//! it never emits `WindowEvent::Ime`, so Floom must drive the iOS keyboard
 //! itself. The approach is the standard iOS pattern — a hidden `UITextField`
 //! is added to the key window and made the first responder. Its
-//! `UITextFieldDelegate` captures edits and re-injects them into Floem as
+//! `UITextFieldDelegate` captures edits and re-injects them into Floom as
 //! `Event::Ime` (`Commit` / `Delete` / `Preedit`) through the same
 //! `UserEvent` event-loop proxy the rest of the app uses.
 //!
@@ -29,10 +29,10 @@ use objc2_ui_kit::{UIApplication, UITextField};
 use crate::app::{Application, UserEvent};
 use crate::event::ImeEvent;
 
-/// Neutral IME edit produced by the iOS keyboard delegate, destined for Floem.
+/// Neutral IME edit produced by the iOS keyboard delegate, destined for Floom.
 ///
 /// This is the payload carried by [`UserEvent::IosIme`]; it maps 1:1 onto the
-/// Floem-internal [`ImeEvent`] that `text_input` consumes.
+/// Floom-internal [`ImeEvent`] that `text_input` consumes.
 #[derive(Clone, Debug)]
 pub(crate) enum IosImeEvent {
     /// Text inserted at the cursor (typed character(s), paste, autofill…).
@@ -41,7 +41,7 @@ pub(crate) enum IosImeEvent {
     Delete { before: usize, after: usize },
     // `Preedit` / `Enabled` are reserved for CJK marked-text composition, which
     // is not yet wired from `UITextField.markedTextRange` (see docs/ios.md §Step
-    // 5). They are matched in `to_floem` but never constructed yet.
+    // 5). They are matched in `to_floom` but never constructed yet.
     #[allow(dead_code)]
     Preedit { text: String, cursor: Option<(usize, usize)> },
     #[allow(dead_code)]
@@ -50,8 +50,8 @@ pub(crate) enum IosImeEvent {
 }
 
 impl IosImeEvent {
-    /// Convert into the Floem-internal [`ImeEvent`] consumed by `text_input`.
-    pub(crate) fn to_floem(self) -> ImeEvent {
+    /// Convert into the Floom-internal [`ImeEvent`] consumed by `text_input`.
+    pub(crate) fn to_floom(self) -> ImeEvent {
         match self {
             IosImeEvent::Commit(text) => ImeEvent::Commit(text),
             IosImeEvent::Delete { before, after } => ImeEvent::DeleteSurrounding {
@@ -132,7 +132,7 @@ fn ensure_field(mtm: MainThreadMarker) {
 
     let field = UITextField::new(mtm);
     // Zero-size and fully transparent: it never covers a touch point (so it
-    // cannot intercept Floem's pointer input) yet can still become the first
+    // cannot intercept Floom's pointer input) yet can still become the first
     // responder and summon the system keyboard.
     field.setFrame(NSRect::ZERO);
     field.setAlpha(0.0);
@@ -142,7 +142,7 @@ fn ensure_field(mtm: MainThreadMarker) {
         window.addSubview(&field);
     }
 
-    // Build and install the delegate that translates edits into Floem IME.
+    // Build and install the delegate that translates edits into Floom IME.
     //
     // We cannot use the typed `UITextField::setDelegate` (which wants a
     // `&ProtocolObject<dyn UITextFieldDelegate>`): our delegate is a
@@ -176,8 +176,8 @@ fn delegate_class() -> &'static AnyClass {
     static CLASS: OnceLock<&'static AnyClass> = OnceLock::new();
     *CLASS.get_or_init(|| {
         let mut builder =
-            ClassBuilder::new(c"FloemIosImeDelegate", NSObject::class())
-                .expect("FloemIosImeDelegate class already registered");
+            ClassBuilder::new(c"FloomIosImeDelegate", NSObject::class())
+                .expect("FloomIosImeDelegate class already registered");
         unsafe {
             builder.add_method(
                 sel!(textField:shouldChangeCharactersInRange:replacementString:),
@@ -197,11 +197,11 @@ fn create_delegate() -> Retained<NSObject> {
     let cls = delegate_class();
     let obj: Option<Retained<NSObject>> =
         unsafe { objc2::msg_send![objc2::msg_send![cls, alloc], init] };
-    obj.expect("failed to allocate FloemIosImeDelegate")
+    obj.expect("failed to allocate FloomIosImeDelegate")
 }
 
 /// `UITextFieldDelegate` edit hook: translate the proposed text change into
-/// Floem `Commit` / `Delete` IME events.
+/// Floom `Commit` / `Delete` IME events.
 ///
 /// The first parameter is the delegate (`self`); `text_field` is the field the
 /// user is editing (our hidden host). We allow the change (returning `true`)
@@ -218,7 +218,7 @@ unsafe extern "C-unwind" fn should_change(
     let inserted = replacement.to_string();
 
     // `range` is expressed in UTF-16 code units; convert the deleted slice to
-    // UTF-8 to obtain the exact byte count Floem's `DeleteSurrounding` expects.
+    // UTF-8 to obtain the exact byte count Floom's `DeleteSurrounding` expects.
     let current_utf16: Vec<u16> = current_str.encode_utf16().collect();
     let loc = range.location as usize;
     let len = range.length as usize;

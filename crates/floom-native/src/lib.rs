@@ -1,4 +1,4 @@
-//! Native composition for Floem 2.0.
+//! Native composition for Floom 2.0.
 //!
 //! A *participant* is a view the framework does not paint — an `NSView`, an
 //! `HWND`, an Android `SurfaceView`, a KMS plane. This crate holds everything
@@ -6,9 +6,9 @@
 //! bounded in virtualized lists, the provider ABI a platform backend
 //! implements, and the controller that enforces their lifecycle.
 //!
-//! It is a **leaf crate**: it depends on `floem-types` and `floem-virtual` and
+//! It is a **leaf crate**: it depends on `floom-types` and `floom-virtual` and
 //! nothing else, so a platform backend can use the ABI without dragging in the
-//! framework. Host-side composition lives in `floem-app`; OS bridges live in
+//! framework. Host-side composition lives in `floom-app`; OS bridges live in
 //! the platform crates (decision D5 in the Phase 16 plan).
 //!
 //! Nothing here opens a window or creates a view. The phase's last mile is
@@ -28,7 +28,7 @@ pub use abi::{
 // Re-exported because they are part of the ABI's vocabulary: a provider
 // implementing `NativeViewProvider` needs them and should not have to guess
 // which crate they came from.
-pub use floem_types::{NativeViewId, Rect, ResourceId};
+pub use floom_types::{NativeViewId, Rect, ResourceId};
 
 pub use controller::NativeViewController;
 pub use fake::{FakeNativeProvider, NativeCommand, NativeCommandLog};

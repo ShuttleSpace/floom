@@ -118,7 +118,7 @@ pub(crate) use time::{Duration, Instant};
 ///
 /// On Android this launches an `ACTION_VIEW` intent through the JNI bridge
 /// (the `open_external` capability is reported as `true`). On other platforms
-/// Floem's core does not open URLs itself — desktop apps should use the `open`
+/// Floom's core does not open URLs itself — desktop apps should use the `open`
 /// crate directly (`open::that(url)`), so this returns an error there.
 pub fn open_url(url: &str) -> Result<(), String> {
     #[cfg(target_os = "android")]
@@ -137,7 +137,7 @@ pub fn open_url(url: &str) -> Result<(), String> {
     {
         let _ = url;
         Err(
-            "floem::platform::open_url is only implemented on Android, iOS and OpenHarmony; use the `open` crate on desktop"
+            "floom::platform::open_url is only implemented on Android, iOS and OpenHarmony; use the `open` crate on desktop"
                 .to_string(),
         )
     }

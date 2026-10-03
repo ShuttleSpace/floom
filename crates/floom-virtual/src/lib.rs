@@ -1,4 +1,4 @@
-//! Retained virtual scrolling viewport for Floem 2.0.
+//! Retained virtual scrolling viewport for Floom 2.0.
 //!
 //! `VirtualViewport` turns an unbounded item list into a small, stable set of
 //! materialized elements. It computes the visible item range from the scroll
@@ -7,7 +7,7 @@
 //! pool of elements (and native views) so memory stays flat regardless of list
 //! length.
 //!
-//! This crate depends only on `floem-types`; it has no knowledge of the element
+//! This crate depends only on `floom-types`; it has no knowledge of the element
 //! tree, renderer, or platform — virtualization is a pure geometry + key-reuse
 //! primitive.
 
@@ -16,7 +16,7 @@
 use std::collections::{HashMap, HashSet};
 use std::hash::Hash;
 
-use floem_types::ElementId;
+use floom_types::ElementId;
 
 /// A visible item range, expressed as `[start, end)` over item indices.
 pub type VisibleRange = std::ops::Range<usize>;

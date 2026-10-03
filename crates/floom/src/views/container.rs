@@ -1,6 +1,6 @@
 #![deny(missing_docs)]
 
-use floem_legacy_reactive::{Scope, UpdaterEffect};
+use floom_legacy_reactive::{Scope, UpdaterEffect};
 
 use crate::{
     context::UpdateCx,
@@ -22,7 +22,7 @@ impl Container {
     ///
     /// ## Example
     /// ```rust
-    /// use floem::views::{Container, Label};
+    /// use floom::views::{Container, Label};
     ///
     /// let wrapped = Container::new(Label::new("Content"));
     /// ```
@@ -42,8 +42,8 @@ impl Container {
     ///
     /// ## Example
     /// ```rust
-    /// use floem::prelude::*;
-    /// use floem::views::{Container, Label};
+    /// use floom::prelude::*;
+    /// use floom::views::{Container, Label};
     ///
     /// let count = RwSignal::new(0);
     ///

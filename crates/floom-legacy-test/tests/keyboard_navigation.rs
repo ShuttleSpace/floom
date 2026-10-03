@@ -7,12 +7,12 @@
 //! - Directional navigation via Alt+Arrow
 //! - Group-priority behavior for traversal
 
-use floem::event::Event;
-use floem::peniko::Brush;
-use floem::prelude::*;
-use floem::style::Background;
-use floem::{FocusNavMeta, understory_focus::FocusSymbol};
-use floem_legacy_test::prelude::*;
+use floom::event::Event;
+use floom::peniko::Brush;
+use floom::prelude::*;
+use floom::style::Background;
+use floom::{FocusNavMeta, understory_focus::FocusSymbol};
+use floom_legacy_test::prelude::*;
 use std::{cell::RefCell, rc::Rc};
 use ui_events::keyboard::{Code, Key, KeyState, KeyboardEvent, Location, Modifiers, NamedKey};
 
@@ -44,7 +44,7 @@ fn press_alt_arrow(harness: &mut HeadlessHarness, key: NamedKey, code: Code) {
     harness.dispatch_event(key_event_named(key, code, Modifiers::ALT));
 }
 
-fn background_is(harness: &HeadlessHarness, id: ViewId, color: floem::peniko::Color) -> bool {
+fn background_is(harness: &HeadlessHarness, id: ViewId, color: floom::peniko::Color) -> bool {
     let style = harness.get_computed_style(id);
     matches!(style.get(Background), Some(Brush::Solid(c)) if c == color)
 }

@@ -1,4 +1,4 @@
-use floem::{
+use floom::{
     peniko::Brush,
     prelude::*,
     style::{CustomStylable, CustomStyle},
@@ -58,7 +58,7 @@ pub fn draggable_sidebar_view() -> impl IntoView {
         })
         .on_event_stop(el::KeyUp, move |_cx, KeyboardEvent { key, .. }| {
             if let Key::Named(NamedKey::F11) = key {
-                floem::action::inspect();
+                floom::action::inspect();
             }
         })
 }

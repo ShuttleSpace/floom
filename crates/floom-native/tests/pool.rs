@@ -1,6 +1,6 @@
 //! Lifecycle and reuse tests for the native view pool.
 
-use floem_native::NativeViewPool;
+use floom_native::NativeViewPool;
 
 #[test]
 fn acquire_returns_same_slot_for_same_key() {

@@ -2,8 +2,8 @@
 //! a full scroll-and-recycle loop exercising the stable-key diff.
 
 use criterion::{BenchmarkId, Criterion, criterion_group, criterion_main};
-use floem_types::ElementId;
-use floem_virtual::{ItemSizes, VirtualViewport};
+use floom_types::ElementId;
+use floom_virtual::{ItemSizes, VirtualViewport};
 
 fn bench_visible_range(c: &mut Criterion) {
     let mut group = c.benchmark_group("visible_range");

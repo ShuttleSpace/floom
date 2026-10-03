@@ -1,18 +1,18 @@
 //! End-to-end exercises of the headless app shell.
 //!
-//! These are the first tests in the repo that run a whole Floem 2.0 *app*:
+//! These are the first tests in the repo that run a whole Floom 2.0 *app*:
 //! mount widgets, pump a frame, route input, assert what landed in the scene.
 
-use floem_app::WidgetHost;
-use floem_core::{Key, NamedKey, Point, Rect, Size};
-use floem_layout::{AlignItems, FlexDirection, JustifyContent, LayoutStyle};
-use floem_types::{KeyEvent, Modifiers, PointerEvent};
-use floem_widgets::{Button, Checkbox, Container, Text};
+use floom_app::WidgetHost;
+use floom_core::{Key, NamedKey, Point, Rect, Size};
+use floom_layout::{AlignItems, FlexDirection, JustifyContent, LayoutStyle};
+use floom_types::{KeyEvent, Modifiers, PointerEvent};
+use floom_widgets::{Button, Checkbox, Container, Text};
 
 /// `Counter` app: a label, a decrement button and an increment button.
 struct Counter {
     host: WidgetHost,
-    label: floem_app::NodeId,
+    label: floom_app::NodeId,
     value: i32,
 }
 
@@ -40,7 +40,7 @@ fn new_counter() -> Counter {
 
     let root = host.mount_root(
         column(8.0),
-        Container::new().background(floem_core::Color::WHITE),
+        Container::new().background(floom_core::Color::WHITE),
     );
     let label = host.mount(root, fixed(160.0, 20.0), Text::new("Count: 0"));
     host.mount(root, fixed(120.0, 28.0), Button::new("Increment"));
@@ -55,7 +55,7 @@ fn new_counter() -> Counter {
 
 impl Counter {
     /// Mirrors app state into the mounted label, then pumps a frame.
-    fn frame(&mut self) -> floem_app::FrameStats {
+    fn frame(&mut self) -> floom_app::FrameStats {
         let text = format!("Count: {}", self.value);
         self.host
             .widget_mut::<Text>(self.label)
@@ -79,7 +79,7 @@ impl Counter {
         down && up
     }
 
-    fn find_button(&self, label: &str) -> floem_app::NodeId {
+    fn find_button(&self, label: &str) -> floom_app::NodeId {
         // Nodes are mounted in order; buttons were pushed after the label.
         for index in 0..self.host.node_count() {
             let node = self.host.node_at(index).unwrap();
@@ -277,24 +277,24 @@ fn semantics_tree_carries_roles_and_labels() {
     // Purely structural nodes become a Group so the tree keeps its shape.
     assert_eq!(
         tree.get(root).expect("root has semantic children").role,
-        floem_accessibility::SemanticsRole::Group
+        floom_accessibility::SemanticsRole::Group
     );
 
     let label_id = counter.host.node_id(counter.label);
     let label_node = tree.get(label_id).expect("text publishes a node");
     assert_eq!(
         label_node.role,
-        floem_accessibility::SemanticsRole::StaticText
+        floom_accessibility::SemanticsRole::StaticText
     );
     assert_eq!(label_node.label, "Count: 0");
 
     let button_id = counter.host.node_id(counter.find_button("Increment"));
     let button_node = tree.get(button_id).expect("button publishes a node");
-    assert_eq!(button_node.role, floem_accessibility::SemanticsRole::Button);
+    assert_eq!(button_node.role, floom_accessibility::SemanticsRole::Button);
     assert!(
         button_node
             .state
-            .contains(floem_accessibility::SemanticsState::FOCUSABLE),
+            .contains(floom_accessibility::SemanticsState::FOCUSABLE),
         "an enabled control advertises focusability"
     );
 }
@@ -382,6 +382,6 @@ fn semantics_parents_children_in_mount_order() {
             .get(host.node_id(checkbox))
             .unwrap()
             .state
-            .contains(floem_accessibility::SemanticsState::CHECKED)
+            .contains(floom_accessibility::SemanticsState::CHECKED)
     );
 }

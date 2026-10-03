@@ -1,12 +1,12 @@
-//! Tier-0 primitive widgets for Floem 2.0.
+//! Tier-0 primitive widgets for Floom 2.0.
 //!
 //! The widget set mirrors the architecture's tier list: this crate holds the
 //! Tier-0 primitives ([`primitives`]); interactive controls, navigation and
 //! data widgets land in sibling crates as their phases complete.
 //!
-//! Primitives depend only on renderer-neutral contracts (`floem-core`),
-//! platform-neutral value types (`floem-types`), the retained scene
-//! (`floem-scene`) and the semantics schema (`floem-accessibility`). They never
+//! Primitives depend only on renderer-neutral contracts (`floom-core`),
+//! platform-neutral value types (`floom-types`), the retained scene
+//! (`floom-scene`) and the semantics schema (`floom-accessibility`). They never
 //! reach a concrete renderer, windowing system, or GPU backend.
 
 #![forbid(unsafe_code)]
@@ -22,9 +22,9 @@ pub mod primitives;
 pub mod testkit;
 mod widget_any;
 
-/// `WidgetAny` lives in `floem-core` (the type-erasure contract); re-exported
+/// `WidgetAny` lives in `floom-core` (the type-erasure contract); re-exported
 /// here so existing importers keep working.
-pub use floem_core::WidgetAny;
+pub use floom_core::WidgetAny;
 /// The accessibility bridge, shared with the sibling data-widget crate.
 pub use widget_any::{to_core_role, to_core_state};
 

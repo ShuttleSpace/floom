@@ -1,15 +1,15 @@
 //! A headless app, driven the way a real window would drive it.
 //!
-//! Three integration suites in `floem-app` had each grown their own copy of the
+//! Three integration suites in `floom-app` had each grown their own copy of the
 //! same harness — a fake platform, a runner, a scene-damage drain, a key
 //! mapping — and every new widget test paid for it again. This is that harness,
 //! once, with the parts a test actually reaches for named.
 //!
 //! ```no_run
-//! use floem_testkit::TestApp;
-//! use floem_widgets::Checkbox;
+//! use floom_testkit::TestApp;
+//! use floom_widgets::Checkbox;
 //!
-//! let mut app = TestApp::new(floem_types::Size::new(200.0, 32.0), Checkbox::new("Agree"));
+//! let mut app = TestApp::new(floom_types::Size::new(200.0, 32.0), Checkbox::new("Agree"));
 //! assert!(app.tap("Agree"), "the click repainted");
 //! assert!(app.widget::<Checkbox>("Agree").is_checked());
 //! ```
@@ -23,7 +23,7 @@
 //! drawn, the semantics that would be published, and whether any of it reached
 //! the screen as damage.
 //!
-//! It is not `floem_widgets::testkit`, which drives a *single* widget through a
+//! It is not `floom_widgets::testkit`, which drives a *single* widget through a
 //! recording context to prove that widget's own logic. This one proves the
 //! wiring *around* it: that the press the platform reported reached the control
 //! under the cursor, that the key reached whatever held focus, and that the
@@ -48,13 +48,13 @@
 
 #![forbid(unsafe_code)]
 
-use floem_app::{AppRunner, FrameStats, NodeId, WidgetHost};
-use floem_core::{SemanticsRole, WidgetAny};
-use floem_layout::LayoutStyle;
-use floem_platform::{FakePlatform, KeyCode, Platform, PlatformEvent, PointerButton, WindowConfig};
-use floem_renderer_software::SoftwarePresenter;
-use floem_scene::SceneNode;
-use floem_types::{Modifiers, Point, Rect, SceneNodeId, Size, WindowId};
+use floom_app::{AppRunner, FrameStats, NodeId, WidgetHost};
+use floom_core::{SemanticsRole, WidgetAny};
+use floom_layout::LayoutStyle;
+use floom_platform::{FakePlatform, KeyCode, Platform, PlatformEvent, PointerButton, WindowConfig};
+use floom_renderer_software::SoftwarePresenter;
+use floom_scene::SceneNode;
+use floom_types::{Modifiers, Point, Rect, SceneNodeId, Size, WindowId};
 
 /// Screen the tests use when the exact size does not matter.
 pub const DEFAULT_SIZE: Size = Size::new(800.0, 600.0);
@@ -139,7 +139,7 @@ impl TestApp {
 
     /// A window of `size` whose root is left to its own [`layout_request`].
     ///
-    /// [`layout_request`]: floem_core::Widget::layout_request
+    /// [`layout_request`]: floom_core::Widget::layout_request
     pub fn unpinned(size: Size, root: impl WidgetAny + 'static) -> Self {
         Self::boot(size, root, false)
     }

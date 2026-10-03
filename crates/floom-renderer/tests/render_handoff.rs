@@ -1,5 +1,5 @@
-use floem_renderer::SceneFrameQueue;
-use floem_scene::{Color, Point, Rect, Scene, SceneNode, Size};
+use floom_renderer::SceneFrameQueue;
+use floom_scene::{Color, Point, Rect, Scene, SceneNode, Size};
 use std::thread;
 use std::time::Duration;
 
@@ -13,7 +13,7 @@ fn render_thread_consumes_immutable_snapshot() {
     scene.begin_update();
     let _ = scene.insert(SceneNode::Rect {
         bounds: Rect::from_origin_size(Point::ZERO, Size::new(10.0, 10.0)),
-        fill: floem_types::Brush::from(Color::BLACK),
+        fill: floom_types::Brush::from(Color::BLACK),
         radius: 0.0,
 
         shadow: None,
@@ -46,7 +46,7 @@ fn bounded_queue_drops_oldest() {
     a.begin_update();
     let _ = a.insert(SceneNode::Rect {
         bounds: Rect::from_origin_size(Point::ZERO, Size::new(1.0, 1.0)),
-        fill: floem_types::Brush::from(Color::BLACK),
+        fill: floom_types::Brush::from(Color::BLACK),
         radius: 0.0,
 
         shadow: None,
@@ -56,7 +56,7 @@ fn bounded_queue_drops_oldest() {
     b.begin_update();
     let _ = b.insert(SceneNode::Rect {
         bounds: Rect::from_origin_size(Point::ZERO, Size::new(2.0, 2.0)),
-        fill: floem_types::Brush::from(Color::WHITE),
+        fill: floom_types::Brush::from(Color::WHITE),
         radius: 0.0,
 
         shadow: None,

@@ -104,9 +104,9 @@ done
 
 METADATA="$(cargo metadata --no-deps --format-version 1 2>/dev/null || true)"
 
-# The argument is usually an *example directory* name (`just build floem2-android
+# The argument is usually an *example directory* name (`just build floom2-android
 # android`), which does not always equal the Cargo package name (that folder's
-# package is `floem2-android-example`). Accept either spelling and resolve to
+# package is `floom2-android-example`). Accept either spelling and resolve to
 # the package + its directory.
 CRATE_DIR=""
 resolve_crate() {

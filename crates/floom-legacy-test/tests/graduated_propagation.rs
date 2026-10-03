@@ -7,11 +7,11 @@
 //! - Responsive changes propagate with correct flags
 //! - Views with selectors don't use the fast path
 
-use floem::peniko::{Brush, Color};
-use floem::prelude::*;
-use floem::prop;
-use floem::style::{Background, Style};
-use floem_legacy_test::prelude::*;
+use floom::peniko::{Brush, Color};
+use floom::prelude::*;
+use floom::prop;
+use floom::style::{Background, Style};
+use floom_legacy_test::prelude::*;
 use serial_test::serial;
 
 // ============================================================================
@@ -37,7 +37,7 @@ impl TestColorExt for Style {
 }
 
 // A test style class.
-floem::style_class!(pub TestButtonClass);
+floom::style_class!(pub TestButtonClass);
 
 // ============================================================================
 // Inherited-Only Fast Path Tests

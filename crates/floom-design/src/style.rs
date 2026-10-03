@@ -1,7 +1,7 @@
 //! Fluent construction of [`StyleProps`] and of a whole [`StyleSet`].
 
-use floem_style::{StyleProps, StyleSet};
-use floem_types::Color;
+use floom_style::{StyleProps, StyleSet};
+use floom_types::Color;
 
 use crate::variant::InteractionState;
 
@@ -110,7 +110,7 @@ impl StyleSetExt for StyleSet {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use floem_style::StyleState;
+    use floom_style::StyleState;
 
     #[test]
     fn a_border_cleared_to_zero_leaves_no_colour_behind() {

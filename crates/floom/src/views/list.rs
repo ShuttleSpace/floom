@@ -7,7 +7,7 @@ use crate::{
     style::{Style, StyleCx, recalc::StyleReason},
     style_class,
 };
-use floem_legacy_reactive::{Effect, RwSignal, SignalGet, SignalUpdate};
+use floom_legacy_reactive::{Effect, RwSignal, SignalGet, SignalUpdate};
 use ui_events::keyboard::{Key, KeyboardEvent, NamedKey};
 
 style_class!(pub ListClass);
@@ -73,7 +73,7 @@ impl List {
 ///
 /// ## Example
 /// ```rust
-/// use floem::views::*;
+/// use floom::views::*;
 /// list(
 ///     vec![1, 1, 2, 2, 3, 4, 5, 6, 7, 8, 9]
 ///         .iter()

@@ -1,7 +1,7 @@
 #![deny(missing_docs)]
 //! Navigation stack view driven by an explicit path.
 //!
-//! `NavigationStack` is Floem's path-based navigation primitive. The caller owns
+//! `NavigationStack` is Floom's path-based navigation primitive. The caller owns
 //! the navigation path and the stack reacts to that path over time, retaining
 //! views for the shared prefix and rebuilding only the changed tail.
 //!
@@ -15,14 +15,14 @@
 //! This means the common cases read naturally:
 //!
 //! ```rust
-//! # use floem::prelude::*;
-//! # use floem::views::NavigationStack;
+//! # use floom::prelude::*;
+//! # use floom::views::NavigationStack;
 //! # #[derive(Clone, Hash, Eq, PartialEq)]
 //! # struct Route(String);
 //! # impl IntoView for Route {
-//! #     type V = floem::views::Label;
-//! #     type Intermediate = floem::view::LazyView<String>;
-//! #     fn into_intermediate(self) -> Self::Intermediate { floem::view::LazyView::new(self.0) }
+//! #     type V = floom::views::Label;
+//! #     type Intermediate = floom::view::LazyView<String>;
+//! #     fn into_intermediate(self) -> Self::Intermediate { floom::view::LazyView::new(self.0) }
 //! # }
 //! let path = RwSignal::new(vec![Route("Home".to_string())]);
 //!
@@ -32,8 +32,8 @@
 //! Or with explicit identity and destination view construction:
 //!
 //! ```rust
-//! # use floem::prelude::*;
-//! # use floem::views::NavigationStack;
+//! # use floom::prelude::*;
+//! # use floom::views::NavigationStack;
 //! # #[derive(Clone)]
 //! # enum Route { Home, Detail(u64) }
 //! let path = RwSignal::new(vec![Route::Home]);
@@ -89,7 +89,7 @@
 
 use std::{any::Any, hash::Hash, marker::PhantomData, rc::Rc};
 
-use floem_legacy_reactive::{Effect, ReadSignal, RwSignal, Scope, SignalWith};
+use floom_legacy_reactive::{Effect, ReadSignal, RwSignal, Scope, SignalWith};
 use smallvec::SmallVec;
 
 use crate::{
@@ -413,15 +413,15 @@ where
 /// `Eq + Hash + Clone`:
 ///
 /// ```rust
-/// # use floem::prelude::*;
-/// # use floem::views::NavigationStack;
+/// # use floom::prelude::*;
+/// # use floom::views::NavigationStack;
 /// # #[derive(Clone, Eq, PartialEq, Hash)]
 /// # struct Route(String);
 /// # impl IntoView for Route {
-/// #     type V = floem::views::Label;
-/// #     type Intermediate = floem::view::LazyView<String>;
+/// #     type V = floom::views::Label;
+/// #     type Intermediate = floom::view::LazyView<String>;
 /// #     fn into_intermediate(self) -> Self::Intermediate {
-/// #         floem::view::LazyView::new(self.0)
+/// #         floom::view::LazyView::new(self.0)
 /// #     }
 /// # }
 /// let path = RwSignal::new(vec![Route("Home".to_string())]);
@@ -433,8 +433,8 @@ where
 /// construction:
 ///
 /// ```rust
-/// # use floem::prelude::*;
-/// # use floem::views::NavigationStack;
+/// # use floom::prelude::*;
+/// # use floom::views::NavigationStack;
 /// # #[derive(Clone)]
 /// # enum Route { Home, Detail(u64) }
 /// let path = RwSignal::new(vec![Route::Home]);
@@ -492,15 +492,15 @@ where
     /// # Example: route items are their own views
     ///
     /// ```rust
-    /// # use floem::prelude::*;
-    /// # use floem::views::NavigationStack;
+    /// # use floom::prelude::*;
+    /// # use floom::views::NavigationStack;
     /// # #[derive(Clone, Eq, PartialEq, Hash)]
     /// # struct Route(String);
     /// # impl IntoView for Route {
-    /// #     type V = floem::views::Label;
-    /// #     type Intermediate = floem::view::LazyView<String>;
+    /// #     type V = floom::views::Label;
+    /// #     type Intermediate = floom::view::LazyView<String>;
     /// #     fn into_intermediate(self) -> Self::Intermediate {
-    /// #         floem::view::LazyView::new(self.0)
+    /// #         floom::view::LazyView::new(self.0)
     /// #     }
     /// # }
     /// let path = RwSignal::new(vec![Route("Home".to_string())]);
@@ -511,8 +511,8 @@ where
     /// # Example: route items need explicit key and view functions
     ///
     /// ```rust
-    /// # use floem::prelude::*;
-    /// # use floem::views::NavigationStack;
+    /// # use floom::prelude::*;
+    /// # use floom::views::NavigationStack;
     /// # #[derive(Clone)]
     /// # enum Route { Home, Detail(u64) }
     /// let path = RwSignal::new(vec![Route::Home]);

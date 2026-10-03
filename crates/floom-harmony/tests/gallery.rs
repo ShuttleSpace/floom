@@ -5,17 +5,17 @@
 //! a claim about the raster, not about the property table, so the strongest test
 //! here reads pixels: the corner of a filled capsule must not be filled.
 
-use floem_design::{
+use floom_design::{
     CellPaint, ControlSize, GallerySample, InteractionState, Variant, contrast_ratio, gallery_size,
 };
-use floem_harmony::{
+use floom_harmony::{
     GALLERY_COLUMNS, HarmonyTheme, button_gallery, button_gallery_labels, button_metrics,
     button_style,
 };
-use floem_snapshot::{PixelSnapshot, SceneSnapshot, assert_snapshot, snapshots_dir};
-use floem_theme::ColorScheme;
-use floem_scene::SceneNode;
-use floem_types::{Color, Size};
+use floom_snapshot::{PixelSnapshot, SceneSnapshot, assert_snapshot, snapshots_dir};
+use floom_theme::ColorScheme;
+use floom_scene::SceneNode;
+use floom_types::{Color, Size};
 
 fn light() -> HarmonyTheme {
     HarmonyTheme::light()
@@ -37,7 +37,7 @@ fn solo_filled_shape(theme: &HarmonyTheme, size: ControlSize, square: bool) -> P
         size,
         InteractionState::Rest,
     )];
-    let scene = floem_design::gallery_scene(&samples, theme.colors.background, 1, |sample| {
+    let scene = floom_design::gallery_scene(&samples, theme.colors.background, 1, |sample| {
         let mut props = button_style(theme, sample.variant, sample.size, sample.state);
         if square {
             props.radius = Some(0.0);

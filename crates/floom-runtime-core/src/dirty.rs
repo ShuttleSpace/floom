@@ -1,7 +1,7 @@
 //! Dirty flags and invalidation helpers.
 
 use bitflags::bitflags;
-use floem_types::ElementId;
+use floom_types::ElementId;
 
 use crate::arena::ElementArena;
 

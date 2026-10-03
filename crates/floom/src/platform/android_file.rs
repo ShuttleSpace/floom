@@ -9,12 +9,12 @@
 //! `Activity.onActivityResult`.
 //!
 //! Because `onActivityResult` is a Java method on the `Activity`, the app must
-//! forward it to Floem. The app's `android_main` host should subclass
-//! `android.app.NativeActivity` (see `examples/android/FloemNativeActivity.java`)
+//! forward it to Floom. The app's `android_main` host should subclass
+//! `android.app.NativeActivity` (see `examples/android/FloomNativeActivity.java`)
 //! and, from its `onActivityResult`, call the native method that invokes
-//! [`dispatch_activity_result`]. Floem stores the pending callback keyed by
+//! [`dispatch_activity_result`]. Floom stores the pending callback keyed by
 //! request code and invokes it when the result arrives — on the main looper
-//! thread, which is also Floem's event-loop thread, so the reactive update is
+//! thread, which is also Floom's event-loop thread, so the reactive update is
 //! safe.
 //!
 //! **Note on paths:** SAF returns `content://` URIs, not filesystem paths. The
@@ -31,7 +31,7 @@ use jni::{
 use parking_lot::Mutex;
 use std::sync::atomic::{AtomicU32, Ordering};
 
-use floem_legacy_reactive::Scope;
+use floom_legacy_reactive::Scope;
 
 use crate::ext_event::create_ext_action;
 use crate::platform::android_jni::AndroidJni;

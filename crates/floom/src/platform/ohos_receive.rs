@@ -1,6 +1,6 @@
 //! Receiving files shared into the app from another OpenHarmony app.
 //!
-//! When the user shares a file (or opens a file with Floem via the share sheet /
+//! When the user shares a file (or opens a file with Floom via the share sheet /
 //! "open with"), the system delivers it to the app's `Ability` through the
 //! `Want`:
 //!
@@ -34,7 +34,7 @@ type SharedFilesHandler = Box<dyn Fn(Vec<SharedFile>) + 'static>;
 
 // OpenHarmony delivers shared files on the main (Ability) thread, so the handler
 // is not required to be `Send`. A `thread_local` avoids the `Sync` bound a
-// `static Mutex` would impose on a `!Send` handler (Floem's UI signals such as
+// `static Mutex` would impose on a `!Send` handler (Floom's UI signals such as
 // `RwSignal` are `!Send`), while still giving a single global registration
 // point per thread.
 thread_local! {

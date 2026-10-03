@@ -1,7 +1,7 @@
 //! # Style
 //! Traits and functions that allow for styling `Views`.
 //!
-//! # The Floem Style System
+//! # The Floom Style System
 //!
 //! ## The [Style] struct
 //!
@@ -41,7 +41,7 @@
 //!
 //! Calls to `style` from the decorators trait have a higher precedence than the `view_style` method, meaning calls to `style` will override any matching `StyleKeyInfo` that came from the `view_style` method.
 //!
-//! If you make repeated calls to `style` from the decorators trait, each will be added separately to the `ViewState` that is managed by Floem and associated with the `ViewId` of the view that `style` was called on.
+//! If you make repeated calls to `style` from the decorators trait, each will be added separately to the `ViewState` that is managed by Floom and associated with the `ViewId` of the view that `style` was called on.
 //! The `ViewState` stores a `Stack` of styles and later calls to `style` (and thus larger indicies in the style stack) will take precedence over earlier calls.
 //!
 //! `style` from the deocrators trait is reactive and the function that returns the style map with be re-run in response to any reactive updates that it depends on.
@@ -115,7 +115,7 @@
 //!
 //! - optionally set how the prop should be interpolated (allowing you to customize what interpolating means in the context of your prop)
 //!
-//! - optionally provide a `debug_view` for your prop, which debug view will be used in the Floem inspector. This means that you can customize a complex debug experience for your prop with very little effort (and it really can be any arbitrary view. no restrictions.)
+//! - optionally provide a `debug_view` for your prop, which debug view will be used in the Floom inspector. This means that you can customize a complex debug experience for your prop with very little effort (and it really can be any arbitrary view. no restrictions.)
 //!
 //! - optionally add a custom implementation of how a prop should be combined with another prop. This is different from interpolation and is useful when you want to specify how properties should override each other. The default implementation just replaces the old value with a new value, but if you have a prop with multiple optional fields, you might want to only replace the fields that have a `Some` value.
 //!
@@ -127,7 +127,7 @@
 //!
 //! You can create custom extractors and embed them in your custom views so that you can get out any built in prop, or any of your custom props from the final combined style that is applied to your `View`.
 
-use floem_legacy_renderer::text::FontWeight as FontWeightProp;
+use floom_legacy_renderer::text::FontWeight as FontWeightProp;
 use peniko::color::palette;
 use peniko::kurbo::{self, Affine, RoundedRect, Stroke, Vec2};
 use peniko::{Brush, Color};
@@ -883,7 +883,7 @@ pub struct Style {
     /// The effect context that was active when this style was created.
     /// This is restored when evaluating context mappings and selectors to ensure
     /// reactive dependencies are tracked correctly.
-    effect_context: Option<Rc<dyn floem_legacy_reactive::EffectTrait>>,
+    effect_context: Option<Rc<dyn floom_legacy_reactive::EffectTrait>>,
 }
 impl Default for Style {
     fn default() -> Self {
@@ -893,7 +893,7 @@ impl Default for Style {
 
 impl Style {
     fn with_capacity(capacity: usize) -> Self {
-        let effect_context = floem_legacy_reactive::Runtime::get_current_effect();
+        let effect_context = floom_legacy_reactive::Runtime::get_current_effect();
         let map = Rc::new(fx_hash_map_with_capacity(capacity));
         Self {
             merge_id: next_style_merge_id(),
@@ -1300,7 +1300,7 @@ impl Style {
     pub(crate) fn apply_iter<'a>(
         &mut self,
         iter: impl Iterator<Item = (&'a StyleKey, &'a Rc<dyn Any>)>,
-        source_effect_context: Option<Rc<dyn floem_legacy_reactive::EffectTrait>>,
+        source_effect_context: Option<Rc<dyn floom_legacy_reactive::EffectTrait>>,
     ) {
         if self.effect_context.is_none() && source_effect_context.is_some() {
             self.effect_context = source_effect_context;
@@ -2015,7 +2015,7 @@ define_builtin_props!(
 
     /// Highlight color for selected text.
     ///
-    /// Shared by labels, text inputs, and satellite editor views (`floem-editor`).
+    /// Shared by labels, text inputs, and satellite editor views (`floom-editor`).
     SelectionColor selection_color { tr }: Brush {} = Brush::Solid(palette::css::BLACK.with_alpha(0.5)),
 
     /// Controls whether the view's text can be selected.
@@ -2170,8 +2170,8 @@ define_builtin_props!(
     ///
     /// **Example:**
     /// ```rust
-    /// # use floem::peniko::kurbo::Affine;
-    /// # use floem::style::Style;
+    /// # use floom::peniko::kurbo::Affine;
+    /// # use floom::style::Style;
     /// let _style = Style::new()
     ///     .translate_x(10.0) // Applied first
     ///     .scale(1.5) // Applied second
@@ -2767,8 +2767,8 @@ impl Style {
     /// # Examples
     /// ```
     /// // In a style sheet or on a parent view
-    /// use floem::prelude::*;
-    /// use floem::style::Style;
+    /// use floom::prelude::*;
+    /// use floom::style::Style;
     /// Style::new().custom_style_class(|s: dropdown::DropdownCustomStyle| s.close_on_accept(false));
     /// // This property is now set on the `DropdownClass` class and will be applied to any dropdowns that are children of this view.
     /// ```
@@ -3297,9 +3297,9 @@ impl Style {
     /// Applies a shadow for the stylized view. Use [BoxShadow] builder
     /// to construct each shadow.
     /// ```rust
-    /// use floem::prelude::*;
-    /// use floem::prelude::palette::css;
-    /// use floem::style::BoxShadow;
+    /// use floom::prelude::*;
+    /// use floom::prelude::palette::css;
+    /// use floom::style::BoxShadow;
     ///
     /// empty().style(|s| s.apply_box_shadows(vec![
     ///    BoxShadow::new()
@@ -3316,7 +3316,7 @@ impl Style {
     /// If you only specify one shadow on the view, use standard style methods directly
     /// on [Style] struct:
     /// ```rust
-    /// use floem::prelude::*;
+    /// use floom::prelude::*;
     /// empty().style(|s| s
     ///     .box_shadow_top_offset(-5.)
     ///     .box_shadow_bottom_offset(30.)
@@ -3470,7 +3470,7 @@ impl Style {
     ///
     /// # Example
     /// ```rust
-    /// use floem::style::Style;
+    /// use floom::style::Style;
     ///
     /// // Create a full-screen overlay
     /// Style::new().fixed().inset(0.0);
@@ -3569,7 +3569,7 @@ impl Style {
     /// Allow the application of a function if the option exists.
     /// This is useful for chaining together a bunch of optional style changes.
     /// ```rust
-    /// use floem::style::Style;
+    /// use floom::style::Style;
     /// let maybe_none: Option<i32> = None;
     /// let style = Style::default()
     ///     .apply_opt(Some(5.0), Style::padding) // ran
@@ -3584,7 +3584,7 @@ impl Style {
     /// Allow the application of a function if the condition holds.
     /// This is useful for chaining together optional style changes.
     /// ```rust
-    /// use floem::style::Style;
+    /// use floom::style::Style;
     /// let style = Style::default()
     ///     .apply_if(true, |s| s.padding(5.0)) // ran
     ///     .apply_if(false, |s| s.margin(5.0)); // not ran
@@ -3597,7 +3597,7 @@ impl Style {
     ///
     /// # Examples
     /// ```
-    /// use floem::prelude::*;
+    /// use floom::prelude::*;
     /// text("test").style(|s| s.custom(|s: LabelCustomStyle| s.selectable(false)));
     /// ```
     ///
@@ -3610,7 +3610,7 @@ impl Style {
     ///
     /// # Examples
     /// ```
-    /// use floem::prelude::*;
+    /// use floom::prelude::*;
     /// text("test").style(|s| s.apply_custom(LabelCustomStyle::new().selectable(false)));
     /// ```
     ///

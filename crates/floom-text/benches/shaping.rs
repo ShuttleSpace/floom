@@ -1,7 +1,7 @@
 use std::hint::black_box;
 
 use criterion::{Criterion, criterion_group, criterion_main};
-use floem_text::{LayoutCache, TextLayoutOptions, TextShaper};
+use floom_text::{LayoutCache, TextLayoutOptions, TextShaper};
 
 fn shaping_uncached(c: &mut Criterion) {
     let mut shaper = TextShaper::new();

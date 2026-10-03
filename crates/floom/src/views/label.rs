@@ -19,8 +19,8 @@ use crate::{
     },
     view::{LayoutNodeCx, View},
 };
-use floem_legacy_reactive::UpdaterEffect;
-use floem_legacy_renderer::Renderer;
+use floom_legacy_reactive::UpdaterEffect;
+use floom_legacy_renderer::Renderer;
 use peniko::{
     Brush,
     color::palette::{self},
@@ -67,10 +67,10 @@ style_class!(
 /// # Example
 ///
 /// ```rust
-/// # use floem::event::EventPropagation;
-/// # use floem::prelude::*;
-/// # use floem::style::{NoWrapOverflow, TextOverflow};
-/// # use floem::text::TextOverflowChanged;
+/// # use floom::event::EventPropagation;
+/// # use floom::prelude::*;
+/// # use floom::style::{NoWrapOverflow, TextOverflow};
+/// # use floom::text::TextOverflowChanged;
 /// Label::derived(|| "Some long text that might overflow")
 ///     .style(|s| s.text_overflow(TextOverflow::NoWrap(NoWrapOverflow::Ellipsis)))
 ///     .on_event(TextOverflowChanged::listener(), |_cx, event| {
@@ -131,7 +131,7 @@ impl Label {
     ///
     /// ## Example
     /// ```rust
-    /// use floem::views::*;
+    /// use floom::views::*;
     ///
     /// Label::new("Hello, world!");
     /// Label::new(42);
@@ -152,7 +152,7 @@ impl Label {
     ///
     /// ## Example
     /// ```rust
-    /// use floem::{reactive::*, views::*};
+    /// use floom::{reactive::*, views::*};
     ///
     /// let count = RwSignal::new(0);
     /// Label::derived(move || format!("Count: {}", count.get()));
@@ -182,7 +182,7 @@ impl Label {
 ///
 /// ## Example
 /// ```rust
-/// use floem::views::*;
+/// use floom::views::*;
 ///
 /// stack((
 ///    text("non-reactive-text"),
@@ -204,7 +204,7 @@ pub fn static_label(label: impl Into<String>) -> Label {
 ///
 /// ## Example
 /// ```rust
-/// use floem::{reactive::*, views::*};
+/// use floom::{reactive::*, views::*};
 ///
 /// let text = RwSignal::new("Reactive text to be displayed".to_string());
 ///

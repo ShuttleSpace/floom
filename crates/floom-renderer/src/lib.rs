@@ -7,13 +7,13 @@ mod frame_queue;
 mod present;
 
 pub use external::{ExternalFrame, ExternalTextureCache, ExternalTextureStats, ImportDecision};
-pub use floem_scene::{DamageRegion, ResourceRegistry, Scene, SceneNode};
-pub use floem_types::{Color, Point, Rect, ResourceId, SceneNodeId, Size};
+pub use floom_scene::{DamageRegion, ResourceRegistry, Scene, SceneNode};
+pub use floom_types::{Color, Point, Rect, ResourceId, SceneNodeId, Size};
 pub use frame_queue::{FrameHandoffStats, SceneFrameQueue, SceneSnapshot};
 pub use present::{AttachedSurface, Presenter, SurfaceHandles};
 
-use floem_scene::Scene as SceneGraph;
-use floem_types::{SurfaceId, WindowId};
+use floom_scene::Scene as SceneGraph;
+use floom_types::{SurfaceId, WindowId};
 
 /// Where a frame is presented.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

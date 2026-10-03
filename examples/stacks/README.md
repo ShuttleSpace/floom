@@ -1,2 +1,2 @@
-In this example you can see the four different types of stacks floem has and
+In this example you can see the four different types of stacks floom has and
 their differences.

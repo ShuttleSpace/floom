@@ -4,8 +4,8 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-floem = { path = "../../crates/floom", features = ["skia"] }
-floem-editor = { path = "../../crates/ecosystem/floem-editor/floem-editor" }
+floom = { path = "../../crates/floom", features = ["skia"] }
+floom-editor = { path = "../../crates/ecosystem/floom-editor/floom-editor" }
 strum = { workspace = true }
 files = { path = "../files", optional = true }
 
@@ -14,5 +14,5 @@ signpost = "*"
 
 [features]
 default = ["full"]
-vello = ["floem/vello"]
+vello = ["floom/vello"]
 full = ["dep:files"]

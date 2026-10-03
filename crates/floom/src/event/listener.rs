@@ -800,8 +800,8 @@ mod inner {
         ///
         /// To only respond when this specific element gains focus (not descendants):
         /// ```rust
-        /// # use floem::prelude::*;
-        /// # let view = floem::views::Empty::new();
+        /// # use floom::prelude::*;
+        /// # let view = floom::views::Empty::new();
         /// view.on_event_stop(listener::FocusGained, |cx, _| {
         ///     if cx.phase.is_target() {
         ///         // Only this element gained focus
@@ -811,9 +811,9 @@ mod inner {
         ///
         /// Or configure which phases to listen to:
         /// ```rust
-        /// # use floem::context::{EventCallbackConfig, Phases};
-        /// # use floem::prelude::*;
-        /// # let view = floem::views::Empty::new();
+        /// # use floom::context::{EventCallbackConfig, Phases};
+        /// # use floom::prelude::*;
+        /// # let view = floom::views::Empty::new();
         /// view.on_event_stop_with_config(
         ///     listener::FocusGained,
         ///     EventCallbackConfig { phases: Phases::TARGET },
@@ -825,9 +825,9 @@ mod inner {
         ///
         /// To listen during capture phase (fires before descendants):
         /// ```rust
-        /// # use floem::context::{EventCallbackConfig, Phases};
-        /// # use floem::prelude::*;
-        /// # let view = floem::views::Empty::new();
+        /// # use floom::context::{EventCallbackConfig, Phases};
+        /// # use floom::prelude::*;
+        /// # let view = floom::views::Empty::new();
         /// view.on_event_stop_with_config(
         ///     listener::FocusGained,
         ///     EventCallbackConfig { phases: Phases::CAPTURE },
@@ -857,8 +857,8 @@ mod inner {
         ///
         /// To only respond when this specific element loses focus (not descendants):
         /// ```rust
-        /// # use floem::prelude::*;
-        /// # let view = floem::views::Empty::new();
+        /// # use floom::prelude::*;
+        /// # let view = floom::views::Empty::new();
         /// view.on_event_stop(listener::FocusLost, |cx, _| {
         ///     if cx.phase.is_target() {
         ///         // Only this element lost focus
@@ -868,9 +868,9 @@ mod inner {
         ///
         /// Or configure which phases to listen to:
         /// ```rust
-        /// # use floem::context::{EventCallbackConfig, Phases};
-        /// # use floem::prelude::*;
-        /// # let view = floem::views::Empty::new();
+        /// # use floom::context::{EventCallbackConfig, Phases};
+        /// # use floom::prelude::*;
+        /// # let view = floom::views::Empty::new();
         /// view.on_event_stop_with_config(
         ///     listener::FocusLost,
         ///     EventCallbackConfig { phases: Phases::TARGET },
@@ -882,9 +882,9 @@ mod inner {
         ///
         /// To listen during capture phase (fires before descendants):
         /// ```rust
-        /// # use floem::context::{EventCallbackConfig, Phases};
-        /// # use floem::prelude::*;
-        /// # let view = floem::views::Empty::new();
+        /// # use floom::context::{EventCallbackConfig, Phases};
+        /// # use floom::prelude::*;
+        /// # let view = floom::views::Empty::new();
         /// view.on_event_stop_with_config(
         ///     listener::FocusLost,
         ///     EventCallbackConfig { phases: Phases::CAPTURE },

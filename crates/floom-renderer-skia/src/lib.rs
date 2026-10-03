@@ -1,8 +1,8 @@
 //! Skia-oriented Scene adapter (command recording; GPU submit stays in legacy crate).
 
-use floem_renderer::{FrameInfo, Renderer};
-use floem_scene::{DamageRegion, Scene, SceneNode};
-use floem_types::{Color, Filter, Rect};
+use floom_renderer::{FrameInfo, Renderer};
+use floom_scene::{DamageRegion, Scene, SceneNode};
+use floom_types::{Color, Filter, Rect};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum SkiaCommand {
@@ -12,10 +12,10 @@ pub enum SkiaCommand {
         /// path maps a gradient to an `SkShader`, a solid to a plain paint
         /// colour. Carried structurally so the contract tests can compare
         /// fills without linking Skia.
-        brush: floem_types::Brush,
+        brush: floom_types::Brush,
         /// Drop shadow requested behind the fill; the submit path turns it
         /// into an `SkBlurImageFilter`-based draw (see the type's docs).
-        shadow: Option<floem_types::Shadow>,
+        shadow: Option<floom_types::Shadow>,
     },
     /// A path, in Skia's own shape vocabulary: `SkPath` holds the segments and
     /// a `SkPaint` decides fill or stroke. Recorded as the segment count plus
@@ -24,7 +24,7 @@ pub enum SkiaCommand {
     DrawPath {
         bounds: Rect,
         segments: usize,
-        fill: Option<floem_types::Brush>,
+        fill: Option<floom_types::Brush>,
         stroke: Option<(f64, Color)>,
     },
     /// `canvas.clipPath` / `clipRRect`. Skia keeps the same push/pop stack the
@@ -78,7 +78,7 @@ pub enum SkiaCommand {
     /// dropping it would leave a custom effect reading as plain transparency.
     Shader {
         bounds: Rect,
-        shader: floem_types::Shader,
+        shader: floom_types::Shader,
     },
 }
 
@@ -127,7 +127,7 @@ impl Renderer for SkiaRendererAdapter {
                 }
                 SceneNode::ClipPush { region } => self.commands.push(SkiaCommand::PushClip {
                     bounds: region.bounds(),
-                    rounded: !matches!(region, floem_types::ClipRegion::Rect(_)),
+                    rounded: !matches!(region, floom_types::ClipRegion::Rect(_)),
                 }),
                 SceneNode::ClipPop => self.commands.push(SkiaCommand::PopClip),
                 SceneNode::GroupPush { transform } => {
@@ -167,10 +167,10 @@ impl Renderer for SkiaRendererAdapter {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use floem_renderer::{FrameInfo, render_once};
-    use floem_renderer_software::SoftwareRenderer;
-    use floem_scene::{Point, SceneNode, Size};
-    use floem_types::{Color, Shader, Transform};
+    use floom_renderer::{FrameInfo, render_once};
+    use floom_renderer_software::SoftwareRenderer;
+    use floom_scene::{Point, SceneNode, Size};
+    use floom_types::{Color, Shader, Transform};
 
     #[test]
     fn skia_and_software_see_same_rect_scene() {
@@ -178,7 +178,7 @@ mod tests {
         scene.begin_update();
         let _ = scene.insert(SceneNode::Rect {
             bounds: Rect::from_origin_size(Point::new(1.0, 1.0), Size::new(2.0, 2.0)),
-            fill: floem_types::Brush::from(Color::rgb(1, 2, 3)),
+            fill: floom_types::Brush::from(Color::rgb(1, 2, 3)),
             radius: 0.0,
 
             shadow: None,
@@ -206,7 +206,7 @@ mod tests {
         });
         let _ = scene.insert(SceneNode::Rect {
             bounds: Rect::from_origin_size(Point::new(1.0, 1.0), Size::new(4.0, 4.0)),
-            fill: floem_types::Brush::from(Color::rgb(9, 9, 9)),
+            fill: floom_types::Brush::from(Color::rgb(9, 9, 9)),
             radius: 0.0,
 
             shadow: None,
@@ -247,7 +247,7 @@ mod tests {
         });
         let _ = scene.insert(SceneNode::Rect {
             bounds: Rect::from_origin_size(Point::new(2.0, 2.0), Size::new(6.0, 6.0)),
-            fill: floem_types::Brush::from(Color::BLACK),
+            fill: floom_types::Brush::from(Color::BLACK),
             radius: 0.0,
             shadow: None,
         });
@@ -268,7 +268,7 @@ mod tests {
                 },
                 SkiaCommand::FillRect {
                     bounds: Rect::from_origin_size(Point::new(2.0, 2.0), Size::new(6.0, 6.0)),
-                    brush: floem_types::Brush::from(Color::BLACK),
+                    brush: floom_types::Brush::from(Color::BLACK),
                     shadow: None,
                 },
                 SkiaCommand::PopFilter,
@@ -287,7 +287,7 @@ mod tests {
     /// the others do not.
     #[test]
     fn skia_records_the_same_clip_brackets_and_paths_the_scene_carries() {
-        use floem_types::{ClipRegion, Path, Point as P};
+        use floom_types::{ClipRegion, Path, Point as P};
 
         let mut scene = Scene::new();
         scene.begin_update();

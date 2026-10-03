@@ -19,7 +19,7 @@ impl Clip {
     ///
     /// ## Example
     /// ```rust
-    /// use floem::views::{Clip, Label};
+    /// use floom::views::{Clip, Label};
     ///
     /// let clipped = Clip::new(Label::new("Clipped content"));
     /// ```

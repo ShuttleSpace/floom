@@ -21,10 +21,10 @@
 
 use std::path::{Path, PathBuf};
 
-const PLAN: &str = "docs/superpowers/plans/2026-09-02-floem-2-complete-implementation-plan.md";
+const PLAN: &str = "docs/superpowers/plans/2026-09-02-floom-2-complete-implementation-plan.md";
 
 fn repo_root() -> PathBuf {
-    // CARGO_MANIFEST_DIR = <repo>/app/floem2
+    // CARGO_MANIFEST_DIR = <repo>/crates/floom2
     Path::new(env!("CARGO_MANIFEST_DIR")).join("../..")
 }
 
@@ -118,8 +118,8 @@ fn looks_like_path(token: &str) -> bool {
 /// Resolves the evidence tokens of one line, in order.
 ///
 /// The matrix writes bare filenames relative to whatever it named earlier in
-/// the same line — `runtime/floem-runtime-core/src/arena.rs` + `arena_tests.rs`,
-/// or `platform/floem-platform-desktop` (… incl. `lifecycle.rs`, …). A
+/// the same line — `crates/floom-runtime-core/src/arena.rs` + `arena_tests.rs`,
+/// or `crates/floom-platform-desktop` (… incl. `lifecycle.rs`, …). A
 /// repo-root join would call all of those missing. So the resolver carries the
 /// directory the line last named and looks in it (and its `src`/`tests`/
 /// `benches`) for a bare filename, which is what a reader does.
@@ -194,7 +194,7 @@ fn every_path_the_matrix_names_as_evidence_exists() {
         let mut resolver = Resolver::new(root.clone());
         for token in tokens(&body) {
             // Resolve *every* token, in order: a bare crate name such as
-            // `floem-platform-desktop` is not path-like, but it is what the
+            // `floom-platform-desktop` is not path-like, but it is what the
             // bare filenames later in the same line are relative to. Only the
             // path-like ones are then held to existing.
             let resolved = resolver.resolve(&token).is_some();

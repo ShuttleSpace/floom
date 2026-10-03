@@ -54,7 +54,7 @@ impl Default for AccessState {
 /// An action a screen reader (or other assistive technology) can request on a
 /// node.
 ///
-/// The platform accessibility API delivers these to Floem; Floem performs them
+/// The platform accessibility API delivers these to Floom; Floom performs them
 /// via [`crate::accessibility::AccessibilityBackend::perform_action`] and
 /// returns whether it handled the request.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]

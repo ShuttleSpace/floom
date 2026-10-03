@@ -1,11 +1,11 @@
-//! Bridge Floem reactive signals to element dirty flags.
+//! Bridge Floom reactive signals to element dirty flags.
 
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use floem_legacy_reactive::{Effect, ReactiveId, Runtime, RwSignal, Scope, SignalGet};
-use floem_types::ElementId;
+use floom_legacy_reactive::{Effect, ReactiveId, Runtime, RwSignal, Scope, SignalGet};
+use floom_types::ElementId;
 
 use crate::arena::ElementArena;
 use crate::dirty::{DirtyFlags, DirtySet};

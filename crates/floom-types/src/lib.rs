@@ -1,4 +1,4 @@
-//! Platform-neutral geometry, color, display, motion, and ID types for Floem 2.0.
+//! Platform-neutral geometry, color, display, motion, and ID types for Floom 2.0.
 //!
 //! This crate must remain free of OS windowing and GPU backend dependencies.
 
@@ -58,7 +58,7 @@ mod dependency_boundary_tests {
         });
         assert!(
             !non_empty,
-            "floem-types must not gain Cargo dependencies without an architecture decision"
+            "floom-types must not gain Cargo dependencies without an architecture decision"
         );
     }
 }

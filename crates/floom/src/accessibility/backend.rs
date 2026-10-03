@@ -8,7 +8,7 @@ use peniko::kurbo::Point;
 
 use super::{AccessAction, AccessNodeId, AccessTree, AccessTreeUpdate};
 
-/// A platform-requested accessibility action routed back to Floem core.
+/// A platform-requested accessibility action routed back to Floom core.
 ///
 /// Produced by a backend's [`AccessibilityBackend::poll_actions`] when an
 /// assistive technology (VoiceOver / Orca / Narrator) invokes an action on a
@@ -16,7 +16,7 @@ use super::{AccessAction, AccessNodeId, AccessTree, AccessTreeUpdate};
 /// [`crate::window::WindowState::handle_accessibility_action`].
 pub type PendingAction = (AccessNodeId, AccessAction, Option<String>);
 
-/// A backend that bridges Floem's neutral accessibility tree to a platform
+/// A backend that bridges Floom's neutral accessibility tree to a platform
 /// screen reader:
 ///
 /// - macOS / iOS: `NSAccessibility` (`NSAccessibilityElement`)
@@ -24,7 +24,7 @@ pub type PendingAction = (AccessNodeId, AccessAction, Option<String>);
 /// - Linux: AT-SPI2 (over D-Bus)
 /// - Windows: UI Automation (UIA)
 ///
-/// Floem core produces [`AccessTreeUpdate`]s from view/layout changes and
+/// Floom core produces [`AccessTreeUpdate`]s from view/layout changes and
 /// calls [`update_tree`](AccessibilityBackend::update_tree). The platform
 /// backend translates them into native a11y nodes and answers queries
 /// ([`node_at_point`], [`focused_node`]) and routes user actions back via
@@ -33,7 +33,7 @@ pub type PendingAction = (AccessNodeId, AccessAction, Option<String>);
 /// The default implementations are no-ops so backends that do not support
 /// accessibility (or have not implemented it yet) compile and run safely.
 pub trait AccessibilityBackend {
-    /// Apply a tree diff produced by Floem core. Default: no-op.
+    /// Apply a tree diff produced by Floom core. Default: no-op.
     fn update_tree(&mut self, _update: AccessTreeUpdate) {}
 
     /// The currently focused node, if any. Default: `None`.
@@ -48,7 +48,7 @@ pub trait AccessibilityBackend {
     }
 
     /// Perform an action requested by the platform accessibility API on a node.
-    /// Returns `true` if Floem handled it. Default: `false`.
+    /// Returns `true` if Floom handled it. Default: `false`.
     fn perform_action(
         &mut self,
         _node: AccessNodeId,
@@ -61,7 +61,7 @@ pub trait AccessibilityBackend {
     /// Return and clear any actions the platform accessibility API requested
     /// since the last call (e.g. a screen reader "press"). Default: empty.
     ///
-    /// Backends that route platform → Floem actions override this to drain
+    /// Backends that route platform → Floom actions override this to drain
     /// their action channel; `WindowState` calls it every frame.
     fn poll_actions(&mut self) -> Vec<PendingAction> {
         Vec::new()

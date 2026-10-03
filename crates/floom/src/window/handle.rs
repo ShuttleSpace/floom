@@ -17,16 +17,16 @@ use muda::MenuTheme as MudaMenuTheme;
 use crate::platform::{Duration, Instant};
 use ui_events::keyboard::{Key, KeyboardEvent, Modifiers, NamedKey};
 use ui_events::pointer::PointerEvent;
-use floem_ui_events_winit::WindowEventReducer;
+use floom_ui_events_winit::WindowEventReducer;
 
 #[cfg(not(any(target_os = "ios", target_env = "ohos")))]
 use winit::window::{
     ImeCapabilities, ImeEnableRequest, ImeHint, ImePurpose, ImeRequest, ImeRequestData,
 };
 
-use floem_legacy_reactive::{ReadSignal, RwSignal, Scope, SignalGet, SignalUpdate};
-use floem_legacy_renderer::Renderer;
-use floem_legacy_renderer::gpu_resources::GpuResources;
+use floom_legacy_reactive::{ReadSignal, RwSignal, Scope, SignalGet, SignalUpdate};
+use floom_legacy_renderer::Renderer;
+use floom_legacy_renderer::gpu_resources::GpuResources;
 use peniko::color::palette;
 use peniko::kurbo::{self, Point, Size};
 use winit::{
@@ -266,7 +266,7 @@ impl WindowHandle {
         // Attach the Android accessibility bridge (TalkBack). Like OHOS/iOS it
         // needs no native view pointer — it injects a transparent
         // `AccessibilityNodeProvider` overlay into the Activity's decor view
-        // (see `backend_android.rs` / `FloemAccessibilityView.java`) and reads
+        // (see `backend_android.rs` / `FloomAccessibilityView.java`) and reads
         // the `Activity` through the shared JNI handle. Receives every
         // `AccessTreeUpdate` from `update_accessibility_tree`.
         #[cfg(target_os = "android")]
@@ -1022,7 +1022,7 @@ impl WindowHandle {
         let surface = match gpu.instance.create_surface(Arc::clone(&self.window)) {
             Ok(surface) => surface,
             Err(err) => {
-                eprintln!("floem: failed to recreate Android GPU surface: {err}");
+                eprintln!("floom: failed to recreate Android GPU surface: {err}");
                 self.gpu_surface_lost = true;
                 return;
             }
@@ -1323,7 +1323,7 @@ impl WindowHandle {
         // Rebuild the neutral accessibility tree for this frame and forward it
         // to any registered platform backend. Runs after layout is committed so
         // the a11y tree mirrors the freshly committed frame. See
-        // `src/accessibility/bridge.rs`.
+        // `crates/floom/src/accessibility/bridge.rs`.
         self.update_accessibility_tree();
 
         let root_element_id = self.window_state.root_view_id.get_element_id();
@@ -1335,8 +1335,8 @@ impl WindowHandle {
     /// view/layout/focus state and forward it to the platform backend (if any).
     ///
     /// Called at the end of every [`Self::process_update_no_paint`] once layout
-    /// is committed. See `src/accessibility/bridge.rs` for the traversal and
-    /// the neutral protocol definition in `src/accessibility/`.
+    /// is committed. See `crates/floom/src/accessibility/bridge.rs` for the traversal and
+    /// the neutral protocol definition in `crates/floom/src/accessibility/`.
     pub(crate) fn update_accessibility_tree(&mut self) {
         use crate::view::VIEW_STORAGE;
 
@@ -2033,7 +2033,7 @@ impl WindowHandle {
     }
 
     pub(crate) fn ime(&mut self, ime: Ime) {
-        let floem_ime = match ime {
+        let floom_ime = match ime {
             Ime::Enabled => ImeEvent::Enabled,
             Ime::Preedit(text, cursor) => ImeEvent::Preedit { text, cursor },
             Ime::Commit(text) => ImeEvent::Commit(text),
@@ -2046,7 +2046,7 @@ impl WindowHandle {
                 after_bytes,
             },
         };
-        self.event(Event::Ime(floem_ime));
+        self.event(Event::Ime(floom_ime));
     }
 
     pub(crate) fn modifiers_changed(&mut self, modifiers: Modifiers) {

@@ -1,4 +1,4 @@
-use floem_legacy_reactive::{RwSignal, SignalRead};
+use floom_legacy_reactive::{RwSignal, SignalRead};
 
 #[test]
 fn read_ref_derefs_to_inner_value() {

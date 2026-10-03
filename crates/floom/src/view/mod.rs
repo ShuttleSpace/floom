@@ -1,34 +1,34 @@
 //! # View and Widget Traits
 //! Views are self-contained components that can be composed together to create complex UIs.
-//! Views are the main building blocks of Floem.
+//! Views are the main building blocks of Floom.
 //!
 //! **Compatibility tier (Phase 29.2).** The `View` lifecycle below is the v1
 //! API: it is preserved for the current major version, and the stable import
-//! path for v1 application code is [`floem::compat::v1_prelude`](crate::compat::v1_prelude).
-//! New applications target the Floem 2.0 surface instead (`floem2::prelude`);
+//! path for v1 application code is [`floom::compat::v1_prelude`](crate::compat::v1_prelude).
+//! New applications target the Floom 2.0 surface instead (`floom2::prelude`);
 //! passing a v1 view into a 2.0 mount point is a compile error whose
 //! diagnostic names this migration.
 //!
-//! Views are structs that implement the [`View`] and [`Widget`] traits. Many of these structs will also contain a child field that also implements [`View`]. In this way, views can be composed together easily to create complex UIs. This is the most common way to build UIs in Floem. For more information on how to compose views check out the [views](crate::views) module.
+//! Views are structs that implement the [`View`] and [`Widget`] traits. Many of these structs will also contain a child field that also implements [`View`]. In this way, views can be composed together easily to create complex UIs. This is the most common way to build UIs in Floom. For more information on how to compose views check out the [views](crate::views) module.
 //!
 //! Creating a struct and manually implementing the [`View`] and [`Widget`] traits is typically only needed for building new widgets and for special cases. The rest of this module documentation is for help when manually implementing [`View`] and [`Widget`] on your own types.
 //!
 //!
 //! ## The View and Widget Traits
-//! The [`View`] trait is the trait that Floem uses to build  and display elements, and it builds on the [`Widget`] trait. The [`Widget`] trait contains the methods for implementing updates, styling, layout, events, and painting.
-//! Eventually, the goal is for Floem to integrate the [`Widget`] trait with other rust UI libraries so that the widget layer can be shared among all compatible UI libraries.
+//! The [`View`] trait is the trait that Floom uses to build  and display elements, and it builds on the [`Widget`] trait. The [`Widget`] trait contains the methods for implementing updates, styling, layout, events, and painting.
+//! Eventually, the goal is for Floom to integrate the [`Widget`] trait with other rust UI libraries so that the widget layer can be shared among all compatible UI libraries.
 //!
 //! ## State management
 //!
 //! For all reactive state that your type contains, either in the form of signals or derived signals, you need to process the changes within an effect.
-//! The most common pattern is to [`get`](floem_legacy_reactive::ReadSignal::get) the data in an effect and pass it in to `id.update_state()` and then handle that data in the `update` method of the View trait.
+//! The most common pattern is to [`get`](floom_legacy_reactive::ReadSignal::get) the data in an effect and pass it in to `id.update_state()` and then handle that data in the `update` method of the View trait.
 //!
 //! For example a minimal slider might look like the following. First, we define the struct with the [`ViewData`] that contains the [`Id`].
 //! Then, we use a function to construct the slider. As part of this function we create an effect that will be re-run every time the signals in the  `percent` closure change.
 //! In the effect we send the change to the associated [`Id`]. This change can then be handled in the [`Widget::update`] method.
 //! ```rust
-//! use floem::ViewId;
-//! use floem::reactive::*;
+//! use floom::ViewId;
+//! use floom::reactive::*;
 //!
 //! struct Slider {
 //!     id: ViewId,
@@ -61,12 +61,12 @@ pub use id::{ViewId, process_pending_scope_reparents};
 pub use into_iter::*;
 pub use state::*;
 /// Custom-layout hooks for views that attach their own taffy measure/finalize
-/// functions (used by satellite widgets such as floem-editor).
+/// functions (used by satellite widgets such as floom-editor).
 pub use storage::{FinalizeFn, LayoutNodeCx, LayoutTree, MeasureCx, MeasureFn};
 pub(crate) use storage::*;
 pub use tuple::*;
 
-use floem_legacy_reactive::{Effect, ReadSignal, RwSignal, Scope, SignalGet, UpdaterEffect};
+use floom_legacy_reactive::{Effect, ReadSignal, RwSignal, Scope, SignalGet, UpdaterEffect};
 use peniko::kurbo::*;
 use smallvec::SmallVec;
 use std::any::Any;
@@ -90,13 +90,13 @@ use state::ViewStyleProps;
 
 /// type erased [`View`]
 ///
-/// Views in Floem are strongly typed. [`AnyView`] allows you to escape the strong typing by converting any type implementing [`View`] into the [`AnyView`] type.
+/// Views in Floom are strongly typed. [`AnyView`] allows you to escape the strong typing by converting any type implementing [`View`] into the [`AnyView`] type.
 ///
 /// ## Bad Example
 ///```compile_fail
-/// use floem::views::*;
-/// use floem::widgets::*;
-/// use floem::reactive::{RwSignal, SignalGet};
+/// use floom::views::*;
+/// use floom::widgets::*;
+/// use floom::reactive::{RwSignal, SignalGet};
 ///
 /// let check = true;
 ///
@@ -111,9 +111,9 @@ use state::ViewStyleProps;
 /// to escape the strongly typed requirement.
 ///
 /// ```
-/// use floem::reactive::{RwSignal, SignalGet};
-/// use floem::views::*;
-/// use floem::{IntoView, View};
+/// use floom::reactive::{RwSignal, SignalGet};
+/// use floom::views::*;
+/// use floom::{IntoView, View};
 ///
 /// let check = true;
 ///
@@ -131,9 +131,9 @@ pub type AnyView = Box<dyn View>;
 ///
 /// For example, `&str` implements `IntoView` by building a `text` view and can therefore be used directly in a View tuple.
 /// ```rust
-/// # use floem::reactive::*;
-/// # use floem::views::*;
-/// # use floem::IntoView;
+/// # use floom::reactive::*;
+/// # use floom::views::*;
+/// # use floom::IntoView;
 /// fn app_view() -> impl IntoView {
 ///     v_stack(("Item One", "Item Two"))
 /// }
@@ -254,8 +254,8 @@ pub trait ParentView: HasViewId + Sized {
     ///
     /// ## Example
     /// ```rust,ignore
-    /// use floem::prelude::*;
-    /// use floem::views::Stem;
+    /// use floom::prelude::*;
+    /// use floom::views::Stem;
     ///
     /// let items = RwSignal::new(vec!["a", "b", "c"]);
     ///
@@ -319,8 +319,8 @@ pub trait ParentView: HasViewId + Sized {
     ///
     /// ## Example
     /// ```rust,ignore
-    /// use floem::prelude::*;
-    /// use floem::views::Stem;
+    /// use floom::prelude::*;
+    /// use floom::views::Stem;
     ///
     /// #[derive(Clone)]
     /// enum ViewType { One, Two }
@@ -424,8 +424,8 @@ pub trait ParentView: HasViewId + Sized {
     ///
     /// ## Example
     /// ```rust,ignore
-    /// use floem::prelude::*;
-    /// use floem::views::Stem;
+    /// use floom::prelude::*;
+    /// use floom::views::Stem;
     ///
     /// let items = RwSignal::new(vec!["a", "b", "c"]);
     ///
@@ -536,8 +536,8 @@ pub trait ParentView: HasViewId + Sized {
     ///
     /// ## Example
     /// ```rust,ignore
-    /// use floem::prelude::*;
-    /// use floem::views::Stem;
+    /// use floom::prelude::*;
+    /// use floom::views::Stem;
     ///
     /// #[derive(Clone)]
     /// enum ViewType { One, Two }
@@ -704,8 +704,8 @@ where
 ///
 /// ## Example
 /// ```rust
-/// use floem::views::*;
-/// use floem::{IntoView, LazyView};
+/// use floom::views::*;
+/// use floom::{IntoView, LazyView};
 ///
 /// // The ViewId is created when LazyView is constructed,
 /// // but the Label is only created when into_view() is called
@@ -923,13 +923,13 @@ impl IntoView for LazyView<()> {
 /// ## State Management in a Custom View
 ///
 /// For all reactive state that your type contains, either in the form of signals or derived signals, you need to process the changes within an effect.
-/// The most common pattern is to [`get`](floem_legacy_reactive::SignalGet::get) the data in an effect and pass it in to `id.update_state()` and then handle that data in the `update` method of the `View` trait.
+/// The most common pattern is to [`get`](floom_legacy_reactive::SignalGet::get) the data in an effect and pass it in to `id.update_state()` and then handle that data in the `update` method of the `View` trait.
 ///
 /// For example a minimal slider might look like the following. First, we define the struct that contains the [`ViewId`](crate::ViewId).
 /// Then, we use a function to construct the slider. As part of this function we create an effect that will be re-run every time the signals in the  `percent` closure change.
 /// In the effect we send the change to the associated [`ViewId`](crate::ViewId). This change can then be handled in the [`View::update`](crate::View::update) method.
 /// ```rust
-/// # use floem::{*, views::*, reactive::*};
+/// # use floom::{*, views::*, reactive::*};
 ///
 /// struct Slider {
 ///     id: ViewId,
@@ -952,7 +952,7 @@ impl IntoView for LazyView<()> {
 ///         self.id
 ///     }
 ///
-///     fn update(&mut self, cx: &mut floem::context::UpdateCx, state: Box<dyn std::any::Any>) {
+///     fn update(&mut self, cx: &mut floom::context::UpdateCx, state: Box<dyn std::any::Any>) {
 ///         if let Ok(percent) = state.downcast::<f32>() {
 ///             self.percent = *percent;
 ///             self.id.request_layout();
@@ -1088,7 +1088,7 @@ pub trait View {
     }
 
     /// `View`-specific implementation. Called during paint traversal for this view.
-    /// Children are painted automatically by Floem.
+    /// Children are painted automatically by Floom.
     /// Views should only paint their own content (backgrounds, borders, custom drawing).
     fn paint(&mut self, cx: &mut PaintCx) {
         let _ = cx;

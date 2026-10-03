@@ -26,9 +26,9 @@ mod raster;
 
 pub use presenter::SoftwarePresenter;
 
-use floem_renderer::{FrameInfo, RenderTarget, Renderer};
-use floem_scene::{DamageRegion, Rect, ResourceKind, ResourceRegistry, Scene, SceneNode};
-use floem_types::{Brush, Color, Filter, Point, Polyline, Shadow, Transform};
+use floom_renderer::{FrameInfo, RenderTarget, Renderer};
+use floom_scene::{DamageRegion, Rect, ResourceKind, ResourceRegistry, Scene, SceneNode};
+use floom_types::{Brush, Color, Filter, Point, Polyline, Shadow, Transform};
 use raster::{ClipStack, Scissor};
 use std::collections::HashMap;
 
@@ -62,7 +62,7 @@ const BLUR_PASSES: usize = 3;
 /// pathological pile of tiny glyphs.
 const GLYPH_CACHE_BYTES: usize = 4 * 1024 * 1024;
 
-/// Software renderer backend implementing the Floem 2.0 [`Renderer`] ABI.
+/// Software renderer backend implementing the Floom 2.0 [`Renderer`] ABI.
 pub struct SoftwareRenderer {
     width: u32,
     height: u32,
@@ -503,8 +503,8 @@ impl SoftwareRenderer {
     /// and blends the fill colour through it.
     fn draw_text(
         &mut self,
-        origin: floem_types::Point,
-        glyph_resource: floem_types::ResourceId,
+        origin: floom_types::Point,
+        glyph_resource: floom_types::ResourceId,
         color: Color,
         resources: &ResourceRegistry,
         clip: Clip,
@@ -610,7 +610,7 @@ impl SoftwareRenderer {
     fn draw_image(
         &mut self,
         bounds: Rect,
-        image_resource: floem_types::ResourceId,
+        image_resource: floom_types::ResourceId,
         alpha: u8,
         resources: &ResourceRegistry,
         clip: Clip,
@@ -986,7 +986,7 @@ impl SoftwareRenderer {
                 } => {
                     let shape = rect_shape(*bounds, *radius);
                     let polylines = shape
-                        .flatten(floem_types::DEFAULT_FLATTEN_TOLERANCE)
+                        .flatten(floom_types::DEFAULT_FLATTEN_TOLERANCE)
                         .into_iter()
                         .map(|mut poly| {
                             for p in &mut poly.points {
@@ -1025,7 +1025,7 @@ impl SoftwareRenderer {
                     } else {
                         let shape = rect_shape(*bounds, *radius);
                         let polylines = shape
-                            .flatten(floem_types::DEFAULT_FLATTEN_TOLERANCE)
+                            .flatten(floom_types::DEFAULT_FLATTEN_TOLERANCE)
                             .into_iter()
                             .map(|mut poly| {
                                 for p in &mut poly.points {
@@ -1113,7 +1113,7 @@ impl SoftwareRenderer {
                         }
                     };
                     if let Some(paint) = fill {
-                        let polylines = path.flatten(floem_types::DEFAULT_FLATTEN_TOLERANCE);
+                        let polylines = path.flatten(floom_types::DEFAULT_FLATTEN_TOLERANCE);
                         self.build_contours(map_polylines(polylines), scale);
                         self.rasterize_contours(paint, clip);
                     }
@@ -1123,7 +1123,7 @@ impl SoftwareRenderer {
                         // filler — the caps and joins are exercised by the same
                         // code the fill is.
                         let outline = stroke
-                            .outline_with_tolerance(path, floem_types::DEFAULT_FLATTEN_TOLERANCE);
+                            .outline_with_tolerance(path, floom_types::DEFAULT_FLATTEN_TOLERANCE);
                         self.build_contours(map_polylines(outline), scale);
                         let stroke_paint = Brush::Solid(stroke.color);
                         self.rasterize_contours(&stroke_paint, clip);
@@ -1345,11 +1345,11 @@ fn hits_clip(bounds: Rect, clip: Clip) -> bool {
 /// The rect node's silhouette as a path: rounded when it has a radius, plain
 /// when it does not. Both the transformed fill and the shadow share it, so a
 /// rect and its shadow can never disagree about what shape they are.
-fn rect_shape(bounds: Rect, radius: f32) -> floem_types::Path {
+fn rect_shape(bounds: Rect, radius: f32) -> floom_types::Path {
     if radius > 0.0 {
-        floem_types::Path::rounded_rect(bounds, f64::from(radius))
+        floom_types::Path::rounded_rect(bounds, f64::from(radius))
     } else {
-        floem_types::Path::rect(bounds)
+        floom_types::Path::rect(bounds)
     }
 }
 
@@ -1599,9 +1599,9 @@ impl Renderer for SoftwareRenderer {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use floem_renderer::{FrameInfo, render_once};
-    use floem_scene::{Point, SceneNode, Size};
-    use floem_types::Color;
+    use floom_renderer::{FrameInfo, render_once};
+    use floom_scene::{Point, SceneNode, Size};
+    use floom_types::Color;
 
     #[test]
     fn software_draws_rect_pixels() {
@@ -1609,7 +1609,7 @@ mod tests {
         scene.begin_update();
         let _ = scene.insert(SceneNode::Rect {
             bounds: Rect::from_origin_size(Point::new(2.0, 2.0), Size::new(3.0, 3.0)),
-            fill: floem_types::Brush::from(Color::rgb(10, 20, 30)),
+            fill: floom_types::Brush::from(Color::rgb(10, 20, 30)),
             radius: 0.0,
 
             shadow: None,
@@ -1633,7 +1633,7 @@ mod tests {
         scene.begin_update();
         let _ = scene.insert(SceneNode::Rect {
             bounds: Rect::from_origin_size(Point::new(2.0, 2.0), Size::new(4.0, 4.0)),
-            fill: floem_types::Brush::from(Color::rgb(200, 10, 10)),
+            fill: floom_types::Brush::from(Color::rgb(200, 10, 10)),
             radius: 2.0,
 
             shadow: None,
@@ -1672,7 +1672,7 @@ mod tests {
         scene.begin_update();
         let _ = scene.insert(SceneNode::Rect {
             bounds: Rect::from_origin_size(Point::new(1.0, 3.0), Size::new(6.0, 2.0)),
-            fill: floem_types::Brush::from(Color::rgb(0, 255, 0)),
+            fill: floom_types::Brush::from(Color::rgb(0, 255, 0)),
             radius: 99.0,
 
             shadow: None,
@@ -1698,14 +1698,14 @@ mod tests {
         scene.begin_update();
         let _ = scene.insert(SceneNode::Rect {
             bounds: Rect::from_origin_size(Point::new(0.0, 0.0), Size::new(4.0, 4.0)),
-            fill: floem_types::Brush::from(Color::rgb(255, 0, 0)),
+            fill: floom_types::Brush::from(Color::rgb(255, 0, 0)),
             radius: 0.0,
 
             shadow: None,
         });
         let _ = scene.insert(SceneNode::Rect {
             bounds: Rect::from_origin_size(Point::new(0.0, 0.0), Size::new(4.0, 4.0)),
-            fill: floem_types::Brush::from(Color::rgba(0, 0, 255, 128)),
+            fill: floom_types::Brush::from(Color::rgba(0, 0, 255, 128)),
             radius: 1.0,
 
             shadow: None,
@@ -1731,7 +1731,7 @@ mod tests {
         let mut registry = ResourceRegistry::new();
         // 1×1 half-alpha red, premultiplied: (128, 0, 0, 128) → straight
         // (255, 0, 0, 128).
-        let img = registry.insert(floem_scene::Resource {
+        let img = registry.insert(floom_scene::Resource {
             kind: ResourceKind::Image {
                 width: 1,
                 height: 1,
@@ -1745,7 +1745,7 @@ mod tests {
         scene.begin_update();
         let _ = scene.insert(SceneNode::Rect {
             bounds: Rect::from_origin_size(Point::new(0.0, 0.0), Size::new(4.0, 4.0)),
-            fill: floem_types::Brush::from(Color::rgb(0, 0, 255)),
+            fill: floom_types::Brush::from(Color::rgb(0, 0, 255)),
             radius: 0.0,
 
             shadow: None,
@@ -1790,7 +1790,7 @@ mod tests {
         let mut registry = ResourceRegistry::new();
         // Opaque white, so the only thing between it and the backdrop is the
         // node alpha.
-        let img = registry.insert(floem_scene::Resource {
+        let img = registry.insert(floom_scene::Resource {
             kind: ResourceKind::Image {
                 width: 1,
                 height: 1,
@@ -1804,7 +1804,7 @@ mod tests {
             scene.begin_update();
             let _ = scene.insert(SceneNode::Rect {
                 bounds: Rect::from_origin_size(Point::ZERO, Size::new(2.0, 2.0)),
-                fill: floem_types::Brush::from(Color::rgb(0, 0, 0)),
+                fill: floom_types::Brush::from(Color::rgb(0, 0, 0)),
                 radius: 0.0,
 
                 shadow: None,
@@ -1839,9 +1839,9 @@ mod tests {
     /// some pixels inside the text bounds must pick up the fill colour.
     #[test]
     fn text_nodes_rasterize_glyphs_from_their_resource() {
-        use floem_text::{TextAlign, TextLayoutOptions};
+        use floom_text::{TextAlign, TextLayoutOptions};
 
-        let mut shaper = floem_text::TextShaper::new();
+        let mut shaper = floom_text::TextShaper::new();
         let laid = shaper.shape(
             "HI",
             &TextLayoutOptions {
@@ -1853,7 +1853,7 @@ mod tests {
         assert!(!laid.runs.is_empty(), "shaper produced runs");
 
         let mut registry = ResourceRegistry::new();
-        let glyphs = registry.insert(floem_scene::Resource {
+        let glyphs = registry.insert(floom_scene::Resource {
             kind: ResourceKind::glyph_runs(laid.runs.clone()),
         });
 
@@ -1902,10 +1902,10 @@ mod tests {
     /// this); ink in the far end of the run is what tells them apart.
     #[test]
     fn glyphs_spread_along_the_run_instead_of_stacking() {
-        use floem_text::{TextAlign, TextLayoutOptions};
+        use floom_text::{TextAlign, TextLayoutOptions};
 
         let text = "clicked 2 times";
-        let mut shaper = floem_text::TextShaper::new();
+        let mut shaper = floom_text::TextShaper::new();
         let laid = shaper.shape(
             text,
             &TextLayoutOptions {
@@ -1918,7 +1918,7 @@ mod tests {
         assert!(width > 100, "the string is wide enough to tell: {width}");
 
         let mut registry = ResourceRegistry::new();
-        let glyphs = registry.insert(floem_scene::Resource {
+        let glyphs = registry.insert(floom_scene::Resource {
             kind: ResourceKind::glyph_runs(laid.runs.clone()),
         });
         let mut scene = Scene::new();
@@ -1964,14 +1964,14 @@ mod tests {
             scene.begin_update();
             let _ = scene.insert(SceneNode::Rect {
                 bounds: Rect::from_origin_size(Point::new(x, 1.0), Size::new(3.0, 3.0)),
-                fill: floem_types::Brush::from(Color::rgb(200, 0, 0)),
+                fill: floom_types::Brush::from(Color::rgb(200, 0, 0)),
                 radius: 0.0,
 
                 shadow: None,
             });
             let _ = scene.insert(SceneNode::Rect {
                 bounds: Rect::from_origin_size(Point::new(6.0, 1.0), Size::new(3.0, 3.0)),
-                fill: floem_types::Brush::from(Color::rgb(0, 0, 200)),
+                fill: floom_types::Brush::from(Color::rgb(0, 0, 200)),
                 radius: 0.0,
 
                 shadow: None,
@@ -2012,7 +2012,7 @@ mod tests {
         scene.begin_update();
         let _ = scene.insert(SceneNode::Rect {
             bounds: Rect::from_origin_size(Point::new(0.0, 0.0), Size::new(4.0, 4.0)),
-            fill: floem_types::Brush::from(Color::rgb(255, 0, 0)),
+            fill: floom_types::Brush::from(Color::rgb(255, 0, 0)),
             radius: 0.0,
 
             shadow: None,
@@ -2033,10 +2033,10 @@ mod tests {
     /// identical. A different font size is a different cache entry.
     #[test]
     fn glyph_masks_are_cached_across_frames() {
-        use floem_text::{TextAlign, TextLayoutOptions};
+        use floom_text::{TextAlign, TextLayoutOptions};
 
         let shape = |size: f32| {
-            let mut shaper = floem_text::TextShaper::new();
+            let mut shaper = floom_text::TextShaper::new();
             shaper.shape(
                 "HI",
                 &TextLayoutOptions {
@@ -2049,7 +2049,7 @@ mod tests {
 
         let make_scene = |runs| {
             let mut registry = ResourceRegistry::new();
-            let glyphs = registry.insert(floem_scene::Resource {
+            let glyphs = registry.insert(floom_scene::Resource {
                 kind: ResourceKind::glyph_runs(runs),
             });
             let mut scene = Scene::new();
@@ -2103,14 +2103,14 @@ mod tests {
         scene.begin_update();
         let _ = scene.insert(SceneNode::Rect {
             bounds: Rect::from_origin_size(Point::new(1.0, 1.0), Size::new(3.0, 3.0)),
-            fill: floem_types::Brush::from(Color::rgb(200, 0, 0)),
+            fill: floom_types::Brush::from(Color::rgb(200, 0, 0)),
             radius: 0.0,
 
             shadow: None,
         });
         let _ = scene.insert(SceneNode::Rect {
             bounds: Rect::from_origin_size(Point::new(8.0, 1.0), Size::new(3.0, 3.0)),
-            fill: floem_types::Brush::from(Color::rgb(0, 0, 200)),
+            fill: floom_types::Brush::from(Color::rgb(0, 0, 200)),
             radius: 0.0,
 
             shadow: None,
@@ -2145,9 +2145,9 @@ mod tests {
 
     /// Renders one frame of `runs` at the given box, the way the app layer
     /// would: a text scene node pointing at a glyph-run resource.
-    fn draw_text_frame(sw: &mut SoftwareRenderer, runs: &[floem_text::GlyphRun]) {
+    fn draw_text_frame(sw: &mut SoftwareRenderer, runs: &[floom_text::GlyphRun]) {
         let mut registry = ResourceRegistry::new();
-        let glyphs = registry.insert(floem_scene::Resource {
+        let glyphs = registry.insert(floom_scene::Resource {
             kind: ResourceKind::glyph_runs(runs.to_vec()),
         });
         let mut scene = Scene::new();
@@ -2168,15 +2168,15 @@ mod tests {
     /// fixed number of entries says nothing about how much is held.
     #[test]
     fn glyph_cache_byte_budget_bounds_retained_memory() {
-        use floem_text::{TextAlign, TextLayoutOptions};
+        use floom_text::{TextAlign, TextLayoutOptions};
 
         let sizes = [24.0, 48.0, 72.0, 96.0, 120.0];
         // Shape once per size and reuse: each `shape()` allocates fresh font
         // bytes, which are part of the cache key.
-        let shaped: std::collections::HashMap<u32, Vec<floem_text::GlyphRun>> = sizes
+        let shaped: std::collections::HashMap<u32, Vec<floom_text::GlyphRun>> = sizes
             .iter()
             .map(|&size| {
-                let mut shaper = floem_text::TextShaper::new();
+                let mut shaper = floom_text::TextShaper::new();
                 let laid = shaper.shape(
                     "MM",
                     &TextLayoutOptions {
@@ -2231,16 +2231,16 @@ mod tests {
     /// still served from the cache.
     #[test]
     fn glyph_cache_evicts_least_recently_used() {
-        use floem_text::{TextAlign, TextLayoutOptions};
+        use floom_text::{TextAlign, TextLayoutOptions};
 
         // Shape every size exactly once and reuse those runs across frames:
         // each shape() call allocates fresh font bytes, which are part of
         // the cache key — only same-byte glyphs can ever hit the cache.
         let sizes = [10.0, 12.0, 14.0, 16.0, 18.0];
-        let shaped: std::collections::HashMap<u32, Vec<floem_text::GlyphRun>> = sizes
+        let shaped: std::collections::HashMap<u32, Vec<floom_text::GlyphRun>> = sizes
             .iter()
             .map(|&size| {
-                let mut shaper = floem_text::TextShaper::new();
+                let mut shaper = floom_text::TextShaper::new();
                 let laid = shaper.shape(
                     "HI",
                     &TextLayoutOptions {
@@ -2252,9 +2252,9 @@ mod tests {
                 (size.to_bits(), laid.runs.clone())
             })
             .collect();
-        let make_scene = |runs: &[floem_text::GlyphRun]| {
+        let make_scene = |runs: &[floom_text::GlyphRun]| {
             let mut registry = ResourceRegistry::new();
-            let glyphs = registry.insert(floem_scene::Resource {
+            let glyphs = registry.insert(floom_scene::Resource {
                 kind: ResourceKind::glyph_runs(runs.to_vec()),
             });
             let mut scene = Scene::new();
@@ -2320,14 +2320,14 @@ mod tests {
         scene.begin_update();
         let _ = scene.insert(SceneNode::Rect {
             bounds: Rect::from_origin_size(Point::new(0.0, 0.0), Size::new(3.0, 3.0)),
-            fill: floem_types::Brush::from(Color::rgb(10, 20, 30)),
+            fill: floom_types::Brush::from(Color::rgb(10, 20, 30)),
             radius: 0.0,
 
             shadow: None,
         });
         let _ = scene.insert(SceneNode::shader(
             Rect::from_origin_size(Point::new(4.0, 4.0), Size::new(2.0, 2.0)),
-            floem_types::Shader::new(
+            floom_types::Shader::new(
                 "@fragment fn fs_main(in: VsOut) -> @location(0) vec4<f32> { \
                  return vec4<f32>(in.uv, 0.0, 1.0); }",
                 [] as [f32; 0],

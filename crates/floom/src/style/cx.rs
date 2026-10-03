@@ -5,7 +5,7 @@
 //! - [`InteractionState`] - Captures current user interaction state for style resolution
 //! - [`StyleRecalcChange`] - Graduated change tracking for optimized style propagation
 
-use floem_legacy_reactive::Scope;
+use floom_legacy_reactive::Scope;
 use smallvec::SmallVec;
 use understory_box_tree::NodeFlags;
 

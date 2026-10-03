@@ -1,5 +1,5 @@
-use floem_scene::{Color, DamageRegion, Rect, Scene, SceneNode};
-use floem_types::{Point, Size};
+use floom_scene::{Color, DamageRegion, Rect, Scene, SceneNode};
+use floom_types::{Point, Size};
 
 #[test]
 fn stable_id_survives_upsert() {
@@ -7,7 +7,7 @@ fn stable_id_survives_upsert() {
     scene.begin_update();
     let id = scene.insert(SceneNode::Rect {
         bounds: Rect::from_origin_size(Point::ZERO, Size::new(10.0, 10.0)),
-        fill: floem_types::Brush::from(Color::BLACK),
+        fill: floom_types::Brush::from(Color::BLACK),
         radius: 0.0,
 
         shadow: None,
@@ -19,7 +19,7 @@ fn stable_id_survives_upsert() {
         id,
         SceneNode::Rect {
             bounds: Rect::from_origin_size(Point::new(1.0, 1.0), Size::new(10.0, 10.0)),
-            fill: floem_types::Brush::from(Color::WHITE),
+            fill: floom_types::Brush::from(Color::WHITE),
             radius: 0.0,
             shadow: None,
         },
@@ -36,7 +36,7 @@ fn remove_invalidates_id_and_reuses_index() {
     scene.begin_update();
     let id = scene.insert(SceneNode::Rect {
         bounds: Rect::from_origin_size(Point::ZERO, Size::new(5.0, 5.0)),
-        fill: floem_types::Brush::from(Color::BLACK),
+        fill: floom_types::Brush::from(Color::BLACK),
         radius: 0.0,
 
         shadow: None,
@@ -51,7 +51,7 @@ fn remove_invalidates_id_and_reuses_index() {
     scene.begin_update();
     let id2 = scene.insert(SceneNode::Rect {
         bounds: Rect::from_origin_size(Point::ZERO, Size::new(1.0, 1.0)),
-        fill: floem_types::Brush::from(Color::WHITE),
+        fill: floom_types::Brush::from(Color::WHITE),
         radius: 0.0,
 
         shadow: None,
@@ -68,7 +68,7 @@ fn damage_tracks_rect_updates() {
     scene.begin_update();
     let id = scene.insert(SceneNode::Rect {
         bounds: Rect::from_origin_size(Point::ZERO, Size::new(10.0, 10.0)),
-        fill: floem_types::Brush::from(Color::BLACK),
+        fill: floom_types::Brush::from(Color::BLACK),
         radius: 0.0,
 
         shadow: None,
@@ -83,7 +83,7 @@ fn damage_tracks_rect_updates() {
         id,
         SceneNode::Rect {
             bounds: Rect::from_origin_size(Point::new(2.0, 2.0), Size::new(10.0, 10.0)),
-            fill: floem_types::Brush::from(Color::BLACK),
+            fill: floom_types::Brush::from(Color::BLACK),
             radius: 0.0,
             shadow: None,
         },
@@ -111,7 +111,7 @@ fn group_update_marks_full_frame() {
 #[test]
 fn a_shadowed_rects_damage_contains_its_reach() {
     let box_of = Rect::from_origin_size(Point::new(10.0, 10.0), Size::new(20.0, 20.0));
-    let shadow = floem_types::Shadow {
+    let shadow = floom_types::Shadow {
         color: Color::rgba(0, 0, 0, 128),
         blur: 4.0,
         offset_x: 0.0,
@@ -119,13 +119,13 @@ fn a_shadowed_rects_damage_contains_its_reach() {
     };
     let bare = SceneNode::Rect {
         bounds: box_of,
-        fill: floem_types::Brush::from(Color::WHITE),
+        fill: floom_types::Brush::from(Color::WHITE),
         radius: 0.0,
         shadow: None,
     };
     let shadowed = SceneNode::Rect {
         bounds: box_of,
-        fill: floem_types::Brush::from(Color::WHITE),
+        fill: floom_types::Brush::from(Color::WHITE),
         radius: 0.0,
         shadow: Some(shadow),
     };
@@ -162,7 +162,7 @@ fn crate_manifest_has_no_os_deps() {
     for forbidden in ["winit", "wgpu", "objc", "android", "napi", "ash", "metal"] {
         assert!(
             !manifest.to_lowercase().contains(forbidden),
-            "floem-scene must not depend on {forbidden}"
+            "floom-scene must not depend on {forbidden}"
         );
     }
 }

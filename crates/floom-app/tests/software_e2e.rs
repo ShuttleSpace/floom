@@ -1,13 +1,13 @@
 //! End-to-end: WidgetHost → SoftwarePresenter — paint damage flows into the
 //! CPU rasteriser (skip → partial → skip) and text lands as real ink.
 
-use floem_app::WidgetHost;
-use floem_layout::LayoutStyle;
-use floem_renderer::{AttachedSurface, Presenter};
-use floem_renderer_software::SoftwarePresenter;
-use floem_types::Color;
-use floem_types::{Size, SurfaceId, WindowId};
-use floem_widgets::{Container, Text};
+use floom_app::WidgetHost;
+use floom_layout::LayoutStyle;
+use floom_renderer::{AttachedSurface, Presenter};
+use floom_renderer_software::SoftwarePresenter;
+use floom_types::Color;
+use floom_types::{Size, SurfaceId, WindowId};
+use floom_widgets::{Container, Text};
 
 fn attached(size: Size) -> AttachedSurface {
     AttachedSurface::new(WindowId::new(0, 1), SurfaceId::new(0, 1), size, 1.0, None)
@@ -32,7 +32,7 @@ fn software_presentation_round_trip_and_damage_flow() {
     host.set_size(Size::new(300.0, 200.0));
     let root = host.mount_root(
         LayoutStyle {
-            flex_direction: floem_layout::FlexDirection::Column,
+            flex_direction: floom_layout::FlexDirection::Column,
             ..LayoutStyle::default()
         },
         Container::new(),

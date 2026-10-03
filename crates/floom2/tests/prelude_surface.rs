@@ -1,4 +1,4 @@
-//! Phase 29.1 — the `floem2::prelude` surface is pinned by name.
+//! Phase 29.1 — the `floom2::prelude` surface is pinned by name.
 //!
 //! Every name a beginner is promised must resolve from a single glob import.
 //! If a surface item is removed or renamed, this file stops compiling — that
@@ -6,13 +6,13 @@
 //! the v1 reactive graph, the v1 `View` lifecycle, type-erasure internals) is
 //! pinned by the compile-fail doctests in the crate docs.
 
-use floem2::prelude::*;
+use floom2::prelude::*;
 
 // `AppRunner` is generic over the presenter backend (a concrete type only
 // exists behind a renderer feature), so its surface presence is pinned as a
 // *path*: if the re-export disappears, this import stops resolving.
 #[allow(unused_imports)]
-use floem2::prelude::AppRunner;
+use floom2::prelude::AppRunner;
 
 fn exists<T: ?Sized>() {}
 
@@ -91,9 +91,9 @@ fn prelude_exports_the_runtime_primitives() {
 
 #[test]
 fn advanced_surface_is_explicit_not_global() {
-    // The advanced tier exists, but under `floem2::advanced`, never in the
+    // The advanced tier exists, but under `floom2::advanced`, never in the
     // prelude (asserted negatively by the compile-fail doctests).
-    use floem2::advanced;
+    use floom2::advanced;
 
     // Type-erasure + authoring contracts (traits).
     exists::<dyn advanced::WidgetAny>();

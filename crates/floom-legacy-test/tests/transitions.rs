@@ -10,7 +10,7 @@
 //! set the `ChangeFlags::STYLE` flag. This causes `style_view_with_change`
 //! to skip the view on subsequent frames, stopping the transition.
 //!
-//! Compare in `src/window/handle.rs`:
+//! Compare in `crates/floom/src/window/handle.rs`:
 //! - `UpdateMessage::RequestStyle` (correct): sets BOTH style_dirty AND ChangeFlags::STYLE
 //! - `FrameUpdate::Style` (bug): only sets style_dirty
 //!
@@ -18,10 +18,10 @@
 
 use std::time::Duration;
 
-use floem::peniko::Brush;
-use floem::prelude::*;
-use floem::style::{Background, Transition};
-use floem_legacy_test::prelude::*;
+use floom::peniko::Brush;
+use floom::prelude::*;
+use floom::style::{Background, Transition};
+use floom_legacy_test::prelude::*;
 
 /// Test that a transition is triggered when hovering.
 ///
@@ -315,7 +315,7 @@ fn test_transition_layout_schedules_updates_on_subsequent_frames() {
     let view = Empty::new().style(move |s| {
         let w = if is_wide.get() { 100.0 } else { 50.0 };
         s.width(w).height(100.0).transition(
-            floem::style::Width,
+            floom::style::Width,
             Transition::linear(Duration::from_millis(100)),
         )
     });

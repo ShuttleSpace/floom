@@ -7,8 +7,8 @@
 //! and paints nothing. Screen galleries and evaluation harnesses hang it over
 //! everything they later address by name.
 
-use floem_accessibility::SemanticsRole;
-use floem_core::{
+use floom_accessibility::SemanticsRole;
+use floom_core::{
     Child, CreateContext, ElementId, LayoutRequest, SemanticsContext, UpdateContext, Widget,
     WidgetAny,
 };
@@ -81,7 +81,7 @@ impl Widget for Labeled {
         }
     }
 
-    fn paint(&self, _cx: &mut dyn floem_core::PaintContext, _id: ElementId) {}
+    fn paint(&self, _cx: &mut dyn floom_core::PaintContext, _id: ElementId) {}
 
     fn semantics(&self, cx: &mut dyn SemanticsContext, _id: ElementId) {
         crate::primitives::emit_semantics(self.semantics_hint(), cx);
@@ -91,7 +91,7 @@ impl Widget for Labeled {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use floem_core::{Axis, ChildKey};
+    use floom_core::{Axis, ChildKey};
 
     #[test]
     fn a_labeled_box_declares_its_child_and_request() {

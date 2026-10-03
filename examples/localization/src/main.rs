@@ -1,8 +1,8 @@
-use floem::{action::inspect, prelude::*};
+use floom::{action::inspect, prelude::*};
 use localization::*;
 
 fn main() {
-    floem::launch(counter_view);
+    floom::launch(counter_view);
 }
 
 fn counter_view() -> impl IntoView {

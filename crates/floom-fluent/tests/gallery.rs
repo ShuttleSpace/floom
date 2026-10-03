@@ -1,12 +1,12 @@
 //! Fluent gallery snapshots and the colour audit.
 
-use floem_design::{GallerySample, contrast_ratio, gallery_size};
-use floem_fluent::{
+use floom_design::{GallerySample, contrast_ratio, gallery_size};
+use floom_fluent::{
     FluentColors, FluentTheme, GALLERY_COLUMNS, button_gallery, button_gallery_labels,
 };
-use floem_snapshot::{PixelSnapshot, SceneSnapshot, assert_snapshot, snapshots_dir};
-use floem_theme::ColorScheme;
-use floem_types::Color;
+use floom_snapshot::{PixelSnapshot, SceneSnapshot, assert_snapshot, snapshots_dir};
+use floom_theme::ColorScheme;
+use floom_types::Color;
 
 #[test]
 fn the_light_scheme_gallery_matches_its_golden() {
@@ -69,7 +69,7 @@ fn the_stroke_is_held_to_visibility_and_not_to_accessibility() {
             "{scheme:?} stroke vanished: {ratio:.2}:1"
         );
         assert!(
-            ratio < floem_design::WCAG_AA_LARGE,
+            ratio < floom_design::WCAG_AA_LARGE,
             "{scheme:?} stroke is now an accessible boundary: {ratio:.2}:1"
         );
     }
@@ -82,7 +82,7 @@ fn the_light_schemes_accent_content_only_just_clears_aa() {
     let colors = FluentTheme::light().colors;
     let ratio = contrast_ratio(colors.on_accent, colors.accent);
     assert!(
-        (floem_design::WCAG_AA_NORMAL..floem_design::WCAG_AA_NORMAL + 0.2).contains(&ratio),
+        (floom_design::WCAG_AA_NORMAL..floom_design::WCAG_AA_NORMAL + 0.2).contains(&ratio),
         "white on Fluent light accent is {ratio:.3}:1"
     );
 }

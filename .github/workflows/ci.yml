@@ -2,7 +2,7 @@ on:
   push:
     branches:
       - main
-      - floem-2.0
+      - floom-2.0
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
 
@@ -17,10 +17,10 @@ jobs:
   # platform/ text/ layout/ native/ framework/ widgets/ app/ tooling/) and is
   # scoped separately on purpose: a regression in the legacy v1 crates must not
   # red the signal for work that never touches them, and vice versa. Every check
-  # below names those packages explicitly -- see FLOEM2_PACKAGES -- so the job
+  # below names those packages explicitly -- see FLOOM2_PACKAGES -- so the job
   # neither depends on the workspace default members nor inherits v1's setup.
-  floem-2.0:
-    name: Floem 2.0 on ${{ matrix.os }}
+  floom-2.0:
+    name: Floom 2.0 on ${{ matrix.os }}
     if: github.event.pull_request.draft == false
     strategy:
       fail-fast: false
@@ -44,24 +44,24 @@ jobs:
       # The list is expanded unquoted, i.e. by shell word splitting -- bash is
       # what GitHub runs `run:` with on both macOS and Ubuntu. Quoting it would
       # pass the entire list as a single package argument.
-      FLOEM2_PACKAGES: >-
-        --package=floem-types --package=floem-core
-        --package=floem-runtime-core --package=floem-scheduler --package=floem-runtime
-        --package=floem-scene
-        --package=floem-renderer --package=floem-renderer-vello --package=floem-renderer-software --package=floem-renderer-skia
-        --package=floem-platform --package=floem-platform-desktop --package=floem-platform-android
-        --package=floem-platform-ios --package=floem-platform-harmony --package=floem-platform-web
-        --package=floem-platform-embedded --package=floem-platform-mobile
-        --package=floem-text --package=floem-editor --package=floem-ime
-        --package=floem-layout --package=floem-style --package=floem-virtual
-        --package=floem-native
-        --package=floem-accessibility --package=floem-theme --package=floem-focus --package=floem-gesture
-        --package=floem-animation --package=floem-overlay --package=floem-store --package=floem-task
-        --package=floem-forms --package=floem-navigation --package=floem-persistence --package=floem-services
-        --package=floem-error
-        --package=floem-widgets
-        --package=floem-app
-        --package=floem-testkit
+      FLOOM2_PACKAGES: >-
+        --package=floom-types --package=floom-core
+        --package=floom-runtime-core --package=floom-scheduler --package=floom-runtime
+        --package=floom-scene
+        --package=floom-renderer --package=floom-renderer-vello --package=floom-renderer-software --package=floom-renderer-skia
+        --package=floom-platform --package=floom-platform-desktop --package=floom-platform-android
+        --package=floom-platform-ios --package=floom-platform-harmony --package=floom-platform-web
+        --package=floom-platform-embedded --package=floom-platform-mobile
+        --package=floom-text --package=floom-editor --package=floom-ime
+        --package=floom-layout --package=floom-style --package=floom-virtual
+        --package=floom-native
+        --package=floom-accessibility --package=floom-theme --package=floom-focus --package=floom-gesture
+        --package=floom-animation --package=floom-overlay --package=floom-store --package=floom-task
+        --package=floom-forms --package=floom-navigation --package=floom-persistence --package=floom-services
+        --package=floom-error
+        --package=floom-widgets
+        --package=floom-app
+        --package=floom-testkit
     steps:
       - name: Free disk space on Ubuntu
         if: startsWith(matrix.os, 'ubuntu')
@@ -84,7 +84,7 @@ jobs:
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
         with:
-          key: floem-2.0
+          key: floom-2.0
           save-if: ${{ github.event_name != 'merge_group' }}
 
       - name: Fetch dependencies
@@ -94,22 +94,22 @@ jobs:
       # is kept rustfmt-clean on its own, so a formatting question about the
       # legacy crates cannot red the 2.0 signal (and vice versa).
       - name: Check formatting
-        run: cargo fmt $FLOEM2_PACKAGES --check
+        run: cargo fmt $FLOOM2_PACKAGES --check
 
       - name: Run tests
-        run: cargo test $FLOEM2_PACKAGES --no-fail-fast
+        run: cargo test $FLOOM2_PACKAGES --no-fail-fast
 
       - name: Run doc tests
-        run: cargo test $FLOEM2_PACKAGES --doc --no-fail-fast
+        run: cargo test $FLOOM2_PACKAGES --doc --no-fail-fast
 
       - name: Check architecture dependency boundaries
         run: ./scripts/check-architecture-deps.sh
 
-  # Floem 2.0's mobile platform code lives behind `#[cfg(target_os = "android")]`,
-  # so nothing above compiles it: the `floem-2.0` job builds the *host* arm of
+  # Floom 2.0's mobile platform code lives behind `#[cfg(target_os = "android")]`,
+  # so nothing above compiles it: the `floom-2.0` job builds the *host* arm of
   # every crate, which for these two crates is a headless stand-in. That gap is
-  # not hypothetical. `floem-platform-mobile`'s entire Android half (the JNI
-  # bridge plus every capability package's `android.rs`) and `floem-platform-android`'s
+  # not hypothetical. `floom-platform-mobile`'s entire Android half (the JNI
+  # bridge plus every capability package's `android.rs`) and `floom-platform-android`'s
   # whole winit-backed `android` module had never been compiled by CI, and a
   # JNI module sitting there with five hard errors went unnoticed until a device
   # build finally pulled it in.
@@ -119,7 +119,7 @@ jobs:
   # invokes `cc` for its `game-activity` backend, which nothing here enables —
   # and nothing is linked or run.
   #
-  # Deliberately NOT covered: `examples/floem2-android`. Its Android module is
+  # Deliberately NOT covered: `examples/floom2-android`. Its Android module is
   # gated on `--features real` as well as the target, and `real` drags wgpu +
   # vello through a cross build for no extra coverage of the platform seams this
   # job exists to check. That example is compiled by `scripts/build-apk.sh`,
@@ -127,7 +127,7 @@ jobs:
   # unnoticed, that is why — add it here with `--features real` and accept the
   # build time.
   android-check:
-    name: Floem 2.0 for aarch64-linux-android
+    name: Floom 2.0 for aarch64-linux-android
     if: github.event.pull_request.draft == false
     runs-on: ubuntu-latest
     steps:
@@ -151,8 +151,8 @@ jobs:
       - name: Check the Android arms of the platform crates
         run: >
           cargo check
-          --package=floem-platform-mobile
-          --package=floem-platform-android
+          --package=floom-platform-mobile
+          --package=floom-platform-android
           --target aarch64-linux-android
 
   build:

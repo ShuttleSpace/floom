@@ -4,12 +4,12 @@
 //! style classes based on reactive conditions, specifically testing the fix
 //! for infinite recursion in ViewId::remove_class.
 
-use floem::prelude::*;
-use floem::views::{Container, Empty, Stack};
-use floem_legacy_test::prelude::*;
+use floom::prelude::*;
+use floom::views::{Container, Empty, Stack};
+use floom_legacy_test::prelude::*;
 use serial_test::serial;
 
-floem::style_class!(pub TestClass);
+floom::style_class!(pub TestClass);
 
 /// Test that class_if adds a class when the condition is true.
 #[test]
@@ -187,8 +187,8 @@ fn test_class_if_remove_does_not_recurse() {
 #[serial]
 fn test_multiple_class_if_conditions() {
     let root = TestRoot::new();
-    floem::style_class!(ClassA);
-    floem::style_class!(ClassB);
+    floom::style_class!(ClassA);
+    floom::style_class!(ClassB);
 
     let apply_a = RwSignal::new(false);
     let apply_b = RwSignal::new(false);

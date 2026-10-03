@@ -1,10 +1,10 @@
 //! Cupertino gallery snapshots and the colour audit.
 
-use floem_cupertino::{CupertinoTheme, GALLERY_COLUMNS, button_gallery, button_gallery_labels};
-use floem_design::{GallerySample, contrast_ratio, gallery_size};
-use floem_snapshot::{PixelSnapshot, SceneSnapshot, assert_snapshot, snapshots_dir};
-use floem_theme::ColorScheme;
-use floem_types::Color;
+use floom_cupertino::{CupertinoTheme, GALLERY_COLUMNS, button_gallery, button_gallery_labels};
+use floom_design::{GallerySample, contrast_ratio, gallery_size};
+use floom_snapshot::{PixelSnapshot, SceneSnapshot, assert_snapshot, snapshots_dir};
+use floom_theme::ColorScheme;
+use floom_types::Color;
 
 #[test]
 fn the_light_scheme_gallery_matches_its_golden() {
@@ -63,7 +63,7 @@ fn the_tint_pair_is_exactly_the_case_the_threshold_was_lowered_for() {
     let colors = CupertinoTheme::light().colors;
     let ratio = contrast_ratio(colors.on_tint, colors.tint);
     assert!(
-        ratio > floem_design::WCAG_AA_LARGE && ratio < floem_design::WCAG_AA_NORMAL,
+        ratio > floom_design::WCAG_AA_LARGE && ratio < floom_design::WCAG_AA_NORMAL,
         "systemBlue/white is {ratio:.2}:1; if Apple's value or the audit changed, revisit the claim"
     );
 }

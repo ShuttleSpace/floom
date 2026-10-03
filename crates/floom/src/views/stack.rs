@@ -38,7 +38,7 @@ pub(crate) fn create_stack_with_id(
 ///
 /// ## Example
 /// ```rust
-/// use floem::views::*;
+/// use floom::views::*;
 /// stack((
 ///    text("first element"),
 ///     stack((
@@ -99,7 +99,7 @@ where
 ///
 /// ## Example
 /// ```rust
-/// use floem::views::*;
+/// use floom::views::*;
 /// stack_from_iter(vec![1,1,2,2,3,4,5,6,7,8,9].iter().map(|val| text(val)));
 /// ```
 #[deprecated(since = "0.2.0", note = "Use Stack::from_iter() instead")]
@@ -161,7 +161,7 @@ impl Stack {
     ///
     /// ## Example
     /// ```rust,no_run
-    /// use floem::views::*;
+    /// use floom::views::*;
     ///
     /// // From array
     /// Stack::new([text("child 1"), text("child 2")]);
@@ -191,7 +191,7 @@ impl Stack {
     ///
     /// ## Example
     /// ```rust
-    /// use floem::{ViewId, views::Stack};
+    /// use floom::{ViewId, views::Stack};
     ///
     /// let id = ViewId::new();
     /// Stack::with_id(id, ("child 1", "child 2"));
@@ -208,7 +208,7 @@ impl Stack {
     ///
     /// ## Example
     /// ```rust,no_run
-    /// use floem::views::*;
+    /// use floom::views::*;
     ///
     /// Stack::from_iter((0..5).map(|i| text(i)));
     /// ```
@@ -235,7 +235,7 @@ impl Stack {
     ///
     /// ## Example
     /// ```rust,no_run
-    /// use floem::{ViewId, views::*};
+    /// use floom::{ViewId, views::*};
     ///
     /// let id = ViewId::new();
     /// Stack::from_iter_with_id(id, (0..5).map(|i| text(i)), None);
@@ -258,7 +258,7 @@ impl Stack {
     ///
     /// ## Example
     /// ```rust,no_run
-    /// use floem::views::*;
+    /// use floom::views::*;
     ///
     /// Stack::horizontal((text("left"), text("right")));
     /// ```
@@ -275,7 +275,7 @@ impl Stack {
     ///
     /// ## Example
     /// ```rust,no_run
-    /// use floem::views::*;
+    /// use floom::views::*;
     ///
     /// Stack::vertical((text("top"), text("bottom")));
     /// ```
@@ -292,7 +292,7 @@ impl Stack {
     ///
     /// ## Example
     /// ```rust,no_run
-    /// use floem::views::*;
+    /// use floom::views::*;
     ///
     /// Stack::horizontal_from_iter((0..5).map(|i| text(i)));
     /// ```
@@ -316,7 +316,7 @@ impl Stack {
     ///
     /// ## Example
     /// ```rust,no_run
-    /// use floem::views::*;
+    /// use floom::views::*;
     ///
     /// Stack::vertical_from_iter((0..5).map(|i| text(i)));
     /// ```

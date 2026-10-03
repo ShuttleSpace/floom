@@ -39,7 +39,7 @@ mutate_one() {
   touch "$file"
 }
 
-COMPOSE=widgets/floem-widgets/src/compose.rs
+COMPOSE=crates/floom-widgets/src/compose.rs
 
 # 1. a transition that returns no longer starts from where it rested — `from` is
 #    left at its initial value, so the 0.5 -> 1.0 leg snaps to full opacity
@@ -64,7 +64,7 @@ mutate_one "$COMPOSE" \
             // Re-sync the declared animation on this node so the host restarts
             // (or parks the new instant value for) the compositor tween.
             cx.mark_dirty(id);" \
-  "cargo test -q -p floem-app --test motion_host an_opacity_transition_reverses_to_its_old_value_when_it_returns" \
+  "cargo test -q -p floom-app --test motion_host an_opacity_transition_reverses_to_its_old_value_when_it_returns" \
   "transition-starts-from-rested-value"
 
 # 2. the transition is ignored entirely — every change snaps, so the 1.0 -> 0.5
@@ -77,7 +77,7 @@ mutate_one "$COMPOSE" \
             None => (f64::from(self.target), f64::from(self.target), 0.0),
         };" \
 "        let (from, to, duration) = (f64::from(self.target), f64::from(self.target), 0.0);" \
-  "cargo test -q -p floem-app --test motion_host an_opacity_transition_fades_from_its_old_value_to_the_new_one" \
+  "cargo test -q -p floom-app --test motion_host an_opacity_transition_fades_from_its_old_value_to_the_new_one" \
   "transition-is-observed"
 
 # 3. the declared animation is never re-synced on the node, so a change of
@@ -88,7 +88,7 @@ mutate_one "$COMPOSE" \
             cx.mark_dirty(id);" \
 "            // Re-sync the declared animation on this node so the host restarts
             // (or parks the new instant value for) the compositor tween." \
-  "cargo test -q -p floem-app --test motion_host an_opacity_transition_fades_from_its_old_value_to_the_new_one" \
+  "cargo test -q -p floom-app --test motion_host an_opacity_transition_fades_from_its_old_value_to_the_new_one" \
   "declared-animation-is-re-synced"
 
 # A restore-by-copy can land inside the same second as the mutated build, and

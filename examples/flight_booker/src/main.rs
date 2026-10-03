@@ -1,7 +1,7 @@
 use std::fmt::Display;
 
-use floem::views::{Button, Label};
-use floem::{
+use floom::views::{Button, Label};
+use floom::{
     peniko::color::palette,
     reactive::{RwSignal, SignalGet, SignalUpdate},
     style::Style,
@@ -118,5 +118,5 @@ pub fn app_view() -> impl IntoView {
 }
 
 fn main() {
-    floem::launch(app_view);
+    floom::launch(app_view);
 }

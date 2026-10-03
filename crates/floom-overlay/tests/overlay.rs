@@ -1,7 +1,7 @@
-use floem_overlay::{
+use floom_overlay::{
     CompositorProp, ENTRY_SECS, OverlayHandle, OverlayKind, OverlayManager, sheet_bounds,
 };
-use floem_types::{ElementId, Point, Rect, Size};
+use floom_types::{ElementId, Point, Rect, Size};
 
 fn eid(i: u32) -> ElementId {
     ElementId::new(i, 1)

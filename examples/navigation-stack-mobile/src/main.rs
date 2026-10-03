@@ -1,4 +1,4 @@
-use floem::{
+use floom::{
     AnyView, Application, LazyView,
     action::{exec_after_animation_frame, set_window_scale},
     event::listener,
@@ -124,7 +124,7 @@ impl Spot {
             .style(|s| {
                 s.col_gap(8.0)
                     .row_gap(8.0)
-                    .flex_wrap(floem::taffy::FlexWrap::Wrap)
+                    .flex_wrap(floom::taffy::FlexWrap::Wrap)
             })
             .debug_name("pills");
 
@@ -444,7 +444,7 @@ impl PaymentResult {
         }
     }
 
-    fn color(self, theme: &floem::style::theme::DesignSystem) -> Color {
+    fn color(self, theme: &floom::style::theme::DesignSystem) -> Color {
         match self {
             PaymentResult::Success => theme.success(),
             PaymentResult::Failure => theme.danger(),
@@ -635,7 +635,7 @@ fn main() {
             ),
         )
         .on_event(|event| {
-            if let floem::AppEvent::Reopen {
+            if let floom::AppEvent::Reopen {
                 has_visible_windows,
             } = event
                 && !has_visible_windows
@@ -681,11 +681,11 @@ fn app_view(window_id: WindowId) -> impl IntoView {
             el::KeyUp,
             move |_cx, KeyboardEvent { modifiers, key, .. }| {
                 if *key == Key::Named(NamedKey::F11) {
-                    floem::action::inspect();
+                    floom::action::inspect();
                 } else if *key == Key::Character("q".into()) && modifiers.contains(OS_MOD) {
-                    floem::quit_app();
+                    floom::quit_app();
                 } else if *key == Key::Character("w".into()) && modifiers.contains(OS_MOD) {
-                    floem::close_window(window_id);
+                    floom::close_window(window_id);
                 }
             },
         )
@@ -964,7 +964,7 @@ fn amenity_row() -> impl IntoView {
         .style(|s| {
             s.width_full()
                 .col_gap(8.0)
-                .flex_wrap(floem::taffy::FlexWrap::Wrap)
+                .flex_wrap(floom::taffy::FlexWrap::Wrap)
         })
         .debug_name("amenity_row")
 }

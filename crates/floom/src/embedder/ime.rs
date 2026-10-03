@@ -1,6 +1,6 @@
 //! Text input method editor (IME) protocol types.
 //!
-//! These are the neutral building blocks a backend uses to tell Floem about
+//! These are the neutral building blocks a backend uses to tell Floom about
 //! composition state and to receive IME enable/configuration requests. Mobile
 //! and HarmonyOS backends map their soft keyboard, candidate UI, secure input,
 //! and CJK composition behavior into this protocol.
@@ -40,7 +40,7 @@ pub enum ImeHint {
     Titlecase,
 }
 
-/// The IME state Floem wants the platform to apply to a window.
+/// The IME state Floom wants the platform to apply to a window.
 #[derive(Clone, Debug, PartialEq)]
 pub struct ImeState {
     /// Whether the IME / soft keyboard should be active.
@@ -59,7 +59,7 @@ pub struct ImeState {
     pub surrounding_text: Option<String>,
 }
 
-/// IME events sent from a backend into Floem.
+/// IME events sent from a backend into Floom.
 #[derive(Clone, Debug, PartialEq)]
 pub enum ImeEvent {
     /// Composition text updated (user is still typing).

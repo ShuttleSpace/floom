@@ -2,14 +2,14 @@
 
 //! Receiving files shared into the app from another Android app.
 //!
-//! When the user shares a file (or opens a file with Floem via the share sheet /
+//! When the user shares a file (or opens a file with Floom via the share sheet /
 //! "open with"), the Android system delivers an `Intent` to the activity:
 //!
 //! - `ACTION_SEND` — a single file in `Intent.EXTRA_STREAM` (a `content://` Uri).
 //! - `ACTION_SEND_MULTIPLE` — several files in `EXTRA_STREAM` (an `ArrayList`).
 //! - `ACTION_VIEW` — a single file in `Intent.getData()`.
 //!
-//! android-activity 0.6 has **no** intent API, so Floem reads the intent through
+//! android-activity 0.6 has **no** intent API, so Floom reads the intent through
 //! the shared JNI bridge (`crate::platform::android_jni`) on the `Activity` object
 //! it already holds:
 //!
@@ -17,7 +17,7 @@
 //!   is read in `Application::new_android` via [`read_launch_intent`]. This works
 //!   with the default `android.app.NativeActivity` — no Java subclass required.
 //! - **Runtime intent** (the app was already running and the user shared again):
-//!   the app's `FloemNativeActivity` must override `onNewIntent` and forward the
+//!   the app's `FloomNativeActivity` must override `onNewIntent` and forward the
 //!   `Intent` to [`dispatch_android_intent`] (same pattern as the file-dialog
 //!   result hook).
 //!
@@ -43,7 +43,7 @@ type SharedFilesHandler = Box<dyn Fn(Vec<SharedFile>) + 'static>;
 
 // Android delivers shared files on the main looper thread only, so the handler is
 // not required to be `Send`. A `thread_local` avoids the `Sync` bound a `static
-// Mutex` would impose on a `!Send` handler (Floem's UI signals such as `RwSignal`
+// Mutex` would impose on a `!Send` handler (Floom's UI signals such as `RwSignal`
 // are `!Send`), while still giving a single global registration point per thread.
 thread_local! {
     static HANDLER: Mutex<Option<SharedFilesHandler>> = Mutex::new(None);

@@ -3,7 +3,7 @@
 //! This module provides composite style types that represent multi-value
 //! CSS properties like borders and padding.
 
-use floem_legacy_renderer::text::FontWeight;
+use floom_legacy_renderer::text::FontWeight;
 use parley::style::{OverflowWrap, WordBreakStrength};
 use peniko::color::palette;
 use peniko::kurbo::Stroke;
@@ -867,7 +867,7 @@ impl StylePropValue for BoxShadow {
 /// # Examples
 ///
 /// ```rust
-/// # use floem::prelude::*;
+/// # use floom::prelude::*;
 /// // A button that can be focused by any means
 /// let _button = Button::new("Click me")
 ///     .style(|s| s.keyboard_navigable());

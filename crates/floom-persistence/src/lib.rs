@@ -1,4 +1,4 @@
-//! Key-value persistence and restoration for Floem 2.0.
+//! Key-value persistence and restoration for Floom 2.0.
 //!
 //! Widget-free (framework sits below widgets). Three layers:
 //!
@@ -384,7 +384,7 @@ mod tests {
 
     #[test]
     fn file_store_persists_and_survives_reopening() {
-        let root = std::env::temp_dir().join(format!("floem-persist-test-{}", std::process::id()));
+        let root = std::env::temp_dir().join(format!("floom-persist-test-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&root);
 
         {
@@ -412,7 +412,7 @@ mod tests {
 
     #[test]
     fn file_store_path_validation() {
-        let store = FileStore::new("/tmp/floem-should-not-exist");
+        let store = FileStore::new("/tmp/floom-should-not-exist");
         assert!(store.get("../escape").is_err(), "'..' must be rejected");
         assert!(store.get("a//b").is_err(), "empty components rejected");
         assert!(store.get("").is_err(), "empty key rejected");
@@ -430,14 +430,14 @@ mod tests {
 
         // Restore into a *different* backend.
         let mut target = FileStore::new(
-            std::env::temp_dir().join(format!("floem-restore-test-{}", std::process::id())),
+            std::env::temp_dir().join(format!("floom-restore-test-{}", std::process::id())),
         );
         let written = snapshot.restore(&mut target).unwrap();
         assert_eq!(written, 2);
         assert_eq!(get_string(&target, "a").unwrap(), Some("1".into()));
 
         let _ = std::fs::remove_dir_all(
-            std::env::temp_dir().join(format!("floem-restore-test-{}", std::process::id())),
+            std::env::temp_dir().join(format!("floom-restore-test-{}", std::process::id())),
         );
     }
 

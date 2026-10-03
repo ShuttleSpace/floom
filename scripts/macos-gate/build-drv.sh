@@ -20,7 +20,7 @@
 set -euo pipefail
 
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-out="${1:-${TMPDIR:-/tmp}/floem-macos-drv}"
+out="${1:-${TMPDIR:-/tmp}/floom-macos-drv}"
 
 swiftc -O -target arm64-apple-macosx15.0 -o "$out" "$here/drv.swift" 2>/dev/null
 printf 'built %s\n' "$out"

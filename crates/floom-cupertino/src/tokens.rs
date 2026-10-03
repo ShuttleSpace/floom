@@ -5,14 +5,14 @@
 //! default UI font via `system-ui` rather than bundling or naming a licensed
 //! typeface, so nothing proprietary ships here.
 
-use floem_theme::{ColorScheme, Theme};
-use floem_types::Color;
+use floom_theme::{ColorScheme, Theme};
+use floom_types::Color;
 
 /// The Cupertino colour roles this crate styles against.
 ///
 /// Several are translucent by design — Apple's `secondaryLabel` and
 /// `separatorColor` are defined as a base colour *with an alpha*, which is why
-/// [`floem_types::Color`]'s four channels are enough and no separate "opacity"
+/// [`floom_types::Color`]'s four channels are enough and no separate "opacity"
 /// role is needed.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct CupertinoColors {
@@ -49,25 +49,25 @@ impl CupertinoColors {
                 "on_tint/tint",
                 self.on_tint,
                 self.tint,
-                floem_design::WCAG_AA_LARGE,
+                floom_design::WCAG_AA_LARGE,
             ),
             (
                 "label/grouped_background",
                 self.label,
                 self.grouped_background,
-                floem_design::WCAG_AA_NORMAL,
+                floom_design::WCAG_AA_NORMAL,
             ),
             (
                 "label/secondary_grouped_background",
                 self.label,
                 self.secondary_grouped_background,
-                floem_design::WCAG_AA_NORMAL,
+                floom_design::WCAG_AA_NORMAL,
             ),
             (
                 "tint/secondary_grouped_background",
                 self.tint,
                 self.secondary_grouped_background,
-                floem_design::WCAG_AA_LARGE,
+                floom_design::WCAG_AA_LARGE,
             ),
         ]
     }

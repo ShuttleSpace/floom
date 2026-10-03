@@ -1,6 +1,6 @@
 //! Retained scene node payloads (no GPU / OS types).
 
-use floem_types::{
+use floom_types::{
     Brush, ClipRegion, Color, Filter, Path, Point, Rect, ResourceId, Shader, Shadow, Size, Stroke,
     Transform,
 };
@@ -217,7 +217,7 @@ impl SceneNode {
                     // less would report damage that misses the spike the
                     // stroke actually painted.
                     let reach = match stroke.join {
-                        floem_types::LineJoin::Miter => stroke.half_width() * stroke.miter_limit,
+                        floom_types::LineJoin::Miter => stroke.half_width() * stroke.miter_limit,
                         _ => stroke.half_width(),
                     };
                     bounds = bounds.union(Rect {

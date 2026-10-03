@@ -3,15 +3,15 @@
 //! `MotionDuration` used to be a token with zero consumers: the design language
 //! was written, but no engine API could read it. This file proves the seam is
 //! closed end-to-end: a Material duration + easing token become a
-//! `floem_types::Transition`, and that transition is exactly what
-//! `floem_widgets::Button::transition` accepts — the implicit-transition door
+//! `floom_types::Transition`, and that transition is exactly what
+//! `floom_widgets::Button::transition` accepts — the implicit-transition door
 //! B4 opened. The design system decides the timing; the engine plays it.
 
-use floem_app::WidgetHost;
-use floem_layout::LayoutStyle;
-use floem_material::{MotionDuration, MotionEasing, MotionTransition};
-use floem_types::{Event, Point, PointerEvent, Size};
-use floem_widgets::Button;
+use floom_app::WidgetHost;
+use floom_layout::LayoutStyle;
+use floom_material::{MotionDuration, MotionEasing, MotionTransition};
+use floom_types::{Event, Point, PointerEvent, Size};
+use floom_widgets::Button;
 
 /// The token spelling and the engine transition agree on the duration: 100 ms
 /// is 0.1 s, and the one conversion in between must not drift by a factor of
@@ -28,7 +28,7 @@ fn a_motion_token_becomes_the_transition_that_names_it() {
 /// without adaptation. This is the "real consumer" B6 asks for — the token does
 /// not just exist, it is what a widget is configured with.
 ///
-/// The button's own colour fade is asserted in `floem-app`'s motion-host suite
+/// The button's own colour fade is asserted in `floom-app`'s motion-host suite
 /// (B4); here the claim is narrower and belongs to this design system — that
 /// the token *is* the value the button is armed with, so the two halves of the
 /// chain meet without a shim.

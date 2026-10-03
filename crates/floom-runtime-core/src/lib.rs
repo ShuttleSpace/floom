@@ -10,7 +10,7 @@ mod tree;
 
 pub use arena::ElementArena;
 pub use dirty::{DirtyFlags, DirtySet, invalidate, propagate_layout};
-pub use floem_types::ElementId;
+pub use floom_types::ElementId;
 pub use id::{IdAllocator, IdSlot};
 pub use reactive_bridge::{
     BindingRegistry, BindingReport, ReactiveBinding, ReactiveBindingId, SignalSource, bind_signal,

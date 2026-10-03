@@ -2,7 +2,7 @@
 
 use std::borrow::Cow;
 
-use floem_types::{Point, Size};
+use floom_types::{Point, Size};
 use parley::layout::{Alignment, AlignmentOptions, PositionedLayoutItem};
 use parley::style::{FontFamily, FontStack, FontWeight, GenericFamily, StyleProperty};
 use parley::{FontContext, LayoutContext};

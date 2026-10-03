@@ -1,4 +1,4 @@
-use floem::{
+use floom::{
     prelude::*,
     unit::UnitExt,
     views::{ContainerExt, Decorators},
@@ -29,5 +29,5 @@ fn app_view() -> impl IntoView {
 }
 
 fn main() {
-    floem::launch(app_view);
+    floom::launch(app_view);
 }

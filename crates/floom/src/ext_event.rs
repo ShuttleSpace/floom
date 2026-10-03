@@ -1,6 +1,6 @@
 use std::{cell::Cell, collections::VecDeque, sync::Arc};
 
-use floem_legacy_reactive::{
+use floom_legacy_reactive::{
     Effect, ReadSignal, RwSignal, Scope, SignalGet, SignalUpdate, SignalWith, WriteSignal,
 };
 use parking_lot::{Mutex, RwLock, RwLockReadGuard, RwLockWriteGuard};

@@ -1,23 +1,23 @@
 //! Reconciliation across the composite components.
 //!
-//! These run the real `WidgetHost` with the real `floem-widgets` composites and
+//! These run the real `WidgetHost` with the real `floom-widgets` composites and
 //! assert what the reconciler mounts/unmounts. Because removed subtrees are only
 //! flagged `dead` (their `NodeId` slot is kept for stability), we count *live*
 //! widgets via [`FrameStats::painted`], which the host increments once per
 //! non-dead node.
 //!
-//! They drive that through `floem_testkit::TestApp`, with the root left
+//! They drive that through `floom_testkit::TestApp`, with the root left
 //! *unpinned* — these tests are about which subtree exists, and pinning the root
 //! to the viewport would decide the layout for them.
 //!
-//! [`FrameStats::painted`]: floem_app::FrameStats::painted
+//! [`FrameStats::painted`]: floom_app::FrameStats::painted
 
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-use floem_core::{Axis, Child, ChildKey, LayoutRequest, Point, Size};
-use floem_testkit::TestApp;
-use floem_widgets::{
+use floom_core::{Axis, Child, ChildKey, LayoutRequest, Point, Size};
+use floom_testkit::TestApp;
+use floom_widgets::{
     BottomSheet, Button, Conditional, Dialog, Grid, List, NavigationBar, NavigationDrawer, Popup,
     Stack, Tabs, Text,
 };
@@ -39,8 +39,8 @@ fn key_of(s: &String) -> u64 {
 fn sized_column(
     width: f32,
     height: f32,
-    build: impl Fn() -> Box<dyn floem_core::WidgetAny> + Send + Sync + 'static,
-) -> impl floem_core::WidgetAny + 'static {
+    build: impl Fn() -> Box<dyn floom_core::WidgetAny> + Send + Sync + 'static,
+) -> impl floom_core::WidgetAny + 'static {
     Stack::new(Axis::Vertical).child(Child::new(
         ChildKey::index(0),
         LayoutRequest::new().width(width).height(height),

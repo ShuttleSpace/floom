@@ -8,11 +8,11 @@
 //! - Responsive breakpoint changes work correctly
 //! - Cache statistics are tracked correctly
 
-use floem::peniko::{Brush, Color};
-use floem::prelude::*;
-use floem::prop;
-use floem::style::{Background, Style};
-use floem_legacy_test::prelude::*;
+use floom::peniko::{Brush, Color};
+use floom::prelude::*;
+use floom::prop;
+use floom::style::{Background, Style};
+use floom_legacy_test::prelude::*;
 use serial_test::serial;
 
 // ============================================================================
@@ -38,7 +38,7 @@ impl CacheColorExt for Style {
 }
 
 // A test style class.
-floem::style_class!(pub CacheTestClass);
+floom::style_class!(pub CacheTestClass);
 
 // ============================================================================
 // Basic Cache Hit Tests

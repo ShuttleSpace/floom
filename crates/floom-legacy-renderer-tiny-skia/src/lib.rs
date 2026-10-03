@@ -1,10 +1,10 @@
 mod recording;
 
 use anyhow::{Result, anyhow};
-use floem_legacy_renderer::Img;
-use floem_legacy_renderer::Renderer;
-use floem_legacy_renderer::text::{Glyph as ParleyGlyph, GlyphRunProps};
-use floem_legacy_renderer::tiny_skia::{
+use floom_legacy_renderer::Img;
+use floom_legacy_renderer::Renderer;
+use floom_legacy_renderer::text::{Glyph as ParleyGlyph, GlyphRunProps};
+use floom_legacy_renderer::tiny_skia::{
     self, FillRule, FilterQuality, GradientStop, IntRect, LinearGradient, Mask, MaskType, Paint,
     Path, PathBuilder, Pixmap, PixmapPaint, PremultipliedColorU8, RadialGradient, Shader,
     SpreadMode, Stroke, Transform,
@@ -1087,7 +1087,7 @@ impl<W: raw_window_handle::HasWindowHandle + raw_window_handle::HasDisplayHandle
     #[cfg(target_env = "ohos")]
     pub fn new_wgpu_surface(
         window: W,
-        gpu_resources: floem_legacy_renderer::gpu_resources::GpuResources,
+        gpu_resources: floom_legacy_renderer::gpu_resources::GpuResources,
         surface: wgpu::Surface<'static>,
         width: u32,
         height: u32,
@@ -1495,7 +1495,7 @@ impl<W: raw_window_handle::HasWindowHandle + raw_window_handle::HasDisplayHandle
 
     fn draw_svg<'b>(
         &mut self,
-        svg: floem_legacy_renderer::Svg<'b>,
+        svg: floom_legacy_renderer::Svg<'b>,
         rect: Rect,
         brush: Option<impl Into<BrushRef<'b>>>,
     ) {

@@ -1,6 +1,6 @@
 use criterion::{BenchmarkId, Criterion, criterion_group, criterion_main};
-use floem_accessibility::{SemanticsNode, SemanticsRole, SemanticsTree};
-use floem_types::ElementId;
+use floom_accessibility::{SemanticsNode, SemanticsRole, SemanticsTree};
+use floom_types::ElementId;
 
 /// Draining the semantics diff is the per-frame hot path when a11y is enabled,
 /// so it must scale with the number of *changed* nodes, not the tree size.

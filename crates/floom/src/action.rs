@@ -1,6 +1,6 @@
 #![deny(missing_docs)]
 
-//! Action functions that can be called anywhere in a Floem application
+//! Action functions that can be called anywhere in a Floom application
 //!
 //! This module includes a variety of functions that can interact with the window from which the function is being called.
 //!
@@ -8,7 +8,7 @@
 
 use std::sync::atomic::AtomicU64;
 
-use floem_legacy_reactive::{SignalWith, UpdaterEffect};
+use floom_legacy_reactive::{SignalWith, UpdaterEffect};
 use peniko::kurbo::{Point, Size, Vec2};
 use winit::window::WindowId;
 use winit::window::{ResizeDirection, Theme};
@@ -88,7 +88,7 @@ pub fn inspect() {
 
 /// Set the **global** app theme in all windows.
 ///
-/// Toggles both floem and window themes.
+/// Toggles both floom and window themes.
 pub fn set_global_theme(theme: Theme) {
     add_app_update_event(AppUpdateEvent::ThemeChanged { theme });
 }
@@ -264,7 +264,7 @@ where
 /// Platform support:
 /// - Windows: Yes (native)
 /// - macOS: Yes (native)
-/// - Linux / FreeBSD / wasm32 / Android: Uses a custom Floem View
+/// - Linux / FreeBSD / wasm32 / Android: Uses a custom Floom View
 pub fn show_context_menu(menu: Menu, pos: Option<Point>) {
     show_context_menu_internal(menu, pos, false);
 }

@@ -8,7 +8,7 @@
 use std::collections::HashMap;
 use std::hash::Hash;
 
-use floem_types::NativeViewId;
+use floom_types::NativeViewId;
 
 /// An opaque, reusable native view slot.
 ///

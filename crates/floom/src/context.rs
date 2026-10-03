@@ -56,7 +56,7 @@ impl Phases {
 
 /// Configuration for event callbacks that determines when they should be invoked during event propagation.
 ///
-/// Event listeners in Floem are called during different phases of the event propagation pipeline,
+/// Event listeners in Floom are called during different phases of the event propagation pipeline,
 /// similar to the DOM event model. This config allows you to specify which phases your callback
 /// should respond to.
 ///
@@ -137,10 +137,10 @@ pub type EventListenerVec = SmallVec<[(Rc<RefCell<EventCallback>>, EventCallback
 /// - Use `VisualChanged`: When you need to know where the view actually appears on screen, or to
 ///   position elements relative to the view's visual appearance
 ///
-/// ## Coordinate Spaces in Floem
+/// ## Coordinate Spaces in Floom
 ///
-/// **Note**: All event handling and painting in Floem happen in the view's **local coordinate space**.
-/// Floem automatically handles transformations to and from local coordinates. You typically don't need
+/// **Note**: All event handling and painting in Floom happen in the view's **local coordinate space**.
+/// Floom automatically handles transformations to and from local coordinates. You typically don't need
 /// window coordinates unless you're positioning elements relative to other views' visual positions or
 /// interacting with platform APIs that expect window coordinates.
 ///
@@ -211,10 +211,10 @@ impl LayoutChanged {
 /// - Use `LayoutChanged`: When you only care about layout box sizes or relative positioning
 ///   within the layout tree, ignoring transforms
 ///
-/// ## Coordinate Spaces in Floem
+/// ## Coordinate Spaces in Floom
 ///
-/// **Note**: All event handling and painting in Floem happen in the view's **local coordinate space**.
-/// Floem automatically handles transformations to and from local coordinates. You typically only need
+/// **Note**: All event handling and painting in Floom happen in the view's **local coordinate space**.
+/// Floom automatically handles transformations to and from local coordinates. You typically only need
 /// visual window coordinates when positioning separate elements (like overlays or platform windows)
 /// relative to a view's visual appearance, or when interacting with platform APIs that expect
 /// window coordinates.

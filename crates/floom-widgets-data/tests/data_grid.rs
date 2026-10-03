@@ -6,14 +6,14 @@
 //! the row count if the window were not real: emitted paint ops, and the size
 //! of the materialized-row pool.
 
-use floem_core::{ElementId, Key, NamedKey, Point, Rect, Widget, WidgetAny};
-use floem_types::{KeyEvent, Modifiers, PointerEvent};
-use floem_virtual::Overscan;
-use floem_widgets::testkit::{
+use floom_core::{ElementId, Key, NamedKey, Point, Rect, Widget, WidgetAny};
+use floom_types::{KeyEvent, Modifiers, PointerEvent};
+use floom_virtual::Overscan;
+use floom_widgets::testkit::{
     AllocatingCreateContext, RecordingUpdateContext, SceneRecorder, dispatch, semantics_snapshot,
 };
-use floem_widgets_data::data_grid::{DataGrid, RowPool};
-use floem_widgets_data::model::{
+use floom_widgets_data::data_grid::{DataGrid, RowPool};
+use floom_widgets_data::model::{
     CellValue, Column, ColumnId, ColumnKind, RowId, SelectionMode, VecTable,
 };
 
@@ -69,7 +69,7 @@ fn allocate(widget: &dyn Widget) -> ElementId {
 
 fn key(grid: &mut DataGrid, id: ElementId, key: Key, modifiers: Modifiers) -> bool {
     let event = KeyEvent {
-        phase: floem_core::KeyPhase::Down,
+        phase: floom_core::KeyPhase::Down,
         key,
         modifiers,
     };

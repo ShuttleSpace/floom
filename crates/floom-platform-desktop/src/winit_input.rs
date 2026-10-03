@@ -1,4 +1,4 @@
-//! Pure winit → Floem ABI input translations.
+//! Pure winit → Floom ABI input translations.
 //!
 //! Everything here is a total function over winit's value types, so it is unit
 //! testable without creating a window or an event loop — which matters, because
@@ -10,7 +10,7 @@
 //! that `to_key()` yields the character the user actually typed. The physical
 //! code is used only as a fallback, for keys the layout does not name.
 
-use floem_platform::{KeyCode, Modifiers, PointerButton};
+use floom_platform::{KeyCode, Modifiers, PointerButton};
 use winit::event::{ButtonSource, ElementState, MouseButton, MouseScrollDelta};
 use winit::keyboard::KeyCode as WinitKeyCode;
 use winit::keyboard::{Key as WinitKey, ModifiersState, NamedKey, PhysicalKey};

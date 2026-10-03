@@ -1,6 +1,6 @@
 use std::{collections::VecDeque, time::Duration};
 
-use floem::{
+use floom::{
     IntoView, View,
     action::exec_after_animation_frame,
     event::{Event, EventPropagation, PointerScrollEventExt},
@@ -19,7 +19,7 @@ pub fn pan_zoom_view<V: IntoView + 'static>(
     view_transform: kurbo::Affine,
     child: V,
 ) -> PanZoomView {
-    let id = floem::ViewId::new();
+    let id = floom::ViewId::new();
 
     let child = child.into_view();
     id.set_children([child]);
@@ -43,7 +43,7 @@ pub fn pan_zoom_view<V: IntoView + 'static>(
 }
 
 pub struct PanZoomView {
-    id: floem::ViewId,
+    id: floom::ViewId,
     /// Callback to be called when the view is panned/zoomed and therefore the requested viewport changed.
     onpanzoom: Option<Box<dyn Fn(kurbo::Affine)>>,
     /// The affine transformation (scale, rotation, translation) that represents the current viewport.
@@ -85,11 +85,11 @@ impl PanZoomView {
 }
 
 impl View for PanZoomView {
-    fn id(&self) -> floem::ViewId {
+    fn id(&self) -> floom::ViewId {
         self.id
     }
 
-    fn event(&mut self, cx: &mut floem::context::EventCx) -> EventPropagation {
+    fn event(&mut self, cx: &mut floom::context::EventCx) -> EventPropagation {
         match &cx.event {
             Event::Pointer(PointerEvent::Down(PointerButtonEvent { state, .. })) => {
                 self.dragging = true;
@@ -150,7 +150,7 @@ impl View for PanZoomView {
         EventPropagation::Continue
     }
 
-    fn update(&mut self, _cx: &mut floem::context::UpdateCx, _state: Box<dyn std::any::Any>) {
+    fn update(&mut self, _cx: &mut floom::context::UpdateCx, _state: Box<dyn std::any::Any>) {
         let update = self.measure_drag_velocity();
 
         let mut repaint = false;

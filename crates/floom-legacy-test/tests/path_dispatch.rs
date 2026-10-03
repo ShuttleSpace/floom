@@ -12,7 +12,7 @@
 //! - Parent handlers fire even when child has no handler
 //! - Multiple click types (single, double, secondary) all bubble correctly
 
-use floem_legacy_test::prelude::*;
+use floom_legacy_test::prelude::*;
 use serial_test::serial;
 
 // =============================================================================
@@ -364,7 +364,7 @@ fn test_click_is_synthetic_after_pointer_up() {
 
     let view = Empty::new()
         .style(|s| s.size(100.0, 100.0))
-        .on_event_stop(floem::event::listener::PointerUp, move |_, _| {
+        .on_event_stop(floom::event::listener::PointerUp, move |_, _| {
             pointer_up_clone.set(true);
         })
         .action(move || {
@@ -408,20 +408,20 @@ fn test_path_includes_all_ancestors() {
 
     let view = Empty::new()
         .style(|s| s.size(100.0, 100.0))
-        .on_event_cont(floem::event::listener::Click, move |_, _| {
+        .on_event_cont(floom::event::listener::Click, move |_, _| {
             visit_order_gp.borrow_mut().push("grandparent".to_string());
         })
         .into_view();
 
     let parent = Container::new(
         Container::new(Empty::new().style(|s| s.size(30.0, 30.0)).on_event_cont(
-            floem::event::listener::Click,
+            floom::event::listener::Click,
             move |_, _| {
                 visit_order_c.borrow_mut().push("child".to_string());
             },
         ))
         .style(|s| s.size(60.0, 60.0))
-        .on_event_cont(floem::event::listener::Click, move |_, _| {
+        .on_event_cont(floom::event::listener::Click, move |_, _| {
             visit_order_p.borrow_mut().push("parent".to_string());
         }),
     )

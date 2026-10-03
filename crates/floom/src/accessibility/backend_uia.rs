@@ -1,12 +1,12 @@
 //! Windows UI Automation backend (via `accesskit_windows`).
 //!
-//! Bridges Floem's neutral [`AccessTreeUpdate`] to UI Automation. We feed the
+//! Bridges Floom's neutral [`AccessTreeUpdate`] to UI Automation. We feed the
 //! tree to `accesskit_windows::Adapter`, created from the window `HWND`. The
 //! adapter answers `WM_GETOBJECT`; because we cannot use `accesskit_winit`
 //! (we depend on a winit fork rather than upstream `winit`), we subclass the
 //! window ourselves and forward that message from our window procedure to
 //! [`Adapter::handle_wm_getobject`]. Actions from Narrator arrive via the
-//! [`accesskit::ActionHandler`] and are forwarded to Floem core through a
+//! [`accesskit::ActionHandler`] and are forwarded to Floom core through a
 //! channel (drained by `WindowState`).
 
 use std::sync::{mpsc, Arc, Mutex};
@@ -139,7 +139,7 @@ unsafe extern "system" fn subclass_proc(
     unsafe { CallWindowProcW(Some(prev), hwnd, msg, wparam, lparam) }
 }
 
-/// Bridges Floem's neutral accessibility tree to Windows UIA via accesskit.
+/// Bridges Floom's neutral accessibility tree to Windows UIA via accesskit.
 pub(crate) struct WindowsAccessibilityBackend {
     /// Shared with the subclass window procedure.
     adapter: Arc<Mutex<Adapter>>,
@@ -233,7 +233,7 @@ impl AccessibilityBackend for WindowsAccessibilityBackend {
     }
 
     fn update_focus_state(&mut self, focused: bool) {
-        // Keep Narrator's notion of window focus in sync with Floem's.
+        // Keep Narrator's notion of window focus in sync with Floom's.
         if let Ok(mut adapter) = self.adapter.lock() {
             if let Some(events) = adapter.update_window_focus_state(focused) {
                 events.raise();

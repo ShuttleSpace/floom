@@ -9,19 +9,19 @@ dependency graph and generate a `THIRD-PARTY` notice.
 
 - `deny.toml` — advisory / license / ban / source checks.
 - `about.toml` — which licenses are accepted when generating the notice.
-- `manual-additions.toml` — license annotations for Floem's in-tree forks
-  (under `vendor/`), which are not on crates.io.
+- `manual-additions.toml` — license annotations for Floom's in-tree forks
+  (under `crates/vendor/`), which are not on crates.io.
 
 ## Forked / vendored crates
 
-Floem vendors third-party forks under [`vendor/`](../vendor/). Each fork carries a
+Floom vendors third-party forks under [`crates/vendor/`](../vendor/). Each fork carries a
 `NOTICE.md` documenting its upstream source and the local delta:
 
-- `vendor/floem-winit` — fork of [lapce/winit](https://github.com/lapce/winit)
+- `crates/vendor/floem-winit` — fork of [lapce/winit](https://github.com/lapce/winit)
   (iOS open-URL forwarding).
-- `vendor/floem-winit-ohos` — fork of `tgui-winit-ohos` 0.4.11 (OHOS
+- `crates/vendor/floom-winit-ohos` — fork of `tgui-winit-ohos` 0.4.11 (OHOS
   `floem-winit-core` retarget).
-- `vendor/harmony-app-rs` — patches for `taoyuan11/harmony-app-rs`
+- `crates/vendor/harmony-app-rs` — patches for `taoyuan11/harmony-app-rs`
   (`cargo-ohos-app`) so the OHOS packaging flow works on macOS/Linux.
 
 ## Generating the notice

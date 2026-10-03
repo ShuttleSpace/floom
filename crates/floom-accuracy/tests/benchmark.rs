@@ -5,7 +5,7 @@
 //! The harness measures how many passes convergence took and *counts
 //! regressions* — a repair that broke a path that used to be clean.
 
-use floem_accuracy::{
+use floom_accuracy::{
     DiffDrivenPolicy, Screen, ScreenTokens, Thresholds, TokenEdit, run_benchmark,
 };
 
@@ -47,8 +47,8 @@ fn the_benchmark_measures_convergence_across_screens() {
 #[derive(Default)]
 struct BlunderingPolicy;
 
-impl floem_accuracy::RepairPolicy for BlunderingPolicy {
-    fn propose(&mut self, report: &floem_accuracy::EvaluationReport) -> Vec<TokenEdit> {
+impl floom_accuracy::RepairPolicy for BlunderingPolicy {
+    fn propose(&mut self, report: &floom_accuracy::EvaluationReport) -> Vec<TokenEdit> {
         if report.diff.entries.is_empty() {
             return Vec::new();
         }
@@ -72,8 +72,8 @@ fn a_blundering_policy_earns_regressions() {
 #[derive(Default)]
 struct DoNothingPolicy;
 
-impl floem_accuracy::RepairPolicy for DoNothingPolicy {
-    fn propose(&mut self, _report: &floem_accuracy::EvaluationReport) -> Vec<TokenEdit> {
+impl floom_accuracy::RepairPolicy for DoNothingPolicy {
+    fn propose(&mut self, _report: &floom_accuracy::EvaluationReport) -> Vec<TokenEdit> {
         Vec::new()
     }
 }
@@ -98,15 +98,15 @@ fn proposed_edits_name_schema_declared_properties() {
         TokenEdit::TitleSize(16.0),
         TokenEdit::BodySize(15.0),
         TokenEdit::ControlHeight(44.0),
-        TokenEdit::Accent(floem_types::Color::rgb(0xBA, 0x68, 0xC8)),
-        TokenEdit::OnAccent(floem_types::Color::rgb(0x12, 0x12, 0x12)),
-        TokenEdit::Surface(floem_types::Color::rgb(0xF0, 0xF0, 0xF0)),
-        TokenEdit::Card(floem_types::Color::rgb(0xE0, 0xE0, 0xE0)),
-        TokenEdit::Text(floem_types::Color::rgb(0x00, 0x00, 0x00)),
+        TokenEdit::Accent(floom_types::Color::rgb(0xBA, 0x68, 0xC8)),
+        TokenEdit::OnAccent(floom_types::Color::rgb(0x12, 0x12, 0x12)),
+        TokenEdit::Surface(floom_types::Color::rgb(0xF0, 0xF0, 0xF0)),
+        TokenEdit::Card(floom_types::Color::rgb(0xE0, 0xE0, 0xE0)),
+        TokenEdit::Text(floom_types::Color::rgb(0x00, 0x00, 0x00)),
     ];
     for edit in edits {
         assert!(
-            floem_ui_ir::prop_is_declared(edit.property_name()),
+            floom_ui_ir::prop_is_declared(edit.property_name()),
             "{} is not in the schema",
             edit.property_name()
         );
@@ -117,10 +117,10 @@ fn proposed_edits_name_schema_declared_properties() {
 fn the_agent_protocol_carries_the_inspection_loop() {
     // The benchmark's information is available over the Phase 25 protocol:
     // labels via Semantics, geometry via Tree, the edit vocabulary via Schema.
-    use floem_agent::{AgentRequest, AgentSession, Command, PROTOCOL_VERSION, Payload};
+    use floom_agent::{AgentRequest, AgentSession, Command, PROTOCOL_VERSION, Payload};
 
-    let mut app = floem_testkit::TestApp::new(
-        floem_accuracy::screen_size(),
+    let mut app = floom_testkit::TestApp::new(
+        floom_accuracy::screen_size(),
         Screen::Settings.build(&ScreenTokens::reference()),
     );
     let mut session = AgentSession::new(&mut app);

@@ -1,4 +1,4 @@
-use floem_animation::{
+use floom_animation::{
     AnimKind, AnimationScheduler, Clock, CompositorChannel, CompositorProp, FakeClock, Tween,
 };
 

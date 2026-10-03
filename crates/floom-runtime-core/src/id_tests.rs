@@ -1,5 +1,5 @@
 use super::IdAllocator;
-use floem_types::ElementId;
+use floom_types::ElementId;
 
 #[test]
 fn alloc_returns_live_ids() {

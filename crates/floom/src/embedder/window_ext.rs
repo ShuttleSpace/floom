@@ -2,13 +2,13 @@
 //!
 //! Defined in a separate `impl` block (rather than editing the core window
 //! module) so the embedder boundary stays surgically isolated. It maps neutral
-//! [`EmbedderEvent`] values onto Floem's existing window methods.
+//! [`EmbedderEvent`] values onto Floom's existing window methods.
 
 use crate::embedder::{
     CommandSink, EmbedderEvent, FocusEvent, ImeEvent, SurfaceEvent, Theme, WindowLifecycleEvent,
 };
 use crate::window::handle::WindowHandle;
-use floem_legacy_reactive::{SignalGet, SignalUpdate};
+use floom_legacy_reactive::{SignalGet, SignalUpdate};
 
 impl WindowHandle {
     /// Route a single embedder event into this window.

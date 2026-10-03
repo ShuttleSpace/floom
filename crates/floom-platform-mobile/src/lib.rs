@@ -1,4 +1,4 @@
-//! Mobile OS-capability packages for Floem 2.0.
+//! Mobile OS-capability packages for Floom 2.0.
 //!
 //! This crate follows the *packages* pattern popularised by
 //! [`gpui-mobile`](https://github.com/itsbalamurali/gpui-mobile): each mobile
@@ -18,13 +18,13 @@
 //! manifest so a shipping app only pulls the backends it actually uses.
 //!
 //! This is a *capability* layer, deliberately separate from the per-OS window
-//! / event backends in `floem-platform-{android,ios,harmony,…}`. Those own
+//! / event backends in `floom-platform-{android,ios,harmony,…}`. Those own
 //! the winit glue; this crate owns the device APIs that an app calls once a
 //! window exists.
 //!
 //! # Why a separate crate, and not a reorganisation of the whole tree?
 //!
-//! Floem's workspace is already a mature, layered graph (L0–L9; see
+//! Floom's workspace is already a mature, layered graph (L0–L9; see
 //! `scripts/check-architecture-deps.sh`). The packages pattern is a *local*
 //! convention for mobile OS glue, not a replacement for that layering. We add
 //! one focused crate that follows it rather than reshaping every directory.

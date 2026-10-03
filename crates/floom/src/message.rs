@@ -1,6 +1,6 @@
 use std::{any::Any, cell::RefCell, collections::HashMap};
 
-use floem_legacy_reactive::Scope;
+use floom_legacy_reactive::Scope;
 use peniko::kurbo::{Point, Rect, Size, Vec2};
 use ui_events::pointer::PointerId;
 use winit::window::{ResizeDirection, Theme};

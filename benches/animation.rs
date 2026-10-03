@@ -1,4 +1,4 @@
-//! Benchmarks for animation processing in Floem.
+//! Benchmarks for animation processing in Floom.
 //!
 //! These benchmarks measure the performance of:
 //! - Style computation for views with animations attached
@@ -11,11 +11,11 @@ use std::hint::black_box;
 use std::time::Duration;
 
 use criterion::{BenchmarkId, Criterion, criterion_group, criterion_main};
-use floem::animate::Animation;
-use floem::headless::{HeadlessHarness, TestRoot};
-use floem::peniko::color::palette;
-use floem::prelude::*;
-use floem::views::{Decorators, Empty, Stack};
+use floom::animate::Animation;
+use floom::headless::{HeadlessHarness, TestRoot};
+use floom::peniko::color::palette;
+use floom::prelude::*;
+use floom::views::{Decorators, Empty, Stack};
 
 /// Create N views WITHOUT animations (baseline).
 fn create_views_no_animation(n: usize) -> impl IntoView {
@@ -215,7 +215,7 @@ fn bench_complex_animation_rebuild(c: &mut Criterion) {
 
 /// Create mixed views - some with animations, some without.
 fn create_mixed_views(total: usize, animated_percent: usize) -> impl IntoView {
-    use floem::view::AnyView;
+    use floom::view::AnyView;
 
     let animated_count = total * animated_percent / 100;
 

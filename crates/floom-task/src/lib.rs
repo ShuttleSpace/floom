@@ -1,4 +1,4 @@
-//! Task spawning and async Resource state for Floem 2.0.
+//! Task spawning and async Resource state for Floom 2.0.
 //!
 //! Executors are abstracted so desktop, WASM, and tests can plug in without
 //! baking a concrete async runtime into framework core.
@@ -6,7 +6,7 @@
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 
-use floem_legacy_reactive::{RwSignal, Scope, SignalGet, SignalUpdate};
+use floom_legacy_reactive::{RwSignal, Scope, SignalGet, SignalUpdate};
 
 /// Lifecycle of a fetched resource.
 #[derive(Debug, Clone, PartialEq, Eq)]

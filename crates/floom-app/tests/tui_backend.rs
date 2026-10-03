@@ -1,26 +1,26 @@
 //! Terminal backend tests: a real widget tree reaching real characters.
 //!
-//! The unit tests inside `floem-renderer-tui` prove the grid and the encoder in
+//! The unit tests inside `floom-renderer-tui` prove the grid and the encoder in
 //! isolation; this suite proves the **pipeline** does, using the same
 //! `WidgetHost` the rest of the app harness drives. That distinction matters
 //! because the interesting failure modes live at the seam: text that shapes
 //! but carries no string, or glyph positions in units this backend assumed
 //! were something else, both look fine from either side alone.
 //!
-//! The layering direction is deliberate — `floem-app` may depend *down* onto a
+//! The layering direction is deliberate — `floom-app` may depend *down* onto a
 //! renderer backend, so the end-to-end assertion lives here rather than pulling
 //! widgets into an L4 crate.
 
-use floem_app::WidgetHost;
-use floem_core::Size;
-use floem_layout::LayoutStyle;
-use floem_renderer::Presenter;
-use floem_renderer_tui::{TerminalSize, TuiPresenter};
-use floem_types::{SurfaceId, WindowId};
-use floem_widgets::Text;
+use floom_app::WidgetHost;
+use floom_core::Size;
+use floom_layout::LayoutStyle;
+use floom_renderer::Presenter;
+use floom_renderer_tui::{TerminalSize, TuiPresenter};
+use floom_types::{SurfaceId, WindowId};
+use floom_widgets::Text;
 
-fn surface(size: Size) -> floem_renderer::AttachedSurface {
-    floem_renderer::AttachedSurface::new(WindowId::new(0, 1), SurfaceId::new(0, 1), size, 1.0, None)
+fn surface(size: Size) -> floom_renderer::AttachedSurface {
+    floom_renderer::AttachedSurface::new(WindowId::new(0, 1), SurfaceId::new(0, 1), size, 1.0, None)
 }
 
 fn host_with_label(content: &str) -> WidgetHost {
@@ -32,7 +32,7 @@ fn host_with_label(content: &str) -> WidgetHost {
 }
 
 /// The characters of the busiest row, left to right, trimmed of padding.
-fn busiest_row(grid: &floem_renderer_tui::TuiGrid) -> String {
+fn busiest_row(grid: &floom_renderer_tui::TuiGrid) -> String {
     let best = (0..grid.rows())
         .map(|row| {
             (0..grid.cols())
@@ -94,7 +94,7 @@ fn a_wider_terminal_puts_the_same_glyph_in_a_different_column() {
     // The first glyph sits at column 0 in both grids (the label is left
     // aligned), so compare the *last* one: its advance is what spreads over
     // twice as many cells when there are twice as many columns.
-    let col_of_last = |grid: &floem_renderer_tui::TuiGrid| {
+    let col_of_last = |grid: &floom_renderer_tui::TuiGrid| {
         (0..grid.rows())
             .flat_map(|row| (0..grid.cols()).rev().map(move |col| (col, row)))
             .find_map(|(col, row)| grid.cell(col, row).filter(|c| c.ch != ' ').map(|_| col))

@@ -2,8 +2,8 @@
 //! (premultiplied RGBA8) → `WidgetHost::register_image_decoded` → a scene
 //! node an `Image` widget renders from.
 
-use floem_app::{WidgetHost, decode_image};
-use floem_scene::{ResourceKind, SceneNode};
+use floom_app::{WidgetHost, decode_image};
+use floom_scene::{ResourceKind, SceneNode};
 use std::io::Cursor;
 
 /// Encodes a 3×2 RGBA image to PNG bytes, with two transparent pixels so the
@@ -85,22 +85,22 @@ fn failed_decode_leaves_the_registry_untouched() {
 #[test]
 fn decoded_image_paints_a_scene_node() {
     let mut host = WidgetHost::new();
-    host.set_size(floem_core::Size::new(120.0, 80.0));
+    host.set_size(floom_core::Size::new(120.0, 80.0));
     let id = host
         .register_image_decoded(&sample_png())
         .expect("valid PNG registers");
     let root = host.mount_root(
-        floem_layout::LayoutStyle::default(),
-        floem_widgets::Container::new(),
+        floom_layout::LayoutStyle::default(),
+        floom_widgets::Container::new(),
     );
     host.mount(
         root,
-        floem_layout::LayoutStyle {
+        floom_layout::LayoutStyle {
             width: Some(24.0),
             height: Some(16.0),
-            ..floem_layout::LayoutStyle::default()
+            ..floom_layout::LayoutStyle::default()
         },
-        floem_widgets::Image::new(id).intrinsic_size(floem_core::Size::new(3.0, 2.0)),
+        floom_widgets::Image::new(id).intrinsic_size(floom_core::Size::new(3.0, 2.0)),
     );
     host.frame();
 

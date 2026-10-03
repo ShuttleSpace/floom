@@ -1,13 +1,13 @@
 //! Linux AT-SPI2 accessibility backend (via `accesskit_unix`).
 //!
-//! Bridges Floem's neutral [`AccessTreeUpdate`] to AT-SPI2 over D-Bus. We feed
+//! Bridges Floom's neutral [`AccessTreeUpdate`] to AT-SPI2 over D-Bus. We feed
 //! the tree to `accesskit_unix::Adapter`, which owns the `org.a11y.atspi`
 //! object server and the session-bus registration. The initial tree is served
 //! lazily via the [`accesskit::ActivationHandler`] from a shared neutral-tree
 //! cache; subsequent updates are pushed through [`Adapter::update_if_active`].
 //!
 //! Actions requested by Orca arrive via the [`accesskit::ActionHandler`] and
-//! are forwarded to Floem core through a channel (drained by `WindowState`).
+//! are forwarded to Floom core through a channel (drained by `WindowState`).
 
 use std::sync::mpsc;
 use std::sync::{Arc, Mutex};
@@ -71,7 +71,7 @@ impl accesskit::DeactivationHandler for LinuxDeactivationHandler {
     fn deactivate(&mut self) {}
 }
 
-/// Bridges Floem's neutral accessibility tree to Linux AT-SPI2 via accesskit.
+/// Bridges Floom's neutral accessibility tree to Linux AT-SPI2 via accesskit.
 pub(crate) struct LinuxAccessibilityBackend {
     adapter: Adapter,
     tree: SharedTree,

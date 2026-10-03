@@ -15,11 +15,11 @@ pub use tokio_spawn_blocking_receiver_option as tokio_spawn_blocking_channel_opt
 /// The future does not need to be `Send`.
 pub fn event_loop_future_option<T: 'static>(
     future: impl std::future::Future<Output = T> + 'static,
-    write: floem_legacy_reactive::WriteSignal<Option<T>>,
-    write_finished: floem_legacy_reactive::WriteSignal<bool>,
+    write: floom_legacy_reactive::WriteSignal<Option<T>>,
+    write_finished: floom_legacy_reactive::WriteSignal<bool>,
     trigger: ExtSendTrigger,
 ) {
-    use floem_legacy_reactive::*;
+    use floom_legacy_reactive::*;
     use futures::task::{ArcWake, waker};
     use std::{
         cell::RefCell,
@@ -61,11 +61,11 @@ pub fn event_loop_future_option<T: 'static>(
 /// The future does not need to be `Send`.
 pub fn event_loop_future<T: 'static>(
     future: impl std::future::Future<Output = T> + 'static,
-    write: floem_legacy_reactive::WriteSignal<T>,
-    write_finished: floem_legacy_reactive::WriteSignal<bool>,
+    write: floom_legacy_reactive::WriteSignal<T>,
+    write_finished: floom_legacy_reactive::WriteSignal<bool>,
     trigger: ExtSendTrigger,
 ) {
-    use floem_legacy_reactive::*;
+    use floom_legacy_reactive::*;
     use futures::task::{ArcWake, waker};
     use std::{
         cell::RefCell,
@@ -107,11 +107,11 @@ pub fn event_loop_future<T: 'static>(
 /// The stream does not need to be `Send`.
 pub fn event_loop_stream_option<T: 'static>(
     stream: impl futures::Stream<Item = T> + 'static,
-    write: floem_legacy_reactive::WriteSignal<Option<T>>,
-    write_finished: floem_legacy_reactive::WriteSignal<bool>,
+    write: floom_legacy_reactive::WriteSignal<Option<T>>,
+    write_finished: floom_legacy_reactive::WriteSignal<bool>,
     trigger: ExtSendTrigger,
 ) {
-    use floem_legacy_reactive::*;
+    use floom_legacy_reactive::*;
     use futures::task::{ArcWake, waker};
     use std::{
         cell::RefCell,
@@ -162,11 +162,11 @@ pub fn event_loop_stream_option<T: 'static>(
 /// The stream does not need to be `Send`.
 pub fn event_loop_stream<T: 'static>(
     stream: impl futures::Stream<Item = T> + 'static,
-    write: floem_legacy_reactive::WriteSignal<T>,
-    write_finished: floem_legacy_reactive::WriteSignal<bool>,
+    write: floom_legacy_reactive::WriteSignal<T>,
+    write_finished: floom_legacy_reactive::WriteSignal<bool>,
     trigger: ExtSendTrigger,
 ) {
-    use floem_legacy_reactive::*;
+    use floom_legacy_reactive::*;
     use futures::task::{ArcWake, waker};
     use std::{
         cell::RefCell,
@@ -217,11 +217,11 @@ pub fn event_loop_stream<T: 'static>(
 /// The receiver does not need to be `Send`.
 pub fn event_loop_receiver_option<T: 'static, E: 'static>(
     receiver: impl PollableReceiver<Item = T, Error = E> + 'static,
-    write: floem_legacy_reactive::WriteSignal<Option<T>>,
-    write_error: floem_legacy_reactive::WriteSignal<Option<E>>,
+    write: floom_legacy_reactive::WriteSignal<Option<T>>,
+    write_error: floom_legacy_reactive::WriteSignal<Option<E>>,
     trigger: ExtSendTrigger,
 ) {
-    use floem_legacy_reactive::*;
+    use floom_legacy_reactive::*;
     use futures::task::{ArcWake, waker};
     use std::{
         cell::RefCell,
@@ -274,11 +274,11 @@ pub fn event_loop_receiver_option<T: 'static, E: 'static>(
 /// The receiver does not need to be `Send`.
 pub fn event_loop_receiver<T: 'static, E: 'static>(
     receiver: impl PollableReceiver<Item = T, Error = E> + 'static,
-    write: floem_legacy_reactive::WriteSignal<T>,
-    write_error: floem_legacy_reactive::WriteSignal<Option<E>>,
+    write: floom_legacy_reactive::WriteSignal<T>,
+    write_error: floom_legacy_reactive::WriteSignal<Option<E>>,
     trigger: ExtSendTrigger,
 ) {
-    use floem_legacy_reactive::*;
+    use floom_legacy_reactive::*;
     use futures::task::{ArcWake, waker};
     use std::{
         cell::RefCell,
@@ -330,16 +330,16 @@ pub fn event_loop_receiver<T: 'static, E: 'static>(
 /// Execute a blocking channel receiver on a dedicated std::thread, for Option<T> signals.
 pub fn std_thread_receiver_option<T: Send + 'static, E: Send + 'static>(
     rx: impl BlockingReceiver<Item = T, Error = E> + Send + 'static,
-    write: floem_legacy_reactive::WriteSignal<Option<T>>,
-    write_error: floem_legacy_reactive::WriteSignal<Option<E>>,
+    write: floom_legacy_reactive::WriteSignal<Option<T>>,
+    write_error: floom_legacy_reactive::WriteSignal<Option<E>>,
     trigger: ExtSendTrigger,
 ) {
-    use floem_legacy_reactive::SignalUpdate;
+    use floom_legacy_reactive::SignalUpdate;
     let data = Arc::new(Mutex::new(VecDeque::new()));
 
     {
         let data = data.clone();
-        let cx = floem_legacy_reactive::Scope::current();
+        let cx = floom_legacy_reactive::Scope::current();
         cx.create_effect(move |_| {
             trigger.track();
             while let Some(result) = data.lock().unwrap().pop_front() {
@@ -372,16 +372,16 @@ pub fn std_thread_receiver_option<T: Send + 'static, E: Send + 'static>(
 /// Execute a blocking channel receiver on a dedicated std::thread.
 pub fn std_thread_receiver<T: Send + 'static, E: Send + 'static>(
     rx: impl BlockingReceiver<Item = T, Error = E> + Send + 'static,
-    write: floem_legacy_reactive::WriteSignal<T>,
-    write_error: floem_legacy_reactive::WriteSignal<Option<E>>,
+    write: floom_legacy_reactive::WriteSignal<T>,
+    write_error: floom_legacy_reactive::WriteSignal<Option<E>>,
     trigger: ExtSendTrigger,
 ) {
-    use floem_legacy_reactive::SignalUpdate;
+    use floom_legacy_reactive::SignalUpdate;
     let data = Arc::new(Mutex::new(VecDeque::new()));
 
     {
         let data = data.clone();
-        let cx = floem_legacy_reactive::Scope::current();
+        let cx = floom_legacy_reactive::Scope::current();
         cx.create_effect(move |_| {
             trigger.track();
             while let Some(result) = data.lock().unwrap().pop_front() {
@@ -416,11 +416,11 @@ pub fn std_thread_receiver<T: Send + 'static, E: Send + 'static>(
 #[cfg(feature = "tokio")]
 pub fn tokio_spawn_future_option<T: Send + 'static>(
     future: impl std::future::Future<Output = T> + Send + 'static,
-    write: floem_legacy_reactive::WriteSignal<Option<T>>,
-    write_finished: floem_legacy_reactive::WriteSignal<bool>,
+    write: floom_legacy_reactive::WriteSignal<Option<T>>,
+    write_finished: floom_legacy_reactive::WriteSignal<bool>,
     trigger: ExtSendTrigger,
 ) {
-    use floem_legacy_reactive::SignalUpdate;
+    use floom_legacy_reactive::SignalUpdate;
 
     let data = Arc::new(Mutex::new(None));
     let finished = Arc::new(Mutex::new(false));
@@ -428,7 +428,7 @@ pub fn tokio_spawn_future_option<T: Send + 'static>(
     {
         let data = data.clone();
         let finished = finished.clone();
-        let cx = floem_legacy_reactive::Scope::current();
+        let cx = floom_legacy_reactive::Scope::current();
         cx.create_effect(move |_| {
             trigger.track();
 
@@ -453,11 +453,11 @@ pub fn tokio_spawn_future_option<T: Send + 'static>(
 #[cfg(feature = "tokio")]
 pub fn tokio_spawn_stream_option<T: Send + 'static>(
     stream: impl futures::Stream<Item = T> + Send + 'static,
-    write: floem_legacy_reactive::WriteSignal<Option<T>>,
-    write_finished: floem_legacy_reactive::WriteSignal<bool>,
+    write: floom_legacy_reactive::WriteSignal<Option<T>>,
+    write_finished: floom_legacy_reactive::WriteSignal<bool>,
     trigger: ExtSendTrigger,
 ) {
-    use floem_legacy_reactive::SignalUpdate;
+    use floom_legacy_reactive::SignalUpdate;
     use futures::StreamExt;
 
     let data = Arc::new(Mutex::new(VecDeque::new()));
@@ -466,7 +466,7 @@ pub fn tokio_spawn_stream_option<T: Send + 'static>(
     {
         let data = data.clone();
         let finished = finished.clone();
-        let cx = floem_legacy_reactive::Scope::current();
+        let cx = floom_legacy_reactive::Scope::current();
         cx.create_effect(move |_| {
             trigger.track();
 
@@ -496,11 +496,11 @@ pub fn tokio_spawn_stream_option<T: Send + 'static>(
 #[cfg(feature = "tokio")]
 pub fn tokio_spawn_future<T: Send + 'static>(
     future: impl std::future::Future<Output = T> + Send + 'static,
-    write: floem_legacy_reactive::WriteSignal<T>,
-    write_finished: floem_legacy_reactive::WriteSignal<bool>,
+    write: floom_legacy_reactive::WriteSignal<T>,
+    write_finished: floom_legacy_reactive::WriteSignal<bool>,
     trigger: ExtSendTrigger,
 ) {
-    use floem_legacy_reactive::SignalUpdate;
+    use floom_legacy_reactive::SignalUpdate;
 
     let data = Arc::new(Mutex::new(None));
     let finished = Arc::new(Mutex::new(false));
@@ -508,7 +508,7 @@ pub fn tokio_spawn_future<T: Send + 'static>(
     {
         let data = data.clone();
         let finished = finished.clone();
-        let cx = floem_legacy_reactive::Scope::current();
+        let cx = floom_legacy_reactive::Scope::current();
         cx.create_effect(move |_| {
             trigger.track();
 
@@ -533,11 +533,11 @@ pub fn tokio_spawn_future<T: Send + 'static>(
 #[cfg(feature = "tokio")]
 pub fn tokio_spawn_stream<T: Send + 'static>(
     stream: impl futures::Stream<Item = T> + Send + 'static,
-    write: floem_legacy_reactive::WriteSignal<T>,
-    write_finished: floem_legacy_reactive::WriteSignal<bool>,
+    write: floom_legacy_reactive::WriteSignal<T>,
+    write_finished: floom_legacy_reactive::WriteSignal<bool>,
     trigger: ExtSendTrigger,
 ) {
-    use floem_legacy_reactive::SignalUpdate;
+    use floom_legacy_reactive::SignalUpdate;
     use futures::StreamExt;
 
     let data = Arc::new(Mutex::new(VecDeque::new()));
@@ -546,7 +546,7 @@ pub fn tokio_spawn_stream<T: Send + 'static>(
     {
         let data = data.clone();
         let finished = finished.clone();
-        let cx = floem_legacy_reactive::Scope::current();
+        let cx = floom_legacy_reactive::Scope::current();
         cx.create_effect(move |_| {
             trigger.track();
 
@@ -576,17 +576,17 @@ pub fn tokio_spawn_stream<T: Send + 'static>(
 #[cfg(feature = "tokio")]
 pub fn tokio_spawn_blocking_receiver_option<T: Send + 'static, E: Send + 'static>(
     rx: impl BlockingReceiver<Item = T, Error = E> + Send + 'static,
-    write: floem_legacy_reactive::WriteSignal<Option<T>>,
-    write_error: floem_legacy_reactive::WriteSignal<Option<E>>,
+    write: floom_legacy_reactive::WriteSignal<Option<T>>,
+    write_error: floom_legacy_reactive::WriteSignal<Option<E>>,
     trigger: ExtSendTrigger,
 ) {
-    use floem_legacy_reactive::SignalUpdate;
+    use floom_legacy_reactive::SignalUpdate;
 
     let data = Arc::new(Mutex::new(VecDeque::new()));
 
     {
         let data = data.clone();
-        let cx = floem_legacy_reactive::Scope::current();
+        let cx = floom_legacy_reactive::Scope::current();
         cx.create_effect(move |_| {
             trigger.track();
             while let Some(result) = data.lock().unwrap().pop_front() {
@@ -619,17 +619,17 @@ pub fn tokio_spawn_blocking_receiver_option<T: Send + 'static, E: Send + 'static
 #[cfg(feature = "tokio")]
 pub fn tokio_spawn_blocking_receiver<T: Send + 'static, E: Send + 'static>(
     rx: impl BlockingReceiver<Item = T, Error = E> + Send + 'static,
-    write: floem_legacy_reactive::WriteSignal<T>,
-    write_error: floem_legacy_reactive::WriteSignal<Option<E>>,
+    write: floom_legacy_reactive::WriteSignal<T>,
+    write_error: floom_legacy_reactive::WriteSignal<Option<E>>,
     trigger: ExtSendTrigger,
 ) {
-    use floem_legacy_reactive::SignalUpdate;
+    use floom_legacy_reactive::SignalUpdate;
 
     let data = Arc::new(Mutex::new(VecDeque::new()));
 
     {
         let data = data.clone();
-        let cx = floem_legacy_reactive::Scope::current();
+        let cx = floom_legacy_reactive::Scope::current();
         cx.create_effect(move |_| {
             trigger.track();
             while let Some(result) = data.lock().unwrap().pop_front() {
@@ -662,17 +662,17 @@ pub fn tokio_spawn_blocking_receiver<T: Send + 'static, E: Send + 'static>(
 #[cfg(feature = "tokio")]
 pub fn tokio_spawn_poll_receiver_option<T: Send + 'static, E: Send + 'static>(
     receiver: impl PollableReceiver<Item = T, Error = E> + Send + 'static,
-    write: floem_legacy_reactive::WriteSignal<Option<T>>,
-    write_error: floem_legacy_reactive::WriteSignal<Option<E>>,
+    write: floom_legacy_reactive::WriteSignal<Option<T>>,
+    write_error: floom_legacy_reactive::WriteSignal<Option<E>>,
     trigger: ExtSendTrigger,
 ) {
-    use floem_legacy_reactive::SignalUpdate;
+    use floom_legacy_reactive::SignalUpdate;
 
     let data = Arc::new(Mutex::new(VecDeque::new()));
 
     {
         let data = data.clone();
-        let cx = floem_legacy_reactive::Scope::current();
+        let cx = floom_legacy_reactive::Scope::current();
         cx.create_effect(move |_| {
             trigger.track();
             while let Some(result) = data.lock().unwrap().pop_front() {
@@ -708,17 +708,17 @@ pub fn tokio_spawn_poll_receiver_option<T: Send + 'static, E: Send + 'static>(
 #[cfg(feature = "tokio")]
 pub fn tokio_spawn_poll_receiver<T: Send + 'static, E: Send + 'static>(
     receiver: impl PollableReceiver<Item = T, Error = E> + Send + 'static,
-    write: floem_legacy_reactive::WriteSignal<T>,
-    write_error: floem_legacy_reactive::WriteSignal<Option<E>>,
+    write: floom_legacy_reactive::WriteSignal<T>,
+    write_error: floom_legacy_reactive::WriteSignal<Option<E>>,
     trigger: ExtSendTrigger,
 ) {
-    use floem_legacy_reactive::SignalUpdate;
+    use floom_legacy_reactive::SignalUpdate;
 
     let data = Arc::new(Mutex::new(VecDeque::new()));
 
     {
         let data = data.clone();
-        let cx = floem_legacy_reactive::Scope::current();
+        let cx = floom_legacy_reactive::Scope::current();
         cx.create_effect(move |_| {
             trigger.track();
             while let Some(result) = data.lock().unwrap().pop_front() {

@@ -1,0 +1,17 @@
+[package]
+name = "floom-demo"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+floom = { workspace = true }
+floom-core-theme = { workspace = true }
+floom-elements = { workspace = true }
+floom-widget-runtime = { workspace = true }
+
+[features]
+default = ["multi"]
+material = ["floom-elements/material", "floom-widget-runtime/material"]
+cupertino = ["floom-elements/cupertino", "floom-widget-runtime/cupertino"]
+fluent = ["floom-elements/fluent", "floom-widget-runtime/fluent"]
+multi = ["floom-elements/multi", "floom-widget-runtime/material"]

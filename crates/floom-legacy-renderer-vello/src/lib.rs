@@ -5,9 +5,9 @@ use std::sync::Arc;
 use std::sync::mpsc::sync_channel;
 
 use anyhow::Result;
-use floem_legacy_renderer::gpu_resources::GpuResources;
-use floem_legacy_renderer::text::{Glyph, GlyphRunProps};
-use floem_legacy_renderer::{Img, Renderer};
+use floom_legacy_renderer::gpu_resources::GpuResources;
+use floom_legacy_renderer::text::{Glyph, GlyphRunProps};
+use floom_legacy_renderer::{Img, Renderer};
 use peniko::kurbo::Size;
 use peniko::{
     Blob, BrushRef,
@@ -348,7 +348,7 @@ impl Renderer for VelloRenderer {
 
     fn draw_svg<'b>(
         &mut self,
-        svg: floem_legacy_renderer::Svg<'b>,
+        svg: floom_legacy_renderer::Svg<'b>,
         rect: Rect,
         brush: Option<impl Into<BrushRef<'b>>>,
     ) {
@@ -508,7 +508,7 @@ impl VelloRenderer {
         };
         let texture = self.device.create_texture(&texture_desc);
         let view = texture.create_view(&wgpu::TextureViewDescriptor {
-            label: Some("Floem Inspector Preview"),
+            label: Some("Floom Inspector Preview"),
             format: Some(TextureFormat::Rgba8Unorm),
             dimension: Some(wgpu::TextureViewDimension::D2),
             aspect: TextureAspect::default(),

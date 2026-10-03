@@ -4,7 +4,7 @@
 //! strings here; resolving them is the *lowering* step's job, because the
 //! vocabulary lives in the IR and the parser should not know it.
 
-use floem_ui_ir::Rgba;
+use floom_ui_ir::Rgba;
 
 use crate::lexer::Span;
 

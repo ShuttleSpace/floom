@@ -12,11 +12,11 @@
 //! transform: translate(-50%, -50%);
 //! ```
 
-use floem::HasViewId;
-use floem::headless::HeadlessHarness;
-use floem::unit::Pct;
-use floem::views::{Decorators, Empty, Stack};
-use floem_legacy_test::TestRoot;
+use floom::HasViewId;
+use floom::headless::HeadlessHarness;
+use floom::unit::Pct;
+use floom::views::{Decorators, Empty, Stack};
+use floom_legacy_test::TestRoot;
 
 // ============================================================================
 // Pixel-based translate tests (baseline)

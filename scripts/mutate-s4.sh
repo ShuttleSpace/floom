@@ -38,28 +38,28 @@ mutate_one() {
   touch "$file"
 }
 
-BRUSH=foundation/floem-types/src/brush.rs
-MOTION=foundation/floem-types/src/motion.rs
-SWLIB=render/floem-renderer-software/src/lib.rs
-APPLIB=app/floem-app/src/lib.rs
-PRIMS=widgets/floem-widgets/src/primitives.rs
-CTRLS=widgets/floem-widgets/src/controls.rs
-VELLO=render/floem-renderer-vello/src/lib.rs
-MATERIAL=design-systems/floem-material/src/scale.rs
+BRUSH=crates/floom-types/src/brush.rs
+MOTION=crates/floom-types/src/motion.rs
+SWLIB=crates/floom-renderer-software/src/lib.rs
+APPLIB=crates/floom-app/src/lib.rs
+PRIMS=crates/floom-widgets/src/primitives.rs
+CTRLS=crates/floom-widgets/src/controls.rs
+VELLO=crates/floom-renderer-vello/src/lib.rs
+MATERIAL=crates/floom-material/src/scale.rs
 
 # 1. a linear gradient samples its first stop everywhere (the ramp collapses)
 mutate_one "$BRUSH" \
   "                    (((p.x - from.x) * axis.x + (p.y - from.y) * axis.y) / length_sq)
                         .clamp(0.0, 1.0)" \
   "                    0.0" \
-  "cargo test -q -p floem-types" \
+  "cargo test -q -p floom-types" \
   "linear-gradient-sampling"
 
 # 2. a radial gradient samples its first stop everywhere
 mutate_one "$BRUSH" \
   "                    (p.distance_to(*center) / radius).clamp(0.0, 1.0)" \
   "                    0.0" \
-  "cargo test -q -p floem-types" \
+  "cargo test -q -p floom-types" \
   "radial-gradient-sampling"
 
 # 3. stops stop clamping: a gradient wraps instead of holding its edge colours
@@ -70,14 +70,14 @@ mutate_one "$BRUSH" \
   "    if t >= last.0 {
         return first.1;
     }" \
-  "cargo test -q -p floem-types" \
+  "cargo test -q -p floom-types" \
   "stops-clamp-past-the-last"
 
 # 4. a shadow's reach forgets the offset — damage would clip the silhouette
 mutate_one "$BRUSH" \
   "        self.offset_x.abs().max(self.offset_y.abs()) + self.blur" \
   "        self.blur" \
-  "cargo test -q -p floem-scene --tests" \
+  "cargo test -q -p floom-scene --tests" \
   "shadow-reach-includes-the-offset"
 
 # 5. software: the shadow composites with no offset (blur in place)
@@ -86,7 +86,7 @@ mutate_one "$SWLIB" \
                 let sy = local.y * scale - off_y - f64::from(iy0);" \
   "                let sx = local.x * scale - f64::from(ix0);
                 let sy = local.y * scale - f64::from(iy0);" \
-  "cargo test -q -p floem-renderer-software --test brush" \
+  "cargo test -q -p floom-renderer-software --test brush" \
   "sw-shadow-offset-applied"
 
 # 6. software: no blur passes — a hard-edged silhouette pretending to be a shadow
@@ -95,14 +95,14 @@ mutate_one "$SWLIB" \
         box_blur(&mut alpha, w, h, br);
         box_blur(&mut alpha, w, h, br);" \
   "        let _ = br;" \
-  "cargo test -q -p floem-renderer-software --test brush" \
+  "cargo test -q -p floom-renderer-software --test brush" \
   "sw-shadow-blur-passes"
 
 # 7. software: gradients are sampled once at the shape instead of per pixel
 mutate_one "$SWLIB" \
   "            return paint.sample(in_scope);" \
   "            return paint.sample(Point::new(0.0, 0.0));" \
-  "cargo test -q -p floem-renderer-software --test brush" \
+  "cargo test -q -p floom-renderer-software --test brush" \
   "sw-gradient-sampled-per-pixel"
 
 # 8. host: draw_shadow drops the request on the floor
@@ -113,21 +113,21 @@ mutate_one "$APPLIB" \
   "            shadow: None,
         });
     }" \
-  "cargo test -q -p floem-app --test style" \
+  "cargo test -q -p floom-app --test style" \
   "host-draw-shadow-carries-the-request"
 
 # 9. host: a brush fill is written as one sampled colour (the gradient dies at
 #    the widget door, which is exactly the A3 gap)
 mutate_one "$APPLIB" \
-  "    fn fill_rect_brush(&mut self, rect: Rect, brush: &floem_types::Brush) {
-        self.push(floem_scene::SceneNode::Rect {
+  "    fn fill_rect_brush(&mut self, rect: Rect, brush: &floom_types::Brush) {
+        self.push(floom_scene::SceneNode::Rect {
             bounds: rect,
             fill: brush.clone()," \
-  "    fn fill_rect_brush(&mut self, rect: Rect, brush: &floem_types::Brush) {
-        self.push(floem_scene::SceneNode::Rect {
+  "    fn fill_rect_brush(&mut self, rect: Rect, brush: &floom_types::Brush) {
+        self.push(floom_scene::SceneNode::Rect {
             bounds: rect,
-            fill: floem_types::Brush::Solid(brush.sample(rect.center()))," \
-  "cargo test -q -p floem-app --test style" \
+            fill: floom_types::Brush::Solid(brush.sample(rect.center()))," \
+  "cargo test -q -p floom-app --test style" \
   "host-brush-fill-carries-the-brush"
 
 # 10. Container forgets to cast the shadow it was given
@@ -137,7 +137,7 @@ mutate_one "$PRIMS" \
         }" \
   "        if let Some(_shadow) = self.shadow {
         }" \
-  "cargo test -q -p floem-widgets --test primitives" \
+  "cargo test -q -p floom-widgets --test primitives" \
   "container-casts-its-shadow"
 
 # 11. Container collapses a gradient to its mid colour before painting it
@@ -149,14 +149,14 @@ mutate_one "$PRIMS" \
                 cx.fill_rounded_rect(bounds, self.radius, colour)
             }
             None => cx.fill_rect(bounds, fill.sample(bounds.center()))," \
-  "cargo test -q -p floem-widgets --test primitives" \
+  "cargo test -q -p floom-widgets --test primitives" \
   "container-keeps-the-ramp"
 
 # 12. Progress re-derives its ink from the flat colour, dropping the gradient
 mutate_one "$CTRLS" \
   "            None => cx.fill_rect_brush(part, &ink)," \
   "            None => cx.fill_rect(part, base)," \
-  "cargo test -q -p floem-widgets --test controls" \
+  "cargo test -q -p floom-widgets --test controls" \
   "progress-fills-with-its-gradient"
 
 # 13. the transition key stops mattering, so "my target changed" replays nothing
@@ -171,7 +171,7 @@ mutate_one "$MOTION" \
         b.key = 0;
         a == b
     }" \
-  "cargo test -q -p floem-app --test motion_host" \
+  "cargo test -q -p floom-app --test motion_host" \
   "transition-key-restarts-the-tween"
 
 # 14. arming a transition stops bumping the key it is identified by
@@ -179,7 +179,7 @@ mutate_one "$CTRLS" \
   "        self.transition_from = old_target;
         self.transition_rev = self.transition_rev.wrapping_add(1);" \
   "        self.transition_from = old_target;" \
-  "cargo test -q -p floem-app --test motion_host" \
+  "cargo test -q -p floom-app --test motion_host" \
   "arm-transition-bumps-the-key"
 
 # 15. vello drops the shadow at the adapter boundary (silently, by definition)
@@ -194,14 +194,14 @@ mutate_one "$VELLO" \
                         radius: radius.max(0.0),
                         shadow: None,
                     });" \
-  "cargo test -q -p floem-renderer-vello --lib" \
+  "cargo test -q -p floom-renderer-vello --lib" \
   "vello-carries-the-shadow-request"
 
 # 16. the motion token's ms → s conversion drifts by a factor of ten
 mutate_one "$MATERIAL" \
   "        Transition::new(duration_ms as f64 / 1000.0).with_easing(easing)" \
   "        Transition::new(duration_ms as f64 / 100.0).with_easing(easing)" \
-  "cargo test -q -p floem-material" \
+  "cargo test -q -p floom-material" \
   "motion-token-conversion"
 
 # 17. the golden example's own claims: run it against a collapsed ramp
@@ -209,7 +209,7 @@ mutate_one "$BRUSH" \
   "                    (((p.x - from.x) * axis.x + (p.y - from.y) * axis.y) / length_sq)
                         .clamp(0.0, 1.0)" \
   "                    0.0" \
-  "cargo run -q -p floem2-style" \
+  "cargo run -q -p floom2-style" \
   "example-gradient-act-has-teeth"
 
 echo "=== campaign results ==="

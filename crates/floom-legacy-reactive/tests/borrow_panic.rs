@@ -1,6 +1,6 @@
 #![cfg(debug_assertions)]
 
-use floem_legacy_reactive::{RwSignal, SignalRead, SignalWrite};
+use floom_legacy_reactive::{RwSignal, SignalRead, SignalWrite};
 
 #[test]
 fn borrow_conflict_reports_locations() {

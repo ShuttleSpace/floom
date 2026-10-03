@@ -5,7 +5,7 @@
 //!
 //! ```java
 //! ClipboardManager cm = (ClipboardManager) activity.getSystemService("clipboard");
-//! cm.setPrimaryClip(ClipData.newPlainText("floem", text));      // set
+//! cm.setPrimaryClip(ClipData.newPlainText("floom", text));      // set
 //! ClipData clip = cm.getPrimaryClip();                         // get
 //! CharSequence cs = clip.getItemAt(0).getText();
 //! ```
@@ -21,7 +21,7 @@ const CLIPBOARD_SERVICE: &str = "clipboard";
 
 /// Label attached to clips we write. Android shows it only in clipboard
 /// previews on newer versions; it is not part of the payload.
-const CLIP_LABEL: &str = "floem";
+const CLIP_LABEL: &str = "floom";
 
 /// The `ClipboardManager`, or `Err` if the service is unavailable.
 ///

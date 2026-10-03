@@ -1,14 +1,14 @@
 [package]
-name = "floem-animation"
+name = "floom-animation"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
-description = "Animation scheduler for Floem 2.0"
+description = "Animation scheduler for Floom 2.0"
 rust-version.workspace = true
 
 [dependencies]
-floem-types = { path = "../floom-types", version = "0.2.0" }
+floom-types = { path = "../floom-types", version = "0.2.0" }
 smallvec = "1.15"
 
 [dev-dependencies]

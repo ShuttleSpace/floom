@@ -19,7 +19,7 @@ use std::net::{SocketAddr, TcpListener, TcpStream};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::mpsc::{self, Receiver, Sender};
 
-use floem_testkit::TestApp;
+use floom_testkit::TestApp;
 
 use crate::protocol::{
     AgentError, AgentRequest, AgentResponse, Command, PROTOCOL_VERSION, Payload,

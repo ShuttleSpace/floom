@@ -5,8 +5,8 @@
 //! - [`TransitionState`] - Internal state for tracking active transitions
 //! - [`DirectTransition`] - Standalone transition controller
 
-use floem_legacy_reactive::{RwSignal, SignalGet};
-use floem_legacy_renderer::Renderer;
+use floom_legacy_reactive::{RwSignal, SignalGet};
+use floom_legacy_renderer::Renderer;
 use peniko::color::palette;
 use peniko::kurbo::{self, Point, Stroke};
 use std::rc::Rc;
@@ -283,7 +283,7 @@ impl Transition {
 ///
 /// ```rust
 /// use std::time::{Duration, Instant};
-/// use floem::style::{DirectTransition, Transition};
+/// use floom::style::{DirectTransition, Transition};
 ///
 /// // Create a transition for animating opacity
 /// let mut opacity = DirectTransition::new(1., None);

@@ -13,8 +13,8 @@
 //!   converges and whether it regresses anything along the way.
 //!
 //! The loop closes over vocabulary that already exists on purpose: the
-//! contract comes from `floem-ui-ir`, the fingerprints from `floem-snapshot`,
-//! the inspection surface from `floem-agent` — nothing here redefines what a
+//! contract comes from `floom-ui-ir`, the fingerprints from `floom-snapshot`,
+//! the inspection surface from `floom-agent` — nothing here redefines what a
 //! disagreement is.
 
 mod benchmark;

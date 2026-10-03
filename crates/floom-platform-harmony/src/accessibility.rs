@@ -4,7 +4,7 @@
 //! it keeps its own capability profile. No native bridge is wired in this fork;
 //! `NATIVE_BRIDGE` stays unset and the adapter only retains the tree.
 
-use floem_accessibility::{AccessibilityCapabilities, CapabilityLimitedAccessibilityAdapter};
+use floom_accessibility::{AccessibilityCapabilities, CapabilityLimitedAccessibilityAdapter};
 
 /// Capabilities HarmonyOS reports once a native bridge lands.
 pub fn accessibility_capabilities() -> AccessibilityCapabilities {
@@ -19,10 +19,10 @@ pub fn harmony_accessibility() -> CapabilityLimitedAccessibilityAdapter {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use floem_accessibility::{
+    use floom_accessibility::{
         AccessibilityAdapter, SemanticsAction, SemanticsDiff, SemanticsNode, SemanticsRole,
     };
-    use floem_types::ElementId;
+    use floom_types::ElementId;
 
     #[test]
     fn reports_capability_profile() {
@@ -37,8 +37,8 @@ mod tests {
         // Harmony is not an alias of Android: the adapters are separate values
         // built from this crate's own profile.
         let harmony = harmony_accessibility();
-        let android = floem_accessibility::CapabilityLimitedAccessibilityAdapter::new(
-            floem_accessibility::AccessibilityCapabilities::SCREEN_READER,
+        let android = floom_accessibility::CapabilityLimitedAccessibilityAdapter::new(
+            floom_accessibility::AccessibilityCapabilities::SCREEN_READER,
         );
         assert_ne!(harmony.capabilities(), android.capabilities());
     }

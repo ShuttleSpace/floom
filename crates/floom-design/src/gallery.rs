@@ -11,9 +11,9 @@
 //! recoverable from [`GallerySample::label`] instead, and the systems snapshot
 //! those labels alongside the scene.
 
-use floem_scene::{Scene, SceneNode};
-use floem_style::StyleProps;
-use floem_types::{Color, Point, Rect, Shadow, Size};
+use floom_scene::{Scene, SceneNode};
+use floom_style::StyleProps;
+use floom_types::{Color, Point, Rect, Shadow, Size};
 
 use crate::variant::{ControlSize, InteractionState, Variant};
 
@@ -220,7 +220,7 @@ mod tests {
     use super::*;
     use crate::color::lerp;
     use crate::style::Props;
-    use floem_types::Brush;
+    use floom_types::Brush;
 
     /// A miniature design system: shape comes from the variant, shade from the
     /// state, radius and box height from the size.

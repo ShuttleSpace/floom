@@ -2,10 +2,10 @@
 
 pub mod accessibility;
 
-use floem_platform::{HostPlatform, PlatformCapabilities};
-use floem_types::PlatformId;
+use floom_platform::{HostPlatform, PlatformCapabilities};
+use floom_types::PlatformId;
 
-pub use floem_platform::{Capability, Clipboard, Ime, Platform, PlatformEvent, WindowConfig};
+pub use floom_platform::{Capability, Clipboard, Ime, Platform, PlatformEvent, WindowConfig};
 
 pub fn ios_platform() -> HostPlatform {
     HostPlatform::new()
@@ -16,8 +16,8 @@ pub fn ios_platform() -> HostPlatform {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use floem_platform::{Ime, Platform, PlatformEvent, WindowConfig};
-    use floem_types::{Point, Size};
+    use floom_platform::{Ime, Platform, PlatformEvent, WindowConfig};
+    use floom_types::{Point, Size};
 
     #[test]
     fn focus_and_ime_bridge_hooks() {

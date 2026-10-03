@@ -5,9 +5,9 @@
 //! of "renderer-neutral primitives": the geometry can be asserted exactly, and
 //! the painted output is only a projection of it.
 
-use floem_core::{ElementId, Rect, Widget};
-use floem_widgets::testkit::{AllocatingCreateContext, SceneRecorder, semantics_snapshot};
-use floem_widgets_data::chart::{AxisSpec, Chart, ChartSeries, DataPoint, LinearScale, SeriesKind};
+use floom_core::{ElementId, Rect, Widget};
+use floom_widgets::testkit::{AllocatingCreateContext, SceneRecorder, semantics_snapshot};
+use floom_widgets_data::chart::{AxisSpec, Chart, ChartSeries, DataPoint, LinearScale, SeriesKind};
 
 const PLOT: Rect = Rect {
     x0: 40.0,

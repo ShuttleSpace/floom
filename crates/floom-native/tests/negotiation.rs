@@ -16,7 +16,7 @@
 //! - refusing a participant that could have been composited (a feature that
 //!   silently does not work on one platform).
 
-use floem_native::{
+use floom_native::{
     ClipSupport, FakeNativeProvider, InputMode, InputModes, NativeCapabilities,
     NativeCompositionMode, NativeError, NativeState, NativeViewController, NativeViewKind,
     NativeViewPool, Rect,

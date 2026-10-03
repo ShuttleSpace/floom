@@ -1,8 +1,0 @@
-[package]
-name = "floem-widget-cupertino-textarea"
-version = "0.1.0"
-edition = "2021"
-
-[dependencies]
-floem = { workspace = true }
-floem-core-theme = { workspace = true }

@@ -1,4 +1,4 @@
-//! Scoped, typed service registry (DI) for Floem 2.0.
+//! Scoped, typed service registry (DI) for Floom 2.0.
 //!
 //! Widget-free (framework sits below widgets). The model:
 //!
@@ -279,7 +279,7 @@ mod tests {
             .or_else(|| payload.downcast_ref::<&str>().map(|s| s.to_string()))
             .unwrap_or_default();
         assert!(
-            message.contains("floem_services::tests::Session"),
+            message.contains("floom_services::tests::Session"),
             "panic names the missing type, got: {message}"
         );
     }

@@ -1,15 +1,15 @@
 [package]
-name = "floem-ios-example"
+name = "floom-ios-example"
 version = "0.1.0"
 edition = "2024"
 publish = false
 license = "MIT"
 
 [dependencies]
-floem = { path = "../../crates/floom" }
+floom = { path = "../../crates/floom" }
 
-# On iOS we rely on the *same* winit fork Floem uses, but unlike Android the
+# On iOS we rely on the *same* winit fork Floom uses, but unlike Android the
 # example does not touch winit's API directly — `Application::new_ios` builds
 # and runs the `EventLoop` internally (winit calls `UIApplicationMain`). So no
-# explicit `winit` dependency is required here; Floem re-exports the window
+# explicit `winit` dependency is required here; Floom re-exports the window
 # types it needs.

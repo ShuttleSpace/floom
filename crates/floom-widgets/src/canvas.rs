@@ -8,12 +8,12 @@
 //! reads back as `animation_value` and turns into geometry. That is exactly the
 //! shape `Canvas` and `Spinner` are.
 
-use floem_core::{
+use floom_core::{
     AnimationSpec, PaintContext, SemanticsContext, SemanticsHint, SemanticsRole, UpdateContext,
     Widget, WidgetAny,
 };
-use floem_legacy_reactive::{Effect, RwSignal, SignalGet};
-use floem_types::{Color, Easing, ElementId, Path, Point, RepeatSpec, Shader, Size, Stroke};
+use floom_legacy_reactive::{Effect, RwSignal, SignalGet};
+use floom_types::{Color, Easing, ElementId, Path, Point, RepeatSpec, Shader, Size, Stroke};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 
@@ -43,7 +43,7 @@ type Painter = dyn Fn(&mut dyn PaintContext) + Send + Sync;
 ///   uses.
 /// * [`Canvas::repaint_on`] subscribes a reactive effect to an `RwSignal<()>`
 ///   ping: bumping the ping from app code enqueues a paint-only repaint
-///   request for this element (`floem_core::request_repaint`), which the host
+///   request for this element (`floom_core::request_repaint`), which the host
 ///   folds into the dirty flag at the top of its next frame. That is the
 ///   whole "my data changed, redraw the chart" path — and it never relayouts.
 ///
@@ -67,7 +67,7 @@ pub struct Canvas {
     /// its laid-out box by the host. A chart uses this to keep its plot area
     /// from spilling over its axes; without it there is no way for a flat
     /// scene to confine self-drawn geometry.
-    clip_shape: Option<floem_types::ClipShape>,
+    clip_shape: Option<floom_types::ClipShape>,
     /// Accessibility role the canvas publishes. Defaults to [`SemanticsRole::Image`]
     /// because a drawn surface is, to assistive tech, an image — the same
     /// default Compose and Flutter landed on after discovering that an
@@ -97,7 +97,7 @@ impl Canvas {
     /// against its laid-out box by the host ([`Widget::clip`]). A chart uses
     /// this to keep its plot area from spilling over its axes; a flat scene
     /// has no other way to confine self-drawn geometry.
-    pub fn clip(mut self, shape: floem_types::ClipShape) -> Self {
+    pub fn clip(mut self, shape: floom_types::ClipShape) -> Self {
         self.clip_shape = Some(shape);
         self.revision.bump();
         self
@@ -158,7 +158,7 @@ impl Canvas {
         };
         Effect::new(move |prev: Option<()>| {
             if prev.is_some() {
-                floem_core::request_repaint(id);
+                floom_core::request_repaint(id);
             }
             ping.get()
         });
@@ -168,13 +168,13 @@ impl Canvas {
         SemanticsHint {
             role: self.role,
             label: self.label.clone(),
-            state: floem_core::SemanticsState::empty(),
+            state: floom_core::SemanticsState::empty(),
         }
     }
 }
 
 impl Widget for Canvas {
-    fn create(&self, cx: &mut dyn floem_core::CreateContext) -> ElementId {
+    fn create(&self, cx: &mut dyn floom_core::CreateContext) -> ElementId {
         cx.alloc_child()
     }
 
@@ -187,13 +187,13 @@ impl Widget for Canvas {
         self.revision.sync(cx, id);
     }
 
-    fn layout_request(&self) -> Option<floem_core::LayoutRequest> {
+    fn layout_request(&self) -> Option<floom_core::LayoutRequest> {
         let size = self.intrinsic?;
         if size.width <= 0.0 || size.height <= 0.0 {
             return None;
         }
         Some(
-            floem_core::LayoutRequest::new()
+            floom_core::LayoutRequest::new()
                 .width(size.width as f32)
                 .height(size.height as f32),
         )
@@ -206,7 +206,7 @@ impl Widget for Canvas {
         (self.painter)(cx);
     }
 
-    fn clip(&self) -> Option<floem_types::ClipShape> {
+    fn clip(&self) -> Option<floom_types::ClipShape> {
         self.clip_shape.clone()
     }
 
@@ -261,7 +261,7 @@ impl WidgetAny for Canvas {
 /// can express, but one fragment function can.
 ///
 /// **Animation is free.** The host advances `u.time` by one nominal frame per
-/// present (see [`floem_types::Shader`]), so a shader that reads it animates
+/// present (see [`floom_types::Shader`]), so a shader that reads it animates
 /// without the widget rebuilding anything: no repaint request, no re-layout,
 /// no per-frame allocation. [`Self::set_params`] is for the other case — the
 /// caller's own scalars changing — and does ask for a frame.
@@ -369,13 +369,13 @@ impl ShaderBox {
         SemanticsHint {
             role: self.role,
             label: self.label.clone(),
-            state: floem_core::SemanticsState::empty(),
+            state: floom_core::SemanticsState::empty(),
         }
     }
 }
 
 impl Widget for ShaderBox {
-    fn create(&self, cx: &mut dyn floem_core::CreateContext) -> ElementId {
+    fn create(&self, cx: &mut dyn floom_core::CreateContext) -> ElementId {
         cx.alloc_child()
     }
 
@@ -383,13 +383,13 @@ impl Widget for ShaderBox {
         self.revision.sync(cx, id);
     }
 
-    fn layout_request(&self) -> Option<floem_core::LayoutRequest> {
+    fn layout_request(&self) -> Option<floom_core::LayoutRequest> {
         let size = self.intrinsic?;
         if size.width <= 0.0 || size.height <= 0.0 {
             return None;
         }
         Some(
-            floem_core::LayoutRequest::new()
+            floom_core::LayoutRequest::new()
                 .width(size.width as f32)
                 .height(size.height as f32),
         )
@@ -497,7 +497,7 @@ impl Default for Spinner {
 }
 
 impl Widget for Spinner {
-    fn create(&self, cx: &mut dyn floem_core::CreateContext) -> ElementId {
+    fn create(&self, cx: &mut dyn floom_core::CreateContext) -> ElementId {
         cx.alloc_child()
     }
 
@@ -505,12 +505,12 @@ impl Widget for Spinner {
         self.revision.sync(cx, id);
     }
 
-    fn layout_request(&self) -> Option<floem_core::LayoutRequest> {
+    fn layout_request(&self) -> Option<floom_core::LayoutRequest> {
         if self.size <= 0.0 {
             return None;
         }
         Some(
-            floem_core::LayoutRequest::new()
+            floom_core::LayoutRequest::new()
                 .width(self.size)
                 .height(self.size),
         )
@@ -526,7 +526,7 @@ impl Widget for Spinner {
                 1.0,
                 self.period_secs as f64,
                 RepeatSpec {
-                    mode: floem_core::RepeatMode::Restart,
+                    mode: floom_core::RepeatMode::Restart,
                     iterations: None,
                 },
             )
@@ -551,7 +551,7 @@ impl Widget for Spinner {
             let full = Path::circle(center, radius);
             cx.stroke_path(
                 &full,
-                &Stroke::new(self.line_width as f64, track).with_cap(floem_types::LineCap::Round),
+                &Stroke::new(self.line_width as f64, track).with_cap(floom_types::LineCap::Round),
             );
         }
 
@@ -564,7 +564,7 @@ impl Widget for Spinner {
         let arc = Path::ellipse_arc(center, radius, radius, start, sweep);
         cx.stroke_path(
             &arc,
-            &Stroke::new(self.line_width as f64, self.color).with_cap(floem_types::LineCap::Round),
+            &Stroke::new(self.line_width as f64, self.color).with_cap(floom_types::LineCap::Round),
         );
     }
 
@@ -593,7 +593,7 @@ impl WidgetAny for Spinner {
 mod tests {
     use super::*;
     use crate::testkit::{SceneRecorder, SemanticsRecorder};
-    use floem_types::Rect;
+    use floom_types::Rect;
 
     fn id() -> ElementId {
         ElementId::new(1, 1)
@@ -676,7 +676,7 @@ mod tests {
             repeat.iterations, None,
             "endless — this is what keeps a frame loop awake"
         );
-        assert_eq!(repeat.mode, floem_types::RepeatMode::Restart);
+        assert_eq!(repeat.mode, floom_types::RepeatMode::Restart);
         assert!(spec.channels.is_empty(), "the arc moves, not the element");
     }
 

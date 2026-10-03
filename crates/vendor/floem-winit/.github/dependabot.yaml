@@ -11,7 +11,7 @@ updates:
                 - "*"
 
   - package-ecosystem: npm
-    directory: src/platform_impl/web/script
+    directory: crates/floom/src/platform_impl/web/script
     schedule:
         interval: daily
     groups:

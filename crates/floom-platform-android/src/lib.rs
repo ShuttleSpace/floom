@@ -5,10 +5,10 @@
 
 pub mod accessibility;
 
-use floem_platform::{HostPlatform, PlatformCapabilities};
-use floem_types::PlatformId;
+use floom_platform::{HostPlatform, PlatformCapabilities};
+use floom_types::PlatformId;
 
-pub use floem_platform::{Capability, Clipboard, Ime, Platform, PlatformEvent, WindowConfig};
+pub use floom_platform::{Capability, Clipboard, Ime, Platform, PlatformEvent, WindowConfig};
 
 /// Build an Android-capability host (headless until NDK surface glue exists).
 ///
@@ -35,8 +35,8 @@ mod android;
 #[cfg(test)]
 mod tests {
     use super::*;
-    use floem_platform::{Platform, PlatformEvent, WindowConfig};
-    use floem_types::Size;
+    use floom_platform::{Platform, PlatformEvent, WindowConfig};
+    use floom_types::Size;
 
     #[test]
     fn lifecycle_and_capabilities() {

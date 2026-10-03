@@ -1,14 +1,14 @@
 [package]
-name = "floem-platform"
+name = "floom-platform"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
-description = "Platform ABI for Floem 2.0 (OS-neutral contracts)"
+description = "Platform ABI for Floom 2.0 (OS-neutral contracts)"
 rust-version.workspace = true
 
 [dependencies]
-floem-types = { path = "../floom-types", version = "0.2.0" }
+floom-types = { path = "../floom-types", version = "0.2.0" }
 bitflags = "2.9"
 # Handle descriptors only — no windowing or GPU library. See `src/surface.rs`.
 raw-window-handle = { workspace = true }

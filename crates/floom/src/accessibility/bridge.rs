@@ -1,10 +1,10 @@
 //! Core accessibility tree builder.
 //!
-//! Translates Floem's live view tree, per-view declared attributes, layout
+//! Translates Floom's live view tree, per-view declared attributes, layout
 //! geometry and focus state into a neutral, diffable
 //! [`AccessTreeUpdate`]. Platform backends consume that update (see
 //! [`crate::accessibility::AccessibilityBackend`]) to drive the native screen
-//! reader. The design mirrors the embedder subsystem (`src/embedder/`): a
+//! reader. The design mirrors the embedder subsystem (`crates/floom/src/embedder/`): a
 //! data-oriented protocol plus a core adapter, independent of any windowing
 //! library.
 //!

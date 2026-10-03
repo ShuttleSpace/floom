@@ -1,14 +1,14 @@
-//! The real run loop: turn a terminal into a live Floem window.
+//! The real run loop: turn a terminal into a live Floom window.
 //!
-//! `floem-platform-desktop` exposes `run` over winit; this is the terminal
+//! `floom-platform-desktop` exposes `run` over winit; this is the terminal
 //! analogue. The loop is deliberately thin and generic — it owns the terminal
 //! machinery (raw mode, alternate screen, a stdin reader, SIGWINCH) but not the
 //! app: the app is any [`TuiApp`], which drains [`Platform::poll_events`] into
 //! its own `AppRunner`. That keeps this crate at L4 (it never names
-//! `floem-app`); the beginner-facing one-call entry lives in the `floem2`
+//! `floom-app`); the beginner-facing one-call entry lives in the `floom2`
 //! facade, which sits above everything.
 //!
-//! [`Platform::poll_events`]: floem_platform::Platform::poll_events
+//! [`Platform::poll_events`]: floom_platform::Platform::poll_events
 
 use std::io::{Read, Write};
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -16,7 +16,7 @@ use std::sync::mpsc;
 use std::thread;
 use std::time::Duration;
 
-use floem_platform::{Platform, WindowConfig};
+use floom_platform::{Platform, WindowConfig};
 
 use crate::TuiPlatform;
 
@@ -30,14 +30,14 @@ extern "C" fn on_winch(_sig: i32) {
     RESIZE_REQUESTED.store(true, Ordering::SeqCst);
 }
 
-/// The application side of a terminal-hosted Floem app.
+/// The application side of a terminal-hosted Floom app.
 ///
 /// Implementors get called from inside the run loop's frame hook, with the
 /// backend handy, and are expected to drain [`Platform::poll_events`] — i.e.
 /// call `runner.pump(&mut platform)`. The loop owns the terminal; the app owns
 /// the runner.
 ///
-/// [`Platform::poll_events`]: floem_platform::Platform::poll_events
+/// [`Platform::poll_events`]: floom_platform::Platform::poll_events
 pub trait TuiApp {
     /// One frame is ready to be serviced. Drain platform events into the runner.
     fn events(&mut self, platform: &mut TuiPlatform);
@@ -48,7 +48,7 @@ pub trait TuiApp {
     fn about_to_exit(&mut self, _platform: &mut TuiPlatform) {}
 }
 
-/// Run a Floem app on a terminal. Blocks until the loop exits (stdin EOF, a
+/// Run a Floom app on a terminal. Blocks until the loop exits (stdin EOF, a
 /// Ctrl-C/Ctrl-D, or [`TuiPlatform::request_exit`]).
 ///
 /// On a real terminal it switches to the alternate screen and raw mode so the
@@ -226,7 +226,7 @@ impl Drop for TerminalGuard {
 mod tests {
     use super::*;
     use crate::TerminalSize;
-    use floem_platform::{Platform, PlatformEvent};
+    use floom_platform::{Platform, PlatformEvent};
 
     #[test]
     fn resize_pushes_window_resized() {

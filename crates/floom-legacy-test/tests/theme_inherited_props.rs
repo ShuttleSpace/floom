@@ -17,10 +17,10 @@
 //!    styles (like toggle_button_style's height calculation) are never evaluated,
 //!    even if the required context values would be available.
 
-use floem::prelude::*;
-use floem::style::FontSize;
-use floem::views::ToggleButton;
-use floem_legacy_test::prelude::*;
+use floom::prelude::*;
+use floom::style::FontSize;
+use floom::views::ToggleButton;
+use floom_legacy_test::prelude::*;
 use serial_test::serial;
 
 // =============================================================================
@@ -230,7 +230,7 @@ fn test_toggle_button_height_with_explicit_font_size() {
 #[serial]
 fn test_toggle_button_in_grid() {
     let root = TestRoot::new();
-    use floem::taffy::prelude::{auto, fr};
+    use floom::taffy::prelude::{auto, fr};
 
     let toggle = ToggleButton::new(|| true);
     let toggle_id = toggle.view_id();
@@ -271,7 +271,7 @@ fn test_toggle_button_in_grid() {
 #[serial]
 fn test_toggle_button_in_grid_with_font_size() {
     let root = TestRoot::new();
-    use floem::taffy::prelude::{auto, fr};
+    use floom::taffy::prelude::{auto, fr};
 
     let toggle = ToggleButton::new(|| true);
     let toggle_id = toggle.view_id();
@@ -419,7 +419,7 @@ fn test_with_context_works_when_font_size_is_explicit() {
 fn test_class_style_context_mappings_stripped() {
     let root = TestRoot::new();
     // Create a custom class and define a style with with_context for it
-    floem::style_class!(TestContextClass);
+    floom::style_class!(TestContextClass);
 
     // A view that uses the custom class
     let child = Empty::new()

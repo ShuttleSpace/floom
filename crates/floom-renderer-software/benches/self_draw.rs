@@ -16,9 +16,9 @@ use std::hint::black_box;
 use std::sync::Arc;
 
 use criterion::{BenchmarkId, Criterion, criterion_group, criterion_main};
-use floem_renderer::{FrameInfo, render_once};
-use floem_scene::{Scene, SceneNode};
-use floem_types::{Color, Path, Point, Rect, Size, Stroke};
+use floom_renderer::{FrameInfo, render_once};
+use floom_scene::{Scene, SceneNode};
+use floom_types::{Color, Path, Point, Rect, Size, Stroke};
 
 const WIDTH: u32 = 800;
 const HEIGHT: u32 = 600;
@@ -62,7 +62,7 @@ fn bench_chart_segments(c: &mut Criterion) {
         let scene = chart_scene(n);
         group.bench_with_input(BenchmarkId::from_parameter(n), &scene, |b, scene| {
             b.iter(|| {
-                let mut sw = floem_renderer_software::SoftwareRenderer::new(WIDTH, HEIGHT);
+                let mut sw = floom_renderer_software::SoftwareRenderer::new(WIDTH, HEIGHT);
                 render_once(
                     &mut sw,
                     &FrameInfo::software(WIDTH, HEIGHT, 1),
@@ -80,7 +80,7 @@ fn bench_circles(c: &mut Criterion) {
     let scene = circles_scene(1_000);
     group.bench_function(BenchmarkId::from_parameter("circles_1k"), |b| {
         b.iter(|| {
-            let mut sw = floem_renderer_software::SoftwareRenderer::new(WIDTH, HEIGHT);
+            let mut sw = floom_renderer_software::SoftwareRenderer::new(WIDTH, HEIGHT);
             render_once(
                 &mut sw,
                 &FrameInfo::software(WIDTH, HEIGHT, 1),
@@ -117,7 +117,7 @@ fn bench_rounded_rects(c: &mut Criterion) {
     let scene = rounded_rects_scene(1_000);
     group.bench_function(BenchmarkId::from_parameter("rounded_rects_1k"), |b| {
         b.iter(|| {
-            let mut sw = floem_renderer_software::SoftwareRenderer::new(WIDTH, HEIGHT);
+            let mut sw = floom_renderer_software::SoftwareRenderer::new(WIDTH, HEIGHT);
             render_once(
                 &mut sw,
                 &FrameInfo::software(WIDTH, HEIGHT, 1),

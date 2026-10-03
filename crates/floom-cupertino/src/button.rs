@@ -1,10 +1,10 @@
 //! Cupertino control variants and their touch-first interaction semantics.
 
-use floem_design::{
+use floom_design::{
     ControlSize, InteractionState, Props, StyleSetBuilder, StyleSetExt, Variant, composite_over,
 };
-use floem_style::{StyleProps, StyleSet};
-use floem_types::Color;
+use floom_style::{StyleProps, StyleSet};
+use floom_types::Color;
 
 use crate::tokens::CupertinoTheme;
 

@@ -1,6 +1,6 @@
 use std::time::Instant;
 
-use floem::{
+use floom::{
     action::{exec_after, inspect},
     event::EventPropagation,
     prelude::*,
@@ -231,7 +231,7 @@ impl AppCommand<'_> {
                         });
                     }
                     active.update(|s| s.set(None));
-                    floem::action::clear_focus();
+                    floom::action::clear_focus();
                 }
                 AppCommand::RefreshDB => {
                     s.refresh_db();

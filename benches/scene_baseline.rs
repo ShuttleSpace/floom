@@ -1,16 +1,16 @@
-//! Floem 2.0 Phase 0 — scene baseline placeholder.
+//! Floom 2.0 Phase 0 — scene baseline placeholder.
 //!
-//! There is no `floem-scene` yet. This bench measures retained-layout churn on
+//! There is no `floom-scene` yet. This bench measures retained-layout churn on
 //! the current headless path as a stand-in until Scene damage tracking lands.
 
 use std::hint::black_box;
 use std::time::Duration;
 
 use criterion::{Criterion, criterion_group, criterion_main};
-use floem::headless::{HeadlessHarness, TestRoot};
-use floem::prelude::*;
-use floem::style::FlexWrap;
-use floem::views::{Decorators, Empty, Stack};
+use floom::headless::{HeadlessHarness, TestRoot};
+use floom::prelude::*;
+use floom::style::FlexWrap;
+use floom::views::{Decorators, Empty, Stack};
 
 fn grid(count: usize) -> impl IntoView {
     let cells: Vec<_> = (0..count)

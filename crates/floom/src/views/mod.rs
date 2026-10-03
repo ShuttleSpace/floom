@@ -1,15 +1,15 @@
-//! # Floem built-in Views
+//! # Floom built-in Views
 //!
-//! This module contains the basic built-in Views of Floem.
+//! This module contains the basic built-in Views of Floom.
 //!
 //! ## Composing Views
-//! The views in this module are the main building blocks for composing UIs in Floem.
+//! The views in this module are the main building blocks for composing UIs in Floom.
 //! There is a collection of different `stacks` and `lists` that can be used to build collections of views.
 //! There are also basic widgets such as [text inputs](text_input::text_input), [labels](label::label), [images](img::img), and [svgs](svg::svg).
 //!
 //! ## Example: Counter
 //! ```rust
-//! use floem::{reactive::*, views::*};
+//! use floom::{reactive::*, views::*};
 //!
 //! let mut counter = RwSignal::new(0);
 //!
@@ -21,10 +21,10 @@
 //!     )),
 //! ));
 //! ```
-//! Views in Floem can also be easily refactored.
+//! Views in Floom can also be easily refactored.
 //! ## Example: Refactored Counter
 //! ```rust
-//! use floem::prelude::*;
+//! use floom::prelude::*;
 //!
 //! let mut counter = RwSignal::new(0);
 //!
@@ -57,13 +57,13 @@
 //! You could build this manually yourself using stacks but it is common enough that it is built-in as a list.
 //!
 //! ## View Trait
-//! The [`View`](crate::View) trait is the trait that Floem uses to build and display elements.
+//! The [`View`](crate::View) trait is the trait that Floom uses to build and display elements.
 //! The trait contains the methods for implementing updates, styling, layout, events, and painting.
 //!
 //! Views are types that implement `View`.
 //! Many of these types will also be built with a child that also implements `View`.
 //! In this way, views can be composed together easily to create complex UIs.
-//! This composition is the most common way to build UIs in Floem.
+//! This composition is the most common way to build UIs in Floom.
 //!
 //! Creating a type and manually implementing the View trait is typically only needed for building new widgets and for special cases.
 

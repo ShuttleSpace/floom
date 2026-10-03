@@ -14,7 +14,7 @@ impl Empty {
     ///
     /// ## Example
     /// ```rust
-    /// use floem::views::Empty;
+    /// use floom::views::Empty;
     ///
     /// let placeholder = Empty::new();
     /// ```

@@ -20,7 +20,7 @@ impl AccessNodeId {
 
 /// A single node in the accessibility tree.
 ///
-/// This is the platform-neutral representation Floem core produces from its
+/// This is the platform-neutral representation Floom core produces from its
 /// view/layout state. Each backend maps it to its native a11y node type
 /// (`NSAccessibilityElement`, `AccessibilityNodeInfo`, an AT-SPI accessible, a
 /// UIA provider element, ...).

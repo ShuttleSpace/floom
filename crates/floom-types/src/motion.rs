@@ -6,11 +6,11 @@
 //! declarative description of an animation a widget wants kept running on its
 //! own element.
 //!
-//! It sits in `floem-types` rather than beside the scheduler because the
-//! layers that need these names cannot all depend on `floem-animation`:
-//! `floem-core` (a widget declares an [`AnimationSpec`] through the `Widget`
-//! contract) is below it in the layer order. `floem-animation` re-exports
-//! everything here, so `floem_animation::Easing` keeps working and there is
+//! It sits in `floom-types` rather than beside the scheduler because the
+//! layers that need these names cannot all depend on `floom-animation`:
+//! `floom-core` (a widget declares an [`AnimationSpec`] through the `Widget`
+//! contract) is below it in the layer order. `floom-animation` re-exports
+//! everything here, so `floom_animation::Easing` keeps working and there is
 //! still exactly one definition of each type.
 
 /// Maps normalised progress to normalised progress.

@@ -1,13 +1,13 @@
 //! Typed, versioned, serializable schema for native-component codegen (Phase 18.1).
 //!
-//! This is the tooling-facing IDL that the `floem-codegen` backends consume.
+//! This is the tooling-facing IDL that the `floom-codegen` backends consume.
 //! It deliberately mirrors the runtime native-composition vocabulary in
-//! `floem-types` (`NativeViewKind`, `NativeCompositionMode`, `InputMode`) but
+//! `floom-types` (`NativeViewKind`, `NativeCompositionMode`, `InputMode`) but
 //! is its own serializable copy, so the compiler crate stays decoupled from
 //! the runtime and the schema can be serialized for tooling only (Step 3).
 //! `From` bridges convert between the two vocabularies.
 
-use floem_types::{
+use floom_types::{
     InputMode as RuntimeInputMode, NativeCompositionMode as RuntimeComposition,
     NativeViewKind as RuntimeViewKind,
 };
@@ -82,7 +82,7 @@ pub enum TypeRef {
     Custom(Ident),
 }
 
-/// What kind of native view a participant is — mirror of `floem_types::NativeViewKind`.
+/// What kind of native view a participant is — mirror of `floom_types::NativeViewKind`.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ViewKind {
     Map,
@@ -93,7 +93,7 @@ pub enum ViewKind {
     Custom(String),
 }
 
-/// How a participant is composited — mirror of `floem_types::NativeCompositionMode`.
+/// How a participant is composited — mirror of `floom_types::NativeCompositionMode`.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Composition {
     Overlay,
@@ -102,7 +102,7 @@ pub enum Composition {
     Offscreen,
 }
 
-/// Whether a participant takes pointer input itself — mirror of `floem_types::InputMode`.
+/// Whether a participant takes pointer input itself — mirror of `floom_types::InputMode`.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum InputMode {
     Passthrough,

@@ -34,12 +34,12 @@ mutate_one() {
   cmp -s /tmp/mut_backup.rs "$file" || echo "RESTORE_FAILED  $label" >> "$RESULTS"
 }
 
-GEOM=foundation/floem-types/src/geometry.rs
-PATHS=foundation/floem-types/src/path.rs
-SWLIB=render/floem-renderer-software/src/lib.rs
-APPLIB=app/floem-app/src/lib.rs
-SKIA=render/floem-renderer-skia/src/lib.rs
-VELLO=render/floem-renderer-vello/src/lib.rs
+GEOM=crates/floom-types/src/geometry.rs
+PATHS=crates/floom-types/src/path.rs
+SWLIB=crates/floom-renderer-software/src/lib.rs
+APPLIB=crates/floom-app/src/lib.rs
+SKIA=crates/floom-renderer-skia/src/lib.rs
+VELLO=crates/floom-renderer-vello/src/lib.rs
 
 # 1. scale_around drops its pivot (scales about the origin instead)
 mutate_one "$GEOM" \
@@ -51,7 +51,7 @@ mutate_one "$GEOM" \
   "    pub fn scale_around(sx: f64, sy: f64, _origin: Point) -> Self {
         Self::scale(sx, sy)
     }" \
-  "cargo test -q -p floem-types" \
+  "cargo test -q -p floom-types" \
   "scale-around-pivot"
 
 # 2. rotate_around drops its pivot
@@ -64,28 +64,28 @@ mutate_one "$GEOM" \
   "    pub fn rotate_around(radians: f64, _origin: Point) -> Self {
         Self::rotate(radians)
     }" \
-  "cargo test -q -p floem-types" \
+  "cargo test -q -p floom-types" \
   "rotate-around-pivot"
 
 # 3. multiply drops the translation carry
 mutate_one "$GEOM" \
   "            e: self.a * other.e + self.c * other.f + self.e," \
   "            e: self.a * other.e + self.c * other.f," \
-  "cargo test -q -p floem-types" \
+  "cargo test -q -p floom-types" \
   "multiply-translation-carry"
 
 # 4. Path::transform passes line vertices through unmapped
 mutate_one "$PATHS" \
   "                PathSeg::LineTo(to) => PathSeg::LineTo(map(to))," \
   "                PathSeg::LineTo(to) => PathSeg::LineTo(to)," \
-  "cargo test -q -p floem-types" \
+  "cargo test -q -p floom-types" \
   "path-transform-maps-vertices"
 
 # 5. ClipRegion::map lets rect regions through unmapped
 mutate_one "$PATHS" \
   "            Self::Rect(bounds) => Self::Rect(t.map_rect(*bounds))," \
   "            Self::Rect(bounds) => Self::Rect(*bounds)," \
-  "cargo test -q -p floem-types" \
+  "cargo test -q -p floom-types" \
   "clip-region-map-rect"
 
 # 6. software: path points drawn untransformed inside a scope
@@ -94,7 +94,7 @@ mutate_one "$SWLIB" \
                         if transformed {" \
   "                    let map_polylines = |polylines: Vec<Polyline>| -> Vec<Polyline> {
                         if false {" \
-  "cargo test -q -p floem-renderer-software --test transforms" \
+  "cargo test -q -p floom-renderer-software --test transforms" \
   "sw-path-points-mapped"
 
 # 7. software: rotated rects take the axis-aligned fast path
@@ -109,23 +109,23 @@ mutate_one "$SWLIB" \
                     fill,
                     radius: 0.0,
                 } if true => {" \
-  "cargo test -q -p floem-renderer-software --test transforms" \
+  "cargo test -q -p floom-renderer-software --test transforms" \
   "sw-rect-transformed-arm"
 
 # 8. software: clip regions pushed unmapped inside a scope
 mutate_one "$SWLIB" \
   "                    let region = region.map(self.transform);" \
   "                    let region = (*region).clone();" \
-  "cargo test -q -p floem-renderer-software --test transforms" \
+  "cargo test -q -p floom-renderer-software --test transforms" \
   "sw-clip-region-mapped"
 
 # 9. host: a scale composite stops producing a scope
 mutate_one "$APPLIB" \
   "            Some(CompositorProp::Scale(s)) => {
-                Some(floem_types::Transform::scale_around(s, s, center))
+                Some(floom_types::Transform::scale_around(s, s, center))
             }" \
   "            Some(CompositorProp::Scale(_)) => None," \
-  "cargo test -q -p floem-app --test transforms" \
+  "cargo test -q -p floom-app --test transforms" \
   "host-scale-scope-emitted"
 
 # 10. host: mid-life bracket minting skips the subtree reseed
@@ -135,7 +135,7 @@ mutate_one "$APPLIB" \
                 self.nodes[index].group_push = Some(id);" \
   "                let id = self.scene.insert(node);
                 self.nodes[index].group_push = Some(id);" \
-  "cargo test -q -p floem-app --test transforms" \
+  "cargo test -q -p floom-app --test transforms" \
   "host-reseed-on-midlife-bracket"
 
 # 11. skia: PushTransform records an identity matrix
@@ -146,7 +146,7 @@ mutate_one "$SKIA" \
   "                SceneNode::GroupPush { transform } => {
                     self.commands.push(SkiaCommand::PushTransform {
                         a: 1.0," \
-  "cargo test -q -p floem-renderer-skia" \
+  "cargo test -q -p floom-renderer-skia" \
   "skia-push-transform-carries-matrix"
 
 # 12. vello headless: PushTransform records an identity transform
@@ -155,9 +155,9 @@ mutate_one "$VELLO" \
                         transform: *transform,
                     });" \
   "                    self.commands.push(VelloCommand::PushTransform {
-                        transform: floem_types::Transform::IDENTITY,
+                        transform: floom_types::Transform::IDENTITY,
                     });" \
-  "cargo test -q -p floem-renderer-vello --lib" \
+  "cargo test -q -p floom-renderer-vello --lib" \
   "vello-push-transform-carries-matrix"
 
 echo "=== campaign results ==="

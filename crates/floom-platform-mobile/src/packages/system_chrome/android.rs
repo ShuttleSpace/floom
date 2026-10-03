@@ -1,7 +1,7 @@
 //! Android system chrome styling.
 //!
-//! TODO(floem): apply via `WindowInsetsController` / `WindowCompat` in the
-//! `floem-platform-android` backend (set status/navigation bar colors and the
+//! TODO(floom): apply via `WindowInsetsController` / `WindowCompat` in the
+//! `floom-platform-android` backend (set status/navigation bar colors and the
 //! `AppearanceLightStatusBars` / `AppearanceLightNavigationBars` flags).
 
 use super::SystemChromeStyle;

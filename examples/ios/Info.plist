@@ -3,13 +3,13 @@
 <plist version="1.0">
 <dict>
     <key>CFBundleName</key>
-    <string>floem-ios-example</string>
+    <string>floom-ios-example</string>
     <key>CFBundleDisplayName</key>
-    <string>Floem iOS</string>
+    <string>Floom iOS</string>
     <key>CFBundleIdentifier</key>
-    <string>dev.floem.ios.example</string>
+    <string>dev.floom.ios.example</string>
     <key>CFBundleExecutable</key>
-    <string>floem-ios-example</string>
+    <string>floom-ios-example</string>
     <key>CFBundleVersion</key>
     <string>1</string>
     <key>CFBundleShortVersionString</key>

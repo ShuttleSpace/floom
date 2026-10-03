@@ -1,4 +1,4 @@
-# Golden examples (Floem 2.0)
+# Golden examples (Floom 2.0)
 
 Every example below is a runnable binary. Unless a row says otherwise it runs
 **headless** — a `WidgetHost` pumped by hand — so it can be verified in CI and
@@ -12,28 +12,28 @@ something stale.
 
 | example | topic | target | status |
 | --- | --- | --- | --- |
-| `floem2-demo` | the demo gallery: every section (primitives, controls, composites, motion, navigation, data, forms, styling) in one app — the same tree runs headless, in a real window, and on Android | all / desktop / Android | headless (default); `--features macos` opens a window, `--features android` produces the APK |
-| `floem2-capabilities` | the platform surface, not the widget one: 18 capability readings (device, app, screen, battery, connectivity, sensors, permissions, accessibility prefs, safe area, orientation, system chrome, soft keyboard, clipboard read/write, URL launcher, haptics) in one keyed table that prints `—` where the OS has no answer, plus 9 side-effecting actions behind buttons | all / desktop / Android | headless (default); `--features macos` opens a window, `--features android` produces the APK |
-| `floem2-chart` | self-drawn content: a line chart on a `Canvas`, clipped to its own box, redrawn from data | all | headless |
-| `floem2-hello` | the smallest app: everything from `floem2::prelude` | all | headless |
-| `floem2-run-desktop` | the same tree in a real OS window through the facade's one-call `floem2::run_desktop` — no `WinitApp` impl, no `AppRunner` wiring in the example | macOS / desktop | **display-gated** — `--features desktop,renderer-gpu`; see the known text-ink defect in [`vello-gpu-text-ink-defect.md`](./vello-gpu-text-ink-defect.md) |
-| `floem2-counter` | composites (`Stack`/`List`/`Grid`/`Tabs`/`Dialog`/`NavBar`) + reconciliation | all | headless |
-| `floem2-list` | a keyed list: append / remove / reorder without rebuilding rows | all | headless |
-| `floem2-virtual-list` | virtual scrolling: bounded element pool over 100 000 items | all | headless |
-| `floem2-datagrid` | data grid: virtualized rows, sorting, selection, edit + undo | all | headless |
-| `floem2-forms` | form validation, dirty/touched tracking, control bindings | all | headless |
-| `floem2-navigation` | typed routes, history, page transitions, nav containers, deep links | all | headless |
-| `floem2-progress-ring` | self-drawn motion: an animated ring + a `Spinner` that animates itself | all | headless |
-| `floem2-transform` | subtree transforms: a card that scales and rotates as one picture | all | headless |
-| `floem2-style` | style that is made of something: a gradient card, a real drop shadow, an implicit hover fade armed with a design-system motion token, a blurred card whose ink crosses its own edge, and a frosted panel that greys the edge behind it | all | headless |
-| `floem2-shader` | custom WGSL shaders: a box whose ink is a program — the source and the caller's scalars reach the scene over the element's own box, and a CPU rasteriser counts the skip instead of faking ink | all | headless |
-| `floem2-editor` | text document: transactions, selection, undo/redo, IME pre-edit | all | headless |
-| `floem2-motion` | eased tweens, interruption, a control that animates itself, presence enter/exit, a crossfade that keeps both sides alive, an `AnimatedContent` that keeps both sides alive by key, an `Opacity` that fades a subtree instead of snapping, and a `SharedTransitionLayout` that flies one subtree into the other's box | all | headless |
-| `floem2-native-plugin` | writing a native provider plugin + slot pooling | all | headless |
-| `floem2-probe` | device probe: one window holding every control the on-screen cases need | desktop | **display-gated** — `--features real`, driven by hand |
-| `floem2-window` | a real OS window: winit + vello GPU | desktop | **verified on macOS** |
-| `floem2-macos` | the macOS gate probe: a clickable tree, a text field an input method can type into, and a clipboard whose far end is the system pasteboard | macOS | **display-gated** — `--features real`, driven by hand (see `docs/gates/macos.md`) |
-| `floem2-android` | a real Android app: `native-activity` + vello GPU in one APK | Android | **device-gated** — `--features real`, packaged by `examples/floem2-android/scripts/build-apk.sh` |
+| `floom2-demo` | the demo gallery: every section (primitives, controls, composites, motion, navigation, data, forms, styling) in one app — the same tree runs headless, in a real window, and on Android | all / desktop / Android | headless (default); `--features macos` opens a window, `--features android` produces the APK |
+| `floom2-capabilities` | the platform surface, not the widget one: 18 capability readings (device, app, screen, battery, connectivity, sensors, permissions, accessibility prefs, safe area, orientation, system chrome, soft keyboard, clipboard read/write, URL launcher, haptics) in one keyed table that prints `—` where the OS has no answer, plus 9 side-effecting actions behind buttons | all / desktop / Android | headless (default); `--features macos` opens a window, `--features android` produces the APK |
+| `floom2-chart` | self-drawn content: a line chart on a `Canvas`, clipped to its own box, redrawn from data | all | headless |
+| `floom2-hello` | the smallest app: everything from `floom2::prelude` | all | headless |
+| `floom2-run-desktop` | the same tree in a real OS window through the facade's one-call `floom2::run_desktop` — no `WinitApp` impl, no `AppRunner` wiring in the example | macOS / desktop | **display-gated** — `--features desktop,renderer-gpu`; see the known text-ink defect in [`vello-gpu-text-ink-defect.md`](./vello-gpu-text-ink-defect.md) |
+| `floom2-counter` | composites (`Stack`/`List`/`Grid`/`Tabs`/`Dialog`/`NavBar`) + reconciliation | all | headless |
+| `floom2-list` | a keyed list: append / remove / reorder without rebuilding rows | all | headless |
+| `floom2-virtual-list` | virtual scrolling: bounded element pool over 100 000 items | all | headless |
+| `floom2-datagrid` | data grid: virtualized rows, sorting, selection, edit + undo | all | headless |
+| `floom2-forms` | form validation, dirty/touched tracking, control bindings | all | headless |
+| `floom2-navigation` | typed routes, history, page transitions, nav containers, deep links | all | headless |
+| `floom2-progress-ring` | self-drawn motion: an animated ring + a `Spinner` that animates itself | all | headless |
+| `floom2-transform` | subtree transforms: a card that scales and rotates as one picture | all | headless |
+| `floom2-style` | style that is made of something: a gradient card, a real drop shadow, an implicit hover fade armed with a design-system motion token, a blurred card whose ink crosses its own edge, and a frosted panel that greys the edge behind it | all | headless |
+| `floom2-shader` | custom WGSL shaders: a box whose ink is a program — the source and the caller's scalars reach the scene over the element's own box, and a CPU rasteriser counts the skip instead of faking ink | all | headless |
+| `floom2-editor` | text document: transactions, selection, undo/redo, IME pre-edit | all | headless |
+| `floom2-motion` | eased tweens, interruption, a control that animates itself, presence enter/exit, a crossfade that keeps both sides alive, an `AnimatedContent` that keeps both sides alive by key, an `Opacity` that fades a subtree instead of snapping, and a `SharedTransitionLayout` that flies one subtree into the other's box | all | headless |
+| `floom2-native-plugin` | writing a native provider plugin + slot pooling | all | headless |
+| `floom2-probe` | device probe: one window holding every control the on-screen cases need | desktop | **display-gated** — `--features real`, driven by hand |
+| `floom2-window` | a real OS window: winit + vello GPU | desktop | **verified on macOS** |
+| `floom2-macos` | the macOS gate probe: a clickable tree, a text field an input method can type into, and a clipboard whose far end is the system pasteboard | macOS | **display-gated** — `--features real`, driven by hand (see `docs/gates/macos.md`) |
+| `floom2-android` | a real Android app: `native-activity` + vello GPU in one APK | Android | **device-gated** — `--features real`, packaged by `examples/floom2-android/scripts/build-apk.sh` |
 | `ios` | the iOS app: a counter, the in-UI context menu, a `UIPasteboard` clipboard and the soft keyboard | iOS | **v1 stack** — `just build ios ios` assembles a simulator `.app` |
 | `ohos` | the OpenHarmony app: the v1 stack as a `cdylib` loaded by an ArkTS Stage project | OpenHarmony | **v1 stack** — `just build ohos ohos` assembles an unsigned HAP |
 | `webgpu` | the browser app: the v1 stack on `wasm32` + WebGPU | wasm32 | **v1 stack** — `just build webgpu web` writes the `wasm-bindgen` bundle (raw `.wasm` when `wasm-bindgen-cli` is absent) |
@@ -49,7 +49,7 @@ The device-, display- and target-gated rows are the same class of gap as phases
 have. Everything else here is exercised on every change:
 `bash scripts/run-golden-examples.sh` *runs* each headless example (compiling
 them proves nothing — their assertions are the point), and
-`app/floem2/tests/docs_parity.rs` asserts that this table, the `examples/`
+`crates/floom2/tests/docs_parity.rs` asserts that this table, the `examples/`
 directory and that script's list all agree, so a new example cannot land
 undocumented and a documented status cannot quietly become false.
 
@@ -67,23 +67,23 @@ TIER=<artifact|check-only|blocked> PLATFORM=<p> CRATE=<c> ARTIFACT=<path|->
 A platform whose backend cannot render, or whose toolchain is missing, is
 reported as `check-only`/`blocked`, never as `artifact`.
 
-Two tracks feed the matrix. **v2** is the `floem2-*` demos; `floem2-demo`
+Two tracks feed the matrix. **v2** is the `floom2-*` demos; `floom2-demo`
 carries one feature per platform. **v1** is the older single-crate stack, and it
-is the one with *real* iOS / OHOS / Web backends today (`src/embedder/*`,
-`src/platform/*`) — which is why those three platforms are covered by the v1
+is the one with *real* iOS / OHOS / Web backends today (`crates/floom/src/embedder/*`,
+`crates/floom/src/platform/*`) — which is why those three platforms are covered by the v1
 examples. A v2 artifact on iOS/OHOS/Web waits on those v2 backends (Phase 19),
 not on this build plumbing.
 
 | crate (`just build` name) | platform | tier | what comes out |
 | --- | --- | --- | --- |
-| floem2-demo | macos | artifact | `target/debug/floem2-demo` — a real winit + vello window |
-| floem2-demo | android | artifact | `target/android/…/*.apk` — `native-activity` + vello |
-| floem2-demo | ios / ohos / web | check-only | the v2 backends for these targets are still in-memory skeletons |
-| ios (`floem-ios-example`) | ios | artifact | `target/ios/floem-ios-example.app`, ad-hoc signed for the simulator |
+| floom2-demo | macos | artifact | `target/debug/floom2-demo` — a real winit + vello window |
+| floom2-demo | android | artifact | `target/android/…/*.apk` — `native-activity` + vello |
+| floom2-demo | ios / ohos / web | check-only | the v2 backends for these targets are still in-memory skeletons |
+| ios (`floom-ios-example`) | ios | artifact | `target/ios/floom-ios-example.app`, ad-hoc signed for the simulator |
 | ohos | ohos | artifact | `examples/ohos/ohos-app/…/entry-default-unsigned.hap` (unsigned) |
 | webgpu | web | artifact | `target/web/webgpu/` — `webgpu_bg.wasm` + `webgpu.js`, the `wasm-bindgen --target web` bundle (tier drops to `check-only` with a raw `.wasm` when `wasm-bindgen-cli` is not installed — its version must match the `wasm-bindgen` crate) |
 | any | windows / linux | check-only | a `cargo check` once `rustup target add` has run |
-| any | tui | rendering | no terminal **platform** yet: `floem-renderer-tui` paints any scene into a character grid and encodes it as ANSI (see "Terminal output" below), but nothing yet sizes that grid from a real terminal or feeds stdin events back |
+| any | tui | rendering | no terminal **platform** yet: `floom-renderer-tui` paints any scene into a character grid and encodes it as ANSI (see "Terminal output" below), but nothing yet sizes that grid from a real terminal or feeds stdin events back |
 
 Three toolchain facts are encoded in the scripts because each one costs a build
 to rediscover: the OHOS path needs both `DEVECO_SDK_HOME` exported and
@@ -99,15 +99,15 @@ path is set or a symlink is added).
 
 ## Notes per example
 
-### `floem2-demo`
+### `floom2-demo`
 
 The gallery the examples are converging on: one crate holds the whole thing and
 the platform is a feature, so a target build is one command away.
 
 ```sh
-cargo run -p floem2-demo              # headless: every demo mounted and painted
-just build floem2-demo macos          # a real winit window (vello over wgpu)
-just build floem2-demo android        # an installable APK
+cargo run -p floom2-demo              # headless: every demo mounted and painted
+just build floom2-demo macos          # a real winit window (vello over wgpu)
+just build floom2-demo android        # an installable APK
 ```
 
 The tree is built once (`demos::gallery_root`) and mounted by three backends
@@ -117,7 +117,7 @@ renders in CI is the same demo that renders on screen. The headless run asserts
 each demo painted at least one widget, which is what makes it a golden example
 rather than a screenshot.
 
-**Platform matrix** (`just build floem2-demo <platform>`):
+**Platform matrix** (`just build floom2-demo <platform>`):
 
 | platform | tier | why |
 | --- | --- | --- |
@@ -125,18 +125,18 @@ rather than a screenshot.
 | android | artifact | the Android winit + vello backend is real |
 | ios / ohos / web | check-only | the v2 backends for these targets are still in-memory skeletons; the features wire the backend crate in so the target can be `cargo check`ed, but no artifact is claimed |
 
-### `floem2-hello`
+### `floom2-hello`
 
 The whole app comes from one glob import — the Phase 29.1 surface contract.
 
 ```text
-hello floem 2.0: mounted and painted 2 widgets
+hello floom 2.0: mounted and painted 2 widgets
 ```
 
 Release binary (macOS, Apple M4 Pro, unstripped): **2,694,256 B ≈ 2.6 MiB** —
 the floor of the size table, because it pulls the headless core only.
 
-### `floem2-chart`
+### `floom2-chart`
 
 Self-drawn content (MOTION-GAP A1/A2/A7/A8 + the repaint bridge): a `Canvas`
 whose painter draws a line chart — axes, a translucent area fill, a stroked
@@ -169,7 +169,7 @@ data line — plus the three things a drawn surface needs besides pixels:
   the ping drew the new data; the clip cut it at the same edge
 ```
 
-### `floem2-progress-ring`
+### `floom2-progress-ring`
 
 Self-drawn motion (MOTION-GAP A7 + the B3 loop): the host animates a `Canvas`
 ring by running a tween whose value the painter turns into arc geometry — the
@@ -190,7 +190,7 @@ paint-only repaint with no relayout.
   sweep: 0.017 -> 0.183 after 10 frames
 ```
 
-### `floem2-transform`
+### `floom2-transform`
 
 Subtree transforms (MOTION-GAP A6/B7): a transform-class composite — scale,
 rotate — becomes a `GroupPush` scope bracketing the animated element's picture,
@@ -206,7 +206,7 @@ the scope carries the sampled value about the box centre, pivoting where
 == 4. a finished transform parks clean ==
 ```
 
-### `floem2-style`
+### `floom2-style`
 
 Style realised in primitives (MOTION-GAP A3/A4/B4/B6): a gradient background,
 a blurred drop shadow instead of the pseudo-shadow rect v1 faked elevation
@@ -247,7 +247,7 @@ puts nothing there. Act 6's pair is what separates a backdrop filter from a
 content one — both blur, so the only discriminating probe is the same hard
 edge read inside the panel (grey) and outside it (still a step).
 
-### `floem2-shader`
+### `floom2-shader`
 
 A5: the one capability in this table whose ink is *code*. Three acts, all
 asserted:
@@ -270,13 +270,13 @@ act 3  params went [0.0, 1.0] -> [0.5, 0.25] over the same 160x72 box
 ```
 
 Pixels are the one thing this example deliberately does not show: a shader's
-output needs the GPU path (`floem2-window` / `floem2-probe`, `--features
+output needs the GPU path (`floom2-window` / `floom2-probe`, `--features
 real`). What vello does with the same node — compile the WGSL, render it
 offscreen, composite it back, count `shaders_drawn` — is asserted by
-`render/floem-renderer-vello/src/gpu.rs` under `--features gpu`, and both
+`crates/floom-renderer-vello/src/gpu.rs` under `--features gpu`, and both
 halves are covered by `scripts/mutate-a5-shader.sh` (8/8).
 
-### `floem2-motion`
+### `floom2-motion`
 
 Motion, end to end (MOTION-GAP B1/B2/B3/B4/B5/B6): a curve is not a duration,
 interruption carries what it interrupted, a control animates itself, a presence
@@ -321,12 +321,12 @@ lands the destination's *own* content is revealed and the source unmounts. It is
 carried on exactly one compositor channel, so redirecting it mid-flight through
 the host's retarget door keeps the speed it had (B2).
 
-Also exercised end to end in `tooling/floem-snapshot/tests/golden_frames.rs`
+Also exercised end to end in `crates/floom-snapshot/tests/golden_frames.rs`
 (`a_shared_element_flight_is_golden_frame_by_frame`: the ink's top edge walks
 down the lattice and the landing frame swaps the inky source card for the hot
 destination card, a trajectory no single-pixel probe can hold).
 
-### `floem2-window`
+### `floom2-window`
 
 The only example that opens a real window: winit + vello over wgpu.
 
@@ -337,8 +337,8 @@ entry fade: 0.4s ease-out on the label (opacity 0 -> 1)
 idle probe after 8s: frames=26 redraws_requested=27 auto_redraws=25 events=28 about_to_wait=50; process CPU: 0.24s (2.9% of one core)
 ```
 
-Run with `FLOEM2_WINDOW_IDLE=1 FLOEM2_WINDOW_IDLE_SECS=8 cargo run -p
-floem2-window --features real`. Release binary: **11,626,912 B ≈ 11.1 MiB** —
+Run with `FLOOM2_WINDOW_IDLE=1 FLOOM2_WINDOW_IDLE_SECS=8 cargo run -p
+floom2-window --features real`. Release binary: **11,626,912 B ≈ 11.1 MiB** —
 what the desktop + GPU bundle costs on top of the 2.6 MiB headless floor.
 
 **The load-bearing claim is that `frames` stops climbing, not that it is small.**
@@ -354,28 +354,28 @@ in the total. `redraws_requested` and the CPU percentage move a little run to
 run (27 / 2.9 % here, 3 / 2.1 % on the pre-motion run) because they count the
 startup redraw and whatever the window server sends in the first second.
 
-### `floem2-macos`
+### `floom2-macos`
 
-The desktop counterpart of `floem2-android`: it exists to produce the evidence
+The desktop counterpart of `floom2-android`: it exists to produce the evidence
 `docs/gates/macos.md` records rather than to demonstrate anything new about the
-stack. Same `AppRunner<VelloGpuPresenter>`, same winit loop as `floem2-window` —
+stack. Same `AppRunner<VelloGpuPresenter>`, same winit loop as `floom2-window` —
 what it adds is a text field, an IME request, a focus trace, and a clipboard
 write, plus a log line for each, so a spot-check is a read of what the OS
 actually did.
 
 ```text
 GPU adapter: Apple M4 Pro (Metal)
-floem2-macos: widget tree mounted (4 nodes)
-floem2-macos: clipboard write=true read_back=Some("floem2-macos clipboard probe 3e7b") matched=true
-floem2-macos: text field focused
-floem2-macos: button logical=(0.0,92.0 160.0x40.0) scale=1 content_px=x0..160 y92..132
-floem2-macos: field logical=(0.0,36.0 260.0x40.0)
-floem2-macos: focus None -> TextField@2
-floem2-macos: text field text="你好世界" preedit="" composing=false
+floom2-macos: widget tree mounted (4 nodes)
+floom2-macos: clipboard write=true read_back=Some("floom2-macos clipboard probe 3e7b") matched=true
+floom2-macos: text field focused
+floom2-macos: button logical=(0.0,92.0 160.0x40.0) scale=1 content_px=x0..160 y92..132
+floom2-macos: field logical=(0.0,36.0 260.0x40.0)
+floom2-macos: focus None -> TextField@2
+floom2-macos: text field text="你好世界" preedit="" composing=false
 ```
 
 The clipboard line is the load-bearing one: on macOS `Clipboard` is
-`NSPasteboard` (see `platform/floem-platform-desktop/src/clipboard.rs`), so the
+`NSPasteboard` (see `crates/floom-platform-desktop/src/clipboard.rs`), so the
 same string is then readable from a different process entirely — which is what
 separates a clipboard from a `String` field. The `logical=` lines are there so a
 click can be *aimed*: they are content-relative, so the window's frame and the
@@ -388,15 +388,15 @@ prove characters arrived, but only pixels can show whether they were drawn. That
 is exactly what happened — the string rendered as four tofu boxes, and the
 finding (parley's per-script fallback resolving Han back to a Latin-only font)
 is written up in `docs/gates/macos.md` and now fixed in
-`floem-text`'s default font stack. A probe that only logged would have reported a
+`floom-text`'s default font stack. A probe that only logged would have reported a
 working CJK path.
 
-### `floem2-android`
+### `floom2-android`
 
-The mobile analogue of `floem2-window`: the same `AppRunner<VelloGpuPresenter>`
+The mobile analogue of `floom2-window`: the same `AppRunner<VelloGpuPresenter>`
 widget tree, but pumped by the Android (winit) event loop instead of the desktop
-one. `native-activity` loads `libfloem2_android_example.so` and calls
-`android_main`, which hands the `AndroidApp` to `floem-platform-android`, mounts
+one. `native-activity` loads `libfloom2_android_example.so` and calls
+`android_main`, which hands the `AndroidApp` to `floom-platform-android`, mounts
 a counter, and runs — the only Android-specific seam is the entry point and the
 `AndroidRunner` callbacks that pump the app from winit's push loop. The GPU
 surface is built from the Android `ANativeWindow*` by the renderer exactly the
@@ -407,7 +407,7 @@ into `jniLibs/`), so the host build compiles only the placeholder `src/main.rs`.
 The Android module is behind the `real` feature, so the cross-check is:
 
 ```text
-cargo check -p floem2-android-example --target aarch64-linux-android --features real
+cargo check -p floom2-android-example --target aarch64-linux-android --features real
 ```
 
 which passes with zero warnings from this crate. Keeping the presenter behind

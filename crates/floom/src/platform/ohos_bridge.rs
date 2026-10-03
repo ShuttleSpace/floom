@@ -13,9 +13,9 @@
 //!
 //! N-API values belong to the JS thread that created them: calling
 //! `napi_call_function` from any other thread aborts the process
-//! (`Fatal: ecma_vm cannot run in multi-thread!`). Floem's OHOS runtime, however,
+//! (`Fatal: ecma_vm cannot run in multi-thread!`). Floom's OHOS runtime, however,
 //! drives the event loop from a **worker** thread (see
-//! `floem-winit-ohos`'s `runtime_new`), and every bridge call — clipboard, file
+//! `floom-winit-ohos`'s `runtime_new`), and every bridge call — clipboard, file
 //! picker, external URL, IME, accessibility — originates there.
 //!
 //! [`call_bridge`] therefore marshals the call back onto the JS thread through a
@@ -167,7 +167,7 @@ fn init_dispatch_queue(env: Env) {
     if TS_FUNCTION.get().is_some() {
         return;
     }
-    let Ok(resource_name) = env.create_string("floem_platform_bridge") else {
+    let Ok(resource_name) = env.create_string("floom_platform_bridge") else {
         return;
     };
     let mut handle: ThreadsafeFunction = ptr::null_mut();

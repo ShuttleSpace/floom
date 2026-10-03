@@ -4,11 +4,11 @@
 //! it is the contract: a client that serialises a command must be able to read
 //! its own response back, and a version gate with concrete refusal rules.
 
-use floem_agent::{
+use floom_agent::{
     AgentError, AgentRequest, Command, PROTOCOL_VERSION, Payload, PerformanceSummary, PointDto,
     ScreenDto, Selector, SemanticsEntryDto, UiNodeInfo, UiTree, check_version,
 };
-use floem_inspector::{ProtocolVersion, SceneLines};
+use floom_inspector::{ProtocolVersion, SceneLines};
 
 #[test]
 fn commands_round_trip_over_json() {

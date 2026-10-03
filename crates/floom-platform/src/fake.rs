@@ -3,7 +3,7 @@
 use std::collections::HashMap;
 use std::time::Instant;
 
-use floem_types::{DisplayInfo, PlatformId, Point, ScaleFactor, Size, SurfaceId, WindowId};
+use floom_types::{DisplayInfo, PlatformId, Point, ScaleFactor, Size, SurfaceId, WindowId};
 
 use crate::capabilities::{Capability, PlatformCapabilities};
 use crate::event::PlatformEvent;
@@ -204,14 +204,14 @@ impl HostPlatform {
             position,
             button: crate::PointerButton::Primary,
             pressed: true,
-            modifiers: floem_types::Modifiers::NONE,
+            modifiers: floom_types::Modifiers::NONE,
         });
         self.events.push(PlatformEvent::PointerButton {
             window,
             position,
             button: crate::PointerButton::Primary,
             pressed: false,
-            modifiers: floem_types::Modifiers::NONE,
+            modifiers: floom_types::Modifiers::NONE,
         });
     }
 

@@ -9,14 +9,14 @@
 > (skeleton + Metal surface + in-UI context menu + clipboard + IME + external
 > URL + file dialog + receive-shared-files + safe-area + example) are
 > implemented and compile green for `aarch64-apple-ios`,
-> `aarch64-apple-ios-sim`, host, and `floem-ios-example` (device/sim/host).
+> `aarch64-apple-ios-sim`, host, and `floom-ios-example` (device/sim/host).
 > **One residual gap remains** (documented, not blocking): `receive_files`
 > misses **cold-start** shares — Step 8 needs a `floem-winit` patch for full
 > coverage. The former "no core layout consumer for `safe_area`" gap is now
 > **closed** by the cross-platform core change tracked as issue **#110** (see
 > new **Step 9b** below): `safe_area` insets now flow through the neutral
 > `EmbedderEvent::SafeArea` protocol into `WindowState`, and when a window opts
-> in via `WindowConfig::apply_safe_area(true)` Floem insets the **root layout**
+> in via `WindowConfig::apply_safe_area(true)` Floom insets the **root layout**
 > by the safe-area padding so content clears the notch / Home Indicator. This
 > document was the design/plan; it now also serves as the implementation log.
 >
@@ -25,14 +25,14 @@
 > that translates iOS touch/keyboard into standard winit `WindowEvent`s — so,
 > unlike Android's `NativeActivity`/JNI dance, the iOS entry is just a normal
 > Rust `fn main` that builds an `EventLoop` and runs it. winit internally calls
-> `UIApplicationMain` with its own `UIApplicationDelegate`. Floem's existing
+> `UIApplicationMain` with its own `UIApplicationDelegate`. Floom's existing
 > winit event path (pointer/keyboard/`text_input`) therefore reuses with **no
 > custom input translation**. The only backend-specific work is: an
 > `embedder/ios.rs` adapter, an `Application::new_ios` entry, a **Metal
 > (`UiKit`) GPU-surface branch** in the renderer, iOS `Cargo.toml` cfg, the
 > `in-UI` context-menu renderer enabled for iOS, and an example/Xcode wrapper.
 
-This document tracks the iOS backend for Floem, built on top of the
+This document tracks the iOS backend for Floom, built on top of the
 experimental [`embedder`](../src/embedder) protocol from
 [`docs/superpowers/plans/2026-08-03-embedder-api.md`](../docs/superpowers/plans/2026-08-03-embedder-api.md).
 It mirrors the structure of [`android.md`](./android.md) (Phase 1, done) so the
@@ -42,17 +42,17 @@ two mobile backends stay comparable.
 
 ```
 Rust fn main()                                (examples/ios/src/main.rs)
-  └─ floem::Application::new_ios(config)       (src/app/mod.rs — NEW)
+  └─ floom::Application::new_ios(config)       (crates/floom/src/app/mod.rs — NEW)
        └─ winit EventLoop (floem-winit-ios)
             └─ UIApplicationMain + winit UIApplicationDelegate  (winit-internal)
                  └─ UIWindow / UIView (CAMetalLayer)
                       └─ wgpu Metal surface  ← renderer UiKit branch (NEW)
   └─ .window(view_fn).run()                    (identical to desktop / Android)
 
-floem event path  (dispatch.rs, window/handle.rs — UNCHANGED, platform-agnostic)
-  └─ pointer/keyboard/IME → standard winit events → Floem widgets
+floom event path  (dispatch.rs, window/handle.rs — UNCHANGED, platform-agnostic)
+  └─ pointer/keyboard/IME → standard winit events → Floom widgets
 
-src/embedder/ios.rs  (NEW)  — capabilities + PlatformServices + window + surface
+crates/floom/src/embedder/ios.rs  (NEW)  — capabilities + PlatformServices + window + surface
   └─ ios_capabilities() / IosServices / IosEmbedderWindow / IosSurfaceHandle
 ```
 
@@ -63,7 +63,7 @@ the GPU API is **Metal**, not Vulkan.
 
 ## 1. Application entry — `Application::new_ios`
 
-Mirror `Application::new_android` (`src/app/mod.rs:323`), but **simpler** — no
+Mirror `Application::new_android` (`crates/floom/src/app/mod.rs:323`), but **simpler** — no
 `AndroidApp`/`with_android_app`, no JNI handles:
 
 ```rust
@@ -96,7 +96,7 @@ The example `examples/ios/src/main.rs` then does the **exact desktop flow**:
 
 ```rust
 fn main() {
-    floem::Application::new_ios(AppConfig::default())
+    floom::Application::new_ios(AppConfig::default())
         .window(|_id| my_view(), None)
         .run();
 }
@@ -119,25 +119,25 @@ No Objective-C `main`/`.m` file is required.
 ## 2. GPU surface — Metal (`UiKit` window handle)
 
 **Update (2026-08-10, Step 2 done — no code change required):** The original
-plan assumed Floem special-cased `RawWindowHandle::AppKit`/`Win32`/`AndroidNdk`
+plan assumed Floom special-cased `RawWindowHandle::AppKit`/`Win32`/`AndroidNdk`
 for surface creation and that iOS needed a new `RawWindowHandle::UiKit` branch.
-**This is false.** Floem's surface creation is fully generic:
+**This is false.** Floom's surface creation is fully generic:
 
 - `renderer/src/gpu_resources.rs:65` (`GpuResources::request`) and
-  `src/window/handle.rs:275` (`WindowHandle::new_paint_state`) both call
+  `crates/floom/src/window/handle.rs:275` (`WindowHandle::new_paint_state`) both call
   `instance.create_surface(Arc::clone(&window))` with an `Arc<dyn winit::window::Window>`
   — **no raw-handle matching at all**. wgpu's `create_surface` internally takes
   `&dyn HasWindowHandle` and dispatches on the raw handle type.
 - The only `RawWindowHandle::AppKit` matches in the codebase are for **macOS
-  traffic-light constraints** (`src/app/handle.rs:646`, gated `target_os =
-  "macos"`) and **IME positioning** (`src/window/handle.rs:1623/1665/1684/1705`,
+  traffic-light constraints** (`crates/floom/src/app/handle.rs:646`, gated `target_os =
+  "macos"`) and **IME positioning** (`crates/floom/src/window/handle.rs:1623/1665/1684/1705`,
   gated macos/windows) — neither touches surface creation.
 - This is exactly why **Android needed no surface-code change in Phase 1**: its
   `AndroidNdk` handle flows through the same generic `create_surface` call.
 
 So iOS is covered for free. The chain:
 
-1. floem passes `Arc<dyn winit::window::Window>` → generic `create_surface`.
+1. floom passes `Arc<dyn winit::window::Window>` → generic `create_surface`.
 2. winit fork's iOS `Window::raw_window_handle` returns
    `RawWindowHandle::UiKit { ui_view, ui_window, ui_view_controller }`
    (`~/.cargo/git/checkouts/winit-…/9404575/src/platform_impl/ios/window.rs:334`).
@@ -147,22 +147,22 @@ So iOS is covered for free. The chain:
 Because Metal surfaces are tied to the `CAMetalLayer` (not a volatile
 `ANativeWindow*`), **iOS has no surface-lifecycle rebuild problem** — rotation/
 resize just changes the layer's bounds, and winit emits `WindowEvent::Resized`,
-which Floem already handles. Therefore **`WindowHandle::recreate_gpu_surface`
+which Floom already handles. Therefore **`WindowHandle::recreate_gpu_surface`
 stays `#[cfg(target_os = "android")]` only** (Step 1 intentionally kept the
 GPU-surface-lifecycle gate out of iOS) — do **not** add a UiKit branch there.
 
 `Metal` is selected by default (`Backends::METAL`) in `new_ios` (Step 1),
 matching how Android selects `Backends::VULKAN`.
 
-**Verification:** `cargo check -p floem --target aarch64-apple-ios` and
+**Verification:** `cargo check -p floom --target aarch64-apple-ios` and
 `--target aarch64-apple-ios-sim` are green with the surface-creation code
 compiled (no `UiKit` branch added). Runtime surface build is the usual
 compile-only-until-simulator caveat (§8).
 
-## 3. Embedder adapter — `src/embedder/ios.rs`
+## 3. Embedder adapter — `crates/floom/src/embedder/ios.rs`
 
-Mirror `src/embedder/android.rs` (same trait impls). New file,
-`#![cfg(target_os = "ios")]`, registered in `src/embedder/mod.rs` as
+Mirror `crates/floom/src/embedder/android.rs` (same trait impls). New file,
+`#![cfg(target_os = "ios")]`, registered in `crates/floom/src/embedder/mod.rs` as
 `#[cfg(target_os = "ios")] pub mod ios;`.
 
 | Item | Purpose |
@@ -188,12 +188,12 @@ Mirror `src/embedder/android.rs` (same trait impls). New file,
 | `accessibility` | false | VoiceOver integration is **Phase 4**; left off for now. |
 | `system_theme` | true | `UITraitCollection.userInterfaceStyle` (light/dark). |
 | `display_info` | true | |
-| `safe_area` | **true** | **implemented (Step 9):** `EmbedderWindow::safe_area()` (new trait method, zero default so other backends are unaffected) reads `UIView.safeAreaInsets` from the key window and converts points → physical pixels via `UIScreen.scale`. **Core consumer now lands in Step 9b (#110):** the insets flow through `EmbedderEvent::SafeArea` → `WindowState`, and when a window opts in via `WindowConfig::apply_safe_area(true)` Floem insets its **root layout** by the safe-area padding so content clears the notch / Home Indicator. The raw insets are also readable any time via `WindowHandle::safe_area()`. |
+| `safe_area` | **true** | **implemented (Step 9):** `EmbedderWindow::safe_area()` (new trait method, zero default so other backends are unaffected) reads `UIView.safeAreaInsets` from the key window and converts points → physical pixels via `UIScreen.scale`. **Core consumer now lands in Step 9b (#110):** the insets flow through `EmbedderEvent::SafeArea` → `WindowState`, and when a window opts in via `WindowConfig::apply_safe_area(true)` Floom insets its **root layout** by the safe-area padding so content clears the notch / Home Indicator. The raw insets are also readable any time via `WindowHandle::safe_area()`. |
 | `virtual_keyboard` | **true** | iOS soft keyboard shown/hidden via a hidden `UITextField` first-responder bridge (`platform/ios_ime.rs`, Step 5). |
-| `open_external` | **true** | `UIApplication.openURL` (`platform/ios_external.rs`, Step 6) — `floem::platform::open_url` now works on iOS like on Android. The non-deprecated `openURL:options:completionHandler:` needs the `block2` feature, so the simpler deprecated form is used (scoped `#[allow(deprecated)]`). |
+| `open_external` | **true** | `UIApplication.openURL` (`platform/ios_external.rs`, Step 6) — `floom::platform::open_url` now works on iOS like on Android. The non-deprecated `openURL:options:completionHandler:` needs the `block2` feature, so the simpler deprecated form is used (scoped `#[allow(deprecated)]`). |
 | `receive_files` | **true** | **implemented (Step 8)** via `platform::ios_receive` — `application:openURL:options:` is injected onto winit's `WinitApplicationDelegate` (a `class_addMethod` on the live class). **Warm-start shares are caught; cold-start shares (app launched via the share sheet) are missed** because the method is installed on the main queue *after* `UIApplicationMain` registers the class. Files become `SharedFile { uri, mime_type: None, display_name }`; `file://` URLs yield a decoded filesystem path. The fully-reliable fix is to patch `floem-winit` to forward `openURL` (documented below). |
-| `drag_drop` | **false** | **by design**, like Android — winit-ios does not surface OS file drag-and-drop; revisit if winit gains `UIDragInteraction` events. Floem **in-app** drag works unchanged. |
-| `ime` | **true** (partial) | **Step 5 done (partial).** iOS winit fork emits no `WindowEvent::Ime`, so a hidden `UITextField` first-responder + `UITextFieldDelegate` re-injects `Event::Ime` (`Commit`/`Delete`/`Preedit`) into Floem. Latin text entry + backspace work; CJK marked-text composition is best-effort (`markedTextRange` preedit not yet wired). |
+| `drag_drop` | **false** | **by design**, like Android — winit-ios does not surface OS file drag-and-drop; revisit if winit gains `UIDragInteraction` events. Floom **in-app** drag works unchanged. |
+| `ime` | **true** (partial) | **Step 5 done (partial).** iOS winit fork emits no `WindowEvent::Ime`, so a hidden `UITextField` first-responder + `UITextFieldDelegate` re-injects `Event::Ime` (`Commit`/`Delete`/`Preedit`) into Floom. Latin text entry + backspace work; CJK marked-text composition is best-effort (`markedTextRange` preedit not yet wired). |
 | `gpu_surface` | **true** | Metal (§2). |
 | `software_surface` | false | |
 | `headless` | false | |
@@ -243,21 +243,21 @@ gating (see "Step 1 changelog"). The in-UI context menu is therefore fully
 wired on iOS, identical to Android.
 
 The long-press → context-menu feature implemented in Phase 1 is
-**platform-agnostic** (`src/event/long_press.rs` keys off `PointerType::Touch`,
+**platform-agnostic** (`crates/floom/src/event/long_press.rs` keys off `PointerType::Touch`,
 which winit-ios produces), so it works on iOS automatically **once the in-UI
 menu renderer is mounted**. Today `context_menu_view` and the in-UI
 `show_context_menu` are compiled only for
 `any(linux, freebsd, wasm32, android)`. To light up on iOS, extend those cfgs to
 include `target_os = "ios"` in:
 
-- `src/window/handle.rs` — `context_menu` signal creation + `context_menu_view`
+- `crates/floom/src/window/handle.rs` — `context_menu` signal creation + `context_menu_view`
   mount (lines ~147, ~153) and the in-UI `show_context_menu` (the
   `any(linux, freebsd, wasm32, android)` block).
-- `src/window/handle.rs` — the `event()` dismiss block (`SignalWith` import cfg
+- `crates/floom/src/window/handle.rs` — the `event()` dismiss block (`SignalWith` import cfg
   + the `is_pointer_down`/`is_pointer_up` cfg + the dismiss logic). Add iOS to
   the **android** dismiss branch (or unify the android/ios branch) so a
   long-press menu is not dismissed by the finger-lift that ends the gesture.
-- `src/platform/context_menu.rs` is already platform-neutral; no change.
+- `crates/floom/src/platform/context_menu.rs` is already platform-neutral; no change.
 
 This is a small, contained cfg-extension and is the main "UI" piece for iOS.
 
@@ -277,15 +277,15 @@ This is a small, contained cfg-extension and is the main "UI" piece for iOS.
 
 ## 7. Phased checklist (all pending)
 
-- [x] **Step 1 — Skeleton + compile.** `src/embedder/ios.rs`
+- [x] **Step 1 — Skeleton + compile.** `crates/floom/src/embedder/ios.rs`
       (`ios_capabilities`/`IosServices`/`IosEmbedderWindow`/`IosSurfaceHandle`/
       `ios_surface_descriptor`), register in `embedder/mod.rs`,
       `Application::new_ios` in `app/mod.rs`, iOS `Cargo.toml` cfg.
-      **Done 2026-08-10:** `cargo check -p floem --target aarch64-apple-ios`,
-      `--target aarch64-apple-ios-sim`, and host (`cargo check -p floem`) are
+      **Done 2026-08-10:** `cargo check -p floom --target aarch64-apple-ios`,
+      `--target aarch64-apple-ios-sim`, and host (`cargo check -p floom`) are
       all green. See "Step 1 changelog" below for the cfg edits required.
 - [x] **Step 2 — Metal (`UiKit`) GPU surface.** **No code change required** —
-      Floem's surface creation is generic (`instance.create_surface(window)`, no
+      Floom's surface creation is generic (`instance.create_surface(window)`, no
       raw-handle match), so iOS is covered like Android was in Phase 1. winit
       fork's iOS `Window` returns `RawWindowHandle::UiKit`; wgpu Metal backend
       builds the `CAMetalLayer` surface. `recreate_gpu_surface` stays
@@ -303,7 +303,7 @@ This is a small, contained cfg-extension and is the main "UI" piece for iOS.
       = true`, and `platform/context_menu.rs` is fully platform-neutral (uses
       the `wasm_stubs` `Menu`/`MudaMenu` like Android). Runtime on simulator is
       still gated behind Step 10.
-- [x] **Step 4 — Clipboard (`UIPasteboard`).** **Done 2026-08-11.** `objc2`/`objc2-ui-kit` bridge in `src/platform/clipboard/ios_clipboard.rs` (new, gated `target_os = "ios"`): `get_contents` reads `UIPasteboard::generalPasteboard().string()` → `String`; `set_contents` builds an `NSString` (`objc2-foundation`'s `NSString::from_str`) and calls `setString`. `Clipboard::get_contents`/`set_contents` (the core API used by `text_input`/`editor`/`label`/`inspector`) now dispatch to this bridge on iOS, exactly mirroring Android's JNI path; `IosServices::read/write_clipboard` delegate to the same `Clipboard` API (like `android.rs`). `ios_capabilities().clipboard = true`. `copypasta` is dropped from iOS (no iOS backend; it would `unwrap()`-panic). Both iOS targets + host compile green.
+- [x] **Step 4 — Clipboard (`UIPasteboard`).** **Done 2026-08-11.** `objc2`/`objc2-ui-kit` bridge in `crates/floom/src/platform/clipboard/ios_clipboard.rs` (new, gated `target_os = "ios"`): `get_contents` reads `UIPasteboard::generalPasteboard().string()` → `String`; `set_contents` builds an `NSString` (`objc2-foundation`'s `NSString::from_str`) and calls `setString`. `Clipboard::get_contents`/`set_contents` (the core API used by `text_input`/`editor`/`label`/`inspector`) now dispatch to this bridge on iOS, exactly mirroring Android's JNI path; `IosServices::read/write_clipboard` delegate to the same `Clipboard` API (like `android.rs`). `ios_capabilities().clipboard = true`. `copypasta` is dropped from iOS (no iOS backend; it would `unwrap()`-panic). Both iOS targets + host compile green.
 - [x] **Step 5 — Virtual keyboard / IME.** **Done 2026-08-10.** iOS winit fork
       emits **no** `WindowEvent::Ime` and its `set_ime_allowed` is a no-op, so
       the desktop `request_ime_update` path panics on iOS — that block is
@@ -316,7 +316,7 @@ This is a small, contained cfg-extension and is the main "UI" piece for iOS.
       from `shouldChangeCharactersInRange` / Return key; `Delete` from UTF-16
       range → UTF-8 bytes; `Enabled`/`Disabled` from focus) via a new
       `UserEvent::IosIme` injection channel (`app/mod.rs` + `app/handle.rs`).
-      Code: `src/platform/ios_ime.rs` (new), `app/mod.rs`, `app/handle.rs`,
+      Code: `crates/floom/src/platform/ios_ime.rs` (new), `app/mod.rs`, `app/handle.rs`,
       `window/handle.rs:1375`, `embedder/ios.rs` (`ime`/`virtual_keyboard =
       true`). Both iOS targets + host compile green (re-verified 2026-08-11:
       `aarch64-apple-ios` 48s / `-sim` 32s, 0 errors). Known limit: CJK
@@ -326,13 +326,13 @@ This is a small, contained cfg-extension and is the main "UI" piece for iOS.
       pre-existing `headless.rs` visibility warnings, unrelated to iOS.
 - [x] **Step 6 — External URL (`UIApplication.openURL`).** **Done 2026-08-11.**
       Mirror Android's `ACTION_VIEW` bridge (`android_external.rs`) as a new
-      `src/platform/ios_external.rs` (`#![cfg(target_os = "ios")]`) using
+      `crates/floom/src/platform/ios_external.rs` (`#![cfg(target_os = "ios")]`) using
       `objc2`/`objc2-ui-kit` instead of JNI. `UIApplication::sharedApplication`
       + `NSURL::URLWithString` + the deprecated `openURL:` (the non-deprecated
       `openURL:options:completionHandler:` needs the `block2` feature, so the
       simpler deprecated form is used with a **function-level**
       `#[allow(deprecated)]` — a statement-level allow does *not* suppress the
-      warning). `floem::platform::open_url` now dispatches to
+      warning). `floom::platform::open_url` now dispatches to
       `ios_external::open_url` on iOS via a 3-way cfg in `platform/mod.rs`,
       returning an `Err` on other platforms ("only implemented on Android and
       iOS"). `ios_capabilities().open_external = true`; §3 capability table
@@ -343,15 +343,15 @@ This is a small, contained cfg-extension and is the main "UI" piece for iOS.
       and `ios_ime.rs::ensure_field`).
 - [x] **Step 7 — File dialogs (`UIDocumentPickerViewController`).** **Done
       2026-08-11.** Mirror Android's SAF bridge (`android_file.rs`) as a new
-      `src/platform/ios_file.rs` (`#![cfg(target_os = "ios")]`) using `objc2`/
-      `objc2-ui-kit` instead of JNI. `floem::platform::{open_file, save_as}`
+      `crates/floom/src/platform/ios_file.rs` (`#![cfg(target_os = "ios")]`) using `objc2`/
+      `objc2-ui-kit` instead of JNI. `floom::platform::{open_file, save_as}`
       now dispatch to `ios_file` on iOS (3-way cfg in `platform/mod.rs`,
       mirroring the `file_action`/Android split — `file_action` stays
       `not(any(wasm32, android, ios))`). The bridge presents a
       `UIDocumentPickerViewController` from the key window's root view
       controller and receives the chosen `NSURL`s through a **runtime-declared
       `UIDocumentPickerDelegate`** (`ClassBuilder` subclass named
-      `FloemDocPickerDelegate`, with `documentPicker:didPickDocumentsAtURLs:`
+      `FloomDocPickerDelegate`, with `documentPicker:didPickDocumentsAtURLs:`
       and `documentPickerWasCancelled:` methods) wired via a raw
       `msg_send![&picker, setDelegate:]` — same bypass as the IME bridge
       (`ios_ime.rs`), because the Rust `UIDocumentPickerDelegate` trait requires
@@ -377,7 +377,7 @@ This is a small, contained cfg-extension and is the main "UI" piece for iOS.
       compile green (re-verified 2026-08-11: 0 errors).
 - [x] **Step 8 — Receive shared files/URLs (`UIApplicationDelegate` open URL).**
       **Done 2026-08-11.** Mirror Android's `ACTION_SEND`/`ACTION_VIEW`
-      receiver: a new `src/platform/ios_receive.rs` (`#![cfg(target_os =
+      receiver: a new `crates/floom/src/platform/ios_receive.rs` (`#![cfg(target_os =
       "ios")]`) exposes `set_shared_files_handler(Fn(Vec<SharedFile>))` (same
       signature/thread-local `HANDLER`+`PENDING` queue as `android_intent.rs`,
       since the handler/`RwSignal` is `!Send`) and an `install_openurl_hook()`
@@ -401,17 +401,17 @@ This is a small, contained cfg-extension and is the main "UI" piece for iOS.
   *before* the main-queue `class_addMethod` block runs, so cold-start shares
   were missed (warm-start shares were caught). This is now fixed in **Step 8b
   (2026-08-13)**: the patched `floem-winit` installs a custom
-  `FloemWinitApplicationDelegate` that captures the cold-start URL from
+  `FloomWinitApplicationDelegate` that captures the cold-start URL from
   `launchOptions[UIApplicationLaunchOptionsURLKey]` (and the warm-start
   `openURL:`), so **both** cold- and warm-start shares funnel into
   `set_shared_files_handler`. `SharedFile` doc + `set_shared_files_handler` 3-way cfg in
       `platform/mod.rs` updated (Android / iOS / other-no-op). Both iOS targets
-      + host + `floem-ios-example` (device/sim/host) compile green
+      + host + `floom-ios-example` (device/sim/host) compile green
       (re-verified 2026-08-11: 0 errors).
 
 - **Step 8b — Cold-start fix (patch `floem-winit`).** **Done 2026-08-13.**
   Implemented, not just documented. Root cause confirmed: winit 25.10.0
-  (lapce/winit@133268de, the git rev floem pins) is **purely
+  (lapce/winit@133268de, the git rev floom pins) is **purely
   `NSNotificationCenter`-driven** — `EventLoop::run` calls
   `UIApplication::main(None, None, mtm)` with **no custom delegate**, so the
   cold-start launch URL in `launchOptions[UIApplicationLaunchOptionsURLKey]`
@@ -420,33 +420,33 @@ This is a small, contained cfg-extension and is the main "UI" piece for iOS.
   `objc2`/`define_class!` world) and its `[patch]` was silently ignored →
   `set_on_open_url` unresolved (E0425). Fix: rebuilt the fork from the cached
   checkout `lapce/winit@133268de` (= 25.10.0 virtual workspace, members
-  `dpi`/`winit*`); it now lives at `vendor/floem-winit/`.
+  `dpi`/`winit*`); it now lives at `crates/vendor/floem-winit/`.
 
   **Wiring** — workspace root `Cargo.toml`:
   ```toml
-  # floem #109: same rev, same version (25.10.0) → no [patch] drift risk.
+  # floom #109: same rev, same version (25.10.0) → no [patch] drift risk.
   # The fork root is a *virtual* workspace, so the patch MUST point at the
   # `floem-winit` member package (`winit/`), not the workspace root
   # (which would error "found a virtual manifest").
   [patch."https://github.com/lapce/winit"]
-  floem-winit = { path = "vendor/floem-winit/winit" }
+  floem-winit = { path = "crates/vendor/floem-winit/winit" }
   ```
 
-  **Fork changes** (all in `vendor/floem-winit/`):
+  **Fork changes** (all in `crates/vendor/floem-winit/`):
   - `winit-uikit/src/app_delegate.rs` (new): `define_class!` defines
-    `FloemWinitApplicationDelegate`
-    (`#[name = "FloemWinitApplicationDelegate"]`,
+    `FloomWinitApplicationDelegate`
+    (`#[name = "FloomWinitApplicationDelegate"]`,
     `#[thread_kind = MainThreadOnly]`). `unsafe impl UIApplicationDelegate`
     implements `did_finish_launching_with_options` (reads
     `launchOptions[UIApplicationLaunchOptionsURLKey]` → `NSURL`) **and**
     `open_url` (warm-start). A `Mutex<Option<OnOpenUrl>>` registered via
     `pub unsafe fn set_on_open_url(...)`; `forward_open_url` invokes it with a
-    raw `&NSURL` pointer — the **same channel** the floem-side trampoline in
+    raw `&NSURL` pointer — the **same channel** the floom-side trampoline in
     `ios_receive.rs` already drains.
   - `winit-uikit/src/lib.rs`: `pub use self::app_delegate::set_on_open_url;`
     re-exports it from the uikit backend.
   - `winit/src/lib.rs`: `#[cfg(target_os = "ios")] pub use
-    winit_uikit::set_on_open_url;` so floem's `winit::set_on_open_url` resolves
+    winit_uikit::set_on_open_url;` so floom's `winit::set_on_open_url` resolves
     against the patched `floem-winit` crate.
   - `winit-uikit/src/event_loop.rs` (`run_app`): installs the delegate —
     ```rust
@@ -458,7 +458,7 @@ This is a small, contained cfg-extension and is the main "UI" piece for iOS.
     winit's own lifecycle (resume/suspend) is notification-driven, so adding a
     URL-only delegate does **not** interfere with those events.
 
-  **floem consumer** — `src/platform/ios_receive.rs` already calls
+  **floom consumer** — `crates/floom/src/platform/ios_receive.rs` already calls
   `winit::set_on_open_url(Some(trampoline))` from `install_openurl_hook()`;
   fixed an E0133 (raw-ptr deref inside `unsafe fn` needs an inner `unsafe`
   block) at `open_url_trampoline`.
@@ -466,7 +466,7 @@ This is a small, contained cfg-extension and is the main "UI" piece for iOS.
   **Verification (2026-08-13):** `cargo check` **Finished 0 error** on all
   four targets — `aarch64-apple-ios` (device),
   `aarch64-apple-ios-sim` (simulator), host `x86_64-apple-darwin`, and
-  `floem-ios-example`. Only benign warnings (pre-existing
+  `floom-ios-example`. Only benign warnings (pre-existing
   `block v0.1.6` future-incompat + dead-code) remain.
   **Still UNVERIFIED on-device:** `cargo check` does not link or run, so the
   runtime share-sheet cold-start path needs a real `cargo build` + device/sim
@@ -476,9 +476,9 @@ This is a small, contained cfg-extension and is the main "UI" piece for iOS.
       had **no API** (and no core consumer — Android also claimed `safe_area:
       true` without implementing it). Added `fn safe_area(&self) ->
       PhysicalInsets<u32>` to the `EmbedderWindow` trait
-      (`src/embedder/services.rs`) with a **zero default** so existing backends
+      (`crates/floom/src/embedder/services.rs`) with a **zero default** so existing backends
       (Android, mock) are unaffected, then implemented it on
-      `IosEmbedderWindow` (`src/embedder/ios.rs`): fetch the key window via
+      `IosEmbedderWindow` (`crates/floom/src/embedder/ios.rs`): fetch the key window via
       `UIApplication::sharedApplication(mtm).keyWindow()` (main-thread only;
       `MainThreadMarker::new()` guards off-main calls → zeros), read
       `UIView.safeAreaInsets` (`UIEdgeInsets` in points), and convert to device
@@ -493,7 +493,7 @@ This is a small, contained cfg-extension and is the main "UI" piece for iOS.
       both features must be on. **Documented limitation:** no core layout
       consumer of `safe_area()` exists yet (same as Android) — wiring the
       insets into layout is a separate follow-up core change; the API is in
-      place for it. Both iOS targets + host + `floem-ios-example`
+      place for it. Both iOS targets + host + `floom-ios-example`
       (device/sim/host) compile green (re-verified 2026-08-11: 0 errors).
 - [x] **Step 9b — Safe-area core layout consumer (issue #110).** **Done
       2026-08-12.** Closes the "no core layout consumer" gap from Step 9. The
@@ -510,9 +510,9 @@ This is a small, contained cfg-extension and is the main "UI" piece for iOS.
       read-only for apps that prefer to manage their own padding). `WindowConfig`
       gained `apply_safe_area(bool)` builder + passthrough through
       `app/handle.rs` → `WindowHandle::new`. **iOS emitter (the missing piece):**
-      `src/embedder/ios.rs` gained a free `read_safe_area() -> PhysicalInsets<u32>`
+      `crates/floom/src/embedder/ios.rs` gained a free `read_safe_area() -> PhysicalInsets<u32>`
       (constructs an `IosEmbedderWindow` and reads the key window — id is
-      irrelevant), and `src/app/handle.rs`'s `WindowEvent::SurfaceResized` arm
+      irrelevant), and `crates/floom/src/app/handle.rs`'s `WindowEvent::SurfaceResized` arm
       (`target_os = "ios"` only) now calls `read_safe_area()` and pushes an
       `EmbedderEvent::SafeArea` into `handle_embedder_event` — so the insets flow
       on every rotation / orientation change. The `examples/ios` app opts in via
@@ -522,17 +522,17 @@ This is a small, contained cfg-extension and is the main "UI" piece for iOS.
       layout, so the default stays `false` (zero-regression); only windows that
       explicitly opt in get the inset, while all windows can still read the raw
       insets via `WindowHandle::safe_area()`. **Verification:** host
-      `cargo check -p floem` Finished (only the pre-existing `headless.rs`
+      `cargo check -p floom` Finished (only the pre-existing `headless.rs`
       visibility + `safe_area` "never used" warnings — the latter is expected,
-      it's an app-facing API); `cargo check -p floem --target
+      it's an app-facing API); `cargo check -p floom --target
       aarch64-apple-ios-sim` Finished 0 errors (the only `warning[E0133]` is a
       pre-existing raw-pointer deref in the iOS backend, unrelated to #110);
-      `cargo check -p floem-ios-example --target aarch64-apple-ios-sim` Finished
+      `cargo check -p floom-ios-example --target aarch64-apple-ios-sim` Finished
       0 errors. (Device/simulator *runtime* inset behavior is the same
       compile-only-until-simulator caveat as the rest of iOS.)
 - [x] **Step 10 — Example + build pipeline + this doc → status.** **Done
       2026-08-11.** Added `examples/ios/`:
-      - `Cargo.toml` — package `floem-ios-example`, depends on `floem` (path);
+      - `Cargo.toml` — package `floom-ios-example`, depends on `floom` (path);
         `edition = "2024"` to match the workspace. No explicit `winit` dep
         needed (unlike Android) because `new_ios` builds/owns the `EventLoop`.
       - `src/main.rs` — real `fn main` (iOS target) calls
@@ -544,8 +544,8 @@ This is a small, contained cfg-extension and is the main "UI" piece for iOS.
         `UIApplicationSupportsIndirectInputEvents` (iPad pointer/keyboard),
         `UISupportedInterfaceOrientations`, `UIRequiredDeviceCapabilities`.
       - `README.md` — `cargo-xcode` → Xcode → simulator/device run, plus
-        compile-only `cargo check -p floem-ios-example --target aarch64-apple-ios(-sim)`.
-      Verified: `cargo check -p floem-ios-example` for **both iOS targets + host
+        compile-only `cargo check -p floom-ios-example --target aarch64-apple-ios(-sim)`.
+      Verified: `cargo check -p floom-ios-example` for **both iOS targets + host
       all Finished, 0 errors** (re-verified 2026-08-11). This document's Status
       header flipped to "Step 10 DONE" and the implemented subset (Steps 1–5 +
       10) is recorded above; Steps 6–9 remain pending.
@@ -585,7 +585,7 @@ don't need rebuild-on-rotate.
   `WindowEvent`s (esp. `Ime`, `Resized`, `Touch`→`Pointer`). First
   `cargo check` in Step 1 will surface this immediately.
 - **IME is the hard part.** iOS has no "IME" in the desktop sense; text input
-  is the OS keyboard driven by the view's first-responder status. Floem's
+  is the OS keyboard driven by the view's first-responder status. Floom's
   `text_input` assumes winit `Ime` events — Step 5 must bridge
   `UITextInput`. Budget extra time here.
 - **`muda` has no iOS backend** → context menu is in-UI only (same as Android);
@@ -600,13 +600,13 @@ don't need rebuild-on-rotate.
 
 | Check | Command | Notes |
 |-------|---------|-------|
-| Compile (device) | `cargo check -p floem --target aarch64-apple-ios` | needs Xcode iPhoneOS SDK (present) |
-| Compile (sim) | `cargo check -p floem --target aarch64-apple-ios-sim` | run on Apple-silicon Mac |
-| Host (regression) | `cargo check -p floem` | must stay green |
-| Android (regression) | `cargo check -p floem --target aarch64-linux-android --offline` | must stay green |
-| Example (device) | `cargo check -p floem-ios-example --target aarch64-apple-ios` | the `examples/ios` app |
-| Example (sim) | `cargo check -p floem-ios-example --target aarch64-apple-ios-sim` | the `examples/ios` app |
-| Example (host) | `cargo check -p floem-ios-example` | placeholder `main`, must stay green |
+| Compile (device) | `cargo check -p floom --target aarch64-apple-ios` | needs Xcode iPhoneOS SDK (present) |
+| Compile (sim) | `cargo check -p floom --target aarch64-apple-ios-sim` | run on Apple-silicon Mac |
+| Host (regression) | `cargo check -p floom` | must stay green |
+| Android (regression) | `cargo check -p floom --target aarch64-linux-android --offline` | must stay green |
+| Example (device) | `cargo check -p floom-ios-example --target aarch64-apple-ios` | the `examples/ios` app |
+| Example (sim) | `cargo check -p floom-ios-example --target aarch64-apple-ios-sim` | the `examples/ios` app |
+| Example (host) | `cargo check -p floom-ios-example` | placeholder `main`, must stay green |
 | Runtime | iOS Simulator via Xcode-hosted `staticlib` | on-device signing is the only fully-unverified step |
 
 > All step checkpoints above are **compile-only** until an Xcode-hosted

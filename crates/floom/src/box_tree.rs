@@ -64,7 +64,7 @@ impl ElementId {
 /// Per-element focus navigation metadata kept in the box tree.
 ///
 /// Focus eligibility lives here rather than on raw box-tree flags so focus
-/// policy remains owned by Floem. `keyboard_navigable` always implies
+/// policy remains owned by Floom. `keyboard_navigable` always implies
 /// `focusable`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct FocusNavMeta {

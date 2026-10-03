@@ -1,4 +1,4 @@
-//! The Floem 2.0 inspection protocol (Phase 23.1).
+//! The Floom 2.0 inspection protocol (Phase 23.1).
 //!
 //! Everything a devtools frontend and a headless backend share, and nothing
 //! else: versioned, serde-serializable snapshot types for the element tree,
@@ -6,7 +6,7 @@
 //! counters. This crate deliberately links no runtime — a frontend can parse a
 //! snapshot without a window, and a backend can serve one without a GUI.
 //!
-//! Versioning has concrete semantics, mirroring [`floem_ui_ir`]'s rule and for
+//! Versioning has concrete semantics, mirroring [`floom_ui_ir`]'s rule and for
 //! the same reason: a reader must never be handed fields it cannot represent.
 //! A snapshot with the same major and an **older or equal minor** loads; a
 //! newer minor is refused (the reader cannot faithfully round-trip unknown
@@ -48,15 +48,15 @@ impl Rgba {
     }
 }
 
-impl From<floem_types::Color> for Rgba {
-    fn from(c: floem_types::Color) -> Self {
+impl From<floom_types::Color> for Rgba {
+    fn from(c: floom_types::Color) -> Self {
         Self::new(c.r, c.g, c.b, c.a)
     }
 }
 
-impl From<Rgba> for floem_types::Color {
+impl From<Rgba> for floom_types::Color {
     fn from(c: Rgba) -> Self {
-        floem_types::Color::rgba(c.r, c.g, c.b, c.a)
+        floom_types::Color::rgba(c.r, c.g, c.b, c.a)
     }
 }
 

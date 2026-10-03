@@ -1,7 +1,7 @@
 //! OpenHarmony (HarmonyOS) embedder backend (experimental skeleton).
 //!
 //! This mirrors `android.rs` / `ios.rs`. The bulk of event handling reuses
-//! Floem's existing winit path, because `floem-winit-ohos` already translates
+//! Floom's existing winit path, because `floom-winit-ohos` already translates
 //! the XComponent surface + touch/key/mouse input into standard winit
 //! `WindowEvent`s. The OHOS-specific work here is limited to:
 //!
@@ -15,7 +15,7 @@
 //!   size and scale.
 //!
 //! The actual entry point is wired in `crate::app` via
-//! `floem_winit_ohos::export_ohos_winit_app!(floem_app_factory)`; this module
+//! `floom_winit_ohos::export_ohos_winit_app!(floom_app_factory)`; this module
 //! only supplies the capability / service / surface descriptions.
 
 #![cfg(target_env = "ohos")]
@@ -30,14 +30,14 @@ use super::{EmbedderWindow, PlatformServices, SurfaceHandle};
 /// open_external / accessibility) are drafted in `crate::platform::ohos_*`
 /// and `crate::accessibility::backend_ohos`; they are wired but **unverified
 /// on a real OHOS SDK build** (see `docs/ohos.md`). IME is reported `true`
-/// but only enable/disable is supported by `floem-winit-ohos` (deep
+/// but only enable/disable is supported by `floom-winit-ohos` (deep
 /// soft-keyboard integration is a follow-up).
 pub fn ohos_capabilities() -> BackendCapabilities {
     BackendCapabilities {
-        clipboard: true,      // N-API bridge drafted (src/platform/ohos_clipboard.rs)
+        clipboard: true,      // N-API bridge drafted (crates/floom/src/platform/ohos_clipboard.rs)
         cursor: true,
         timers: true,
-        file_dialog: true,    // N-API bridge drafted (src/platform/ohos_file.rs)
+        file_dialog: true,    // N-API bridge drafted (crates/floom/src/platform/ohos_file.rs)
         context_menu: true,
         window_title: false,
         // NOTE (#113/#121): claimed true, but the OHOS screen reader is NOT
@@ -49,8 +49,8 @@ pub fn ohos_capabilities() -> BackendCapabilities {
         display_info: true,
         safe_area: true,
         virtual_keyboard: true,
-        open_external: true, // N-API bridge drafted (src/platform/ohos_external.rs)
-        receive_files: true, // N-API bridge drafted (src/platform/ohos_receive.rs)
+        open_external: true, // N-API bridge drafted (crates/floom/src/platform/ohos_external.rs)
+        receive_files: true, // N-API bridge drafted (crates/floom/src/platform/ohos_receive.rs)
         drag_drop: false,
         ime: true,            // shallow: enable/disable only
         gpu_surface: true,
@@ -97,7 +97,7 @@ impl PlatformServices for OhosServices {
 
 /// OpenHarmony embedder window handle.
 ///
-/// Redraws are driven by `floem-winit-ohos`'s frame pump, so
+/// Redraws are driven by `floom-winit-ohos`'s frame pump, so
 /// [`EmbedderWindow::request_redraw`] is a no-op here.
 pub struct OhosEmbedderWindow {
     id: EmbedderWindowId,
@@ -116,7 +116,7 @@ impl EmbedderWindow for OhosEmbedderWindow {
     }
 
     fn request_redraw(&mut self) {
-        // floem-winit-ohos owns the frame pump; nothing to do here.
+        // floom-winit-ohos owns the frame pump; nothing to do here.
     }
 
     fn set_title(&mut self, _title: &str) {
@@ -146,7 +146,7 @@ impl SurfaceHandle for OhosSurfaceHandle {
 ///
 /// `pixel_size` is the native window's pixel dimensions and `scale` the device
 /// scale factor. OpenHarmony uses an opaque (`transparent = false`) GPU
-/// surface. Floem's renderer (`wgpu::Instance::create_surface`, via
+/// surface. Floom's renderer (`wgpu::Instance::create_surface`, via
 /// `VK_OHOS_surface` on wgpu >= 0.30) consumes the native window behind this
 /// descriptor.
 pub fn ohos_surface_descriptor(

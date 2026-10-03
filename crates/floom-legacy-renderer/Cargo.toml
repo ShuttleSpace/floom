@@ -1,8 +1,8 @@
 [package]
-name = "floem-legacy-renderer"
+name = "floom-legacy-renderer"
 version.workspace = true
 edition.workspace = true
-repository = "https://github.com/lapce/floem"
+repository = "https://github.com/lapce/floom"
 description = "A native Rust UI library with fine-grained reactivity"
 license.workspace = true
 

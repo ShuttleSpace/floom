@@ -5,10 +5,10 @@
 //! node vector flagged `dead`, so [`FrameStats::painted`] (live nodes only) is
 //! the metric to assert on.
 
-use floem_app::{NodeId, WidgetHost};
-use floem_layout::LayoutStyle;
-use floem_types::Size;
-use floem_widgets::{NavHandle, NavHost, Text};
+use floom_app::{NodeId, WidgetHost};
+use floom_layout::LayoutStyle;
+use floom_types::Size;
+use floom_widgets::{NavHandle, NavHost, Text};
 
 fn host_with(nav: NavHandle) -> (WidgetHost, NodeId) {
     let mut host = WidgetHost::new();
@@ -16,7 +16,7 @@ fn host_with(nav: NavHandle) -> (WidgetHost, NodeId) {
     let nav_host = NavHost::new(nav, |page| {
         // A distinct widget per page: its text is the page path, which lets us
         // find nodes and check identity across navigation.
-        Box::new(Text::new(page.path.clone())) as Box<dyn floem_core::WidgetAny>
+        Box::new(Text::new(page.path.clone())) as Box<dyn floom_core::WidgetAny>
     });
     let root = host.mount_root(LayoutStyle::default(), nav_host);
     host.frame();

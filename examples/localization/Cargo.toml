@@ -5,4 +5,4 @@ license.workspace = true
 version.workspace = true
 
 [dependencies]
-floem = { path = "../../crates/floom", features = ["vello", "localization"] }
+floom = { path = "../../crates/floom", features = ["vello", "localization"] }

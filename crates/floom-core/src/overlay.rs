@@ -13,7 +13,7 @@
 //! itself — which is precisely how a popup ends up stuck on screen.
 
 use crate::WidgetAny;
-use floem_types::{OverlayHandle, OverlayKind, Rect};
+use floom_types::{OverlayHandle, OverlayKind, Rect};
 
 /// A request to place widget content above the whole tree.
 ///

@@ -1,4 +1,4 @@
-//! Headless app shell for Floem 2.0.
+//! Headless app shell for Floom 2.0.
 //!
 //! This is the missing piece that makes the 2.0 crates *runnable*: it owns a
 //! widget tree, drives layout, records paint output into a retained
@@ -24,32 +24,32 @@ use std::any::Any;
 use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, Mutex};
 
-use floem_accessibility::{SemanticsNode, SemanticsTree};
-use floem_animation::{AnimId, AnimKind, AnimSample, AnimationScheduler};
-use floem_core::{
+use floom_accessibility::{SemanticsNode, SemanticsTree};
+use floom_animation::{AnimId, AnimKind, AnimSample, AnimationScheduler};
+use floom_core::{
     Align, AnimationSpec, Axis, Child, ChildKey, CreateContext, ElementId, Event, EventContext,
     Key, KeyEvent, KeyPhase, LayoutRequest, Modifiers, NamedKey, NativeGrant, NativeRequest,
     NativeSnapshot, OverlayHandle, OverlayKind, OverlayRequest, PaintContext, Point, PointerPhase,
     Position, Rect, ResourceId, SemanticsHint, SemanticsRole, Size, UpdateContext,
 };
-use floem_focus::{FocusDirection, FocusManager, FocusScopeId};
-use floem_layout::{
+use floom_focus::{FocusDirection, FocusManager, FocusScopeId};
+use floom_layout::{
     AlignItems as LAlign, FlexDirection, JustifyContent, LayoutEngine, LayoutNode, LayoutStyle,
     MeasureFn, Position as LPosition,
 };
-use floem_native::{
+use floom_native::{
     InputMode, NativeCompositionMode, NativeError, NativeSlot, NativeState, NativeViewController,
     NativeViewId, NativeViewKind, NativeViewPool, NativeViewProvider,
 };
-use floem_overlay::{CompositorProp, OverlayManager};
-use floem_runtime::{EventRouter, Hit, HitRegion, RouteStop};
-use floem_runtime_core::IdAllocator;
-use floem_scene::{Resource, ResourceKind, ResourceRegistry, Scene, SceneNode, SceneNodeId};
-use floem_text::{LayoutCache, TextAlign, TextLayoutOptions, TextShaper};
-use floem_types::NativeCapture;
-use floem_types::ScrollEvent;
-use floem_types::{ClipRegion, resolve_clip};
-use floem_widgets::WidgetAny;
+use floom_overlay::{CompositorProp, OverlayManager};
+use floom_runtime::{EventRouter, Hit, HitRegion, RouteStop};
+use floom_runtime_core::IdAllocator;
+use floom_scene::{Resource, ResourceKind, ResourceRegistry, Scene, SceneNode, SceneNodeId};
+use floom_text::{LayoutCache, TextAlign, TextLayoutOptions, TextShaper};
+use floom_types::NativeCapture;
+use floom_types::ScrollEvent;
+use floom_types::{ClipRegion, resolve_clip};
+use floom_widgets::WidgetAny;
 use smallvec::SmallVec;
 
 /// Stable handle to a mounted widget.
@@ -238,7 +238,7 @@ struct OverlaySlot {
     /// Focus before the overlay opened, restored when it closes.
     previous_focus: Option<ElementId>,
     /// The widget that asked for this overlay, if any. Its content is handed
-    /// back to this node through [`floem_core::Widget::overlay_closed`] when
+    /// back to this node through [`floom_core::Widget::overlay_closed`] when
     /// the overlay comes down, which is how an opener learns the result of a
     /// popup it does not own the events for.
     owner: Option<ElementId>,
@@ -355,7 +355,7 @@ enum OverlayCommand {
 /// the tree.
 struct Retired;
 
-impl floem_core::Widget for Retired {
+impl floom_core::Widget for Retired {
     fn create(&self, cx: &mut dyn CreateContext) -> ElementId {
         cx.alloc_child()
     }
@@ -527,9 +527,9 @@ impl Default for WidgetHost {
 
 // --- layout intent lowering ------------------------------------------------
 
-fn to_a11y_role(role: SemanticsRole) -> floem_accessibility::SemanticsRole {
+fn to_a11y_role(role: SemanticsRole) -> floom_accessibility::SemanticsRole {
     use SemanticsRole as C;
-    use floem_accessibility::SemanticsRole as A;
+    use floom_accessibility::SemanticsRole as A;
     match role {
         C::None => A::None,
         C::Button => A::Button,
@@ -557,9 +557,9 @@ fn to_a11y_role(role: SemanticsRole) -> floem_accessibility::SemanticsRole {
     }
 }
 
-fn to_a11y_state(state: floem_core::SemanticsState) -> floem_accessibility::SemanticsState {
-    use floem_accessibility::SemanticsState as A;
-    use floem_core::SemanticsState as C;
+fn to_a11y_state(state: floom_core::SemanticsState) -> floom_accessibility::SemanticsState {
+    use floom_accessibility::SemanticsState as A;
+    use floom_core::SemanticsState as C;
     let mut out = A::empty();
     let mut add = |flag: C, a11y: A| {
         if state.contains(flag) {
@@ -600,7 +600,7 @@ fn align_to_align_items(align: Align) -> LAlign {
 
 /// Lowers a composite child's [`LayoutRequest`] into the engine's [`LayoutStyle`].
 ///
-/// This is the heart of engine neutrality: `floem-core` never names a concrete
+/// This is the heart of engine neutrality: `floom-core` never names a concrete
 /// layout type, so the lowering happens here, where both vocabularies are in
 /// scope.
 fn request_to_style(req: &LayoutRequest) -> LayoutStyle {
@@ -630,7 +630,7 @@ fn request_to_style(req: &LayoutRequest) -> LayoutStyle {
         };
     }
     if let Some(inset) = req.inset {
-        style.inset = floem_layout::AbsoluteInset {
+        style.inset = floom_layout::AbsoluteInset {
             left: inset.left,
             top: inset.top,
             right: inset.right,
@@ -672,7 +672,7 @@ fn apply_self_layout(mut base: LayoutStyle, req: Option<&LayoutRequest>) -> Layo
             };
         }
         if let Some(inset) = req.inset {
-            base.inset = floem_layout::AbsoluteInset {
+            base.inset = floom_layout::AbsoluteInset {
                 left: inset.left,
                 top: inset.top,
                 right: inset.right,
@@ -707,7 +707,7 @@ fn self_layout_with_text_measure(
     let pinned_height = base.height.is_some();
     let mut style = apply_self_layout(base, req.as_ref());
 
-    let Some(text) = widget.as_any().downcast_ref::<floem_widgets::Text>() else {
+    let Some(text) = widget.as_any().downcast_ref::<floom_widgets::Text>() else {
         return (style, None);
     };
     if pinned_width && pinned_height {
@@ -783,7 +783,7 @@ impl WidgetHost {
 
     /// Caps how many shaped-text results the paint path retains.
     ///
-    /// Defaults to [`floem_text::DEFAULT_LAYOUT_CACHE_CAPACITY`]. Lower it for a
+    /// Defaults to [`floom_text::DEFAULT_LAYOUT_CACHE_CAPACITY`]. Lower it for a
     /// memory-tight target, raise it for a screen with very many labels; the
     /// cache evicts least-recently-used entries once it is full, so the value
     /// is a ceiling rather than a preallocation.
@@ -843,7 +843,7 @@ impl WidgetHost {
     /// This is the host-side door, for an embedder mounting a dialog by hand.
     /// A widget asks through [`EventContext::open_overlay`] instead.
     ///
-    /// [`EventContext::open_overlay`]: floem_core::EventContext::open_overlay
+    /// [`EventContext::open_overlay`]: floom_core::EventContext::open_overlay
     pub fn open_overlay(
         &mut self,
         kind: OverlayKind,
@@ -1133,7 +1133,7 @@ impl WidgetHost {
                     // `avail.width` is the box this leaf actually landed in —
                     // wrap against it; `f64::INFINITY` (unconstrained) falls
                     // through to the unwrapped extent.
-                    floem_text::measure_text(&m.text, m.font_size, avail.width)
+                    floom_text::measure_text(&m.text, m.font_size, avail.width)
                 });
                 self.layout.new_leaf_with_measure(style.clone(), measure)
             }
@@ -1430,7 +1430,7 @@ impl WidgetHost {
             // it lives in the channel, not on the host, so it is polled here.
             // `frame()` drains the channel, so this settles to `false` once
             // the request has been served.
-            || floem_core::has_repaint_requests()
+            || floom_core::has_repaint_requests()
     }
 
     /// Advances the animation clock by `dt_secs` and re-samples every running
@@ -1455,7 +1455,7 @@ impl WidgetHost {
     //
     // Two doors in, one channel out. `animate` is the imperative one, for
     // anything that holds a host — an app, an example, a test. A widget's own
-    // declaration ([`floem_core::Widget::animation`]) is the declarative one,
+    // declaration ([`floom_core::Widget::animation`]) is the declarative one,
     // for the code that cannot hold a host: a widget is borrowed *out* of it
     // for the whole of every call the host makes into it, so it can only say
     // what it wants and let the host own what is running.
@@ -1924,7 +1924,7 @@ impl WidgetHost {
         // front: a request repaints at most one frame, and requests for
         // elements that no longer exist simply match nothing.
         let repaint_requests: std::collections::HashSet<ElementId> =
-            floem_core::take_repaint_requests().into_iter().collect();
+            floom_core::take_repaint_requests().into_iter().collect();
         for index in 0..self.nodes.len() {
             if self.nodes[index].dead {
                 continue;
@@ -2049,7 +2049,7 @@ impl WidgetHost {
         let Some(text) = self.nodes[index]
             .widget
             .as_any()
-            .downcast_ref::<floem_widgets::Text>()
+            .downcast_ref::<floom_widgets::Text>()
         else {
             return;
         };
@@ -2474,12 +2474,12 @@ impl WidgetHost {
         &self,
         index: usize,
         composite: &[CompositorProp],
-    ) -> Option<floem_types::Transform> {
+    ) -> Option<floom_types::Transform> {
         let bounds = self.nodes[index].bounds;
         if bounds.width() <= 0.0 || bounds.height() <= 0.0 {
             return None;
         }
-        let center = floem_types::Point::new(
+        let center = floom_types::Point::new(
             bounds.x0 + bounds.width() / 2.0,
             bounds.y0 + bounds.height() / 2.0,
         );
@@ -2488,12 +2488,12 @@ impl WidgetHost {
             match *prop {
                 CompositorProp::Scale(s) => {
                     transform = Some(compose_transform(transform, {
-                        floem_types::Transform::scale_around(s, s, center)
+                        floom_types::Transform::scale_around(s, s, center)
                     }));
                 }
                 CompositorProp::Rotate(radians) => {
                     transform = Some(compose_transform(transform, {
-                        floem_types::Transform::rotate_around(radians, center)
+                        floom_types::Transform::rotate_around(radians, center)
                     }));
                 }
                 _ => {}
@@ -2505,7 +2505,7 @@ impl WidgetHost {
     /// Opens this node's transform scope, on the same retained-slot scheme as
     /// [`Self::write_clip_push`]: the marker is minted on the way into the
     /// node's picture and kept there, so later frames only `upsert` it.
-    fn write_group_push(&mut self, index: usize, transform: floem_types::Transform) {
+    fn write_group_push(&mut self, index: usize, transform: floom_types::Transform) {
         let node = SceneNode::GroupPush { transform };
         match self.nodes[index].group_push {
             Some(id) => self.scene.upsert(id, node),
@@ -2567,7 +2567,7 @@ impl WidgetHost {
     /// [`Self::write_group_push`] — including the mid-life reseed, which this
     /// one needs just as much: a card that gains a blur after its first paint
     /// would otherwise be slotted *after* the picture it has to filter.
-    fn write_filter_push(&mut self, index: usize, filter: floem_types::Filter) {
+    fn write_filter_push(&mut self, index: usize, filter: floom_types::Filter) {
         let node = SceneNode::FilterPush { filter };
         match self.nodes[index].filter_push {
             Some(id) => self.scene.upsert(id, node),
@@ -2698,14 +2698,14 @@ impl WidgetHost {
         // A purely structural node with semantic descendants becomes a
         // `Group` so the assistive-technology tree keeps its hierarchy.
         let role = match hint.as_ref().map(|hint| hint.role) {
-            Some(SemanticsRole::None) => floem_accessibility::SemanticsRole::Group,
+            Some(SemanticsRole::None) => floom_accessibility::SemanticsRole::Group,
             Some(role) => to_a11y_role(role),
-            None => floem_accessibility::SemanticsRole::Group,
+            None => floom_accessibility::SemanticsRole::Group,
         };
         let state = hint
             .as_ref()
             .map(|hint| to_a11y_state(hint.state))
-            .unwrap_or_else(floem_accessibility::SemanticsState::empty);
+            .unwrap_or_else(floom_accessibility::SemanticsState::empty);
 
         let mut semantics_node = SemanticsNode::new(role).with_state(state);
         if let Some(label) = hint.and_then(|hint| hint.label) {
@@ -3618,7 +3618,7 @@ impl WidgetHost {
     }
 
     /// Registers decoded image pixels and returns the resource id a
-    /// [`floem_widgets::Image`] widget renders from.
+    /// [`floom_widgets::Image`] widget renders from.
     ///
     /// `pixels` must be RGBA8 **premultiplied**, row-major, `width * height * 4`
     /// bytes — the format the GPU path uploads verbatim and the software path
@@ -3681,13 +3681,13 @@ fn set_widget_focused(widget: &mut dyn WidgetAny, focused: bool) {
         };
     }
     try_focus!(
-        floem_widgets::Button,
-        floem_widgets::TextField,
-        floem_widgets::Checkbox,
-        floem_widgets::Radio,
-        floem_widgets::Switch,
-        floem_widgets::Slider,
-        floem_widgets::Select
+        floom_widgets::Button,
+        floom_widgets::TextField,
+        floom_widgets::Checkbox,
+        floom_widgets::Radio,
+        floom_widgets::Switch,
+        floom_widgets::Slider,
+        floom_widgets::Select
     );
 }
 
@@ -3966,7 +3966,7 @@ impl NodePaintContext<'_> {
         &mut self,
         text: &str,
         font_size: f32,
-        runs: Vec<floem_text::GlyphRun>,
+        runs: Vec<floom_text::GlyphRun>,
     ) -> ResourceId {
         if let Some(id) = self.cached_glyph_id(text, font_size) {
             return id;
@@ -3999,8 +3999,8 @@ impl PaintContext for NodePaintContext<'_> {
         self.animation
     }
 
-    fn fill_rect(&mut self, rect: Rect, color: floem_types::Color) {
-        self.push(floem_scene::SceneNode::Rect {
+    fn fill_rect(&mut self, rect: Rect, color: floom_types::Color) {
+        self.push(floom_scene::SceneNode::Rect {
             bounds: rect,
             fill: color.into(),
             radius: 0.0,
@@ -4008,8 +4008,8 @@ impl PaintContext for NodePaintContext<'_> {
         });
     }
 
-    fn fill_rounded_rect(&mut self, rect: Rect, radius: f32, color: floem_types::Color) {
-        self.push(floem_scene::SceneNode::Rect {
+    fn fill_rounded_rect(&mut self, rect: Rect, radius: f32, color: floom_types::Color) {
+        self.push(floom_scene::SceneNode::Rect {
             bounds: rect,
             fill: color.into(),
             radius: radius.max(0.0),
@@ -4017,8 +4017,8 @@ impl PaintContext for NodePaintContext<'_> {
         });
     }
 
-    fn fill_rect_brush(&mut self, rect: Rect, brush: &floem_types::Brush) {
-        self.push(floem_scene::SceneNode::Rect {
+    fn fill_rect_brush(&mut self, rect: Rect, brush: &floom_types::Brush) {
+        self.push(floom_scene::SceneNode::Rect {
             bounds: rect,
             fill: brush.clone(),
             radius: 0.0,
@@ -4026,8 +4026,8 @@ impl PaintContext for NodePaintContext<'_> {
         });
     }
 
-    fn fill_rounded_rect_brush(&mut self, rect: Rect, radius: f32, brush: &floem_types::Brush) {
-        self.push(floem_scene::SceneNode::Rect {
+    fn fill_rounded_rect_brush(&mut self, rect: Rect, radius: f32, brush: &floom_types::Brush) {
+        self.push(floom_scene::SceneNode::Rect {
             bounds: rect,
             fill: brush.clone(),
             radius: radius.max(0.0),
@@ -4035,8 +4035,8 @@ impl PaintContext for NodePaintContext<'_> {
         });
     }
 
-    fn fill_path_brush(&mut self, path: &floem_types::Path, brush: &floem_types::Brush) {
-        self.push(floem_scene::SceneNode::Path {
+    fn fill_path_brush(&mut self, path: &floom_types::Path, brush: &floom_types::Brush) {
+        self.push(floom_scene::SceneNode::Path {
             path: std::sync::Arc::new(path.clone()),
             fill: Some(brush.clone()),
             stroke: None,
@@ -4049,25 +4049,25 @@ impl PaintContext for NodePaintContext<'_> {
     /// on top. One node rather than a pending state latched onto the following
     /// fill — otherwise "the shadow this shape casts" and "this shape" would
     /// be two things the scene has to keep in step.
-    fn draw_shadow(&mut self, rect: Rect, radius: f32, shadow: &floem_types::Shadow) {
+    fn draw_shadow(&mut self, rect: Rect, radius: f32, shadow: &floom_types::Shadow) {
         if shadow.color.a == 0 {
             return;
         }
-        self.push(floem_scene::SceneNode::Rect {
+        self.push(floom_scene::SceneNode::Rect {
             bounds: rect,
-            fill: floem_types::Brush::Solid(floem_types::Color::TRANSPARENT),
+            fill: floom_types::Brush::Solid(floom_types::Color::TRANSPARENT),
             radius: radius.max(0.0),
             shadow: Some(*shadow),
         });
     }
 
-    fn backdrop_filter(&mut self, rect: Rect, filter: &floem_types::Filter) {
+    fn backdrop_filter(&mut self, rect: Rect, filter: &floom_types::Filter) {
         // An identity filter is "no filter": writing a node for it would make
         // every backend pay for a layer to do nothing.
         if filter.is_identity() {
             return;
         }
-        self.push(floem_scene::SceneNode::BackdropFilter {
+        self.push(floom_scene::SceneNode::BackdropFilter {
             rect,
             filter: *filter,
         });
@@ -4079,14 +4079,14 @@ impl PaintContext for NodePaintContext<'_> {
     /// The skip counters live in the backends: the software renderer counts
     /// `shaders_skipped` and vello counts `shaders_drawn`, so "the shader ran"
     /// and "the shader was degraded" are both observable.
-    fn draw_shader(&mut self, shader: &floem_types::Shader) {
+    fn draw_shader(&mut self, shader: &floom_types::Shader) {
         if self.bounds.width() <= 0.0 || self.bounds.height() <= 0.0 {
             return;
         }
-        self.push(floem_scene::SceneNode::shader(self.bounds, shader.clone()));
+        self.push(floom_scene::SceneNode::shader(self.bounds, shader.clone()));
     }
 
-    fn fill_text(&mut self, origin: Point, text: &str, size: f32, color: floem_types::Color) {
+    fn fill_text(&mut self, origin: Point, text: &str, size: f32, color: floom_types::Color) {
         if text.is_empty() || size <= 0.0 {
             return;
         }
@@ -4125,7 +4125,7 @@ impl PaintContext for NodePaintContext<'_> {
             .layout_cache
             .get_or_insert_with(text, &options, || shaper.shape(text, &options))
             .size;
-        self.push(floem_scene::SceneNode::Text {
+        self.push(floom_scene::SceneNode::Text {
             origin,
             size: laid_size,
             glyphs,
@@ -4134,15 +4134,15 @@ impl PaintContext for NodePaintContext<'_> {
     }
 
     fn draw_image(&mut self, bounds: Rect, image: ResourceId) {
-        self.push(floem_scene::SceneNode::image(bounds, image));
+        self.push(floom_scene::SceneNode::image(bounds, image));
     }
 
-    fn fill_path(&mut self, path: &floem_types::Path, color: floem_types::Color) {
-        self.push(floem_scene::SceneNode::filled_path(path.clone(), color));
+    fn fill_path(&mut self, path: &floom_types::Path, color: floom_types::Color) {
+        self.push(floom_scene::SceneNode::filled_path(path.clone(), color));
     }
 
-    fn stroke_path(&mut self, path: &floem_types::Path, stroke: &floem_types::Stroke) {
-        self.push(floem_scene::SceneNode::stroked_path(
+    fn stroke_path(&mut self, path: &floom_types::Path, stroke: &floom_types::Stroke) {
+        self.push(floom_scene::SceneNode::stroked_path(
             path.clone(),
             stroke.clone(),
         ));
@@ -4154,7 +4154,7 @@ impl NodePaintContext<'_> {
     /// available at this position, allocating a fresh one otherwise. The id
     /// list is updated in place: a reused slot already holds the id being
     /// written (positional reuse), so only the append case touches memory.
-    fn push(&mut self, mut node: floem_scene::SceneNode) {
+    fn push(&mut self, mut node: floom_scene::SceneNode) {
         for &prop in &self.composite {
             apply_composite(&mut node, prop);
         }
@@ -4190,16 +4190,16 @@ impl NodePaintContext<'_> {
 /// picture fades with the rest of it instead of staying opaque over a dimming
 /// background.
 fn compose_transform(
-    existing: Option<floem_types::Transform>,
-    m: floem_types::Transform,
-) -> floem_types::Transform {
+    existing: Option<floom_types::Transform>,
+    m: floom_types::Transform,
+) -> floom_types::Transform {
     match existing {
         Some(acc) => acc.multiply(m),
         None => m,
     }
 }
 
-fn apply_composite(node: &mut floem_scene::SceneNode, prop: CompositorProp) {
+fn apply_composite(node: &mut floom_scene::SceneNode, prop: CompositorProp) {
     match prop {
         CompositorProp::Opacity(alpha) => {
             let alpha = alpha.clamp(0.0, 1.0);

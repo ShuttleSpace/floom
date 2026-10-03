@@ -11,7 +11,7 @@
 //!
 //! 1. At app startup the ArkTS side calls
 //!    `register_platform_bridge({ getText, setText, openUrl, openFile, saveFile })`.
-//! 2. When Floem needs clipboard text, [`get_contents`] / [`set_contents`]
+//! 2. When Floom needs clipboard text, [`get_contents`] / [`set_contents`]
 //!    call back into that object's `getText` / `setText` via N-API.
 //!
 //! # Status

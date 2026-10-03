@@ -1,6 +1,6 @@
-//! Minimal Floem app for Android — **shared library** target.
+//! Minimal Floom app for Android — **shared library** target.
 //!
-//! Android's `native-activity` glue loads `libfloem_android_example.so`
+//! Android's `native-activity` glue loads `libfloom_android_example.so`
 //! (named by the `android.app.lib_name` meta-data in `AndroidManifest.xml`)
 //! and calls [`android_main`]. That is why this crate is a `cdylib` and not a
 //! plain binary: `cargo ndk` only copies `*.so` artifacts into `jniLibs/`.
@@ -13,7 +13,7 @@
 //! ```
 
 #[cfg(target_os = "android")]
-use floem::prelude::*;
+use floom::prelude::*;
 #[cfg(target_os = "android")]
 use winit::platform::android::activity::AndroidApp;
 
@@ -23,10 +23,10 @@ use winit::platform::android::activity::AndroidApp;
 pub fn android_main(app: AndroidApp) {
     // Surface files shared into the app (Android ACTION_SEND / ACTION_VIEW).
     let shared_files: RwSignal<Vec<String>> = RwSignal::new(Vec::new());
-    floem::platform::set_shared_files_handler(Box::new(move |files| {
+    floom::platform::set_shared_files_handler(Box::new(move |files| {
         shared_files.set(files.into_iter().map(|f| f.uri).collect());
     }));
-    floem::Application::new_android(app, floem::AppConfig::default())
+    floom::Application::new_android(app, floom::AppConfig::default())
         .window(move |_id| app_view(shared_files), None)
         .run();
 }
@@ -62,31 +62,31 @@ fn app_view(shared_files: RwSignal<Vec<String>>) -> impl IntoView {
     })
 }
 
-// Native bridge for `FloemNativeActivity.onActivityResult`. The Java class
-// (see `FloemNativeActivity.java`) forwards `onActivityResult` here so Floem
+// Native bridge for `FloomNativeActivity.onActivityResult`. The Java class
+// (see `FloomNativeActivity.java`) forwards `onActivityResult` here so Floom
 // can deliver Storage Access Framework file-picker results. This symbol is
 // resolved by the JVM via JNI's default dynamic linking when the APK's
-// activity is `dev.floem.android.FloemNativeActivity`.
+// activity is `dev.floom.android.FloomNativeActivity`.
 #[cfg(target_os = "android")]
 #[no_mangle]
-pub unsafe extern "system" fn Java_dev_floem_android_FloemNativeActivity_floemOnActivityResult(
+pub unsafe extern "system" fn Java_dev_floom_android_FloomNativeActivity_floomOnActivityResult(
     _env: jni::JNIEnv,
     _this: jni::objects::JObject,
     request_code: jni::sys::jint,
     result_code: jni::sys::jint,
     data: jni::sys::jobject,
 ) {
-    floem::platform::dispatch_activity_result(request_code as u32, result_code as i32, data);
+    floom::platform::dispatch_activity_result(request_code as u32, result_code as i32, data);
 }
 
-// Native bridge for `FloemNativeActivity.onNewIntent`. Forwards a file
-// shared into a running app (ACTION_SEND / ACTION_VIEW) to Floem.
+// Native bridge for `FloomNativeActivity.onNewIntent`. Forwards a file
+// shared into a running app (ACTION_SEND / ACTION_VIEW) to Floom.
 #[cfg(target_os = "android")]
 #[no_mangle]
-pub unsafe extern "system" fn Java_dev_floem_android_FloemNativeActivity_floemOnNewIntent(
+pub unsafe extern "system" fn Java_dev_floom_android_FloomNativeActivity_floomOnNewIntent(
     _env: jni::JNIEnv,
     _this: jni::objects::JObject,
     intent: jni::sys::jobject,
 ) {
-    floem::platform::dispatch_android_intent(intent);
+    floom::platform::dispatch_android_intent(intent);
 }

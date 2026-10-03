@@ -1,8 +1,8 @@
 # Plan: Phase 16 — native composition (R4)
 
 - **Date:** 2026-09-15
-- **Plan:** `docs/superpowers/plans/2026-09-02-floem-2-complete-implementation-plan.md` (§Phase 16)
-- **Ledger:** `.superpowers/sdd/progress-floem-2.md` (Roadmap R4)
+- **Plan:** `docs/superpowers/plans/2026-09-02-floom-2-complete-implementation-plan.md` (§Phase 16)
+- **Ledger:** `.superpowers/sdd/progress-floom-2.md` (Roadmap R4)
 - **Status:** not started. Deliberately landed as a plan: the phase's *last* mile
   needs real devices, but its first two thirds do not, and R1–R3 have just made
   the headless half cheap to test.
@@ -34,14 +34,14 @@ down as *cases*, not as prose about what "should" work.
 
 | Piece | Where | State |
 | --- | --- | --- |
-| `NativeViewId` | `foundation/floem-types/src/ids.rs` | done |
-| `NativeSlot` (id + generation), `NativeViewPool<K>` | `native/floem-native/src/pool.rs` | done (Phase 12.2 precursor) |
-| `Capability::NATIVE_VIEW` | `platform/floem-platform/src/capabilities.rs` | flag exists (`1 << 10`); set by `web_default` only, **not** by `desktop_default` |
-| `SurfaceTarget` (raw-window-handle pair, size, scale) | `platform/floem-platform/src/surface.rs` | done |
-| Scene nodes | `scene/floem-scene/src/node.rs` | `Group`/`Rect`/`Image`/`Text` — **no hole/participant variant** |
-| `Renderer` trait | `render/floem-renderer/src/lib.rs` | `begin_frame`/`render_scene`/`render_scene_with_resources`/`end_frame`/`trim_caches` — **no native/participant hook** |
-| Host paint, overlay stack, frame clock, damage | `app/floem-app/src/lib.rs` | done (R2) |
-| Headless harness | `tooling/floem-testkit` | done (R3) — `TestApp`, `Selector`, actors, `settle` |
+| `NativeViewId` | `crates/floom-types/src/ids.rs` | done |
+| `NativeSlot` (id + generation), `NativeViewPool<K>` | `crates/floom-native/src/pool.rs` | done (Phase 12.2 precursor) |
+| `Capability::NATIVE_VIEW` | `crates/floom-platform/src/capabilities.rs` | flag exists (`1 << 10`); set by `web_default` only, **not** by `desktop_default` |
+| `SurfaceTarget` (raw-window-handle pair, size, scale) | `crates/floom-platform/src/surface.rs` | done |
+| Scene nodes | `crates/floom-scene/src/node.rs` | `Group`/`Rect`/`Image`/`Text` — **no hole/participant variant** |
+| `Renderer` trait | `crates/floom-renderer/src/lib.rs` | `begin_frame`/`render_scene`/`render_scene_with_resources`/`end_frame`/`trim_caches` — **no native/participant hook** |
+| Host paint, overlay stack, frame clock, damage | `crates/floom-app/src/lib.rs` | done (R2) |
+| Headless harness | `crates/floom-testkit` | done (R3) — `TestApp`, `Selector`, actors, `settle` |
 
 Nothing above `NativeViewPool` exists: no `NativeViewProvider`, no controller,
 no host participant registry, no way for a widget to say "this node is a native
@@ -108,11 +108,11 @@ visible bug (the candidate window jumps between the framework caret and the
 native field), and R1 made the framework an owner, so the handoff has to be
 explicit.
 
-**D5 — `floem-native` stays a leaf.** ABI traits and the participant registry go
-in `native/floem-native` (extending `lib.rs` as the Phase 12.2 decision
-promised), gaining `floem-overlay`-style nothing: the crate keeps depending only
-on `floem-types` + `floem-virtual` + `floem-scene`-free basics. Host-side
-composition lives in `app/floem-app`; OS bridges live in the platform crates.
+**D5 — `floom-native` stays a leaf.** ABI traits and the participant registry go
+in `crates/floom-native` (extending `lib.rs` as the Phase 12.2 decision
+promised), gaining `floom-overlay`-style nothing: the crate keeps depending only
+on `floom-types` + `floom-virtual` + `floom-scene`-free basics. Host-side
+composition lives in `crates/floom-app`; OS bridges live in the platform crates.
 This keeps `check-architecture-deps.sh` green and keeps the ABI usable by a
 platform backend without dragging in the framework.
 
@@ -121,15 +121,15 @@ platform backend without dragging in the framework.
 ## Task 16.1 — Define the Native ABI *(headless, shippable now)*
 
 **Status: done, `d25bf07`** — 30 tests. One deviation: the three shared enums
-ended up in `foundation/floem-types/src/native.rs` rather than in `abi.rs`,
+ended up in `crates/floom-types/src/native.rs` rather than in `abi.rs`,
 because a widget at L6 asks for a participant and a provider at L4 implements
 one, and neither crate may depend on the other's.
 
 **Files**
 
-- Modify: `native/floem-native/src/lib.rs`, `native/floem-native/Cargo.toml`
-- Create: `native/floem-native/src/abi.rs`, `native/floem-native/src/fake.rs`
-- Test: `native/floem-native/tests/contract.rs`
+- Modify: `crates/floom-native/src/lib.rs`, `crates/floom-native/Cargo.toml`
+- Create: `crates/floom-native/src/abi.rs`, `crates/floom-native/src/fake.rs`
+- Test: `crates/floom-native/tests/contract.rs`
 
 **Interfaces** (shapes, not final signatures)
 
@@ -194,7 +194,7 @@ slot is reused without re-binding.
 ## Task 16.2 — Overlay composition *(headless half + device half)*
 
 **Status: steps 1–6 and 8 done, `dab2547`** (+ `6773950`, the hit-test rule
-they depend on). `app/floem-app/tests/native.rs`, 16 tests. Deviations and
+they depend on). `crates/floom-app/tests/native.rs`, 16 tests. Deviations and
 findings worth carrying forward:
 
 - The native door is answered **inline**, not queued like the overlay door: a
@@ -222,7 +222,7 @@ findings worth carrying forward:
   claim is not enough — the node is still a widget, and a deep node's region
   outranks a shallow one's. Off-screen participants now have no region at all.
 - **Step 7's macOS half is done (`6829445` for the translation layer, then the
-  AppKit host).** `floem-platform-desktop/src/native.rs` holds the
+  AppKit host).** `floom-platform-desktop/src/native.rs` holds the
   `NativeState` → `ViewPlacement` translation and the `NativeViewProvider` impl
   over a `NativeViewHost` trait; `native_appkit.rs` holds the AppKit
   `NativeViewHost`, and `WinitPlatform::native_view_provider` builds one from
@@ -236,10 +236,10 @@ six OS calls behind a trait. Both halves are now in for macOS, in three commits
 that are worth reading in order, because the second and third changed what the
 first assumed:
 
-1. **Done.** `floem-platform-desktop` gains `floem-native` (same layer, L4, so
+1. **Done.** `floom-platform-desktop` gains `floom-native` (same layer, L4, so
    the architecture gate permits it; verified the gate *sees* the edge by moving
-   `floem-native` to L5, which fails `UPWARD floem_platform_desktop(L4) →
-   floem_native(L5)`). `DesktopNativeBridge` implements `NativeViewProvider`
+   `floom-native` to L5, which fails `UPWARD floom_platform_desktop(L4) →
+   floom_native(L5)`). `DesktopNativeBridge` implements `NativeViewProvider`
    over a `NativeViewHost` trait.
 2. **Done, and the origin turned out not to be a platform fact.**
    `to_view_placement` deliberately does *not* mirror: it returns the framework's
@@ -251,7 +251,7 @@ first assumed:
      every future backend AppKit's convention and made the module's own docs
      false.
    - `NSView::isFlipped` is **per-view**, and winit's content view already
-     overrides it to `true`. So on a floem 2.0 window the correct answer is
+     overrides it to `true`. So on a floom 2.0 window the correct answer is
      `Origin::TopLeft` and no flip happens at all; on a bare `NSView` it is
      `Origin::BottomLeft`. The AppKit host asks the parent (`parent.isFlipped()`)
      rather than assuming, and a backend that hardcoded "macOS means bottom-left"
@@ -336,30 +336,30 @@ the host.*
 
 **Files**
 
-- Modify: `app/floem-app/src/lib.rs` (participant registry, frame diff, paint
+- Modify: `crates/floom-app/src/lib.rs` (participant registry, frame diff, paint
   order, hit-test subtraction, focus yield)
-- Modify: `foundation/floem-core` (`UpdateContext`/`EventContext` native door)
-- Modify: `widgets/floem-widgets` (a `NativeSurface` composite widget holding
+- Modify: `crates/floom-core` (`UpdateContext`/`EventContext` native door)
+- Modify: `crates/floom-widgets` (a `NativeSurface` composite widget holding
   `Surface`-style bookkeeping: present / last_present / slot / in_tree)
-- Modify: `platform/floem-platform/src/capabilities.rs` (adds
+- Modify: `crates/floom-platform/src/capabilities.rs` (adds
   `desktop_capabilities(native_view)`; `desktop_default` itself must **not** gain
   `NATIVE_VIEW` — see case D1)
-- Add: `platform/floem-platform-desktop/src/native.rs` (`6829445` — the
+- Add: `crates/floom-platform-desktop/src/native.rs` (`6829445` — the
   `NativeState` → `ViewPlacement` translation, `NativeViewHost`,
   `DesktopNativeBridge`)
-- Add: `platform/floem-platform-desktop/src/native_appkit.rs` (the AppKit
+- Add: `crates/floom-platform-desktop/src/native_appkit.rs` (the AppKit
   `NativeViewHost`: `Container` + `MacNativeViewHost` + `NativeParent`, macOS only)
-- Modify: `platform/floem-platform-desktop/src/winit_backend.rs`
+- Modify: `crates/floom-platform-desktop/src/winit_backend.rs`
   (`native_view_provider`, `native_view_parent`, the stored `native_caps`)
-- Modify: `app/floem-app/src/runner.rs` (push the window's scale factor to the
+- Modify: `crates/floom-app/src/runner.rs` (push the window's scale factor to the
   host on creation *and* on the resize a display change arrives as)
-- Modify: `platform/floem-platform/src/fake.rs` (the fake window carries a scale,
+- Modify: `crates/floom-platform/src/fake.rs` (the fake window carries a scale,
   so a Retina boot is testable without a Retina display)
-- Modify: `tooling/floem-testkit` (`TestApp::window`)
-- Test: `app/floem-app/tests/native.rs` (testkit)
-- Test: `platform/floem-platform-desktop/tests/winit_capabilities.rs` (a session
+- Modify: `crates/floom-testkit` (`TestApp::window`)
+- Test: `crates/floom-app/tests/native.rs` (testkit)
+- Test: `crates/floom-platform-desktop/tests/winit_capabilities.rs` (a session
   that never built a bridge does not advertise `NATIVE_VIEW`)
-- Example: `examples/floem2-probe` (installs the provider over a real window and
+- Example: `examples/floom2-probe` (installs the provider over a real window and
   dumps both the OS subview tree and the framework's participant states — the
   device half of D1–D3, run by hand)
 
@@ -419,7 +419,7 @@ once with the outcome recorded in the device checklist.
 ## Task 16.3 — Texture / Surface composition *(mostly device-gated)*
 
 **Status: steps 1 and 2 done.** `tests/negotiation.rs` (7 tests) plus
-`floem-renderer/src/external.rs` (10 tests) and four GPU tests in
+`floom-renderer/src/external.rs` (10 tests) and four GPU tests in
 `gpu.rs`. Findings worth carrying forward:
 
 - **vello 0.7 cannot import a GPU texture.** `peniko::ImageData` is `Blob<u8>`
@@ -449,14 +449,14 @@ once with the outcome recorded in the device checklist.
 **Still open:** step 3 (surface compositor on KMS/Android/iOS), a device-gated
 task this machine cannot do, and the *frame-time* half of step 4 (needs a
 device). The *bytes* half of step 4 is DONE: `texture_mode_moves_an_exact_set_of_bytes_per_produced_frame`
-(`render/floem-renderer/src/external.rs`) pins the per-frame cost model — one
+(`crates/floom-renderer/src/external.rs`) pins the per-frame cost model — one
 full frame per produced frame, nothing for silence. `external_stats().bytes_uploaded`
 counts only what actually crossed.
 
 **Files**
 
-- Modify: `render/floem-renderer-vello/src/gpu.rs` (import an external texture as
-  a scene resource), `render/floem-renderer` (an `import_texture`-shaped hook)
+- Modify: `crates/floom-renderer-vello/src/gpu.rs` (import an external texture as
+  a scene resource), `crates/floom-renderer` (an `import_texture`-shaped hook)
 - Modify: platform providers that can expose a surface/texture
 - Test: capability-negotiation tests (headless), plus the device cases below
 
@@ -501,7 +501,7 @@ is the only remaining task whose *device* case (D11) is runnable on the machine
 the work is being done on.
 
 - The frozen texture is painted by the widget that owns the box, so
-  `NativeSnapshot` had to move to `floem-types` — a fourth shared noun, which
+  `NativeSnapshot` had to move to `floom-types` — a fourth shared noun, which
   16.1 did not anticipate because a frozen participant is still the same
   participant.
 - Freezing hides the live view rather than destroying it: a transition's end
@@ -514,9 +514,9 @@ the work is being done on.
 
 **Files**
 
-- Modify: `native/floem-native` (snapshot contract), `framework/floem-animation`
-  (animate a snapshot texture), `app/floem-app` (transition orchestration)
-- Test: `app/floem-app/tests/native_transition.rs`
+- Modify: `crates/floom-native` (snapshot contract), `crates/floom-animation`
+  (animate a snapshot texture), `crates/floom-app` (transition orchestration)
+- Test: `crates/floom-app/tests/native_transition.rs`
 
 **Steps**
 

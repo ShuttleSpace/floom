@@ -139,9 +139,9 @@ pub trait TooltipExt {
     ///
     /// ### Examples
     /// ```rust
-    /// # use floem::views::TooltipExt;
-    /// # use floem::views::{text, Decorators};
-    /// # use floem::prelude::{RwSignal, SignalGet};
+    /// # use floom::views::TooltipExt;
+    /// # use floom::views::{text, Decorators};
+    /// # use floom::prelude::{RwSignal, SignalGet};
     /// // Simple usage:
     /// let simple = text("A text with tooltip")
     ///     .tooltip(|| "This is a tooltip.");

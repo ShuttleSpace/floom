@@ -1,4 +1,4 @@
-use floem_scene::{Resource, ResourceKind, ResourceRegistry};
+use floom_scene::{Resource, ResourceKind, ResourceRegistry};
 
 #[test]
 fn retain_release_refcount() {
@@ -51,11 +51,11 @@ fn budget_evicts_single_ref_resources() {
 /// positions), and its registry cost accounts every glyph.
 #[test]
 fn glyph_run_resource_carries_shaped_runs() {
-    let mut shaper = floem_text::TextShaper::new();
-    let options = floem_text::TextLayoutOptions {
+    let mut shaper = floom_text::TextShaper::new();
+    let options = floom_text::TextLayoutOptions {
         max_width: f64::INFINITY,
         font_size: 16.0,
-        align: floem_text::TextAlign::Start,
+        align: floom_text::TextAlign::Start,
     };
     let laid = shaper.shape("Hello", &options);
     assert!(!laid.runs.is_empty(), "shaping produces at least one run");

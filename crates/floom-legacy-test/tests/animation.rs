@@ -7,13 +7,13 @@
 
 use std::time::Duration;
 
-use floem::animate::Animation;
-use floem::peniko::color::palette;
-use floem::prelude::*;
-use floem::reactive::Trigger;
-use floem::style::Background;
-use floem::unit::DurationUnitExt;
-use floem_legacy_test::prelude::*;
+use floom::animate::Animation;
+use floom::peniko::color::palette;
+use floom::prelude::*;
+use floom::reactive::Trigger;
+use floom::style::Background;
+use floom::unit::DurationUnitExt;
+use floom_legacy_test::prelude::*;
 use serial_test::serial;
 
 // =============================================================================
@@ -422,7 +422,7 @@ fn test_animation_progresses_over_frames() {
 #[serial]
 fn test_animation_in_dynamic_container() {
     let root = TestRoot::new();
-    use floem::views::dyn_container;
+    use floom::views::dyn_container;
 
     let show_animation = RwSignal::new(false);
 
@@ -660,7 +660,7 @@ fn test_size_animation_reaches_target() {
 #[serial]
 fn test_multiple_property_animation() {
     let root = TestRoot::new();
-    use floem::style::BorderTopLeftRadius;
+    use floom::style::BorderTopLeftRadius;
 
     let view = Empty::new()
         .style(|s| s.size(50.0, 50.0).border_radius(0.0))

@@ -36,7 +36,7 @@
 //! that is invisible on the developer's 2x display and reported by one user at
 //! 1.5x.
 //!
-//! So: **snap once, in [`floem_native::to_device`], and mirror in device
+//! So: **snap once, in [`floom_native::to_device`], and mirror in device
 //! space.** [`os_frame`] only ever receives a `DeviceRect`, which is what makes
 //! that structural rather than a comment, and `mirror_device` is an involution,
 //! which makes the invariant checkable — mirroring an OS frame back must
@@ -67,13 +67,13 @@
 
 use std::collections::HashMap;
 
-use floem_native::{
+use floom_native::{
     ClipSupport, DeviceRect, InputMode, InputModes, NativeCapabilities, NativeCompositionMode,
     NativeError, NativeSlot, NativeSnapshot, NativeState, NativeViewKind, NativeViewProvider,
     to_device,
 };
-use floem_platform::{Capability, PlatformCapabilities};
-use floem_types::{NativeCapture, Size};
+use floom_platform::{Capability, PlatformCapabilities};
+use floom_types::{NativeCapture, Size};
 
 /// A participant's placement, in the framework's own device space.
 ///
@@ -242,7 +242,7 @@ pub fn device_to_points(rect: DeviceRect, scale: f64) -> (f64, f64, f64, f64) {
 ///
 /// The one crossing from logical to device. No mirroring and no OS convention:
 /// both of those are the backend's business, and the snap has to happen exactly
-/// once, here, so that [`floem_native::to_device`] is the only rounding in the
+/// once, here, so that [`floom_native::to_device`] is the only rounding in the
 /// chain.
 pub fn to_view_placement(state: NativeState) -> ViewPlacement {
     // The crop is snapped by the same call as the frame, so it stays a
@@ -370,7 +370,7 @@ struct Placed {
 /// Deliberately thin. The lifecycle invariants — `destroy` for every `create`,
 /// a recycled slot re-bound before anything is applied to it, no double freeze,
 /// a rect with a negative extent refused, a crop the host cannot do refused —
-/// all live in [`floem_native::NativeViewController`], so this type has exactly
+/// all live in [`floom_native::NativeViewController`], so this type has exactly
 /// two jobs:
 ///
 /// 1. translate a [`NativeState`] into a [`ViewPlacement`];
@@ -542,8 +542,8 @@ pub fn desktop_capabilities(native_view: bool) -> PlatformCapabilities {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use floem_native::NativeViewId;
-    use floem_types::{InputMode, Rect};
+    use floom_native::NativeViewId;
+    use floom_types::{InputMode, Rect};
 
     fn slot(index: u32) -> NativeSlot {
         NativeSlot {

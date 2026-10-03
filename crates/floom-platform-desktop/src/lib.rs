@@ -1,7 +1,7 @@
 //! Desktop platform adapter.
 //!
 //! Maps Winit-style window / pointer / keyboard / IME lifecycle onto the
-//! `floem-platform` ABI without pulling Winit into `floem-platform` itself.
+//! `floom-platform` ABI without pulling Winit into `floom-platform` itself.
 //! Real `floem-winit` wiring stays in the app/runtime layer; this crate owns
 //! the ABI-facing desktop services (clipboard + IME stubs included).
 
@@ -40,11 +40,11 @@ pub use native::{
 use std::collections::HashMap;
 use std::time::Instant;
 
-use floem_platform::{
+use floom_platform::{
     Clipboard, Ime, KeyCode, Modifiers, Platform, PlatformCapabilities, PlatformEvent,
     PointerButton, SurfaceConfig, Window, WindowConfig, WindowState,
 };
-use floem_types::{DisplayInfo, PlatformId, Point, ScaleFactor, Size, SurfaceId, WindowId};
+use floom_types::{DisplayInfo, PlatformId, Point, ScaleFactor, Size, SurfaceId, WindowId};
 
 /// Logical desktop input sample (Winit-equivalent, OS-handle free).
 #[derive(Debug, Clone, PartialEq)]

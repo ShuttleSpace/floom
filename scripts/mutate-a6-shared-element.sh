@@ -3,7 +3,7 @@
 #
 # The shared-element net is only worth having if it actually *bites*: if the
 # flight logic is broken and neither the scene-coordinate tests in motion_host
-# nor the per-frame pixel golden in floem-snapshot go red, the net is decoration.
+# nor the per-frame pixel golden in floom-snapshot go red, the net is decoration.
 # So we break the widget on purpose and watch the right test fail. Four mutations
 # hit the novel parts of SharedTransitionLayout: the guard that only animates
 # while Flying, the translate that carries the source onto the destination's box,
@@ -44,9 +44,9 @@ mutate_one() {
   touch "$file"
 }
 
-WIDGET=widgets/floem-widgets/src/compose.rs
-SCENE="cargo test -q -p floem-app --test motion_host"
-GOLDEN="cargo test -q -p floem-snapshot --test golden_frames a_shared_element_flight_is_golden_frame_by_frame"
+WIDGET=crates/floom-widgets/src/compose.rs
+SCENE="cargo test -q -p floom-app --test motion_host"
+GOLDEN="cargo test -q -p floom-snapshot --test golden_frames a_shared_element_flight_is_golden_frame_by_frame"
 
 # 1. the guard is inverted: animation() now returns None *while* the flight is
 #    Flying, so the flight never leaves the source box. The scene-coordinate
@@ -73,7 +73,7 @@ mutate_one "$WIDGET" \
             (0.0, -delta)
         };
         Some(
-            floem_core::AnimationSpec::new(from, to, self.duration)
+            floom_core::AnimationSpec::new(from, to, self.duration)
                 .with_easing(self.easing)
                 .with_key(self.rev)
                 .with_prop(CompositorProp::TranslateY(0.0))," \
@@ -82,7 +82,7 @@ mutate_one "$WIDGET" \
             (0.0, -delta)
         };
         Some(
-            floem_core::AnimationSpec::new(from, to, self.duration)
+            floom_core::AnimationSpec::new(from, to, self.duration)
                 .with_easing(self.easing)
                 .with_key(self.rev)
                 .with_prop(CompositorProp::Opacity(0.0))," \

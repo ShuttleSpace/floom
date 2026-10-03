@@ -1,7 +1,7 @@
 //! Accessible role taxonomy.
 //!
 //! Mirrors the WAI-ARIA role set and the native role vocabularies of the
-//! platforms Floem targets:
+//! platforms Floom targets:
 //!
 //! - macOS / iOS: `NSAccessibility` roles
 //! - Android: `AccessibilityNodeInfo` role flags

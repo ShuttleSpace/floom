@@ -1,4 +1,4 @@
-use floem_ime::{CompositionState, ImeEvent, ImeState};
+use floom_ime::{CompositionState, ImeEvent, ImeState};
 
 fn preedit(text: &str, caret: usize) -> ImeEvent {
     ImeEvent::Preedit {

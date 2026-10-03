@@ -3,7 +3,7 @@ use std::{
     marker::PhantomData,
 };
 
-use floem_legacy_reactive::{Effect, Scope};
+use floom_legacy_reactive::{Effect, Scope};
 use rustc_hash::FxHasher;
 use smallvec::SmallVec;
 
@@ -47,8 +47,8 @@ where
 ///
 /// ## Example
 /// ```
-/// use floem::reactive::*;
-/// use floem::views::*;
+/// use floom::reactive::*;
+/// use floom::views::*;
 ///
 /// let items = create_rw_signal(vec![1,2,3,4]);
 ///
@@ -65,8 +65,8 @@ where
 /// ```
 ///
 /// use std::sync::atomic::{AtomicU32, Ordering};
-/// use floem::reactive::*;
-/// use floem::views::*;
+/// use floom::reactive::*;
+/// use floom::views::*;
 ///
 /// let items = create_rw_signal(vec![1,1,2,2,3,3,4,4]);
 /// let unique_atomic = AtomicU32::new(0);

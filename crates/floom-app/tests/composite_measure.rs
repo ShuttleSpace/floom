@@ -5,13 +5,13 @@
 //! applies that as *default* sizing: unpinned controls shrink-wrap their
 //! content, an explicit mount style still wins.
 
-use floem_app::{NodeId, WidgetHost};
-use floem_layout::LayoutStyle;
-use floem_types::Size;
-use floem_widgets::controls::{Button, Checkbox, Progress, Select, Slider, Switch, TextField};
-use floem_widgets::primitives::{Divider, Icon, Image, Spacer};
+use floom_app::{NodeId, WidgetHost};
+use floom_layout::LayoutStyle;
+use floom_types::Size;
+use floom_widgets::controls::{Button, Checkbox, Progress, Select, Slider, Switch, TextField};
+use floom_widgets::primitives::{Divider, Icon, Image, Spacer};
 
-fn node_bounds(host: &WidgetHost, node: NodeId) -> floem_types::Rect {
+fn node_bounds(host: &WidgetHost, node: NodeId) -> floom_types::Rect {
     host.bounds(node)
 }
 
@@ -23,17 +23,17 @@ fn button_shrink_wraps_its_label() {
     host.set_size(Size::new(400.0, 200.0));
     let root = host.mount_root(
         LayoutStyle {
-            align_items: floem_layout::AlignItems::Start,
+            align_items: floom_layout::AlignItems::Start,
             ..LayoutStyle::default()
         },
-        floem_widgets::Container::new(),
+        floom_widgets::Container::new(),
     );
     let label = "Click me";
     let button = host.mount(root, LayoutStyle::default(), Button::new(label));
     host.frame();
 
     let bounds = node_bounds(&host, button);
-    let measured = floem_text::measure_text(label, 14.0, f64::INFINITY);
+    let measured = floom_text::measure_text(label, 14.0, f64::INFINITY);
     assert!(
         (bounds.width() - (measured.width + 16.0)).abs() < 1.5,
         "button width = label + 2x8 padding, got {bounds:?} (label {})",
@@ -60,10 +60,10 @@ fn pinned_style_beats_the_button_intrinsic_size() {
     host.set_size(Size::new(400.0, 200.0));
     let root = host.mount_root(
         LayoutStyle {
-            align_items: floem_layout::AlignItems::Start,
+            align_items: floom_layout::AlignItems::Start,
             ..LayoutStyle::default()
         },
-        floem_widgets::Container::new(),
+        floom_widgets::Container::new(),
     );
     let button = host.mount(
         root,
@@ -95,10 +95,10 @@ fn checkbox_includes_indicator_and_label_extent() {
     host.set_size(Size::new(400.0, 200.0));
     let root = host.mount_root(
         LayoutStyle {
-            align_items: floem_layout::AlignItems::Start,
+            align_items: floom_layout::AlignItems::Start,
             ..LayoutStyle::default()
         },
-        floem_widgets::Container::new(),
+        floom_widgets::Container::new(),
     );
     let label = "Ship it";
     let check = host.mount(root, LayoutStyle::default(), Checkbox::new(label));
@@ -106,7 +106,7 @@ fn checkbox_includes_indicator_and_label_extent() {
     host.frame();
 
     let bounds = node_bounds(&host, check);
-    let measured = floem_text::measure_text(label, 14.0, f64::INFINITY);
+    let measured = floom_text::measure_text(label, 14.0, f64::INFINITY);
     assert!(
         (bounds.width() - (16.0 + 6.0 + measured.width)).abs() < 1.5,
         "checkbox width = box + gap + label, got {bounds:?}"
@@ -130,10 +130,10 @@ fn textfield_keeps_a_minimum_width_and_measures_its_text() {
     host.set_size(Size::new(400.0, 200.0));
     let root = host.mount_root(
         LayoutStyle {
-            align_items: floem_layout::AlignItems::Start,
+            align_items: floom_layout::AlignItems::Start,
             ..LayoutStyle::default()
         },
-        floem_widgets::Container::new(),
+        floom_widgets::Container::new(),
     );
     // Empty field: floored at the minimum width.
     let empty = host.mount(root, LayoutStyle::default(), TextField::new());
@@ -157,7 +157,7 @@ fn textfield_keeps_a_minimum_width_and_measures_its_text() {
     );
 
     let filled_bounds = node_bounds(&host, filled);
-    let measured = floem_text::measure_text(long_value, 14.0, f64::INFINITY);
+    let measured = floom_text::measure_text(long_value, 14.0, f64::INFINITY);
     assert!(
         (filled_bounds.width() - (measured.width + 16.0)).abs() < 1.5,
         "filled field = text + 2x8 padding, got {filled_bounds:?} (text {})",
@@ -177,10 +177,10 @@ fn select_sizes_from_the_widest_label() {
     host.set_size(Size::new(400.0, 200.0));
     let root = host.mount_root(
         LayoutStyle {
-            align_items: floem_layout::AlignItems::Start,
+            align_items: floom_layout::AlignItems::Start,
             ..LayoutStyle::default()
         },
-        floem_widgets::Container::new(),
+        floom_widgets::Container::new(),
     );
     let select = host.mount(
         root,
@@ -190,7 +190,7 @@ fn select_sizes_from_the_widest_label() {
     host.frame();
 
     let bounds = node_bounds(&host, select);
-    let widest = floem_text::measure_text("Beta Gamma Delta Epsilon", 14.0, f64::INFINITY);
+    let widest = floom_text::measure_text("Beta Gamma Delta Epsilon", 14.0, f64::INFINITY);
     assert!(
         (bounds.width() - (widest.width + 16.0)).abs() < 1.5,
         "select width = widest option + 2x8 padding, got {bounds:?}"
@@ -210,10 +210,10 @@ fn slider_and_progress_report_their_painted_geometry() {
     host.set_size(Size::new(400.0, 200.0));
     let root = host.mount_root(
         LayoutStyle {
-            align_items: floem_layout::AlignItems::Start,
+            align_items: floom_layout::AlignItems::Start,
             ..LayoutStyle::default()
         },
-        floem_widgets::Container::new(),
+        floom_widgets::Container::new(),
     );
     let slider = host.mount(root, LayoutStyle::default(), Slider::new(0.5, 0.0, 1.0));
     let progress = host.mount(root, LayoutStyle::default(), Progress::determinate(0.5));
@@ -246,23 +246,23 @@ fn icon_image_divider_and_spacer_report_their_extents() {
     host.set_size(Size::new(400.0, 200.0));
     let root = host.mount_root(
         LayoutStyle {
-            align_items: floem_layout::AlignItems::Start,
+            align_items: floom_layout::AlignItems::Start,
             ..LayoutStyle::default()
         },
-        floem_widgets::Container::new(),
+        floom_widgets::Container::new(),
     );
     let icon = host.mount(root, LayoutStyle::default(), Icon::new('★').size(24.0));
     let image = host.mount(
         root,
         LayoutStyle::default(),
-        Image::new(floem_types::ResourceId::new(1, 1))
-            .intrinsic_size(floem_types::Size::new(32.0, 18.0)),
+        Image::new(floom_types::ResourceId::new(1, 1))
+            .intrinsic_size(floom_types::Size::new(32.0, 18.0)),
     );
     let divider = host.mount(root, LayoutStyle::default(), Divider::new());
     let spacer = host.mount(
         root,
         LayoutStyle::default(),
-        Spacer::new(12.0).axis(floem_widgets::Axis::Horizontal),
+        Spacer::new(12.0).axis(floom_widgets::Axis::Horizontal),
     );
     host.frame();
 

@@ -1,10 +1,10 @@
 [package]
-name = "floem-platform-embedded"
+name = "floom-platform-embedded"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
-description = "Embedded / DRM-framebuffer platform adapter for Floem 2.0"
+description = "Embedded / DRM-framebuffer platform adapter for Floom 2.0"
 rust-version.workspace = true
 
 [features]
@@ -13,6 +13,6 @@ default = []
 drm = []
 
 [dependencies]
-floem-accessibility = { path = "../floom-accessibility", version = "0.2.0" }
-floem-platform = { path = "../floom-platform", version = "0.2.0" }
-floem-types = { path = "../floom-types", version = "0.2.0" }
+floom-accessibility = { path = "../floom-accessibility", version = "0.2.0" }
+floom-platform = { path = "../floom-platform", version = "0.2.0" }
+floom-types = { path = "../floom-types", version = "0.2.0" }

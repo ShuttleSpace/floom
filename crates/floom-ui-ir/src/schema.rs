@@ -11,13 +11,13 @@ use crate::value::ValueType;
 
 /// Which layer a property belongs to.
 ///
-/// The split is what lets a lowering step route `radius` to `floem_style` and
-/// `grow` to `floem_core::LayoutRequest` without knowing property names.
+/// The split is what lets a lowering step route `radius` to `floom_style` and
+/// `grow` to `floom_core::LayoutRequest` without knowing property names.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PropClass {
-    /// Style properties ([`floem_style::StyleProps`] vocabulary).
+    /// Style properties ([`floom_style::StyleProps`] vocabulary).
     Style,
-    /// Layout intent ([`floem_core::LayoutRequest`] vocabulary).
+    /// Layout intent ([`floom_core::LayoutRequest`] vocabulary).
     Layout,
     /// A property of the widget itself.
     Widget,
@@ -67,7 +67,7 @@ const STYLE_PROPS: &[Row] = &[
     row("foreground", ValueType::Color),
     row("font_size", ValueType::Number),
     row("opacity", ValueType::Number),
-    // A single value, matching `floem_style::StyleProps::padding`; the lowering
+    // A single value, matching `floom_style::StyleProps::padding`; the lowering
     // step expands it for the widgets that want four sides.
     row("padding", ValueType::Number),
     row("radius", ValueType::Number),
@@ -97,7 +97,7 @@ const LAYOUT_PROPS: &[Row] = &[
     row_in("cross_align", ValueType::Ident, ALIGN),
 ];
 
-/// Properties of a native participant. These mirror `floem_types`, so the same
+/// Properties of a native participant. These mirror `floom_types`, so the same
 /// document describes a WebView to a platform that has one and to a tool that
 /// merely renders a placeholder.
 const NATIVE_PROPS: &[Row] = &[

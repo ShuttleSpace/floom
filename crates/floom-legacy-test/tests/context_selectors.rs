@@ -1,7 +1,7 @@
 //! Tests for selector detection inside `with_context` closures.
 //!
 //! These tests verify that selectors (like `.hover()` and `.active()`) defined
-//! inside `with_context` closures are properly detected by floem's selector
+//! inside `with_context` closures are properly detected by floom's selector
 //! detection mechanism.
 //!
 //! This was a bug where selectors inside `with_context` were invisible because
@@ -10,11 +10,11 @@
 //!
 //! The fix probes the context mapping at construction time to discover selectors.
 
-use floem::peniko::{Brush, Color};
-use floem::prelude::*;
-use floem::prop;
-use floem::style::{Background, ContextRef, ContextValue, ExprStyle, Style, StyleSelector};
-use floem_legacy_test::prelude::*;
+use floom::peniko::{Brush, Color};
+use floom::prelude::*;
+use floom::prop;
+use floom::style::{Background, ContextRef, ContextValue, ExprStyle, Style, StyleSelector};
+use floom_legacy_test::prelude::*;
 use serial_test::serial;
 
 // Define a simple theme prop for testing
@@ -39,7 +39,7 @@ impl Default for TestTheme {
     }
 }
 
-impl floem::style::StylePropValue for TestTheme {
+impl floom::style::StylePropValue for TestTheme {
     fn interpolate(&self, _other: &Self, _value: f64) -> Option<Self> {
         None
     }

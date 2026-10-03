@@ -1,7 +1,7 @@
 //! The Material component gallery: every button variant × size × state.
 
-use floem_design::{CellPaint, ControlSize, GallerySample, InteractionState, gallery_scene};
-use floem_scene::Scene;
+use floom_design::{CellPaint, ControlSize, GallerySample, InteractionState, gallery_scene};
+use floom_scene::Scene;
 
 use crate::button::{button_metrics, button_style};
 use crate::tokens::MaterialTheme;

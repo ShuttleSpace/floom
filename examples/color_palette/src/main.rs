@@ -1,13 +1,13 @@
-use floem::kurbo::Size;
-use floem::peniko::Color;
-use floem::prelude::{Decorators, RwSignal};
-use floem::reactive::{SignalGet, SignalUpdate};
-use floem::style::Position;
-use floem::views::slider::{Slider, SliderChanged};
-use floem::views::{dyn_view, Empty, Label};
-use floem::window::WindowConfig;
-use floem::Application;
-use floem::IntoView;
+use floom::kurbo::Size;
+use floom::peniko::Color;
+use floom::prelude::{Decorators, RwSignal};
+use floom::reactive::{SignalGet, SignalUpdate};
+use floom::style::Position;
+use floom::views::slider::{Slider, SliderChanged};
+use floom::views::{dyn_view, Empty, Label};
+use floom::window::WindowConfig;
+use floom::Application;
+use floom::IntoView;
 use palette::{Hsl, Hsv, IntoColor, Lch, Srgb};
 
 fn create_color_sliders(

@@ -1,9 +1,9 @@
-//! Commands Floem emits for a backend to execute, plus command batching.
+//! Commands Floom emits for a backend to execute, plus command batching.
 
 use super::{EmbedderWindowId, ImeState};
 use crate::style::CursorStyle;
 
-/// A command Floem emits for the backend to execute on the platform.
+/// A command Floom emits for the backend to execute on the platform.
 #[derive(Clone, Debug, PartialEq)]
 pub enum EmbedderCommand {
     /// Ask the backend to schedule a frame for this window.
@@ -89,7 +89,7 @@ impl CommandBatch {
     }
 }
 
-/// Trait for collecting commands emitted by Floem.
+/// Trait for collecting commands emitted by Floom.
 ///
 /// Implemented by [`VecCommandSink`] and by real backends that forward
 /// commands to their event loop.

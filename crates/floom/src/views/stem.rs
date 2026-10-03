@@ -4,9 +4,9 @@ use crate::view::{ParentView, View, ViewId};
 
 /// A generic container view that can hold multiple children.
 ///
-/// `Stem` is the simplest container in Floem - it's just a wrapper that can
+/// `Stem` is the simplest container in Floom - it's just a wrapper that can
 /// have children and be styled. It's analogous to HTML's `<div>` element.
-/// The name comes from Floem's botanical theme (phloem is plant tissue),
+/// The name comes from Floom's botanical theme (phloem is plant tissue),
 /// where a stem is the main structural support that holds branches.
 ///
 /// Use `Stem` when you need a container without any specific layout behavior.
@@ -14,7 +14,7 @@ use crate::view::{ParentView, View, ViewId};
 ///
 /// ## Example
 /// ```rust,ignore
-/// use floem::views::Stem;
+/// use floom::views::Stem;
 ///
 /// // Empty stem that can be styled
 /// Stem::new().style(|s| s.padding(10.0).background(Color::GRAY));
@@ -34,7 +34,7 @@ impl Stem {
     ///
     /// ## Example
     /// ```rust
-    /// use floem::views::Stem;
+    /// use floom::views::Stem;
     ///
     /// let container = Stem::new();
     /// ```

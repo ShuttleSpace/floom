@@ -1,4 +1,4 @@
-use floem::{
+use floom::{
     action::inspect,
     prelude::*,
     reactive::{Context, Scope},
@@ -63,5 +63,5 @@ fn app_view() -> impl IntoView {
 }
 
 fn main() {
-    floem::launch(app_view);
+    floom::launch(app_view);
 }

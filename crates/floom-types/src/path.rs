@@ -2,7 +2,7 @@
 //!
 //! Everything here is pure geometry in logical pixels — no scene, no backend.
 //! The path vocabulary lives at L0 because both the core paint contract
-//! (`floem-core`'s `PaintContext`) and the scene IR (`floem-scene`) have to be
+//! (`floom-core`'s `PaintContext`) and the scene IR (`floom-scene`) have to be
 //! able to name it, and neither may reach down into a renderer to do so.
 //!
 //! ## What a path is, and what it is not

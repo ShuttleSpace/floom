@@ -1,12 +1,12 @@
-//! Core layout tests for Floem.
+//! Core layout tests for Floom.
 //!
 //! These tests verify that taffy-based layout computation works correctly
 //! for various layout properties: sizing, flex, padding, margin, positioning.
 
-use floem::prelude::*;
-use floem::unit::Pct;
-use floem_legacy_test::TestRoot;
-use floem_legacy_test::prelude::*;
+use floom::prelude::*;
+use floom::unit::Pct;
+use floom_legacy_test::TestRoot;
+use floom_legacy_test::prelude::*;
 use serial_test::serial;
 
 // =============================================================================
@@ -460,7 +460,7 @@ fn test_padding_uniform() {
     let child_id = child.view_id();
 
     let container =
-        floem::views::Container::new(child).style(|s| s.padding(10.0).size(100.0, 100.0));
+        floom::views::Container::new(child).style(|s| s.padding(10.0).size(100.0, 100.0));
 
     let mut harness = HeadlessHarness::new_with_size(root, container, 200.0, 200.0);
     harness.rebuild();
@@ -485,7 +485,7 @@ fn test_padding_directional() {
     let child = Empty::new().style(|s| s.size(50.0, 50.0));
     let child_id = child.view_id();
 
-    let container = floem::views::Container::new(child).style(|s| {
+    let container = floom::views::Container::new(child).style(|s| {
         s.padding_left(5.0)
             .padding_top(10.0)
             .padding_right(15.0)
@@ -518,7 +518,7 @@ fn test_padding_reduces_content_area() {
     let child_id = child.view_id();
 
     let container =
-        floem::views::Container::new(child).style(|s| s.padding(20.0).size(100.0, 100.0));
+        floom::views::Container::new(child).style(|s| s.padding(20.0).size(100.0, 100.0));
 
     let mut harness = HeadlessHarness::new_with_size(root, container, 200.0, 200.0);
     harness.rebuild();
@@ -602,7 +602,7 @@ fn test_margin_directional() {
 fn test_margin_auto_centering() {
     let root = TestRoot::new();
     // margin_horiz_auto should center horizontally in flex container
-    let child = Empty::new().style(|s| s.margin_horiz(floem::style::Auto).size(50.0, 50.0));
+    let child = Empty::new().style(|s| s.margin_horiz(floom::style::Auto).size(50.0, 50.0));
     let child_id = child.view_id();
 
     let container = Stack::new((child,)).style(|s| s.flex_row().size(200.0, 100.0));
@@ -899,7 +899,7 @@ fn test_aspect_ratio_with_height() {
 #[serial]
 fn test_display_none_hides_element() {
     let root = TestRoot::new();
-    let child = Empty::new().style(|s| s.display(floem::taffy::Display::None).size(50.0, 50.0));
+    let child = Empty::new().style(|s| s.display(floom::taffy::Display::None).size(50.0, 50.0));
     let child_id = child.view_id();
 
     let container = Stack::new((child,)).style(|s| s.size(200.0, 200.0));
@@ -925,7 +925,7 @@ fn test_display_none_hides_element() {
 #[serial]
 fn test_display_none_does_not_affect_siblings() {
     let root = TestRoot::new();
-    let hidden = Empty::new().style(|s| s.display(floem::taffy::Display::None).size(100.0, 100.0));
+    let hidden = Empty::new().style(|s| s.display(floom::taffy::Display::None).size(100.0, 100.0));
     let visible = Empty::new().style(|s| s.size(50.0, 50.0));
     let visible_id = visible.view_id();
 
@@ -954,7 +954,7 @@ fn test_border_affects_layout() {
     let child = Empty::new().style(|s| s.size_full());
     let child_id = child.view_id();
 
-    let container = floem::views::Container::new(child).style(|s| s.border(5.0).size(100.0, 100.0));
+    let container = floom::views::Container::new(child).style(|s| s.border(5.0).size(100.0, 100.0));
 
     let mut harness = HeadlessHarness::new_with_size(root, container, 200.0, 200.0);
     harness.rebuild();

@@ -170,7 +170,7 @@ impl Parser {
             // A node key that collides with a property name therefore cannot
             // carry attributes of its own; that is a documented grammar rule,
             // not an accident.
-            if !is_event && !floem_ui_ir::prop_is_declared(&word) {
+            if !is_event && !floom_ui_ir::prop_is_declared(&word) {
                 break;
             }
             if is_event {
@@ -331,7 +331,7 @@ mod tests {
         assert_eq!(t.attrs[0].value, AstValue::Text("hi".into()));
         assert_eq!(
             t.attrs[1].value,
-            AstValue::Color(floem_ui_ir::Rgba::opaque(0x10, 0x20, 0x30))
+            AstValue::Color(floom_ui_ir::Rgba::opaque(0x10, 0x20, 0x30))
         );
         let b = &ast.root.children[1];
         assert_eq!(b.attrs[0].value, AstValue::Ident("filled".into()));

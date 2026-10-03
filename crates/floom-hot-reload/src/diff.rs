@@ -9,7 +9,7 @@
 
 use std::collections::HashMap;
 
-use floem_ui_ir::{NodeKey, UiDocument};
+use floom_ui_ir::{NodeKey, UiDocument};
 
 use crate::live::seat_props;
 use crate::patch::{PatchOp, UiPatch};
@@ -65,7 +65,7 @@ pub fn diff(old: &UiDocument, new: &UiDocument) -> UiPatch {
     let before = structure(old);
     let after = structure(new);
 
-    fn node_of(document: &UiDocument) -> HashMap<&NodeKey, &floem_ui_ir::UiNode> {
+    fn node_of(document: &UiDocument) -> HashMap<&NodeKey, &floom_ui_ir::UiNode> {
         document.nodes.iter().map(|n| (&n.key, n)).collect()
     }
     let old_nodes = node_of(old);
@@ -126,7 +126,7 @@ pub fn diff(old: &UiDocument, new: &UiDocument) -> UiPatch {
             });
         }
         if old_layout != new_layout {
-            if new_layout == floem_core::LayoutRequest::new() {
+            if new_layout == floom_core::LayoutRequest::new() {
                 ops.push(PatchOp::ClearLayout {
                     key: (*key).clone(),
                 });

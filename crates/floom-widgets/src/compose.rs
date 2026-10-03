@@ -21,8 +21,8 @@ use std::any::Any;
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::Arc;
 
-use floem_accessibility::SemanticsRole;
-use floem_core::{
+use floom_accessibility::SemanticsRole;
+use floom_core::{
     Align, AnimationSpec, Axis, Child, ChildKey, CompositorProp, CreateContext, Easing, ElementId,
     Inset, LayoutRequest, OverlayHandle, OverlayKind, OverlayRequest, PaintContext, Position,
     PresenceTransition, Rect, SemanticsContext, Transition, UpdateContext, Widget, WidgetAny,
@@ -342,7 +342,7 @@ impl Widget for Conditional {
         }
     }
 
-    fn animation(&self) -> Option<floem_core::AnimationSpec> {
+    fn animation(&self) -> Option<floom_core::AnimationSpec> {
         let spec = match self.phase {
             PresencePhase::Entering => self.enter?.spec(true),
             PresencePhase::Exiting => self.exit?.spec(false),
@@ -402,7 +402,7 @@ impl Widget for PresenceLeaf {
         self.inner.children()
     }
 
-    fn animation(&self) -> Option<floem_core::AnimationSpec> {
+    fn animation(&self) -> Option<floom_core::AnimationSpec> {
         self.inner.animation()
     }
 
@@ -751,7 +751,7 @@ impl Widget for SharedTransitionLayout {
         out
     }
 
-    fn animation(&self) -> Option<floem_core::AnimationSpec> {
+    fn animation(&self) -> Option<floom_core::AnimationSpec> {
         if self.phase != SharedPhase::Flying {
             return None;
         }
@@ -762,7 +762,7 @@ impl Widget for SharedTransitionLayout {
             (0.0, -delta)
         };
         Some(
-            floem_core::AnimationSpec::new(from, to, self.duration)
+            floom_core::AnimationSpec::new(from, to, self.duration)
                 .with_easing(self.easing)
                 .with_key(self.rev)
                 .with_prop(CompositorProp::TranslateY(0.0)),
@@ -789,7 +789,7 @@ impl WidgetAny for SharedTransitionLayout {
         self
     }
 
-    fn semantics_hint(&self) -> Option<floem_core::SemanticsHint> {
+    fn semantics_hint(&self) -> Option<floom_core::SemanticsHint> {
         Some(<Self>::semantics_hint(self).into())
     }
 }
@@ -924,7 +924,7 @@ impl Widget for AnimatedContentLeaf {
         self.inner.children()
     }
 
-    fn animation(&self) -> Option<floem_core::AnimationSpec> {
+    fn animation(&self) -> Option<floom_core::AnimationSpec> {
         self.inner.animation()
     }
 
@@ -956,7 +956,7 @@ impl WidgetAny for AnimatedContentLeaf {
         self
     }
 
-    fn semantics_hint(&self) -> Option<floem_core::SemanticsHint> {
+    fn semantics_hint(&self) -> Option<floom_core::SemanticsHint> {
         Some(<Self>::semantics_hint(self).into())
     }
 }
@@ -1107,7 +1107,7 @@ impl<T: Clone + Eq + Send + Sync + 'static> WidgetAny for AnimatedContent<T> {
         self
     }
 
-    fn semantics_hint(&self) -> Option<floem_core::SemanticsHint> {
+    fn semantics_hint(&self) -> Option<floom_core::SemanticsHint> {
         Some(<Self>::semantics_hint(self).into())
     }
 }
@@ -1758,7 +1758,7 @@ impl<T: Clone + Send + Sync + 'static> WidgetAny for List<T> {
         self
     }
 
-    fn semantics_hint(&self) -> Option<floem_core::SemanticsHint> {
+    fn semantics_hint(&self) -> Option<floom_core::SemanticsHint> {
         Some(<Self>::semantics_hint(self).into())
     }
 }
@@ -2052,7 +2052,7 @@ impl<T: Clone + Send + Sync + 'static> WidgetAny for Grid<T> {
         self
     }
 
-    fn semantics_hint(&self) -> Option<floem_core::SemanticsHint> {
+    fn semantics_hint(&self) -> Option<floom_core::SemanticsHint> {
         Some(<Self>::semantics_hint(self).into())
     }
 }
@@ -2405,7 +2405,7 @@ impl Widget for BottomSheet {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use floem_core::{Axis, Position};
+    use floom_core::{Axis, Position};
 
     #[test]
     fn stack_reports_its_children_and_axis() {

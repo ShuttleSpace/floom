@@ -3,8 +3,8 @@
 
 use std::collections::HashMap;
 
-use floem_types::ElementId;
-use floem_virtual::{ItemSizes, Overscan, VirtualViewport};
+use floom_types::ElementId;
+use floom_virtual::{ItemSizes, Overscan, VirtualViewport};
 
 #[test]
 fn uniform_visible_no_overscan() {

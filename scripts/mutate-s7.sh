@@ -37,11 +37,11 @@ mutate_one() {
   touch "$file"
 }
 
-SOFTWARE=render/floem-renderer-software/src/lib.rs
-HOST=app/floem-app/src/lib.rs
-CONTAINER=widgets/floem-widgets/src/primitives.rs
-SW_TESTS="cargo test -q -p floem-renderer-software --test filters"
-HOST_TESTS="cargo test -q -p floem-app --test filters"
+SOFTWARE=crates/floom-renderer-software/src/lib.rs
+HOST=crates/floom-app/src/lib.rs
+CONTAINER=crates/floom-widgets/src/primitives.rs
+SW_TESTS="cargo test -q -p floom-renderer-software --test filters"
+HOST_TESTS="cargo test -q -p floom-app --test filters"
 
 # 1. the layer is composited without ever being blurred — a filter that copies
 mutate_one "$SOFTWARE" \
@@ -119,7 +119,7 @@ mutate_one "$HOST" \
         // with no matching visual effect is one more thing that can go wrong.
         match self.nodes[index].widget.filter().filter(|f| !f.is_identity()) {" \
   "        // space the content was laid out in, not in the rotated one).
-        match None::<floem_types::Filter> {" \
+        match None::<floom_types::Filter> {" \
   "$HOST_TESTS" \
   "the-widgets-declaration-is-read"
 
@@ -134,14 +134,14 @@ mutate_one "$CONTAINER" \
 mutate_one "$SOFTWARE" \
   "        blur_window(&mut bytes, w, h, &layer.filter, self.scale);" \
   "        let _ = (&mut bytes, w, h, &layer.filter, self.scale);" \
-  "cargo run -q -p floem2-style" \
+  "cargo run -q -p floom2-style" \
   "example-filter-acts-have-teeth"
 
 # 12. ...and against a backdrop that does not replace what it read
 mutate_one "$SOFTWARE" \
   "                self.pixels[dst..dst + 4].copy_from_slice(&bytes[src..src + 4]);" \
   "                let _ = (dst, src, &bytes);" \
-  "cargo run -q -p floem2-style" \
+  "cargo run -q -p floom2-style" \
   "example-frost-act-has-teeth"
 
 # A restore-by-copy can land inside the same second as the mutated build, and

@@ -11,10 +11,10 @@
 //! counters are for, so the counts are asserted alongside the pixels rather
 //! than trusted.
 
-use floem_renderer::{FrameInfo, render_once};
-use floem_renderer_software::SoftwareRenderer;
-use floem_scene::{Point, Rect, Scene, SceneNode};
-use floem_types::{Brush, Color, Shadow};
+use floom_renderer::{FrameInfo, render_once};
+use floom_renderer_software::SoftwareRenderer;
+use floom_scene::{Point, Rect, Scene, SceneNode};
+use floom_types::{Brush, Color, Shadow};
 
 const RED: Color = Color::rgb(220, 40, 40);
 const BLUE: Color = Color::rgb(40, 60, 220);

@@ -3,8 +3,8 @@
 //! These tests verify that events are dispatched to views based on their
 //! visual stacking order (z-index), not just DOM order.
 
-use floem::style::Position;
-use floem_legacy_test::prelude::*;
+use floom::style::Position;
+use floom_legacy_test::prelude::*;
 use serial_test::serial;
 
 #[test]
@@ -1127,7 +1127,7 @@ fn test_display_none_to_visible_layout() {
     //               ├── item1 (100x30)
     //               └── item2 (100x30)
 
-    use floem::reactive::RwSignal;
+    use floom::reactive::RwSignal;
 
     let root = TestRoot::new();
     let tracker = ClickTracker::new();
@@ -1150,7 +1150,7 @@ fn test_display_none_to_visible_layout() {
         if open {
             base
         } else {
-            base.display(floem::style::Display::None)
+            base.display(floom::style::Display::None)
         }
     });
 
@@ -1168,7 +1168,7 @@ fn test_display_none_to_visible_layout() {
             if open {
                 base
             } else {
-                base.display(floem::style::Display::None)
+                base.display(floom::style::Display::None)
             }
         });
 
@@ -1202,7 +1202,7 @@ fn test_display_toggle_multiple_times() {
     //
     // This is a more comprehensive test of the display toggle bug.
 
-    use floem::reactive::RwSignal;
+    use floom::reactive::RwSignal;
 
     let root = TestRoot::new();
     let tracker = ClickTracker::new();
@@ -1224,7 +1224,7 @@ fn test_display_toggle_multiple_times() {
         if open {
             base
         } else {
-            base.display(floem::style::Display::None)
+            base.display(floom::style::Display::None)
         }
     });
 
@@ -1242,7 +1242,7 @@ fn test_display_toggle_multiple_times() {
             if open {
                 base
             } else {
-                base.display(floem::style::Display::None)
+                base.display(floom::style::Display::None)
             }
         });
 
@@ -1312,8 +1312,8 @@ fn test_inside_scroll_view_with_display_toggle() {
     //                   └── v_stack
     //                       └── items
 
-    use floem::reactive::RwSignal;
-    use floem::views::Scroll;
+    use floom::reactive::RwSignal;
+    use floom::views::Scroll;
 
     let root = TestRoot::new();
     let tracker = ClickTracker::new();
@@ -1336,7 +1336,7 @@ fn test_inside_scroll_view_with_display_toggle() {
         if open {
             base
         } else {
-            base.display(floem::style::Display::None)
+            base.display(floom::style::Display::None)
         }
     });
 
@@ -1354,7 +1354,7 @@ fn test_inside_scroll_view_with_display_toggle() {
             if open {
                 base
             } else {
-                base.display(floem::style::Display::None)
+                base.display(floom::style::Display::None)
             }
         });
 
@@ -1403,7 +1403,7 @@ fn test_inset_top_pct_positioning() {
     //           └── v_stack
     //               └── items
 
-    use floem::reactive::RwSignal;
+    use floom::reactive::RwSignal;
 
     let root = TestRoot::new();
     let tracker = ClickTracker::new();
@@ -1427,7 +1427,7 @@ fn test_inset_top_pct_positioning() {
         if open {
             base
         } else {
-            base.display(floem::style::Display::None)
+            base.display(floom::style::Display::None)
         }
     });
 
@@ -1445,7 +1445,7 @@ fn test_inset_top_pct_positioning() {
             if open {
                 base
             } else {
-                base.display(floem::style::Display::None)
+                base.display(floom::style::Display::None)
             }
         });
 
@@ -1659,7 +1659,7 @@ fn test_stacking_model_both_children_bounded() {
 #[test]
 #[serial]
 #[should_panic]
-/// floem views all create a stacking context and children cannot escape. In the future, if that changes this test should pass
+/// floom views all create a stacking context and children cannot escape. In the future, if that changes this test should pass
 fn test_dropdown_extends_beyond_scroll_area() {
     // Test that z-index event dispatch works correctly when a dropdown extends
     // beyond the scroll container's visible area.
@@ -1684,8 +1684,8 @@ fn test_dropdown_extends_beyond_scroll_area() {
     // With scroll container height of 100, items at y>80 are outside the visible area.
     // But they should still receive clicks because they're rendered with absolute positioning.
 
-    use floem::reactive::RwSignal;
-    use floem::views::Scroll;
+    use floom::reactive::RwSignal;
+    use floom::views::Scroll;
 
     let root = TestRoot::new();
     let tracker = ClickTracker::new();
@@ -1708,7 +1708,7 @@ fn test_dropdown_extends_beyond_scroll_area() {
         if open {
             base
         } else {
-            base.display(floem::style::Display::None)
+            base.display(floom::style::Display::None)
         }
     });
 
@@ -1726,7 +1726,7 @@ fn test_dropdown_extends_beyond_scroll_area() {
             if open {
                 base
             } else {
-                base.display(floem::style::Display::None)
+                base.display(floom::style::Display::None)
             }
         });
 

@@ -1,7 +1,7 @@
-//! Colour arithmetic the design systems need and `floem_types::Color` does not
+//! Colour arithmetic the design systems need and `floom_types::Color` does not
 //! provide: alpha replacement, interpolation, WCAG contrast, and a tonal ramp.
 
-use floem_types::Color;
+use floom_types::Color;
 
 /// WCAG 2.x contrast threshold for normal-size text.
 pub const WCAG_AA_NORMAL: f64 = 4.5;

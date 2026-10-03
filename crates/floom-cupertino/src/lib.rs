@@ -14,7 +14,7 @@
 //!    standing in for an elevated control.
 //!
 //! What it does share with Material is the *shape of the work*: a token table,
-//! a variant table, and a gallery — which is what [`floem_design`] exists for.
+//! a variant table, and a gallery — which is what [`floom_design`] exists for.
 
 mod button;
 mod gallery;
@@ -26,5 +26,5 @@ pub use button::{
 pub use gallery::{GALLERY_COLUMNS, button_gallery, button_gallery_labels};
 pub use tokens::{CupertinoColors, CupertinoTheme};
 
-pub use floem_design::{ControlSize, InteractionState, Variant};
-pub use floem_theme::ColorScheme;
+pub use floom_design::{ControlSize, InteractionState, Variant};
+pub use floom_theme::ColorScheme;

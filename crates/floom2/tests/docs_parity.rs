@@ -36,7 +36,7 @@ fn rows(md: &str) -> impl Iterator<Item = Vec<String>> + '_ {
 }
 
 /// The first backtick-quoted token in a cell, ignoring any trailing prose
-/// (the size table writes "`floem2-window` (`--features real`)").
+/// (the size table writes "`floom2-window` (`--features real`)").
 fn first_token(cell: &str) -> String {
     let rest = cell.trim_start_matches('`');
     let end = rest.find('`').unwrap_or(rest.len());
@@ -109,11 +109,11 @@ fn scripted_examples() -> Vec<String> {
 }
 
 #[test]
-fn every_floem2_example_is_documented() {
+fn every_floom2_example_is_documented() {
     let documented: Vec<String> = documented_examples().into_iter().map(|(n, _)| n).collect();
 
     for name in example_directories() {
-        if !name.starts_with("floem2-") {
+        if !name.starts_with("floom2-") {
             continue; // the v1 examples have their own docs
         }
         assert!(
@@ -218,7 +218,7 @@ fn documented_layers() -> BTreeMap<String, u8> {
         }
     }
     assert!(
-        layers.contains_key("floem2") && layers.contains_key("floem-types"),
+        layers.contains_key("floom2") && layers.contains_key("floom-types"),
         "the layer table did not parse: {:?}",
         layers.keys().take(5).collect::<Vec<_>>()
     );
@@ -345,34 +345,34 @@ fn the_bench_targets_named_by_the_policy_exist() {
 fn the_migration_guide_points_at_a_test_that_compiles_its_snippets() {
     let guide = read("docs/2.0/MIGRATION.md");
     assert!(
-        guide.contains("app/floem2/tests/migration.rs"),
+        guide.contains("crates/floom2/tests/migration.rs"),
         "the guide must say where its snippets are compiled"
     );
     assert!(
-        root().join("app/floem2/tests/migration.rs").exists(),
+        root().join("crates/floom2/tests/migration.rs").exists(),
         "the guide's snippet test is gone"
     );
 
     // The compat path it recommends must be the one that exists.
     assert!(
-        guide.contains("floem::compat::v1_prelude"),
+        guide.contains("floom::compat::v1_prelude"),
         "the guide must name the frozen v1 prelude"
     );
-    let v1 = read("src/lib.rs");
+    let v1 = read("crates/floom/src/lib.rs");
     assert!(
         v1.contains("pub mod compat") && v1.contains("pub mod v1_prelude"),
-        "`floem::compat::v1_prelude` no longer exists in src/lib.rs"
+        "`floom::compat::v1_prelude` no longer exists in crates/floom/src/lib.rs"
     );
 
     // And the diagnostic it quotes must be the diagnostic in the source.
-    let note = "v1 `floem::view::View` values are compatibility APIs and cannot be mounted into a Floem 2.0 host";
+    let note = "v1 `floom::view::View` values are compatibility APIs and cannot be mounted into a Floom 2.0 host";
     assert!(
-        guide.contains("is not a Floem 2.0 `Widget`"),
+        guide.contains("is not a Floom 2.0 `Widget`"),
         "the guide must quote the mount-point diagnostic"
     );
     for source in [
-        "foundation/floem-core/src/widget.rs",
-        "foundation/floem-core/src/widget_any.rs",
+        "crates/floom-core/src/widget.rs",
+        "crates/floom-core/src/widget_any.rs",
     ] {
         assert!(
             read(source).contains(note),

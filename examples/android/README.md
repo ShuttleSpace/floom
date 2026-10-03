@@ -1,7 +1,7 @@
-# Floem Android Example
+# Floom Android Example
 
-A minimal Floem counter app that runs on Android. It demonstrates the
-Phase 1 Android entry point: `floem::Application::new_android(app)`.
+A minimal Floom counter app that runs on Android. It demonstrates the
+Phase 1 Android entry point: `floom::Application::new_android(app)`.
 
 > Status: **skeleton**. The app compiles for `aarch64-linux-android` and the
 > event loop / input path reuses the lapce winit fork's Android backend. The
@@ -37,7 +37,7 @@ scripts/build-apk.sh --install            # then `adb install -r`
 scripts/build-apk.sh --skip-build         # repackage an already-built .so
 ```
 
-The APK lands in `target/android/floem_android_example-<abi>-<profile>.apk`.
+The APK lands in `target/android/floom_android_example-<abi>-<profile>.apk`.
 
 ### Why `cargo ndk` alone is not enough
 
@@ -52,12 +52,12 @@ Two separate things are going on, and both bite:
    `cdylib`. `Cargo.toml` now declares:
    ```toml
    [lib]
-   name = "floem_android_example"
+   name = "floom_android_example"
    path = "src/lib.rs"
    crate-type = ["cdylib"]
    ```
    and `android_main` + the JNI bridges moved from `src/main.rs` to
-   `src/lib.rs`. `src/main.rs` is now just a host placeholder.
+   `crates/floom/src/lib.rs`. `src/main.rs` is now just a host placeholder.
 
 `scripts/build-apk.sh` covers the packaging half with SDK tools only:
 `aapt2 link` → bundle `lib/` uncompressed → `zipalign -P 16` → `apksigner`
@@ -73,4 +73,4 @@ folder.
 The default configuration uses `android.app.NativeActivity` with
 `android:hasCode="false"`, which covers everything except receiving
 file-picker results and files shared into a *running* app. See the header of
-`FloemNativeActivity.java` for the three-step opt-in.
+`FloomNativeActivity.java` for the three-step opt-in.

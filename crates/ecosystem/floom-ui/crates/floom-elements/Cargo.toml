@@ -1,0 +1,827 @@
+[package]
+name = "floom-elements"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+floom = { workspace = true }
+floom-core-theme = { workspace = true }
+
+floom-widget-md-button = { path = "../material/md-button", optional = true }
+floom-widget-md-text = { path = "../material/md-text", optional = true }
+floom-widget-md-text-field = { path = "../material/md-text-field", optional = true }
+floom-widget-md-checkbox = { path = "../material/md-checkbox", optional = true }
+floom-widget-md-switch = { path = "../material/md-switch", optional = true }
+floom-widget-md-dialog = { path = "../material/md-dialog", optional = true }
+floom-widget-md-menu = { path = "../material/md-menu", optional = true }
+floom-widget-md-card = { path = "../material/md-card", optional = true }
+floom-widget-md-icon = { path = "../material/md-icon", optional = true }
+floom-widget-md-divider = { path = "../material/md-divider", optional = true }
+floom-widget-md-slider = { path = "../material/md-slider", optional = true }
+floom-widget-md-radio-group = { path = "../material/md-radio-group", optional = true }
+floom-widget-md-tooltip = { path = "../material/md-tooltip", optional = true }
+floom-widget-md-tabs = { path = "../material/md-tabs", optional = true }
+floom-widget-md-list = { path = "../material/md-list", optional = true }
+floom-widget-md-select = { path = "../material/md-select", optional = true }
+floom-widget-md-textarea = { path = "../material/md-textarea", optional = true }
+floom-widget-md-snackbar = { path = "../material/md-snackbar", optional = true }
+floom-widget-md-chip = { path = "../material/md-chip", optional = true }
+floom-widget-md-badge = { path = "../material/md-badge", optional = true }
+floom-widget-md-app_bar = { path = "../material/md-app_bar", optional = true }
+floom-widget-md-navigation_drawer = { path = "../material/md-navigation_drawer", optional = true }
+floom-widget-md-bottom_navigation = { path = "../material/md-bottom_navigation", optional = true }
+floom-widget-md-progress_linear = { path = "../material/md-progress_linear", optional = true }
+floom-widget-md-progress_circular = { path = "../material/md-progress_circular", optional = true }
+floom-widget-md-avatar = { path = "../material/md-avatar", optional = true }
+floom-widget-md-alert = { path = "../material/md-alert", optional = true }
+floom-widget-md-rating = { path = "../material/md-rating", optional = true }
+floom-widget-md-pagination = { path = "../material/md-pagination", optional = true }
+floom-widget-md-timeline = { path = "../material/md-timeline", optional = true }
+floom-widget-cupertino-button = { path = "../cupertino/cupertino-button", optional = true }
+floom-widget-cupertino-text = { path = "../cupertino/cupertino-text", optional = true }
+floom-widget-cupertino-text-field = { path = "../cupertino/cupertino-text-field", optional = true }
+floom-widget-cupertino-checkbox = { path = "../cupertino/cupertino-checkbox", optional = true }
+floom-widget-cupertino-switch = { path = "../cupertino/cupertino-switch", optional = true }
+floom-widget-cupertino-dialog = { path = "../cupertino/cupertino-dialog", optional = true }
+floom-widget-cupertino-menu = { path = "../cupertino/cupertino-menu", optional = true }
+floom-widget-cupertino-card = { path = "../cupertino/cupertino-card", optional = true }
+floom-widget-cupertino-icon = { path = "../cupertino/cupertino-icon", optional = true }
+floom-widget-cupertino-divider = { path = "../cupertino/cupertino-divider", optional = true }
+floom-widget-cupertino-slider = { path = "../cupertino/cupertino-slider", optional = true }
+floom-widget-cupertino-radio-group = { path = "../cupertino/cupertino-radio-group", optional = true }
+floom-widget-cupertino-tooltip = { path = "../cupertino/cupertino-tooltip", optional = true }
+floom-widget-cupertino-tabs = { path = "../cupertino/cupertino-tabs", optional = true }
+floom-widget-cupertino-list = { path = "../cupertino/cupertino-list", optional = true }
+floom-widget-cupertino-select = { path = "../cupertino/cupertino-select", optional = true }
+floom-widget-cupertino-textarea = { path = "../cupertino/cupertino-textarea", optional = true }
+floom-widget-cupertino-snackbar = { path = "../cupertino/cupertino-snackbar", optional = true }
+floom-widget-cupertino-chip = { path = "../cupertino/cupertino-chip", optional = true }
+floom-widget-cupertino-badge = { path = "../cupertino/cupertino-badge", optional = true }
+floom-widget-cupertino-app_bar = { path = "../cupertino/cupertino-app_bar", optional = true }
+floom-widget-cupertino-navigation_drawer = { path = "../cupertino/cupertino-navigation_drawer", optional = true }
+floom-widget-cupertino-bottom_navigation = { path = "../cupertino/cupertino-bottom_navigation", optional = true }
+floom-widget-cupertino-progress_linear = { path = "../cupertino/cupertino-progress_linear", optional = true }
+floom-widget-cupertino-progress_circular = { path = "../cupertino/cupertino-progress_circular", optional = true }
+floom-widget-cupertino-avatar = { path = "../cupertino/cupertino-avatar", optional = true }
+floom-widget-cupertino-alert = { path = "../cupertino/cupertino-alert", optional = true }
+floom-widget-cupertino-rating = { path = "../cupertino/cupertino-rating", optional = true }
+floom-widget-cupertino-pagination = { path = "../cupertino/cupertino-pagination", optional = true }
+floom-widget-cupertino-timeline = { path = "../cupertino/cupertino-timeline", optional = true }
+floom-widget-fluent-button = { path = "../fluent/fluent-button", optional = true }
+floom-widget-fluent-text = { path = "../fluent/fluent-text", optional = true }
+floom-widget-fluent-text-field = { path = "../fluent/fluent-text-field", optional = true }
+floom-widget-fluent-checkbox = { path = "../fluent/fluent-checkbox", optional = true }
+floom-widget-fluent-switch = { path = "../fluent/fluent-switch", optional = true }
+floom-widget-fluent-dialog = { path = "../fluent/fluent-dialog", optional = true }
+floom-widget-fluent-menu = { path = "../fluent/fluent-menu", optional = true }
+floom-widget-fluent-card = { path = "../fluent/fluent-card", optional = true }
+floom-widget-fluent-icon = { path = "../fluent/fluent-icon", optional = true }
+floom-widget-fluent-divider = { path = "../fluent/fluent-divider", optional = true }
+floom-widget-fluent-slider = { path = "../fluent/fluent-slider", optional = true }
+floom-widget-fluent-radio-group = { path = "../fluent/fluent-radio-group", optional = true }
+floom-widget-fluent-tooltip = { path = "../fluent/fluent-tooltip", optional = true }
+floom-widget-fluent-tabs = { path = "../fluent/fluent-tabs", optional = true }
+floom-widget-fluent-list = { path = "../fluent/fluent-list", optional = true }
+floom-widget-fluent-select = { path = "../fluent/fluent-select", optional = true }
+floom-widget-fluent-textarea = { path = "../fluent/fluent-textarea", optional = true }
+floom-widget-fluent-snackbar = { path = "../fluent/fluent-snackbar", optional = true }
+floom-widget-fluent-chip = { path = "../fluent/fluent-chip", optional = true }
+floom-widget-fluent-badge = { path = "../fluent/fluent-badge", optional = true }
+floom-widget-fluent-app_bar = { path = "../fluent/fluent-app_bar", optional = true }
+floom-widget-fluent-navigation_drawer = { path = "../fluent/fluent-navigation_drawer", optional = true }
+floom-widget-fluent-bottom_navigation = { path = "../fluent/fluent-bottom_navigation", optional = true }
+floom-widget-fluent-progress_linear = { path = "../fluent/fluent-progress_linear", optional = true }
+floom-widget-fluent-progress_circular = { path = "../fluent/fluent-progress_circular", optional = true }
+floom-widget-fluent-avatar = { path = "../fluent/fluent-avatar", optional = true }
+floom-widget-fluent-alert = { path = "../fluent/fluent-alert", optional = true }
+floom-widget-fluent-rating = { path = "../fluent/fluent-rating", optional = true }
+floom-widget-fluent-pagination = { path = "../fluent/fluent-pagination", optional = true }
+floom-widget-fluent-timeline = { path = "../fluent/fluent-timeline", optional = true }
+floom-widget-md-image = { path = "../material/md-image", optional = true }
+floom-widget-md-banner = { path = "../material/md-banner", optional = true }
+floom-widget-md-skeleton_loader = { path = "../material/md-skeleton_loader", optional = true }
+floom-widget-md-toolbar = { path = "../material/md-toolbar", optional = true }
+floom-widget-md-sheet = { path = "../material/md-sheet", optional = true }
+floom-widget-cupertino-image = { path = "../cupertino/cupertino-image", optional = true }
+floom-widget-cupertino-banner = { path = "../cupertino/cupertino-banner", optional = true }
+floom-widget-cupertino-skeleton_loader = { path = "../cupertino/cupertino-skeleton_loader", optional = true }
+floom-widget-cupertino-toolbar = { path = "../cupertino/cupertino-toolbar", optional = true }
+floom-widget-cupertino-sheet = { path = "../cupertino/cupertino-sheet", optional = true }
+floom-widget-fluent-image = { path = "../fluent/fluent-image", optional = true }
+floom-widget-fluent-banner = { path = "../fluent/fluent-banner", optional = true }
+floom-widget-fluent-skeleton_loader = { path = "../fluent/fluent-skeleton_loader", optional = true }
+floom-widget-fluent-toolbar = { path = "../fluent/fluent-toolbar", optional = true }
+floom-widget-fluent-sheet = { path = "../fluent/fluent-sheet", optional = true }
+floom-widget-md-container = { path = "../material/md-container", optional = true }
+floom-widget-md-grid = { path = "../material/md-grid", optional = true }
+floom-widget-md-spacer = { path = "../material/md-spacer", optional = true }
+floom-widget-md-footer = { path = "../material/md-footer", optional = true }
+floom-widget-md-system_bar = { path = "../material/md-system_bar", optional = true }
+floom-widget-cupertino-container = { path = "../cupertino/cupertino-container", optional = true }
+floom-widget-cupertino-grid = { path = "../cupertino/cupertino-grid", optional = true }
+floom-widget-cupertino-spacer = { path = "../cupertino/cupertino-spacer", optional = true }
+floom-widget-cupertino-footer = { path = "../cupertino/cupertino-footer", optional = true }
+floom-widget-cupertino-system_bar = { path = "../cupertino/cupertino-system_bar", optional = true }
+floom-widget-fluent-container = { path = "../fluent/fluent-container", optional = true }
+floom-widget-fluent-grid = { path = "../fluent/fluent-grid", optional = true }
+floom-widget-fluent-spacer = { path = "../fluent/fluent-spacer", optional = true }
+floom-widget-fluent-footer = { path = "../fluent/fluent-footer", optional = true }
+floom-widget-fluent-system_bar = { path = "../fluent/fluent-system_bar", optional = true }
+floom-widget-md-combobox = { path = "../material/md-combobox", optional = true }
+floom-widget-md-autocomplete = { path = "../material/md-autocomplete", optional = true }
+floom-widget-md-date_picker = { path = "../material/md-date_picker", optional = true }
+floom-widget-md-time_picker = { path = "../material/md-time_picker", optional = true }
+floom-widget-md-empty_state = { path = "../material/md-empty_state", optional = true }
+floom-widget-cupertino-combobox = { path = "../cupertino/cupertino-combobox", optional = true }
+floom-widget-cupertino-autocomplete = { path = "../cupertino/cupertino-autocomplete", optional = true }
+floom-widget-cupertino-date_picker = { path = "../cupertino/cupertino-date_picker", optional = true }
+floom-widget-cupertino-time_picker = { path = "../cupertino/cupertino-time_picker", optional = true }
+floom-widget-cupertino-empty_state = { path = "../cupertino/cupertino-empty_state", optional = true }
+floom-widget-fluent-combobox = { path = "../fluent/fluent-combobox", optional = true }
+floom-widget-fluent-autocomplete = { path = "../fluent/fluent-autocomplete", optional = true }
+floom-widget-fluent-date_picker = { path = "../fluent/fluent-date_picker", optional = true }
+floom-widget-fluent-time_picker = { path = "../fluent/fluent-time_picker", optional = true }
+floom-widget-fluent-empty_state = { path = "../fluent/fluent-empty_state", optional = true }
+floom-widget-md-datatable = { path = "../material/md-datatable", optional = true }
+floom-widget-md-treeview = { path = "../material/md-treeview", optional = true }
+floom-widget-md-calendar = { path = "../material/md-calendar", optional = true }
+floom-widget-md-carousel = { path = "../material/md-carousel", optional = true }
+floom-widget-md-virtual_scroller = { path = "../material/md-virtual_scroller", optional = true }
+floom-widget-md-theme_provider = { path = "../material/md-theme_provider", optional = true }
+floom-widget-md-locale_provider = { path = "../material/md-locale_provider", optional = true }
+floom-widget-md-display_provider = { path = "../material/md-display_provider", optional = true }
+floom-widget-md-defaults_provider = { path = "../material/md-defaults_provider", optional = true }
+floom-widget-md-icons_provider = { path = "../material/md-icons_provider", optional = true }
+floom-widget-md-date_adapter_provider = { path = "../material/md-date_adapter_provider", optional = true }
+floom-widget-md-window = { path = "../material/md-window", optional = true }
+floom-widget-md-slide_group = { path = "../material/md-slide_group", optional = true }
+floom-widget-md-item_group = { path = "../material/md-item_group", optional = true }
+floom-widget-md-color_picker = { path = "../material/md-color_picker", optional = true }
+floom-widget-md-stepper = { path = "../material/md-stepper", optional = true }
+floom-widget-md-breadcrumbs = { path = "../material/md-breadcrumbs", optional = true }
+floom-widget-md-form = { path = "../material/md-form", optional = true }
+floom-widget-md-validation_messages = { path = "../material/md-validation_messages", optional = true }
+floom-widget-cupertino-datatable = { path = "../cupertino/cupertino-datatable", optional = true }
+floom-widget-cupertino-treeview = { path = "../cupertino/cupertino-treeview", optional = true }
+floom-widget-cupertino-calendar = { path = "../cupertino/cupertino-calendar", optional = true }
+floom-widget-cupertino-carousel = { path = "../cupertino/cupertino-carousel", optional = true }
+floom-widget-cupertino-virtual_scroller = { path = "../cupertino/cupertino-virtual_scroller", optional = true }
+floom-widget-cupertino-theme_provider = { path = "../cupertino/cupertino-theme_provider", optional = true }
+floom-widget-cupertino-locale_provider = { path = "../cupertino/cupertino-locale_provider", optional = true }
+floom-widget-cupertino-display_provider = { path = "../cupertino/cupertino-display_provider", optional = true }
+floom-widget-cupertino-defaults_provider = { path = "../cupertino/cupertino-defaults_provider", optional = true }
+floom-widget-cupertino-icons_provider = { path = "../cupertino/cupertino-icons_provider", optional = true }
+floom-widget-cupertino-date_adapter_provider = { path = "../cupertino/cupertino-date_adapter_provider", optional = true }
+floom-widget-cupertino-window = { path = "../cupertino/cupertino-window", optional = true }
+floom-widget-cupertino-slide_group = { path = "../cupertino/cupertino-slide_group", optional = true }
+floom-widget-cupertino-item_group = { path = "../cupertino/cupertino-item_group", optional = true }
+floom-widget-cupertino-color_picker = { path = "../cupertino/cupertino-color_picker", optional = true }
+floom-widget-cupertino-stepper = { path = "../cupertino/cupertino-stepper", optional = true }
+floom-widget-cupertino-breadcrumbs = { path = "../cupertino/cupertino-breadcrumbs", optional = true }
+floom-widget-cupertino-form = { path = "../cupertino/cupertino-form", optional = true }
+floom-widget-cupertino-validation_messages = { path = "../cupertino/cupertino-validation_messages", optional = true }
+floom-widget-fluent-datatable = { path = "../fluent/fluent-datatable", optional = true }
+floom-widget-fluent-treeview = { path = "../fluent/fluent-treeview", optional = true }
+floom-widget-fluent-calendar = { path = "../fluent/fluent-calendar", optional = true }
+floom-widget-fluent-carousel = { path = "../fluent/fluent-carousel", optional = true }
+floom-widget-fluent-virtual_scroller = { path = "../fluent/fluent-virtual_scroller", optional = true }
+floom-widget-fluent-theme_provider = { path = "../fluent/fluent-theme_provider", optional = true }
+floom-widget-fluent-locale_provider = { path = "../fluent/fluent-locale_provider", optional = true }
+floom-widget-fluent-display_provider = { path = "../fluent/fluent-display_provider", optional = true }
+floom-widget-fluent-defaults_provider = { path = "../fluent/fluent-defaults_provider", optional = true }
+floom-widget-fluent-icons_provider = { path = "../fluent/fluent-icons_provider", optional = true }
+floom-widget-fluent-date_adapter_provider = { path = "../fluent/fluent-date_adapter_provider", optional = true }
+floom-widget-fluent-window = { path = "../fluent/fluent-window", optional = true }
+floom-widget-fluent-slide_group = { path = "../fluent/fluent-slide_group", optional = true }
+floom-widget-fluent-item_group = { path = "../fluent/fluent-item_group", optional = true }
+floom-widget-fluent-color_picker = { path = "../fluent/fluent-color_picker", optional = true }
+floom-widget-fluent-stepper = { path = "../fluent/fluent-stepper", optional = true }
+floom-widget-fluent-breadcrumbs = { path = "../fluent/fluent-breadcrumbs", optional = true }
+floom-widget-fluent-form = { path = "../fluent/fluent-form", optional = true }
+floom-widget-fluent-validation_messages = { path = "../fluent/fluent-validation_messages", optional = true }
+floom-widget-md-app = { path = "../material/md-app", optional = true }
+floom-widget-md-main = { path = "../material/md-main", optional = true }
+floom-widget-cupertino-app = { path = "../cupertino/cupertino-app", optional = true }
+floom-widget-cupertino-main = { path = "../cupertino/cupertino-main", optional = true }
+floom-widget-fluent-app = { path = "../fluent/fluent-app", optional = true }
+floom-widget-fluent-main = { path = "../fluent/fluent-main", optional = true }
+
+floom-widget-md-button_group = { path = "../material/md-button_group", optional = true }
+floom-widget-md-floating_action_button = { path = "../material/md-floating_action_button", optional = true }
+floom-widget-md-range_slider = { path = "../material/md-range_slider", optional = true }
+floom-widget-md-file_input = { path = "../material/md-file_input", optional = true }
+floom-widget-md-otp_input = { path = "../material/md-otp_input", optional = true }
+floom-widget-cupertino-button_group = { path = "../cupertino/cupertino-button_group", optional = true }
+floom-widget-cupertino-floating_action_button = { path = "../cupertino/cupertino-floating_action_button", optional = true }
+floom-widget-cupertino-range_slider = { path = "../cupertino/cupertino-range_slider", optional = true }
+floom-widget-cupertino-file_input = { path = "../cupertino/cupertino-file_input", optional = true }
+floom-widget-cupertino-otp_input = { path = "../cupertino/cupertino-otp_input", optional = true }
+floom-widget-fluent-button_group = { path = "../fluent/fluent-button_group", optional = true }
+floom-widget-fluent-floating_action_button = { path = "../fluent/fluent-floating_action_button", optional = true }
+floom-widget-fluent-range_slider = { path = "../fluent/fluent-range_slider", optional = true }
+floom-widget-fluent-file_input = { path = "../fluent/fluent-file_input", optional = true }
+floom-widget-fluent-otp_input = { path = "../fluent/fluent-otp_input", optional = true }
+floom-widget-md-list_item = { path = "../material/md-list_item", optional = true }
+floom-widget-md-table = { path = "../material/md-table", optional = true }
+floom-widget-md-data_iterator = { path = "../material/md-data_iterator", optional = true }
+floom-widget-md-sparkline = { path = "../material/md-sparkline", optional = true }
+floom-widget-md-kbd = { path = "../material/md-kbd", optional = true }
+floom-widget-md-code = { path = "../material/md-code", optional = true }
+floom-widget-cupertino-list_item = { path = "../cupertino/cupertino-list_item", optional = true }
+floom-widget-cupertino-table = { path = "../cupertino/cupertino-table", optional = true }
+floom-widget-cupertino-data_iterator = { path = "../cupertino/cupertino-data_iterator", optional = true }
+floom-widget-cupertino-sparkline = { path = "../cupertino/cupertino-sparkline", optional = true }
+floom-widget-cupertino-kbd = { path = "../cupertino/cupertino-kbd", optional = true }
+floom-widget-cupertino-code = { path = "../cupertino/cupertino-code", optional = true }
+floom-widget-fluent-list_item = { path = "../fluent/fluent-list_item", optional = true }
+floom-widget-fluent-table = { path = "../fluent/fluent-table", optional = true }
+floom-widget-fluent-data_iterator = { path = "../fluent/fluent-data_iterator", optional = true }
+floom-widget-fluent-sparkline = { path = "../fluent/fluent-sparkline", optional = true }
+floom-widget-fluent-kbd = { path = "../fluent/fluent-kbd", optional = true }
+floom-widget-fluent-code = { path = "../fluent/fluent-code", optional = true }
+floom-widget-md-radio = { path = "../material/md-radio", optional = true }
+floom-widget-md-overlay = { path = "../material/md-overlay", optional = true }
+floom-widget-cupertino-radio = { path = "../cupertino/cupertino-radio", optional = true }
+floom-widget-cupertino-overlay = { path = "../cupertino/cupertino-overlay", optional = true }
+floom-widget-fluent-radio = { path = "../fluent/fluent-radio", optional = true }
+floom-widget-fluent-overlay = { path = "../fluent/fluent-overlay", optional = true }
+floom-widget-md-parallax = { path = "../material/md-parallax", optional = true }
+floom-widget-md-infinite_scroller = { path = "../material/md-infinite_scroller", optional = true }
+floom-widget-md-hover = { path = "../material/md-hover", optional = true }
+floom-widget-cupertino-parallax = { path = "../cupertino/cupertino-parallax", optional = true }
+floom-widget-cupertino-infinite_scroller = { path = "../cupertino/cupertino-infinite_scroller", optional = true }
+floom-widget-cupertino-hover = { path = "../cupertino/cupertino-hover", optional = true }
+floom-widget-fluent-parallax = { path = "../fluent/fluent-parallax", optional = true }
+floom-widget-fluent-infinite_scroller = { path = "../fluent/fluent-infinite_scroller", optional = true }
+floom-widget-fluent-hover = { path = "../fluent/fluent-hover", optional = true }
+floom-widget-md-fade_transition = { path = "../material/md-fade_transition", optional = true }
+floom-widget-md-scale_transition = { path = "../material/md-scale_transition", optional = true }
+floom-widget-md-expand_transition = { path = "../material/md-expand_transition", optional = true }
+floom-widget-md-slide_transition = { path = "../material/md-slide_transition", optional = true }
+floom-widget-cupertino-fade_transition = { path = "../cupertino/cupertino-fade_transition", optional = true }
+floom-widget-cupertino-scale_transition = { path = "../cupertino/cupertino-scale_transition", optional = true }
+floom-widget-cupertino-expand_transition = { path = "../cupertino/cupertino-expand_transition", optional = true }
+floom-widget-cupertino-slide_transition = { path = "../cupertino/cupertino-slide_transition", optional = true }
+floom-widget-fluent-fade_transition = { path = "../fluent/fluent-fade_transition", optional = true }
+floom-widget-fluent-scale_transition = { path = "../fluent/fluent-scale_transition", optional = true }
+floom-widget-fluent-expand_transition = { path = "../fluent/fluent-expand_transition", optional = true }
+floom-widget-fluent-slide_transition = { path = "../fluent/fluent-slide_transition", optional = true }
+floom-widget-md-icon_button = { path = "../material/md-icon_button", optional = true }
+floom-widget-md-expansion_panels = { path = "../material/md-expansion_panels", optional = true }
+floom-widget-md-speed_dial = { path = "../material/md-speed_dial", optional = true }
+floom-widget-md-chip_group = { path = "../material/md-chip_group", optional = true }
+floom-widget-md-list_group = { path = "../material/md-list_group", optional = true }
+floom-widget-md-counter = { path = "../material/md-counter", optional = true }
+floom-widget-md-responsive = { path = "../material/md-responsive", optional = true }
+floom-widget-md-checkbox_btn = { path = "../material/md-checkbox_btn", optional = true }
+floom-widget-md-list_subheader = { path = "../material/md-list_subheader", optional = true }
+floom-widget-cupertino-icon_button = { path = "../cupertino/cupertino-icon_button", optional = true }
+floom-widget-cupertino-expansion_panels = { path = "../cupertino/cupertino-expansion_panels", optional = true }
+floom-widget-cupertino-speed_dial = { path = "../cupertino/cupertino-speed_dial", optional = true }
+floom-widget-cupertino-chip_group = { path = "../cupertino/cupertino-chip_group", optional = true }
+floom-widget-cupertino-list_group = { path = "../cupertino/cupertino-list_group", optional = true }
+floom-widget-cupertino-counter = { path = "../cupertino/cupertino-counter", optional = true }
+floom-widget-cupertino-responsive = { path = "../cupertino/cupertino-responsive", optional = true }
+floom-widget-cupertino-checkbox_btn = { path = "../cupertino/cupertino-checkbox_btn", optional = true }
+floom-widget-cupertino-list_subheader = { path = "../cupertino/cupertino-list_subheader", optional = true }
+floom-widget-fluent-icon_button = { path = "../fluent/fluent-icon_button", optional = true }
+floom-widget-fluent-expansion_panels = { path = "../fluent/fluent-expansion_panels", optional = true }
+floom-widget-fluent-speed_dial = { path = "../fluent/fluent-speed_dial", optional = true }
+floom-widget-fluent-chip_group = { path = "../fluent/fluent-chip_group", optional = true }
+floom-widget-fluent-list_group = { path = "../fluent/fluent-list_group", optional = true }
+floom-widget-fluent-counter = { path = "../fluent/fluent-counter", optional = true }
+floom-widget-fluent-responsive = { path = "../fluent/fluent-responsive", optional = true }
+floom-widget-fluent-checkbox_btn = { path = "../fluent/fluent-checkbox_btn", optional = true }
+floom-widget-fluent-list_subheader = { path = "../fluent/fluent-list_subheader", optional = true }
+floom-widget-md-number_input = { path = "../material/md-number_input", optional = true }
+floom-widget-md-pull_to_refresh = { path = "../material/md-pull_to_refresh", optional = true }
+floom-widget-md-confirm_edit = { path = "../material/md-confirm_edit", optional = true }
+floom-widget-cupertino-number_input = { path = "../cupertino/cupertino-number_input", optional = true }
+floom-widget-cupertino-pull_to_refresh = { path = "../cupertino/cupertino-pull_to_refresh", optional = true }
+floom-widget-cupertino-confirm_edit = { path = "../cupertino/cupertino-confirm_edit", optional = true }
+floom-widget-fluent-number_input = { path = "../fluent/fluent-number_input", optional = true }
+floom-widget-fluent-pull_to_refresh = { path = "../fluent/fluent-pull_to_refresh", optional = true }
+floom-widget-fluent-confirm_edit = { path = "../fluent/fluent-confirm_edit", optional = true }
+[features]
+material = [
+    "floom-core-theme/material",
+    "floom-widget-md-button",
+    "floom-widget-md-text",
+    "floom-widget-md-text-field",
+    "floom-widget-md-checkbox",
+    "floom-widget-md-switch",
+    "floom-widget-md-dialog",
+    "floom-widget-md-menu",
+    "floom-widget-md-card",
+    "floom-widget-md-icon",
+    "floom-widget-md-divider",
+    "floom-widget-md-slider",
+    "floom-widget-md-radio-group",
+    "floom-widget-md-tooltip",
+    "floom-widget-md-tabs",
+    "floom-widget-md-list",
+    "floom-widget-md-select",
+    "floom-widget-md-textarea",
+    "floom-widget-md-snackbar",
+    "floom-widget-md-chip",
+    "floom-widget-md-badge",
+    "floom-widget-md-app_bar",
+    "floom-widget-md-navigation_drawer",
+    "floom-widget-md-bottom_navigation",
+    "floom-widget-md-progress_linear",
+    "floom-widget-md-progress_circular",
+    "floom-widget-md-avatar",
+    "floom-widget-md-alert",
+    "floom-widget-md-rating",
+    "floom-widget-md-pagination",
+    "floom-widget-md-timeline",
+    "floom-widget-md-image",
+    "floom-widget-md-banner",
+    "floom-widget-md-skeleton_loader",
+    "floom-widget-md-toolbar",
+    "floom-widget-md-sheet",
+    "floom-widget-md-container",
+    "floom-widget-md-grid",
+    "floom-widget-md-spacer",
+    "floom-widget-md-footer",
+    "floom-widget-md-system_bar",
+    "floom-widget-md-combobox",
+    "floom-widget-md-autocomplete",
+    "floom-widget-md-date_picker",
+    "floom-widget-md-time_picker",
+    "floom-widget-md-empty_state",
+    "floom-widget-md-datatable",
+    "floom-widget-md-treeview",
+    "floom-widget-md-calendar",
+    "floom-widget-md-carousel",
+    "floom-widget-md-virtual_scroller",
+    "floom-widget-md-app",
+    "floom-widget-md-main",
+    "floom-widget-md-theme_provider",
+    "floom-widget-md-locale_provider",
+    "floom-widget-md-display_provider",
+    "floom-widget-md-defaults_provider",
+    "floom-widget-md-icons_provider",
+    "floom-widget-md-date_adapter_provider",
+    "floom-widget-md-window",
+    "floom-widget-md-slide_group",
+    "floom-widget-md-item_group",
+    "floom-widget-md-color_picker",
+    "floom-widget-md-stepper",
+    "floom-widget-md-breadcrumbs",
+    "floom-widget-md-form",
+    "floom-widget-md-button_group",
+    "floom-widget-md-floating_action_button",
+    "floom-widget-md-range_slider",
+    "floom-widget-md-file_input",
+    "floom-widget-md-otp_input",
+    "floom-widget-md-list_item",
+    "floom-widget-md-table",
+    "floom-widget-md-data_iterator",
+    "floom-widget-md-sparkline",
+    "floom-widget-md-kbd",
+    "floom-widget-md-code",
+    "floom-widget-md-radio",
+    "floom-widget-md-overlay",
+    "floom-widget-md-parallax",
+    "floom-widget-md-infinite_scroller",
+    "floom-widget-md-hover",
+    "floom-widget-md-fade_transition",
+    "floom-widget-md-scale_transition",
+    "floom-widget-md-expand_transition",
+    "floom-widget-md-slide_transition",
+    "floom-widget-md-icon_button",
+    "floom-widget-md-expansion_panels",
+    "floom-widget-md-speed_dial",
+    "floom-widget-md-chip_group",
+    "floom-widget-md-list_group",
+    "floom-widget-md-counter",
+    "floom-widget-md-responsive",
+    "floom-widget-md-checkbox_btn",
+    "floom-widget-md-list_subheader",
+    "floom-widget-md-validation_messages",
+    "floom-widget-md-number_input",
+    "floom-widget-md-pull_to_refresh",
+    "floom-widget-md-confirm_edit",
+]
+cupertino = [
+    "floom-core-theme/cupertino",
+    "floom-widget-cupertino-button",
+    "floom-widget-cupertino-text",
+    "floom-widget-cupertino-text-field",
+    "floom-widget-cupertino-checkbox",
+    "floom-widget-cupertino-switch",
+    "floom-widget-cupertino-dialog",
+    "floom-widget-cupertino-menu",
+    "floom-widget-cupertino-card",
+    "floom-widget-cupertino-icon",
+    "floom-widget-cupertino-divider",
+    "floom-widget-cupertino-slider",
+    "floom-widget-cupertino-radio-group",
+    "floom-widget-cupertino-tooltip",
+    "floom-widget-cupertino-tabs",
+    "floom-widget-cupertino-list",
+    "floom-widget-cupertino-select",
+    "floom-widget-cupertino-textarea",
+    "floom-widget-cupertino-snackbar",
+    "floom-widget-cupertino-chip",
+    "floom-widget-cupertino-badge",
+    "floom-widget-cupertino-app_bar",
+    "floom-widget-cupertino-navigation_drawer",
+    "floom-widget-cupertino-bottom_navigation",
+    "floom-widget-cupertino-progress_linear",
+    "floom-widget-cupertino-progress_circular",
+    "floom-widget-cupertino-avatar",
+    "floom-widget-cupertino-alert",
+    "floom-widget-cupertino-rating",
+    "floom-widget-cupertino-pagination",
+    "floom-widget-cupertino-timeline",
+    "floom-widget-cupertino-image",
+    "floom-widget-cupertino-banner",
+    "floom-widget-cupertino-skeleton_loader",
+    "floom-widget-cupertino-toolbar",
+    "floom-widget-cupertino-sheet",
+    "floom-widget-cupertino-container",
+    "floom-widget-cupertino-grid",
+    "floom-widget-cupertino-spacer",
+    "floom-widget-cupertino-footer",
+    "floom-widget-cupertino-system_bar",
+    "floom-widget-cupertino-combobox",
+    "floom-widget-cupertino-autocomplete",
+    "floom-widget-cupertino-date_picker",
+    "floom-widget-cupertino-time_picker",
+    "floom-widget-cupertino-empty_state",
+    "floom-widget-cupertino-datatable",
+    "floom-widget-cupertino-treeview",
+    "floom-widget-cupertino-calendar",
+    "floom-widget-cupertino-carousel",
+    "floom-widget-cupertino-virtual_scroller",
+    "floom-widget-cupertino-app",
+    "floom-widget-cupertino-main",
+    "floom-widget-cupertino-theme_provider",
+    "floom-widget-cupertino-locale_provider",
+    "floom-widget-cupertino-display_provider",
+    "floom-widget-cupertino-defaults_provider",
+    "floom-widget-cupertino-icons_provider",
+    "floom-widget-cupertino-date_adapter_provider",
+    "floom-widget-cupertino-window",
+    "floom-widget-cupertino-slide_group",
+    "floom-widget-cupertino-item_group",
+    "floom-widget-cupertino-color_picker",
+    "floom-widget-cupertino-stepper",
+    "floom-widget-cupertino-breadcrumbs",
+    "floom-widget-cupertino-form",
+    "floom-widget-cupertino-button_group",
+    "floom-widget-cupertino-floating_action_button",
+    "floom-widget-cupertino-range_slider",
+    "floom-widget-cupertino-file_input",
+    "floom-widget-cupertino-otp_input",
+    "floom-widget-cupertino-list_item",
+    "floom-widget-cupertino-table",
+    "floom-widget-cupertino-data_iterator",
+    "floom-widget-cupertino-sparkline",
+    "floom-widget-cupertino-kbd",
+    "floom-widget-cupertino-code",
+    "floom-widget-cupertino-radio",
+    "floom-widget-cupertino-overlay",
+    "floom-widget-cupertino-parallax",
+    "floom-widget-cupertino-infinite_scroller",
+    "floom-widget-cupertino-hover",
+    "floom-widget-cupertino-fade_transition",
+    "floom-widget-cupertino-scale_transition",
+    "floom-widget-cupertino-expand_transition",
+    "floom-widget-cupertino-slide_transition",
+    "floom-widget-cupertino-icon_button",
+    "floom-widget-cupertino-expansion_panels",
+    "floom-widget-cupertino-speed_dial",
+    "floom-widget-cupertino-chip_group",
+    "floom-widget-cupertino-list_group",
+    "floom-widget-cupertino-counter",
+    "floom-widget-cupertino-responsive",
+    "floom-widget-cupertino-checkbox_btn",
+    "floom-widget-cupertino-list_subheader",
+    "floom-widget-cupertino-validation_messages",
+    "floom-widget-cupertino-number_input",
+    "floom-widget-cupertino-pull_to_refresh",
+    "floom-widget-cupertino-confirm_edit",
+]
+fluent = [
+    "floom-core-theme/fluent",
+    "floom-widget-fluent-button",
+    "floom-widget-fluent-text",
+    "floom-widget-fluent-text-field",
+    "floom-widget-fluent-checkbox",
+    "floom-widget-fluent-switch",
+    "floom-widget-fluent-dialog",
+    "floom-widget-fluent-menu",
+    "floom-widget-fluent-card",
+    "floom-widget-fluent-icon",
+    "floom-widget-fluent-divider",
+    "floom-widget-fluent-slider",
+    "floom-widget-fluent-radio-group",
+    "floom-widget-fluent-tooltip",
+    "floom-widget-fluent-tabs",
+    "floom-widget-fluent-list",
+    "floom-widget-fluent-select",
+    "floom-widget-fluent-textarea",
+    "floom-widget-fluent-snackbar",
+    "floom-widget-fluent-chip",
+    "floom-widget-fluent-badge",
+    "floom-widget-fluent-app_bar",
+    "floom-widget-fluent-navigation_drawer",
+    "floom-widget-fluent-bottom_navigation",
+    "floom-widget-fluent-progress_linear",
+    "floom-widget-fluent-progress_circular",
+    "floom-widget-fluent-avatar",
+    "floom-widget-fluent-alert",
+    "floom-widget-fluent-rating",
+    "floom-widget-fluent-pagination",
+    "floom-widget-fluent-timeline",
+    "floom-widget-fluent-image",
+    "floom-widget-fluent-banner",
+    "floom-widget-fluent-skeleton_loader",
+    "floom-widget-fluent-toolbar",
+    "floom-widget-fluent-sheet",
+    "floom-widget-fluent-container",
+    "floom-widget-fluent-grid",
+    "floom-widget-fluent-spacer",
+    "floom-widget-fluent-footer",
+    "floom-widget-fluent-system_bar",
+    "floom-widget-fluent-combobox",
+    "floom-widget-fluent-autocomplete",
+    "floom-widget-fluent-date_picker",
+    "floom-widget-fluent-time_picker",
+    "floom-widget-fluent-empty_state",
+    "floom-widget-fluent-datatable",
+    "floom-widget-fluent-treeview",
+    "floom-widget-fluent-calendar",
+    "floom-widget-fluent-carousel",
+    "floom-widget-fluent-virtual_scroller",
+    "floom-widget-fluent-app",
+    "floom-widget-fluent-main",
+    "floom-widget-fluent-theme_provider",
+    "floom-widget-fluent-locale_provider",
+    "floom-widget-fluent-display_provider",
+    "floom-widget-fluent-defaults_provider",
+    "floom-widget-fluent-icons_provider",
+    "floom-widget-fluent-date_adapter_provider",
+    "floom-widget-fluent-window",
+    "floom-widget-fluent-slide_group",
+    "floom-widget-fluent-item_group",
+    "floom-widget-fluent-color_picker",
+    "floom-widget-fluent-stepper",
+    "floom-widget-fluent-breadcrumbs",
+    "floom-widget-fluent-form",
+    "floom-widget-fluent-button_group",
+    "floom-widget-fluent-floating_action_button",
+    "floom-widget-fluent-range_slider",
+    "floom-widget-fluent-file_input",
+    "floom-widget-fluent-otp_input",
+    "floom-widget-fluent-list_item",
+    "floom-widget-fluent-table",
+    "floom-widget-fluent-data_iterator",
+    "floom-widget-fluent-sparkline",
+    "floom-widget-fluent-kbd",
+    "floom-widget-fluent-code",
+    "floom-widget-fluent-radio",
+    "floom-widget-fluent-overlay",
+    "floom-widget-fluent-parallax",
+    "floom-widget-fluent-infinite_scroller",
+    "floom-widget-fluent-hover",
+    "floom-widget-fluent-fade_transition",
+    "floom-widget-fluent-scale_transition",
+    "floom-widget-fluent-expand_transition",
+    "floom-widget-fluent-slide_transition",
+    "floom-widget-fluent-icon_button",
+    "floom-widget-fluent-expansion_panels",
+    "floom-widget-fluent-speed_dial",
+    "floom-widget-fluent-chip_group",
+    "floom-widget-fluent-list_group",
+    "floom-widget-fluent-counter",
+    "floom-widget-fluent-responsive",
+    "floom-widget-fluent-checkbox_btn",
+    "floom-widget-fluent-list_subheader",
+    "floom-widget-fluent-validation_messages",
+    "floom-widget-fluent-number_input",
+    "floom-widget-fluent-pull_to_refresh",
+    "floom-widget-fluent-confirm_edit",
+]
+# `multi` enables ALL three Design Systems simultaneously and turns the neutral
+# `floom-elements` facade into runtime-dispatched wrappers (they read the
+# process-wide `design_system_signal` and delegate to the active DS concrete
+# component). This is what lets the gallery switch DS live. It is mutually
+# exclusive with the single-DS `material`/`cupertino`/`fluent` features.
+# Runtime multi-DS mode.
+#
+# We enable `material` (so the 95 single-DS facade files resolve their
+# `pub use ... as X` re-exports to the Material concrete widgets — exactly one
+# definition, no duplicates) plus the concrete Cupertino/Fluent button/text/
+# container crates that the runtime dispatch wrappers (`Button`/`Text`/
+# `Container`) forward to. We deliberately do NOT enable the `cupertino`/
+# `fluent` floom-elements features, because that would re-activate the three
+# `pub use ... as X` re-exports in every facade file and cause duplicate-definition
+# errors. The Cupertino/Fluent theme token data is still available because the
+# `floom-core-theme/{cupertino,fluent}` features are on.
+multi = [
+    "floom-core-theme/material",
+    "floom-core-theme/cupertino",
+    "floom-core-theme/fluent",
+    "material",
+    "floom-widget-cupertino-button",
+    "floom-widget-cupertino-text",
+    "floom-widget-cupertino-container",
+    "floom-widget-fluent-button",
+    "floom-widget-fluent-text",
+    "floom-widget-fluent-container",
+    "floom-widget-cupertino-checkbox",
+    "floom-widget-cupertino-switch",
+    "floom-widget-cupertino-dialog",
+    "floom-widget-cupertino-menu",
+    "floom-widget-cupertino-card",
+    "floom-widget-cupertino-icon",
+    "floom-widget-cupertino-divider",
+    "floom-widget-cupertino-slider",
+    "floom-widget-cupertino-tooltip",
+    "floom-widget-cupertino-tabs",
+    "floom-widget-cupertino-list",
+    "floom-widget-cupertino-select",
+    "floom-widget-cupertino-textarea",
+    "floom-widget-cupertino-snackbar",
+    "floom-widget-cupertino-chip",
+    "floom-widget-cupertino-badge",
+    "floom-widget-cupertino-app_bar",
+    "floom-widget-cupertino-navigation_drawer",
+    "floom-widget-cupertino-bottom_navigation",
+    "floom-widget-cupertino-progress_linear",
+    "floom-widget-cupertino-progress_circular",
+    "floom-widget-cupertino-avatar",
+    "floom-widget-cupertino-alert",
+    "floom-widget-cupertino-rating",
+    "floom-widget-cupertino-pagination",
+    "floom-widget-cupertino-timeline",
+    "floom-widget-fluent-checkbox",
+    "floom-widget-fluent-switch",
+    "floom-widget-fluent-dialog",
+    "floom-widget-fluent-menu",
+    "floom-widget-fluent-card",
+    "floom-widget-fluent-icon",
+    "floom-widget-fluent-divider",
+    "floom-widget-fluent-slider",
+    "floom-widget-fluent-tooltip",
+    "floom-widget-fluent-tabs",
+    "floom-widget-fluent-list",
+    "floom-widget-fluent-select",
+    "floom-widget-fluent-textarea",
+    "floom-widget-fluent-snackbar",
+    "floom-widget-fluent-chip",
+    "floom-widget-fluent-badge",
+    "floom-widget-fluent-app_bar",
+    "floom-widget-fluent-navigation_drawer",
+    "floom-widget-fluent-bottom_navigation",
+    "floom-widget-fluent-progress_linear",
+    "floom-widget-fluent-progress_circular",
+    "floom-widget-fluent-avatar",
+    "floom-widget-fluent-alert",
+    "floom-widget-fluent-rating",
+    "floom-widget-fluent-pagination",
+    "floom-widget-fluent-timeline",
+    "floom-widget-cupertino-image",
+    "floom-widget-cupertino-banner",
+    "floom-widget-cupertino-skeleton_loader",
+    "floom-widget-cupertino-toolbar",
+    "floom-widget-cupertino-sheet",
+    "floom-widget-fluent-image",
+    "floom-widget-fluent-banner",
+    "floom-widget-fluent-skeleton_loader",
+    "floom-widget-fluent-toolbar",
+    "floom-widget-fluent-sheet",
+    "floom-widget-cupertino-grid",
+    "floom-widget-cupertino-spacer",
+    "floom-widget-cupertino-footer",
+    "floom-widget-cupertino-system_bar",
+    "floom-widget-fluent-grid",
+    "floom-widget-fluent-spacer",
+    "floom-widget-fluent-footer",
+    "floom-widget-fluent-system_bar",
+    "floom-widget-cupertino-combobox",
+    "floom-widget-cupertino-autocomplete",
+    "floom-widget-cupertino-date_picker",
+    "floom-widget-cupertino-time_picker",
+    "floom-widget-cupertino-empty_state",
+    "floom-widget-fluent-combobox",
+    "floom-widget-fluent-autocomplete",
+    "floom-widget-fluent-date_picker",
+    "floom-widget-fluent-time_picker",
+    "floom-widget-fluent-empty_state",
+    "floom-widget-cupertino-datatable",
+    "floom-widget-cupertino-treeview",
+    "floom-widget-cupertino-calendar",
+    "floom-widget-cupertino-carousel",
+    "floom-widget-cupertino-virtual_scroller",
+    "floom-widget-cupertino-theme_provider",
+    "floom-widget-cupertino-locale_provider",
+    "floom-widget-cupertino-display_provider",
+    "floom-widget-cupertino-defaults_provider",
+    "floom-widget-cupertino-icons_provider",
+    "floom-widget-cupertino-date_adapter_provider",
+    "floom-widget-cupertino-window",
+    "floom-widget-cupertino-slide_group",
+    "floom-widget-cupertino-item_group",
+    "floom-widget-cupertino-color_picker",
+    "floom-widget-cupertino-stepper",
+    "floom-widget-cupertino-breadcrumbs",
+    "floom-widget-cupertino-form",
+    "floom-widget-cupertino-validation_messages",
+    "floom-widget-fluent-datatable",
+    "floom-widget-fluent-treeview",
+    "floom-widget-fluent-calendar",
+    "floom-widget-fluent-carousel",
+    "floom-widget-fluent-virtual_scroller",
+    "floom-widget-fluent-theme_provider",
+    "floom-widget-fluent-locale_provider",
+    "floom-widget-fluent-display_provider",
+    "floom-widget-fluent-defaults_provider",
+    "floom-widget-fluent-icons_provider",
+    "floom-widget-fluent-date_adapter_provider",
+    "floom-widget-fluent-window",
+    "floom-widget-fluent-slide_group",
+    "floom-widget-fluent-item_group",
+    "floom-widget-fluent-color_picker",
+    "floom-widget-fluent-stepper",
+    "floom-widget-fluent-breadcrumbs",
+    "floom-widget-fluent-form",
+    "floom-widget-fluent-validation_messages",
+    "floom-widget-cupertino-app",
+    "floom-widget-cupertino-main",
+    "floom-widget-fluent-app",
+    "floom-widget-fluent-main",
+    "floom-widget-cupertino-button_group",
+    "floom-widget-cupertino-floating_action_button",
+    "floom-widget-cupertino-range_slider",
+    "floom-widget-cupertino-file_input",
+    "floom-widget-cupertino-otp_input",
+    "floom-widget-fluent-button_group",
+    "floom-widget-fluent-floating_action_button",
+    "floom-widget-fluent-range_slider",
+    "floom-widget-fluent-file_input",
+    "floom-widget-fluent-otp_input",
+    "floom-widget-cupertino-list_item",
+    "floom-widget-cupertino-table",
+    "floom-widget-cupertino-data_iterator",
+    "floom-widget-cupertino-sparkline",
+    "floom-widget-cupertino-kbd",
+    "floom-widget-cupertino-code",
+    "floom-widget-fluent-list_item",
+    "floom-widget-fluent-table",
+    "floom-widget-fluent-data_iterator",
+    "floom-widget-fluent-sparkline",
+    "floom-widget-fluent-kbd",
+    "floom-widget-fluent-code",
+    "floom-widget-cupertino-radio",
+    "floom-widget-cupertino-overlay",
+    "floom-widget-fluent-radio",
+    "floom-widget-fluent-overlay",
+    "floom-widget-cupertino-parallax",
+    "floom-widget-cupertino-infinite_scroller",
+    "floom-widget-cupertino-hover",
+    "floom-widget-fluent-parallax",
+    "floom-widget-fluent-infinite_scroller",
+    "floom-widget-fluent-hover",
+    "floom-widget-cupertino-fade_transition",
+    "floom-widget-cupertino-scale_transition",
+    "floom-widget-cupertino-expand_transition",
+    "floom-widget-cupertino-slide_transition",
+    "floom-widget-fluent-fade_transition",
+    "floom-widget-fluent-scale_transition",
+    "floom-widget-fluent-expand_transition",
+    "floom-widget-fluent-slide_transition",
+    "floom-widget-cupertino-icon_button",
+    "floom-widget-cupertino-expansion_panels",
+    "floom-widget-cupertino-speed_dial",
+    "floom-widget-cupertino-chip_group",
+    "floom-widget-cupertino-list_group",
+    "floom-widget-cupertino-counter",
+    "floom-widget-cupertino-responsive",
+    "floom-widget-cupertino-checkbox_btn",
+    "floom-widget-cupertino-list_subheader",
+    "floom-widget-fluent-icon_button",
+    "floom-widget-fluent-expansion_panels",
+    "floom-widget-fluent-speed_dial",
+    "floom-widget-fluent-chip_group",
+    "floom-widget-fluent-list_group",
+    "floom-widget-fluent-counter",
+    "floom-widget-fluent-responsive",
+    "floom-widget-fluent-checkbox_btn",
+    "floom-widget-fluent-list_subheader",
+    "floom-widget-cupertino-number_input",
+    "floom-widget-cupertino-pull_to_refresh",
+    "floom-widget-cupertino-confirm_edit",
+    "floom-widget-fluent-number_input",
+    "floom-widget-fluent-pull_to_refresh",
+    "floom-widget-fluent-confirm_edit",
+    "floom-widget-cupertino-radio-group",
+    "floom-widget-fluent-radio-group",
+    "floom-widget-cupertino-text-field",
+    "floom-widget-fluent-text-field"
+]
+

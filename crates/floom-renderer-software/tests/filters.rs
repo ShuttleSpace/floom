@@ -17,10 +17,10 @@
 //! - per-axis radii get one probe each, because a blur that collapsed them
 //!   into a single number would still pass every one-axis assertion.
 
-use floem_renderer::{FrameInfo, render_once};
-use floem_renderer_software::SoftwareRenderer;
-use floem_scene::{Rect, Scene, SceneNode};
-use floem_types::{Color, Filter};
+use floom_renderer::{FrameInfo, render_once};
+use floom_renderer_software::SoftwareRenderer;
+use floom_scene::{Rect, Scene, SceneNode};
+use floom_types::{Color, Filter};
 
 const BLACK: Color = Color::rgb(0, 0, 0);
 const WHITE: Color = Color::rgb(255, 255, 255);
@@ -233,7 +233,7 @@ fn a_filter_scope_stays_inside_the_clip_that_was_in_force() {
     // belongs to.
     let sw = render(vec![
         SceneNode::ClipPush {
-            region: floem_types::ClipRegion::Rect(rect(0.0, 0.0, 8.0, 24.0)),
+            region: floom_types::ClipRegion::Rect(rect(0.0, 0.0, 8.0, 24.0)),
         },
         SceneNode::FilterPush {
             filter: Filter::blur(6.0),

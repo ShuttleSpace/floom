@@ -1,12 +1,12 @@
 //! The wire protocol (Task 25.1).
 //!
 //! One request, one response, both fully serde — an agent in any language can
-//! speak this without linking Floem. Inspection commands observe a running
+//! speak this without linking Floom. Inspection commands observe a running
 //! app; control commands act on it. The version gate reuses the inspector's
 //! rule verbatim, because "a reader must never be handed fields it cannot
 //! represent" is the same contract in both directions of this protocol.
 
-use floem_inspector::{ProtocolVersion, SceneLines};
+use floom_inspector::{ProtocolVersion, SceneLines};
 use serde::{Deserialize, Serialize};
 
 /// The version this crate writes. Requests carry it; a server refusing a

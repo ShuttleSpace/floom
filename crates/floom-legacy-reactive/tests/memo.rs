@@ -3,7 +3,7 @@ use std::{
     rc::Rc,
 };
 
-use floem_legacy_reactive::{Effect, Memo, Runtime, RwSignal, SignalGet, SignalTrack, SignalUpdate};
+use floom_legacy_reactive::{Effect, Memo, Runtime, RwSignal, SignalGet, SignalTrack, SignalUpdate};
 
 #[test]
 fn memo_recomputes_eagerly_on_change() {

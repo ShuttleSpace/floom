@@ -4,9 +4,9 @@ use std::sync::Arc;
 use std::sync::mpsc::sync_channel;
 
 use anyhow::Result;
-use floem_legacy_renderer::gpu_resources::GpuResources;
-use floem_legacy_renderer::text::{Glyph, GlyphRunProps};
-use floem_legacy_renderer::{Img, Renderer, tiny_skia};
+use floom_legacy_renderer::gpu_resources::GpuResources;
+use floom_legacy_renderer::text::{Glyph, GlyphRunProps};
+use floom_legacy_renderer::{Img, Renderer, tiny_skia};
 use floem_vger_rs::{GlyphImage, Image, PaintIndex, PixelFormat, Vger};
 use peniko::kurbo::{Size, Stroke};
 use peniko::{Blob, ImageData, LinearGradientPosition};
@@ -631,7 +631,7 @@ impl Renderer for VgerRenderer {
 
     fn draw_svg<'b>(
         &mut self,
-        svg: floem_legacy_renderer::Svg<'b>,
+        svg: floom_legacy_renderer::Svg<'b>,
         rect: Rect,
         brush: Option<impl Into<BrushRef<'b>>>,
     ) {

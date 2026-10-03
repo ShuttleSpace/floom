@@ -1,6 +1,6 @@
-# Floem 2.0 进度盘点（2026-09-17）
+# Floom 2.0 进度盘点（2026-09-17）
 
-主计划 `docs/superpowers/plans/2026-09-02-floem-2-complete-implementation-plan.md`
+主计划 `docs/superpowers/plans/2026-09-02-floom-2-complete-implementation-plan.md`
 Phase 16 计划 `docs/superpowers/plans/2026-09-15-phase-16-native-composition-plan.md`
 
 ---
@@ -18,14 +18,14 @@ Phase 16 计划 `docs/superpowers/plans/2026-09-15-phase-16-native-composition-p
 
 关键设计决定：
 
-- 第四个共享名词 `NativeSnapshot` 从 `floem-native`（L4）下沉到 `floem-types`（L0）——
+- 第四个共享名词 `NativeSnapshot` 从 `floom-native`（L4）下沉到 `floom-types`（L0）——
   **绘制**冻结纹理是 widget 的活，L6 不能命名 L4 的类型。16.1 没预见到这点。
 - 动画复用 R2 的通道（`AnimationScheduler` → `CompositorProp` → `paint_node`），
   **不造第二套机制**；过渡结束**自己 thaw**，不交给调用方（它可能已经滚走）。
 - provider 不能快照 ⇒ `Ok(None)`，不是错误，且**不启动任何动画**。
 - host 侧不重复 controller 的不变量（我加的 `AlreadyFrozen` 被变异测试证明没用 → 删）。
 
-新增测试：`app/floem-app/tests/native.rs` +8（6 条冻结/解冻、2 条过渡）。
+新增测试：`crates/floom-app/tests/native.rs` +8（6 条冻结/解冻、2 条过渡）。
 全部经 `scripts/mutate.py` 变异验证：step 1 四个变异各杀一条、step 2 两个变异各杀一条。
 
 ### 顺手修的既有缺陷：scene 图像没有 alpha
@@ -40,7 +40,7 @@ Phase 16 计划 `docs/superpowers/plans/2026-09-15-phase-16-native-composition-p
 
 ### 顺手完成：推送与计划补漏
 
-- 62 个未推提交全部推送，`origin/floem-2.0` 与本地一致（当前落后 0）。
+- 62 个未推提交全部推送，`origin/floom-2.0` 与本地一致（当前落后 0）。
 - 主计划新增「附录——计划外已完成的工作」，把 R1–R6 与 Phase 16 的实际产出记进去。
 
 ---
@@ -73,9 +73,9 @@ Phase 16 计划 `docs/superpowers/plans/2026-09-15-phase-16-native-composition-p
 
 | 项 | 内容 | 状态 |
 | --- | --- | --- |
-| R1 | `floem-ime` → `TextField` | **DONE** `f6d5819` |
+| R1 | `floom-ime` → `TextField` | **DONE** `f6d5819` |
 | R2 | 浮层（提升、轻关闭、进入动画） | **DONE** `61894b2` + `3cba342` |
-| R3 | `tooling/floem-testkit` | **DONE** `5187233` |
+| R3 | `crates/floom-testkit` | **DONE** `5187233` |
 | R5 | 2.0 专属 CI + 格式化 | **DONE** `44cff56` + `879401b` |
 | R6 | 结构与约定（目录、层级表） | **DONE** `36c8f3c` + `3d7da27` + `a5c8a71` |
 | R4 | **Phase 16 native composition** | **进行中**，见下 |
@@ -122,7 +122,7 @@ Phase 16 计划 `docs/superpowers/plans/2026-09-15-phase-16-native-composition-p
 按「headless 可验证 → 解锁设备用例」这个排序规则：
 
 1. **16.4 step 3 = D11（推荐）** —— 唯一还能在本机往前推的一项。
-   要让 `examples/floem2-probe` 真的调一次 `begin_native_transition`，然后肉眼判断
+   要让 `examples/floom2-probe` 真的调一次 `begin_native_transition`，然后肉眼判断
    "是一张在动的图，接缝处不闪"。headless 半已就绪，缺的只是探针的发起 + 一双眼。
 2. **16.2 Win32 / X11** —— 只剩两个 trait impl（翻译层与桥都已就位），但本机
    `cfg` 掉，编译不到，四判据一条都过不了。需要 Windows / Linux 构建目标。

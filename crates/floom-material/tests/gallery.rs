@@ -5,14 +5,14 @@
 //! result still shows up here. The last two tests exist to prove the snapshots
 //! can fail — a golden file that nothing can move is a file nobody reads.
 
-use floem_design::{CELL_H, ControlSize, GAP, GallerySample, InteractionState, gallery_size};
-use floem_material::{
+use floom_design::{CELL_H, ControlSize, GAP, GallerySample, InteractionState, gallery_size};
+use floom_material::{
     GALLERY_COLUMNS, MaterialTheme, button_gallery, button_gallery_labels, button_metrics,
     button_style,
 };
-use floem_scene::SceneNode;
-use floem_snapshot::{PixelSnapshot, SceneSnapshot, assert_snapshot, snapshots_dir};
-use floem_types::Color;
+use floom_scene::SceneNode;
+use floom_snapshot::{PixelSnapshot, SceneSnapshot, assert_snapshot, snapshots_dir};
+use floom_types::Color;
 
 fn light() -> MaterialTheme {
     MaterialTheme::light()
@@ -104,12 +104,12 @@ fn a_size_step_moves_the_snapshot() {
     let large: Vec<GallerySample> =
         GallerySample::variants_at(ControlSize::Lg, InteractionState::Rest);
     let render = |samples: &[GallerySample]| {
-        SceneSnapshot::of(&floem_design::gallery_scene(
+        SceneSnapshot::of(&floom_design::gallery_scene(
             samples,
             theme.roles.surface,
             samples.len(),
             |s| {
-                floem_design::CellPaint::new(
+                floom_design::CellPaint::new(
                     button_style(&theme, s.variant, s.size, s.state),
                     button_metrics(&theme, s.size).height as f64,
                 )

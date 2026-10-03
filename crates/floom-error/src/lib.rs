@@ -1,4 +1,4 @@
-//! Error boundaries for Floem 2.0.
+//! Error boundaries for Floom 2.0.
 //!
 //! Widget-free (framework sits below widgets). A UI callback that panics
 //! would otherwise unwind through the event loop and kill the process; an

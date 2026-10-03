@@ -1,6 +1,6 @@
 //! Tests for nested class style inheritance - CSS-like behavior.
 //!
-//! These tests verify that Floem's class style system follows CSS-like semantics:
+//! These tests verify that Floom's class style system follows CSS-like semantics:
 //! when a view matches multiple class selectors, ALL matching rules apply.
 //!
 //! ## CSS-like Behavior
@@ -31,20 +31,20 @@
 //! This is correct CSS-like behavior. Theme authors should design class styles
 //! to either not overlap, or explicitly override properties when needed.
 
-use floem::peniko::Color;
-use floem::prelude::*;
-use floem::style::FontSize;
-use floem::views::{Container, Empty};
-use floem_legacy_test::prelude::*;
+use floom::peniko::Color;
+use floom::prelude::*;
+use floom::style::FontSize;
+use floom::views::{Container, Empty};
+use floom_legacy_test::prelude::*;
 use serial_test::serial;
 
 // =============================================================================
 // Test Classes
 // =============================================================================
 
-floem::style_class!(pub OuterClass);
-floem::style_class!(pub InnerClass);
-floem::style_class!(pub ItemClass);
+floom::style_class!(pub OuterClass);
+floom::style_class!(pub InnerClass);
+floom::style_class!(pub ItemClass);
 
 // =============================================================================
 // Basic Nested Class Tests
@@ -342,10 +342,10 @@ fn test_context_mappings_from_multiple_paths() {
 #[serial]
 fn test_css_like_style_accumulation_from_multiple_paths() {
     let root = TestRoot::new();
-    floem::style_class!(ListClass);
-    floem::style_class!(ListItemClass);
-    floem::style_class!(DropdownClass);
-    floem::style_class!(ScrollClass);
+    floom::style_class!(ListClass);
+    floom::style_class!(ListItemClass);
+    floom::style_class!(DropdownClass);
+    floom::style_class!(ScrollClass);
 
     // List item (like items in a dropdown list)
     let item = Empty::new().class(ListItemClass).style(|s| s.width(100.0));
@@ -421,10 +421,10 @@ fn test_css_like_different_properties_accumulate() {
     use std::cell::Cell;
     use std::rc::Rc;
 
-    floem::style_class!(ListClass);
-    floem::style_class!(ListItemClass);
-    floem::style_class!(DropdownClass);
-    floem::style_class!(ScrollClass);
+    floom::style_class!(ListClass);
+    floom::style_class!(ListItemClass);
+    floom::style_class!(DropdownClass);
+    floom::style_class!(ScrollClass);
 
     // Track which closures ran
     let list_ran = Rc::new(Cell::new(false));
@@ -524,8 +524,8 @@ fn test_css_like_different_properties_accumulate() {
 #[serial]
 fn test_list_item_inside_list_class() {
     let root = TestRoot::new();
-    floem::style_class!(ListClass);
-    floem::style_class!(ListItemClass);
+    floom::style_class!(ListClass);
+    floom::style_class!(ListItemClass);
 
     // List item - sets width inline, but NOT height (will come from class)
     let item = Empty::new().class(ListItemClass).style(|s| s.width(100.0));
@@ -596,10 +596,10 @@ fn test_class_style_requires_matching_class() {
 #[serial]
 fn test_deeply_nested_class_inheritance() {
     let root = TestRoot::new();
-    floem::style_class!(Level1);
-    floem::style_class!(Level2);
-    floem::style_class!(Level3);
-    floem::style_class!(TargetClass);
+    floom::style_class!(Level1);
+    floom::style_class!(Level2);
+    floom::style_class!(Level3);
+    floom::style_class!(TargetClass);
 
     let target = Empty::new().class(TargetClass).style(|s| s.width(50.0));
     let target_id = target.view_id();

@@ -1,11 +1,11 @@
 //! Patches: the named operations a reload applies, and their transactional
 //! application.
 
-use floem_core::LayoutRequest;
-use floem_runtime_core::{DirtyFlags, DirtySet};
-use floem_style::StyleProps;
-use floem_types::ElementId;
-use floem_ui_ir::{EventName, NodeKey, NodeKind, Prop};
+use floom_core::LayoutRequest;
+use floom_runtime_core::{DirtyFlags, DirtySet};
+use floom_style::StyleProps;
+use floom_types::ElementId;
+use floom_ui_ir::{EventName, NodeKey, NodeKind, Prop};
 
 use crate::live::{LiveTree, element_kind};
 
@@ -135,7 +135,7 @@ impl LiveTree {
                     }
                     None => None,
                 };
-                let id = self.arena.insert(floem_core::Element::new(
+                let id = self.arena.insert(floom_core::Element::new(
                     ElementId::INVALID,
                     element_kind(*kind),
                 ));
@@ -242,7 +242,7 @@ impl LiveTree {
                 if events.iter().any(|b| b.event == *event) {
                     return Err(format!("`{}` already handles {event:?}", key.as_str()));
                 }
-                events.push(floem_ui_ir::EventBinding::new(*event, handler.clone()));
+                events.push(floom_ui_ir::EventBinding::new(*event, handler.clone()));
                 dirty.invalidate(&self.arena, id, DirtyFlags::STATE);
                 Ok(())
             }

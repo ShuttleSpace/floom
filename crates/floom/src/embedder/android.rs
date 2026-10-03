@@ -3,7 +3,7 @@
 //! This is a first cut at implementing the embedder adapter traits for Android.
 //! It is intentionally small because the lapce winit fork **already** translates
 //! Android input into standard winit `WindowEvent`s — so the bulk of event
-//! handling reuses Floem's existing winit path. The Android-specific work here
+//! handling reuses Floom's existing winit path. The Android-specific work here
 //! is limited to:
 //!
 //! - reporting Android [`BackendCapabilities`] (no muda native menu bar, no
@@ -42,8 +42,8 @@ use super::{EmbedderWindow, PlatformServices, SurfaceHandle};
 ///   Framework picker — both are handled separately (external-URL + `file_dialog`
 ///   capabilities), not via `DragDropEvent`.
 ///
-/// Note that this only concerns *OS file* drag-and-drop. Floem's **in-app** drag
-/// system (`Event::Drag` / `DragTracker`, driven by [`PointerEvent`]s and Floem's
+/// Note that this only concerns *OS file* drag-and-drop. Floom's **in-app** drag
+/// system (`Event::Drag` / `DragTracker`, driven by [`PointerEvent`]s and Floom's
 /// internal pointer capture) is fully platform-agnostic and **already works on
 /// Android** through the touch→`PointerEvent` pipeline — no backend code required.
 ///
@@ -51,7 +51,7 @@ use super::{EmbedderWindow, PlatformServices, SurfaceHandle};
 /// files** (the `receive_files` capability — Android `ACTION_SEND` / `ACTION_VIEW`
 /// intents delivered as `content://` URIs) are all wired through the shared JNI
 /// bridge (see `crate::platform::android_jni` and `Application::new_android`,
-/// plus `crate::platform::set_shared_files_handler`). Everything else that Floem
+/// plus `crate::platform::set_shared_files_handler`). Everything else that Floom
 /// needs on mobile is enabled.
 pub fn android_capabilities() -> BackendCapabilities {
     BackendCapabilities {

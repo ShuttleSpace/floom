@@ -1,6 +1,6 @@
 use std::{hash::Hasher, sync::atomic::AtomicU64, time::Instant};
 
-use floem::{
+use floom::{
     action::{debounce_action, exec_after},
     easing::Spring,
     event::{Event, EventPropagation},
@@ -123,7 +123,7 @@ impl IntoView for TodoState {
                     .border(
                         Stroke::new(1.)
                             .with_dashes(0.2, [1., 2.])
-                            .with_caps(floem::kurbo::Cap::Round),
+                            .with_caps(floom::kurbo::Cap::Round),
                     )
                     .class(SvgClass, |s| s.size_pct(50., 50.))
             })

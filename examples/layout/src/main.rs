@@ -1,4 +1,4 @@
-use floem::{
+use floom::{
     kurbo::Size,
     prelude::*,
     style::AlignContent,
@@ -95,12 +95,12 @@ fn app_view() -> impl IntoView {
     })
     .on_event_stop(listener::KeyUp, move |_cx, KeyboardEvent { key, .. }| {
         if let Key::Named(NamedKey::F11) = key {
-            floem::action::inspect();
+            floom::action::inspect();
         }
     })
     .window_title(|| String::from("Layout examples"))
 }
 
 fn main() {
-    floem::launch(app_view);
+    floom::launch(app_view);
 }

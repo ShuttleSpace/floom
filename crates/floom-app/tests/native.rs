@@ -16,21 +16,21 @@ use std::any::Any;
 use std::cell::Cell;
 use std::rc::Rc;
 
-use floem_animation::{AnimKind, CompositorProp, Easing, Tween};
-use floem_core::{
+use floom_animation::{AnimKind, CompositorProp, Easing, Tween};
+use floom_core::{
     CreateContext, ElementId, NativeGrant, NativeRequest, UpdateContext, Widget, WidgetAny,
 };
-use floem_layout::{AbsoluteInset, LayoutStyle, Position};
-use floem_native::{
+use floom_layout::{AbsoluteInset, LayoutStyle, Position};
+use floom_native::{
     ClipSupport, FakeNativeProvider, InputMode, InputModes, NativeCapabilities, NativeCommandLog,
     NativeCompositionMode, NativeSlot, NativeViewKind,
 };
-use floem_overlay::OverlayKind;
-use floem_testkit::TestApp;
-use floem_types::{Point, Rect, ResourceId, Size};
-use floem_widgets::controls::{Button, TextField};
-use floem_widgets::primitives::Container;
-use floem_widgets::NativeSurface;
+use floom_overlay::OverlayKind;
+use floom_testkit::TestApp;
+use floom_types::{Point, Rect, ResourceId, Size};
+use floom_widgets::controls::{Button, TextField};
+use floom_widgets::primitives::Container;
+use floom_widgets::NativeSurface;
 
 // --- scaffolding -----------------------------------------------------------
 
@@ -87,7 +87,7 @@ fn at(x: f32, y: f32, width: f32, height: f32) -> LayoutStyle {
 }
 
 /// The single participant's last pushed state.
-fn live_state(app: &TestApp) -> floem_native::NativeState {
+fn live_state(app: &TestApp) -> floom_native::NativeState {
     let states = app.host().participant_states();
     assert_eq!(states.len(), 1, "expected exactly one participant");
     states[0].1
@@ -143,7 +143,7 @@ impl WidgetAny for RowSurface {
         self
     }
 
-    fn semantics_hint(&self) -> Option<floem_core::SemanticsHint> {
+    fn semantics_hint(&self) -> Option<floom_core::SemanticsHint> {
         None
     }
 }
@@ -997,7 +997,7 @@ fn bound_surface(app: &mut TestApp) -> NativeSlot {
 /// A frame whose *last* pushed state for the single participant is the thing
 /// under test — a freeze that never reached the provider would leave the older,
 /// visible one in place and look fine in every other respect.
-fn last_applied(log: &NativeCommandLog) -> floem_native::NativeState {
+fn last_applied(log: &NativeCommandLog) -> floom_native::NativeState {
     log.applied().last().expect("nothing was ever applied").1
 }
 
@@ -1049,7 +1049,7 @@ fn a_frozen_participant_is_painted_as_an_image_in_its_own_box() {
     let drawn = app
         .scene_nodes()
         .into_iter()
-        .filter(|node| matches!(node, floem_scene::SceneNode::Image { image, .. } if *image == snapshot.resource))
+        .filter(|node| matches!(node, floom_scene::SceneNode::Image { image, .. } if *image == snapshot.resource))
         .count();
     assert_eq!(drawn, 1, "the frozen texture must be drawn exactly once");
 }
@@ -1077,7 +1077,7 @@ fn thawing_restores_the_live_view() {
     assert_eq!(
         log.commands()
             .iter()
-            .filter(|c| matches!(c, floem_native::NativeCommand::Restore { .. }))
+            .filter(|c| matches!(c, floom_native::NativeCommand::Restore { .. }))
             .count(),
         1,
         "ownership moves exactly once"
@@ -1097,13 +1097,13 @@ fn the_freeze_lifecycle_rejects_double_and_stray_calls() {
     app.host_mut().freeze_native(slot).unwrap().unwrap();
     assert_eq!(
         app.host_mut().freeze_native(slot),
-        Err(floem_native::NativeError::AlreadyFrozen(slot)),
+        Err(floom_native::NativeError::AlreadyFrozen(slot)),
         "freezing twice strands the first snapshot"
     );
     assert_eq!(
         log.commands()
             .iter()
-            .filter(|c| matches!(c, floem_native::NativeCommand::Snapshot { .. }))
+            .filter(|c| matches!(c, floom_native::NativeCommand::Snapshot { .. }))
             .count(),
         1,
         "the rejected second freeze must not reach the provider"
@@ -1112,7 +1112,7 @@ fn the_freeze_lifecycle_rejects_double_and_stray_calls() {
     app.host_mut().thaw_native(slot).unwrap();
     assert_eq!(
         app.host_mut().thaw_native(slot),
-        Err(floem_native::NativeError::NotFrozen(slot)),
+        Err(floom_native::NativeError::NotFrozen(slot)),
         "thawing twice frees a texture nobody owns"
     );
 }
@@ -1196,7 +1196,7 @@ fn slide(from: f64, to: f64) -> AnimKind {
 /// texture's bounds are the only thing on screen that can.
 fn frozen_bounds(app: &TestApp, resource: ResourceId) -> Option<Rect> {
     app.scene_nodes().into_iter().find_map(|node| match node {
-        floem_scene::SceneNode::Image { bounds, image, .. } if image == resource => Some(bounds),
+        floom_scene::SceneNode::Image { bounds, image, .. } if image == resource => Some(bounds),
         _ => None,
     })
 }

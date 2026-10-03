@@ -26,7 +26,7 @@
 #   --features <list>       Extra cargo features (may be repeated).
 #   --bin <name>            Override the binary name (default: read from
 #                           `cargo metadata`).
-#   --bundle-id <id>        CFBundleIdentifier (default: dev.floem.<crate>).
+#   --bundle-id <id>        CFBundleIdentifier (default: dev.floom.<crate>).
 #   --display-name <name>   CFBundleDisplayName (default: the crate name).
 #   -h, --help
 #
@@ -106,7 +106,7 @@ for p in d["packages"]:
 fi
 [[ -n "$BIN" ]] || BIN="$CRATE"
 
-[[ -n "$BUNDLE_ID" ]] || BUNDLE_ID="dev.floem.${CRATE//-/.}"
+[[ -n "$BUNDLE_ID" ]] || BUNDLE_ID="dev.floom.${CRATE//-/.}"
 [[ -n "$DISPLAY_NAME" ]] || DISPLAY_NAME="$CRATE"
 
 # ------------------------------------------------------------------ Rust build

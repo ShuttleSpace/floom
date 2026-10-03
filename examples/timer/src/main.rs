@@ -1,6 +1,6 @@
 use std::time::{Duration, Instant};
 
-use floem::{
+use floom::{
     action::exec_after,
     reactive::{DerivedRwSignal, Effect, RwSignal, SignalGet, SignalTrack, SignalUpdate},
     unit::{Pct, UnitExt},
@@ -9,7 +9,7 @@ use floem::{
 };
 
 fn main() {
-    floem::launch(app_view);
+    floom::launch(app_view);
 }
 
 fn app_view() -> impl IntoView {

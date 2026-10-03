@@ -18,11 +18,11 @@
 //! ## Winding
 //!
 //! Fill uses the non-zero rule. That matters beyond matching other toolkits:
-//! [`floem_types::Stroke::outline`] emits a *union* of overlapping pieces and
+//! [`floom_types::Stroke::outline`] emits a *union* of overlapping pieces and
 //! relies on non-zero to keep them from cancelling, so the two halves of this
 //! module are load-bearing for each other.
 
-use floem_types::{ClipRegion, Point, Rect};
+use floom_types::{ClipRegion, Point, Rect};
 
 /// Sub-scanlines per pixel row. Four is the point where a diagonal edge's
 /// staircase stops being visible at 1× and the cost is still linear.
@@ -281,7 +281,7 @@ impl ClipStack {
                 path,
             } => {
                 let contours = path
-                    .flatten(floem_types::DEFAULT_FLATTEN_TOLERANCE)
+                    .flatten(floom_types::DEFAULT_FLATTEN_TOLERANCE)
                     .into_iter()
                     .map(|poly| {
                         poly.points

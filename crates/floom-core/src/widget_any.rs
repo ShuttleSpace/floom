@@ -14,14 +14,14 @@ use std::any::Any;
 /// accessibility description.
 ///
 /// This trait is what real mount points take (`mount_root(impl WidgetAny)`),
-/// so it carries the Phase 29.2 migration diagnostic: a v1 `floem::view::View`
-/// value handed to a Floem 2.0 host reports the cross-version migration path
+/// so it carries the Phase 29.2 migration diagnostic: a v1 `floom::view::View`
+/// value handed to a Floom 2.0 host reports the cross-version migration path
 /// here, at the call site, rather than a bare "trait bound not satisfied".
 #[diagnostic::on_unimplemented(
-    message = "`{Self}` is not a Floem 2.0 `Widget`",
-    label = "not a Floem 2.0 `Widget`",
-    note = "v1 `floem::view::View` values are compatibility APIs and cannot be mounted into a Floem 2.0 host",
-    note = "rebuild the subtree from `floem2::prelude` widgets, or keep the application on the v1 `floem` crate (preserved for the current major version)"
+    message = "`{Self}` is not a Floom 2.0 `Widget`",
+    label = "not a Floom 2.0 `Widget`",
+    note = "v1 `floom::view::View` values are compatibility APIs and cannot be mounted into a Floom 2.0 host",
+    note = "rebuild the subtree from `floom2::prelude` widgets, or keep the application on the v1 `floom` crate (preserved for the current major version)"
 )]
 pub trait WidgetAny: crate::Widget + Any {
     fn as_any(&self) -> &dyn Any;
@@ -30,9 +30,9 @@ pub trait WidgetAny: crate::Widget + Any {
     /// The accessibility description of this widget, in engine-neutral form.
     ///
     /// This exists because [`crate::SemanticsHint`] is the bridge between a widget
-    /// and the framework's accessibility layer: `floem-core` owns the neutral
-    /// vocabulary and the host lowers it into `floem-accessibility` when it
+    /// and the framework's accessibility layer: `floom-core` owns the neutral
+    /// vocabulary and the host lowers it into `floom-accessibility` when it
     /// builds the semantics tree. Returning the hint here is how roles reach
-    /// that tree without `floem-core` depending on the accessibility framework.
+    /// that tree without `floom-core` depending on the accessibility framework.
     fn semantics_hint(&self) -> Option<crate::SemanticsHint>;
 }

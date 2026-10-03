@@ -8,7 +8,7 @@ use super::{AccessNode, AccessNodeId};
 
 /// A full or partial update to the accessibility tree.
 ///
-/// Floem core produces these from view/layout changes and hands them to the
+/// Floom core produces these from view/layout changes and hands them to the
 /// backend via [`crate::accessibility::AccessibilityBackend::update_tree`].
 ///
 /// - `nodes` are **upserts**: insert a new node or replace an existing one by

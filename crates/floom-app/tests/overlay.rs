@@ -1,13 +1,13 @@
 //! Overlay system: the chain that lets popups, dialogs and sheets escape their
 //! parent's clip and still be seen, clicked and focused.
 //!
-//! `floem-overlay` owns the *policy* (stacking, modal scrim, focus scope, hit
+//! `floom-overlay` owns the *policy* (stacking, modal scrim, focus scope, hit
 //! priority, the entry animation); `WidgetHost` owns the *content* — it mounts
 //! an overlay's widget as an independent subtree, lays it out against the
 //! viewport, paints it last (so it sits on top), and routes pointer hits to it
 //! before the main tree.
 //!
-//! These tests drive that whole chain through `floem_testkit::TestApp`, which
+//! These tests drive that whole chain through `floom_testkit::TestApp`, which
 //! is the same `FakePlatform` → `AppRunner` path a real window takes, and assert
 //! on two things every time: the overlay's content actually receives the event,
 //! and the change reaches the screen (damage).
@@ -15,12 +15,12 @@
 use std::cell::Cell;
 use std::rc::Rc;
 
-use floem_overlay::{OverlayHandle, OverlayKind};
-use floem_platform::KeyCode;
-use floem_scene::SceneNode;
-use floem_testkit::TestApp;
-use floem_types::{Point, Rect, Size};
-use floem_widgets::Button;
+use floom_overlay::{OverlayHandle, OverlayKind};
+use floom_platform::KeyCode;
+use floom_scene::SceneNode;
+use floom_testkit::TestApp;
+use floom_types::{Point, Rect, Size};
+use floom_widgets::Button;
 
 /// Whether two rects share any area.
 fn overlaps(a: Rect, b: Rect) -> bool {
@@ -40,7 +40,7 @@ fn open(
     kind: OverlayKind,
     modal: bool,
     bounds: Rect,
-    content: impl floem_core::WidgetAny + 'static,
+    content: impl floom_core::WidgetAny + 'static,
 ) -> OverlayHandle {
     let id = app.host_mut().open_overlay(kind, modal, bounds, content);
     app.frame();
@@ -352,7 +352,7 @@ fn an_image_in_a_fading_overlay_fades_with_it() {
         OverlayKind::Popup,
         false,
         area,
-        floem_widgets::Image::new(img).intrinsic_size(Size::new(120.0, 40.0)),
+        floom_widgets::Image::new(img).intrinsic_size(Size::new(120.0, 40.0)),
     );
 
     let mut seen_partial = None;

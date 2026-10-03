@@ -10,7 +10,7 @@
 //! 16.2 (diff, clipping, z-order, hit-test subtraction, focus yield) and 16.4
 //! (snapshot transitions) assertable without a single OS bridge existing.
 
-use floem_native::{
+use floom_native::{
     ClipSupport, FakeNativeProvider, InputMode, InputModes, NativeCapabilities, NativeCommand,
     NativeCompositionMode, NativeError, NativeState, NativeViewController, NativeViewKind,
     NativeViewPool, Rect,

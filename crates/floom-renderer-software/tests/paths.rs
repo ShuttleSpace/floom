@@ -7,10 +7,10 @@
 //! colour" is worth nothing on its own — it is worth something next to the same
 //! probe over a shape that must produce the colour.
 
-use floem_renderer::{FrameInfo, render_once};
-use floem_renderer_software::SoftwareRenderer;
-use floem_scene::{Point, Rect, Scene, SceneNode};
-use floem_types::{ClipRegion, ClipShape, Color, LineCap, LineJoin, Path, Stroke, resolve_clip};
+use floom_renderer::{FrameInfo, render_once};
+use floom_renderer_software::SoftwareRenderer;
+use floom_scene::{Point, Rect, Scene, SceneNode};
+use floom_types::{ClipRegion, ClipShape, Color, LineCap, LineJoin, Path, Stroke, resolve_clip};
 
 const BACKDROP: Color = Color::rgb(20, 30, 40);
 const INK: Color = Color::rgb(220, 40, 40);
@@ -23,7 +23,7 @@ fn rect(x0: f64, y0: f64, x1: f64, y1: f64) -> Rect {
 fn fill(bounds: Rect, color: Color) -> SceneNode {
     SceneNode::Rect {
         bounds,
-        fill: floem_types::Brush::from(color),
+        fill: floom_types::Brush::from(color),
         radius: 0.0,
         shadow: None,
     }

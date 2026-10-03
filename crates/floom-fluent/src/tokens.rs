@@ -5,8 +5,8 @@
 //! fixed order, which is why the audit can hold them to a contrast floor against
 //! the text on top of them.
 
-use floem_theme::{ColorScheme, Theme};
-use floem_types::Color;
+use floom_theme::{ColorScheme, Theme};
+use floom_types::Color;
 
 /// The Fluent colour roles this crate styles against.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -48,31 +48,31 @@ impl FluentColors {
                 "on_accent/accent",
                 self.on_accent,
                 self.accent,
-                floem_design::WCAG_AA_NORMAL,
+                floom_design::WCAG_AA_NORMAL,
             ),
             (
                 "text/card_background",
                 self.text,
                 self.card_background,
-                floem_design::WCAG_AA_NORMAL,
+                floom_design::WCAG_AA_NORMAL,
             ),
             (
                 "text/layer",
                 self.text,
                 self.layer,
-                floem_design::WCAG_AA_NORMAL,
+                floom_design::WCAG_AA_NORMAL,
             ),
             (
                 "text_secondary/layer",
                 self.text_secondary,
                 self.layer,
-                floem_design::WCAG_AA_NORMAL,
+                floom_design::WCAG_AA_NORMAL,
             ),
             (
                 "focus_ring/card_background",
                 self.focus_ring,
                 self.card_background,
-                floem_design::WCAG_AA_LARGE,
+                floom_design::WCAG_AA_LARGE,
             ),
         ]
     }
@@ -196,13 +196,13 @@ mod tests {
         // and this test should be the thing that raises the question.
         for scheme in [ColorScheme::Light, ColorScheme::Dark] {
             let c = FluentTheme::for_scheme(scheme).colors;
-            let ratio = floem_design::contrast_ratio(c.stroke_default, c.card_background);
+            let ratio = floom_design::contrast_ratio(c.stroke_default, c.card_background);
             assert!(
                 ratio >= FluentColors::STROKE_VISIBILITY_FLOOR,
                 "{scheme:?} stroke is invisible at {ratio:.2}:1"
             );
             assert!(
-                ratio < floem_design::WCAG_AA_LARGE,
+                ratio < floom_design::WCAG_AA_LARGE,
                 "{scheme:?} stroke now clears 3:1 — revisit the doc comment"
             );
         }
@@ -214,8 +214,8 @@ mod tests {
         // flipping it black/white rather than by tinting it.
         let light = FluentTheme::light().colors;
         let dark = FluentTheme::dark().colors;
-        assert!(floem_design::relative_luminance(light.focus_ring) < 0.1);
-        assert!(floem_design::relative_luminance(dark.focus_ring) > 0.9);
+        assert!(floom_design::relative_luminance(light.focus_ring) < 0.1);
+        assert!(floom_design::relative_luminance(dark.focus_ring) > 0.9);
     }
 
     #[test]

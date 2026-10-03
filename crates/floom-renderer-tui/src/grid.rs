@@ -6,8 +6,8 @@
 //! could have meant" — a glyph either lands inside the grid or it is dropped,
 //! and [`PaintStats`] says how many went.
 
-use floem_scene::{ResourceKind, ResourceRegistry, Scene, SceneNode};
-use floem_types::{ClipRegion, Color, Rect, Size};
+use floom_scene::{ResourceKind, ResourceRegistry, Scene, SceneNode};
+use floom_types::{ClipRegion, Color, Rect, Size};
 
 /// One character cell.
 ///
@@ -200,9 +200,9 @@ fn composite(src: Color, dst: Color) -> Color {
     )
 }
 
-fn solid_color(fill: &floem_types::Brush) -> Option<Color> {
+fn solid_color(fill: &floom_types::Brush) -> Option<Color> {
     match fill {
-        floem_types::Brush::Solid(color) => Some(*color),
+        floom_types::Brush::Solid(color) => Some(*color),
         _ => None,
     }
 }
@@ -211,7 +211,7 @@ fn solid_color(fill: &floem_types::Brush) -> Option<Color> {
 ///
 /// Nodes arrive as one ordered stream, exactly as the host painted them, so
 /// later nodes overwrite earlier ones — the same painter's-algorithm contract
-/// every other floem backend honours. Clips are tracked as a stack of rects
+/// every other floom backend honours. Clips are tracked as a stack of rects
 /// because a pushed region applies to everything drawn after the marker.
 pub fn paint_scene(grid: &mut TuiGrid, scene: &Scene, resources: &ResourceRegistry) {
     let mut clips: Vec<Rect> = Vec::new();
@@ -289,7 +289,7 @@ pub fn paint_scene(grid: &mut TuiGrid, scene: &Scene, resources: &ResourceRegist
     }
 }
 
-/// Rect from two corners — `floem_types::Rect` itself only offers origin+size,
+/// Rect from two corners — `floom_types::Rect` itself only offers origin+size,
 /// and the four literal forms here are easier to read as edges.
 pub(crate) fn rect(x0: f64, y0: f64, x1: f64, y1: f64) -> Rect {
     Rect { x0, y0, x1, y1 }
@@ -320,9 +320,9 @@ fn in_clips(x: f64, y: f64, clips: &[Rect]) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use floem_scene::{Resource, SceneNode};
-    use floem_text::{TextAlign, TextLayoutOptions, TextShaper};
-    use floem_types::Point;
+    use floom_scene::{Resource, SceneNode};
+    use floom_text::{TextAlign, TextLayoutOptions, TextShaper};
+    use floom_types::Point;
 
     fn default_fill_cell() -> Cell {
         Cell::default()
@@ -469,7 +469,7 @@ mod tests {
         scene.begin_update();
         let _ = scene.insert(SceneNode::Rect {
             bounds: rect(0.0, 0.0, 10.0, 10.0),
-            fill: floem_types::Brush::from(Color::BLACK),
+            fill: floom_types::Brush::from(Color::BLACK),
             radius: 0.0,
             shadow: None,
         });

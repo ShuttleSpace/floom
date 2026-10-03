@@ -6,7 +6,7 @@
 //! of having to be tracked separately, because a backend may batch events and a
 //! consumer that only sees the tail of a batch must still see the right chord.
 
-use floem_types::{Modifiers, Point, Size, SurfaceId, WindowId};
+use floom_types::{Modifiers, Point, Size, SurfaceId, WindowId};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum PointerButton {

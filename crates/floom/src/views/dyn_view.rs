@@ -1,4 +1,4 @@
-use floem_legacy_reactive::{Scope, UpdaterEffect};
+use floom_legacy_reactive::{Scope, UpdaterEffect};
 
 use crate::{
     view::ViewId,

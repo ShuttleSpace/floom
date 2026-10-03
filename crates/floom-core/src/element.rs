@@ -1,6 +1,6 @@
 //! Persistent element identity shell (storage lives in runtime-core later).
 
-use floem_types::ElementId;
+use floom_types::ElementId;
 
 /// Discriminator for element roles at the contract layer.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]

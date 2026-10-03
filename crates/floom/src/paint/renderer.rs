@@ -1,6 +1,6 @@
 //! # Renderer
 //!
-//! This section is to help understand how Floem is implemented for developers of Floem.
+//! This section is to help understand how Floom is implemented for developers of Floom.
 //!
 //! ## Render loop and update lifecycle
 //!
@@ -14,12 +14,12 @@
 //!
 //! #### Event handling -> reactive system updates
 //! Event handling is a common place for reactive state changes to occur. E.g., on the counter example, when you click increment,
-//! it updates the counter and because the label has an effect that is subscribed to those changes (see [`floem_legacy_reactive::create_effect`]), the label will update the text it presents.
+//! it updates the counter and because the label has an effect that is subscribed to those changes (see [`floom_legacy_reactive::create_effect`]), the label will update the text it presents.
 //!
 //! #### Update
 //! The update of states on the Views could cause some of them to need a new layout recalculation, because the size might have changed etc.
 //! The reactive system can't directly manipulate the view state of the label because the `WindowState` owns all the views. And instead, it will send the update to a message queue via [`ViewId::update_state`](crate::ViewId::update_state)
-//! After the event propagation is done, Floem will process all the update messages in the queue, and it can manipulate the state of a particular view through the update method.
+//! After the event propagation is done, Floom will process all the update messages in the queue, and it can manipulate the state of a particular view through the update method.
 //!
 //!
 //! #### Layout
@@ -32,7 +32,7 @@
 //!
 //! ## Terminology
 //!
-//! Useful definitions for developers of Floem
+//! Useful definitions for developers of Floom
 //!
 //! #### Active view
 //!
@@ -49,15 +49,15 @@
 //!
 use std::sync::Arc;
 
-use floem_legacy_renderer::Img;
-use floem_legacy_renderer::gpu_resources::GpuResources;
+use floom_legacy_renderer::Img;
+use floom_legacy_renderer::gpu_resources::GpuResources;
 #[cfg(feature = "skia")]
-use floem_legacy_renderer_skia::SkiaRenderer as ActiveRenderer;
-use floem_legacy_renderer_tiny_skia::TinySkiaRenderer;
+use floom_legacy_renderer_skia::SkiaRenderer as ActiveRenderer;
+use floom_legacy_renderer_tiny_skia::TinySkiaRenderer;
 #[cfg(all(feature = "vello", not(feature = "skia")))]
-use floem_legacy_renderer_vello::VelloRenderer as ActiveRenderer;
+use floom_legacy_renderer_vello::VelloRenderer as ActiveRenderer;
 #[cfg(all(not(feature = "vello"), not(feature = "skia")))]
-use floem_legacy_renderer_vger::VgerRenderer as ActiveRenderer;
+use floom_legacy_renderer_vger::VgerRenderer as ActiveRenderer;
 use peniko::BrushRef;
 use peniko::kurbo::{Affine, Point, Rect, Shape, Size, Stroke};
 use winit::window::Window;
@@ -95,7 +95,7 @@ impl Renderer {
     pub fn new_skia(window: Arc<dyn Window>, scale: f64, size: Size, font_embolden: f32) -> Self {
         let size = Size::new(size.width.max(1.0), size.height.max(1.0));
 
-        let force_tiny_skia = std::env::var("FLOEM_FORCE_TINY_SKIA")
+        let force_tiny_skia = std::env::var("FLOOM_FORCE_TINY_SKIA")
             .ok()
             .map(|val| val.as_str() == "1")
             .unwrap_or(false);
@@ -195,7 +195,7 @@ impl Renderer {
 
         #[cfg(not(all(not(feature = "skia"), target_env = "ohos")))]
         let renderer = {
-            let force_tiny_skia = std::env::var("FLOEM_FORCE_TINY_SKIA")
+            let force_tiny_skia = std::env::var("FLOOM_FORCE_TINY_SKIA")
                 .ok()
                 .map(|val| val.as_str() == "1")
                 .unwrap_or(false);
@@ -282,7 +282,7 @@ impl Renderer {
     }
 }
 
-impl floem_legacy_renderer::Renderer for Renderer {
+impl floom_legacy_renderer::Renderer for Renderer {
     fn begin(&mut self, capture: bool) {
         match self {
             Renderer::Active(r) => {
@@ -394,8 +394,8 @@ impl floem_legacy_renderer::Renderer for Renderer {
     fn draw_glyphs<'a>(
         &mut self,
         origin: Point,
-        props: &floem_legacy_renderer::text::GlyphRunProps<'a>,
-        glyphs: impl Iterator<Item = floem_legacy_renderer::text::Glyph> + 'a,
+        props: &floom_legacy_renderer::text::GlyphRunProps<'a>,
+        glyphs: impl Iterator<Item = floom_legacy_renderer::text::Glyph> + 'a,
     ) {
         match self {
             Renderer::Active(v) => v.draw_glyphs(origin, props, glyphs),
@@ -406,7 +406,7 @@ impl floem_legacy_renderer::Renderer for Renderer {
 
     fn draw_svg<'b>(
         &mut self,
-        svg: floem_legacy_renderer::Svg<'b>,
+        svg: floom_legacy_renderer::Svg<'b>,
         rect: Rect,
         brush: Option<impl Into<BrushRef<'b>>>,
     ) {

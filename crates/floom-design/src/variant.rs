@@ -1,6 +1,6 @@
 //! The control vocabulary all four design systems map onto.
 
-use floem_style::StyleState;
+use floom_style::StyleState;
 
 /// An emphasis level for a control.
 ///
@@ -92,7 +92,7 @@ impl ControlSize {
 
 /// One resolved interaction state, for the purpose of styling.
 ///
-/// This is a single state rather than `floem_style::StyleState`'s flag set
+/// This is a single state rather than `floom_style::StyleState`'s flag set
 /// because a gallery has to enumerate *disjoint* samples: "hovered and pressed
 /// and disabled at once" has a resolution order but no meaningful swatch.
 /// Callers that do have a flag set convert with [`Self::to_style_state`] or

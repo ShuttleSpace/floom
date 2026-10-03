@@ -1,6 +1,6 @@
 use super::ElementArena;
-use floem_core::{Element, ElementKind};
-use floem_types::ElementId;
+use floom_core::{Element, ElementKind};
+use floom_types::ElementId;
 
 #[test]
 fn insert_get_remove() {

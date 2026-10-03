@@ -5,10 +5,10 @@
 //! - Identical style inputs produce identical outputs (cache correctness)
 //! - Style computation is deterministic
 
-use floem::peniko::Brush;
-use floem::prelude::*;
-use floem::style::Background;
-use floem_legacy_test::prelude::*;
+use floom::peniko::Brush;
+use floom::prelude::*;
+use floom::style::Background;
+use floom_legacy_test::prelude::*;
 
 /// Test that identical styles produce identical computed results.
 /// This is a key property for caching - if inputs match, outputs must match.

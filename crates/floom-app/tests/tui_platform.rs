@@ -8,15 +8,15 @@
 //! backend's events were shaped wrong, the runner would not turn them into a
 //! frame or a dispatched key.
 
-use floem_app::{AppRunner, WidgetHost};
-use floem_core::Size;
-use floem_layout::LayoutStyle;
-use floem_platform::{Platform, WindowConfig};
-use floem_renderer::Presenter;
-use floem_renderer_tui::TuiPresenter;
-use floem_widgets::Text;
+use floom_app::{AppRunner, WidgetHost};
+use floom_core::Size;
+use floom_layout::LayoutStyle;
+use floom_platform::{Platform, WindowConfig};
+use floom_renderer::Presenter;
+use floom_renderer_tui::TuiPresenter;
+use floom_widgets::Text;
 
-use floem_platform_tui::{TerminalSize as PlatformSize, TuiPlatform};
+use floom_platform_tui::{TerminalSize as PlatformSize, TuiPlatform};
 
 fn host_with_label(content: &str) -> WidgetHost {
     let mut host = WidgetHost::new();
@@ -29,7 +29,7 @@ fn host_with_label(content: &str) -> WidgetHost {
 /// Every non-space character in the grid, row-major (top to bottom, then left
 /// to right). The label may wrap across rows, so the assertion checks the whole
 /// grid rather than guessing which row is "busiest".
-fn grid_text(grid: &floem_renderer_tui::TuiGrid) -> String {
+fn grid_text(grid: &floom_renderer_tui::TuiGrid) -> String {
     (0..grid.rows())
         .flat_map(|row| {
             (0..grid.cols())
@@ -43,7 +43,7 @@ fn grid_text(grid: &floem_renderer_tui::TuiGrid) -> String {
 #[test]
 fn a_window_is_created_and_a_frame_renders_the_label() {
     let host = host_with_label("HelloTUI");
-    let presenter = TuiPresenter::new(floem_renderer_tui::TerminalSize::new(200, 40), Vec::new());
+    let presenter = TuiPresenter::new(floom_renderer_tui::TerminalSize::new(200, 40), Vec::new());
     let mut platform = TuiPlatform::with_override(Some(PlatformSize::new(200, 40)));
     let mut runner = AppRunner::new(host, presenter);
 
@@ -76,7 +76,7 @@ fn a_window_is_created_and_a_frame_renders_the_label() {
 #[test]
 fn injected_text_is_dispatched_into_the_tree() {
     let host = host_with_label("Type:");
-    let presenter = TuiPresenter::new(floem_renderer_tui::TerminalSize::new(80, 24), Vec::new());
+    let presenter = TuiPresenter::new(floom_renderer_tui::TerminalSize::new(80, 24), Vec::new());
     let mut platform = TuiPlatform::with_override(Some(PlatformSize::new(80, 24)));
     let mut runner = AppRunner::new(host, presenter);
 
@@ -109,7 +109,7 @@ fn injected_cjk_text_is_also_committed() {
     // The whole point of the text-via-ImeCommit path: a non-Latin character has
     // no `KeyCode`, yet it must still reach the tree.
     let host = host_with_label("Input:");
-    let presenter = TuiPresenter::new(floem_renderer_tui::TerminalSize::new(80, 24), Vec::new());
+    let presenter = TuiPresenter::new(floom_renderer_tui::TerminalSize::new(80, 24), Vec::new());
     let mut platform = TuiPlatform::with_override(Some(PlatformSize::new(80, 24)));
     let mut runner = AppRunner::new(host, presenter);
 

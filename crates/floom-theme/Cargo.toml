@@ -1,13 +1,13 @@
 [package]
-name = "floem-theme"
+name = "floom-theme"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
-description = "Theme tokens for Floem 2.0"
+description = "Theme tokens for Floom 2.0"
 rust-version.workspace = true
 
 [dependencies]
-floem-types = { path = "../floom-types", version = "0.2.0" }
+floom-types = { path = "../floom-types", version = "0.2.0" }
 
 [dev-dependencies]

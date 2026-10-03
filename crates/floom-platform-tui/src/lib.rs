@@ -1,4 +1,4 @@
-//! Terminal (character-grid) platform backend for Floem 2.0.
+//! Terminal (character-grid) platform backend for Floom 2.0.
 //!
 //! A terminal is not a pixel surface, so this backend fills the `Platform`
 //! contract with the minimum a windowing framework needs: a window whose size
@@ -20,11 +20,11 @@ pub mod input;
 pub mod run;
 pub mod terminal;
 
-use floem_platform::{
+use floom_platform::{
     Capability, Clipboard, HostPlatform, Ime, Platform, PlatformCapabilities, PlatformEvent, Window,
     WindowConfig,
 };
-use floem_types::{PlatformId, Size, WindowId};
+use floom_types::{PlatformId, Size, WindowId};
 
 pub use terminal::TerminalSize;
 
@@ -217,7 +217,7 @@ fn base64_encode(input: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use floem_platform::Platform;
+    use floom_platform::Platform;
 
     #[test]
     fn override_size_is_used() {

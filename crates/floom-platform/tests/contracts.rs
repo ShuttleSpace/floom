@@ -1,8 +1,8 @@
-use floem_platform::{
+use floom_platform::{
     Capability, Clipboard, FakePlatform, Ime, Platform, PlatformCapabilities, PlatformEvent,
     WindowConfig,
 };
-use floem_types::{Point, Size};
+use floom_types::{Point, Size};
 
 #[test]
 fn fake_platform_window_lifecycle() {
@@ -64,7 +64,7 @@ fn core_manifest_has_no_os_backends() {
     for forbidden in ["winit", "objc", "android", "napi", "wayland", "x11", "wgpu"] {
         assert!(
             !manifest.to_lowercase().contains(forbidden),
-            "floem-platform core must not depend on {forbidden}"
+            "floom-platform core must not depend on {forbidden}"
         );
     }
 }

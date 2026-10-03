@@ -4,7 +4,7 @@ mod clock;
 mod kinds;
 
 pub use clock::{Clock, FakeClock};
-pub use floem_types::{
+pub use floom_types::{
     AnimationSpec, CompositorChannel, CompositorProp, Easing, PresenceChannel, PresenceTransition,
     RepeatMode, RepeatSpec, Transition,
 };

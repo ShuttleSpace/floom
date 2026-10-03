@@ -1,0 +1,26 @@
+[workspace]
+resolver = "3"
+members = ["floom-editor-core", "floom-editor", "examples/editor", "examples/syntax-editor"]
+
+[workspace.package]
+edition = "2024"
+license = "MIT"
+version = "0.1.0"
+
+[workspace.dependencies]
+floom = { path = "../../floom", default-features = false, features = ["default-image-formats", "vger", "serde"] }
+floom-legacy-reactive = { path = "../../floom-legacy-reactive" }
+
+# `floom` is reached by path, and a `[patch]` only applies to the workspace that
+# declares it — floom's own patches do not reach this nested workspace. So the
+# vendored lapce/winit tree is pinned here too, exactly as the monorepo root
+# pins it, so both workspaces resolve the same `floem-winit-core` and `dpi`
+# instances. A mismatch would make `ApplicationHandler` two distinct traits.
+#
+# No `[patch.crates-io]` is needed any more: floom consumes the retargeted OHOS
+# fork through a path dependency (`crates/vendor/floom-winit-ohos`), not a crates.io
+# package.
+[patch."https://github.com/lapce/winit"]
+floem-winit = { path = "../../vendor/floem-winit/winit" }
+floem-winit-core = { path = "../../vendor/floem-winit/winit-core" }
+dpi = { path = "../../vendor/floem-winit/dpi" }

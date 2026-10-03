@@ -2,12 +2,12 @@
 //!
 //! Mobile screens reserve regions for the OS: the status bar, camera notch,
 //! home indicator, and navigation bar. Apps must avoid drawing under them.
-//! This package exposes those insets as a [`floem_types::Insets`] and a
+//! This package exposes those insets as a [`floom_types::Insets`] and a
 //! `#[cfg]`-dispatched [`safe_area_insets`] that returns the live values on
 //! iOS/Android and [`Insets::ZERO`] on the host.
 //!
 //! The native arms live in `android.rs` / `ios.rs`; the real values come from
-//! the platform window backend (`floem-platform-{android,ios}`), which owns
+//! the platform window backend (`floom-platform-{android,ios}`), which owns
 //! the `UIWindow` / `ANativeWindow` context needed to read them.
 //!
 //! # Ported from
@@ -20,7 +20,7 @@ mod android;
 #[cfg(target_os = "ios")]
 mod ios;
 
-use floem_types::Insets;
+use floom_types::Insets;
 
 /// Current safe-area insets in logical pixels: `(top, right, bottom, left)` of
 /// the region the OS reserves for system chrome. Content laid out inside these

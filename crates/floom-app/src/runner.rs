@@ -24,7 +24,7 @@
 //!
 //! 1. Drain the platform queue into a local buffer.
 //! 2. For each event: update host size, (re)attach or resize the presentation
-//!    surface, or translate input into a `floem-types` event and dispatch it.
+//!    surface, or translate input into a `floom-types` event and dispatch it.
 //! 3. On `RedrawRequested`: run `WidgetHost::frame()` and present the resulting
 //!    scene.
 //!
@@ -33,11 +33,11 @@
 
 use std::collections::HashMap;
 
-use floem_error::{ErrorBoundary, Outcome};
-use floem_platform::{Platform, PlatformEvent, SurfaceTarget};
-use floem_renderer::{AttachedSurface, ExternalFrame, Presenter, SurfaceHandles};
-use floem_services::{Scope, Services};
-use floem_types::{
+use floom_error::{ErrorBoundary, Outcome};
+use floom_platform::{Platform, PlatformEvent, SurfaceTarget};
+use floom_renderer::{AttachedSurface, ExternalFrame, Presenter, SurfaceHandles};
+use floom_services::{Scope, Services};
+use floom_types::{
     Event, ImeUpdate, Key, KeyEvent, KeyPhase, Modifiers, Point, PointerEvent, PointerKind,
     PointerPhase, Rect, ScrollEvent, Size, SurfaceId, WindowId,
 };
@@ -129,7 +129,7 @@ impl<R: Presenter> AppRunner<R> {
     ///
     /// Without one, a panicking `on_click` (or any widget event handler)
     /// unwinds through the event loop and kills the process. With one, the
-    /// panic is captured into a [`floem_error::Report`] — classified by the
+    /// panic is captured into a [`floom_error::Report`] — classified by the
     /// app's classifier; a *fatal* verdict still re-raises — and the runner
     /// keeps going. Read reports back via [`Self::boundary`].
     pub fn with_error_boundary(mut self, boundary: ErrorBoundary) -> Self {
@@ -490,7 +490,7 @@ impl<R: Presenter> AppRunner<R> {
     /// becomes a recorded report + fallback instead of an unwind through the
     /// event loop. The boundary's own classifier decides recoverable vs fatal;
     /// a fatal verdict re-raises from inside `capture`.
-    fn dispatch(&mut self, event: floem_types::Event, context: &str) {
+    fn dispatch(&mut self, event: floom_types::Event, context: &str) {
         if let Some(boundary) = self.boundary.clone() {
             let host = &mut self.host;
             let outcome = boundary.in_(context.to_string()).capture(move || {
@@ -591,7 +591,7 @@ fn window_scale<P: Platform>(platform: &P, window: WindowId) -> f64 {
 
 /// Destructures a platform [`SurfaceTarget`] into the renderer's handle pair.
 ///
-/// This is the *only* place the two ABIs meet, which keeps `floem-renderer` free
+/// This is the *only* place the two ABIs meet, which keeps `floom-renderer` free
 /// of any platform dependency: it never names [`SurfaceTarget`], only the two
 /// handle values carried inside it.
 fn to_handles(target: SurfaceTarget) -> SurfaceHandles {
@@ -606,11 +606,11 @@ fn to_handles(target: SurfaceTarget) -> SurfaceHandles {
 /// `Auxiliary` is the middle button by another name; the back/forward pair and
 /// any exotic device buttons act as `Primary` for now (the contract has no
 /// identity for them yet).
-fn map_button(button: floem_platform::PointerButton) -> floem_types::PointerButton {
-    use floem_platform::PointerButton as P;
+fn map_button(button: floom_platform::PointerButton) -> floom_types::PointerButton {
+    use floom_platform::PointerButton as P;
     match button {
-        P::Primary => floem_types::PointerButton::Primary,
-        P::Secondary => floem_types::PointerButton::Secondary,
-        P::Auxiliary | P::Other(_) => floem_types::PointerButton::Middle,
+        P::Primary => floom_types::PointerButton::Primary,
+        P::Secondary => floom_types::PointerButton::Secondary,
+        P::Auxiliary | P::Other(_) => floom_types::PointerButton::Middle,
     }
 }

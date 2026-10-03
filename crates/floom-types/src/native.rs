@@ -1,9 +1,9 @@
 //! Shared vocabulary for native composition participants.
 //!
-//! These live in `floem-types` and not in `floem-native` for the same reason
+//! These live in `floom-types` and not in `floom-native` for the same reason
 //! [`OverlayKind`] does: a widget asks for one, the host grants it, and a
 //! platform provider implements it, and none of those three may depend upward
-//! at the others. `floem-native` is at L4 and the widget layer is at L6, so a
+//! at the others. `floom-native` is at L4 and the widget layer is at L6, so a
 //! widget naming "I want a video, composited as an overlay" needs the words to
 //! exist below both of them.
 //!
@@ -70,7 +70,7 @@ impl NativeCompositionMode {
 
 /// A participant frozen into a texture, for a transition that moves it.
 ///
-/// This lives beside the other three nouns rather than in `floem-native` for
+/// This lives beside the other three nouns rather than in `floom-native` for
 /// the same reason they do: the widget that paints the frozen image sits two
 /// layers above the crate that defines the ABI, and asking it to name a type
 /// from there would be an upward edge. A fourth noun was not anticipated by
@@ -96,7 +96,7 @@ pub struct NativeSnapshot {
 /// is what lets them stay decoupled: this struct holds plain `Arc<[u8]>`, so
 /// neither side has to depend on the other's OS or GPU types — the same
 /// decoupling that puts the other native nouns in this crate rather than in
-/// `floem-native`.
+/// `floom-native`.
 ///
 /// The bytes are always [`ImageFormat::Rgba8`] / premultiplied, the format the
 /// vello path uploads verbatim; the host does the OS-specific conversion

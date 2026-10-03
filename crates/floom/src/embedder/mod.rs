@@ -12,7 +12,7 @@
 //!
 //! The protocol does not depend on `winit`: backends translate their native
 //! events into [`EmbedderEvent`] and execute the returned [`EmbedderCommand`]
-//! values. The default desktop path (`floem::launch`) is the first official
+//! values. The default desktop path (`floom::launch`) is the first official
 //! implementation of this contract.
 
 pub mod capabilities;

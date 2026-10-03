@@ -10,13 +10,13 @@
 //! - Checking this flag in `any_inherited()` so `request_style_recursive()` is called
 //! - This ensures children are added to style_dirty when parent's inherited props change
 
-use floem::peniko::{Brush, Color};
-use floem::prelude::*;
-use floem::prop;
-use floem::reactive::RwSignal;
-use floem::style::{Background, ContextRef, ContextValue, ExprStyle, FontWeight, Style, TextColor};
-use floem::text::FontWeight as Weight;
-use floem_legacy_test::prelude::*;
+use floom::peniko::{Brush, Color};
+use floom::prelude::*;
+use floom::prop;
+use floom::reactive::RwSignal;
+use floom::style::{Background, ContextRef, ContextValue, ExprStyle, FontWeight, Style, TextColor};
+use floom::text::FontWeight as Weight;
+use floom_legacy_test::prelude::*;
 use serial_test::serial;
 
 // Define a simple theme prop for testing
@@ -43,7 +43,7 @@ impl Default for TestTheme {
     }
 }
 
-impl floem::style::StylePropValue for TestTheme {
+impl floom::style::StylePropValue for TestTheme {
     fn interpolate(&self, _other: &Self, _value: f64) -> Option<Self> {
         None
     }
@@ -439,7 +439,7 @@ fn test_click_changes_signal_inside_with_context() {
 #[serial]
 fn test_child_label_inherits_font_weight_from_parent() {
     let test_root = TestRoot::new();
-    use floem::views::Label;
+    use floom::views::Label;
 
     let is_active = RwSignal::new(false);
 
@@ -889,7 +889,7 @@ fn test_siblings_with_theme_selectors() {
 
     let container = Stack::new((child1, child2)).style(move |s| {
         s.size(100.0, 100.0)
-            .flex_direction(floem::style::FlexDirection::Row)
+            .flex_direction(floom::style::FlexDirection::Row)
             .set(TestThemeProp, custom_theme)
     });
 

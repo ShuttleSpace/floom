@@ -1,6 +1,6 @@
 use std::{cell::Cell, rc::Rc};
 
-use floem_legacy_reactive::{
+use floom_legacy_reactive::{
     Effect, Runtime, RwSignal, SignalGet, SignalRead, SignalTrack, SignalUpdate, SignalWrite,
 };
 

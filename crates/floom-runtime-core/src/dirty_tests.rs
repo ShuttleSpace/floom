@@ -1,7 +1,7 @@
 use super::{DirtyFlags, DirtySet};
 use crate::arena::ElementArena;
-use floem_core::Element;
-use floem_types::ElementId;
+use floom_core::Element;
+use floom_types::ElementId;
 
 #[test]
 fn property_specific_invalidation() {
@@ -33,12 +33,12 @@ fn propagate_layout_walks_parents() {
     let mut arena = ElementArena::new();
     let root = arena.insert_primitive();
     let mid = {
-        let mut e = Element::new(ElementId::INVALID, floem_core::ElementKind::Primitive);
+        let mut e = Element::new(ElementId::INVALID, floom_core::ElementKind::Primitive);
         e.parent = Some(root);
         arena.insert(e)
     };
     let leaf = {
-        let mut e = Element::new(ElementId::INVALID, floem_core::ElementKind::Primitive);
+        let mut e = Element::new(ElementId::INVALID, floom_core::ElementKind::Primitive);
         e.parent = Some(mid);
         arena.insert(e)
     };

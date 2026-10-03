@@ -1,8 +1,8 @@
-# Release policy (Floem 2.0)
+# Release policy (Floom 2.0)
 
 This is the gate a release has to pass, and the promise it makes once it has.
 Every claim here that can be checked mechanically is checked:
-`app/floem2/tests/docs_parity.rs` asserts that the test targets and benchmark
+`crates/floom2/tests/docs_parity.rs` asserts that the test targets and benchmark
 targets named below actually exist, and that the golden-example list matches
 `docs/2.0/EXAMPLES.md`.
 
@@ -24,21 +24,21 @@ to be inferred:
   release; each one gets a changelog entry with a pointer to the migration
   section that covers it.
 - **major** — reserved for the retirement of the v1 monolith, at which point
-  the facade takes the `floem` name.
+  the facade takes the `floom` name.
 
 ### What is semver-locked
 
 | surface | guarantee | enforced by |
 | --- | --- | --- |
-| `floem2::prelude` — the names a beginner gets from one glob | locked: a removal or rename is breaking | `app/floem2/tests/prelude_surface.rs` (inventory of 46 names) |
-| `floem2` feature-bundle names (`desktop`, `mobile`, `web`, `embedded`, `renderer-gpu`, `renderer-software`, `devtools`) | locked | `app/floem2/tests/feature_graph.rs` |
-| `floem-core::Widget` / `WidgetAny` | locked | the whole workspace compiles against them |
-| `floem-renderer::Renderer`, `floem-platform::{Platform, Window, Surface, Clipboard, Ime}`, `floem-native::{NativeViewProvider, NativeViewController}` | locked — these are the plugin ABIs | the ABI contract suites below |
-| `floem-app::WidgetHost` | locked | prelude + migration tests |
-| `floem-widgets` public widget API | locked | `widgets/floem-widgets` tests |
-| `floem2::advanced`, L5 framework crates, design systems | stable: may change in a minor release with a changelog entry | — |
-| L8 tooling (`floem-testkit` … `floem-agent`) | **no** compatibility guarantee — dev-time only, never shipped in an app binary | the `default` feature graph test |
-| `floem` (the v1 monolith) | compat tier, see [Deprecation](#deprecation-policy) | `tests/compat_prelude.rs` |
+| `floom2::prelude` — the names a beginner gets from one glob | locked: a removal or rename is breaking | `crates/floom2/tests/prelude_surface.rs` (inventory of 46 names) |
+| `floom2` feature-bundle names (`desktop`, `mobile`, `web`, `embedded`, `renderer-gpu`, `renderer-software`, `devtools`) | locked | `crates/floom2/tests/feature_graph.rs` |
+| `floom-core::Widget` / `WidgetAny` | locked | the whole workspace compiles against them |
+| `floom-renderer::Renderer`, `floom-platform::{Platform, Window, Surface, Clipboard, Ime}`, `floom-native::{NativeViewProvider, NativeViewController}` | locked — these are the plugin ABIs | the ABI contract suites below |
+| `floom-app::WidgetHost` | locked | prelude + migration tests |
+| `floom-widgets` public widget API | locked | `crates/floom-widgets` tests |
+| `floom2::advanced`, L5 framework crates, design systems | stable: may change in a minor release with a changelog entry | — |
+| L8 tooling (`floom-testkit` … `floom-agent`) | **no** compatibility guarantee — dev-time only, never shipped in an app binary | the `default` feature graph test |
+| `floom` (the v1 monolith) | compat tier, see [Deprecation](#deprecation-policy) | `tests/compat_prelude.rs` |
 
 ## Supported targets and tested OS ranges
 
@@ -48,17 +48,17 @@ nothing more.
 
 | target | backend | status |
 | --- | --- | --- |
-| `aarch64-apple-darwin` | `floem-platform-desktop` (winit) + `floem-renderer-vello` (Metal) | **tested**: macOS 26.6.2, Apple M4 Pro, rustc 1.98.0 |
+| `aarch64-apple-darwin` | `floom-platform-desktop` (winit) + `floom-renderer-vello` (Metal) | **tested**: macOS 26.6.2, Apple M4 Pro, rustc 1.98.0 |
 | `x86_64-apple-darwin` | same | **untested** — no Intel Mac on this machine. The window lifecycle is winit's (portable), but nothing here has been measured. |
-| `x86_64-pc-windows-msvc` | `floem-platform-desktop` | **device-gated**: windowing goes through winit, but native-view composition on Win32 is Phase 16.2 and incomplete. No Windows machine in CI. |
-| `x86_64-unknown-linux-gnu` | `floem-platform-desktop` | **device-gated**: same gap, X11. No Linux machine in CI. |
-| `aarch64-linux-android` | `floem-platform-android` | **device-gated** (Phase 17) |
-| `aarch64-apple-ios` | `floem-platform-ios` | **device-gated** (Phase 17) |
-| OpenHarmony | `floem-platform-harmony` | **device-gated** (Phase 19) |
-| `wasm32-unknown-unknown` | `floem-platform-web` | **target-gated** (Phase 19) |
-| no-std / bare metal | `floem-platform-embedded` | **target-gated** (Phase 19) |
+| `x86_64-pc-windows-msvc` | `floom-platform-desktop` | **device-gated**: windowing goes through winit, but native-view composition on Win32 is Phase 16.2 and incomplete. No Windows machine in CI. |
+| `x86_64-unknown-linux-gnu` | `floom-platform-desktop` | **device-gated**: same gap, X11. No Linux machine in CI. |
+| `aarch64-linux-android` | `floom-platform-android` | **device-gated** (Phase 17) |
+| `aarch64-apple-ios` | `floom-platform-ios` | **device-gated** (Phase 17) |
+| OpenHarmony | `floom-platform-harmony` | **device-gated** (Phase 19) |
+| `wasm32-unknown-unknown` | `floom-platform-web` | **target-gated** (Phase 19) |
+| no-std / bare metal | `floom-platform-embedded` | **target-gated** (Phase 19) |
 
-The headless core (`floem2` with no feature bundle) has no OS dependency at
+The headless core (`floom2` with no feature bundle) has no OS dependency at
 all: the whole workspace test suite runs without a display, and that is what
 makes the headless rows in this table trustworthy.
 
@@ -67,28 +67,28 @@ makes the headless rows in this table trustworthy.
 A backend is released only if it passes the **ABI's** suite, not just its own —
 otherwise "conformance" degenerates into "the tests the author wrote".
 
-Renderer ABI (`floem-renderer`):
+Renderer ABI (`floom-renderer`):
 
-- `render/floem-renderer/tests/contract.rs`
-- `render/floem-renderer/tests/render_handoff.rs`
+- `crates/floom-renderer/tests/contract.rs`
+- `crates/floom-renderer/tests/render_handoff.rs`
 
-Platform ABI (`floem-platform`):
+Platform ABI (`floom-platform`):
 
-- `platform/floem-platform/tests/contracts.rs`
-- `platform/floem-platform-desktop/tests/lifecycle.rs`
-- `platform/floem-platform-desktop/tests/accessibility.rs`
-- `platform/floem-platform-desktop/tests/winit_capabilities.rs`
+- `crates/floom-platform/tests/contracts.rs`
+- `crates/floom-platform-desktop/tests/lifecycle.rs`
+- `crates/floom-platform-desktop/tests/accessibility.rs`
+- `crates/floom-platform-desktop/tests/winit_capabilities.rs`
 
 Facade and compatibility:
 
-- `app/floem2/tests/prelude_surface.rs` — the beginner surface is pinned by name
-- `app/floem2/tests/feature_graph.rs` — the default build links no windowing,
+- `crates/floom2/tests/prelude_surface.rs` — the beginner surface is pinned by name
+- `crates/floom2/tests/feature_graph.rs` — the default build links no windowing,
   renderer, GPU or tooling crate; each bundle adds exactly its own
-- `app/floem2/tests/migration.rs` — the before/after snippets in
+- `crates/floom2/tests/migration.rs` — the before/after snippets in
   `docs/2.0/MIGRATION.md` compile and behave as documented
-- `app/floem2/tests/docs_parity.rs` — the three docs pages agree with the tree
-- `tests/compat_prelude.rs` — `floem::compat::v1_prelude` is a faithful mirror
-  of `floem::prelude`
+- `crates/floom2/tests/docs_parity.rs` — the three docs pages agree with the tree
+- `tests/compat_prelude.rs` — `floom::compat::v1_prelude` is a faithful mirror
+  of `floom::prelude`
 
 ## Performance, size and scale gates
 
@@ -96,9 +96,9 @@ Facade and compatibility:
 
 | example | bytes |
 | --- | --- |
-| `floem2-hello` | 2,694,256 (≈ 2.6 MiB) — the headless floor |
-| `floem2-counter` | 2,835,248 (≈ 2.7 MiB) |
-| `floem2-window` (`--features real`) | 11,626,912 (≈ 11.1 MiB) — what desktop + GPU costs on top |
+| `floom2-hello` | 2,694,256 (≈ 2.6 MiB) — the headless floor |
+| `floom2-counter` | 2,835,248 (≈ 2.7 MiB) |
+| `floom2-window` (`--features real`) | 11,626,912 (≈ 11.1 MiB) — what desktop + GPU costs on top |
 
 A release that grows the headless floor by more than 10 % without a written
 reason is a question, not a merge.
@@ -107,9 +107,9 @@ reason is a question, not a merge.
 Apple M4 Pro). Bench targets at the workspace root: `event_dispatch`,
 `style_computation`, `painting`, `layout`, `animation`, `text`,
 `view_creation`, `runtime_baseline`, `scene_baseline`, `render_baseline`. Plus
-per-crate suites in `floem-layout`, `floem-virtual`, `floem-text`,
-`floem-runtime-core`, `floem-renderer-vello`, `floem-native`, `floem-store`,
-`floem-animation`, `floem-accessibility`, `floem-widgets-data`.
+per-crate suites in `floom-layout`, `floom-virtual`, `floom-text`,
+`floom-runtime-core`, `floom-renderer-vello`, `floom-native`, `floom-store`,
+`floom-animation`, `floom-accessibility`, `floom-widgets-data`.
 
 Two different gates, and it matters which one is being quoted:
 
@@ -120,7 +120,7 @@ Two different gates, and it matters which one is being quoted:
   It is stated as a policy because the number has to be recorded somewhere
   before it can be enforced automatically.
 - **The hot benches, 10 %, enforced by a script.**
-  `docs/superpowers/benchmarks/floem-2-budget-baseline.json` carries the
+  `docs/superpowers/benchmarks/floom-2-budget-baseline.json` carries the
   calibration Criterion medians and `scripts/check-perf-budgets.sh` measures and
   fails over the threshold (exit 1, verified able to fail). It runs Criterion's
   own default protocol and takes the **best of N** runs, because a single run is
@@ -134,7 +134,7 @@ Two different gates, and it matters which one is being quoted:
 **Idle.** An idle window must not burn a core:
 
 ```sh
-FLOEM2_WINDOW_IDLE=1 FLOEM2_WINDOW_IDLE_SECS=8 cargo run -p floem2-window --features real
+FLOOM2_WINDOW_IDLE=1 FLOOM2_WINDOW_IDLE_SECS=8 cargo run -p floom2-window --features real
 ```
 
 Last measured (macOS 26.6.2, Apple M4 Pro), at the case's own 30 s horizon and
@@ -147,22 +147,22 @@ window server sends in the first second — so they are recorded, not gated. A
 window that keeps producing frames while nothing is happening fails the release.
 
 **Scale.** The two virtualization claims are asserted, not asserted-once:
-`examples/floem2-virtual-list` proves 38 elements materialized for 100 000 rows
-(0.04 %), and `examples/floem2-datagrid` proves equal paint ops (44 vs 44) for
+`examples/floom2-virtual-list` proves 38 elements materialized for 100 000 rows
+(0.04 %), and `examples/floom2-datagrid` proves equal paint ops (44 vs 44) for
 1 000 versus 100 000 rows, with a row pool capped at 16. Both are re-run by
 `scripts/run-golden-examples.sh`.
 
 ## Deprecation policy
 
-- **The v1 compat tier.** `floem::prelude` and `floem::compat::v1_prelude` are
-  guaranteed for the current major version of the `floem` crate. Removing a
+- **The v1 compat tier.** `floom::prelude` and `floom::compat::v1_prelude` are
+  guaranteed for the current major version of the `floom` crate. Removing a
   name from it requires: one release carrying `#[deprecated]` with the
   replacement in the message, an entry in `docs/2.0/MIGRATION.md`, and a
   changelog line. The v1 crate is not deleted while any example or test in this
   workspace still imports it (342 files do today).
 - **2.0 deprecations.** Mark with `#[deprecated]` and a replacement, then
   remove at the next minor release. No silent removals from a locked surface.
-- **The `floem` name.** Held by the monolith. The facade is `floem2` until the
+- **The `floom` name.** Held by the monolith. The facade is `floom2` until the
   monolith retires; renaming it is then a one-line change, and it is a major
   event, not a minor one.
 
@@ -182,4 +182,4 @@ Every release, in this order:
    reformatting it buries the diff.
 5. Metal smoke: the window-idle command above, on a real display.
 6. Record the four criteria, the release sizes and the test count in
-   `.superpowers/sdd/progress-floem-2.md`.
+   `.superpowers/sdd/progress-floom-2.md`.

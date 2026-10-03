@@ -1,0 +1,16 @@
+[package]
+name = "floom2-transform"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+description = "Subtree transforms: a card that scales and rotates as one picture"
+
+# The software renderer is enabled *by the example* (same reason as
+# floom2-chart): the pixel goldens here render real pixels through it, and a
+# facade consumer that never draws pays nothing for that.
+[dependencies]
+floom2 = { path = "../../crates/floom2", version = "0.2.0", features = [
+    "renderer-software",
+] }
+floom-renderer = { path = "../../crates/floom-renderer", version = "0.2.0" }

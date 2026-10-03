@@ -3,7 +3,7 @@
 //! Unlike macOS/Windows, iOS has **no `accesskit` adapter** — `accesskit`
 //! only covers the desktop platforms. So this backend speaks the iOS
 //! `UIAccessibility` protocol directly: it subclasses `UIAccessibilityElement`
-//! once per Floem a11y node, mirrors the neutral tree under the window's
+//! once per Floom a11y node, mirrors the neutral tree under the window's
 //! `UIView` (which acts as the root accessibility container), and routes
 //! VoiceOver actions (activate / increment / decrement / scroll) back to core
 //! through the same `PendingAction` channel the desktop backends use.
@@ -60,7 +60,7 @@ const ACTION_INCREMENT: u32 = 1 << 1;
 const ACTION_DECREMENT: u32 = 1 << 2;
 const ACTION_SCROLL: u32 = 1 << 3;
 
-/// Ivars for the `FloemA11yElement` subclass.
+/// Ivars for the `FloomA11yElement` subclass.
 ///
 /// `tx` is a raw pointer to the backend's action `Sender` (owned by the
 /// backend that owns this element, so it outlives the element). We store a raw
@@ -76,12 +76,12 @@ define_class!(
     #[unsafe(super(UIAccessibilityElement))]
     #[thread_kind = MainThreadOnly]
     #[ivars = A11yIvars]
-    #[name = "FloemA11yElement"]
-    struct FloemA11yElement;
+    #[name = "FloomA11yElement"]
+    struct FloomA11yElement;
 
-    unsafe impl NSObjectProtocol for FloemA11yElement {}
+    unsafe impl NSObjectProtocol for FloomA11yElement {}
 
-    impl FloemA11yElement {
+    impl FloomA11yElement {
         /// VoiceOver "activate" (double-tap / Enter) → our `Default` action
         /// (e.g. click a button).
         #[unsafe(method(accessibilityActivate))]
@@ -127,8 +127,8 @@ define_class!(
     }
 );
 
-impl FloemA11yElement {
-    /// Allocate + init a `FloemA11yElement` anchored to `container` (the
+impl FloomA11yElement {
+    /// Allocate + init a `FloomA11yElement` anchored to `container` (the
     /// window's `UIView`).
     fn new(
         mtm: MainThreadMarker,
@@ -160,7 +160,7 @@ unsafe fn as_any<T: ?Sized>(obj: &T) -> &AnyObject {
     &*(obj as *const T as *const AnyObject)
 }
 
-/// Forward a VoiceOver action to Floem core via the backend's channel.
+/// Forward a VoiceOver action to Floom core via the backend's channel.
 ///
 /// # Safety
 /// `tx` must be a valid, live pointer to the backend's `mpsc::Sender`
@@ -177,13 +177,13 @@ unsafe fn send_action(
     let _ = unsafe { (*tx).send((AccessNodeId(node), action, payload)) };
 }
 
-/// Bridges Floem's neutral accessibility tree to iOS VoiceOver.
+/// Bridges Floom's neutral accessibility tree to iOS VoiceOver.
 pub(crate) struct IosAccessibilityBackend {
     /// The window's `UIView` — the root accessibility container VoiceOver
     /// starts traversal from.
     container: Retained<UIView>,
     /// One native element per live neutral node, keyed by stable id.
-    elements: HashMap<AccessNodeId, Retained<FloemA11yElement>>,
+    elements: HashMap<AccessNodeId, Retained<FloomA11yElement>>,
     /// Neutral cache powering `focused_node` / `node_at_point`.
     tree: AccessTree,
     /// Action channel: elements → core (drained by `WindowState`).
@@ -249,7 +249,7 @@ impl AccessibilityBackend for IosAccessibilityBackend {
         for id in new_ids.difference(&old_ids) {
             if let Some(node) = self.tree.get(*id) {
                 let actions = action_bits(&node.actions);
-                let el = FloemA11yElement::new(mtm, container_any, id.0, actions, tx_ptr);
+                let el = FloomA11yElement::new(mtm, container_any, id.0, actions, tx_ptr);
                 self.elements.insert(*id, el);
             }
         }
@@ -329,7 +329,7 @@ impl IosAccessibilityBackend {
                 root_el.setAccessibilityContainer(Some(container_any));
             }
             if let Some(root_el) = self.elements.get(&root) {
-                let arr: Retained<NSArray<FloemA11yElement>> =
+                let arr: Retained<NSArray<FloomA11yElement>> =
                     NSArray::from_retained_slice(&[root_el.clone()]);
                 let _: () = msg_send![container_any, setAccessibilityElements: Some(&*arr)];
             }
@@ -346,7 +346,7 @@ impl IosAccessibilityBackend {
                 continue;
             }
             let child_any = as_any(&**el);
-            let child_els: Vec<Retained<FloemA11yElement>> = node
+            let child_els: Vec<Retained<FloomA11yElement>> = node
                 .children
                 .iter()
                 .filter_map(|c| self.elements.get(c).cloned())
@@ -425,7 +425,7 @@ unsafe fn traits_for(node: &AccessNode) -> UIAccessibilityTraits {
 /// # Safety
 /// Must be called on the main thread (touches UIKit objects; reads trait
 /// constants).
-unsafe fn update_element(el: &FloemA11yElement, node: &AccessNode, container: &UIView) {
+unsafe fn update_element(el: &FloomA11yElement, node: &AccessNode, container: &UIView) {
     // Label / value / hint.
     let label: Option<Retained<NSString>> = node.label.as_deref().map(NSString::from_str);
     let _: () = msg_send![el, setAccessibilityLabel: label.as_deref()];

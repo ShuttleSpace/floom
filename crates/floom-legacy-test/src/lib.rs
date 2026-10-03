@@ -1,12 +1,12 @@
-//! Testing utilities for Floem UI applications.
+//! Testing utilities for Floom UI applications.
 //!
-//! This crate provides a headless harness for testing Floem views without
+//! This crate provides a headless harness for testing Floom views without
 //! creating an actual window.
 //!
 //! # Example
 //!
 //! ```rust,ignore
-//! use floem_legacy_test::prelude::*;
+//! use floom_legacy_test::prelude::*;
 //!
 //! #[test]
 //! fn test_button_click() {
@@ -26,7 +26,7 @@
 //! # Testing Z-Index / Layered Views
 //!
 //! ```rust,ignore
-//! use floem_legacy_test::prelude::*;
+//! use floom_legacy_test::prelude::*;
 //!
 //! #[test]
 //! fn test_z_index_click_order() {
@@ -49,25 +49,25 @@
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
-use floem::kurbo::Vec2;
-use floem::prelude::*;
-use floem::views::scroll::ScrollChanged;
-use floem::views::{Decorators, Stack};
+use floom::kurbo::Vec2;
+use floom::prelude::*;
+use floom::views::scroll::ScrollChanged;
+use floom::views::{Decorators, Stack};
 
-// Re-export the headless harness from floem
-pub use floem::headless::*;
+// Re-export the headless harness from floom
+pub use floom::headless::*;
 
-// Re-export commonly used floem types for convenience
-pub use floem::ViewId;
+// Re-export commonly used floom types for convenience
+pub use floom::ViewId;
 
 /// Prelude module for convenient imports in tests.
 pub mod prelude {
     pub use super::{ClickTracker, PointerCaptureTracker, ScrollTracker, layer, layers};
-    pub use floem::ViewId;
-    pub use floem::event::PointerId;
-    pub use floem::headless::*;
-    pub use floem::prelude::*;
-    pub use floem::views::{Container, Decorators, Empty, Scroll, Stack};
+    pub use floom::ViewId;
+    pub use floom::event::PointerId;
+    pub use floom::headless::*;
+    pub use floom::prelude::*;
+    pub use floom::views::{Container, Decorators, Empty, Scroll, Stack};
 }
 
 /// Tracks click events on views for testing.
@@ -293,7 +293,7 @@ pub fn layers<VT: ViewTuple + 'static>(children: VT) -> impl IntoView {
 /// assert!(viewport.y0 > 0.0, "Should have scrolled down");
 /// ```
 /// Kurbo types re-exported for convenience.
-pub use floem::kurbo::{Point, Rect};
+pub use floom::kurbo::{Point, Rect};
 
 #[derive(Clone, Default)]
 pub struct ScrollTracker {
@@ -307,7 +307,7 @@ impl ScrollTracker {
     }
 
     /// Wrap a Scroll view to track its viewport changes.
-    pub fn track(&self, scroll: floem::views::Scroll) -> floem::views::Scroll {
+    pub fn track(&self, scroll: floom::views::Scroll) -> floom::views::Scroll {
         let viewports = self.offsets.clone();
         scroll.on_event_stop(ScrollChanged::listener(), move |_cx, state| {
             viewports.borrow_mut().push(state.offset);
@@ -346,7 +346,7 @@ impl ScrollTracker {
 }
 
 /// Type alias for pointer event tracking with optional pointer ID.
-type PointerEventLog = Rc<RefCell<Vec<(String, Option<floem::event::PointerId>)>>>;
+type PointerEventLog = Rc<RefCell<Vec<(String, Option<floom::event::PointerId>)>>>;
 
 /// Tracks pointer capture events on views for testing.
 ///
@@ -364,8 +364,8 @@ type PointerEventLog = Rc<RefCell<Vec<(String, Option<floem::event::PointerId>)>
 /// ```
 #[derive(Clone, Default)]
 pub struct PointerCaptureTracker {
-    gained_captures: Rc<RefCell<Vec<(String, floem::event::PointerId)>>>,
-    lost_captures: Rc<RefCell<Vec<(String, floem::event::PointerId)>>>,
+    gained_captures: Rc<RefCell<Vec<(String, floom::event::PointerId)>>>,
+    lost_captures: Rc<RefCell<Vec<(String, floom::event::PointerId)>>>,
     pointer_downs: PointerEventLog,
     pointer_moves: PointerEventLog,
     pointer_ups: PointerEventLog,
@@ -397,31 +397,31 @@ impl PointerCaptureTracker {
                 got_captures
                     .borrow_mut()
                     .push((name_got.clone(), drag_token.pointer_id()));
-                floem::event::EventPropagation::Continue
+                floom::event::EventPropagation::Continue
             })
             .on_event(listener::LostPointerCapture, move |_cx, pointer_id| {
                 lost_captures
                     .borrow_mut()
                     .push((name_lost.clone(), *pointer_id));
-                floem::event::EventPropagation::Continue
+                floom::event::EventPropagation::Continue
             })
             .on_event(listener::PointerDown, move |_cx, pe| {
                 pointer_downs
                     .borrow_mut()
                     .push((name_down.clone(), pe.pointer.pointer_id));
-                floem::event::EventPropagation::Continue
+                floom::event::EventPropagation::Continue
             })
             .on_event(listener::PointerMove, move |_cx, pu| {
                 pointer_moves
                     .borrow_mut()
                     .push((name_move.clone(), pu.pointer.pointer_id));
-                floem::event::EventPropagation::Continue
+                floom::event::EventPropagation::Continue
             })
             .on_event(listener::PointerUp, move |_cx, pe| {
                 pointer_ups
                     .borrow_mut()
                     .push((name_up.clone(), pe.pointer.pointer_id));
-                floem::event::EventPropagation::Continue
+                floom::event::EventPropagation::Continue
             })
     }
 

@@ -1,12 +1,12 @@
 //! HarmonyOS control variants: capsules whose corner is derived from the
 //! control's own height.
 
-use floem_design::{
+use floom_design::{
     ControlSize, InteractionState, Props, StyleSetBuilder, StyleSetExt, Variant, composite_over,
     most_contrasting,
 };
-use floem_style::{StyleProps, StyleSet};
-use floem_types::Color;
+use floom_style::{StyleProps, StyleSet};
+use floom_types::Color;
 
 use crate::tokens::HarmonyTheme;
 
@@ -283,9 +283,9 @@ mod tests {
                 Some(bg) => composite_over(t.colors.card, bg, 1.0),
                 None => t.colors.card,
             };
-            let ratio = floem_design::contrast_ratio(ring, behind);
+            let ratio = floom_design::contrast_ratio(ring, behind);
             assert!(
-                ratio >= floem_design::WCAG_AA_LARGE,
+                ratio >= floom_design::WCAG_AA_LARGE,
                 "{variant:?}: ring {ring:?} on {behind:?} is {ratio:.2}:1"
             );
         }

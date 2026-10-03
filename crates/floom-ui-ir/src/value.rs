@@ -2,13 +2,13 @@
 
 use serde::{Deserialize, Serialize};
 
-use floem_types::Color;
+use floom_types::Color;
 
 /// An 8-bit RGBA colour, so a document reads the same in any tool.
 ///
-/// `floem_types::Color` is the runtime type and deliberately does not implement
+/// `floom_types::Color` is the runtime type and deliberately does not implement
 /// `serde` (it is L0 vocabulary that everything links); the IR carries its own
-/// copy and bridges with `From`, exactly as `floem-codegen` mirrors the native
+/// copy and bridges with `From`, exactly as `floom-codegen` mirrors the native
 /// composition vocabulary.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct Rgba {

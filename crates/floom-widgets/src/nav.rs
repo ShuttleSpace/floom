@@ -1,6 +1,6 @@
 //! Navigation ↔ widget binding.
 //!
-//! [`floem-navigation`](floem_navigation) is deliberately widget-free: it
+//! [`floom-navigation`](floom_navigation) is deliberately widget-free: it
 //! models page stacks as data. This module is the glue that renders that data
 //! through the composite layer — a [`NavHost`] whose children are the
 //! navigator's pages, keyed by stable page key so per-page widget state
@@ -23,11 +23,11 @@
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 
-use floem_core::{
+use floom_core::{
     Child, ChildKey, CreateContext, ElementId, LayoutRequest, PaintContext, SemanticsContext,
     UpdateContext, Widget, WidgetAny,
 };
-use floem_navigation::{Navigator, Page};
+use floom_navigation::{Navigator, Page};
 
 /// Shared navigation state: the [`Navigator`] plus a dirty flag the app-side
 /// handle raises after every mutation.
@@ -238,7 +238,7 @@ mod tests {
             self
         }
 
-        fn semantics_hint(&self) -> Option<floem_core::SemanticsHint> {
+        fn semantics_hint(&self) -> Option<floom_core::SemanticsHint> {
             None
         }
     }

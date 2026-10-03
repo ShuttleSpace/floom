@@ -1,6 +1,6 @@
 # 缺陷：vello GPU presenter 不绘制裸 `Text` 节点（macOS/Metal）
 
-> 发现日期：2026-09-28 · 发现途径：给 `floem2::run_desktop` 做 Metal 冒烟截图
+> 发现日期：2026-09-28 · 发现途径：给 `floom2::run_desktop` 做 Metal 冒烟截图
 > 状态：**未修，已定位到分层边界** · 影响面：所有走 `VelloGpuPresenter` 的 v2 应用
 
 ## 症状
@@ -11,10 +11,10 @@
 
 | 示例 | 可见 | 不可见 |
 |---|---|---|
-| `floem2-window --features real` | 渐变 `Image`、蓝色 `Button` | `Text::new("clicked 0 times")` |
-| `floem2-run-desktop`（本次新增） | 蓝色 `Button` | `Text::new("run_desktop: a real winit window")` |
+| `floom2-window --features real` | 渐变 `Image`、蓝色 `Button` | `Text::new("clicked 0 times")` |
+| `floom2-run-desktop`（本次新增） | 蓝色 `Button` | `Text::new("run_desktop: a real winit window")` |
 
-`floem2-window` 是本次改动之前就存在的示例，**同样不可见** —— 所以这不是 `run_desktop`
+`floom2-window` 是本次改动之前就存在的示例，**同样不可见** —— 所以这不是 `run_desktop`
 引入的回归，而是先存在的后端缺陷。
 
 ## 已排除的原因（有证据）
@@ -25,11 +25,11 @@
 - **不是颜色问题**：裸 `Text` 颜色是**黑** `rgba(0,0,0,255)`，按钮内 `Text` 是白
   `rgba(255,255,255,255)` —— 而按钮的白字**能看见**，黑字反而看不见，故与明暗无关。
 - **不是资源缺失**：`ResourceKind::GlyphRun` 能解引用出 `runs`（软件渲染器
-  `glyphs_drawn > 0` 的既有用例通过，见 `render/floem-renderer-software/src/lib.rs:1870`
+  `glyphs_drawn > 0` 的既有用例通过，见 `crates/floom-renderer-software/src/lib.rs:1870`
   与 `:1934` 两个测试，它们断言了像素级 ink）。
 - **不是编码器不发字形命令**：`gpu.rs:1418` 的 `SceneNode::Text` 分支会
   `draw_glyphs(...).transform(...).brush(...)`，并在 `:1451` 计 `stats.glyph_runs += 1`。
-  `floem2-window` 运行日志 `frame 300: rasters 19557 (partial 1)` 说明确有光栅化发生。
+  `floom2-window` 运行日志 `frame 300: rasters 19557 (partial 1)` 说明确有光栅化发生。
 
 ## 像素证据
 
@@ -57,16 +57,16 @@
 ## 复现
 
 ```bash
-cargo run -p floem2-run-desktop                 # 本次新增的最小示例
+cargo run -p floom2-run-desktop                 # 本次新增的最小示例
 osascript -e 'tell application "System Events" to get {position,size} of window 1'
 screencapture -x -R<x>,<y>,480,272 /tmp/shot.png
 # 或用既有示例
-FLOEM2_WINDOW_IDLE=1 cargo run -p floem2-window --features real
+FLOOM2_WINDOW_IDLE=1 cargo run -p floom2-window --features real
 ```
 
 ## 建议的修法方向
 
-先加一条**会红的测试**：在 `render/floem-renderer-vello` 里对「单个 `Text` 节点」
+先加一条**会红的测试**：在 `crates/floom-renderer-vello` 里对「单个 `Text` 节点」
 断言编码后 `stats.glyph_runs > 0` **且** 字形 draw 命令确实进入 vello scene。
 现状下这条测试应当失败 —— 有了它，上面两个候选就能被二分，而不是靠读码推断。
 

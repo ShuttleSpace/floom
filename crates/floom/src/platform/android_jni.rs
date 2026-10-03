@@ -2,7 +2,7 @@
 
 //! Shared JNI handles for the Android backend.
 //!
-//! Floem's Android backend reaches system services (clipboard, content
+//! Floom's Android backend reaches system services (clipboard, content
 //! resolver, intents, …) through JNI from the app's `Activity`. The `JavaVM`
 //! and the JNI *global* reference to the `Activity` are captured once from the
 //! `AndroidApp` at startup and stored here, so every Android-only subsystem
@@ -59,7 +59,7 @@ impl AndroidJni {
         // callers swallow the `Err` and move on, but a pending exception is a
         // landmine: the next JNI call on this thread makes ART abort the whole
         // process ("No pending exception expected: …"). Concretely, an app
-        // without the optional `FloemAccessibilityView` Java class aborted on
+        // without the optional `FloomAccessibilityView` Java class aborted on
         // its first hardware key event, because the ClassNotFoundException
         // thrown during a11y injection at startup was never cleared. Every
         // `with_env` closure therefore gets a clean exception state on exit.

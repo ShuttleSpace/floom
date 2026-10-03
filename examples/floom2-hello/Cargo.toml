@@ -1,0 +1,15 @@
+[package]
+name = "floom2-hello"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+description = "Minimal Floom 2.0 app: everything comes from the floom2 facade prelude"
+
+# The point of this example is the import surface *and* the dependency graph:
+# `cargo tree -p floom2-hello` must show the headless core only — no windowing
+# backend, no GPU stack (checked by floom2's feature-graph tests at the facade
+# level). Phase 29.3 measures this binary as the floor of the release-size
+# table.
+[dependencies]
+floom2 = { path = "../../crates/floom2", version = "0.2.0" }

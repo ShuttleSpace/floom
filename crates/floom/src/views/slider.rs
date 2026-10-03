@@ -1,8 +1,8 @@
-//! A toggle button widget. An example can be found in widget-gallery/button in the floem examples.
+//! A toggle button widget. An example can be found in widget-gallery/button in the floom examples.
 
 use std::ops::RangeInclusive;
 
-use floem_legacy_reactive::{SignalGet, SignalUpdate, UpdaterEffect};
+use floom_legacy_reactive::{SignalGet, SignalUpdate, UpdaterEffect};
 use peniko::Brush;
 use peniko::color::palette;
 use peniko::kurbo::{Circle, Point, RoundedRect, RoundedRectRadii};
@@ -189,9 +189,9 @@ custom_event!(SliderHover, SliderState, SliderHover::extract_state);
 /// **Responding to events**:
 /// You can respond to slider changes by listening to `SliderChanged` events:
 /// ```rust
-/// # use floem::event::EventPropagation;
-/// # use floem::prelude::*;
-/// # use floem::views::slider::{self, SliderChanged};
+/// # use floom::event::EventPropagation;
+/// # use floom::prelude::*;
+/// # use floom::views::slider::{self, SliderChanged};
 /// slider::Slider::new(|| 40.pct())
 ///     .on_event(SliderChanged::listener(), |cx, state| {
 ///         println!("Value: {}", state.value);
@@ -203,9 +203,9 @@ custom_event!(SliderHover, SliderState, SliderHover::extract_state);
 ///
 /// You can also listen to `SliderHover` events to respond when the user hovers over the slider:
 /// ```rust
-/// # use floem::event::EventPropagation;
-/// # use floem::prelude::*;
-/// # use floem::views::slider::{self, SliderHover};
+/// # use floom::event::EventPropagation;
+/// # use floom::prelude::*;
+/// # use floom::views::slider::{self, SliderHover};
 /// slider::Slider::new(|| 40.pct())
 ///     .on_event(SliderHover::listener(), |cx, state| {
 ///         println!("Hovering at: {:?}", state.pct);
@@ -224,9 +224,9 @@ custom_event!(SliderHover, SliderState, SliderHover::extract_state);
 ///
 /// Styling Example:
 /// ```rust
-/// # use floem::prelude::*;
-/// # use floem::peniko::Brush;
-/// # use floem::style::Foreground;
+/// # use floom::prelude::*;
+/// # use floom::peniko::Brush;
+/// # use floom::style::Foreground;
 /// slider::Slider::new(|| 40.pct())
 ///     .slider_style(|s| {
 ///         s.edge_align(true)
@@ -404,9 +404,9 @@ impl Slider {
     ///
     /// # Example
     /// ```rust
-    /// # use floem::event::EventPropagation;
-    /// # use floem::prelude::*;
-    /// # use floem::views::slider::{self, SliderChanged};
+    /// # use floom::event::EventPropagation;
+    /// # use floom::prelude::*;
+    /// # use floom::views::slider::{self, SliderChanged};
     /// let percent = RwSignal::new(40.pct());
     ///
     /// slider::Slider::new(move || percent.get())
@@ -470,7 +470,7 @@ impl Slider {
     ///
     /// # Example
     /// ```rust
-    /// # use floem::prelude::*;
+    /// # use floom::prelude::*;
     /// let percent = RwSignal::new(40.pct());
     ///
     /// slider::Slider::new_rw(percent)
@@ -494,9 +494,9 @@ impl Slider {
     ///
     /// # Example
     /// ```rust
-    /// # use floem::event::EventPropagation;
-    /// # use floem::prelude::*;
-    /// # use floem::views::slider::{self, SliderChanged};
+    /// # use floom::event::EventPropagation;
+    /// # use floom::prelude::*;
+    /// # use floom::views::slider::{self, SliderChanged};
     /// let value = RwSignal::new(-25.0);
     /// let range = -50.0..=100.0;
     ///

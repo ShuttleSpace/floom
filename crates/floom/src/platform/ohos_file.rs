@@ -10,7 +10,7 @@
 //!   a request id.
 //! - When the picker resolves, the ArkTS side calls the exported N-API function
 //!   [`on_file_picked`] with the request id and the chosen URI(s); we build a
-//!   [`FileInfo`] and invoke the callback (deferred to Floem's event loop via an
+//!   [`FileInfo`] and invoke the callback (deferred to Floom's event loop via an
 //!   ext action, as on Android).
 //!
 //! **Note on paths:** the picker returns `file://` URIs or sandbox paths, not
@@ -33,7 +33,7 @@ use napi_derive::napi;
 use napi::{Env, Result as NapiResult};
 use parking_lot::Mutex;
 
-use floem_legacy_reactive::Scope;
+use floom_legacy_reactive::Scope;
 
 use crate::ext_event::create_ext_action;
 use crate::platform::file::{FileDialogOptions, FileInfo};
@@ -79,8 +79,8 @@ fn launch(
     options: FileDialogOptions,
     file_info_action: impl Fn(Option<FileInfo>) + Send + 'static,
 ) {
-    // Defer the user callback to Floem's event loop (the picker result may
-    // arrive on the ArkTS thread, not Floem's).
+    // Defer the user callback to Floom's event loop (the picker result may
+    // arrive on the ArkTS thread, not Floom's).
     let send = create_ext_action(Scope::new(), move |info: Option<FileInfo>| {
         file_info_action(info);
     });

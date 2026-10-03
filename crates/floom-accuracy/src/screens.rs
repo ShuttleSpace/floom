@@ -7,10 +7,10 @@
 //! works for all of them and the screens differ only the way real screens
 //! differ: in their rows.
 
-use floem_accessibility::SemanticsRole;
-use floem_core::{Align, Axis, Child, ChildKey, LayoutRequest, WidgetAny};
-use floem_types::{Color, Size};
-use floem_widgets::{Checkbox, Container, Labeled, Spacer, Stack, Switch, Text};
+use floom_accessibility::SemanticsRole;
+use floom_core::{Align, Axis, Child, ChildKey, LayoutRequest, WidgetAny};
+use floom_types::{Color, Size};
+use floom_widgets::{Checkbox, Container, Labeled, Spacer, Stack, Switch, Text};
 
 use crate::tokens::ScreenTokens;
 
@@ -277,8 +277,8 @@ fn webview_child(t: &ScreenTokens) -> Child {
 /// evaluation) with a padded title/body run laid over it via an absolute-fill
 /// background — the engine's in-tree overlay vocabulary.
 fn card_child(t: &ScreenTokens, title: &str, body: &str) -> Child {
-    let title_lh = floem_text::measure_text(title, t.title_size, f64::INFINITY).height as f32;
-    let body_lh = floem_text::measure_text(body, t.body_size, f64::INFINITY).height as f32;
+    let title_lh = floom_text::measure_text(title, t.title_size, f64::INFINITY).height as f32;
+    let body_lh = floom_text::measure_text(body, t.body_size, f64::INFINITY).height as f32;
     let card_h = t.padding as f32 * 2.0 + title_lh + INNER_GAP as f32 + body_lh;
     let padding = t.padding;
     let (title, body) = (title.to_string(), body.to_string());
@@ -292,7 +292,7 @@ fn card_child(t: &ScreenTokens, title: &str, body: &str) -> Child {
                     move || Box::new(Container::new().background(t.card).radius(t.radius))
                 })
                 .push({
-                    move || Box::new(Spacer::new(padding).axis(floem_widgets::Axis::Vertical))
+                    move || Box::new(Spacer::new(padding).axis(floom_widgets::Axis::Vertical))
                 })
                 .push({
                     let t = t.clone();
@@ -332,7 +332,7 @@ fn card_child(t: &ScreenTokens, title: &str, body: &str) -> Child {
                                                     move || {
                                                         Box::new(
                                                             Spacer::new(INNER_GAP).axis(
-                                                                floem_widgets::Axis::Vertical,
+                                                                floom_widgets::Axis::Vertical,
                                                             ),
                                                         )
                                                     }
@@ -359,7 +359,7 @@ fn card_child(t: &ScreenTokens, title: &str, body: &str) -> Child {
                     }
                 })
                 .push({
-                    move || Box::new(Spacer::new(padding).axis(floem_widgets::Axis::Vertical))
+                    move || Box::new(Spacer::new(padding).axis(floom_widgets::Axis::Vertical))
                 }),
         )
     })

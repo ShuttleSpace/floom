@@ -1,7 +1,7 @@
 use std::{any::Any, cell::RefCell, rc::Rc};
 
-use floem_legacy_reactive::Effect;
-use floem_legacy_renderer::text::{Attrs, AttrsList, AttrsOwned};
+use floom_legacy_reactive::Effect;
+use floom_legacy_renderer::text::{Attrs, AttrsList, AttrsOwned};
 use peniko::{Color, color::palette};
 use smallvec::{SmallVec, smallvec};
 use taffy::tree::NodeId;
@@ -165,29 +165,29 @@ impl<'a> RichSpan<'a> {
         self
     }
 
-    pub fn family(mut self, family: &'a [floem_legacy_renderer::text::FamilyOwned]) -> RichSpan<'a> {
+    pub fn family(mut self, family: &'a [floom_legacy_renderer::text::FamilyOwned]) -> RichSpan<'a> {
         self.attrs = self.attrs.family(family);
         self
     }
 
-    pub fn font_width(mut self, stretch: floem_legacy_renderer::text::FontWidth) -> RichSpan<'a> {
+    pub fn font_width(mut self, stretch: floom_legacy_renderer::text::FontWidth) -> RichSpan<'a> {
         self.attrs = self.attrs.font_width(stretch);
         self
     }
 
-    pub fn text_style(mut self, style: floem_legacy_renderer::text::FontStyle) -> RichSpan<'a> {
+    pub fn text_style(mut self, style: floom_legacy_renderer::text::FontStyle) -> RichSpan<'a> {
         self.attrs = self.attrs.font_style(style);
         self
     }
 
-    pub fn weight(mut self, weight: floem_legacy_renderer::text::FontWeight) -> RichSpan<'a> {
+    pub fn weight(mut self, weight: floom_legacy_renderer::text::FontWeight) -> RichSpan<'a> {
         self.attrs = self.attrs.weight(weight);
         self
     }
 
     pub fn line_height(
         mut self,
-        line_height: floem_legacy_renderer::text::LineHeightValue,
+        line_height: floom_legacy_renderer::text::LineHeightValue,
     ) -> RichSpan<'a> {
         self.attrs = self.attrs.line_height(line_height);
         self

@@ -3,7 +3,7 @@
 // Demonstrates how to intercept an attempt to close a window.
 // Also, demonstrates how to launch a second window.
 
-use floem::{
+use floom::{
     close_window,
     event::listener,
     kurbo::Size,
@@ -81,7 +81,7 @@ fn closable_window<V: IntoView + 'static>(window_id: WindowId, content: V) -> im
             listener::KeyUp,
             move |_cx, KeyboardEvent { modifiers, key, .. }| {
                 if *key == Key::Character("w".into()) && modifiers.contains(OS_MOD) {
-                    floem::request_close_window(window_id);
+                    floom::request_close_window(window_id);
                 }
             },
         )
@@ -118,7 +118,7 @@ fn main_window_view(window_id: WindowId) -> impl IntoView {
 }
 
 fn main() {
-    floem::Application::new()
+    floom::Application::new()
         .window(
             main_window_view,
             Some(

@@ -6,7 +6,7 @@
 [package]
 name = "floom"
 version.workspace = true
-authors = ["The Floem contributors"]
+authors = ["The Floom contributors"]
 readme = "../../README.md"
 repository.workspace = true
 description = "A native Rust UI library with fine-grained reactivity"
@@ -32,19 +32,19 @@ parley = { workspace = true }
 serde = { workspace = true, optional = true }
 serde_json = { workspace = true }
 paste = "1.0"
-floem-legacy-renderer = { path = "../floom-legacy-renderer", version = "0.2.0" }
-floem-legacy-renderer-skia = { path = "../floom-legacy-renderer-skia", version = "0.2.0", optional = true }
-floem-legacy-renderer-vello = { path = "../floom-legacy-renderer-vello", version = "0.2.0", optional = true }
-floem-legacy-renderer-vger = { path = "../floom-legacy-renderer-vger", version = "0.2.0", optional = true }
-floem-legacy-renderer-tiny-skia = { path = "../floom-legacy-renderer-tiny-skia", version = "0.2.0" }
-floem-legacy-reactive = { path = "../floom-legacy-reactive", version = "0.2.0" }
+floom-legacy-renderer = { path = "../floom-legacy-renderer", version = "0.2.0" }
+floom-legacy-renderer-skia = { path = "../floom-legacy-renderer-skia", version = "0.2.0", optional = true }
+floom-legacy-renderer-vello = { path = "../floom-legacy-renderer-vello", version = "0.2.0", optional = true }
+floom-legacy-renderer-vger = { path = "../floom-legacy-renderer-vger", version = "0.2.0", optional = true }
+floom-legacy-renderer-tiny-skia = { path = "../floom-legacy-renderer-tiny-skia", version = "0.2.0" }
+floom-legacy-reactive = { path = "../floom-legacy-reactive", version = "0.2.0" }
 parking_lot = { workspace = true }
 image = { workspace = true }
 winit = { workspace = true }
 futures = { version = "0.3.31" }
 crossbeam = { version = "0.8", optional = true }
 ui-events.workspace = true
-floem-ui-events-winit.workspace = true
+floom-ui-events-winit.workspace = true
 dpi.workspace = true
 wgpu.workspace = true
 fluent-bundle = { version = "0.16", optional = true }
@@ -93,7 +93,7 @@ objc2-app-kit = { version = "0.3", features = [
   "NSApplication",
   "NSResponder",
   "NSView",
-  # Accessibility bridge (src/accessibility/backend_nsaccessibility.rs)
+  # Accessibility bridge (crates/floom/src/accessibility/backend_nsaccessibility.rs)
   "NSAccessibility",
   "NSAccessibilityConstants",
   "NSAccessibilityElement",
@@ -101,13 +101,13 @@ objc2-app-kit = { version = "0.3", features = [
 ] }
 dispatch2 = {version = "0.3.0"}
 # `accesskit_macos` wraps NSAccessibility and pulls its own `objc2 0.5`
-# (floem's windowing keeps `objc2 0.6`); both majors coexist in the graph.
+# (floom's windowing keeps `objc2 0.6`); both majors coexist in the graph.
 accesskit_macos = "0.26"
 
 # Accessibility: accesskit provider transport for the three desktop platforms.
 # Replaces the hand-rolled per-platform bridges (Phase 4 Step 2): accesskit
 # wraps AT-SPI2 (Linux), UI Automation (Windows) and NSAccessibility (macOS).
-# `accesskit_macos` pulls its own `objc2 0.5`; floem's windowing keeps
+# `accesskit_macos` pulls its own `objc2 0.5`; floom's windowing keeps
 # `objc2 0.6`, so both majors coexist in the dependency graph. The per-OS
 # crates are merged into the existing target-specific dependency blocks above.
 [target.'cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))'.dependencies]
@@ -165,17 +165,17 @@ objc2-ui-kit = { version = "0.3", features = [
 ] }
 
 # OpenHarmony (HarmonyOS) backend. The event loop / windowing is provided by
-# `floem-winit-ohos`, a vendored fork of `tgui-winit-ohos` (a split-architecture
+# `floom-winit-ohos`, a vendored fork of `tgui-winit-ohos` (a split-architecture
 # winit backend for OHOS) whose `winit-core` dependency is retargeted onto
-# `floem-winit-core`. That retarget is what lets Floem's `Application` satisfy
+# `floem-winit-core`. That retarget is what lets Floom's `Application` satisfy
 # the crate's `RuntimeApplication` trait at all. The drift is near-zero (the
 # `ApplicationHandler` trait is byte-identical and the OHOS backend only uses
 # the unchanged subset), so the retarget is a pure `winit_core ->
 # floem_winit_core` rename — see
-# `vendor/floem-winit-ohos/patch/retarget-to-floem-winit-core.patch` and
+# `crates/vendor/floom-winit-ohos/patch/retarget-to-floem-winit-core.patch` and
 # `docs/ohos.md`. The fork is declared in `[workspace.dependencies]`.
 [target.'cfg(target_env = "ohos")'.dependencies]
-floem-winit-ohos = { workspace = true }
+floom-winit-ohos = { workspace = true }
 # N-API bridge for clipboard / file_dialog / open_external / receive_files.
 # napi-rs compiles the Rust<->ArkTS FFI; the OpenHarmony N-API lib is linked
 # into libentry.so by cargo-ohos-app. TODO(OHOS): confirm the napi version and
@@ -188,10 +188,10 @@ napi-derive = "2"
 
 [features]
 default = ["default-image-formats", "vger", "serde"]
-skia = ["dep:floem-legacy-renderer-skia"]
-vello = ["dep:floem-legacy-renderer-vello"]
-vger = ["dep:floem-legacy-renderer-vger"]
-# tiny-skia = ["dep:floem-legacy-renderer-tiny-skia"]
+skia = ["dep:floom-legacy-renderer-skia"]
+vello = ["dep:floom-legacy-renderer-vello"]
+vger = ["dep:floom-legacy-renderer-vger"]
+# tiny-skia = ["dep:floom-legacy-renderer-tiny-skia"]
 serde = [
   "dep:serde",
   "winit/serde",
@@ -218,12 +218,12 @@ image-tiff = ["image/tiff"]
 image-webp = ["image/webp"]
 tokio = ["dep:tokio"]
 # rfd (file dialog) async runtime
-crossbeam = ["dep:crossbeam", "floem-legacy-renderer/crossbeam"]
+crossbeam = ["dep:crossbeam", "floom-legacy-renderer/crossbeam"]
 localization = ["dep:fluent-bundle", "dep:unic-langid", "dep:sys-locale", "dep:ouroboros"]
 
 [dev-dependencies]
 criterion = { version = "0.8.1", features = ["html_reports"] }
-floem-legacy-renderer = { path = "../floom-legacy-renderer" }
+floom-legacy-renderer = { path = "../floom-legacy-renderer" }
 peniko = { workspace = true }
 # Doc examples in `views::dropdown` show the enum-driven dropdown workflow,
 # which is the one place the docs ask users to reach for `strum`.
@@ -281,7 +281,7 @@ harness = false
 
 # --- OHOS: the retargeted fork is a plain dependency, not a `[patch]` ---
 # A `[patch.crates-io] tgui-winit-ohos = { path = ... }` entry used to live
-# here. The fork is now package-renamed to `floem-winit-ohos`, and a `[patch]`
+# here. The fork is now package-renamed to `floom-winit-ohos`, and a `[patch]`
 # entry must keep the name of the package it replaces, so it became a plain
 # path dependency in `[workspace.dependencies]`. The retarget rationale
 # (`winit_core -> floem_winit_core`, zero logic change) is recorded in the
@@ -295,19 +295,19 @@ harness = false
 #    used to drop both cold-start (`application:didFinishLaunchingWithOptions:`)
 #    and warm-start (`application:openURL:options:`) shares. This local fork
 #    (built from the published `floem-winit 0.29.5`, which is that exact rev)
-#    adds a `set_on_open_url` C callback that floem registers at startup; the
+#    adds a `set_on_open_url` C callback that floom registers at startup; the
 #    delegate forwards every shared `NSURL` through it. No drift risk — same
 #    rev, same version (25.10.0). The fork's root `Cargo.toml` is a virtual
 #    workspace, so the patch must point at member packages, not at the root.
 #    See docs/ios.md "Step 8b".
 #
-# 2. OHOS trait identity. `vendor/floem-winit-ohos` used to depend on the *git*
+# 2. OHOS trait identity. `crates/vendor/floom-winit-ohos` used to depend on the *git*
 #    `floem-winit-core` / `dpi` while the patched `floem-winit` facade depends
 #    on the vendored *path* copies. Cargo treats those as different packages, so
 #    the resolve graph carried two `floem-winit-core` and three `dpi` instances
-#    (`cargo metadata`). Floem's `Application` implements the local
+#    (`cargo metadata`). Floom's `Application` implements the local
 #    `ApplicationHandler` while the OHOS backend required the git one — meaning
-#    `export_ohos_winit_app!(floem_app_factory)` could not type-check. Every
+#    `export_ohos_winit_app!(floom_app_factory)` could not type-check. Every
 #    member is now redirected to the vendored tree, so one instance is left.
 #    This is only observable on an OHOS target, which is why macOS never
 #    noticed.

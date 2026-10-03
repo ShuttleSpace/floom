@@ -1,4 +1,4 @@
-//! Renderer-neutral text layout for Floem 2.0.
+//! Renderer-neutral text layout for Floom 2.0.
 //!
 //! Shaping / bidi / line-breaking live here (Parley). Renderers consume
 //! [`GlyphRun`] / [`LaidOutText`] only — they must not own shaping.

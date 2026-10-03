@@ -2,7 +2,7 @@ use crate::ViewId;
 use crate::accessibility::AccessibilityAttrs;
 use crate::inspector::CapturedView;
 use crate::views::VirtualVector;
-use floem_legacy_reactive::{RwSignal, SignalGet, SignalUpdate};
+use floom_legacy_reactive::{RwSignal, SignalGet, SignalUpdate};
 use std::collections::HashMap;
 use std::ops::AddAssign;
 use std::rc::Rc;

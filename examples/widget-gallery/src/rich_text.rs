@@ -1,6 +1,6 @@
 use std::ops::Range;
 
-use floem::{
+use floom::{
     IntoView,
     peniko::color::palette,
     text::{Attrs, AttrsList, FontStyle},
@@ -12,7 +12,7 @@ pub fn rich_text_view() -> impl IntoView {
         "This".red().italic() + " is rich text".blue() + "\nTest value: " + 5.to_string().green();
 
     let text = "
-    // floem is a ui lib, homepage https://github.com/lapce/floem
+    // floom is a ui lib, homepage https://github.com/lapce/floom
     fn main() {
         println(\"Hello World!\");
     }";

@@ -12,9 +12,9 @@ This is an example timer app, as described in
 > it clear that the signal is a timer tick and, as always, has not
 > much scaffolding.
 
-This examples shows how to integrate tokio streams with a Floem application
+This examples shows how to integrate tokio streams with a Floom application
 
-![timer](https://github.com/lapce/floem/assets/23398472/b55dae4f-56fe-4e9f-a0ee-1898db048588)
+![timer](https://github.com/lapce/floom/assets/23398472/b55dae4f-56fe-4e9f-a0ee-1898db048588)
 
 [task4]: https://eugenkiss.github.io/7guis/tasks/#timer
 [7gui]: https://eugenkiss.github.io/7guis/

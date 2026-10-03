@@ -11,24 +11,24 @@
 //! * the negative space — cancelling the animation retires the markers, so a
 //!   finished scale can never leave a frozen transform behind.
 
-use floem_animation::{AnimKind, Tween};
-use floem_app::WidgetHost;
-use floem_layout::LayoutStyle;
-use floem_scene::SceneNode;
-use floem_types::{CompositorProp, Point, Rect, Size, Transform};
-use floem_widgets::Canvas;
+use floom_animation::{AnimKind, Tween};
+use floom_app::WidgetHost;
+use floom_layout::LayoutStyle;
+use floom_scene::SceneNode;
+use floom_types::{CompositorProp, Point, Rect, Size, Transform};
+use floom_widgets::Canvas;
 
 fn rect_canvas() -> Canvas {
     Canvas::new(|cx| {
         let b = cx.bounds();
         let rect =
             Rect::from_origin_size(Point::new(b.x0 + 10.0, b.y0 + 10.0), Size::new(20.0, 10.0));
-        cx.fill_rect(rect, floem_types::Color::rgb(30, 30, 30));
+        cx.fill_rect(rect, floom_types::Color::rgb(30, 30, 30));
     })
     .size(40.0, 30.0)
 }
 
-fn host_with_canvas() -> (WidgetHost, floem_app::NodeId) {
+fn host_with_canvas() -> (WidgetHost, floom_app::NodeId) {
     let mut host = WidgetHost::new();
     host.set_size(Size::new(200.0, 60.0));
     let root = host.mount_root(
@@ -195,5 +195,5 @@ fn cancelling_the_scale_retires_the_markers() {
 }
 
 // The test needs a container to mount under; pull it from the prelude-shaped
-// surface the facade re-exports so this file compiles against floem-app only.
-use floem_widgets::Container;
+// surface the facade re-exports so this file compiles against floom-app only.
+use floom_widgets::Container;

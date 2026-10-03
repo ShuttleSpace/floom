@@ -291,7 +291,7 @@ impl FakeNativeProvider {
         let n = self.next_snapshot;
         self.next_snapshot += 1;
         NativeSnapshot {
-            resource: floem_types::ResourceId::new(n, 1),
+            resource: floom_types::ResourceId::new(n, 1),
             pixel_width: 64,
             pixel_height: 32,
         }

@@ -1,8 +1,8 @@
-use floem_platform::{
+use floom_platform::{
     Capability, Clipboard, Ime, Modifiers, Platform, PlatformEvent, PointerButton, WindowConfig,
 };
-use floem_platform_desktop::{DesktopInput, DesktopPlatform};
-use floem_types::{Point, Size};
+use floom_platform_desktop::{DesktopInput, DesktopPlatform};
+use floom_types::{Point, Size};
 
 #[test]
 fn desktop_window_and_input_mapping() {

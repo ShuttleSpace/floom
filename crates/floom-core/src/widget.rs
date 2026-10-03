@@ -2,20 +2,20 @@
 
 use crate::compose::{Child, LayoutRequest};
 use crate::context::{CreateContext, EventContext, PaintContext, SemanticsContext, UpdateContext};
-use floem_types::ElementId;
+use floom_types::ElementId;
 
 /// High-level UI description. Implementations must not depend on concrete renderers.
 ///
 /// The `on_unimplemented` diagnostic is the Phase 29.2 migration hook: the
-/// most common cross-version mistake is handing a v1 `floem::view::View`
-/// value to a Floem 2.0 mount point. The unsatisfied bound then reports the
+/// most common cross-version mistake is handing a v1 `floom::view::View`
+/// value to a Floom 2.0 mount point. The unsatisfied bound then reports the
 /// migration path at the exact line that needs it, instead of a bare
 /// "trait bound not satisfied".
 #[diagnostic::on_unimplemented(
-    message = "`{Self}` is not a Floem 2.0 `Widget`",
-    label = "not a Floem 2.0 `Widget`",
-    note = "v1 `floem::view::View` values are compatibility APIs and cannot be mounted into a Floem 2.0 host",
-    note = "rebuild the subtree from `floem2::prelude` widgets, or keep the application on the v1 `floem` crate (preserved for the current major version)"
+    message = "`{Self}` is not a Floom 2.0 `Widget`",
+    label = "not a Floom 2.0 `Widget`",
+    note = "v1 `floom::view::View` values are compatibility APIs and cannot be mounted into a Floom 2.0 host",
+    note = "rebuild the subtree from `floom2::prelude` widgets, or keep the application on the v1 `floom` crate (preserved for the current major version)"
 )]
 pub trait Widget {
     fn create(&self, cx: &mut dyn CreateContext) -> ElementId;
@@ -102,7 +102,7 @@ pub trait Widget {
     /// A clip applies to the widget's own paint as well as its descendants'.
     /// The region is resolved from the element's box, so the one thing a widget
     /// cannot express here is a clip unrelated to its own layout.
-    fn clip(&self) -> Option<floem_types::ClipShape> {
+    fn clip(&self) -> Option<floom_types::ClipShape> {
         None
     }
     /// The filter this widget's **whole subtree** is drawn through, or `None`
@@ -119,7 +119,7 @@ pub trait Widget {
     /// sits *behind* the widget is a different request with a different input,
     /// and it is an op rather than a declaration — see
     /// [`crate::PaintContext::backdrop_filter`].
-    fn filter(&self) -> Option<floem_types::Filter> {
+    fn filter(&self) -> Option<floom_types::Filter> {
         None
     }
     fn semantics(&self, cx: &mut dyn SemanticsContext, id: ElementId) {

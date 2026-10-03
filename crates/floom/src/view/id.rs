@@ -6,7 +6,7 @@
 
 use std::{any::Any, cell::RefCell, collections::HashSet, rc::Rc};
 
-use floem_legacy_reactive::Scope;
+use floom_legacy_reactive::Scope;
 use peniko::kurbo::{Affine, Point, Rect, RoundedRect, Size};
 use smallvec::smallvec;
 use taffy::{Layout, NodeId};
@@ -1174,7 +1174,7 @@ impl ViewId {
     /// Screen readers can request semantic actions — [`AccessAction::Increment`],
     /// [`AccessAction::Decrement`], [`AccessAction::Expand`],
     /// [`AccessAction::Collapse`], [`AccessAction::SetValue`],
-    /// [`AccessAction::ScrollIntoView`] — that have no generic Floem event.
+    /// [`AccessAction::ScrollIntoView`] — that have no generic Floom event.
     /// Register a handler here to make the view operable: it receives the
     /// requested [`AccessAction`] and, for `SetValue`, the new value as a
     /// string payload.
@@ -1198,7 +1198,7 @@ impl ViewId {
     /// ```
     ///
     /// Generic actions (`Focus`, `Default`, `ShowContextMenu`) are routed
-    /// through Floem's normal focus/event paths and need no handler.
+    /// through Floom's normal focus/event paths and need no handler.
     ///
     /// See also [`super::accessibility::AccessibilityActionHandler`].
     pub fn accessibility_action(&self, handler: impl Fn(AccessAction, Option<String>) + 'static) {
@@ -1535,9 +1535,9 @@ impl ViewId {
     /// # Examples
     ///
     /// ```rust
-    /// # use floem::context::Phases;
-    /// # use floem::event::{Event, InteractionEvent, RouteKind};
-    /// # use floem::ViewId;
+    /// # use floom::context::Phases;
+    /// # use floom::event::{Event, InteractionEvent, RouteKind};
+    /// # use floom::ViewId;
     /// # let view_id = ViewId::new();
     /// # let focused_view = view_id.get_element_id();
     /// // Dispatch a click directly to a specific view (target only, no propagation)

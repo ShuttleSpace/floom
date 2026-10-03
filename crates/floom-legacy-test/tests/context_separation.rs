@@ -8,11 +8,11 @@
 //! This test file helps validate architectural changes to separate
 //! inherited context from class context in StyleCx.
 
-use floem::peniko::{Brush, Color};
-use floem::prelude::*;
-use floem::prop;
-use floem::style::{Background, Style};
-use floem_legacy_test::prelude::*;
+use floom::peniko::{Brush, Color};
+use floom::prelude::*;
+use floom::prop;
+use floom::style::{Background, Style};
+use floom_legacy_test::prelude::*;
 
 // ============================================================================
 // Test Helpers
@@ -37,7 +37,7 @@ impl TestColorExt for Style {
 }
 
 // A test style class.
-floem::style_class!(pub TestClass);
+floom::style_class!(pub TestClass);
 
 // ============================================================================
 // Isolation Tests: Class changes shouldn't affect inherited props

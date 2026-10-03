@@ -6,7 +6,7 @@
 //! The [`DropdownCustomStyle`] struct allows for easy and advanced customization of the dropdown's appearance.
 use std::{any::Any, rc::Rc};
 
-use floem_legacy_reactive::{Effect, RwSignal, Scope, SignalGet, SignalUpdate, UpdaterEffect};
+use floom_legacy_reactive::{Effect, RwSignal, Scope, SignalGet, SignalUpdate, UpdaterEffect};
 use imbl::OrdMap;
 use peniko::kurbo::{Point, Size};
 
@@ -145,7 +145,7 @@ custom_event!(DropdownAccept<T>);
 /// #     }
 /// # }
 /// #
-/// # use floem::reactive::RwSignal;
+/// # use floom::reactive::RwSignal;
 /// let selected = RwSignal::new(Character::Ori);
 /// ```
 ///
@@ -171,8 +171,8 @@ custom_event!(DropdownAccept<T>);
 /// #     }
 /// # }
 /// #
-/// # fn character_select() -> impl floem::IntoView {
-/// #     use floem::{prelude::*, views::dropdown::Dropdown};
+/// # fn character_select() -> impl floom::IntoView {
+/// #     use floom::{prelude::*, views::dropdown::Dropdown};
 /// # let selected = RwSignal::new(Character::Ori);
 /// Dropdown::new_rw(selected, Character::iter())
 /// # }
@@ -186,9 +186,9 @@ custom_event!(DropdownAccept<T>);
 /// The default is `true`.
 /// Styling Example:
 /// ```rust
-/// # use floem::views::dropdown;
-/// # use floem::views::empty;
-/// # use floem::views::Decorators;
+/// # use floom::views::dropdown;
+/// # use floom::views::empty;
+/// # use floom::views::Decorators;
 /// // root view
 /// empty().style(|s| {
 ///     s.class(dropdown::DropdownClass, |s| {
@@ -330,8 +330,8 @@ impl<T: Clone + std::cmp::PartialEq + std::fmt::Debug> Dropdown<T> {
     ///
     /// # Example
     /// ```rust
-    /// # use floem::{*, views::*, reactive::*};
-    /// # use floem::views::dropdown::*;
+    /// # use floom::{*, views::*, reactive::*};
+    /// # use floom::views::dropdown::*;
     /// let active_item = RwSignal::new(3);
     ///
     /// Dropdown::custom(
@@ -413,8 +413,8 @@ impl<T: Clone + std::cmp::PartialEq + std::fmt::Debug> Dropdown<T> {
     ///
     /// # Example
     /// ```rust
-    /// # use floem::{*, views::*, reactive::*};
-    /// # use floem::views::dropdown::*;
+    /// # use floom::{*, views::*, reactive::*};
+    /// # use floom::views::dropdown::*;
     /// let active_item = RwSignal::new(3);
     ///
     /// Dropdown::new(move || active_item.get(), 1..=5).on_accept(move |val| active_item.set(val));
@@ -445,8 +445,8 @@ impl<T: Clone + std::cmp::PartialEq + std::fmt::Debug> Dropdown<T> {
     ///
     /// # Example:
     /// ```rust
-    /// # use floem::{*, views::*, reactive::*};
-    /// # use floem::{views::dropdown::*};
+    /// # use floom::{*, views::*, reactive::*};
+    /// # use floom::{views::dropdown::*};
     /// let dropdown_active_item = RwSignal::new(3);
     ///
     /// Dropdown::new_rw(dropdown_active_item, 1..=5);

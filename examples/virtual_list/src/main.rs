@@ -1,4 +1,4 @@
-use floem::prelude::{palette::css, *};
+use floom::prelude::{palette::css, *};
 
 fn app_view() -> impl IntoView {
     VirtualStack::new(move || 1..=1000000)
@@ -22,5 +22,5 @@ fn app_view() -> impl IntoView {
 }
 
 fn main() {
-    floem::launch(app_view);
+    floom::launch(app_view);
 }

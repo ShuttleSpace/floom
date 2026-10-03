@@ -1,4 +1,4 @@
-use floem::{action::set_window_scale, prelude::*, reactive::Effect, style_class, unit::UnitExt};
+use floom::{action::set_window_scale, prelude::*, reactive::Effect, style_class, unit::UnitExt};
 
 style_class!(pub Button);
 
@@ -89,11 +89,11 @@ fn app_view() -> impl IntoView {
         })
         .on_event_stop(listener::KeyUp, move |_cx, KeyboardEvent { key, .. }| {
             if let Key::Named(NamedKey::F11) = key {
-                floem::action::inspect();
+                floom::action::inspect();
             }
         })
 }
 
 fn main() {
-    floem::launch(app_view);
+    floom::launch(app_view);
 }

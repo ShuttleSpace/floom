@@ -1,9 +1,9 @@
 //! Experimental accessibility (a11y) subsystem.
 //!
-//! Floem's accessibility model is a **platform-neutral tree** of
+//! Floom's accessibility model is a **platform-neutral tree** of
 //! [`AccessNode`]s. Each node carries a [`AccessRole`], boolean
 //! [`AccessState`]s, the [`AccessAction`]s it supports, geometry, and its
-//! children. Floem core builds this tree from view/layout state and hands
+//! children. Floom core builds this tree from view/layout state and hands
 //! diffable [`AccessTreeUpdate`]s to a platform [`AccessibilityBackend`],
 //! which bridges them to the native screen reader:
 //!
@@ -17,7 +17,7 @@
 //! wired in, [`crate::embedder::BackendCapabilities::accessibility`] stays
 //! `false`.
 //!
-//! The design deliberately mirrors the embedder crate (`src/embedder/`):
+//! The design deliberately mirrors the embedder crate (`crates/floom/src/embedder/`):
 //! a data-oriented protocol plus Rust adapter traits, independent of any
 //! specific platform or windowing library.
 
@@ -140,8 +140,8 @@ pub(crate) fn native_backend_for_window(
 /// window, or `None` when no bridge is available on this target.
 ///
 /// On Android the bridge is a transparent `AccessibilityNodeProvider` overlay
-/// that floem injects into the `Activity`'s decor view (see
-/// `backend_android.rs` / `FloemAccessibilityView.java`). It needs no native
+/// that floom injects into the `Activity`'s decor view (see
+/// `backend_android.rs` / `FloomAccessibilityView.java`). It needs no native
 /// view pointer — it reaches the `Activity` through the shared JNI handle in
 /// `crate::platform::android_jni`. Single-window today, like iOS/OHOS.
 #[cfg(target_os = "android")]

@@ -2,7 +2,7 @@
 
 use std::collections::HashMap;
 
-use floem_types::{ElementId, NativeViewId, Point, Rect};
+use floom_types::{ElementId, NativeViewId, Point, Rect};
 
 /// Dispatch phase for a routed pointer event.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

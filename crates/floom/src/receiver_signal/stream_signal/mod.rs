@@ -27,8 +27,8 @@ use super::common::{EventLoopExecutor, NoInitial};
 ///     .build();
 /// ```
 pub struct StreamSignal<T> {
-    value: floem_legacy_reactive::ReadSignal<T>,
-    finished: floem_legacy_reactive::ReadSignal<bool>,
+    value: floom_legacy_reactive::ReadSignal<T>,
+    finished: floom_legacy_reactive::ReadSignal<bool>,
 }
 
 /// This implementation will be removed in the future
@@ -112,39 +112,39 @@ impl<T: 'static> StreamSignal<T> {
     }
 
     pub fn is_finished(&self) -> bool {
-        use floem_legacy_reactive::SignalGet;
+        use floom_legacy_reactive::SignalGet;
         self.finished.get()
     }
 }
 
-impl<T> floem_legacy_reactive::SignalGet<T> for StreamSignal<T>
+impl<T> floom_legacy_reactive::SignalGet<T> for StreamSignal<T>
 where
     T: Clone,
 {
-    fn id(&self) -> floem_legacy_reactive::ReactiveId {
+    fn id(&self) -> floom_legacy_reactive::ReactiveId {
         self.value.id()
     }
 }
 
-impl<T> floem_legacy_reactive::SignalWith<T> for StreamSignal<T> {
-    fn id(&self) -> floem_legacy_reactive::ReactiveId {
+impl<T> floom_legacy_reactive::SignalWith<T> for StreamSignal<T> {
+    fn id(&self) -> floom_legacy_reactive::ReactiveId {
         self.value.id()
     }
 }
 
-impl<T> floem_legacy_reactive::SignalRead<T> for StreamSignal<T> {
-    fn id(&self) -> floem_legacy_reactive::ReactiveId {
+impl<T> floom_legacy_reactive::SignalRead<T> for StreamSignal<T> {
+    fn id(&self) -> floom_legacy_reactive::ReactiveId {
         self.value.id()
     }
 
-    fn try_read(&self) -> Option<floem_legacy_reactive::ReadRef<'_, T>>
+    fn try_read(&self) -> Option<floom_legacy_reactive::ReadRef<'_, T>>
     where
         T: 'static,
     {
         self.value.try_read()
     }
 
-    fn try_read_untracked(&self) -> Option<floem_legacy_reactive::ReadRef<'_, T>>
+    fn try_read_untracked(&self) -> Option<floom_legacy_reactive::ReadRef<'_, T>>
     where
         T: 'static,
     {
@@ -152,8 +152,8 @@ impl<T> floem_legacy_reactive::SignalRead<T> for StreamSignal<T> {
     }
 }
 
-impl<T> floem_legacy_reactive::SignalTrack<T> for StreamSignal<T> {
-    fn id(&self) -> floem_legacy_reactive::ReactiveId {
+impl<T> floom_legacy_reactive::SignalTrack<T> for StreamSignal<T> {
+    fn id(&self) -> floom_legacy_reactive::ReactiveId {
         self.value.id()
     }
 }

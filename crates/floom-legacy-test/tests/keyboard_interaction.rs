@@ -5,11 +5,11 @@
 //! - Active styles work with pointer events
 //! - Container/child interaction works correctly
 
-use floem::event::Event;
-use floem::peniko::Brush;
-use floem::prelude::*;
-use floem::style::{Background, StyleSelector};
-use floem_legacy_test::prelude::*;
+use floom::event::Event;
+use floom::peniko::Brush;
+use floom::prelude::*;
+use floom::style::{Background, StyleSelector};
+use floom_legacy_test::prelude::*;
 use ui_events::keyboard::{Code, Key, KeyState, KeyboardEvent, Location, Modifiers};
 
 /// Test that focused view shows focus style.

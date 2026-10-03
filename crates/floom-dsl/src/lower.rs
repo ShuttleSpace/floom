@@ -14,7 +14,7 @@
 
 use std::collections::BTreeMap;
 
-use floem_ui_ir::{
+use floom_ui_ir::{
     Binding, BindingKind, DEFAULT_SLOT, EventBinding, EventName, IrError, IrVersion, NodeKind,
     Prop, PropValue, Slot, UiDocument, UiNode, ValueType, prop_spec,
 };
@@ -252,7 +252,7 @@ fn flatten(node: &AstNode, nodes: &mut Vec<UiNode>, spans: &mut SpanMap) -> Resu
         }
     }
 
-    let children: Vec<floem_ui_ir::NodeKey> = node
+    let children: Vec<floom_ui_ir::NodeKey> = node
         .children
         .iter()
         .map(|child| child.key.clone().into())
@@ -300,8 +300,8 @@ mod tests {
         assert_eq!(
             slots[0].children,
             vec![
-                floem_ui_ir::NodeKey::from("b"),
-                floem_ui_ir::NodeKey::from("c")
+                floom_ui_ir::NodeKey::from("b"),
+                floom_ui_ir::NodeKey::from("c")
             ]
         );
         assert!(

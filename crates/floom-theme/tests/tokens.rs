@@ -1,4 +1,4 @@
-use floem_theme::{ColorScheme, Theme, ThemeScope};
+use floom_theme::{ColorScheme, Theme, ThemeScope};
 
 #[test]
 fn light_and_dark_tokens() {

@@ -1,11 +1,11 @@
-# Floem workspace baseline (pre–2.0)
+# Floom workspace baseline (pre–2.0)
 
 **Date:** 2026-09-04  
-**Git:** `0715ac3` on branch `floem-2.0`  
+**Git:** `0715ac3` on branch `floom-2.0`  
 **Host:** macOS 26.5.1 arm64, `rustc 1.98.0` (Homebrew)  
 **Related decision:** [`../decisions/2026-09-04-no-legacy-view-adapter.md`](../decisions/2026-09-04-no-legacy-view-adapter.md) (Policy A: no Legacy View adapter)
 
-This inventory freezes the repository shape before Floem 2.0 Phase 1 crate topology lands.
+This inventory freezes the repository shape before Floom 2.0 Phase 1 crate topology lands.
 
 ---
 
@@ -17,31 +17,31 @@ This inventory freezes the repository shape before Floem 2.0 Phase 1 crate topol
 
 | Package | Path |
 |---|---|
-| `floem` | `.` |
-| `floem_reactive` | `reactive/` |
-| `floem_renderer` | `renderer/` |
+| `floom` | `.` |
+| `floom_reactive` | `reactive/` |
+| `floom_renderer` | `renderer/` |
 | `floem_vger_renderer` | `vger/` |
-| `floem_vello_renderer` | `vello/` |
-| `floem_skia_renderer` | `skia/` |
-| `floem_tiny_skia_renderer` | `tiny_skia/` |
+| `floom_vello_renderer` | `vello/` |
+| `floom_skia_renderer` | `skia/` |
+| `floom_tiny_skia_renderer` | `tiny_skia/` |
 | `ui-events-floem-winit` | `ui-events-winit/` |
-| `floem-test` | `test/` |
+| `floom-test` | `test/` |
 
 ### Examples (`examples/*`)
 
-Includes desktop demos (`counter`, `widget-gallery`, …) and platform samples (`floem-android-example`, `floem-ios-example`, `ohos`).
+Includes desktop demos (`counter`, `widget-gallery`, …) and platform samples (`floom-android-example`, `floom-ios-example`, `ohos`).
 
 ### Not workspace members
 
 - `platform-compat/` — vendor trees (`floem-winit`, `tgui-winit-ohos`, `harmony-app-rs`); pulled via `[patch]` only.
 
-### Floem 2.0 crates (absent)
+### Floom 2.0 crates (absent)
 
-No `floem-types`, `floem-core`, `floem-runtime-core`, `floem-scene`, `floem-platform`, etc.
+No `floom-types`, `floom-core`, `floom-runtime-core`, `floom-scene`, `floom-platform`, etc.
 
 ---
 
-## 2. Feature flags (`floem` package)
+## 2. Feature flags (`floom` package)
 
 | Feature | Notes |
 |---|---|
@@ -53,7 +53,7 @@ No `floem-types`, `floem-core`, `floem-runtime-core`, `floem-scene`, `floem-plat
 | `localization` | Fluent / locale |
 | image-* | Per-format image codecs |
 
-`editor` feature: **removed** (Industrial 1.0); editor lives in sibling `floem-editor`.
+`editor` feature: **removed** (Industrial 1.0); editor lives in sibling `floom-editor`.
 
 ---
 
@@ -61,23 +61,23 @@ No `floem-types`, `floem-core`, `floem-runtime-core`, `floem-scene`, `floem-plat
 
 ### App / window
 
-- `floem::launch`, `floem::Application`, `floem::AppConfig`, `floem::AppEvent`
-- `floem::new_window`, `floem::close_window`, `floem::WindowState`, …
+- `floom::launch`, `floom::Application`, `floom::AppConfig`, `floom::AppEvent`
+- `floom::new_window`, `floom::close_window`, `floom::WindowState`, …
 - Modules: `app`, `window`
 
 ### View tree (legacy — delete without shim under Policy A)
 
-- `floem::View`, `floem::ViewId`, `floem::IntoView`, `floem::AnyView`, `floem::ParentView`
+- `floom::View`, `floom::ViewId`, `floom::IntoView`, `floom::AnyView`, `floom::ParentView`
 - Modules: `view`, `views`, `style`, `context` (internal)
 
 ### Reactive
 
-- Crate: `floem_reactive`
-- Re-exports: `floem::reactive`, crate-root `RwSignal`, `Scope`, `create_*`, `prelude`
+- Crate: `floom_reactive`
+- Re-exports: `floom::reactive`, crate-root `RwSignal`, `Scope`, `create_*`, `prelude`
 
 ### Layout / text / paint
 
-- Layout: Taffy via `floem::taffy`, `layout` module, `ScreenLayout`
+- Layout: Taffy via `floom::taffy`, `layout` module, `ScreenLayout`
 - Text: `text` module + Parley/Fontique via renderer
 - Paint: `paint::renderer::Renderer` enum wrapping vger/vello/skia/tiny-skia
 
@@ -89,8 +89,8 @@ No `floem-types`, `floem-core`, `floem-runtime-core`, `floem-scene`, `floem-plat
 
 ### IDs already present
 
-- `ViewId` — primary view identity (`src/view/id.rs`)
-- `floem::ElementId` — re-export from `understory_box_tree` (not the 2.0 generation-safe ElementId yet)
+- `ViewId` — primary view identity (`crates/floom/src/view/id.rs`)
+- `floom::ElementId` — re-export from `understory_box_tree` (not the 2.0 generation-safe ElementId yet)
 
 ---
 
@@ -117,15 +117,15 @@ No `floem-types`, `floem-core`, `floem-runtime-core`, `floem-scene`, `floem-plat
 
 ### Known failures (pre-existing at baseline)
 
-1. **`floem-test` / `embedder_protocol`**
+1. **`floom-test` / `embedder_protocol`**
    - `capabilities_winit_default_reports_desktop_features`
    - Panic: `assertion failed: !caps.accessibility`  
      (desktop winit default now reports accessibility; test expectation stale.)
 
-2. **`floem` doctests** (`src/views/dropdown.rs`)
+2. **`floom` doctests** (`crates/floom/src/views/dropdown.rs`)
    - Three doctests fail compile: `unresolved import strum`
 
-These are **baseline defects**, not regressions introduced by Floem 2.0 work. Fix opportunistically or in a dedicated hygiene task; do not treat as Phase 0 blockers unless they block new crates.
+These are **baseline defects**, not regressions introduced by Floom 2.0 work. Fix opportunistically or in a dedicated hygiene task; do not treat as Phase 0 blockers unless they block new crates.
 
 ---
 
@@ -134,28 +134,28 @@ These are **baseline defects**, not regressions introduced by Floem 2.0 work. Fi
 Existing Criterion benches (root `Cargo.toml` `[[bench]]`, `harness = false`):
 
 ```bash
-cargo bench -p floem --bench event_dispatch
-cargo bench -p floem --bench style_computation
-cargo bench -p floem --bench painting
-cargo bench -p floem --bench layout
-cargo bench -p floem --bench animation
-cargo bench -p floem --bench text
-cargo bench -p floem --bench view_creation
+cargo bench -p floom --bench event_dispatch
+cargo bench -p floom --bench style_computation
+cargo bench -p floom --bench painting
+cargo bench -p floom --bench layout
+cargo bench -p floom --bench animation
+cargo bench -p floom --bench text
+cargo bench -p floom --bench view_creation
 # or all:
-cargo bench -p floem
+cargo bench -p floom
 ```
 
-**Gap vs Floem 2.0 Task 0.3:** no `runtime_baseline` / `scene_baseline` / `render_baseline` / memory report yet — those land in Task 0.3.
+**Gap vs Floom 2.0 Task 0.3:** no `runtime_baseline` / `scene_baseline` / `render_baseline` / memory report yet — those land in Task 0.3.
 
 ---
 
-## 7. Likely Floem 2.0 seams
+## 7. Likely Floom 2.0 seams
 
 | Seam | Today | 2.0 target |
 |---|---|---|
-| Types / IDs | `ViewId` + understory `ElementId` | `floem-types` generation-safe IDs |
+| Types / IDs | `ViewId` + understory `ElementId` | `floom-types` generation-safe IDs |
 | Runtime | View storage + reactive effects | ElementArena + DirtyFlags + scheduler |
-| Scene | Implicit in paint | `floem-scene` |
+| Scene | Implicit in paint | `floom-scene` |
 | Renderer | Concrete enum in `paint` | Renderer ABI backends |
 | Platform | Mixed modules | Platform ABI crates |
 | Legacy View | Public API | **Removed** (Policy A; no adapter) |

@@ -17,7 +17,7 @@
 //! # Example
 //!
 //! ```rust
-//! use floem::prelude::*;
+//! use floom::prelude::*;
 //!
 //! // Using the trait to iterate over children
 //! fn process_children(children: impl IntoViewIter) {

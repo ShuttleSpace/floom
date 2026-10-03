@@ -73,8 +73,8 @@ where
     where
         F: FnOnce(
                 Fut,
-                floem_legacy_reactive::WriteSignal<Option<T>>,
-                floem_legacy_reactive::WriteSignal<bool>,
+                floom_legacy_reactive::WriteSignal<Option<T>>,
+                floom_legacy_reactive::WriteSignal<bool>,
                 ExtSendTrigger,
             ) + 'static,
     {
@@ -116,8 +116,8 @@ where
     Fut: std::future::Future<Output = T> + 'static,
     F: FnOnce(
             Fut,
-            floem_legacy_reactive::WriteSignal<Option<T>>,
-            floem_legacy_reactive::WriteSignal<bool>,
+            floom_legacy_reactive::WriteSignal<Option<T>>,
+            floom_legacy_reactive::WriteSignal<bool>,
             ExtSendTrigger,
         ) + 'static,
 {
@@ -132,12 +132,12 @@ where
     Fut: std::future::Future<Output = T> + 'static,
     F: FnOnce(
         Fut,
-        floem_legacy_reactive::WriteSignal<Option<T>>,
-        floem_legacy_reactive::WriteSignal<bool>,
+        floom_legacy_reactive::WriteSignal<Option<T>>,
+        floom_legacy_reactive::WriteSignal<bool>,
         ExtSendTrigger,
     ),
 {
-    use floem_legacy_reactive::*;
+    use floom_legacy_reactive::*;
 
     let cx = Scope::current();
     let trigger = cx.enter(ExtSendTrigger::new);

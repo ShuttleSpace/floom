@@ -89,8 +89,8 @@ where
     where
         F: FnOnce(
                 R,
-                floem_legacy_reactive::WriteSignal<T>,
-                floem_legacy_reactive::WriteSignal<Option<E>>,
+                floom_legacy_reactive::WriteSignal<T>,
+                floom_legacy_reactive::WriteSignal<Option<E>>,
                 ExtSendTrigger,
             ) + 'static,
     {
@@ -251,8 +251,8 @@ where
     R: BlockingReceiver<Item = T, Error = E> + 'static,
     F: FnOnce(
             R,
-            floem_legacy_reactive::WriteSignal<Option<T>>,
-            floem_legacy_reactive::WriteSignal<Option<E>>,
+            floom_legacy_reactive::WriteSignal<Option<T>>,
+            floom_legacy_reactive::WriteSignal<Option<E>>,
             ExtSendTrigger,
         ) + 'static,
 {
@@ -269,8 +269,8 @@ where
     R: BlockingReceiver<Item = T, Error = E> + 'static,
     F: FnOnce(
             R,
-            floem_legacy_reactive::WriteSignal<T>,
-            floem_legacy_reactive::WriteSignal<Option<E>>,
+            floom_legacy_reactive::WriteSignal<T>,
+            floom_legacy_reactive::WriteSignal<Option<E>>,
             ExtSendTrigger,
         ) + 'static,
 {
@@ -290,12 +290,12 @@ where
     R: 'static,
     F: FnOnce(
         R,
-        floem_legacy_reactive::WriteSignal<T>,
-        floem_legacy_reactive::WriteSignal<Option<E>>,
+        floom_legacy_reactive::WriteSignal<T>,
+        floom_legacy_reactive::WriteSignal<Option<E>>,
         ExtSendTrigger,
     ),
 {
-    use floem_legacy_reactive::*;
+    use floom_legacy_reactive::*;
 
     let cx = Scope::current();
     let trigger = cx.enter(ExtSendTrigger::new);
@@ -317,12 +317,12 @@ where
     R: 'static,
     F: FnOnce(
         R,
-        floem_legacy_reactive::WriteSignal<Option<T>>,
-        floem_legacy_reactive::WriteSignal<Option<E>>,
+        floom_legacy_reactive::WriteSignal<Option<T>>,
+        floom_legacy_reactive::WriteSignal<Option<E>>,
         ExtSendTrigger,
     ),
 {
-    use floem_legacy_reactive::*;
+    use floom_legacy_reactive::*;
 
     let cx = Scope::current();
     let trigger = cx.enter(ExtSendTrigger::new);

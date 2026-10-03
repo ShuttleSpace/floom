@@ -28,18 +28,18 @@
 //! frame did not move.
 //!
 //! Regenerate with
-//! `UPDATE_SNAPSHOTS=1 cargo test -p floem-snapshot --test golden_frames`.
+//! `UPDATE_SNAPSHOTS=1 cargo test -p floom-snapshot --test golden_frames`.
 //!
 //! Font caveat, same as `tests/widgets.rs`: **no fixture here paints glyphs.**
 //! A pixel golden over shaped text is pinned to the host's font stack.
 
-use floem_animation::{AnimKind, CompositorProp, Tween};
-use floem_app::{NodeId, WidgetHost};
-use floem_core::{Child, ChildKey, LayoutRequest};
-use floem_layout::LayoutStyle;
-use floem_snapshot::{FrameDigest, GoldenFrames, PixelSnapshot, snapshots_dir};
-use floem_types::{Brush, Color, PresenceTransition, Size};
-use floem_widgets::{Conditional, Container, Crossfade, SharedTransitionLayout, WidgetAny};
+use floom_animation::{AnimKind, CompositorProp, Tween};
+use floom_app::{NodeId, WidgetHost};
+use floom_core::{Child, ChildKey, LayoutRequest};
+use floom_layout::LayoutStyle;
+use floom_snapshot::{FrameDigest, GoldenFrames, PixelSnapshot, snapshots_dir};
+use floom_types::{Brush, Color, PresenceTransition, Size};
+use floom_widgets::{Conditional, Container, Crossfade, SharedTransitionLayout, WidgetAny};
 
 /// The frame: 120×60.
 const FRAME: Size = Size::new(120.0, 60.0);
@@ -171,10 +171,10 @@ fn a_fading_gradient_card_is_golden_frame_by_frame() {
     let card = Container::new()
         .background(Brush::Linear {
             stops: vec![(0.0, HOT), (1.0, INK)],
-            from: floem_types::Point::new(0.0, 0.0),
-            to: floem_types::Point::new(CARD_W as f64, CARD_H as f64),
+            from: floom_types::Point::new(0.0, 0.0),
+            to: floom_types::Point::new(CARD_W as f64, CARD_H as f64),
         })
-        .shadow(floem_types::Shadow {
+        .shadow(floom_types::Shadow {
             color: Color::rgba(0, 0, 0, 160),
             blur: 6.0,
             offset_x: 3.0,

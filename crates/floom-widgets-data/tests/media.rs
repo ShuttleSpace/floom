@@ -1,13 +1,13 @@
 //! Media-control tests: transport state, time formatting, the accessible
 //! parts, and pointer interaction.
 
-use floem_accessibility::{SemanticsRole, SemanticsState};
-use floem_core::{ElementId, KeyPhase, Point, Rect, Widget, WidgetAny};
-use floem_types::{Key, KeyEvent, NamedKey, PointerEvent};
-use floem_widgets::testkit::{
+use floom_accessibility::{SemanticsRole, SemanticsState};
+use floom_core::{ElementId, KeyPhase, Point, Rect, Widget, WidgetAny};
+use floom_types::{Key, KeyEvent, NamedKey, PointerEvent};
+use floom_widgets::testkit::{
     AllocatingCreateContext, RecordingUpdateContext, SceneRecorder, dispatch, semantics_snapshot,
 };
-use floem_widgets_data::media::{MediaControls, MediaKind, MediaState, format_time};
+use floom_widgets_data::media::{MediaControls, MediaKind, MediaState, format_time};
 
 const BAR: Rect = Rect {
     x0: 0.0,
@@ -356,7 +356,7 @@ fn space_toggles_playback_and_the_arrow_keys_walk_the_track() {
         let ev = KeyEvent {
             phase: KeyPhase::Down,
             key: k,
-            modifiers: floem_types::Modifiers::NONE,
+            modifiers: floom_types::Modifiers::NONE,
         };
         dispatch(controls, id, BAR, ev.into())
     };
@@ -426,7 +426,7 @@ fn the_cluster_paints_its_transport() {
         .ops()
         .iter()
         .filter_map(|op| match op {
-            floem_widgets::testkit::PaintOp::Text { text, .. } => Some(text.clone()),
+            floom_widgets::testkit::PaintOp::Text { text, .. } => Some(text.clone()),
             _ => None,
         })
         .collect();

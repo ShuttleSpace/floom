@@ -1,0 +1,10 @@
+[package]
+name = "floom2-progress-ring"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+description = "Self-drawn motion: an animated progress ring on a Canvas, plus a Spinner that animates itself"
+
+[dependencies]
+floom2 = { path = "../../crates/floom2", version = "0.2.0" }

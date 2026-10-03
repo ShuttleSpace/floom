@@ -1,20 +1,20 @@
-# Migrating from Floem v1 to 2.0
+# Migrating from Floom v1 to 2.0
 
 Two crates, two models, one repository:
 
-- **`floem`** is the v1 monolith (`src/`). It is preserved and **will keep
+- **`floom`** is the v1 monolith (`src/`). It is preserved and **will keep
   working for the current major version**. Nothing in this document is required
   of an app that stays on it.
-- **`floem2`** is the 2.0 facade (`app/floem2`). It is a different architecture,
+- **`floom2`** is the 2.0 facade (`crates/floom2`). It is a different architecture,
   not a new coat of paint on the old one: a layered crate graph, an explicit
   element tree, three replaceable ABIs, and a headless app shell.
 
 The two trees **do not mix in one frame**. There is no adapter that mounts a v1
 `View` inside a 2.0 host, and there is no adapter that mounts a 2.0 widget
 inside a v1 app. Migration is therefore *subtree by subtree*: you port a screen,
-not a file, and the ported screen is built from `floem2::prelude`.
+not a file, and the ported screen is built from `floom2::prelude`.
 
-Every snippet below is compiled and run by `app/floem2/tests/migration.rs`.
+Every snippet below is compiled and run by `crates/floom2/tests/migration.rs`.
 That file is the source of truth; if this page and it disagree, the test is
 right.
 
@@ -22,46 +22,46 @@ right.
 
 | situation | what to do |
 | --- | --- |
-| staying on v1 for now | nothing, or switch `use floem::prelude::*` to `use floem::compat::v1_prelude::*` to pin the surface (below) |
-| porting one screen | port that subtree to `floem2::prelude`; the rest of the app keeps running v1 |
-| starting a new app | `floem2::prelude` |
+| staying on v1 for now | nothing, or switch `use floom::prelude::*` to `use floom::compat::v1_prelude::*` to pin the surface (below) |
+| porting one screen | port that subtree to `floom2::prelude`; the rest of the app keeps running v1 |
+| starting a new app | `floom2::prelude` |
 
 ## Step 0 — freeze the v1 surface (optional, cheap)
 
-`floem::prelude` is the v1 prelude and will not change while v1 is supported,
+`floom::prelude` is the v1 prelude and will not change while v1 is supported,
 but a future narrowing is easier to survive if the app imports the frozen copy:
 
 ```rust
 // before
-use floem::prelude::*;
+use floom::prelude::*;
 // after
-use floem::compat::v1_prelude::*;
+use floom::compat::v1_prelude::*;
 ```
 
-`floem::compat::v1_prelude` is a verbatim mirror of today's v1 prelude — the
+`floom::compat::v1_prelude` is a verbatim mirror of today's v1 prelude — the
 same items, same `TypeId`s (asserted by `tests/compat_prelude.rs`). Once an app
-imports it, a future change to `floem::prelude` cannot touch it.
+imports it, a future change to `floom::prelude` cannot touch it.
 
 ## Concept mapping
 
 | v1 | 2.0 | note |
 | --- | --- | --- |
-| `View` / `IntoView` | `Widget` (and `WidgetAny` in type-erased trees) | both live in `floem-core`; custom widgets reach them through `floem2::advanced` |
+| `View` / `IntoView` | `Widget` (and `WidgetAny` in type-erased trees) | both live in `floom-core`; custom widgets reach them through `floom2::advanced` |
 | `impl IntoView` return value | `Child::new(ChildKey, LayoutRequest, \|\| Box::new(widget))` | children are **keyed** and built by the host |
-| `RwSignal`, `create_effect` | application-owned state | the reactive graph is legacy; `floem-store` if you want signals back |
+| `RwSignal`, `create_effect` | application-owned state | the reactive graph is legacy; `floom-store` if you want signals back |
 | `ViewId` | `NodeId` | `NodeId` is issued by, and scoped to, one `WidgetHost` |
 | `.style(\|s\| s...)` | `LayoutStyle` (layout) + `StyleSet`/`StyleProps` (paint, per interaction state) | style is a value, not a closure |
-| `floem::launch(view)` | `WidgetHost::new()` + `mount_root(..)` + `AppRunner` | the shell runs **headless** — that is why every example is a test |
-| `floem::Renderer` (immediate mode) | `floem_renderer::Renderer` (retained: scene + damage in) | see [Renderer plugins](#renderer-plugins) |
-| windowing baked into `floem` | `floem-platform` ABI (`Platform`, `Window`, `Surface`, `Clipboard`, `Ime`) | see [Platform plugins](#platform-plugins) |
-| — | `floem-native` with capability negotiation | new in 2.0; see [Native views](#native-views) |
+| `floom::launch(view)` | `WidgetHost::new()` + `mount_root(..)` + `AppRunner` | the shell runs **headless** — that is why every example is a test |
+| `floom::Renderer` (immediate mode) | `floom_renderer::Renderer` (retained: scene + damage in) | see [Renderer plugins](#renderer-plugins) |
+| windowing baked into `floom` | `floom-platform` ABI (`Platform`, `Window`, `Surface`, `Clipboard`, `Ime`) | see [Platform plugins](#platform-plugins) |
+| — | `floom-native` with capability negotiation | new in 2.0; see [Native views](#native-views) |
 
 ## Step 1 — state: signals → the application owns it
 
 **Before (v1).** A signal, and a label that re-runs when it changes:
 
 ```rust
-use floem::compat::v1_prelude::*;
+use floom::compat::v1_prelude::*;
 
 let mut counter = RwSignal::new(0_i32);
 
@@ -81,7 +81,7 @@ is updated in place (excerpt — the full snippet, including how `label_id` is
 found, is `after::the_same_counter_mounts_clicks_and_updates` in the test):
 
 ```rust
-use floem2::prelude::*;
+use floom2::prelude::*;
 
 let clicks = std::sync::Arc::new(std::sync::atomic::AtomicI32::new(0));
 let counter = clicks.clone();
@@ -120,7 +120,7 @@ Two things to know:
   repaint it. Forgetting `host.frame()` is the most common "why didn't it
   update".
 
-If you want signals back, `floem-store` (`store(value)`, `select(..)`) provides
+If you want signals back, `floom-store` (`store(value)`, `select(..)`) provides
 fine-grained selectors. It is built on the legacy reactive crate — the one 2.0
 → v1 edge still live in the graph, and one the architecture gate reports as a
 note.
@@ -137,8 +137,8 @@ Child::new(ChildKey::index(0), LayoutRequest::new(), || Box::new(Text::new("firs
 The key is what makes reconciliation cheap: keep the key and the widget
 survives, change the key and it is replaced. This is the contract a v1
 `dyn_stack` / `virtual_stack` user is moving to — see
-`examples/floem2-list` (keyed rows survive a reorder) and
-`examples/floem2-virtual-list` (38 elements materialized for 100 000 rows).
+`examples/floom2-list` (keyed rows survive a reorder) and
+`examples/floom2-virtual-list` (38 elements materialized for 100 000 rows).
 
 ## Step 3 — identity: `ViewId` → `NodeId`
 
@@ -146,7 +146,7 @@ survives, change the key and it is replaced. This is the contract a v1
 usable from anywhere:
 
 ```rust
-use floem::ViewId;
+use floom::ViewId;
 
 let id = ViewId::new();
 assert!(id.is_valid());
@@ -177,15 +177,15 @@ v1 builds style with closures, including state selectors:
 ```
 
 2.0 resolves a sparse property bag per interaction state.
-`floem_style::StyleSet` maps `StyleState` (`NORMAL`, `HOVER`, `PRESSED`,
+`floom_style::StyleSet` maps `StyleState` (`NORMAL`, `HOVER`, `PRESSED`,
 `FOCUSED`, `DISABLED`, `SELECTED`) to `StyleProps` (`background`, `foreground`,
 `opacity`, `font_size`, `padding`, `radius`, `border_width`, `border_color`,
 `elevation`), and `resolve(active)` merges the matching sets — `None` means
 "unset", so a hover set that mentions only `background` leaves the rest alone.
-The design systems (`floem-material`, `floem-cupertino`, `floem-fluent`,
-`floem-harmony`) emit `StyleProps`, they do not paint.
+The design systems (`floom-material`, `floom-cupertino`, `floom-fluent`,
+`floom-harmony`) emit `StyleProps`, they do not paint.
 
-Layout is separate: `LayoutStyle` (from `floem-layout`) is a plain value, and
+Layout is separate: `LayoutStyle` (from `floom-layout`) is a plain value, and
 `set_style(node, style)` replaces it.
 
 ## Renderer plugins
@@ -213,15 +213,15 @@ fn trim_caches(&mut self) {}
 ```
 
 The port is: keep your device setup, replace the draw-call stream with a scene
-walk. Widgets name `floem-renderer`, never a backend; only `floem-app` names
+walk. Widgets name `floom-renderer`, never a backend; only `floom-app` names
 both. Backends are verified against the ABI's own tests
-(`render/floem-renderer/tests/contract.rs`, `render_handoff.rs`), not only
+(`crates/floom-renderer/tests/contract.rs`, `render_handoff.rs`), not only
 theirs.
 
 ## Platform plugins
 
 v1 talks to winit directly from the monolith. 2.0 hides it behind
-`floem-platform`:
+`floom-platform`:
 
 ```rust
 pub trait Platform {
@@ -236,37 +236,37 @@ pub trait Platform {
 }
 ```
 
-plus `Window`, `Surface`, `Clipboard` and `Ime`. `floem-ui-events-winit` adapts
+plus `Window`, `Surface`, `Clipboard` and `Ime`. `floom-ui-events-winit` adapts
 winit's event loop; a new backend implements the traits and registers in three
 places (see `docs/2.0/ARCHITECTURE.md`). Conformance:
-`platform/floem-platform/tests/contracts.rs` and, on desktop,
-`platform/floem-platform-desktop/tests/{lifecycle,accessibility,winit_capabilities}.rs`.
+`crates/floom-platform/tests/contracts.rs` and, on desktop,
+`crates/floom-platform-desktop/tests/{lifecycle,accessibility,winit_capabilities}.rs`.
 
 ## Native views
 
-New in 2.0 and with no v1 counterpart: `floem-native`. A provider declares
+New in 2.0 and with no v1 counterpart: `floom-native`. A provider declares
 capabilities; the controller **negotiates** a composition mode per participant,
 and a mode the backend cannot do is downgraded, never silently granted — a
 participant granted an impossible mode draws nothing, which looks exactly like
-one that was never asked for. `examples/floem2-native-plugin` writes a provider
+one that was never asked for. `examples/floom2-native-plugin` writes a provider
 from scratch.
 
 ## The compatibility tier
 
 Two mechanisms, both from Phase 29.2:
 
-1. **`floem::compat::v1_prelude`** — the frozen v1 surface (Step 0).
-2. **A diagnostic at the mount point.** `floem_core::Widget` and `WidgetAny`
+1. **`floom::compat::v1_prelude`** — the frozen v1 surface (Step 0).
+2. **A diagnostic at the mount point.** `floom_core::Widget` and `WidgetAny`
    both carry `#[diagnostic::on_unimplemented]`, so the most common
    cross-version mistake reports the migration path on the line that needs it:
 
    ```text
    error[E0277]: the trait bound `Label: Widget` is not satisfied
-     = note: `Label` is not a Floem 2.0 `Widget`
-     = note: v1 `floem::view::View` values are compatibility APIs and cannot be
-             mounted into a Floem 2.0 host
-     = note: rebuild the subtree from `floem2::prelude` widgets, or keep the
-             application on the v1 `floem` crate (preserved for the current
+     = note: `Label` is not a Floom 2.0 `Widget`
+     = note: v1 `floom::view::View` values are compatibility APIs and cannot be
+             mounted into a Floom 2.0 host
+     = note: rebuild the subtree from `floom2::prelude` widgets, or keep the
+             application on the v1 `floom` crate (preserved for the current
              major version)
    ```
 
@@ -278,17 +278,17 @@ Two mechanisms, both from Phase 29.2:
 Stated plainly, so nobody plans a port around them:
 
 - **The global reactive graph.** `create_effect`, `create_memo` and friends are
-  v1. 2.0 owns state explicitly; `floem-store` is the opt-in bridge.
+  v1. 2.0 owns state explicitly; `floom-store` is the opt-in bridge.
 - **`ViewId`'s global reach.** No 2.0 handle works across hosts.
 - **Immediate-mode rendering.** There is no shim that turns a v1 `Renderer`
   into a 2.0 one.
-- **The crate name `floem`.** The facade is `floem2` because the monolith holds
+- **The crate name `floom`.** The facade is `floom2` because the monolith holds
   the name. Renaming it is a one-line change once the monolith retires.
 
 ## Verification
 
 ```bash
-cargo test -p floem2 --test migration      # the snippets on this page
+cargo test -p floom2 --test migration      # the snippets on this page
 cargo test --workspace --no-fail-fast      # everything
 bash scripts/check-architecture-deps.sh    # the layering
 ```

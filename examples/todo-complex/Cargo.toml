@@ -5,7 +5,7 @@ edition = "2021"
 
 [dependencies]
 confy = "1.0.0"
-floem = { path = "../../crates/floom", features = [
+floom = { path = "../../crates/floom", features = [
   "serde",
   "vello",
 ], default-features = false }

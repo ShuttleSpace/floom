@@ -1,19 +1,19 @@
 # cargo-about manual license additions.
 #
-# Floem vendors forked upstream crates in `vendor/`. They are not on crates.io,
+# Floom vendors forked upstream crates in `crates/vendor/`. They are not on crates.io,
 # so cargo-about cannot auto-detect their licenses. Record them here, taken from
-# each fork's upstream project (see `vendor/*/NOTICE.md` for the full source +
+# each fork's upstream project (see `crates/vendor/*/NOTICE.md` for the full source +
 # delta note).
 
 [[annotations]]
-id = "vendor/floem-winit"
+id = "crates/vendor/floem-winit"
 license = "Apache-2.0 OR MIT"
-notes = "Fork of lapce/winit @ 133268de. See vendor/floem-winit/NOTICE.md."
+notes = "Fork of lapce/winit @ 133268de. See crates/vendor/floem-winit/NOTICE.md."
 
 [[annotations]]
-id = "vendor/floem-winit-ohos"
+id = "crates/vendor/floom-winit-ohos"
 license = "Apache-2.0 OR MIT"
-notes = "Fork of tgui-winit-ohos 0.4.11 (renamed to floem-winit-ohos). See vendor/floem-winit-ohos/NOTICE.md."
+notes = "Fork of tgui-winit-ohos 0.4.11 (renamed to floom-winit-ohos). See crates/vendor/floom-winit-ohos/NOTICE.md."
 
 # The third fork — `ui-events/floem-winit`, a fork of endoli/ui-events'
 # `ui-events-winit` 0.1.0 (upstream is Apache-2.0 OR MIT) — needs no entry here:

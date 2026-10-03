@@ -28,5 +28,5 @@ pub use live::{ElementRef, LiveTree, Snapshot};
 pub use patch::{ApplyReport, PatchOp, RolledBack, UiPatch};
 
 /// Re-exported so a caller can talk about keys without depending on
-/// `floem-ui-ir` directly.
-pub use floem_ui_ir::NodeKey;
+/// `floom-ui-ir` directly.
+pub use floom_ui_ir::NodeKey;

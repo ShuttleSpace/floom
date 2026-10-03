@@ -1,7 +1,7 @@
-use floem::accessibility::AccessRole;
-use floem::headless::{HeadlessHarness, TestRoot};
-use floem::views::{Button, Decorators};
-use floem::IntoView;
+use floom::accessibility::AccessRole;
+use floom::headless::{HeadlessHarness, TestRoot};
+use floom::views::{Button, Decorators};
+use floom::IntoView;
 
 #[test]
 fn harness_exposes_access_tree_with_button_label() {

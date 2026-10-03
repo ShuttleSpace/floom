@@ -1,8 +1,8 @@
-// EntryAbility — OpenHarmony Stage model entry that wires Floem's platform
+// EntryAbility — OpenHarmony Stage model entry that wires Floom's platform
 // bridge into the OS.
 //
 // This file is the integration point between the ArkTS ability lifecycle and
-// floem's Rust N-API bridge (see FloemBridge.ets). To use it:
+// floom's Rust N-API bridge (see FloomBridge.ets). To use it:
 //
 //   1. Register this ability in your module.json5:
 //        "abilities": [{
@@ -12,7 +12,7 @@
 //          "startBackgroundColor": "#FFFFFF"
 //        }]
 //   2. Make sure the Rust cdylib (libohos.so) is linked by cargo-ohos-app and
-//      its `#[napi]` exports are importable from './FloemBridge'.
+//      its `#[napi]` exports are importable from './FloomBridge'.
 //   3. Add `pages/Index` (a minimal XComponent surface) if the build needs an
 //      ArkTS UI to host the native window; otherwise the Rust/winit window is
 //      driven by the export_ohos_winit_app! entry point.
@@ -22,9 +22,9 @@ import { window } from '@kit.WindowKit';
 import {
   setAppContext,
   registerPlatformBridge,
-  registerFloemA11yProvider,
+  registerFloomA11yProvider,
   onSharedFiles,
-} from './FloemBridge';
+} from './FloomBridge';
 
 export default class EntryAbility extends UIAbility {
   onWindowStageCreate(windowStage: window.WindowStage): void {
@@ -32,11 +32,11 @@ export default class EntryAbility extends UIAbility {
     setAppContext(this.context);
     // 2. Register the platform bridge (clipboard / file / external / a11y / IME).
     registerPlatformBridge();
-    // 3. ArkTS a11y seam (see FloemA11y.ets). NOTE: the real OHOS screen-reader
+    // 3. ArkTS a11y seam (see FloomA11y.ets). NOTE: the real OHOS screen-reader
     //    provider is registered from Rust via the native C ArkUI_Accessibility
     //    Provider (task #121) — ArkTS cannot register a provider. This call is
     //    a no-op that documents the correct architecture.
-    registerFloemA11yProvider();
+    registerFloomA11yProvider();
 
     // 4. Host the native (Rust/winit) window. With cargo-ohos-app the native
     //    surface is created by libohos.so's export_ohos_winit_app! entry. If
@@ -64,7 +64,7 @@ export default class EntryAbility extends UIAbility {
 // Extract URIs shared into the app via a share sheet / "open with".
 // OHOS delivers a single uri on `want.uri` and batch shares as an array under
 // `ability.params.stream`. MIME types / display names are not always present,
-// so they are forwarded as null and floem fills them in from the URI.
+// so they are forwarded as null and floom fills them in from the URI.
 function extractSharedFiles(want: Want): {
   uris: Array<string>;
   mimeTypes: Array<string | null>;

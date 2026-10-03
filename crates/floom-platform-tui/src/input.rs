@@ -7,7 +7,7 @@
 //! how badly pixel-downsampling mangles non-Latin text) would have no `KeyCode`
 //! and would be dropped before it reached a text field.
 //!
-//! Floem already has a path that bypasses `KeyCode` entirely: committed input
+//! Floom already has a path that bypasses `KeyCode` entirely: committed input
 //! text is delivered as [`PlatformEvent::ImeCommit`], one `Key::Char` per
 //! scalar, and a text field consumes it through the same machinery as ordinary
 //! typing. So *every* character this parser sees — ASCII or UTF-8 — is emitted
@@ -15,8 +15,8 @@
 //! that mean *commands* rather than *text* still go through [`KeyCode`], where
 //! the app's shortcut layer can see them.
 
-use floem_platform::{KeyCode, PlatformEvent};
-use floem_types::{Modifiers, WindowId};
+use floom_platform::{KeyCode, PlatformEvent};
+use floom_types::{Modifiers, WindowId};
 
 /// A parsed input, classified into "this is text" or "this is a key command".
 enum Outcome {

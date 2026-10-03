@@ -1,4 +1,4 @@
-//! Typed routing and navigation for Floem 2.0.
+//! Typed routing and navigation for Floom 2.0.
 //!
 //! Framework sits *below* widgets in the architecture, so this crate is
 //! deliberately widget-free: it models navigation as plain data and state
@@ -344,7 +344,7 @@ mod tests {
     #[test]
     fn deep_link_round_trip_through_typed_route() {
         let route = TestRoute::Profile(42);
-        let parsed = url::parse("floem://app/profile/42?ref=push").expect("valid url");
+        let parsed = url::parse("floom://app/profile/42?ref=push").expect("valid url");
         assert_eq!(parsed.path, "/profile/42");
         assert_eq!(parsed.query("ref"), Some("push"));
 

@@ -1,11 +1,11 @@
 //! Clipboard — read and write the system clipboard.
 //!
 //! Unlike the rest of the device-query packages, this one is not optional
-//! polish: Floem's own [`floem_platform::Clipboard`] trait is implemented per
+//! polish: Floom's own [`floom_platform::Clipboard`] trait is implemented per
 //! backend, and on Android there is **no NDK clipboard API at all** — the
 //! clipboard is reachable only through `android.content.ClipboardManager`.
 //! So the Android arm here is real JNI, and it is what
-//! `floem-platform-android` calls to satisfy that trait.
+//! `floom-platform-android` calls to satisfy that trait.
 //!
 //! Both functions are best-effort in the same way the OS is: Android 10+
 //! restricts *reading* the clipboard to the focused app, and an empty clipboard
@@ -16,7 +16,7 @@
 //!
 //! Adapted from `gpui-mobile` (Apache-2.0).
 //!
-//! [`floem_platform::Clipboard`]: https://docs.rs/floem-platform
+//! [`floom_platform::Clipboard`]: https://docs.rs/floom-platform
 
 #[cfg(target_os = "android")]
 mod android;

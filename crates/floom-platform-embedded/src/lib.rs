@@ -2,12 +2,12 @@
 
 pub mod accessibility;
 
-use floem_platform::{
+use floom_platform::{
     Capability, HostPlatform, Platform, PlatformCapabilities, PlatformEvent, Window, WindowConfig,
 };
-use floem_types::{PlatformId, Size};
+use floom_types::{PlatformId, Size};
 
-pub use floem_platform::{Clipboard, Ime};
+pub use floom_platform::{Clipboard, Ime};
 
 /// RGBA8 framebuffer backing a software-rendered embedded surface.
 #[derive(Debug, Clone)]
@@ -87,18 +87,18 @@ impl Platform for EmbeddedPlatform {
         self.host.capabilities()
     }
 
-    fn create_window(&mut self, config: WindowConfig) -> floem_types::WindowId {
+    fn create_window(&mut self, config: WindowConfig) -> floom_types::WindowId {
         let size = Size::new(self.fb.width as f64, self.fb.height as f64);
         let mut cfg = config;
         cfg.size = size;
         self.host.create_window(cfg)
     }
 
-    fn window(&self, id: floem_types::WindowId) -> Option<&dyn Window> {
+    fn window(&self, id: floom_types::WindowId) -> Option<&dyn Window> {
         self.host.window(id)
     }
 
-    fn window_mut(&mut self, id: floem_types::WindowId) -> Option<&mut dyn Window> {
+    fn window_mut(&mut self, id: floom_types::WindowId) -> Option<&mut dyn Window> {
         self.host.window_mut(id)
     }
 
@@ -106,7 +106,7 @@ impl Platform for EmbeddedPlatform {
         self.host.poll_events(out)
     }
 
-    fn request_frame(&mut self, window: floem_types::WindowId) {
+    fn request_frame(&mut self, window: floom_types::WindowId) {
         self.host.request_frame(window)
     }
 
@@ -118,7 +118,7 @@ impl Platform for EmbeddedPlatform {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use floem_platform::WindowConfig;
+    use floom_platform::WindowConfig;
 
     #[test]
     fn framebuffer_software_path() {

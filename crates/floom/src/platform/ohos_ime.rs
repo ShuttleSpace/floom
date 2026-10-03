@@ -108,7 +108,7 @@ fn push_event(event: ImeEvent) {
 //
 // The ArkTS input-method extension calls these when the user types. They are
 // ordinary `#[napi]` exports, so `cargo-ohos-app` surfaces them as C symbols
-// in `libfloem.so` that the ArkTS side imports.
+// in `libfloom.so` that the ArkTS side imports.
 
 /// Final text committed (composition finished, or a single key press / paste).
 #[napi]

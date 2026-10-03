@@ -10,17 +10,17 @@
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-use floem_core::{Axis, Child, ChildKey, LayoutRequest, SemanticsRole};
-use floem_testkit::{DEFAULT_SIZE, Selector, TestApp};
-use floem_types::{Point, Size};
-use floem_widgets::{Button, Checkbox, Popup, Stack, Switch, Text, TextField};
+use floom_core::{Axis, Child, ChildKey, LayoutRequest, SemanticsRole};
+use floom_testkit::{DEFAULT_SIZE, Selector, TestApp};
+use floom_types::{Point, Size};
+use floom_widgets::{Button, Checkbox, Popup, Stack, Switch, Text, TextField};
 
 /// A button that counts its clicks.
 ///
 /// The counter is atomic rather than an `Rc<Cell>` because a `Child` builder
 /// has to be `Send + Sync` — it may be called from anywhere the reconciler
 /// runs.
-fn counting_button(sink: Arc<AtomicUsize>) -> impl floem_core::WidgetAny + 'static {
+fn counting_button(sink: Arc<AtomicUsize>) -> impl floom_core::WidgetAny + 'static {
     Stack::new(Axis::Vertical).child(Child::new(
         ChildKey::index(0),
         LayoutRequest::new(),
@@ -35,7 +35,7 @@ fn counting_button(sink: Arc<AtomicUsize>) -> impl floem_core::WidgetAny + 'stat
 
 /// A column holding a label and a button — the smallest tree with two things
 /// worth telling apart.
-fn labelled_button(label: &'static str) -> impl floem_core::WidgetAny + 'static {
+fn labelled_button(label: &'static str) -> impl floom_core::WidgetAny + 'static {
     Stack::new(Axis::Vertical)
         .child(Child::new(ChildKey::index(0), LayoutRequest::new(), || {
             Box::new(Text::new("header"))

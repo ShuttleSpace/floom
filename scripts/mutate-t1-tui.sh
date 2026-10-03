@@ -39,10 +39,10 @@ mutate_one() {
   touch "$file"
 }
 
-UNIT="cargo test -q -p floem-renderer-tui --lib"
-E2E="cargo test -q -p floem-app --test tui_backend"
-GRID=render/floem-renderer-tui/src/grid.rs
-ANSI=render/floem-renderer-tui/src/ansi.rs
+UNIT="cargo test -q -p floom-renderer-tui --lib"
+E2E="cargo test -q -p floom-app --test tui_backend"
+GRID=crates/floom-renderer-tui/src/grid.rs
+ANSI=crates/floom-renderer-tui/src/ansi.rs
 
 # 1. Every column is off by one. If nothing pins where a glyph lands, the whole
 #    grid could shift a cell and still look plausible.

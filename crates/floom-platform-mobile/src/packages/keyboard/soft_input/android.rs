@@ -9,9 +9,9 @@
 //! travels the whole chain and is then refused:
 //!
 //! ```text
-//! ImeTracker: com.example.floem2:… onRequestShow at ORIGIN_CLIENT_SHOW_SOFT_INPUT
+//! ImeTracker: com.example.floom2:… onRequestShow at ORIGIN_CLIENT_SHOW_SOFT_INPUT
 //! InputMethodManager: Ignoring showSoftInput() as view=…NativeContentView is not served.
-//! ImeTracker: com.example.floem2:… onFailed at PHASE_CLIENT_VIEW_SERVED
+//! ImeTracker: com.example.floom2:… onFailed at PHASE_CLIENT_VIEW_SERVED
 //! ```
 //!
 //! So the keyboard is driven the way Java apps do it: attach a minimal,
@@ -525,5 +525,5 @@ fn report_once(err: &str) {
     reported.push(err.to_string());
     // stderr, like everything else here: logcat shows it as `RustStdoutStderr`
     // whatever the compile-time log level is.
-    eprintln!("floem2-android: IME text read failed: {err}");
+    eprintln!("floom2-android: IME text read failed: {err}");
 }

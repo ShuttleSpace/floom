@@ -1,8 +1,8 @@
-use floem::text::FONT_CONTEXT;
-use floem::views::Label;
-use floem::window::WindowConfig;
-use floem::Application;
-use floem::{
+use floom::text::FONT_CONTEXT;
+use floom::views::Label;
+use floom::window::WindowConfig;
+use floom::Application;
+use floom::{
     reactive::{RwSignal, SignalGet, SignalUpdate},
     views::{ButtonClass, Decorators},
     IntoView,

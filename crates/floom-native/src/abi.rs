@@ -22,19 +22,19 @@
 
 use std::fmt;
 
-use floem_types::{NativeCapture, Rect};
+use floom_types::{NativeCapture, Rect};
 
 use crate::pool::NativeSlot;
 
 // The nouns a widget, a host and a provider all have to say live in
-// `floem-types`: the widget layer sits above this crate and may not name
+// `floom-types`: the widget layer sits above this crate and may not name
 // anything in it, so "I want a video composited as an overlay" has to be
 // spellable below both. Re-exported so callers of this crate keep one import.
 //
 // `NativeSnapshot` joined them in 16.4, and for a reason 16.1 did not have:
 // the frozen texture has to be *painted*, and painting is the widget's job. A
 // widget at L6 cannot name a type defined here at L4.
-pub use floem_types::{InputMode, NativeCompositionMode, NativeSnapshot, NativeViewKind};
+pub use floom_types::{InputMode, NativeCompositionMode, NativeSnapshot, NativeViewKind};
 
 /// Whether a provider can crop a participant to a rect it does not own.
 ///
@@ -456,7 +456,7 @@ pub trait NativeViewProvider {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use floem_types::Rect;
+    use floom_types::Rect;
 
     const OVERLAY_ONLY: &[NativeCompositionMode] = &[NativeCompositionMode::Overlay];
     const TEXTURE_FIRST: &[NativeCompositionMode] = &[

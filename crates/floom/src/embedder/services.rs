@@ -45,7 +45,7 @@ pub trait SurfaceHandle {
     fn descriptor(&self) -> SurfaceDescriptor;
 }
 
-/// Platform services (clipboard, theme, IME, etc.) exposed to Floem.
+/// Platform services (clipboard, theme, IME, etc.) exposed to Floom.
 pub trait PlatformServices {
     /// Report the capabilities of this backend.
     fn capabilities(&self) -> BackendCapabilities;

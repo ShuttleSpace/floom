@@ -20,7 +20,7 @@ use winit::cursor::CursorIcon;
 use winit::dpi::PhysicalInsets;
 use winit::window::Theme;
 
-use floem_legacy_reactive::{RwSignal, SignalGet};
+use floom_legacy_reactive::{RwSignal, SignalGet};
 
 use std::rc::Rc;
 use slotmap::KeyData;
@@ -60,7 +60,7 @@ fn build_focus_space_for_scope<'a>(
     }
 
     // Match the upstream adapter traversal, but take focus policy from
-    // Floem-owned metadata instead of raw box-tree focus flags.
+    // Floom-owned metadata instead of raw box-tree focus flags.
     let mut stack = vec![(scope_root.0, 0u8)];
     while let Some((id, depth)) = stack.pop() {
         if !tree.is_alive(id) {
@@ -305,7 +305,7 @@ impl WindowState {
     /// Register the platform accessibility backend for this window.
     ///
     /// Core forwards every [`crate::accessibility::AccessTreeUpdate`] it builds
-    /// to this backend, which bridges Floem's neutral tree to the native screen
+    /// to this backend, which bridges Floom's neutral tree to the native screen
     /// reader. Passing `None` (the default) means no bridge is active and the
     /// updates are only kept in [`Self::accessibility`].
     ///
@@ -324,7 +324,7 @@ impl WindowState {
     ///
     /// This is the sink for [`crate::accessibility::AccessibilityBackend::poll_actions`].
     /// The neutral [`AccessNodeId`](crate::accessibility::AccessNodeId) is the
-    /// stable `u64` floem assigned from the view's `ViewId` (`as_ffi`), so we
+    /// stable `u64` floom assigned from the view's `ViewId` (`as_ffi`), so we
     /// recover the `ViewId` and drive the view through its normal event/focus
     /// paths — no screen-reader-specific code in the views themselves.
     pub(crate) fn handle_accessibility_action(
@@ -366,7 +366,7 @@ impl WindowState {
                     },
                 );
             }
-            // Semantic actions have no generic Floem event; route them to the
+            // Semantic actions have no generic Floom event; route them to the
             // view's registered a11y handler (if any). Views that own a value
             // or disclosure state register one via
             // [`crate::ViewId::accessibility_action`]. Without a handler we

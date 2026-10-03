@@ -11,14 +11,14 @@
 
 lapce/winit @ `133268de` owns the `WinitApplicationDelegate` and used to drop both
 cold-start (`application:didFinishLaunchingWithOptions:`) and warm-start
-(`application:openURL:options:`) shared URLs/files. Floem needs those shares
-(floem #109), so this in-tree fork adds a `set_on_open_url` C callback that Floem
+(`application:openURL:options:`) shared URLs/files. Floom needs those shares
+(floom #109), so this in-tree fork adds a `set_on_open_url` C callback that Floom
 registers at startup; the delegate forwards every shared `NSURL` through it.
 
 ## Local delta (all in this tree)
 
 - `winit/` — `WinitApplicationDelegate` forwards open-URL shares via a new C callback
-  (`set_on_open_url`); Floem registers it at startup.
+  (`set_on_open_url`); Floom registers it at startup.
 - Otherwise byte-identical to upstream `133268de` (same version 25.10.0).
 
 ## Exit criteria

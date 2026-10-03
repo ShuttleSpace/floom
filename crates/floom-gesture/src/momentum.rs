@@ -36,7 +36,7 @@
 //! Adapted from [`gpui-mobile`](https://github.com/itsbalamurali/gpui-mobile)
 //! (`src/momentum.rs`), which implements iOS `UIScrollView`-style fling for
 //! GPUI on iOS/Android. The physics are unchanged; only the surrounding
-//! framework hooks were removed so the module can live in `floem-gesture`.
+//! framework hooks were removed so the module can live in `floom-gesture`.
 
 use std::time::Instant;
 

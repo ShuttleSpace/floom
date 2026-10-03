@@ -9,10 +9,10 @@ use serial_test::serial;
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use floem::headless::TestRoot;
-use floem::prelude::*;
-use floem::views::tab;
-use floem_legacy_test::prelude::*;
+use floom::headless::TestRoot;
+use floom::prelude::*;
+use floom::views::tab;
+use floom_legacy_test::prelude::*;
 
 // =============================================================================
 // Basic Tab Layout Tests
@@ -454,7 +454,7 @@ fn test_hidden_with_display_none_style() {
     let view = Empty::new().style(move |s| {
         let mut s = s.size(100.0, 100.0);
         if is_display_none.get() {
-            s = s.display(floem::taffy::Display::None);
+            s = s.display(floom::taffy::Display::None);
         }
         s
     });

@@ -1,5 +1,5 @@
-use floem::{action::inspect, prelude::*};
-use floem_editor::{
+use floom::{action::inspect, prelude::*};
+use floom_editor::{
     editor::{
         command::{Command, CommandExecuted},
         core::{

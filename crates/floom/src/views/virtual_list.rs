@@ -1,4 +1,4 @@
-use floem_legacy_reactive::Effect;
+use floom_legacy_reactive::Effect;
 use taffy::FlexDirection;
 use ui_events::keyboard::{Key, NamedKey};
 
@@ -118,7 +118,7 @@ impl<T: 'static> VirtualList<T> {
     /// # Example
     ///
     /// ```rust
-    /// use floem::prelude::*;
+    /// use floom::prelude::*;
     ///
     /// virtual_list(
     ///     move || 1..=1000000,

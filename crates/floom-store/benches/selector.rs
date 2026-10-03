@@ -2,8 +2,8 @@ use std::hint::black_box;
 use std::time::Duration;
 
 use criterion::{Criterion, criterion_group, criterion_main};
-use floem_legacy_reactive::SignalGet;
-use floem_store::store;
+use floom_legacy_reactive::SignalGet;
+use floom_store::store;
 
 #[derive(Clone)]
 struct BigState {

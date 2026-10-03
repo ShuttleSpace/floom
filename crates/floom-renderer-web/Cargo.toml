@@ -1,16 +1,16 @@
 [package]
-name = "floem-renderer-web"
+name = "floom-renderer-web"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
-description = "Web/WASM canvas presenter for Floem 2.0 (CPU scene rasterizer + canvas blit)"
+description = "Web/WASM canvas presenter for Floom 2.0 (CPU scene rasterizer + canvas blit)"
 
 [dependencies]
-floem-renderer = { path = "../floom-renderer", version = "0.2.0" }
-floem-renderer-software = { path = "../floom-renderer-software", version = "0.2.0" }
-floem-scene = { path = "../floom-scene", version = "0.2.0" }
-floem-types = { path = "../floom-types", version = "0.2.0" }
+floom-renderer = { path = "../floom-renderer", version = "0.2.0" }
+floom-renderer-software = { path = "../floom-renderer-software", version = "0.2.0" }
+floom-scene = { path = "../floom-scene", version = "0.2.0" }
+floom-types = { path = "../floom-types", version = "0.2.0" }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 wasm-bindgen = "0.2"

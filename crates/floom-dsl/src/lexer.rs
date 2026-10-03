@@ -2,7 +2,7 @@
 
 use std::fmt;
 
-use floem_ui_ir::Rgba;
+use floom_ui_ir::Rgba;
 
 use crate::DslError;
 

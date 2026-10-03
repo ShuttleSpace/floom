@@ -1,12 +1,12 @@
 //! Material 3 colour roles and the token set built around them.
 
-use floem_design::{readable_on, tonal_ramp};
-use floem_theme::{ColorScheme, Theme};
-use floem_types::Color;
+use floom_design::{readable_on, tonal_ramp};
+use floom_theme::{ColorScheme, Theme};
+use floom_types::Color;
 
 /// The Material 3 colour roles this crate styles against.
 ///
-/// `floem_theme::ColorTokens` carries seven slots; Material needs nineteen. The
+/// `floom_theme::ColorTokens` carries seven slots; Material needs nineteen. The
 /// extra twelve live here rather than in the shared crate, because a role named
 /// `primary_container` is meaningless to Cupertino, and padding the shared token
 /// struct with one system's vocabulary is how it becomes a union of all four.
@@ -77,7 +77,7 @@ pub struct MaterialTheme {
     pub roles: MaterialRoles,
     /// Typography, spacing, radius, elevation, motion and density. Its
     /// `colors` are kept in step with `roles` so a generic consumer that only
-    /// knows `floem_theme::Theme` still gets Material's primary and surface.
+    /// knows `floom_theme::Theme` still gets Material's primary and surface.
     pub theme: Theme,
 }
 
@@ -241,7 +241,7 @@ impl MaterialTheme {
         theme.elevation.level2 = 3.0;
         theme.elevation.level3 = 6.0;
         // Keep the generic colour slots in step with the Material roles, so
-        // `floem_theme::Theme`-only consumers see Material's colours.
+        // `floom_theme::Theme`-only consumers see Material's colours.
         theme.colors.background = roles.surface;
         theme.colors.surface = roles.surface_variant;
         theme.colors.primary = roles.primary;

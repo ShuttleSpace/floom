@@ -2,7 +2,7 @@
 #![deny(missing_docs)]
 use std::{cell::RefCell, path::PathBuf, rc::Rc, sync::Arc};
 
-use floem_legacy_reactive::UpdaterEffect;
+use floom_legacy_reactive::UpdaterEffect;
 use peniko::{Blob, ImageAlphaType, ImageData, kurbo::Rect};
 use sha2::{Digest, Sha256};
 
@@ -115,8 +115,8 @@ pub struct Img {
 ///
 /// ### Example:
 /// ```rust
-/// # use crate::floem::views::Decorators;
-/// # use floem::views::img;
+/// # use crate::floom::views::Decorators;
+/// # use floom::views::img;
 /// let ferris_png = include_bytes!("../../examples/widget-gallery/assets/ferris.png");
 /// // Create an image from the function returning Vec<u8>:
 /// img(move || ferris_png.to_vec())
@@ -128,11 +128,11 @@ pub struct Img {
 ///
 /// ### Example with reactive updates:
 /// ```rust
-/// # use floem::prelude::*;
-/// # use crate::floem::views::Decorators;
-/// # use floem::views::img;
-/// # use floem::views::dyn_view;
-/// # use floem::reactive::RwSignal;
+/// # use floom::prelude::*;
+/// # use crate::floom::views::Decorators;
+/// # use floom::views::img;
+/// # use floom::views::dyn_view;
+/// # use floom::reactive::RwSignal;
 ///
 /// #[derive(Clone)]
 /// enum Image {
@@ -178,8 +178,8 @@ pub fn img(image: impl Fn() -> Vec<u8> + 'static) -> Img {
 /// ### Example:
 /// ```rust
 /// # use std::path::PathBuf;
-/// # use floem::views::Decorators;
-/// # use floem::views::img_from_path;
+/// # use floom::views::Decorators;
+/// # use floom::views::img_from_path;
 ///
 /// let path_to_ferris = PathBuf::from(r"../../examples/widget-gallery/assets/ferrig.png");
 /// // Create an image from the function returning PathBuf:
@@ -370,7 +370,7 @@ impl View for Img {
         }
 
         cx.draw_img(
-            floem_legacy_renderer::Img {
+            floom_legacy_renderer::Img {
                 img: self.img.clone(),
                 hash: &self.img_hash,
             },

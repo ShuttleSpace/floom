@@ -2,7 +2,7 @@
 //! [`EmbedderEvent`] protocol.
 //!
 //! This is the first official implementation of the embedder contract for the
-//! default desktop path: `floem::launch` routes its winit events through here,
+//! default desktop path: `floom::launch` routes its winit events through here,
 //! so every backend (winit, Android, iOS, HarmonyOS) shares one neutral event
 //! model. Lifecycle events that need extra platform bookkeeping (live-resize,
 //! drag-and-drop, window close) are still handled by the caller's existing
@@ -11,7 +11,7 @@
 
 use peniko::kurbo::{Point, Size};
 use smallvec::SmallVec;
-use floem_ui_events_winit::WindowEventTranslation;
+use floom_ui_events_winit::WindowEventTranslation;
 use winit::{dpi::PhysicalPosition, event::WindowEvent};
 
 use crate::embedder::{
@@ -30,13 +30,13 @@ pub(crate) fn winit_window_id(window_id: winit::window::WindowId) -> EmbedderWin
 /// Translate a single winit `WindowEvent` into zero or more neutral
 /// [`EmbedderEvent`]s.
 ///
-/// Keyboard and pointer input are produced by `floem_ui_events_winit`'s reducer
+/// Keyboard and pointer input are produced by `floom_ui_events_winit`'s reducer
 /// (the canonical winit → ui-events bridge). Lifecycle, IME, surface, focus,
 /// theme, and drag-and-drop events are mapped directly.
 pub(crate) fn translate_window_event(
     embedder_window_id: EmbedderWindowId,
     scale: f64,
-    reducer: &mut floem_ui_events_winit::WindowEventReducer,
+    reducer: &mut floom_ui_events_winit::WindowEventReducer,
     event: &WindowEvent,
 ) -> SmallVec<[EmbedderEvent; 4]> {
     let mut events = SmallVec::new();

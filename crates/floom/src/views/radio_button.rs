@@ -5,7 +5,7 @@ use crate::{
     view::View,
     views::{self, ContainerExt, Decorators, Stack},
 };
-use floem_legacy_reactive::{SignalGet, SignalUpdate};
+use floom_legacy_reactive::{SignalGet, SignalUpdate};
 
 use super::{ValueContainer, create_value_container_signals, value_container};
 
@@ -220,7 +220,7 @@ where
 #[cfg(test)]
 mod test {
     use super::*;
-    use floem_legacy_reactive::{RwSignal, SignalGet, SignalUpdate};
+    use floom_legacy_reactive::{RwSignal, SignalGet, SignalUpdate};
 
     #[test]
     fn test_radio_button_new_initial_value() {

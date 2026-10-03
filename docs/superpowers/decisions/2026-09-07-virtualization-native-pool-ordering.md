@@ -1,22 +1,22 @@
-# Decision: native/floem-native introduced as a Phase 12.2 precursor
+# Decision: crates/floom-native introduced as a Phase 12.2 precursor
 
 - **Date:** 2026-09-07
-- **Plan:** `docs/superpowers/plans/2026-09-02-floem-2-complete-implementation-plan.md`
+- **Plan:** `docs/superpowers/plans/2026-09-02-floom-2-complete-implementation-plan.md`
 - **Task:** 12.2 (Native view pooling)
 
 ## Conflict
 
-Task 12.2 prescribes creating `native/floem-native/src/pool.rs` (the native view
+Task 12.2 prescribes creating `crates/floom-native/src/pool.rs` (the native view
 pool that virtualization depends on), but the crate's `Cargo.toml` **and**
-`src/lib.rs` are only specified later, in Phase 16 Task 16.1 ("Define Native
+`crates/floom/src/lib.rs` are only specified later, in Phase 16 Task 16.1 ("Define Native
 ABI"). As written, Phase 12 cannot be completed without a crate the plan
 defines two phases later — a genuine ordering bug.
 
 ## Decision
 
-Introduce `native/floem-native` **now** as a minimal precursor that contains
+Introduce `crates/floom-native` **now** as a minimal precursor that contains
 only the pooling primitive (`pool.rs`: `NativeSlot`, `NativeViewPool`), depending
-solely on `floem-types` (for `NativeViewId`) and `floem-virtual`. The full
+solely on `floom-types` (for `NativeViewId`) and `floom-virtual`. The full
 Native ABI traits (`NativeViewProvider`, `NativeViewController`,
 `NativeCapabilities`, `NativeCompositionMode`) remain Phase 16 deliverables and
 will be added to this same crate's `lib.rs` in Task 16.1.
@@ -27,9 +27,9 @@ exists for virtualized rows.
 
 ## Consequences
 
-- Phase 16 Task 16.1's "Create: native/floem-native/Cargo.toml" and
-  "src/lib.rs" become "Extend" rather than "Create". No structural conflict.
-- The dependency edge `floem-native → floem-virtual` is new but permitted:
+- Phase 16 Task 16.1's "Create: crates/floom-native/Cargo.toml" and
+  "crates/floom/src/lib.rs" become "Extend" rather than "Create". No structural conflict.
+- The dependency edge `floom-native → floom-virtual` is new but permitted:
   native composition legitimately consumes the virtualization primitive, and it
   crosses no forbidden architecture boundary (scene↛platform, types↛platform/GPU,
   widgets↛concrete-renderer, renderer↛widgets). Verified by

@@ -15,12 +15,12 @@
 use std::any::Any;
 use std::cmp::Ordering;
 
-use floem_accessibility::{SemanticsRole, SemanticsState};
-use floem_core::{
+use floom_accessibility::{SemanticsRole, SemanticsState};
+use floom_core::{
     Color, CreateContext, ElementId, LayoutRequest, PaintContext, Point, Rect, SemanticsContext,
     UpdateContext, Widget, WidgetAny,
 };
-use floem_widgets::{SemanticsHint, to_core_role, to_core_state};
+use floom_widgets::{SemanticsHint, to_core_role, to_core_state};
 
 /// Room reserved around the plot for axes and labels.
 const AXIS_MARGIN: f64 = 24.0;
@@ -742,7 +742,7 @@ impl WidgetAny for Chart {
         self
     }
 
-    fn semantics_hint(&self) -> Option<floem_core::SemanticsHint> {
+    fn semantics_hint(&self) -> Option<floom_core::SemanticsHint> {
         // A chart is a graphic with an accessible name, which is what `Image`
         // means to a screen reader; there is no chart role to claim.
         let hint = SemanticsHint {
@@ -750,7 +750,7 @@ impl WidgetAny for Chart {
             label: Some(self.summary().describe()),
             state: SemanticsState::ENABLED,
         };
-        Some(floem_core::SemanticsHint {
+        Some(floom_core::SemanticsHint {
             role: to_core_role(hint.role),
             label: hint.label,
             state: to_core_state(hint.state),

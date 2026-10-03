@@ -2,19 +2,19 @@
 //!
 //! Primitives are *descriptions*: they carry the data needed to lay out, paint
 //! and describe a node, and they lower that data into the renderer-neutral
-//! contracts in [`floem_core`]. Nothing in this module touches a concrete
+//! contracts in [`floom_core`]. Nothing in this module touches a concrete
 //! renderer, a windowing system, or a GPU backend.
 //!
 //! Invalidation follows the architecture's dirty rules: mutating a primitive
 //! bumps an internal revision, and the next [`Widget::update`] marks the
 //! element dirty exactly once until the change has been painted.
 
-use floem_accessibility::{SemanticsRole, SemanticsState};
-use floem_core::{
+use floom_accessibility::{SemanticsRole, SemanticsState};
+use floom_core::{
     Brush, Color, CreateContext, ElementId, Filter, LayoutRequest, PaintContext, Point, Rect,
     ResourceId, SemanticsContext, Shadow, Size, UpdateContext, Widget,
 };
-use floem_types::Insets;
+use floom_types::Insets;
 
 /// Main axis for one-dimensional primitives ([`Spacer`], [`Divider`]).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
@@ -42,7 +42,7 @@ pub enum ImageFit {
 ///
 /// `SemanticsContext` currently only carries a label, so `role` is published
 /// here for the runtime's semantics bridge to consume when it lowers widgets
-/// into `floem_accessibility::SemanticsTree`.
+/// into `floom_accessibility::SemanticsTree`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SemanticsHint {
     pub role: SemanticsRole,
@@ -217,7 +217,7 @@ impl Widget for Text {
         if self.content.is_empty() || self.size <= 0.0 {
             return None;
         }
-        let measured = floem_text::measure_text(&self.content, self.size, f64::INFINITY);
+        let measured = floom_text::measure_text(&self.content, self.size, f64::INFINITY);
         if measured.width <= 0.0 || measured.height <= 0.0 {
             return None;
         }
@@ -325,7 +325,7 @@ impl Widget for Icon {
         }
         let mut buf = [0u8; 4];
         let glyph = self.glyph.encode_utf8(&mut buf);
-        let measured = floem_text::measure_text(glyph, self.size, f64::INFINITY);
+        let measured = floom_text::measure_text(glyph, self.size, f64::INFINITY);
         if measured.width <= 0.0 || measured.height <= 0.0 {
             return None;
         }
