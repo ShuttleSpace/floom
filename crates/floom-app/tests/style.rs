@@ -106,6 +106,7 @@ fn an_elevated_card_casts_its_shadow_before_its_own_fill() {
         blur: 6.0,
         offset_x: 0.0,
         offset_y: 4.0,
+        spread: 0.0,
     };
     let host = host_with(
         Container::new()

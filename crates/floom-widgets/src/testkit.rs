@@ -58,6 +58,7 @@ pub enum PaintOp {
         blur: f64,
         offset_x: f64,
         offset_y: f64,
+        spread: f64,
     },
     /// A filled and/or stroked vector path. `segments` is the flattened count
     /// the node carries, so two shapes that share a box are still telling
@@ -145,18 +146,20 @@ impl PaintOp {
                 fmt_color(*sampled)
             ),
             PaintOp::Shadow {
+                spread,
                 bounds,
                 radius,
                 blur,
                 offset_x,
                 offset_y,
             } => format!(
-                "Shadow {} r={:.1} blur={:.1} off=({:.1}, {:.1})",
+                "Shadow {} r={:.1} blur={:.1} off=({:.1}, {:.1}) spread={:.1}",
                 fmt_rect(*bounds),
                 radius,
                 blur,
                 offset_x,
-                offset_y
+                offset_y,
+                spread
             ),
             PaintOp::Path {
                 bounds,
@@ -380,6 +383,7 @@ impl PaintContext for SceneRecorder {
             blur: shadow.blur,
             offset_x: shadow.offset_x,
             offset_y: shadow.offset_y,
+            spread: shadow.spread,
         });
     }
 

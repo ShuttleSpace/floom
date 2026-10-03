@@ -164,6 +164,7 @@ fn cast_down() -> Shadow {
         blur: 2.0,
         offset_x: 0.0,
         offset_y: 6.0,
+        spread: 0.0,
     }
 }
 
@@ -225,6 +226,7 @@ fn a_shadow_is_blurred_and_the_blur_is_what_reaches_sideways() {
         blur: 6.0,
         offset_x: 0.0,
         offset_y: 6.0,
+        spread: 0.0,
     };
     let sw = render(vec![node(CARD, Brush::Solid(RED), Some(soft))]);
     // The card spans x 2..18; the silhouette the shadow offsets covers the

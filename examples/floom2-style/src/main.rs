@@ -66,6 +66,7 @@ fn elevation() -> Shadow {
         blur: 5.0,
         offset_x: 0.0,
         offset_y: 6.0,
+        spread: 0.0,
     }
 }
 

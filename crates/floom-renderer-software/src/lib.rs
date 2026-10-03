@@ -753,9 +753,18 @@ impl SoftwareRenderer {
         let inv = scope.inverse().unwrap_or(Transform::IDENTITY);
         let radius_dev = radius.clamp(0.0, bounds.width().min(bounds.height()) / 2.0) * scale;
 
+        // CSS spread dilates the silhouette *before* the blur, so it is folded
+        // into the distance field rather than into the blur kernel: subtracting
+        // it from the signed distance grows a rounded box on all four sides
+        // with its corner radius growing to match, and a negative value erodes
+        // it. Folding it into the blur instead would be a different (and much
+        // rarer) effect, so it is not done.
+        let spread_dev = shadow.spread * scale;
+
         // 1. SDF coverage of the (rounded) silhouette into a node-space
-        //    working buffer, padded by the blur's spread.
-        let pad = blur.ceil() as i32 + 2;
+        //    working buffer. The pad has to cover the blur *and* any positive
+        //    spread, since a dilated silhouette reaches past the shape's bounds.
+        let pad = (blur + spread_dev.max(0.0)).ceil() as i32 + 2;
         let bx0 = bounds.x0 * scale - f64::from(pad);
         let by0 = bounds.y0 * scale - f64::from(pad);
         let bx1 = bounds.x1 * scale + f64::from(pad);
@@ -781,7 +790,12 @@ impl SoftwareRenderer {
                 let px = f64::from(ix0 + col as i32) + 0.5;
                 let qxp = (px - cx).abs() - qx_extent;
                 let qyp = (py - cy).abs() - qy_extent;
-                let d = qxp.max(0.0).hypot(qyp.max(0.0)) + qxp.max(qyp).min(0.0) - radius_dev;
+                // `- spread_dev` is the dilation: the shape's own signed
+                // distance, offset outward (or inward, when negative).
+                let d = qxp.max(0.0).hypot(qyp.max(0.0))
+                    + qxp.max(qyp).min(0.0)
+                    - radius_dev
+                    - spread_dev;
                 alpha[row * w + col] = ((0.5 - d).clamp(0.0, 1.0)) as f32;
             }
         }

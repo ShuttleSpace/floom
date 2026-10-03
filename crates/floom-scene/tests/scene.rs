@@ -116,6 +116,7 @@ fn a_shadowed_rects_damage_contains_its_reach() {
         blur: 4.0,
         offset_x: 0.0,
         offset_y: 3.0,
+        spread: 0.0,
     };
     let bare = SceneNode::Rect {
         bounds: box_of,

@@ -179,6 +179,7 @@ fn a_fading_gradient_card_is_golden_frame_by_frame() {
             blur: 6.0,
             offset_x: 3.0,
             offset_y: 3.0,
+            spread: 0.0,
         });
 
     let (mut host, root) = mounted(FRAME, card_style(), card);

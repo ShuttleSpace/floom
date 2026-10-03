@@ -430,6 +430,7 @@ mod tests {
             blur: 6.0,
             offset_x: 0.0,
             offset_y: 4.0,
+            spread: 0.0,
         };
         let mut scene = Scene::new();
         scene.begin_update();

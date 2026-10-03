@@ -177,6 +177,7 @@ pub fn gallery_scene(
             blur: f64::from(elevation),
             offset_x: 0.0,
             offset_y: f64::from(elevation),
+            spread: 0.0,
         });
 
         let fill = props.background.unwrap_or(Color::TRANSPARENT);

@@ -28,16 +28,45 @@ pub struct Shadow {
     pub blur: f64,
     pub offset_x: f64,
     pub offset_y: f64,
+    /// How far the silhouette is dilated (or eroded, when negative) *before*
+    /// the blur is applied, in logical px.
+    ///
+    /// This is CSS's fourth `box-shadow` length — `0 4px 6px 2px #000` has a
+    /// spread of `2px` — and it dilates the *shape*, it does not widen the
+    /// blur: a rounded box grows on every side with its corner radius growing
+    /// to match, so the silhouette stays a rounded box instead of becoming a
+    /// rectangle with soft corners. Negative spread erodes it.
+    ///
+    /// Order matters and is CSS's: offset, then spread, then blur. Applying
+    /// spread after the blur would read as "fatter shadow", which is a
+    /// different and much rarer effect.
+    ///
+    /// A backend that cannot dilate must ignore it rather than approximate it
+    /// with blur, and record the degradation — a wrong shadow is worse than an
+    /// absent one.
+    pub spread: f64,
 }
 
+/// Backend support for `spread`.
+///
+/// `floom-renderer-software` is the reference: it folds `spread` into the
+/// silhouette's signed distance field, so the shape is genuinely dilated (or
+/// eroded) before the blur runs. The other backends do not implement
+/// `draw_shadow` at all yet — they carry the request through the scene so it
+/// survives to reach a backend that can answer it, which is the same
+/// "carried rather than dropped" posture vello's shadow test asserts. When one
+/// of them grows shadow support it must dilate rather than widen the blur, and
+/// must count what it could not do rather than approximating silently.
 impl Shadow {
     /// How far past the shape's own bounds the shadow can reach.
     ///
-    /// The offset shifts the whole silhouette; the blur smears it outward by
-    /// roughly its radius. Conservative by construction — a damage region built
-    /// from this must contain the shadow, never clip it.
+    /// The offset shifts the whole silhouette; spread dilates it; the blur
+    /// smears the result outward by roughly its radius. Negative spread pulls
+    /// the silhouette *in*, so it cannot extend the reach and is clamped at
+    /// zero here. Conservative by construction — a damage region built from
+    /// this must contain the shadow, never clip it.
     pub fn reach(&self) -> f64 {
-        self.offset_x.abs().max(self.offset_y.abs()) + self.blur
+        self.offset_x.abs().max(self.offset_y.abs()) + self.blur + self.spread.max(0.0)
     }
 }
 

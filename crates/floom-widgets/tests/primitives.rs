@@ -248,6 +248,7 @@ fn container_shadow_is_cast_behind_its_own_fill() {
         blur: 4.0,
         offset_x: 0.0,
         offset_y: 3.0,
+        spread: 0.0,
     };
     let widget = Container::new()
         .background(Color::WHITE)
@@ -263,11 +264,38 @@ fn container_shadow_is_cast_behind_its_own_fill() {
     assert_eq!(
         lines,
         vec![
-            "Shadow (0.0, 0.0, 100.0, 20.0) r=6.0 blur=4.0 off=(0.0, 3.0)".to_string(),
+            "Shadow (0.0, 0.0, 100.0, 20.0) r=6.0 blur=4.0 off=(0.0, 3.0) spread=0.0"
+                .to_string(),
             "RoundedRect (0.0, 0.0, 100.0, 20.0) r=6.0 #FFFFFFFF".to_string(),
         ],
         "the ask precedes the shape it belongs to"
     );
+
+/// The `spread` a container declares has to survive into the recorded ask —
+/// it is part of the request the backend answers, not something the widget may
+/// quietly drop.
+#[test]
+fn container_shadow_carries_its_spread_into_the_ask() {
+    let shadow = Shadow {
+        color: Color::rgba(0, 0, 0, 128),
+        blur: 4.0,
+        offset_x: 0.0,
+        offset_y: 3.0,
+        spread: 2.5,
+    };
+    let widget = Container::new().shadow(shadow);
+    let (id, _create) = allocate(&widget);
+
+    let mut recorder = SceneRecorder::new(BOX);
+    widget.paint(&mut recorder, id);
+    recorder.finish();
+
+    let snapshot = recorder.snapshot();
+    assert!(
+        snapshot.contains("spread=2.5"),
+        "the declared spread must reach the paint op, got:\n{snapshot}"
+    );
+}
     // And the two are one request each in the retained scene, not one merged
     // node a reader could mistake for the fill carrying the shadow silently.
     let carries: Vec<bool> = recorder
