@@ -148,40 +148,49 @@ with no `.child()` builder, because composition moved to the parent via
 `Child::new(ChildKey, LayoutRequest, || Box::new(..))`. So both now only install
 their signal, and wrapping is the caller's job.
 
-#### `Ripple` is the first Stage B item
+#### `Ripple` — the one engine gap, precisely located
 
-`Ripple` (the Material press ripple) is **not** ported. It is not a find-and-
-replace problem, and the reason is a genuine 2.0 gap:
+`Ripple` (the Material press ripple) is **not** ported. My first description of
+why was too broad — it said 2.0 "cannot express a two-phase pointer-driven
+interaction". Having read the animation contract, that is wrong: the model does
+support it. What follows is what the code actually shows.
 
-- The v1 ripple was a `View` wrapper that animated a growing ink circle on
-  pointer-down and faded it on pointer-up, clipped to rounded bounds.
-- 2.0 has every *piece*: `WidgetHost::bounds` / `dispatch` / `animate`, and
-  `Widget::clip`.
-- But 2.0's animation contract is **declarative** — a widget returns one
-  `AnimationSpec` from `Widget::animation` and the host owns the running state
-  ("a widget has no host handle… so it cannot start anything itself"). That
-  cannot express a **two-phase, pointer-driven** interaction: expand on press,
-  fade on release, driven by event timing rather than a declared spec.
+**The contract is fine.** `Widget::animation` returns an `AnimationSpec`, and
+`WidgetHost::sync_declared_animation` compares it to the last declared spec with
+`declared.matches(&spec)`; on a difference it cancels and starts a new
+`AnimKind`. So a widget that *re-arms* its spec gets a restart — which is
+exactly what a two-phase ripple needs. A ripple needs only one animated scalar
+at a time (radius while expanding, alpha while fading), `AnimationSpec` with
+empty `channels` already means "the widget reads the value itself" via
+`cx.animation_value()`, and `Spinner` demonstrates that read. Two phases are
+sequential, so one scalar suffices.
 
-So Stage B needs an interaction-animation capability (per-widget animation
-state machines started and advanced from `Widget::event`) before `Ripple` can
-exist. Ten components depend on it and do not build until then:
+**The gap is narrower: a widget cannot invalidate itself from an event.**
+`EventContext` exposes `target`, `bounds`, `cursor_position`, `event`,
+`request_focus` and `open_overlay` — and no way to mark itself dirty. The
+host's routing loop (`WidgetHost::dispatch`) walks the capture/bubble route,
+sets `handled`, breaks, and then applies focus and overlay requests — it never
+marks the routed node dirty. Dirtiness in this host is *reported by*
+`update()` (`cx.dirty` from `Revision::sync` / `mark_dirty`), and
+`reconcile_declared_animations` only runs for nodes already in the update pass.
+
+So a widget that changes its own state inside `event()` has that state read
+never, or much later. The ripple is the case that needs it: a press must start
+the expand phase, a release the fade phase.
+
+**The fix is small and follows an existing pattern.** `request_focus` and
+`open_overlay` are already deferred out of `event()` precisely because "the
+widget is borrowed out of the host for the duration of the call". A
+`dirty_requests: Vec<usize>` collected by the event context and drained after
+the route loop is the same shape, and `NodeEventContext` already knows its own
+node index. Adding `fn mark_dirty(&mut self, _id: ElementId)` (default no-op,
+like the other `EventContext` methods) to the trait is the API half.
+
+Until that lands, the ten components that use `Ripple` do not build:
 `{material,cupertino,fluent}-card`, `-list_item`, `-icon_button`, and
-`material-button`. Everything else in `floom-widget-runtime` is live, and
-verified: a non-`Ripple` consumer (`floom-widget-md-avatar`) builds against it.
-
-The mapping table established there is the template for the rest:
-
-| v1 | 2.0 |
-|---|---|
-| `floom::reactive::{RwSignal, SignalGet, SignalUpdate}` | `floom_legacy_reactive::{…}` (re-exported by the 2.0 prelude) |
-| `floom::create_global_rw_signal` | `floom_legacy_reactive::create_global_rw_signal` |
-| `floom::peniko::Color` | `peniko::Color` |
-| `floom::text::FontWeight` | `parley::style::FontWeight` |
-
-Porting it also surfaced a latent `cfg` bug: `global()` is gated on a
-design-system feature but three public wrappers that call it were not, so
-`cargo check -p floom-core-theme` with no features had never compiled. Fixed.
+`material-button`. Everything else in `floom-widget-runtime` is live and
+verified (a non-`Ripple` consumer, `floom-widget-md-avatar`, builds against it),
+and `md-card` is ported with its ripple simply absent.
 
 ### Stage B — superseded
 
