@@ -1,0 +1,1 @@
+{"nodes": [{"id": "pkg_floom_error", "label": "floom-error", "file_type": "code", "type": "package", "ecosystem": "cargo", "source_file": "crates/floom-error/Cargo.toml", "source_location": "L1"}], "edges": []}

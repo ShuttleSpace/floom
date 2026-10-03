@@ -33,9 +33,9 @@ pub enum FontWeight {
 }
 
 impl FontWeight {
-    /// Convert to Floom's `parley`-based `FontWeight` for use with `Style::font_weight`.
-    pub fn to_floom(self) -> floom::text::FontWeight {
-        use floom::text::FontWeight as F;
+    /// Convert to the `parley` `FontWeight` that `floom-text` styles with.
+    pub fn to_floom(self) -> parley::style::FontWeight {
+        use parley::style::FontWeight as F;
         match self {
             FontWeight::Thin => F::THIN,
             FontWeight::ExtraLight => F::EXTRA_LIGHT,

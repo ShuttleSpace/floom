@@ -1,0 +1,1 @@
+{"nodes": [{"id": "pkg_floom_navigation", "label": "floom-navigation", "file_type": "code", "type": "package", "ecosystem": "cargo", "source_file": "crates/floom-navigation/Cargo.toml", "source_location": "L1"}], "edges": []}

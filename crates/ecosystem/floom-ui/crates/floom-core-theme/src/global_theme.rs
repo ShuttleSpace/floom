@@ -16,8 +16,8 @@
 
 use std::cell::OnceCell;
 
-use floom::create_global_rw_signal;
-use floom::reactive::{RwSignal, SignalGet, SignalUpdate};
+use floom_legacy_reactive::create_global_rw_signal;
+use floom_legacy_reactive::{RwSignal, SignalGet, SignalUpdate};
 
 use crate::theme::MultiTheme;
 
@@ -45,12 +45,14 @@ fn global() -> RwSignal<SelectedTheme> {
 /// All components created without an explicit theme share this signal, so
 /// changing it re-themes the whole application.
 #[cfg(any(feature = "material", feature = "cupertino", feature = "fluent"))]
+#[cfg(any(feature = "material", feature = "cupertino", feature = "fluent"))]
 pub fn theme_signal() -> RwSignal<SelectedTheme> {
     global()
 }
 
 /// Replace the app-wide theme. Every component reading the shared signal
 /// updates automatically.
+#[cfg(any(feature = "material", feature = "cupertino", feature = "fluent"))]
 #[cfg(any(feature = "material", feature = "cupertino", feature = "fluent"))]
 pub fn set_theme(theme: SelectedTheme) {
     global().set(theme);
@@ -106,6 +108,7 @@ pub fn design_system_signal() -> RwSignal<DesignSystem> {
 /// every component reading the shared theme signal re-styles automatically
 /// (the `MultiTheme` itself reads the active DS live, but bumping the signal
 /// value is what actually triggers Floom's reactive style re-evaluation).
+#[cfg(any(feature = "material", feature = "cupertino", feature = "fluent"))]
 pub fn set_design_system(ds: DesignSystem) {
     ds_global().set(ds);
     global().set(MultiTheme::new_for(ds));

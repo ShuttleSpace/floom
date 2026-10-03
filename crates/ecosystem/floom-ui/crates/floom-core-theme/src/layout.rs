@@ -22,8 +22,8 @@
 
 use std::cell::OnceCell;
 
-use floom::create_global_rw_signal;
-use floom::reactive::{RwSignal, SignalUpdate};
+use floom_legacy_reactive::create_global_rw_signal;
+use floom_legacy_reactive::{RwSignal, SignalUpdate};
 
 /// Which piece of the application shell is reporting its size.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

@@ -4,7 +4,14 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-floom = { workspace = true }
+# Ported off the v1 `floom` monolith. This crate is theme tokens, so it needs no
+# widget layer at all -- only the reactive primitives it stores theme state in
+# (`RwSignal`, `create_global_rw_signal`) and the two value types it converts
+# to (`peniko::Color`, `parley::style::FontWeight`). See
+# `docs/porting-floem-ui-to-2.0.md`.
+floom-legacy-reactive = { path = "../../../../floom-legacy-reactive" }
+peniko = "0.6"
+parley = "0.7"
 
 [features]
 material = []

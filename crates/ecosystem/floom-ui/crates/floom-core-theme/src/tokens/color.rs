@@ -43,8 +43,8 @@ impl Color {
 
     /// Convert our design-system `Color` into Floom's `peniko::Color`
     /// so it can be used directly with Floom's styling API.
-    pub fn to_peniko(self) -> floom::peniko::Color {
-        floom::peniko::Color::from_rgba8(self.r, self.g, self.b, self.a)
+    pub fn to_peniko(self) -> peniko::Color {
+        peniko::Color::from_rgba8(self.r, self.g, self.b, self.a)
     }
 
     /// Convert to a CSS `rgba(...)` string, used for inline SVG fills.

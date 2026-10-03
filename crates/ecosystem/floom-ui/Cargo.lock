@@ -1413,7 +1413,9 @@ dependencies = [
 name = "floom-core-theme"
 version = "0.1.0"
 dependencies = [
- "floom",
+ "floom-legacy-reactive",
+ "parley",
+ "peniko",
 ]
 
 [[package]]
