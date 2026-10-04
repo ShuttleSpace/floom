@@ -549,6 +549,10 @@ pub struct RecordingUpdateContext {
     /// that cannot tell them apart cannot pin a stateful widget, because every
     /// state change is supposed to do the second.
     children_dirty: Vec<ElementId>,
+    /// Nodes whose `layout_request` moved. A third kind of request, and the one a
+    /// stateful widget is most likely to get wrong: a repaint of a box that is
+    /// still the old size changes nothing a user can see.
+    layout_dirty: Vec<ElementId>,
 }
 
 impl RecordingUpdateContext {
@@ -574,11 +578,22 @@ impl RecordingUpdateContext {
         !self.children_dirty.is_empty()
     }
 
+    /// Every id passed to [`UpdateContext::mark_layout_dirty`], in order.
+    pub fn layout_dirty(&self) -> &[ElementId] {
+        &self.layout_dirty
+    }
+
+    /// Whether any node asked for the layout pass to run again.
+    pub fn laid_out_again(&self) -> bool {
+        !self.layout_dirty.is_empty()
+    }
+
     /// Forgets everything recorded, so a second phase of a test can assert what
     /// a *later* update does rather than what the first one did.
     pub fn clear(&mut self) {
         self.dirty.clear();
         self.children_dirty.clear();
+        self.layout_dirty.clear();
     }
 }
 
@@ -589,6 +604,10 @@ impl UpdateContext for RecordingUpdateContext {
 
     fn mark_children_dirty(&mut self, id: ElementId) {
         self.children_dirty.push(id);
+    }
+
+    fn mark_layout_dirty(&mut self, id: ElementId) {
+        self.layout_dirty.push(id);
     }
 }
 

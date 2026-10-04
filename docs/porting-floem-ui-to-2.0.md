@@ -12,26 +12,20 @@ so the widget API gets shaken out before anything is translated in bulk:
 | stateful | `md-expansion_panels` | ported, 12 tests |
 
 Ported kits: `md-card`, `md-button`, `md-icon`, `md-expansion_panels`.
-Engine widgets: `Badge`, `Ripple`, `VectorIcon`, **`Pressable`**, **`Accordion`**.
+Engine widgets: `Badge`, `Ripple`, `VectorIcon`, `Pressable`, `Accordion`,
+**`Surface`**.
 
-**The next task is not another component.** Porting `md-expansion_panels` turned
-up two *capabilities* floem-ui leans on that 2.0 did not have at all — a clickable
-subtree, and a padding/border vocabulary — and they are worth more than the
-remaining 94 components, because they gate 146 and 172 files respectively:
+**The next task is a component again.** The capability work is done — a clickable
+subtree, a padding/border vocabulary, and a decorated box that can hold content
+all landed, and between them they unblock the 146 / 172 / 94 files listed below:
 
-1. **`LayoutRequest::margin` is in. A decorated box *with a child* is still
-   missing.** v1's `Container::new(child).style(..)` — 165 uses — has no 2.0
-   spelling, because 2.0's `Container` is a *leaf* and a leaf cannot hold the
-   content it decorates. That is the next thing to build, and it is what would
-   make a ported card actually contain its text.
-2. **`Container::border` is in**, but only for a box with nothing in it. The
-   box-with-a-child above subsumes it, and 94 files want it.
-3. **A height transition on a mount/unmount is not available and is not cheap**
-   — see "What `md-expansion_panels` turned up" below. Do not plan a component
-   around it.
-
-After that: batch the surface components (`footer`, `toolbar`, `item_group`),
-which should now be uneventful, then port one kit end to end.
+1. **Batch the surface components** — `footer`, `toolbar`, `item_group`,
+   `list_subheader`, `banner`. These are now genuinely uneventful: a `Surface`, a
+   `Text`, maybe a `Stack`.
+2. **`floom-elements` needs repairing, not just rewriting** (correction 6). Eight
+   material crates are broken by the ports already done; they are the *callers* of
+   `MdIcon` and `Ripple`, so each is a small edit rather than a port.
+3. Then port one kit end to end, and the other two follow its shape.
 
 Verification commands that must stay green:
 
@@ -42,7 +36,7 @@ Verification commands that must stay green:
     # the engine widget crate
     cargo test --manifest-path crates/floom-widgets/Cargo.toml
 
-    # the layout crate (the margin vocabulary lives here)
+    # the layout crate (the padding / margin vocabulary lives here)
     cargo test --manifest-path crates/floom-layout/Cargo.toml
 
     # the nested floem-ui workspace (a separate workspace)
@@ -141,12 +135,14 @@ call sites rather than component names:
 | v1 capability | call sites in floem-ui | 2.0 at the time | now |
 |---|---|---|---|
 | `.on_event(listener::…, …)` on any view | **360** (146 files; 209 are `Click`) | nothing — `Button` is a label, not a wrapper | `Pressable` |
-| `.padding*()` | **288** (172 files) | `Container::padding` stored, never read | `LayoutRequest::margin` |
+| `Container::new(child).style(..)` | **165** | nothing — `Container` is a leaf | `Surface` |
+| `.padding*()` | **288** (172 files) | `Container::padding` stored, never read | `LayoutRequest::padding` / `margin` |
 | `.border()` / `.border_color()` | **119** / **145** (94 files) | nothing — no stroke primitive on a box | `Container::border` |
+| a widget whose own layout moves after mount | every theme change | `mark_dirty` repainted yesterday's geometry | `UpdateContext::mark_layout_dirty` |
 | height transition on mount | `md-expand_transition` | nothing | still nothing (see below) |
 
 So the honest statement is: **Stage B needs no new component shapes, and did need
-three new capabilities — two of which are now in.** Every one of them was found by
+five new capabilities — four of which are now in.** Every one of them was found by
 compiling a component, not by reading the tree, which is the argument for shaking
 out one component per shape before translating in bulk.
 
@@ -212,6 +208,7 @@ mistakes.
 | surface | `md-card` | ported, 7 tests |
 | interactive | `md-button` | ported, 10 tests |
 | stateful | `md-expansion_panels` | ported, 12 tests |
+| *(the box they all draw in)* | `Surface` | ported, 17 tests |
 
 ### What `md-button` turned up
 
@@ -305,16 +302,75 @@ fade would be a behaviour change dressed as a translation. The negative test is
 
 Then:
 
-1. **A decorated box with a child** (v1's `Container::new(child).style(..)`) —
-   165 uses, and the thing every remaining surface component needs.
-2. **Batch the surface components** (`footer`, `toolbar`, `item_group`) — these
-   should now be uneventful.
+1. **Batch the surface components** (`footer`, `toolbar`, `item_group`,
+   `list_subheader`, `banner`) — these should now be uneventful: a `Surface`, a
+   `Text`, maybe a `Stack`.
+2. **Repair `floom-elements`' callers** — the eight material crates correction 6
+   names. Each is a small edit, not a port: they call `MdIcon::view()` and
+   `Ripple::new(x).view()`, both of which are gone on purpose.
 3. **Port one kit end to end** (material, 98 components), then cupertino and
    fluent, which follow the same shape with their own tokens.
 4. **`floom-elements`** last: its 800 lines of re-exports and 6,220 lines of v1
    `multi` dispatch can only be rewritten once the underlying components exist.
-   It is **already broken** by the ports done so far (correction 5), so this is a
-   repair, not just a rewrite.
+
+### What building the decorated box turned up — `Surface`
+
+The last of the three shapes turned out not to be a component but the *box* every
+component draws in, and it produced two findings that no amount of reading would
+have.
+
+**`Container` cannot hold children, and that is not a detail.** 2.0's `Container`
+is a leaf by design — composition is declared by the parent — which leaves the
+most common v1 shape in the whole library with no spelling at all:
+`Container::new(child).style(..)`, 165 uses. `Surface` is the missing third kind
+of widget: `Container` is the decoration description, `Stack` is the structure
+description, and a card is both. It holds a `Container` whole rather than copying
+its fields, so there is one implementation of "fill, then outline, then shadow,
+then the backdrop filter" and the two cannot drift apart about how either draws.
+It also keeps **one** revision of its own rather than forwarding the decoration's,
+so a frame reports dirty at most once per node however many fields moved — and
+`decoration()` hands out a shared reference, because handing out the fields
+mutably is a way to change a box with no way to invalidate it.
+
+**Padding had to become real, and it is two different things.** `LayoutRequest`
+now carries both `padding` (inside the box, between it and its children) and
+`margin` (outside the box, inside its parent). The first attempt at this reached
+for a margin and was half right — with a *single* child the two are geometrically
+identical, so every test written against one child passes for either
+implementation. The measurable difference needs two children: a margin is per
+child and lands *between* them as well, while a padding is one inset around the
+group. `floom-layout`'s `a_margin_is_per_child_and_a_padding_is_around_the_group`
+is that measurement, and it is why a card is a padded box rather than a margin on
+its content.
+
+**The third door: a widget could not say "my layout moved".** `UpdateContext`
+offered `mark_dirty` and `mark_children_dirty`, and a padding change is neither —
+it needs the *layout pass*, which `WidgetHost::frame` runs only when layout is
+dirty. So a `Surface` whose padding moved after mount reported dirty, repainted,
+and left the content exactly where it was, because the geometry it repainted into
+was the previous frame's. `UpdateContext::mark_layout_dirty` is the missing
+request, and it is deliberately **not** defaulted: there is no honest fallback,
+because a host that ignored it would mis-lay-out every widget that used it,
+silently. `FrameStats::layout_requested` counts the requests so a test can assert
+the ask rather than infer it.
+
+The cost control matters as much as the door and has its own test: a theme toggle
+moves colours and radii on every surface in a tree, so `mark_layout_dirty` fires
+only when the *padding* moved
+(`a_moved_colour_does_not_ask_for_a_layout_pass`).
+
+**And `md-card`'s padding was wrong three separate times**, which is the clearest
+argument in this document for the last rule:
+
+1. `Container::new().background(..).radius(..).padding(..).shadow(..)` — a
+   `padding` field with a setter and no reader. The card rendered with its text
+   against the edge, and its test passed, because it asserted the token was
+   *positive*.
+2. `content_layout()` — a margin on the content's slot. Applied, at least, but the
+   content still was not *inside* the card.
+3. `Surface` — a filled, rounded, elevated box that holds its content and pads it.
+   The test now asserts the inset is found on the surface **and** leaves as
+   `padding`, which is the only assertion that would have failed for 1 and 2.
 
 ## Stages
 
@@ -462,3 +518,10 @@ this plan. It needs its own porting assessment once the widget set is in place.
   port, and `md-card`'s test passed the whole time because it only asserted the
   token was positive. `grep -n <field> crates/floom-widgets/src/` is the check,
   and it is cheaper than the bug.
+- **A widget that hands out its own fields is handing out a way to change them
+  without invalidating them.** `Surface` therefore exposes `decoration()` shared
+  and `set_*` in place, never a `&mut`. The same reasoning as the rule above,
+  turned into an API shape instead of a habit.
+- **A test written against one child cannot tell a margin from a padding.** The
+  two are geometrically identical for a single child; the difference only appears
+  with two, where a margin also lands between them. Write the two-child test.

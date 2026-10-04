@@ -646,6 +646,45 @@ impl Container {
         self
     }
 
+    /// The in-place form of [`Self::background`].
+    ///
+    /// Idempotent: setting the same fill dirties nothing, so a theme signal
+    /// firing on an unrelated change does not repaint every frame. See
+    /// [`Self::set_blur`] for why an in-place form exists at all.
+    pub fn set_background(&mut self, fill: impl Into<Brush>) {
+        let fill = fill.into();
+        if self.background.as_ref() != Some(&fill) {
+            self.background = Some(fill);
+            self.revision.bump();
+        }
+    }
+
+    /// The in-place form of [`Self::radius`]. Idempotent.
+    pub fn set_radius(&mut self, radius: f32) {
+        if self.radius != radius {
+            self.radius = radius;
+            self.revision.bump();
+        }
+    }
+
+    /// The in-place form of [`Self::border`]. Idempotent, and a non-positive
+    /// `width` clears the border exactly as the builder does.
+    pub fn set_border(&mut self, width: f32, color: Color) {
+        let next = if width > 0.0 { Some((width, color)) } else { None };
+        if self.border != next {
+            self.border = next;
+            self.revision.bump();
+        }
+    }
+
+    /// The in-place form of [`Self::shadow`]. Idempotent.
+    pub fn set_shadow(&mut self, shadow: Option<Shadow>) {
+        if self.shadow != shadow {
+            self.shadow = shadow;
+            self.revision.bump();
+        }
+    }
+
     /// The in-place form of [`Self::blur`].
     ///
     /// A builder takes `self` by value, so a caller holding `&mut Container` —

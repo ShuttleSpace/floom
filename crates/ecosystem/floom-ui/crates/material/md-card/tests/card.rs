@@ -5,10 +5,10 @@
 //! widget) without depending on the v1 monolith. See
 //! `docs/porting-floem-ui-to-2.0.md`.
 
-use floom_types::{Insets, Rect};
+use floom_core::Widget;
+use floom_types::{Insets};
 use floom_types::{Color as PaintColor, Shadow};
 
-use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::theme::MultiTheme;
 use floom_widgets::testkit::{AllocatingCreateContext, paint_snapshot};
 
@@ -107,21 +107,26 @@ fn the_surface_uses_the_resolved_padding_radius_and_palette() {
         "card tokens should carry a real radius"
     );
     assert_eq!(
-        surface.corner_radius(),
+        surface.decoration().corner_radius(),
         style.border_radius,
         "and the radius is on the surface the caller mounts"
     );
 
-    // The padding is *not* on the surface, and this assertion is the reason that
-    // is not a silent regression: an earlier version of this port handed
-    // `Container` a padding that the widget stored and never read, and this test
-    // passed anyway because it only asserted the token was positive. The inset
-    // now has to be found on the content's own slot.
-    let layout = MdCard::new().content_layout();
+    // The padding has to be found on the *surface*, not on the content's slot.
+    // Two earlier versions of this port got this wrong and this test passed both
+    // times: the first handed `Container` a padding the widget stored and never
+    // read, the second moved it onto the content's slot as a margin. Both are
+    // visible mistakes (text against the edge, content not inside the box) and
+    // both survived a test that only asserted the token was positive.
     assert_eq!(
-        layout.margin.expect("the card's inset"),
+        surface.padding_insets(),
         Insets::uniform(f64::from(style.padding)),
-        "the padding token reaches the content as a margin on its slot"
+        "the padding token reaches a box that can actually hold content"
+    );
+    assert!(
+        surface.layout_request().and_then(|r| r.padding).is_some(),
+        "and it leaves as padding, which is the only inset a box with children \
+         can apply"
     );
     // A no-op `background` would make the card invisible, so assert the paint
     // op is not a transparent fill.

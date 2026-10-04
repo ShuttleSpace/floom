@@ -1276,7 +1276,7 @@ impl Widget for Opacity {
 /// falls back to mounting the same surface in-tree — what a headless embedder
 /// gets, and what these widgets did before overlays existed.
 #[derive(Clone)]
-pub(crate) struct Surface {
+pub(crate) struct OverlaySurface {
     present: bool,
     last_present: bool,
     /// The ticket the host issued, while the surface sits on its overlay stack.
@@ -1285,7 +1285,7 @@ pub(crate) struct Surface {
     in_tree: bool,
 }
 
-impl Surface {
+impl OverlaySurface {
     pub(crate) fn new(present: bool) -> Self {
         Self {
             present,
@@ -1512,7 +1512,7 @@ impl Widget for Overlay {
 /// scrolling list is still centred on the screen and still owns the keyboard.
 #[derive(Clone)]
 pub struct Dialog {
-    surface: Surface,
+    surface: OverlaySurface,
     title: String,
     body: Option<Child>,
 }
@@ -1528,7 +1528,7 @@ impl std::fmt::Debug for Dialog {
 impl Dialog {
     pub fn new() -> Self {
         Self {
-            surface: Surface::new(false),
+            surface: OverlaySurface::new(false),
             title: String::new(),
             body: None,
         }
@@ -2092,7 +2092,7 @@ impl<T: Clone + Send + Sync + 'static> WidgetAny for Grid<T> {
 /// overlay composite it contributes nothing while hidden.
 #[derive(Clone)]
 pub struct Popup {
-    surface: Surface,
+    surface: OverlaySurface,
     label: Option<String>,
     content: Option<Child>,
 }
@@ -2109,7 +2109,7 @@ impl std::fmt::Debug for Popup {
 impl Popup {
     pub fn new() -> Self {
         Self {
-            surface: Surface::new(false),
+            surface: OverlaySurface::new(false),
             label: None,
             content: None,
         }
@@ -2255,7 +2255,7 @@ impl Widget for Popup {
 /// clip because the column is a host overlay.
 #[derive(Clone)]
 pub struct BottomSheet {
-    surface: Surface,
+    surface: OverlaySurface,
     title: String,
     height: f32,
     body: Option<Child>,
@@ -2273,7 +2273,7 @@ impl std::fmt::Debug for BottomSheet {
 impl BottomSheet {
     pub fn new() -> Self {
         Self {
-            surface: Surface::new(false),
+            surface: OverlaySurface::new(false),
             title: String::new(),
             height: 200.0,
             body: None,

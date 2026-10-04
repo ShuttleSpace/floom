@@ -20,7 +20,7 @@ use floom_core::{
     OverlayKind, OverlayRequest, PaintContext, SemanticsContext, UpdateContext, Widget, WidgetAny,
 };
 
-use crate::compose::{Overlay, Stack, Surface};
+use crate::compose::{Overlay, OverlaySurface, Stack};
 use crate::controls::Button;
 use crate::primitives::{SemanticsHint, Text};
 
@@ -359,7 +359,7 @@ impl Widget for NavigationRail {
 /// layer mounted in-tree.
 #[derive(Clone)]
 pub struct NavigationDrawer {
-    surface: Surface,
+    surface: OverlaySurface,
     header: Option<String>,
     width: f32,
     items: Vec<NavDestination>,
@@ -379,7 +379,7 @@ impl std::fmt::Debug for NavigationDrawer {
 impl NavigationDrawer {
     pub fn new() -> Self {
         Self {
-            surface: Surface::new(false),
+            surface: OverlaySurface::new(false),
             header: None,
             width: 260.0,
             items: Vec::new(),

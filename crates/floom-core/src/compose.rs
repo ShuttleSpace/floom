@@ -100,14 +100,22 @@ pub struct LayoutRequest {
     pub cross_align: Option<Align>,
     /// Space reserved *outside* this box, inside its parent.
     ///
-    /// This is how 2.0 spells "inset my content": v1 wrote
-    /// `Container::new(child).style(|s| s.padding(..))`, and 2.0's `Container`
-    /// is a leaf — it holds no children, because composition moved to the
-    /// parent — so there is no box left to pad. The inset belongs on the
-    /// content's own slot, and the engine's word for space around a box inside
-    /// its parent is a margin. It looks the same as padding for every case a
-    /// design system actually draws (the parent's fill still covers the inset).
+    /// This is what a child's own slot asks for when it wants room around itself:
+    /// the gap between a card's edge and its content is a margin on the content's
+    /// slot, and the parent's fill still covers it.
     pub margin: Option<Insets>,
+    /// Space reserved *inside* this box, between its edge and its children.
+    ///
+    /// Only meaningful on a node that declares children — the engine's word for
+    /// it is the box model's, and a leaf has nothing to inset. This is the direct
+    /// translation of v1's `Container::new(child).style(|s| s.padding(..))`,
+    /// which padded the box that held the content.
+    ///
+    /// The two are not interchangeable: a margin is outside the box and so
+    /// changes where the box sits among its siblings, while padding is inside it
+    /// and only moves the content. A parent that stretches its children wants
+    /// padding; a child in a flow wants margin.
+    pub padding: Option<Insets>,
     /// Flow participation; `Absolute` removes the box from its parent's flow.
     pub position: Option<Position>,
     /// Offsets when `position` is `Absolute`; `None` sides resolve to auto.
@@ -125,6 +133,7 @@ impl LayoutRequest {
             main_align: None,
             cross_align: None,
             margin: None,
+            padding: None,
             position: None,
             inset: None,
         }
@@ -174,6 +183,13 @@ impl LayoutRequest {
         self
     }
 
+    /// Space reserved inside this box, between its edge and its children. See
+    /// [`LayoutRequest::padding`].
+    pub const fn padding(mut self, padding: Insets) -> Self {
+        self.padding = Some(padding);
+        self
+    }
+
     /// The same inset on the horizontal axis only.
     pub fn margin_horiz(mut self, value: f64) -> Self {
         let current = self.margin.unwrap_or(Insets::ZERO);
@@ -189,6 +205,28 @@ impl LayoutRequest {
     pub fn margin_vert(mut self, value: f64) -> Self {
         let current = self.margin.unwrap_or(Insets::ZERO);
         self.margin = Some(Insets {
+            top: value,
+            bottom: value,
+            ..current
+        });
+        self
+    }
+
+    /// Padding on the horizontal axis only.
+    pub fn padding_horiz(mut self, value: f64) -> Self {
+        let current = self.padding.unwrap_or(Insets::ZERO);
+        self.padding = Some(Insets {
+            left: value,
+            right: value,
+            ..current
+        });
+        self
+    }
+
+    /// Padding on the vertical axis only.
+    pub fn padding_vert(mut self, value: f64) -> Self {
+        let current = self.padding.unwrap_or(Insets::ZERO);
+        self.padding = Some(Insets {
             top: value,
             bottom: value,
             ..current

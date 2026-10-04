@@ -418,3 +418,124 @@ fn a_margin_is_per_side() {
     assert!((rect.x0 - 4.0).abs() < 0.01);
     assert!((rect.y0 - 8.0).abs() < 0.01);
 }
+
+/// Padding is the other half of the box model and the reason it cannot be
+/// substituted for a margin: it insets the children *inside* the box, so the
+/// box's own size grows by it and the child's box does not.
+#[test]
+fn padding_insets_the_children_inside_the_box() {
+    let mut eng = LayoutEngine::new();
+    let child = eng.new_leaf(LayoutStyle {
+        width: Some(40.0),
+        height: Some(20.0),
+        ..Default::default()
+    });
+    let root = eng.new_with_children(
+        LayoutStyle {
+            width: Some(200.0),
+            height: Some(100.0),
+            padding: Insets::uniform(16.0),
+            ..Default::default()
+        },
+        &[child],
+    );
+
+    eng.compute(root, Size::new(200.0, 100.0));
+    let rect = eng.layout(child).rect;
+    assert!((rect.x0 - 16.0).abs() < 0.01, "inset from the inside");
+    assert!(
+        (rect.width() - 40.0).abs() < 0.01,
+        "and the child's own box is unchanged, unlike a margin"
+    );
+}
+
+/// The control that keeps the two apart, and the reason `Surface` carries real
+/// padding rather than a margin per child.
+///
+/// With **one** child the two are geometrically identical — measured, both give
+/// the child at 8px and the box at 56x36 — so a test written against a single
+/// child would pass for either implementation. With **two** they diverge: a
+/// margin is per child and lands between them as well, while a padding is one
+/// inset around the group. Taffy does not collapse margins, so the row below ends
+/// up with a 16px hole in the middle that the padded row does not have.
+#[test]
+fn a_margin_is_per_child_and_a_padding_is_around_the_group() {
+    let two = |margin: Insets, padding: Insets| {
+        let mut eng = LayoutEngine::new();
+        let a = eng.new_leaf(LayoutStyle {
+            width: Some(40.0),
+            height: Some(20.0),
+            margin,
+            ..Default::default()
+        });
+        let b = eng.new_leaf(LayoutStyle {
+            width: Some(30.0),
+            height: Some(20.0),
+            margin,
+            ..Default::default()
+        });
+        let root = eng.new_with_children(
+            LayoutStyle {
+                flex_direction: FlexDirection::Row,
+                padding,
+                ..Default::default()
+            },
+            &[a, b],
+        );
+        eng.compute(root, Size::new(200.0, 100.0));
+        (eng.layout(root).rect, eng.layout(a).rect, eng.layout(b).rect)
+    };
+
+    let inset = 8.0;
+    let (padded_box, padded_a, padded_b) = two(Insets::ZERO, Insets::uniform(inset));
+    let (margin_box, margin_a, margin_b) = two(Insets::uniform(inset), Insets::ZERO);
+
+    assert!((padded_a.x0 - inset).abs() < 0.01, "the group is inset once");
+    assert!(
+        (padded_b.x0 - padded_a.x1).abs() < 0.01,
+        "and its members stay flush with each other"
+    );
+    assert!((margin_a.x0 - inset).abs() < 0.01, "each margin insets its own child");
+    assert!(
+        (margin_b.x0 - margin_a.x1 - inset * 2.0).abs() < 0.01,
+        "and the second margin also lands *between* them — a hole a padded \
+         group does not have"
+    );
+    assert!(
+        (margin_box.width() - padded_box.width() - inset * 2.0).abs() < 0.01,
+        "which is why the margin version's box is wider: four margins against \
+         two paddings"
+    );
+}
+
+/// Padding is per side, because a design system's header inset is horizontal and
+/// its body inset is usually not.
+#[test]
+fn padding_is_per_side() {
+    let mut eng = LayoutEngine::new();
+    let child = eng.new_leaf(LayoutStyle {
+        width: Some(10.0),
+        height: Some(10.0),
+        ..Default::default()
+    });
+    let root = eng.new_with_children(
+        LayoutStyle {
+            width: Some(200.0),
+            height: Some(100.0),
+            padding: Insets {
+                left: 4.0,
+                top: 8.0,
+                right: 0.0,
+                bottom: 0.0,
+            },
+            ..Default::default()
+        },
+        &[child],
+    );
+
+    eng.compute(root, Size::new(200.0, 100.0));
+    let rect = eng.layout(child).rect;
+    assert!((rect.x0 - 4.0).abs() < 0.01);
+    assert!((rect.y0 - 8.0).abs() < 0.01);
+}
+

@@ -87,6 +87,8 @@ pub struct LayoutStyle {
     pub gap: f32,
     /// Space reserved outside the box, inside its parent.
     pub margin: Insets,
+    /// Space reserved inside the box, between its edge and its children.
+    pub padding: Insets,
     pub position: Position,
     pub inset: AbsoluteInset,
 }
@@ -102,6 +104,7 @@ impl Default for LayoutStyle {
             flex_grow: 0.0,
             gap: 0.0,
             margin: Insets::ZERO,
+            padding: Insets::ZERO,
             position: Position::Relative,
             inset: AbsoluteInset::default(),
         }
@@ -140,6 +143,14 @@ impl LayoutStyle {
     pub fn with_margin(margin: Insets) -> Self {
         Self {
             margin,
+            ..Self::default()
+        }
+    }
+
+    /// The same as the default, but with `padding` reserved inside the box.
+    pub fn with_padding(padding: Insets) -> Self {
+        Self {
+            padding,
             ..Self::default()
         }
     }
@@ -185,6 +196,12 @@ impl LayoutStyle {
                 right: LengthPercentage::length(self.margin.right as f32).into(),
                 top: LengthPercentage::length(self.margin.top as f32).into(),
                 bottom: LengthPercentage::length(self.margin.bottom as f32).into(),
+            },
+            padding: taffy::Rect {
+                left: LengthPercentage::length(self.padding.left as f32),
+                right: LengthPercentage::length(self.padding.right as f32),
+                top: LengthPercentage::length(self.padding.top as f32),
+                bottom: LengthPercentage::length(self.padding.bottom as f32),
             },
             position: match self.position {
                 Position::Relative => TPosition::Relative,

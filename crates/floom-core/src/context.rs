@@ -20,6 +20,20 @@ pub trait UpdateContext {
     /// Requires [`crate::Widget::children`] to be consulted again, so it is
     /// strictly more expensive than a repaint. See [`crate::compose`].
     fn mark_children_dirty(&mut self, id: ElementId);
+    /// The *layout* `id` asked for changed; re-run layout before painting.
+    ///
+    /// A third request, distinct from the other two, and the one that is easiest
+    /// to leave out. A widget whose `layout_request` moves — a padding, an inset,
+    /// an intrinsic size — and that only calls [`Self::mark_dirty`] produces a
+    /// repaint of a box that is still the old size: the ink is redrawn into the
+    /// geometry the *previous* frame computed, because
+    /// `WidgetHost::frame` runs layout only when layout is dirty and a repaint
+    /// request does not make it dirty.
+    ///
+    /// Not defaulted, unlike the overlay and native doors below, because there is
+    /// no honest fallback: a host that ignored this would silently mis-lay-out
+    /// every widget that used it. Every `UpdateContext` has to answer it.
+    fn mark_layout_dirty(&mut self, id: ElementId);
 
     /// Layout box of the node being updated, in viewport coordinates.
     ///

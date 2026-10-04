@@ -21,6 +21,7 @@ pub mod nav;
 pub mod navigation;
 pub mod primitives;
 pub mod ripple;
+pub mod surface;
 pub mod svg_path;
 pub mod testkit;
 pub mod vector_icon;
@@ -49,6 +50,8 @@ pub use native::NativeSurface;
 pub use nav::{NavHandle, NavHost};
 pub use navigation::{NavDestination, NavigationBar, NavigationDrawer, NavigationRail};
 pub use ripple::{Phase, Ripple, ripple};
+/// A decorated box with children: v1's `Container::new(child).style(..)`.
+pub use surface::Surface;
 /// SVG path data -> `Path`, for the icon sets the kits ship as `d="..."`.
 pub use svg_path::parse_path_data;
 /// An icon drawn from an outline, for kits with no SVG pipeline in 2.0.

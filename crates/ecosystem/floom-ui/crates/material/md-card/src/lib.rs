@@ -27,21 +27,23 @@
 //! `Shadow` gained `spread` (CSS's fourth `box-shadow` length) to match v1's
 //! `box_shadow_spread`, which this card used.
 //!
-//! * **The card's padding is not set on the surface, and that is a correction.**
-//!   An earlier version of this port wrote
+//! * **The card's padding went on the surface twice, wrongly, before it went on
+//!   the right widget.** The first version wrote
 //!   `Container::new().background(..).radius(..).padding(..).shadow(..)` and
-//!   looked finished. 2.0's `Container` is a *leaf* — it holds no children,
-//!   because composition moved to the parent — so a box with nothing inside it has
-//!   nothing to pad, and the `Container::padding` field it was handed was stored
-//!   and never read: `grep -n padding crates/floom-widgets/src/primitives.rs`
-//!   showed a setter and no reader. The card rendered with its text against the
-//!   edge and no test noticed. The inset is a **margin on the content's slot**
-//!   instead; see [`MdCard::content_layout`].
+//!   looked finished — but 2.0's `Container` is a *leaf*, so a box with nothing
+//!   inside it has nothing to pad, and the `Container::padding` field it was
+//!   handed was stored and never read: `grep -n padding
+//!   crates/floom-widgets/src/primitives.rs` showed a setter and no reader. The
+//!   card rendered with its text against the edge and no test noticed. The second
+//!   version moved the inset onto the *content's slot* as a margin, which is at
+//!   least applied, but it is not what a card is: the content has to be inside
+//!   the box. Both mistakes came from the same root — the engine had no decorated
+//!   box that could hold children — and that is what [`floom_widgets::Surface`]
+//!   is. `Container::padding` is gone rather than left as a second dead field.
 
-use floom_core::LayoutRequest;
 use floom_legacy_reactive::{RwSignal, SignalGet};
 use floom_types::{Color as PaintColor, Insets, Shadow};
-use floom_widgets::Container;
+use floom_widgets::Surface;
 
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::card::CardProps;
@@ -136,33 +138,43 @@ impl MdCard {
         shadow_from(self.resolved_style().shadow)
     }
 
-    /// The card's surface as a 2.0 widget.
+    /// The card's surface as a 2.0 widget — the filled, rounded, elevated box
+    /// with the card's padding on it.
     ///
-    /// Mount content into it from the parent, e.g.
-    /// `Child::new(key, LayoutRequest::new(), || Box::new(Text::new("hi")))`.
-    pub fn surface(&self) -> Container {
+    /// This is a [`Surface`] and not a [`Container`], and that is the whole
+    /// difference between a card and a coloured rectangle: a `Container` is a
+    /// leaf, so it can carry the fill and the elevation but not the content, and
+    /// not the padding either (a box with nothing inside it has nothing to pad).
+    /// A `Surface` is a node with children, so both of those are real.
+    ///
+    /// ```ignore
+    /// // the content goes *inside* the card, as it did in v1
+    /// card.surface().push(|| Box::new(Text::new("..")))
+    /// ```
+    pub fn surface(&self) -> Surface {
         let style = self.resolved_style();
-        Container::new()
+        Surface::new()
             .background(to_paint(style.container_color))
             .radius(style.border_radius)
+            .padding(self.padding())
             .shadow(shadow_from(style.shadow))
     }
 
-    /// The layout request this card's *content* should be mounted with.
+    /// The card's surface with nothing in it, for a caller that wants to declare
+    /// the content itself — with its own keys or its own layout.
     ///
-    /// The padding token, applied where it can actually take effect. v1 put it on
-    /// the box that held the content; 2.0's `Container` is a leaf, so the inset
-    /// belongs on the content's own slot, and the engine's word for space around
-    /// a box inside its parent is a margin.
-    ///
-    /// ```ignore
-    /// Child::new(key, card.content_layout(), || Box::new(Text::new("..")))
-    /// ```
-    pub fn content_layout(&self) -> LayoutRequest {
-        LayoutRequest::new().margin(Insets::uniform(f64::from(self.resolved_style().padding)))
+    /// `Surface::surface()` is this; `surface()` is this plus nothing. Split out
+    /// because "the box" and "the box plus its one child" are the same widget and
+    /// a caller should not have to restate the tokens to get either.
+    pub fn empty_surface(&self) -> Surface {
+        self.surface()
     }
 
-    /// The same inset on its own, for a caller that composes the slot itself.
+    /// The card's padding, as a layout inset.
+    ///
+    /// Applied by [`Self::surface`]; exposed because a caller mounting content by
+    /// hand needs to put it somewhere, and the answer is *inside* the box, not on
+    /// the content's own slot.
     pub fn padding(&self) -> Insets {
         Insets::uniform(f64::from(self.resolved_style().padding))
     }

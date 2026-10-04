@@ -61,6 +61,14 @@ pub struct FrameStats {
     pub updated: usize,
     pub painted: usize,
     pub layout_nodes: usize,
+    /// Widgets that asked for the layout pass to run again this frame, via
+    /// [`floom_core::UpdateContext::mark_layout_dirty`].
+    ///
+    /// Separate from `relaid` because a request does not guarantee a pass: the
+    /// frame may already have been going to lay out. A test that wants "this
+    /// change reached layout" asserts on the geometry; one that wants "this
+    /// widget said its layout moved" asserts on this.
+    pub layout_requested: usize,
     /// Whether this frame ran the layout pass.
     ///
     /// Separate from `layout_nodes`, which is the size of the layout tree
@@ -620,6 +628,9 @@ fn request_to_style(req: &LayoutRequest) -> LayoutStyle {
     if let Some(margin) = req.margin {
         style.margin = margin;
     }
+    if let Some(padding) = req.padding {
+        style.padding = padding;
+    }
     if let Some(align) = req.main_align {
         style.justify_content = align_to_justify(align);
     }
@@ -673,6 +684,9 @@ fn apply_self_layout(mut base: LayoutStyle, req: Option<&LayoutRequest>) -> Layo
         // carried its own margin is a caller restating the slot's intent.
         if let Some(margin) = req.margin {
             base.margin = margin;
+        }
+        if let Some(padding) = req.padding {
+            base.padding = padding;
         }
         if let Some(position) = req.position {
             base.position = match position {
@@ -1755,6 +1769,7 @@ impl WidgetHost {
         let mut cx = HostUpdateContext {
             dirty: false,
             children_dirty: false,
+            layout_dirty: false,
             bounds,
             viewport,
             snapshot: None,
@@ -1957,6 +1972,7 @@ impl WidgetHost {
             let mut cx = HostUpdateContext {
                 dirty: false,
                 children_dirty: false,
+                layout_dirty: false,
                 bounds: node.bounds,
                 viewport,
                 snapshot,
@@ -1974,6 +1990,13 @@ impl WidgetHost {
             let dirty = cx.dirty || repaint_requests.contains(&node.id);
             node.dirty = dirty;
             node.children_dirty |= cx.children_dirty;
+            // A widget that moved its own `layout_request` has to be able to say
+            // so, or the frame would repaint the previous frame's geometry: a
+            // padding or an intrinsic size would change nothing a user could see.
+            if cx.layout_dirty {
+                self.layout_dirty = true;
+                stats.layout_requested += 1;
+            }
             if dirty {
                 stats.updated += 1;
                 // A widget that changed may have changed its semantics hint
@@ -3728,6 +3751,11 @@ struct UpdateOverlaySink<'a> {
 struct HostUpdateContext<'a> {
     dirty: bool,
     children_dirty: bool,
+    /// A widget asked for the layout pass to run again — see
+    /// [`UpdateContext::mark_layout_dirty`]. Folded into the host's own
+    /// `layout_dirty` after the update pass, because the flag is a field of the
+    /// host and this borrows the node out of it for the duration of `update`.
+    layout_dirty: bool,
     /// The updating node's box (from the previous frame — `update` runs before
     /// layout), so a composite can anchor an overlay to itself.
     bounds: Rect,
@@ -3825,6 +3853,7 @@ impl HostUpdateContext<'_> {
         Self {
             dirty: false,
             children_dirty: false,
+            layout_dirty: false,
             bounds,
             viewport,
             snapshot: None,
@@ -3841,6 +3870,10 @@ impl UpdateContext for HostUpdateContext<'_> {
 
     fn mark_children_dirty(&mut self, _id: ElementId) {
         self.children_dirty = true;
+    }
+
+    fn mark_layout_dirty(&mut self, _id: ElementId) {
+        self.layout_dirty = true;
     }
 
     fn bounds(&self) -> Rect {

@@ -45,6 +45,8 @@ impl UpdateContext for TestUpdateCx {
     fn mark_children_dirty(&mut self, id: ElementId) {
         self.children_dirty.borrow_mut().push(id);
     }
+
+    fn mark_layout_dirty(&mut self, _id: ElementId) {}
 }
 
 struct TestEventCx {

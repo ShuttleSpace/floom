@@ -143,6 +143,7 @@ impl_widget_any!(
     crate::vector_icon::VectorIcon,
     crate::primitives::Image,
     crate::primitives::Container,
+    crate::surface::Surface,
     crate::primitives::Spacer,
     crate::primitives::Divider,
     crate::controls::Button,
