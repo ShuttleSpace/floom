@@ -27,7 +27,8 @@ remaining 94 components, because they gate 146 and 172 files respectively:
 2. **`Container::border` is in**, but only for a box with nothing in it. The
    box-with-a-child above subsumes it, and 94 files want it.
 3. **A height transition on a mount/unmount is not available and is not cheap**
-   — see "What the stateful shape cost" below. Do not plan a component around it.
+   — see "What `md-expansion_panels` turned up" below. Do not plan a component
+   around it.
 
 After that: batch the surface components (`footer`, `toolbar`, `item_group`),
 which should now be uneventful, then port one kit end to end.
@@ -54,9 +55,9 @@ points at `src/lib.rs`, the file is `src/librs`), `floom2-capabilities` (7
 Android/iOS errors `cfg`'d out on macOS), and `floom-legacy-renderer-skia` (its
 `skia-bindings` build script needs network). `--exclude` does not actually
 suppress the last two — they come back in through other packages' targets — so the
-gate is "13 errors, all pre-existing, all in those files", counted before and
-after every change. The same discipline applies to `floom-elements`, where the
-count is 20 and the cause is *not* pre-existing (correction 6).
+gate is "8 error lines, all in `floom2-capabilities`", counted before and after
+every change. The same discipline applies to `floom-elements`, where the count is
+20 and the cause is *not* pre-existing (correction 6).
 
 **`floom-elements --features material` is not green, and this document was wrong
 to say it was** (correction 6).
