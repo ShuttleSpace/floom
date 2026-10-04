@@ -111,6 +111,7 @@ impl_widget_any!(
     crate::primitives::Text,
     crate::labeled::Labeled,
     crate::primitives::Icon,
+    crate::vector_icon::VectorIcon,
     crate::primitives::Image,
     crate::primitives::Container,
     crate::primitives::Spacer,

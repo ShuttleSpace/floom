@@ -4,6 +4,16 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-floom = { workspace = true }
+# Ported off the v1 `floom` monolith (see docs/porting-floem-ui-to-2.0.md).
+# v1's `svg` view and the renderer's `usvg` path have no 2.0 equivalent, so the
+# icon is now a `floom_widgets::VectorIcon` filled from parsed path data.
 floom-core-theme = { workspace = true }
 floom-widget-runtime = { workspace = true, features = ["material"] }
+floom-legacy-reactive = { path = "../../../../../floom-legacy-reactive" }
+floom-core = { path = "../../../../../floom-core" }
+floom-types = { path = "../../../../../floom-types" }
+floom-widgets = { path = "../../../../../floom-widgets" }
+
+[dev-dependencies]
+floom-core-theme = { workspace = true }
+floom-types = { path = "../../../../../floom-types" }

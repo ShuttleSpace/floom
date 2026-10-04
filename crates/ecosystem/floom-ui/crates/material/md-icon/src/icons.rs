@@ -39,7 +39,21 @@ fn md_icon_path(name: &str) -> &'static str {
     }
 }
 
+/// The path data for a named Material icon, in the 24x24 view box.
+///
+/// Unrecognised names fall back to a filled dot. Unchanged from v1: this is
+/// data, not API, and 2.0's `VectorIcon::from_path_data` reads it directly.
+pub fn md_icon_path_data(name: &str) -> &'static str {
+    md_icon_path(name)
+}
+
 /// Build a full SVG markup string for a named Material icon.
+///
+/// **v1 compatibility only.** 2.0 has no SVG pipeline, so nothing in the ported
+/// widget path calls this; it stays because six material crates still on v1
+/// (`md-list_group`, `md-stepper`, `md-confirm_edit`, `md-checkbox_btn`,
+/// `md-checkbox`, `md-rating`) hand the markup to their own `svg()` view. It
+/// goes when they do.
 pub fn md_icon_svg(name: &str) -> String {
     format!(
         "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"currentColor\"><path d=\"{}\"/></svg>",

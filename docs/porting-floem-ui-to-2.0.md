@@ -2,20 +2,18 @@
 
 ## Resume here
 
-Branch `floem2.0`. The next task is **porting `md-icon`**, not the stateful
-shape. `md-expansion_panels` was the intended stateful pilot, but it depends on
-`floom-widget-md-icon`, which is still v1 — so the stateful shape is *blocked*
-until md-icon lands. md-icon is 138 lines and 16 components depend on it, so it
-is both the cheapest unlock and the one with the widest fan-out.
+Branch `floem2.0`. `md-icon` is ported (and was the gate: it feeds 16 components,
+and until it landed the stateful shape could not start). The next task is the
+**stateful** shape -- `md-expansion_panels`, chosen over `carousel` because
+expand/collapse needs only a height transition and its state-machine shape is
+the one more components are likely to reuse. `md-icon`'s port also added
+`floom_widgets::VectorIcon` + `svg_path` to the engine crate, which is new
+surface other kits will use.
 
-Note md-icon is not a pure rename either: v1's `md_icon_svg` returns a v1 svg
-value, which 2.0 has no equivalent for (2.0 self-draws via `Canvas`). Expect
-real translation work, not a find-and-replace.
+Ported so far: `md-card` (surface), `md-button` (interactive), `md-icon`
+(shared base, unlocks 16). Engine widgets: `Badge`, `Ripple`, `VectorIcon`.
 
-Once md-icon is ported: the **stateful** shape (`md-expansion_panels` —
-chosen over `carousel` because expand/collapse needs only a height transition and
-its state-machine shape is the one more components are likely to reuse), then
-the surface batch (`footer`, `toolbar`, `item_group`) x3 kits.
+**`floom-elements` now builds clean with `--features material`.**
 
 Verification commands that must stay green:
 
