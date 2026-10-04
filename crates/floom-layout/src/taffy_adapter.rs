@@ -2,7 +2,7 @@
 
 use std::collections::HashMap;
 
-use floom_types::{Point, Rect, Size as GeoSize};
+use floom_types::{Insets, Point, Rect, Size as GeoSize};
 use taffy::prelude::{
     AlignItems as TAlign, AvailableSpace, Dimension, Display, FlexDirection as TFlex,
     JustifyContent as TJustify, LengthPercentage, LengthPercentageAuto, NodeId,
@@ -85,6 +85,8 @@ pub struct LayoutStyle {
     pub height: Option<f32>,
     pub flex_grow: f32,
     pub gap: f32,
+    /// Space reserved outside the box, inside its parent.
+    pub margin: Insets,
     pub position: Position,
     pub inset: AbsoluteInset,
 }
@@ -99,6 +101,7 @@ impl Default for LayoutStyle {
             height: None,
             flex_grow: 0.0,
             gap: 0.0,
+            margin: Insets::ZERO,
             position: Position::Relative,
             inset: AbsoluteInset::default(),
         }
@@ -129,6 +132,14 @@ impl LayoutStyle {
         Self {
             position: Position::Absolute,
             inset: AbsoluteInset::fill(),
+            ..Self::default()
+        }
+    }
+
+    /// The same as the default, but with `margin` reserved outside the box.
+    pub fn with_margin(margin: Insets) -> Self {
+        Self {
+            margin,
             ..Self::default()
         }
     }
@@ -168,6 +179,12 @@ impl LayoutStyle {
             gap: taffy::Size {
                 width: LengthPercentage::length(self.gap),
                 height: LengthPercentage::length(self.gap),
+            },
+            margin: taffy::Rect {
+                left: LengthPercentage::length(self.margin.left as f32).into(),
+                right: LengthPercentage::length(self.margin.right as f32).into(),
+                top: LengthPercentage::length(self.margin.top as f32).into(),
+                bottom: LengthPercentage::length(self.margin.bottom as f32).into(),
             },
             position: match self.position {
                 Position::Relative => TPosition::Relative,

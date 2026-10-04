@@ -543,6 +543,12 @@ impl CreateContext for AllocatingCreateContext {
 #[derive(Default)]
 pub struct RecordingUpdateContext {
     dirty: Vec<ElementId>,
+    /// Nodes whose *children* were declared changed. Kept apart from `dirty`
+    /// because the two are not the same request: a repaint re-runs `paint`, a
+    /// reconcile re-runs `children()` and can mount or unmount a subtree. A test
+    /// that cannot tell them apart cannot pin a stateful widget, because every
+    /// state change is supposed to do the second.
+    children_dirty: Vec<ElementId>,
 }
 
 impl RecordingUpdateContext {
@@ -557,6 +563,23 @@ impl RecordingUpdateContext {
     pub fn dirty_count(&self) -> usize {
         self.dirty.len()
     }
+
+    /// Every id passed to [`UpdateContext::mark_children_dirty`], in order.
+    pub fn children_dirty(&self) -> &[ElementId] {
+        &self.children_dirty
+    }
+
+    /// Whether any node asked to have its children re-declared.
+    pub fn reconciled(&self) -> bool {
+        !self.children_dirty.is_empty()
+    }
+
+    /// Forgets everything recorded, so a second phase of a test can assert what
+    /// a *later* update does rather than what the first one did.
+    pub fn clear(&mut self) {
+        self.dirty.clear();
+        self.children_dirty.clear();
+    }
 }
 
 impl UpdateContext for RecordingUpdateContext {
@@ -564,9 +587,8 @@ impl UpdateContext for RecordingUpdateContext {
         self.dirty.push(id);
     }
 
-    fn mark_children_dirty(&mut self, _id: ElementId) {
-        // The test kit records structure changes separately if a test needs them;
-        // the default pass-through keeps existing widget tests unaffected.
+    fn mark_children_dirty(&mut self, id: ElementId) {
+        self.children_dirty.push(id);
     }
 }
 

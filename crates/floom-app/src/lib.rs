@@ -617,6 +617,9 @@ fn request_to_style(req: &LayoutRequest) -> LayoutStyle {
     if let Some(gap) = req.gap {
         style.gap = gap;
     }
+    if let Some(margin) = req.margin {
+        style.margin = margin;
+    }
     if let Some(align) = req.main_align {
         style.justify_content = align_to_justify(align);
     }
@@ -664,6 +667,12 @@ fn apply_self_layout(mut base: LayoutStyle, req: Option<&LayoutRequest>) -> Layo
         }
         if let Some(gap) = req.gap {
             base.gap = gap;
+        }
+        // A margin declared by the slot is the *only* word for "inset this
+        // child", so unlike sizing it is applied outright: a base style that
+        // carried its own margin is a caller restating the slot's intent.
+        if let Some(margin) = req.margin {
+            base.margin = margin;
         }
         if let Some(position) = req.position {
             base.position = match position {

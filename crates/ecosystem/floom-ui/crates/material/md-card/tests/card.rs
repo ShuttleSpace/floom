@@ -5,6 +5,7 @@
 //! widget) without depending on the v1 monolith. See
 //! `docs/porting-floem-ui-to-2.0.md`.
 
+use floom_types::{Insets, Rect};
 use floom_types::{Color as PaintColor, Shadow};
 
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
@@ -102,8 +103,25 @@ fn the_surface_uses_the_resolved_padding_radius_and_palette() {
     // The engine container is what a caller actually mounts content into, so
     // the theme values have to have reached it.
     assert!(
-        style.padding > 0.0 && style.border_radius > 0.0,
-        "card tokens should carry real padding and radius"
+        style.border_radius > 0.0,
+        "card tokens should carry a real radius"
+    );
+    assert_eq!(
+        surface.corner_radius(),
+        style.border_radius,
+        "and the radius is on the surface the caller mounts"
+    );
+
+    // The padding is *not* on the surface, and this assertion is the reason that
+    // is not a silent regression: an earlier version of this port handed
+    // `Container` a padding that the widget stored and never read, and this test
+    // passed anyway because it only asserted the token was positive. The inset
+    // now has to be found on the content's own slot.
+    let layout = MdCard::new().content_layout();
+    assert_eq!(
+        layout.margin.expect("the card's inset"),
+        Insets::uniform(f64::from(style.padding)),
+        "the padding token reaches the content as a margin on its slot"
     );
     // A no-op `background` would make the card invisible, so assert the paint
     // op is not a transparent fill.

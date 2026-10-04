@@ -5,13 +5,16 @@ use std::rc::Rc;
 
 use floom_accessibility::SemanticsState;
 use floom_core::{
-    ElementId, Key, NamedKey, OverlayHandle, OverlayKind, Point, Rect, Size, Widget, WidgetAny,
+    Axis, Child, ChildKey, ElementId, Key, KeyPhase, LayoutRequest, NamedKey, OverlayHandle,
+    OverlayKind, Point, Rect, Size, Widget, WidgetAny,
 };
 use floom_scene::SceneNode;
 use floom_types::{Brush, Color, KeyEvent, Modifiers, PointerEvent, PointerPhase};
 use floom_widgets::controls::{
-    Button, Checkbox, Progress, Radio, Select, SelectPopup, Slider, Switch, TextField,
+    Button, Checkbox, Pressable, Progress, Radio, Select, SelectPopup, Slider, Switch, TextField,
 };
+use floom_widgets::primitives::Text;
+use floom_widgets::Stack;
 use floom_widgets::testkit::{
     AllocatingCreateContext, OverlayCall, RecordingUpdateContext, SceneRecorder, TestEventContext,
     dispatch, paint_snapshot, semantics_snapshot,
@@ -940,4 +943,185 @@ fn a_gradientless_progress_paints_the_same_flat_fill_as_before() {
         paint_snapshot(&Progress::determinate(0.5), id, ROW),
         "Rect (0.0, 0.0, 200.0, 32.0) #E2E8F0FF\nRect (0.0, 0.0, 100.0, 32.0) #2B6CB0FF"
     );
+}
+
+// --- Pressable -------------------------------------------------------------
+
+fn pressable(child: impl Fn() -> Box<dyn WidgetAny> + Send + Sync + 'static) -> Pressable {
+    Pressable::new(Child::new(ChildKey::index(0), LayoutRequest::new(), child))
+        .label("header")
+}
+
+/// A click is a press *and* a release over the same spot. Sending one half is
+/// not a weaker click, it is not a click.
+#[test]
+fn a_pressable_fires_on_a_matched_press_and_release() {
+    let hits = Rc::new(Cell::new(0u32));
+    let sink = hits.clone();
+    let mut widget = pressable(move || Box::new(Text::new("row"))).on_click(move || {
+        sink.set(sink.get() + 1);
+    });
+    let id = allocate(&widget);
+
+    assert!(fire_down_up(&mut widget, id, Point::new(10.0, 10.0)));
+
+    assert_eq!(hits.get(), 1, "the callback runs exactly once");
+}
+
+/// The whole point of the widget: `Button` paints its own label, so a row of
+/// widgets has no other way to be clickable.
+#[test]
+fn a_pressable_wraps_a_subtree_rather_than_a_label() {
+    let row = Stack::new(Axis::Horizontal)
+        .push(|| Box::new(Text::new("Title")))
+        .push(|| Box::new(Text::new(">")));
+    let widget = pressable(move || Box::new(row.clone()));
+
+    let children = widget.children();
+    assert_eq!(children.len(), 1);
+    let built = children[0].build();
+    assert!(
+        built.as_any().downcast_ref::<Stack>().is_some(),
+        "the pressable's child is the caller's subtree, untouched"
+    );
+}
+
+/// The whole surface consumes, so a press inside it never reaches something
+/// further down. (`Ripple` is the opposite case and says so.)
+#[test]
+fn a_pressable_consumes_the_press() {
+    let mut widget = pressable(|| Box::new(Text::new("row")));
+    let id = allocate(&widget);
+    assert!(
+        dispatch(&mut widget, id, ROW, PointerEvent::primary_down(Point::new(4.0, 4.0)).into()),
+        "the press belongs to the pressable"
+    );
+}
+
+/// A release with no press in flight is not a click. Without this a pointer
+/// that appears already up — a synthetic event, a missed down — would fire the
+/// action.
+#[test]
+fn a_release_without_a_press_does_not_fire() {
+    let hits = Rc::new(Cell::new(0u32));
+    let sink = hits.clone();
+    let mut widget = pressable(|| Box::new(Text::new("row"))).on_click(move || {
+        sink.set(sink.get() + 1);
+    });
+    let id = allocate(&widget);
+
+    dispatch(&mut widget, id, ROW, PointerEvent::primary_up(Point::new(4.0, 4.0)).into());
+
+    assert_eq!(hits.get(), 0, "a release alone is not a click");
+}
+
+#[test]
+fn a_disabled_pressable_is_inert() {
+    let hits = Rc::new(Cell::new(0u32));
+    let sink = hits.clone();
+    let mut widget = pressable(|| Box::new(Text::new("row")))
+        .disabled(true)
+        .on_click(move || {
+            sink.set(sink.get() + 1);
+        });
+    let id = allocate(&widget);
+
+    assert!(!fire_down_up(&mut widget, id, Point::new(4.0, 4.0)));
+
+    assert_eq!(hits.get(), 0);
+}
+
+#[test]
+fn a_focused_pressable_activates_from_the_keyboard() {
+    let hits = Rc::new(Cell::new(0u32));
+    let sink = hits.clone();
+    let mut widget = pressable(|| Box::new(Text::new("row"))).on_click(move || {
+        sink.set(sink.get() + 1);
+    });
+    let id = allocate(&widget);
+    widget.set_focused(true);
+
+    let event = KeyEvent {
+        key: Key::Named(NamedKey::Enter),
+        phase: KeyPhase::Down,
+        modifiers: Modifiers::empty(),
+    };
+    assert!(dispatch(&mut widget, id, ROW, event.into()));
+
+    assert_eq!(
+        hits.get(),
+        1,
+        "a disclosure has to be operable without a pointer"
+    );
+}
+
+/// The reported state follows a *reader*, not a value captured at build time.
+/// A header that is not rebuilt across its own toggle would otherwise report
+/// the state it was built with — the opposite of what the user sees.
+#[test]
+fn the_reported_expanded_state_follows_a_shared_flag() {
+    use std::sync::atomic::{AtomicBool, Ordering};
+    use std::sync::Arc;
+
+    let open = Arc::new(AtomicBool::new(false));
+    let reader = open.clone();
+    let mut widget = pressable(|| Box::new(Text::new("row")))
+        .expanded_from(move || reader.load(Ordering::SeqCst));
+    let id = allocate(&widget);
+
+    let mut cx = RecordingUpdateContext::new();
+    widget.update(&mut cx, id);
+    assert!(
+        widget.semantics_hint().state.contains(SemanticsState::COLLAPSED),
+        "closed panels report collapsed"
+    );
+
+    open.store(true, Ordering::SeqCst);
+    let mut cx = RecordingUpdateContext::new();
+    widget.update(&mut cx, id);
+    assert!(
+        widget.semantics_hint().state.contains(SemanticsState::EXPANDED),
+        "a flag that moved since the last update has to invalidate the node, \
+         or the semantics tree keeps reporting last frame's answer"
+    );
+    assert_eq!(cx.dirty_count(), 1);
+}
+
+/// The settled frame marks nothing: a widget that dirties itself every frame
+/// would invalidate its whole subtree for a tree standing still.
+#[test]
+fn a_settled_pressable_marks_nothing_dirty() {
+    let mut widget = pressable(|| Box::new(Text::new("row")));
+    let id = allocate(&widget);
+
+    let mut first = RecordingUpdateContext::new();
+    widget.update(&mut first, id);
+    let mut second = RecordingUpdateContext::new();
+    widget.update(&mut second, id);
+
+    assert_eq!(first.dirty_count(), 1, "the first sync paints once");
+    assert_eq!(
+        second.dirty_count(),
+        0,
+        "an unchanged widget must not invalidate again"
+    );
+}
+
+#[test]
+fn a_pressable_reports_its_role_and_name() {
+    let widget = pressable(|| Box::new(Text::new("row")));
+    let hint = widget.semantics_hint();
+    assert_eq!(hint.role, floom_accessibility::SemanticsRole::Button);
+    assert_eq!(hint.label.as_deref(), Some("header"));
+    assert!(
+        hint.state.contains(SemanticsState::FOCUSABLE),
+        "an activatable surface must be reachable by keyboard"
+    );
+}
+
+#[test]
+fn a_pressable_paints_nothing() {
+    let widget = pressable(|| Box::new(Text::new("row")));
+    let id = allocate(&widget);
+    assert_eq!(paint_snapshot(&widget, id, ROW), "(empty)");
 }

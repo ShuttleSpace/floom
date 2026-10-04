@@ -17,10 +17,10 @@ pub use context::{CreateContext, EventContext, PaintContext, SemanticsContext, U
 pub use element::{Element, ElementKind};
 pub use floom_types::{
     AnimationSpec, Brush, Color, CompositorProp, Easing, ElementId, Event, Filter, ImeUpdate,
-    InputMode, Key, KeyEvent, KeyPhase, Modifiers, NamedKey, NativeCompositionMode, NativeSnapshot,
-    NativeViewKind, OverlayHandle, OverlayKind, Point, PointerButton, PointerEvent, PointerKind,
-    PointerPhase, PresenceChannel, PresenceTransition, Rect, RepeatMode, RepeatSpec, ResourceId,
-    ScrollEvent, Shadow, Size, Transition,
+    InputMode, Insets, Key, KeyEvent, KeyPhase, Modifiers, NamedKey, NativeCompositionMode,
+    NativeSnapshot, NativeViewKind, OverlayHandle, OverlayKind, Point, PointerButton, PointerEvent,
+    PointerKind, PointerPhase, PresenceChannel, PresenceTransition, Rect, RepeatMode, RepeatSpec,
+    ResourceId, ScrollEvent, Shadow, Size, Transition,
 };
 pub use native::{NativeGrant, NativeRequest};
 pub use overlay::OverlayRequest;

@@ -12,6 +12,8 @@
 
 use std::sync::Arc;
 
+use floom_types::Insets;
+
 use crate::WidgetAny;
 
 /// Main axis along which a box lays out its own children.
@@ -96,6 +98,16 @@ pub struct LayoutRequest {
     pub gap: Option<f32>,
     pub main_align: Option<Align>,
     pub cross_align: Option<Align>,
+    /// Space reserved *outside* this box, inside its parent.
+    ///
+    /// This is how 2.0 spells "inset my content": v1 wrote
+    /// `Container::new(child).style(|s| s.padding(..))`, and 2.0's `Container`
+    /// is a leaf — it holds no children, because composition moved to the
+    /// parent — so there is no box left to pad. The inset belongs on the
+    /// content's own slot, and the engine's word for space around a box inside
+    /// its parent is a margin. It looks the same as padding for every case a
+    /// design system actually draws (the parent's fill still covers the inset).
+    pub margin: Option<Insets>,
     /// Flow participation; `Absolute` removes the box from its parent's flow.
     pub position: Option<Position>,
     /// Offsets when `position` is `Absolute`; `None` sides resolve to auto.
@@ -112,6 +124,7 @@ impl LayoutRequest {
             gap: None,
             main_align: None,
             cross_align: None,
+            margin: None,
             position: None,
             inset: None,
         }
@@ -151,6 +164,35 @@ impl LayoutRequest {
 
     pub const fn cross_align(mut self, align: Align) -> Self {
         self.cross_align = Some(align);
+        self
+    }
+
+    /// Space reserved outside this box, inside its parent. See
+    /// [`LayoutRequest::margin`].
+    pub const fn margin(mut self, margin: Insets) -> Self {
+        self.margin = Some(margin);
+        self
+    }
+
+    /// The same inset on the horizontal axis only.
+    pub fn margin_horiz(mut self, value: f64) -> Self {
+        let current = self.margin.unwrap_or(Insets::ZERO);
+        self.margin = Some(Insets {
+            left: value,
+            right: value,
+            ..current
+        });
+        self
+    }
+
+    /// The same inset on the vertical axis only.
+    pub fn margin_vert(mut self, value: f64) -> Self {
+        let current = self.margin.unwrap_or(Insets::ZERO);
+        self.margin = Some(Insets {
+            top: value,
+            bottom: value,
+            ..current
+        });
         self
     }
 

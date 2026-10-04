@@ -106,6 +106,35 @@ macro_rules! impl_widget_any {
     };
 }
 
+/// Implements `WidgetAny` for a widget that publishes no semantics of its own.
+///
+/// Distinct from `impl_widget_any!` because that macro assumes a
+/// `semantics_hint()` returning this crate's own `SemanticsHint`. A decorative
+/// composite has no such method, and `Option<CoreHint>` is already `None` for
+/// it — so the honest answer is to *say* nothing rather than to invent an empty
+/// hint.
+macro_rules! impl_widget_any_decorative {
+    ($($ty:ty),* $(,)?) => {
+        $(
+            impl floom_core::WidgetAny for $ty {
+                fn as_any(&self) -> &dyn Any {
+                    self
+                }
+
+                fn as_any_mut(&mut self) -> &mut dyn Any {
+                    self
+                }
+
+                fn semantics_hint(&self) -> Option<CoreHint> {
+                    // No semantics method of its own, and therefore nothing to
+                    // publish: `None` is what an unlabelled node reports.
+                    None
+                }
+            }
+        )*
+    };
+}
+
 impl_widget_any!(
     crate::badge::Badge,
     crate::primitives::Text,
@@ -117,6 +146,7 @@ impl_widget_any!(
     crate::primitives::Spacer,
     crate::primitives::Divider,
     crate::controls::Button,
+    crate::controls::Pressable,
     crate::controls::TextField,
     crate::controls::Checkbox,
     crate::controls::Radio,
@@ -134,10 +164,18 @@ impl_widget_any!(
     crate::compose::Overlay,
     crate::compose::Dialog,
     crate::compose::Tabs,
+    crate::compose::Accordion,
     crate::compose::Popup,
     crate::compose::BottomSheet,
     crate::navigation::NavigationBar,
     crate::navigation::NavigationRail,
     crate::navigation::NavigationDrawer,
     crate::native::NativeSurface,
+);
+
+// The two internals of `Accordion`: decorative composites with no semantics
+// method of their own, so they need the other macro.
+impl_widget_any_decorative!(
+    crate::compose::AccordionPanelLeaf,
+    crate::compose::AccordionIndicatorSlot,
 );

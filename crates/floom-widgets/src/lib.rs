@@ -37,11 +37,12 @@ pub use widget_any::{to_core_role, to_core_state};
 pub use badge::Badge;
 pub use canvas::{Canvas, ShaderBox, Spinner};
 pub use compose::{
-    AnimatedContent, BottomSheet, Conditional, Crossfade, Dialog, Grid, List, Opacity, Overlay,
-    Popup, SharedTransitionLayout, Stack, Tabs,
+    Accordion, AccordionIndicator, AccordionStyle, AnimatedContent, BottomSheet, Conditional,
+    Crossfade, Dialog, Grid, List, Opacity, Overlay, Popup, SharedTransitionLayout, Stack, Tabs,
 };
 pub use controls::{
-    Button, Checkbox, InteractionState, Progress, Radio, Select, Slider, Switch, TextField,
+    Button, Checkbox, InteractionState, Pressable, Progress, Radio, Select, Slider, Switch,
+    TextField,
 };
 pub use labeled::Labeled;
 pub use native::NativeSurface;

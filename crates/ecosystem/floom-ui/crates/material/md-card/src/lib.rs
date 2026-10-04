@@ -26,7 +26,19 @@
 //!
 //! `Shadow` gained `spread` (CSS's fourth `box-shadow` length) to match v1's
 //! `box_shadow_spread`, which this card used.
+//!
+//! * **The card's padding is not set on the surface, and that is a correction.**
+//!   An earlier version of this port wrote
+//!   `Container::new().background(..).radius(..).padding(..).shadow(..)` and
+//!   looked finished. 2.0's `Container` is a *leaf* — it holds no children,
+//!   because composition moved to the parent — so a box with nothing inside it has
+//!   nothing to pad, and the `Container::padding` field it was handed was stored
+//!   and never read: `grep -n padding crates/floom-widgets/src/primitives.rs`
+//!   showed a setter and no reader. The card rendered with its text against the
+//!   edge and no test noticed. The inset is a **margin on the content's slot**
+//!   instead; see [`MdCard::content_layout`].
 
+use floom_core::LayoutRequest;
 use floom_legacy_reactive::{RwSignal, SignalGet};
 use floom_types::{Color as PaintColor, Insets, Shadow};
 use floom_widgets::Container;
@@ -133,8 +145,26 @@ impl MdCard {
         Container::new()
             .background(to_paint(style.container_color))
             .radius(style.border_radius)
-            .padding(Insets::uniform(f64::from(style.padding)))
             .shadow(shadow_from(style.shadow))
+    }
+
+    /// The layout request this card's *content* should be mounted with.
+    ///
+    /// The padding token, applied where it can actually take effect. v1 put it on
+    /// the box that held the content; 2.0's `Container` is a leaf, so the inset
+    /// belongs on the content's own slot, and the engine's word for space around
+    /// a box inside its parent is a margin.
+    ///
+    /// ```ignore
+    /// Child::new(key, card.content_layout(), || Box::new(Text::new("..")))
+    /// ```
+    pub fn content_layout(&self) -> LayoutRequest {
+        LayoutRequest::new().margin(Insets::uniform(f64::from(self.resolved_style().padding)))
+    }
+
+    /// The same inset on its own, for a caller that composes the slot itself.
+    pub fn padding(&self) -> Insets {
+        Insets::uniform(f64::from(self.resolved_style().padding))
     }
 }
 

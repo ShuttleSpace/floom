@@ -19,16 +19,17 @@
 
 use std::any::Any;
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use floom_accessibility::SemanticsRole;
 use floom_core::{
-    Align, AnimationSpec, Axis, Child, ChildKey, CompositorProp, CreateContext, Easing, ElementId,
-    Inset, LayoutRequest, OverlayHandle, OverlayKind, OverlayRequest, PaintContext, Position,
-    PresenceTransition, Rect, SemanticsContext, Transition, UpdateContext, Widget, WidgetAny,
+    Align, AnimationSpec, Axis, Child, ChildBuilder, ChildKey, Color, CompositorProp,
+    CreateContext, Easing, ElementId, Inset, Insets, LayoutRequest, OverlayHandle, OverlayKind,
+    OverlayRequest, PaintContext, Position, PresenceTransition, Rect, SemanticsContext, Transition,
+    UpdateContext, Widget, WidgetAny,
 };
 
-use crate::controls::Button;
+use crate::controls::{Button, Pressable};
 use crate::primitives::{SemanticsHint, Text};
 
 // ---------------------------------------------------------------------------
@@ -267,6 +268,26 @@ impl Conditional {
     /// Updates whether the child is shown; the next frame reconciles.
     pub fn set_when(&mut self, when: bool) {
         self.when = when;
+    }
+
+    /// Adopts `when` as the state this widget *starts* from, without treating it
+    /// as a change.
+    ///
+    /// The distinction is load-bearing. [`Self::new`] deliberately starts "not
+    /// yet seen" so the first frame reconciles — which means a
+    /// `Conditional::new(false)` reads its own starting state as a *departure*
+    /// on the first `update`, and would play the exit transition for a child
+    /// that was never there. A parent that already knows the answer (a
+    /// disclosure panel seeded from its shared open flag) says so here instead.
+    pub(crate) fn sync_when(&mut self, when: bool) {
+        self.when = when;
+        self.last_when = when;
+        self.phase = if when {
+            PresencePhase::Shown
+        } else {
+            PresencePhase::Hidden
+        };
+        self.finished = false;
     }
 
     pub fn semantics_hint(&self) -> SemanticsHint {
@@ -2571,5 +2592,993 @@ mod tests {
         let mut shown = sheet;
         shown.set_present(true);
         assert_eq!(shown.children().len(), 1, "shown sheet mounts its layer");
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Accordion
+// ---------------------------------------------------------------------------
+
+/// Builds one panel's expand/collapse indicator, told which way the panel is.
+///
+/// A closure over the flag rather than two separate widgets (`collapsed` /
+/// `expanded`) because the caller cannot know the state when it declares the
+/// panel — that is the accordion's answer, and it changes after mount.
+pub type AccordionIndicator = Arc<dyn Fn(bool) -> Box<dyn WidgetAny> + Send + Sync + 'static>;
+
+/// Resolved, theme-agnostic style for an [`Accordion`].
+///
+/// Like every 2.0 widget this takes explicit values: deciding *which* palette
+/// and *which* metrics is the design system's job, so a kit resolves them once
+/// (`floom-core-theme` -> `MdExpansionPanels::resolve`) and hands the result here.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct AccordionStyle {
+    /// Height of each header row, in logical px.
+    pub header_height: f32,
+    /// Inset between the header's outline and its content, horizontally.
+    pub header_padding: f32,
+    /// Inset between the revealed content's edge and its own content.
+    pub content_padding: f32,
+    /// Extra horizontal indent the revealed content is pushed by, so it reads as
+    /// belonging to the panel rather than to the page.
+    pub content_indent: f32,
+    /// Gap between stacked panels.
+    pub gap: f32,
+    /// Header title colour.
+    pub title_color: Color,
+    /// Header title size, in logical px.
+    pub title_size: f32,
+    /// Outline width drawn just inside each header's edge. `0.0` draws none.
+    pub border_width: f32,
+    /// Outline colour.
+    pub border_color: Color,
+    /// Corner radius of the header's outline.
+    pub radius: f32,
+}
+
+impl Default for AccordionStyle {
+    fn default() -> Self {
+        Self {
+            header_height: 48.0,
+            header_padding: 16.0,
+            content_padding: 16.0,
+            content_indent: 0.0,
+            gap: 8.0,
+            title_color: Color::BLACK,
+            title_size: 14.0,
+            border_width: 1.0,
+            border_color: Color::rgba(0, 0, 0, 32),
+            radius: 12.0,
+        }
+    }
+}
+
+/// One panel of an [`Accordion`].
+struct AccordionPanel {
+    title: String,
+    indicator: AccordionIndicator,
+    content: ChildBuilder,
+}
+
+/// A stack of panels, each a clickable header that reveals its content.
+///
+/// This is the **stateful** shape the floem-ui kits all share: a value that
+/// changes after mount, a subtree that mounts and unmounts with it, and — the
+/// part that is easy to get wrong — a header that must *keep its identity*
+/// across the toggle, so keyboard focus is not thrown away by the very act of
+/// activating it. All three kits ship this component and their copies differ
+/// only in tokens and glyph names, so it is promoted here once.
+///
+/// ## Where the state lives, and why it is shared
+///
+/// The click lands on a [`Pressable`] deep inside a header subtree, while the
+/// answer — which panels are open — is needed by that panel's body, by its
+/// indicator, and in single-panel mode by every *other* panel. None of those
+/// owns the accordion's node. So the open set is a shared
+/// `Arc<Mutex<Vec<bool>>>`, exactly as [`Tabs`] shares its selection, and every
+/// widget that cares reads it in its own `update` and marks itself. The host
+/// visits every node each frame, so no notification has to travel.
+///
+/// ## What this cannot animate
+///
+/// The reveal is a mount/unmount, not a height transition. v1 animated
+/// `height: 0 -> computed` (`md-expand_transition`); 2.0's implicit layer
+/// cannot, because `run_layout` only runs when layout is dirty and no
+/// compositor channel carries a size. [`Accordion::content_transition`] is
+/// therefore compositor-only — a fade, a grow or a slide over the revealed
+/// subtree — while the box appears at its final height. See
+/// `docs/2.0/MOTION-GAP.md` (B4, the "size" entry under "not done").
+pub struct Accordion {
+    panels: Vec<AccordionPanel>,
+    style: AccordionStyle,
+    /// Whether more than one panel may be open at once.
+    multiple: bool,
+    open: Arc<Mutex<Vec<bool>>>,
+    on_change: Option<Arc<dyn Fn(usize, bool) + Send + Sync>>,
+    content_transition: Option<PresenceTransition>,
+}
+
+impl std::fmt::Debug for Accordion {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Accordion")
+            .field("panels", &self.panels.len())
+            .field("multiple", &self.multiple)
+            .field("open", &self.open_state())
+            .finish_non_exhaustive()
+    }
+}
+
+impl Accordion {
+    pub fn new() -> Self {
+        Self {
+            panels: Vec::new(),
+            style: AccordionStyle::default(),
+            multiple: false,
+            open: Arc::new(Mutex::new(Vec::new())),
+            on_change: None,
+            content_transition: None,
+        }
+    }
+
+    /// Adds a panel.
+    ///
+    /// `indicator` is handed the panel's current state and returns the widget
+    /// that shows it. `content` builds the body, which is mounted only while the
+    /// panel is open (and while its exit transition is still playing).
+    pub fn panel(
+        mut self,
+        title: impl Into<String>,
+        indicator: impl Fn(bool) -> Box<dyn WidgetAny> + Send + Sync + 'static,
+        content: impl Fn() -> Box<dyn WidgetAny> + Send + Sync + 'static,
+    ) -> Self {
+        let index = self.panels.len();
+        self.lock().resize(index + 1, false);
+        self.panels.push(AccordionPanel {
+            title: title.into(),
+            indicator: Arc::new(indicator),
+            content: Arc::new(content),
+        });
+        self
+    }
+
+    /// Allow more than one panel open at a time. Off by default, which is the
+    /// accordion rule: opening one closes the others.
+    pub fn multiple(mut self, multiple: bool) -> Self {
+        self.multiple = multiple;
+        self
+    }
+
+    /// Called with `(panel_index, expanded)` whenever a panel's state changes
+    /// from a click.
+    ///
+    /// `Send + Sync` is required, not incidental: the click lands on a
+    /// [`Pressable`] built inside a `Child` builder closure, and the host may
+    /// hand that closure between threads.
+    pub fn on_change(mut self, callback: impl Fn(usize, bool) + Send + Sync + 'static) -> Self {
+        self.on_change = Some(Arc::new(callback));
+        self
+    }
+
+    /// The resolved style. See [`AccordionStyle`].
+    pub fn style(mut self, style: AccordionStyle) -> Self {
+        self.style = style;
+        self
+    }
+
+    /// A transition played by a panel's content as it appears and disappears.
+    ///
+    /// Optional and compositor-only — see the type's note on what cannot be
+    /// animated. Left unset, the content mounts and unmounts instantly, which is
+    /// what v1's `dyn_view` did.
+    pub fn content_transition(mut self, transition: PresenceTransition) -> Self {
+        self.content_transition = Some(transition);
+        self
+    }
+
+    /// Which panels are open right now.
+    pub fn open_state(&self) -> Vec<bool> {
+        self.lock().clone()
+    }
+
+    /// Whether panel `index` is open.
+    pub fn is_open(&self, index: usize) -> bool {
+        self.lock().get(index).copied().unwrap_or(false)
+    }
+
+    /// Opens or closes panel `index` without going through a click.
+    ///
+    /// The imperative door, the twin of [`Tabs::set_selected`]. It does **not**
+    /// fire [`Accordion::on_change`]: that callback reports what a *person* did,
+    /// and a programmatic caller already knows. It does apply the
+    /// single/multiple rule, so opening a panel in accordion mode closes the
+    /// others.
+    pub fn set_open(&mut self, index: usize, open: bool) {
+        let mut guard = self.lock();
+        if guard.len() <= index {
+            guard.resize(index + 1, false);
+        }
+        if !self.multiple {
+            for slot in guard.iter_mut() {
+                *slot = false;
+            }
+        }
+        guard[index] = open;
+    }
+
+    pub fn panel_count(&self) -> usize {
+        self.panels.len()
+    }
+
+    pub fn titles(&self) -> Vec<&str> {
+        self.panels.iter().map(|p| p.title.as_str()).collect()
+    }
+
+    fn lock(&self) -> std::sync::MutexGuard<'_, Vec<bool>> {
+        // A poisoned lock means some other holder panicked mid-toggle. The data
+        // is a `Vec<bool>` only ever written whole, so it is still coherent, and
+        // refusing to draw an accordion because an unrelated callback panicked
+        // would be the worse failure.
+        self.open.lock().unwrap_or_else(|e| e.into_inner())
+    }
+
+    /// Flips panel `index` and returns its new state, applying the
+    /// single/multiple rule.
+    fn toggle(open: &Mutex<Vec<bool>>, index: usize, multiple: bool) -> bool {
+        let mut guard = open.lock().unwrap_or_else(|e| e.into_inner());
+        let next = !guard.get(index).copied().unwrap_or(false);
+        if !multiple {
+            for slot in guard.iter_mut() {
+                *slot = false;
+            }
+        }
+        if let Some(slot) = guard.get_mut(index) {
+            *slot = next;
+        }
+        next
+    }
+
+    pub fn semantics_hint(&self) -> SemanticsHint {
+        SemanticsHint::decorative()
+    }
+}
+
+impl Default for Accordion {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl Widget for Accordion {
+    fn create(&self, cx: &mut dyn CreateContext) -> ElementId {
+        cx.alloc_child()
+    }
+
+    /// Deliberately empty.
+    ///
+    /// Nothing changed *here*: the accordion still owns the same panel slots, and
+    /// what moved is the shared open set. Every panel reads that set in its own
+    /// `update` and reports the change itself, so marking dirty here too would
+    /// be a second report of a change already reported — the same reasoning (and
+    /// deliberately the same wording) as [`Crossfade::update`].
+    fn update(&mut self, _cx: &mut dyn UpdateContext, _id: ElementId) {}
+
+    fn children(&self) -> Vec<Child> {
+        let mut out = Vec::with_capacity(self.panels.len());
+        for (index, panel) in self.panels.iter().enumerate() {
+            let open = self.open.clone();
+            let on_change = self.on_change.clone();
+            let multiple = self.multiple;
+            let toggle = Arc::new(move || {
+                let next = Self::toggle(&open, index, multiple);
+                if let Some(callback) = &on_change {
+                    callback(index, next);
+                }
+            }) as Arc<dyn Fn() + Send + Sync>;
+
+            let mut body = Conditional::new(true);
+            // Seeded closed, and *seeded* rather than left at the constructor's
+            // "not yet seen": see `Conditional::sync_when`.
+            body.sync_when(false);
+            let content = panel.content.clone();
+            body = body.show_with(
+                ChildKey::index(1),
+                LayoutRequest::new().margin(content_insets(self.style)),
+                move || content(),
+            );
+            if let Some(transition) = self.content_transition {
+                body = body.presence(transition);
+            }
+
+            let leaf = AccordionPanelLeaf {
+                index,
+                open: self.open.clone(),
+                last_open: false,
+                style: self.style,
+                header: header_child(self, index, panel, toggle),
+                body,
+            };
+            out.push(Child::new(
+                ChildKey::index(index),
+                LayoutRequest::new(),
+                move || Box::new(leaf.clone()),
+            ));
+        }
+        out
+    }
+
+    fn layout_request(&self) -> Option<LayoutRequest> {
+        Some(LayoutRequest::new().stack(Axis::Vertical, self.style.gap))
+    }
+
+    fn paint(&self, _cx: &mut dyn PaintContext, _id: ElementId) {}
+
+    fn semantics(&self, cx: &mut dyn SemanticsContext, _id: ElementId) {
+        crate::primitives::emit_semantics(self.semantics_hint(), cx);
+    }
+}
+
+/// The inset a revealed panel's body sits inside its panel box.
+///
+/// v1 wrote this as `padding_horiz(content_padding + indent)` and
+/// `padding_vert(content_padding)` on the box holding the body. 2.0's `Container`
+/// is a leaf, so the inset is a *margin on the body's slot* instead — see
+/// `LayoutRequest::margin`.
+fn content_insets(style: AccordionStyle) -> Insets {
+    let horizontal = f64::from(style.content_padding + style.content_indent);
+    let vertical = f64::from(style.content_padding);
+    Insets {
+        left: horizontal,
+        right: horizontal,
+        top: vertical,
+        bottom: vertical,
+    }
+}
+
+/// The header slot: the whole of the panel's top row, clickable.
+///
+/// Keyed by [`ChildKey::index`] on purpose. The row has to survive the toggle —
+/// a rebuilt header is a new node, so the keyboard focus [`Pressable`] requests
+/// on the press that *causes* the toggle would be thrown away by activating it.
+/// Everything inside that has to change therefore has to be a widget that
+/// re-declares its own children, which is what [`AccordionIndicatorSlot`] is.
+fn header_child(
+    accordion: &Accordion,
+    index: usize,
+    panel: &AccordionPanel,
+    toggle: Arc<dyn Fn() + Send + Sync + 'static>,
+) -> Child {
+    let style = accordion.style;
+    let open = accordion.open.clone();
+    let title = panel.title.clone();
+    let indicator = panel.indicator.clone();
+    Child::new(
+        ChildKey::index(0),
+        LayoutRequest::new().height(style.header_height).fill(),
+        move || {
+            let open_flag = open.clone();
+            let row = Stack::new(Axis::Horizontal)
+                .align(Align::Start, Align::Center)
+                .push({
+                    let title = title.clone();
+                    move || {
+                        Box::new(
+                            Text::new(title.clone())
+                                .size(style.title_size)
+                                .color(style.title_color),
+                        )
+                    }
+                })
+                // v1 asked for `justify_between`, which 2.0's single `Align`
+                // cannot say; a flexible spacer is the flex spelling of "push
+                // these apart".
+                .push(|| Box::new(crate::primitives::Spacer::flexible()))
+                .push({
+                    let indicator = indicator.clone();
+                    let open_flag = open_flag.clone();
+                    move || {
+                        Box::new(AccordionIndicatorSlot {
+                            open: open_flag.clone(),
+                            index,
+                            indicator: indicator.clone(),
+                            last_open: false,
+                        })
+                    }
+                });
+
+            Box::new(
+                Pressable::new(Child::new(
+                    ChildKey::index(0),
+                    LayoutRequest::new().fill(),
+                    move || Box::new(row.clone()),
+                ))
+                .label(title.clone())
+                .expanded_from(move || is_open(&open_flag, index))
+                .on_click({
+                    let toggle = toggle.clone();
+                    move || toggle()
+                }),
+            )
+        },
+    )
+}
+
+/// One panel of an [`Accordion`]: the header plus the body its open flag mounts
+/// and unmounts.
+///
+/// Stable for the panel's whole life, which is what keeps the header's focus.
+/// Everything it shows is derived from the shared open set on every `update`.
+///
+/// It also paints the panel's own outline, which is the one place this port
+/// departs from v1: v1 outlined the *header row* with
+/// `.border(1.0).border_color(..)`, and 2.0 cannot reproduce that shape — the
+/// box that would have to carry the outline is a `Container`, which is a leaf and
+/// so cannot hold the row it would be outlining (see `docs/`). Outlining the
+/// panel instead is both what is available and what Material 3's outlined
+/// expansion panel is: one box holding the header and, when open, the content.
+#[derive(Clone)]
+pub(crate) struct AccordionPanelLeaf {
+    index: usize,
+    open: Arc<Mutex<Vec<bool>>>,
+    /// The open state this leaf last acted on.
+    last_open: bool,
+    style: AccordionStyle,
+    header: Child,
+    /// The reveal, held as a value rather than mounted as a node of its own so
+    /// the presence transition is declared on *this* node — one node instead of a
+    /// wrapper, and the transition's `animation_finished` lands here too.
+    body: Conditional,
+}
+
+impl Widget for AccordionPanelLeaf {
+    fn create(&self, cx: &mut dyn CreateContext) -> ElementId {
+        cx.alloc_child()
+    }
+
+    fn update(&mut self, cx: &mut dyn UpdateContext, id: ElementId) {
+        if is_open(&self.open, self.index) == self.last_open {
+            return;
+        }
+        self.last_open = !self.last_open;
+        // `Conditional::update` is what marks this node dirty *and* reconciles
+        // its children; passing this node's id is deliberate — the transition is
+        // declared here, so the host re-syncs the declaration against it.
+        self.body.set_when(self.last_open);
+        self.body.update(cx, id);
+    }
+
+    fn children(&self) -> Vec<Child> {
+        let mut out = vec![self.header.clone()];
+        out.extend(self.body.children());
+        out
+    }
+
+    fn layout_request(&self) -> Option<LayoutRequest> {
+        Some(LayoutRequest::new().stack(Axis::Vertical, 0.0))
+    }
+
+    fn animation(&self) -> Option<floom_core::AnimationSpec> {
+        self.body.animation()
+    }
+
+    fn animation_finished(&mut self, cx: &mut dyn UpdateContext, id: ElementId) {
+        self.body.animation_finished(cx, id);
+    }
+
+    fn paint(&self, cx: &mut dyn PaintContext, _id: ElementId) {
+        if self.style.border_width <= 0.0 {
+            return;
+        }
+        let bounds = cx.bounds();
+        crate::primitives::stroke_rounded_outline(
+            cx,
+            bounds,
+            f64::from(self.style.radius),
+            f64::from(self.style.border_width),
+            self.style.border_color,
+        );
+    }
+
+    fn semantics(&self, cx: &mut dyn SemanticsContext, _id: ElementId) {
+        crate::primitives::emit_semantics(SemanticsHint::decorative(), cx);
+    }
+}
+
+/// The disclosure indicator of one panel.
+///
+/// Stable across toggles — that is what lets the header be — but it re-declares
+/// its own single child keyed by the open flag, which is what swaps one glyph for
+/// the other. A bare [`Child`] could not do this: the host only rebuilds a child
+/// whose key *changed*, and everything inside a stable header has a stable key.
+#[derive(Clone)]
+pub(crate) struct AccordionIndicatorSlot {
+    open: Arc<Mutex<Vec<bool>>>,
+    index: usize,
+    indicator: AccordionIndicator,
+    last_open: bool,
+}
+
+impl Widget for AccordionIndicatorSlot {
+    fn create(&self, cx: &mut dyn CreateContext) -> ElementId {
+        cx.alloc_child()
+    }
+
+    fn update(&mut self, cx: &mut dyn UpdateContext, id: ElementId) {
+        if is_open(&self.open, self.index) == self.last_open {
+            return;
+        }
+        self.last_open = !self.last_open;
+        // Reconcile for the new glyph, and repaint so the row is re-measured
+        // around an indicator of a different size.
+        cx.mark_children_dirty(id);
+        cx.mark_dirty(id);
+    }
+
+    fn children(&self) -> Vec<Child> {
+        let indicator = self.indicator.clone();
+        let open = self.last_open;
+        vec![Child::new(
+            // The flag is the key, so the host mounts a *different* widget rather
+            // than re-using the previous glyph and diffing two builders that
+            // both mean "the indicator".
+            ChildKey::keyed(INDICATOR_KEY_BASE ^ (open as u64)),
+            LayoutRequest::new(),
+            move || indicator(open),
+        )]
+    }
+
+    fn paint(&self, _cx: &mut dyn PaintContext, _id: ElementId) {}
+
+    fn semantics(&self, cx: &mut dyn SemanticsContext, _id: ElementId) {
+        crate::primitives::emit_semantics(SemanticsHint::decorative(), cx);
+    }
+}
+
+/// Distinct from the positional keys an accordion's slots use, so a keyed
+/// indicator can never collide with one of them.
+const INDICATOR_KEY_BASE: u64 = 0xACC0_0000_0000_0000;
+
+/// Whether panel `index` of a shared open set is open.
+fn is_open(open: &Mutex<Vec<bool>>, index: usize) -> bool {
+    open.lock()
+        .unwrap_or_else(|e| e.into_inner())
+        .get(index)
+        .copied()
+        .unwrap_or(false)
+}
+
+#[cfg(test)]
+mod accordion_tests {
+    //! The **stateful** reference widget.
+    //!
+    //! `tests/badge.rs` pins a description and `tests/controls.rs` a single
+    //! interaction. This pins the part that is easy to get wrong and hard to see:
+    //! a value that changes after mount, a subtree that mounts and unmounts with
+    //! it, and a header that must *keep its identity* across the toggle.
+    //!
+    //! The tests stand in for the host, which is enough because the host's
+    //! contribution here is a documented one — the update pass visits every node
+    //! every frame and dirtiness is *reported by* `update()`. So what is checked
+    //! is that each widget reports its own change, not that it was told.
+
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::sync::{Arc, Mutex};
+
+    use floom_accessibility::SemanticsState;
+    use floom_core::{Point, PointerEvent, Widget, WidgetAny};
+    use floom_types::Rect;
+
+    use super::*;
+    use crate::primitives::Text;
+    use crate::testkit::{AllocatingCreateContext, RecordingUpdateContext, TestEventContext};
+
+    const ROW: Rect = Rect {
+        x0: 0.0,
+        y0: 0.0,
+        x1: 300.0,
+        y1: 48.0,
+    };
+    const AT: Point = Point { x: 20.0, y: 20.0 };
+
+    /// One panel, with a counter that can tell "the body was *declared*" from
+    /// "the body widget was *built*".
+    fn one_panel() -> (Accordion, Arc<AtomicUsize>) {
+        one_panel_with(false)
+    }
+
+    fn one_panel_with(multiple: bool) -> (Accordion, Arc<AtomicUsize>) {
+        let builds = Arc::new(AtomicUsize::new(0));
+        let sink = builds.clone();
+        (
+            Accordion::new()
+                .multiple(multiple)
+                .panel("Only", indicator(), move || {
+                    sink.fetch_add(1, Ordering::SeqCst);
+                    Box::new(Text::new("body"))
+                }),
+            builds,
+        )
+    }
+
+    fn indicator() -> impl Fn(bool) -> Box<dyn WidgetAny> + Send + Sync {
+        |open| Box::new(Text::new(if open { "v" } else { ">" }))
+    }
+
+    fn three_panels() -> Accordion {
+        let mut accordion = Accordion::new();
+        for title in ["One", "Two", "Three"] {
+            accordion = accordion.panel(title, indicator(), || Box::new(Text::new("body")));
+        }
+        accordion
+    }
+
+    /// Mounts panel `index` the way the reconciler would.
+    fn mount_panel(accordion: &Accordion, index: usize) -> AccordionPanelLeaf {
+        let child = accordion.children()[index].clone();
+        let mut widget = child.build();
+        widget
+            .as_any_mut()
+            .downcast_mut::<AccordionPanelLeaf>()
+            .expect("a panel slot mounts a panel leaf")
+            .clone()
+    }
+
+    fn tick(leaf: &mut AccordionPanelLeaf) -> RecordingUpdateContext {
+        let mut create = AllocatingCreateContext::new();
+        let id = leaf.create(&mut create);
+        let mut cx = RecordingUpdateContext::new();
+        leaf.update(&mut cx, id);
+        cx
+    }
+
+    /// Clicks panel `header` through the real dispatch path: a press and then a
+    /// release, both consumed by the header's own `Pressable`.
+    fn click_header(accordion: &Accordion, panel: usize) {
+        let mut header = accordion.children()[panel]
+            .build()
+            .children()
+            .remove(0)
+            .build();
+        let pressable = header
+            .as_any_mut()
+            .downcast_mut::<Pressable>()
+            .expect("the header slot mounts a pressable");
+        let mut create = AllocatingCreateContext::new();
+        let id = pressable.create(&mut create);
+        for phase in [PointerEvent::primary_down(AT), PointerEvent::primary_up(AT)] {
+            let mut cx = TestEventContext::new(id, ROW, phase.into());
+            pressable.event(&mut cx, id);
+        }
+    }
+
+    // --- structure ---------------------------------------------------------
+
+    #[test]
+    fn every_declared_panel_gets_one_slot() {
+        let accordion = three_panels();
+        let children = accordion.children();
+        assert_eq!(children.len(), 3);
+        assert_eq!(children[0].key, ChildKey::index(0));
+        assert_eq!(children[2].key, ChildKey::index(2));
+        assert_eq!(accordion.titles(), vec!["One", "Two", "Three"]);
+    }
+
+    #[test]
+    fn the_stack_declares_its_axis_and_the_token_gap() {
+        let accordion = three_panels().style(AccordionStyle {
+            gap: 7.0,
+            ..AccordionStyle::default()
+        });
+        let req = accordion
+            .layout_request()
+            .expect("the accordion is a stack");
+        assert_eq!(req.axis, Some(Axis::Vertical));
+        assert_eq!(req.gap, Some(7.0));
+    }
+
+    #[test]
+    fn a_collapsed_panel_mounts_only_its_header() {
+        let (accordion, _) = one_panel();
+        let mut leaf = mount_panel(&accordion, 0);
+        assert_eq!(
+            leaf.children().len(),
+            1,
+            "header only, before the panel has ever been opened"
+        );
+        let cx = tick(&mut leaf);
+        assert!(
+            !cx.reconciled(),
+            "a panel standing still must not ask to be reconciled"
+        );
+    }
+
+    #[test]
+    fn opening_a_panel_reconciles_and_builds_its_content() {
+        let (mut accordion, builds) = one_panel();
+        accordion.set_open(0, true);
+        let mut leaf = mount_panel(&accordion, 0);
+
+        let cx = tick(&mut leaf);
+
+        assert!(
+            cx.reconciled(),
+            "the body's mount state changed, so the subtree has to be re-declared"
+        );
+        assert_eq!(leaf.children().len(), 2, "header plus the revealed body");
+        assert_eq!(
+            builds.load(Ordering::SeqCst),
+            0,
+            "declaring a slot does not build it"
+        );
+        let body = leaf.children()[1].build();
+        assert_eq!(builds.load(Ordering::SeqCst), 1, "mounting does");
+        assert!(body.as_any().is::<Text>());
+    }
+
+    #[test]
+    fn closing_a_panel_unmounts_its_content_again() {
+        let (mut accordion, _) = one_panel();
+        accordion.set_open(0, true);
+        let mut leaf = mount_panel(&accordion, 0);
+        tick(&mut leaf);
+        assert_eq!(leaf.children().len(), 2);
+
+        accordion.set_open(0, false);
+        tick(&mut leaf);
+
+        assert_eq!(
+            leaf.children().len(),
+            1,
+            "the body is gone once the panel is closed"
+        );
+    }
+
+    // --- the state machine -------------------------------------------------
+
+    #[test]
+    fn every_panel_starts_collapsed() {
+        assert_eq!(three_panels().open_state(), vec![false, false, false]);
+    }
+
+    #[test]
+    fn multiple_panels_may_be_open_together() {
+        let mut accordion = three_panels().multiple(true);
+        accordion.set_open(0, true);
+        accordion.set_open(2, true);
+        assert_eq!(
+            accordion.open_state(),
+            vec![true, false, true],
+            "two open at once, the middle one shut"
+        );
+    }
+
+    /// The imperative door applies the same rule a click does — it is the one
+    /// place a caller could otherwise reach a state the UI cannot.
+    #[test]
+    fn the_imperative_door_applies_the_single_panel_rule_too() {
+        let mut accordion = three_panels();
+        accordion.set_open(0, true);
+        accordion.set_open(1, true);
+        assert_eq!(accordion.open_state(), vec![false, true, false]);
+    }
+
+    /// A programmatic change does **not** fire `on_change`: that callback reports
+    /// what a person did, and a caller that just set the state knows already.
+    #[test]
+    fn the_imperative_door_does_not_fire_on_change() {
+        let changes = Arc::new(AtomicUsize::new(0));
+        let sink = changes.clone();
+        let (mut accordion, _) = one_panel();
+        accordion = accordion.on_change(move |_, _| {
+            sink.fetch_add(1, Ordering::SeqCst);
+        });
+
+        accordion.set_open(0, true);
+        assert_eq!(changes.load(Ordering::SeqCst), 0);
+    }
+
+    // --- clicking ----------------------------------------------------------
+
+    #[test]
+    fn clicking_a_header_opens_that_panel_and_reports_it() {
+        let seen: Arc<Mutex<Vec<(usize, bool)>>> = Arc::new(Mutex::new(Vec::new()));
+        let sink = seen.clone();
+        let (mut accordion, _) = one_panel();
+        accordion = accordion.on_change(move |index, open| {
+            sink.lock().unwrap().push((index, open));
+        });
+
+        click_header(&accordion, 0);
+
+        assert!(accordion.is_open(0), "the click reached the shared state");
+        assert_eq!(
+            *seen.lock().unwrap(),
+            vec![(0, true)],
+            "and the callback reported which panel moved which way"
+        );
+    }
+
+    #[test]
+    fn clicking_the_open_panel_closes_it_again() {
+        let (mut accordion, _) = one_panel();
+        accordion.set_open(0, true);
+        click_header(&accordion, 0);
+        assert!(!accordion.is_open(0));
+    }
+
+    #[test]
+    fn a_click_does_not_dirty_the_accordion_itself() {
+        let mut accordion = one_panel().0;
+        let mut create = AllocatingCreateContext::new();
+        let id = accordion.create(&mut create);
+        let mut cx = RecordingUpdateContext::new();
+        accordion.update(&mut cx, id);
+        assert_eq!(
+            cx.dirty_count(),
+            0,
+            "the accordion owns the same panel slots either way; each panel \
+             reports its own change, so a report here would be redundant work"
+        );
+    }
+
+    // --- the header survives its own toggle --------------------------------
+
+    /// The header must not be rebuilt when the panel opens: a rebuilt header is a
+    /// new node, so the keyboard focus the press requested is gone — thrown away
+    /// by the very act of activating it.
+    #[test]
+    fn the_header_slot_key_does_not_depend_on_the_open_flag() {
+        let (mut accordion, _) = one_panel();
+        let closed = mount_panel(&accordion, 0).children()[0].clone();
+
+        accordion.set_open(0, true);
+        let open = mount_panel(&accordion, 0).children()[0].clone();
+
+        assert_eq!(
+            closed.key, open.key,
+            "the reconciler reuses a child only when the key still matches"
+        );
+        assert_eq!(closed.key, ChildKey::index(0));
+    }
+
+    /// A header that is not rebuilt cannot know a value it captured at build
+    /// time, so its reported state has to be read from the shared flag. Without
+    /// this the header would announce "collapsed" on a visibly open panel.
+    #[test]
+    fn a_header_built_before_the_toggle_still_reports_the_new_state() {
+        let (mut accordion, _) = one_panel();
+        let mut header = mount_panel(&accordion, 0).children()[0].clone().build();
+        let pressable = header
+            .as_any_mut()
+            .downcast_mut::<Pressable>()
+            .expect("the header is a pressable");
+
+        assert!(
+            pressable
+                .semantics_hint()
+                .state
+                .contains(SemanticsState::COLLAPSED)
+        );
+
+        accordion.set_open(0, true);
+
+        assert!(
+            pressable
+                .semantics_hint()
+                .state
+                .contains(SemanticsState::EXPANDED),
+            "the same widget instance now reports what the user can see"
+        );
+    }
+
+    /// The indicator is a widget that re-declares its own child, because a bare
+    /// `Child` cannot change: the host only rebuilds a child whose key changed,
+    /// and everything inside a stable header has a stable key.
+    ///
+    /// Reaching it is the argument in miniature — the header is a `Pressable`,
+    /// its child is the row `Stack`, and the indicator is the row's third slot.
+    #[test]
+    fn the_indicator_rebuilds_its_glyph_when_the_panel_opens() {
+        let (mut accordion, _) = one_panel();
+        let leaf = mount_panel(&accordion, 0);
+        let mut header = leaf.children().remove(0).build();
+        let pressable = header
+            .as_any_mut()
+            .downcast_mut::<Pressable>()
+            .expect("the header slot mounts a pressable");
+        let mut row = pressable.children().remove(0).build();
+        let row = row
+            .as_any_mut()
+            .downcast_mut::<Stack>()
+            .expect("the pressable's child is the row")
+            .clone();
+        assert_eq!(row.children().len(), 3, "title, spacer, indicator");
+        let mut indicator_child = row.children().remove(2).build();
+        let slot = indicator_child
+            .as_any_mut()
+            .downcast_mut::<AccordionIndicatorSlot>()
+            .expect("the third slot is the indicator");
+
+        let collapsed = slot.children()[0].clone();
+        let mut create = AllocatingCreateContext::new();
+        let id = slot.create(&mut create);
+        let mut cx = RecordingUpdateContext::new();
+        slot.update(&mut cx, id);
+        assert!(!cx.reconciled(), "closed is where it started");
+
+        accordion.set_open(0, true);
+        let mut cx = RecordingUpdateContext::new();
+        slot.update(&mut cx, id);
+
+        assert!(
+            cx.reconciled(),
+            "a different glyph is a different child, so the slot has to \
+             re-declare it"
+        );
+        let opened = slot.children()[0].clone();
+        assert_ne!(
+            collapsed.key, opened.key,
+            "and the key carries the flag, so the host mounts rather than reuses"
+        );
+    }
+
+    // --- what cannot be animated -------------------------------------------
+
+    /// Without a transition the reveal is instant, matching v1's `dyn_view`.
+    #[test]
+    fn without_a_transition_nothing_is_declared_while_shown() {
+        let (mut accordion, _) = one_panel();
+        accordion.set_open(0, true);
+        let mut leaf = mount_panel(&accordion, 0);
+        tick(&mut leaf);
+        assert!(
+            leaf.animation().is_none(),
+            "a mount is not a motion"
+        );
+    }
+
+    /// With one, the *panel's own node* declares it — which is why the leaf holds
+    /// the reveal as a value instead of mounting it as a node of its own.
+    #[test]
+    fn a_content_transition_is_declared_on_the_panel_node() {
+        let (mut accordion, _) = one_panel();
+        accordion = accordion.content_transition(PresenceTransition::fade(0.2));
+        accordion.set_open(0, true);
+        let mut leaf = mount_panel(&accordion, 0);
+        tick(&mut leaf);
+
+        let spec = leaf.animation().expect("the reveal declares its motion");
+        assert!(
+            spec.duration_secs > 0.0,
+            "and it is the caller's duration, not a default"
+        );
+    }
+
+    /// The control for the whole point: **2.0 cannot animate the reveal's
+    /// height.** v1's `md-expand_transition` tweened `height: 0 -> computed`,
+    /// which needs a re-layout every frame, and the host only lays out when
+    /// layout is dirty (`WidgetHost::frame` -> `if self.layout_dirty`). So the
+    /// panel's box is its final height from the first frame and the transition
+    /// can only be compositor-only.
+    #[test]
+    fn the_reveal_does_not_resize_the_panel_over_time() {
+        let (mut accordion, _) = one_panel();
+        accordion = accordion.content_transition(PresenceTransition::fade(0.2));
+        accordion.set_open(0, true);
+        let mut leaf = mount_panel(&accordion, 0);
+
+        // Mid-flight: the transition is declared and the body is mounted...
+        tick(&mut leaf);
+        assert!(leaf.animation().is_some());
+        assert_eq!(leaf.children().len(), 2);
+
+        // ...while the panel's own layout request is unchanged, because nothing
+        // here scales a box by the animation. A height reveal would have to.
+        let req = leaf.layout_request().expect("a vertical stack");
+        assert_eq!(req.axis, Some(Axis::Vertical));
+        assert_eq!(
+            req.height, None,
+            "the panel claims no height of its own, so the host has nothing to \
+             re-derive per frame — which is exactly why this is unavailable"
+        );
     }
 }

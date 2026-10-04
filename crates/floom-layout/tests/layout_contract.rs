@@ -1,5 +1,5 @@
 use floom_layout::{FlexDirection, JustifyContent, LayoutEngine, LayoutStyle, MeasureFn};
-use floom_types::{Point, Size};
+use floom_types::{Insets, Point, Size};
 
 #[test]
 fn flex_row_places_children() {
@@ -327,4 +327,94 @@ fn measure_nodes_remeasure_under_per_node_constraints() {
         (*seen.lock().unwrap() - 40.0).abs() < 0.5,
         "measure saw the new constraint"
     );
+}
+
+/// A margin is space *outside* a box, inside its parent — which is how 2.0
+/// spells v1's `Container::new(child).style(|s| s.padding(..))`. The inset has
+/// to push the child off the parent's edge, and it has to be counted in the
+/// parent's own size rather than clipped away.
+#[test]
+fn a_margin_insets_the_child_inside_its_parent() {
+    let mut eng = LayoutEngine::new();
+    let child = eng.new_leaf(LayoutStyle {
+        width: Some(40.0),
+        height: Some(20.0),
+        margin: Insets::uniform(16.0),
+        ..Default::default()
+    });
+    let root = eng.new_with_children(
+        LayoutStyle {
+            flex_direction: FlexDirection::Column,
+            width: Some(200.0),
+            height: Some(100.0),
+            ..Default::default()
+        },
+        &[child],
+    );
+
+    eng.compute(root, Size::new(200.0, 100.0));
+    assert!(
+        (eng.layout(child).rect.x0 - 16.0).abs() < 0.01,
+        "a 16px margin pushes the child 16px from the parent's edge"
+    );
+}
+
+/// The control for the wrong reading: the inset must not *shrink* the child's
+/// own box. `child.width = 40` with a 16px margin is a 40px box 16px in — not a
+/// 40px box reduced to 8px, which is what treating a margin as padding-inverted
+/// would produce.
+#[test]
+fn a_margin_does_not_shrink_the_childs_box() {
+    let mut eng = LayoutEngine::new();
+    let child = eng.new_leaf(LayoutStyle {
+        width: Some(40.0),
+        height: Some(20.0),
+        margin: Insets::uniform(16.0),
+        ..Default::default()
+    });
+    let root = eng.new_with_children(
+        LayoutStyle {
+            width: Some(200.0),
+            height: Some(100.0),
+            ..Default::default()
+        },
+        &[child],
+    );
+
+    eng.compute(root, Size::new(200.0, 100.0));
+    let rect = eng.layout(child).rect;
+    assert!((rect.width() - 40.0).abs() < 0.01, "the box keeps its width");
+    assert!((rect.x0 - 16.0).abs() < 0.01);
+}
+
+/// `Insets` per side, because v1's `padding_horiz` / `padding_vert` are the
+/// common call and a single number cannot express the expansion panels' header
+/// inset (horizontal only).
+#[test]
+fn a_margin_is_per_side() {
+    let mut eng = LayoutEngine::new();
+    let child = eng.new_leaf(LayoutStyle {
+        width: Some(10.0),
+        height: Some(10.0),
+        margin: Insets {
+            left: 4.0,
+            top: 8.0,
+            right: 0.0,
+            bottom: 0.0,
+        },
+        ..Default::default()
+    });
+    let root = eng.new_with_children(
+        LayoutStyle {
+            width: Some(200.0),
+            height: Some(100.0),
+            ..Default::default()
+        },
+        &[child],
+    );
+
+    eng.compute(root, Size::new(200.0, 100.0));
+    let rect = eng.layout(child).rect;
+    assert!((rect.x0 - 4.0).abs() < 0.01);
+    assert!((rect.y0 - 8.0).abs() < 0.01);
 }

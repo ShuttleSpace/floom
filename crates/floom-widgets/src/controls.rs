@@ -5,10 +5,16 @@
 //! technology sees the same state the control paints. Mutation goes through
 //! builders that bump the internal revision, keeping a single invalidation
 //! model across all widgets.
+//!
+//! [`Button`] and friends draw their own content; [`Pressable`] is the one that
+//! does not — it makes an arbitrary subtree act as a single clickable surface,
+//! which is what v1's `.on_event(listener::Click, ..)` decorator was for.
+
+use std::sync::Arc;
 
 use floom_accessibility::{SemanticsRole, SemanticsState};
 use floom_core::{
-    AnimationSpec, Brush, Color, CreateContext, Easing, ElementId, Event, EventContext, Key,
+    AnimationSpec, Brush, Child, Color, CreateContext, Easing, ElementId, Event, EventContext, Key,
     KeyEvent, KeyPhase, NamedKey, OverlayHandle, OverlayKind, OverlayRequest, PaintContext, Point,
     Rect, RepeatSpec, SemanticsContext, Size, Transition, UpdateContext, Widget, WidgetAny,
 };
@@ -153,14 +159,18 @@ fn emphasis(c: Color) -> (Color, Color) {
 /// `Consumed` and `Activate` both stop the event from bubbling; only
 /// `Activate` triggers the control's action, and only on the release that
 /// completes a press begun inside the control.
-enum Press {
+pub(crate) enum Press {
     Ignored,
     Consumed,
     Activate,
 }
 
 /// Applies a pointer event to `state`, reporting how far it got.
-fn track_pointer(state: &mut InteractionState, cx: &mut dyn EventContext, id: ElementId) -> Press {
+pub(crate) fn track_pointer(
+    state: &mut InteractionState,
+    cx: &mut dyn EventContext,
+    id: ElementId,
+) -> Press {
     let Event::Pointer(pointer) = cx.event() else {
         return Press::Ignored;
     };
@@ -518,6 +528,244 @@ impl Widget for Button {
                 .with_key(self.transition_rev),
         )
     }
+
+    fn semantics(&self, cx: &mut dyn SemanticsContext, _id: ElementId) {
+        crate::primitives::emit_semantics(self.semantics_hint(), cx);
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Pressable
+// ---------------------------------------------------------------------------
+
+/// A single-child wrapper that makes its child act as one clickable surface.
+///
+/// This is the missing half of v1's `Decorators::on_event`: v1 let *any* view
+/// take `.on_event(listener::Click, ..)`, which is why 360 call sites across 146
+/// floem-ui files use it. 2.0's only clickable widget is [`Button`], and
+/// `Button` *is* its label — it paints a run of text and nothing else — so it
+/// cannot carry a row of widgets. An expansion-panel header is a title plus a
+/// chevron; a list row is an icon, two labels and a trailing icon. Those need
+/// the interaction without the drawing, which is what this is.
+///
+/// Deliberately thin: it paints nothing and owns no style. Wrap it in a
+/// [`crate::primitives::Container`] (or a [`Ripple`](crate::ripple::Ripple),
+/// which does not consume and so composes with it) for the visuals.
+///
+/// ## Why the callback is `Fn()`, not `Fn() + Send + Sync`
+///
+/// Same reasoning as [`crate::controls::Callback`]: dispatch happens on one
+/// thread, and leaving the bound off lets a callback capture an `Rc` handle to
+/// the state it drives. A widget that has to live *inside* a `Child` builder
+/// (which is `Send + Sync`) builds itself inside the closure from `Send + Sync`
+/// captured data, and hands this an `Fn` over that.
+pub struct Pressable {
+    child: Child,
+    on_click: Option<Callback>,
+    role: SemanticsRole,
+    label: Option<String>,
+    state: InteractionState,
+    /// Reported as [`SemanticsState::EXPANDED`] / [`COLLAPSED`].
+    ///
+    /// A value here or a reader in [`Self::expanded_from`], never both: a
+    /// disclosure header has to survive its own toggle to keep keyboard focus,
+    /// and a widget that is *not* rebuilt cannot learn a value it captured when
+    /// it was built. That is what the reader is for.
+    expanded: Option<bool>,
+    expanded_reader: Option<Arc<dyn Fn() -> bool + Send + Sync>>,
+    /// What [`Self::expanded_reader`] last reported, so a change is a change
+    /// rather than a fresh read every frame.
+    reported: Option<bool>,
+    revision: Revision,
+}
+
+impl std::fmt::Debug for Pressable {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Pressable")
+            .field("role", &self.role)
+            .field("state", &self.state)
+            .field("expanded", &self.expanded)
+            .finish_non_exhaustive()
+    }
+}
+
+impl Pressable {
+    /// Wraps `child`, which becomes the whole clickable surface.
+    pub fn new(child: Child) -> Self {
+        Self {
+            child,
+            on_click: None,
+            role: SemanticsRole::Button,
+            label: None,
+            state: InteractionState::default(),
+            expanded: None,
+            expanded_reader: None,
+            reported: None,
+            revision: Revision::default(),
+        }
+    }
+
+    /// Runs on a completed click — a press *and* a release over the same spot —
+    /// or on an activation key while focused.
+    pub fn on_click(mut self, callback: impl Fn() + 'static) -> Self {
+        self.on_click = Some(Box::new(callback));
+        self.revision.bump();
+        self
+    }
+
+    /// The role this surface reports. [`SemanticsRole::Button`] by default;
+    /// `MenuItem`, `Tab` and friends are one call away.
+    pub fn role(mut self, role: SemanticsRole) -> Self {
+        self.role = role;
+        self.revision.bump();
+        self
+    }
+
+    /// The accessible name. Without one this surface publishes its role and no
+    /// name, which leaves a screen reader with something it cannot name.
+    pub fn label(mut self, label: impl Into<String>) -> Self {
+        self.label = Some(label.into());
+        self.revision.bump();
+        self
+    }
+
+    /// Whether this surface is currently expanded, reported to assistive
+    /// technology as `EXPANDED` or `COLLAPSED`.
+    pub fn expanded(mut self, expanded: bool) -> Self {
+        self.expanded = Some(expanded);
+        self.revision.bump();
+        self
+    }
+
+    /// Reads the expanded state on every update instead of baking it in.
+    ///
+    /// For the widget that has to keep its identity across a toggle: a
+    /// disclosure header is rebuilt by nothing, so a value captured at build
+    /// time goes stale the moment the panel opens, and its reported state would
+    /// be the opposite of what the user sees. Same seam as `PresenceLeaf`'s
+    /// `when_signal`.
+    pub fn expanded_from(
+        mut self,
+        read: impl Fn() -> bool + Send + Sync + 'static,
+    ) -> Self {
+        self.expanded_reader = Some(Arc::new(read));
+        self.revision.bump();
+        self
+    }
+
+    pub fn disabled(mut self, disabled: bool) -> Self {
+        self.state.disabled = disabled;
+        self.revision.bump();
+        self
+    }
+
+    pub fn interaction(&self) -> InteractionState {
+        self.state
+    }
+
+    pub fn set_focused(&mut self, focused: bool) -> &mut Self {
+        if self.state.focused != focused {
+            self.state.focused = focused;
+            self.revision.bump();
+        }
+        self
+    }
+
+    /// The expanded state as last read, for a test or a caller mirroring it.
+    pub fn is_expanded(&self) -> Option<bool> {
+        match &self.expanded_reader {
+            Some(read) => Some(read()),
+            None => self.expanded,
+        }
+    }
+
+    pub fn child(&self) -> &Child {
+        &self.child
+    }
+
+    pub fn semantics_hint(&self) -> SemanticsHint {
+        let mut hint = match &self.label {
+            Some(label) => SemanticsHint::labeled(self.role, label.clone()),
+            None => SemanticsHint {
+                role: self.role,
+                label: None,
+                state: SemanticsState::empty(),
+            },
+        };
+        hint.state = hint.state.union(self.state.to_semantics());
+        if let Some(expanded) = self.is_expanded() {
+            hint.state = hint.state.union(if expanded {
+                SemanticsState::EXPANDED
+            } else {
+                SemanticsState::COLLAPSED
+            });
+        }
+        hint
+    }
+}
+
+impl Widget for Pressable {
+    fn create(&self, cx: &mut dyn CreateContext) -> ElementId {
+        cx.alloc_child()
+    }
+
+    fn update(&mut self, cx: &mut dyn UpdateContext, id: ElementId) {
+        // A reader is consulted here rather than in `paint` because this widget
+        // paints nothing: what a moved flag has to invalidate is the *semantics*
+        // tree, and that is reached through the dirty flag.
+        let read_now = self.expanded_reader.as_ref().map(|read| read());
+        if let Some(now) = read_now {
+            if self.reported != Some(now) {
+                self.reported = Some(now);
+                self.revision.bump();
+            }
+        }
+        self.revision.sync(cx, id);
+    }
+
+    fn children(&self) -> Vec<Child> {
+        vec![self.child.clone()]
+    }
+
+    fn layout_request(&self) -> Option<floom_core::LayoutRequest> {
+        None
+    }
+
+    fn event(&mut self, cx: &mut dyn EventContext, id: ElementId) -> bool {
+        let before = self.state;
+        let consumed = match track_pointer(&mut self.state, cx, id) {
+            Press::Activate => {
+                if let Some(callback) = &self.on_click {
+                    callback();
+                }
+                true
+            }
+            Press::Consumed => true,
+            Press::Ignored => {
+                // A focused surface still answers the keyboard, exactly as
+                // `Button` does — the press/release pair has no keyboard
+                // equivalent, so activation keys are matched directly.
+                if let Event::Key(key) = cx.event() {
+                    if is_activation_key(&key, self.state) {
+                        if let Some(callback) = &self.on_click {
+                            callback();
+                        }
+                        true
+                    } else {
+                        false
+                    }
+                } else {
+                    false
+                }
+            }
+        };
+        if self.state != before {
+            self.revision.bump();
+        }
+        consumed
+    }
+
+    fn paint(&self, _cx: &mut dyn PaintContext, _id: ElementId) {}
 
     fn semantics(&self, cx: &mut dyn SemanticsContext, _id: ElementId) {
         crate::primitives::emit_semantics(self.semantics_hint(), cx);

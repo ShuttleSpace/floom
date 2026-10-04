@@ -473,3 +473,89 @@ fn a_content_blur_is_declared_not_painted() {
     );
     assert_eq!(widget.content_filter(), Some(floom_core::Filter::blur(4.0)));
 }
+
+// --- Container::border -----------------------------------------------------
+
+/// The border is a stroke of the box's rounded outline, not a second fill: a
+/// filled box with no background is exactly the case a "fill the outside with
+/// the border colour" trick cannot draw.
+#[test]
+fn a_border_is_stroked_even_with_no_background() {
+    let widget = Container::new().radius(8.0).border(1.0, Color::rgb(0x11, 0x22, 0x33));
+    let (id, _create) = allocate(&widget);
+
+    let mut recorder = SceneRecorder::new(BOX);
+    widget.paint(&mut recorder, id);
+    recorder.finish();
+
+    assert_eq!(
+        recorder.scene_node_kinds(),
+        vec!["Path"],
+        "an outlined box with no fill draws exactly one shape"
+    );
+    assert_eq!(
+        widget.border_style(),
+        Some((1.0, Color::rgb(0x11, 0x22, 0x33)))
+    );
+}
+
+/// The whole band has to land *inside* the box: a stroke straddles its path, so
+/// tracing the outline on the edge itself would put half the border outside the
+/// bounds, where any clipping ancestor would take it away.
+#[test]
+fn a_border_is_inset_by_half_its_width() {
+    let widget = Container::new().border(4.0, Color::BLACK);
+    let (id, _create) = allocate(&widget);
+
+    let mut recorder = SceneRecorder::new(BOX);
+    widget.paint(&mut recorder, id);
+    recorder.finish();
+
+    let line = recorder.ops()[0].snapshot_line();
+    assert!(
+        line.contains("(2.0, 2.0, 98.0, 18.0)"),
+        "a 4px border on a 100x20 box traces at 2px in: {line}"
+    );
+}
+
+/// A token that resolves to no border must leave no hairline behind — the
+/// failure mode being a design system that turned an outline off for one theme
+/// and still drew a line in the other.
+#[test]
+fn a_zero_width_border_draws_nothing() {
+    let widget = Container::new()
+        .background(Color::WHITE)
+        .border(0.0, Color::BLACK);
+    assert_eq!(widget.border_style(), None);
+    let (id, _create) = allocate(&widget);
+
+    let mut recorder = SceneRecorder::new(BOX);
+    widget.paint(&mut recorder, id);
+    recorder.finish();
+
+    assert_eq!(
+        recorder.scene_node_kinds(),
+        vec!["Rect"],
+        "only the fill, no outline"
+    );
+}
+
+/// Fill and outline are independent — a divider is outlined with nothing behind
+/// it, a surface is filled with nothing around it — so neither may suppress the
+/// other. This is the control for the shared early-return that used to make a
+/// border depend on a background being present.
+#[test]
+fn a_fill_and_a_border_are_independent() {
+    let both = Container::new()
+        .background(Color::WHITE)
+        .border(1.0, Color::BLACK);
+    let (id, _create) = allocate(&both);
+    let mut recorder = SceneRecorder::new(BOX);
+    both.paint(&mut recorder, id);
+    recorder.finish();
+    assert_eq!(
+        recorder.scene_node_kinds(),
+        vec!["Rect", "Path"],
+        "a filled box draws its fill and its outline"
+    );
+}

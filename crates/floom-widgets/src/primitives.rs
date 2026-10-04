@@ -14,7 +14,7 @@ use floom_core::{
     Brush, Color, CreateContext, ElementId, Filter, LayoutRequest, PaintContext, Point, Rect,
     ResourceId, SemanticsContext, Shadow, Size, UpdateContext, Widget,
 };
-use floom_types::Insets;
+use floom_types::{Path, Stroke};
 
 /// Main axis for one-dimensional primitives ([`Spacer`], [`Divider`]).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
@@ -126,6 +126,39 @@ pub(crate) fn emit_semantics(hint: SemanticsHint, cx: &mut dyn SemanticsContext)
     }
     let bounds = cx.bounds();
     cx.set_bounds(bounds);
+}
+
+/// Strokes a rounded outline of `width` px just inside `bounds`.
+///
+/// Shared by [`Container`]'s border and by a composite that draws its own
+/// outline — 2.0's decoration boxes are leaves, so a widget that both decorates
+/// *and* holds children has to trace the outline itself rather than wrap itself
+/// in a `Container`.
+///
+/// The path is traced on the box edge and pulled in by half the width, because a
+/// stroke band straddles its path and a border drawn half outside the bounds
+/// would be clipped away by any ancestor that clips.
+pub(crate) fn stroke_rounded_outline(
+    cx: &mut dyn PaintContext,
+    bounds: Rect,
+    radius: f64,
+    width: f64,
+    color: Color,
+) {
+    let half = width / 2.0;
+    let rect = Rect {
+        x0: bounds.x0 + half,
+        y0: bounds.y0 + half,
+        x1: bounds.x1 - half,
+        y1: bounds.y1 - half,
+    };
+    if rect.width() <= 0.0 || rect.height() <= 0.0 {
+        return;
+    }
+    cx.stroke_path(
+        &Path::rounded_rect(rect, radius),
+        &Stroke::new(width, color),
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -495,11 +528,22 @@ impl Widget for Image {
 /// The background is a [`Brush`] rather than a colour, so a card can be filled
 /// with a gradient; a plain colour still fits through `impl Into<Brush>`, which
 /// is why every pre-gradient call site reads exactly as it did.
+///
+/// There is deliberately **no padding here.** v1's `Container` held a child and
+/// could pad it; 2.0's holds no children (composition moved to the parent), so a
+/// box with nothing inside it has nothing to pad, and a field that is stored and
+/// never read is worse than an absent one — it makes a caller believe an inset
+/// is being applied. The inset is a *margin on the content's own slot* instead:
+/// `LayoutRequest::margin`.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Container {
     background: Option<Brush>,
     radius: f32,
-    padding: Insets,
+    /// The outline drawn just inside this box's edge, if any. A separate field
+    /// from `background` because it is a stroke and not a fill — 2.0's paint
+    /// contract grew `stroke_path` with the vector work, and a design system's
+    /// hairline divider is the reason it is reachable from a box at all.
+    border: Option<(f32, Color)>,
     /// The drop shadow this card casts, drawn behind its own fill.
     shadow: Option<Shadow>,
     /// The filter this card's **content** — its own fill and every descendant
@@ -520,7 +564,7 @@ impl Container {
         Self {
             background: None,
             radius: 0.0,
-            padding: Insets::ZERO,
+            border: None,
             shadow: None,
             filter: None,
             backdrop: None,
@@ -540,6 +584,29 @@ impl Container {
         self.radius = radius;
         self.revision.bump();
         self
+    }
+
+    /// Draws a `width`-px outline just inside this box's edge.
+    ///
+    /// v1 spelled this `.border(1.0).border_color(..)` on any view; 2.0's
+    /// decoration boxes are `Container`s, so it lands here. It is a *stroke* —
+    /// the path is traced and the band drawn along it — because filling an outer
+    /// rounded rect in the border colour and an inset one in the background
+    /// colour cannot work for the common case: a bordered box with a
+    /// transparent fill has nothing to paint the inside back with, and would
+    /// show the border colour wherever the fill was absent.
+    ///
+    /// `width <= 0.0` is "no border", so a token that resolves to zero does not
+    /// leave a hairline behind.
+    pub fn border(mut self, width: f32, color: Color) -> Self {
+        self.border = if width > 0.0 { Some((width, color)) } else { None };
+        self.revision.bump();
+        self
+    }
+
+    /// The border this box draws, as `(width, colour)`, if any.
+    pub fn border_style(&self) -> Option<(f32, Color)> {
+        self.border
     }
 
     /// Casts this card's own shadow: its silhouette, blurred by `shadow.blur`
@@ -595,13 +662,6 @@ impl Container {
     pub fn set_backdrop_blur(&mut self, radius: f64) {
         self.backdrop = Some(Filter::blur(radius));
         self.revision.bump();
-    }
-
-    /// Padding is consumed by the layout layer; the primitive only carries it.
-    pub fn padding(mut self, padding: Insets) -> Self {
-        self.padding = padding;
-        self.revision.bump();
-        self
     }
 
     /// The background as whatever it is — the accessor a gradient assertion
@@ -681,18 +741,29 @@ impl Widget for Container {
         if let Some(shadow) = self.shadow {
             cx.draw_shadow(bounds, self.radius, &shadow);
         }
-        let Some(fill) = self.background.as_ref() else {
-            return;
-        };
-        // A solid background takes the fast path the renderers take themselves
-        // — one colour needs no per-pixel sampling, and emitting the ops it
-        // always did keeps every pre-gradient snapshot honest about what it
-        // is looking at.
-        match fill.solid() {
-            Some(color) if self.radius > 0.0 => cx.fill_rounded_rect(bounds, self.radius, color),
-            Some(color) => cx.fill_rect(bounds, color),
-            None if self.radius > 0.0 => cx.fill_rounded_rect_brush(bounds, self.radius, fill),
-            None => cx.fill_rect_brush(bounds, fill),
+        // Fill and outline are independent: a box may be outlined with nothing
+        // behind it (a divider) or filled with no outline (a surface). So the
+        // fill no longer decides whether anything else is drawn.
+        if let Some(fill) = self.background.as_ref() {
+            // A solid background takes the fast path the renderers take
+            // themselves — one colour needs no per-pixel sampling, and emitting
+            // the ops it always did keeps every pre-gradient snapshot honest
+            // about what it is looking at.
+            match fill.solid() {
+                Some(color) if self.radius > 0.0 => cx.fill_rounded_rect(bounds, self.radius, color),
+                Some(color) => cx.fill_rect(bounds, color),
+                None if self.radius > 0.0 => cx.fill_rounded_rect_brush(bounds, self.radius, fill),
+                None => cx.fill_rect_brush(bounds, fill),
+            }
+        }
+        if let Some((width, color)) = self.border {
+            stroke_rounded_outline(
+                cx,
+                bounds,
+                f64::from(self.radius),
+                f64::from(width),
+                color,
+            );
         }
     }
 

@@ -102,6 +102,22 @@ impl VectorIcon {
         &self.path
     }
 
+    /// The colour this icon is filled with.
+    pub fn fill(&self) -> Color {
+        self.color
+    }
+
+    /// The configured edge length, in logical px. Paint fills `cx.bounds()`;
+    /// this is the intrinsic size, which is also what `layout_request` asks for.
+    pub fn edge(&self) -> f32 {
+        self.size
+    }
+
+    /// The accessible name, when one was given.
+    pub fn name(&self) -> Option<&str> {
+        self.label.as_deref()
+    }
+
     /// What this icon reports to assistive technology.
     pub fn semantics_hint(&self) -> SemanticsHint {
         match self.label.clone() {
