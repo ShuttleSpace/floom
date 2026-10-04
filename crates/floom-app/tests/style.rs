@@ -10,7 +10,7 @@
 use floom_app::WidgetHost;
 use floom_layout::LayoutStyle;
 use floom_scene::SceneNode;
-use floom_types::{Brush, Color, Path, Point, Rect, Shadow, Size};
+use floom_types::{Brush, Color, Path, Point, Rect, Shadow, Size, Length};
 use floom_widgets::{Canvas, Container};
 
 const RAMP: fn() -> Brush = || {
@@ -26,8 +26,8 @@ const RAMP: fn() -> Brush = || {
 
 fn box_style(width: f32, height: f32) -> LayoutStyle {
     LayoutStyle {
-        width: Some(width),
-        height: Some(height),
+        width: Some(Length::Px(width)),
+        height: Some(Length::Px(height)),
         ..LayoutStyle::default()
     }
 }

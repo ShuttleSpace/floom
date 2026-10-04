@@ -17,9 +17,7 @@ use std::cell::Cell;
 use std::rc::Rc;
 
 use floom_animation::{AnimKind, CompositorProp, Easing, Tween};
-use floom_core::{
-    CreateContext, ElementId, NativeGrant, NativeRequest, UpdateContext, Widget, WidgetAny,
-};
+use floom_core::{CreateContext, ElementId, NativeGrant, NativeRequest, UpdateContext, Widget, WidgetAny, Length};
 use floom_layout::{AbsoluteInset, LayoutStyle, Position};
 use floom_native::{
     ClipSupport, FakeNativeProvider, InputMode, InputModes, NativeCapabilities, NativeCommandLog,
@@ -80,8 +78,8 @@ fn at(x: f32, y: f32, width: f32, height: f32) -> LayoutStyle {
             right: None,
             bottom: None,
         },
-        width: Some(width),
-        height: Some(height),
+        width: Some(Length::Px(width)),
+        height: Some(Length::Px(height)),
         ..LayoutStyle::default()
     }
 }

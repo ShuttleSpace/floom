@@ -5,7 +5,7 @@
 //! resolution left to the design-system kits. See
 //! `docs/porting-floem-ui-to-2.0.md`.
 
-use floom_core::{Rect, Widget};
+use floom_core::{Rect, Widget, Length};
 use floom_widgets::testkit::{
     AllocatingCreateContext, RecordingUpdateContext, SceneRecorder, paint_snapshot,
     semantics_snapshot,
@@ -67,8 +67,8 @@ fn explicit_radius_beats_the_default_pill() {
 fn intrinsic_size_of_a_dot_is_its_diameter() {
     let widget = Badge::new().dot(true).dot_size(10.0);
     let req = widget.layout_request().expect("a dot always wants a size");
-    assert_eq!(req.width, Some(10.0));
-    assert_eq!(req.height, Some(10.0));
+    assert_eq!(req.width, Some(Length::Px(10.0)));
+    assert_eq!(req.height, Some(Length::Px(10.0)));
 }
 
 #[test]
@@ -79,12 +79,18 @@ fn intrinsic_size_of_a_pill_is_text_plus_padding_floored_at_min_size() {
 
     let text = floom_text_measure(&widget);
     let want_w = (text + 12.0).max(16.0);
-    let got_w = req.width.expect("content implies a width");
+    let got_w = req
+        .width
+        .and_then(|l| l.px())
+        .expect("content implies a pixel width");
     assert!(
         (got_w - want_w).abs() < 0.01,
         "width {got_w} should be {want_w}"
     );
-    let got_h = req.height.expect("content implies a height");
+    let got_h = req
+        .height
+        .and_then(|l| l.px())
+        .expect("content implies a pixel height");
     assert!(
         got_h >= 16.0,
         "height {got_h} should honour min_size"

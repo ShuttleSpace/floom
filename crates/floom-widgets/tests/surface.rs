@@ -7,7 +7,7 @@
 //! accident: the padding has to be *inside* the box (the `md-card` bug), and the
 //! decoration has to be drawn by the same code a bare `Container` uses.
 
-use floom_core::{ChildKey, LayoutRequest, Widget, WidgetAny};
+use floom_core::{ChildKey, LayoutRequest, Widget, WidgetAny, Length};
 use floom_types::{Color, Insets, Shadow};
 use floom_widgets::primitives::Text;
 use floom_widgets::testkit::{
@@ -74,7 +74,7 @@ fn a_child_can_carry_its_own_layout() {
         || Box::new(Text::new("wide")),
     );
     let children = surface.children();
-    assert_eq!(children[0].layout.width, Some(120.0));
+    assert_eq!(children[0].layout.width, Some(Length::Px(120.0)));
 }
 
 /// A keyed child follows its item rather than the slot, which is what lets a

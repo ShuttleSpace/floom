@@ -6,7 +6,7 @@
 //! and undistorted. A regression there is invisible in a type signature and
 //! obvious on screen.
 
-use floom_core::{Rect, Widget};
+use floom_core::{Rect, Widget, Length};
 use floom_types::{PathSeg, Point};
 use floom_widgets::testkit::{
     paint_snapshot, semantics_snapshot, AllocatingCreateContext, RecordingUpdateContext,
@@ -154,8 +154,8 @@ fn intrinsic_size_is_the_configured_size_on_both_axes() {
     let req = widget
         .layout_request()
         .expect("an icon always wants a size");
-    assert_eq!(req.width, Some(18.0));
-    assert_eq!(req.height, Some(18.0));
+    assert_eq!(req.width, Some(Length::Px(18.0)));
+    assert_eq!(req.height, Some(Length::Px(18.0)));
 }
 
 #[test]

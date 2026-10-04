@@ -91,7 +91,7 @@ impl Widget for Labeled {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use floom_core::{Axis, ChildKey};
+    use floom_core::{Axis, ChildKey, Length};
 
     #[test]
     fn a_labeled_box_declares_its_child_and_request() {
@@ -106,7 +106,7 @@ mod tests {
         // The child slot was declared `fill()`: grow along the parent axis.
         assert_eq!(children[0].layout.flex_grow, Some(1.0));
         let request = box_.layout_request().expect("the request was set");
-        assert_eq!(request.height, Some(120.0));
+        assert_eq!(request.height, Some(Length::Px(120.0)));
     }
 
     #[test]

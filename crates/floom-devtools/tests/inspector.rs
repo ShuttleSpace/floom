@@ -9,6 +9,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use floom_accessibility::{SemanticsNode, SemanticsRole, SemanticsTree};
+use floom_core::Length;
 use floom_devtools::Inspector;
 use floom_hot_reload::{LiveTree, NodeKey};
 use floom_inspector::JsonSnapshot;
@@ -89,7 +90,7 @@ fn the_property_inspector_resolves_style_and_layout() {
     let layout = inspector
         .layout_of(&key("body"))
         .expect("body has a layout");
-    assert_eq!(layout.width, Some(100.0));
+    assert_eq!(layout.width, Some(floom_core::Length::Px(100.0)));
     assert_eq!(layout.gap, Some(4.0));
     assert_eq!(layout.axis, Some(floom_core::Axis::Horizontal));
 }

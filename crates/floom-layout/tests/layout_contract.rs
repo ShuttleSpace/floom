@@ -1,24 +1,24 @@
-use floom_layout::{FlexDirection, JustifyContent, LayoutEngine, LayoutStyle, MeasureFn};
-use floom_types::{Insets, Point, Size};
+use floom_layout::{AlignItems, FlexDirection, JustifyContent, LayoutEngine, LayoutStyle, MeasureFn};
+use floom_types::{Insets, Length, Point, Size};
 
 #[test]
 fn flex_row_places_children() {
     let mut eng = LayoutEngine::new();
     let a = eng.new_leaf(LayoutStyle {
-        width: Some(40.0),
-        height: Some(20.0),
+        width: Some(Length::Px(40.0)),
+        height: Some(Length::Px(20.0)),
         ..Default::default()
     });
     let b = eng.new_leaf(LayoutStyle {
-        width: Some(60.0),
-        height: Some(20.0),
+        width: Some(Length::Px(60.0)),
+        height: Some(Length::Px(20.0)),
         ..Default::default()
     });
     let root = eng.new_with_children(
         LayoutStyle {
             flex_direction: FlexDirection::Row,
-            width: Some(200.0),
-            height: Some(40.0),
+            width: Some(Length::Px(200.0)),
+            height: Some(Length::Px(40.0)),
             gap: 10.0,
             ..Default::default()
         },
@@ -37,16 +37,16 @@ fn flex_row_places_children() {
 fn column_stack_and_center() {
     let mut eng = LayoutEngine::new();
     let child = eng.new_leaf(LayoutStyle {
-        width: Some(30.0),
-        height: Some(10.0),
+        width: Some(Length::Px(30.0)),
+        height: Some(Length::Px(10.0)),
         ..Default::default()
     });
     let root = eng.new_with_children(
         LayoutStyle {
             flex_direction: FlexDirection::Column,
             justify_content: JustifyContent::Center,
-            width: Some(100.0),
-            height: Some(100.0),
+            width: Some(Length::Px(100.0)),
+            height: Some(Length::Px(100.0)),
             ..Default::default()
         },
         &[child],
@@ -63,8 +63,8 @@ fn measure_fn_leaf() {
     let leaf = eng.new_leaf_with_measure(LayoutStyle::default(), measure);
     let root = eng.new_with_children(
         LayoutStyle {
-            width: Some(200.0),
-            height: Some(100.0),
+            width: Some(Length::Px(200.0)),
+            height: Some(Length::Px(100.0)),
             align_items: floom_layout::AlignItems::Start,
             ..Default::default()
         },
@@ -89,8 +89,8 @@ fn absolute_child_escapes_parent_flow() {
     let mut eng = LayoutEngine::new();
     // In-flow sibling that would otherwise sit beside the overlay.
     let sibling = eng.new_leaf(LayoutStyle {
-        width: Some(40.0),
-        height: Some(20.0),
+        width: Some(Length::Px(40.0)),
+        height: Some(Length::Px(20.0)),
         ..Default::default()
     });
     // Overlay anchored to all four sides of the containing block.
@@ -101,8 +101,8 @@ fn absolute_child_escapes_parent_flow() {
     });
     let root = eng.new_with_children(
         LayoutStyle {
-            width: Some(200.0),
-            height: Some(100.0),
+            width: Some(Length::Px(200.0)),
+            height: Some(Length::Px(100.0)),
             ..Default::default()
         },
         &[sibling, overlay],
@@ -122,8 +122,8 @@ fn absolute_child_escapes_parent_flow() {
 fn absolute_child_uses_parent_alignment_as_static_position() {
     let mut eng = LayoutEngine::new();
     let panel = eng.new_leaf(LayoutStyle {
-        width: Some(120.0),
-        height: Some(60.0),
+        width: Some(Length::Px(120.0)),
+        height: Some(Length::Px(60.0)),
         position: floom_layout::Position::Absolute,
         ..Default::default()
     });
@@ -131,8 +131,8 @@ fn absolute_child_uses_parent_alignment_as_static_position() {
     // CSS defines by the parent's alignment — not by centring on its own.
     let root = eng.new_with_children(
         LayoutStyle {
-            width: Some(200.0),
-            height: Some(100.0),
+            width: Some(Length::Px(200.0)),
+            height: Some(Length::Px(100.0)),
             justify_content: JustifyContent::Center,
             align_items: floom_layout::AlignItems::Center,
             ..Default::default()
@@ -151,7 +151,7 @@ fn absolute_inset_pins_to_one_edge() {
     let mut eng = LayoutEngine::new();
     // A bottom-anchored sheet: pinned down, stretched sideways.
     let sheet = eng.new_leaf(LayoutStyle {
-        height: Some(50.0),
+        height: Some(Length::Px(50.0)),
         position: floom_layout::Position::Absolute,
         inset: floom_layout::AbsoluteInset {
             left: Some(0.0),
@@ -163,8 +163,8 @@ fn absolute_inset_pins_to_one_edge() {
     });
     let root = eng.new_with_children(
         LayoutStyle {
-            width: Some(300.0),
-            height: Some(200.0),
+            width: Some(Length::Px(300.0)),
+            height: Some(Length::Px(200.0)),
             ..Default::default()
         },
         &[sheet],
@@ -185,19 +185,19 @@ fn absolute_inset_pins_to_one_edge() {
 fn removing_a_child_updates_the_flow() {
     let mut eng = LayoutEngine::new();
     let keep = eng.new_leaf(LayoutStyle {
-        width: Some(40.0),
-        height: Some(20.0),
+        width: Some(Length::Px(40.0)),
+        height: Some(Length::Px(20.0)),
         ..Default::default()
     });
     let drop = eng.new_leaf(LayoutStyle {
-        width: Some(40.0),
-        height: Some(20.0),
+        width: Some(Length::Px(40.0)),
+        height: Some(Length::Px(20.0)),
         ..Default::default()
     });
     let root = eng.new_with_children(
         LayoutStyle {
-            width: Some(200.0),
-            height: Some(100.0),
+            width: Some(Length::Px(200.0)),
+            height: Some(Length::Px(100.0)),
             flex_direction: FlexDirection::Column,
             ..Default::default()
         },
@@ -224,18 +224,18 @@ fn removing_a_child_updates_the_flow() {
 fn insert_child_at_index_preserves_order() {
     let mut eng = LayoutEngine::new();
     let a = eng.new_leaf(LayoutStyle {
-        width: Some(10.0),
-        height: Some(10.0),
+        width: Some(Length::Px(10.0)),
+        height: Some(Length::Px(10.0)),
         ..Default::default()
     });
     let b = eng.new_leaf(LayoutStyle {
-        width: Some(10.0),
-        height: Some(10.0),
+        width: Some(Length::Px(10.0)),
+        height: Some(Length::Px(10.0)),
         ..Default::default()
     });
     let c = eng.new_leaf(LayoutStyle {
-        width: Some(10.0),
-        height: Some(10.0),
+        width: Some(Length::Px(10.0)),
+        height: Some(Length::Px(10.0)),
         ..Default::default()
     });
     let root = eng.new_with_children(LayoutStyle::column(), &[a, b]);
@@ -287,8 +287,8 @@ fn measure_nodes_remeasure_under_per_node_constraints() {
     let text = eng.new_leaf_with_measure(LayoutStyle::default(), measure);
     let holder = eng.new_with_children(
         LayoutStyle {
-            width: Some(100.0),
-            height: Some(100.0),
+            width: Some(Length::Px(100.0)),
+            height: Some(Length::Px(100.0)),
             ..LayoutStyle::column()
         },
         &[text],
@@ -311,8 +311,8 @@ fn measure_nodes_remeasure_under_per_node_constraints() {
     eng.set_style(
         holder,
         LayoutStyle {
-            width: Some(40.0),
-            height: Some(100.0),
+            width: Some(Length::Px(40.0)),
+            height: Some(Length::Px(100.0)),
             ..LayoutStyle::column()
         },
     );
@@ -337,16 +337,16 @@ fn measure_nodes_remeasure_under_per_node_constraints() {
 fn a_margin_insets_the_child_inside_its_parent() {
     let mut eng = LayoutEngine::new();
     let child = eng.new_leaf(LayoutStyle {
-        width: Some(40.0),
-        height: Some(20.0),
+        width: Some(Length::Px(40.0)),
+        height: Some(Length::Px(20.0)),
         margin: Insets::uniform(16.0),
         ..Default::default()
     });
     let root = eng.new_with_children(
         LayoutStyle {
             flex_direction: FlexDirection::Column,
-            width: Some(200.0),
-            height: Some(100.0),
+            width: Some(Length::Px(200.0)),
+            height: Some(Length::Px(100.0)),
             ..Default::default()
         },
         &[child],
@@ -367,15 +367,15 @@ fn a_margin_insets_the_child_inside_its_parent() {
 fn a_margin_does_not_shrink_the_childs_box() {
     let mut eng = LayoutEngine::new();
     let child = eng.new_leaf(LayoutStyle {
-        width: Some(40.0),
-        height: Some(20.0),
+        width: Some(Length::Px(40.0)),
+        height: Some(Length::Px(20.0)),
         margin: Insets::uniform(16.0),
         ..Default::default()
     });
     let root = eng.new_with_children(
         LayoutStyle {
-            width: Some(200.0),
-            height: Some(100.0),
+            width: Some(Length::Px(200.0)),
+            height: Some(Length::Px(100.0)),
             ..Default::default()
         },
         &[child],
@@ -394,8 +394,8 @@ fn a_margin_does_not_shrink_the_childs_box() {
 fn a_margin_is_per_side() {
     let mut eng = LayoutEngine::new();
     let child = eng.new_leaf(LayoutStyle {
-        width: Some(10.0),
-        height: Some(10.0),
+        width: Some(Length::Px(10.0)),
+        height: Some(Length::Px(10.0)),
         margin: Insets {
             left: 4.0,
             top: 8.0,
@@ -406,8 +406,8 @@ fn a_margin_is_per_side() {
     });
     let root = eng.new_with_children(
         LayoutStyle {
-            width: Some(200.0),
-            height: Some(100.0),
+            width: Some(Length::Px(200.0)),
+            height: Some(Length::Px(100.0)),
             ..Default::default()
         },
         &[child],
@@ -426,14 +426,14 @@ fn a_margin_is_per_side() {
 fn padding_insets_the_children_inside_the_box() {
     let mut eng = LayoutEngine::new();
     let child = eng.new_leaf(LayoutStyle {
-        width: Some(40.0),
-        height: Some(20.0),
+        width: Some(Length::Px(40.0)),
+        height: Some(Length::Px(20.0)),
         ..Default::default()
     });
     let root = eng.new_with_children(
         LayoutStyle {
-            width: Some(200.0),
-            height: Some(100.0),
+            width: Some(Length::Px(200.0)),
+            height: Some(Length::Px(100.0)),
             padding: Insets::uniform(16.0),
             ..Default::default()
         },
@@ -463,14 +463,14 @@ fn a_margin_is_per_child_and_a_padding_is_around_the_group() {
     let two = |margin: Insets, padding: Insets| {
         let mut eng = LayoutEngine::new();
         let a = eng.new_leaf(LayoutStyle {
-            width: Some(40.0),
-            height: Some(20.0),
+            width: Some(Length::Px(40.0)),
+            height: Some(Length::Px(20.0)),
             margin,
             ..Default::default()
         });
         let b = eng.new_leaf(LayoutStyle {
-            width: Some(30.0),
-            height: Some(20.0),
+            width: Some(Length::Px(30.0)),
+            height: Some(Length::Px(20.0)),
             margin,
             ..Default::default()
         });
@@ -514,14 +514,14 @@ fn a_margin_is_per_child_and_a_padding_is_around_the_group() {
 fn padding_is_per_side() {
     let mut eng = LayoutEngine::new();
     let child = eng.new_leaf(LayoutStyle {
-        width: Some(10.0),
-        height: Some(10.0),
+        width: Some(Length::Px(10.0)),
+        height: Some(Length::Px(10.0)),
         ..Default::default()
     });
     let root = eng.new_with_children(
         LayoutStyle {
-            width: Some(200.0),
-            height: Some(100.0),
+            width: Some(Length::Px(200.0)),
+            height: Some(Length::Px(100.0)),
             padding: Insets {
                 left: 4.0,
                 top: 8.0,
@@ -539,3 +539,133 @@ fn padding_is_per_side() {
     assert!((rect.y0 - 8.0).abs() < 0.01);
 }
 
+
+// --- percentage sizing -----------------------------------------------------
+
+/// The claim, and the reason `Length` exists: a percentage resolves against the
+/// containing block, so `width_pct(100.0)` is a full-width row while a fixed
+/// `200.0` is not. Before this, 2.0 had no spelling for the 310 `width_pct` /
+/// `height_pct` calls across floem-ui.
+#[test]
+fn a_percentage_resolves_against_the_containing_block() {
+    let mut eng = LayoutEngine::new();
+    let child = eng.new_leaf(LayoutStyle {
+        width: Some(Length::Pct(100.0)),
+        height: Some(Length::Pct(50.0)),
+        ..Default::default()
+    });
+    let root = eng.new_with_children(
+        LayoutStyle {
+            width: Some(Length::Px(300.0)),
+            height: Some(Length::Px(200.0)),
+            ..Default::default()
+        },
+        &[child],
+    );
+
+    eng.compute(root, Size::new(300.0, 200.0));
+    let rect = eng.layout(child).rect;
+    assert!((rect.width() - 300.0).abs() < 0.01, "100% of 300");
+    assert!((rect.height() - 100.0).abs() < 0.01, "50% of 200");
+}
+
+/// The control for reading `100.0` as `1.0`: taffy's percentage is a fraction, so
+/// a missing `/100.0` makes the box 100× its parent rather than the same size —
+/// which overflows rather than looks wrong, and is easy to miss.
+#[test]
+fn a_percentage_is_hundred_not_one() {
+    let mut eng = LayoutEngine::new();
+    let child = eng.new_leaf(LayoutStyle {
+        width: Some(Length::Pct(1.0)),
+        ..Default::default()
+    });
+    let root = eng.new_with_children(
+        LayoutStyle {
+            width: Some(Length::Px(200.0)),
+            height: Some(Length::Px(50.0)),
+            ..Default::default()
+        },
+        &[child],
+    );
+
+    eng.compute(root, Size::new(200.0, 50.0));
+    assert!(
+        (eng.layout(child).rect.width() - 2.0).abs() < 0.01,
+        "1% of 200 is 2px, not 200px"
+    );
+}
+
+/// A fixed length and a percentage are different values, not two spellings of
+/// one, and the difference is invisible at the parent size where they happen to
+/// agree — which is why a test written at one width proves nothing.
+#[test]
+fn a_fixed_length_and_a_percentage_diverge_as_the_parent_grows() {
+    let sized = |parent: f32, w: Option<Length>| {
+        let mut eng = LayoutEngine::new();
+        let child = eng.new_leaf(LayoutStyle { width: w, ..Default::default() });
+        let root = eng.new_with_children(
+            LayoutStyle {
+                width: Some(Length::Px(parent)),
+                height: Some(Length::Px(50.0)),
+                ..Default::default()
+            },
+            &[child],
+        );
+        eng.compute(root, Size::new(f64::from(parent), 50.0));
+        eng.layout(child).rect.width()
+    };
+
+    // 50px and 25% coincide at a 200px parent...
+    assert!((sized(200.0, Some(Length::Px(50.0))) - sized(200.0, Some(Length::Pct(25.0)))).abs() < 0.01);
+    // ...and part company at 400, which is the difference in one line.
+    assert!((sized(400.0, Some(Length::Px(50.0))) - 50.0).abs() < 0.01);
+    assert!((sized(400.0, Some(Length::Pct(25.0))) - 100.0).abs() < 0.01);
+    assert!(
+        sized(400.0, Some(Length::Px(50.0))) < sized(400.0, Some(Length::Pct(25.0))),
+        "the fixed length does not follow the parent, which is the whole point"
+    );
+}
+
+// --- SpaceBetween ----------------------------------------------------------
+
+/// The layout layer carried `SpaceBetween` from the start; only the
+/// engine-neutral vocabulary was missing it, and floem-ui asks for it 38 times.
+/// Two boxes with free space between them and none at either end is what makes it
+/// distinguishable from `End`.
+#[test]
+fn space_between_pushes_the_children_apart() {
+    let mut eng = LayoutEngine::new();
+    let a = eng.new_leaf(LayoutStyle {
+        width: Some(Length::Px(20.0)),
+        height: Some(Length::Px(10.0)),
+        ..Default::default()
+    });
+    let b = eng.new_leaf(LayoutStyle {
+        width: Some(Length::Px(20.0)),
+        height: Some(Length::Px(10.0)),
+        ..Default::default()
+    });
+    let root = eng.new_with_children(
+        LayoutStyle {
+            flex_direction: FlexDirection::Row,
+            justify_content: JustifyContent::SpaceBetween,
+            width: Some(Length::Px(200.0)),
+            height: Some(Length::Px(50.0)),
+            ..Default::default()
+        },
+        &[a, b],
+    );
+
+    eng.compute(root, Size::new(200.0, 50.0));
+    let (ra, rb) = (eng.layout(a).rect, eng.layout(b).rect);
+    assert!(
+        (ra.x0 - 0.0).abs() < 0.01,
+        "nothing at the start edge: {:?}",
+        ra.x0
+    );
+    assert!(
+        (rb.x1 - 200.0).abs() < 0.01,
+        "and nothing at the end edge: {:?}",
+        rb.x1
+    );
+}

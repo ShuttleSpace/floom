@@ -2,7 +2,7 @@
 
 use std::collections::HashMap;
 
-use floom_types::{Insets, Point, Rect, Size as GeoSize};
+use floom_types::{Insets, Length, Point, Rect, Size as GeoSize};
 use taffy::prelude::{
     AlignItems as TAlign, AvailableSpace, Dimension, Display, FlexDirection as TFlex,
     JustifyContent as TJustify, LengthPercentage, LengthPercentageAuto, NodeId,
@@ -81,8 +81,8 @@ pub struct LayoutStyle {
     pub flex_direction: FlexDirection,
     pub justify_content: JustifyContent,
     pub align_items: AlignItems,
-    pub width: Option<f32>,
-    pub height: Option<f32>,
+    pub width: Option<Length>,
+    pub height: Option<Length>,
     pub flex_grow: f32,
     pub gap: f32,
     /// Space reserved outside the box, inside its parent.
@@ -177,14 +177,8 @@ impl LayoutStyle {
                 AlignItems::End => TAlign::End,
             }),
             size: taffy::Size {
-                width: self
-                    .width
-                    .map(Dimension::length)
-                    .unwrap_or(Dimension::auto()),
-                height: self
-                    .height
-                    .map(Dimension::length)
-                    .unwrap_or(Dimension::auto()),
+                width: dimension(self.width),
+                height: dimension(self.height),
             },
             flex_grow: self.flex_grow,
             gap: taffy::Size {
@@ -215,6 +209,17 @@ impl LayoutStyle {
             },
             ..Style::DEFAULT
         }
+    }
+}
+
+/// Lowers one axis's length. `None` is auto; a percentage resolves against the
+/// containing block's content box, which is what makes `width_pct(100.0)` a
+/// full-width row rather than a guess.
+fn dimension(length: Option<Length>) -> Dimension {
+    match length {
+        Some(Length::Px(px)) => Dimension::length(px),
+        Some(Length::Pct(percent)) => Dimension::percent(percent / 100.0),
+        None => Dimension::auto(),
     }
 }
 

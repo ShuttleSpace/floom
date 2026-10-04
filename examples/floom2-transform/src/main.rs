@@ -74,8 +74,8 @@ fn host_with_card() -> (WidgetHost, NodeId) {
     host.set_size(Size::new(SIZE, SIZE));
     let root = host.mount_root(
         LayoutStyle {
-            width: Some(SIZE as f32),
-            height: Some(SIZE as f32),
+            width: Some(Length::Px(SIZE as f32)),
+            height: Some(Length::Px(SIZE as f32)),
             ..LayoutStyle::default()
         },
         Stack::new(Axis::Vertical),
@@ -83,8 +83,8 @@ fn host_with_card() -> (WidgetHost, NodeId) {
     let canvas = host.mount(
         root,
         LayoutStyle {
-            width: Some(SIZE as f32),
-            height: Some(SIZE as f32),
+            width: Some(Length::Px(SIZE as f32)),
+            height: Some(Length::Px(SIZE as f32)),
             ..LayoutStyle::default()
         },
         card(),

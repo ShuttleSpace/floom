@@ -6,7 +6,7 @@
 //! content, an explicit mount style still wins.
 
 use floom_app::{NodeId, WidgetHost};
-use floom_layout::LayoutStyle;
+use floom_layout::{LayoutStyle, Length};
 use floom_types::Size;
 use floom_widgets::controls::{Button, Checkbox, Progress, Select, Slider, Switch, TextField};
 use floom_widgets::primitives::{Divider, Icon, Image, Spacer};
@@ -68,8 +68,8 @@ fn pinned_style_beats_the_button_intrinsic_size() {
     let button = host.mount(
         root,
         LayoutStyle {
-            width: Some(200.0),
-            height: Some(40.0),
+            width: Some(Length::Px(200.0)),
+            height: Some(Length::Px(40.0)),
             ..LayoutStyle::default()
         },
         Button::new("tiny"),

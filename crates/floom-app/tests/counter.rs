@@ -4,7 +4,7 @@
 //! mount widgets, pump a frame, route input, assert what landed in the scene.
 
 use floom_app::WidgetHost;
-use floom_core::{Key, NamedKey, Point, Rect, Size};
+use floom_core::{Key, NamedKey, Point, Rect, Size, Length};
 use floom_layout::{AlignItems, FlexDirection, JustifyContent, LayoutStyle};
 use floom_types::{KeyEvent, Modifiers, PointerEvent};
 use floom_widgets::{Button, Checkbox, Container, Text};
@@ -28,8 +28,8 @@ fn column(gap: f64) -> LayoutStyle {
 
 fn fixed(width: f64, height: f64) -> LayoutStyle {
     LayoutStyle {
-        width: Some(width as f32),
-        height: Some(height as f32),
+        width: Some(Length::Px(width as f32)),
+        height: Some(Length::Px(height as f32)),
         ..LayoutStyle::default()
     }
 }
@@ -308,8 +308,8 @@ fn restyling_triggers_a_new_layout() {
     counter.host.set_style(
         counter.label,
         LayoutStyle {
-            width: Some(40.0),
-            height: Some(20.0),
+            width: Some(Length::Px(40.0)),
+            height: Some(Length::Px(20.0)),
             ..LayoutStyle::default()
         },
     );

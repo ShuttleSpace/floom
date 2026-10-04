@@ -35,7 +35,7 @@
 
 use floom_animation::{AnimKind, CompositorProp, Tween};
 use floom_app::{NodeId, WidgetHost};
-use floom_core::{Child, ChildKey, LayoutRequest};
+use floom_core::{Child, ChildKey, LayoutRequest, Length};
 use floom_layout::LayoutStyle;
 use floom_snapshot::{FrameDigest, GoldenFrames, PixelSnapshot, snapshots_dir};
 use floom_types::{Brush, Color, PresenceTransition, Size};
@@ -60,8 +60,8 @@ const HOT: Color = Color::rgb(220, 60, 40);
 /// The card's own box: a fixed size, so it does not stretch to the viewport.
 fn card_style() -> LayoutStyle {
     LayoutStyle {
-        width: Some(CARD_W),
-        height: Some(CARD_H),
+        width: Some(Length::Px(CARD_W)),
+        height: Some(Length::Px(CARD_H)),
         ..LayoutStyle::default()
     }
 }
@@ -237,8 +237,8 @@ fn sized_card(color: Color, index: usize) -> Child {
     Child::new(
         ChildKey::index(index),
         LayoutRequest {
-            width: Some(CARD_W),
-            height: Some(CARD_H),
+            width: Some(Length::Px(CARD_W)),
+            height: Some(Length::Px(CARD_H)),
             ..LayoutRequest::default()
         },
         move || Box::new(Container::new().background(color)),
@@ -355,8 +355,8 @@ fn shared_card(color: Color, index: usize) -> Child {
     Child::new(
         ChildKey::index(index),
         LayoutRequest {
-            width: Some(20.0),
-            height: Some(20.0),
+            width: Some(Length::Px(20.0)),
+            height: Some(Length::Px(20.0)),
             ..LayoutRequest::default()
         },
         move || Box::new(Container::new().background(color)),

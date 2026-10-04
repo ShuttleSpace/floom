@@ -20,7 +20,7 @@ use floom_layout::LayoutStyle;
 use floom_renderer::{AttachedSurface, Presenter};
 use floom_renderer_software::SoftwarePresenter;
 use floom_scene::SceneNode;
-use floom_types::{Color, Shader, Size, SurfaceId, WindowId};
+use floom_types::{Color, Shader, Size, SurfaceId, WindowId, Length};
 use floom_widgets::{Container, ShaderBox};
 
 const WGSL: &str = "@fragment fn fs_main(in: VsOut) -> @location(0) vec4<f32> { \
@@ -36,8 +36,8 @@ fn host_with_shader_box() -> (WidgetHost, floom_app::NodeId) {
     host.set_size(Size::new(300.0, 200.0));
     let root = host.mount_root(
         LayoutStyle {
-            width: Some(300.0),
-            height: Some(200.0),
+            width: Some(Length::Px(300.0)),
+            height: Some(Length::Px(200.0)),
             ..LayoutStyle::default()
         },
         Container::new().background(Color::rgb(10, 10, 10)),

@@ -21,15 +21,15 @@
 use floom_app::WidgetHost;
 use floom_layout::LayoutStyle;
 use floom_scene::SceneNode;
-use floom_types::{Color, Filter, Size};
+use floom_types::{Color, Filter, Size, Length};
 use floom_widgets::Container;
 
 const INK: Color = Color::rgb(20, 30, 40);
 
 fn box_style(width: f32, height: f32) -> LayoutStyle {
     LayoutStyle {
-        width: Some(width),
-        height: Some(height),
+        width: Some(Length::Px(width)),
+        height: Some(Length::Px(height)),
         ..LayoutStyle::default()
     }
 }

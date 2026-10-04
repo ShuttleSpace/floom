@@ -11,7 +11,7 @@ use floom_app::{AppRunner, RunStats, WidgetHost};
 use floom_layout::LayoutStyle;
 use floom_platform::{FakePlatform, KeyCode, Platform, PlatformEvent, WindowConfig};
 use floom_renderer_software::SoftwarePresenter;
-use floom_types::{Color, Point, Size};
+use floom_types::{Color, Point, Size, Length};
 use floom_widgets::{Button, Container, Stack, Text, TextField};
 
 /// A tiny window (64×48 logical, scale 1) so pixel arithmetic stays trivial.
@@ -154,8 +154,8 @@ fn a_click_reaches_a_button() {
     // button's intrinsic (label-fitting) size.
     host.mount_root(
         LayoutStyle {
-            width: Some(64.0),
-            height: Some(48.0),
+            width: Some(Length::Px(64.0)),
+            height: Some(Length::Px(48.0)),
             ..LayoutStyle::default()
         },
         Button::new("Go").on_click(move || flag.store(true, Ordering::SeqCst)),
@@ -298,8 +298,8 @@ fn ime_preedit_updates_focused_field_then_commit_finalizes() {
     // intrinsic (content-fitting) size, so clicks land squarely on it.
     let field = host.mount_root(
         LayoutStyle {
-            width: Some(64.0),
-            height: Some(48.0),
+            width: Some(Length::Px(64.0)),
+            height: Some(Length::Px(48.0)),
             ..LayoutStyle::default()
         },
         TextField::new(),
@@ -449,8 +449,8 @@ mod boundary {
         let mut host = WidgetHost::new();
         host.mount_root(
             LayoutStyle {
-                width: Some(64.0),
-                height: Some(48.0),
+                width: Some(Length::Px(64.0)),
+                height: Some(Length::Px(48.0)),
                 ..LayoutStyle::default()
             },
             Button::new("boom").on_click(|| panic!("unhandled")),

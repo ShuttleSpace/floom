@@ -12,7 +12,7 @@
 
 use std::sync::Arc;
 
-use floom_types::Insets;
+use floom_types::{Insets, Length};
 
 use crate::WidgetAny;
 
@@ -43,6 +43,12 @@ pub enum Align {
     Start,
     Center,
     End,
+    /// Distribute the free space *between* the children, none at either end.
+    ///
+    /// Only meaningful as a `main_align`, which is why it is here rather than in
+    /// the padding vocabulary: it distributes, it does not place one box. floem-ui
+    /// asks for it 38 times, nearly always as v1's `justify_between()`.
+    SpaceBetween,
 }
 
 /// Whether a box participates in its parent's flow.
@@ -89,8 +95,10 @@ impl Inset {
 /// "deliberately zero"; the layer lowering this decides the defaults.
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub struct LayoutRequest {
-    pub width: Option<f32>,
-    pub height: Option<f32>,
+    /// `None` is "unspecified", which is not the same as zero: the layer lowering
+    /// this decides whether an unspecified dimension is auto or filled.
+    pub width: Option<Length>,
+    pub height: Option<Length>,
     /// Fraction of leftover space this box claims along the parent's main axis.
     pub flex_grow: Option<f32>,
     /// Direction this box lays out *its own* children in.
@@ -140,12 +148,24 @@ impl LayoutRequest {
     }
 
     pub const fn width(mut self, width: f32) -> Self {
-        self.width = Some(width);
+        self.width = Some(Length::Px(width));
         self
     }
 
     pub const fn height(mut self, height: f32) -> Self {
-        self.height = Some(height);
+        self.height = Some(Length::Px(height));
+        self
+    }
+
+    /// Width as a percentage of the containing block. See [`Length`].
+    pub const fn width_pct(mut self, percent: f32) -> Self {
+        self.width = Some(Length::Pct(percent));
+        self
+    }
+
+    /// Height as a percentage of the containing block. See [`Length`].
+    pub const fn height_pct(mut self, percent: f32) -> Self {
+        self.height = Some(Length::Pct(percent));
         self
     }
 

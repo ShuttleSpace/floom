@@ -178,6 +178,44 @@ impl Insets {
     }
 }
 
+/// A length along one axis: a fixed number of logical pixels, or a fraction of
+/// the containing block.
+///
+/// A percentage is not a convenience — it is a different thing to measure, and
+/// the difference is the whole reason a full-width row can fill its parent while
+/// a fixed 200px row cannot. v1 had `width(..)` and `width_pct(..)` as two
+/// builders over one field, and 2.0 had only the first, so the 310
+/// `width_pct` / `height_pct` calls across floem-ui had no spelling at all.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum Length {
+    /// A fixed extent in logical pixels.
+    Px(f32),
+    /// A percentage of the containing block, `0.0..=100.0`.
+    Pct(f32),
+}
+
+impl Length {
+    /// The same length as a fraction of the containing block.
+    pub const fn pct(percent: f32) -> Self {
+        Self::Pct(percent)
+    }
+
+    /// The fixed part, if this is one. `None` for a percentage, which has no
+    /// pixel value until the containing block is known — so a caller that needs a
+    /// number has to say what it will do with the answer rather than get a
+    /// silently wrong one.
+    pub const fn px(self) -> Option<f32> {
+        match self {
+            Self::Px(px) => Some(px),
+            Self::Pct(_) => None,
+        }
+    }
+
+    pub const fn is_pct(self) -> bool {
+        matches!(self, Self::Pct(_))
+    }
+}
+
 /// Layout constraints (min/max size).
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Constraints {

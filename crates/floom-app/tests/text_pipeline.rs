@@ -7,15 +7,15 @@
 //! blob, font size, glyph ids and pixel-space positions.
 
 use floom_app::WidgetHost;
-use floom_layout::LayoutStyle;
+use floom_layout::{LayoutStyle, Length};
 use floom_scene::{ResourceKind, SceneNode};
 use floom_types::ResourceId;
 use floom_widgets::Text;
 
 fn fixed(width: f64, height: f64) -> LayoutStyle {
     LayoutStyle {
-        width: Some(width as f32),
-        height: Some(height as f32),
+        width: Some(Length::Px(width as f32)),
+        height: Some(Length::Px(height as f32)),
         ..LayoutStyle::default()
     }
 }

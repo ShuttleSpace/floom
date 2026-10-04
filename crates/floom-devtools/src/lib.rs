@@ -90,6 +90,7 @@ fn align_name(align: Align) -> &'static str {
         Align::Center => "center",
         Align::End => "end",
         Align::Stretch => "stretch",
+        Align::SpaceBetween => "space-between",
     }
 }
 
@@ -306,8 +307,8 @@ impl<'a> Inspector<'a> {
                 Some(LayoutEntry {
                     id: e.id.raw(),
                     layout: LayoutDto {
-                        width: layout.width,
-                        height: layout.height,
+                        width: layout.width.map(|l| l.px().unwrap_or(0.0)),
+                        height: layout.height.map(|l| l.px().unwrap_or(0.0)),
                         flex_grow: layout.flex_grow,
                         axis: layout.axis.map(|a| axis_name(a).to_string()),
                         gap: layout.gap,

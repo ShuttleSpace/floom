@@ -232,3 +232,138 @@ fn changing_the_padding_after_mount_moves_the_content() {
          would leave the content where it was ({stats:?})"
     );
 }
+
+// --- percentage sizing, end to end ----------------------------------------
+
+/// `width_pct(100.0)` is what 231 floem-ui call sites ask for, and it is the
+/// reason a footer or a toolbar spans the window while a 200px row does not.
+///
+/// The root is force-filled by the host, so the percentage is measured on a
+/// *child* slot: that is where a kit's `width_pct(100.0)` actually lands.
+#[test]
+fn a_percentage_width_fills_the_parent() {
+    let mut host = WidgetHost::new();
+    host.set_size(Size::new(300.0, 100.0));
+    let child = host.mount_root(
+        LayoutStyle::default(),
+        Stack::new(Axis::Vertical).push(|| {
+            // The percentage, on a child's own slot.
+            let slot = floom_core::LayoutRequest::new().width_pct(100.0);
+            Box::new(
+                Surface::new()
+                    .background(Color::WHITE)
+                    .padding_horiz(0.0)
+                    .push_layout(slot, || Box::new(Text::new("full width"))),
+            )
+        }),
+    );
+    host.frame();
+    let _ = child;
+
+    // Read the fill the surface painted: that is the box the percentage sized.
+    let box_rect = host
+        .scene()
+        .iter()
+        .find_map(|(_, node)| match node {
+            SceneNode::Rect { bounds, .. } => Some(*bounds),
+            _ => None,
+        })
+        .expect("the surface painted a box");
+    assert!(
+        (box_rect.width() - 300.0).abs() < 0.5,
+        "100% of a 300px viewport: {box_rect:?}"
+    );
+}
+
+/// **Open question, recorded rather than worked around.** A child of a column is
+/// stretched to its parent's width by the default `Align::Stretch` *even when the
+/// child asks for a definite width*, and the host's reconciler provably writes
+/// that width into the layout node first (`slot_w=Some(Px(120.0))` and
+/// `final_w=Some(Px(120.0))` under a temporary probe in `WidgetHost::reconcile`).
+/// `floom-layout` does **not** reproduce it: a column with `align_items: Stretch`
+/// and a child of `width: 120, height: auto` lays out at 120 in every combination
+/// probed. So the width is being lost between `set_style` and the painted box, and
+/// it is not a `Length` change — `width: Some(120.0)` lowered to the same
+/// `Dimension::length(120.0)` before this work.
+///
+/// Left as a pinned observation rather than a workaround, because the honest
+/// response to a bug whose cause is unknown is to write down what is known. It
+/// matters to the kits: 231 `width_pct` call sites are full-width rows, and a
+/// design system that wants a fixed-width row inside one will silently get a
+/// stretched one.
+///
+/// It also means "a fixed width and a full-width percentage are different values"
+/// is **not observable through the host** — both come out as the parent's width —
+/// so that distinction is pinned at the layout layer instead, by
+/// `a_fixed_length_and_a_percentage_diverge_as_the_parent_grows`.
+#[test]
+fn a_definite_child_width_is_stretched_by_the_default_cross_axis() {
+    let mut host = WidgetHost::new();
+    host.set_size(Size::new(300.0, 100.0));
+    host.mount_root(
+        LayoutStyle::default(),
+        Stack::new(Axis::Vertical).push(|| {
+            Box::new(
+                Surface::new()
+                    .background(Color::WHITE)
+                    .padding_horiz(0.0)
+                    .push_layout(
+                        floom_core::LayoutRequest::new().width(120.0),
+                        || Box::new(Text::new("x")),
+                    ),
+            )
+        }),
+    );
+    host.frame();
+    let width = host
+        .scene()
+        .iter()
+        .filter_map(|(_, node)| match node {
+            SceneNode::Rect { bounds, .. } => Some(bounds.width()),
+            _ => None,
+        })
+        .max_by(|a, b| a.partial_cmp(b).expect("no NaN widths"))
+        .expect("the surface painted a box");
+    assert!(
+        (width - 300.0).abs() < 0.5,
+        "the box is the parent's width, not the 120px its slot asked for — see \
+         this test's doc comment; if this starts failing the bug is fixed and the \
+         note above should go"
+    );
+}
+
+/// `SpaceBetween` through the host: a title at the start edge and an action at
+/// the end edge, which is v1's `justify_between()` and 38 floem-ui call sites.
+#[test]
+fn space_between_pushes_content_to_both_edges() {
+    let mut host = WidgetHost::new();
+    host.set_size(Size::new(300.0, 60.0));
+    host.mount_root(
+        LayoutStyle::default(),
+        Stack::new(Axis::Horizontal)
+            .align(floom_core::Align::SpaceBetween, Align::Center)
+            .push(|| Box::new(Text::new("left")))
+            .push(|| Box::new(Text::new("right"))),
+    );
+    host.frame();
+
+    let texts: Vec<floom_types::Rect> = host
+        .scene()
+        .iter()
+        .filter_map(|(_, node)| match node {
+            SceneNode::Text { .. } => node.bounds_hint(),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(texts.len(), 2, "both labels painted");
+    assert!(
+        (texts[0].x0 - 0.0).abs() < 0.5,
+        "the first is flush with the start edge: {:?}",
+        texts[0].x0
+    );
+    assert!(
+        (texts[1].x1 - 300.0).abs() < 0.5,
+        "and the last is flush with the end edge: {:?}",
+        texts[1].x1
+    );
+}

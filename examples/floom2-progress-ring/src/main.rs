@@ -31,8 +31,8 @@ fn main() {
     let ring = host.mount(
         root,
         LayoutStyle {
-            width: Some(RING_SIZE),
-            height: Some(RING_SIZE),
+            width: Some(Length::Px(RING_SIZE)),
+            height: Some(Length::Px(RING_SIZE)),
             ..LayoutStyle::default()
         },
         Canvas::new(paint_ring)

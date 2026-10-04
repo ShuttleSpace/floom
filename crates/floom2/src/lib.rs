@@ -420,7 +420,9 @@ pub mod prelude {
     pub use floom_app::{AppRunner, FrameStats, NodeId, RunStats, WidgetHost};
 
     // --- Runtime primitives (floom-core) ---------------------------------
-    pub use floom_core::{Align, Axis, Child, ChildKey, Event, LayoutRequest, Point, Rect, Size};
+    pub use floom_core::{
+        Align, Axis, Child, ChildKey, Event, LayoutRequest, Length, Point, Rect, Size,
+    };
 
     // --- Layout style + input value types --------------------------------
     pub use floom_layout::LayoutStyle;

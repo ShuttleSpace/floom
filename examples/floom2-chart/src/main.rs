@@ -68,8 +68,8 @@ fn main() {
                 top: Some(CANVAS_TOP),
                 ..AbsoluteInset::default()
             },
-            width: Some(CANVAS_W),
-            height: Some(CANVAS_H),
+            width: Some(Length::Px(CANVAS_W)),
+            height: Some(Length::Px(CANVAS_H)),
             ..LayoutStyle::default()
         },
         chart,

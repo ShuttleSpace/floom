@@ -26,12 +26,7 @@ use std::sync::{Arc, Mutex};
 
 use floom_accessibility::{SemanticsNode, SemanticsTree};
 use floom_animation::{AnimId, AnimKind, AnimSample, AnimationScheduler};
-use floom_core::{
-    Align, AnimationSpec, Axis, Child, ChildKey, CreateContext, ElementId, Event, EventContext,
-    Key, KeyEvent, KeyPhase, LayoutRequest, Modifiers, NamedKey, NativeGrant, NativeRequest,
-    NativeSnapshot, OverlayHandle, OverlayKind, OverlayRequest, PaintContext, Point, PointerPhase,
-    Position, Rect, ResourceId, SemanticsHint, SemanticsRole, Size, UpdateContext,
-};
+use floom_core::{Align, AnimationSpec, Axis, Child, ChildKey, CreateContext, ElementId, Event, EventContext, Key, KeyEvent, KeyPhase, Length, LayoutRequest, Modifiers, NamedKey, NativeGrant, NativeRequest, NativeSnapshot, OverlayHandle, OverlayKind, OverlayRequest, PaintContext, Point, PointerPhase, Position, Rect, ResourceId, SemanticsHint, SemanticsRole, Size, UpdateContext};
 use floom_focus::{FocusDirection, FocusManager, FocusScopeId};
 use floom_layout::{
     AlignItems as LAlign, FlexDirection, JustifyContent, LayoutEngine, LayoutNode, LayoutStyle,
@@ -594,6 +589,9 @@ fn align_to_justify(align: Align) -> JustifyContent {
         Align::Start => JustifyContent::Start,
         Align::Center => JustifyContent::Center,
         Align::End => JustifyContent::End,
+        // The layout layer has carried `SpaceBetween` from the start; only the
+        // engine-neutral vocabulary was missing it.
+        Align::SpaceBetween => JustifyContent::SpaceBetween,
     }
 }
 
@@ -603,6 +601,10 @@ fn align_to_align_items(align: Align) -> LAlign {
         Align::Start => LAlign::Start,
         Align::Center => LAlign::Center,
         Align::End => LAlign::End,
+        // Cross-axis "distribute between" does not exist in flexbox, and a caller
+        // who asked for it on the cross axis gets the start edge rather than a
+        // silently invented behaviour.
+        Align::SpaceBetween => LAlign::Start,
     }
 }
 
@@ -1044,8 +1046,8 @@ impl WidgetHost {
             if let Some(req) = self.nodes[index].widget.layout_request() {
                 style = apply_self_layout(style, Some(&req));
             }
-            style.width = Some(bounds.width() as f32);
-            style.height = Some(bounds.height() as f32);
+            style.width = Some(Length::Px(bounds.width() as f32));
+            style.height = Some(Length::Px(bounds.height() as f32));
             self.layout.set_style(self.nodes[index].layout_node, style);
             self.layout
                 .compute(self.nodes[index].layout_node, bounds.size());
@@ -2122,10 +2124,10 @@ impl WidgetHost {
             root_style = apply_self_layout(root_style, Some(&req));
         }
         if root_style.width.is_none() {
-            root_style.width = Some(self.size.width as f32);
+            root_style.width = Some(Length::Px(self.size.width as f32));
         }
         if root_style.height.is_none() {
-            root_style.height = Some(self.size.height as f32);
+            root_style.height = Some(Length::Px(self.size.height as f32));
         }
         self.layout.set_style(root_node, root_style);
         self.layout.compute(root_node, self.size);

@@ -15,7 +15,7 @@ use floom_animation::{AnimKind, Tween};
 use floom_app::WidgetHost;
 use floom_layout::LayoutStyle;
 use floom_scene::SceneNode;
-use floom_types::{CompositorProp, Point, Rect, Size, Transform};
+use floom_types::{CompositorProp, Point, Rect, Size, Transform, Length};
 use floom_widgets::Canvas;
 
 fn rect_canvas() -> Canvas {
@@ -33,8 +33,8 @@ fn host_with_canvas() -> (WidgetHost, floom_app::NodeId) {
     host.set_size(Size::new(200.0, 60.0));
     let root = host.mount_root(
         LayoutStyle {
-            width: Some(200.0),
-            height: Some(60.0),
+            width: Some(Length::Px(200.0)),
+            height: Some(Length::Px(60.0)),
             ..LayoutStyle::default()
         },
         Container::new(),
@@ -42,8 +42,8 @@ fn host_with_canvas() -> (WidgetHost, floom_app::NodeId) {
     let canvas = host.mount(
         root,
         LayoutStyle {
-            width: Some(40.0),
-            height: Some(30.0),
+            width: Some(Length::Px(40.0)),
+            height: Some(Length::Px(30.0)),
             ..LayoutStyle::default()
         },
         rect_canvas(),

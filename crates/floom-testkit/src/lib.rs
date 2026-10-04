@@ -49,7 +49,7 @@
 #![forbid(unsafe_code)]
 
 use floom_app::{AppRunner, FrameStats, NodeId, WidgetHost};
-use floom_core::{SemanticsRole, WidgetAny};
+use floom_core::{SemanticsRole, WidgetAny, Length};
 use floom_layout::LayoutStyle;
 use floom_platform::{FakePlatform, KeyCode, Platform, PlatformEvent, PointerButton, WindowConfig};
 use floom_renderer_software::SoftwarePresenter;
@@ -149,8 +149,8 @@ impl TestApp {
         let mut host = WidgetHost::new();
         let style = if pinned {
             LayoutStyle {
-                width: Some(size.width as f32),
-                height: Some(size.height as f32),
+                width: Some(Length::Px(size.width as f32)),
+                height: Some(Length::Px(size.height as f32)),
                 ..LayoutStyle::default()
             }
         } else {

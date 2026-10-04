@@ -3,7 +3,7 @@
 
 use std::collections::HashMap;
 
-use floom_core::{Align, Axis, Element, ElementKind, LayoutRequest, Position};
+use floom_core::{Align, Axis, Element, ElementKind, LayoutRequest, Position, Length};
 use floom_runtime_core::{ElementArena, ElementTree};
 use floom_style::{StyleMap, StyleProps, StyleSet, StyleState};
 use floom_types::ElementId;
@@ -393,8 +393,8 @@ fn set_style_prop(props: &mut StyleProps, prop: &Prop) {
 fn set_layout_prop(layout: &mut LayoutRequest, prop: &Prop) {
     use floom_ui_ir::PropValue;
     match (prop.name.as_str(), &prop.value) {
-        ("width", PropValue::Number(n)) => layout.width = Some(*n as f32),
-        ("height", PropValue::Number(n)) => layout.height = Some(*n as f32),
+        ("width", PropValue::Number(n)) => layout.width = Some(Length::Px(*n as f32)),
+        ("height", PropValue::Number(n)) => layout.height = Some(Length::Px(*n as f32)),
         ("grow", PropValue::Number(n)) => layout.flex_grow = Some(*n as f32),
         ("position", PropValue::Ident(word)) => {
             layout.position = Some(if word == "absolute" {

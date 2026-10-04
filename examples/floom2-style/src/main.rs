@@ -87,8 +87,8 @@ fn mount_card(card: Container) -> WidgetHost {
                 top: Some(CARD_TOP),
                 ..AbsoluteInset::default()
             },
-            width: Some(CARD_W),
-            height: Some(CARD_H),
+            width: Some(Length::Px(CARD_W)),
+            height: Some(Length::Px(CARD_H)),
             ..LayoutStyle::default()
         },
         card,
@@ -282,8 +282,8 @@ fn mount_button(transition: Option<Transition>) -> (WidgetHost, Rect) {
                 top: Some(20.0),
                 ..AbsoluteInset::default()
             },
-            width: Some(140.0),
-            height: Some(40.0),
+            width: Some(Length::Px(140.0)),
+            height: Some(Length::Px(40.0)),
             ..LayoutStyle::default()
         },
         button,
@@ -466,8 +466,8 @@ fn act_6_frost_reads_what_is_behind_it() {
                     top: Some(0.0),
                     ..AbsoluteInset::default()
                 },
-                width: Some(edge_x),
-                height: Some(SURFACE_H as f32),
+                width: Some(Length::Px(edge_x)),
+                height: Some(Length::Px(SURFACE_H as f32)),
                 ..LayoutStyle::default()
             },
             Container::new().background(color),
@@ -482,8 +482,8 @@ fn act_6_frost_reads_what_is_behind_it() {
                 top: Some(panel_top),
                 ..AbsoluteInset::default()
             },
-            width: Some(panel_w),
-            height: Some(panel_h),
+            width: Some(Length::Px(panel_w)),
+            height: Some(Length::Px(panel_h)),
             ..LayoutStyle::default()
         },
         Container::new().backdrop_blur(7.0),
@@ -533,8 +533,8 @@ fn act_6_frost_reads_what_is_behind_it() {
                     top: Some(0.0),
                     ..AbsoluteInset::default()
                 },
-                width: Some(edge_x),
-                height: Some(SURFACE_H as f32),
+                width: Some(Length::Px(edge_x)),
+                height: Some(Length::Px(SURFACE_H as f32)),
                 ..LayoutStyle::default()
             },
             Container::new().background(color),

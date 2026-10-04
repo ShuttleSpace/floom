@@ -93,8 +93,8 @@ fn box_style() -> LayoutStyle {
             top: Some(BOX_TOP),
             ..AbsoluteInset::default()
         },
-        width: Some(BOX_W),
-        height: Some(BOX_H),
+        width: Some(Length::Px(BOX_W)),
+        height: Some(Length::Px(BOX_H)),
         ..LayoutStyle::default()
     }
 }

@@ -15,17 +15,27 @@ Ported kits: `md-card`, `md-button`, `md-icon`, `md-expansion_panels`.
 Engine widgets: `Badge`, `Ripple`, `VectorIcon`, `Pressable`, `Accordion`,
 **`Surface`**.
 
-**The next task is a component again.** The capability work is done — a clickable
-subtree, a padding/border vocabulary, and a decorated box that can hold content
-all landed, and between them they unblock the 146 / 172 / 94 files listed below:
+**The next task is a component again, and the component is `md-footer`.** Reading
+the three surface components to batch them turned up two more measured gaps
+(`font_weight`, 73 sites; per-side borders, 27 sites) and one engine bug (the
+cross-axis stretch, below), so the order is:
 
-1. **Batch the surface components** — `footer`, `toolbar`, `item_group`,
-   `list_subheader`, `banner`. These are now genuinely uneventful: a `Surface`, a
-   `Text`, maybe a `Stack`.
-2. **`floom-elements` needs repairing, not just rewriting** (correction 6). Eight
+1. **`font_weight`** — 73 call sites, and the one that is not a widget field:
+   `floom-text`'s glyph cache is keyed on the layout options and the host's
+   `sync_text_measure` compares only text and size, so a weight added carelessly
+   draws bold text with regular glyphs. `md-toolbar`'s `FontWeight::Medium` title
+   is the component that needs it.
+2. **Per-side borders** — 27 call sites. `Container::border` traces all four
+   sides; `border_top` on a footer is a different shape, not a flag.
+3. **Then the batch**: `md-footer`, `md-toolbar`, `md-item_group`, and
+   `list_subheader`. `md-item_group` is the interesting one — it is the first
+   component that is surface *and* interactive *and* stateful at once, and its
+   selection changes a mounted row's fill and outline, which is exactly what
+   `Surface::set_background` / `set_border` exist for.
+4. **`floom-elements` needs repairing, not just rewriting** (correction 6). Eight
    material crates are broken by the ports already done; they are the *callers* of
    `MdIcon` and `Ripple`, so each is a small edit rather than a port.
-3. Then port one kit end to end, and the other two follow its shape.
+5. Then port one kit end to end, and the other two follow its shape.
 
 Verification commands that must stay green:
 
@@ -36,8 +46,12 @@ Verification commands that must stay green:
     # the engine widget crate
     cargo test --manifest-path crates/floom-widgets/Cargo.toml
 
-    # the layout crate (the padding / margin vocabulary lives here)
+    # the layout crate (the padding / margin / percentage vocabulary lives here)
     cargo test --manifest-path crates/floom-layout/Cargo.toml
+
+    # the host, including the padding and percentage suites that close the loop
+    # from a widget's request through to a painted box
+    cargo test --manifest-path crates/floom-app/Cargo.toml
 
     # the nested floem-ui workspace (a separate workspace)
     cd crates/ecosystem/floom-ui
@@ -137,14 +151,29 @@ call sites rather than component names:
 | `.on_event(listener::…, …)` on any view | **360** (146 files; 209 are `Click`) | nothing — `Button` is a label, not a wrapper | `Pressable` |
 | `Container::new(child).style(..)` | **165** | nothing — `Container` is a leaf | `Surface` |
 | `.padding*()` | **288** (172 files) | `Container::padding` stored, never read | `LayoutRequest::padding` / `margin` |
-| `.border()` / `.border_color()` | **119** / **145** (94 files) | nothing — no stroke primitive on a box | `Container::border` |
+| `.border()` / `.border_color()` | **119** / **145** (94 files) | nothing — no stroke primitive on a box | `Container::border` (**all four sides only**) |
+| `width_pct` / `height_pct` | **231** / **79** | nothing — `LayoutRequest` had no percentage | `Length::Pct` |
+| `justify_between()` | **38** | the layout layer had `SpaceBetween`; the vocabulary did not | `Align::SpaceBetween` |
 | a widget whose own layout moves after mount | every theme change | `mark_dirty` repainted yesterday's geometry | `UpdateContext::mark_layout_dirty` |
+| `font_weight(…)` | **73** | `Text` has size and colour, no weight | **still nothing** |
+| `border_top` / `border_bottom` / `border_left` / `border_right` | **7 / 14 / 3 / 3** | nothing | **still nothing** |
 | height transition on mount | `md-expand_transition` | nothing | still nothing (see below) |
 
-So the honest statement is: **Stage B needs no new component shapes, and did need
-five new capabilities — four of which are now in.** Every one of them was found by
+So the honest statement is: **Stage B needs no new component shapes, and has
+needed nine new capabilities — six of which are now in.** Every one was found by
 compiling a component, not by reading the tree, which is the argument for shaking
-out one component per shape before translating in bulk.
+out one component per shape before translating in bulk. The three still open, in
+the order their call counts justify:
+
+1. **`font_weight` — 73 sites.** `Text` has a size and a colour and no weight, so
+   a toolbar's `FontWeight::Medium` title has no spelling. This one is not just a
+   widget field: `floom-text`'s glyph cache is keyed on the layout options and the
+   host's `sync_text_measure` compares only text and size, so a weight added
+   carelessly would draw bold text with regular glyphs.
+2. **Per-side borders — 27 sites.** `Container::border` traces all four sides;
+   `border_top` on a footer or a divider is a different shape (a straight band,
+   no corners) and needs its own paint, not a flag on the existing one.
+3. **A height transition — see below.** Not cheap, and not a component problem.
 
 - **The real translation cost** is the v1 style closure
   (`.style(|s| s.padding(..).background(..).rounded(..))`) becoming 2.0's
@@ -371,6 +400,53 @@ argument in this document for the last rule:
 3. `Surface` — a filled, rounded, elevated box that holds its content and pads it.
    The test now asserts the inset is found on the surface **and** leaves as
    `padding`, which is the only assertion that would have failed for 1 and 2.
+
+### Percentage sizing, and a bug it ran into
+
+Reading the three surface components (`footer`, `toolbar`, `item_group`) to batch
+them turned up the largest remaining gap and one genuine engine bug.
+
+**`width_pct` / `height_pct` — 310 call sites, no spelling at all.** v1 had
+`width(..)` and `width_pct(..)` over one field; 2.0 had only the first, so every
+full-width row in the library — a footer, a toolbar, a banner — was inexpressible.
+`LayoutRequest.width`/`height` are now `Option<Length>` with
+`Length::{Px, Pct}`, which is a breaking change to a small, well-contained type:
+the compiler found all 30-odd sites, which is exactly why it was done as a type
+rather than as a second `width_pct: Option<f32>` field. Two parallel fields would
+have left "both set" representable, and a percentage beats a length or loses to it
+depending on which line you read.
+
+`Align::SpaceBetween` came in the same pass and is nearly free: the layout layer
+has carried `JustifyContent::SpaceBetween` since the beginning, so only the
+engine-neutral vocabulary was missing it. On the cross axis it lowers to `Start`,
+because flexbox has no cross-axis "distribute between" and inventing one would be
+worse than saying so.
+
+**The bug: a definite child width loses to the cross-axis stretch.** Writing the
+control for the percentage — "a fixed 120px width must not also come out 300" —
+failed, and it is not a `Length` problem: `width: Some(120.0)` lowered to the same
+`Dimension::length(120.0)` before this work. What is known:
+
+* `WidgetHost::reconcile` **does** write the width first. A temporary probe in the
+  reconciler printed `slot_w=Some(Px(120.0))` and `final_w=Some(Px(120.0))` for the
+  node whose box then painted at 300.
+* `floom-layout` does **not** reproduce it. A column with the default
+  `align_items: Stretch` and a child of `width: 120, height: auto` lays out at 120
+  in every combination probed, and so does one with both dimensions definite.
+
+So the width is lost between `set_style` and the painted box, in the host. It is
+recorded as `a_definite_child_width_is_stretched_by_the_default_cross_axis` in
+`floom-app/tests/surface_padding.rs` — a test that **passes** by asserting the
+current behaviour and whose doc comment says to delete it when the behaviour
+changes — because the honest response to a bug of unknown cause is to write down
+what is known rather than to route around it. Two consequences worth carrying:
+
+* A "full width" and a "fixed width" are indistinguishable through the host, both
+  coming out as the parent's width. The *value* distinction is pinned at the
+  layout layer instead (`a_fixed_length_and_a_percentage_diverge_as_the_parent_grows`).
+* The kits want a fixed-width row inside a full-width container more often than
+  one might hope — a chip, a badge, a button. Until this is understood, every one
+  of those will silently come out stretched.
 
 ## Stages
 
