@@ -50,7 +50,7 @@ Verification commands that must stay green:
     # the `Length` change broke two of these suites and nothing noticed for two
     # commits — see the correction below.
     cd crates/ecosystem/floom-ui
-    for c in md-card md-button md-icon md-expansion_panels md-toolbar md-footer; do
+    for c in md-card md-button md-icon md-expansion_panels md-toolbar md-footer md-item_group; do
         cargo test --manifest-path "crates/material/$c/Cargo.toml"
     done
 
