@@ -150,6 +150,74 @@ impl Rect {
     }
 }
 
+/// Which of a box's four edges something applies to.
+///
+/// The counterpart of [`Insets`]: padding is measured in from every edge, and a
+/// border is drawn *on* some of them. floem-ui asks for one edge at 27 sites
+/// (`border_top` 7, `border_bottom` 14, `border_left` 3, `border_right` 3) and 2.0
+/// had no way to say which, because [`crate::Stroke`] traces a whole path and the
+/// only shape a path could take was the full outline.
+///
+/// [`Default`] is [`Edges::ALL`], so a caller that has an edge set and does not
+/// care about it gets the whole outline — which is what "a border" has always
+/// meant here.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct Edges(u8);
+
+impl Edges {
+    /// No edge.
+    pub const NONE: Self = Self(0);
+    /// The top edge.
+    pub const TOP: Self = Self(1 << 0);
+    /// The right edge.
+    pub const RIGHT: Self = Self(1 << 1);
+    /// The bottom edge.
+    pub const BOTTOM: Self = Self(1 << 2);
+    /// The left edge.
+    pub const LEFT: Self = Self(1 << 3);
+    /// All four.
+    pub const ALL: Self = Self(0b1111);
+
+    /// Whether every edge in `other` is in `self`.
+    ///
+    /// Set containment rather than equality, because that is how a caller combines
+    /// edges: `Edges::TOP | Edges::BOTTOM` *contains* `TOP`.
+    pub const fn contains(self, other: Self) -> bool {
+        self.0 & other.0 == other.0
+    }
+
+    pub const fn is_empty(self) -> bool {
+        self.0 == 0
+    }
+
+    /// Whether this is every edge — the one case that draws a rounded outline
+    /// rather than straight bands, and so the one case where the corner radius
+    /// still matters.
+    pub const fn is_all(self) -> bool {
+        self.0 == Self::ALL.0
+    }
+}
+
+impl Default for Edges {
+    fn default() -> Self {
+        Self::ALL
+    }
+}
+
+impl std::ops::BitOr for Edges {
+    type Output = Self;
+
+    fn bitor(self, rhs: Self) -> Self {
+        Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitOrAssign for Edges {
+    fn bitor_assign(&mut self, rhs: Self) {
+        self.0 |= rhs.0;
+    }
+}
+
 /// Edge insets (top, right, bottom, left).
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub struct Insets {

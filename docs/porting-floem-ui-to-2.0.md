@@ -17,23 +17,20 @@ Engine widgets: `Badge`, `Ripple`, `VectorIcon`, `Pressable`, `Accordion`,
 Text: **`FontWeight`**, end to end — `floom_types` enum, `TextLayoutOptions`,
 both glyph caches, the measure comparison, the paint op.
 
-**The next task is a component again, and the component is `md-toolbar`.** The
-last capability (`font_weight`, 73 call sites) is in, and reading it turned up a
-font-matching correction and a text-wrapping bug worth a whole section each:
+**The next task is a component again, and the component is `md-toolbar`.** Every
+capability gap the plan listed is now closed — `font_weight` (73 sites) and
+per-side borders (27 sites) were the last two, and both turned up corrections
+worth a section each:
 
-1. **Per-side borders** — 27 call sites. `Container::border` traces all four
-   sides; `border_top` on a footer is a different shape, not a flag. This is the
-   last capability gap, and `md-toolbar` is the component that needs it (the
-   divider under the bar) alongside `md-footer`.
-2. **Then the batch**: `md-toolbar`, `md-footer`, `md-item_group`, and
+1. **Then the batch**: `md-toolbar`, `md-footer`, `md-item_group`, and
    `list_subheader`. `md-item_group` is the interesting one — it is the first
    component that is surface *and* interactive *and* stateful at once, and its
    selection changes a mounted row's fill and outline, which is exactly what
-   `Surface::set_background` / `set_border` exist for.
-3. **`floom-elements` needs repairing, not just rewriting** (correction 6). Eight
+   `Surface::set_background` / `set_border_edges` exist for.
+2. **`floom-elements` needs repairing, not just rewriting** (correction 6). Eight
    material crates are broken by the ports already done; they are the *callers* of
    `MdIcon` and `Ripple`, so each is a small edit rather than a port.
-4. Then port one kit end to end, and the other two follow its shape.
+3. Then port one kit end to end, and the other two follow its shape.
 
 Verification commands that must stay green:
 
@@ -157,19 +154,18 @@ call sites rather than component names:
 | `justify_between()` | **38** | the layout layer had `SpaceBetween`; the vocabulary did not | `Align::SpaceBetween` |
 | a widget whose own layout moves after mount | every theme change | `mark_dirty` repainted yesterday's geometry | `UpdateContext::mark_layout_dirty` |
 | `font_weight(…)` | **73** | `Text` has size and colour, no weight | `FontWeight` end to end |
-| `border_top` / `border_bottom` / `border_left` / `border_right` | **7 / 14 / 3 / 3** | nothing | **still nothing** |
+| `border_top` / `border_bottom` / `border_left` / `border_right` | **7 / 14 / 3 / 3** | nothing | `Edges` + `border_edges(..)` |
 | height transition on mount | `md-expand_transition` | nothing | still nothing (see below) |
 
 So the honest statement is: **Stage B needs no new component shapes, and has
-needed nine new capabilities — seven of which are now in.** Every one was found by
+needed nine new capabilities — eight of which are now in.** Every one was found by
 compiling a component, not by reading the tree, which is the argument for shaking
 out one component per shape before translating in bulk. The two still open, in
 the order their call counts justify:
 
-1. **Per-side borders — 27 sites.** `Container::border` traces all four sides;
-   `border_top` on a footer or a divider is a different shape (a straight band,
-   no corners) and needs its own paint, not a flag on the existing one.
-2. **A height transition — see below.** Not cheap, and not a component problem.
+1. **A height transition — see below.** Not cheap, and not a component problem.
+   It is the last item on this list, and the only one whose cost is design work
+   rather than plumbing.
 
 - **The real translation cost** is the v1 style closure
   (`.style(|s| s.padding(..).background(..).rounded(..))`) becoming 2.0's
@@ -519,6 +515,46 @@ is the wrapped width (fine), but for one measured against a wide available space
 it is the string's natural width, and feeding that back as the paint wrap width
 stops the label wrapping at all. `a_label_that_needs_two_lines_still_wraps` is the
 test for that half.
+
+### Per-side borders, and a shape question worth answering out loud
+
+The last capability gap: 27 call sites (`border_bottom` 14, `border_top` 7,
+`border_left` 3, `border_right` 3) that `Container::border` could not express,
+because a `Stroke` traces a whole path and the only path a box had was the full
+outline.
+
+`floom_types::Edges` is a four-bit set whose `Default` is `ALL`, so every existing
+`border(..)` call, test and kit crate means exactly what it meant, and
+`border_edges(w, colour, Edges::TOP)` is additive. `Border` became a spec struct
+(width, colour, edges) because `Surface::set_border` was comparing the lossy
+`(width, colour)` pair, and a change of *edges alone* compared equal — which is the
+change a selected row in `md-item_group` makes. `border_style()` is kept and
+documented as lossy; `border_spec()` is the honest one.
+
+**The interesting decision is what one edge looks like.** A band, or a partial
+rounded outline? The paint does bands — filled rects — and the reasons are worth
+stating rather than leaving in the diff:
+
+* *Why not curved.* CSS would curve it. A footer's rule and a toolbar's divider
+  are straight lines, and curving them raises a question this API has no opinion
+  about: what happens where two drawn edges meet. Choosing straight means the
+  answer is visible in the drawing rather than hidden in a corner rule.
+* *Why a fill and not a stroke.* A stroke straddles its path, so half of a 1px
+  band would land outside the box and be clipped away by any clipping ancestor. The
+  existing whole-outline border already has to inset by half its width for the same
+  reason; a band starts at the edge instead, and is exactly `width` thick.
+* *`Edges::ALL` keeps the rounded stroke*, so `border(1.0, c)` and
+  `border_edges(1.0, c, Edges::ALL)` are the same drawing — asserted, because two
+  spellings that merely look alike are how a footer silently loses its corners.
+
+And the fill keeps its own radius either way: only the outline ignores `radius`.
+Dropping it from both would turn a rounded box square the moment a rule was added,
+which is `a_straight_band_does_not_flatten_the_fill`.
+
+Two mutations, checked rather than assumed: routing single edges through the
+rounded stroke turns 3 tests red, and losing the second of two edges (`else if`
+instead of a second `if`) turns exactly `each_edge_band_sits_on_that_edge` and
+`two_edges_draw_two_bands` red.
 
 ## Stages
 

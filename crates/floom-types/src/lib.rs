@@ -24,7 +24,7 @@ pub use event::{
     Event, ImeUpdate, Key, KeyEvent, KeyPhase, Modifiers, NamedKey, PointerButton, PointerEvent,
     PointerKind, PointerPhase, ScrollEvent,
 };
-pub use geometry::{Constraints, Insets, Length, Point, Rect, Size, Transform};
+pub use geometry::{Constraints, Edges, Insets, Length, Point, Rect, Size, Transform};
 pub use ids::{ElementId, NativeViewId, PlatformId, ResourceId, SceneNodeId, SurfaceId, WindowId};
 pub use motion::{
     AnimationSpec, CompositorChannel, CompositorProp, Easing, PresenceChannel, PresenceTransition,

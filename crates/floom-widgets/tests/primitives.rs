@@ -1,6 +1,6 @@
 //! Scene and semantics snapshots for the Tier-0 primitives.
 
-use floom_core::{Brush, Color, FontWeight, Point, Rect, ResourceId, Shadow, Size, Widget};
+use floom_core::{Brush, Color, Edges, FontWeight, Point, Rect, ResourceId, Shadow, Size, Widget};
 use floom_scene::SceneNode;
 use floom_widgets::primitives::{Axis, Container, Divider, Icon, Image, ImageFit, Spacer, Text};
 use floom_widgets::testkit::{
@@ -637,4 +637,178 @@ fn setting_the_weight_after_mount_reaches_the_paint() {
         "the paint should follow the setter"
     );
     assert_eq!(widget.font_weight(), FontWeight::Bold);
+}
+
+// --- per-side borders -----------------------------------------------------
+
+/// One edge is one band, at that edge, exactly as thick as asked. This is the
+/// shape 27 floem-ui call sites want (`border_top` 7, `border_bottom` 14,
+/// `border_left` 3, `border_right` 3) and which the four-sided stroke could not
+/// express at all.
+#[test]
+fn a_top_border_draws_one_band_at_the_top() {
+    let widget = Container::new().border_edges(3.0, Color::BLACK, Edges::TOP);
+    let (id, _create) = allocate(&widget);
+    assert_eq!(widget.border_spec().map(|b| b.edges()), Some(Edges::TOP));
+
+    let mut recorder = SceneRecorder::new(BOX);
+    widget.paint(&mut recorder, id);
+    recorder.finish();
+
+    assert_eq!(
+        recorder.scene_node_kinds(),
+        vec!["Rect"],
+        "one band is one rect, not a traced path"
+    );
+    let line = recorder.ops()[0].snapshot_line();
+    assert!(
+        line.contains("(0.0, 0.0, 100.0, 3.0)"),
+        "the band spans the full width and sits at the very top: {line}"
+    );
+}
+
+/// The band's position per edge, all four, so a `border_bottom` divider is not
+/// silently drawn at the top. A single assertion would only prove `TOP`.
+#[test]
+fn each_edge_band_sits_on_that_edge() {
+    let band = |edges: Edges| {
+        let widget = Container::new().border_edges(2.0, Color::BLACK, edges);
+        let (id, _create) = allocate(&widget);
+        let mut recorder = SceneRecorder::new(BOX);
+        widget.paint(&mut recorder, id);
+        recorder.finish();
+        recorder.ops()[0].snapshot_line()
+    };
+    // BOX is 0,0..100,20.
+    assert!(band(Edges::TOP).contains("(0.0, 0.0, 100.0, 2.0)"), "top");
+    assert!(
+        band(Edges::BOTTOM).contains("(0.0, 18.0, 100.0, 20.0)"),
+        "bottom, flush with the far edge: {}",
+        band(Edges::BOTTOM)
+    );
+    assert!(band(Edges::LEFT).contains("(0.0, 0.0, 2.0, 20.0)"), "left");
+    assert!(
+        band(Edges::RIGHT).contains("(98.0, 0.0, 100.0, 20.0)"),
+        "right: {}",
+        band(Edges::RIGHT)
+    );
+}
+
+/// Two edges draw two bands. The mutation this catches is an `else if` chain,
+/// where the second edge silently loses to the first.
+#[test]
+fn two_edges_draw_two_bands() {
+    let widget = Container::new().border_edges(1.0, Color::BLACK, Edges::TOP | Edges::BOTTOM);
+    let (id, _create) = allocate(&widget);
+
+    let mut recorder = SceneRecorder::new(BOX);
+    widget.paint(&mut recorder, id);
+    recorder.finish();
+
+    assert_eq!(
+        recorder.scene_node_kinds(),
+        vec!["Rect", "Rect"],
+        "two edges, two bands"
+    );
+}
+
+/// `border(..)` and `border_edges(.., Edges::ALL)` must be the same drawing, not
+/// two spellings that happen to look alike: the first is the rounded stroke, the
+/// second would be four straight bands, and a footer that switched to the "new"
+/// call would visibly lose its rounded corners.
+#[test]
+fn all_edges_still_draw_the_rounded_stroke() {
+    let all = Container::new().radius(8.0).border_edges(1.0, Color::BLACK, Edges::ALL);
+    let plain = Container::new().radius(8.0).border(1.0, Color::BLACK);
+    let kinds = |w: &Container| {
+        let (id, _c) = allocate(w);
+        let mut recorder = SceneRecorder::new(BOX);
+        w.paint(&mut recorder, id);
+        recorder.finish();
+        recorder.scene_node_kinds()
+    };
+    assert_eq!(kinds(&all), vec!["Path"], "a whole outline is one traced path");
+    assert_eq!(kinds(&all), kinds(&plain));
+    assert_eq!(all.border_spec(), plain.border_spec());
+}
+
+/// A band is a fill, not a stroke, and that is the reason it starts at the edge:
+/// a stroke straddles its path, so half of a 1px band would land outside the box
+/// and be clipped away by any clipping ancestor.
+#[test]
+fn a_band_is_filled_so_it_lands_entirely_inside() {
+    let widget = Container::new().border_edges(1.0, Color::BLACK, Edges::TOP);
+    let (id, _create) = allocate(&widget);
+    let mut recorder = SceneRecorder::new(BOX);
+    widget.paint(&mut recorder, id);
+    recorder.finish();
+
+    let op = &recorder.ops()[0];
+    let floom_widgets::testkit::PaintOp::Rect { bounds, .. } = op else {
+        panic!("expected a filled rect, got {op:?}");
+    };
+    assert_eq!(bounds.y0, BOX.y0, "flush with the top edge");
+    assert_eq!(bounds.height(), 1.0, "and exactly one pixel thick");
+}
+
+/// The fill keeps its radius even when the outline is a straight band: only the
+/// *outline* ignores `radius`, and a widget that dropped the radius from both
+/// would be a rounded box turning into a square one the moment a footer rule was
+/// added.
+#[test]
+fn a_straight_band_does_not_flatten_the_fill() {
+    let widget = Container::new()
+        .radius(8.0)
+        .background(Color::WHITE)
+        .border_edges(1.0, Color::BLACK, Edges::TOP);
+    let (id, _create) = allocate(&widget);
+    let mut recorder = SceneRecorder::new(BOX);
+    widget.paint(&mut recorder, id);
+    recorder.finish();
+
+    // The scene node for a rounded fill is still a `Rect` carrying a radius, so
+    // the distinction is in the ops: `RoundedRect` for the fill, `Rect` for the
+    // band.
+    let ops: Vec<String> = recorder.ops().iter().map(|op| op.snapshot_line()).collect();
+    assert!(
+        ops[0].contains("RoundedRect") && ops[0].contains("r=8.0"),
+        "the fill keeps its radius: {}",
+        ops[0]
+    );
+    assert!(
+        ops[1].starts_with("Rect "),
+        "and only the band is square: {}",
+        ops[1]
+    );
+}
+
+/// No edges is no border, exactly like a zero width. `Edges::NONE` is
+/// representable, so it has to mean something rather than paint four bands of
+/// width zero.
+#[test]
+fn no_edges_draws_nothing() {
+    let widget = Container::new().border_edges(2.0, Color::BLACK, Edges::NONE);
+    assert_eq!(widget.border_spec(), None);
+    let (id, _create) = allocate(&widget);
+    let mut recorder = SceneRecorder::new(BOX);
+    widget.paint(&mut recorder, id);
+    recorder.finish();
+    assert_eq!(recorder.scene_node_kinds(), Vec::<&str>::new());
+}
+
+/// Changing *only* the edges is a change. `Surface::set_border_edges` used to
+/// compare the lossy `(width, colour)` pair, which reports two different edge sets
+/// as equal — so a selected row in `md-item_group` would swap its fill and keep
+/// its old outline. This is the test for that comparison.
+#[test]
+fn changing_the_edges_alone_counts_as_a_change() {
+    let mut widget = Container::new().border(1.0, Color::BLACK);
+    let before = widget.border_spec();
+    widget.set_border_edges(1.0, Color::BLACK, Edges::BOTTOM);
+    assert_ne!(
+        before,
+        widget.border_spec(),
+        "same width and colour, different edges — still a change"
+    );
+    assert_eq!(widget.border_spec().map(|b| b.edges()), Some(Edges::BOTTOM));
 }

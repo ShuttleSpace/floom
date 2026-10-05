@@ -46,7 +46,7 @@
 //! kit's job. See `docs/porting-floem-ui-to-2.0.md`.
 
 use floom_core::{
-    Brush, Child, ChildKey, CreateContext, ElementId, Filter, LayoutRequest, PaintContext,
+    Brush, Child, ChildKey, CreateContext, Edges, ElementId, Filter, LayoutRequest, PaintContext,
     SemanticsContext, UpdateContext, Widget, WidgetAny,
 };
 use floom_types::{Color, Insets, Shadow};
@@ -110,10 +110,7 @@ impl Surface {
     }
 
     /// Appends a child auto-keyed by position, with default layout.
-    pub fn push(
-        mut self,
-        build: impl Fn() -> Box<dyn WidgetAny> + Send + Sync + 'static,
-    ) -> Self {
+    pub fn push(mut self, build: impl Fn() -> Box<dyn WidgetAny> + Send + Sync + 'static) -> Self {
         let key = ChildKey::index(self.children.len());
         self.children
             .push(Child::new(key, LayoutRequest::new(), build));
@@ -160,6 +157,15 @@ impl Surface {
     /// An outline just inside the box's edge.
     pub fn border(mut self, width: f32, color: Color) -> Self {
         self.decoration = self.decoration.border(width, color);
+        self.revision.bump();
+        self
+    }
+
+    /// An outline on only some edges — a footer with a rule along its top, a
+    /// toolbar with a divider under it. Drawn as straight bands; see
+    /// [`crate::primitives::Container::border_edges`].
+    pub fn border_edges(mut self, width: f32, color: Color, edges: Edges) -> Self {
+        self.decoration = self.decoration.border_edges(width, color, edges);
         self.revision.bump();
         self
     }
@@ -241,9 +247,19 @@ impl Surface {
 
     /// The in-place form of [`Self::border`].
     pub fn set_border(&mut self, width: f32, color: Color) {
-        let next = if width > 0.0 { Some((width, color)) } else { None };
-        if self.decoration.border_style() != next {
-            self.decoration.set_border(width, color);
+        self.set_border_edges(width, color, Edges::ALL);
+    }
+
+    /// The in-place form of [`Self::border_edges`].
+    ///
+    /// The comparison is on the whole spec rather than the `(width, colour)` pair,
+    /// because a selected row in `md-item_group` changing *which* edges are
+    /// outlined is a change, and a pair comparison would call it unchanged.
+    pub fn set_border_edges(&mut self, width: f32, color: Color, edges: Edges) {
+        let next = self.decoration.border_spec();
+        let wanted = crate::primitives::Border::new(width, color, edges);
+        if next != wanted {
+            self.decoration.set_border_edges(width, color, edges);
             self.revision.bump();
         }
     }

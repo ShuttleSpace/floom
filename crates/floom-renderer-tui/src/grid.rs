@@ -321,7 +321,7 @@ fn in_clips(x: f64, y: f64, clips: &[Rect]) -> bool {
 mod tests {
     use super::*;
     use floom_scene::{Resource, SceneNode};
-    use floom_text::{TextAlign, TextLayoutOptions, TextShaper};
+    use floom_text::{TextAlign, TextLayoutOptions, TextShaper, FontWeight};
     use floom_types::Point;
 
     fn default_fill_cell() -> Cell {
@@ -416,6 +416,7 @@ mod tests {
             max_width: f64::INFINITY,
             font_size: 10.0,
             align: TextAlign::Start,
+            weight: FontWeight::Normal,
         };
         let laid = shaper.shape("AB", &options);
         assert_eq!(

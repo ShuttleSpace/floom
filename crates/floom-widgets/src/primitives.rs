@@ -11,8 +11,8 @@
 
 use floom_accessibility::{SemanticsRole, SemanticsState};
 use floom_core::{
-    Brush, Color, CreateContext, ElementId, Filter, LayoutRequest, PaintContext, Point, Rect,
-    ResourceId, SemanticsContext, Shadow, Size, UpdateContext, Widget,
+    Brush, Color, CreateContext, Edges, ElementId, Filter, LayoutRequest, PaintContext, Point,
+    Rect, ResourceId, SemanticsContext, Shadow, Size, UpdateContext, Widget,
 };
 use floom_types::{FontWeight, Path, Stroke};
 
@@ -138,6 +138,42 @@ pub(crate) fn emit_semantics(hint: SemanticsHint, cx: &mut dyn SemanticsContext)
 /// The path is traced on the box edge and pulled in by half the width, because a
 /// stroke band straddles its path and a border drawn half outside the bounds
 /// would be clipped away by any ancestor that clips.
+/// A box outline: how thick, in what colour, and on which edges.
+///
+/// The edge set is what makes "a footer with a rule along its top" expressible.
+/// It defaults to all four so that everything written before it — `border(..)`,
+/// every test, every kit crate — means exactly what it meant.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Border {
+    width: f32,
+    color: Color,
+    edges: Edges,
+}
+
+impl Border {
+    /// `width <= 0.0` is "no border", so a token that resolves to zero leaves no
+    /// hairline behind and callers need not check the sign themselves.
+    pub fn new(width: f32, color: Color, edges: Edges) -> Option<Self> {
+        (width > 0.0 && !edges.is_empty()).then_some(Self {
+            width,
+            color,
+            edges,
+        })
+    }
+
+    pub fn width(self) -> f32 {
+        self.width
+    }
+
+    pub fn color(self) -> Color {
+        self.color
+    }
+
+    pub fn edges(self) -> Edges {
+        self.edges
+    }
+}
+
 pub(crate) fn stroke_rounded_outline(
     cx: &mut dyn PaintContext,
     bounds: Rect,
@@ -572,7 +608,7 @@ pub struct Container {
     /// from `background` because it is a stroke and not a fill — 2.0's paint
     /// contract grew `stroke_path` with the vector work, and a design system's
     /// hairline divider is the reason it is reachable from a box at all.
-    border: Option<(f32, Color)>,
+    border: Option<Border>,
     /// The drop shadow this card casts, drawn behind its own fill.
     shadow: Option<Shadow>,
     /// The filter this card's **content** — its own fill and every descendant
@@ -628,17 +664,36 @@ impl Container {
     /// `width <= 0.0` is "no border", so a token that resolves to zero does not
     /// leave a hairline behind.
     pub fn border(mut self, width: f32, color: Color) -> Self {
-        self.border = if width > 0.0 {
-            Some((width, color))
-        } else {
-            None
-        };
+        self.border = Border::new(width, color, Edges::ALL);
+        self.revision.bump();
+        self
+    }
+
+    /// The same outline, drawn on only some edges.
+    ///
+    /// A single edge is a **straight band**, not a partial rounded outline: a
+    /// footer's rule and a toolbar's divider are straight lines, and curving them
+    /// would raise a question this API has no opinion about — what the corners do
+    /// where two drawn edges meet. `radius` still applies to the *fill*; only the
+    /// outline ignores it. `Edges::ALL` keeps the rounded stroke.
+    pub fn border_edges(mut self, width: f32, color: Color, edges: Edges) -> Self {
+        self.border = Border::new(width, color, edges);
         self.revision.bump();
         self
     }
 
     /// The border this box draws, as `(width, colour)`, if any.
+    ///
+    /// Deliberately lossy: it cannot report *which* edges. Kept because it is
+    /// what the pre-edges callers ask, and because a caller comparing two borders
+    /// that differ only in edges would get a false "unchanged" from it — which is
+    /// why [`Self::border_spec`] exists.
     pub fn border_style(&self) -> Option<(f32, Color)> {
+        self.border.map(|b| (b.width, b.color))
+    }
+
+    /// The full border, edges included.
+    pub fn border_spec(&self) -> Option<Border> {
         self.border
     }
 
@@ -703,11 +758,13 @@ impl Container {
     /// The in-place form of [`Self::border`]. Idempotent, and a non-positive
     /// `width` clears the border exactly as the builder does.
     pub fn set_border(&mut self, width: f32, color: Color) {
-        let next = if width > 0.0 {
-            Some((width, color))
-        } else {
-            None
-        };
+        self.set_border_edges(width, color, Edges::ALL);
+    }
+
+    /// The in-place form of [`Self::border_edges`].
+    pub fn set_border_edges(&mut self, width: f32, color: Color, edges: Edges) {
+        let next = Border::new(width, color, edges);
+        // The whole spec, not the lossy pair: a change of edges alone is a change.
         if self.border != next {
             self.border = next;
             self.revision.bump();
@@ -834,8 +891,54 @@ impl Widget for Container {
                 None => cx.fill_rect_brush(bounds, fill),
             }
         }
-        if let Some((width, color)) = self.border {
-            stroke_rounded_outline(cx, bounds, f64::from(self.radius), f64::from(width), color);
+        if let Some(border) = self.border {
+            if border.edges().is_all() {
+                stroke_rounded_outline(
+                    cx,
+                    bounds,
+                    f64::from(self.radius),
+                    f64::from(border.width()),
+                    border.color(),
+                );
+            } else {
+                // Filled bands rather than strokes: a stroke straddles its path, so
+                // half of it would land outside the box, and a 1px rule would end
+                // up half a pixel light on both sides. A band is exactly `width`
+                // tall and starts at the edge.
+                let w = f64::from(border.width());
+                let color = border.color();
+                let edges = border.edges();
+                if edges.contains(Edges::TOP) {
+                    cx.fill_rect(
+                        Rect::from_origin_size(bounds.origin(), Size::new(bounds.width(), w)),
+                        color,
+                    );
+                }
+                if edges.contains(Edges::BOTTOM) {
+                    cx.fill_rect(
+                        Rect::from_origin_size(
+                            Point::new(bounds.x0, bounds.y1 - w),
+                            Size::new(bounds.width(), w),
+                        ),
+                        color,
+                    );
+                }
+                if edges.contains(Edges::LEFT) {
+                    cx.fill_rect(
+                        Rect::from_origin_size(bounds.origin(), Size::new(w, bounds.height())),
+                        color,
+                    );
+                }
+                if edges.contains(Edges::RIGHT) {
+                    cx.fill_rect(
+                        Rect::from_origin_size(
+                            Point::new(bounds.x1 - w, bounds.y0),
+                            Size::new(w, bounds.height()),
+                        ),
+                        color,
+                    );
+                }
+            }
         }
     }
 
