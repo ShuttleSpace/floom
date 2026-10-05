@@ -39,7 +39,8 @@ pub use badge::Badge;
 pub use canvas::{Canvas, ShaderBox, Spinner};
 pub use compose::{
     Accordion, AccordionIndicator, AccordionStyle, AnimatedContent, BottomSheet, Conditional,
-    Crossfade, Dialog, Grid, List, Opacity, Overlay, Popup, SharedTransitionLayout, Stack, Tabs,
+    Crossfade, Dialog, Grid, List, Opacity, Overlay, Popup, SelectGroup, SelectGroupStyle,
+    SelectionMode, SharedTransitionLayout, Stack, Tabs,
 };
 pub use controls::{
     Button, Checkbox, InteractionState, Pressable, Progress, Radio, Select, Slider, Switch,

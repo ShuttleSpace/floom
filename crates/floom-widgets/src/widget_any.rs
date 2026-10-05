@@ -166,6 +166,7 @@ impl_widget_any!(
     crate::compose::Dialog,
     crate::compose::Tabs,
     crate::compose::Accordion,
+    crate::compose::SelectGroup,
     crate::compose::Popup,
     crate::compose::BottomSheet,
     crate::navigation::NavigationBar,
@@ -174,9 +175,13 @@ impl_widget_any!(
     crate::native::NativeSurface,
 );
 
-// The two internals of `Accordion`: decorative composites with no semantics
-// method of their own, so they need the other macro.
+// The internals of `Accordion` and `SelectGroup`: decorative composites with no
+// semantics method of their own, so they need the other macro. A `SelectGroup`'s
+// row publishes nothing because the *`Pressable` inside it* publishes the radio or
+// checkbox role and the selected state — a row that also claimed a role would
+// double up in the semantics tree.
 impl_widget_any_decorative!(
     crate::compose::AccordionPanelLeaf,
     crate::compose::AccordionIndicatorSlot,
+    crate::compose::SelectGroupRow,
 );

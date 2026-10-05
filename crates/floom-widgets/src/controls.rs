@@ -576,6 +576,10 @@ pub struct Pressable {
     /// What [`Self::expanded_reader`] last reported, so a change is a change
     /// rather than a fresh read every frame.
     reported: Option<bool>,
+    /// The same seam for `SELECTED`, kept separate because a widget can be both an
+    /// expanded disclosure *and* a selected row, and one flag cannot be both.
+    selected_reader: Option<Arc<dyn Fn() -> bool + Send + Sync>>,
+    reported_selected: Option<bool>,
     revision: Revision,
 }
 
@@ -600,7 +604,9 @@ impl Pressable {
             state: InteractionState::default(),
             expanded: None,
             expanded_reader: None,
+            selected_reader: None,
             reported: None,
+            reported_selected: None,
             revision: Revision::default(),
         }
     }
@@ -650,6 +656,25 @@ impl Pressable {
         self
     }
 
+    /// Reads the selected state on every update, reported as
+    /// [`SemanticsState::SELECTED`].
+    ///
+    /// The same seam as [`Self::expanded_from`], and for the same reason: a row in
+    /// a selectable group is not rebuilt when the selection moves, so a value
+    /// captured at build time goes stale the instant another row is chosen — and
+    /// the stale value is the *opposite* of what the user sees. `SELECTED` is a
+    /// flag rather than a pair, so an unselected row reports nothing at all.
+    pub fn selected_from(mut self, read: impl Fn() -> bool + Send + Sync + 'static) -> Self {
+        self.selected_reader = Some(Arc::new(read));
+        self.revision.bump();
+        self
+    }
+
+    /// Whether this surface is currently selected, if anything says so.
+    pub fn is_selected(&self) -> Option<bool> {
+        self.selected_reader.as_ref().map(|read| read())
+    }
+
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.state.disabled = disabled;
         self.revision.bump();
@@ -697,6 +722,12 @@ impl Pressable {
                 SemanticsState::COLLAPSED
             });
         }
+        // A flag, not a pair: an unselected row says nothing, which is what
+        // `SELECTED` means. A row that never declared a selection also says
+        // nothing, so a plain button is unaffected.
+        if self.is_selected() == Some(true) {
+            hint.state = hint.state.union(SemanticsState::SELECTED);
+        }
         hint
     }
 }
@@ -714,6 +745,13 @@ impl Widget for Pressable {
         if let Some(now) = read_now {
             if self.reported != Some(now) {
                 self.reported = Some(now);
+                self.revision.bump();
+            }
+        }
+        let selected_now = self.selected_reader.as_ref().map(|read| read());
+        if let Some(now) = selected_now {
+            if self.reported_selected != Some(now) {
+                self.reported_selected = Some(now);
                 self.revision.bump();
             }
         }

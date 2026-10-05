@@ -12,25 +12,26 @@ so the widget API gets shaken out before anything is translated in bulk:
 | stateful | `md-expansion_panels` | ported, 12 tests |
 | self-composing | `md-toolbar` | ported, 13 tests |
 | separator | `md-footer` | ported, 14 tests |
+| selectable | `md-item_group` | ported, 11 tests (state machine promoted) |
 
 Ported kits: `md-card`, `md-button`, `md-icon`, `md-expansion_panels`,
-`md-toolbar`, `md-footer`.
+`md-toolbar`, `md-footer`, `md-item_group`.
 Engine widgets: `Badge`, `Ripple`, `VectorIcon`, `Pressable`, `Accordion`,
-**`Surface`**.
+**`Surface`**, **`SelectGroup`**.
 Text: **`FontWeight`**, end to end — `floom_types` enum, `TextLayoutOptions`,
 both glyph caches, the measure comparison, the paint op.
 
-**The next task is `md-item_group`,** the last of the batch and the only one that
-is surface *and* interactive *and* stateful at once:
+**The next task is `floom-elements`.** The surface batch is done — `md-toolbar`,
+`md-footer` and `md-item_group` are ported, and the last of them turned out to be a
+70-line wrapper because its state machine belongs in the engine.
 
-1. **The rest of the batch**: `md-item_group` and
-   `list_subheader`. `md-item_group` is the interesting one — it is the first
-   component that is surface *and* interactive *and* stateful at once, and its
-   selection changes a mounted row's fill and outline, which is exactly what
-   `Surface::set_background` / `set_border_edges` exist for.
-2. **`floom-elements` needs repairing, not just rewriting** (correction 6). Eight
-   material crates are broken by the ports already done; they are the *callers* of
-   `MdIcon` and `Ripple`, so each is a small edit rather than a port.
+1. **Repair the eight broken material crates** (correction 6). They are *callers*
+   of `MdIcon` and `Ripple`, so each is a small edit rather than a port, and they
+   have been broken since the first ports landed.
+2. **Then rewrite `floom-elements` itself**, whose `multi` dispatch is still v1
+   `IntoView`. That is a port rather than a repair, and it comes *after* the eight
+   repairs above, because a crate that does not compile cannot tell you whether a
+   rewrite is enough.
 3. Then port one kit end to end, and the other two follow its shape.
 
 Verification commands that must stay green:
@@ -667,6 +668,70 @@ pattern is worth naming: *the box owns the fill, the child owns the ink.*
 `Edges` is now re-exported from `floom-widgets`' root beside `Align` and `Axis`,
 for the same reason those two are: a kit author writing `border_edges` should not
 have to reach past this crate for the type.
+
+### What `md-item_group` turned up — the promotion that paid for itself
+
+209 lines of v1 became a 70-line wrapper, and the measurement that justified it is
+the whole argument for promoting a component rather than porting it three times:
+
+| | lines | substantive lines shared with the other two |
+|---|---|---|
+| `md-item_group` | 209 | **123 of 149** |
+| `cupertino-item_group` | 208 | |
+| `fluent-item_group` | 208 | |
+
+Everything the three share — the shared selection state, the
+single/multiple/mandatory click rules, the row's two appearances, the click target,
+and the padding that is `pad` across and `pad / 2` down — is now
+[`floom_widgets::SelectGroup`], promoted for the same reason `Accordion` was. What
+is left in `md-item_group` is the part that genuinely differs per design system:
+which tokens, and which colours mean "chosen". Its 11 tests are about the
+translation; the state machine's 21 live in `floom-widgets`' `select_group_tests`,
+which is the right boundary for them.
+
+**The state is shared because a row's appearance depends on *other* rows.** This is
+the one place where the `Arc<Mutex<Vec<bool>>>` pattern earns its keep rather than
+merely following precedent: choosing row 1 has to restyle rows 0 and 2 as well, so
+no row can own the answer. Each row reads the shared set in its own `update`,
+compares against what it last acted on, and marks itself dirty. Four mutations,
+checked rather than assumed:
+
+| Mutation | Tests red |
+|---|---|
+| single mode stops clearing the other rows | 3 — the shared-state tests |
+| a row's `update` stops comparing | 3 — the self-report tests |
+| `selected_from(..)` reads a constant | 1 — the reader test |
+| `mandatory` in multiple mode refuses at two rows | 1 — the rule test |
+
+**A correction to this document's own reading of v1.** The first version of the
+mandatory test asserted that with two rows chosen, clicking one *keeps* it. It does
+not: v1 refuses to remove a row only when it is the **only** chosen one
+(`cur.len() == 1`). So `mandatory` keeps the selection non-empty; it does not
+freeze it. The implementation was right and the test was wrong — but only because
+the test disagreed loudly. Recorded because getting this backwards is invisible
+until a user tries to deselect one of two chosen rows and nothing happens.
+
+**`Pressable::selected_from` is the missing half of `expanded_from`.** The row has
+to report `SELECTED` through a *reader*, because a row is not rebuilt when the
+selection moves: a captured value would go stale the instant another row was
+chosen, and would be the opposite of what the user sees. `SemanticsState::SELECTED`
+already existed and had no way to be set.
+
+**Two additions, both deliberate and both called out rather than slipped in:**
+
+* **Semantics.** v1's rows were a `Container` with a click handler and a pointer
+  cursor — invisible to a screen reader, which could neither name a row nor learn
+  which was chosen. Rows here are `SemanticsRole::Radio` in single mode and
+  `CheckBox` in multiple mode. That is an addition, not a translation.
+* **`Pressable` where v1 had a raw listener.** The pointer cursor is *not* carried
+  over: 2.0's `PaintContext` has no cursor vocabulary. The row is still keyboard
+  activatable, which the pointer was not.
+
+**What could not be carried over, recorded rather than worked around:** v1 wrote
+`apply_if(n == 0, |s| s.hide())` — an empty group hides its *node*. 2.0's
+`LayoutRequest` carries no visibility, and a hidden node and an absent one differ
+in layout: one takes no space, the other takes whatever the parent gives it. An
+empty group here is a stack with no children.
 
 ## Stages
 
