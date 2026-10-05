@@ -45,14 +45,15 @@ pub use controls::{
     Button, Checkbox, InteractionState, Pressable, Progress, Radio, Select, Slider, Switch,
     TextField,
 };
-/// The layout vocabulary a widget author needs alongside [`Stack`]: the main
-/// axis a stack runs on, and how its children sit on each axis.
+/// The layout vocabulary a widget author needs alongside [`Stack`] and
+/// [`Surface::border_edges`]: the main axis a stack runs on, how its children
+/// sit on each axis, and which of a box's four edges an outline is drawn on.
 ///
 /// Re-exported rather than left to `floom-core` because `Axis` used to be a
 /// *second*, identical enum in `primitives`, and the root re-export named that
 /// one — so `use floom_widgets::*;` followed by `Stack::new(Axis::Horizontal)`
 /// did not compile. One axis type, exported from here, cannot drift back.
-pub use floom_core::{Align, Axis};
+pub use floom_core::{Align, Axis, Edges};
 pub use labeled::Labeled;
 pub use native::NativeSurface;
 pub use nav::{NavHandle, NavHost};

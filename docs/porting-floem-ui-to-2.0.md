@@ -11,19 +11,19 @@ so the widget API gets shaken out before anything is translated in bulk:
 | interactive | `md-button` | ported, 10 tests |
 | stateful | `md-expansion_panels` | ported, 12 tests |
 | self-composing | `md-toolbar` | ported, 13 tests |
+| separator | `md-footer` | ported, 14 tests |
 
 Ported kits: `md-card`, `md-button`, `md-icon`, `md-expansion_panels`,
-`md-toolbar`.
+`md-toolbar`, `md-footer`.
 Engine widgets: `Badge`, `Ripple`, `VectorIcon`, `Pressable`, `Accordion`,
 **`Surface`**.
 Text: **`FontWeight`**, end to end — `floom_types` enum, `TextLayoutOptions`,
 both glyph caches, the measure comparison, the paint op.
 
-**The next task is `md-footer`.** Every capability gap the plan listed is closed —
-`font_weight` (73 sites) and per-side borders (27 sites) were the last two — and
-`md-toolbar` is ported, so the batch is underway:
+**The next task is `md-item_group`,** the last of the batch and the only one that
+is surface *and* interactive *and* stateful at once:
 
-1. **The rest of the batch**: `md-footer`, `md-item_group`, and
+1. **The rest of the batch**: `md-item_group` and
    `list_subheader`. `md-item_group` is the interesting one — it is the first
    component that is surface *and* interactive *and* stateful at once, and its
    selection changes a mounted row's fill and outline, which is exactly what
@@ -49,7 +49,7 @@ Verification commands that must stay green:
     # the `Length` change broke two of these suites and nothing noticed for two
     # commits — see the correction below.
     cd crates/ecosystem/floom-ui
-    for c in md-card md-button md-icon md-expansion_panels md-toolbar; do
+    for c in md-card md-button md-icon md-expansion_panels md-toolbar md-footer; do
         cargo test --manifest-path "crates/material/$c/Cargo.toml"
     done
 
@@ -626,6 +626,47 @@ so a root `cargo test` never reaches it.
 That is the same failure this document keeps recording in a different form: a check
 that was not in the list did not happen. The list now ends with a loop over every
 ported kit, and the comment on it says why it is there.
+
+### What `md-footer` turned up — the component the separator was for
+
+The footer is what the `Edges` work was for: v1 styled it
+`.border_color(outline_variant).border_top(tokens.border)`, and a four-sided stroke
+cannot say "top". 14 tests, three mutations checked rather than assumed:
+
+| Mutation | Tests red |
+|---|---|
+| `border_edges` returns `Edges::ALL` | exactly the two separator tests |
+| `view` stops calling `publish_layout` | exactly the two layout-registry tests |
+| the content is dropped instead of pushed | exactly the two content tests |
+
+Three things it settled:
+
+**`items_center` is not a property of the fill.** v1 put it on the box. In 2.0 the
+*child* is what gets centred, so it went into `Surface::request(..)`'s
+`main_align`/`cross_align` — which is the payoff of letting a decorated box
+declare its own extent. The whole of v1's styling now lives on one widget: the
+extent, the padding, the separator, the elevation, and the content inside.
+
+**The layout registry is a real dependency, not bookkeeping.** v1 called
+`register_layout(LayoutSlot::Footer, height)` while building the view, and
+`md-main` reads that process-wide signal to inset the content region. A port that
+dropped the call would look finished and overlap every footer's content with the
+bar. It is kept as a build-time side effect — not reactive — and
+`MdFooter::publish_layout` says why making it reactive is not available: it would
+mean holding the theme signal inside a `Send + Sync` slot closure, which 2.0's
+slots cannot do. Two tests pin the publication, including the token default, since
+a caller who never sets a height still has to publish something.
+
+**`color(..)` on a box has nowhere to live.** v1 set the footer's content colour
+on the box. 2.0's `Surface` paints a fill and only the child knows it is text, so
+the colour is a field on the resolved style and a method,
+`MdFooter::content_color`, for the child to use. Recorded because it is the third
+component in a row where a v1 style closure property has no 2.0 home, and the
+pattern is worth naming: *the box owns the fill, the child owns the ink.*
+
+`Edges` is now re-exported from `floom-widgets`' root beside `Align` and `Axis`,
+for the same reason those two are: a kit author writing `border_edges` should not
+have to reach past this crate for the type.
 
 ## Stages
 
