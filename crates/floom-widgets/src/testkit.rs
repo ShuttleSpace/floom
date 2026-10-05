@@ -8,9 +8,9 @@
 use std::any::Any;
 
 use floom_core::{
-    Color, CreateContext, ElementId, Event, EventContext, OverlayHandle, OverlayKind, PaintContext,
-    Point, Rect, ResourceId, SemanticsContext, SemanticsRole, Size, UpdateContext, Widget,
-    WidgetAny,
+    Color, CreateContext, ElementId, Event, EventContext, FontWeight, OverlayHandle, OverlayKind,
+    PaintContext, Point, Rect, ResourceId, SemanticsContext, SemanticsRole, Size, UpdateContext,
+    Widget, WidgetAny,
 };
 use floom_scene::{Resource, ResourceKind, ResourceRegistry, Scene, SceneNode};
 use floom_types::PointerEvent;
@@ -31,6 +31,12 @@ pub enum PaintOp {
         origin: Point,
         size: f32,
         text: String,
+        /// How heavy the run was asked to be. Recorded because there is otherwise
+        /// no way to tell a `Medium` label from a `Normal` one in a widget test:
+        /// the retained scene node points at a glyph *resource*, and this
+        /// recorder deliberately shapes nothing, so the request is the only
+        /// observable that survives.
+        weight: FontWeight,
         color: Color,
     },
     Image {
@@ -110,13 +116,23 @@ impl PaintOp {
                 origin,
                 size,
                 text,
+                weight,
                 color,
             } => format!(
-                "Text ({:.1}, {:.1}) {:.1} {:?} {}",
+                // The weight is appended only when it is not `Normal`: these
+                // lines are compared byte-for-byte by golden snapshot tests, and
+                // a trailing "Normal" on every line would churn all of them to
+                // record something they did not ask about.
+                "Text ({:.1}, {:.1}) {:.1} {:?}{} {}",
                 origin.x,
                 origin.y,
                 size,
                 text,
+                if weight.is_normal() {
+                    String::new()
+                } else {
+                    format!(" @{weight:?}")
+                },
                 fmt_color(*color)
             ),
             PaintOp::BackdropFilter {
@@ -387,7 +403,14 @@ impl PaintContext for SceneRecorder {
         });
     }
 
-    fn fill_text(&mut self, origin: Point, text: &str, size: f32, color: Color) {
+    fn fill_text(
+        &mut self,
+        origin: Point,
+        text: &str,
+        size: f32,
+        weight: FontWeight,
+        color: Color,
+    ) {
         // No shaping happens here (`floom-text` owns that); an empty run list
         // keeps the resource present without pulling a text dependency into
         // the widget layer.
@@ -410,6 +433,7 @@ impl PaintContext for SceneRecorder {
             origin,
             size,
             text: text.to_string(),
+            weight,
             color,
         });
     }

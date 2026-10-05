@@ -2,9 +2,11 @@
 
 use std::borrow::Cow;
 
-use floom_types::{Point, Size};
+use floom_types::{FontWeight, Point, Size};
 use parley::layout::{Alignment, AlignmentOptions, PositionedLayoutItem};
-use parley::style::{FontFamily, FontStack, FontWeight, GenericFamily, StyleProperty};
+use parley::style::{
+    FontFamily, FontStack, FontWeight as ParleyFontWeight, GenericFamily, StyleProperty,
+};
 use parley::{FontContext, LayoutContext};
 
 /// Default font stack, tried left-to-right.
@@ -63,11 +65,22 @@ impl TextAlign {
     }
 }
 
+/// Everything that changes the shaped result, and therefore everything a cache
+/// keyed on a shaped run has to compare.
+///
+/// The fields here and the fields of [`crate::LayoutCache`]'s key are the same
+/// list on purpose. A field added to one and not the other is the bug this type
+/// was extended to fix: floem-ui asks for a `Medium` weight on 50 call sites,
+/// and a cache that forgot the weight would hand back the regular glyphs for
+/// every one of them.
 #[derive(Debug, Clone, PartialEq)]
 pub struct TextLayoutOptions {
     pub max_width: f64,
     pub font_size: f32,
     pub align: TextAlign,
+    /// How heavy the run is drawn. Default is `Normal`, which is what every text
+    /// path that does not ask gets.
+    pub weight: FontWeight,
 }
 
 impl Default for TextLayoutOptions {
@@ -76,6 +89,7 @@ impl Default for TextLayoutOptions {
             max_width: f64::INFINITY,
             font_size: 16.0,
             align: TextAlign::Start,
+            weight: FontWeight::Normal,
         }
     }
 }
@@ -147,7 +161,12 @@ impl TextShaper {
             .layout_cx
             .ranged_builder(&mut self.font_cx, text, 1.0, true);
         builder.push_default(StyleProperty::FontSize(options.font_size));
-        builder.push_default(StyleProperty::FontWeight(FontWeight::NORMAL));
+        // Previously hardcoded to NORMAL. Lowered through the engine-neutral
+        // enum rather than taken from the shaper, so the number here is the one
+        // the cache key carries.
+        builder.push_default(StyleProperty::FontWeight(ParleyFontWeight::new(
+            options.weight.to_value().into(),
+        )));
         builder.push_default(StyleProperty::FontStack(default_font_stack()));
         let mut layout = builder.build(text);
 

@@ -19,7 +19,7 @@ use floom_core::{
     Rect, RepeatSpec, SemanticsContext, Size, Transition, UpdateContext, Widget, WidgetAny,
 };
 use floom_ime::{CompositionState, ImeEvent, ImeState};
-use floom_types::{ImeUpdate, PointerButton, PointerPhase};
+use floom_types::{FontWeight, ImeUpdate, PointerButton, PointerPhase};
 
 use crate::primitives::{Revision, SemanticsHint};
 
@@ -229,7 +229,7 @@ fn draw_centered_text(
         bounds.x0 + f64::from(BUTTON_PADDING),
         bounds.y0 + (bounds.height() - f64::from(size)) / 2.0,
     );
-    cx.fill_text(origin, text, size, color);
+    cx.fill_text(origin, text, size, FontWeight::Normal, color);
 }
 
 // ---------------------------------------------------------------------------
@@ -644,10 +644,7 @@ impl Pressable {
     /// time goes stale the moment the panel opens, and its reported state would
     /// be the opposite of what the user sees. Same seam as `PresenceLeaf`'s
     /// `when_signal`.
-    pub fn expanded_from(
-        mut self,
-        read: impl Fn() -> bool + Send + Sync + 'static,
-    ) -> Self {
+    pub fn expanded_from(mut self, read: impl Fn() -> bool + Send + Sync + 'static) -> Self {
         self.expanded_reader = Some(Arc::new(read));
         self.revision.bump();
         self
@@ -1140,6 +1137,7 @@ impl Widget for TextField {
                     Point::new(bounds.x0 + pad, origin_y),
                     &self.placeholder,
                     LABEL_FONT_SIZE,
+                    FontWeight::Normal,
                     color,
                 );
             }
@@ -1159,12 +1157,24 @@ impl Widget for TextField {
         let committed = Color::BLACK;
         let mut x = bounds.x0 + pad;
         if !left.is_empty() {
-            cx.fill_text(Point::new(x, origin_y), left, LABEL_FONT_SIZE, committed);
+            cx.fill_text(
+                Point::new(x, origin_y),
+                left,
+                LABEL_FONT_SIZE,
+                FontWeight::Normal,
+                committed,
+            );
             x += floom_text::measure_text(left, LABEL_FONT_SIZE, f64::INFINITY).width;
         }
         if !preedit.is_empty() {
             let accent = Color::rgb(0x2B, 0x6C, 0xB0);
-            cx.fill_text(Point::new(x, origin_y), &preedit, LABEL_FONT_SIZE, accent);
+            cx.fill_text(
+                Point::new(x, origin_y),
+                &preedit,
+                LABEL_FONT_SIZE,
+                FontWeight::Normal,
+                accent,
+            );
             let width = floom_text::measure_text(&preedit, LABEL_FONT_SIZE, f64::INFINITY).width;
             // Underline the composition so it reads as provisional text.
             let underline =
@@ -1173,7 +1183,13 @@ impl Widget for TextField {
             x += width;
         }
         if !right.is_empty() {
-            cx.fill_text(Point::new(x, origin_y), right, LABEL_FONT_SIZE, committed);
+            cx.fill_text(
+                Point::new(x, origin_y),
+                right,
+                LABEL_FONT_SIZE,
+                FontWeight::Normal,
+                committed,
+            );
         }
     }
 
@@ -1344,10 +1360,22 @@ impl Widget for Checkbox {
             let mut buf = [0u8; 4];
             let check = '\u{2714}'.encode_utf8(&mut buf);
             let origin = Point::new(box_rect.x0 + 2.0, box_rect.y0 + 1.0);
-            cx.fill_text(origin, check, box_rect.height() as f32, Color::WHITE);
+            cx.fill_text(
+                origin,
+                check,
+                box_rect.height() as f32,
+                FontWeight::Normal,
+                Color::WHITE,
+            );
         }
         let label_origin = Point::new(box_rect.x1 + 6.0, bounds.y0);
-        cx.fill_text(label_origin, &self.label, LABEL_FONT_SIZE, Color::BLACK);
+        cx.fill_text(
+            label_origin,
+            &self.label,
+            LABEL_FONT_SIZE,
+            FontWeight::Normal,
+            Color::BLACK,
+        );
     }
 
     fn semantics(&self, cx: &mut dyn SemanticsContext, _id: ElementId) {
@@ -1515,7 +1543,13 @@ impl Widget for Radio {
             );
         }
         let label_origin = Point::new(outer.x1 + 6.0, bounds.y0);
-        cx.fill_text(label_origin, &self.label, LABEL_FONT_SIZE, Color::BLACK);
+        cx.fill_text(
+            label_origin,
+            &self.label,
+            LABEL_FONT_SIZE,
+            FontWeight::Normal,
+            Color::BLACK,
+        );
     }
 
     fn semantics(&self, cx: &mut dyn SemanticsContext, _id: ElementId) {
@@ -1720,7 +1754,13 @@ impl Widget for Switch {
         cx.fill_rounded_rect(track, track.height() as f32 / 2.0, track_color);
         cx.fill_rounded_rect(knob, knob.height() as f32 / 2.0, Color::WHITE);
         let label_origin = Point::new(track.x1 + 6.0, bounds.y0);
-        cx.fill_text(label_origin, &self.label, LABEL_FONT_SIZE, Color::BLACK);
+        cx.fill_text(
+            label_origin,
+            &self.label,
+            LABEL_FONT_SIZE,
+            FontWeight::Normal,
+            Color::BLACK,
+        );
     }
 
     fn semantics(&self, cx: &mut dyn SemanticsContext, _id: ElementId) {
@@ -2422,6 +2462,7 @@ impl Widget for SelectPopup {
                 Point::new(row.x0 + f64::from(SELECT_PADDING), row.y0 + 3.0),
                 option,
                 LABEL_FONT_SIZE,
+                FontWeight::Normal,
                 Color::BLACK,
             );
         }

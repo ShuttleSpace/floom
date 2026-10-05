@@ -1,6 +1,6 @@
 //! Scene and semantics snapshots for the Tier-0 primitives.
 
-use floom_core::{Brush, Color, Point, Rect, ResourceId, Shadow, Size, Widget};
+use floom_core::{Brush, Color, FontWeight, Point, Rect, ResourceId, Shadow, Size, Widget};
 use floom_scene::SceneNode;
 use floom_widgets::primitives::{Axis, Container, Divider, Icon, Image, ImageFit, Spacer, Text};
 use floom_widgets::testkit::{
@@ -558,4 +558,83 @@ fn a_fill_and_a_border_are_independent() {
         vec!["Rect", "Path"],
         "a filled box draws its fill and its outline"
     );
+}
+
+// --- Text weight -----------------------------------------------------------
+
+/// The feature exists, so the obvious test: what was asked for is what is
+/// recorded. Asserted on the snapshot line because that is the channel a test
+/// reads; the weight is printed only when it is not `Normal`, which is why
+/// `text_scene_snapshot` above still reads exactly as it did before.
+#[test]
+fn a_weighted_text_paints_the_weight_it_asks_for() {
+    let widget = Text::new("Hello").weight(FontWeight::SemiBold);
+    let (id, _create) = allocate(&widget);
+    let line = paint_snapshot(&widget, id, BOX);
+    assert!(
+        line.contains("@SemiBold"),
+        "the recorded paint should name the weight: {line}"
+    );
+}
+
+/// The control for the above, and the reason the snapshot prints nothing for
+/// `Normal`: a regular label's recorded paint is byte-identical to what it was
+/// before weights existed, so the golden snapshots that compare whole op lists
+/// do not all churn to record something they did not ask about.
+#[test]
+fn a_regular_text_records_no_weight() {
+    let widget = Text::new("Hello");
+    let (id, _create) = allocate(&widget);
+    let line = paint_snapshot(&widget, id, BOX);
+    assert_eq!(line, r#"Text (0.0, 0.0) 14.0 "Hello" #000000FF"#);
+    assert!(!line.contains('@'), "and nothing new appeared: {line}");
+}
+
+/// A weight that only reached the *paint* would look right here and be wrong in
+/// a layout: the box was measured for regular glyphs and the bold ones are wider,
+/// so the text would be clipped to a width it no longer needs. Asserting the box
+/// moves with the weight is what makes the two paths one feature rather than two
+/// half-applied ones.
+///
+/// `Bold` and not `Medium`, for the reason the `floom-text` suite gives: the
+/// default stack's faces generally have only a regular and a bold, so `500`
+/// resolves to the same face as `400` and the two legitimately measure alike.
+#[test]
+fn a_bold_text_asks_for_a_wider_box_than_a_regular_one() {
+    let (id, _create) = {
+        let widget = Text::new("Toolbar title");
+        let (id, create) = allocate(&widget);
+        (id, create)
+    };
+    let _ = id;
+    // The measured width is a `Length`; the pixel value is what the comparison
+    // is about, and `px()` is honest about not having one for a percentage.
+    let width_of = |w: Text| {
+        w.layout_request()
+            .and_then(|r| r.width)
+            .and_then(|l| l.px())
+            .expect("non-empty text has a pixel width")
+    };
+    let regular = width_of(Text::new("Toolbar title"));
+    let bold = width_of(Text::new("Toolbar title").weight(FontWeight::Bold));
+    assert!(
+        bold > regular,
+        "the box has to follow the glyphs: {bold} vs {regular}"
+    );
+}
+
+/// The in-place setter exists for a mounted tree — a theme switch, a row that
+/// becomes a heading. What matters is that it reaches the paint, so the recorded
+/// op is read after the change rather than the builder being trusted.
+#[test]
+fn setting_the_weight_after_mount_reaches_the_paint() {
+    let mut widget = Text::new("Hello");
+    let (id, _create) = allocate(&widget);
+    assert!(!paint_snapshot(&widget, id, BOX).contains('@'));
+    widget.set_weight(FontWeight::Bold);
+    assert!(
+        paint_snapshot(&widget, id, BOX).contains("@Bold"),
+        "the paint should follow the setter"
+    );
+    assert_eq!(widget.font_weight(), FontWeight::Bold);
 }

@@ -15,6 +15,7 @@ mod native;
 mod overlay;
 mod path;
 mod shader;
+mod text;
 
 pub use brush::{Brush, Filter, Shadow};
 pub use color::Color;
@@ -36,6 +37,7 @@ pub use path::{
     Stroke, resolve_clip,
 };
 pub use shader::Shader;
+pub use text::FontWeight;
 
 #[cfg(test)]
 mod dependency_boundary_tests {

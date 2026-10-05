@@ -12,8 +12,8 @@ use std::collections::BTreeSet;
 
 use floom_accessibility::{SemanticsRole, SemanticsState};
 use floom_core::{
-    Color, CreateContext, ElementId, Event, EventContext, Key, KeyPhase, LayoutRequest, NamedKey,
-    PaintContext, Point, Rect, SemanticsContext, UpdateContext, Widget, WidgetAny,
+    Color, CreateContext, ElementId, Event, EventContext, FontWeight, Key, KeyPhase, LayoutRequest,
+    NamedKey, PaintContext, Point, Rect, SemanticsContext, UpdateContext, Widget, WidgetAny,
 };
 use floom_types::{Modifiers, PointerButton, PointerPhase};
 use floom_virtual::{ItemSizes, Overscan, VirtualViewport};
@@ -741,6 +741,7 @@ impl Widget for Tree {
                     Point::new(depth_x + 2.0, text_y(row_bounds.y0, self.row_height)),
                     &glyph.to_string(),
                     LABEL_FONT_SIZE,
+                    FontWeight::Normal,
                     DISCLOSURE_FG,
                 );
             }
@@ -751,6 +752,7 @@ impl Widget for Tree {
                 ),
                 &row.label,
                 LABEL_FONT_SIZE,
+                FontWeight::Normal,
                 ROW_FG,
             );
         }

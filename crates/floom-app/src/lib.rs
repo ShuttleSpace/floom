@@ -26,7 +26,12 @@ use std::sync::{Arc, Mutex};
 
 use floom_accessibility::{SemanticsNode, SemanticsTree};
 use floom_animation::{AnimId, AnimKind, AnimSample, AnimationScheduler};
-use floom_core::{Align, AnimationSpec, Axis, Child, ChildKey, CreateContext, ElementId, Event, EventContext, Key, KeyEvent, KeyPhase, Length, LayoutRequest, Modifiers, NamedKey, NativeGrant, NativeRequest, NativeSnapshot, OverlayHandle, OverlayKind, OverlayRequest, PaintContext, Point, PointerPhase, Position, Rect, ResourceId, SemanticsHint, SemanticsRole, Size, UpdateContext};
+use floom_core::{
+    Align, AnimationSpec, Axis, Child, ChildKey, CreateContext, ElementId, Event, EventContext,
+    FontWeight, Key, KeyEvent, KeyPhase, LayoutRequest, Length, Modifiers, NamedKey, NativeGrant,
+    NativeRequest, NativeSnapshot, OverlayHandle, OverlayKind, OverlayRequest, PaintContext, Point,
+    PointerPhase, Position, Rect, ResourceId, SemanticsHint, SemanticsRole, Size, UpdateContext,
+};
 use floom_focus::{FocusDirection, FocusManager, FocusScopeId};
 use floom_layout::{
     AlignItems as LAlign, FlexDirection, JustifyContent, LayoutEngine, LayoutNode, LayoutStyle,
@@ -228,6 +233,29 @@ pub const NOMINAL_FRAME_SECS: f64 = 1.0 / 60.0;
 struct TextMeasure {
     text: String,
     font_size: f32,
+    /// The width the measure closure last wrapped against — the `avail.width` it
+    /// was handed, *before* the layout engine rounds the leaf's box to whole
+    /// pixels.
+    ///
+    /// The paint path needs this. It re-shapes the same string to get glyph runs,
+    /// and it used to wrap against the node's own (rounded) box — so a string
+    /// whose natural width landed in the upper half-pixel of that box wrapped by
+    /// one word: `498 of 2997` random regular-weight strings, measured.
+    ///
+    /// It is the *available* width rather than the measured result, and that is
+    /// the whole subtlety. Recording what the measure returned looked equivalent
+    /// and is not: for a string that is wider than its box the result is the
+    /// wrapped width (fine), but for one measured against a wide available space
+    /// the result is the string's natural width, and feeding *that* back as the
+    /// paint wrap width stops the label ever wrapping at all. The available width
+    /// is what the text was actually wrapped against, so the two agree exactly.
+    wrap_width: f64,
+    /// Part of the state because it changes the measured width: a `Bold` run is
+    /// wider than a `Normal` one, so a weight that changes after mount has to
+    /// re-measure the node or the box stays sized for the old glyphs while the
+    /// paint path draws the new weight's — text clipped to a width it no longer
+    /// needs, which is exactly the bug a *missing* comparison here produces.
+    weight: FontWeight,
 }
 
 /// A mounted overlay: an independent widget subtree painted above the main
@@ -741,6 +769,8 @@ fn self_layout_with_text_measure(
     let state = Arc::new(Mutex::new(TextMeasure {
         text: text.content().to_string(),
         font_size: text.font_size(),
+        weight: text.font_weight(),
+        wrap_width: 0.0,
     }));
     if !pinned_width {
         style.width = None;
@@ -1151,14 +1181,23 @@ impl WidgetHost {
             Some(state) => {
                 let state = Arc::clone(state);
                 let measure: MeasureFn = Box::new(move |avail| {
-                    let m = state.lock().unwrap();
+                    let mut m = state.lock().unwrap();
                     if m.text.is_empty() || m.font_size <= 0.0 {
                         return Size::ZERO;
                     }
                     // `avail.width` is the box this leaf actually landed in —
                     // wrap against it; `f64::INFINITY` (unconstrained) falls
                     // through to the unwrapped extent.
-                    floom_text::measure_text(&m.text, m.font_size, avail.width)
+                    let measured = floom_text::measure_weighted_text(
+                        &m.text,
+                        m.font_size,
+                        m.weight,
+                        avail.width,
+                    );
+                    // Published for the paint path, which re-shapes this same string and must
+                    // wrap it against the width it was measured at, not the rounded box.
+                    m.wrap_width = avail.width;
+                    measured
                 });
                 self.layout.new_leaf_with_measure(style.clone(), measure)
             }
@@ -2088,9 +2127,13 @@ impl WidgetHost {
             return;
         };
         let mut m = state.lock().unwrap();
-        if m.text != text.content() || m.font_size != text.font_size() {
+        if m.text != text.content()
+            || m.font_size != text.font_size()
+            || m.weight != text.font_weight()
+        {
             m.text = text.content().to_string();
             m.font_size = text.font_size();
+            m.weight = text.font_weight();
             drop(m);
             // Taffy caches per-node layout and cannot observe the closure's
             // inputs changing — the node must be told explicitly.
@@ -2289,6 +2332,11 @@ impl WidgetHost {
                 layout_cache: &mut self.text_layout_cache,
                 composite,
                 animation: motion.as_ref().map(|sample| sample.value),
+                wrap_width: node
+                    .text_measure
+                    .as_ref()
+                    .and_then(|state| state.lock().ok())
+                    .map_or(0.0, |m| m.wrap_width),
                 prev: ids,
                 used: 0,
                 bounds: node.bounds,
@@ -3940,16 +3988,27 @@ impl UpdateContext for HostUpdateContext<'_> {
 struct GlyphCacheEntry {
     text: String,
     size_bits: u32,
+    /// The CSS number, because that is what the hash carries; keeping the enum
+    /// here as well would be a second representation that can drift from it.
+    weight: u16,
     id: ResourceId,
 }
 
-/// Hashes (text, font size) for [`WidgetHost::glyph_cache`]. Text content and
-/// size together decide glyph ids and positions, so both belong in the key.
-fn glyph_hash(text: &str, font_size: f32) -> u64 {
+/// Hashes (text, font size, weight) for [`WidgetHost::glyph_cache`].
+///
+/// Text content and size together decide glyph ids and positions, so both
+/// belong in the key — and so does the weight, because two weights of one
+/// string are two *different* sets of glyph ids. Leaving it out would not
+/// merely cost a re-shape: a `Bold` label would be handed the `Normal` runs
+/// for its own text, which is the same string at the same size in the wrong
+/// face, and the only symptom is that every weighted label in a design
+/// system renders flat.
+fn glyph_hash(text: &str, font_size: f32, weight: FontWeight) -> u64 {
     use std::hash::{Hash, Hasher};
     let mut hasher = std::collections::hash_map::DefaultHasher::new();
     text.hash(&mut hasher);
     font_size.to_bits().hash(&mut hasher);
+    weight.to_value().hash(&mut hasher);
     hasher.finish()
 }
 
@@ -3969,6 +4028,9 @@ struct NodePaintContext<'a> {
     /// This frame's value from the animation running on this element, for the
     /// element to draw its own motion with.
     animation: Option<f64>,
+    /// The width this node's text was wrapped against when it was measured.
+    /// See [`TextMeasure::wrap_width`].
+    wrap_width: f64,
     /// Last frame's scene node ids for this widget — and, in place, this
     /// frame's. Painting reuses them positionally (`upsert` on a match, no
     /// damage when the payload is unchanged; `insert` once the previous nodes
@@ -3996,23 +4058,33 @@ impl NodePaintContext<'_> {
     /// must run *before* shaping: interning after shaping still paid for the
     /// shaping and a full `Vec<GlyphRun>` clone on every frame the text did
     /// not change.
-    fn cached_glyph_id(&self, text: &str, font_size: f32) -> Option<ResourceId> {
-        let entry = self.glyphs.get(&glyph_hash(text, font_size))?;
-        (entry.text == text && entry.size_bits == font_size.to_bits()).then_some(entry.id)
+    fn cached_glyph_id(
+        &self,
+        text: &str,
+        font_size: f32,
+        weight: FontWeight,
+    ) -> Option<ResourceId> {
+        let entry = self.glyphs.get(&glyph_hash(text, font_size, weight))?;
+        (entry.text == text
+            && entry.size_bits == font_size.to_bits()
+            && entry.weight == weight.to_value())
+        .then_some(entry.id)
     }
 
     /// Interns a shaped glyph run, reusing the resource across frames.
     ///
-    /// The key is the (text, font size) hash — the same string at two sizes
-    /// has different glyph ids and positions, so the size must be part of it.
+    /// The key is the (text, font size, weight) hash — the same string at two
+    /// sizes has different glyph ids and positions, and at two weights it has
+    /// different glyph ids outright, so both must be part of it.
     /// Call [`Self::cached_glyph_id`] first; only a miss needs the runs.
     fn intern_glyphs(
         &mut self,
         text: &str,
         font_size: f32,
+        weight: FontWeight,
         runs: Vec<floom_text::GlyphRun>,
     ) -> ResourceId {
-        if let Some(id) = self.cached_glyph_id(text, font_size) {
+        if let Some(id) = self.cached_glyph_id(text, font_size, weight) {
             return id;
         }
         // The string the runs were shaped from travels with the resource. It is
@@ -4023,10 +4095,11 @@ impl NodePaintContext<'_> {
             kind: ResourceKind::glyph_runs_with_text(runs, text),
         });
         self.glyphs.insert(
-            glyph_hash(text, font_size),
+            glyph_hash(text, font_size, weight),
             GlyphCacheEntry {
                 text: text.to_string(),
                 size_bits: font_size.to_bits(),
+                weight: weight.to_value(),
                 id,
             },
         );
@@ -4130,28 +4203,51 @@ impl PaintContext for NodePaintContext<'_> {
         self.push(floom_scene::SceneNode::shader(self.bounds, shader.clone()));
     }
 
-    fn fill_text(&mut self, origin: Point, text: &str, size: f32, color: floom_types::Color) {
+    fn fill_text(
+        &mut self,
+        origin: Point,
+        text: &str,
+        size: f32,
+        weight: FontWeight,
+        color: floom_types::Color,
+    ) {
         if text.is_empty() || size <= 0.0 {
             return;
         }
-        // Shape within the laid-out box so wrapped text paints as wrapped:
-        // the measure callback sized this node against the same width.
-        let max_width = if self.bounds.width() > 0.0 {
+        // Shape within the laid-out box so wrapped text paints as wrapped: the
+        // measure callback sized this node against the same width.
+        //
+        // The measured width wins where it is *wider* than the box, and the reason
+        // is a rounding, not a preference. A measure leaf's box comes back from
+        // the layout engine rounded to whole pixels, so a string whose natural
+        // width lands in the upper half-pixel of that box would wrap by one word
+        // against it — a label that measured in one line, laid out in one line,
+        // and then painted in two. The measure closure's available width is what
+        // the text was actually wrapped against, so preferring it makes the two
+        // agree exactly. A string that really is meant to wrap still does: its
+        // available width is the box.
+        let box_width = if self.bounds.width() > 0.0 {
             self.bounds.width()
         } else {
             f64::INFINITY
+        };
+        let max_width = if self.wrap_width > box_width {
+            self.wrap_width
+        } else {
+            box_width
         };
         let options = TextLayoutOptions {
             max_width,
             font_size: size,
             align: TextAlign::Start,
+            weight,
         };
         // The intern cache is checked *before* any shaping: a repeat frame
         // must not re-shape, clone the shaped runs, or mint a key String for
         // a text that has not changed. Shaping is the expensive part (parse /
         // script segmentation / glyph placement); the cache hit keeps glyph
         // runs — and their font data — stable across frames.
-        let glyphs = match self.cached_glyph_id(text, size) {
+        let glyphs = match self.cached_glyph_id(text, size, weight) {
             Some(id) => id,
             None => {
                 let shaper = &mut *self.shaper;
@@ -4159,7 +4255,7 @@ impl PaintContext for NodePaintContext<'_> {
                     .layout_cache
                     .get_or_insert_with(text, &options, || shaper.shape(text, &options));
                 let runs = laid.runs.clone();
-                self.intern_glyphs(text, size, runs)
+                self.intern_glyphs(text, size, weight, runs)
             }
         };
         // The laid-out extent is a cheap cache lookup either way (no clones,

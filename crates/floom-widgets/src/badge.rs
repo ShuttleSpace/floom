@@ -7,8 +7,8 @@
 
 use floom_accessibility::SemanticsRole;
 use floom_core::{
-    Color, CreateContext, ElementId, LayoutRequest, PaintContext, Point, SemanticsContext,
-    UpdateContext, Widget,
+    Color, CreateContext, ElementId, FontWeight, LayoutRequest, PaintContext, Point,
+    SemanticsContext, UpdateContext, Widget,
 };
 
 use crate::primitives::{Revision, SemanticsHint, emit_semantics};
@@ -180,6 +180,7 @@ impl Widget for Badge {
             Point::new(x, y),
             &self.content,
             self.font_size,
+            FontWeight::Normal,
             self.foreground,
         );
     }

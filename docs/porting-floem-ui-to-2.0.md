@@ -14,28 +14,26 @@ so the widget API gets shaken out before anything is translated in bulk:
 Ported kits: `md-card`, `md-button`, `md-icon`, `md-expansion_panels`.
 Engine widgets: `Badge`, `Ripple`, `VectorIcon`, `Pressable`, `Accordion`,
 **`Surface`**.
+Text: **`FontWeight`**, end to end — `floom_types` enum, `TextLayoutOptions`,
+both glyph caches, the measure comparison, the paint op.
 
-**The next task is a component again, and the component is `md-footer`.** Reading
-the three surface components to batch them turned up two more measured gaps
-(`font_weight`, 73 sites; per-side borders, 27 sites) and one engine bug (the
-cross-axis stretch, below), so the order is:
+**The next task is a component again, and the component is `md-toolbar`.** The
+last capability (`font_weight`, 73 call sites) is in, and reading it turned up a
+font-matching correction and a text-wrapping bug worth a whole section each:
 
-1. **`font_weight`** — 73 call sites, and the one that is not a widget field:
-   `floom-text`'s glyph cache is keyed on the layout options and the host's
-   `sync_text_measure` compares only text and size, so a weight added carelessly
-   draws bold text with regular glyphs. `md-toolbar`'s `FontWeight::Medium` title
-   is the component that needs it.
-2. **Per-side borders** — 27 call sites. `Container::border` traces all four
-   sides; `border_top` on a footer is a different shape, not a flag.
-3. **Then the batch**: `md-footer`, `md-toolbar`, `md-item_group`, and
+1. **Per-side borders** — 27 call sites. `Container::border` traces all four
+   sides; `border_top` on a footer is a different shape, not a flag. This is the
+   last capability gap, and `md-toolbar` is the component that needs it (the
+   divider under the bar) alongside `md-footer`.
+2. **Then the batch**: `md-toolbar`, `md-footer`, `md-item_group`, and
    `list_subheader`. `md-item_group` is the interesting one — it is the first
    component that is surface *and* interactive *and* stateful at once, and its
    selection changes a mounted row's fill and outline, which is exactly what
    `Surface::set_background` / `set_border` exist for.
-4. **`floom-elements` needs repairing, not just rewriting** (correction 6). Eight
+3. **`floom-elements` needs repairing, not just rewriting** (correction 6). Eight
    material crates are broken by the ports already done; they are the *callers* of
    `MdIcon` and `Ripple`, so each is a small edit rather than a port.
-5. Then port one kit end to end, and the other two follow its shape.
+4. Then port one kit end to end, and the other two follow its shape.
 
 Verification commands that must stay green:
 
@@ -45,6 +43,9 @@ Verification commands that must stay green:
 
     # the engine widget crate
     cargo test --manifest-path crates/floom-widgets/Cargo.toml
+
+    # the shaping crate, where the weight and both caches' keys are pinned
+    cargo test --manifest-path crates/floom-text/Cargo.toml
 
     # the layout crate (the padding / margin / percentage vocabulary lives here)
     cargo test --manifest-path crates/floom-layout/Cargo.toml
@@ -155,25 +156,20 @@ call sites rather than component names:
 | `width_pct` / `height_pct` | **231** / **79** | nothing — `LayoutRequest` had no percentage | `Length::Pct` |
 | `justify_between()` | **38** | the layout layer had `SpaceBetween`; the vocabulary did not | `Align::SpaceBetween` |
 | a widget whose own layout moves after mount | every theme change | `mark_dirty` repainted yesterday's geometry | `UpdateContext::mark_layout_dirty` |
-| `font_weight(…)` | **73** | `Text` has size and colour, no weight | **still nothing** |
+| `font_weight(…)` | **73** | `Text` has size and colour, no weight | `FontWeight` end to end |
 | `border_top` / `border_bottom` / `border_left` / `border_right` | **7 / 14 / 3 / 3** | nothing | **still nothing** |
 | height transition on mount | `md-expand_transition` | nothing | still nothing (see below) |
 
 So the honest statement is: **Stage B needs no new component shapes, and has
-needed nine new capabilities — six of which are now in.** Every one was found by
+needed nine new capabilities — seven of which are now in.** Every one was found by
 compiling a component, not by reading the tree, which is the argument for shaking
-out one component per shape before translating in bulk. The three still open, in
+out one component per shape before translating in bulk. The two still open, in
 the order their call counts justify:
 
-1. **`font_weight` — 73 sites.** `Text` has a size and a colour and no weight, so
-   a toolbar's `FontWeight::Medium` title has no spelling. This one is not just a
-   widget field: `floom-text`'s glyph cache is keyed on the layout options and the
-   host's `sync_text_measure` compares only text and size, so a weight added
-   carelessly would draw bold text with regular glyphs.
-2. **Per-side borders — 27 sites.** `Container::border` traces all four sides;
+1. **Per-side borders — 27 sites.** `Container::border` traces all four sides;
    `border_top` on a footer or a divider is a different shape (a straight band,
    no corners) and needs its own paint, not a flag on the existing one.
-3. **A height transition — see below.** Not cheap, and not a component problem.
+2. **A height transition — see below.** Not cheap, and not a component problem.
 
 - **The real translation cost** is the v1 style closure
   (`.style(|s| s.padding(..).background(..).rounded(..))`) becoming 2.0's
@@ -447,6 +443,82 @@ what is known rather than to route around it. Two consequences worth carrying:
 * The kits want a fixed-width row inside a full-width container more often than
   one might hope — a chip, a badge, a button. Until this is understood, every one
   of those will silently come out stretched.
+
+### Font weight, and two things it turned up
+
+`font_weight` is the last big vocabulary gap (73 call sites, 68 of them `Medium`
+or `SemiBold`). It is not a widget field, and the reason is worth writing down
+because the shape of the mistake is invisible: **two caches return shaped glyph
+runs on a hit, so a key without the weight answers a `Bold` request with the
+`Normal` glyphs for the same string.** Same text, same size, wrong face. Nothing
+in the result says so, and nothing in a code review would either.
+
+So the weight went into four places, each of which has a test that fails without
+it:
+
+* `floom_types::FontWeight` — the nine CSS weights, named as CSS names them
+  because floem-ui already writes `FontWeight::Medium` at 50 call sites and a
+  port should not also be a rename.
+* `floom_text::TextLayoutOptions.weight` and `LayoutCache`'s key, which mirrors
+  that struct field for field *on purpose*.
+* `PaintContext::fill_text`, which gained the parameter rather than gaining a
+  sibling method. 20 call sites, all mechanical.
+* the host's glyph cache (`glyph_hash` **and** the retained entry) and
+  `sync_text_measure`'s comparison, so a weight that changes *after mount*
+  re-measures and re-shapes.
+
+**How much of that is load-bearing, measured rather than assumed.** The host keeps
+the weight in two places in the glyph cache. Three mutations, three answers:
+
+| Mutation | Result |
+|---|---|
+| drop it from `glyph_hash` only | **all 8 tests green** — correct output, one re-shape per frame per text node |
+| drop it from the retained entry's comparison only | **all 8 green** — redundant; the hash already separates the buckets |
+| drop both | **3 tests red** |
+
+One line is load-bearing and the other is defence in depth, and it is not obvious
+from reading either which is which. The hash-only variant's cost is real and
+invisible to every assertion in the suite, which is the kind of thing worth
+knowing before someone "simplifies" it.
+
+**And a correction to this document's own first draft.** The first version of
+`a_heavier_weight_measures_wider` asserted `Medium` measures strictly wider than
+`Normal`. It does not, and cannot be made to: the default font stack's faces
+generally ship a regular and a bold and nothing between, so font matching resolves
+`500` to the same face as `400` — correctly, per CSS. `Medium` measures
+*identically*; `Bold` measures wider. Asserting the former would have been
+asserting something about the installed fonts rather than about the code, and it
+would pass on a machine with a variable font installed and fail on one without. The
+test now asserts `Medium >= Normal` plus `Bold > Normal`, and the same reasoning is
+carried into the widget and host suites so the trap is not re-set there.
+
+**Then a bug that has nothing to do with weight.** `md-toolbar`'s `Medium` title
+is 79.078px wide. The host's measure produced that, the node's box came back
+**79.0**, and the paint path re-shaped the same string against the box — so the
+text wrapped to two lines inside a box that had just measured it as one. Chasing
+it found the real rule:
+
+* A measure leaf's box comes back from `floom-layout` **rounded to whole pixels**
+  (`79.078125` in, `x1: 79.0` out — pinned by
+  `a_measure_leafs_box_is_rounded_to_whole_pixels`, with
+  `the_rounding_goes_both_ways` for the other direction).
+* The paint path wrapped against that rounded box. A string whose natural width
+  lands in the **upper half-pixel** of its own box therefore measured in one line,
+  laid out in one line, and painted in two.
+* Over 2997 random regular-weight strings, **498 of them — one in six — wrapped at
+  their own box.** This is a pre-existing bug, not a weight bug: weight only moved
+  one string (`Toolbar title`, 71.59 regular → 79.08 bold) across the boundary.
+
+The fix is to wrap against the width the text was actually wrapped against, which
+the measure closure already knows: `TextMeasure::wrap_width` records the
+`avail.width` it was handed, and the paint prefers it over the rounded box. The
+subtlety, which cost one wrong implementation to find, is that it must be the
+*available* width and **not** the measured result. Recording what the measure
+returned looks equivalent and is not: for a string wider than its box that result
+is the wrapped width (fine), but for one measured against a wide available space
+it is the string's natural width, and feeding that back as the paint wrap width
+stops the label wrapping at all. `a_label_that_needs_two_lines_still_wraps` is the
+test for that half.
 
 ## Stages
 

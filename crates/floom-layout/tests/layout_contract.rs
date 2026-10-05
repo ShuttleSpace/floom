@@ -669,3 +669,66 @@ fn space_between_pushes_the_children_apart() {
         rb.x1
     );
 }
+
+/// **A measure leaf's box comes back rounded to whole pixels**, and that is the
+/// reason the host's paint path cannot wrap text against it.
+///
+/// `79.078125` in, `x1: 79.0` out. The host re-shapes the same string to get
+/// glyph runs and used to use this rounded box as the wrap width, so any string
+/// whose natural width landed in the upper half-pixel of its own box painted one
+/// word short of fitting — measured at 498 of 2997 random regular-weight
+/// strings. The host now wraps against the *measured* width instead (see
+/// `TextMeasure::measured` in `floom-app`).
+///
+/// This test pins the rounding itself rather than the workaround, so that if a
+/// future taffy stops rounding, the comment above is what points at the code
+/// that can then be deleted.
+#[test]
+fn a_measure_leafs_box_is_rounded_to_whole_pixels() {
+    let mut eng = LayoutEngine::new();
+    let leaf = eng.new_leaf_with_measure(
+        LayoutStyle::default(),
+        Box::new(|_| Size::new(79.078125, 14.0)),
+    );
+    let root = eng.new_with_children(
+        LayoutStyle {
+            width: Some(Length::Px(400.0)),
+            height: Some(Length::Px(100.0)),
+            ..Default::default()
+        },
+        &[leaf],
+    );
+    eng.compute(root, Size::new(400.0, 100.0));
+    let rect = eng.layout(leaf).rect;
+    assert!(
+        (rect.x1 - 79.0).abs() < 0.001,
+        "expected the box to be rounded down to 79.0, got {rect:?}"
+    );
+}
+
+/// The control for the above: a box that comes out *wider* than it went in would
+/// mean the rounding is a `ceil` and the host's `max` would be the wrong
+/// direction. Rounding is to nearest, so a measure returning 71.59 — which rounds
+/// *up* to 72 — proves both halves.
+#[test]
+fn the_rounding_goes_both_ways() {
+    let width_for = |measured: f64| {
+        let mut eng = LayoutEngine::new();
+        let leaf = eng.new_leaf_with_measure(
+            LayoutStyle::default(),
+            Box::new(move |_| Size::new(measured, 14.0)),
+        );
+        let root = eng.new_with_children(
+            LayoutStyle {
+                width: Some(Length::Px(400.0)),
+                height: Some(Length::Px(100.0)),
+                ..Default::default()
+            },
+            &[leaf],
+        );
+        eng.compute(root, Size::new(400.0, 100.0));
+        eng.layout(leaf).rect.x1
+    };
+    assert!((width_for(79.078125) - 79.0).abs() < 0.001, "rounds down");
+    assert!((width_for(71.5927734375) - 72.0).abs() < 0.001, "rounds up");
+}

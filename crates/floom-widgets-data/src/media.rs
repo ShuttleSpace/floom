@@ -20,8 +20,8 @@ use std::any::Any;
 
 use floom_accessibility::{SemanticsRole, SemanticsState};
 use floom_core::{
-    Color, CreateContext, ElementId, Event, EventContext, Key, KeyPhase, LayoutRequest, NamedKey,
-    PaintContext, Point, Rect, SemanticsContext, UpdateContext, Widget, WidgetAny,
+    Color, CreateContext, ElementId, Event, EventContext, FontWeight, Key, KeyPhase, LayoutRequest,
+    NamedKey, PaintContext, Point, Rect, SemanticsContext, UpdateContext, Widget, WidgetAny,
 };
 use floom_types::{PointerButton, PointerPhase};
 use floom_widgets::{SemanticsHint, to_core_role, to_core_state};
@@ -491,12 +491,14 @@ impl Widget for MediaControls {
             ),
             glyph,
             LABEL_FONT_SIZE,
+            FontWeight::Normal,
             FOREGROUND,
         );
         cx.fill_text(
             Point::new(layout.time.x0, text_y(layout.time.y0, layout.time.height())),
             &self.time_label(),
             LABEL_FONT_SIZE,
+            FontWeight::Normal,
             FOREGROUND,
         );
 

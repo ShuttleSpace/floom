@@ -14,7 +14,7 @@ use floom_core::{
     Brush, Color, CreateContext, ElementId, Filter, LayoutRequest, PaintContext, Point, Rect,
     ResourceId, SemanticsContext, Shadow, Size, UpdateContext, Widget,
 };
-use floom_types::{Path, Stroke};
+use floom_types::{FontWeight, Path, Stroke};
 
 /// Main axis for one-dimensional primitives ([`Spacer`], [`Divider`]).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
@@ -170,6 +170,10 @@ pub(crate) fn stroke_rounded_outline(
 pub struct Text {
     content: String,
     size: f32,
+    /// How heavy the run is drawn. Carried into both the measure and the paint
+    /// call, because a widget that measured at `Normal` and painted at `Medium`
+    /// would lay out a box too narrow for the glyphs it draws.
+    weight: FontWeight,
     color: Color,
     /// Overrides the accessibility label; defaults to `content`.
     label: Option<String>,
@@ -181,6 +185,7 @@ impl Text {
         Self {
             content: content.into(),
             size: 14.0,
+            weight: FontWeight::Normal,
             color: Color::BLACK,
             label: None,
             revision: Revision::default(),
@@ -190,6 +195,14 @@ impl Text {
     /// Font size in logical pixels.
     pub fn size(mut self, size: f32) -> Self {
         self.size = size;
+        self.revision.bump();
+        self
+    }
+
+    /// Font weight. floem-ui asks for `Medium` and `SemiBold` at 68 of its 73
+    /// weight call sites, so those two are the ones that matter in practice.
+    pub fn weight(mut self, weight: FontWeight) -> Self {
+        self.weight = weight;
         self.revision.bump();
         self
     }
@@ -222,6 +235,21 @@ impl Text {
         self.size
     }
 
+    pub fn font_weight(&self) -> FontWeight {
+        self.weight
+    }
+
+    /// In-place weight change, for a text that is already mounted — a theme
+    /// switch, a pressed state, a row that becomes a heading.
+    ///
+    /// The bump repaints. Re-measuring is the host's job: the text measure
+    /// callback reads the widget, so it sees the new weight, and the box follows.
+    pub fn set_weight(&mut self, weight: FontWeight) -> &mut Self {
+        self.weight = weight;
+        self.revision.bump();
+        self
+    }
+
     pub fn semantics_hint(&self) -> SemanticsHint {
         match self.label.clone().or_else(|| Some(self.content.clone())) {
             Some(label) if !label.is_empty() => {
@@ -250,7 +278,8 @@ impl Widget for Text {
         if self.content.is_empty() || self.size <= 0.0 {
             return None;
         }
-        let measured = floom_text::measure_text(&self.content, self.size, f64::INFINITY);
+        let measured =
+            floom_text::measure_weighted_text(&self.content, self.size, self.weight, f64::INFINITY);
         if measured.width <= 0.0 || measured.height <= 0.0 {
             return None;
         }
@@ -270,7 +299,7 @@ impl Widget for Text {
             return;
         }
         let origin = cx.bounds().origin();
-        cx.fill_text(origin, &self.content, self.size, self.color);
+        cx.fill_text(origin, &self.content, self.size, self.weight, self.color);
     }
 
     fn semantics(&self, cx: &mut dyn SemanticsContext, _id: ElementId) {
@@ -376,7 +405,7 @@ impl Widget for Icon {
         let mut buf = [0u8; 4];
         let glyph = self.glyph.encode_utf8(&mut buf);
         let origin = cx.bounds().origin();
-        cx.fill_text(origin, glyph, self.size, self.color);
+        cx.fill_text(origin, glyph, self.size, FontWeight::Normal, self.color);
     }
 
     fn semantics(&self, cx: &mut dyn SemanticsContext, _id: ElementId) {
@@ -599,7 +628,11 @@ impl Container {
     /// `width <= 0.0` is "no border", so a token that resolves to zero does not
     /// leave a hairline behind.
     pub fn border(mut self, width: f32, color: Color) -> Self {
-        self.border = if width > 0.0 { Some((width, color)) } else { None };
+        self.border = if width > 0.0 {
+            Some((width, color))
+        } else {
+            None
+        };
         self.revision.bump();
         self
     }
@@ -670,7 +703,11 @@ impl Container {
     /// The in-place form of [`Self::border`]. Idempotent, and a non-positive
     /// `width` clears the border exactly as the builder does.
     pub fn set_border(&mut self, width: f32, color: Color) {
-        let next = if width > 0.0 { Some((width, color)) } else { None };
+        let next = if width > 0.0 {
+            Some((width, color))
+        } else {
+            None
+        };
         if self.border != next {
             self.border = next;
             self.revision.bump();
@@ -789,20 +826,16 @@ impl Widget for Container {
             // the ops it always did keeps every pre-gradient snapshot honest
             // about what it is looking at.
             match fill.solid() {
-                Some(color) if self.radius > 0.0 => cx.fill_rounded_rect(bounds, self.radius, color),
+                Some(color) if self.radius > 0.0 => {
+                    cx.fill_rounded_rect(bounds, self.radius, color)
+                }
                 Some(color) => cx.fill_rect(bounds, color),
                 None if self.radius > 0.0 => cx.fill_rounded_rect_brush(bounds, self.radius, fill),
                 None => cx.fill_rect_brush(bounds, fill),
             }
         }
         if let Some((width, color)) = self.border {
-            stroke_rounded_outline(
-                cx,
-                bounds,
-                f64::from(self.radius),
-                f64::from(width),
-                color,
-            );
+            stroke_rounded_outline(cx, bounds, f64::from(self.radius), f64::from(width), color);
         }
     }
 

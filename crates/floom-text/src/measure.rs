@@ -7,7 +7,7 @@
 
 use std::cell::RefCell;
 
-use floom_types::Size;
+use floom_types::{FontWeight, Size};
 
 use crate::LayoutCache;
 use crate::layout::{TextAlign, TextLayoutOptions, TextShaper};
@@ -27,14 +27,44 @@ thread_local! {
 /// baseline metrics, and a zero-size box is exactly what layout should give an
 /// empty label.
 pub fn measure_text(text: &str, font_size: f32, max_width: f64) -> Size {
-    if text.is_empty() || font_size <= 0.0 {
+    measure_weighted_text(text, font_size, FontWeight::Normal, max_width)
+}
+
+/// [`measure_text`] with a weight.
+///
+/// The wrapper exists so the 30-odd callers that only ever render regular text
+/// do not have to build an options struct, and so that the weight is a visible
+/// argument where it does matter — a toolbar title asks for `Medium` here, and
+/// the box it gets back is a few pixels wider than the same string at `Normal`,
+/// which is exactly what should happen.
+pub fn measure_weighted_text(
+    text: &str,
+    font_size: f32,
+    weight: FontWeight,
+    max_width: f64,
+) -> Size {
+    measure(
+        text,
+        &TextLayoutOptions {
+            max_width,
+            font_size,
+            align: TextAlign::Start,
+            weight,
+        },
+    )
+}
+
+/// The general form: every field of the options participates in the cache key.
+///
+/// A widget whose text can change weight *after mount* has to come through here
+/// rather than through a convenience wrapper, because the weight has to reach
+/// the measure call that decides the box the text was laid out in — otherwise
+/// the box stays the width of the old weight's glyphs while the paint path draws
+/// the new weight's, and the text is clipped to the size it used to need.
+pub fn measure(text: &str, options: &TextLayoutOptions) -> Size {
+    if text.is_empty() || options.font_size <= 0.0 {
         return Size::ZERO;
     }
-    let options = TextLayoutOptions {
-        max_width,
-        font_size,
-        align: TextAlign::Start,
-    };
     // Cache the shaped result by (text + options): the layout engine re-runs a
     // text leaf's measure callback whenever its container reflows, not only when
     // the string itself changes, so identical measures would otherwise re-shape
@@ -42,8 +72,8 @@ pub fn measure_text(text: &str, font_size: f32, max_width: f64) -> Size {
     LAYOUT_CACHE.with(|cache| {
         let mut cache = cache.borrow_mut();
         cache
-            .get_or_insert_with(text, &options, || {
-                SHAPER.with(|shaper| shaper.borrow_mut().shape(text, &options))
+            .get_or_insert_with(text, options, || {
+                SHAPER.with(|shaper| shaper.borrow_mut().shape(text, options))
             })
             .size
     })

@@ -1,6 +1,8 @@
 //! Context objects passed into widget lifecycle methods.
 
-use floom_types::{Brush, Color, ElementId, Event, Filter, Point, Rect, ResourceId, Shadow, Size};
+use floom_types::{
+    Brush, Color, ElementId, Event, Filter, FontWeight, Point, Rect, ResourceId, Shadow, Size,
+};
 
 /// Context available while creating an element from a widget.
 pub trait CreateContext {
@@ -276,8 +278,20 @@ pub trait PaintContext {
     ///
     /// Multi-paragraph / shaped text goes through `floom-text`; this op carries
     /// the unshaped string so renderer backends can intern a glyph run.
-    fn fill_text(&mut self, origin: Point, text: &str, size: f32, color: Color) {
-        let _ = (origin, text, size, color);
+    ///
+    /// `weight` is part of this signature rather than a separate op because a
+    /// backend that keys its glyph cache on `(text, size)` will otherwise hand
+    /// back the regular runs for a `Medium` request — same string, same size,
+    /// silently the wrong weight, and nothing downstream can tell.
+    fn fill_text(
+        &mut self,
+        origin: Point,
+        text: &str,
+        size: f32,
+        weight: FontWeight,
+        color: Color,
+    ) {
+        let _ = (origin, text, size, weight, color);
     }
 
     /// Fills an arbitrary vector path.

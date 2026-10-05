@@ -22,12 +22,20 @@ pub const DEFAULT_LAYOUT_CACHE_CAPACITY: usize = 1024;
 /// measured exactly that — one key allocation per painted text node per
 /// frame). A hash collision with different content degrades to a re-shape,
 /// never to a wrong result.
+///
+/// `weight` is in this list because of what it costs to leave out: a hit returns
+/// glyph runs, so a cache that keyed on (text, size, align) alone would answer a
+/// `Medium` request with the `Normal` runs for the same string. Nothing about the
+/// result would look wrong — it is the same text at the same size, just not the
+/// weight asked for, and the only symptom is that 50 `font_weight` call sites in
+/// floem-ui render flat.
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct CacheKey {
     text: String,
     max_width_bits: u64,
     font_size_bits: u32,
     align: u8,
+    weight: u16,
 }
 
 impl CacheKey {
@@ -37,6 +45,7 @@ impl CacheKey {
             max_width_bits: options.max_width.to_bits(),
             font_size_bits: options.font_size.to_bits(),
             align: options.align as u8,
+            weight: options.weight.to_value(),
         }
     }
 
@@ -45,6 +54,7 @@ impl CacheKey {
             && self.max_width_bits == options.max_width.to_bits()
             && self.font_size_bits == options.font_size.to_bits()
             && self.align == options.align as u8
+            && self.weight == options.weight.to_value()
     }
 }
 
@@ -57,6 +67,7 @@ fn cache_key_hash(text: &str, options: &TextLayoutOptions) -> u64 {
     options.max_width.to_bits().hash(&mut hasher);
     options.font_size.to_bits().hash(&mut hasher);
     (options.align as u8).hash(&mut hasher);
+    options.weight.to_value().hash(&mut hasher);
     hasher.finish()
 }
 

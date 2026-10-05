@@ -17,8 +17,8 @@ use std::any::Any;
 
 use floom_accessibility::{SemanticsRole, SemanticsState};
 use floom_core::{
-    Color, CreateContext, ElementId, Event, EventContext, Key, KeyPhase, LayoutRequest, NamedKey,
-    PaintContext, Point, Rect, SemanticsContext, UpdateContext, Widget, WidgetAny,
+    Color, CreateContext, ElementId, Event, EventContext, FontWeight, Key, KeyPhase, LayoutRequest,
+    NamedKey, PaintContext, Point, Rect, SemanticsContext, UpdateContext, Widget, WidgetAny,
 };
 use floom_types::{Modifiers, PointerButton, PointerPhase};
 use floom_virtual::{ItemSizes, Overscan, VirtualViewport};
@@ -875,6 +875,7 @@ impl Widget for DataGrid {
                 ),
                 &title,
                 LABEL_FONT_SIZE,
+                FontWeight::Normal,
                 HEADER_FG,
             );
         }
@@ -925,6 +926,7 @@ impl Widget for DataGrid {
                     ),
                     &text,
                     LABEL_FONT_SIZE,
+                    FontWeight::Normal,
                     ROW_FG,
                 );
             }

@@ -792,8 +792,7 @@ impl SoftwareRenderer {
                 let qyp = (py - cy).abs() - qy_extent;
                 // `- spread_dev` is the dilation: the shape's own signed
                 // distance, offset outward (or inward, when negative).
-                let d = qxp.max(0.0).hypot(qyp.max(0.0))
-                    + qxp.max(qyp).min(0.0)
+                let d = qxp.max(0.0).hypot(qyp.max(0.0)) + qxp.max(qyp).min(0.0)
                     - radius_dev
                     - spread_dev;
                 alpha[row * w + col] = ((0.5 - d).clamp(0.0, 1.0)) as f32;
@@ -1853,7 +1852,7 @@ mod tests {
     /// some pixels inside the text bounds must pick up the fill colour.
     #[test]
     fn text_nodes_rasterize_glyphs_from_their_resource() {
-        use floom_text::{TextAlign, TextLayoutOptions};
+        use floom_text::{FontWeight, TextAlign, TextLayoutOptions};
 
         let mut shaper = floom_text::TextShaper::new();
         let laid = shaper.shape(
@@ -1862,6 +1861,7 @@ mod tests {
                 max_width: f64::INFINITY,
                 font_size: 24.0,
                 align: TextAlign::Start,
+                weight: FontWeight::Normal,
             },
         );
         assert!(!laid.runs.is_empty(), "shaper produced runs");
@@ -1916,7 +1916,7 @@ mod tests {
     /// this); ink in the far end of the run is what tells them apart.
     #[test]
     fn glyphs_spread_along_the_run_instead_of_stacking() {
-        use floom_text::{TextAlign, TextLayoutOptions};
+        use floom_text::{FontWeight, TextAlign, TextLayoutOptions};
 
         let text = "clicked 2 times";
         let mut shaper = floom_text::TextShaper::new();
@@ -1926,6 +1926,7 @@ mod tests {
                 max_width: f64::INFINITY,
                 font_size: 20.0,
                 align: TextAlign::Start,
+                weight: FontWeight::Normal,
             },
         );
         let width = laid.size.width.ceil() as u32;
@@ -2047,7 +2048,7 @@ mod tests {
     /// identical. A different font size is a different cache entry.
     #[test]
     fn glyph_masks_are_cached_across_frames() {
-        use floom_text::{TextAlign, TextLayoutOptions};
+        use floom_text::{FontWeight, TextAlign, TextLayoutOptions};
 
         let shape = |size: f32| {
             let mut shaper = floom_text::TextShaper::new();
@@ -2057,6 +2058,7 @@ mod tests {
                     max_width: f64::INFINITY,
                     font_size: size,
                     align: TextAlign::Start,
+                    weight: FontWeight::Normal,
                 },
             )
         };
@@ -2182,7 +2184,7 @@ mod tests {
     /// fixed number of entries says nothing about how much is held.
     #[test]
     fn glyph_cache_byte_budget_bounds_retained_memory() {
-        use floom_text::{TextAlign, TextLayoutOptions};
+        use floom_text::{FontWeight, TextAlign, TextLayoutOptions};
 
         let sizes = [24.0, 48.0, 72.0, 96.0, 120.0];
         // Shape once per size and reuse: each `shape()` allocates fresh font
@@ -2197,6 +2199,7 @@ mod tests {
                         max_width: f64::INFINITY,
                         font_size: size,
                         align: TextAlign::Start,
+                        weight: FontWeight::Normal,
                     },
                 );
                 (size.to_bits(), laid.runs.clone())
@@ -2245,7 +2248,7 @@ mod tests {
     /// still served from the cache.
     #[test]
     fn glyph_cache_evicts_least_recently_used() {
-        use floom_text::{TextAlign, TextLayoutOptions};
+        use floom_text::{FontWeight, TextAlign, TextLayoutOptions};
 
         // Shape every size exactly once and reuse those runs across frames:
         // each shape() call allocates fresh font bytes, which are part of
@@ -2261,6 +2264,7 @@ mod tests {
                         max_width: f64::INFINITY,
                         font_size: size,
                         align: TextAlign::Start,
+                        weight: FontWeight::Normal,
                     },
                 );
                 (size.to_bits(), laid.runs.clone())
