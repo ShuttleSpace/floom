@@ -13,9 +13,10 @@ so the widget API gets shaken out before anything is translated in bulk:
 | self-composing | `md-toolbar` | ported, 13 tests |
 | separator | `md-footer` | ported, 14 tests |
 | selectable | `md-item_group` | ported, 11 tests (state machine promoted) |
+| surface + press | `fluent-card` | ported, 14 tests (first fluent kit) |
 
 Ported kits: `md-card`, `md-button`, `md-icon`, `md-expansion_panels`,
-`md-toolbar`, `md-footer`, `md-item_group`.
+`md-toolbar`, `md-footer`, `md-item_group`, **`fluent-card`**.
 Engine widgets: `Badge`, `Ripple`, `VectorIcon`, `Pressable`, `Accordion`,
 **`Surface`**, **`SelectGroup`**.
 Text: **`FontWeight`**, end to end — `floom_types` enum, `TextLayoutOptions`,
@@ -25,14 +26,22 @@ both glyph caches, the measure comparison, the paint op.
 `md-footer` and `md-item_group` are ported, and the last of them turned out to be a
 70-line wrapper because its state machine belongs in the engine.
 
-1. **Repair the eight broken material crates** (correction 6). They are *callers*
-   of `MdIcon` and `Ripple`, so each is a small edit rather than a port, and they
-   have been broken since the first ports landed.
-2. **Then rewrite `floom-elements` itself**, whose `multi` dispatch is still v1
-   `IntoView`. That is a port rather than a repair, and it comes *after* the eight
-   repairs above, because a crate that does not compile cannot tell you whether a
-   rewrite is enough.
-3. Then port one kit end to end, and the other two follow its shape.
+**The next task is a port, not a repair.** Correction 7 established that the 14
+crates broken by the ports already done are **not small edits** — they are ports,
+and no repair exists that keeps this plan's rules. So:
+
+1. ~~**Port the cheapest of the 14 first**~~ — **done**: `fluent-card`, 14 tests.
+   The floem-ui workspace is now at **24 errors across 13 crates** (was 26 across
+   14; `fluent-card`'s two `Ripple` errors are gone), so the arithmetic is the
+   check that the count in correction 7 was right.
+2. **`cupertino-card` next** (109 lines, the same shape with `radius().md` where
+   Fluent uses `radius().xl`), then the two `icon_button`s (117/117/118) and the
+   three `list_item`s (172 each) — the last of those is one shape three times and
+   wants the same promotion `md-item_group` got.
+3. Then `md-alert`, `md-dialog`, `md-select`, `md-treeview`, `md-combobox`,
+   `md-autocomplete` — and with them the floem-ui workspace goes green, at which
+   point `floom-elements`' own 6,220 lines of v1 `multi` dispatch can be rewritten
+   (correction 6).
 
 Verification commands that must stay green:
 
@@ -52,6 +61,9 @@ Verification commands that must stay green:
     cd crates/ecosystem/floom-ui
     for c in md-card md-button md-icon md-expansion_panels md-toolbar md-footer md-item_group; do
         cargo test --manifest-path "crates/material/$c/Cargo.toml"
+    done
+    for c in fluent/fluent-card; do
+        cargo test --manifest-path "crates/$c/Cargo.toml"
     done
 
     # the layout crate (the padding / margin / percentage vocabulary lives here)
@@ -104,6 +116,83 @@ assertion made from reading code instead of compiling it:
    Porting a shared base therefore breaks its callers, and the plan had no step
    for that; `md-icon`'s note about "six material crates still on v1" named the
    right crates and then did not go and fix them.
+
+7. **Correction 6's own remedy was wrong**, twice over: the count, and the claim
+   that each break is "a small edit rather than a port". Both were assertions from
+   reading code, and one experiment each is what settled them.
+
+   **The count.** `cargo check --workspace --keep-going` in the nested workspace
+   reports **26 errors across 14 files in all three kits**, not 20 across 8
+   material ones — because the breakage grew as more ports landed (`Ripple`'s
+   re-export is what reached cupertino and fluent), and because the earlier count
+   only ever looked at material.
+
+   The count was re-measured after `fluent-card` was ported, and came back
+   **24 errors across 13 crates** — exactly `26 - 2`, which is the two `Ripple`
+   errors in `fluent-card`. A count that moves by precisely the amount a change
+   should move it is the cheapest available check that the original number was
+   real rather than remembered.
+
+   | crate | lines | `floom::` references |
+   |---|---|---|
+   | `fluent-card`, `cupertino-card` | 107, 109 | 3, 4 |
+   | `fluent-icon_button`, `cupertino-icon_button`, `md-icon_button` | 117, 117, 118 | 3, 3, 3 |
+   | `fluent-list_item`, `cupertino-list_item`, `md-list_item` | 172, 172, 174 | 5, 5, 5 |
+   | `md-alert`, `md-dialog` | 170, 271 | 4, 4 |
+   | `md-select`, `md-treeview`, `md-combobox`, `md-autocomplete` | 263, 259, 284, 315 | 7, 7, 7, 7 |
+
+   **Not a small edit.** Two experiments, both reverted:
+
+   * *Can `.view()` just be dropped?* No. Deleting it from `md-alert` moves the
+     error down one line rather than removing it: `the method style exists for
+     struct MdIcon, but its trait bounds were not satisfied`. `MdIcon` is a 2.0
+     `Widget`; its callers are v1 crates that still depend on the `floom`
+     monolith, and a v1 `Decorators` chain needs `impl View`. **There is no v1
+     view to return**, so the repair would be to port the click onto
+     [`Pressable`] — which is a port.
+   * *Can the v1 `Ripple` wrapper be restored to `floom-widget-runtime`?* No. It
+     is still in git history (234 lines) and restoring it fails immediately:
+     `cannot find module or crate floem`. The wrapper needs
+     `floom::context::LayoutChangedListener` and `floom::animate::Animation`,
+     because a v1 *view wrapper* has to learn its own box before it can size the
+     ink. 2.0 hands `paint` and `event` `cx.bounds()` directly, which is why the
+     engine version needs no listener. So restoring it would put a v1 `floom`
+     dependency back into a ported crate — the one thing this plan forbids.
+
+   **What this changes about the plan.** `floom-widget-runtime`'s note claimed
+   that re-exporting the 2.0 `Ripple` was right because "91 of 99 crates reach it
+   through this path". It reached them, and it broke all nine that were still v1,
+   because a v1 `Container` cannot be handed to a 2.0 widget's builder. So:
+
+   * there is **no repair** that keeps the plan's own rules — every option is
+     either 14 ports, or a new v1-only compatibility crate to be deleted in Stage D;
+   * the floem-ui workspace **cannot be made to compile before those 14 crates are
+     ported**, and the honest thing is to say so rather than carry them as a
+     backlog of edits;
+   * so they are no longer a repair step. They are the first 14 entries of "port
+     one kit end to end", and `cupertino-card` / `fluent-card` are the cheapest
+     way in, because `md-card`'s shape is already proven.
+
+8. **"The kit test suites are green" meant "they were never run."** Porting
+   `fluent-card` surfaced this: the crate's own `tests/api.rs` contained
+   `assert_eq!(style.border_radius, 4.0)`, and no design system in the table says
+   `4.0` — `CardTokens::from_spacing`, which is what Fluent resolves, says `12.0`,
+   and Material's card token says `10.0`. The assertion was wrong before the port.
+
+   It had never been caught because **the crate did not compile**: its v1 `lib.rs`
+   still called `Ripple::new(inner)` and `.radius_fn(..)`, both removed by the
+   ports, so every run stopped at the build and the assertion sat behind that error
+   for the life of the crate. This is the same omission as the `Length` correction
+   further down — a `floem-ui` suite that no root-workspace command reaches —
+   except that this one was not merely skipped by the verification list, it was
+   unreachable.
+
+   The lesson is narrower than "write more tests". A test suite behind a compile
+   error is not a safety net; it is a comment. **Every unported crate's test suite
+   should be assumed to contain a stale assertion, and none of them can be
+   believed until its crate builds.** That is an argument for porting in
+   dependency order and re-running each suite the moment its crate goes green —
+   not for reading ahead and judging the tests.
 
 `floem-ui` is the design-system component library: **298 crates, 66,729 LOC**
 (98 distinct components × 3 kits — Material, Cupertino, Fluent — plus the shared
@@ -336,9 +425,10 @@ Then:
 1. **Batch the surface components** (`footer`, `toolbar`, `item_group`,
    `list_subheader`, `banner`) — these should now be uneventful: a `Surface`, a
    `Text`, maybe a `Stack`.
-2. **Repair `floom-elements`' callers** — the eight material crates correction 6
-   names. Each is a small edit, not a port: they call `MdIcon::view()` and
-   `Ripple::new(x).view()`, both of which are gone on purpose.
+2. **Port `floom-elements`' callers** — the 14 crates correction 7 names, across
+   all three kits. Correction 6 called each "a small edit"; two experiments showed
+   otherwise, because `.view()` has no v1 view to return and the v1 `Ripple`
+   wrapper cannot be restored without putting v1 back into a ported crate.
 3. **Port one kit end to end** (material, 98 components), then cupertino and
    fluent, which follow the same shape with their own tokens.
 4. **`floom-elements`** last: its 800 lines of re-exports and 6,220 lines of v1
@@ -668,6 +758,85 @@ pattern is worth naming: *the box owns the fill, the child owns the ink.*
 `Edges` is now re-exported from `floom-widgets`' root beside `Align` and `Axis`,
 for the same reason those two are: a kit author writing `border_edges` should not
 have to reach past this crate for the type.
+
+### What `fluent-card` turned up — the first Fluent kit, and a red test nobody ran
+
+`fluent-card` is 107 lines of v1 and the second card in the library. It exists in
+this document for two reasons: it is the cheapest of the 14 crates correction 7
+identified, and it **inherited a failing test**.
+
+**The inherited test was wrong, and had never been run.**
+`tests/api.rs::card_style_resolves_from_fluent_theme` asserted
+`style.border_radius == 4.0`. No design system in the table says `4.0`:
+`CardTokens::from_spacing` — which is what Fluent gets — says `12.0`, and
+Material's own card token says `10.0`. The literal was simply stale.
+
+It could not have been caught earlier, and the reason is worth writing down: **the
+crate did not compile before this port.** Its v1 `lib.rs` called
+`Ripple::new(inner)` and `.radius_fn(..)`, both of which the ports removed, so
+every run stopped at the build. The assertion sat behind a compile error for the
+life of the crate. This is the same failure as the `Length` correction below — a
+kit test suite that no root-workspace command reaches — except that this one was
+never reachable at all.
+
+Rewritten to assert against `theme.component(ComponentId::Card)` instead of a
+literal, which is what the test's own name claims: the point is that the style
+*resolves from* the theme, so a change to the token table should move the number
+rather than break it.
+
+**The manifest was wrong in a way that compiled.** `fluent-card`'s `Cargo.toml`
+started as a copy of `md-card`'s with the package name changed, and
+`floom-widget-runtime = { features = ["material"] }` came along with it. It built
+and every test passed, because all three design-system features are *the same
+gate*: `#[cfg(any(feature = "material", feature = "cupertino", feature = "fluent"))]`
+appears on the same items in both `floom-widget-runtime` and `floom-core-theme`, so
+enabling the wrong one satisfies it exactly as well as the right one.
+
+Corrected to `["fluent"]`, and recorded because the failure mode is the interesting
+part: **these features are presence flags, not data selectors.** Nothing in the
+tree can currently tell you which design system a crate asked for, so a Fluent
+crate asking for Material is undetectable by compiling or by testing — it is only
+detectable by reading the manifest. That stops being true the moment the features
+start selecting data instead of gating items, so the copy-a-manifest shortcut needs
+its own check: **when a ported kit manifest is derived from another kit's, the
+design-system feature is the field that must not be inherited.**
+
+**A card you can press is still a card that holds its content.** This is the one
+genuine shape difference from `md-card`, and it is why `Surface` had to be a
+widget with children rather than a leaf. The composition is `Ripple(Surface(content))`
+— not `Surface(Ripple(content))`, and not a replacement. The test that holds it
+honest is a downcast: the ripple's one child must *be* a `Surface`. A
+`Container`-based port, or a ripple that had displaced the box, fails there.
+
+**Two slot facts the port turned up, both about replay rather than storage.**
+
+* `Ripple::child` takes the child's `LayoutRequest` as well as its builder, like
+  every other slot. Found by compiling, not by reading.
+* The surface cannot be *captured* by the ripple's slot, because a 2.0 slot is a
+  replayed `Fn` and cannot hand out the same widget twice —
+  `cannot move out of surface, a captured variable in an Fn closure`. So the slot
+  captures plain data (a colour, three lengths, a `Shadow`) and composes the box
+  on every rebuild. `the_slot_replays_rather_than_hands_out_one_widget` replays
+  twice and asserts both rounds still have their content, which is what a captured
+  widget would lose.
+
+**The radius v1 read but never used, now kept apart on purpose.** v1 read
+`CardTokens::border_radius` into its style struct and drew the box at
+`t.radius().xl`. For Material the two are close enough to hide this; for Fluent
+they are `12.0` against `24.0`, which is the only reason the port noticed. Both
+are kept — `resolved_style().border_radius` reports what v1 reported,
+`corner_radius()` returns what v1 drew — and
+`the_drawn_radius_is_the_themes_not_the_cards_token` asserts they differ.
+
+**One thing the port gives up, stated rather than buried:** the ripple's radius is
+resolved once, here, instead of through v1's `radius_fn(|t| t.radius().xl)`
+re-read on every render. `floom_widgets::Ripple` takes a fixed radius for the same
+reason it takes a fixed ink — it is a value in a builder. Box and ripple resolve
+from the same theme value at the same moment, so they cannot disagree, but neither
+re-reads the theme afterwards. This is a property of the whole porting approach
+rather than of this crate: **every ported kit resolves the theme when it is built,
+so a runtime theme switch restyles nothing until the tree is rebuilt.** Worth
+deciding on purpose before 290 more crates inherit it.
 
 ### What `md-item_group` turned up — the promotion that paid for itself
 
