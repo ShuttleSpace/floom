@@ -16,3 +16,7 @@ rustc-ice*
 # iOS example local build output and nested lock symlink
 examples/ios/build/
 examples/ios/Cargo.lock
+
+# Python bytecode from the repo tools
+__pycache__/
+*.pyc
