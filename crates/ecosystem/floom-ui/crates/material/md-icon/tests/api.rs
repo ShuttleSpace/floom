@@ -78,8 +78,8 @@ fn resolve_produces_a_widget_sized_by_the_theme() {
         .layout_request()
         .expect("an icon always wants a size");
 
-    assert_eq!(req.width, Some(20.0));
-    assert_eq!(req.height, Some(20.0));
+    assert_eq!(req.width, Some(floom_core::Length::Px(20.0)));
+    assert_eq!(req.height, Some(floom_core::Length::Px(20.0)));
 }
 
 #[test]
@@ -240,7 +240,11 @@ trait SizeOf {
 
 impl SizeOf for floom_widgets::VectorIcon {
     fn size_of(&self) -> Option<f32> {
-        self.layout_request().and_then(|r| r.width)
+        // A request's dimension is a `Length`; a percentage has no pixel value
+        // until the containing block is known, so this asks for the pixel part.
+        self.layout_request()
+            .and_then(|r| r.width)
+            .and_then(|l| l.px())
     }
 }
 

@@ -270,8 +270,7 @@ impl Widget for Ripple {
         match pointer.phase {
             PointerPhase::Down => {
                 self.origin = Some(local);
-                self.diameter =
-                    Self::diameter_at(local, (bounds.width(), bounds.height()));
+                self.diameter = Self::diameter_at(local, (bounds.width(), bounds.height()));
                 self.phase = Phase::Expanding;
             }
             // Only a release that follows a press starts the fade; a release
@@ -323,7 +322,9 @@ impl Widget for Ripple {
             rect,
             (radius / 2.0) as f32,
             Color {
-                a: (f32::from(self.ink.a) * alpha as f32).round().clamp(0.0, 255.0) as u8,
+                a: (f32::from(self.ink.a) * alpha as f32)
+                    .round()
+                    .clamp(0.0, 255.0) as u8,
                 ..self.ink
             },
         );
@@ -332,7 +333,9 @@ impl Widget for Ripple {
     /// Clip the ink to this element's rounded box. Without this the circle
     /// would spill past the corners it is meant to be tucked into.
     fn clip(&self) -> Option<ClipShape> {
-        Some(ClipShape::RoundedBox { radius: self.radius })
+        Some(ClipShape::RoundedBox {
+            radius: self.radius,
+        })
     }
 }
 

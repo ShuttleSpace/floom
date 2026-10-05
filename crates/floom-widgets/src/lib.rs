@@ -45,10 +45,19 @@ pub use controls::{
     Button, Checkbox, InteractionState, Pressable, Progress, Radio, Select, Slider, Switch,
     TextField,
 };
+/// The layout vocabulary a widget author needs alongside [`Stack`]: the main
+/// axis a stack runs on, and how its children sit on each axis.
+///
+/// Re-exported rather than left to `floom-core` because `Axis` used to be a
+/// *second*, identical enum in `primitives`, and the root re-export named that
+/// one — so `use floom_widgets::*;` followed by `Stack::new(Axis::Horizontal)`
+/// did not compile. One axis type, exported from here, cannot drift back.
+pub use floom_core::{Align, Axis};
 pub use labeled::Labeled;
 pub use native::NativeSurface;
 pub use nav::{NavHandle, NavHost};
 pub use navigation::{NavDestination, NavigationBar, NavigationDrawer, NavigationRail};
+pub use primitives::{Container, Divider, Icon, Image, ImageFit, SemanticsHint, Spacer, Text};
 pub use ripple::{Phase, Ripple, ripple};
 /// A decorated box with children: v1's `Container::new(child).style(..)`.
 pub use surface::Surface;
@@ -56,6 +65,3 @@ pub use surface::Surface;
 pub use svg_path::parse_path_data;
 /// An icon drawn from an outline, for kits with no SVG pipeline in 2.0.
 pub use vector_icon::VectorIcon;
-pub use primitives::{
-    Axis, Container, Divider, Icon, Image, ImageFit, SemanticsHint, Spacer, Text,
-};

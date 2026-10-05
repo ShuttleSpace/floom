@@ -37,7 +37,7 @@ use floom_core::{
 };
 use floom_types::{Path, Transform};
 
-use crate::primitives::{emit_semantics, Revision, SemanticsHint};
+use crate::primitives::{Revision, SemanticsHint, emit_semantics};
 use crate::svg_path::parse_path_data;
 
 /// An icon drawn as a filled outline.

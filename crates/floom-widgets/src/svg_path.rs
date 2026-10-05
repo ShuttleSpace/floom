@@ -745,10 +745,7 @@ mod tests {
     fn an_arc_with_a_zero_radius_is_a_line() {
         assert_eq!(
             segs("M0 0 A0 0 0 0 1 10 10"),
-            vec![
-                PathSeg::MoveTo(p(0.0, 0.0)),
-                PathSeg::LineTo(p(10.0, 10.0)),
-            ]
+            vec![PathSeg::MoveTo(p(0.0, 0.0)), PathSeg::LineTo(p(10.0, 10.0)),]
         );
     }
 
@@ -756,10 +753,7 @@ mod tests {
     fn commas_and_newlines_are_separators_too() {
         assert_eq!(
             segs("M0,0\nL10\r\n,10"),
-            vec![
-                PathSeg::MoveTo(p(0.0, 0.0)),
-                PathSeg::LineTo(p(10.0, 10.0)),
-            ]
+            vec![PathSeg::MoveTo(p(0.0, 0.0)), PathSeg::LineTo(p(10.0, 10.0)),]
         );
     }
 

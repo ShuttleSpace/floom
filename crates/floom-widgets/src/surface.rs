@@ -63,6 +63,9 @@ use crate::primitives::{Container, Revision, SemanticsHint};
 pub struct Surface {
     decoration: Container,
     padding: Insets,
+    /// The caller's own extent for this box, merged with [`Surface::padding`]
+    /// in [`Widget::layout_request`]. See [`Self::request`].
+    request: LayoutRequest,
     revision: Revision,
     /// Set when the padding moved, so the next `update` can also ask for a
     /// layout pass. A repaint alone would redraw the *previous* frame's geometry,
@@ -97,10 +100,35 @@ impl Surface {
         Self {
             decoration: Container::new(),
             padding: Insets::ZERO,
+            request: LayoutRequest::default(),
             revision: Revision::default(),
             padding_moved: false,
             children: Vec::new(),
         }
+    }
+
+    /// Declares this box's own extent — a bar's height, a full-width row.
+    ///
+    /// Without this a decorated box could only ever shrink-wrap, because its
+    /// `layout_request` carried padding and nothing else. A leaf cannot declare a
+    /// size at all, and a surface is not a leaf, so the asymmetry was accidental
+    /// rather than principled: `md-toolbar` needs "64px tall and the full width of
+    /// its parent", and the only way to say that was to put the request on the
+    /// *parent's* slot for the child, which spreads one box's styling across two
+    /// widgets.
+    ///
+    /// Padding wins over this request's `padding` field, since the padding is the
+    /// surface's own and a caller restating it is restating the same thing.
+    ///
+    /// ```ignore
+    /// Surface::new()
+    ///     .request(LayoutRequest::new().height(64.0).width_pct(100.0))
+    ///     .push(|| Box::new(Text::new("..")))
+    /// ```
+    pub fn request(mut self, request: LayoutRequest) -> Self {
+        self.request = request;
+        self.revision.bump();
+        self
     }
 
     /// Appends a prebuilt child slot.
@@ -348,10 +376,14 @@ impl Widget for Surface {
     }
 
     fn layout_request(&self) -> Option<LayoutRequest> {
-        if self.padding == Insets::ZERO {
-            return None;
+        // Merged rather than replaced: the padding is this box's own, and a caller
+        // declaring an extent is saying something else. Neither can erase the other,
+        // which is the rule the host's own lowering already follows.
+        let mut request = self.request;
+        if self.padding != Insets::ZERO {
+            request.padding = Some(self.padding);
         }
-        Some(LayoutRequest::new().padding(self.padding))
+        (request != LayoutRequest::default()).then_some(request)
     }
 
     /// Declared rather than pushed in `paint`: the filter has to bracket the whole

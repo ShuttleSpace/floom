@@ -11,18 +11,10 @@
 
 use floom_accessibility::{SemanticsRole, SemanticsState};
 use floom_core::{
-    Brush, Color, CreateContext, Edges, ElementId, Filter, LayoutRequest, PaintContext, Point,
-    Rect, ResourceId, SemanticsContext, Shadow, Size, UpdateContext, Widget,
+    Axis, Brush, Color, CreateContext, Edges, ElementId, Filter, LayoutRequest, PaintContext,
+    Point, Rect, ResourceId, SemanticsContext, Shadow, Size, UpdateContext, Widget,
 };
 use floom_types::{FontWeight, Path, Stroke};
-
-/// Main axis for one-dimensional primitives ([`Spacer`], [`Divider`]).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
-pub enum Axis {
-    #[default]
-    Horizontal,
-    Vertical,
-}
 
 /// How an [`Image`] maps its intrinsic size onto the bounds it is given.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]

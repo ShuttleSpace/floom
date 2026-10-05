@@ -210,8 +210,16 @@ fn the_indicator_carries_the_token_size_and_the_muted_ink() {
         let req = icon
             .layout_request()
             .expect("an icon asks for its own size");
-        assert_eq!(req.width, Some(tokens().icon_size));
-        assert_eq!(req.height, Some(tokens().icon_size));
+        assert_eq!(
+            req.width.and_then(|l| l.px()),
+            Some(tokens().icon_size),
+            "the icon is sized in pixels, not as a percentage"
+        );
+        assert_eq!(
+            req.height.and_then(|l| l.px()),
+            Some(tokens().icon_size),
+            "the icon is sized in pixels, not as a percentage"
+        );
     }
 
     let theme = MultiTheme::new_for(DesignSystem::Material);

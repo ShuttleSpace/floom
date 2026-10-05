@@ -74,6 +74,15 @@ impl Stack {
         self
     }
 
+    /// How many slots this stack holds.
+    ///
+    /// Present because [`crate::Surface`] has the same question and the same
+    /// answer, and a caller building a row should not have to know which of the
+    /// two it holds.
+    pub fn child_count(&self) -> usize {
+        self.children.len()
+    }
+
     /// How this stack aligns its children on the main and cross axes.
     pub fn align(mut self, main: Align, cross: Align) -> Self {
         self.main_align = Some(main);
@@ -3530,10 +3539,7 @@ mod accordion_tests {
         accordion.set_open(0, true);
         let mut leaf = mount_panel(&accordion, 0);
         tick(&mut leaf);
-        assert!(
-            leaf.animation().is_none(),
-            "a mount is not a motion"
-        );
+        assert!(leaf.animation().is_none(), "a mount is not a motion");
     }
 
     /// With one, the *panel's own node* declares it — which is why the leaf holds

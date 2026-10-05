@@ -10,19 +10,20 @@ so the widget API gets shaken out before anything is translated in bulk:
 | surface | `md-card` | ported, 7 tests |
 | interactive | `md-button` | ported, 10 tests |
 | stateful | `md-expansion_panels` | ported, 12 tests |
+| self-composing | `md-toolbar` | ported, 13 tests |
 
-Ported kits: `md-card`, `md-button`, `md-icon`, `md-expansion_panels`.
+Ported kits: `md-card`, `md-button`, `md-icon`, `md-expansion_panels`,
+`md-toolbar`.
 Engine widgets: `Badge`, `Ripple`, `VectorIcon`, `Pressable`, `Accordion`,
 **`Surface`**.
 Text: **`FontWeight`**, end to end — `floom_types` enum, `TextLayoutOptions`,
 both glyph caches, the measure comparison, the paint op.
 
-**The next task is a component again, and the component is `md-toolbar`.** Every
-capability gap the plan listed is now closed — `font_weight` (73 sites) and
-per-side borders (27 sites) were the last two, and both turned up corrections
-worth a section each:
+**The next task is `md-footer`.** Every capability gap the plan listed is closed —
+`font_weight` (73 sites) and per-side borders (27 sites) were the last two — and
+`md-toolbar` is ported, so the batch is underway:
 
-1. **Then the batch**: `md-toolbar`, `md-footer`, `md-item_group`, and
+1. **The rest of the batch**: `md-footer`, `md-item_group`, and
    `list_subheader`. `md-item_group` is the interesting one — it is the first
    component that is surface *and* interactive *and* stateful at once, and its
    selection changes a mounted row's fill and outline, which is exactly what
@@ -43,6 +44,14 @@ Verification commands that must stay green:
 
     # the shaping crate, where the weight and both caches' keys are pinned
     cargo test --manifest-path crates/floom-text/Cargo.toml
+
+    # **every ported kit**, from the nested workspace. This line was missing until
+    # the `Length` change broke two of these suites and nothing noticed for two
+    # commits — see the correction below.
+    cd crates/ecosystem/floom-ui
+    for c in md-card md-button md-icon md-expansion_panels md-toolbar; do
+        cargo test --manifest-path "crates/material/$c/Cargo.toml"
+    done
 
     # the layout crate (the padding / margin / percentage vocabulary lives here)
     cargo test --manifest-path crates/floom-layout/Cargo.toml
@@ -555,6 +564,68 @@ Two mutations, checked rather than assumed: routing single edges through the
 rounded stroke turns 3 tests red, and losing the second of two edges (`else if`
 instead of a second `if`) turns exactly `each_edge_band_sits_on_that_edge` and
 `two_edges_draw_two_bands` red.
+
+### What `md-toolbar` turned up — the first self-composing component
+
+The first ported component that brings its own content, and so the first one whose
+tests are about composition as much as decoration. Three things came out of it.
+
+**1. A slot is a replayed `Fn`, so a component cannot close over itself.** v1's
+`actions(impl IntoView)` stored a *value*; 2.0's `push` takes
+`impl Fn() -> Box<dyn WidgetAny> + Send + Sync`, and the compiler says so in the
+least helpful way:
+
+* a closure that moved a built `Icon`/`Text` out of the capture fails with
+  "cannot move out of a captured variable in an `Fn` closure" — the widget has to
+  be *rebuilt* on every replay;
+* a closure that captured `self` fails with "`Rc<()>` cannot be sent between
+  threads", because `MdToolbar` holds an `RwSignal` and 2.0's signal is
+  `Rc`-based.
+
+So the shape is: **resolve the theme to plain data first, then close over
+`String`s, `f32`s and colours.** `bar_of` and `leading_group_of` are free functions
+over exactly that, and `view()` is the composition of them. The actions slot is an
+`Arc<dyn Fn ..>` rather than a `Box` for the same reason one level down — the
+surface's slot is itself replayed, so every rebuild needs its own copy.
+
+**2. Two engine capabilities this component was the first to need**, both of which
+the previous commits happened to add:
+
+* `FontWeight`, because v1's title is `FontWeight::Medium`. It is a literal in v1,
+  and it stayed a literal — but it is now a *field on the resolved style*, so the
+  style struct states the weight instead of the widget builder hard-coding it.
+* `Surface::request`, because v1 styled the bar `.width_pct(100.0).height(h)`. A
+  decorated box could only shrink-wrap: its `layout_request` carried padding and
+  nothing else, so the only way to say "64px and full width" was to put the request
+  on the *parent's* slot for the child, which spreads one box's styling across two
+  widgets. The request now merges with the padding rather than replacing it.
+
+**3. A record, not a change: the theme's own weight table is wrong.**
+`floem_core_theme::tokens::typography::FontWeight::to_floom` maps both `ExtraBold`
+and `Black` onto parley's `EXTRA_BOLD` (800), so the two are indistinguishable
+there. `FontWeight::Black` has **no call site** in material, cupertino or fluent,
+so the mapping is left alone — a fix there would change nothing observable and
+could not be verified. The kit's own conversion maps all nine weights distinctly,
+and a test says so.
+
+Two v1 oddities kept deliberately, each with a comment saying why: the leading
+icon's 22px and the title's `Medium` are literals rather than tokens, and the bar's
+height comes from `ToolbarProps::height` while `ToolbarTokens::height` — which v1
+also declared — stays unread. Reading the token instead would be a behaviour change
+wearing a cleanup's clothes.
+
+### A correction: the verification list did not include the kits
+
+`Length` landed two commits ago and broke two ported kits' *test* suites
+(`md-expansion_panels`, `md-icon` — `assert_eq!(req.width, Some(120.0))` against a
+field that is now `Option<Length>`). Nothing noticed, because the porting plan's
+verification list named the core workspace and five core crates and **not one kit
+crate**, and `floem-ui` is a separate nested workspace with its own `Cargo.lock`,
+so a root `cargo test` never reaches it.
+
+That is the same failure this document keeps recording in a different form: a check
+that was not in the list did not happen. The list now ends with a loop over every
+ported kit, and the comment on it says why it is there.
 
 ## Stages
 

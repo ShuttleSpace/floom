@@ -1,8 +1,8 @@
 //! Scene and semantics snapshots for the Tier-0 primitives.
 
-use floom_core::{Brush, Color, Edges, FontWeight, Point, Rect, ResourceId, Shadow, Size, Widget};
+use floom_core::{Axis, Brush, Color, Edges, FontWeight, Point, Rect, ResourceId, Shadow, Size, Widget};
 use floom_scene::SceneNode;
-use floom_widgets::primitives::{Axis, Container, Divider, Icon, Image, ImageFit, Spacer, Text};
+use floom_widgets::primitives::{Container, Divider, Icon, Image, ImageFit, Spacer, Text};
 use floom_widgets::testkit::{
     AllocatingCreateContext, RecordingUpdateContext, SceneRecorder, paint_snapshot,
     semantics_snapshot,
