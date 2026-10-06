@@ -15,10 +15,11 @@ so the widget API gets shaken out before anything is translated in bulk:
 | selectable | `md-item_group` | ported, 11 tests (state machine promoted) |
 | surface + press | `fluent-card` | ported, 14 tests (first fluent kit) |
 | surface + press | `cupertino-card` | ported, 14 tests (same shape, `radius().md`) |
+| icon button | `md-icon_button` + 2 kits | ported, 43 tests (shape promoted to the engine) |
 
 Ported kits: `md-card`, `md-button`, `md-icon`, `md-expansion_panels`,
 `md-toolbar`, `md-footer`, `md-item_group`, **`fluent-card`**,
-**`cupertino-card`**.
+**`cupertino-card`, and the three `icon_button`s**.
 Engine widgets: `Badge`, `Ripple`, `VectorIcon`, `Pressable`, `Accordion`,
 **`Surface`**, **`SelectGroup`**.
 Text: **`FontWeight`**, end to end — `floom_types` enum, `TextLayoutOptions`,
@@ -39,12 +40,14 @@ and no repair exists that keeps this plan's rules. So:
 2. ~~**`cupertino-card`**~~ — **done**, 14 tests. The floem-ui workspace is now at
    **22 errors across 12 crates** (26/14 → 24/13 → 22/12, each step minus exactly
    the two `Ripple` errors of the card just ported).
-3. **The two `icon_button`s** (117/117/118) next, then the three `list_item`s
-   (172 each) — the last of those is one shape three times and wants the same
-   promotion `md-item_group` got. Both groups are where the `Pressable` +
-   `Ripple` + slot shape has to hold without a `Surface`, which the cards did not
-   test.
-4. Then `md-alert`, `md-dialog`, `md-select`, `md-treeview`, `md-combobox`,
+3. ~~**The three `icon_button`s**~~ — **done**, 43 tests. The shape was promoted to
+   the engine rather than ported three times; see the section below for the
+   measurement that decided it and the four mutations run against it.
+4. **The three `list_item`s** (172/174/172) next. This is the last group before
+   `floom-elements` can go green, and the one shape where all three kits are *not*
+   the same: v1 reads a different token per kit, so this is a decision about what
+   stays shared rather than a mechanical translation.
+5. Then `md-alert`, `md-dialog`, `md-select`, `md-treeview`, `md-combobox`,
    `md-autocomplete` — and with them the floem-ui workspace goes green, at which
    point `floom-elements`' own 6,220 lines of v1 `multi` dispatch can be rewritten
    (correction 6).
@@ -68,7 +71,9 @@ Verification commands that must stay green:
     for c in md-card md-button md-icon md-expansion_panels md-toolbar md-footer md-item_group; do
         cargo test --manifest-path "crates/material/$c/Cargo.toml"
     done
-    for c in fluent/fluent-card cupertino/cupertino-card; do
+    for c in fluent/fluent-card fluent/fluent-icon_button \
+             cupertino/cupertino-card cupertino/cupertino-icon_button \
+             material/md-icon_button; do
         cargo test --manifest-path "crates/$c/Cargo.toml"
     done
 
@@ -199,6 +204,37 @@ assertion made from reading code instead of compiling it:
    believed until its crate builds.** That is an argument for porting in
    dependency order and re-running each suite the moment its crate goes green —
    not for reading ahead and judging the tests.
+
+10. **Correction 9 has a consequence no ported crate can currently test for, and
+    the attempt to test for it produced a control group that could not fail.**
+
+    The three `icon_button` suites each end with a test reading the crate's own
+    design system's colours. Two of those tests are *incapable* of failing for the
+    reason they were written: they read the global design system, which the test
+    itself sets on the previous line, while the crate's `new()` seeds a
+    `MultiTheme` that — per correction 9 — ignores its own argument.
+
+    Measured, not argued: changing `DesignSystem::Fluent` to `DesignSystem::Material`
+    in `fluent-icon_button/src/lib.rs` leaves **all 15 of its tests green**.
+
+    So the annotation now in those two files says what is and is not established:
+
+    * **is** pinned — the crate's translations read `on_surface_variant` and
+      `primary` from whatever theme is active;
+    * **is not** pinned — that the crate activates *its own* kit.
+
+    Nothing can pin the second thing today, because `MultiTheme` does not carry a
+    design system: it holds all three and dispatches on a global at every read. The
+    engine fix is small and belongs before the remaining crates — give `MultiTheme`
+    a design system (or make `new_for` actually call `activate`) — but it changes
+    every kit at once, so it is a decision rather than a port.
+
+    **The general lesson, which is the one worth keeping:** a control group has to be
+    checked by mutating the thing it is a control *for*. Mine asserted a property
+    that no mutation could disturb, so it was decoration. This document has now been
+    wrong twice in the same way — correction 8 assumed a stale assertion would be
+    caught, and this assumed a control group would fail — and both times the failure
+    was a test that could not fail rather than a test that failed.
 
 9. **Every kit was resolving Material's tokens, and one inherited test passed for
    exactly that reason.** This is the largest correction in the document, and it was
@@ -975,6 +1011,87 @@ build-time-resolution limitation already noted, now with a sharper edge: it is n
 only "a theme switch restyles nothing", it is "a theme switch restyles a kit card
 *partially*", which is worse than either consistent behaviour. It wants a decision
 before 290 more crates inherit it.
+
+### What the `icon_button` turned up — the promotion that needed three engine additions
+
+Three crates, 118/117/117 lines of v1, and the measurement that settled the
+approach: **69 of 73 substantive lines are identical across all three**, and the
+four that differ are the type name, the `DesignSystem` handed to `MultiTheme`, and
+whether the theme came from `theme_signal()` or a fresh `MultiTheme`.
+
+That is a *higher* overlap than `SelectGroup`'s 123 of 149, and the same reasoning
+applies — port it once. So the shape became `floom_widgets::IconButton` and each kit
+crate is now ~40 lines of token translation. What the promotion took is worth
+spelling out, because it is not "most of it" but **all of the decisions**:
+
+* the composition and its *order*: `Ripple(Pressable(Surface(icon)))`;
+* the disabled rule, which replaces the variant's fill **and** outline with two
+  different alphas of `on_surface` (12 for the fill, 38 for the outline and glyph);
+* the ripple-ink rule — `on_primary` for contained, `on_surface` for the other two;
+* that the glyph's colour follows `disabled` while its *size* does not;
+* and that `disabled` gates the click in **one** place. v1 wrote
+  `if !disabled { .. }` inside the action closure, which guarded the pointer but
+  not the keyboard; 2.0's gate is in `Pressable`, which guards both. That is an
+  improvement rather than a translation, and the engine suite is what keeps it.
+
+**A 2.0 slot is replayed once per key, so the icon could not be a built value.**
+This is the finding that forced the node. v1 built the icon inside the button's
+style closure; in 2.0, a subtree built from a `Child` builder keeps the widget it
+first built, so toggling `disabled` would repaint the box and leave the glyph stale
+— and a test that looked only at the box would pass. Hence `IconButtonIcon`: a node
+with its own `update`, which is what needed the engine additions below.
+
+**Three engine additions, each found by composing rather than by reading.**
+
+* `VectorIcon::set_color` / `set_size`. Every widget here that owns a decoration has
+  the pair (`Surface::set_background`, `Ripple::set_ink`, `Text::set_weight`), and
+  the reasoning is theirs: a theme signal fires on unrelated changes too, so a
+  setter that always bumped would repaint the tree on every one. Without these the
+  icon is frozen at build time — the ninth capability gap, and the first one a
+  *promotion* rather than a port turned up.
+* `Ripple::ink_color()`, a reader for the same reason `clip_radius()` exists.
+* **`Ripple` was never registered as a `WidgetAny`.** It could be constructed,
+  returned from a public method, and then not mounted: `Box::new(Ripple::new()..)`
+  failed with *"`Ripple` is not a Floom 2.0 `Widget`"*. Nobody had tried to mount
+  one, because `md-button` is the only kit that used the ripple and it composes it
+  by hand. Found on the first attempt to build the icon button's subtree. A public
+  widget that cannot be mounted is a gap the type system does not report.
+
+**Four mutations, because this shape has three orderings that all compile.**
+
+| Mutation | Tests red |
+|---|---|
+| the icon stops restyling itself in `update` | 1 — `the_icon_is_a_node_so_a_disabled_toggle_can_restyle_it` |
+| `disabled` stops replacing the variant's paint | 1 — `disabled_replaces_the_variants_paint_rather_than_blending` |
+| the `Pressable` is dropped from between ripple and surface | **0 — the compiler caught it** (`E0507`: cannot move out of a captured variable in an `Fn` closure) |
+| the ripple and the pressable are swapped | **6** |
+
+The third row is the honest one: that mutation *did not compile*, so the type
+system is what holds that invariant, not the test. Recorded because a suite that
+claims to check an ordering should say which orderings it can actually check.
+
+**One control group that could not fail, and was left in place with that said
+out loud.** `the_crate_really_reads_fluent_tokens` reads the *global* design system,
+which the test sets itself one line above — so it passes no matter what the crate's
+`new()` seeds its signal with. Mutating `DesignSystem::Fluent` to `Material` in
+`fluent-icon_button` leaves all 15 tests green. That is correction 9 eating a
+control group written to catch a different bug, and a test that cannot fail is
+worse than none because it reads as coverage. So it stays, with a doc comment
+stating exactly what it does and does not establish: it pins that the crate's
+translations read `on_surface_variant` and `primary` from the active theme; it
+**cannot** pin that the crate activates its own kit, because `MultiTheme::new_for`
+ignores its argument and nothing in `floom-core-theme` lets a theme carry its design
+system. **A kit can be wired to the wrong theme and no assertion in any ported
+crate will notice.** That is the sharpest form of correction 9's consequence, and
+it wants an engine fix before the remaining 285 crates inherit it.
+
+**One thing recorded rather than fixed.** `IconButtonProps::on_click` is
+`Option<Box<dyn Fn()>>` — a v1 type, shared by all three kits — and the engine's
+slot requires `Send + Sync`. So `MdIconButton` stores the callback **twice**: the
+v1-shaped `Box` so `props()` reports what v1 reported, and an `Arc<dyn Fn() +
+Send + Sync>` for the engine, from one closure. It is the last v1-shaped field in
+the crate and a duplicate of something already stored; the honest fix is to change
+the shared props type, which is a three-kit change and therefore its own decision.
 
 ### What `md-item_group` turned up — the promotion that paid for itself
 

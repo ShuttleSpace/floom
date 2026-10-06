@@ -107,6 +107,32 @@ impl VectorIcon {
         self.color
     }
 
+    /// The in-place form of [`Self::color`].
+    ///
+    /// It exists because a widget that *contains* an icon cannot restyle it: a
+    /// 2.0 slot is a replayed builder that runs once per key, so a composite that
+    /// changed the icon's colour — a disabled toggle, a theme switch — would
+    /// otherwise keep painting the old one forever. Every other widget here that
+    /// owns a decoration has the same pair (`Surface::set_background`,
+    /// `Ripple::set_ink`, `Text::set_weight`), and the reasoning about
+    /// idempotence is theirs: a theme signal fires on unrelated changes too, so a
+    /// setter that always bumped would repaint the tree on every one of them.
+    pub fn set_color(&mut self, color: Color) {
+        if self.color != color {
+            self.color = color;
+            self.revision.bump();
+        }
+    }
+
+    /// The in-place form of [`Self::size`], for the same reason as
+    /// [`Self::set_color`].
+    pub fn set_size(&mut self, size: f32) {
+        if self.size != size {
+            self.size = size;
+            self.revision.bump();
+        }
+    }
+
     /// The configured edge length, in logical px. Paint fills `cx.bounds()`;
     /// this is the intrinsic size, which is also what `layout_request` asks for.
     pub fn edge(&self) -> f32 {

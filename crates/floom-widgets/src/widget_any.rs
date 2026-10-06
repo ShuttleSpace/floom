@@ -184,4 +184,11 @@ impl_widget_any_decorative!(
     crate::compose::AccordionPanelLeaf,
     crate::compose::AccordionIndicatorSlot,
     crate::compose::SelectGroupRow,
+    // The ripple is a *wrapper* whose whole job is to paint ink over whatever it
+    // holds, so it publishes nothing: the button inside it is what names itself and
+    // carries the role. It was missing here entirely, which meant `Ripple` could be
+    // constructed, returned from a public method, and then not mounted —
+    // `Box::new(Ripple::new()..)` failed with "not a Floom 2.0 `Widget`". Found by
+    // composing one for the first time; see `IconButton`.
+    crate::ripple::Ripple,
 );

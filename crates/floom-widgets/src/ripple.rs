@@ -177,6 +177,16 @@ impl Ripple {
     }
 
     /// The clip radius currently in force.
+    /// The ink colour at full opacity.
+    ///
+    /// A reader to go with [`Self::ink`] and [`Self::set_ink`], for the same reason
+    /// [`Self::clip_radius`] exists: a caller that composes a ripple over its own
+    /// surface needs to know the two agree, and a test needs to read what the
+    /// variant resolved to. Named `ink_color` because `ink` is the builder.
+    pub fn ink_color(&self) -> Color {
+        self.ink
+    }
+
     pub fn clip_radius(&self) -> f64 {
         self.radius
     }

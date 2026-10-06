@@ -15,6 +15,7 @@ pub mod badge;
 pub mod canvas;
 pub mod compose;
 pub mod controls;
+pub mod icon_button;
 pub mod labeled;
 pub mod native;
 pub mod nav;
@@ -55,6 +56,9 @@ pub use controls::{
 /// one — so `use floom_widgets::*;` followed by `Stack::new(Axis::Horizontal)`
 /// did not compile. One axis type, exported from here, cannot drift back.
 pub use floom_core::{Align, Axis, Edges};
+pub use icon_button::{
+    IconButton, IconButtonIcon, IconButtonPaint, IconButtonStyle, IconButtonVariant,
+};
 pub use labeled::Labeled;
 pub use native::NativeSurface;
 pub use nav::{NavHandle, NavHost};
