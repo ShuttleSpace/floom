@@ -4,6 +4,23 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-floom = { workspace = true }
+# Ported off the v1 `floom` monolith (see docs/porting-floem-ui-to-2.0.md).
+# The theme signal comes from floom-widget-runtime, which is already ported.
+#
+# `features = ["cupertino"]`. All three design-system features are the *same* gate
+# -- `#[cfg(any(feature = "material", feature = "cupertino", feature = "fluent"))]`
+# -- so enabling the wrong one compiles just as well, which is how fluent-card's
+# first manifest said `["material"]` and still built. See the correction in
+# docs/porting-floem-ui-to-2.0.md: these features are presence flags, not data
+# selectors, so nothing but reading the manifest can catch a kit asking for the
+# wrong design system.
 floom-core-theme = { workspace = true }
 floom-widget-runtime = { workspace = true, features = ["cupertino"] }
+floom-legacy-reactive = { path = "../../../../../floom-legacy-reactive" }
+floom-core = { path = "../../../../../floom-core" }
+floom-types = { path = "../../../../../floom-types" }
+floom-widgets = { path = "../../../../../floom-widgets" }
+
+[dev-dependencies]
+floom-core-theme = { workspace = true }
+floom-types = { path = "../../../../../floom-types" }

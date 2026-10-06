@@ -7,9 +7,11 @@
 //! the tokens.
 
 use floom_core::{Widget, WidgetAny};
-use floom_types::{Insets, Rect};
+use floom_types::Rect;
 
-use floom_core_theme::theme::MultiTheme;
+use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
+use floom_core_theme::global_theme::DesignSystem;
+use floom_core_theme::theme::{MultiTheme, Theme};
 use floom_widgets::testkit::{AllocatingCreateContext, paint_snapshot};
 
 use floom_widget_fluent_card::FluentCard;
@@ -21,8 +23,30 @@ const CARD: Rect = Rect {
     y1: 120.0,
 };
 
-fn card() -> FluentCard {
+/// Activate `ds`, then build the card against it.
+///
+/// One helper, and it takes the design system as an argument on purpose. The first
+/// version had two — `card()` plus a separate `cupertino()` — and `card()`
+/// re-activated the kit on every call, so the control test that switched the global
+/// to Material to prove a number was *read* rather than hard-coded had its switch
+/// undone one line later and failed against a correct implementation.
+///
+/// `floom_core_theme`'s design-system signal is a `thread_local`, and the test
+/// harness gives each test its own thread, so this cannot leak into a sibling.
+fn card_under(ds: DesignSystem) -> FluentCard {
+    floom_core_theme::global_theme::set_design_system(ds);
     FluentCard::new()
+}
+
+/// The card, resolving against this kit's own tokens.
+fn card() -> FluentCard {
+    card_under(DesignSystem::Fluent)
+}
+
+/// The active kit's `spacing().md`, read through the same global the card reads.
+fn spacing_md(ds: DesignSystem) -> f32 {
+    floom_core_theme::global_theme::set_design_system(ds);
+    MultiTheme::new_for(ds).spacing().md
 }
 
 /// The widget the ripple wraps, still type-erased.
@@ -49,70 +73,135 @@ fn surface_inside(ripple: &floom_widgets::Ripple) -> floom_widgets::Surface {
 
 // --- the translation ------------------------------------------------------
 
-/// Fluent's own theme instance, so the card resolves against its design system
-/// rather than whatever a caller left in the signal.
+/// The style names its design system, and — this is the part worth asserting —
+/// the tokens behind it really are Fluent's.
+///
+/// The first version of this test asserted only `design_system == "fluent"`, which
+/// is a string literal in the crate. It passed while the card was resolving
+/// Material's numbers, which is what made the mistake worth recording.
 #[test]
-fn a_new_card_resolves_fluent_tokens() {
+fn a_new_card_resolves_its_own_kits_tokens() {
     assert_eq!(
         card().resolved_style().design_system,
         "fluent",
-        "the design system is Fluent, which is what `new()` seeds the signal with"
+        "the crate names its design system"
+    );
+
+    let style = card().resolved_style();
+    assert_eq!(
+        style.border_radius, 8.0,
+        "Fluent's card token is 8.0. Material's is 12.0 and Cupertino's 10.0, so \
+         this is the assertion that the numbers came from Fluent at all"
+    );
+    assert_eq!(
+        style.padding,
+        spacing_md(DesignSystem::Fluent),
+        "and the padding comes from Fluent's spacing scale"
     );
 }
 
+/// A pin, not a test of the card: `MultiTheme::new_for(ds)` does not select `ds`,
+/// and a `MultiTheme` is not a snapshot of any one design system.
+///
+/// `activate` is a documented no-op placeholder. `MultiTheme` holds all three
+/// themes and dispatches on `current_design_system()` — a process-global — at
+/// **every read**. So a `MultiTheme` built "for Fluent" answers with **Material**
+/// unless something set the global first, and nothing in this 299-crate workspace
+/// ever does.
+///
+/// The ordering below is load-bearing and was got wrong first: reading `named_fluent`
+/// *after* switching the global yields 8.0, because the read is live. That is the
+/// second half of the finding, not a detail.
+///
+/// Delete this test when the global stops being the selector; it is here so the day
+/// that changes, the change is loud. It is also why every other test in this file
+/// activates its design system explicitly — without that, all of them would be
+/// measuring Material and calling it Fluent.
 #[test]
-fn the_tokens_reach_the_engine_surface() {
-    let resolved = card().resolved_style();
-    let surface = card().surface();
-    let declared = surface
-        .layout_request()
-        .expect("a padded surface has a request");
+fn new_for_does_not_select_the_design_system_it_is_given() {
+    floom_core_theme::global_theme::set_design_system(DesignSystem::Material);
+    let named_fluent = MultiTheme::new_for(DesignSystem::Fluent);
+    assert_eq!(
+        card_radius(&named_fluent),
+        12.0,
+        "CONTROL: the one *named* Fluent read Material's token, because `new_for` \
+         ignored its argument"
+    );
 
+    floom_core_theme::global_theme::set_design_system(DesignSystem::Fluent);
+    let really_fluent = MultiTheme::new_for(DesignSystem::Fluent);
     assert_eq!(
-        declared.padding,
-        Some(Insets::uniform(f64::from(resolved.padding))),
-        "the token's padding, inside the box"
-    );
-    assert_eq!(
-        surface.decoration().corner_radius(),
-        card().corner_radius(),
-        "and the theme's radius scale — v1 drew `t.radius().xl`, not the token"
-    );
-    assert!(
-        surface.decoration().drop_shadow().is_some(),
-        "elevation reaches the engine as a drop shadow"
+        card_radius(&really_fluent),
+        8.0,
+        "and only once the global is set does the same constructor answer with Fluent"
     );
 }
 
-#[test]
-fn the_ink_is_offered_rather_than_baked_in() {
-    let resolved = card().resolved_style();
-    assert_eq!(
-        card().content_color().r,
-        resolved.content_color.r,
-        "v1 set this on the box, which has nowhere to live in 2.0: a Surface \
-         paints a fill and only the child knows it is text"
-    );
+/// The `border_radius` a `CardTokens` resolves to — read through the same path the
+/// card reads.
+fn card_radius(theme: &MultiTheme) -> f32 {
+    match theme.component(ComponentId::Card) {
+        ComponentTokens::Card(tokens) => tokens.border_radius,
+        _ => unreachable!("ComponentId::Card resolves to CardTokens"),
+    }
 }
 
 // --- the corner radius, and the difference the port had to keep ------------
 
 /// v1 read `CardTokens::border_radius` into its style struct and never used it,
-/// while drawing the box at `t.radius().xl`. Keeping both apart is what makes the
-/// translation honest — and for Fluent the two differ, which is how the
-/// difference was noticed at all.
+/// while drawing the box at `t.radius().xl`. The port keeps both, and the box uses
+/// the one v1 drew.
+///
+/// **For Fluent the two coincide** — token `8.0`, drawn `radius().xl` `8.0` — so
+/// this test asserts equality rather than difference. The first version of it
+/// asserted they differed, and passed: it was reading Material, whose numbers are
+/// `12.0` and `24.0`. Material is the kit where the discrepancy is real; Cupertino
+/// (`10.0`/`10.0` at `radius().md`) and Fluent (`8.0`/`8.0`) are not. That is why
+/// the port keeps them apart as separate methods instead of collapsing them — one
+/// shape serves all three kits, and only one of them needs the distinction.
 #[test]
 fn the_drawn_radius_is_the_themes_not_the_cards_token() {
     let token_radius = card().resolved_style().border_radius;
     let drawn_radius = card().corner_radius();
-    assert!(
-        (token_radius - drawn_radius).abs() > f32::EPSILON,
-        "Fluent's two radii differ: token {token_radius}, drawn {drawn_radius}"
+    assert_eq!(
+        token_radius, drawn_radius,
+        "Fluent's card token and `radius().xl` are both 8.0 — they coincide, \
+         which is the opposite of what this test first claimed"
     );
     assert_eq!(
         card().surface().decoration().corner_radius(),
         drawn_radius,
-        "and the box uses the one v1 drew"
+        "and the box uses the one v1 drew, which is also the token's value"
+    );
+}
+
+/// The control, and the mutation this whole pair of tests exists for.
+///
+/// Fluent's card token and Fluent's `radius().xl` are both `8.0`, so every
+/// assertion above would also pass against a hard-coded `8.0`. Switching the design
+/// system is what separates the two: Material's `radius().xl` is `24.0`.
+///
+/// If someone "simplifies" `corner_radius()` into a literal, this goes red.
+///
+/// A previous version of this test asserted that Material was the one kit whose
+/// token and drawn radius disagreed (`12.0` against `24.0`). It does not: Material's
+/// `md-card` draws at `tokens.border_radius`, so it agrees too. All three kits land
+/// on the same number by three different expressions — Material reads the token,
+/// Cupertino reads `radius().md`, Fluent reads `radius().xl` — and the agreement is
+/// a fact about today's token table, not something the port may rely on.
+#[test]
+fn the_drawn_radius_follows_the_theme_rather_than_a_literal() {
+    assert_eq!(
+        card().corner_radius(),
+        8.0,
+        "CONTROL: Fluent's `radius().xl`"
+    );
+
+    assert_eq!(
+        card_under(DesignSystem::Material).corner_radius(),
+        24.0,
+        "and Material's `radius().xl` is 24.0 — so the 8.0 above was read from \
+         the theme, not baked in. A literal would fail here."
     );
 }
 

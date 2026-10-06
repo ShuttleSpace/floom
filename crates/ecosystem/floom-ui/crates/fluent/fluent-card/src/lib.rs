@@ -43,14 +43,6 @@ use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color_ext::*;
 use floom_core_theme::tokens::shadow::ShadowData;
 
-/// Opaque black, the base every elevation shadow tints.
-const BLACK: Color = Color {
-    r: 0,
-    g: 0,
-    b: 0,
-    a: 255,
-};
-
 /// A builder for the card's content.
 ///
 /// An [`std::sync::Arc`] because a 2.0 slot is a replayed `Fn`: every rebuild needs

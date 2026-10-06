@@ -14,9 +14,11 @@ so the widget API gets shaken out before anything is translated in bulk:
 | separator | `md-footer` | ported, 14 tests |
 | selectable | `md-item_group` | ported, 11 tests (state machine promoted) |
 | surface + press | `fluent-card` | ported, 14 tests (first fluent kit) |
+| surface + press | `cupertino-card` | ported, 14 tests (same shape, `radius().md`) |
 
 Ported kits: `md-card`, `md-button`, `md-icon`, `md-expansion_panels`,
-`md-toolbar`, `md-footer`, `md-item_group`, **`fluent-card`**.
+`md-toolbar`, `md-footer`, `md-item_group`, **`fluent-card`**,
+**`cupertino-card`**.
 Engine widgets: `Badge`, `Ripple`, `VectorIcon`, `Pressable`, `Accordion`,
 **`Surface`**, **`SelectGroup`**.
 Text: **`FontWeight`**, end to end — `floom_types` enum, `TextLayoutOptions`,
@@ -34,11 +36,15 @@ and no repair exists that keeps this plan's rules. So:
    The floem-ui workspace is now at **24 errors across 13 crates** (was 26 across
    14; `fluent-card`'s two `Ripple` errors are gone), so the arithmetic is the
    check that the count in correction 7 was right.
-2. **`cupertino-card` next** (109 lines, the same shape with `radius().md` where
-   Fluent uses `radius().xl`), then the two `icon_button`s (117/117/118) and the
-   three `list_item`s (172 each) — the last of those is one shape three times and
-   wants the same promotion `md-item_group` got.
-3. Then `md-alert`, `md-dialog`, `md-select`, `md-treeview`, `md-combobox`,
+2. ~~**`cupertino-card`**~~ — **done**, 14 tests. The floem-ui workspace is now at
+   **22 errors across 12 crates** (26/14 → 24/13 → 22/12, each step minus exactly
+   the two `Ripple` errors of the card just ported).
+3. **The two `icon_button`s** (117/117/118) next, then the three `list_item`s
+   (172 each) — the last of those is one shape three times and wants the same
+   promotion `md-item_group` got. Both groups are where the `Pressable` +
+   `Ripple` + slot shape has to hold without a `Surface`, which the cards did not
+   test.
+4. Then `md-alert`, `md-dialog`, `md-select`, `md-treeview`, `md-combobox`,
    `md-autocomplete` — and with them the floem-ui workspace goes green, at which
    point `floom-elements`' own 6,220 lines of v1 `multi` dispatch can be rewritten
    (correction 6).
@@ -62,7 +68,7 @@ Verification commands that must stay green:
     for c in md-card md-button md-icon md-expansion_panels md-toolbar md-footer md-item_group; do
         cargo test --manifest-path "crates/material/$c/Cargo.toml"
     done
-    for c in fluent/fluent-card; do
+    for c in fluent/fluent-card cupertino/cupertino-card; do
         cargo test --manifest-path "crates/$c/Cargo.toml"
     done
 
@@ -193,6 +199,80 @@ assertion made from reading code instead of compiling it:
    believed until its crate builds.** That is an argument for porting in
    dependency order and re-running each suite the moment its crate goes green —
    not for reading ahead and judging the tests.
+
+9. **Every kit was resolving Material's tokens, and one inherited test passed for
+   exactly that reason.** This is the largest correction in the document, and it was
+   found only because `cupertino-card`'s inherited test disagreed with
+   `fluent-card`'s about the same field.
+
+   `MultiTheme::new_for(ds)` **does not select `ds`.** `activate` is a documented
+   no-op placeholder, and `MultiTheme` holds all three themes and dispatches on
+   `current_design_system()` — a **process-global** — at *every read*:
+
+   ```rust
+   pub fn activate(self, _ds: DesignSystem) -> Self { self }   // the argument is unused
+   fn ds(&self) -> DesignSystem { current_design_system() }
+   ```
+
+   `floom_core_theme` therefore has exactly one design system in effect per thread,
+   defaulting to Material, and **nothing in this 299-crate workspace ever calls
+   `set_design_system`** — the only two definitions are the function itself and its
+   re-export in `floom-widget-runtime`. So `MultiTheme::new_for(Cupertino)` answers
+   with Material.
+
+   Measured, by activating each in turn:
+
+   | kit | `radius().md` | `radius().xl` | card token |
+   |---|---|---|---|
+   | Material | 12.0 | 24.0 | 12.0 |
+   | Cupertino | 10.0 | 20.0 | 10.0 |
+   | Fluent | 4.0 | 8.0 | 8.0 |
+
+   **The two inherited card tests, and what they prove.** `fluent-card`'s asserted
+   `border_radius == 4.0` and **failed** — `4.0` is nobody's. `cupertino-card`'s
+   asserted `12.0` and **passed** — because `12.0` is *Material's*. Two tests, one
+   field, two different beliefs about their own kit's radius, and the one that was
+   wrong in the direction of the default went green. A passing test that is right for
+   the wrong reason is the failure mode correction 8 did not anticipate: 8 assumed a
+   stale assertion would be *caught*, and here it was not, because the bug supplied
+   the wrong number.
+
+   **What this document got wrong as a result, all of it mine, one commit ago.**
+   `fluent-card`'s port claimed "Fluent's two radii differ: token 12.0, drawn 24.0,
+   which is the only reason the port noticed" and built a test asserting they differ.
+   Those are Material's numbers, read while believing they were Fluent's. Under real
+   Fluent both are `8.0`. The test passed *because* of the bug it was written to
+   document, and it has been rewritten to assert equality.
+
+   The follow-on claim was worse: that Material was "the kit where the token and the
+   drawn radius disagree". It is not. v1's `md-card` draws at
+   `tokens.border_radius` — the token — so Material agrees with itself. All three
+   kits land on the same number by three *different* expressions (Material reads the
+   token, Cupertino reads `radius().md`, Fluent reads `radius().xl`), and the
+   agreement is a fact about today's token table rather than something a port may
+   rely on. Hence the control: `the_drawn_radius_follows_the_theme_rather_than_a_literal`
+   switches the global to Material and would go red against a hard-coded radius.
+   Verified by mutation — replacing `corner_radius()`'s body with `10.0` turns that
+   one test red and leaves the other eleven green.
+
+   **Blast radius, measured rather than assumed.** All seven previously ported kits
+   were checked for hard-coded design-system numbers: **zero**. Their tests compare a
+   widget against a token read from the same theme, which is correct under any design
+   system, so Material being the default did not mislead them. The exposure is
+   confined to tests that assert a *literal* — the two inherited `api.rs` files and
+   the ones written this session, all now fixed. The seven kits' claims of the form
+   "resolves from its own theme" are nonetheless now known to be true by construction
+   rather than by measurement, and each should activate its design system when it is
+   next touched.
+
+   **A `MultiTheme` is not a snapshot.** The pin that documents this got the ordering
+   wrong first: reading a theme built while the global said Material, *after*
+   switching the global to Fluent, returns Fluent's numbers. The switch has to happen
+   before the read. Two of this document's own test helpers also fought each other —
+   `card()` re-activated the kit on every call, so a control test that switched to
+   Material had its switch undone one line later and failed against a correct
+   implementation. One helper, `card_under(ds)`, now takes the design system as an
+   argument for that reason.
 
 `floem-ui` is the design-system component library: **298 crates, 66,729 LOC**
 (98 distinct components × 3 kits — Material, Cupertino, Fluent — plus the shared
@@ -822,11 +902,16 @@ honest is a downcast: the ripple's one child must *be* a `Surface`. A
 
 **The radius v1 read but never used, now kept apart on purpose.** v1 read
 `CardTokens::border_radius` into its style struct and drew the box at
-`t.radius().xl`. For Material the two are close enough to hide this; for Fluent
-they are `12.0` against `24.0`, which is the only reason the port noticed. Both
-are kept — `resolved_style().border_radius` reports what v1 reported,
-`corner_radius()` returns what v1 drew — and
-`the_drawn_radius_is_the_themes_not_the_cards_token` asserts they differ.
+`t.radius().xl`. Both are kept — `resolved_style().border_radius` reports what v1
+reported, `corner_radius()` returns what v1 drew.
+
+*This paragraph was wrong and correction 9 fixes it.* It claimed the two differ for
+Fluent (`12.0` against `24.0`) and that this was how the port noticed. Those are
+Material's numbers, read while the global design system was Material. Under real
+Fluent both are `8.0`, and the test written to that claim was asserting a difference
+that does not exist — passing only because of the bug. It now asserts equality, and
+the reason the two are still separate methods is that **Material** is the kit that
+would break if they were merged into one.
 
 **One thing the port gives up, stated rather than buried:** the ripple's radius is
 resolved once, here, instead of through v1's `radius_fn(|t| t.radius().xl)`
@@ -837,6 +922,59 @@ re-reads the theme afterwards. This is a property of the whole porting approach
 rather than of this crate: **every ported kit resolves the theme when it is built,
 so a runtime theme switch restyles nothing until the tree is rebuilt.** Worth
 deciding on purpose before 290 more crates inherit it.
+
+### What `cupertino-card` turned up — the same shape, and the test that agreed with the bug
+
+`cupertino-card` is 109 lines of v1 and the third card in the library. As a *port* it
+is nearly free: `fluent-card` had already established the composition
+`Ripple(Surface(content))`, and the only difference is the radius — Cupertino draws
+at `t.radius().md` where Fluent draws at `radius().xl`. That is the whole change,
+and it is why a shape that appears in three kits is worth porting once.
+
+**It is here because of what it proved about the other two.** Cupertino's inherited
+`tests/api.rs` asserted `style.border_radius == 12.0` and **passed**. Cupertino's card
+token is `10.0`; `12.0` is Material's. Its sibling in `fluent-card` asserted `4.0`
+and failed, because `4.0` is nobody's. So the two inherited card tests held two
+different beliefs about the same field of the same shape, and the one that was wrong
+*in the direction of the default* went green — which is what correction 9 is about.
+
+**Three kits, one shape, three different ways to name the radius.** This is the part
+worth keeping:
+
+| kit | v1 drew the radius from | value | card token | agree? |
+|---|---|---|---|---|
+| Material | `tokens.border_radius` | 12.0 | 12.0 | yes |
+| Cupertino | `t.radius().md` | 10.0 | 10.0 | yes |
+| Fluent | `t.radius().xl` | 8.0 | 8.0 | yes |
+
+All three agree, and that agreement is a coincidence of today's token table rather
+than a property any of them relies on. Two of the three read the *radius scale* and
+one reads the *token*, and a port that unified them would break two kits the moment a
+radius scale moved. So `corner_radius()` is a method that reads the scale, and
+`resolved_style().border_radius` is a field that reports the token, in all three
+crates — and the control test proves the method is a read rather than a literal:
+
+    the_drawn_radius_follows_the_theme_rather_than_a_literal
+
+Verified by mutation: replacing `corner_radius()`'s body with `10.0` turns that one
+test red and leaves the other eleven green.
+
+**`BLACK` is a shared token, not a per-crate constant.** `fluent-card`'s port defined
+its own `const BLACK` and this one inherited the mistake from the copy; v1 got it
+from the glob `use floom_core_theme::tokens::color_ext::*`, where it is already
+`pub const BLACK: Color`. Both now import it. Worth a line because a locally
+redefined token is invisible: it compiles, it is almost certainly the same value, and
+nothing in the type system says two crates must agree.
+
+**One thing this port did not decide.** Cupertino's card, like Fluent's, resolves its
+theme when it is built. Combined with correction 9 — a theme resolves the *active*
+design system at every read, from a global — a card that is built once will follow a
+later `set_design_system` for its colours but not for its radius, padding or shadow,
+because those were resolved into plain data at build time. That is the general
+build-time-resolution limitation already noted, now with a sharper edge: it is not
+only "a theme switch restyles nothing", it is "a theme switch restyles a kit card
+*partially*", which is worse than either consistent behaviour. It wants a decision
+before 290 more crates inherit it.
 
 ### What `md-item_group` turned up — the promotion that paid for itself
 
