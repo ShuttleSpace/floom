@@ -271,3 +271,6 @@ impl Default for MdAutocomplete {
         Self::new()
     }
 }
+
+/// Type alias for `floom-elements` compatibility.
+pub type MdAutocompleteStyle = ComboboxStyle;

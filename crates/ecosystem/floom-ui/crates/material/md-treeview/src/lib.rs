@@ -187,3 +187,6 @@ impl Default for MdTreeview {
         Self::new()
     }
 }
+
+/// Type alias for `floom-elements` compatibility.
+pub type MdTreeviewStyle = TreeViewStyle;

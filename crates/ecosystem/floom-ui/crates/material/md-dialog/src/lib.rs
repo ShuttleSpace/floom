@@ -502,3 +502,6 @@ fn close_button(
     })
     .label("Close")
 }
+
+/// Type alias for `floom-elements` compatibility.
+pub type MdDialogStyle = DialogStyle;

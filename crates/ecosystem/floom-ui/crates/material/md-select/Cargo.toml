@@ -8,3 +8,6 @@ floom = { workspace = true }
 floom-core-theme = { workspace = true }
 floom-widget-runtime = { workspace = true, features = ["material"] }
 floom-widget-md-icon = { workspace = true }
+floom-legacy-reactive = { path = "../../../../../floom-legacy-reactive" }
+floom-types = { path = "../../../../../floom-types" }
+floom-widgets = { path = "../../../../../floom-widgets" }

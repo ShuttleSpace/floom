@@ -207,3 +207,5 @@ impl Default for MdCombobox {
         Self::new()
     }
 }
+/// Type alias for `floom-elements` compatibility.
+pub type MdComboboxStyle = ComboboxStyle;
