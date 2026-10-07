@@ -29,7 +29,8 @@ so the widget API gets shaken out before anything is translated in bulk:
 | autocomplete | `md-autocomplete` + 2 kits | ported, 19/20/20 tests — the combobox plus a text-shaped callback |
 | dialog presence | `Dialog::with_shared_presence` | **correction 11 answered**, 13 tests — the host already owned presence |
 | dialog card | `Dialog::card_with` | the close-button slot v1 had and the engine did not |
-| dialog (Material) | `md-dialog` | ported — **compile-verified, tests not yet written** |
+| dialog (Material) | `md-dialog` | ported, 21 tests |
+| dialog (Cupertino, Fluent) | `cupertino-dialog`, `fluent-dialog` | ported, 24 tests each — **one number differs**: card radius |
 
 Ported kits: `md-card`, `md-button`, `md-icon`, `md-expansion_panels`,
 `md-toolbar`, `md-footer`, `md-item_group`, **`fluent-card`**,
@@ -2376,6 +2377,23 @@ Only after `floem-ui` no longer references it:
 
 `ecosystem/floom-editor` (20,593 LOC) is also v1-based and is **not** covered by
 this plan. It needs its own porting assessment once the widget set is in place.
+
+### What remains
+
+Only one crate remains unported in `floem-ui`: **`md-select`** (plus its Cupertino
+and Fluent siblings).
+
+It is blocked on two things:
+
+1. **A popup widget** — the engine has `PopupPlacement::Below` and `OverlayKind::Popup`
+   but no `SelectPopup` widget. The combobox/autocomplete need this too.
+2. **A 60%-overlap decision** — the three kits disagree on structure (the only such
+   case in the entire port). Material uses a menu button, Cupertino uses a native
+   picker style, Fluent uses a dropdown. This is the one case where "promote to
+   engine" fails because the kits fundamentally disagree.
+
+Once the popup widget exists, the three kits can be ported with their disagreement
+preserved as parameters.
 
 ## Rules for the port
 
