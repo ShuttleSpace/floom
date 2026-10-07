@@ -21,7 +21,7 @@ so the widget API gets shaken out before anything is translated in bulk:
 | tree view | `md-treeview` + 2 kits | ported, 53 tests (shared expansion state promoted) |
 | text input | `floom_widgets::TextInput` | **new primitive**, 32 tests — nothing in 2.0 had one |
 | popup placement | `PopupPlacement` + `OverlayHost` | the geometry and the embeddable host — 24 tests |
-| combobox | `floom_widgets::combobox` | **decision layer first**, 24 tests — no `Widget` impl yet |
+| combobox | `floom_widgets::Combobox` | decision layer (24 tests) + widget (20 tests) |
 
 Ported kits: `md-card`, `md-button`, `md-icon`, `md-expansion_panels`,
 `md-toolbar`, `md-footer`, `md-item_group`, **`fluent-card`**,
@@ -1571,6 +1571,62 @@ Two more expectations in the suite were mine and wrong, and the tests were right
   a node's children show when **that** node is open, and the root being visible says
   nothing about it;
 * and collapsing a node removes its *children's* rows, not its own — one row, not two.
+
+### What mounting the combobox turned up — three wirings, all silent
+
+The `Widget` impl, 20 tests. Three of the failures below are **wiring**, and they share
+a shape: nothing errored, nothing looked wrong in review, and each produced a combobox
+that was quietly not a combobox.
+
+**`pick.open` and `host.present` are two sources of truth, and nothing wired them.**
+`pick.open` is what the user asked for — the chevron writes it, a keystroke writes it,
+the host's own dismissal writes it. `OverlayHost::present` is what the overlay
+bookkeeping acts on. A widget that owns both has to say so once per frame, in **both**
+directions:
+
+* `update` copies `pick.open` into `host.present`, or the panel is never requested;
+* `overlay_closed` copies the host's dismissal back into `pick.open`, or the next
+  `update` re-opens a panel the user just dismissed.
+
+Both were missing at first, in opposite directions. The mutation table's first row is
+the first one; the second is the second.
+
+**Keeping a selection's raw index across an option-list replacement makes the widget
+contradict itself.** `selected` is an `Option<usize>` — that is what v1 stored and what
+`on_change` reports — and an index stops meaning anything the moment the list behind it
+is replaced. So the selection is re-pointed **by text**: the option that was chosen is
+looked up in the new list and becomes the new index. Keeping the raw index leaves a
+combobox whose field reads "banana" while `selected()` says `Some(1)` and index 1 is
+now "apple" — two of the three disagree and the user sees the one that is wrong.
+
+If the chosen option is **gone**, the selection is dropped *and the field cleared*: a
+field still reading "banana" above a list with no banana looks right, which is worse
+than one reading nothing. My test for this was wrong at first in an instructive way — I
+replaced the list with `["apple", "Cherry"]` and index 1 *was* `Cherry`, so the
+selection did still resolve and the code was right.
+
+**The panel is `None` when nothing matches, not an empty box.** A dropdown with nothing
+in it should not be a bordered, shadowed rectangle around nothing — and returning `None`
+also means the host is never asked, which is cheaper than asking and being refused.
+
+Two smaller things the port settles rather than guesses:
+
+* **The list opens on the first keystroke, not on focus.** v1 opened on
+  `FocusGained`; 2.0 has no way for a parent to observe a child's focus, so the same
+  user-visible moment is used minus the "tap the field, see nothing happen" one.
+  Recorded, not worked around.
+* **A row's selected fill is read when the row is built**, not when it is painted.
+  Child keys do the work: choosing changes `selected`, the reconciler is asked for
+  children again, every row is rebuilt, and a now-chosen row paints its fill.
+
+And a test of mine that would have passed for the wrong reason: the disabled/enabled
+comparison painted the `Combobox`, whose `paint` deliberately draws nothing — the
+trigger is a child — so it compared two empty scenes. It now paints the trigger.
+
+    Mutation                                        Tests red
+    `update` never tells the host the user opened    4
+    a host dismissal does not clear `pick.open`      1
+    the selection keeps its raw index                2
 
 ### What the combobox turned up — three decisions, and two of them are disagreements
 

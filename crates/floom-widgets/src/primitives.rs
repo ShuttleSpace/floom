@@ -15,6 +15,7 @@ use floom_accessibility::{SemanticsRole, SemanticsState};
 /// uses, so a widget in another module does not have to know which crate the enum
 /// lives in.
 pub use floom_accessibility::SemanticsRole as Role;
+pub use floom_accessibility::SemanticsState as StateBits;
 use floom_core::{
     Axis, Brush, Color, CreateContext, Edges, ElementId, Filter, LayoutRequest, PaintContext,
     Point, Rect, ResourceId, SemanticsContext, Shadow, Size, UpdateContext, Widget,

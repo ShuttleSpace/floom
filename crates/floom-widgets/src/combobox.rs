@@ -55,7 +55,10 @@
 
 use std::sync::{Arc, Mutex};
 
-use floom_core::{Color, OverlayRequest, WidgetAny};
+use floom_core::{
+    Align, Axis, Child, ChildKey, Color, CreateContext, ElementId, LayoutRequest, OverlayRequest,
+    PaintContext, SemanticsContext, UpdateContext, Widget, WidgetAny,
+};
 use floom_types::OverlayKind;
 
 use crate::compose::{PopupPlacement, popup_placement_rect};
@@ -375,4 +378,619 @@ impl ComboboxStyle {
 /// identity v1 relied on for `panel_shadow_color`.
 fn alpha(color: Color, alpha: u8) -> Color {
     Color { a: alpha, ..color }
+}
+// ---------------------------------------------------------------------------
+// The widget
+// ---------------------------------------------------------------------------
+
+use floom_types::Shadow;
+
+use crate::compose::{OverlayHost, Stack};
+use crate::surface::Surface;
+use crate::primitives::{Role, SemanticsHint, StateBits as SemanticsState, Text};
+use crate::text_input::{TextInput, TextInputStyle};
+use crate::vector_icon::VectorIcon;
+use crate::controls::Pressable;
+
+/// A text field, a chevron, and a filtered list under them.
+pub struct Combobox {
+    /// The option list. Shared because a row's click handler needs the option text to
+    /// put in the field, and a row is built inside a `Send + Sync` closure that cannot
+    /// borrow from this struct.
+    options: Arc<Mutex<Vec<String>>>,
+    query: SharedBuffer,
+    pick: SharedPick,
+    placeholder: Option<String>,
+    style: ComboboxStyle,
+    /// Icon path data by name, for the same reason `TreeView` takes one: three kits'
+    /// icon sets differ and the engine has no business choosing between them.
+    icons: Arc<dyn Fn(&str) -> Option<VectorIcon> + Send + Sync + 'static>,
+    disabled: bool,
+    on_change: Option<Arc<dyn Fn(Option<usize>) + Send + Sync + 'static>>,
+    /// Held as a field rather than returned as a child — see `OverlayHost`'s note on
+    /// why unmounting a node does not close the overlays it opened.
+    host: OverlayHost,
+}
+
+impl std::fmt::Debug for Combobox {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Combobox")
+            .field("style", &self.style)
+            .field("disabled", &self.disabled)
+            .field("open", &self.is_open())
+            .finish_non_exhaustive()
+    }
+}
+
+impl Combobox {
+    /// A combobox over `options`, which becomes the shared option list.
+    pub fn new(options: Vec<String>) -> Self {
+        Combobox {
+            options: Arc::new(Mutex::new(options)),
+            query: Arc::new(Mutex::new(String::new())),
+            pick: Arc::new(Mutex::new(ComboPick::default())),
+            placeholder: None,
+            style: ComboboxStyle::default(),
+            icons: Arc::new(|_| None),
+            disabled: false,
+            on_change: None,
+            host: OverlayHost::new(false),
+        }
+    }
+
+    /// Adopt existing shared state, so a caller that already has one — or that wants
+    /// to watch the selection — does not have to hand over ownership.
+    pub fn with_shared(
+        options: Vec<String>,
+        query: SharedBuffer,
+        pick: SharedPick,
+    ) -> Self {
+        Combobox {
+            options: Arc::new(Mutex::new(options)),
+            query,
+            pick,
+            placeholder: None,
+            style: ComboboxStyle::default(),
+            icons: Arc::new(|_| None),
+            disabled: false,
+            on_change: None,
+            host: OverlayHost::new(false),
+        }
+    }
+
+    pub fn style(mut self, style: ComboboxStyle) -> Self {
+        self.style = style;
+        self
+    }
+
+    pub fn placeholder(mut self, placeholder: impl Into<String>) -> Self {
+        self.placeholder = Some(placeholder.into());
+        self
+    }
+
+    pub fn disabled(mut self, disabled: bool) -> Self {
+        self.disabled = disabled;
+        self
+    }
+
+    /// Icon lookup, because three kits' icon sets differ.
+    pub fn icons(mut self, icons: impl Fn(&str) -> Option<VectorIcon> + Send + Sync + 'static) -> Self {
+        self.icons = Arc::new(icons);
+        self
+    }
+
+    pub fn on_change(mut self, callback: impl Fn(Option<usize>) + Send + Sync + 'static) -> Self {
+        self.on_change = Some(Arc::new(callback));
+        self
+    }
+
+    // --- state, readable and writable by a caller ---
+
+    /// The shared selection state.
+    pub fn pick(&self) -> SharedPick {
+        self.pick.clone()
+    }
+
+    /// The field's shared buffer.
+    pub fn query(&self) -> SharedBuffer {
+        self.query.clone()
+    }
+
+    pub fn is_open(&self) -> bool {
+        self.pick.lock().map(|guard| guard.open).unwrap_or(false)
+    }
+
+    pub fn selected(&self) -> Option<usize> {
+        self.pick.lock().ok().and_then(|guard| guard.selected)
+    }
+
+    /// Open or close the list. Returns whether this changed anything.
+    pub fn set_open(&mut self, open: bool) -> bool {
+        match self.pick.lock() {
+            Ok(mut guard) if guard.open != open => {
+                guard.open = open;
+                true
+            }
+            _ => false,
+        }
+    }
+
+    /// Choose an option, as a click on its row would.
+    ///
+    /// Public because v1's `selected(..)` setter did this — it set the index *and*
+    /// copied the option's text into the field — and a caller that sets `selected` on a
+    /// combobox expects to see the option, not an index the widget disagrees with.
+    pub fn select(&mut self, index: usize) -> bool {
+        let options = self.options();
+        let changed = select(&self.pick, &self.query, &options, index);
+        if changed {
+            if let Some(on_change) = &self.on_change {
+                on_change(Some(index));
+            }
+        }
+        changed
+    }
+
+    /// Replace the option list.
+    ///
+    /// A selection is tracked **by index** — that is what v1 stored, and what
+    /// `on_change(Option<usize>)` reports — and an index stops meaning anything the
+    /// moment the list behind it is replaced. So the selection is re-pointed **by
+    /// text**: the option that was chosen is looked up in the new list, and becomes
+    /// the new index.
+    ///
+    /// Keeping the raw index instead would leave the widget contradicting itself: a
+    /// combobox whose field reads "banana" while `selected()` says `Some(1)` and the
+    /// list's index 1 is "apple". Two of the three disagree and the user sees the one
+    /// that is wrong.
+    ///
+    /// If the chosen option is **gone**, the selection is dropped *and the field is
+    /// cleared*, because a field still reading "banana" above a list with no banana
+    /// looks right — which is worse than one reading nothing.
+    pub fn set_options(&mut self, options: Vec<String>) {
+        // Read the chosen option's *text* before the list is replaced.
+        let chosen_text = {
+            let selected = self.pick.lock().ok().and_then(|guard| guard.selected);
+            selected.and_then(|index| {
+                self.options
+                    .lock()
+                    .ok()
+                    .and_then(|guard| guard.get(index).cloned())
+            })
+        };
+
+        if let Ok(mut guard) = self.options.lock() {
+            *guard = options.clone();
+        }
+
+        let repointed = match &chosen_text {
+            None => None,
+            // Two identical options: the first, which is the one the user can see.
+            Some(text) => options.iter().position(|candidate| candidate == text),
+        };
+
+        if let Ok(mut guard) = self.pick.lock() {
+            guard.selected = repointed;
+        }
+        if let Ok(mut buffer) = self.query.lock() {
+            match &chosen_text {
+                // Keep showing what was chosen, even if it moved.
+                Some(text) => *buffer = text.clone(),
+                // Nothing was chosen, so the field is the user's typing: leave it be.
+                None => {}
+            }
+        }
+        if repointed.is_none() {
+            if let Ok(mut buffer) = self.query.lock() {
+                if chosen_text.is_some() {
+                    buffer.clear();
+                }
+            }
+        }
+    }
+
+    pub fn options(&self) -> Vec<String> {
+        self.options.lock().map(|guard| guard.clone()).unwrap_or_default()
+    }
+
+    /// The options that survive the current query.
+    pub fn visible(&self) -> Vec<String> {
+        let options = self.options();
+        let query = self.query.lock().map(|guard| guard.clone()).unwrap_or_default();
+        visible_options(&options, &query)
+            .into_iter()
+            .map(str::to_string)
+            .collect()
+    }
+
+    // --- the two halves, as children ---
+
+    /// The panel: a surface holding the matching rows, or `None` when none match.
+    ///
+    /// `None` rather than an empty panel, because a dropdown with nothing in it should
+    /// not be a box with a border and a shadow around nothing.
+    fn panel_content(&self) -> Option<Child> {
+        let options = self.options();
+        let query = self
+            .query
+            .lock()
+            .map(|guard| guard.clone())
+            .unwrap_or_default();
+        let rows = visible_options(&options, &query);
+        if rows.is_empty() {
+            return None;
+        }
+        let style = self.style;
+        let pick = self.pick.clone();
+        let shared_options = self.options.clone();
+        let query_buffer = self.query.clone();
+        let on_change = self.on_change.clone();
+
+        let mut list = Stack::new(Axis::Vertical);
+        for (row, option) in rows.into_iter().enumerate() {
+            // The *option's* index, not the row's, so a row that survives a keystroke
+            // is reused rather than rebuilt at a new key.
+            let index = match options.iter().position(|candidate| candidate == option) {
+                Some(index) => index,
+                // Two identical options; the first is the one the user can see.
+                None => row,
+            };
+            let pick = pick.clone();
+            let shared_options = shared_options.clone();
+            let query_buffer = query_buffer.clone();
+            let on_change = on_change.clone();
+            let label = option.to_string();
+            list = list.push(move || {
+                // One level of cloning, then the row is assembled by a function that
+                // takes ownership. Nesting three closures here and cloning at each
+                // level is what `TreeView` does, and it is why its note says so: the
+                // row builder, the surface builder and the label builder each may run
+                // again, and each must hand its children a value it will see twice.
+                Box::new(row_widget(
+                    style,
+                    index,
+                    label.clone(),
+                    pick.clone(),
+                    shared_options.clone(),
+                    query_buffer.clone(),
+                    on_change.clone(),
+                ))
+            });
+        }
+
+        let panel_layout = LayoutRequest::new()
+            .padding_vert(4.0)
+            .padding_horiz(4.0)
+            .min_width(style.min_width);
+        // Built here rather than inside the surface's closure: a `move` closure nested
+        // inside another `move` closure *takes ownership* of what it captures, which
+        // would make the outer one `FnOnce` — and a slot builder has to be replayable
+        // `Fn`, because it is called once per key for as long as the row lives.
+        let rows_child = Child::new(ChildKey::index(0), LayoutRequest::new(), move || {
+            Box::new(list.clone()) as Box<dyn WidgetAny>
+        });
+
+        Some(Child::new(ChildKey::index(0), panel_layout, move || {
+            Box::new(
+                Surface::new()
+                    .request(panel_layout)
+                    .background(style.surface)
+                    .radius(style.border_radius)
+                    .border(
+                        style.border_width,
+                        alpha(style.outline, style.panel_border_alpha),
+                    )
+                    .shadow(Shadow {
+                        color: style.panel_shadow_color(),
+                        blur: 8.0,
+                        spread: 1.0,
+                        offset_x: 0.0,
+                        offset_y: 0.0,
+                    })
+                    .child(rows_child.clone()),
+            ) as Box<dyn WidgetAny>
+        }))
+    }
+
+    /// The field and the chevron, in a bordered surface.
+    fn trigger_content(&self) -> Child {
+        let style = self.style;
+        let disabled = self.disabled;
+        let query = self.query.clone();
+        let pick = self.pick.clone();
+        let icons = self.icons.clone();
+        let placeholder = self.placeholder.clone();
+        let open = self.is_open();
+
+        Child::new(
+            ChildKey::index(0),
+            self.trigger_layout(),
+            move || {
+                let row = Stack::new(Axis::Horizontal)
+                    .gap(style.trigger_gap)
+                    .align(Align::Center, Align::Center)
+                    .request(LayoutRequest::new().fill())
+                    .child(Child::new(ChildKey::index(0), LayoutRequest::new(), {
+                        // Built here rather than outside and copied in: `TextInput`
+                        // and `Pressable` are builders, so there is nothing to clone.
+                        let query = query.clone();
+                        let pick = pick.clone();
+                        let placeholder = placeholder.clone();
+                        move || {
+                            let mut field = TextInput::new(query.clone()).style(TextInputStyle {
+                                font_size: style.text_size,
+                                color: style.text_color(disabled),
+                                // The field's own border is the trigger surface's
+                                // border; two outlines around one control is a widget
+                                // that looks like a nest of dolls, and v1 had one.
+                                border_width: 0.0,
+                                background: None,
+                                ..TextInputStyle::default()
+                            });
+                            if let Some(placeholder) = &placeholder {
+                                field = field.placeholder(placeholder.clone());
+                            }
+                            field = field
+                                .on_change({
+                                    // v1 opened the list on `FocusGained`. 2.0 has no
+                                    // way for a parent to observe a child's focus, so
+                                    // the list opens on the first keystroke instead —
+                                    // the same moment minus the "tap the field, see
+                                    // nothing happen" one. Recorded, not worked around.
+                                    let pick = pick.clone();
+                                    move |_text| {
+                                        if let Ok(mut guard) = pick.lock() {
+                                            guard.open = true;
+                                        }
+                                    }
+                                });
+                            Box::new(field) as Box<dyn WidgetAny>
+                        }
+                    }))
+                    .child(Child::new(ChildKey::index(1), LayoutRequest::new(), {
+                        let pick = pick.clone();
+                        let icons = icons.clone();
+                        move || {
+                            let chevron = Pressable::new(Child::new(
+                                ChildKey::index(0),
+                                LayoutRequest::new(),
+                                {
+                                    let icons = icons.clone();
+                                    move || match icons("expand_more") {
+                                        Some(mut icon) => {
+                                            icon.set_size(style.chevron_size);
+                                            icon.set_color(style.chevron_color(disabled));
+                                            Box::new(icon) as Box<dyn WidgetAny>
+                                        }
+                                        // v1's `MdIcon::new("expand_more")` always
+                                        // resolved, so an unresolved name is a kit's
+                                        // missing icon rather than a blank on purpose.
+                                        // The box keeps its size either way, so the
+                                        // layout does not depend on the icon set.
+                                        None => Box::new(Surface::new().request(
+                                            LayoutRequest::new()
+                                                .width(style.chevron_size)
+                                                .height(style.chevron_size),
+                                        )),
+                                    }
+                                },
+                            ))
+                            .on_click({
+                                let pick = pick.clone();
+                                move || {
+                                    if let Ok(mut guard) = pick.lock() {
+                                        guard.open = !guard.open;
+                                    }
+                                }
+                            })
+                            .label("Show options");
+                            Box::new(chevron) as Box<dyn WidgetAny>
+                        }
+                    }));
+
+                Box::new(
+                    Surface::new()
+                        .request(
+                            LayoutRequest::new()
+                                .height(style.height)
+                                .min_width(style.min_width)
+                                .padding_horiz(f64::from(style.padding_horizontal)),
+                        )
+                        .background(style.surface)
+                        .radius(style.border_radius)
+                        .border(style.border_width, style.border_color(disabled, open))
+                        .child(Child::new(ChildKey::index(0), LayoutRequest::new(), move || {
+                            Box::new(row.clone()) as Box<dyn WidgetAny>
+                        })),
+                ) as Box<dyn WidgetAny>
+            },
+        )
+    }
+
+    fn trigger_layout(&self) -> LayoutRequest {
+        LayoutRequest::new()
+            .height(self.style.height)
+            .min_width(self.style.min_width)
+            .padding_horiz(f64::from(self.style.padding_horizontal))
+    }
+}
+
+impl Widget for Combobox {
+    fn create(&self, cx: &mut dyn CreateContext) -> ElementId {
+        cx.alloc_child()
+    }
+
+    fn update(&mut self, cx: &mut dyn UpdateContext, id: ElementId) {
+        // The two must be told apart, and this is where they meet. `pick.open` is what
+        // the user asked for and what the chevron, a keystroke and the host's own
+        // dismissal all write; `host.present` is what the overlay bookkeeping acts on.
+        // Nothing wires them together implicitly — a widget that owns both has to say
+        // so once per frame, and forgetting is silent: the list state says open while
+        // no panel was ever requested.
+        self.host.set_present(self.is_open());
+        let content = self.panel_content();
+        let placement = self.style.placement();
+        self.host.reconcile(cx, id, move |bounds, _viewport| {
+            let content = content.clone()?;
+            Some(panel_request(placement, bounds, move |_handle| content.build()))
+        });
+    }
+
+    fn children(&self) -> Vec<Child> {
+        let mut children = vec![self.trigger_content()];
+        children.extend(
+            self.host
+                .fallback_children(self.panel_content(), ChildKey::index(1)),
+        );
+        children
+    }
+
+    fn layout_request(&self) -> Option<LayoutRequest> {
+        Some(self.trigger_layout())
+    }
+
+    /// Forwarded, and the forwarding is the point — see `OverlayHost`'s note.
+    fn overlay_opened(&mut self, cx: &mut dyn UpdateContext, id: ElementId, handle: floom_types::OverlayHandle) {
+        self.host.opened(handle);
+        cx.mark_children_dirty(id);
+    }
+
+    fn overlay_closed(
+        &mut self,
+        cx: &mut dyn UpdateContext,
+        id: ElementId,
+        handle: floom_types::OverlayHandle,
+        _content: Box<dyn WidgetAny>,
+    ) {
+        if self.host.closed(handle) {
+            // ...and back the other way. `OverlayHost::closed` clears *its own*
+            // `present`, but the state a caller reads is `pick.open`, and leaving that
+            // set means the next `update` re-opens a panel the user just dismissed.
+            // Two sources of truth, so both directions need saying out loud.
+            if let Ok(mut guard) = self.pick.lock() {
+                guard.open = false;
+            }
+            cx.mark_children_dirty(id);
+        }
+    }
+
+    /// Nothing: the field and the panel are children, and the field's own chrome
+    /// belongs to the trigger surface.
+    fn paint(&self, _cx: &mut dyn PaintContext, _id: ElementId) {}
+
+    fn semantics(&self, cx: &mut dyn SemanticsContext, _id: ElementId) {
+        crate::primitives::emit_semantics(self.hint(), cx);
+    }
+}
+
+impl WidgetAny for Combobox {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
+        self
+    }
+
+    /// A text field that is or is not expanded.
+    ///
+    /// `TextField` rather than a combobox role, because the accessibility vocabulary in
+    /// 2.0 has no combobox and inventing one is a platform decision rather than a
+    /// widget's. Recorded here so the gap is visible where it would be fixed.
+    fn semantics_hint(&self) -> Option<floom_core::SemanticsHint> {
+        Some(self.hint().into())
+    }
+}
+
+impl Combobox {
+    fn hint(&self) -> SemanticsHint {
+        let state = if self.is_open() {
+            SemanticsState::EXPANDED
+        } else {
+            SemanticsState::COLLAPSED
+        };
+        SemanticsHint::labeled(
+            Role::TextField,
+            self.placeholder.clone().unwrap_or_else(|| {
+                self.selected()
+                    .and_then(|index| self.options().get(index).cloned())
+                    .unwrap_or_default()
+            }),
+        )
+        .with_state(state)
+    }
+}
+
+/// One option row: a `Pressable` over a surface holding its label.
+///
+/// A free function taking ownership, rather than another nested closure, because the
+/// row is three `Fn` levels deep otherwise — the list's builder, the surface's
+/// builder, and the label's — and each level would need its own clone of the same five
+/// values. Here there is one level, and it hands everything on by value.
+///
+/// The selected fill is read when the row is built, not when it is painted. That is
+/// what a child-keyed rebuild gives us: choosing an option changes `selected`, the
+/// reconciler is asked for children again, and every row is rebuilt, so a row that is
+/// now chosen paints its fill. A `Pressable` that read it at paint time would need a
+/// repaint request the widget does not otherwise make.
+fn row_widget(
+    style: ComboboxStyle,
+    index: usize,
+    label: String,
+    pick: SharedPick,
+    options: Arc<Mutex<Vec<String>>>,
+    query: SharedBuffer,
+    on_change: Option<Arc<dyn Fn(Option<usize>) + Send + Sync + 'static>>,
+) -> impl WidgetAny {
+    let chosen = pick
+        .lock()
+        .map(|guard| guard.selected == Some(index))
+        .unwrap_or(false);
+    let row_layout = LayoutRequest::new()
+        .height(style.item_height)
+        .padding_horiz(f64::from(style.row_padding_horizontal));
+    let background = if chosen {
+        style.selected_row_color()
+    } else {
+        Color { a: 0, ..style.surface }
+    };
+    let accessible = label.clone();
+
+    Pressable::new(Child::new(ChildKey::index(0), row_layout, move || {
+        let label = label.clone();
+        Box::new(
+            Surface::new()
+                .request(row_layout)
+                .background(background)
+                .child(Child::new(ChildKey::index(0), LayoutRequest::new(), move || {
+                    Box::new(
+                        Text::new(label.clone())
+                            .size(style.text_size)
+                            .color(style.on_surface),
+                    ) as Box<dyn WidgetAny>
+                })),
+        ) as Box<dyn WidgetAny>
+    }))
+    .on_click({
+        // Cloned here because `on_click` takes the handle, and the semantics reader
+        // below needs one too — a reader written afterwards would find `pick` moved.
+        let pick = pick.clone();
+        move || {
+            let options = options.lock().map(|guard| guard.clone()).unwrap_or_default();
+            if select(&pick, &query, &options, index) {
+                if let Some(on_change) = &on_change {
+                    on_change(Some(index));
+                }
+            }
+        }
+    })
+    .label(accessible)
+    .selected_from({
+        let pick = pick.clone();
+        move || {
+            pick.lock()
+                .map(|guard| guard.selected == Some(index))
+                .unwrap_or(false)
+        }
+    })
 }
