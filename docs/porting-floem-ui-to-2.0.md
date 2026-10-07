@@ -17,6 +17,7 @@ so the widget API gets shaken out before anything is translated in bulk:
 | surface + press | `cupertino-card` | ported, 14 tests (same shape, `radius().md`) |
 | icon button | `md-icon_button` + 2 kits | ported, 43 tests (shape promoted to the engine) |
 | list row | `md-list_item` + 2 kits | ported, 48 tests (shape promoted; needed a new capability) |
+| alert banner | `md-alert` | ported, 12 tests (**needed nothing** from the engine) |
 
 Ported kits: `md-card`, `md-button`, `md-icon`, `md-expansion_panels`,
 `md-toolbar`, `md-footer`, `md-item_group`, **`fluent-card`**,
@@ -48,10 +49,26 @@ and no repair exists that keeps this plan's rules. So:
    `floom-elements`: the floem-ui workspace is now at **7 errors across 6 crates**,
    all of them `MdIcon::view()` callers (`md-alert`, `md-autocomplete`,
    `md-combobox`, `md-dialog`, `md-select`, `md-treeview`).
-5. **Those six**, then `floom-elements`. They are the last callers of the removed
-   `MdIcon::view()`, so they are ports like the rest — and correction 7's two
-   experiments still stand: `.view()` cannot simply be dropped, because the callers
-   are v1 crates and a 2.0 widget has no v1 view to return.
+5. **The remaining five components** — `dialog`, `treeview`, `select`, `combobox`,
+   `autocomplete` — 15 crates, and then `floom-elements`. Correction 7's two
+   experiments still stand for all of them: `.view()` cannot simply be dropped,
+   because the callers are v1 crates and a 2.0 widget has no v1 view to return.
+
+   Measured, so the order is chosen rather than guessed:
+
+   | component | cross-kit overlap | md lines | what it will need |
+   |---|---|---|---|
+   | `alert` | 83% | 170 | **nothing** — done |
+   | `dialog` | 90% | 271 | absolute positioning, a scrim, two slots |
+   | `treeview` | 87% | 259 | shared expansion state (as `SelectGroup` had) + a viewport |
+   | `select` | **60%** | 263 | a popup anchor — and the kits genuinely differ |
+   | `combobox` | 93% | 284 | a text input + a filtered list popup |
+   | `autocomplete` | 93% | 315 | the same, plus focus |
+
+   `dialog` next: high overlap, and its needs (absolute positioning, a scrim) are
+   engine capabilities rather than new shapes. `select` last of the five despite
+   being no larger, because at 60% it is the one component where the three kits are
+   **not** the same component, so it is a decision rather than a translation.
    With them the floem-ui workspace goes green, at which point `floom-elements`'
    own 6,220 lines of v1 `multi` dispatch can be rewritten (correction 6).
 
@@ -1185,6 +1202,62 @@ ever wants a rounded row, to be changed together with the test.
 | the band's `min_height` becomes `height` | 1 — `the_band_has_a_height_floor_and_fills_its_width` |
 | the text column stops growing | 1 — `the_text_column_is_the_only_part_that_grows` |
 | the row inside the band stops growing | 1 — the same test, its `CONTROL` assertion |
+
+### What `md-alert` turned up — the first of the six that needed nothing
+
+The six crates correction 7 identified were treated as one batch, and this one
+breaks the batch in half.
+
+`md-alert` is a tinted rounded `Surface` holding a `Stack` of two more stacks and
+some `Text`, plus a bare pressable icon for the dismiss affordance. **Every one of
+those pieces already existed.** No new engine capability, no new shape, no promotion
+warranted either: at 83% cross-kit overlap the shape is shared, but unlike the
+`icon_button` (95%) or `list_item` (84%) there is no *decision* in the shared part
+worth centralising — it is three nested stacks and a `Surface`, and the engine's
+`Stack`/`Surface` already say all of it. The right answer was to write it once in a
+kit crate and be done.
+
+That is worth recording because it is the outcome a port *should* have most often,
+and this plan had been carrying "14 crates, all ports" as if they were all alike.
+
+**One deliberate behaviour change, pinned.** v1 wrote:
+
+```ignore
+let dismiss = if dismissible { MdIcon::new("close")... } else { Label::new("") };
+```
+
+So the row **always** had two children, and the 8px gap after the content was spent
+on an empty label. A non-dismissible alert was 8px narrower in its content than it
+needed to be. Here the slot is simply absent, so the row has one child. Reproducing
+v1 exactly would mean reproducing its bug; dropping it is a *change*, so it is
+pinned by `the_dismiss_slot_is_absent_unless_the_alert_is_dismissible`, whose
+mutation — making the slot unconditional — turns 2 tests red.
+
+**The `MdIcon::view()` site, and what replaced it.** v1 chained
+`.style(|s| s.padding(2.0).cursor(Pointer)).on_event(listener::Click, ..)` onto the
+icon's view. In 2.0 the icon *is* a widget, so the chain is gone and a clickable icon
+is that widget inside a [`Pressable`] — which also gains a label, so a screen reader
+can name the dismiss button. The pointer cursor is the fourth time in this port that
+`PaintContext`'s lack of a cursor vocabulary has cost something; recorded each time
+rather than worked around.
+
+**The third `FontWeight` crossing, again.** `FontWeight::Bold.to_floom()` returns a
+`parley` weight, so the same nine-variant mapping `md-list_item` needed appears here.
+This is now the third kit to need it, which says the mapping belongs somewhere shared
+rather than in three crates — see the open item at the end of this section.
+
+**An engine change that turned out not to be one.** Reaching for `Text`'s string
+added `content()`, `edge()` and `font_weight()` to `primitives::Text` — and then the
+compiler reported all three as duplicates: `content()`, `font_size()` and
+`font_weight()` were **already there**. The readers existed; I had not looked. Three
+lines added, three removed, and the crate needed nothing — which is the second time in
+this batch that the honest answer turned out to be "the engine is fine", after the
+`min_width`/`min_height` that turned out not to be.
+
+| Mutation | Tests red |
+|---|---|
+| the dismiss slot becomes unconditional (i.e. v1's bug) | **2** |
+| the container tint drops its 26/255 alpha | 1 |
 
 ### What `md-item_group` turned up — the promotion that paid for itself
 

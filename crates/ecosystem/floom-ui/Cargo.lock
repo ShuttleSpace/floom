@@ -3464,10 +3464,13 @@ dependencies = [
 name = "floom-widget-md-alert"
 version = "0.1.0"
 dependencies = [
- "floom",
+ "floom-core",
  "floom-core-theme",
+ "floom-legacy-reactive",
+ "floom-types",
  "floom-widget-md-icon",
  "floom-widget-runtime",
+ "floom-widgets",
 ]
 
 [[package]]
