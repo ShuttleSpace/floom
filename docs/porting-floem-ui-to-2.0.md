@@ -22,6 +22,7 @@ so the widget API gets shaken out before anything is translated in bulk:
 | text input | `floom_widgets::TextInput` | **new primitive**, 32 tests — nothing in 2.0 had one |
 | popup placement | `PopupPlacement` + `OverlayHost` | the geometry and the embeddable host — 24 tests |
 | combobox | `floom_widgets::Combobox` | decision layer (24 tests) + widget (20 tests) |
+| combobox (Material) | `md-combobox` | ported, 14 tests — 91% overlap, so it promoted |
 
 Ported kits: `md-card`, `md-button`, `md-icon`, `md-expansion_panels`,
 `md-toolbar`, `md-footer`, `md-item_group`, **`fluent-card`**,
@@ -358,6 +359,38 @@ assertion made from reading code instead of compiling it:
     `overlay_opened`. Without that call the widget has no handle to name, so there
     was nothing to close. That is not a nit — it is the reason the grant is a
     separate callback and not a return value.
+
+13d. **`md-combobox` is ported — and the other two are blocked on a crate that is not
+    a component at all.**
+
+    Material's combobox is a 14-test token translation, exactly as the overlap argued
+    it would be. The port removed: three `RwSignal`s (v1's `selected`, `open`, `query`)
+    in favour of the engine's shared state; v1's `Overlay::new(panel)` plus a
+    `LayoutChangedListener` reading the trigger's window origin and height, in favour
+    of `OverlayHost` with `PopupPlacement::Below` — which is the same arithmetic said
+    the short way, and the listener is gone because the widget already has the box
+    whose bottom edge it needs; v1's `List` of `AnyView`s; and v1's pointer cursor, for
+    the fifth time in this port.
+
+    Two losses are recorded rather than faked:
+
+    * **v1's row hover fill has no 2.0 equivalent.** `Pressable`'s interaction state is
+      not readable from outside, so a row paints its selected fill or nothing. The
+      alternative — a fill that is always on — would be a permanent hover.
+    * **The list opens on the first keystroke, not on focus**, because 2.0 has no way
+      for a parent to observe a child's focus.
+
+    Then Cupertino and Fluent turned out to need `cupertino_icon_svg` /
+    `fluent_icon_svg` for their chevron, and **both live in `cupertino-icon` /
+    `fluent-icon`, which are still v1 crates** — `floom = { workspace = true }`. So the
+    blocker for the other two comboboxes is not a component but an *unported
+    dependency*, which is a category this plan had not tracked.
+
+    The good news is that those crates are nearly free to port: `icons.rs` is a 45-line
+    pure data table with no v1 dependency at all — a `match` of SVG path strings — and
+    only `lib.rs` (the v1 view wrapper, 93 lines) needs dropping. What the kit then
+    needs is `VectorIcon::new(parse_path_data(path), 0,0,24,24)`, both of which the
+    engine already has.
 
 12. **The last four components are not four ports; they are four prerequisites,
     and only one of them is self-contained.**
