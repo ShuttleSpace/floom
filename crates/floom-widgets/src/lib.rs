@@ -41,9 +41,10 @@ pub use widget_any::{to_core_role, to_core_state};
 /// a loading spinner.
 pub use badge::Badge;
 pub use canvas::{Canvas, ShaderBox, Spinner};
-pub use compose::{
+pub use compose::{popup_placement_rect, 
     Accordion, AccordionIndicator, AccordionStyle, AnimatedContent, BottomSheet, Conditional,
-    Crossfade, Dialog, Grid, List, Opacity, Overlay, Popup, SelectGroup, SelectGroupStyle,
+    Crossfade, Dialog, Grid, List, Opacity, Overlay, Popup, PopupPlacement, SelectGroup,
+    SelectGroupStyle,
     SelectionMode, SharedTransitionLayout, Stack, Tabs,
 };
 pub use controls::{

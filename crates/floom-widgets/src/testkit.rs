@@ -577,11 +577,70 @@ pub struct RecordingUpdateContext {
     /// stateful widget is most likely to get wrong: a repaint of a box that is
     /// still the old size changes nothing a user can see.
     layout_dirty: Vec<ElementId>,
+    /// This node's box, in viewport coordinates. Zero unless set, which is the
+    /// honest default: an update context that knows no geometry says so, rather
+    /// than reporting an empty rect that happens to look like a real answer.
+    bounds: Rect,
+    /// The host viewport, for a widget whose overlay spans the window.
+    viewport: Rect,
+    /// Every overlay asked for through the state-driven door, in order.
+    ///
+    /// `open_overlay`/`close_overlay` are *defaulted* on `UpdateContext`, so until
+    /// this existed a composite that mounted its panel from `update` — which is
+    /// exactly what a popup, a dialog and a drawer all do — was untestable here:
+    /// the door returned `false` and a test could not tell a deliberate fallback
+    /// from a missing implementation. `TestEventContext` already recorded the
+    /// event-driven twin; this is the same recording on the other door.
+    overlays: Vec<OverlayCall>,
+    next_handle: u64,
 }
 
 impl RecordingUpdateContext {
     pub fn new() -> Self {
         Self::default()
+    }
+
+    /// A context that reports `bounds` for this node.
+    ///
+    /// The reason this exists: `UpdateContext::bounds` is documented as the
+    /// *previous* frame's box, and as "exactly right for anchoring an overlay to a
+    /// control that already exists". A test that cannot set it cannot check that a
+    /// popup put itself below its trigger.
+    pub fn with_bounds(bounds: Rect) -> Self {
+        RecordingUpdateContext {
+            bounds,
+            ..RecordingUpdateContext::default()
+        }
+    }
+
+    /// Every overlay call made through the state-driven door, in order.
+    pub fn overlays(&self) -> &[OverlayCall] {
+        &self.overlays
+    }
+
+    /// The overlays asked to be *opened*, in order.
+    pub fn opened_overlays(&self) -> Vec<&OverlayCall> {
+        self.overlays
+            .iter()
+            .filter(|call| matches!(call, OverlayCall::Open { .. }))
+            .collect()
+    }
+
+    /// The handles asked to be *closed*, in order.
+    pub fn closed_overlays(&self) -> Vec<OverlayHandle> {
+        self.overlays
+            .iter()
+            .filter_map(|call| match call {
+                OverlayCall::Close(handle) => Some(*handle),
+                OverlayCall::Open { .. } => None,
+            })
+            .collect()
+    }
+
+    /// Whether any overlay was opened at all — the distinction a bare `false`
+    /// from [`UpdateContext::open_overlay`] cannot make on its own.
+    pub fn opened_any_overlay(&self) -> bool {
+        !self.opened_overlays().is_empty()
     }
 
     pub fn dirty(&self) -> &[ElementId] {
@@ -618,6 +677,7 @@ impl RecordingUpdateContext {
         self.dirty.clear();
         self.children_dirty.clear();
         self.layout_dirty.clear();
+        self.overlays.clear();
     }
 }
 
@@ -632,6 +692,36 @@ impl UpdateContext for RecordingUpdateContext {
 
     fn mark_layout_dirty(&mut self, id: ElementId) {
         self.layout_dirty.push(id);
+    }
+
+    fn bounds(&self) -> Rect {
+        self.bounds
+    }
+
+    fn viewport(&self) -> Rect {
+        self.viewport
+    }
+
+    /// Grants the request and records it, running the content factory exactly as
+    /// the real host does — so a test sees the content the host would have built,
+    /// holding the handle the host would have given it.
+    fn open_overlay(&mut self, request: floom_core::OverlayRequest) -> bool {
+        let handle = OverlayHandle::new(self.next_handle);
+        self.next_handle += 1;
+        let content = (request.content)(handle);
+        self.overlays.push(OverlayCall::Open {
+            handle,
+            kind: request.kind,
+            modal: request.modal,
+            bounds: request.bounds,
+            content,
+        });
+        true
+    }
+
+    fn close_overlay(&mut self, handle: OverlayHandle) -> bool {
+        self.overlays.push(OverlayCall::Close(handle));
+        true
     }
 }
 

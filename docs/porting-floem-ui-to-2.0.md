@@ -281,6 +281,45 @@ assertion made from reading code instead of compiling it:
     further, and neither is worked around: a field narrower than its text paints past
     its own edge, and that is visible.
 
+13b. **The popup was already there. I wrote a second one, and it was worse.**
+
+    `combobox`, `autocomplete` and `select` all need a panel below a control, and 2.0
+    has: `OverlayRequest`, `OverlayHandle`, `OverlayKind::Popup`, the state-driven
+    `UpdateContext::open_overlay`/`close_overlay` (whose doc names a `Dialog` as its
+    intended caller), `Widget::overlay_opened`/`overlay_closed`, and in the host
+    `dismiss_top_overlay_on_press` — the outside-click rule, correctly a *host* rule.
+    `floem-app/tests/overlay.rs` covers all of it against the real host.
+
+    What is missing is the geometry: a `Popup` asks for **its own box** and fills it,
+    which is right for a menu pinned to a toolbar button and wrong for every dropdown,
+    because a combobox's list belongs *below* its field.
+
+    I did not find that first. I wrote a new `floom_widgets::Popup` — 320 lines, a
+    three-state `open`/`requested`/`handle` machine, `panel_rect`, the whole state
+    machine — and it was **worse than what it duplicated** in the one way that
+    mattered: on a host that refuses the request, `OverlaySurface` falls back to
+    mounting the panel in-tree, while mine cleared `open` and showed nothing at all.
+    285 lines of duplicate machinery and a regression, found by grepping the module I
+    was extending *before* checking what it already did.
+
+    The real gap turned out to be one enum and one function: `PopupPlacement`
+    (`Fill` / `Below` / `Above`) and `popup_placement_rect`. `Fill` is the default,
+    so every existing popup is unchanged — which is the control group that proves the
+    new field changed nothing.
+
+    Two things survived from the attempt and are worth having:
+
+    * **`RecordingUpdateContext` had no overlay door.** `open_overlay` is *defaulted*
+      on `UpdateContext`, so a composite that mounts its panel from `update` — which
+      is what a popup, a dialog and a drawer all do — was untestable: the door
+      returned `false` and a test could not tell a deliberate fallback from a missing
+      implementation. It now records `OverlayCall`s and runs the content factory
+      exactly as the host does. The placement tests drive a real `Popup` through it.
+    * **`bounds()` was unsettable.** `UpdateContext::bounds` is documented as the
+      *previous* frame's box and as "exactly right for anchoring an overlay to a
+      control that already exists"; without `with_bounds` a test could not check that
+      a popup put itself below its trigger.
+
 12. **The last four components are not four ports; they are four prerequisites,
     and only one of them is self-contained.**
 
