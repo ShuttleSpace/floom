@@ -79,6 +79,15 @@ impl Stack {
     /// Present because [`crate::Surface`] has the same question and the same
     /// answer, and a caller building a row should not have to know which of the
     /// two it holds.
+    /// The axis this stack lays its children out along.
+    ///
+    /// A reader for the one field that decides what a stack *is*: two `Stack`s with
+    /// the same children are different components if one is a column and the other a
+    /// row, and until this existed only the type name said so.
+    pub fn axis(&self) -> Axis {
+        self.axis
+    }
+
     pub fn child_count(&self) -> usize {
         self.children.len()
     }

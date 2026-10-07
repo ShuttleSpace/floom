@@ -16,10 +16,11 @@ so the widget API gets shaken out before anything is translated in bulk:
 | surface + press | `fluent-card` | ported, 14 tests (first fluent kit) |
 | surface + press | `cupertino-card` | ported, 14 tests (same shape, `radius().md`) |
 | icon button | `md-icon_button` + 2 kits | ported, 43 tests (shape promoted to the engine) |
+| list row | `md-list_item` + 2 kits | ported, 48 tests (shape promoted; needed a new capability) |
 
 Ported kits: `md-card`, `md-button`, `md-icon`, `md-expansion_panels`,
 `md-toolbar`, `md-footer`, `md-item_group`, **`fluent-card`**,
-**`cupertino-card`, and the three `icon_button`s**.
+**`cupertino-card`, the three `icon_button`s** and **the three `list_item`s**.
 Engine widgets: `Badge`, `Ripple`, `VectorIcon`, `Pressable`, `Accordion`,
 **`Surface`**, **`SelectGroup`**.
 Text: **`FontWeight`**, end to end — `floom_types` enum, `TextLayoutOptions`,
@@ -43,14 +44,16 @@ and no repair exists that keeps this plan's rules. So:
 3. ~~**The three `icon_button`s**~~ — **done**, 43 tests. The shape was promoted to
    the engine rather than ported three times; see the section below for the
    measurement that decided it and the four mutations run against it.
-4. **The three `list_item`s** (172/174/172) next. This is the last group before
-   `floom-elements` can go green, and the one shape where all three kits are *not*
-   the same: v1 reads a different token per kit, so this is a decision about what
-   stays shared rather than a mechanical translation.
-5. Then `md-alert`, `md-dialog`, `md-select`, `md-treeview`, `md-combobox`,
-   `md-autocomplete` — and with them the floem-ui workspace goes green, at which
-   point `floom-elements`' own 6,220 lines of v1 `multi` dispatch can be rewritten
-   (correction 6).
+4. ~~**The three `list_item`s**~~ — **done**, 48 tests. The last group before
+   `floom-elements`: the floem-ui workspace is now at **7 errors across 6 crates**,
+   all of them `MdIcon::view()` callers (`md-alert`, `md-autocomplete`,
+   `md-combobox`, `md-dialog`, `md-select`, `md-treeview`).
+5. **Those six**, then `floom-elements`. They are the last callers of the removed
+   `MdIcon::view()`, so they are ports like the rest — and correction 7's two
+   experiments still stand: `.view()` cannot simply be dropped, because the callers
+   are v1 crates and a 2.0 widget has no v1 view to return.
+   With them the floem-ui workspace goes green, at which point `floom-elements`'
+   own 6,220 lines of v1 `multi` dispatch can be rewritten (correction 6).
 
 Verification commands that must stay green:
 
@@ -71,9 +74,10 @@ Verification commands that must stay green:
     for c in md-card md-button md-icon md-expansion_panels md-toolbar md-footer md-item_group; do
         cargo test --manifest-path "crates/material/$c/Cargo.toml"
     done
-    for c in fluent/fluent-card fluent/fluent-icon_button \
+    for c in fluent/fluent-card fluent/fluent-icon_button fluent/fluent-list_item \
              cupertino/cupertino-card cupertino/cupertino-icon_button \
-             material/md-icon_button; do
+             cupertino/cupertino-list_item \
+             material/md-icon_button material/md-list_item; do
         cargo test --manifest-path "crates/$c/Cargo.toml"
     done
 
@@ -1092,6 +1096,95 @@ v1-shaped `Box` so `props()` reports what v1 reported, and an `Arc<dyn Fn() +
 Send + Sync>` for the engine, from one closure. It is the last v1-shaped field in
 the crate and a duplicate of something already stored; the honest fix is to change
 the shared props type, which is a three-kit change and therefore its own decision.
+
+### What the `list_item` turned up — a capability the shape needed, and an inconsistency it preserved
+
+90 of 107 substantive lines are identical across the three v1 `list_item`s, so the
+row's structure went to the engine as `floom_widgets::ListItemRow`. What the port
+turned up is one **missing capability** and one **deliberate refusal to fix a bug**.
+
+**The tenth capability gap: a minimum size.** v1 wrote `.min_height(..)`. 2.0's
+`LayoutRequest` had `width` and `height`, both of which are *definite* sizes — a row
+that must be **at least** a touch target tall but may grow with its content has
+nothing to say, because `height` is the content's height now. The engine had no
+minimum anywhere: not in `LayoutRequest`, not in `LayoutStyle`, and taffy's
+`min_size` was never populated.
+
+So `min_width` / `min_height` were added, and the interesting part is proving they
+are a **floor and not a ceiling** — which is the whole reason they are separate
+fields. `floom-app/tests/min_size.rs` closes the loop through a real host:
+
+| Mutation | Tests red |
+|---|---|
+| a widget that asks only for a floor is *sized* to its floor | **3** — including `a_min_height_is_a_floor_and_not_a_ceiling` |
+
+Two of the nine tests in that suite had to be rewritten before they could fail at
+all, and both failures were mine rather than the engine's:
+
+* **the control was mounted as a root.** A root is force-filled to the viewport and
+  cannot shrink, so "without a floor the box hugs its content" asserted `400 < 180`
+  against a 400pt-wide box. It has to be a *child* of a non-stretching stack — the
+  same two-shape trick `surface_padding.rs` already uses for the same reason.
+* **the "mount style wins" test pinned the style on a wrapper.** The style applied
+  to the wrapper, the surface was its child with a request of its own, and nothing
+  was ever in conflict. The box came out 180pt and the failure message read "the
+  mount style's 30pt stands: 180 wide" — a sentence that says the opposite of what
+  it means.
+
+**The inconsistency this port refused to fix.** Two kits read their own token table
+for the row's height and font sizes; the third does not:
+
+| | `min_height` | `title_font_size` | `subtitle_font_size` |
+|---|---|---|---|
+| Material | `tokens.*` | `tokens.*` | `tokens.*` |
+| Cupertino | **44.0** | **17.0** | **15.0** |
+| Fluent | **40.0** | **14.0** | **12.0** |
+
+`ListItemTokens::default()` says `56.0 / 16.0 / 14.0` for **every** kit, so Cupertino
+and Fluent disagree with tokens they have, and the disagreement is real: Cupertino's
+rows are 44pt tall and the table says 56.
+
+A port that "helpfully" routed all three through the token table would change
+Cupertino's rows from 44pt to 56pt tall — a design change wearing a refactor's
+clothes. So each kit passes its own numbers, and the disagreement is pinned by a test
+whose doc comment says it **must fail** if someone later makes the kits consistent.
+Verified by mutation: replacing the literals with token reads turns 2 tests red in
+each of the two suites.
+
+**A third `FontWeight`, and a silent behaviour change.** v1's
+`typography().title.medium.font_weight.to_floom()` returns a
+**`parley::style::FontWeight`** — a third type with the same name as
+`floom_types::FontWeight`, which is what 2.0's `Text::weight` takes. The two have to
+meet somewhere. Going through parley's numeric weight would mean reaching into a
+dependency's internals from a kit crate, so each kit names the nine variants
+instead, which makes the mapping checkable.
+
+That surfaced a silent difference: **v1's `to_floom()` sends `Black` to `EXTRA_BOLD`
+(800)**, because parley's table has no 900, while the direct mapping gives
+`floom_types::Black` (900). This port applies the *fixed* answer — so `Black` is the
+one weight where this crate and v1 disagree. It is unverifiable from here: no kit
+reads `Black` at any call site, which is the same fact the plan already records about
+`to_floom()`. Applied here rather than in `to_floom()` on purpose, so the two answers
+differ in exactly one place and that place is written down.
+
+**Two props that are carried and never read.** `ListItemProps::nav`'s own doc claims
+"extra trailing affordance space + hover affordance", and v1 read it nowhere in
+`view()` — neither exists. Kept unread, with a comment saying that reading it would
+mean inventing the behaviour the doc promises. `ListItemTokens::padding_horizontal`
+*is* read; `text_gap` is v1's literal `.gap(4.0)` written at the call site, so it is
+a style field here rather than buried in a call site, and a test asserts the column's
+gap is not the row's gap.
+
+**Three mutations, and the ripple's radius is asserted to be zero.** v1 passed no
+radius to the row's ripple, and a full-width row with rounded ink reads as a card, so
+`the_ripple_is_not_rounded` pins `clip_radius() == 0.0` — the line to change if a kit
+ever wants a rounded row, to be changed together with the test.
+
+| Mutation | Tests red |
+|---|---|
+| the band's `min_height` becomes `height` | 1 — `the_band_has_a_height_floor_and_fills_its_width` |
+| the text column stops growing | 1 — `the_text_column_is_the_only_part_that_grows` |
+| the row inside the band stops growing | 1 — the same test, its `CONTROL` assertion |
 
 ### What `md-item_group` turned up — the promotion that paid for itself
 

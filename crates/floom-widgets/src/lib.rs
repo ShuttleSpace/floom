@@ -17,6 +17,7 @@ pub mod compose;
 pub mod controls;
 pub mod icon_button;
 pub mod labeled;
+pub mod list_item;
 pub mod native;
 pub mod nav;
 pub mod navigation;
@@ -60,6 +61,7 @@ pub use icon_button::{
     IconButton, IconButtonIcon, IconButtonPaint, IconButtonStyle, IconButtonVariant,
 };
 pub use labeled::Labeled;
+pub use list_item::{ListItemRow, ListItemStyle, SlotBuilder};
 pub use native::NativeSurface;
 pub use nav::{NavHandle, NavHost};
 pub use navigation::{NavDestination, NavigationBar, NavigationDrawer, NavigationRail};

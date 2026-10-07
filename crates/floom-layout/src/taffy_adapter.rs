@@ -83,6 +83,10 @@ pub struct LayoutStyle {
     pub align_items: AlignItems,
     pub width: Option<Length>,
     pub height: Option<Length>,
+    /// Floors for the two axes. `None` is taffy's `auto`, i.e. no constraint —
+    /// see [`floom_core::LayoutRequest::min_width`] for why this is not `Some(0.0)`.
+    pub min_width: Option<Length>,
+    pub min_height: Option<Length>,
     pub flex_grow: f32,
     pub gap: f32,
     /// Space reserved outside the box, inside its parent.
@@ -101,6 +105,8 @@ impl Default for LayoutStyle {
             align_items: AlignItems::Stretch,
             width: None,
             height: None,
+            min_width: None,
+            min_height: None,
             flex_grow: 0.0,
             gap: 0.0,
             margin: Insets::ZERO,
@@ -179,6 +185,10 @@ impl LayoutStyle {
             size: taffy::Size {
                 width: dimension(self.width),
                 height: dimension(self.height),
+            },
+            min_size: taffy::Size {
+                width: dimension(self.min_width),
+                height: dimension(self.min_height),
             },
             flex_grow: self.flex_grow,
             gap: taffy::Size {

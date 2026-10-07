@@ -99,6 +99,19 @@ pub struct LayoutRequest {
     /// this decides whether an unspecified dimension is auto or filled.
     pub width: Option<Length>,
     pub height: Option<Length>,
+    /// A floor for the main axis, in the same units as [`Self::width`].
+    ///
+    /// Separate from `height` on purpose, and this is the whole reason: a row that
+    /// must be *at least* a touch target tall but may grow with its content cannot
+    /// say `height`, because `height` is that content's height now. v1's
+    /// `min_height(..)` is the direct translation, and the first component to need
+    /// it was the list item, whose row is exactly that shape.
+    ///
+    /// `None` means "no floor", which is what taffy's `auto` means — so the default
+    /// is the absent constraint rather than zero, which would pin every box.
+    pub min_width: Option<Length>,
+    /// A floor for the cross axis. See [`Self::min_width`].
+    pub min_height: Option<Length>,
     /// Fraction of leftover space this box claims along the parent's main axis.
     pub flex_grow: Option<f32>,
     /// Direction this box lays out *its own* children in.
@@ -135,6 +148,8 @@ impl LayoutRequest {
         Self {
             width: None,
             height: None,
+            min_width: None,
+            min_height: None,
             flex_grow: None,
             axis: None,
             gap: None,
@@ -149,6 +164,18 @@ impl LayoutRequest {
 
     pub const fn width(mut self, width: f32) -> Self {
         self.width = Some(Length::Px(width));
+        self
+    }
+
+    /// A floor for the main axis. See [`LayoutRequest::min_width`].
+    pub const fn min_width(mut self, width: f32) -> Self {
+        self.min_width = Some(Length::Px(width));
+        self
+    }
+
+    /// A floor for the cross axis. See [`LayoutRequest::min_width`].
+    pub const fn min_height(mut self, height: f32) -> Self {
+        self.min_height = Some(Length::Px(height));
         self
     }
 
