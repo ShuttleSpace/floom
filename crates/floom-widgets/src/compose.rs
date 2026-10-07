@@ -1643,6 +1643,14 @@ pub struct Dialog {
     /// dialogs exposed `open_signal()` "so an external trigger (e.g. a button) can
     /// drive it".
     presence: Option<crate::text_input::SharedFlag>,
+    /// A caller-supplied card, when this dialog is not the engine's title-and-body one.
+    ///
+    /// Set by [`Self::card_with`]. `Box<dyn WidgetAny>` rather than a `Child` because the
+    /// kit builds the whole thing, including a close affordance the engine's layout has
+    /// no slot for.
+    card_override: Option<
+        std::sync::Arc<dyn Fn() -> Box<dyn WidgetAny> + Send + Sync + 'static>,
+    >,
 }
 
 impl std::fmt::Debug for Dialog {
@@ -1660,7 +1668,29 @@ impl Dialog {
             title: String::new(),
             body: None,
             presence: None,
+            card_override: None,
         }
+    }
+
+    /// A dialog whose **whole card** is the caller's, rather than the engine's
+    /// title-above-body stack.
+    ///
+    /// This exists because v1's dialog card is a composition — a title row carrying a
+    /// close button, then the content, then a row of action buttons — and the engine's
+    /// [`Self::card`] has no slot for the close button. Rather than give the engine a
+    /// `close_button: Option<Child>` that every kit would fill differently, the kit
+    /// supplies the card and the engine keeps doing the one thing only it can: mounting
+    /// it as a modal overlay over the viewport.
+    ///
+    /// [`Self::title`] still applies, but **only to semantics**: with a card override the
+    /// title is what the dialog is called for accessibility and nothing is rendered from
+    /// it, so a caller does not get two titles.
+    pub fn card_with(
+        mut self,
+        build: impl Fn() -> Box<dyn WidgetAny> + Send + Sync + 'static,
+    ) -> Self {
+        self.card_override = Some(std::sync::Arc::new(build));
+        self
     }
 
     /// A dialog whose presence is driven by a shared flag rather than by this widget's
@@ -1719,21 +1749,35 @@ impl Dialog {
         self.surface.is_shown()
     }
 
-    /// The card: a centred, vertically stacked [`Stack`] holding the title and
-    /// the body. Built fresh on demand so each mount yields new builders; the
-    /// host reuses nodes by key and only mounts/unmounts on `present`.
-    fn card(&self) -> Stack {
+    /// A builder for the card, so the overlay path and the in-tree fallback each get
+    /// their own instance rather than sharing one — a `Box<dyn WidgetAny>` is not
+    /// `Clone`, and a card is a widget instance, so the only way to get a second one is
+    /// to build a second one.
+    ///
+    /// `Arc<dyn Fn ..>` rather than `impl Fn ..` because there are two branches with two
+    /// closure types, and `impl Fn` admits exactly one.
+    fn card_builder(
+        &self,
+    ) -> std::sync::Arc<dyn Fn() -> Box<dyn WidgetAny> + Send + Sync + 'static> {
+        if let Some(card) = self.card_override.clone() {
+            return std::sync::Arc::new(move || card());
+        }
         let title = self.title.clone();
-        let body = self.body.clone().unwrap_or_else(empty_body);
-        Stack::new(Axis::Vertical)
-            .gap(8.0)
-            .align(Align::Center, Align::Center)
-            .child(Child::new(
-                ChildKey::index(0),
-                LayoutRequest::new(),
-                move || Box::new(Text::new(title.clone())),
-            ))
-            .child(body)
+        let body = self.body.clone();
+        std::sync::Arc::new(move || {
+            // Cloned inside: an `Fn` cannot move out of its captures, and this builder is
+            // called once per mount. `Child` is `Clone`, and `String` is.
+            Box::new(
+                Stack::new(Axis::Vertical)
+                    .gap(8.0)
+                    .align(Align::Center, Align::Center)
+                    .child(Child::new(ChildKey::index(0), LayoutRequest::new(), {
+                        let title = title.clone();
+                        move || Box::new(Text::new(title.clone()))
+                    }))
+                    .child(body.clone().unwrap_or_else(empty_body)),
+            )
+        })
     }
 
     pub fn semantics_hint(&self) -> SemanticsHint {
@@ -1764,7 +1808,7 @@ impl Widget for Dialog {
             self.surface
                 .set_present(crate::text_input::read_flag(&presence));
         }
-        let card = self.card();
+        let build_card = self.card_builder();
         // A dialog covers the window, not its own box, so it is sized from the
         // viewport the host reports rather than from `bounds`.
         self.surface.reconcile(cx, id, move |_bounds, viewport| {
@@ -1772,7 +1816,7 @@ impl Widget for Dialog {
                 OverlayKind::Dialog,
                 true,
                 viewport,
-                move |_handle| Box::new(card),
+                move |_handle| build_card(),
             ))
         });
     }
@@ -1783,11 +1827,16 @@ impl Widget for Dialog {
         }
         // The host refused the overlay (or has none at all), so fall back to the
         // in-tree layer this widget used before it could escape its parent.
-        let card = self.card();
-        let surface =
-            Overlay::new().content_with(ChildKey::index(0), LayoutRequest::new(), move || {
-                Box::new(card.clone())
-            });
+        //
+        // `card()` is called *inside* the builder rather than captured and cloned: a
+        // `Box<dyn WidgetAny>` is not `Clone`, and a card is a widget instance, so the
+        // only way to get a second one is to build a second one.
+        let build_card = self.card_builder();
+        let surface = Overlay::new().content_with(
+            ChildKey::index(0),
+            LayoutRequest::new(),
+            move || build_card(),
+        );
         vec![Child::new(
             ChildKey::index(0),
             LayoutRequest::new().absolute_fill(),

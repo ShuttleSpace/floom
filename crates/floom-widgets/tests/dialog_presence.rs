@@ -234,3 +234,99 @@ fn a_dialog_with_no_flag_is_still_driven_by_set_present() {
         "and still no flag, because none was asked for"
     );
 }
+// --- the caller-supplied card --------------------------------------------
+
+/// The reason `card_with` exists: v1's card carries a **close button**, and the engine's
+/// title-above-body layout has no slot for one.
+///
+/// Painted rather than asserted structurally, because the claim is about what appears on
+/// screen: the override's text is there, and the engine's title is not, so a caller
+/// supplying a card does not get two titles.
+#[test]
+fn a_supplied_card_is_what_gets_mounted() {
+    let flag = shared_flag(true);
+    let mut dialog = dialog(Some(flag))
+        .title("Engine title")
+        .card_with(|| {
+            Box::new(floom_widgets::Text::new("supplied card")) as Box<dyn WidgetAny>
+        });
+    let mut cx = context();
+    dialog.update(&mut cx, ID);
+
+    let content = match cx.opened_overlays()[0] {
+        floom_widgets::testkit::OverlayCall::Open { content, .. } => content,
+        _ => panic!("expected an open"),
+    };
+    let scene = floom_widgets::testkit::paint_snapshot_any(content.as_ref(), ID, VIEWPORT);
+    assert!(
+        scene.contains("supplied"),
+        "the caller's card is what the host mounts: {scene}"
+    );
+    assert!(
+        !scene.contains("Engine title"),
+        "and the engine's title is *not* also rendered, so there is no duplicate: {scene}"
+    );
+}
+
+/// The control: with no override, the request carries the engine's own `Stack`.
+///
+/// I first wrote this by painting and asserting the title appeared, and it failed with
+/// **"(empty)"** — because an unmounted `Stack` paints none of its children's ink, so a
+/// scene-based assertion here would have been vacuous. Worse, the *supplied-card* test
+/// above passes for the same reason it would pass if the widget painted nothing at all: a
+/// bare `Text` does paint itself, a `Stack` of children does not.
+///
+/// So the control downcasts instead. It also caught the real thing: the control was
+/// asserting the wrong thing, and a green run would have hidden that.
+#[test]
+fn without_an_override_the_request_carries_the_engines_own_stack() {
+    let flag = shared_flag(true);
+    let mut dialog = dialog(Some(flag)).title("Engine title");
+    let mut cx = context();
+    dialog.update(&mut cx, ID);
+    let content = match cx.opened_overlays()[0] {
+        floom_widgets::testkit::OverlayCall::Open { content, .. } => content,
+        _ => panic!("expected an open"),
+    };
+    assert!(
+        content.as_any().is::<floom_widgets::Stack>(),
+        "the engine's title-above-body stack, not the caller's card"
+    );
+}
+
+/// And a card override is built **fresh per mount** rather than shared — a card is a
+/// widget instance, and handing the same one to two overlays would give two dialogs one
+/// set of children.
+#[test]
+fn a_supplied_card_is_built_afresh_each_mount() {
+    let flag = shared_flag(true);
+    let built = Arc::new(std::sync::atomic::AtomicUsize::new(0));
+    let counter = built.clone();
+    let mut dialog = dialog(Some(flag.clone())).card_with(move || {
+        counter.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+        Box::new(floom_widgets::Text::new("card")) as Box<dyn WidgetAny>
+    });
+
+    let mut cx = context();
+    dialog.update(&mut cx, ID);
+    assert_eq!(built.load(std::sync::atomic::Ordering::SeqCst), 1);
+
+    // Close it and open it again: a second mount must be a second build, or the second
+    // dialog would reuse the first one's already-mounted children.
+    //
+    // **The flag, not `set_present`.** I first used `set_present(false)` here and the
+    // close silently did nothing: with a shared presence flag, `update` overwrites
+    // `present` from the flag on the very next line, so `set_present` is only meaningful
+    // between an update and the next one. That is a real interaction between the two
+    // ways to drive a dialog and it is worth a reader knowing — a dialog given a flag has
+    // one source of truth, and `set_present` is not it.
+    write_flag(&flag, false);
+    dialog.update(&mut cx, ID);
+    write_flag(&flag, true);
+    dialog.update(&mut cx, ID);
+    assert_eq!(
+        built.load(std::sync::atomic::Ordering::SeqCst),
+        2,
+        "a second mount builds a second card"
+    );
+}

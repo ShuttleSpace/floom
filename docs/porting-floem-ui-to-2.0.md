@@ -27,7 +27,8 @@ so the widget API gets shaken out before anything is translated in bulk:
 | combobox (Cupertino, Fluent) | `cupertino-combobox`, `fluent-combobox` | ported, 15 tests each — **no panel gap**, against Material's 4.0 |
 | free-text commit | `floom_widgets::combobox::commit` | **new decision**, 6 tests — v1's blur rule, written out identically in all three kits |
 | autocomplete | `md-autocomplete` + 2 kits | ported, 19/20/20 tests — the combobox plus a text-shaped callback |
-| dialog presence | `Dialog::with_shared_presence` | **correction 11 answered**, 10 tests — the host already owned presence |
+| dialog presence | `Dialog::with_shared_presence` | **correction 11 answered**, 13 tests — the host already owned presence |
+| dialog card | `Dialog::card_with` | the close-button slot v1 had and the engine did not |
 
 Ported kits: `md-card`, `md-button`, `md-icon`, `md-expansion_panels`,
 `md-toolbar`, `md-footer`, `md-item_group`, **`fluent-card`**,
@@ -1767,6 +1768,46 @@ trigger is a child — so it compared two empty scenes. It now paints the trigge
     `update` never tells the host the user opened    4
     a host dismissal does not clear `pick.open`      1
     the selection keeps its raw index                2
+
+### What the dialog's card turned up — a close button with nowhere to live
+
+`Dialog::card_with`, 3 more tests. v1's dialog card is a **composition**: a title row
+carrying a close button, then the content, then a row of action buttons. The engine's
+`Dialog::card` is a title above a body, and it has no slot for the close button.
+
+Two ways to fix that, and the choice is the finding:
+
+* give the engine a `close_button: Option<Child>` — which every kit would fill
+  differently, and Cupertino's would not be in the same place as Material's;
+* let the kit supply the whole card and keep the engine doing the one thing only it can,
+  which is mounting it as a modal overlay over the viewport.
+
+The second is what `card_with` is. It also settles a smaller question for free: with a
+card override, `Dialog::title` applies **only to semantics**, so a caller does not get
+two titles.
+
+**Two things the tests had to be told, and one of them is a false pass I nearly shipped.**
+
+*An unmounted `Stack` paints none of its children's ink.* I wrote the control group by
+painting the engine's card and asserting its title appeared; it failed with **"(empty)"**.
+That is not a bug in the widget — it means a scene-based assertion there is vacuous. It
+is also why the *supplied-card* test passed for a reason that does not distinguish anything:
+a bare `Text` paints itself, a `Stack` of children does not. So the control **downcasts**
+to `Stack` instead. A green run would have hidden the whole thing.
+
+**With a shared presence flag, `set_present` is not the source of truth.** I closed the
+"fresh mount" test with `set_present(false)`, and the close silently did nothing: `update`
+overwrites `present` from the flag on the very next line. So a dialog given a flag has
+*one* source of truth and `set_present` is only meaningful between an update and the next
+one. That is a real interaction between the two ways to drive a dialog, so it is written
+on the test rather than left for the next reader to trip over.
+
+The card is also built **fresh per mount** — a card is a widget instance, and
+`Box<dyn WidgetAny>` is not `Clone`, so the only way to get a second one is to build a
+second one. Sharing one would hand two dialogs the same children.
+
+    Mutation                              Tests red
+    `card_with` ignored by `card_builder`   2
 
 ### What answering correction 11 turned up — the decision was already made
 

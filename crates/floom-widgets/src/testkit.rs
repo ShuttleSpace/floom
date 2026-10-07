@@ -959,6 +959,22 @@ pub fn paint_snapshot(widget: &dyn Widget, id: ElementId, bounds: Rect) -> Strin
     recorder.snapshot()
 }
 
+/// Paints `widget` — typed as `WidgetAny` — inside `bounds` and returns the snapshot.
+///
+/// The separate entry point is not tidiness. `WidgetAny: Widget`, so the value *is* a
+/// widget, but upcasting `&dyn WidgetAny` to `&dyn Widget` needs trait upcasting, which
+/// is still unstable — and the thing being painted here is exactly the kind of value a
+/// caller cannot name concretely: the content an `OverlayRequest`'s factory built.
+///
+/// So this calls [`Widget::paint`] through the `WidgetAny` handle directly, which needs no
+/// upcast because the method is found on the supertrait.
+pub fn paint_snapshot_any(widget: &dyn WidgetAny, id: ElementId, bounds: Rect) -> String {
+    let mut recorder = SceneRecorder::new(bounds);
+    widget.paint(&mut recorder, id);
+    recorder.finish();
+    recorder.snapshot()
+}
+
 /// Emits `widget` semantics inside `bounds` and returns the snapshot.
 pub fn semantics_snapshot(widget: &dyn Widget, id: ElementId, bounds: Rect) -> String {
     let mut recorder = SemanticsRecorder::new(bounds);
