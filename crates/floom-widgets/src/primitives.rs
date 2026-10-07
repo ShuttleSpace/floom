@@ -10,6 +10,11 @@
 //! element dirty exactly once until the change has been painted.
 
 use floom_accessibility::{SemanticsRole, SemanticsState};
+
+/// The accessibility role vocabulary, under the neutral name the rest of the crate
+/// uses, so a widget in another module does not have to know which crate the enum
+/// lives in.
+pub use floom_accessibility::SemanticsRole as Role;
 use floom_core::{
     Axis, Brush, Color, CreateContext, Edges, ElementId, Filter, LayoutRequest, PaintContext,
     Point, Rect, ResourceId, SemanticsContext, Shadow, Size, UpdateContext, Widget,

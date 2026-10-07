@@ -87,6 +87,33 @@ fn label_height(label: &str) -> f32 {
     }
 }
 
+/// Intrinsic width of a string at an arbitrary size.
+///
+/// `label_width` measures at the controls' shared size; a text field takes its size
+/// from a token, so it needs the same measurement at *its* size. Both go through
+/// `floom_text::measure_text`, so there is still one estimator in the crate.
+pub(crate) fn text_width_at(label: &str, size: f32) -> f32 {
+    if label.is_empty() {
+        0.0
+    } else {
+        floom_text::measure_text(label, size, f64::INFINITY).width as f32
+    }
+}
+
+/// The height one line occupies at an arbitrary size.
+pub(crate) fn text_height_at(size: f32) -> f32 {
+    floom_text::measure_text(" ", size, f64::INFINITY).height as f32
+}
+
+/// Where the baseline sits within one line, at an arbitrary size.
+///
+/// Derived from a measured reference string rather than a guessed ratio, so a caret
+/// and a first line agree at every size — and `text_ascent_at` exists rather than a
+/// formula so that a future real measurement replaces one place.
+pub(crate) fn text_ascent_at(size: f32) -> f32 {
+    floom_text::measure_text("Hg", size, f64::INFINITY).height as f32 * 0.8
+}
+
 /// Shared hover/press/focus/disable state for interactive controls.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct InteractionState {

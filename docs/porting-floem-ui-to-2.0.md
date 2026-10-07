@@ -19,6 +19,7 @@ so the widget API gets shaken out before anything is translated in bulk:
 | list row | `md-list_item` + 2 kits | ported, 48 tests (shape promoted; needed a new capability) |
 | alert banner | `md-alert` | ported, 12 tests (**needed nothing** from the engine) |
 | tree view | `md-treeview` + 2 kits | ported, 53 tests (shared expansion state promoted) |
+| text input | `floom_widgets::TextInput` | **new primitive**, 32 tests — nothing in 2.0 had one |
 
 Ported kits: `md-card`, `md-button`, `md-icon`, `md-expansion_panels`,
 `md-toolbar`, `md-footer`, `md-item_group`, **`fluent-card`**,
@@ -64,7 +65,7 @@ and no repair exists that keeps this plan's rules. So:
    | | what blocks it |
    |---|---|
    | ~~**`treeview`**~~ | **done**, 53 tests. The state is the engine's `floom_widgets::TreeView` and each kit is a token translation. |
-   | a **text-input primitive** | nothing — but it does not exist yet, and `combobox` + `autocomplete` both need it |
+   | ~~a **text-input primitive**~~ | **done** — `floom_widgets::TextInput`, 32 tests. `combobox` and `autocomplete` can now start, and each needs a filtered popup on top of it. |
    | `combobox`, `autocomplete` | that primitive; 93% overlap, so whichever is second is cheaper |
    | the **dialog decision** | correction 11 — who owns a dialog's `open` state |
    | `select` | a popup widget *and* an answer about three kits that disagree (60% overlap) |
@@ -244,6 +245,41 @@ assertion made from reading code instead of compiling it:
    believed until its crate builds.** That is an argument for porting in
    dependency order and re-running each suite the moment its crate goes green —
    not for reading ahead and judging the tests.
+
+13. **The first *new* widget in the port is a text input, and two of its four
+    obligations had nowhere to go.**
+
+    `combobox` and `autocomplete` both build on `TextInput::new(query)`, and 2.0 had
+    no text input at all — so this is the first primitive here that is not a port of
+    something, and its shape is worth stating rather than leaving in the diff.
+
+    **The buffer is `Arc<Mutex<String>>`, not a signal.** v1's
+    `TextInput::new(buffer: RwSignal<String>)` had the *caller* own the buffer, which
+    cannot cross a `Send + Sync` slot boundary — the same wall `md-dialog` hits
+    (correction 11), and for the same reason. An `Arc<Mutex<String>>` is `Send + Sync`
+    and shared, so a caller still holds a handle and can read or write it. The
+    consequence is that the **external write** path becomes a first-class case: v1 got
+    it free from the signal, and here the widget has to notice for itself by comparing
+    against what it last read on every frame. Two of the six obligations that adds are
+    `on_change` firing for both directions, and the caret being clamped when an external
+    write shrinks the buffer under it.
+
+    **Two obligations had nowhere to go, and are recorded rather than faked:**
+
+    * **A click cannot place the caret.** `EventContext` carries `cursor_position` and
+      `bounds` but no text measurement, so an x coordinate cannot become a byte offset.
+      A click focuses and puts the caret at the end. Everything else — typing,
+      backspace, delete, arrows, Home, End, Enter, Escape, IME — works from the caret's
+      current position.
+    * **The text is not clipped to the box.** `PaintContext` has `stroke_path` but no
+      `stroke_rect` and no clip op — *although the host already has the scene
+      operation* (`write_clip_push`, and `resolve_clip` in `floom-types`). So this is
+      a missing method rather than a missing capability, which makes it worth doing
+      before a text input grows selection handles or scrolls.
+
+    Both are the kind of limit that should be fixed before the widget is built on
+    further, and neither is worked around: a field narrower than its text paints past
+    its own edge, and that is visible.
 
 12. **The last four components are not four ports; they are four prerequisites,
     and only one of them is self-contained.**
@@ -1457,6 +1493,64 @@ Two more expectations in the suite were mine and wrong, and the tests were right
   a node's children show when **that** node is open, and the root being visible says
   nothing about it;
 * and collapsing a node removes its *children's* rows, not its own — one row, not two.
+
+### What building the text input turned up — a buffer, and four obligations
+
+`floom_widgets::TextInput`, 32 tests. Not a port: the first *new* widget in this
+project, written because `combobox` and `autocomplete` both need one and 2.0 had
+none. Correction 13 has the full account; what is here is what the tests had to
+settle.
+
+**The buffer is shared, and that makes the external write a first-class case.** v1's
+input took an `RwSignal<String>` from the caller, which cannot cross a `Send + Sync`
+slot boundary — the same wall as `md-dialog`. `Arc<Mutex<String>>` can, and a caller
+keeps a handle. So the widget compares what it last read on every frame and adopts a
+difference, which is where three of the tests live:
+
+* `on_change` fires for a keystroke **and** for an external write, so a caller can
+  treat the handle as a signal;
+* an update with no external change fires **nothing**, or a model that rewrites the
+  same value on every change would loop;
+* and two fields over one handle see each other, proved with `Arc::ptr_eq` — two
+  copies would both work and then drift apart, which is a silent bug rather than a
+  wrong answer.
+
+**Every offset is a byte index, and the caret must never land inside a character.**
+This is the part that bites. A byte index that is not on a character boundary panics
+on the next `String::slice`, and three things can produce one: an external write that
+shrank the buffer, a caret set by a caller, and an IME `Preedit` whose offsets are
+documented as needing exactly this clamping. So `clamp_to_char_boundary` is public, and
+the test that earns its keep walks the caret left through `"héllo"` and shows the
+positions:
+
+    6, 5, 4, 3, 1        — and never 2
+
+`2` is the second byte of `é`. A caret stepping by bytes would land there and the next
+slice would panic. A four-byte emoji gets the same treatment
+(`a_four_byte_character_survives_backspace`).
+
+Two of my own expectations were wrong here, and the code was right both times: from
+the end of a six-byte `"héllo"` one arrow-back is **5**, not 4 — I mis-added the
+byte offsets twice before writing the sequence out properly, which is why the test
+now prints every position instead of asserting one.
+
+**An IME composition is held but not committed.** `Preedit` sets a field the paint
+code reads and the buffer never sees, because a half-typed syllable must not be
+readable as text; closing the panel commits it at the caret. `KeyPhase::Up` does
+nothing, or every character would arrive twice. Escape fires a callback and does
+**not** clear the field — v1's input had no escape behaviour, and inventing "escape
+reverts" would be a decision a text field should not make on its own.
+
+**The border is a filled band, not a stroke.** `PaintContext` has `stroke_path` but
+no `stroke_rect`, so the outline is four thin rects inset by the border width — the
+same choice the plan already made for single-edge borders, and for the same reason: a
+fill lands inside the box, a stroke straddles its edge.
+
+| Mutation | Tests red |
+|---|---|
+| backspace steps one byte, ignoring character boundaries | 2 — **and it panics** |
+| the widget never notices an external write to the buffer | 2 |
+| an IME composition is committed straight into the buffer | 2 |
 
 ### What `md-item_group` turned up — the promotion that paid for itself
 
