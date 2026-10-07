@@ -12,6 +12,8 @@ pub struct SelectTokens {
     pub item_height: f32,
     /// Size of the trigger chevron / dropdown arrow icon in px.
     pub icon_size: f32,
+    /// Maximum height of the dropdown panel.
+    pub panel_max_height: f32,
 }
 
 impl Default for SelectTokens {
@@ -23,6 +25,7 @@ impl Default for SelectTokens {
             min_width: 180.0,
             item_height: 48.0,
             icon_size: 14.0,
+            panel_max_height: 320.0,
         }
     }
 }

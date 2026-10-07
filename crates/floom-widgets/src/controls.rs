@@ -2543,6 +2543,91 @@ impl Widget for SelectPopup {
 /// Choosing opens [`SelectPopup`] as an overlay, so the list escapes the
 /// control's own box instead of being painted inside it — see that type for
 /// why an inline list could not be clicked.
+
+/// How a select (dropdown) looks.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct SelectStyle {
+    // --- from tokens ---
+    /// The trigger's height.
+    pub height: f32,
+    /// The trigger's horizontal inner padding.
+    pub padding_horizontal: f32,
+    /// The trigger's and the popup's corner radius.
+    pub border_radius: f32,
+    /// The trigger's and the popup's minimum width.
+    pub min_width: f32,
+    /// One row's height in the popup.
+    pub item_height: f32,
+    /// The popup's maximum height.
+    pub panel_max_height: f32,
+
+    // --- v1's call-site constants ---
+    /// Gap between the trigger's field and the chevron.
+    pub trigger_gap: f32,
+    /// One row's horizontal padding in the popup.
+    pub row_padding_horizontal: f32,
+    /// Gap between the trigger's bottom and the popup's top.
+    pub panel_gap: f64,
+    /// The chevron's size.
+    pub icon_size: f32,
+
+    // --- colours as alpha values ---
+    pub disabled_text_alpha: u8,
+    pub disabled_chevron_alpha: u8,
+    pub disabled_border_alpha: u8,
+    pub disabled_background_alpha: u8,
+    pub selected_row_alpha: u8,
+    pub hover_row_alpha: u8,
+    pub panel_border_alpha: u8,
+    pub panel_shadow_alpha: u8,
+    pub border_width: f32,
+
+    // --- resolved theme colours ---
+    pub surface: Color,
+    pub on_surface: Color,
+    pub on_surface_variant: Color,
+    pub outline: Color,
+    pub primary: Color,
+    pub text_size: f32,
+}
+
+impl Default for SelectStyle {
+    fn default() -> Self {
+        SelectStyle {
+            height: 56.0,
+            padding_horizontal: 16.0,
+            border_radius: 4.0,
+            min_width: 240.0,
+            item_height: 48.0,
+            panel_max_height: 320.0,
+            trigger_gap: 8.0,
+            row_padding_horizontal: 12.0,
+            panel_gap: 4.0,
+            icon_size: 14.0,
+            disabled_text_alpha: 38,
+            disabled_chevron_alpha: 97,
+            disabled_border_alpha: 97,
+            disabled_background_alpha: 12,
+            selected_row_alpha: 24,
+            hover_row_alpha: 8,
+            panel_border_alpha: 120,
+            panel_shadow_alpha: 20,
+            border_width: 1.0,
+            surface: Color::rgb(0xFF, 0xFB, 0xFE),
+            on_surface: Color::rgb(0x1C, 0x1B, 0x1F),
+            on_surface_variant: Color::rgb(0x49, 0x45, 0x46),
+            outline: Color::rgb(0x79, 0x74, 0x7E),
+            primary: Color::rgb(0x67, 0x50, 0xA4),
+            text_size: 16.0,
+        }
+    }
+}
+
+/// A single-choice selector.
+
+/// Choosing opens [`SelectPopup`] as an overlay, so the list escapes the
+/// control's own box instead of being painted inside it — see that type for
+/// why an inline list could not be clicked.
 pub struct Select {
     options: Vec<String>,
     selected: Option<usize>,
@@ -2555,6 +2640,8 @@ pub struct Select {
     /// [`Widget::overlay_closed`], so the control can never believe a list is
     /// up that nothing is painting.
     popup: Option<OverlayHandle>,
+    /// Visual style.
+    style_: SelectStyle,
 }
 
 impl std::fmt::Debug for Select {
@@ -2577,6 +2664,7 @@ impl Select {
             state: InteractionState::default(),
             revision: Revision::default(),
             popup: None,
+            style_: SelectStyle::default(),
         }
     }
 
@@ -2588,6 +2676,12 @@ impl Select {
 
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.state.disabled = disabled;
+        self.revision.bump();
+        self
+    }
+
+    pub fn style(mut self, style: SelectStyle) -> Self {
+        self.style_ = style;
         self.revision.bump();
         self
     }

@@ -44,7 +44,7 @@ fn resolve_icon(name: &str) -> Option<floom_widgets::VectorIcon> {
 pub struct MdSelect {
     props: SelectProps,
     theme: RwSignal<MultiTheme>,
-    on_change: Option<std::sync::Arc<dyn Fn(Option<usize>) + Send + Sync + 'static>>,
+    on_change: Option<std::sync::Arc<dyn Fn(usize) + Send + Sync + 'static>>,
 }
 
 impl MdSelect {
@@ -81,12 +81,17 @@ impl MdSelect {
         self
     }
 
-    pub fn on_change(mut self, callback: impl Fn(Option<usize>) + Send + Sync + 'static) -> Self {
-        self.props.on_change = Some(Box::new({
-            let shared = std::sync::Arc::new(callback);
-            self.on_change = Some(shared.clone());
-            move |index: Option<usize>| shared(index)
+    pub fn on_change(mut self, callback: impl Fn(usize) + Send + Sync + 'static) -> Self {
+        let cb = std::sync::Arc::new(callback);
+        // props.on_change keeps v1 shape (Option<usize>) for compatibility
+        let cb2 = cb.clone();
+        self.props.on_change = Some(Box::new(move |idx: Option<usize>| {
+            if let Some(i) = idx {
+                cb2(i);
+            }
         }));
+        // Internal on_change uses engine shape (usize)
+        self.on_change = Some(cb);
         self
     }
 
@@ -120,6 +125,7 @@ impl MdSelect {
             border_radius: tokens.border_radius,
             min_width: tokens.min_width,
             item_height: tokens.item_height,
+            panel_max_height: tokens.panel_max_height,
             icon_size: tokens.icon_size,
 
             // --- v1's call-site constants, Material's values ---
@@ -156,15 +162,19 @@ impl MdSelect {
         let disabled = self.props.disabled;
         let on_change = self.on_change.clone();
 
-        Select::new(options)
-            .selected(selected.unwrap_or(0))
-            .disabled(disabled)
+        let mut select = Select::new(options)
             .style(style)
-            .on_change(move |index| {
-                if let Some(on_change) = &on_change {
-                    on_change(Some(index));
-                }
-            })
+            .disabled(disabled);
+
+        if let Some(index) = selected {
+            select = select.selected(index);
+        }
+
+        if let Some(on_change) = on_change {
+            select = select.on_change(move |index| on_change(index));
+        }
+
+        select
     }
 }
 

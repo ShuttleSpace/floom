@@ -269,6 +269,7 @@ impl MaterialComponentTokens {
                 min_width: 180.0,
                 item_height: 44.0,
                 icon_size: 12.0,
+                panel_max_height: 320.0,
             },
             textarea: TextareaTokens {
                 padding: spacing.md,
@@ -629,6 +630,7 @@ impl MaterialComponentTokens {
                 min_width: 160.0,
                 item_height: 32.0,
                 icon_size: 12.0,
+                panel_max_height: 320.0,
             },
             textarea: TextareaTokens {
                 padding: spacing.sm,

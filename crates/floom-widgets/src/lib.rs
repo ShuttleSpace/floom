@@ -52,7 +52,7 @@ pub use compose::{OverlayHost, popup_placement_rect,
     SelectGroupStyle,
     SelectionMode, SharedTransitionLayout, Stack, Tabs,
 };
-pub use controls::{
+pub use controls::{SelectStyle, 
     Button, Checkbox, InteractionState, Pressable, Progress, Radio, Select, Slider, Switch,
     TextField,
 };
