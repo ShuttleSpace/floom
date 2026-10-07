@@ -647,6 +647,8 @@ fn request_to_style(req: &LayoutRequest) -> LayoutStyle {
     style.height = req.height;
     style.min_width = req.min_width;
     style.min_height = req.min_height;
+    style.max_width = req.max_width;
+    style.max_height = req.max_height;
     style.flex_grow = req.flex_grow.unwrap_or(0.0);
     if let Some(axis) = req.axis {
         style.flex_direction = match axis {
@@ -699,10 +701,12 @@ fn apply_self_layout(mut base: LayoutStyle, req: Option<&LayoutRequest>) -> Layo
         if base.width.is_none() {
             base.width = req.width;
             base.min_width = req.min_width;
+            base.max_width = req.max_width;
         }
         if base.height.is_none() {
             base.height = req.height;
             base.min_height = req.min_height;
+            base.max_height = req.max_height;
         }
         if let Some(axis) = req.axis {
             base.flex_direction = match axis {

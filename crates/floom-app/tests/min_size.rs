@@ -306,3 +306,147 @@ fn without_a_pinned_style_the_same_floor_applies() {
         bounds.width()
     );
 }
+
+// --- the ceiling ----------------------------------------------------------
+
+/// `max_width` is the other half of `min_width`, and it exists because a dialog's
+/// card is `width_pct(100.0)` *and* capped — with only `width`, one of the two
+/// would have to be dropped. floem-ui asks for it 22 times across 8 crates.
+///
+/// The content is **wider than the cap**, which is the only shape in which a ceiling
+/// is observable at all. The first version of this test used a single character, and
+/// a mutation that sized the box *to* its ceiling instead of capping it passed: a
+/// one-character box is already narrower than 180pt, so pinning it to 180 still
+/// satisfied `<= 180`. A ceiling that cannot be violated cannot be tested.
+#[test]
+fn a_max_width_caps_content_that_wants_to_be_wider() {
+    let mut host = WidgetHost::new();
+    host.set_size(Size::new(600.0, 200.0));
+    host.mount_root(
+        LayoutStyle::default(),
+        Stack::new(Axis::Vertical)
+            .align(Align::Start, Align::Start)
+            .push(|| {
+                Box::new(
+                    Surface::new()
+                        .background(Color::WHITE)
+                        .request(LayoutRequest::new().max_width(180.0))
+                        // Comfortably wider than 180pt at this font size.
+                        .push(|| Box::new(Text::new("a line of text that would rather not wrap"))),
+                )
+            }),
+    );
+    host.frame();
+    let capped = painted_rect(&host);
+    assert!(
+        capped.width() <= 180.0,
+        "the cap holds even though the content wants more: {}",
+        capped.width()
+    );
+
+    // The control: the same content with no ceiling is wider than the cap, so the
+    // assertion above is about the ceiling and not about the text.
+    let mut host = WidgetHost::new();
+    host.set_size(Size::new(600.0, 200.0));
+    host.mount_root(
+        LayoutStyle::default(),
+        Stack::new(Axis::Vertical)
+            .align(Align::Start, Align::Start)
+            .push(|| {
+                Box::new(
+                    Surface::new()
+                        .background(Color::WHITE)
+                        .push(|| Box::new(Text::new("a line of text that would rather not wrap"))),
+                )
+            }),
+    );
+    host.frame();
+    let uncapped = painted_rect(&host);
+    assert!(
+        uncapped.width() > 180.0,
+        "CONTROL: uncapped, the same content is {} wide — so the ceiling above \
+         really did something",
+        uncapped.width()
+    );
+}
+
+/// The other half of the pair above, and the half that distinguishes a ceiling from
+/// a size.
+///
+/// With content **wider** than the cap, a ceiling and "size me to the cap" produce
+/// the same box — 180pt either way — so the wide-content test cannot tell them
+/// apart. With content **narrower** than the cap they differ: a ceiling lets the box
+/// shrink to its content, while a size pins it to 180. This is the test that catches
+/// that mutation, and it is why both are needed.
+#[test]
+fn content_narrower_than_the_cap_still_shrinks_the_box() {
+    let mut host = WidgetHost::new();
+    host.set_size(Size::new(600.0, 200.0));
+    host.mount_root(
+        LayoutStyle::default(),
+        Stack::new(Axis::Vertical)
+            .align(Align::Start, Align::Start)
+            .push(|| {
+                Box::new(
+                    Surface::new()
+                        .background(Color::WHITE)
+                        .request(LayoutRequest::new().max_width(180.0))
+                        .push(|| Box::new(Text::new("x"))),
+                )
+            }),
+    );
+    host.frame();
+    let bounds = painted_rect(&host);
+
+    assert!(
+        bounds.width() < 180.0,
+        "a ceiling is not a size: one character in a 180pt-capped box is still \
+         {} wide",
+        bounds.width()
+    );
+}
+
+/// The pair that makes it a *cap* rather than a *size*: a floor and a ceiling on the
+/// same box, with content between them. This is the dialog's card exactly —
+/// `width_pct(100.0)`, a `max_width`, and a `min_height` — and it is the only shape
+/// in the engine that needs all four numbers at once.
+#[test]
+fn a_floor_and_a_ceiling_together_pin_a_band() {
+    let mut host = WidgetHost::new();
+    host.set_size(Size::new(600.0, 400.0));
+    host.mount_root(
+        LayoutStyle::default(),
+        Stack::new(Axis::Vertical)
+            .align(Align::Start, Align::Start)
+            .push(|| {
+                let mut column = Stack::new(Axis::Vertical);
+                column = column.push(|| Box::new(Text::new("line")));
+                let column = column.clone();
+                Box::new(
+                    Surface::new()
+                        .background(Color::WHITE)
+                        .request(
+                            LayoutRequest::new()
+                                .min_width(120.0)
+                                .max_width(180.0)
+                                .min_height(60.0)
+                                .max_height(90.0),
+                        )
+                        .push(move || Box::new(column.clone())),
+                )
+            }),
+    );
+    host.frame();
+    let bounds = painted_rect(&host);
+
+    assert!(
+        bounds.width() >= 120.0 && bounds.width() <= 180.0,
+        "the width sits inside its band: {}",
+        bounds.width()
+    );
+    assert!(
+        bounds.height() >= 60.0 && bounds.height() <= 90.0,
+        "and so does the height: {}",
+        bounds.height()
+    );
+}

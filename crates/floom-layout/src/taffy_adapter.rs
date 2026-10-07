@@ -87,6 +87,10 @@ pub struct LayoutStyle {
     /// see [`floom_core::LayoutRequest::min_width`] for why this is not `Some(0.0)`.
     pub min_width: Option<Length>,
     pub min_height: Option<Length>,
+    /// Ceilings for the two axes. See
+    /// [`floom_core::LayoutRequest::max_width`].
+    pub max_width: Option<Length>,
+    pub max_height: Option<Length>,
     pub flex_grow: f32,
     pub gap: f32,
     /// Space reserved outside the box, inside its parent.
@@ -107,6 +111,8 @@ impl Default for LayoutStyle {
             height: None,
             min_width: None,
             min_height: None,
+            max_width: None,
+            max_height: None,
             flex_grow: 0.0,
             gap: 0.0,
             margin: Insets::ZERO,
@@ -189,6 +195,10 @@ impl LayoutStyle {
             min_size: taffy::Size {
                 width: dimension(self.min_width),
                 height: dimension(self.min_height),
+            },
+            max_size: taffy::Size {
+                width: dimension(self.max_width),
+                height: dimension(self.max_height),
             },
             flex_grow: self.flex_grow,
             gap: taffy::Size {

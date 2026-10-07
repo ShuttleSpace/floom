@@ -112,6 +112,16 @@ pub struct LayoutRequest {
     pub min_width: Option<Length>,
     /// A floor for the cross axis. See [`Self::min_width`].
     pub min_height: Option<Length>,
+    /// A ceiling for the main axis, in the same units as [`Self::width`].
+    ///
+    /// The other half of [`Self::min_width`], and absent for the same reason the
+    /// floor was: a dialog's card is `width_pct(100.0)` *and* capped, and with only
+    /// `width` one of the two had to be dropped. floem-ui asks for this 22 times
+    /// across 8 crates, so it is a real part of the vocabulary rather than one
+    /// component's quirk.
+    pub max_width: Option<Length>,
+    /// A ceiling for the cross axis. See [`Self::max_width`].
+    pub max_height: Option<Length>,
     /// Fraction of leftover space this box claims along the parent's main axis.
     pub flex_grow: Option<f32>,
     /// Direction this box lays out *its own* children in.
@@ -150,6 +160,8 @@ impl LayoutRequest {
             height: None,
             min_width: None,
             min_height: None,
+            max_width: None,
+            max_height: None,
             flex_grow: None,
             axis: None,
             gap: None,
@@ -176,6 +188,18 @@ impl LayoutRequest {
     /// A floor for the cross axis. See [`LayoutRequest::min_width`].
     pub const fn min_height(mut self, height: f32) -> Self {
         self.min_height = Some(Length::Px(height));
+        self
+    }
+
+    /// A ceiling for the main axis. See [`LayoutRequest::max_width`].
+    pub const fn max_width(mut self, width: f32) -> Self {
+        self.max_width = Some(Length::Px(width));
+        self
+    }
+
+    /// A ceiling for the cross axis. See [`LayoutRequest::max_width`].
+    pub const fn max_height(mut self, height: f32) -> Self {
+        self.max_height = Some(Length::Px(height));
         self
     }
 

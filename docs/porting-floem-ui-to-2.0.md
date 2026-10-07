@@ -49,10 +49,19 @@ and no repair exists that keeps this plan's rules. So:
    `floom-elements`: the floem-ui workspace is now at **7 errors across 6 crates**,
    all of them `MdIcon::view()` callers (`md-alert`, `md-autocomplete`,
    `md-combobox`, `md-dialog`, `md-select`, `md-treeview`).
-5. **The remaining five components** — `dialog`, `treeview`, `select`, `combobox`,
-   `autocomplete` — 15 crates, and then `floom-elements`. Correction 7's two
-   experiments still stand for all of them: `.view()` cannot simply be dropped,
-   because the callers are v1 crates and a 2.0 widget has no v1 view to return.
+5. **A decision before `dialog`.** Correction 11: a v1 dialog owns its `open`
+   signal and a 2.0 one cannot, because `RwSignal` is `Rc`-based and a slot closure
+   must be `Send + Sync`. The host already owns presence (`OverlayKind`,
+   `OverlayHandle`, `PresenceChannel`), so the answer is "the host owns it" — but that
+   touches the overlay API and 285 crates will inherit the answer. Everything else
+   about `dialog` was checked and is *not* blocked: the scale animation exists
+   (`CompositorProp::Scale`), and clicks-inside-already-do-not-dismiss falls out of
+   2.0's outward-from-the-hit dispatch. `max_width`, which it did need, is now in.
+
+6. **Then `treeview`, `select`, `combobox`, `autocomplete`** — 12 crates, and then
+   `floom-elements`. Correction 7's two experiments still stand for all of them:
+   `.view()` cannot simply be dropped, because the callers are v1 crates and a 2.0
+   widget has no v1 view to return.
 
    Measured, so the order is chosen rather than guessed:
 
@@ -65,10 +74,10 @@ and no repair exists that keeps this plan's rules. So:
    | `combobox` | 93% | 284 | a text input + a filtered list popup |
    | `autocomplete` | 93% | 315 | the same, plus focus |
 
-   `dialog` next: high overlap, and its needs (absolute positioning, a scrim) are
-   engine capabilities rather than new shapes. `select` last of the five despite
-   being no larger, because at 60% it is the one component where the three kits are
-   **not** the same component, so it is a decision rather than a translation.
+   `treeview` next once the dialog question is settled: 87% overlap, and its state
+   (which nodes are expanded) is shared across rows exactly as `SelectGroup`'s was,
+   so it wants the same promotion. `select` last despite being no larger, because at
+   60% it is the one component where the three kits are **not** the same component.
    With them the floem-ui workspace goes green, at which point `floom-elements`'
    own 6,220 lines of v1 `multi` dispatch can be rewritten (correction 6).
 
@@ -225,6 +234,41 @@ assertion made from reading code instead of compiling it:
    believed until its crate builds.** That is an argument for porting in
    dependency order and re-running each suite the moment its crate goes green —
    not for reading ahead and judging the tests.
+
+11. **A v1 dialog owns its own open state, and a 2.0 one cannot.** `md-dialog` is the
+    first component in this batch whose blocker is not a missing capability but a
+    modelling difference, so it is assessed here rather than half-ported.
+
+    v1's dialog holds `open: RwSignal<bool>` and closes by `open.set(false)` from its
+    own click handlers. In 2.0 a slot builder is `Fn() -> Box<dyn WidgetAny> +
+    Send + Sync`, and `RwSignal<T, S = UnsyncStorage>` is `Rc`-based — so it **cannot
+    be captured by a slot closure**, which is the same fact that makes
+    `Pressable::on_click` non-`Send`. A 2.0 dialog therefore cannot own its own
+    visibility: the host owns presence (`OverlayKind`, `OverlayHandle`,
+    `PresenceChannel` all live in `floom-core` and `floem-app`), the widget reports
+    "I was dismissed" through a `Send + Sync` callback, and something above has to
+    re-render it.
+
+    That is a design decision about who owns state, it touches the host's overlay
+    API, and 285 unported crates will inherit the answer. It is not a port and should
+    not be decided inside one.
+
+    **What the assessment did settle**, by reading rather than guessing:
+
+    * **The scale animation is *not* a gap.** v1 keyframes `scale(95.pct())` to
+      `scale(100.pct())`, and `CompositorProp::Scale(f64)` already exists as an
+      `AnimationSpec` channel. `MOTION-GAP.md`'s B4 is the *height* transition, which
+      this component does not use.
+    * **"Clicks inside the card must not dismiss" is *not* a gap either.** 2.0's
+      dispatch builds a route from the hit node outward and stops at the first widget
+      that consumes, so anything inside the card that consumes the press already
+      prevents the scrim from seeing it. v1 needed an explicit
+      `EventPropagation::Stop` because v1 had no such chain. The idiom here would be
+      a `Pressable` with no callback — it consumes, and publishes none — which is
+      slightly odd but needs no engine change.
+    * **`max_width` *was* a gap**, and is now closed (see below). v1's card is
+      `width_pct(100.0).max_width(..)`, and with only `width` one of the two had to
+      be dropped.
 
 10. **Correction 9 has a consequence no ported crate can currently test for, and
     the attempt to test for it produced a control group that could not fail.**
@@ -1202,6 +1246,59 @@ ever wants a rounded row, to be changed together with the test.
 | the band's `min_height` becomes `height` | 1 — `the_band_has_a_height_floor_and_fills_its_width` |
 | the text column stops growing | 1 — `the_text_column_is_the_only_part_that_grows` |
 | the row inside the band stops growing | 1 — the same test, its `CONTROL` assertion |
+
+### What `md-dialog` turned up before it was ported — one capability, and one decision
+
+`md-dialog` is 271 lines at 90% cross-kit overlap, and it is the first component in
+this batch whose blocker is **not** a missing capability. Correction 11 has the
+detail; the short version is that a v1 dialog owns its `open: RwSignal<bool>` and a
+2.0 one cannot, because `RwSignal` is `Rc`-based and a slot builder must be
+`Send + Sync`. That is a decision about state ownership, and it is recorded rather
+than half-ported.
+
+The assessment was still worth doing, because two of the three things it appeared to
+need turned out not to be gaps — and that is the outcome worth having.
+
+**The scale animation exists.** v1 keyframes `scale(95.pct())` → `scale(100.pct())`
+over 220ms on both create and remove, and `CompositorProp::Scale(f64)` is already an
+`AnimationSpec` channel. `MOTION-GAP.md`'s B4 is the *height* transition, which this
+component does not use — so the two were easy to confuse, and only reading the spec
+settled it.
+
+**"Clicks inside the card must not dismiss" needs no propagation API.** v1 wrote
+`.on_event(listener::Click, |_, _| EventPropagation::Stop)` on the card. 2.0's host
+builds a route from the hit node *outward* and stops at the first widget that
+consumes, so anything inside the card consuming the press already stops the scrim
+from seeing it. The 2.0 idiom would be a `Pressable` with no callback — it consumes
+and publishes none — which is slightly odd to read and needs nothing new.
+
+**`max_width` was a real gap, and is now closed** — the eleventh capability, and the
+other half of the `min_width` added for `md-list_item`. v1's card is
+`width_pct(100.0).max_width(..)`, and with only `width` one of the two had to be
+dropped. floem-ui asks for `max_width` **22 times across 8 crates**, so it is part of
+the vocabulary rather than one component's quirk; `max_height` came with it because
+half the call sites are "cap this thing that is otherwise unbounded".
+
+**And a lesson about testing a ceiling, which cost a whole rewrite.** The first
+version of the cap test put one character in a 180pt-capped box and asserted
+`<= 180`. The mutation — making the engine *size* a box to its ceiling instead of
+capping it — **passed**, because a one-character box is already narrower than 180, so
+pinning it to 180 still satisfies `<= 180`. A ceiling that cannot be violated cannot
+be tested.
+
+The fix was not one test but two, because the two cases are distinguishable in
+opposite directions and neither alone suffices:
+
+| content | ceiling | "size me to the cap" | what only the ceiling gets right |
+|---|---|---|---|
+| wider than 180 | 180 | 180 | **identical** — so this case cannot detect the mutation |
+| narrower than 180 | 180 | 180 | the box shrinks to its content |
+
+So `a_max_width_caps_content_that_wants_to_be_wider` proves the ceiling applies, and
+`content_narrower_than_the_cap_still_shrinks_the_box` proves it is not a size. With
+both in place the mutation turns exactly the second red. The floor suite needed no
+such pair, because a floor and a height differ even when the content is *shorter* —
+which is the asymmetry that made me write one test where two were required.
 
 ### What `md-alert` turned up — the first of the six that needed nothing
 
