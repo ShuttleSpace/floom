@@ -26,6 +26,7 @@ so the widget API gets shaken out before anything is translated in bulk:
 | icon tables | `cupertino-icon`, `fluent-icon` | 2.0 surface **added** to two still-v1 crates, 11 tests each |
 | combobox (Cupertino, Fluent) | `cupertino-combobox`, `fluent-combobox` | ported, 15 tests each — **no panel gap**, against Material's 4.0 |
 | free-text commit | `floom_widgets::combobox::commit` | **new decision**, 6 tests — v1's blur rule, written out identically in all three kits |
+| autocomplete | `md-autocomplete` + 2 kits | ported, 19/20/20 tests — the combobox plus a text-shaped callback |
 
 Ported kits: `md-card`, `md-button`, `md-icon`, `md-expansion_panels`,
 `md-toolbar`, `md-footer`, `md-item_group`, **`fluent-card`**,
@@ -1731,6 +1732,54 @@ trigger is a child — so it compared two empty scenes. It now paints the trigge
     `update` never tells the host the user opened    4
     a host dismissal does not clear `pick.open`      1
     the selection keeps its raw index                2
+
+### What porting the autocompletes turned up — a prop type, and a commit point nobody can trigger
+
+`md-autocomplete` (19 tests), `cupertino-autocomplete` and `fluent-autocomplete` (20 each).
+With these, both remaining "needs a widget that does not exist" components are closed.
+
+**The control is a `Combobox` plus two adaptations, and only two.** v1's
+`md-autocomplete` is 315 lines against the combobox's 284, and the difference is *not*
+structural: the field, the chevron, the filter, the rows and the panel are all the engine
+widget now. What is left is the callback's payload and the commit.
+
+**The payload is text, and that forced a props-type discovery.** v1's
+`MdAutocomplete::on_change` takes `impl Fn(Option<String>)`, and the obvious move is to
+store it in the crate's props — where `props()` reports it, exactly as the combobox does.
+I reached for `ComboboxProps`, because that is what the combobox stores its callback in,
+and it does not compile: `ComboboxProps::on_change` is `Box<dyn Fn(Option<usize>)>`.
+
+There is a **`floom_core_theme::props::autocomplete::AutocompleteProps`**, and the two
+structs are identical except for that payload. So the port uses the autocomplete's own
+props — which is the *only* reason the two crates are not the same crate, and a fact I
+had to read rather than assume. It has a second difference too, found by a failing test:
+`AutocompleteProps::default().placeholder` is `"Type to search…"` where
+`ComboboxProps::default()`'s is `"Select…"`.
+
+**v1 committed on `FocusLost`, and 2.0 cannot deliver that event to a parent.** So
+`MdAutocomplete::commit()` is public and the caller drives it. That is a real loss of
+fidelity and the alternative is worse: committing on every keystroke would snap the
+selection to whatever the text currently matches, which is not an autocomplete. The test
+`the_commit_point_is_public_because_focus_cannot_be_observed` holds the autocomplete with
+no reference to any field and commits successfully — under v1 that was reachable only from
+inside the widget.
+
+**The derivation substituted a test's title but not its number**, which is the sharpest
+lesson in this batch. `the_panel_gap_is_materials_four` became
+`the_panel_gap_is_cupertinos_four` while still asserting `4.0` against a value the
+substitution had not touched — so a Cupertino kit asserted that Cupertino *disagrees with
+itself*. A substitution renames words; it does not know which words are values. The
+replacement pair is `the_panel_gap_is_zero` plus
+`the_engine_default_would_have_been_wrong_here`, so the difference is legible rather than
+merely asserted.
+
+Two more substitution misses, both caught by compiling rather than by diffing: the icon
+resolver kept Material's `MdIcon` (a Cupertino control would have drawn a Material
+chevron), and one derived file kept `MdAutocomplete` as its type name.
+
+| Mutation | Tests red |
+|---|---|
+| the index→text adapter reports the index | 1 |
 
 ### What `autocomplete` turned up — a combobox that is allowed to hold nonsense
 
