@@ -2193,7 +2193,10 @@ name = "floom-widget-cupertino-icon"
 version = "0.1.0"
 dependencies = [
  "floom",
+ "floom-core",
  "floom-core-theme",
+ "floom-types",
+ "floom-widgets",
 ]
 
 [[package]]
@@ -3007,7 +3010,10 @@ name = "floom-widget-fluent-icon"
 version = "0.1.0"
 dependencies = [
  "floom",
+ "floom-core",
  "floom-core-theme",
+ "floom-types",
+ "floom-widgets",
 ]
 
 [[package]]

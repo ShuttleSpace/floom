@@ -23,6 +23,7 @@ so the widget API gets shaken out before anything is translated in bulk:
 | popup placement | `PopupPlacement` + `OverlayHost` | the geometry and the embeddable host — 24 tests |
 | combobox | `floom_widgets::Combobox` | decision layer (24 tests) + widget (20 tests) |
 | combobox (Material) | `md-combobox` | ported, 14 tests — 91% overlap, so it promoted |
+| icon tables | `cupertino-icon`, `fluent-icon` | 2.0 surface **added** to two still-v1 crates, 11 tests each |
 
 Ported kits: `md-card`, `md-button`, `md-icon`, `md-expansion_panels`,
 `md-toolbar`, `md-footer`, `md-item_group`, **`fluent-card`**,
@@ -391,6 +392,31 @@ assertion made from reading code instead of compiling it:
     only `lib.rs` (the v1 view wrapper, 93 lines) needs dropping. What the kit then
     needs is `VectorIcon::new(parse_path_data(path), 0,0,24,24)`, both of which the
     engine already has.
+
+13e. **I turned a crate into a 2.0-only crate and broke five crates that were not part
+    of the port.**
+
+    Porting `cupertino-icon` and `fluent-icon` looked trivial — `icons.rs` is a 45-line
+    pure data table with no v1 dependency — so I *replaced* each `lib.rs` with a 2.0
+    version that dropped the v1 widget. The floem-ui workspace went from **three error
+    crates to eight**, because `cupertino-alert`, `cupertino-dialog`, `fluent-alert`,
+    `fluent-dialog` and `fluent-stepper` all call `CupertinoIcon::new(..).view()` and
+    are themselves still v1.
+
+    The mistake was reading "this crate is being ported" as "this crate's consumers have
+    been ported". They have not — the port proceeds one shape at a time and the whole v1
+    tree is still underneath. The rule says *never reintroduce a v1 `floom` dependency
+    into a **ported** crate*; it does not say *strip v1 out of a crate that is still
+    v1*. So the fix is to **add** a 2.0 surface and leave the v1 one alone, which is
+    what the two crates do now: `cupertino_icon(name) -> VectorIcon`, plus a public
+    `*_icon_path` and `VIEW_BOX`, alongside the untouched v1 widget.
+
+    Worth noting what the added surface deliberately does **not** do: it resolves no
+    theme. v1's `CupertinoIcon` produced a `resolved_style()` from a `MultiTheme`; the
+    2.0 icon is a widget the caller holds and restyles with `set_color`/`set_size`, and a
+    caller wanting the design system's `on_surface` reads it from the theme itself. So
+    v1's `tests/api.rs` had nothing left to assert, and it was rewritten to say *why*
+    rather than deleted.
 
 12. **The last four components are not four ports; they are four prerequisites,
     and only one of them is self-contained.**
