@@ -2012,9 +2012,13 @@ dependencies = [
 name = "floom-widget-cupertino-combobox"
 version = "0.1.0"
 dependencies = [
- "floom",
+ "floom-core",
  "floom-core-theme",
+ "floom-legacy-reactive",
+ "floom-types",
  "floom-widget-cupertino-icon",
+ "floom-widget-runtime",
+ "floom-widgets",
 ]
 
 [[package]]
@@ -2829,9 +2833,13 @@ dependencies = [
 name = "floom-widget-fluent-combobox"
 version = "0.1.0"
 dependencies = [
- "floom",
+ "floom-core",
  "floom-core-theme",
+ "floom-legacy-reactive",
+ "floom-types",
  "floom-widget-fluent-icon",
+ "floom-widget-runtime",
+ "floom-widgets",
 ]
 
 [[package]]

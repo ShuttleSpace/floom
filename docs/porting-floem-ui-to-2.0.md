@@ -24,6 +24,7 @@ so the widget API gets shaken out before anything is translated in bulk:
 | combobox | `floom_widgets::Combobox` | decision layer (24 tests) + widget (20 tests) |
 | combobox (Material) | `md-combobox` | ported, 14 tests — 91% overlap, so it promoted |
 | icon tables | `cupertino-icon`, `fluent-icon` | 2.0 surface **added** to two still-v1 crates, 11 tests each |
+| combobox (Cupertino, Fluent) | `cupertino-combobox`, `fluent-combobox` | ported, 15 tests each — **no panel gap**, against Material's 4.0 |
 
 Ported kits: `md-card`, `md-button`, `md-icon`, `md-expansion_panels`,
 `md-toolbar`, `md-footer`, `md-item_group`, **`fluent-card`**,
@@ -417,6 +418,49 @@ assertion made from reading code instead of compiling it:
     caller wanting the design system's `on_surface` reads it from the theme itself. So
     v1's `tests/api.rs` had nothing left to assert, and it was rewritten to say *why*
     rather than deleted.
+
+13f. **Two of the three comboboxes had no gap, and copying a manifest would have given
+    them Material's.**
+
+    The kit-to-kit copy is where this plan has already been bitten twice, and the
+    combobox was no different — twice:
+
+    * `cupertino-combobox`'s manifest was generated from `md-combobox`'s and came out
+      asking for `features = ["material"]`. It compiled. That is correction 8 exactly:
+      the three design-system features are the *same* gate
+      (`#[cfg(any(feature = "material", ...))]`), so nothing but reading the manifest
+      catches a kit asking for the wrong one.
+    * `fluent-combobox` was *derived* from `cupertino-combobox` by explicit
+      substitution, and the diff came back showing only names, the icon crate and the
+      design system. But the **manifest had been written by a separate pass**, so it kept
+      `features = ["cupertino"]` — and the diff of the manifests did not show it, because
+      I diffed the two manifests *after* substituting and they now differed only in the
+      lines I had changed. The wrong feature was invisible to the check that was supposed
+      to catch exactly that.
+
+      The fix that actually works: **grep the manifests for the feature after deriving**,
+      not diff them. A diff shows what differs between two files; the question here was
+      whether a value was right, and those are different questions.
+
+    Both were caught before committing, by reading the manifest rather than trusting the
+    derivation. The derivation itself was sound — 20 changed lines, every one of them a
+    name, an icon crate, a design system, or a doc sentence — and one claim in the copied
+    prose needed checking rather than assuming: the note says `fluent-treeview`'s v1
+    source genuinely used `MdIcon` (unlike `fluent-combobox`), and it does.
+
+    **The disagreement itself is the substance.** Material wrote `.margin_top(4.0)`;
+    Cupertino and Fluent wrote nothing, so their panels sit flush against the field.
+    `ComboboxStyle::panel_gap` is a parameter and the engine default is Material's 4.0 —
+    which means *a kit that says nothing gets the wrong gap*, and the kits that want 0.0
+    have to say so out loud. Three tests per kit pin that, and mutating `0.0` to `4.0`
+    turns three of them red.
+
+    Also derived, deliberately: **the kits' call-site constants are identical.** The
+    26-line diff between the three v1 crates gives the impression that they disagree
+    about everything, and they do not — they agree on `gap(8.0)`, `padding_horiz(12.0)`,
+    `size(14.0)` and all seven alphas, and differ on exactly one number. A test says so,
+    because "these two design systems agree here" is the surprising claim and deserves
+    the same protection as the disagreement.
 
 12. **The last four components are not four ports; they are four prerequisites,
     and only one of them is self-contained.**
