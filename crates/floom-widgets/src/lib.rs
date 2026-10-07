@@ -25,6 +25,7 @@ pub mod primitives;
 pub mod ripple;
 pub mod surface;
 pub mod svg_path;
+pub mod tree_view;
 pub mod testkit;
 pub mod vector_icon;
 mod widget_any;
@@ -71,5 +72,8 @@ pub use ripple::{Phase, Ripple, ripple};
 pub use surface::Surface;
 /// SVG path data -> `Path`, for the icon sets the kits ship as `d="..."`.
 pub use svg_path::parse_path_data;
+pub use tree_view::{
+    RowRef, SharedTree, TreeNode, TreeView, TreeViewStyle, node_at, toggle_path, visible_rows,
+};
 /// An icon drawn from an outline, for kits with no SVG pipeline in 2.0.
 pub use vector_icon::VectorIcon;

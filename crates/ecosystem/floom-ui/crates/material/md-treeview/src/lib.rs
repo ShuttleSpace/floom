@@ -1,254 +1,184 @@
-use std::rc::Rc;
+//! Material 3 tree view, ported to the Floom 2.0 widget API.
+//!
+//! ## Why this crate is a token translation
+//!
+//! 87% cross-kit overlap, and the shared part is where all the difficulty lives: the
+//! expansion state, the flattening, and the fact that expanding a node changes
+//! *which rows exist*. So that went to the engine as
+//! [`floom_widgets::TreeView`]; what is left here is Material's numbers and its icon
+//! names.
+//!
+//! ## What the port changed
+//!
+//! * `MdIcon::new("expand_more").view().style(..).on_event(Click, ..)` — the
+//!   `.view()` had no 2.0 meaning and the chain after it was v1's `Decorators`. In
+//!   2.0 the icon is a widget and a clickable one is that widget inside a
+//!   [`Pressable`]. v1's pointer cursor is gone for the fourth time in this port;
+//!   2.0's `PaintContext` has no cursor vocabulary.
+//! * the tree's expansion state moved from a `RwSignal<Vec<TreeviewNode>>` that v1
+//!   mutated in place to the engine's shared forest, for the reason
+//!   `floom_widgets::TreeView` gives: no row can own an answer that changes how many
+//!   rows follow it.
+//! * `Empty::new().style(..)` for a childless node's expander and for a node with no
+//!   icon became an **empty box of the same size** rather than an absent one, because
+//!   v1 used them to keep the labels aligned — a tree where a missing icon shifts
+//!   every label below it is a different component.
+//! * `TreeviewTokens::item_gap` is declared and **never read by v1** — `flatten`
+//!   built one flat list and the gap lived on the container. Kept in
+//!   [`TreeviewStyle::item_gap`] and left unused, for the same reason
+//!   `ToolbarTokens::height` is.
 
-use floom::event::EventPropagation;
-use floom::prelude::*;
-use floom::reactive::RwSignal;
-use floom::style::CursorStyle;
-use floom::view::AnyView;
-use floom::views::{dyn_view, Empty, Label, Stack};
-use floom::IntoView;
+use floom_legacy_reactive::{RwSignal, SignalGet};
+use floom_types::Color as PaintColor;
+
+use floom_widgets::{TreeNode, TreeView, TreeViewStyle, VectorIcon};
+
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
-use floom_widget_md_icon::MdIcon;
 use floom_core_theme::props::treeview::{TreeviewNode, TreeviewProps};
 use floom_core_theme::theme::{MultiTheme, Theme};
 use floom_core_theme::tokens::color::Color;
-use floom_core_theme::tokens::color_ext::*;
-use floom_widget_runtime::theme_signal;
 
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub struct MdTreeviewStyle {
-    pub design_system: &'static str,
-    pub surface: Color,
-    pub on_surface: Color,
-    pub on_surface_variant: Color,
-    pub primary: Color,
-    pub indent: f32,
-    pub row_height: f32,
-    pub icon_size: f32,
-    pub expander_size: f32,
-    pub font_size: f32,
+/// Design-system colour -> engine colour.
+fn to_paint(c: Color) -> PaintColor {
+    PaintColor {
+        r: c.r,
+        g: c.g,
+        b: c.b,
+        a: c.a,
+    }
 }
 
+/// The engine's node shape, built from the props' one.
+///
+/// A straight field-for-field copy rather than a conversion, because
+/// `TreeviewNode` is already plain data and a kit's node type that differed in shape
+/// would be a second thing to keep in step. The one thing worth naming: the props'
+/// `expanded` is an *initial* state — its doc says so — and here it becomes the
+/// shared forest's starting value, which is the same thing.
+pub fn to_engine_nodes(nodes: &[TreeviewNode]) -> Vec<TreeNode> {
+    nodes
+        .iter()
+        .map(|node| {
+            let mut out = TreeNode::new(node.label.clone())
+                .expanded(node.expanded)
+                .children(to_engine_nodes(&node.children));
+            if let Some(icon) = &node.icon {
+                out = out.icon(icon.clone());
+            }
+            out
+        })
+        .collect()
+}
+
+/// Icon names are resolved by the kit, because three kits' icon sets differ and the
+/// engine has no business choosing between them.
+fn resolve_icon(name: &str) -> Option<VectorIcon> {
+    floom_widget_md_icon::MdIcon::new(name).resolve().into()
+}
+
+/// Material's tree view.
 pub struct MdTreeview {
     props: TreeviewProps,
     theme: RwSignal<MultiTheme>,
-    nodes: RwSignal<Vec<TreeviewNode>>,
-}
-
-fn set_expanded(tree: &mut Vec<TreeviewNode>, path: &[usize]) {
-    if path.is_empty() {
-        return;
-    }
-    let mut node_ref = tree;
-    for &idx in &path[..path.len() - 1] {
-        node_ref = &mut node_ref[idx].children;
-    }
-    let last = *path.last().unwrap();
-    node_ref[last].expanded = !node_ref[last].expanded;
-}
-
-fn flatten(
-    nodes: &[TreeviewNode],
-    out: &mut Vec<AnyView>,
-    path: &[usize],
-    theme: RwSignal<MultiTheme>,
-    indent: f32,
-    row_height: f32,
-    icon_size: f32,
-    expander_size: f32,
-    font_size: f32,
-    on_node_click: &Rc<Option<Box<dyn Fn(String)>>>,
-    toggle: &Rc<dyn Fn(Vec<usize>)>,
-) {
-    for (i, node) in nodes.iter().enumerate() {
-        let mut p = path.to_vec();
-        p.push(i);
-        let depth = p.len();
-        let has_children = !node.children.is_empty();
-        let label = node.label.clone();
-        let icon = node.icon.clone();
-        let expanded = node.expanded;
-        let on_node_click = on_node_click.clone();
-        let toggle = toggle.clone();
-        let path_clone = p.clone();
-
-        let expander = if has_children {
-            let t2 = toggle.clone();
-            let icon_name = if expanded { "expand_more" } else { "chevron_right" };
-            MdIcon::new(icon_name)
-                .size(expander_size)
-                .view()
-                .style(move |s| {
-                    s.width(expander_size)
-                        .height(expander_size)
-                        .items_center()
-                        .justify_center()
-                        .cursor(CursorStyle::Pointer)
-                })
-                .on_event(listener::Click, move |_, _| {
-                    let pc = path_clone.clone();
-                    t2(pc);
-                    EventPropagation::Continue
-                })
-                .into_any()
-        } else {
-            Empty::new()
-                .style(move |s| s.width(expander_size).height(expander_size))
-                .into_any()
-        };
-
-        let icon_view = if let Some(ic) = icon {
-            MdIcon::new(ic)
-                .size(icon_size * 0.7)
-                .view()
-                .style(move |s| {
-                    s.width(icon_size)
-                        .height(icon_size)
-                        .items_center()
-                        .justify_center()
-                })
-                .into_any()
-        } else {
-            Empty::new().style(move |s| s.width(icon_size)).into_any()
-        };
-
-        let indent_sp = Empty::new()
-            .style(move |s| s.width((depth as f32 - 1.0) * indent))
-            .into_any();
-
-        let on_node_click_label = on_node_click.clone();
-        let label_view = Label::new(label.clone())
-            .style(move |s| {
-                s.flex_grow(1.0)
-                    .color(theme.get().colors().on_surface.to_peniko())
-                    .font_size(font_size)
-                    .items_center()
-            })
-            .on_event(listener::Click, move |_, _| {
-                if let Some(cb) = on_node_click_label.as_ref() {
-                    cb(label.clone());
-                }
-                EventPropagation::Continue
-            })
-            .into_any();
-
-        let row = Stack::horizontal((indent_sp, expander, icon_view, label_view))
-            .style(move |s| {
-                s.height(row_height)
-                    .items_center()
-                    .gap(4.0)
-                    .padding_horiz(8.0)
-                    .cursor(CursorStyle::Pointer)
-                    .hover(move |s| {
-                        s.background(with_alpha(theme.get().colors().on_surface, 8).to_peniko())
-                    })
-            });
-        out.push(row.into_any());
-
-        if expanded && has_children {
-            flatten(
-                &node.children,
-                out,
-                &p,
-                theme,
-                indent,
-                row_height,
-                icon_size,
-                expander_size,
-                font_size,
-                &on_node_click,
-                &toggle,
-            );
-        }
-    }
+    /// The shared forest the widget reads and writes.
+    ///
+    /// Held here as well as inside the widget so a caller that already had a
+    /// `TreeviewProps` can watch the tree, and so `nodes(..)` can replace it.
+    tree: floom_widgets::SharedTree,
+    on_node_click: Option<std::sync::Arc<dyn Fn(String) + Send + Sync + 'static>>,
 }
 
 impl MdTreeview {
     pub fn new() -> Self {
         let props = TreeviewProps::default();
-        Self {
-            theme: theme_signal(),
-            nodes: RwSignal::new(props.nodes.clone()),
+        MdTreeview {
+            tree: std::sync::Arc::new(std::sync::Mutex::new(Vec::new())),
+            theme: RwSignal::new(MultiTheme::new_for(
+                floom_core_theme::global_theme::DesignSystem::Material,
+            )),
             props,
+            on_node_click: None,
         }
     }
 
+    /// Replace the tree.
+    ///
+    /// v1 stored the nodes in an `RwSignal<Vec<TreeviewNode>>` and set it here; here
+    /// the shared forest is replaced under the widget, which is the same thing with a
+    /// lock rather than a signal — and it means a caller can keep a handle.
     pub fn nodes(mut self, nodes: Vec<TreeviewNode>) -> Self {
         self.props.nodes = nodes.clone();
-        self.nodes.set(nodes);
+        if let Ok(mut forest) = self.tree.lock() {
+            *forest = to_engine_nodes(&nodes);
+        }
         self
     }
 
-    pub fn on_node_click(mut self, callback: impl Fn(String) + 'static) -> Self {
-        self.props.on_node_click = Some(Box::new(callback));
+    pub fn on_node_click(mut self, callback: impl Fn(String) + Send + Sync + 'static) -> Self {
+        self.props.on_node_click = Some(Box::new({
+            let shared = std::sync::Arc::new(callback);
+            // Held so `props()` keeps reporting what v1 reported; the engine gets the
+            // `Send + Sync` handle, because a slot closure has to be one.
+            self.on_node_click = Some(shared.clone());
+            move |label: String| shared(label)
+        }));
         self
     }
 
-    pub fn resolved_style(&self) -> MdTreeviewStyle {
+    pub fn props(&self) -> &TreeviewProps {
+        &self.props
+    }
+
+    pub fn theme(&self) -> RwSignal<MultiTheme> {
+        self.theme
+    }
+
+    pub fn with_theme(mut self, theme: MultiTheme) -> Self {
+        self.theme = RwSignal::new(theme);
+        self
+    }
+
+    /// The shared forest, for a caller that wants to read it.
+    pub fn tree(&self) -> floom_widgets::SharedTree {
+        self.tree.clone()
+    }
+
+    pub fn resolved_style(&self) -> TreeViewStyle {
         let theme = self.theme.get();
         let ComponentTokens::Treeview(tokens) = theme.component(ComponentId::Treeview) else {
             unreachable!("ComponentId::Treeview must resolve to TreeviewTokens")
         };
-        MdTreeviewStyle {
-            design_system: "material",
-            surface: theme.colors().surface,
-            on_surface: theme.colors().on_surface,
-            on_surface_variant: theme.colors().on_surface_variant,
-            primary: theme.colors().primary,
+        TreeViewStyle {
             indent: tokens.indent,
             row_height: tokens.row_height,
-            icon_size: tokens.icon_size,
+            item_gap: tokens.item_gap,
             expander_size: tokens.expander_size,
+            icon_size: tokens.icon_size,
+            // v1 drew the icon at `icon_size * 0.7` at the call site.
+            icon_scale: 0.7,
             font_size: tokens.font_size,
+            label_color: to_paint(theme.colors().on_surface),
+            // v1's `.hover(|s| s.background(with_alpha(on_surface, 8)))`.
+            hover_background: to_paint(floom_core_theme::tokens::color_ext::with_alpha(
+                theme.colors().on_surface,
+                8,
+            )),
+            // v1's `.gap(4.0)` and `.padding_horiz(8.0)`, both at the call site.
+            gap: 4.0,
+            padding_horizontal: 8.0,
         }
     }
 
-    pub fn view(self) -> impl View {
-        let theme = self.theme;
-        let nodes = self.nodes;
-        let on_node_click: Rc<Option<Box<dyn Fn(String)>>> = Rc::new(self.props.on_node_click);
-
-        let tokens = match theme.get().component(ComponentId::Treeview) {
-            ComponentTokens::Treeview(t) => t,
-            _ => unreachable!(),
-        };
-        let indent = tokens.indent;
-        let row_height = tokens.row_height;
-        let icon_size = tokens.icon_size;
-        let expander_size = tokens.expander_size;
-        let font_size = tokens.font_size;
-
-        let toggle: Rc<dyn Fn(Vec<usize>)> = Rc::new(move |path: Vec<usize>| {
-            nodes.update(|tree| set_expanded(tree, &path));
-        });
-
-        let area = dyn_view(move || {
-            let tree = nodes.get();
+    /// The tree, ready to mount.
+    pub fn view(self) -> TreeView {
+        let mut tree = TreeView::with_shared_tree(self.tree.clone())
+            .style(self.resolved_style())
+            .icons(resolve_icon);
+        if let Some(on_node_click) = &self.on_node_click {
             let on_node_click = on_node_click.clone();
-            let toggle = toggle.clone();
-            let mut rows: Vec<AnyView> = Vec::new();
-            flatten(
-                &tree,
-                &mut rows,
-                &[],
-                theme,
-                indent,
-                row_height,
-                icon_size,
-                expander_size,
-                font_size,
-                &on_node_click,
-                &toggle,
-            );
-            list(rows).style(|s| s.gap(0.0))
-        });
-
-        area.style(move |s| {
-            let t = theme.get();
-            s.width_pct(100.0)
-                .background(t.colors().surface.to_peniko())
-                .color(t.colors().on_surface.to_peniko())
-        })
+            tree = tree.on_node_click(move |label| on_node_click(label));
+        }
+        tree
     }
 }
 

@@ -40,6 +40,7 @@ use crate::primitives::{SemanticsHint, Text};
 #[derive(Clone)]
 pub struct Stack {
     axis: Axis,
+    request: Option<LayoutRequest>,
     gap: f32,
     main_align: Option<Align>,
     cross_align: Option<Align>,
@@ -61,6 +62,7 @@ impl Stack {
     pub fn new(axis: Axis) -> Self {
         Self {
             axis,
+            request: None,
             gap: 0.0,
             main_align: None,
             cross_align: None,
@@ -86,6 +88,39 @@ impl Stack {
     /// row, and until this existed only the type name said so.
     pub fn axis(&self) -> Axis {
         self.axis
+    }
+
+    /// This stack's own layout request: its size, padding, and so on.
+    ///
+    /// Its siblings all have this — [`crate::Surface::request`] and
+    /// [`crate::Button::layout_request`] both exist — and a stack did not, so a
+    /// component whose row *is* a stack of boxes had nowhere to say how tall the row
+    /// is. Found by porting the tree view, whose row is `height(row_height)` and
+    /// nothing else: the obvious translation was to wrap every row in a `Surface`,
+    /// which would have added a node per row to carry one number.
+    pub fn request(mut self, request: LayoutRequest) -> Self {
+        self.request = Some(request);
+        self
+    }
+
+    /// The in-place form of [`Self::request`].
+    pub fn set_request(&mut self, request: Option<LayoutRequest>) -> &mut Self {
+        self.request = request;
+        self
+    }
+
+    /// The stack's own request, if it declared one.
+    ///
+    /// Named `declared_request` rather than `layout_request` on purpose: an inherent
+    /// method of that name **shadows** the `Widget` trait method, and the first
+    /// version of this reader did — so a row's `gap` and its alignment silently
+    /// vanished from the answer, because the stored request does not carry them and
+    /// only the trait method merges the stack's own nature over it.
+    ///
+    /// That is the second time in this port that adding a convenient reader cost a
+    /// real piece of behaviour, and both times the compiler was silent.
+    pub fn declared_request(&self) -> Option<LayoutRequest> {
+        self.request
     }
 
     pub fn child_count(&self) -> usize {
@@ -151,8 +186,17 @@ impl Widget for Stack {
         self.children.clone()
     }
 
+    /// The stored request — a caller's size, padding, margins — with the stack's own
+    /// nature laid over it.
+    ///
+    /// Axis, gap and alignment come from the stack rather than the caller, because
+    /// they are what a `Stack` *is*: a caller who set them differently would be
+    /// describing a different widget. Everything else the caller declared survives,
+    /// which is what makes `Stack::new(..).request(height(..))` mean "a stack, that
+    /// tall" rather than replacing one with the other.
     fn layout_request(&self) -> Option<LayoutRequest> {
-        let mut req = LayoutRequest::new().stack(self.axis, self.gap);
+        let mut req = self.request.unwrap_or_else(LayoutRequest::new);
+        req = req.stack(self.axis, self.gap);
         if let Some(a) = self.main_align {
             req = req.main_align(a);
         }

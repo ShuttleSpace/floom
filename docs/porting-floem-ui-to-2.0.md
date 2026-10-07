@@ -18,6 +18,7 @@ so the widget API gets shaken out before anything is translated in bulk:
 | icon button | `md-icon_button` + 2 kits | ported, 43 tests (shape promoted to the engine) |
 | list row | `md-list_item` + 2 kits | ported, 48 tests (shape promoted; needed a new capability) |
 | alert banner | `md-alert` | ported, 12 tests (**needed nothing** from the engine) |
+| tree view | `md-treeview` + 2 kits | ported, 53 tests (shared expansion state promoted) |
 
 Ported kits: `md-card`, `md-button`, `md-icon`, `md-expansion_panels`,
 `md-toolbar`, `md-footer`, `md-item_group`, **`fluent-card`**,
@@ -45,10 +46,7 @@ and no repair exists that keeps this plan's rules. So:
 3. ~~**The three `icon_button`s**~~ — **done**, 43 tests. The shape was promoted to
    the engine rather than ported three times; see the section below for the
    measurement that decided it and the four mutations run against it.
-4. ~~**The three `list_item`s**~~ — **done**, 48 tests. The last group before
-   `floom-elements`: the floem-ui workspace is now at **7 errors across 6 crates**,
-   all of them `MdIcon::view()` callers (`md-alert`, `md-autocomplete`,
-   `md-combobox`, `md-dialog`, `md-select`, `md-treeview`).
+4. ~~**The three `list_item`s**~~ — **done**, 48 tests.
 5. **A decision before `dialog`.** Correction 11: a v1 dialog owns its `open`
    signal and a 2.0 one cannot, because `RwSignal` is `Rc`-based and a slot closure
    must be `Send + Sync`. The host already owns presence (`OverlayKind`,
@@ -58,10 +56,22 @@ and no repair exists that keeps this plan's rules. So:
    (`CompositorProp::Scale`), and clicks-inside-already-do-not-dismiss falls out of
    2.0's outward-from-the-hit dispatch. `max_width`, which it did need, is now in.
 
-6. **Then `treeview`, `select`, `combobox`, `autocomplete`** — 12 crates, and then
-   `floom-elements`. Correction 7's two experiments still stand for all of them:
-   `.view()` cannot simply be dropped, because the callers are v1 crates and a 2.0
-   widget has no v1 view to return.
+6. **Then the last three — in dependency order, not crate order** (correction 12),
+   and then `floom-elements`. The floem-ui workspace is now at **4 errors across 4
+   crates** — `md-autocomplete`, `md-combobox`, `md-dialog`, `md-select` — so
+   `floom-elements` needs all four, and nothing else:
+
+   | | what blocks it |
+   |---|---|
+   | ~~**`treeview`**~~ | **done**, 53 tests. The state is the engine's `floom_widgets::TreeView` and each kit is a token translation. |
+   | a **text-input primitive** | nothing — but it does not exist yet, and `combobox` + `autocomplete` both need it |
+   | `combobox`, `autocomplete` | that primitive; 93% overlap, so whichever is second is cheaper |
+   | the **dialog decision** | correction 11 — who owns a dialog's `open` state |
+   | `select` | a popup widget *and* an answer about three kits that disagree (60% overlap) |
+
+   Correction 7's two experiments still stand for all of them: `.view()` cannot simply
+   be dropped, because the callers are v1 crates and a 2.0 widget has no v1 view to
+   return.
 
    Measured, so the order is chosen rather than guessed:
 
@@ -234,6 +244,36 @@ assertion made from reading code instead of compiling it:
    believed until its crate builds.** That is an argument for porting in
    dependency order and re-running each suite the moment its crate goes green —
    not for reading ahead and judging the tests.
+
+12. **The last four components are not four ports; they are four prerequisites,
+    and only one of them is self-contained.**
+
+    Measured while assessing `md-dialog`, and worth stating as its own finding
+    because the plan has been counting *crates* rather than ordering *work*:
+
+    | component | overlap | what it actually needs first |
+    |---|---|---|
+    | `treeview` | 87% | a new `floom_widgets::TreeView` — shared expansion state, row flattening, hover. **Self-contained: no host change.** |
+    | `dialog` | 90% | the open-state decision (correction 11). Its *layout* needs are already met: `OverlayKind::Dialog` exists in `floom-types`, `CompositorProp::Scale` covers the pop-in, 2.0's outward-from-the-hit dispatch covers click-inside, and `max_width` landed with correction 11. |
+    | `select` | 60% | a **popup widget**. `OverlayKind::Popup` exists as a type, but no widget uses it — there is nothing to anchor to. And at 60% the three kits are not the same component, so it is a decision even once the popup exists. |
+    | `combobox`, `autocomplete` | 93%, 93% | **a text-input primitive that does not exist.** `ImeUpdate` and `InputMode` are in `floom-types` and the host handles them, but there is no `TextInput` widget in `floom-widgets`. Both crates build on `TextInput::new(query)` in v1, so neither can start. |
+
+    Two consequences the crate count hid:
+
+    * **`combobox` and `autocomplete` cannot be ported in either order relative to
+      each other** — both need the same missing primitive, and neither is a
+      prerequisite for the other. Whichever is done second is cheaper.
+    * **`select` is the only one whose blocker is *also* its own design question.**
+      The other three are blocked by something external (a decision, a missing
+      primitive, a missing widget), which is the good kind of blocked: someone else
+      can decide it. `select` needs a popup *and* an answer about how three kits that
+      disagree should each present one.
+
+    So the honest order is `treeview` (self-contained), then the text-input primitive,
+    then `combobox`/`autocomplete` (cheapest whichever way round), then the dialog
+    decision, then `select`. **`floom-elements` still gates on all four**, because it
+    re-exports them — which is why it stays last and why the floem-ui workspace
+    cannot go green before them.
 
 11. **A v1 dialog owns its own open state, and a 2.0 one cannot.** `md-dialog` is the
     first component in this batch whose blocker is not a missing capability but a
@@ -1355,6 +1395,68 @@ this batch that the honest answer turned out to be "the engine is fine", after t
 |---|---|
 | the dismiss slot becomes unconditional (i.e. v1's bug) | **2** |
 | the container tint drops its 26/255 alpha | 1 |
+
+### What the `tree_view` turned up — a shared answer, and two ways to lose it
+
+87% cross-kit overlap, so the shape went to the engine as `floom_widgets::TreeView`
+and each kit became a token translation. 53 tests across the three.
+
+**The state is shared for a stronger reason than `SelectGroup`'s was.** Selecting a
+row restyles other rows but never adds or removes one. Expanding a tree node
+**changes which rows exist** — the node's own row stays, its descendants' rows go,
+and every row below shifts up a slot. So a row that remembered "I am expanded" would
+be right about itself and wrong about everything after it, and a host that rebuilt
+the subtree on each toggle would throw away the hover and focus state of every row
+underneath. The shape is the same `Arc<Mutex<..>>` with a re-flatten, and the same
+"every node is visited each frame, so nobody has to send a notification" reasoning.
+
+**Two v1 details that are bugs if reproduced and invisible if dropped.**
+
+* v1 rendered `Empty::new().style(|s| s.width(expander_size)…)` for a childless
+  node's expander, and `Empty::new().style(|s| s.width(icon_size))` for a node with
+  no icon — so it kept every row's geometry stable and the labels lined up. Here the
+  **boxes stay and only the widgets inside them are absent**, which is the same
+  geometry and a different child count. A tree where a missing icon shifts every
+  label below it is a different component, and `a_childless_nodes_expander_box_is_empty_but_the_same_size`
+  is what holds that.
+* `TreeviewTokens::item_gap` is declared and **never read by v1** — `flatten` built
+  one flat list and the gap lived on the container. Carried in the style and left
+  unused, for the same reason `ToolbarTokens::height` is, with a test that says so.
+
+**`Stack` could not declare its own extent.** v1 set `height(row_height)` and
+`padding_horiz(8.0)` on the row, and the row *is* a `Stack`. Its siblings all had a
+request — `Surface::request`, `Button::layout_request` — and a stack did not, so the
+obvious translation was to wrap every row in a `Surface` and add a node per row to
+carry one number. `Stack::request` now exists, and `Stack::layout_request` merges the
+caller's request with the stack's own nature (axis, gap, alignment) laid over it.
+
+**Adding that reader cost a real behaviour, and the compiler said nothing.** The first
+version added an *inherent* `Stack::layout_request`, which **shadows** the `Widget`
+trait method — so a row's `gap` and its alignment silently vanished from the answer,
+because the stored request does not carry them and only the trait method does the
+merge. The symptom was an assertion reading `gap: None` on a row built with
+`.gap(4.0)`. It is now `declared_request`, and the doc comment says why it is not
+named `layout_request`. That is the **second** time in this port that adding a
+convenience reader cost behaviour; both times the compiler was silent, and both times
+the test that noticed was one that asserted a field the new method did not carry.
+
+**`node_at` type-checked and was wrong.** Its first version walked the path and
+returned `level.last()` of the final node's *children* — so it returned a slice, not a
+node, and every label in the tree would have been another node's. `node_at_resolves_a_path_to_that_node`
+is the walk, asserted per level, because a wrong-but-plausible descent is the kind of
+bug a compiler cannot see and a type cannot express.
+
+| Mutation | Tests red |
+|---|---|
+| `flatten` descends into collapsed nodes | **4** |
+| a toggle only ever expands, never collapses | **4** |
+
+Two more expectations in the suite were mine and wrong, and the tests were right:
+
+* the fixture left the root collapsed, so three tests correctly reported one row —
+  a node's children show when **that** node is open, and the root being visible says
+  nothing about it;
+* and collapsing a node removes its *children's* rows, not its own — one row, not two.
 
 ### What `md-item_group` turned up — the promotion that paid for itself
 

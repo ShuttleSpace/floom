@@ -2621,9 +2621,13 @@ dependencies = [
 name = "floom-widget-cupertino-treeview"
 version = "0.1.0"
 dependencies = [
- "floom",
+ "floom-core",
  "floom-core-theme",
- "floom-widget-cupertino-icon",
+ "floom-legacy-reactive",
+ "floom-types",
+ "floom-widget-md-icon",
+ "floom-widget-runtime",
+ "floom-widgets",
 ]
 
 [[package]]
@@ -3431,9 +3435,13 @@ dependencies = [
 name = "floom-widget-fluent-treeview"
 version = "0.1.0"
 dependencies = [
- "floom",
+ "floom-core",
  "floom-core-theme",
- "floom-widget-fluent-icon",
+ "floom-legacy-reactive",
+ "floom-types",
+ "floom-widget-md-icon",
+ "floom-widget-runtime",
+ "floom-widgets",
 ]
 
 [[package]]
@@ -4347,10 +4355,13 @@ dependencies = [
 name = "floom-widget-md-treeview"
 version = "0.1.0"
 dependencies = [
- "floom",
+ "floom-core",
  "floom-core-theme",
+ "floom-legacy-reactive",
+ "floom-types",
  "floom-widget-md-icon",
  "floom-widget-runtime",
+ "floom-widgets",
 ]
 
 [[package]]
