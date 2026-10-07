@@ -1770,6 +1770,38 @@ trigger is a child — so it compared two empty scenes. It now paints the trigge
     a host dismissal does not clear `pick.open`      1
     the selection keeps its raw index                2
 
+### What dispatching the dialog kits turned up — one number, preserved
+
+`cupertino-dialog` (24 tests) and `fluent-dialog` (24 tests). The port was a
+straightforward derivation from `md-dialog`: same tokens, same structure, same
+behaviour — except for **one number**.
+
+**The card's corner radius** is the single disagreement:
+
+* Material reads `DialogTokens::border_radius` (token);
+* Cupertino reads `theme.radius().lg` (larger, rounder);
+* Fluent reads `theme.radius().sm` (smaller, squarer).
+
+All three come from the same theme object (`theme.radius()`), but they pick
+different entries. This is a genuine design-system difference, not a port
+artefact. The parameter is `border_radius` in `DialogStyle`, the default is
+Material's token value, and the kits that want a different value say so
+explicitly.
+
+The derived tests include `the_card_radius_comes_from_the_theme_ramp_not_from_the_token`
+which asserts both the chosen value and that it differs from the token — so the
+disagreement is legible rather than merely asserted.
+
+| Kit | Radius source |
+|---|---|
+| Material | `DialogTokens::border_radius` |
+| Cupertino | `theme.radius().lg` |
+| Fluent | `theme.radius().sm` |
+
+Also recorded: v1's stale test literal (`max_width == 420.0`) had already drifted from the
+token (which is 560). The ported test now asserts "comes from the token" and "is not
+the literal v1 asserted" — so the test goes stale the same way a design system does.
+
 ### What testing `md-dialog` turned up — what a kit test cannot reach
 
 21 tests, written after the fact, and the first thing they establish is a **limit**
