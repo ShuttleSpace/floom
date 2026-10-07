@@ -29,6 +29,7 @@ so the widget API gets shaken out before anything is translated in bulk:
 | autocomplete | `md-autocomplete` + 2 kits | ported, 19/20/20 tests — the combobox plus a text-shaped callback |
 | dialog presence | `Dialog::with_shared_presence` | **correction 11 answered**, 13 tests — the host already owned presence |
 | dialog card | `Dialog::card_with` | the close-button slot v1 had and the engine did not |
+| dialog (Material) | `md-dialog` | ported — **compile-verified, tests not yet written** |
 
 Ported kits: `md-card`, `md-button`, `md-icon`, `md-expansion_panels`,
 `md-toolbar`, `md-footer`, `md-item_group`, **`fluent-card`**,
@@ -1768,6 +1769,43 @@ trigger is a child — so it compared two empty scenes. It now paints the trigge
     `update` never tells the host the user opened    4
     a host dismissal does not clear `pick.open`      1
     the selection keeps its raw index                2
+
+### What `md-dialog` turned up — five methods become three, and one behaviour change
+
+`md-dialog`, ported over `Dialog` + `SharedFlag` + `card_with`. **This crate is
+compile-verified but its test suite is not written yet**, which breaks this port's own
+rule that every ported crate carries tests. It is called out here rather than buried: the
+next step is `md-dialog/tests/dialog.rs`, and the claims below are the ones that suite
+has to settle.
+
+**Five methods around `open` become three.** v1 had `open(bool)`, `close()`,
+`is_open()`, `open_signal() -> RwSignal<bool>`, and `with_open_signal(RwSignal<bool>)`.
+All five become writes to, reads from, or hand-outs of one `SharedFlag`. The two
+signal-taking methods are the interesting ones: they are the reason the flag exists, since
+a dialog and the button that opens it have to share one value.
+
+**Two losses and one behaviour change, all recorded rather than papered over:**
+
+* **v1's pop-in animation is gone** — it scaled the card from 95% to 100%. 2.0 has
+  `AnimationSpec` and `AnimatedContent` and the host drives animations, so this is
+  reachable; wiring a scale into a card that lives inside an overlay's factory is a
+  separate piece of work.
+* **Clicking outside no longer closes the dialog**, because a *modal* overlay is
+  deliberately not light-dismissed by the host. v1's scrim covered the window and had an
+  `on_event(Click)`, so it did close. **This is a behaviour change, and it is the host's
+  rule rather than the kit's** — which is the right place for it, since a widget cannot
+  see a press that lands outside itself.
+* **v1's row hover fill has no 2.0 equivalent**, as with the combobox: `Pressable`'s
+  interaction state is not readable from outside, so an action button paints its label
+  and nothing else. The `action_hover_alpha` style field is kept and unread, for the same
+  reason `ToolbarTokens::height` is.
+
+**`FontWeight` is mapped for the second time, and the duplication is deliberate.**
+`to_engine_weight` mirrors `floom_widget_md_list_item::to_engine_weight` rather than
+importing it, because the theme's weight enum lives in `floom-core-theme`, which the
+engine does not depend on — so the mapping cannot move into `floom-widgets` without
+inverting the dependency. A second caller is the signal that it wants a home; the note is
+where that is recorded rather than leaving a third copy to appear.
 
 ### What the dialog's card turned up — a close button with nowhere to live
 
