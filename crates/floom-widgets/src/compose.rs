@@ -1635,6 +1635,14 @@ pub struct Dialog {
     surface: OverlayHost,
     title: String,
     body: Option<Child>,
+    /// The caller's "should this be up" flag, when it has one.
+    ///
+    /// `None` for a dialog driven purely by [`Self::set_present`], which is what the
+    /// engine's own tests and any single-owner caller do. `Some` for a dialog a caller
+    /// outside the widget has to drive — which is every ported kit, because v1's
+    /// dialogs exposed `open_signal()` "so an external trigger (e.g. a button) can
+    /// drive it".
+    presence: Option<crate::text_input::SharedFlag>,
 }
 
 impl std::fmt::Debug for Dialog {
@@ -1651,7 +1659,31 @@ impl Dialog {
             surface: OverlayHost::new(false),
             title: String::new(),
             body: None,
+            presence: None,
         }
+    }
+
+    /// A dialog whose presence is driven by a shared flag rather than by this widget's
+    /// own [`Self::set_present`].
+    ///
+    /// This is what every ported kit needs, because v1's dialogs handed out their open
+    /// signal — `open_signal()`, documented "so an external trigger (e.g. a button) can
+    /// drive it" — and an `RwSignal` is `Rc`-based and cannot cross a `Send + Sync` slot
+    /// boundary. A shared flag can, and it is the same move as `TextInput`'s buffer and
+    /// `TreeView`'s forest.
+    ///
+    /// The flag is read in `update` and written in `overlay_closed`, so a caller setting
+    /// it opens the dialog and the host dismissing the dialog clears it. Both directions
+    /// are said out loud, because the alternative — a flag nobody reads back — is a
+    /// dialog that comes straight back after the user closed it.
+    pub fn with_shared_presence(mut self, presence: crate::text_input::SharedFlag) -> Self {
+        self.presence = Some(presence);
+        self
+    }
+
+    /// The shared presence flag, if this dialog has one.
+    pub fn presence(&self) -> Option<crate::text_input::SharedFlag> {
+        self.presence.clone()
     }
 
     /// The text shown at the top of the card.
@@ -1725,6 +1757,13 @@ impl Widget for Dialog {
     }
 
     fn update(&mut self, cx: &mut dyn UpdateContext, id: ElementId) {
+        // The caller's flag is the truth about *whether to ask*; `surface.present` is
+        // what the bookkeeping acts on. Nothing wires them implicitly — and this exact
+        // missing wire cost `Combobox` two bugs in a row.
+        if let Some(presence) = self.presence.clone() {
+            self.surface
+                .set_present(crate::text_input::read_flag(&presence));
+        }
         let card = self.card();
         // A dialog covers the window, not its own box, so it is sized from the
         // viewport the host reports rather than from `bounds`.
@@ -1773,6 +1812,11 @@ impl Widget for Dialog {
         _content: Box<dyn WidgetAny>,
     ) {
         if self.surface.closed(handle) {
+            // ...and back the other way, so a caller reading the flag sees the dialog
+            // close. Two sources of truth, so both directions need saying out loud.
+            if let Some(presence) = &self.presence {
+                crate::text_input::write_flag(presence, false);
+            }
             cx.mark_dirty(id);
         }
     }

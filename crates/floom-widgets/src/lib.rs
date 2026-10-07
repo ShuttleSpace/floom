@@ -77,7 +77,7 @@ pub use primitives::{Container, Divider, Icon, Image, ImageFit, SemanticsHint, S
 pub use ripple::{Phase, Ripple, ripple};
 /// A decorated box with children: v1's `Container::new(child).style(..)`.
 pub use surface::Surface;
-pub use text_input::{SharedBuffer, TextInput, TextInputStyle, clamp_to_char_boundary};
+pub use text_input::{SharedBuffer, SharedFlag, read_flag, shared_flag, write_flag, TextInput, TextInputStyle, clamp_to_char_boundary};
 /// SVG path data -> `Path`, for the icon sets the kits ship as `d="..."`.
 pub use svg_path::parse_path_data;
 pub use tree_view::{

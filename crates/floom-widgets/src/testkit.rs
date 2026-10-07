@@ -641,6 +641,19 @@ impl RecordingUpdateContext {
         }
     }
 
+    /// A context that also reports `viewport`.
+    ///
+    /// Separate from [`Self::with_bounds`] because a **dialog** is sized from the
+    /// viewport, not from its own box — so a test that sets only the bounds cannot tell
+    /// a dialog that covered the window from one that covered itself.
+    pub fn with_viewport(bounds: Rect, viewport: Rect) -> Self {
+        RecordingUpdateContext {
+            bounds,
+            viewport,
+            ..RecordingUpdateContext::default()
+        }
+    }
+
     /// A context that refuses every overlay, as a headless embedder does.
     pub fn without_overlay_support() -> Self {
         RecordingUpdateContext {

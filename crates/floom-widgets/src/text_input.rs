@@ -52,6 +52,39 @@ use crate::primitives::Revision;
 /// because a caller needs to read and write it from outside the widget.
 pub type SharedBuffer = Arc<Mutex<String>>;
 
+/// A flag shared between a widget and whoever drives it.
+///
+/// The same shape as [`SharedBuffer`] and for the same reason, and named separately
+/// because `SharedBuffer` is `Arc<Mutex<String>>` and a type that says `Buffer` while
+/// holding a `bool` is a lie at every call site. It exists because v1's dialogs exposed
+/// `open_signal()` — "so an external trigger (e.g. a button) can drive it" — and an
+/// `RwSignal` is `Rc`-based and cannot cross a `Send + Sync` slot boundary.
+pub type SharedFlag = Arc<Mutex<bool>>;
+
+/// A fresh shared flag, initialised to `value`.
+pub fn shared_flag(value: bool) -> SharedFlag {
+    Arc::new(Mutex::new(value))
+}
+
+/// Read a shared flag, treating a poisoned mutex as "not set".
+///
+/// A caller that poisoned the mutex is as stuck as the widget is, and panicking here
+/// would take down a paint pass over a flag nobody was looking at.
+pub fn read_flag(flag: &SharedFlag) -> bool {
+    flag.lock().map(|guard| *guard).unwrap_or(false)
+}
+
+/// Write a shared flag. Reports whether it changed, so a caller can skip a frame.
+pub fn write_flag(flag: &SharedFlag, value: bool) -> bool {
+    match flag.lock() {
+        Ok(mut guard) if *guard != value => {
+            *guard = value;
+            true
+        }
+        _ => false,
+    }
+}
+
 /// How a field looks.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct TextInputStyle {
