@@ -1770,6 +1770,49 @@ trigger is a child — so it compared two empty scenes. It now paints the trigge
     a host dismissal does not clear `pick.open`      1
     the selection keeps its raw index                2
 
+### What testing `md-dialog` turned up — what a kit test cannot reach
+
+21 tests, written after the fact, and the first thing they establish is a **limit**
+rather than a behaviour: *the close button and the action buttons are not reachable from
+a kit test.* They live inside the card, which the host mounts from an overlay's content
+factory, and driving a click on them needs a host that hit-tests and dispatches.
+
+That is the same limitation that cost the combobox its row hover fill, and it means three
+of v1's claims are asserted where they *are* reachable rather than where they were written:
+
+* **v1 fired `on_close` and *then* set `open = false`**, so a callback that reads the flag
+  sees it still true. The ordering is stated in the code; it cannot be tested here.
+* **an action button ran its callback and then closed the dialog** — same.
+* the button's existence is checked structurally (the card is a `Surface`, asserted by
+  `downcast`) because **an unmounted `Stack` paints none of its children's ink**, so a
+  scene-based assertion would be vacuous.
+
+What *is* reachable, and therefore carries the weight:
+
+* **the flag in every direction** — `open`, `close`, `is_open`, `open_flag`,
+  `with_open_flag` — with `Arc::ptr_eq` for the sharing, because two flags holding the
+  same value would pass every behavioural test and then diverge;
+* **the request**, including `modal: true`, which is the behaviour change this port makes;
+* **the round trip**: the host dismisses it, the flag clears, and setting the flag opens
+  it again — the loop a caller driving a dialog actually needs;
+* the token translation, the call-site numbers, and the nine-variant weight mapping.
+
+And the weight mapping earned its own test: **`Black` → 900 here, 800 in v1**, because
+v1's `to_floom()` returned a `parley::style::FontWeight` whose table has no 900. The test
+asserts the numeric values (`to_value()`) as well as the variant, because the variant name
+alone does not distinguish `Black` from `ExtraBold` to a reader who has not read parley's
+table.
+
+A second finding from writing them: **v1 wrote `FontWeight::Medium.to_floom()` as a
+literal for the action buttons, while the size came from the ramp.** Reading the weight
+from `label.large` too is the same decision as reading the size from the ramp, and it is
+worth a test because the two lines look interchangeable and only one of them reads the
+theme.
+
+| Mutation | Tests red |
+|---|---|
+| `view()` never hands the dialog the caller's flag | 4 |
+
 ### What `md-dialog` turned up — five methods become three, and one behaviour change
 
 `md-dialog`, ported over `Dialog` + `SharedFlag` + `card_with`. **This crate is
