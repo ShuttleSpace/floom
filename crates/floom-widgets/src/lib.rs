@@ -13,6 +13,7 @@
 
 pub mod badge;
 pub mod canvas;
+pub mod combobox;
 pub mod compose;
 pub mod controls;
 pub mod icon_button;
@@ -41,6 +42,10 @@ pub use widget_any::{to_core_role, to_core_state};
 /// a loading spinner.
 pub use badge::Badge;
 pub use canvas::{Canvas, ShaderBox, Spinner};
+pub use combobox::{
+    ComboPick, ComboboxStyle, SharedPick, matching, panel_placement, panel_rect,
+    panel_request, select, sync_query_to_selection, visible_options,
+};
 pub use compose::{OverlayHost, popup_placement_rect, 
     Accordion, AccordionIndicator, AccordionStyle, AnimatedContent, BottomSheet, Conditional,
     Crossfade, Dialog, Grid, List, Opacity, Overlay, Popup, PopupPlacement, SelectGroup,

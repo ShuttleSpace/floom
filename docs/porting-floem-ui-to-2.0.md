@@ -20,6 +20,8 @@ so the widget API gets shaken out before anything is translated in bulk:
 | alert banner | `md-alert` | ported, 12 tests (**needed nothing** from the engine) |
 | tree view | `md-treeview` + 2 kits | ported, 53 tests (shared expansion state promoted) |
 | text input | `floom_widgets::TextInput` | **new primitive**, 32 tests — nothing in 2.0 had one |
+| popup placement | `PopupPlacement` + `OverlayHost` | the geometry and the embeddable host — 24 tests |
+| combobox | `floom_widgets::combobox` | **decision layer first**, 24 tests — no `Widget` impl yet |
 
 Ported kits: `md-card`, `md-button`, `md-icon`, `md-expansion_panels`,
 `md-toolbar`, `md-footer`, `md-item_group`, **`fluent-card`**,
@@ -1569,6 +1571,73 @@ Two more expectations in the suite were mine and wrong, and the tests were right
   a node's children show when **that** node is open, and the root being visible says
   nothing about it;
 * and collapsing a node removes its *children's* rows, not its own — one row, not two.
+
+### What the combobox turned up — three decisions, and two of them are disagreements
+
+`floom_widgets::combobox`, 24 tests. 91% cross-kit overlap — the three v1 crates differ
+by 26 lines, all of it type names, the icon source, the theme source, and one
+`.margin_top(4.0)`. So this promotes rather than being ported three times, the same
+call as `icon_button` and `list_item`.
+
+**It is a decision layer with no `Widget` impl yet**, on purpose. 2.0 had neither a
+popup placement nor a shared buffer, so both had to be built first (`PopupPlacement`,
+`TextInput`, correction 13). This file settles what can be settled without mounting
+anything — the filter, the selection state machine, the placement, and the token
+translation — which is the ordering this port adopted at the start: design logic first,
+markup second.
+
+**The filter is v1's, and two parts of it are easy to "improve" into a behaviour
+change.** `q.is_empty() || opt.to_lowercase().contains(&q)`: an empty query matches
+everything, so an untouched combobox opens showing its options rather than an empty
+list; and it is a *substring* match, so `"ban"` finds `"urban planning"`. A prefix
+filter would look like a refinement and would silently stop finding things — the
+mutation table has that one turning two tests red.
+
+**Choosing is one decision, not four statements.** v1's row click set `selected`,
+`query`, `open`, and the callback. Three of those are one decision — *the user chose
+this, so the field reads it and the list goes away* — and a decision written at four
+call sites is written three and a half somewhere. Hence `select`. It also returns
+whether anything changed, so a second click on the already-chosen row (still there
+behind the list) does not repaint.
+
+**Two disagreements are preserved, not resolved:**
+
+* **The panel gap.** Material wrote `.margin_top(4.0)`. Cupertino and Fluent wrote
+  nothing, so their panels sit flush against the field. That is a design disagreement
+  between three design systems; `panel_gap` is a parameter and `ComboboxStyle`'s
+  default is Material's 4.0 — the only one of the three that wrote a number. A default
+  invented here would have been a fourth opinion.
+* **The panel's shadow is black**, at alpha 20: `with_alpha(rgba(0,0,0,255), 20)`,
+  while everything else in this design system tints its shadow from the theme's own
+  colour. Recorded by `panel_shadow_color`, and pinned by a test so that harmonising it
+  later is a decision somebody makes on purpose.
+
+And one ordering that reads like a typo: `border_color` checks **disabled before
+open**, so a disabled combobox that somehow has its list up still draws the disabled
+border. Reversed, it produces a combobox that looks live while it is not. Same for
+`chevron_color`, which fades `on_surface` when disabled but shows plain
+`on_surface_variant` when not — so the two states are not one colour at two opacities,
+and the test says so explicitly.
+
+**Mounted rows, not mounted-and-hidden.** v1 mounted *every* option and hid the
+non-matching ones, so a keystroke rebuilt the whole list. Here only matching rows are
+mounted, keyed by option index so a row that stays visible is reused rather than
+rebuilt. Invisible to a user; visible in a profile.
+
+Two of my own expectations were wrong and the code was right both times:
+`"urban planning"` really does contain `"ning"` (it ends in *plan**ning***), and
+`"banana"` has no `e` — I put it in an expected list and the filter correctly left it
+out.
+
+`select` also failed its first test because it did not do what its own doc comment
+promised: it returned `true` for a re-selection. Fixed, and the test now pins it.
+
+| Mutation | Tests red |
+|---|---|
+| choosing leaves the list up | 1 |
+| the border checks `open` before `disabled` | 1 |
+| the substring filter becomes a prefix filter | 2 |
+| choosing leaves the field reading what was typed | 1 |
 
 ### What building the text input turned up — a buffer, and four obligations
 
