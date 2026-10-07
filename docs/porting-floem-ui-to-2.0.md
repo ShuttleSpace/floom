@@ -27,6 +27,7 @@ so the widget API gets shaken out before anything is translated in bulk:
 | combobox (Cupertino, Fluent) | `cupertino-combobox`, `fluent-combobox` | ported, 15 tests each — **no panel gap**, against Material's 4.0 |
 | free-text commit | `floom_widgets::combobox::commit` | **new decision**, 6 tests — v1's blur rule, written out identically in all three kits |
 | autocomplete | `md-autocomplete` + 2 kits | ported, 19/20/20 tests — the combobox plus a text-shaped callback |
+| dialog presence | `Dialog::with_shared_presence` | **correction 11 answered**, 10 tests — the host already owned presence |
 
 Ported kits: `md-card`, `md-button`, `md-icon`, `md-expansion_panels`,
 `md-toolbar`, `md-footer`, `md-item_group`, **`fluent-card`**,
@@ -463,6 +464,40 @@ assertion made from reading code instead of compiling it:
     `size(14.0)` and all seven alphas, and differ on exactly one number. A test says so,
     because "these two design systems agree here" is the surprising claim and deserves
     the same protection as the disagreement.
+
+13g. **Correction 11 is answered, and the answer was already in the architecture: the
+    host owns presence.**
+
+    Correction 11 stopped at "a dialog cannot own its `open: RwSignal<bool>`", recorded as
+    a *decision, not a port*. Going back to look, the decision had in fact been made
+    already — by code that predates the port:
+
+    * `OverlayKind::Dialog`, `OverlayHandle`, `PresenceChannel`;
+    * the state-driven `UpdateContext::open_overlay` / `close_overlay`, whose own doc says
+      "a `Dialog` sees `present` flip in `update`, where there is no pointer or key to
+      react to";
+    * `Widget::overlay_opened` / `overlay_closed`, which hand the content back;
+    * and `floem-app/tests/overlay.rs`, covering all of it against the real host — modal
+      absorption, keyboard reach, and the rule that an outside press dismisses a *non*-modal
+      overlay and leaves a modal one up.
+
+    So "the host owns presence" was not a choice this port had to make; it was a
+    consequence of a door that was already built. What was missing was the other half: a
+    flag **a caller can hold**, because v1's dialogs exposed `open_signal()`, documented
+    "so an external trigger (e.g. a button) can drive it".
+
+    That is [`Dialog::with_shared_presence`] — an `Arc<Mutex<bool>>`, named
+    `SharedFlag`, for exactly the reason `TextInput`'s buffer and `TreeView`'s forest
+    are what they are. It is deliberately *not* called `SharedBuffer`: that type is
+    `Arc<Mutex<String>>`, and a type that says `Buffer` while holding a `bool` is a lie
+    at every call site.
+
+    **And both directions of the flag are said out loud**, because `Combobox` made
+    exactly this mistake twice in a row and the lesson was expensive:
+
+    * `update` reads the flag into `surface.present`, or the dialog never opens;
+    * `overlay_closed` writes `false` back, or it comes straight back after the user
+      closed it.
 
 12. **The last four components are not four ports; they are four prerequisites,
     and only one of them is self-contained.**
@@ -1732,6 +1767,49 @@ trigger is a child — so it compared two empty scenes. It now paints the trigge
     `update` never tells the host the user opened    4
     a host dismissal does not clear `pick.open`      1
     the selection keeps its raw index                2
+
+### What answering correction 11 turned up — the decision was already made
+
+`Dialog::with_shared_presence` + `SharedFlag`/`read_flag`/`write_flag`, 10 tests.
+Correction 11 stopped at "a dialog cannot own its `open: RwSignal<bool>`", recorded as a
+*decision, not a port*. The answer turned out to be that **the decision had already been
+made by the architecture**, in code that predates the port:
+
+* `OverlayKind::Dialog`, `OverlayHandle`, `PresenceChannel`;
+* the state-driven `open_overlay` / `close_overlay`, whose doc names "a `Dialog` sees
+  `present` flip in `update`" as its motivating case;
+* `Widget::overlay_opened` / `overlay_closed`, which hand the content back;
+* and `floem-app/tests/overlay.rs`, covering it against the real host — modal absorption,
+  keyboard reach, and the rule that an outside press takes down a *non*-modal overlay and
+  leaves a modal one up.
+
+What was missing was only the other half: **a flag a caller can hold**, because v1's
+dialogs exposed `open_signal()`, documented "so an external trigger (e.g. a button) can
+drive it". An `RwSignal` is `Rc`-based and cannot cross a `Send + Sync` slot boundary; an
+`Arc<Mutex<bool>>` can, and it is the same move as the text input's buffer and the tree
+view's forest.
+
+Two details that are decisions rather than mechanics:
+
+* **It is named `SharedFlag`, not `SharedBuffer`.** `SharedBuffer` is
+  `Arc<Mutex<String>>` and already exists; a type that says `Buffer` while holding a
+  `bool` is a lie at every call site, and reusing the name would have made
+  `dialog.presence()` look like it handed back text.
+* **The flag is read on *every* update, not once at construction.** That is the whole
+  difference between a flag and a constructor argument, and it is the reason a flag exists
+  at all: an external button flips it long after the dialog was built. The test flips it
+  after a first update and asserts the dialog opens.
+
+And the lesson from `Combobox` applies verbatim, which is why both directions are
+written out in the code rather than left implicit:
+
+| Mutation | Tests red |
+|---|---|
+| `update` never reads the caller's flag | 4 |
+| `overlay_closed` never clears the caller's flag | 1 |
+
+The second is the stuck-dialog bug in one line: the host dismisses it, the caller still
+believes it is open, and the next frame asks again.
 
 ### What porting the autocompletes turned up — a prop type, and a commit point nobody can trigger
 
