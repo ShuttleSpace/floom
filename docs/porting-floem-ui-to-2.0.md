@@ -320,6 +320,43 @@ assertion made from reading code instead of compiling it:
       control that already exists"; without `with_bounds` a test could not check that
       a popup put itself below its trigger.
 
+13c. **A popup cannot be a child, and the reason is a host fact I had to go read.**
+    `combobox` cannot hand its `view()` a `Popup` and flip its presence — and the
+    first reason I reached for ("a child whose presence flag changes must change
+    key") is only the symptom. The cause is in the host: **`OverlaySlot` is removed
+    only by `close_overlay`**, so *unmounting a node does not close the overlays it
+    opened*. A popup rebuilt with a new key remounts, and the panel it had open is
+    orphaned on the overlay stack with nothing left able to name it.
+
+    So the owner keeps the overlay bookkeeping as a **field**, flips `present` on it,
+    and forwards `overlay_opened`/`overlay_closed`. Which means
+    `compose::OverlaySurface` — previously `pub(crate)`, correct while `Popup` and
+    `Dialog` *were* the composite — has to become the public `OverlayHost`, and it
+    has to hand out the in-tree fallback it was writing out for itself.
+
+    Two test doubles came with it, and one of them had a bug worth recording:
+
+    * **`RecordingUpdateContext` refused every overlay**, because
+      `#[derive(Default)]` set `overlays_supported` to `bool::default()` — `false`.
+      So a context built the obvious way silently shut the door, and the first
+      symptom was a state-machine test reporting that nothing had been opened, which
+      read like a bug in the widget. It now has a hand-written `Default` in which the
+      door is **open**, and `without_overlay_support()` for the headless embedder.
+      Without that second constructor the refusal branch would have been unreachable
+      in tests, which is how a fallback rots.
+    * The first draft of `nothing_to_show_mounts_nothing_anywhere` asserted that a
+      `build` returning `None` leaves the in-tree fallback *unarmed*. That is wrong,
+      and the code is right: a refusal is a refusal whatever caused it, so the
+      fallback **is** armed — the panel is absent because there was no content. The
+      test now says both halves, because "no content" and "the fallback declined" are
+      different statements.
+
+    And one test of mine was simply wrong about the contract: `closing_closes_the_
+    handle_the_host_issued` forgot that the host answers *later*, through
+    `overlay_opened`. Without that call the widget has no handle to name, so there
+    was nothing to close. That is not a nit — it is the reason the grant is a
+    separate callback and not a return value.
+
 12. **The last four components are not four ports; they are four prerequisites,
     and only one of them is self-contained.**
 

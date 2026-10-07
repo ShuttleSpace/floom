@@ -564,7 +564,13 @@ impl CreateContext for AllocatingCreateContext {
 }
 
 /// Records every dirty notification.
-#[derive(Default)]
+///
+/// Hand-written `Default` rather than derived, for one reason: a derived `Default`
+/// sets `overlays_supported` to `false`, because that is what `bool::default()` is.
+/// So a context built the obvious way silently refused every overlay, and the first
+/// symptom was a state-machine test reporting that nothing had been opened — which
+/// looked like a bug in the widget and was a bug in the double. The door being open is
+/// the interesting case, so it is what the default means.
 pub struct RecordingUpdateContext {
     dirty: Vec<ElementId>,
     /// Nodes whose *children* were declared changed. Kept apart from `dirty`
@@ -593,6 +599,28 @@ pub struct RecordingUpdateContext {
     /// event-driven twin; this is the same recording on the other door.
     overlays: Vec<OverlayCall>,
     next_handle: u64,
+    /// Whether this context answers like a host with overlay support.
+    ///
+    /// `false` is a real host, not a broken double: a headless embedder refuses every
+    /// request, and the whole point of `OverlayHost` is that a composite falls back
+    /// rather than showing nothing. A double that *always* granted would make the
+    /// fallback branch unreachable in tests, which is exactly how a fallback rots.
+    overlays_supported: bool,
+}
+
+impl Default for RecordingUpdateContext {
+    fn default() -> Self {
+        RecordingUpdateContext {
+            dirty: Vec::new(),
+            children_dirty: Vec::new(),
+            layout_dirty: Vec::new(),
+            bounds: Rect::ZERO,
+            viewport: Rect::ZERO,
+            overlays: Vec::new(),
+            next_handle: 0,
+            overlays_supported: true,
+        }
+    }
 }
 
 impl RecordingUpdateContext {
@@ -609,6 +637,14 @@ impl RecordingUpdateContext {
     pub fn with_bounds(bounds: Rect) -> Self {
         RecordingUpdateContext {
             bounds,
+            ..RecordingUpdateContext::default()
+        }
+    }
+
+    /// A context that refuses every overlay, as a headless embedder does.
+    pub fn without_overlay_support() -> Self {
+        RecordingUpdateContext {
+            overlays_supported: false,
             ..RecordingUpdateContext::default()
         }
     }
@@ -706,6 +742,9 @@ impl UpdateContext for RecordingUpdateContext {
     /// the real host does — so a test sees the content the host would have built,
     /// holding the handle the host would have given it.
     fn open_overlay(&mut self, request: floom_core::OverlayRequest) -> bool {
+        if !self.overlays_supported {
+            return false;
+        }
         let handle = OverlayHandle::new(self.next_handle);
         self.next_handle += 1;
         let content = (request.content)(handle);

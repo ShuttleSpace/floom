@@ -1337,8 +1337,35 @@ impl Widget for Opacity {
 /// the host has no overlay support and refuses, in which case the composite
 /// falls back to mounting the same surface in-tree — what a headless embedder
 /// gets, and what these widgets did before overlays existed.
+///
+/// ## Why this is public, and why a composite holds it as a field
+///
+/// It was `pub(crate)` while only [`Popup`] and [`Dialog`] used it, which was
+/// correct then: those two *are* the composite, so the bookkeeping lived inside
+/// them. It is public now because a composite which is *about* something else —
+/// a combobox with a dropdown, a select with a list — has to own the same
+/// bookkeeping, and it cannot.
+///
+/// The reason it cannot is a host fact worth writing down: **unmounting a node
+/// does not close the overlays it opened.** `OverlaySlot` is only ever removed by
+/// [`Widget::update`]'s `close_overlay` path, so an overlay whose owner is torn
+/// down stays on the stack. That rules out the obvious shape — the combobox
+/// returns a `Popup` as one of its `children`, and rebuilds it with `present`
+/// set — because a child whose presence flag changes has to change key to take
+/// effect, and changing key remounts, and remounting orphans the panel.
+///
+/// So the owner keeps the host as a *field*, flips `present` on it, and forwards
+/// [`Widget::overlay_opened`] / [`Widget::overlay_closed`]. Nothing about that is
+/// specialised to a combobox, which is why it is a public type rather than code
+/// copied into each component.
+///
+/// The forwarding is the sharp edge, and it has already cost this port once:
+/// see `floom_widgets::popup`'s module note on an inherent method shadowing a
+/// `Widget` trait method. A composite that defines `overlay_opened` and forgets to
+/// forward compiles, runs, opens its panel, and never learns the handle — so it
+/// can never close it, and nothing errors.
 #[derive(Clone)]
-pub(crate) struct OverlaySurface {
+pub struct OverlayHost {
     present: bool,
     last_present: bool,
     /// The ticket the host issued, while the surface sits on its overlay stack.
@@ -1347,8 +1374,8 @@ pub(crate) struct OverlaySurface {
     in_tree: bool,
 }
 
-impl OverlaySurface {
-    pub(crate) fn new(present: bool) -> Self {
+impl OverlayHost {
+    pub fn new(present: bool) -> Self {
         Self {
             present,
             // "Not yet seen": the first `update` always acts on whatever the
@@ -1364,17 +1391,17 @@ impl OverlaySurface {
     }
 
     /// Whether the surface should be visible at all.
-    pub(crate) fn is_shown(&self) -> bool {
+    pub fn is_shown(&self) -> bool {
         self.present
     }
 
     /// Whether the surface is currently mounted as in-tree children, i.e. the
     /// host refused the overlay (or never had one).
-    pub(crate) fn takes_children_in_tree(&self) -> bool {
+    pub fn takes_children_in_tree(&self) -> bool {
         self.present && self.in_tree
     }
 
-    pub(crate) fn set_present(&mut self, present: bool) {
+    pub fn set_present(&mut self, present: bool) {
         self.present = present;
     }
 
@@ -1384,7 +1411,7 @@ impl OverlaySurface {
     /// own box plus the host viewport into the request to place — or `None` when
     /// there is nothing to put in an overlay after all (a `Popup` with no
     /// content), in which case nothing is mounted anywhere.
-    pub(crate) fn reconcile(
+    pub fn reconcile(
         &mut self,
         cx: &mut dyn UpdateContext,
         id: ElementId,
@@ -1414,8 +1441,39 @@ impl OverlaySurface {
         cx.mark_dirty(id);
     }
 
+    /// The in-tree layer to mount while there is no host overlay, as a child's
+    /// `children()` contribution. Empty in the normal case.
+    ///
+    /// This is the half of the fallback that used to be written out inside every
+    /// composite, and it is here because a composite which is about something else
+    /// — a combobox's dropdown — needs the same two lines and would otherwise copy
+    /// them: *the fallback covers the control*, because the containing block is the
+    /// control's own box.
+    ///
+    /// That covering is a real limitation and is stated rather than hidden: a
+    /// dropdown that should hang **below** its field falls back to covering it, on a
+    /// host with no overlay support. The alternative — offsetting within the parent —
+    /// is not expressible in [`LayoutRequest`], which offers [`LayoutRequest::
+    /// absolute_fill`] and nothing for "below my own bottom edge". A hostless embeder
+    /// gets a dropdown on top of its field, which is wrong but visible; the thing it
+    /// must not do is show nothing.
+    pub fn fallback_children(&self, content: Option<Child>, key: ChildKey) -> Vec<Child> {
+        if !self.takes_children_in_tree() {
+            return Vec::new();
+        }
+        let Some(content) = content else {
+            return Vec::new();
+        };
+        let surface = Overlay::new().content_with(key, LayoutRequest::new().fill(), move || {
+            content.build()
+        });
+        vec![Child::new(key, LayoutRequest::new().absolute_fill(), move || {
+            Box::new(surface.clone())
+        })]
+    }
+
     /// Records the handle the host issued for this surface's overlay.
-    pub(crate) fn opened(&mut self, handle: OverlayHandle) {
+    pub fn opened(&mut self, handle: OverlayHandle) {
         self.handle = Some(handle);
     }
 
@@ -1427,7 +1485,7 @@ impl OverlaySurface {
     /// (clicking outside a popup) has to leave the widget's own state matching
     /// what the user sees, or the next `update` would believe the surface is
     /// still up and never reopen it.
-    pub(crate) fn closed(&mut self, handle: OverlayHandle) -> bool {
+    pub fn closed(&mut self, handle: OverlayHandle) -> bool {
         if self.handle != Some(handle) {
             return false;
         }
@@ -1574,7 +1632,7 @@ impl Widget for Overlay {
 /// scrolling list is still centred on the screen and still owns the keyboard.
 #[derive(Clone)]
 pub struct Dialog {
-    surface: OverlaySurface,
+    surface: OverlayHost,
     title: String,
     body: Option<Child>,
 }
@@ -1590,7 +1648,7 @@ impl std::fmt::Debug for Dialog {
 impl Dialog {
     pub fn new() -> Self {
         Self {
-            surface: OverlaySurface::new(false),
+            surface: OverlayHost::new(false),
             title: String::new(),
             body: None,
         }
@@ -2148,7 +2206,7 @@ impl<T: Clone + Send + Sync + 'static> WidgetAny for Grid<T> {
 ///
 /// This is a [`Popup`]'s only real decision. Everything else about it — asking the
 /// host, learning the handle, being dismissed from outside, falling back to an
-/// in-tree layer when the host refuses — is [`OverlaySurface`] and was already
+/// in-tree layer when the host refuses — is [`OverlayHost`] and was already
 /// there. What was missing was geometry: a popup whose rect *is* its own box covers
 /// the control, which is right for a menu pinned to a toolbar button and wrong for
 /// every dropdown, because a combobox's list belongs *below* its field.
@@ -2222,7 +2280,7 @@ pub fn popup_placement_rect(placement: PopupPlacement, anchor: Rect) -> Rect {
 /// overlay composite it contributes nothing while hidden.
 #[derive(Clone)]
 pub struct Popup {
-    surface: OverlaySurface,
+    surface: OverlayHost,
     label: Option<String>,
     content: Option<Child>,
     placement: PopupPlacement,
@@ -2240,7 +2298,7 @@ impl std::fmt::Debug for Popup {
 impl Popup {
     pub fn new() -> Self {
         Self {
-            surface: OverlaySurface::new(false),
+            surface: OverlayHost::new(false),
             label: None,
             content: None,
             placement: PopupPlacement::default(),
@@ -2404,7 +2462,7 @@ impl Widget for Popup {
 /// clip because the column is a host overlay.
 #[derive(Clone)]
 pub struct BottomSheet {
-    surface: OverlaySurface,
+    surface: OverlayHost,
     title: String,
     height: f32,
     body: Option<Child>,
@@ -2422,7 +2480,7 @@ impl std::fmt::Debug for BottomSheet {
 impl BottomSheet {
     pub fn new() -> Self {
         Self {
-            surface: OverlaySurface::new(false),
+            surface: OverlayHost::new(false),
             title: String::new(),
             height: 200.0,
             body: None,
