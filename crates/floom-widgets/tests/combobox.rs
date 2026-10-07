@@ -14,6 +14,8 @@ use floom_types::{OverlayKind, Rect};
 use floom_widgets::combobox::{
     ComboPick, ComboboxStyle, SharedPick, matching, panel_placement, panel_rect,
     panel_request, select, sync_query_to_selection, visible_options,
+    Commit,
+    commit,
 };
 use floom_widgets::{PopupPlacement, TextInput};
 
@@ -368,4 +370,116 @@ fn the_panel_shadow_is_black_at_v1s_alpha() {
         (style.on_surface.r, style.on_surface.g, style.on_surface.b),
         "which is not this design system's own colour"
     );
+}
+// --- committing free text, which is what makes it an autocomplete ---------
+
+/// An empty query clears the selection and reports "nothing selected".
+///
+/// v1's first branch, and the one that makes an autocomplete clearable: a field the user
+/// has emptied should not still claim an option.
+#[test]
+fn an_empty_query_clears_the_selection_and_reports_none() {
+    let pick = pick();
+    let query = query("banana");
+    select(&pick, &query, &options(), 1);
+    assert_eq!(pick.lock().unwrap().selected, Some(1), "chosen to begin with");
+    // Then the user empties it. (I first ran this with the query still holding
+    // "banana", which *is* an exact match — so `commit` correctly reported
+    // `Unchanged` and the code was right and my premise was wrong.)
+    query.lock().unwrap().clear();
+
+    assert_eq!(commit(&pick, &query, &options()), Commit::Report(None));
+    assert_eq!(pick.lock().unwrap().selected, None, "and the choice is gone");
+}
+
+/// **Free text is the whole point of an autocomplete**, so a query that matches nothing
+/// is reported rather than rejected: the field is *allowed* to hold something that is
+/// not on the list.
+#[test]
+fn text_that_matches_no_option_is_reported_as_typed() {
+    let pick = pick();
+    let query = query("kiwi");
+    assert_eq!(
+        commit(&pick, &query, &options()),
+        Commit::Report(Some("kiwi".to_string())),
+        "the typed text, not an index and not nothing"
+    );
+    assert_eq!(
+        pick.lock().unwrap().selected,
+        None,
+        "and no option is claimed for it"
+    );
+}
+
+/// An exact match points the selection at the option — case-insensitively, and
+/// *exactly*: this asks "is this row **the** one", not the filter's "does this row
+/// survive".
+#[test]
+fn an_exact_match_points_the_selection_at_the_option() {
+    let pick = pick();
+    let query = query("Cherry");
+    commit(&pick, &query, &options());
+    assert_eq!(
+        pick.lock().unwrap().selected,
+        Some(3),
+        "and case-insensitively: `Cherry` is not `cherry`"
+    );
+}
+
+/// The distinction from the filter is worth a test of its own, because conflating them
+/// is the obvious mistake: the filter would let "an" match "banana", and committing
+/// "an" must not select it.
+#[test]
+fn committing_a_substring_does_not_select_the_row_the_filter_showed() {
+    let pick = pick();
+    let query = query("an");
+    assert!(
+        matching("banana", "an"),
+        "the filter shows this row"
+    );
+    assert_eq!(
+        commit(&pick, &query, &options()),
+        Commit::Report(Some("an".to_string())),
+        "but committing it reports free text"
+    );
+    assert_eq!(
+        pick.lock().unwrap().selected,
+        None,
+        "and selects nothing — `eq_ignore_ascii_case`, not `contains`"
+    );
+}
+
+/// **An exact match reports nothing, even when it moved the selection.** This is v1's
+/// third branch: it sets `selected` and calls no callback at all, so a caller watching
+/// `on_change` never learns that the choice changed.
+///
+/// It reads like an oversight and it is preserved deliberately — a caller written
+/// against v1 may depend on not being told — and it is a named variant rather than an
+/// absence of code, so that changing it later is a decision somebody makes on purpose.
+#[test]
+fn an_exact_match_reports_nothing_even_when_it_moved_the_selection() {
+    let pick = pick();
+    let query = query("banana");
+    assert_eq!(pick.lock().unwrap().selected, None, "nothing chosen yet");
+
+    assert_eq!(
+        commit(&pick, &query, &options()),
+        Commit::Unchanged,
+        "and the caller is told nothing"
+    );
+    assert_eq!(
+        pick.lock().unwrap().selected,
+        Some(1),
+        "even though the selection moved — which is the whole point of pinning this"
+    );
+}
+
+/// Committing the same exact text twice is still silent, so a second blur cannot turn
+/// into a report.
+#[test]
+fn committing_the_same_text_twice_reports_nothing_either_time() {
+    let pick = pick();
+    let query = query("banana");
+    assert_eq!(commit(&pick, &query, &options()), Commit::Unchanged);
+    assert_eq!(commit(&pick, &query, &options()), Commit::Unchanged);
 }

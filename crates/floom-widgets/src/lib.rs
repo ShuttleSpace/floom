@@ -43,7 +43,7 @@ pub use widget_any::{to_core_role, to_core_state};
 pub use badge::Badge;
 pub use canvas::{Canvas, ShaderBox, Spinner};
 pub use combobox::{
-    ComboPick, Combobox, ComboboxStyle, SharedPick, matching, panel_placement, panel_rect,
+    ComboPick, Combobox, Commit, commit, ComboboxStyle, SharedPick, matching, panel_placement, panel_rect,
     panel_request, select, sync_query_to_selection, visible_options,
 };
 pub use compose::{OverlayHost, popup_placement_rect, 

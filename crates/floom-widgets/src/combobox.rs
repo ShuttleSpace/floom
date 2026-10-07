@@ -158,6 +158,86 @@ pub fn sync_query_to_selection(query: &SharedBuffer, options: &[String], selecte
     }
 }
 
+/// What losing focus does to a free-text query that names no particular option.
+///
+/// `autocomplete` is the reason this exists, and it is a different control from a
+/// combobox in one specific way: **its field accepts text that is not an option.** A
+/// combobox's callback reports an index; an autocomplete's reports the text. Reconciling
+/// one to the other on blur is a real decision, so it is named rather than inlined at a
+/// call site — all three kits' v1 sources wrote it out identically, at four lines each,
+/// and none of them looked like a rule.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Commit {
+    /// Nothing to report.
+    ///
+    /// Not "nothing happened": the selection may well have changed. See
+    /// [`commit`] for the case where it does and this is still the answer.
+    Unchanged,
+    /// Report this: `None` for cleared, `Some(text)` for free text.
+    Report(Option<String>),
+}
+
+/// Reconcile a free-text query to an option, the way losing focus does.
+///
+/// v1's rule, in v1's order:
+///
+/// * an **empty** query clears the selection and reports `None`;
+/// * a query with **no exact option** clears the selection and reports the typed text —
+///   because the point of an autocomplete is that the field is allowed to hold
+///   something that is not on the list;
+/// * a query that **exactly matches** an option (ASCII case-insensitively) points the
+///   selection at it.
+///
+/// And then the part that reads like an oversight: **an exact match reports nothing**.
+/// v1's third branch sets `selected` and calls no callback at all. So typing "banana",
+/// letting it match, and losing focus moves the selection *silently* — a caller watching
+/// `on_change` never learns.
+///
+/// That is preserved, and it is worth preserving deliberately: this is a port, and a
+/// caller written against v1 may depend on not being told. It is also the kind of thing
+/// that should be fixed as a decision rather than by accident, which is why it is a
+/// named variant rather than an absence of code. See the test that pins it.
+pub fn commit(
+    pick: &SharedPick,
+    query: &SharedBuffer,
+    options: &[String],
+) -> Commit {
+    let text = query.lock().map(|guard| guard.clone()).unwrap_or_default();
+    if text.is_empty() {
+        set_selected(pick, None);
+        return Commit::Report(None);
+    }
+    // `eq_ignore_ascii_case` rather than the filter's `to_lowercase().contains(..)`: the
+    // filter asks "does this row survive", and this asks "is this row *the* one". A
+    // substring test here would make typing "an" select "banana".
+    let exact = options
+        .iter()
+        .position(|option| option.eq_ignore_ascii_case(&text));
+    match exact {
+        None => {
+            set_selected(pick, None);
+            Commit::Report(Some(text))
+        }
+        Some(index) => {
+            if selected(pick) != Some(index) {
+                set_selected(pick, Some(index));
+            }
+            Commit::Unchanged
+        }
+    }
+}
+
+/// The chosen option, if any.
+fn selected(pick: &SharedPick) -> Option<usize> {
+    pick.lock().ok().and_then(|guard| guard.selected)
+}
+
+fn set_selected(pick: &SharedPick, index: Option<usize>) {
+    if let Ok(mut guard) = pick.lock() {
+        guard.selected = index;
+    }
+}
+
 /// How the panel is placed under the field.
 ///
 /// v1 positioned the panel with `.absolute().inset_top(origin.y + trigger_height)` plus

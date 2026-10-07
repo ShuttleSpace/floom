@@ -25,6 +25,7 @@ so the widget API gets shaken out before anything is translated in bulk:
 | combobox (Material) | `md-combobox` | ported, 14 tests — 91% overlap, so it promoted |
 | icon tables | `cupertino-icon`, `fluent-icon` | 2.0 surface **added** to two still-v1 crates, 11 tests each |
 | combobox (Cupertino, Fluent) | `cupertino-combobox`, `fluent-combobox` | ported, 15 tests each — **no panel gap**, against Material's 4.0 |
+| free-text commit | `floom_widgets::combobox::commit` | **new decision**, 6 tests — v1's blur rule, written out identically in all three kits |
 
 Ported kits: `md-card`, `md-button`, `md-icon`, `md-expansion_panels`,
 `md-toolbar`, `md-footer`, `md-item_group`, **`fluent-card`**,
@@ -1730,6 +1731,49 @@ trigger is a child — so it compared two empty scenes. It now paints the trigge
     `update` never tells the host the user opened    4
     a host dismissal does not clear `pick.open`      1
     the selection keeps its raw index                2
+
+### What `autocomplete` turned up — a combobox that is allowed to hold nonsense
+
+`floom_widgets::combobox::commit` + `Commit`, 6 tests. The next of the 93%-overlap pair,
+and the cheaper one, as predicted.
+
+**An autocomplete differs from a combobox in exactly one way: its field accepts text that
+is not an option.** That single difference moves the callback's payload from
+`Option<usize>` to `Option<String>`, and it introduces a *commit point* — losing focus —
+where the typed text is reconciled against the list. v1 wrote that rule out at four lines
+in **all three kits, identically**, and none of them looked like a rule. So it is now
+`commit`, named, in the engine beside `select`.
+
+**Two rules that look like one:**
+
+* the **filter** asks "does this row survive", and is a case-insensitive `contains`;
+* the **commit** asks "is this row *the* one", and is `eq_ignore_ascii_case`.
+
+Conflating them is the obvious mistake and it is a real one: the filter shows "banana" for
+the query "an", and committing "an" must not select it. There is a test that runs both in
+one function for exactly this reason.
+
+**And then the part that reads like an oversight: an exact match reports *nothing*.** v1's
+third branch sets `selected` and calls no callback at all, so typing "banana", letting it
+match, and blurring moves the selection **silently** — a caller watching `on_change` never
+learns.
+
+That is preserved, and preserved *deliberately*: this is a port, and a caller written
+against v1 may depend on not being told. It is also the kind of thing that should be fixed
+as a decision rather than by accident, which is why it is a named `Commit::Unchanged`
+variant and not merely an absence of code. Two tests pin it, one of which asserts the
+selection moved *and* nothing was reported.
+
+| Mutation | Tests red |
+|---|---|
+| committing uses the filter's substring test | 1 |
+| an exact match reports the silent commit | 2 |
+
+Two of my expectations were wrong again and the code was right both times: `options()` in
+that file is `["apple", "banana", "urban planning", "Cherry"]`, so `Cherry` is index 3
+rather than 2; and my "clearing" test set the query to `"banana"` — which *is* an exact
+match, so `commit` correctly reported `Unchanged` instead of `Report(None)`. Both are
+corrected, with the reasoning kept in the test.
 
 ### What the combobox turned up — three decisions, and two of them are disagreements
 
