@@ -31,10 +31,14 @@ so the widget API gets shaken out before anything is translated in bulk:
 | dialog card | `Dialog::card_with` | the close-button slot v1 had and the engine did not |
 | dialog (Material) | `md-dialog` | ported, 21 tests |
 | dialog (Cupertino, Fluent) | `cupertino-dialog`, `fluent-dialog` | ported, 24 tests each — **one number differs**: card radius |
+| select (Material) | `md-select` | ported, 13 tests |
+| select (Cupertino, Fluent) | `cupertino-select`, `fluent-select` | ported, 14 / 12 tests — the **60% overlap** carried as four parameters |
+| select style | `SelectStyle`, actually read | **correction 14**, 12 engine tests — the style was dead |
 
 Ported kits: `md-card`, `md-button`, `md-icon`, `md-expansion_panels`,
 `md-toolbar`, `md-footer`, `md-item_group`, **`fluent-card`**,
-**`cupertino-card`, the three `icon_button`s** and **the three `list_item`s**.
+**`cupertino-card`, the three `icon_button`s**, **the three `list_item`s** and
+**the three `select`s**.
 Engine widgets: `Badge`, `Ripple`, `VectorIcon`, `Pressable`, `Accordion`,
 **`Surface`**, **`SelectGroup`**.
 Text: **`FontWeight`**, end to end — `floom_types` enum, `TextLayoutOptions`,
@@ -69,9 +73,9 @@ and no repair exists that keeps this plan's rules. So:
    2.0's outward-from-the-hit dispatch. `max_width`, which it did need, is now in.
 
 6. **Then the last three — in dependency order, not crate order** (correction 12),
-   and then `floom-elements`. The floem-ui workspace is now at **4 errors across 4
-   crates** — `md-autocomplete`, `md-combobox`, `md-dialog`, `md-select` — so
-   `floom-elements` needs all four, and nothing else:
+   and then `floom-elements`. The last three are done; with `select` ported the
+   floem-ui workspace is now at **84 errors, all in `floom-elements`** — the v1
+   `multi` re-export layer (correction 6) — so nothing else blocks green:
 
    | | what blocks it |
    |---|---|
@@ -2124,6 +2128,31 @@ promised: it returned `true` for a re-selection. Fixed, and the test now pins it
 | the substring filter becomes a prefix filter | 2 |
 | choosing leaves the field reading what was typed | 1 |
 
+### What wiring correction 14 turned up — a style that was dead
+
+`SelectStyle` existed for a full cycle: `Select::style()` assigned it and nothing
+read it. The trigger painted a constant box, the list used a hardcoded `22.0` row
+height, and the popup ignored every colour the kits had set. So the three kits —
+which resolve `SelectStyle` from their own tokens — were indistinguishable on
+screen, and a "the token is positive" test passed while proving nothing.
+
+Correction: every field is now read. `layout_request` uses `height`,
+`padding_horizontal` and `text_size` for the trigger; the popup rect uses
+`item_height`, `panel_gap` and `panel_max_height`; the trigger and `SelectPopup`
+paints read `surface`, `outline`, `primary`, `chevron`, `hover_row`,
+`selected_row`, `panel_border`, `panel_shadow` and the disabled alphas. The
+popup's row height and the closed control's height come from one place, so they
+cannot disagree — which is also why the interaction test's old `y = 87` click had
+to move to `y = 112` once rows stopped being 22px.
+
+The test that earns its keep is a mutation: `Select::style()` is temporarily made
+a no-op and every test that should depend on a field goes red, proving the read is
+real and not a coincidental constant. The engine suite is 12 tests; the three kits
+assert their own constants (height, chevron alpha, hover band colour, panel
+shadow) because the theme crate still resolves all three design systems to one
+identical token set — so a *token* assertion would pass for all three no matter
+what any kit did.
+
 ### What building the text input turned up — a buffer, and four obligations
 
 `floom_widgets::TextInput`, 32 tests. Not a port: the first *new* widget in this
@@ -2363,6 +2392,49 @@ gives the pattern for the other two.
 
 ### Stage D — delete v1 and rename
 
+Only after `floem-ui` no longer references it.
+
+#### Current状况 (as of commit 141f6b33)
+
+All independent kit crates are ported (30 crates / 415 tests). But the workspace
+still has v1 holdouts in three places:
+
+1. **`floem-elements`** (99 files, 8 293 LOC) — the v1 `multi` re-export layer. It
+   remains the only floem-ui crate that declares `floom = { workspace = true }` and
+   its `multi` feature still drives v1 `IntoView` dispatch. Deleting it requires
+   checking that nothing new depends on it. Deletion removes 63 compile errors and
+   allows `floom-ui` to survive without the v1 `floom` dependency.
+
+2. **263 Cargo.toml entries** -- `floom = { workspace = true }` in every unported
+   floom-ui member crate. Their `src/` may or may not have been ported; in portd
+   crates the entry is a dead one (no operator uses it anymore). Removing this line
+   from every Cargo.toml is a one-time scripted run.
+
+3. **`examples/flameo` and `crates/ecosystem/floom-ui/examples/demo`** -- both
+   depend on `floem-elements` and v1 `floom`.
+
+4. **`floom-editor`** (20 593 LOC) -- still v1-based. Out of scope by decision.
+
+The script to remove v1:
+
+```bash
+# 1. Delete the v1 crate
+rm -rf crates/floom
+# 2. Delete v1 renderers and test helper
+rm -rf crates/floom-legacy-renderer{,-skia,-tiny-skia,-vello,-vger}
+rm -rf crates/floem-legacy-test
+# 3. Delete floom-elements (metacrate), demo example, flameo example
+rm -rf crates/ecosystem/floom-ui/crates/floom-elements
+rm -rf crates/ecosystem/floom-ui/examples/demo
+rm -rf examples/flameo
+# 4. Batch-remove `floom = { workspace = true }` from all Cargo.tomls
+find crates/ecosystem/floom-ui/crates -name Cargo.toml -exec sed -i '' '/^floom = { workspace = true }$/d' {} +
+# 5. From root Cargo.toml members list, delete "crates/floom"
+# 6. Rename floom2 → floom in all Cargo.tomls
+```
+
+### Stage D — delete v1 and rename
+
 Only after `floem-ui` no longer references it:
 
 1. Delete `crates/floom` (70,196 LOC), `floom-legacy-renderer` + 4 backends
@@ -2380,20 +2452,22 @@ this plan. It needs its own porting assessment once the widget set is in place.
 
 ### What remains
 
-Only one crate remains unported in `floem-ui`: **`md-select`** (plus its Cupertino
-and Fluent siblings).
+The three select kits are now ported — `md-select` (13 tests), `cupertino-select`
+(14), `fluent-select` (12) — and the engine finally reads `SelectStyle`
+(correction 14, 12 engine tests). The two blockers this section used to list are
+gone: the popup *is* an engine widget (`SelectPopup`, opened as an
+`OverlayKind::Popup`), and the 60%-overlap disagreement between the kits is
+carried as four parameters (`panel_gap`, chevron placement, hover band colour,
+panel shadow colour) rather than resolved.
 
-It is blocked on two things:
-
-1. **A popup widget** — the engine has `PopupPlacement::Below` and `OverlayKind::Popup`
-   but no `SelectPopup` widget. The combobox/autocomplete need this too.
-2. **A 60%-overlap decision** — the three kits disagree on structure (the only such
-   case in the entire port). Material uses a menu button, Cupertino uses a native
-   picker style, Fluent uses a dropdown. This is the one case where "promote to
-   engine" fails because the kits fundamentally disagree.
-
-Once the popup widget exists, the three kits can be ported with their disagreement
-preserved as parameters.
+That leaves exactly one crate failing in the `floom-ui` workspace:
+**`floom-elements`**, with 84 errors. It is the v1 `multi` re-export layer
+(correction 6) — roughly 6,220 lines of `multi`-dispatch that still call the v1
+`floom` API and re-export every component the kits now build directly. Every
+consumer crate (`md-autocomplete`, `md-combobox`, `md-dialog`, the three selects)
+is green; only the aggregator that stitched them together by name still depends on
+the v1 monolith. Porting it is the last step before the workspace goes fully
+green.
 
 ## Rules for the port
 
