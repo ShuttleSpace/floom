@@ -51,16 +51,23 @@
 //! take_view(|| "still the v1 API".to_string());
 //! ```
 //!
-//! And the mount point only accepts Floom 2.0 widgets. Passing a real v1
-//! view (from the legacy crate) fails to compile, and the failure carries
-//! the migration diagnostic:
+//! And the mount point only accepts Floom 2.0 widgets. A value that is not a
+//! Floom 2.0 widget fails to compile, and the failure carries the migration
+//! diagnostic:
 //!
 //! ```compile_fail
-//! use floom2::prelude::*;
-//! let v1_label = floom::views::label(|| "v1 label".to_string());
+//! use floem2::prelude::*;
+//! let v1_label = || "v1 label".to_string();
 //! let mut host = WidgetHost::new();
 //! host.mount_root(LayoutStyle::default(), v1_label);
 //! ```
+//!
+//! The original form of that doctest linked the v1 monolith and handed a real
+//! `floom::views::label` to `mount_root`. Stage D deleted that crate, which
+//! turned the doctest into a vacuous pass: `compile_fail` is satisfied by a
+//! missing crate just as happily as by a rejected type, so the test would
+//! have gone on passing while asserting nothing. The substitution above keeps
+//! the assertion real - a closure is not a widget - with no v1 dependency.
 
 #![forbid(unsafe_code)]
 

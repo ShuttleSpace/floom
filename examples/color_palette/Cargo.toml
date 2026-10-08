@@ -1,9 +1,0 @@
-[package]
-name = "color_palette"
-edition = "2021"
-license.workspace = true
-version.workspace = true
-
-[dependencies]
-floom = { path = "../../crates/floom" }
-palette = "0.7.6"

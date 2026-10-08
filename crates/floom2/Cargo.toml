@@ -77,10 +77,3 @@ floom-renderer-tui = { path = "../floom-renderer-tui", version = "0.2.0", option
 floom-renderer-vello = { path = "../floom-renderer-vello", version = "0.2.0", optional = true }
 floom-renderer-software = { path = "../floom-renderer-software", version = "0.2.0", optional = true }
 floom-devtools = { path = "../floom-devtools", version = "0.2.0", optional = true }
-
-[dev-dependencies]
-# The v1 monolith, used only by the compile-fail doctest that proves a legacy
-# `View` is rejected at the 2.0 mount point (with the migration diagnostic).
-# Dev-only: a shipped facade never links the legacy stack, and the
-# architecture gate ignores dev dependencies for exactly this reason.
-floom = { path = "../floom" }

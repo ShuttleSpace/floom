@@ -4,7 +4,6 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-floom = { workspace = true }
 floom-core-theme = { workspace = true }
 floom-core = { path = "../../../../../floom-core" }
 floom-types = { path = "../../../../../floom-types" }

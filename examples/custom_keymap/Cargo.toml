@@ -1,8 +1,0 @@
-[package]
-name = "custom_keymap"
-version = "0.1.0"
-edition = "2021"
-
-[dependencies]
-floom = { path = "../../crates/floom" }
-floom-editor = { path = "../../crates/ecosystem/floom-editor/floom-editor" }

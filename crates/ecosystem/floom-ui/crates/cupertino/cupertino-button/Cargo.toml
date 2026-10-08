@@ -5,4 +5,3 @@ edition = "2021"
 
 [dependencies]
 floom-core-theme = { workspace = true }
-floom = { workspace = true }

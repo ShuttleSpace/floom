@@ -2,7 +2,6 @@
 members = [
     "crates/floom-core-theme",
     "crates/floom-widget-runtime",
-    "crates/floom-elements",
     "crates/material/md-button",
     "crates/material/md-text",
     "crates/material/md-text-field",
@@ -298,29 +297,25 @@ members = [
     "crates/fluent/fluent-pull_to_refresh",
     "crates/fluent/fluent-confirm_edit",
     "crates/floom-testing",
-    "examples/demo",
 ]
 
 resolver = "2"
 
 [workspace.dependencies]
-floom = { path = "../../floom" }
 floom-core-theme = { path = "crates/floom-core-theme" }
 floom-widget-runtime = { path = "crates/floom-widget-runtime" }
-floom-elements = { path = "crates/floom-elements" }
 floom-widget-md-icon = { path = "crates/material/md-icon" }
 floom-widget-cupertino-icon = { path = "crates/cupertino/cupertino-icon" }
 floom-widget-fluent-icon = { path = "crates/fluent/fluent-icon" }
 
-# `floom` is consumed as a direct path dependency so this workspace binds to the
-# local checkout (commits export `Scope` / `create_global_rw_signal`, which
-# floom-core-theme needs to bind process-wide signals to the never-disposed root
-# scope). It used to be an upstream git dependency redirected here by a
-# `[patch]`; pointing straight at the path yields the same single-instance graph
-# without depending on a remote that has not been renamed yet.
+# Stage D removed the `floom = { path = "../../floom" }` entry above and every
+# `floom = { workspace = true }` in this workspace's member manifests. Nothing here
+# links the v1 monolith any more; the `floom-elements` re-export layer went with
+# it, so each kit crate names `floom-core-theme` and `floom-widget-runtime`
+# directly.
 
-# `floom` reaches `lapce/winit` through git, and a nested workspace does not
-# inherit the monorepo root's `[patch]` — so pin the vendored tree here too,
+# `floom-app` reaches `lapce/winit` through git, and a nested workspace does not
+# inherit the monorepo root's `[patch]` - so pin the vendored tree here too,
 # exactly as `../../Cargo.toml` does. Without this, `floem-winit` would be
 # fetched from git and `floem-winit-core` / `dpi` would exist twice.
 [patch."https://github.com/lapce/winit"]

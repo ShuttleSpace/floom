@@ -1,12 +1,11 @@
 [workspace]
 resolver = "3"
 # `crates/vendor/` holds forked upstream trees wired in via `[patch]` / path deps.
-# `crates/ecosystem/` holds the satellite projects (floom-editor, floom-ui, flameo);
+# `crates/ecosystem/` holds the satellite projects (floom-editor, floem-ui);
 # each is its own workspace, so the root `cargo test --workspace` stays focused
 # on the core. Build them from their own directory.
-exclude = ["crates/vendor", "crates/ecosystem", "examples/flameo"]
+exclude = ["crates/vendor", "crates/ecosystem"]
 members = [
-  "crates/floom",
   "crates/floom-accessibility",
   "crates/floom-accuracy",
   "crates/floom-agent",
@@ -31,12 +30,6 @@ members = [
   "crates/floom-inspector",
   "crates/floom-layout",
   "crates/floom-legacy-reactive",
-  "crates/floom-legacy-renderer",
-  "crates/floom-legacy-renderer-skia",
-  "crates/floom-legacy-renderer-tiny-skia",
-  "crates/floom-legacy-renderer-vello",
-  "crates/floom-legacy-renderer-vger",
-  "crates/floom-legacy-test",
   "crates/floom-material",
   "crates/floom-native",
   "crates/floom-navigation",
@@ -81,7 +74,6 @@ members = [
 ]
 default-members = [
   ".",
-  "crates/floom",
   "crates/floom-accessibility",
   "crates/floom-accuracy",
   "crates/floom-agent",
@@ -105,12 +97,6 @@ default-members = [
   "crates/floom-inspector",
   "crates/floom-layout",
   "crates/floom-legacy-reactive",
-  "crates/floom-legacy-renderer",
-  "crates/floom-legacy-renderer-skia",
-  "crates/floom-legacy-renderer-tiny-skia",
-  "crates/floom-legacy-renderer-vello",
-  "crates/floom-legacy-renderer-vger",
-  "crates/floom-legacy-test",
   "crates/floom-material",
   "crates/floom-native",
   "crates/floom-navigation",

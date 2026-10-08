@@ -506,6 +506,67 @@ assertion made from reading code instead of compiling it:
     * `overlay_closed` writes `false` back, or it comes straight back after the user
       closed it.
 
+15. **The Stage D blocker list counted manifests instead of crates, and the port is
+    10% done, not "nearly finished".**
+
+    Stage D's status section named three v1 holdouts in `floom-ui` and called the
+    removal "a one-time scripted run". Two of its claims were wrong, and both were
+    wrong in the convenient direction:
+
+    * *"263 Cargo.toml entries — in ported crates the entry is a dead one (no operator
+      uses it anymore)."* The parenthetical was about the **dependency line** and was
+      true. The inference drawn from it — that removing the line is safe — was not.
+    * *"Their `src/` may or may not have been ported."* That sentence is the whole
+      error. A premise hedged with "may" was then silently resolved in the direction
+      that made the plan work. The correct reading of "may or may not" is that the
+      answer has to be measured, and it had not been.
+
+    Measured, per kit crate, by looking at whether `src/lib.rs` still names the v1
+    crate at all:
+
+    | | kit crates | still v1 | ported |
+    |---|---|---|---|
+    | material | 100 | 83 | 15 |
+    | cupertino | 98 | 91 | 7 |
+    | fluent | 98 | 91 | 7 |
+    | **total** | **294** | **265** | **29** |
+
+    After the scripted removal, `cargo check --workspace --keep-going` in
+    `crates/ecosystem/floom-ui` reports **248 failing crates** and roughly 3 400 error
+    lines, of which 1 242 are `E0433: cannot find module or crate` and 952 are
+    `E0433: cannot find type` — the signature of source files whose first `use` line is
+    `use floem::views::{…}`. The count is 248 rather than 265 because 17 unported
+    crates are not workspace members or are not reached from the check graph.
+
+    So the plan's own status line — *"All independent kit crates are ported (30 crates
+    / 415 tests)"* — was a statement about the **crates that had been ported**, read as
+    a statement about **the crates that exist**. "All X are done" is only a claim about
+    the whole when X is the whole; here X was a self-selected subset. The `select` work
+    that immediately preceded this had the same shape: three crates ported, three
+    crates selected, and the plan moved on to Stage D.
+
+    **What was kept and what was not.** The root workspace half of Stage D is real and
+    verified, and stays: `crates/floom`, the five `floom-legacy-renderer*` backends,
+    `floom-legacy-test`, the 33 v1 examples and the top-level `benches/` + `tests/`
+    (which the v1 manifest reached through explicit `../../benches` paths) are gone,
+    and `cargo check --workspace --exclude calculator` is back to its exact baseline of
+    6 error lines, all in `floom2-capabilities`. The six core suites are green and
+    unchanged: 219 / 23 / 23 / 84 / 416 / 125.
+
+    `floom-ui` is left red, on purpose and on the record. Deleting `floom-elements`,
+    `examples/demo` and the 263 lines was the scripted step; it is kept because it is
+    the state that makes the remaining 265 crates visible, and hiding it by restoring
+    v1 would restore the illusion that the port is nearly finished.
+
+    **One thing the deletion nearly got away with.** `crates/floom2/src/lib.rs` had a
+    `compile_fail` doctest that proved a v1 `View` is rejected at the 2.0 mount point —
+    and it was the only remaining edge from `floom2` to v1, a dev-dependency. Deleting
+    the v1 crate would not have made it fail. `compile_fail` is satisfied by a missing
+    crate exactly as happily as by a rejected type, so the doctest would have gone on
+    passing, green, while asserting nothing at all. It now passes a closure where a
+    widget is required, which is still a compile error for the reason the test is about,
+    and needs no v1 dependency.
+
 12. **The last four components are not four ports; they are four prerequisites,
     and only one of them is self-contained.**
 
@@ -2394,56 +2455,76 @@ gives the pattern for the other two.
 
 Only after `floem-ui` no longer references it.
 
-#### Current状况 (as of commit 141f6b33)
+#### Status (measured, not estimated)
 
-All independent kit crates are ported (30 crates / 415 tests). But the workspace
-still has v1 holdouts in three places:
+**Done and verified — the root workspace no longer contains v1.**
 
-1. **`floem-elements`** (99 files, 8 293 LOC) — the v1 `multi` re-export layer. It
-   remains the only floem-ui crate that declares `floom = { workspace = true }` and
-   its `multi` feature still drives v1 `IntoView` dispatch. Deleting it requires
-   checking that nothing new depends on it. Deletion removes 63 compile errors and
-   allows `floom-ui` to survive without the v1 `floom` dependency.
+* Deleted `crates/floom` (the v1 monolith), `floom-legacy-renderer` and its four
+  backends, and `floom-legacy-test`. Nothing referenced the legacy renderers except the
+  monolith, so they went with it.
+* Deleted the 33 v1 examples (`examples/*` whose manifest depends on `floom`; the 22
+  `floom2-*` examples stay) and `examples/flameo`.
+* Deleted the top-level `benches/` and `tests/`. These belonged to the v1 manifest,
+  which reached them through explicit `[[bench]] path = "../../benches/…"` entries —
+  there was no other owner, so leaving them would have left 11 benches and 3 integration
+  tests that no target could compile.
+* Removed `"crates/floom"` and the six legacy crates from `members` and
+  `default-members`, and dropped the now-dead `examples/flameo` entry from `exclude`.
+* Removed `floom2`'s dev-dependency on the monolith and rewrote the one doctest that
+  used it (correction 15 explains why that one mattered).
 
-2. **263 Cargo.toml entries** -- `floom = { workspace = true }` in every unported
-   floom-ui member crate. Their `src/` may or may not have been ported; in portd
-   crates the entry is a dead one (no operator uses it anymore). Removing this line
-   from every Cargo.toml is a one-time scripted run.
+Verification:
 
-3. **`examples/flameo` and `crates/ecosystem/floom-ui/examples/demo`** -- both
-   depend on `floem-elements` and v1 `floom`.
+```
+cargo check --workspace --exclude calculator --all-targets
+  -> exactly 6 error lines, all in floom2-capabilities (the pre-existing baseline)
+cargo test --manifest-path crates/flo?m-{app,layout,text,types,widgets,widgets-data}/Cargo.toml
+  -> 219 / 23 / 23 / 84 / 416 / 125, 0 failed
+```
 
-4. **`floom-editor`** (20 593 LOC) -- still v1-based. Out of scope by decision.
+**Not done — `floom-ui` still needs v1, and that is the real blocker.**
 
-The script to remove v1:
+265 of the 294 kit crates still `use floem::…`. The scripted removal has been applied
+(`floom-elements`, `examples/demo`, and every `floom = { workspace = true }`), and
+`cargo check --workspace --keep-going` in `crates/ecosystem/floom-ui` therefore reports
+**248 failing crates**. Correction 15 has the breakdown, and the reason the earlier
+status line was wrong.
+
+So the deletion of v1 as a whole is **not** available yet. Two things are separable and
+should not be conflated:
+
+* `floom-legacy-renderer*` and `floom-legacy-test` were dead the moment the monolith
+  went, and nothing in `floom-ui` referenced them. Those deletions stand.
+* `crates/floom` itself cannot go until the last kit crate is ported, because 265 of
+  them import it. `floom-legacy-reactive` is a separate matter and stays regardless —
+  2.0 depends on it, despite the name.
+
+#### The removal script, corrected
 
 ```bash
 # 1. Delete the v1 crate
 rm -rf crates/floom
 # 2. Delete v1 renderers and test helper
-rm -rf crates/floom-legacy-renderer{,-skia,-tiny-skia,-vello,-vger}
-rm -rf crates/floem-legacy-test
-# 3. Delete floom-elements (metacrate), demo example, flameo example
+rm -rf crates/flo?m-legacy-renderer{,-skia,-tiny-skia,-vello,-vger}
+rm -rf crates/flo?m-legacy-test
+# 3. Delete floem-elements (metacrate), demo example, flameo example
 rm -rf crates/ecosystem/floom-ui/crates/floom-elements
 rm -rf crates/ecosystem/floom-ui/examples/demo
 rm -rf examples/flameo
-# 4. Batch-remove `floom = { workspace = true }` from all Cargo.tomls
+# 4. Delete the 33 v1 examples (every examples/* whose manifest depends on `floom`)
+# 5. Delete the top-level benches/ and tests/ (the v1 manifest's only owner)
+# 6. Batch-remove `floom = { workspace = true }` from all Cargo.tomls
 find crates/ecosystem/floom-ui/crates -name Cargo.toml -exec sed -i '' '/^floom = { workspace = true }$/d' {} +
-# 5. From root Cargo.toml members list, delete "crates/floom"
-# 6. Rename floom2 → floom in all Cargo.tomls
+# 7. From root Cargo.toml, delete "crates/floom" + the six legacy crates from
+#    members AND default-members, and drop "examples/flameo" from exclude
+# 8. Drop floom2's dev-dependency `floom = { path = "../floom" }` and rewrite the
+#    compile_fail doctest that used it
+# 9. Rename floom2 -> floom in all Cargo.tomls
 ```
 
-### Stage D — delete v1 and rename
-
-Only after `floem-ui` no longer references it:
-
-1. Delete `crates/floom` (70,196 LOC), `floom-legacy-renderer` + 4 backends
-   (6,469), `floom-legacy-test`, and the 33 v1 examples.
-2. Rename `floom2` → `floom`.
-3. **Keep `floom-legacy-reactive`** — 2.0 depends on it
-   (`floom-runtime`, `floom-runtime-core`, `floom-store`, `floom-task`,
-   `floom-widgets`, `floom2`), so it is not part of the v1 teardown despite the
-   name. Renaming it to drop "legacy" is a separate, later cleanup.
+Steps 1–3 and 6 **cannot** be applied to a tree where the kit crates are unported.
+They are listed together here only because they were applied together; the ordering
+that actually matters is *port first, delete second*.
 
 ## Note on `floem-editor`
 
@@ -2460,14 +2541,21 @@ gone: the popup *is* an engine widget (`SelectPopup`, opened as an
 carried as four parameters (`panel_gap`, chevron placement, hover band colour,
 panel shadow colour) rather than resolved.
 
-That leaves exactly one crate failing in the `floom-ui` workspace:
-**`floom-elements`**, with 84 errors. It is the v1 `multi` re-export layer
-(correction 6) — roughly 6,220 lines of `multi`-dispatch that still call the v1
-`floom` API and re-export every component the kits now build directly. Every
-consumer crate (`md-autocomplete`, `md-combobox`, `md-dialog`, the three selects)
-is green; only the aggregator that stitched them together by name still depends on
-the v1 monolith. Porting it is the last step before the workspace goes fully
-green.
+This section used to end with "that leaves exactly one crate failing in the
+`floem-ui` workspace: `floom-elements`". That sentence was wrong in the same
+direction as the Stage D blocker list, and for the same reason — it counted the
+crates this port had *reached*, not the crates that exist. `floom-elements` was
+never the last crate; it was the most *visible* one, because it is the aggregator
+whose failure blocks everything downstream of it in the graph, while the other 264
+unported crates each fail on their own and block nothing. A crate that blocks 100
+others looks more like a blocker than a crate that blocks none, no matter how many
+of each there are.
+
+**The real remaining work is 265 kit crates** (83 material, 91 cupertino, 91
+fluent), each of which needs the same treatment the 29 ported ones got: design
+logic first, markup second, one crate at a time, each compiling before the next.
+`floom-elements` is deleted as part of that, not before it — it was the last crate
+in the *plan's* ordering and it is roughly the 266th in the *dependency* ordering.
 
 ## Rules for the port
 
@@ -2490,3 +2578,13 @@ green.
 - **A test written against one child cannot tell a margin from a padding.** The
   two are geometrically identical for a single child; the difference only appears
   with two, where a margin also lands between them. Write the two-child test.
+- **"All X are done" is a claim about the whole only if X is the whole.** This plan
+  said "all independent kit crates are ported" about 29 of 294, and then a Stage D
+  blocker list that counted *dependency declarations* instead of crates. Write the
+  denominator: `29 of 294`, not "all". A hedged premise ("their `src/` may or may not
+  have been ported") has to be resolved by counting, not by reading it the convenient
+  way — correction 15.
+- **The crate that blocks the most downstream work is not the crate that remains.**
+  `floom-elements` broke 100 other crates and so read as "the last one", while 264
+  crates each failed alone and read as nothing. Rank remaining work by count, not by
+  how loudly a single failure shouts.
