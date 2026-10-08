@@ -145,12 +145,14 @@ fn a_select_popup_escapes_its_header_and_takes_clicks() {
         "focus went into the list, which now owns the keyboard"
     );
 
-    // The third row sits at y≈87 — well below the control's own 32px box, and
-    // below whatever else the window might be showing. This click is the point
-    // of the whole change: as raw paint ops the rows could never be hit, so a
-    // mouse could open the list but never use it.
-    app.press(Point::new(100.0, 87.0));
-    assert!(app.release(Point::new(100.0, 87.0)), "choosing repainted");
+    // The third row sits at y≈112 — the control is pinned to the 32px window
+    // (so bounds.y1 = 32) and each row is item_height = 32px, leaving row 2
+    // spanning 96..128. Well below the control's own box, and below whatever
+    // else the window might be showing. This click is the point of the whole
+    // change: as raw paint ops the rows could never be hit, so a mouse could
+    // open the list but never use it.
+    app.press(Point::new(100.0, 112.0));
+    assert!(app.release(Point::new(100.0, 112.0)), "choosing repainted");
 
     assert_eq!(
         app.widget::<Select>(select).selected_index(),

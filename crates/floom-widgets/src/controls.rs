@@ -19,9 +19,10 @@ use floom_core::{
     Rect, RepeatSpec, SemanticsContext, Size, Transition, UpdateContext, Widget, WidgetAny,
 };
 use floom_ime::{CompositionState, ImeEvent, ImeState};
-use floom_types::{FontWeight, ImeUpdate, PointerButton, PointerPhase};
+use floom_types::{FontWeight, ImeUpdate, PointerButton, PointerPhase, Shadow};
 
 use crate::primitives::{Revision, SemanticsHint};
+use crate::vector_icon::VectorIcon;
 
 /// Font size every tier-1 control paints its label with. Shared between
 /// `paint` and `layout_request` so the intrinsic size always matches what is
@@ -41,9 +42,6 @@ const SWITCH_TRACK_WIDTH: f32 = 40.0;
 /// placeholder) is still visible and clickable instead of collapsing to the
 /// 8px padding.
 const TEXTFIELD_MIN_WIDTH: f32 = 120.0;
-/// Horizontal padding between a Select's edge and its label (each side);
-/// matches the offset `draw_centered_text` applies.
-const SELECT_PADDING: f32 = 8.0;
 /// Slider thumb diameter (and therefore the slider's intrinsic height — the
 /// thumb is the tallest thing it paints).
 const SLIDER_THUMB: f32 = 16.0;
@@ -54,10 +52,6 @@ const SLIDER_TRACK_WIDTH: f32 = 160.0;
 const PROGRESS_HEIGHT: f32 = 8.0;
 /// Default Progress bar length when no explicit width is given.
 const PROGRESS_WIDTH: f32 = 160.0;
-/// Panel behind an open Select's option list.
-const SELECT_LIST_BACKGROUND: Color = Color::rgb(0xED, 0xF2, 0xF7);
-/// Band drawn behind the row a Select popup has its highlight on.
-const SELECT_ROW_HIGHLIGHT: Color = Color::rgb(0xD6, 0xE4, 0xF0);
 
 /// Intrinsic width of a label at the controls' shared font size.
 ///
@@ -239,6 +233,24 @@ fn is_activation_key(key: &KeyEvent, state: InteractionState) -> bool {
         return false;
     }
     matches!(key.key, Key::Named(NamedKey::Enter) | Key::Char(' '))
+}
+
+/// Paints `icon` inside `bounds`, tinted `color`.
+///
+/// A composite cannot hand a [`VectorIcon`] its own paint context, so it needs
+/// this: the icon's path is in its view box's coordinates, and the mapping onto
+/// an arbitrary box is [`VectorIcon::transform_for`] — the same one the icon
+/// uses for itself, so a chevron drawn by a Select and one drawn on its own are
+/// identical. An empty path (an icon name with no glyph behind it) paints
+/// nothing rather than a degenerate path.
+fn paint_icon(cx: &mut dyn PaintContext, icon: &VectorIcon, bounds: Rect, color: Color) {
+    if icon.path().is_empty() {
+        return;
+    }
+    let Some(transform) = icon.transform_for(bounds) else {
+        return;
+    };
+    cx.fill_path(&icon.path().transform(transform), color);
 }
 
 /// Draws `text` left-aligned and vertically centred inside `bounds`.
@@ -2347,7 +2359,13 @@ pub struct SelectPopup {
     options: Vec<String>,
     /// Row the pointer is over or the arrow keys last moved to.
     highlight: usize,
-    row_height: f64,
+    /// The row the Select had chosen before the list opened; it keeps its own
+    /// tint while the highlight moves over other rows.
+    selected: Option<usize>,
+    /// Copied from the opening Select rather than shared: the popup outlives the
+    /// frame in which it was built, and a style is `Copy` precisely so this can
+    /// be a snapshot.
+    style: SelectStyle,
     /// Set once the user picks a row; `None` means dismissed.
     chosen: Option<usize>,
     /// Handed in by the content factory so the popup can take itself down
@@ -2371,13 +2389,14 @@ impl SelectPopup {
     pub fn new(
         options: Vec<String>,
         selected: Option<usize>,
-        row_height: f64,
+        style: SelectStyle,
         handle: OverlayHandle,
     ) -> Self {
         Self {
             highlight: selected.unwrap_or(0),
             options,
-            row_height,
+            selected,
+            style,
             chosen: None,
             handle: Some(handle),
         }
@@ -2385,6 +2404,21 @@ impl SelectPopup {
 
     pub fn options(&self) -> &[String] {
         &self.options
+    }
+
+    /// One row's height, from the style it was opened with.
+    pub fn row_height(&self) -> f64 {
+        f64::from(self.style.item_height)
+    }
+
+    /// The offset of row 0 from the popup's own top edge — the panel's padding,
+    /// which the rows sit inside.
+    pub fn row_origin(&self) -> f64 {
+        f64::from(self.style.panel_padding)
+    }
+
+    pub fn style(&self) -> SelectStyle {
+        self.style
     }
 
     /// The row the user picked, if they picked one rather than dismissing.
@@ -2397,15 +2431,20 @@ impl SelectPopup {
     }
 
     /// Row whose band contains `y` within `bounds`, if any.
+    ///
+    /// The band starts *after* the panel's padding, so a click in the padding
+    /// above the first row hits no row — which is what v1's padded panel did
+    /// and what the popup's rect (padding included) promises.
     pub fn row_at(&self, bounds: Rect, y: f64) -> Option<usize> {
-        if self.options.is_empty() || self.row_height <= 0.0 {
+        let row_height = self.row_height();
+        if self.options.is_empty() || row_height <= 0.0 {
             return None;
         }
-        let offset = y - bounds.y0;
+        let offset = y - bounds.y0 - self.row_origin();
         if offset < 0.0 {
             return None;
         }
-        let index = (offset / self.row_height) as usize;
+        let index = (offset / row_height) as usize;
         (index < self.options.len()).then_some(index)
     }
 
@@ -2512,23 +2551,65 @@ impl Widget for SelectPopup {
         if bounds.width() <= 0.0 || bounds.height() <= 0.0 {
             return;
         }
-        cx.fill_rect(bounds, SELECT_LIST_BACKGROUND);
+        let style = self.style;
+        let row_height = self.row_height();
+
+        cx.draw_shadow(
+            bounds,
+            style.border_radius,
+            &Shadow {
+                color: style.panel_shadow,
+                blur: f64::from(style.panel_shadow_blur),
+                offset_x: 0.0,
+                offset_y: 0.0,
+                spread: f64::from(style.panel_shadow_spread),
+            },
+        );
+        if style.panel_border.a > 0 {
+            let inset = f64::from(style.border_width.max(0.0));
+            cx.fill_rounded_rect(bounds, style.border_radius, style.panel_border);
+            cx.fill_rounded_rect(
+                Rect {
+                    x0: bounds.x0 + inset,
+                    y0: bounds.y0 + inset,
+                    x1: (bounds.x1 - inset).max(bounds.x0 + inset),
+                    y1: (bounds.y1 - inset).max(bounds.y0 + inset),
+                },
+                (style.border_radius - inset as f32).max(0.0),
+                style.surface,
+            );
+        } else {
+            cx.fill_rounded_rect(bounds, style.border_radius, style.surface);
+        }
+
+        let top = bounds.y0 + self.row_origin();
         for (index, option) in self.options.iter().enumerate() {
             let row = Rect {
                 x0: bounds.x0,
-                y0: bounds.y0 + index as f64 * self.row_height,
+                y0: top + index as f64 * row_height,
                 x1: bounds.x1,
-                y1: bounds.y0 + (index + 1) as f64 * self.row_height,
+                y1: top + (index + 1) as f64 * row_height,
             };
-            if index == self.highlight {
-                cx.fill_rect(row, SELECT_ROW_HIGHLIGHT);
+            if row.y0 >= bounds.y1 {
+                // The panel was capped by `panel_max_height`; the rows that
+                // fall past it are not visible and painting them would draw
+                // outside the box the host gave us.
+                break;
+            }
+            if Some(index) == self.selected && style.selected_row.a > 0 {
+                cx.fill_rect(row, style.selected_row);
+            } else if index == self.highlight && style.hover_row.a > 0 {
+                cx.fill_rect(row, style.hover_row);
             }
             cx.fill_text(
-                Point::new(row.x0 + f64::from(SELECT_PADDING), row.y0 + 3.0),
+                Point::new(
+                    row.x0 + f64::from(style.row_padding_horizontal),
+                    row.y0 + (row_height - f64::from(style.text_size)) / 2.0,
+                ),
                 option,
-                LABEL_FONT_SIZE,
+                style.text_size,
                 FontWeight::Normal,
-                Color::BLACK,
+                style.outline,
             );
         }
     }
@@ -2545,9 +2626,17 @@ impl Widget for SelectPopup {
 /// why an inline list could not be clicked.
 
 /// How a select (dropdown) looks.
+///
+/// Every field here is read by [`Select`] or [`SelectPopup`], and the coverage
+/// is what the three kits' disagreement needs rather than what one kit's markup
+/// happened to spell out. Colours are *resolved* rather than carried as an
+/// alpha over a theme colour: the engine has no theme, and the one place the
+/// kits genuinely disagree — a hovered row is `on_surface`@8 in Material and
+/// Fluent but `primary`@12 in Cupertino — is a different *source* colour, not a
+/// different alpha, so an `alpha: u8` field could not have carried it.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct SelectStyle {
-    // --- from tokens ---
+    // --- geometry, from `SelectTokens` ---
     /// The trigger's height.
     pub height: f32,
     /// The trigger's horizontal inner padding.
@@ -2558,69 +2647,102 @@ pub struct SelectStyle {
     pub min_width: f32,
     /// One row's height in the popup.
     pub item_height: f32,
-    /// The popup's maximum height.
+    /// The popup's maximum height; the list stops growing here.
     pub panel_max_height: f32,
 
-    // --- v1's call-site constants ---
-    /// Gap between the trigger's field and the chevron.
+    // --- geometry, v1's call-site constants ---
+    /// Gap between the trigger's label and its chevron.
     pub trigger_gap: f32,
     /// One row's horizontal padding in the popup.
     pub row_padding_horizontal: f32,
     /// Gap between the trigger's bottom and the popup's top.
     pub panel_gap: f64,
-    /// The chevron's size.
+    /// Padding between the popup's edge and its first row.
+    pub panel_padding: f32,
+    /// The chevron's edge length.
     pub icon_size: f32,
-
-    // --- colours as alpha values ---
-    pub disabled_text_alpha: u8,
-    pub disabled_chevron_alpha: u8,
-    pub disabled_border_alpha: u8,
-    pub disabled_background_alpha: u8,
-    pub selected_row_alpha: u8,
-    pub hover_row_alpha: u8,
-    pub panel_border_alpha: u8,
-    pub panel_shadow_alpha: u8,
+    /// The trigger's border thickness. `0.0` draws no border.
     pub border_width: f32,
-
-    // --- resolved theme colours ---
-    pub surface: Color,
-    pub on_surface: Color,
-    pub on_surface_variant: Color,
-    pub outline: Color,
-    pub primary: Color,
+    /// Label font size, from the theme's body-medium.
     pub text_size: f32,
+    /// The popup's shadow blur radius.
+    pub panel_shadow_blur: f32,
+    /// The popup's shadow spread.
+    pub panel_shadow_spread: f32,
+
+    // --- resolved colours ---
+    /// The trigger's and the popup's background.
+    pub surface: Color,
+    /// The chosen option's label.
+    pub on_surface: Color,
+    /// The trigger's border, and the popup's rows' text.
+    pub outline: Color,
+    /// The label when nothing is chosen.
+    pub placeholder: Color,
+    /// The chevron.
+    pub chevron: Color,
+    /// The band behind the row the pointer or the arrow keys are on.
+    pub hover_row: Color,
+    /// The band behind the chosen row.
+    pub selected_row: Color,
+    /// The popup's border; `TRANSPARENT` draws none.
+    pub panel_border: Color,
+    /// The popup's shadow.
+    pub panel_shadow: Color,
+    /// The label when the control is disabled.
+    pub disabled_text: Color,
+    /// The chevron when the control is disabled.
+    pub disabled_chevron: Color,
+    /// The trigger's border when the control is disabled.
+    pub disabled_border: Color,
+    /// The trigger's background when the control is disabled.
+    pub disabled_background: Color,
 }
 
 impl Default for SelectStyle {
     fn default() -> Self {
         SelectStyle {
-            height: 56.0,
+            height: 40.0,
             padding_horizontal: 16.0,
             border_radius: 4.0,
-            min_width: 240.0,
-            item_height: 48.0,
-            panel_max_height: 320.0,
+            min_width: 160.0,
+            item_height: 32.0,
+            panel_max_height: 240.0,
             trigger_gap: 8.0,
             row_padding_horizontal: 12.0,
-            panel_gap: 4.0,
-            icon_size: 14.0,
-            disabled_text_alpha: 38,
-            disabled_chevron_alpha: 97,
-            disabled_border_alpha: 97,
-            disabled_background_alpha: 12,
-            selected_row_alpha: 24,
-            hover_row_alpha: 8,
-            panel_border_alpha: 120,
-            panel_shadow_alpha: 20,
+            panel_gap: 0.0,
+            panel_padding: 4.0,
+            icon_size: 16.0,
             border_width: 1.0,
-            surface: Color::rgb(0xFF, 0xFB, 0xFE),
+            text_size: 14.0,
+            panel_shadow_blur: 8.0,
+            panel_shadow_spread: 1.0,
+            surface: Color::rgb(0xFF, 0xFF, 0xFF),
             on_surface: Color::rgb(0x1C, 0x1B, 0x1F),
-            on_surface_variant: Color::rgb(0x49, 0x45, 0x46),
             outline: Color::rgb(0x79, 0x74, 0x7E),
-            primary: Color::rgb(0x67, 0x50, 0xA4),
-            text_size: 16.0,
+            placeholder: Color::rgb(0x49, 0x45, 0x46),
+            chevron: Color::rgb(0x49, 0x45, 0x46),
+            hover_row: Color::rgba(0x1C, 0x1B, 0x1F, 8),
+            selected_row: Color::rgba(0x67, 0x50, 0xA4, 24),
+            panel_border: Color::rgba(0x79, 0x74, 0x7E, 120),
+            panel_shadow: Color::rgba(0x00, 0x00, 0x00, 20),
+            disabled_text: Color::rgba(0x1C, 0x1B, 0x1F, 97),
+            disabled_chevron: Color::rgba(0x1C, 0x1B, 0x1F, 97),
+            disabled_border: Color::rgba(0x79, 0x74, 0x7E, 97),
+            disabled_background: Color::rgba(0x1C, 0x1B, 0x1F, 12),
         }
     }
+}
+
+/// Height of the popup for `rows` options: one [`SelectStyle::item_height`]
+/// each, plus the panel's padding, capped at [`SelectStyle::panel_max_height`].
+///
+/// Shared by [`Select::open_popup`] (which has to guess the rect before the
+/// host measures anything) and by the tests that assert the guess — one
+/// definition so the two cannot drift.
+pub fn popup_height(style: &SelectStyle, rows: usize) -> f64 {
+    let wanted = f64::from(style.item_height) * rows as f64 + f64::from(style.panel_padding) * 2.0;
+    wanted.min(f64::from(style.panel_max_height))
 }
 
 /// A single-choice selector.
@@ -2631,7 +2753,11 @@ impl Default for SelectStyle {
 pub struct Select {
     options: Vec<String>,
     selected: Option<usize>,
-    row_height: f64,
+    /// Shown in place of a label while nothing is chosen.
+    placeholder: String,
+    /// The chevron. A kit supplies it rather than the engine: three icon sets
+    /// disagree on what "expand" looks like, and picking one belongs to the kit.
+    chevron: Option<VectorIcon>,
     on_change: Option<IndexCallback>,
     state: InteractionState,
     revision: Revision,
@@ -2659,7 +2785,8 @@ impl Select {
         Self {
             options: options.into_iter().map(Into::into).collect(),
             selected: None,
-            row_height: 22.0,
+            placeholder: String::new(),
+            chevron: None,
             on_change: None,
             state: InteractionState::default(),
             revision: Revision::default(),
@@ -2670,6 +2797,23 @@ impl Select {
 
     pub fn selected(mut self, index: usize) -> Self {
         self.selected = Some(index);
+        self.revision.bump();
+        self
+    }
+
+    /// The label shown while nothing is chosen. Empty means [`Select::selected_label`]
+    /// falls back to the em dash it has always used.
+    pub fn placeholder(mut self, placeholder: impl Into<String>) -> Self {
+        self.placeholder = placeholder.into();
+        self.revision.bump();
+        self
+    }
+
+    /// The chevron drawn at the trigger's trailing edge. Sized from
+    /// [`SelectStyle::icon_size`] and tinted from [`SelectStyle::chevron`] —
+    /// the *shape* is the kit's, the rest is the style's.
+    pub fn chevron(mut self, icon: VectorIcon) -> Self {
+        self.chevron = Some(icon);
         self.revision.bump();
         self
     }
@@ -2704,11 +2848,25 @@ impl Select {
         self.popup.is_some()
     }
 
+    /// The label the trigger shows: the chosen option, or the placeholder
+    /// while nothing is chosen, or an em dash when there is neither.
     pub fn selected_label(&self) -> &str {
         match self.selected.and_then(|i| self.options.get(i)) {
             Some(label) => label,
+            None if !self.placeholder.is_empty() => &self.placeholder,
             None => "—",
         }
+    }
+
+    /// Whether the trigger is currently showing the placeholder rather than a
+    /// chosen option — the two are painted in different colours.
+    pub fn showing_placeholder(&self) -> bool {
+        self.selected.and_then(|i| self.options.get(i)).is_none()
+    }
+
+    /// The placeholder as configured; empty when none was set.
+    pub fn placeholder_text(&self) -> &str {
+        &self.placeholder
     }
 
     pub fn interaction(&self) -> InteractionState {
@@ -2780,18 +2938,21 @@ impl Select {
             return false;
         }
         let bounds = cx.bounds();
+        let style = self.style_;
         let rect = Rect::from_origin_size(
-            Point::new(bounds.x0, bounds.y1),
-            Size::new(bounds.width(), self.row_height * self.options.len() as f64),
+            Point::new(bounds.x0, bounds.y1 + style.panel_gap),
+            Size::new(
+                (bounds.width()).max(f64::from(style.min_width)),
+                popup_height(&style, self.options.len()),
+            ),
         );
         let options = self.options.clone();
         let selected = self.selected;
-        let row_height = self.row_height;
         let opened = cx.open_overlay(OverlayRequest::new(
             OverlayKind::Popup,
             false,
             rect,
-            move |handle| Box::new(SelectPopup::new(options, selected, row_height, handle)),
+            move |handle| Box::new(SelectPopup::new(options, selected, style, handle)),
         ));
         if opened {
             self.revision.bump();
@@ -2861,21 +3022,34 @@ impl Widget for Select {
     }
 
     /// Intrinsic size of the *closed* control: the widest label (selected or
-    /// option) plus the paint padding, one [`Select::row_height`] tall. The
-    /// open list is an overlay sized from this box, so it deliberately does not
-    /// contribute to the intrinsic extent — otherwise the control would grow a
-    /// list-height hole in its parent's flow every time it opened.
+    /// option) at the style's font size, plus the style's padding and — when a
+    /// chevron was supplied — its edge and the gap before it;
+    /// [`SelectStyle::height`] tall. The open list is an overlay sized from this
+    /// box, so it deliberately does not contribute to the intrinsic extent —
+    /// otherwise the control would grow a list-height hole in its parent's flow
+    /// every time it opened.
     fn layout_request(&self) -> Option<floom_core::LayoutRequest> {
         let widest = self
             .options
             .iter()
-            .map(|option| label_width(option))
-            .chain(std::iter::once(label_width(self.selected_label())))
+            .map(|option| text_width_at(option, self.style_.text_size))
+            .chain(std::iter::once(text_width_at(
+                self.selected_label(),
+                self.style_.text_size,
+            )))
             .fold(0.0_f32, f32::max);
+        let trailing = if self.chevron.is_some() {
+            self.style_.trigger_gap + self.style_.icon_size
+        } else {
+            0.0
+        };
         Some(
             floom_core::LayoutRequest::new()
-                .width(widest + SELECT_PADDING * 2.0)
-                .height(self.row_height as f32),
+                .width(
+                    (widest + self.style_.padding_horizontal * 2.0 + trailing)
+                        .max(self.style_.min_width),
+                )
+                .height(self.style_.height),
         )
     }
 
@@ -2947,28 +3121,69 @@ impl Widget for Select {
         if bounds.width() <= 0.0 || bounds.height() <= 0.0 {
             return;
         }
-        let (darker, lighter) = emphasis(Color::WHITE);
-        cx.fill_rect(
-            bounds,
-            resolved_color(
-                Color::WHITE,
-                darker,
-                lighter,
-                InteractionState {
-                    // An open list is a pressed control: the header stays lit
-                    // for as long as the popup is up.
-                    pressed: self.state.pressed || self.is_open(),
-                    ..self.state
-                },
+        let style = self.style_;
+        let disabled = self.state.disabled;
+
+        // A border is a larger box in the border colour with a smaller box on
+        // top of it: `PaintContext` has a rounded-rect fill and no stroke, and
+        // drawing one honestly beats a stroke op nobody implemented.
+        let (border, background) = if disabled {
+            (style.disabled_border, style.disabled_background)
+        } else {
+            (style.outline, style.surface)
+        };
+        let inset = f64::from(style.border_width.max(0.0));
+        if inset > 0.0 && border.a > 0 {
+            cx.fill_rounded_rect(bounds, style.border_radius, border);
+        }
+        cx.fill_rounded_rect(
+            Rect {
+                x0: bounds.x0 + inset,
+                y0: bounds.y0 + inset,
+                x1: (bounds.x1 - inset).max(bounds.x0 + inset),
+                y1: (bounds.y1 - inset).max(bounds.y0 + inset),
+            },
+            (style.border_radius - inset as f32).max(0.0),
+            background,
+        );
+
+        let text_color = if disabled {
+            style.disabled_text
+        } else if self.showing_placeholder() {
+            style.placeholder
+        } else {
+            style.on_surface
+        };
+        // Left-aligned at the padding, vertically centred — a select's label
+        // sits at the leading edge with the chevron opposite it, unlike a
+        // button's centred caption.
+        cx.fill_text(
+            Point::new(
+                bounds.x0 + f64::from(style.padding_horizontal),
+                bounds.y0 + (bounds.height() - f64::from(style.text_size)) / 2.0,
             ),
-        );
-        draw_centered_text(
-            cx,
-            bounds,
             self.selected_label(),
-            LABEL_FONT_SIZE,
-            Color::BLACK,
+            style.text_size,
+            FontWeight::Normal,
+            text_color,
         );
+
+        if let Some(chevron) = &self.chevron {
+            let edge = f64::from(style.icon_size);
+            let icon_bounds = Rect::from_origin_size(
+                Point::new(
+                    bounds.x1 - f64::from(style.padding_horizontal) - edge,
+                    bounds.y0 + (bounds.height() - edge) / 2.0,
+                ),
+                Size::new(edge, edge),
+            );
+            let tint = if disabled {
+                style.disabled_chevron
+            } else {
+                style.chevron
+            };
+            paint_icon(cx, chevron, icon_bounds, tint);
+        }
     }
 
     fn semantics(&self, cx: &mut dyn SemanticsContext, _id: ElementId) {

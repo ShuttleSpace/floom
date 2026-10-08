@@ -11,7 +11,8 @@ use floom_core::{
 use floom_scene::SceneNode;
 use floom_types::{Brush, Color, KeyEvent, Modifiers, PointerEvent, PointerPhase};
 use floom_widgets::controls::{
-    Button, Checkbox, Pressable, Progress, Radio, Select, SelectPopup, Slider, Switch, TextField,
+    Button, Checkbox, Pressable, Progress, Radio, Select, SelectPopup, SelectStyle, Slider, Switch,
+    TextField, popup_height,
 };
 use floom_widgets::primitives::Text;
 use floom_widgets::Stack;
@@ -472,12 +473,22 @@ fn open_popup(select: &mut Select, id: ElementId) -> (Box<dyn WidgetAny>, Rect, 
     (content, bounds, handle)
 }
 
+/// The style an unstyled `Select` paints with, so the geometry assertions below
+/// read the same numbers the widget does instead of a copy of them that would
+/// silently agree with a change.
+fn default_style() -> SelectStyle {
+    SelectStyle::default()
+}
+
 /// Centre of row `index` inside `bounds`.
+///
+/// Rows start *after* the panel's padding — the popup's rect includes it — so
+/// the row's centre is the padding plus half a row in.
 fn row_center(bounds: Rect, index: usize) -> Point {
-    let row_height = 22.0;
+    let style = default_style();
     Point::new(
         bounds.x0 + 10.0,
-        bounds.y0 + (index as f64 + 0.5) * row_height,
+        bounds.y0 + f64::from(style.panel_padding) + (index as f64 + 0.5) * f64::from(style.item_height),
     )
 }
 
@@ -518,7 +529,7 @@ fn select_opens_a_list_as_an_overlay_below_itself() {
     assert_eq!(bounds.y0, ROW.y1, "the list hangs below the header");
     assert_eq!(bounds.x0, ROW.x0);
     assert_eq!(bounds.width(), ROW.width());
-    assert_eq!(bounds.height(), 3.0 * 22.0);
+    assert_eq!(bounds.height(), popup_height(&default_style(), 3));
     assert_eq!(select.popup_handle(), Some(handle));
     assert_eq!(
         popup_of(&mut content).options(),
@@ -527,11 +538,13 @@ fn select_opens_a_list_as_an_overlay_below_itself() {
     );
 
     // The header keeps painting only its own box — the list is a separate node
-    // now, which is the whole point of the change.
+    // now, which is the whole point of the change. Three ops: the border's
+    // rounded rect, the background inset inside it, and the label.
     let painted = paint_snapshot(&select, id, ROW);
-    assert!(
-        painted.lines().count() <= 2,
-        "the closed control paints just its box and label:\n{painted}"
+    assert_eq!(
+        painted.lines().count(),
+        3,
+        "the closed control paints its border, its background and its label:\n{painted}"
     );
 }
 

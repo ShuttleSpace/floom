@@ -52,9 +52,9 @@ pub use compose::{OverlayHost, popup_placement_rect,
     SelectGroupStyle,
     SelectionMode, SharedTransitionLayout, Stack, Tabs,
 };
-pub use controls::{SelectStyle, 
-    Button, Checkbox, InteractionState, Pressable, Progress, Radio, Select, Slider, Switch,
-    TextField,
+pub use controls::{
+    Button, Checkbox, InteractionState, Pressable, Progress, Radio, Select, SelectPopup,
+    SelectStyle, Slider, Switch, TextField, popup_height,
 };
 /// The layout vocabulary a widget author needs alongside [`Stack`] and
 /// [`Surface::border_edges`]: the main axis a stack runs on, how its children
