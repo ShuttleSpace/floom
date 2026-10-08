@@ -354,7 +354,12 @@ dependencies = [
 name = "floom-widget-cupertino-counter"
 version = "0.1.0"
 dependencies = [
+ "floom-core",
  "floom-core-theme",
+ "floom-legacy-reactive",
+ "floom-types",
+ "floom-widget-runtime",
+ "floom-widgets",
 ]
 
 [[package]]
@@ -1092,7 +1097,12 @@ dependencies = [
 name = "floom-widget-fluent-counter"
 version = "0.1.0"
 dependencies = [
+ "floom-core",
  "floom-core-theme",
+ "floom-legacy-reactive",
+ "floom-types",
+ "floom-widget-runtime",
+ "floom-widgets",
 ]
 
 [[package]]
@@ -1858,8 +1868,12 @@ dependencies = [
 name = "floom-widget-md-counter"
 version = "0.1.0"
 dependencies = [
+ "floom-core",
  "floom-core-theme",
+ "floom-legacy-reactive",
+ "floom-types",
  "floom-widget-runtime",
+ "floom-widgets",
 ]
 
 [[package]]

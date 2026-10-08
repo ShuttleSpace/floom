@@ -9,7 +9,15 @@ pub struct CounterProps {
     /// Increment/decrement step.
     pub step: i64,
     /// Called with the new value whenever it changes.
-    pub on_change: Option<Box<dyn Fn(i64)>>,
+    ///
+    /// `Send + Sync`, which v1's was not. A 2.0 slot is a replayed
+    /// `Fn() -> Box<dyn WidgetAny> + Send + Sync`, so the engine's
+    /// `Counter::on_change` demands it and a callback that cannot cross that
+    /// boundary cannot be stored at all. The only crates that read this field are
+    /// the three counter crates, so tightening it broke nothing that was not being
+    /// ported anyway -- recorded because "it happened to break nothing" is the
+    /// condition that lets an unforced API change through unnoticed.
+    pub on_change: Option<Box<dyn Fn(i64) + Send + Sync>>,
 }
 
 impl Clone for CounterProps {

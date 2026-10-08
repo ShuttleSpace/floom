@@ -16,6 +16,7 @@ pub mod canvas;
 pub mod combobox;
 pub mod compose;
 pub mod controls;
+pub mod counter;
 pub mod icon_button;
 pub mod labeled;
 pub mod list_item;
@@ -46,6 +47,7 @@ pub use combobox::{
     ComboPick, Combobox, Commit, commit, ComboboxStyle, SharedPick, matching, panel_placement, panel_rect,
     panel_request, select, sync_query_to_selection, visible_options,
 };
+pub use counter::{Counter, CounterState, CounterStyle, SharedCounter, Step, clamp_value, step_value};
 pub use compose::{OverlayHost, popup_placement_rect, 
     Accordion, AccordionIndicator, AccordionStyle, AnimatedContent, BottomSheet, Conditional,
     Crossfade, Dialog, Grid, List, Opacity, Overlay, Popup, PopupPlacement, SelectGroup,

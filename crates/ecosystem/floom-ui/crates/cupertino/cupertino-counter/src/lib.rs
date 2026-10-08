@@ -1,22 +1,101 @@
-use std::rc::Rc;
+//! Cupertino counter, ported to the Floom 2.0 widget API.
+//!
+//! ## The shortest possible port, and why that is a finding
+//!
+//! `cupertino-counter`, `cupertino-counter` and `fluent-counter` are 151, 148 and 148
+//! lines, and after normalising the kit names away the three differ in **five
+//! lines — all of them the theme signal**. Every design value comes from
+//! `CounterTokens`, and the single literal (`font_size(16.0)` on the value readout)
+//! is the same literal in all three.
+//!
+//! So this is not "one component with three skins", and that is worth stating
+//! plainly: there is **no disagreement to preserve here**. Most shapes in this port
+//! turned out to disagree somewhere, and the disagreements are the substance. This
+//! one does not, and the honest report is "the kits agree" rather than a table of
+//! two rows.
+//!
+//! Everything that is left here is the translation from design tokens to
+//! [`CounterStyle`], plus the one value that is *not* a token — the readout's
+//! `16.0`.
+//!
+//! ## What changed from v1
+//!
+//! * **The state became shared.** v1 held a `RwSignal<i64>` created inside
+//!   `view()`, so a caller could set the value before mounting and read it
+//!   afterwards only by holding the signal — and `view()` returned `impl View`, so
+//!   it could not hand it back. 2.0 needs `Arc<Mutex<CounterState>>` for the reason
+//!   every other 2.0 shared value does: a slot is `Send + Sync` and `RwSignal` is
+//!   `Rc`-based. [`CupertinoCounter::view`] therefore hands the widget back, and
+//!   [`floom_widgets::Counter::state`] is how a caller reads it.
+//! * **`CursorStyle::Pointer` is gone.** 2.0's `PaintContext` has no cursor
+//!   vocabulary. The buttons are still `Pressable`s, so they are still reachable by
+//!   keyboard, which the cursor was not. Recorded rather than worked around.
+//! * **`clamp_value` moved into the engine**, unchanged, including which bound wins
+//!   when the range is inverted. See `floom_widgets::counter`.
+//! * **`on_change` still fires when a press cannot move the value.** v1 called back
+//!   unconditionally, and that is preserved — including the fact that the engine's
+//!   own `Slider` does the opposite.
 
-use floom::event::EventPropagation;
-use floom::prelude::*;
-use floom::style::CursorStyle;
-use floom::views::{Container, Decorators, Stack, Label};
-use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
+use floom_legacy_reactive::{RwSignal, SignalGet};
+use floom_types::Color as PaintColor;
+use floom_widgets::{Counter, CounterStyle};
+
+use floom_widget_runtime::theme_signal;
+
+use floom_core_theme::component_tokens::{ComponentId, ComponentTokens, CounterTokens};
 use floom_core_theme::props::counter::CounterProps;
 use floom_core_theme::theme::{MultiTheme, Theme};
+use floom_core_theme::tokens::color::Color;
 
-fn clamp_value(v: i64, min: Option<i64>, max: Option<i64>) -> i64 {
-    let mut r = v;
-    if let Some(m) = min {
-        r = r.max(m);
+/// The design system this crate reads.
+const DESIGN_SYSTEM: &str = "cupertino";
+
+/// The readout's font size, in px.
+///
+/// **Not a token.** v1 wrote `s.font_size(16.0)` inline in all three kits, and all
+/// three wrote the same 16.0 — so it is a literal here too, named rather than
+/// inlined so the three crates can be compared against each other by reading this
+/// line. The kits' agreement on it is measured, not assumed; see
+/// `tests/counter.rs::the_three_kits_agree_on_the_readout_font_size`.
+pub const READOUT_FONT_SIZE: f32 = 16.0;
+
+/// Design-system colour -> engine colour.
+fn to_paint(c: Color) -> PaintColor {
+    PaintColor {
+        r: c.r,
+        g: c.g,
+        b: c.b,
+        a: c.a,
     }
-    if let Some(m) = max {
-        r = r.min(m);
+}
+
+fn counter_tokens(theme: &MultiTheme) -> CounterTokens {
+    match theme.component(ComponentId::Counter) {
+        ComponentTokens::Counter(t) => t,
+        _ => unreachable!("ComponentId::Counter must resolve to CounterTokens"),
     }
-    r
+}
+
+/// Material's resolved counter appearance.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct CupertinoCounterStyle {
+    pub design_system: &'static str,
+    /// Fill of the two step buttons. v1 read `surface_variant`.
+    pub button_background: Color,
+    /// Ink of the two glyphs. v1 read `on_surface`.
+    pub button_foreground: Color,
+    /// Ink of the readout. v1 read `on_surface` — the *same* token as the glyphs,
+    /// which is why the engine carries one `value_font_size` for both and a kit
+    /// that wanted them to differ would need a second field.
+    pub value_color: Color,
+    /// Outline of the band. v1 read `outline`.
+    pub border_color: Color,
+    pub button_size: f32,
+    pub width: f32,
+    pub height: f32,
+    pub radius: f32,
+    pub gap: f32,
+    pub border: f32,
 }
 
 pub struct CupertinoCounter {
@@ -28,7 +107,9 @@ impl CupertinoCounter {
     pub fn new() -> Self {
         Self {
             props: CounterProps::default(),
-            theme: RwSignal::new(MultiTheme::new_for(floom_core_theme::global_theme::DesignSystem::Cupertino)),
+            theme: RwSignal::new(MultiTheme::new_for(
+                floom_core_theme::global_theme::DesignSystem::Cupertino,
+            )),
         }
     }
 
@@ -52,91 +133,84 @@ impl CupertinoCounter {
         self
     }
 
-    pub fn on_change(mut self, callback: impl Fn(i64) + 'static) -> Self {
+    /// The change callback, held until [`Self::view`].
+    ///
+    /// `Send + Sync` where v1's was not, because the engine's callback crosses a
+    /// slot boundary. A caller that captured an `Rc` cannot; that is the port's
+    /// one hard requirement on callers, and it is the third time this port has had
+    /// to state it.
+    pub fn on_change(mut self, callback: impl Fn(i64) + Send + Sync + 'static) -> Self {
         self.props.on_change = Some(Box::new(callback));
         self
     }
 
-    pub fn view(self) -> impl View {
-        let theme = self.theme;
-        let min = self.props.min;
-        let max = self.props.max;
-        let step = self.props.step;
-        let on_change = Rc::new(self.props.on_change);
-        let value: RwSignal<i64> = RwSignal::new(clamp_value(self.props.value, min, max));
+    pub fn props(&self) -> &CounterProps {
+        &self.props
+    }
 
-        let tokens = match theme.get().component(ComponentId::Counter) {
-            ComponentTokens::Counter(t) => t,
-            _ => unreachable!(),
-        };
-        let tk_dec = tokens.clone();
-        let tk_inc = tokens.clone();
-        let tk_out = tokens;
+    pub fn theme(&self) -> RwSignal<MultiTheme> {
+        self.theme
+    }
 
-        let dec = Container::new(Label::new("-"))
-            .style(move |s| {
-                let t = theme.get();
-                s.size(tk_dec.button_size, tk_dec.button_size)
-                    .border_radius(tk_dec.radius)
-                    .background(t.colors().surface_variant.to_peniko())
-                    .color(t.colors().on_surface.to_peniko())
-                    .items_center()
-                    .justify_center()
-                    .cursor(CursorStyle::Pointer)
-            })
-            .on_event(listener::Click, {
-                let value = value;
-                let on_change = on_change.clone();
-                move |_, _| {
-                    let nv = clamp_value(value.get() - step, min, max);
-                    value.set(nv);
-                    if let Some(cb) = on_change.as_ref() {
-                        cb(nv);
-                    }
-                    EventPropagation::Continue
-                }
-            });
+    pub fn with_theme(mut self, theme: MultiTheme) -> Self {
+        self.theme = RwSignal::new(theme);
+        self
+    }
 
-        let val = Label::derived(move || value.get().to_string()).style(move |s| {
-            let t = theme.get();
-            s.font_size(16.0).color(t.colors().on_surface.to_peniko())
-        });
+    pub fn resolved_style(&self) -> CupertinoCounterStyle {
+        let theme = self.theme.get();
+        let tokens = counter_tokens(&theme);
+        CupertinoCounterStyle {
+            design_system: DESIGN_SYSTEM,
+            button_background: theme.colors().surface_variant,
+            button_foreground: theme.colors().on_surface,
+            value_color: theme.colors().on_surface,
+            border_color: theme.colors().outline,
+            button_size: tokens.button_size,
+            width: tokens.width,
+            height: tokens.height,
+            radius: tokens.radius,
+            gap: tokens.gap,
+            border: tokens.border,
+        }
+    }
 
-        let inc = Container::new(Label::new("+"))
-            .style(move |s| {
-                let t = theme.get();
-                s.size(tk_inc.button_size, tk_inc.button_size)
-                    .border_radius(tk_inc.radius)
-                    .background(t.colors().surface_variant.to_peniko())
-                    .color(t.colors().on_surface.to_peniko())
-                    .items_center()
-                    .justify_center()
-                    .cursor(CursorStyle::Pointer)
-            })
-            .on_event(listener::Click, {
-                let value = value;
-                let on_change = on_change.clone();
-                move |_, _| {
-                    let nv = clamp_value(value.get() + step, min, max);
-                    value.set(nv);
-                    if let Some(cb) = on_change.as_ref() {
-                        cb(nv);
-                    }
-                    EventPropagation::Continue
-                }
-            });
+    /// The engine's style, which is the whole translation.
+    pub fn counter_style(&self) -> CounterStyle {
+        let style = self.resolved_style();
+        CounterStyle {
+            button_size: style.button_size,
+            width: style.width,
+            height: style.height,
+            radius: style.radius,
+            gap: style.gap,
+            border: style.border,
+            border_color: to_paint(style.border_color),
+            button_background: to_paint(style.button_background),
+            button_foreground: to_paint(style.button_foreground),
+            value_font_size: READOUT_FONT_SIZE,
+            value_color: to_paint(style.value_color),
+        }
+    }
 
-        Stack::horizontal((dec, val, inc)).style(move |s| {
-            let t = theme.get();
-            s.height(tk_out.height)
-                .width(tk_out.width)
-                .gap(tk_out.gap)
-                .items_center()
-                .justify_center()
-                .border(tk_out.border)
-                .border_color(t.colors().outline.to_peniko())
-                .border_radius(tk_out.radius)
-        })
+    /// The counter as an engine widget.
+    ///
+    /// Returns the widget rather than `impl View`, so a caller can read the value
+    /// off it afterwards — v1's `view()` returned an opaque view and left the value
+    /// unreachable.
+    pub fn view(self) -> Counter {
+        let mut counter = Counter::new(self.props.value).style(self.counter_style());
+        if let Some(min) = self.props.min {
+            counter = counter.min(min);
+        }
+        if let Some(max) = self.props.max {
+            counter = counter.max(max);
+        }
+        counter = counter.step_size(self.props.step);
+        if let Some(on_change) = self.props.on_change {
+            counter = counter.on_change(move |v| on_change(v));
+        }
+        counter
     }
 }
 

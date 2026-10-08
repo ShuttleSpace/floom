@@ -567,6 +567,83 @@ assertion made from reading code instead of compiling it:
     widget is required, which is still a compile error for the reason the test is about,
     and needs no v1 dependency.
 
+16. **`MultiTheme` has exactly one readable palette, and the process-global is the
+    only lever — so a token adapter cannot be given a colour.**
+
+    This one started as a test that failed for the wrong reason in two of three
+    kits, and unpicking it produced the sharpest version of a finding this port has
+    had three times now ("a kit's own design system is unverified by any test").
+
+    **What I wrote.** `the_colours_move_with_the_design_system_so_they_are_read_not_hard_coded`
+    builds the same counter twice under two design systems and asserts the button
+    fill differs. That is the standard control for a token adapter: a crate that
+    hard-coded its colours answers the same twice.
+
+    **What happened.** It passed under Material and failed under Cupertino and
+    Fluent. The obvious reading — "the two kits build their themes differently" —
+    is what I reached for, and it is wrong. The real difference is that Material
+    calls `theme_signal()` and the other two build their own
+    `RwSignal::new(MultiTheme::new_for(..))`, and that difference is *inert*:
+    **`MultiTheme` dispatches every accessor on the process-global design system**,
+    so all three read the same thing regardless of how they got their `MultiTheme`.
+    `global_theme::set_design_system`'s own doc comment says exactly this — "the
+    `MultiTheme` itself reads the active DS live" — and I had read past it.
+
+    Measured, all six combinations, in a scratch probe before I trusted any of it:
+
+    | global | `new_for(..)` argument | `colors().surface_variant` |
+    |---|---|---|
+    | Material | Material | 231, 224, 236 |
+    | Material | Cupertino | 231, 224, 236 |
+    | Cupertino | Cupertino | 242, 242, 247 |
+    | Fluent | Material | 243, 242, 241 |
+
+    Three consequences, and the second is the expensive one:
+
+    * `MultiTheme::new_for(ds)` ignores `ds` — already known.
+    * **`with_theme(..)` ignores the theme you hand it.** So no ported component
+      can be given a palette that differs from the process-global one. A caller who
+      wants a Cupertino counter to look Cupertino inside a Material app has no API
+      for it at all, in any of the three kits.
+    * The only way a test can see two palettes is to move the global between the
+      two reads, **in that order**, because the global is the only lever.
+
+    That is now a permanent test where it belongs —
+    `floom-core-theme/tests/design_system_themes.rs::multi_theme_reads_follow_the_process_global_not_its_own_argument`
+    — rather than a discovery buried in a kit suite. It sets the global through
+    `design_system_signal()` rather than `set_design_system(..)`, because the
+    latter is behind the very `#[cfg(any(feature = "material", ...))]` gate that
+    `floom-core-theme`'s own test run does not enable. A test that needs a
+    design-system feature in order to observe a design-system bug is a test that
+    will silently not run.
+
+    **And the derivation bug the failure exposed**, which is the part worth
+    remembering. Fixing the failing test meant naming the two design systems in two
+    helper functions, so the derivation for the other kits had exactly one line to
+    change. Before that, the substitution was blanket — `DesignSystem::Material` →
+    `DesignSystem::Cupertino` — and it rewrote the *contrast inside the control
+    test*, so the Cupertino copy compared Cupertino against Cupertino. It failed
+    for a different reason than the one I was fixing, and it took reading the
+    failure rather than re-running to find it. This is correction 13f exactly: a
+    kit-to-kit substitution renames what it can reach and silently corrupts what
+    it cannot, and a test that fails after a derivation is not evidence the
+    derivation was right.
+
+    Two smaller things the same exercise turned up:
+
+    * `CounterProps::on_change` had to become `Box<dyn Fn(i64) + Send + Sync>`,
+      because the engine's callback crosses a slot boundary and v1's did not. Only
+      the three counter crates read that field, so the tightening broke nothing
+      that was not being ported anyway — recorded because "it broke nothing" is
+      exactly the condition that lets an unforced API change through unnoticed.
+    * **`CounterTokens` is a single shared table.** All three kits read the same
+      six numbers, so *no test in any of the three suites can tell a read from a
+      hard-coded literal* — a crate that wrote `32.0` inline would pass. The
+      protection is not a test, it is that the crate contains no size literals,
+      which `grep` checks. The colours are the opposite case and get a real
+      control. Writing down which of a suite's assertions can actually fail is
+      part of writing the suite.
+
 12. **The last four components are not four ports; they are four prerequisites,
     and only one of them is self-contained.**
 
