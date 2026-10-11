@@ -30,7 +30,8 @@ use floom_core::{
     Align, AnimationSpec, Axis, Child, ChildKey, CreateContext, ElementId, Event, EventContext,
     FontWeight, Key, KeyEvent, KeyPhase, LayoutRequest, Length, Modifiers, NamedKey, NativeGrant,
     NativeRequest, NativeSnapshot, OverlayHandle, OverlayKind, OverlayRequest, PaintContext, Point,
-    PointerPhase, Position, Rect, ResourceId, SemanticsHint, SemanticsRole, Size, UpdateContext,
+    PointerPhase, Position, Rect, ResourceId, ScrollOffset, SemanticsHint, SemanticsRole, Size,
+    UpdateContext,
 };
 use floom_focus::{FocusDirection, FocusManager, FocusScopeId};
 use floom_layout::{
@@ -118,6 +119,15 @@ struct Node {
     parent_request: Option<LayoutRequest>,
     /// Tree depth, used to give deeper nodes priority in hit-testing.
     depth: u32,
+    /// How far this node scrolls its own subtree, set by a scrolling widget.
+    ///
+    /// Applied during the absolute-position accumulation pass, not to the
+    /// layout: a scroll offset is not a box, and folding it into a margin would
+    /// make the viewport grow by the scroll distance. It applies to this node's
+    /// *descendants*, never to the node itself — a scroll container's own frame
+    /// does not move when its content scrolls, which is what makes it read as a
+    /// frame around a window rather than as part of the content.
+    scroll_offset: ScrollOffset,
     /// Set by the last `update()`; drives whether we repaint this frame.
     dirty: bool,
     /// Set when the widget's `children()` set changed; the reconciler rebuilds
@@ -446,6 +456,15 @@ pub struct WidgetHost {
     /// one slot per node. Resized (not reallocated) per pass.
     layout_relative: Vec<Option<Rect>>,
     layout_absolute: Vec<Option<Rect>>,
+    /// Absolute position after scroll offsets, which is what is painted and
+    /// hit-tested. Separate from `layout_absolute` so a child still resolves
+    /// against its parent's *unscrolled* box — a scroll container's content is
+    /// laid out in the container's own coordinates and only then moved.
+    painted_absolute: Vec<Option<Rect>>,
+    /// Per node, the summed scroll offset of its ancestors. Read by a node's
+    /// children and so one slot behind `scroll_offset` in the same way a node's
+    /// absolute position trails its parent's.
+    scroll_inherited: Vec<ScrollOffset>,
     /// True while the embedder says the app is not visible or the OS has
     /// suspended it: animation clocks stop advancing (see
     /// [`WidgetHost::set_paused`]), and the runner drops frame requests.
@@ -812,6 +831,8 @@ impl WidgetHost {
             // fresh `Vec<Option<Rect>>` per pass (grown to node count below).
             layout_relative: Vec::new(),
             layout_absolute: Vec::new(),
+            painted_absolute: Vec::new(),
+            scroll_inherited: Vec::new(),
             paused: false,
             focus,
             scope,
@@ -1251,6 +1272,7 @@ impl WidgetHost {
             style,
             parent_request,
             depth,
+            scroll_offset: ScrollOffset::ZERO,
             dirty: true,
             children_dirty: true,
             dead: false,
@@ -1947,6 +1969,33 @@ impl WidgetHost {
         self.layout_dirty = true;
     }
 
+    /// Scrolls `node`'s subtree by `offset`.
+    ///
+    /// The offset moves this node's descendants and not the node itself, so a
+    /// scroll container's own frame stays put while its content moves — which
+    /// is what makes it read as a window rather than as part of what it shows.
+    ///
+    /// Unlike [`Self::set_style`] this does not dirty the layout. A scroll
+    /// offset is a post-layout transform on absolute coordinates, so re-running
+    /// taffy would produce the same boxes and cost a pass for nothing. It does
+    /// request a repaint, because the pixels move.
+    ///
+    /// Setting the same offset twice is free, so a widget can push its offset
+    /// every frame without checking first.
+    pub fn set_scroll_offset(&mut self, node: NodeId, offset: ScrollOffset) {
+        let index = node.0;
+        if self.nodes[index].scroll_offset == offset {
+            return;
+        }
+        self.nodes[index].scroll_offset = offset;
+        self.layout_dirty = true;
+    }
+
+    /// The scroll offset currently applied to `node`'s subtree.
+    pub fn scroll_offset(&self, node: NodeId) -> ScrollOffset {
+        self.nodes[node.0].scroll_offset
+    }
+
     // --- viewport ----------------------------------------------------------
 
     pub fn set_size(&mut self, size: Size) {
@@ -2189,6 +2238,10 @@ impl WidgetHost {
         self.layout_relative.resize(self.nodes.len(), None);
         self.layout_absolute.clear();
         self.layout_absolute.resize(self.nodes.len(), None);
+        self.painted_absolute.clear();
+        self.painted_absolute.resize(self.nodes.len(), None);
+        self.scroll_inherited.clear();
+        self.scroll_inherited.resize(self.nodes.len(), ScrollOffset::ZERO);
         for index in 0..self.nodes.len() {
             if self.nodes[index].dead {
                 continue;
@@ -2206,10 +2259,22 @@ impl WidgetHost {
         // hit-test shifted by exactly those offsets. Mount order puts every
         // parent before its children, so one forward pass accumulates each
         // node's absolute position out of its parent's.
+        //
+        // Scroll offsets accumulate in the same pass, for the same structural
+        // reason: a node inherits its ancestors' positions, and it must inherit
+        // their scroll offsets with them or a scroll container nested in another
+        // would move only its own content. Two nested containers compose; a
+        // container and its siblings stay independent, because a node's own
+        // offset is applied to its children and never to itself.
+        // `scroll_inherited` is the sum of the offsets of every *ancestor* — the
+        // offset this node's subtree is displaced by. A node's own offset is
+        // deliberately excluded: it displaces its children, not itself, which is
+        // what keeps a scroll container's frame still while its content moves.
         for index in 0..self.nodes.len() {
             let Some(mut rect) = self.layout_relative[index] else {
                 continue;
             };
+            let mut inherited = ScrollOffset::ZERO;
             if let Some(parent) = self.nodes[index].parent {
                 if let Some(parent_rect) = self.layout_absolute[parent] {
                     rect.x0 += parent_rect.x0;
@@ -2217,11 +2282,23 @@ impl WidgetHost {
                     rect.x1 += parent_rect.x0;
                     rect.y1 += parent_rect.y0;
                 }
+                inherited = self.scroll_inherited[parent];
             }
             self.layout_absolute[index] = Some(rect);
+            self.scroll_inherited[index] = inherited.then(self.nodes[index].scroll_offset);
+
+            let dx = inherited.x;
+            let dy = inherited.y;
+            if dx != 0.0 || dy != 0.0 {
+                rect.x0 += dx;
+                rect.y0 += dy;
+                rect.x1 += dx;
+                rect.y1 += dy;
+            }
+            self.painted_absolute[index] = Some(rect);
         }
         for index in 0..self.nodes.len() {
-            let Some(rect) = self.layout_absolute[index] else {
+            let Some(rect) = self.painted_absolute[index] else {
                 continue;
             };
             self.nodes[index].bounds = rect;
