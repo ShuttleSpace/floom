@@ -24,9 +24,9 @@ use std::sync::{Arc, Mutex};
 use floom_accessibility::SemanticsRole;
 use floom_core::{
     Align, AnimationSpec, Axis, Child, ChildBuilder, ChildKey, Color, CompositorProp,
-    CreateContext, Easing, ElementId, Inset, Insets, LayoutRequest, OverlayHandle, OverlayKind,
-    OverlayRequest, PaintContext, Position, PresenceTransition, Rect, SemanticsContext, Transition,
-    UpdateContext, Widget, WidgetAny,
+    CreateContext, Easing, ElementId, Event, EventContext, Inset, Insets, LayoutRequest,
+    OverlayHandle, OverlayKind, OverlayRequest, PaintContext, Position, PresenceTransition, Rect,
+    ScrollOffset, SemanticsContext, Size, Transition, UpdateContext, Widget, WidgetAny,
 };
 
 use crate::controls::{Button, Pressable};
@@ -210,6 +210,374 @@ impl Widget for Stack {
 
     fn semantics(&self, cx: &mut dyn SemanticsContext, _id: ElementId) {
         crate::primitives::emit_semantics(self.semantics_hint(), cx);
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Scroll
+// ---------------------------------------------------------------------------
+
+/// A viewport that scrolls its content vertically or horizontally.
+///
+/// ## What it does, and what it deliberately does not
+///
+/// The wheel scrolls, the content is clipped to the viewport, and the offset is
+/// clamped to the content. That is the whole contract. There is no scrollbar:
+/// drawing one means deciding its thickness, its track's insets, whether it
+/// fades, and whether it takes pointer input — four decisions that belong to a
+/// design system, and a `Scroll` in the primitive layer has none. A kit that
+/// wants a bar composes one over this.
+///
+/// There is no keyboard scrolling either, for a different reason: which element
+/// a PageDown belongs to is a focus question — the focused thing inside the
+/// scroll area, the scroll area itself, or the nearest scrollable ancestor —
+/// and there is no answer to that without a focus policy. The wheel has no such
+/// ambiguity: the event is routed by position, so the container under the
+/// pointer is the one that scrolls.
+///
+/// ## Why the offset lives here and not in a signal
+///
+/// A signal would be a second source of truth. The host already stores the
+/// applied offset on the node and applies it during layout, so a signal would
+/// have to be kept in step with the host by every writer, and the two would
+/// disagree the first time a container was rebuilt. A plain field cannot drift:
+/// there is exactly one copy, and it is the one the host was last told.
+///
+/// ## The content size is one frame old
+///
+/// Clamping needs the content's extent, and only the host knows it. It is
+/// measured during `update` — which runs before layout, so it is the *previous*
+/// frame's geometry, cached here on the way past. That is the latest figure that
+/// exists at the moment a wheel event arrives, and a frame of lag on a size that
+/// has not been re-measured is invisible: nothing about the content has changed,
+/// so the clamp it would compute is the clamp it did compute.
+///
+/// A widget that resized its content in the same frame it was scrolled gets the
+/// new clamp on the next wheel turn, which is a frame nobody can perceive
+/// because the wheel has stopped by then.
+#[derive(Debug, Clone)]
+pub struct Scroll {
+    /// The content being scrolled. Usually one, but a scroll area is a
+    /// container, and a container that cannot hold anything is not one — the
+    /// content is what gives it a size to clamp against, and a `Scroll` with no
+    /// children has none.
+    children: Vec<Child>,
+    /// Which axes the wheel may scroll. A horizontal-only strip must not
+    /// scroll vertically when the wheel rolls over it, and a vertical list must
+    /// not drift sideways on a trackpad's horizontal swipe.
+    axes: ScrollAxes,
+    /// Where the viewport is, shared rather than a field.
+    ///
+    /// A composite widget is rebuilt whenever its parent re-declares
+    /// `children()`, and a rebuild constructs a fresh value — so a plain field
+    /// would silently reset to the top every time an unrelated part of the tree
+    /// changed. The host keeps the *node* across rebuilds, keyed by
+    /// [`ChildKey`], but not the widget value that describes it.
+    ///
+    /// This is the same shape [`Accordion`] uses for its open set and the same
+    /// reason: the state has to outlive the value that reads it. The host's copy
+    /// of the applied offset stays the authority — this is where the widget
+    /// remembers what it asked for.
+    offset: Arc<Mutex<ScrollOffset>>,
+    /// The content extent measured on the last `update`, in the same units as
+    /// [`ScrollOffset`]. `None` until the host has measured once.
+    content: Option<(f64, f64)>,
+}
+
+/// Which axes a [`Scroll`] responds to.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ScrollAxes {
+    pub horizontal: bool,
+    pub vertical: bool,
+}
+
+impl Default for ScrollAxes {
+    fn default() -> Self {
+        Self {
+            horizontal: false,
+            vertical: true,
+        }
+    }
+}
+
+impl Scroll {
+    pub fn new() -> Self {
+        Self {
+            children: Vec::new(),
+            axes: ScrollAxes::default(),
+            offset: Arc::new(Mutex::new(ScrollOffset::ZERO)),
+            content: None,
+        }
+    }
+
+    /// The content this viewport scrolls.
+    pub fn child(mut self, child: Child) -> Self {
+        self.children.push(child);
+        self
+    }
+
+    /// Scrolls on both axes. A trackpad is two-dimensional and a pane whose
+    /// content is both wider and taller than its viewport needs both.
+    pub fn both_axes() -> Self {
+        Self {
+            axes: ScrollAxes {
+                horizontal: true,
+                vertical: true,
+            },
+            ..Self::new()
+        }
+    }
+
+    /// Scrolls sideways only.
+    pub fn horizontal() -> Self {
+        Self {
+            axes: ScrollAxes {
+                horizontal: true,
+                vertical: false,
+            },
+            ..Self::new()
+        }
+    }
+
+    /// The axes this container responds to.
+    pub fn axes(mut self, axes: ScrollAxes) -> Self {
+        self.axes = axes;
+        self
+    }
+
+    /// Where the viewport currently is.
+    pub fn offset(&self) -> ScrollOffset {
+        *self.offset.lock().unwrap_or_else(|e| e.into_inner())
+    }
+
+    /// The content extent this container last saw, in pixels.
+    ///
+    /// `None` until the host has measured once, which is also what makes a
+    /// fresh container refuse to move: with nothing to clamp against, every
+    /// offset would be past the end.
+    pub fn content_extent(&self) -> Option<(f64, f64)> {
+        self.content
+    }
+
+    /// Records the measured content extent.
+    ///
+    /// Called by the host through [`UpdateContext::content_size`] on every
+    /// update, and public because a caller that lays a container out by hand
+    /// needs the same door: the wheel cannot clamp against an extent nobody
+    /// told it.
+    pub fn with_content_extent(mut self, extent: Size) -> Self {
+        self.content = Some((extent.width as f64, extent.height as f64));
+        self
+    }
+
+    /// Moves the viewport without a wheel, clamped the same way.
+    ///
+    /// Returns whether the offset actually moved, which is `false` at either end
+    /// — the same signal [`Widget::event`] gives back when it declines to
+    /// consume a wheel, so a caller can pass an unconsumed gesture on.
+    pub fn scroll_to(&mut self, offset: ScrollOffset, viewport: (f64, f64)) -> bool {
+        let next = ::floom_core::clamp_offset(
+            offset,
+            (
+                if self.axes.horizontal { viewport.0 } else { f64::INFINITY },
+                if self.axes.vertical { viewport.1 } else { f64::INFINITY },
+            ),
+            (
+                if self.axes.horizontal {
+                    self.content.map(|c| c.0).unwrap_or(0.0)
+                } else {
+                    f64::INFINITY
+                },
+                if self.axes.vertical {
+                    self.content.map(|c| c.1).unwrap_or(0.0)
+                } else {
+                    f64::INFINITY
+                },
+            ),
+        );
+        let mut current = self.offset.lock().unwrap_or_else(|e| e.into_inner());
+        let moved = next != *current;
+        *current = next;
+        moved
+    }
+
+    /// The axes this container responds to.
+    pub fn scroll_axes(&self) -> ScrollAxes {
+        self.axes
+    }
+
+    /// Whether the content currently extends past the viewport on either axis.
+    pub fn is_scrollable(&self) -> bool {
+        self.content.is_some_and(|(w, h)| (w > 0.0 && h > 0.0) && (w != h))
+    }
+
+    /// The largest offset the content allows, given a viewport of
+    /// `viewport`. `None` before the host has measured the content.
+    pub fn max_offset(&self, viewport: (f64, f64)) -> Option<ScrollOffset> {
+        let (w, h) = self.content?;
+        Some(::floom_core::max_offset(
+            (
+                if self.axes.horizontal { viewport.0 } else { f64::INFINITY },
+                if self.axes.vertical { viewport.1 } else { f64::INFINITY },
+            ),
+            (
+                if self.axes.horizontal { w } else { f64::INFINITY },
+                if self.axes.vertical { h } else { f64::INFINITY },
+            ),
+        ))
+    }
+
+    /// Where a wheel delta of `delta` would put the viewport, given a viewport
+    /// of `viewport`.
+    ///
+    /// An axis this container does not scroll is passed as `INFINITY`, so
+    /// `max_offset` sees no overflow on it and the clamp leaves the offset
+    /// alone. That is why the flags go into the arithmetic rather than into a
+    /// branch afterwards: one clamp, with the disabled axis made harmless.
+    ///
+    /// Pure: it does not move the viewport. Clamping is arithmetic on two
+    /// numbers, so it is computed here rather than by calling [`Self::scroll_to`]
+    /// on a copy — a copy shares the offset cell, and "previewing" a scroll by
+    /// performing it is the kind of thing that shows up as a viewport that jumps
+    /// when nothing scrolled it.
+    pub fn offset_after_wheel(&self, delta: (f64, f64), viewport: (f64, f64)) -> ScrollOffset {
+        let here = self.offset();
+        let limit = self.max_offset(viewport).unwrap_or(ScrollOffset::ZERO);
+        floom_core::clamp_offset(
+            ScrollOffset::new(here.x + delta.0, here.y + delta.1),
+            (
+                if self.axes.horizontal { viewport.0 } else { f64::INFINITY },
+                if self.axes.vertical { viewport.1 } else { f64::INFINITY },
+            ),
+            (
+                // Unmeasured content counts as *zero-sized*, not as infinitely
+                // large. `INFINITY` here would leave the clamp with nothing to
+                // bite on and let a fresh container scroll forever — the one
+                // state in which there is provably nothing to scroll to. An
+                // axis this container does not scroll is still `INFINITY`, which
+                // is what makes the clamp leave it alone.
+                if self.axes.horizontal {
+                    self.content.map(|c| c.0).unwrap_or(0.0)
+                } else {
+                    f64::INFINITY
+                },
+                if self.axes.vertical {
+                    self.content.map(|c| c.1).unwrap_or(0.0)
+                } else {
+                    f64::INFINITY
+                },
+            ),
+        )
+    }
+}
+
+impl Default for Scroll {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl WidgetAny for Scroll {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
+    }
+
+    fn semantics_hint(&self) -> Option<floom_core::SemanticsHint> {
+        Some(floom_core::SemanticsHint {
+            role: floom_core::SemanticsRole::Scrollable,
+            ..floom_core::SemanticsHint::default()
+        })
+    }
+}
+
+impl Widget for Scroll {
+    fn create(&self, cx: &mut dyn CreateContext) -> ElementId {
+        cx.alloc_child()
+    }
+
+    /// The content, declared like any other composite's children.
+    ///
+    /// The host lays it out in this container's own coordinates and applies the
+    /// scroll offset afterwards, so the content's size is whatever it turns out
+    /// to be rather than whatever this container's box implies.
+    fn children(&self) -> Vec<Child> {
+        self.children.clone()
+    }
+
+    /// Cache the content extent on the way past.
+    ///
+    /// The host measures this node because `needs_content_size` says so, and
+    /// only widgets that opted in are measured — a subtree walk per node would
+    /// put an allocation-free but O(subtree) cost on every frame of every tree.
+    fn update(&mut self, cx: &mut dyn UpdateContext, id: ElementId) {
+        self.content = cx
+            .content_size(id)
+            .map(|s| (s.width as f64, s.height as f64));
+    }
+
+    /// Clipped to its own box.
+    ///
+    /// Without this the content paints outside the viewport and a scroll
+    /// container stops looking like a container: its rows draw over whatever is
+    /// beside it, which is the one thing a scroll area is supposed to prevent.
+    fn clip(&self) -> Option<floom_types::ClipShape> {
+        Some(floom_types::ClipShape::Box)
+    }
+
+    fn needs_content_size(&self) -> bool {
+        true
+    }
+
+    fn event(&mut self, cx: &mut dyn EventContext, id: ElementId) -> bool {
+        let Event::Scroll(delta) = cx.event() else {
+            return false;
+        };
+        // The viewport is this element's own box, which the host has already
+        // resolved. An element with no box has no viewport to scroll.
+        let bounds = cx.bounds();
+        if bounds.width() <= 0.0 || bounds.height() <= 0.0 {
+            return false;
+        }
+        // Read here rather than from the extent cached in `update`: a wheel can
+        // arrive before this node has ever been updated, and a container that
+        // clamped against a stale figure would stop at the wrong end. The host
+        // measured it on the way in.
+        let Some(content) = cx.content_size(id) else {
+            // Nothing measured, so nothing to scroll. Passing the wheel on beats
+            // refusing it — a page behind this container may well scroll.
+            return false;
+        };
+        self.content = Some((content.width as f64, content.height as f64));
+
+        let viewport = (bounds.width(), bounds.height());
+        let next = self.offset_after_wheel((delta.delta_x, delta.delta_y), viewport);
+        if next == self.offset() {
+            // Already at an end. Swallowing the wheel anyway would stop a nested
+            // scroller inside this one from ever being reached, so an exhausted
+            // scroll passes the wheel down rather than eating it.
+            return false;
+        }
+        self.scroll_to(next, viewport);
+        cx.request_scroll(next);
+        true
+    }
+
+    fn semantics(&self, cx: &mut dyn SemanticsContext, _id: ElementId) {
+        // Announced as scrollable even when there is nothing to scroll: assistive
+        // technology is told what the widget *is*, and a container that becomes
+        // scrollable later should not have to re-announce itself. The hint
+        // itself comes from `WidgetAny`, which is where a mount point reads it.
+        crate::primitives::emit_semantics(
+            SemanticsHint {
+                role: SemanticsRole::Scrollable,
+                ..SemanticsHint::default()
+            },
+            cx,
+        );
     }
 }
 

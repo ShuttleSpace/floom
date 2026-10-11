@@ -53,7 +53,7 @@ pub use compose::{OverlayHost, popup_placement_rect,
     Accordion, AccordionIndicator, AccordionStyle, AnimatedContent, BottomSheet, Conditional,
     Crossfade, Dialog, Grid, List, Opacity, Overlay, Popup, PopupPlacement, SelectGroup,
     SelectGroupStyle,
-    SelectionMode, SharedTransitionLayout, Stack, Tabs,
+    Scroll, ScrollAxes, SelectionMode, SharedTransitionLayout, Stack, Tabs,
 };
 pub use controls::{
     Button, Checkbox, InteractionState, Pressable, Progress, Radio, Select, SelectPopup,

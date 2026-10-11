@@ -19,3 +19,5 @@ floom-signal = { path = "../floom-signal", version = "0.2.0" }
 
 [dev-dependencies]
 floom-text = { path = "../floom-text", version = "0.2.0" }
+floom-app = { path = "../floom-app", version = "0.2.0" }
+floom-layout = { path = "../floom-layout", version = "0.2.0" }
