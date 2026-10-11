@@ -37,6 +37,32 @@ pub trait UpdateContext {
     /// every widget that used it. Every `UpdateContext` has to answer it.
     fn mark_layout_dirty(&mut self, id: ElementId);
 
+    /// The union of `id`'s mounted descendants' boxes, relative to `id`'s own
+    /// box, or `None` if the host cannot say.
+    ///
+    /// This exists because a widget cannot otherwise know how big its own
+    /// content is. Its `layout_request` states what it *wants*; the size of what
+    /// it ends up containing is computed by the layout engine and lives in the
+    /// host, which is borrowed while the widget's `update` runs. A scrolling
+    /// container is the case that hurts: it must clamp its offset to
+    /// `content - viewport`, and both halves are host-side numbers.
+    ///
+    /// Measured on the *unscrolled* layout, so the answer does not change when
+    /// the container scrolls. A size that moved with the offset would be
+    /// self-referential — scrolling would shrink the content, which would clamp
+    /// the offset, which would shrink it further.
+    ///
+    /// Relative rather than absolute so a caller does not have to know where its
+    /// own box sits on screen to compare it with its own bounds.
+    ///
+    /// Defaults to `None`, because a host that does not lay out (a headless
+    /// recorder, a testkit that mounts without framing) has no honest answer,
+    /// and a zero would be indistinguishable from "genuinely empty".
+    fn content_size(&mut self, id: ElementId) -> Option<Size> {
+        let _ = id;
+        None
+    }
+
     /// Layout box of the node being updated, in viewport coordinates.
     ///
     /// This is the *previous* frame's box — a widget is updated before layout

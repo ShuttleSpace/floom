@@ -105,6 +105,28 @@ pub trait Widget {
     fn clip(&self) -> Option<floom_types::ClipShape> {
         None
     }
+
+    /// Whether this widget will ask [`UpdateContext::content_size`].
+    ///
+    /// Declared rather than inferred so the host can skip measuring for the
+    /// other nodes. Answering the question costs a subtree walk, and doing that
+    /// for every parent on every frame would charge a 100k-node tree for a
+    /// measurement only a scrolling container needs — a cost on the settled-frame
+    /// path that `tests/allocation.rs` budgets at eight allocations for the whole
+    /// tree.
+    ///
+    /// A widget that answers `true` must not be lying: the host measures once per
+    /// frame for the nodes that answer `true`, so a widget that lies pays for
+    /// walks it does not use. Answering `false` while asking is not a
+    /// correctness bug — the question still returns the right answer for a node
+    /// that was measured some other way — it just costs a walk it did not need.
+    ///
+    /// The default is `false`, and it is the right default for the overwhelming
+    /// majority of widgets: a leaf has no content to measure, and a container
+    /// that does not scroll has no reason to know how big its contents are.
+    fn needs_content_size(&self) -> bool {
+        false
+    }
     /// The filter this widget's **whole subtree** is drawn through, or `None`
     /// (the default) for the usual "drawn as it is".
     ///

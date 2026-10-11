@@ -461,6 +461,14 @@ pub struct WidgetHost {
     /// against its parent's *unscrolled* box — a scroll container's content is
     /// laid out in the container's own coordinates and only then moved.
     painted_absolute: Vec<Option<Rect>>,
+    /// Reused traversal stack for [`Self::content_size`].
+    ///
+    /// Host-owned and cleared, never reallocated, so a subtree walk costs no
+    /// allocation. This matters because the walk is driven by a widget asking a
+    /// question mid-update, and a fresh `Vec` per question would put an
+    /// allocation on the settled-frame path that `tests/allocation.rs` budgets at
+    /// eight for the whole tree.
+    content_stack: Vec<usize>,
     /// Per node, the summed scroll offset of its ancestors. Read by a node's
     /// children and so one slot behind `scroll_offset` in the same way a node's
     /// absolute position trails its parent's.
@@ -832,6 +840,7 @@ impl WidgetHost {
             layout_relative: Vec::new(),
             layout_absolute: Vec::new(),
             painted_absolute: Vec::new(),
+            content_stack: Vec::new(),
             scroll_inherited: Vec::new(),
             paused: false,
             focus,
@@ -1843,6 +1852,7 @@ impl WidgetHost {
             layout_dirty: false,
             bounds,
             viewport,
+            content_size: None,
             snapshot: None,
             overlays: None,
             native: None,
@@ -1915,6 +1925,63 @@ impl WidgetHost {
     /// Handle for the `index`-th mounted node, in mount order.
     pub fn node_at(&self, index: usize) -> Option<NodeId> {
         (index < self.nodes.len()).then_some(NodeId(index))
+    }
+
+
+    /// The union of `index`'s descendants' boxes, relative to its own box, or
+    /// `None` when it has no content.
+    ///
+    /// Measured from `layout_absolute`, the *unscrolled* position. A scrolling
+    /// container's content does not change size when the container scrolls, and
+    /// measuring the painted rect would make it look as though it did: the
+    /// offset would shrink the content, which would clamp the offset, which
+    /// would shrink it again.
+    ///
+    /// The node's own box is excluded. A scroll container's viewport is not its
+    /// content, and including it would make a container whose child is smaller
+    /// than itself report itself as the floor — right for nothing.
+    ///
+    /// Only ever called from a widget that asked, because a walk per node on a
+    /// 100k-node tree is a cost paid for a question nobody asked. The stack is
+    /// host-owned scratch, so the walk itself does not allocate.
+    fn content_size(&mut self, index: usize) -> Option<Size> {
+        // A node with no measured position cannot have a meaningful content
+        // extent, and answering zero would be indistinguishable from empty.
+        let Some(Some(own)) = self.layout_absolute.get(index) else {
+            return None;
+        };
+        self.content_stack.clear();
+        self.content_stack.extend(self.nodes[index].children.iter().copied());
+        let mut union: Option<Rect> = None;
+        while let Some(i) = self.content_stack.pop() {
+            if self.nodes[i].dead {
+                continue;
+            }
+            // An overlay escapes its parent's box by design, so its size is not
+            // the content's.
+            if self.nodes[i].is_overlay {
+                continue;
+            }
+            self.content_stack.extend(self.nodes[i].children.iter().copied());
+            let Some(&Some(rect)) = self.layout_absolute.get(i) else {
+                continue;
+            };
+            union = Some(match union {
+                None => rect,
+                Some(u) => u.union(rect),
+            });
+        }
+        // Relative to the node's own origin. Absolute union extents would make
+        // the answer depend on where the widget sits on screen, so two identical
+        // scroll containers at different points in a window would clamp
+        // differently. The caller has its own bounds and can subtract them.
+        let Some(union) = union else {
+            return None;
+        };
+        Some(Size::new(
+            (union.x1 - own.x0).max(0.0),
+            (union.y1 - own.y0).max(0.0),
+        ))
     }
 
     /// The `index`-th child of `node`, in declaration order.
@@ -2064,6 +2131,18 @@ impl WidgetHost {
         // elements that no longer exist simply match nothing.
         let repaint_requests: std::collections::HashSet<ElementId> =
             floom_core::take_repaint_requests().into_iter().collect();
+        // Content extents, for the widgets that asked to be told — see
+        // `Widget::needs_content_size`. Measured here, before the update pass
+        // borrows any node, because a widget cannot reach the host to ask. Every
+        // other node stays `None` and costs nothing, which is what keeps the walk
+        // off the settled-frame path `tests/allocation.rs` budgets.
+        let mut content_sizes: Vec<Option<Size>> = Vec::new();
+        content_sizes.resize(self.nodes.len(), None);
+        for i in 0..self.nodes.len() {
+            if !self.nodes[i].dead && self.nodes[i].widget.needs_content_size() {
+                content_sizes[i] = self.content_size(i);
+            }
+        }
         for index in 0..self.nodes.len() {
             if self.nodes[index].dead {
                 continue;
@@ -2090,6 +2169,7 @@ impl WidgetHost {
                 layout_dirty: false,
                 bounds: node.bounds,
                 viewport,
+                content_size: content_sizes.get(index).copied().flatten(),
                 snapshot,
                 overlays: Some(UpdateOverlaySink {
                     commands: &mut overlay_commands,
@@ -3925,6 +4005,9 @@ struct HostUpdateContext<'a> {
     bounds: Rect,
     /// The host viewport, for a composite whose overlay spans the window.
     viewport: Rect,
+    /// This node's content extent, measured by the host before the update pass
+    /// borrowed anything — see [`UpdateContext::content_size`].
+    content_size: Option<Size>,
     /// The frozen texture standing in for this node's participant, if its
     /// transition has taken the live view away.
     snapshot: Option<NativeSnapshot>,
@@ -4020,6 +4103,7 @@ impl HostUpdateContext<'_> {
             layout_dirty: false,
             bounds,
             viewport,
+            content_size: None,
             snapshot: None,
             overlays: None,
             native: None,
@@ -4038,6 +4122,17 @@ impl UpdateContext for HostUpdateContext<'_> {
 
     fn mark_layout_dirty(&mut self, _id: ElementId) {
         self.layout_dirty = true;
+    }
+
+    /// The extent of this node's descendants, from the most recent layout.
+    ///
+    /// Read during `update`, which runs *before* layout, so this is the
+    /// previous frame's geometry. That is the latest figure that exists: there
+    /// is no layout to read yet. For a scroll container it is the right one —
+    /// the content it is clamping against is the content it last laid out, and
+    /// a frame of lag on a size that has not been re-measured yet is invisible.
+    fn content_size(&mut self, _id: ElementId) -> Option<Size> {
+        self.content_size
     }
 
     fn bounds(&self) -> Rect {

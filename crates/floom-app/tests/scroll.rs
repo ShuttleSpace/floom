@@ -575,3 +575,331 @@ fn the_host_applies_exactly_what_the_widget_asks_for() {
         "and the host applied the clamped value, not the raw delta"
     );
 }
+
+// --- content measurement ---------------------------------------------------
+
+/// A widget that reports its content extent on demand, so the host's answer can
+/// be observed.
+struct MeasuresContent {
+    answer: ::std::sync::Arc<::std::sync::Mutex<Vec<Option<::floom_types::Size>>>>,
+}
+
+impl ::floom_core::WidgetAny for MeasuresContent {
+    fn as_any(&self) -> &dyn std::any::Any { self }
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any { self }
+    fn semantics_hint(&self) -> Option<::floom_core::SemanticsHint> { None }
+}
+
+impl ::floom_core::Widget for MeasuresContent {
+    fn create(&self, cx: &mut dyn ::floom_core::CreateContext) -> ::floom_core::ElementId {
+        cx.alloc_child()
+    }
+
+    fn update(&mut self, cx: &mut dyn ::floom_core::UpdateContext, id: ::floom_core::ElementId) {
+        if let Ok(mut log) = self.answer.lock() {
+            log.push(cx.content_size(id));
+        }
+    }
+
+    fn children(&self) -> Vec<::floom_core::Child> {
+        vec![::floom_core::Child::new(
+            0,
+            ::floom_core::LayoutRequest::new().width(120.0).height(400.0),
+            || Box::new(Filler) as Box<dyn ::floom_core::WidgetAny>,
+        )]
+    }
+
+    fn needs_content_size(&self) -> bool {
+        true
+    }
+
+    fn paint(&self, _cx: &mut dyn ::floom_core::PaintContext, _id: ::floom_core::ElementId) {}
+}
+
+/// Declaring the opt-in is what makes the host measure at all — this asserts the
+/// door is wired, since a host that never measured would answer `None`.
+#[test]
+fn a_widget_that_opts_in_is_told_its_content_extent() {
+    let log = ::std::sync::Arc::new(::std::sync::Mutex::new(Vec::new()));
+    let mut host = WidgetHost::new();
+    host.set_size(Size::new(200.0, 200.0));
+    host.mount_root(
+        LayoutStyle {
+            width: Some(Length::Px(200.0)),
+            height: Some(Length::Px(200.0)),
+            ..LayoutStyle::default()
+        },
+        MeasuresContent { answer: log.clone() },
+    );
+    settle(&mut host);
+    // A second frame: the first has no layout to measure against.
+    host.frame();
+
+    let log = log.lock().unwrap();
+    let measured = log.iter().rev().find(|v| v.is_some()).copied().flatten();
+    assert_eq!(
+        measured,
+        Some(Size::new(120.0, 400.0)),
+        "the host measured the union of the declared children"
+    );
+}
+
+/// The extent is relative to the widget's own box, so the same shape reports the
+/// same number wherever it sits. Absolute extents would make a scroll container
+/// low on a page clamp differently from the same container near the top, for no
+/// reason a user could see.
+#[test]
+fn the_extent_is_independent_of_where_the_widget_sits() {
+    fn measure_at(margin_top: f32) -> Option<::floom_types::Size> {
+        let log = ::std::sync::Arc::new(::std::sync::Mutex::new(Vec::new()));
+        let mut host = WidgetHost::new();
+        host.set_size(Size::new(600.0, 600.0));
+        let root = host.mount_root(
+            LayoutStyle {
+                width: Some(Length::Px(600.0)),
+                height: Some(Length::Px(600.0)),
+                ..LayoutStyle::default()
+            },
+            MeasuresContent { answer: log.clone() },
+        );
+        // A spacer above the container, so the container's own box sits
+        // somewhere other than the origin.
+        host.mount(
+            root,
+            LayoutStyle {
+                width: Some(Length::Px(10.0)),
+                height: Some(Length::Px(margin_top)),
+                ..LayoutStyle::default()
+            },
+            Filler,
+        );
+        settle(&mut host);
+        host.frame();
+        log.lock().unwrap().iter().rev().find(|v| v.is_some()).copied().flatten()
+    }
+
+    let at_origin = measure_at(0.0_f32);
+    let lower_down = measure_at(300.0_f32);
+    assert_eq!(at_origin, Some(Size::new(120.0, 400.0)));
+    assert_eq!(
+        at_origin, lower_down,
+        "moving the container 300px down must not change what it reports"
+    );
+}
+
+/// The measurement reads the *unscrolled* layout. If it read the painted rect,
+/// scrolling would shrink the content, which would clamp the offset further,
+/// which would shrink it again — the container would ratchet itself shut.
+#[test]
+fn the_extent_does_not_change_when_the_container_scrolls() {
+    let log = ::std::sync::Arc::new(::std::sync::Mutex::new(Vec::new()));
+    let mut host = WidgetHost::new();
+    host.set_size(Size::new(200.0, 200.0));
+    let root = host.mount_root(
+        LayoutStyle {
+            width: Some(Length::Px(200.0)),
+            height: Some(Length::Px(200.0)),
+            ..LayoutStyle::default()
+        },
+        MeasuresContent { answer: log.clone() },
+    );
+    settle(&mut host);
+    host.frame();
+    let before = log.lock().unwrap().iter().rev().find(|v| v.is_some()).copied().flatten();
+
+    host.set_scroll_offset(root, ScrollOffset::new(0.0, 150.0));
+    settle(&mut host);
+    host.frame();
+    let after = log.lock().unwrap().iter().rev().find(|v| v.is_some()).copied().flatten();
+
+    assert_eq!(before, after, "content did not shrink because the viewport moved");
+}
+
+/// The default is `false`, so a tree with no scroll container never pays for a
+/// walk. This is the guard on `tests/allocation.rs`, stated as a claim rather
+/// than as a budget: a widget that starts answering `true` by default would
+/// silently put a per-node walk back on the settled frame.
+#[test]
+fn a_widget_that_does_not_opt_in_is_not_measured() {
+    struct Plain;
+    impl ::floom_core::WidgetAny for Plain {
+        fn as_any(&self) -> &dyn std::any::Any { self }
+        fn as_any_mut(&mut self) -> &mut dyn std::any::Any { self }
+        fn semantics_hint(&self) -> Option<::floom_core::SemanticsHint> { None }
+    }
+    impl ::floom_core::Widget for Plain {
+        fn create(&self, _cx: &mut dyn ::floom_core::CreateContext) -> ::floom_core::ElementId {
+            ::floom_core::ElementId::new(0, 0)
+        }
+        fn update(&mut self, _cx: &mut dyn ::floom_core::UpdateContext, _id: ::floom_core::ElementId) {}
+        fn paint(&self, _cx: &mut dyn ::floom_core::PaintContext, _id: ::floom_core::ElementId) {}
+    }
+
+    assert!(
+        !Plain.needs_content_size(),
+        "the default must be false, or every node in the tree gets measured"
+    );
+}
+
+/// **The guard on the opt-in itself.** A widget that does not declare
+/// `needs_content_size` must be told nothing — and the way to prove the host
+/// gates on the flag rather than merely happening to answer correctly is a
+/// widget that asks without having opted in and gets `None`.
+///
+/// Without this, a host that measured everything would pass every other test
+/// here: the answers would all still be right. The flag exists to keep a subtree
+/// walk off the settled frame, and only a widget that asked uninvited can tell
+/// "not measured" from "measured to the same number".
+#[test]
+fn a_widget_that_did_not_opt_in_is_told_nothing() {
+    struct Unopted(::std::sync::Arc<::std::sync::Mutex<Vec<Option<::floom_types::Size>>>>);
+
+    impl ::floom_core::WidgetAny for Unopted {
+        fn as_any(&self) -> &dyn std::any::Any { self }
+        fn as_any_mut(&mut self) -> &mut dyn std::any::Any { self }
+        fn semantics_hint(&self) -> Option<::floom_core::SemanticsHint> { None }
+    }
+
+    impl ::floom_core::Widget for Unopted {
+        fn create(&self, cx: &mut dyn ::floom_core::CreateContext) -> ::floom_core::ElementId {
+            cx.alloc_child()
+        }
+
+        fn update(&mut self, cx: &mut dyn ::floom_core::UpdateContext, id: ::floom_core::ElementId) {
+            // Asks anyway. The default `needs_content_size` is `false`.
+            if let Ok(mut log) = self.0.lock() {
+                log.push(cx.content_size(id));
+            }
+        }
+
+        fn children(&self) -> Vec<::floom_core::Child> {
+            vec![::floom_core::Child::new(
+                0,
+                ::floom_core::LayoutRequest::new().width(120.0).height(400.0),
+                || Box::new(Filler) as Box<dyn ::floom_core::WidgetAny>,
+            )]
+        }
+
+        fn paint(&self, _cx: &mut dyn ::floom_core::PaintContext, _id: ::floom_core::ElementId) {}
+    }
+
+    let log = ::std::sync::Arc::new(::std::sync::Mutex::new(Vec::new()));
+    let mut host = WidgetHost::new();
+    host.set_size(Size::new(200.0, 200.0));
+    host.mount_root(
+        LayoutStyle {
+            width: Some(Length::Px(200.0)),
+            height: Some(Length::Px(200.0)),
+            ..LayoutStyle::default()
+        },
+        Unopted(log.clone()),
+    );
+    settle(&mut host);
+    host.frame();
+
+    let readings = &log.lock().unwrap();
+    assert!(
+        !readings.is_empty(),
+        "the widget's update ran, so the question was asked"
+    );
+    assert!(
+        readings.iter().all(|r| r.is_none()),
+        "a widget that never opted in was measured anyway: {readings:?}"
+    );
+}
+
+/// **The scroll-invariance case that actually distinguishes the two rects.**
+///
+/// The earlier version scrolled by 150 in a 400-tall content, where the painted
+/// union happens to have the same extent as the laid-out one, so reading either
+/// gave 120 x 400 and the test passed both ways.
+///
+/// Scrolling by the content's full height is the case that separates them: the
+/// painted content ends up entirely above the viewport, so a painted union would
+/// report a *smaller* extent — or nothing at all, since the viewport's own box is
+/// excluded from the union. Either way the answer changes, and reading the
+/// unscrolled layout keeps it at 120 x 400.
+#[test]
+fn scrolling_by_the_whole_content_still_reports_the_whole_content() {
+    let log = ::std::sync::Arc::new(::std::sync::Mutex::new(Vec::new()));
+    let mut host = WidgetHost::new();
+    host.set_size(Size::new(200.0, 200.0));
+    let root = host.mount_root(
+        LayoutStyle {
+            width: Some(Length::Px(200.0)),
+            height: Some(Length::Px(200.0)),
+            ..LayoutStyle::default()
+        },
+        MeasuresContent { answer: log.clone() },
+    );
+    settle(&mut host);
+    host.frame();
+
+    // Content is 400 tall; scroll by all of it, so nothing of the content is
+    // inside the viewport any more.
+    host.set_scroll_offset(root, ScrollOffset::new(0.0, 400.0));
+    settle(&mut host);
+    host.frame();
+
+    let after = log.lock().unwrap().iter().rev().find(|v| v.is_some()).copied().flatten();
+    assert_eq!(
+        after,
+        Some(Size::new(120.0, 400.0)),
+        "the content did not shrink just because the viewport scrolled past it"
+    );
+}
+
+/// **A container that is genuinely offset from the origin, asking while it is
+/// offset.** The earlier version put the spacer beside the container rather than
+/// above it, so the container's own box stayed at the origin and an absolute
+/// answer would have matched a relative one.
+#[test]
+fn a_container_sitting_low_reports_the_same_extent() {
+    let log = ::std::sync::Arc::new(::std::sync::Mutex::new(Vec::new()));
+    let mut host = WidgetHost::new();
+    host.set_size(Size::new(600.0, 600.0));
+
+    // A column: a tall spacer, then the measuring container below it.
+    let column = host.mount_root(
+        LayoutStyle {
+            width: Some(Length::Px(600.0)),
+            height: Some(Length::Px(600.0)),
+            flex_direction: ::floom_layout::FlexDirection::Column,
+            ..LayoutStyle::default()
+        },
+        Container::new(),
+    );
+    host.mount(
+        column,
+        LayoutStyle {
+            width: Some(Length::Px(600.0)),
+            height: Some(Length::Px(300.0)),
+            ..LayoutStyle::default()
+        },
+        Filler,
+    );
+    let measured = host.mount(
+        column,
+        LayoutStyle {
+            width: Some(Length::Px(600.0)),
+            height: Some(Length::Px(200.0)),
+            ..LayoutStyle::default()
+        },
+        MeasuresContent { answer: log.clone() },
+    );
+    settle(&mut host);
+    host.frame();
+
+    let origin = host.bounds(measured).y0;
+    assert!(
+        origin > 100.0,
+        "the control: the container really is offset, at y={origin}"
+    );
+
+    let reported = log.lock().unwrap().iter().rev().find(|v| v.is_some()).copied().flatten();
+    assert_eq!(
+        reported,
+        Some(Size::new(120.0, 400.0)),
+        "the same extent as a container sitting at the origin, despite y={origin}"
+    );
+}
