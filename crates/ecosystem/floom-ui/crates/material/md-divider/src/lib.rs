@@ -1,13 +1,72 @@
-use floom::prelude::*;
-use floom::views::{Container, Decorators, Empty};
-use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
+//! Material 3 divider, ported to the Floom 2.0 widget API.
+//!
+//! ## What this kit uniquely wants
+//!
+//! **A rule flush with the top of its box.** `RuleAlignment::Start`, not the
+//! engine's default `Center`.
+//!
+//! v1 wrote `s.height(thickness).width_full().background(color)` for a
+//! horizontal divider and said nothing about the vertical axis. In a container
+//! taller than the rule, "nothing said" means the rule lands on the container's
+//! top edge. The engine centres instead — it was written before this crate was
+//! ported, and centring is the better default for a rule between two columns.
+//!
+//! So this kit asks for `Start` explicitly rather than inheriting a default that
+//! would silently move its rule. `start_reproduces_what_v1_wrote` in
+//! `floom-widgets/tests/primitives.rs` is the assertion that makes that a port
+//! rather than a preference.
+//!
+//! ## The other difference, which is not about the divider
+//!
+//! Material reads the **live** theme signal (`theme_signal()`); Cupertino and
+//! Fluent capture a **snapshot** at construction (`MultiTheme::new_for(..)`). So
+//! a Material divider follows a global theme switch and the other two do not.
+//! That difference lives in this crate's `new()`, not in the widget, because it
+//! is a property of where the theme came from rather than of how a rule is drawn.
+//!
+//! ## What the three kits agree on
+//!
+//! Everything else, exactly. Measured: with naming and the `design_system`
+//! field removed, the three v1 files' `resolved_style()` and `view()` bodies are
+//! **byte-identical**. One token (`thickness: 1.0`), one colour role
+//! (`outline_variant`), one inset rule. There is no second style parameter to
+//! set, and inventing one would be inventing a disagreement.
+
+use floom_signal::{RwSignal, SignalGet};
+use floom_types::Color as PaintColor;
+use floom_widgets::{Divider, RuleAlignment};
+
+use floom_widget_runtime::theme_signal;
+
+use floom_core_theme::component_tokens::{ComponentId, ComponentTokens, DividerTokens};
 use floom_core_theme::props::divider::{DividerOrientation, DividerProps};
 use floom_core_theme::theme::{MultiTheme, Theme};
 use floom_core_theme::tokens::color::Color;
-use floom_widget_runtime::theme_signal;
 
+/// The design system this crate reads.
+const DESIGN_SYSTEM: &str = "material";
+
+/// Design-system colour -> engine colour.
+fn to_paint(c: Color) -> PaintColor {
+    PaintColor {
+        r: c.r,
+        g: c.g,
+        b: c.b,
+        a: c.a,
+    }
+}
+
+fn divider_tokens(theme: &MultiTheme) -> DividerTokens {
+    match theme.component(ComponentId::Divider) {
+        ComponentTokens::Divider(t) => t,
+        _ => unreachable!("ComponentId::Divider must resolve to DividerTokens"),
+    }
+}
+
+/// Material's resolved appearance.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct MdDividerStyle {
+    pub design_system: &'static str,
     pub color: Color,
     pub thickness: f32,
     pub inset: f32,
@@ -23,6 +82,8 @@ impl MdDivider {
     pub fn new() -> Self {
         Self {
             props: DividerProps::default(),
+            // The **live** signal, unlike Cupertino and Fluent. A global theme
+            // switch repaints this divider; theirs would not.
             theme: theme_signal(),
         }
     }
@@ -52,10 +113,9 @@ impl MdDivider {
 
     pub fn resolved_style(&self) -> MdDividerStyle {
         let theme = self.theme.get();
-        let ComponentTokens::Divider(tokens) = theme.component(ComponentId::Divider) else {
-            unreachable!("ComponentId::Divider must resolve to DividerTokens")
-        };
+        let tokens = divider_tokens(&theme);
         MdDividerStyle {
+            design_system: DESIGN_SYSTEM,
             color: theme.colors().outline_variant,
             thickness: tokens.thickness,
             inset: self.props.inset,
@@ -63,28 +123,22 @@ impl MdDivider {
         }
     }
 
-    /// Build a renderable Material 3 divider.
-    pub fn view(self) -> impl View {
-        let theme = self.theme;
-        let orientation = self.props.orientation;
-        let inset = self.props.inset;
-        Container::new(Empty::new()).style(move |s| {
-            let t = theme.get();
-            let ComponentTokens::Divider(tokens) = t.component(ComponentId::Divider) else {
-                unreachable!()
-            };
-            let color = t.colors().outline_variant.to_peniko();
-            match orientation {
-                DividerOrientation::Horizontal => s.height(tokens.thickness)
-                    .width_full()
-                    .background(color)
-                    .margin_horiz(inset),
-                DividerOrientation::Vertical => s.width(tokens.thickness)
-                    .height_full()
-                    .background(color)
-                    .margin_vert(inset),
-            }
-        })
+    /// The engine's style, which is the whole translation.
+    ///
+    /// Four disagreements in seven lines, and only one of them is a value:
+    /// `RuleAlignment::Start` is this kit's entire styling opinion. The colour,
+    /// the thickness and the inset are what all three kits already agreed on.
+    pub fn divider(&self) -> Divider {
+        let style = self.resolved_style();
+        Divider::new()
+            .color(to_paint(style.color))
+            .thickness(style.thickness as f64)
+            .axis(match style.orientation {
+                DividerOrientation::Horizontal => floom_core::Axis::Horizontal,
+                DividerOrientation::Vertical => floom_core::Axis::Vertical,
+            })
+            .indent(style.inset as f64)
+            .alignment(RuleAlignment::Start)
     }
 }
 

@@ -1,0 +1,16 @@
+[package]
+name = "floom-run-desktop"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+description = "Floom 2.0 desktop window via the one-call floom::run_desktop entry"
+
+[dependencies]
+# `desktop` pulls the winit backend; `renderer-gpu` pulls the vello/wgpu
+# presenter that `run_desktop` drives. Both are what the facade entry needs, so
+# the example declares exactly the features the entry documents.
+floom = { path = "../../crates/floom", version = "0.2.0", features = [
+    "desktop",
+    "renderer-gpu",
+] }

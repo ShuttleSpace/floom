@@ -58,7 +58,7 @@
 //! cannot live in `floom-widgets` without inverting the dependency. A second caller is
 //! the signal that it wants a home, and this note is where that is recorded.
 
-use floom_legacy_reactive::{RwSignal, SignalGet};
+use floom_signal::{RwSignal, SignalGet};
 use floom_types::Color as PaintColor;
 use floom_types::FontWeight;
 

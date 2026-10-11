@@ -35,7 +35,7 @@
 //! which was already true in v1 and is recorded in
 //! [`MdFooter::publish_layout`] rather than quietly improved.
 
-use floom_legacy_reactive::{RwSignal, SignalGet};
+use floom_signal::{RwSignal, SignalGet};
 use floom_types::{Color as PaintColor, Insets, Shadow};
 use floom_widgets::{Align, Edges, Surface};
 use floom_core::{LayoutRequest, WidgetAny};

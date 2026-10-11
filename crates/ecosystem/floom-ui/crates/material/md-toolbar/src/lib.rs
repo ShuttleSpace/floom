@@ -38,7 +38,7 @@
 //!   would be a behaviour change, so the token stays unread and says so in
 //!   [`ToolbarTokensHeightNote`] below rather than being silently preferred.
 
-use floom_legacy_reactive::{RwSignal, SignalGet};
+use floom_signal::{RwSignal, SignalGet};
 use floom_types::{Color as PaintColor, Insets, Shadow};
 use floom_widgets::{Align, Axis, Icon, Stack, Surface, Text};
 use floom_core::{FontWeight as EngineFontWeight, LayoutRequest, WidgetAny};

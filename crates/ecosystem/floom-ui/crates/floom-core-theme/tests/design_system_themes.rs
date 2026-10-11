@@ -2,7 +2,7 @@ use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::global_theme::{DesignSystem, design_system_signal};
 use floom_core_theme::theme::{CupertinoTheme, FluentTheme, MultiTheme, Theme};
 use floom_core_theme::tokens::color::Color;
-use floom_legacy_reactive::SignalUpdate;
+use floom_signal::SignalUpdate;
 
 #[test]
 fn cupertino_theme_implements_theme_contract() {

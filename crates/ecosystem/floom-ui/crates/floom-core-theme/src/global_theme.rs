@@ -16,8 +16,8 @@
 
 use std::cell::OnceCell;
 
-use floom_legacy_reactive::create_global_rw_signal;
-use floom_legacy_reactive::{RwSignal, SignalGet, SignalUpdate};
+use floom_signal::create_global_rw_signal;
+use floom_signal::{RwSignal, SignalGet, SignalUpdate};
 
 use crate::theme::MultiTheme;
 

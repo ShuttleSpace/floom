@@ -1,0 +1,44 @@
+[package]
+name = "floom-android-example"
+version = "0.1.0"
+edition = "2021"
+publish = false
+license = "MIT"
+
+# `native-activity` loads a *shared library* named by the manifest's
+# `android.app.lib_name` meta-data (`floom_android_example`). A bin-only crate
+# produces an executable and `cargo ndk` would copy nothing into `jniLibs/`,
+# so the Android entry point must live in a `cdylib` lib target.
+[lib]
+name = "floom_android_example"
+path = "src/lib.rs"
+crate-type = ["cdylib"]
+
+# The GPU presenter (`VelloGpuPresenter`) is feature-gated so the host build and
+# `cargo test --workspace` stay dependency-light; `--features real` activates the
+# full Android stack (wgpu + vello). The APK build script / cross-check must pass
+# `--features real`.
+[features]
+default = []
+real = ["floom-renderer-vello/gpu"]
+
+[dependencies]
+floom-app = { path = "../../crates/floom-app" }
+floom-core = { path = "../../crates/floom-core" }
+floom-layout = { path = "../../crates/floom-layout" }
+floom-platform = { path = "../../crates/floom-platform" }
+floom-platform-android = { path = "../../crates/floom-platform-android" }
+floom-platform-mobile = { path = "../../crates/floom-platform-mobile" }
+floom-renderer-vello = { path = "../../crates/floom-renderer-vello", optional = true }
+floom-types = { path = "../../crates/floom-types" }
+floom-widgets = { path = "../../crates/floom-widgets" }
+
+# On Android we need the *same* winit fork Floom uses so the `AndroidApp`
+# type lines up with `floom_platform_android::set_android_app`. The rev must
+# match the one pinned in Floom's root `Cargo.toml` (`winit` workspace dep).
+[target.'cfg(target_os = "android")'.dependencies]
+winit = { git = "https://github.com/lapce/winit", rev = "133268de675a4fda70816d78a7a1435eb972fea1", package = "floem-winit", features = ["android-native-activity"] }
+# No `log` dependency: this crate reports through `eprintln!`, which Android
+# surfaces in logcat as `RustStdoutStderr` independent of logger configuration.
+# (`run` does initialise `android_logger`, but its level defaults to the
+# compile-time `log::max_level`, so `log::info!` is not reliably visible.)

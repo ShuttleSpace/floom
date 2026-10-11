@@ -11,10 +11,10 @@
 //! # Ported to the 2.0 API
 //!
 //! Theme state is just an `RwSignal`, and the 2.0 prelude already re-exports
-//! `RwSignal` from `floom-legacy-reactive`, so this crate needs no widget layer
+//! `RwSignal` from `floom-signal`, so this crate needs no widget layer
 //! and no `floom` (v1) dependency. See `docs/porting-floem-ui-to-2.0.md`.
 
-use floom_legacy_reactive::RwSignal;
+use floom_signal::RwSignal;
 
 // `DesignSystem`, `MultiTheme` and the three theme mutators only exist when a
 // design-system feature is on, so their imports are gated to match.

@@ -32,7 +32,7 @@
 //!   fixed radius for the same reason it takes a fixed ink: it is a value in a
 //!   builder. See the note on `md-card` about theme timing.
 
-use floom_legacy_reactive::{RwSignal, SignalGet};
+use floom_signal::{RwSignal, SignalGet};
 use floom_types::{Color as PaintColor, Insets, Shadow};
 use floom_widgets::{Ripple, Surface};
 

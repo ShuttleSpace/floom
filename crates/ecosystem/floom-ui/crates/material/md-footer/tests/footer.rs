@@ -13,7 +13,7 @@ use floom_widgets::testkit::{AllocatingCreateContext, SceneRecorder, paint_snaps
 
 use floom_core_theme::global_theme::DesignSystem;
 use floom_core_theme::layout::{LayoutSlot, layout_signal};
-use floom_legacy_reactive::SignalGet;
+use floom_signal::SignalGet;
 use floom_core_theme::theme::{MultiTheme, Theme};
 use floom_widget_md_footer::MdFooter;
 

@@ -43,7 +43,7 @@
 
 use std::sync::Arc;
 
-use floom_legacy_reactive::{RwSignal, SignalGet};
+use floom_signal::{RwSignal, SignalGet};
 use floom_types::{Color as PaintColor, FontWeight};
 
 use floom_widgets::{ListItemRow, ListItemStyle, SlotBuilder};

@@ -56,7 +56,7 @@
 //! `set_design_system`. That is the third correction of this shape in this port, and the
 //! test says so by name.
 
-use floom_legacy_reactive::{RwSignal, SignalGet};
+use floom_signal::{RwSignal, SignalGet};
 use floom_types::Color as PaintColor;
 
 use floom_widgets::{Combobox, ComboboxStyle, SharedPick};

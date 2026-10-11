@@ -37,7 +37,7 @@
 //!   through the glob import. It is a shared token, not a per-crate constant, and
 //!   `fluent-card`'s port briefly redefined it locally before this one corrected it.
 
-use floom_legacy_reactive::{RwSignal, SignalGet};
+use floom_signal::{RwSignal, SignalGet};
 use floom_types::{Color as PaintColor, Insets, Shadow};
 use floom_widgets::{Ripple, Surface};
 

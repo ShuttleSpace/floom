@@ -1,0 +1,16 @@
+[package]
+name = "floom-shader"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+description = "Custom WGSL shaders: a box whose ink is a program, and the degradation a CPU rasteriser records"
+
+# The software renderer is enabled *by the example*, not by the facade: act 2
+# renders the same scene a GPU backend would and reads what the CPU rasteriser
+# did with it — the skip has to be counted, not silent.
+[dependencies]
+floom = { path = "../../crates/floom", version = "0.2.0", features = [
+    "renderer-software",
+] }
+floom-renderer = { path = "../../crates/floom-renderer", version = "0.2.0" }

@@ -32,7 +32,7 @@
 use std::sync::Arc;
 
 use floom_core::{Child, ChildKey, LayoutRequest};
-use floom_legacy_reactive::{RwSignal, SignalGet};
+use floom_signal::{RwSignal, SignalGet};
 use floom_types::{Color as PaintColor, FontWeight};
 
 use floom_widgets::{Align, Axis, Pressable, Stack, Surface, Text};

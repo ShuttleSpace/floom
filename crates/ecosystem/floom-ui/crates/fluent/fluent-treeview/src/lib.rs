@@ -28,7 +28,7 @@
 //!   [`TreeviewStyle::item_gap`] and left unused, for the same reason
 //!   `ToolbarTokens::height` is.
 
-use floom_legacy_reactive::{RwSignal, SignalGet};
+use floom_signal::{RwSignal, SignalGet};
 use floom_types::Color as PaintColor;
 
 use floom_widgets::{TreeNode, TreeView, TreeViewStyle, VectorIcon};

@@ -1,0 +1,11 @@
+[package]
+name = "floom-forms-demo"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+description = "Form validation golden example: rules, dirty/touched tracking and control bindings"
+
+[dependencies]
+floom = { path = "../../crates/floom", version = "0.2.0" }
+floom-forms = { path = "../../crates/floom-forms", version = "0.2.0" }

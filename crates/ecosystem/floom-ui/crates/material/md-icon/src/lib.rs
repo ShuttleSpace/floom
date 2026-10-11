@@ -28,7 +28,7 @@
 //!
 //! See `docs/porting-floem-ui-to-2.0.md`.
 
-use floom_legacy_reactive::{RwSignal, SignalGet};
+use floom_signal::{RwSignal, SignalGet};
 use floom_types::{Color as PaintColor, Rect};
 use floom_widgets::VectorIcon;
 

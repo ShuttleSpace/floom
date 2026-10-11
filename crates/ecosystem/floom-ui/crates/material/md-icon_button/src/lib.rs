@@ -30,7 +30,7 @@
 //!   padding to separate. Left unread deliberately; see the note on
 //!   `ToolbarTokens::height` in the porting plan for the same decision elsewhere.
 
-use floom_legacy_reactive::{RwSignal, SignalGet};
+use floom_signal::{RwSignal, SignalGet};
 use std::sync::Arc;
 
 use floom_types::Color as PaintColor;

@@ -14,7 +14,7 @@ edition = "2021"
 # features are presence flags, not data selectors.
 floom-core-theme = { workspace = true }
 floom-widget-runtime = { workspace = true, features = ["cupertino"] }
-floom-legacy-reactive = { path = "../../../../../floom-legacy-reactive" }
+floom-signal = { path = "../../../../../floom-signal" }
 floom-core = { path = "../../../../../floom-core" }
 floom-types = { path = "../../../../../floom-types" }
 floom-widgets = { path = "../../../../../floom-widgets" }

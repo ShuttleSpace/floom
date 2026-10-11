@@ -41,7 +41,7 @@
 //!   box that could hold children — and that is what [`floom_widgets::Surface`]
 //!   is. `Container::padding` is gone rather than left as a second dead field.
 
-use floom_legacy_reactive::{RwSignal, SignalGet};
+use floom_signal::{RwSignal, SignalGet};
 use floom_types::{Color as PaintColor, Insets, Shadow};
 use floom_widgets::Surface;
 

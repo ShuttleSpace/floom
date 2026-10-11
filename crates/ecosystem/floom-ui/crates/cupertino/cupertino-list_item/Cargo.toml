@@ -14,7 +14,7 @@ edition = "2021"
 # so nothing but reading the manifest can catch a kit asking for the wrong one.
 floom-core-theme = { workspace = true }
 floom-widget-runtime = { workspace = true, features = ["cupertino"] }
-floom-legacy-reactive = { path = "../../../../../floom-legacy-reactive" }
+floom-signal = { path = "../../../../../floom-signal" }
 floom-core = { path = "../../../../../floom-core" }
 floom-types = { path = "../../../../../floom-types" }
 floom-widgets = { path = "../../../../../floom-widgets" }

@@ -1,0 +1,12 @@
+[package]
+name = "floom-motion"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+description = "Motion: eased tweens, interruption, and a control that animates itself"
+
+# Prelude-only, on purpose: the point of the example is that an app author can
+# write every one of these animations without naming a crate below the facade.
+[dependencies]
+floom = { path = "../../crates/floom", version = "0.2.0" }

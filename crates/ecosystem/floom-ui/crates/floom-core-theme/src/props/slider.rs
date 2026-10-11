@@ -1,4 +1,4 @@
-use floom_legacy_reactive::RwSignal;
+use floom_signal::RwSignal;
 
 pub struct SliderProps {
     /// Current value.

@@ -9,7 +9,7 @@ edition = "2021"
 # (`RwSignal`, `create_global_rw_signal`) and the two value types it converts
 # to (`peniko::Color`, `parley::style::FontWeight`). See
 # `docs/porting-floem-ui-to-2.0.md`.
-floom-legacy-reactive = { path = "../../../../floom-legacy-reactive" }
+floom-signal = { path = "../../../../floom-signal" }
 peniko = "0.6"
 parley = "0.7"
 

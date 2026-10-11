@@ -13,7 +13,7 @@
 //! The engine's `Select` handles the trigger, the popup, and the selection state.
 //! This crate provides Material's token translation and styling.
 
-use floom_legacy_reactive::{RwSignal, SignalGet};
+use floom_signal::{RwSignal, SignalGet};
 use floom_types::Color as PaintColor;
 
 use floom_widgets::{Select, SelectStyle};

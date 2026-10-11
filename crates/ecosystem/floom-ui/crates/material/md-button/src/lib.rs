@@ -23,7 +23,7 @@
 use std::sync::Arc;
 
 use floom_core::LayoutRequest;
-use floom_legacy_reactive::{RwSignal, SignalGet};
+use floom_signal::{RwSignal, SignalGet};
 use floom_types::{Color as PaintColor, Insets};
 use floom_widgets::{Button, Ripple, Text};
 

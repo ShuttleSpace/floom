@@ -34,7 +34,7 @@
 //!   `Container` with a click handler: invisible to a screen reader. Rows here are
 //!   radios (single mode) or checkboxes (multiple).
 
-use floom_legacy_reactive::{RwSignal, SignalGet};
+use floom_signal::{RwSignal, SignalGet};
 use floom_types::{Color as PaintColor, Insets};
 use floom_widgets::{SelectGroup, SelectGroupStyle, SelectionMode};
 

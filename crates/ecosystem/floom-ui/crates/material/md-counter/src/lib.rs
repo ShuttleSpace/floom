@@ -36,7 +36,7 @@
 //!   unconditionally, and that is preserved — including the fact that the engine's
 //!   own `Slider` does the opposite.
 
-use floom_legacy_reactive::{RwSignal, SignalGet};
+use floom_signal::{RwSignal, SignalGet};
 use floom_types::Color as PaintColor;
 use floom_widgets::{Counter, CounterStyle};
 
