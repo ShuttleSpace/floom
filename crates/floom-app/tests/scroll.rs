@@ -417,3 +417,161 @@ fn the_offset_can_be_read_back() {
     host.set_scroll_offset(root, ScrollOffset::new(3.0, 4.0));
     assert_eq!(host.scroll_offset(root), ScrollOffset::new(3.0, 4.0));
 }
+
+// --- the request path ------------------------------------------------------
+
+/// A widget that scrolls itself by `delta` on every wheel event.
+struct WheelScroller {
+    delta: f64,
+    offset: Rc<std::cell::Cell<ScrollOffset>>,
+}
+
+impl ::floom_core::WidgetAny for WheelScroller {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
+        self
+    }
+    fn semantics_hint(&self) -> Option<::floom_core::SemanticsHint> {
+        None
+    }
+}
+
+impl ::floom_core::Widget for WheelScroller {
+    fn create(&self, cx: &mut dyn ::floom_core::CreateContext) -> ::floom_core::ElementId {
+        cx.alloc_child()
+    }
+
+    fn update(&mut self, _cx: &mut dyn ::floom_core::UpdateContext, _id: ::floom_core::ElementId) {}
+
+    fn children(&self) -> Vec<::floom_core::Child> {
+        vec![::floom_core::Child::new(
+            0,
+            ::floom_core::LayoutRequest::new().width(40.0).height(30.0),
+            || Box::new(Filler) as Box<dyn ::floom_core::WidgetAny>,
+        )]
+    }
+
+    fn event(
+        &mut self,
+        cx: &mut dyn ::floom_core::EventContext,
+        _id: ::floom_core::ElementId,
+    ) -> bool {
+        if let ::floom_types::Event::Scroll(e) = cx.event() {
+            let next = ::floom_core::clamp_offset(
+                ScrollOffset::new(0.0, self.offset.get().y + e.delta_y),
+                (200.0, 200.0),
+                (200.0, 800.0),
+            );
+            self.offset.set(next);
+            cx.request_scroll(next);
+            return true;
+        }
+        false
+    }
+
+    fn paint(&self, _cx: &mut dyn ::floom_core::PaintContext, _id: ::floom_core::ElementId) {}
+}
+
+struct Filler;
+
+impl ::floom_core::WidgetAny for Filler {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
+        self
+    }
+    fn semantics_hint(&self) -> Option<::floom_core::SemanticsHint> {
+        None
+    }
+}
+
+impl ::floom_core::Widget for Filler {
+    fn create(&self, _cx: &mut dyn ::floom_core::CreateContext) -> ::floom_core::ElementId {
+        ::floom_core::ElementId::new(0, 0)
+    }
+    fn update(&mut self, _cx: &mut dyn ::floom_core::UpdateContext, _id: ::floom_core::ElementId) {}
+    fn paint(&self, _cx: &mut dyn ::floom_core::PaintContext, _id: ::floom_core::ElementId) {}
+}
+
+fn wheel(delta_y: f64) -> ::floom_types::Event {
+    ::floom_types::Event::Scroll(::floom_types::ScrollEvent {
+        delta_x: 0.0,
+        delta_y,
+        position: Point::new(50.0, 50.0),
+        modifiers: ::floom_types::Modifiers::default(),
+    })
+}
+
+/// The whole chain in one test: a wheel event reaches a widget, the widget asks
+/// to scroll, and the subtree moves.
+///
+/// Before this the offset could only be set from outside the host, which is not
+/// a thing an application can do. This is the path an application actually uses,
+/// and it is the first consumer of `Event::Scroll` in the codebase.
+#[test]
+fn a_wheel_event_scrolls_the_subtree_end_to_end() {
+    let offset = Rc::new(std::cell::Cell::new(ScrollOffset::ZERO));
+    let mut host = WidgetHost::new();
+    host.set_size(Size::new(200.0, 200.0));
+    let root = host.mount_root(
+        LayoutStyle {
+            width: Some(Length::Px(200.0)),
+            height: Some(Length::Px(200.0)),
+            ..LayoutStyle::default()
+        },
+        WheelScroller {
+            delta: 0.0,
+            offset: offset.clone(),
+        },
+    );
+    settle(&mut host);
+    let child = host.child_at(root, 0).expect("the scroller has one child");
+    let before = host.bounds(child);
+
+    host.dispatch(wheel(60.0));
+    settle(&mut host);
+
+    assert_eq!(offset.get().y, 60.0, "the widget clamped and stored the offset");
+    assert_eq!(
+        host.bounds(child).y0 - before.y0,
+        60.0,
+        "and the child moved by it without the host being told twice"
+    );
+}
+
+/// The clamp is the widget's business and the host's job is only to apply what
+/// it is given. Here the widget asks for an offset beyond its content's end and
+/// the host applies exactly that, so a test can tell the two apart.
+#[test]
+fn the_host_applies_exactly_what_the_widget_asks_for() {
+    let offset = Rc::new(std::cell::Cell::new(ScrollOffset::ZERO));
+    let mut host = WidgetHost::new();
+    host.set_size(Size::new(200.0, 200.0));
+    let root = host.mount_root(
+        LayoutStyle {
+            width: Some(Length::Px(200.0)),
+            height: Some(Length::Px(200.0)),
+            ..LayoutStyle::default()
+        },
+        WheelScroller {
+            delta: 0.0,
+            offset: offset.clone(),
+        },
+    );
+    settle(&mut host);
+    let child = host.child_at(root, 0).expect("the scroller has one child");
+
+    // Content is 800 tall in a 200 viewport, so 9000 is far past the end.
+    host.dispatch(wheel(9000.0));
+    settle(&mut host);
+
+    assert_eq!(offset.get().y, 600.0, "the widget clamped to 800 - 200");
+    assert_eq!(
+        host.bounds(child).y0,
+        600.0,
+        "and the host applied the clamped value, not the raw delta"
+    );
+}

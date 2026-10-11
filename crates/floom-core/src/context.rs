@@ -140,6 +140,20 @@ pub trait EventContext {
         let _ = id;
     }
 
+    /// Asks the host to scroll this widget's subtree by `offset`.
+    ///
+    /// The request is recorded and applied once `event` returns, because the
+    /// widget is borrowed out of the host while its `event` runs and the host is
+    /// what owns the tree. Defaults to a no-op for hosts without scrolling.
+    ///
+    /// A widget requests rather than writes, and the offset applies to `target`
+    /// — the widget being dispatched — and its descendants. A scroll container
+    /// never scrolls its ancestors or its siblings, which is what keeps two
+    /// containers independent.
+    fn request_scroll(&mut self, offset: crate::ScrollOffset) {
+        let _ = offset;
+    }
+
     /// Asks the host to place `request.content` above the whole tree.
     ///
     /// Returns whether a host accepted it. A widget must check: hosts without

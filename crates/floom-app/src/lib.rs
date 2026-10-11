@@ -1917,6 +1917,23 @@ impl WidgetHost {
         (index < self.nodes.len()).then_some(NodeId(index))
     }
 
+    /// The `index`-th child of `node`, in declaration order.
+    ///
+    /// `None` for an unmounted node, and `None` when `index` is past the end —
+    /// a caller walking a subtree cannot tell those apart from the handle alone,
+    /// and a composite's child count changes with its own state.
+    pub fn child_at(&self, node: NodeId, index: usize) -> Option<NodeId> {
+        self.nodes
+            .get(node.0)
+            .and_then(|n| n.children.get(index))
+            .map(|&i| NodeId(i))
+    }
+
+    /// How many children `node` has mounted right now.
+    pub fn child_count(&self, node: NodeId) -> usize {
+        self.nodes.get(node.0).map_or(0, |n| n.children.len())
+    }
+
     /// The mounted node holding `id` — the inverse of [`Self::node_id`].
     pub fn node_for(&self, id: ElementId) -> Option<NodeId> {
         self.index_of(id).map(NodeId)
@@ -2989,6 +3006,7 @@ impl WidgetHost {
         let route = self.router.route(hit.target);
         let mut handled = false;
         let mut focus_requests: Vec<ElementId> = Vec::new();
+        let mut scroll_requests: Vec<(ElementId, ScrollOffset)> = Vec::new();
         let mut overlay_commands: Vec<OverlayCommand> = Vec::new();
 
         for stop in route {
@@ -3003,6 +3021,7 @@ impl WidgetHost {
                 stop,
                 event.clone(),
                 &mut focus_requests,
+                &mut scroll_requests,
                 &mut overlay_commands,
             ) {
                 handled = true;
@@ -3012,6 +3031,14 @@ impl WidgetHost {
 
         for id in focus_requests {
             self.set_focus(id);
+        }
+        for (id, offset) in scroll_requests {
+            if let Some(index) = self.index_of(id) {
+                if !self.nodes[index].dead {
+                    self.nodes[index].scroll_offset = offset;
+                    self.layout_dirty = true;
+                }
+            }
         }
         // Overlay work happens after the event, never inside it: opening one
         // mounts a subtree, which needs the whole host mutably while the widget
@@ -3059,6 +3086,7 @@ impl WidgetHost {
         stop: RouteStop,
         event: Event,
         focus_requests: &mut Vec<ElementId>,
+        scroll_requests: &mut Vec<(ElementId, ScrollOffset)>,
         overlay_commands: &mut Vec<OverlayCommand>,
     ) -> bool {
         let node = &mut self.nodes[index];
@@ -3067,6 +3095,7 @@ impl WidgetHost {
             bounds: node.bounds,
             event,
             focus_requests,
+            scroll_requests,
             ime_caret: &mut self.ime_caret,
             overlays: OverlayDispatch {
                 commands: overlay_commands,
@@ -4522,6 +4551,16 @@ struct NodeEventContext<'a> {
     bounds: Rect,
     event: Event,
     focus_requests: &'a mut Vec<ElementId>,
+    /// Scroll offsets this widget asked for, drained by the host after the event
+    /// returns.
+    ///
+    /// The same shape as `focus_requests`: a widget cannot reach the host while
+    /// its own `event` is on the stack, so it records an intent and the host
+    /// applies it once the borrow ends. Encoding the request as a `(ElementId,
+    /// ScrollOffset)` pair rather than letting a widget write straight to a node
+    /// is what keeps the offset off the tree structure — a widget that could
+    /// reach its ancestors could scroll something it does not contain.
+    scroll_requests: &'a mut Vec<(ElementId, ScrollOffset)>,
     /// Where the focused composing text widget wants the IME popup anchored.
     ime_caret: &'a mut Option<Rect>,
     overlays: OverlayDispatch<'a>,
@@ -4555,6 +4594,10 @@ impl EventContext for NodeEventContext<'_> {
 
     fn request_focus(&mut self, id: ElementId) {
         self.focus_requests.push(id);
+    }
+
+    fn request_scroll(&mut self, offset: ScrollOffset) {
+        self.scroll_requests.push((self.target, offset));
     }
 
     fn open_overlay(&mut self, request: OverlayRequest) -> bool {
