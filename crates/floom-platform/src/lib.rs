@@ -2,17 +2,27 @@
 //!
 //! Concrete backends (desktop/mobile/web/embedded) live in sibling crates and
 //! must not leak into `floom-types` / `floom-scene` / widgets.
+//!
+//! # Plugins
+//!
+//! [`register_plugin`] and [`plugin`] are the plugin seam. A plugin is a
+//! link-time dependency whose native half is compiled into the binary by its own
+//! `build.rs`; the registry holds its enable function, not its code, and
+//! nothing crosses a serialization boundary. See [`plugins`] for why this is not
+//! a Flutter-style method-channel registry.
 
 mod capabilities;
 mod event;
 mod fake;
 mod keymap;
+mod plugins;
 mod surface;
 mod window;
 
 pub use capabilities::{Capability, PlatformCapabilities};
 pub use event::{PlatformEvent, PointerButton};
 pub use fake::{FakePlatform, HostPlatform};
+pub use plugins::{Plugin, PluginError, plugin, register_plugin, registered_plugins};
 pub use floom_types::{DisplayInfo, Modifiers, Point, ScaleFactor, Size, SurfaceId, WindowId};
 pub use keymap::KeyCode;
 pub use surface::{Surface, SurfaceConfig, SurfaceTarget};

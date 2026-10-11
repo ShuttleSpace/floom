@@ -788,7 +788,7 @@ struct PlatformCapabilities { ... }
 >   `Widget::update` via `mark_children_dirty`. Its layout lowering now combines
 >   a slot's flex-item intent with the widget's own container intent, and
 >   `reconcile` no longer wipes imperatively-mounted (`host.mount`) children.
-> - Demo: `examples/floom2-counter` drives every composite end-to-end.
+> - Demo: `examples/floom-counter` drives every composite end-to-end.
 
 ## Task 14.4: Forms
 
@@ -1463,8 +1463,8 @@ tester.assert_text(selector, text)
 ## Task 29.1: Public prelude
 
 - [x] Define `floom::prelude::*` as the beginner-facing stable surface. — the
-  2.0 facade crate **`floom2`** (`crates/floom2`, L9 in the layer table) owns
-  `floom2::prelude`: the package name `floom` is still held by the v1
+  2.0 facade crate **`floom`** (`crates/floom`, L9 in the layer table) owns
+  `floom::prelude`: the package name `floom` is still held by the v1
   monolith, and 29.2's preservation policy says v1 apps must keep compiling,
   so the facade takes the sibling name now and the one-line rename to `floom`
   happens when the monolith retires. Registered in the root manifest, the
@@ -1478,16 +1478,16 @@ tester.assert_text(selector, text)
   the layout `Axis` (what Stack takes) wins the glob; the divider-orientation
   `floom_widgets::Axis` stays at its explicit path.
 - [x] Keep advanced/experimental APIs under explicit modules. —
-  `floom2::advanced` holds the authoring contracts (`Widget`, `WidgetAny`,
+  `floom::advanced` holds the authoring contracts (`Widget`, `WidgetAny`,
   contexts, semantics vocabulary); the full layered crates stay reachable as
-  top-level re-exports (`floom2::widgets`, `floom2::core`, …).
+  top-level re-exports (`floom::widgets`, `floom::core`, …).
 - [x] Add compile-fail tests for unsupported patterns. — doctests: v1
   `create_signal` unresolved in the prelude; v1 `IntoView` unresolved; and a
   **real v1 `floom::views::label(...)` rejected by
   `WidgetHost::mount_root`** (facade dev-depends on the monolith for exactly
   this test). Plus a positive inventory test pinning all 46 prelude names and
   a prelude-only hello app that mounts, paints and routes a button click
-  (`crates/floom2/tests/prelude_surface.rs`, 5 tests + 4 doctests).
+  (`crates/floom/tests/prelude_surface.rs`, 5 tests + 4 doctests).
 - [x] Commit.
 
 ## Task 29.2: Deprecate legacy View internals
@@ -1500,7 +1500,7 @@ tester.assert_text(selector, text)
 - [x] Add migration diagnostics. — `#[diagnostic::on_unimplemented]` on
   **both** `floom_core::Widget` and `floom_core::WidgetAny` (the trait real
   mount points take): passing a v1 view to a 2.0 mount reports "`{Self}` is
-  not a Floom 2.0 `Widget`" plus notes naming `floom2::prelude` and the
+  not a Floom 2.0 `Widget`" plus notes naming `floom::prelude` and the
   preservation policy, verified rendering at a scratch call site.
 - [x] Preserve old applications through the current major version. —
   `floom::prelude` untouched (all 342 referencing files compile unchanged);
@@ -1525,10 +1525,10 @@ tester.assert_text(selector, text)
   (e.g. `desktop` brings winit but not wgpu; `renderer-gpu` brings wgpu but
   not winit).
 - [x] Measure release binary size per target. — macOS (Apple M4 Pro),
-  release, unstripped: **`floom2-hello`** (new minimal example, imports
-  *only* `floom2::prelude`, headless) **2,694,256 B ≈ 2.6 MiB**;
-  `floom2-counter` (headless composite demo) 2,835,248 B ≈ 2.7 MiB;
-  `floom2-window --features real` (winit + vello + wgpu/Metal) 11,626,912 B ≈
+  release, unstripped: **`floom-hello`** (new minimal example, imports
+  *only* `floom::prelude`, headless) **2,694,256 B ≈ 2.6 MiB**;
+  `floom-counter` (headless composite demo) 2,835,248 B ≈ 2.7 MiB;
+  `floom-window --features real` (winit + vello + wgpu/Metal) 11,626,912 B ≈
   11.1 MiB. Win32/X11/other targets remain device-gated (17/19).
 - [x] Commit.
 
@@ -1558,14 +1558,14 @@ web
 embedded
 ```
 
-- [x] Ensure each compiles for its intended target. — `examples/floom2-{hello,counter,list,virtual-list,datagrid,forms,navigation,editor,native-plugin}` run headless and **assert** the invariant they demonstrate (compiled by `cargo build --workspace`, *run* by `bash scripts/run-golden-examples.sh`, 9/9 green). `floom2-probe` and `floom2-window` need a display (`--features real`). `webview`/`video`/`camera` remain device-gated (Phase 17), `harmony`/`web`/`embedded` target-gated (Phase 19).
+- [x] Ensure each compiles for its intended target. — `examples/floom2-{hello,counter,list,virtual-list,datagrid,forms,navigation,editor,native-plugin}` run headless and **assert** the invariant they demonstrate (compiled by `cargo build --workspace`, *run* by `bash scripts/run-golden-examples.sh`, 9/9 green). `floom-probe` and `floom-window` need a display (`--features real`). `webview`/`video`/`camera` remain device-gated (Phase 17), `harmony`/`web`/`embedded` target-gated (Phase 19).
 - [x] Add screenshots and benchmark notes. — **Partially, and stated as such:** no screenshots — the headless examples have nothing to photograph, and the two display examples are documented with their captured output instead. Benchmark notes are the measured invariants recorded in `docs/2.0/EXAMPLES.md`: 38 elements materialized over a 100 000-row scroll, paint ops 44 vs 44 for 1 000 vs 100 000 rows, release sizes.
 - [x] Commit.
 
 ## Task 30.2: Architecture documentation
 
-- [x] Document Runtime, Scene, Renderer, Platform, Native, Widget, AI layers. — `docs/2.0/ARCHITECTURE.md`: an L0–L9 table (every row parity-checked against the gate's `LAYERS` by `crates/floom2/tests/docs_parity.rs`), plus the three ABIs (renderer / platform / native) and the two crates deliberately outside the ladder. The "AI layer" is the L8 tooling tier (`floom-agent`, `floom-devtools`), documented as reachable only from the L9 facade and never shipped in an app binary.
-- [x] Add dependency diagrams. — the layer diagram in the same file (arrows point down; `floom2` is the only crate that may reach L8).
+- [x] Document Runtime, Scene, Renderer, Platform, Native, Widget, AI layers. — `docs/2.0/ARCHITECTURE.md`: an L0–L9 table (every row parity-checked against the gate's `LAYERS` by `crates/floom/tests/docs_parity.rs`), plus the three ABIs (renderer / platform / native) and the two crates deliberately outside the ladder. The "AI layer" is the L8 tooling tier (`floom-agent`, `floom-devtools`), documented as reachable only from the L9 facade and never shipped in an app binary.
+- [x] Add dependency diagrams. — the layer diagram in the same file (arrows point down; `floom` is the only crate that may reach L8).
 - [x] Add contributor guide for new widget/backend/plugin. — four recipes: add a widget, add a renderer/platform backend (the three registrations, including `LIB_DIRS`), add a native plugin, add a crate/example.
 - [x] Commit.
 
@@ -1574,7 +1574,7 @@ embedded
 - [x] Document `View` → `Widget`/`Element` migration. — `docs/2.0/MIGRATION.md`: the concept table plus steps 1–2 (state, keyed children).
 - [x] Document `ViewId` compatibility. — §Step 3: `ViewId` (global registry) → `NodeId` (issued by, and scoped to, one `WidgetHost`), with the consequence for code that stashed ids in structs, threads or statics.
 - [x] Document renderer/platform plugin migration. — §Renderer plugins (v1 immediate-mode `begin/set_transform/fill/…` → 2.0 retained `render_scene(&SceneGraph, &DamageRegion)`) and §Platform plugins (winit baked into the monolith → the `floom-platform` `Platform`/`Window`/`Surface`/`Clipboard`/`Ime` ABI), each naming its conformance suite.
-- [x] Add before/after examples. — both halves are compiled **and run** by `crates/floom2/tests/migration.rs` (5 tests): the before half through `floom::compat::v1_prelude`, the after half through `floom2::prelude`. A migration guide whose snippets do not compile is worse than none.
+- [x] Add before/after examples. — both halves are compiled **and run** by `crates/floom/tests/migration.rs` (5 tests): the before half through `floom::compat::v1_prelude`, the after half through `floom::prelude`. A migration guide whose snippets do not compile is worse than none.
 - [x] Commit.
 
 ## Task 30.4: Release gates
@@ -1619,7 +1619,7 @@ would go red if the claim stopped being true.
 ## P2 Acceptance
 
 - [ ] macOS/Windows/Linux/iOS/Android/Harmony/Web/Embedded backend matrix passes defined conformance suite. **BLOCKED — and the suite does not exist yet either.** Phase 19 is 0/24. Note that `docs/gates/*.md` is **not** this suite: those are the Floom **1.0** platform gates, every item still unrun with an empty Sign-off. macOS is the only platform with any real evidence (G1-1, G1-5, D1, D11); the other seven have none, and the mobile ones cannot be run here at all. Phase 19.1–19.8 is what has to define and then run the matrix.
-- [ ] WebView/Video/Camera/Map native providers work on agreed target subsets. **BLOCKED — the mechanism is built, the four named providers are not.** `crates/floom-native` gives the ABI (capability negotiation, slot pool, freeze/thaw, external texture) and `examples/floom2-native-plugin` writes a complete `NativeViewProvider` against it (a TextInput bridge), so authoring a provider is a documented, tested path. What Phase 17 has not done is the OS-backed WebView/Video/Camera/Map set itself, each of which needs the platform surface of Phase 16.2/19.
+- [ ] WebView/Video/Camera/Map native providers work on agreed target subsets. **BLOCKED — the mechanism is built, the four named providers are not.** `crates/floom-native` gives the ABI (capability negotiation, slot pool, freeze/thaw, external texture) and `examples/floom-native-plugin` writes a complete `NativeViewProvider` against it (a TextInput bridge), so authoring a provider is a documented, tested path. What Phase 17 has not done is the OS-backed WebView/Video/Camera/Map set itself, each of which needs the platform surface of Phase 16.2/19.
 - [ ] Native composition policy works without widget-level platform conditionals. **PARTIAL — the policy is built and holds on macOS only.** The mechanism is real and verified: capability negotiation, `ClipSupport` fail-closed, sticky re-negotiation, freeze/thaw and the external-texture path all have headless tests, and D1/D11 confirm it on a real window. What is missing is the cross-platform half — the Win32/X11 `NativeViewHost` impls do not compile here, and the surface compositor (KMS/Android/iOS) is device-gated. So "no widget-level platform conditionals" is demonstrated on one backend, not proven across the set.
 
 ## P3 Acceptance
@@ -1637,9 +1637,9 @@ tier is available to anyone with the time.
 ## P4 Acceptance
 
 - [x] Material/Cupertino/Fluent/Harmony design systems available. — `crates/floom-material`, `crates/floom-cupertino`, `crates/floom-fluent` and `crates/floom-harmony`, all built on the 2.0 stack (`floom-types`, `floom-style`, `floom-theme`, `floom-scene`, `crates/floom-design`) with 42 gallery/token tests between them. `crates/ecosystem/floom-ui` (~350 crates) is still v1-only and untouched; the Phase 21 crates are the 2.0 answer, not a port of it.
-- [x] Docs/examples complete. — `docs/2.0/EXAMPLES.md` (9 golden examples, each with its captured real output, run by `scripts/run-golden-examples.sh`), `docs/2.0/ARCHITECTURE.md`, `docs/2.0/MIGRATION.md`, `docs/2.0/RELEASE-POLICY.md`; `crates/floom2/tests/docs_parity.rs` asserts the four pages agree with the tree, so they cannot rot silently.
-- [x] Third-party plugin authoring path documented. — `docs/2.0/ARCHITECTURE.md` §"Add a renderer or platform backend" and §"Add a native plugin", `docs/2.0/MIGRATION.md`'s renderer/platform plugin sections, and two executable references: `examples/floom2-native-plugin` writes a real `NativeViewProvider` end to end, and `crates/floom-platform/tests/contracts.rs` is the conformance suite a new backend must pass.
-- [ ] Compatibility/release policy active. **PARTIAL — written and self-checking, not yet exercised end to end.** `docs/2.0/MIGRATION.md` and `docs/2.0/RELEASE-POLICY.md` landed in Phase 30; `crates/floom2/tests/docs_parity.rs` keeps both honest (every test/bench target they name exists; every example they list exists and runs). Missing for "active": no release has been cut and measured against the policy, and `docs/gates/*.md` — the **1.0** platform gates — are still entirely unrun. Those gates belong to the v1 line; what 2.0 needs is its own conformance run, which Phase 19 owns.
+- [x] Docs/examples complete. — `docs/2.0/EXAMPLES.md` (9 golden examples, each with its captured real output, run by `scripts/run-golden-examples.sh`), `docs/2.0/ARCHITECTURE.md`, `docs/2.0/MIGRATION.md`, `docs/2.0/RELEASE-POLICY.md`; `crates/floom/tests/docs_parity.rs` asserts the four pages agree with the tree, so they cannot rot silently.
+- [x] Third-party plugin authoring path documented. — `docs/2.0/ARCHITECTURE.md` §"Add a renderer or platform backend" and §"Add a native plugin", `docs/2.0/MIGRATION.md`'s renderer/platform plugin sections, and two executable references: `examples/floom-native-plugin` writes a real `NativeViewProvider` end to end, and `crates/floom-platform/tests/contracts.rs` is the conformance suite a new backend must pass.
+- [ ] Compatibility/release policy active. **PARTIAL — written and self-checking, not yet exercised end to end.** `docs/2.0/MIGRATION.md` and `docs/2.0/RELEASE-POLICY.md` landed in Phase 30; `crates/floom/tests/docs_parity.rs` keeps both honest (every test/bench target they name exists; every example they list exists and runs). Missing for "active": no release has been cut and measured against the policy, and `docs/gates/*.md` — the **1.0** platform gates — are still entirely unrun. Those gates belong to the v1 line; what 2.0 needs is its own conformance run, which Phase 19 owns.
 - [ ] Performance budgets enforced in CI. **PARTIAL — the budget exists and fails, the CI job does not.** `docs/superpowers/benchmarks/floom-2-budget-baseline.json` finally carries calibration numbers (best-of-3 Criterion medians for the five hot benches), and `scripts/check-perf-budgets.sh` measures and fails over the 10% threshold — verified able to fail, exit 1. Not wired into CI on purpose: the baseline is one host's numbers (macOS arm64, the only tested target) and a runner-specific failure is worse than no gate. Widening the support matrix in `docs/2.0/RELEASE-POLICY.md` is the prerequisite.
 
 ---
@@ -1658,8 +1658,8 @@ claimed, which is the single most important result here.
 | Tests | `cargo test --workspace --no-fail-fast` | **240 targets / 1642 passed / 0 failed / 72 ignored / EXIT=0** — identical to the 2026-09-17 baseline |
 | Architecture | `bash scripts/check-architecture-deps.sh` | **PASS** — after the fix below |
 | Format, 2.0 selection | `cargo fmt <40 packages> --check` | **FAIL** on first run (2 files); clean after the fix below |
-| Real window | `floom2-window --features real`, 12 s then killed | **PASS** — `Apple M4 Pro (Metal)`, frame 1200, `partial 1`, `skips 0`, no panic |
-| Native probe | `floom2-probe --features real`, 14 s then killed | **PASS** — `NATIVE_VIEW true`, `all four surfaces mounted (frame 2)`, content view `520x560 flipped true`, native view 0 frame `(0.0, 278.0, 200.0, 80.0)` pt == the framework's expected `(0, 556, 400, 160)` device px, no panic |
+| Real window | `floom-window --features real`, 12 s then killed | **PASS** — `Apple M4 Pro (Metal)`, frame 1200, `partial 1`, `skips 0`, no panic |
+| Native probe | `floom-probe --features real`, 14 s then killed | **PASS** — `NATIVE_VIEW true`, `all four surfaces mounted (frame 2)`, content view `520x560 flipped true`, native view 0 frame `(0.0, 278.0, 200.0, 80.0)` pt == the framework's expected `(0, 556, 400, 160)` device px, no panic |
 
 ### Two gates were lying
 
@@ -1770,10 +1770,10 @@ and neither was visible from reading it.
 |---|---|---|
 | Tests | `cargo test --workspace --no-fail-fast` | **2178 passed / 0 failed / 72 ignored / EXIT=0** |
 | Architecture | `bash scripts/check-architecture-deps.sh` | **PASS** |
-| Format (touched packages) | `cargo fmt --package=floom2 --package=floom-snapshot --check` | **clean** |
+| Format (touched packages) | `cargo fmt --package=floom --package=floom-snapshot --check` | **clean** |
 | Golden examples | `bash scripts/run-golden-examples.sh` | **9/9** |
 | Performance budgets | `bash scripts/check-perf-budgets.sh` | **PASS — 5 budgets, best of 3** |
-| Real window | `floom2-window --features real`, 8 s idle | **PASS** — `Apple M4 Pro (Metal)`, `frames=2`, CPU `0.16 s` (1.9 % of one core) |
+| Real window | `floom-window --features real`, 8 s idle | **PASS** — `Apple M4 Pro (Metal)`, `frames=2`, CPU `0.16 s` (1.9 % of one core) |
 
 ### The matrix had rotted, twice over
 
@@ -1791,7 +1791,7 @@ and one P4 line said the design systems were BLOCKED while
 42 tests between them. Five of those lines are now ticked against real targets;
 the MCP one is PARTIAL for reasons given on the line itself.
 
-So the pass added `crates/floom2/tests/acceptance.rs`: it parses this section and
+So the pass added `crates/floom/tests/acceptance.rs`: it parses this section and
 asserts that every path named as evidence exists, that no ticked line is
 evidence-free (waivers excepted), that P0 stays ticked, and that a **dated**
 acceptance run is present. The last one is why this section exists — the test

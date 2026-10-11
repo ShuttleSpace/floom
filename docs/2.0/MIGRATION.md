@@ -5,16 +5,16 @@ Two crates, two models, one repository:
 - **`floom`** is the v1 monolith (`src/`). It is preserved and **will keep
   working for the current major version**. Nothing in this document is required
   of an app that stays on it.
-- **`floom2`** is the 2.0 facade (`crates/floom2`). It is a different architecture,
+- **`floom`** is the 2.0 facade (`crates/floom`). It is a different architecture,
   not a new coat of paint on the old one: a layered crate graph, an explicit
   element tree, three replaceable ABIs, and a headless app shell.
 
 The two trees **do not mix in one frame**. There is no adapter that mounts a v1
 `View` inside a 2.0 host, and there is no adapter that mounts a 2.0 widget
 inside a v1 app. Migration is therefore *subtree by subtree*: you port a screen,
-not a file, and the ported screen is built from `floom2::prelude`.
+not a file, and the ported screen is built from `floom::prelude`.
 
-Every snippet below is compiled and run by `crates/floom2/tests/migration.rs`.
+Every snippet below is compiled and run by `crates/floom/tests/migration.rs`.
 That file is the source of truth; if this page and it disagree, the test is
 right.
 
@@ -22,46 +22,28 @@ right.
 
 | situation | what to do |
 | --- | --- |
-| staying on v1 for now | nothing, or switch `use floom::prelude::*` to `use floom::compat::v1_prelude::*` to pin the surface (below) |
-| porting one screen | port that subtree to `floom2::prelude`; the rest of the app keeps running v1 |
-| starting a new app | `floom2::prelude` |
+| staying on v1 | **no longer an option.** The v1 crate has been removed from this workspace: v1 source does not compile against this tree, and `crates/floom/tests/migration.rs` asserts that as `compile_fail` doctests. There is no compat prelude to freeze onto |
+| porting one screen | port that subtree to `floom::prelude`; the rest of the app keeps running v1 |
+| starting a new app | `floom::prelude` |
 
-## Step 0 — freeze the v1 surface (optional, cheap)
+## Step 0 — nothing to freeze
 
-`floom::prelude` is the v1 prelude and will not change while v1 is supported,
-but a future narrowing is easier to survive if the app imports the frozen copy:
+This step used to be "switch `use floem::prelude::*` to
+`use floem::compat::v1_prelude::*`", which pinned the v1 surface so an app could
+stay on v1 while the 2.0 surface moved underneath it.
 
-```rust
-// before
-use floom::prelude::*;
-// after
-use floom::compat::v1_prelude::*;
-```
+**It no longer applies.** The v1 crate has been deleted from this workspace, so
+there is no `floem::compat` module left to import and no v1 surface left to pin.
+What replaces it is the row in "Pick your path" above: port the screen you are
+changing, and leave the rest where it builds until you can move it.
 
-`floom::compat::v1_prelude` is a verbatim mirror of today's v1 prelude — the
-same items, same `TypeId`s (asserted by `tests/compat_prelude.rs`). Once an app
-imports it, a future change to `floom::prelude` cannot touch it.
-
-## Concept mapping
-
-| v1 | 2.0 | note |
-| --- | --- | --- |
-| `View` / `IntoView` | `Widget` (and `WidgetAny` in type-erased trees) | both live in `floom-core`; custom widgets reach them through `floom2::advanced` |
-| `impl IntoView` return value | `Child::new(ChildKey, LayoutRequest, \|\| Box::new(widget))` | children are **keyed** and built by the host |
-| `RwSignal`, `create_effect` | application-owned state | the reactive graph is legacy; `floom-store` if you want signals back |
-| `ViewId` | `NodeId` | `NodeId` is issued by, and scoped to, one `WidgetHost` |
-| `.style(\|s\| s...)` | `LayoutStyle` (layout) + `StyleSet`/`StyleProps` (paint, per interaction state) | style is a value, not a closure |
-| `floom::launch(view)` | `WidgetHost::new()` + `mount_root(..)` + `AppRunner` | the shell runs **headless** — that is why every example is a test |
-| `floom::Renderer` (immediate mode) | `floom_renderer::Renderer` (retained: scene + damage in) | see [Renderer plugins](#renderer-plugins) |
-| windowing baked into `floom` | `floom-platform` ABI (`Platform`, `Window`, `Surface`, `Clipboard`, `Ime`) | see [Platform plugins](#platform-plugins) |
-| — | `floom-native` with capability negotiation | new in 2.0; see [Native views](#native-views) |
-
-## Step 1 — state: signals → the application owns it
-
-**Before (v1).** A signal, and a label that re-runs when it changes:
+**Before (v1).** Kept as the reference the port is measured against. This code
+**does not compile against this tree** — `crates/floom/tests/migration.rs`
+asserts that as a `compile_fail` doctest, which is a stronger statement than a
+passing test would be: it names the code you wrote and records that it is gone.
 
 ```rust
-use floom::compat::v1_prelude::*;
+use floem::compat::v1_prelude::*;
 
 let mut counter = RwSignal::new(0_i32);
 
@@ -81,7 +63,7 @@ is updated in place (excerpt — the full snippet, including how `label_id` is
 found, is `after::the_same_counter_mounts_clicks_and_updates` in the test):
 
 ```rust
-use floom2::prelude::*;
+use floom::prelude::*;
 
 let clicks = std::sync::Arc::new(std::sync::atomic::AtomicI32::new(0));
 let counter = clicks.clone();
@@ -137,8 +119,8 @@ Child::new(ChildKey::index(0), LayoutRequest::new(), || Box::new(Text::new("firs
 The key is what makes reconciliation cheap: keep the key and the widget
 survives, change the key and it is replaced. This is the contract a v1
 `dyn_stack` / `virtual_stack` user is moving to — see
-`examples/floom2-list` (keyed rows survive a reorder) and
-`examples/floom2-virtual-list` (38 elements materialized for 100 000 rows).
+`examples/floom-list` (keyed rows survive a reorder) and
+`examples/floom-virtual-list` (38 elements materialized for 100 000 rows).
 
 ## Step 3 — identity: `ViewId` → `NodeId`
 
@@ -248,14 +230,13 @@ New in 2.0 and with no v1 counterpart: `floom-native`. A provider declares
 capabilities; the controller **negotiates** a composition mode per participant,
 and a mode the backend cannot do is downgraded, never silently granted — a
 participant granted an impossible mode draws nothing, which looks exactly like
-one that was never asked for. `examples/floom2-native-plugin` writes a provider
+one that was never asked for. `examples/floom-native-plugin` writes a provider
 from scratch.
 
 ## The compatibility tier
 
 Two mechanisms, both from Phase 29.2:
 
-1. **`floom::compat::v1_prelude`** — the frozen v1 surface (Step 0).
 2. **A diagnostic at the mount point.** `floom_core::Widget` and `WidgetAny`
    both carry `#[diagnostic::on_unimplemented]`, so the most common
    cross-version mistake reports the migration path on the line that needs it:
@@ -265,7 +246,7 @@ Two mechanisms, both from Phase 29.2:
      = note: `Label` is not a Floom 2.0 `Widget`
      = note: v1 `floom::view::View` values are compatibility APIs and cannot be
              mounted into a Floom 2.0 host
-     = note: rebuild the subtree from `floom2::prelude` widgets, or keep the
+     = note: rebuild the subtree from `floom::prelude` widgets, or keep the
              application on the v1 `floom` crate (preserved for the current
              major version)
    ```
@@ -282,13 +263,13 @@ Stated plainly, so nobody plans a port around them:
 - **`ViewId`'s global reach.** No 2.0 handle works across hosts.
 - **Immediate-mode rendering.** There is no shim that turns a v1 `Renderer`
   into a 2.0 one.
-- **The crate name `floom`.** The facade is `floom2` because the monolith holds
+- **The crate name `floom`.** The facade is `floom` because the monolith holds
   the name. Renaming it is a one-line change once the monolith retires.
 
 ## Verification
 
 ```bash
-cargo test -p floom2 --test migration      # the snippets on this page
+cargo test -p floom --test migration      # the snippets on this page
 cargo test --workspace --no-fail-fast      # everything
 bash scripts/check-architecture-deps.sh    # the layering
 ```

@@ -12,7 +12,7 @@ use floom_core::{
     AnimationSpec, PaintContext, SemanticsContext, SemanticsHint, SemanticsRole, UpdateContext,
     Widget, WidgetAny,
 };
-use floom_legacy_reactive::{Effect, RwSignal, SignalGet};
+use floom_signal::{Effect, RwSignal, SignalGet};
 use floom_types::{Color, Easing, ElementId, Path, Point, RepeatSpec, Shader, Size, Stroke};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};

@@ -8,7 +8,7 @@ use floom_editor_core::{
     command::{EditCommand, MoveCommand, MultiSelectionCommand, ScrollCommand},
     mode::Mode,
 };
-use floom_legacy_reactive::{SignalGet, SignalWith};
+use floom_signal::{SignalGet, SignalWith};
 use ui_events::keyboard::{Key, Modifiers};
 
 use super::{

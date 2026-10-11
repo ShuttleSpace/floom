@@ -58,14 +58,14 @@
 | **B1 缓动** | `crates/floom-types/src/motion.rs::Easing`（Linear / CubicBezier / Spring 三种阻尼区）＋ `AnimKind::Tween.easing`（`crates/floom-animation/src/kinds.rs`，默认 `Linear` = 改造前的行为，曲线是 opt-in） | `floom-types` 的 `motion` 单测（逐点数值）、`crates/floom-animation/tests/motion.rs` |
 | **B2 中断/重定向** | `floom-animation::AnimationScheduler::retarget`（tween → 带初速 spring）、`floom_app::WidgetHost::retarget_animation` | `floom-animation/tests/motion.rs`（不跳变）、`crates/floom-app/tests/motion_host.rs::retargeting_carries_the_momentum_it_interrupted`（**真的保速度**：改目标后先沿原方向再走一帧，零初速的 spring 做不到） |
 | **B3 循环/无限/往返** | `AnimKind::Repeat { inner, iterations: Option<u32>, mode }`、`RepeatMode::{Restart, Reverse}`；spring 无 span → 文档化的"退化为播一次" | `floom-animation/tests/motion.rs`（环绕/有界结束/往返/退化）、`floom-widgets` 的 `INDETERMINATE_SWEEP` |
-| **B8 公开入口** | 命令式 `WidgetHost::{animate, retarget_animation, cancel_animation, animation_value, animations_running}`；声明式 `floom_core::Widget::animation()`；控件自绘侧 `PaintContext::animation_value()`；**facade 词汇**：`floom2::prelude` 导出 `AnimKind/Tween/Easing/CompositorProp/RepeatMode/AnimId`，`floom2::advanced` 导出 `AnimationSpec/RepeatSpec` | `crates/floom-app/tests/motion_host.rs`（16 条）、`crates/floom2/tests/prelude_surface.rs::the_prelude_can_animate_a_node_from_a_single_glob_import` |
+| **B8 公开入口** | 命令式 `WidgetHost::{animate, retarget_animation, cancel_animation, animation_value, animations_running}`；声明式 `floom_core::Widget::animation()`；控件自绘侧 `PaintContext::animation_value()`；**facade 词汇**：`floom::prelude` 导出 `AnimKind/Tween/Easing/CompositorProp/RepeatMode/AnimId`，`floom::advanced` 导出 `AnimationSpec/RepeatSpec` | `crates/floom-app/tests/motion_host.rs`（16 条）、`crates/floom/tests/prelude_surface.rs::the_prelude_can_animate_a_node_from_a_single_glob_import` |
 | **B9 自检门** | 稳定帧预算（金帧留待 S2 与像素黄金一批补） | `crates/floom-app/tests/allocation.rs::a_running_animation_does_not_allocate_per_node`（11k 节点、动画在跑 → **0 次分配/帧**）与 `::a_running_animation_does_not_allocate_per_animation`（10 → 400 个动画，分配数不得增长） |
 
 **四判据的实测结果（2026-09-20）**：
 
-- `cargo test --workspace --no-fail-fast` → **2304 passed / 0 failed / 74 ignored / EXIT=0**（基线 2254，**delta = +50**，逐项对账：`floom-types/src/motion.rs` +11、`floom-animation/src/kinds.rs` 内联 +4、`floom-animation/tests/motion.rs` +15、`floom-overlay/tests/overlay.rs` +1、`floom-app/tests/motion_host.rs` +16、`floom-app/tests/allocation.rs` +2、`floom2/tests/prelude_surface.rs` +1）。
+- `cargo test --workspace --no-fail-fast` → **2304 passed / 0 failed / 74 ignored / EXIT=0**（基线 2254，**delta = +50**，逐项对账：`floom-types/src/motion.rs` +11、`floom-animation/src/kinds.rs` 内联 +4、`floom-animation/tests/motion.rs` +15、`floom-overlay/tests/overlay.rs` +1、`floom-app/tests/motion_host.rs` +16、`floom-app/tests/allocation.rs` +2、`floom/tests/prelude_surface.rs` +1）。
 - `bash scripts/check-architecture-deps.sh` → PASS。
-- **真窗口**：`examples/floom2-window` 加了一条一次性入场淡入（0.4s / ease-out / opacity），`FLOOM2_WINDOW_IDLE=1 FLOOM2_WINDOW_IDLE_SECS=8` 实测 `frames` 从 2 涨到 **26**（含淡入的 24 帧）后**冻住**、`about_to_wait=50`（未空转）、CPU 2.9%（Apple M4 Pro / Metal）。**即：动画真实地在 winit+Metal 帧循环里跑过并释放了循环。** 淡放刻意做成一次性——无限动画会让 G1-4 这条用例失去可证伪性。EXAMPLES.md 里原本写死的 `frames=2` 已同步更新（这正是"点名的证据会腐烂"的又一例）。
+- **真窗口**：`examples/floom-window` 加了一条一次性入场淡入（0.4s / ease-out / opacity），`FLOOM2_WINDOW_IDLE=1 FLOOM2_WINDOW_IDLE_SECS=8` 实测 `frames` 从 2 涨到 **26**（含淡入的 24 帧）后**冻住**、`about_to_wait=50`（未空转）、CPU 2.9%（Apple M4 Pro / Metal）。**即：动画真实地在 winit+Metal 帧循环里跑过并释放了循环。** 淡放刻意做成一次性——无限动画会让 G1-4 这条用例失去可证伪性。EXAMPLES.md 里原本写死的 `frames=2` 已同步更新（这正是"点名的证据会腐烂"的又一例）。
 - 未做：逐帧**像素金帧**（B9 的另一半）与 `Rotate`；`Scale` 仍受 A6 阻塞。
 
 **落地时被测试逼出来的两条语义**（都不是实现细节，是契约，写在这里免得下次重新踩）：
@@ -95,7 +95,7 @@
 
 - **交付**：场景 IR 的 `fill` 是 `Brush { Solid, Linear, Radial }`；`PaintContext` 补上 `fill_rect_brush` / `fill_rounded_rect_brush` / `fill_path_brush`，`Container::background` 收 `impl Into<Brush>`、`Progress::gradient` 收一支锚在轨道上的渐变。软件后端逐像素采样，vello 映射 `peniko::Brush`，skia 记录 `SkShader` 请求。
 - **为什么控件侧入口也算这条**：IR 与后端都支持渐变，但 `PaintContext` 只收 `Color` 时，**没有任何控件能要一支**——和 Compose 在 `brush:` 重载之前的状态一模一样。
-- **黄金**：`floom2-style` 第一幕（渐变卡片两端像素不同 + 单色对照组零差异）、`crates/floom-renderer-software/tests/brush.rs`。
+- **黄金**：`floom-style` 第一幕（渐变卡片两端像素不同 + 单色对照组零差异）、`crates/floom-renderer-software/tests/brush.rs`。
 - **旧判据原文**：
 
 - **现状**：`SceneNode::Rect.fill` 是**单色 `Color`**（`crates/floom-scene/src/node.rs:12-20`），文字同理。
@@ -110,7 +110,7 @@
   - `BackdropFilter { rect, filter }` 单节点——**背景过滤**：就地过滤 `rect` 内**已经画过**的像素，等于 Flutter `BackdropFilter`（磨砂玻璃）。它需要自己的节点，因为它的输入在流里位于它**之前**，而 push/pop 无论从空图层还是从快照起都只能表达其中一种。
   - 软件后端真做：图层靠**换缓冲**实现（父缓冲入栈，绘制照旧往 `self.pixels` 写，弹出时模糊 + 合成），所以没有一条光栅化例程需要多长一个"目标"参数；模糊走**预乘**通道（缓冲是直通 alpha，直接模糊会把透明像素的颜色当墨平均进来，边缘发 halo），三趟 box blur 分摊 `radius/3` 的核半径，总扩散正好等于 `Filter::reach`——这就是 damage 为什么能用半径这一个数。vello 无 blur 原语 → 内容照常画（画sharp比消失好）并计 `filters_skipped`；skia 记录为 `saveLayer` + `SkImageFilter`。
   - 控件侧入口同样是真正的缺口所在：`Widget::filter()` 声明式钩子（宿主照 clip/group 的槽位方案括包**整棵子树**，含中途声明的 reseed）+ `PaintContext::backdrop_filter(rect, &filter)` 操作式入口；`Container::blur()` / `Container::backdrop_blur()` 是消费点。
-- **黄金**：`floom2-style` 第二幕（阴影：卡片下方着墨、无高程对照组为空）、第五幕（滤镜：卡片边缘外 3px 有墨且随距离变淡，无滤镜对照组为 0）、第六幕（背景过滤：硬边在面板内变灰 184、面板外仍是纯白 255）；`crates/floom-renderer-software/tests/filters.rs`、`crates/floom-app/tests/filters.rs`。
+- **黄金**：`floom-style` 第二幕（阴影：卡片下方着墨、无高程对照组为空）、第五幕（滤镜：卡片边缘外 3px 有墨且随距离变淡，无滤镜对照组为 0）、第六幕（背景过滤：硬边在面板内变灰 184、面板外仍是纯白 255）；`crates/floom-renderer-software/tests/filters.rs`、`crates/floom-app/tests/filters.rs`。
 - **旧判据原文**：
 
 - **现状**：场景 IR 与 `PaintContext` 都没有 blur / shadow / renderEffect 字段。
@@ -123,7 +123,7 @@
 - **对标**：Compose 走 AGSL（Android，API 33+）/ SkSL（其余平台）**两套实现 + expect/actual**，且 composite 效果链只在 Android 完整——这是反面教材；Flutter 是单一 `FragmentProgram(.frag GLSL)` 全平台一致。
 - **判据（含反面约束）**：见第 7 节——**不要**引入两套着色语言。本切片只选 **WGSL 一条语言**：软件后端跳过并计 `shaders_skipped`，skia 记录降级，vello 真跑。
 - **交付**：`floom_types::Shader{wgsl, params}` + `SceneNode::Shader{bounds, shader}`；宿主顶点阶段由 vello 承担（全屏三角形 + `Uniforms`），调用者只写 `fn fs_main` 的 WGSL 体。三后端：软件 `shaders_skipped++`、skia `SkiaCommand::Shader` 记录、**vello GPU 离屏渲染**（`run_shader_to_image`：offscreen `Rgba8Unorm + COPY_SRC`，uniform `[16 f32]`→`Blob`→`ImageBrush` 合回场景，`hash_shader_wgsl`/`shader_cache_key` 缓存，`shader_clock` 每帧 +1/60，Shader 节点**永不进 fragment 缓存**）。`--features gpu` 编译 + 单测（有 adapter 时 `shaders_drawn>=1`）。
-- **控件侧入口（同切片补齐）**：后端能跑不等于应用能调用——一个从 widget 树里叫不出名字的着色器只是后端能力，不是特性。故补 `PaintContext::draw_shader`（默认不做，与 `backdrop_filter` 同一条"非静默"规矩）+ `floom_widgets::ShaderBox`（`Canvas`/`Spinner` 同模块的自绘表面，尺寸来自布局，`u.time` 由宿主推进所以动画零重建，`set_shader`/`set_params` 为挂载后原地改值版本）+ prelude 导出 + 黄金示例 `floom2-shader`（三幕：程序越过控件门 / 软件后端计数而非伪造墨迹 / 标量改动是重绘不是重排）+ `crates/floom-app/tests/shader_box.rs` 4 条。变异 `scripts/mutate-a5-shader.sh` **8/8**（含"宿主吞掉 `draw_shader`"与"着色器占窗口而非自身盒子"两刀——只有控件侧断言抓得住，后端测试全绿）。
+- **控件侧入口（同切片补齐）**：后端能跑不等于应用能调用——一个从 widget 树里叫不出名字的着色器只是后端能力，不是特性。故补 `PaintContext::draw_shader`（默认不做，与 `backdrop_filter` 同一条"非静默"规矩）+ `floom_widgets::ShaderBox`（`Canvas`/`Spinner` 同模块的自绘表面，尺寸来自布局，`u.time` 由宿主推进所以动画零重建，`set_shader`/`set_params` 为挂载后原地改值版本）+ prelude 导出 + 黄金示例 `floom-shader`（三幕：程序越过控件门 / 软件后端计数而非伪造墨迹 / 标量改动是重绘不是重排）+ `crates/floom-app/tests/shader_box.rs` 4 条。变异 `scripts/mutate-a5-shader.sh` **8/8**（含"宿主吞掉 `draw_shader`"与"着色器占窗口而非自身盒子"两刀——只有控件侧断言抓得住，后端测试全绿）。
 
 ### A6. `Group` 有类型、无实现：子树变换是空的 — **P0 / L（最贵）**
 
@@ -182,7 +182,7 @@
   - **颜色**（S4）：`Button::transition`，hover/press 的填充色沿主机采样的 `0..=1` 插值，中途反向从**当前颜色**起算而非回到静止色。
   - **透明度**（S8）：`Opacity` 控件包裹单子树，改写目标透明度时整棵子树沿 `CompositorProp::Opacity` 淡入/淡出——复用 S3 已落地的 fold 类合成通道（opacity 向下传给子树），**不改宿主**：控件只在 `Widget::animation` 返回一个带 `with_prop(CompositorProp::Opacity(..))` 的 `AnimationSpec`，宿主本就把声明式动画的 `prop` 折进场景。无过渡时透明度仍以"零时长规范"即时落定（仍是真实可见的静止态，不是 no-op）。
 - **未做**：`尺寸`（真正移除布局空间的折叠）仍需要布局耦合——`run_layout` 只在 `layout_dirty` 时跑，目前隐式层不逐帧重排，留待后续切片；`位移` 与透明度是**同一个机制**（换一个 `CompositorProp::TranslateX/Y` 变体即可，且同样 fold 类），只是还没有真实消费点，未专门做控件。
-- **黄金**：`floom2-style` 第三幕（过渡按钮逐帧走、无过渡控件一帧到位、两者终值相同）；`floom2-motion` 第七幕（`Opacity` 改值淡出、返回值从停留处淡回）；`crates/floom-app/tests/motion_host.rs` 三条（`an_opacity_transition_fades_from_its_old_value_to_the_new_one` / `an_opacity_without_a_transition_is_applied_instantly` / `an_opacity_transition_reverses_to_its_old_value_when_it_returns`）。并用**变异**证伪（`scripts/mutate-s8.sh`）。
+- **黄金**：`floom-style` 第三幕（过渡按钮逐帧走、无过渡控件一帧到位、两者终值相同）；`floom-motion` 第七幕（`Opacity` 改值淡出、返回值从停留处淡回）；`crates/floom-app/tests/motion_host.rs` 三条（`an_opacity_transition_fades_from_its_old_value_to_the_new_one` / `an_opacity_without_a_transition_is_applied_instantly` / `an_opacity_transition_reverses_to_its_old_value_when_it_returns`）。并用**变异**证伪（`scripts/mutate-s8.sh`）。
 - **旧判据原文**：
 
 - **现状**：2.0 **没有**任何样式属性过渡机制（`Transition` / `easing` 在 2.0 目录零命中）。v1 有 `.transition(Background, Transition::ease_in_out(500.millis()))`（`examples/themes/src/main.rs:25-93`、`crates/floom/src/style/transition.rs`）。
@@ -200,7 +200,7 @@
   - `AnimatedContent<T>`（S6，判据里 `AnimatedContent` / `Crossfade` 的**另一支**，至此 B5 的"内容切换"判据完全闭合）：`AnimatedContent::new(key).content_with(|v| child).presence(transition)`——它是 `Crossfade` 的 **N 元、按内容键泛化**：每次 `key` 变化，离开的内容以唯一递增 `ChildKey::keyed(id)` 保持挂载播 exit，到达的内容作为全新的叶节点播 enter，二者因此成为两棵独立的子树（互不干扰，且 key 回到旧值时挂载的是**全新的节点**而非复活已结束的那棵）。每枚内容叶是 `PresenceLeaf` 的薄包装 `AnimatedContentLeaf`——只多带一个 `exited: Arc<AtomicBool>`，在自身 exit 完成时置位，让父节点把已结束的退场子树剪掉，避免每次切换泄漏一个隐藏节点。`T: Clone + Eq + Send + Sync + 'static` 即内容键。
   - 词汇落在 `floom-types`：`PresenceTransition { channel, duration_secs, easing }` + `PresenceChannel::{Fade, Grow{from}, Slide{dy}}`，`spec(entering)` 一次描述双向，避免 enter/exit 各写一遍后漂移。
   - 宿主侧两处配套：①`Widget::animation_finished(cx, id)` 回调——声明式动画完成时通知 widget，是 presence 知道"退场播完了"的事件门（`crates/floom-app/src/lib.rs::tick_node_animations`）；②绘制 walk 把 **fold 类**（opacity / translate）合成属性**向下传给子树**，于是一个 presence 节点的淡入淡出作用到整棵子树而非只有自身（scale/rotate 仍走既有的 Group 作用域，不叠加）。
-  - 判据：`crates/floom-app/tests/motion_host.rs` 五条——首帧淡入、退场中途仍挂载且已变暗、退场播完才卸载、无过渡时退场即时卸载、grow 退场同样延迟卸载，外加 `a_crossfade_keeps_both_children_mounted_while_it_swaps`（交换中途**两侧**都在屏上、且分别处于淡入淡出的两端，交换结束后只剩到达侧）；S6 新增 `an_animated_content_keeps_both_sides_live_while_it_switches` / `an_animated_content_swaps_instantly_without_a_transition` / `an_animated_content_replays_enter_when_a_value_returns`（按内容键切换中途两侧同屏、无过渡即时切换、返回值重放 enter）；黄金示例 `floom2-motion` 第四幕（presence 延迟卸载）、第五幕（crossfade 两侧同屏）与第六幕（AnimatedContent 按键切换 + 返回值重放）；并用**变异**证伪。
+  - 判据：`crates/floom-app/tests/motion_host.rs` 五条——首帧淡入、退场中途仍挂载且已变暗、退场播完才卸载、无过渡时退场即时卸载、grow 退场同样延迟卸载，外加 `a_crossfade_keeps_both_children_mounted_while_it_swaps`（交换中途**两侧**都在屏上、且分别处于淡入淡出的两端，交换结束后只剩到达侧）；S6 新增 `an_animated_content_keeps_both_sides_live_while_it_switches` / `an_animated_content_swaps_instantly_without_a_transition` / `an_animated_content_replays_enter_when_a_value_returns`（按内容键切换中途两侧同屏、无过渡即时切换、返回值重放 enter）；黄金示例 `floom-motion` 第四幕（presence 延迟卸载）、第五幕（crossfade 两侧同屏）与第六幕（AnimatedContent 按键切换 + 返回值重放）；并用**变异**证伪。
 - **未做（明确子集，按判据允许在此写明）**：
   - **共享元素**（`SharedTransitionLayout` / `Hero`）：JS 布局坐标要在两个子树间共享，S5/S6 未做；**补在 A6 切片**——见切片表"共享元素 + B6 多值编排"，`SharedTransitionLayout` 完整落地（源子树沿 translate 飞入目标箱子、落定后揭示目标自身内容、可经宿主 retarget 门中断重定向）。
   - 退出子树仍参与命中测试与可访问性树（退场期间子树仍"存在"，未把它从语义层摘除——已知限制，待后续切片处理）。
@@ -208,7 +208,7 @@
 
 ### B6. ~~motion token 零消费者~~ — **P1 / S** — ✅ 已交付（S4；多值编排 ✅ B6 切片）
 
-- **交付**：`MotionTransition::from_tokens(MotionDuration, MotionEasing)` 把 Material 的两个 token 变成一个 `floom_types::Transition`，而 `Button::transition` 直接收它——**只写一次 ms→s 换算**，改 token 即改动效，无需在任何地方复述数值。`crates/floom-material/tests/motion.rs` 与 `floom2-style` 第四幕锁住这条链。
+- **交付**：`MotionTransition::from_tokens(MotionDuration, MotionEasing)` 把 Material 的两个 token 变成一个 `floom_types::Transition`，而 `Button::transition` 直接收它——**只写一次 ms→s 换算**，改 token 即改动效，无需在任何地方复述数值。`crates/floom-material/tests/motion.rs` 与 `floom-style` 第四幕锁住这条链。
 - **交付（B6 切片：多值编排）**：`AnimationSpec.prop` 扩为 `channels: Vec<CompositorChannel>`（每条 `{prop, from, to}`，同享一条曲线），`with_prop` 保留为单通道简写、新增 `with_channels` 多通道；Tween/Spring/Keyframe 据 `channels` 逐通道采样（`sample_compositors`），一条曲线可同时驱动不透明 + 位移。绘制路径把 `MotionSample.props`/`paint_subtree` 继承合成/`NodePaintContext.composite`/`overlay_nodes` 全部收敛为 `SmallVec<[CompositorProp; 2]>`（单/双通道内联零分配，顺带锁住 B9 稳定帧）。顺带修复了多通道暴露的 B9 回归：`fold_class_only` 与 overlay 子树复用父级继承合成，稳定帧不再重新计算空合成。`motion_host.rs` 新增 `a_multichannel_animation_drives_opacity_and_translation_together` 同帧断言两条通道。
 - **旧判据原文**：
 
@@ -262,18 +262,18 @@ A8 独立，随时可做（但越早越好——它是"自绘控件在无障碍�
 | 切片 | 内容 | 规模 | 交付物 |
 |---|---|---|---|
 | **S1 让动画"像样"** ✅ 已交付 | B1 + B2 + B3 + B8 + B9 | M | 缓动/中断/循环 + 公开入口；**示例未做**（`examples/` 零改动）——不确定态 `Progress` 已作为真实消费点接上，hover 渐隐与拖拽回弹随 B4 一起做（它们本质是隐式层） |
-| **S2 让自绘"能用"** ✅ 已交付 | A1 + A2 + A7 + A8 + A9 | M–L | `Path`/`Stroke`/`ClipRegion` + `Canvas`/`Spinner` + 语义 role + 规模基准并入预算门；示例 `floom2-chart` / `floom2-progress-ring`（原 `floom2-paths` 已并入前者） |
-| **S3 让变换"成立"** ✅ 已交付 | A6 + B7 | L | 需求成立：`Group` 重塑为 `GroupPush`/`GroupPop` 流标记，三后端应用之；`CompositorProp::Scale` 从"故意不动"转为真实；示例 `floom2-transform` |
-| **S4 让风格"成套"** ⚠️ 部分交付 | A3 + A4 + B4 + B6 | L | `Brush`（线性/径向）在场景 IR + 三后端落地，**并补上了控件侧入口**（`PaintContext::fill_*_brush` / `draw_shadow`）；`Shadow` 由软件后端真模糊合成，vello 无 blur 原语→**跳过并计数**；B4 只做最小集合（颜色），B6 接通 Material token → `Transition`；示例 `floom2-style`。通用滤镜、A5 着色器、`AnimatedContent`/共享元素仍未动 |
-| **S5 让过渡"成立"（enter/exit）** ◐ 部分交付 | B5（子集） | M | `Conditional` 支持 `enter`/`exit`/`presence` 过渡，退场动画播完前保持子树挂载；`Crossfade`（`AnimatedContent` / Crossfade 判据支）以两个叠放的 presence 子节点实现"交换时两侧同屏"；`PresenceTransition` 词汇（Fade/Grow/Slide）；宿主加 `Widget::animation_finished` 回调 + fold 类合成属性向下传播；示例 `floom2-motion`（第四幕：presence 延迟卸载；第五幕：crossfade 两侧同屏）。`AnimatedContent`（通用内容过渡）与**共享元素**未做（明确子集，见 B5） |
+| **S2 让自绘"能用"** ✅ 已交付 | A1 + A2 + A7 + A8 + A9 | M–L | `Path`/`Stroke`/`ClipRegion` + `Canvas`/`Spinner` + 语义 role + 规模基准并入预算门；示例 `floom-chart` / `floom-progress-ring`（原 `floom-paths` 已并入前者） |
+| **S3 让变换"成立"** ✅ 已交付 | A6 + B7 | L | 需求成立：`Group` 重塑为 `GroupPush`/`GroupPop` 流标记，三后端应用之；`CompositorProp::Scale` 从"故意不动"转为真实；示例 `floom-transform` |
+| **S4 让风格"成套"** ⚠️ 部分交付 | A3 + A4 + B4 + B6 | L | `Brush`（线性/径向）在场景 IR + 三后端落地，**并补上了控件侧入口**（`PaintContext::fill_*_brush` / `draw_shadow`）；`Shadow` 由软件后端真模糊合成，vello 无 blur 原语→**跳过并计数**；B4 只做最小集合（颜色），B6 接通 Material token → `Transition`；示例 `floom-style`。通用滤镜、A5 着色器、`AnimatedContent`/共享元素仍未动 |
+| **S5 让过渡"成立"（enter/exit）** ◐ 部分交付 | B5（子集） | M | `Conditional` 支持 `enter`/`exit`/`presence` 过渡，退场动画播完前保持子树挂载；`Crossfade`（`AnimatedContent` / Crossfade 判据支）以两个叠放的 presence 子节点实现"交换时两侧同屏"；`PresenceTransition` 词汇（Fade/Grow/Slide）；宿主加 `Widget::animation_finished` 回调 + fold 类合成属性向下传播；示例 `floom-motion`（第四幕：presence 延迟卸载；第五幕：crossfade 两侧同屏）。`AnimatedContent`（通用内容过渡）与**共享元素**未做（明确子集，见 B5） |
 
-| **S7 让滤镜"成立"** ✅ 已交付 | A4（后半：通用滤镜） | M | `Filter` 词汇 + `FilterPush/FilterPop` 内容过滤 + `BackdropFilter` 背景过滤；软件后端换缓冲做真图层模糊（预乘通道），vello 跳过并计 `filters_skipped`，skia 记录为 saveLayer；`Widget::filter()` 让宿主括包整棵子树，`PaintContext::backdrop_filter` 是背景那一路的入口；`Container::blur()` / `Container::backdrop_blur()` 是消费点；示例 `floom2-style` 第五、六幕 |
+| **S7 让滤镜"成立"** ✅ 已交付 | A4（后半：通用滤镜） | M | `Filter` 词汇 + `FilterPush/FilterPop` 内容过滤 + `BackdropFilter` 背景过滤；软件后端换缓冲做真图层模糊（预乘通道），vello 跳过并计 `filters_skipped`，skia 记录为 saveLayer；`Widget::filter()` 让宿主括包整棵子树，`PaintContext::backdrop_filter` 是背景那一路的入口；`Container::blur()` / `Container::backdrop_blur()` 是消费点；示例 `floom-style` 第五、六幕 |
 
-| **S8 补 B4 透明度通道** ✅ 已交付 | B4（透明度子集） | S | `Opacity` 控件把隐式过渡从颜色扩到合成透明度通道：包裹单子树，改目标透明度时整棵子树沿 `CompositorProp::Opacity` 淡入/淡出，复用 S3 的 fold 类合成（不改宿主）；无过渡时透明度以"零时长规范"即时落定仍为真实可见态。示例 `floom2-motion` 第七幕；`motion_host.rs` 三条 + 变异证伪 |
+| **S8 补 B4 透明度通道** ✅ 已交付 | B4（透明度子集） | S | `Opacity` 控件把隐式过渡从颜色扩到合成透明度通道：包裹单子树，改目标透明度时整棵子树沿 `CompositorProp::Opacity` 淡入/淡出，复用 S3 的 fold 类合成（不改宿主）；无过渡时透明度以"零时长规范"即时落定仍为真实可见态。示例 `floom-motion` 第七幕；`motion_host.rs` 三条 + 变异证伪 |
 
-| **A5 自定义着色器** ✅ 已交付 | A5 | L | 只选 **WGSL 单一语言**（反面约束：不引入 AGSL+SkSL 两套）。`Shader{wgsl,params}` + `SceneNode::Shader{bounds,shader}`；软件后端跳过并计 `shaders_skipped`，skia 记录 `SkiaCommand::Shader`，**vello 真跑**（离屏 `Rgba8Unorm` 读回→`ImageBrush` 合回场景，`run_shader_to_image`，节点永不进 fragment 缓存）。控件侧：`PaintContext::draw_shader` + `ShaderBox` 控件 + prelude 导出，黄金示例 `floom2-shader` 三幕。`--features gpu` 单测 + `scripts/mutate-a5-shader.sh` **8/8** |
+| **A5 自定义着色器** ✅ 已交付 | A5 | L | 只选 **WGSL 单一语言**（反面约束：不引入 AGSL+SkSL 两套）。`Shader{wgsl,params}` + `SceneNode::Shader{bounds,shader}`；软件后端跳过并计 `shaders_skipped`，skia 记录 `SkiaCommand::Shader`，**vello 真跑**（离屏 `Rgba8Unorm` 读回→`ImageBrush` 合回场景，`run_shader_to_image`，节点永不进 fragment 缓存）。控件侧：`PaintContext::draw_shader` + `ShaderBox` 控件 + prelude 导出，黄金示例 `floom-shader` 三幕。`--features gpu` 单测 + `scripts/mutate-a5-shader.sh` **8/8** |
 
-| **共享元素 + B6 多值编排** ✅ 已交付 | A6（共享元素）+ B6（多值） | M | `Child.shared_key` 让两处子树共享同一 `key`；`SharedTransitionLayout{key,delta}`（`floom-widgets`）完整落地：源/目标子树都挂载、各自锚在绝对箱子（源顶、目标下方 `delta`），`fly` 使能时整棵布局沿一条 `TranslateY` 通道把源子树飞入目标箱子、落定（`animation_finished` 折叠）后再揭示目标**自身**内容并卸载源；可经宿主 `retarget_animation` 门**中断重定向**（动量保持、不跳变）。B6 多值编排：`AnimationSpec.channels` + 绘制路径 `SmallVec<[CompositorProp;2]>`，一条曲线同驱不透明+位移。`motion_host.rs` 两条共享元素（飞行+中断）+ 一条多通道；`floom-snapshot` 逐帧像素金帧 `frames_shared_element_flight`（顶缘逐帧下移、落帧源卡片换目标卡）；示例 `floom2-motion` 第八幕；变异 `scripts/mutate-a6-shared-element.sh` 4/4；全量 workspace 门通过 |
+| **共享元素 + B6 多值编排** ✅ 已交付 | A6（共享元素）+ B6（多值） | M | `Child.shared_key` 让两处子树共享同一 `key`；`SharedTransitionLayout{key,delta}`（`floom-widgets`）完整落地：源/目标子树都挂载、各自锚在绝对箱子（源顶、目标下方 `delta`），`fly` 使能时整棵布局沿一条 `TranslateY` 通道把源子树飞入目标箱子、落定（`animation_finished` 折叠）后再揭示目标**自身**内容并卸载源；可经宿主 `retarget_animation` 门**中断重定向**（动量保持、不跳变）。B6 多值编排：`AnimationSpec.channels` + 绘制路径 `SmallVec<[CompositorProp;2]>`，一条曲线同驱不透明+位移。`motion_host.rs` 两条共享元素（飞行+中断）+ 一条多通道；`floom-snapshot` 逐帧像素金帧 `frames_shared_element_flight`（顶缘逐帧下移、落帧源卡片换目标卡）；示例 `floom-motion` 第八幕；变异 `scripts/mutate-a6-shared-element.sh` 4/4；全量 workspace 门通过 |
 
 所有切片完成后，与 Flutter / Compose Multiplatform 在"canvas + 动画"这两项上的差距已把**共享元素 `SharedTransitionLayout`/Hero 与 B6 多值编排**补完（见切片表"共享元素 + B6 多值编排"）。自由坐标系共享元素（任意子树间、随布局推导 delta）仍留作后续增强——本切片以布局内置的固定 `delta` 落地。
 
@@ -306,7 +306,7 @@ bash scripts/check-perf-budgets.sh             # 并入 A9 的自绘基准后仍
 UPDATE_SNAPSHOTS=1 cargo test -p floom-snapshot
 # 3) 真窗口冒烟（动画必须在真实帧循环里跑过一次）
 FLOOM2_WINDOW_IDLE=1 FLOOM2_WINDOW_IDLE_SECS=30 \
-  cargo run -p floom2-window --features real
+  cargo run -p floom-window --features real
 ```
 
 **注意**：动画的"看起来对了"不能作为证据。本项目的既有纪律是 **① 会红的负例 ② 对照组 ③ 明确退出码**——动画这类主观能力，这三条一个都不能省。

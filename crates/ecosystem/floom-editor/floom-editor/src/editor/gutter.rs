@@ -12,7 +12,7 @@ use floom::{
     views::Decorators,
 };
 use floom_editor_core::{cursor::CursorMode, mode::Mode};
-use floom_legacy_reactive::{RwSignal, SignalGet, SignalWith};
+use floom_signal::{RwSignal, SignalGet, SignalWith};
 use peniko::Color;
 use peniko::color::palette;
 use peniko::kurbo::Rect;

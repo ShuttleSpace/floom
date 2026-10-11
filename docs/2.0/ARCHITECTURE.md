@@ -6,7 +6,7 @@ depend on its own level and below; an upward edge fails the gate unless it is
 allowlisted with a written reason.
 
 This document is the human-readable mirror of that gate. The layer table below
-is parsed by `crates/floom2/tests/docs_parity.rs`, which fails if the two drift
+is parsed by `crates/floom/tests/docs_parity.rs`, which fails if the two drift
 apart — so this page cannot quietly become wrong.
 
 Companion pages: [`EXAMPLES.md`](EXAMPLES.md) (the golden examples),
@@ -18,20 +18,19 @@ Companion pages: [`EXAMPLES.md`](EXAMPLES.md) (the golden examples),
 | crate | layer | what it owns |
 | --- | --- | --- |
 | `floom-types` | L0 | engine-neutral value types: geometry, ids, events vocabulary |
-| `floom-legacy-renderer`, `floom-legacy-renderer-vello`, `floom-legacy-renderer-skia`, `floom-legacy-renderer-vger`, `floom-legacy-renderer-tiny-skia`, `floom-legacy-reactive`, `floom-legacy-test` | L0 | the v1 crates, kept below the 2.0 graph so nothing has to depend upward into them |
 | `floom-core` | L1 | the element/widget contract: `Widget`, `WidgetAny`, contexts, semantics vocabulary |
-| `floom-runtime-core`, `floom-runtime`, `floom-scheduler` | L2 | element arena, dirty propagation, input routing, task ordering |
+| `floom-runtime-core`, `floom-scheduler`, `floom-signal` | L2 | element arena, dirty propagation, task ordering, and the reactive runtime that drives them (it was `floom-legacy-reactive`; it is v2's own and sits here, not at L0) |
 | `floom-layout`, `floom-style`, `floom-text`, `floom-scene`, `floom-virtual`, `floom-accessibility` | L3 | layout engine, style resolution, text shaping, the retained scene, virtualization geometry, the semantics schema |
 | `floom-renderer`, `floom-renderer-software`, `floom-renderer-vello`, `floom-renderer-skia`, `floom-renderer-tui`, `floom-renderer-web` | L4 | the renderer ABI plus concrete backends (including one whose target is a character grid rather than pixels, and one that blits a raster buffer to a `<canvas>`) |
 | `floom-platform`, `floom-platform-desktop`, `floom-platform-android`, `floom-platform-ios`, `floom-platform-harmony`, `floom-platform-web`, `floom-platform-embedded`, `floom-platform-tui`, `floom-ui-events-winit` | L4 | the windowing ABI plus concrete backends (including one whose target is a character grid) |
 | `floom-native` | L4 | native view composition: capability negotiation, slots, pooling |
 | `floom-platform-mobile` | L4 | mobile OS capabilities (camera, location, sensors, vibration) behind one ABI, with `jni` / `objc2` backends |
-| `floom-animation`, `floom-focus`, `floom-gesture`, `floom-overlay`, `floom-theme`, `floom-store`, `floom-task`, `floom-forms`, `floom-navigation`, `floom-persistence`, `floom-services`, `floom-error`, `floom-ime`, `floom-editor` | L5 | framework services, widget-free by design |
-| `floom-design`, `floom-material`, `floom-cupertino`, `floom-fluent`, `floom-harmony` | L5 | design systems — they emit `floom-style` property values, not paint calls |
+| `floom-animation`, `floom-focus`, `floom-gesture`, `floom-overlay`, `floom-store`, `floom-task`, `floom-forms`, `floom-navigation`, `floom-persistence`, `floom-services`, `floom-error`, `floom-ime`, `floom-editor` | L5 | framework services, widget-free by design |
+| _(design systems)_ | — | `floom-theme`, `floom-design`, `floom-material`, `floom-cupertino`, `floom-fluent`, `floom-harmony` live in the `floom-ui` workspace, which the root workspace `exclude`s. They emit `floom-style` property values rather than paint calls, and their own dependency graph is checked by that workspace's build, not by `scripts/check-architecture-deps.sh`. |
 | `floom-widgets`, `floom-widgets-data` | L6 | widgets: Tier-0 primitives, controls, composites, data widgets |
 | `floom-app` | L7 | the headless app shell: `WidgetHost`, `AppRunner`, input routing, semantics publication |
 | `floom-testkit`, `floom-snapshot`, `floom-codegen`, `floom-ui-ir`, `floom-dsl`, `floom-hot-reload`, `floom-inspector`, `floom-devtools`, `floom-profiler`, `floom-agent`, `floom-accuracy` | L8 | tooling and compilers — **not** shipped in an application binary |
-| `floom2` | L9 | the public facade: `floom2::prelude`, feature bundles. It aggregates the tooling tier too, which is why it sits above L8 even though it *is* shipped. |
+| `floom`, `floom-cli` | L9 | the public facade and the scaffolder that targets it: `floom::prelude`, feature bundles. It aggregates the tooling tier too, which is why it sits above L8 even though it *is* shipped. |
 
 Two crates sit outside the ladder on purpose:
 
@@ -47,7 +46,7 @@ Two crates sit outside the ladder on purpose:
 
 ```text
                          ┌─────────────────────────────┐
-   L9  facade           │ floom2  (prelude, bundles)  │
+   L9  facade           │ floom  (prelude, bundles)  │
                          └──────────────┬──────────────┘
         ┌───────────────────────────────┼──────────────────────────────┐
         │                               │                              │
@@ -81,7 +80,7 @@ Two crates sit outside the ladder on purpose:
    L0  types ── and, below everything, the v1 legacy crates
 ```
 
-Arrows point down. `floom2` is the only crate that may reach L8; no crate below
+Arrows point down. `floom` is the only crate that may reach L8; no crate below
 it may.
 
 ## The three ABIs
@@ -110,8 +109,8 @@ replaceable without touching the parts with the most logic:
    names a concrete backend or an OS crate. Paint through `PaintContext`;
    declare semantics through `SemanticsHint`.
 3. Re-export it from the crate root, and — if it belongs in the beginner
-   surface — add it to `floom2::prelude` *and* to the inventory test
-   (`crates/floom2/tests/prelude_surface.rs`).
+   surface — add it to `floom::prelude` *and* to the inventory test
+   (`crates/floom/tests/prelude_surface.rs`).
 4. Test it with the shared harness (`floom-widgets::testkit`:
    `AllocatingCreateContext`, `RecordingUpdateContext`, `SceneRecorder`,
    `dispatch`) — do not hand-roll recorders.
@@ -129,12 +128,12 @@ replaceable without touching the parts with the most logic:
 3. Add the contract suite: backends are verified against the ABI's own tests,
    not only against their own.
 4. Expose it as a facade feature bundle so an app opts in and nothing else links
-   it (see `floom2`'s `renderer-gpu` / `desktop`).
+   it (see `floom`'s `renderer-gpu` / `desktop`).
 
 ### Add a native plugin
 
 Implement `NativeViewProvider` (8 methods, one of them defaulted) — see
-`examples/floom2-native-plugin`, which writes one and then proves negotiation,
+`examples/floom-native-plugin`, which writes one and then proves negotiation,
 lifecycle and pooling. A plugin advertises only what it can actually do; the
 host downgrades requests to the advertised set.
 

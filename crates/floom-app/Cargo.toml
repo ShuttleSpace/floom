@@ -14,7 +14,6 @@ floom-scene = { path = "../floom-scene", version = "0.2.0" }
 floom-accessibility = { path = "../floom-accessibility", version = "0.2.0" }
 floom-layout = { path = "../floom-layout", version = "0.2.0" }
 floom-runtime-core = { path = "../floom-runtime-core", version = "0.2.0" }
-floom-runtime = { path = "../floom-runtime", version = "0.2.0" }
 floom-focus = { path = "../floom-focus", version = "0.2.0" }
 floom-overlay = { path = "../floom-overlay", version = "0.2.0" }
 # The same scheduler the overlay stack drives its entry animation with: a
@@ -37,7 +36,7 @@ image = { workspace = true, features = ["png", "jpeg"] }
 smallvec = "1.15"
 
 [dev-dependencies]
-floom-legacy-reactive = { path = "../floom-legacy-reactive", version = "0.2.0" }
+floom-signal = { path = "../floom-signal", version = "0.2.0" }
 floom-forms = { path = "../floom-forms", version = "0.2.0" }
 floom-renderer-software = { path = "../floom-renderer-software", version = "0.2.0" }
 floom-renderer-tui = { path = "../floom-renderer-tui", version = "0.2.0" }

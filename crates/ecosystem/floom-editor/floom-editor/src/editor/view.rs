@@ -25,7 +25,7 @@ use floom_editor_core::{
     cursor::{ColPosition, CursorAffinity, CursorMode},
     mode::{Mode, VisualMode},
 };
-use floom_legacy_reactive::{SignalGet, SignalTrack, SignalUpdate, SignalWith};
+use floom_signal::{SignalGet, SignalTrack, SignalUpdate, SignalWith};
 use peniko::Brush;
 use taffy::Overflow;
 use ui_events::keyboard::NamedKey;
@@ -1532,7 +1532,7 @@ fn editor_content(
 mod tests {
     use std::{collections::HashMap, rc::Rc};
 
-    use floom_legacy_reactive::RwSignal;
+    use floom_signal::RwSignal;
     use peniko::kurbo::Rect;
 
     use crate::editor::{

@@ -581,7 +581,7 @@ impl Widget for Button {
 ///
 /// This is the missing half of v1's `Decorators::on_event`: v1 let *any* view
 /// take `.on_event(listener::Click, ..)`, which is why 360 call sites across 146
-/// floem-ui files use it. 2.0's only clickable widget is [`Button`], and
+/// floom-ui files use it. 2.0's only clickable widget is [`Button`], and
 /// `Button` *is* its label — it paints a run of text and nothing else — so it
 /// cannot carry a row of widgets. An expansion-panel header is a title plus a
 /// chevron; a list row is an icon, two labels and a trailing icon. Those need
@@ -1647,12 +1647,87 @@ impl Radio {
     }
 }
 
+/// The colours a [`Switch`] paints with.
+///
+/// A palette rather than four setters, because the four base colours are never
+/// chosen independently in practice: a design system either owns a switch's
+/// colours or does not own its switch at all. The defaults are the values this
+/// widget has always used, so [`Default`] is exactly the pre-palette behaviour.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct SwitchPalette {
+    /// Track fill when on.
+    pub track_on: Color,
+    /// Track fill when off.
+    pub track_off: Color,
+    /// Knob fill when on.
+    pub thumb_on: Color,
+    /// Knob fill when off.
+    pub track_knob_off: Color,
+    /// Track fill when disabled. `None` halves the base colour's alpha, which
+    /// is what this widget did before a palette existed.
+    pub track_disabled: Option<Color>,
+    /// Knob fill when disabled. `None` halves the base colour's alpha.
+    pub thumb_disabled: Option<Color>,
+}
+
+impl Default for SwitchPalette {
+    fn default() -> Self {
+        Self {
+            track_on: Color::rgb(0x38, 0xA1, 0x69),
+            track_off: Color::rgb(0xCB, 0xD5, 0xE0),
+            thumb_on: Color::WHITE,
+            track_knob_off: Color::WHITE,
+            track_disabled: None,
+            thumb_disabled: None,
+        }
+    }
+}
+
 /// An on/off switch.
+///
+/// ## Geometry is derived, and that is a choice
+///
+/// By default this widget computes its own shape: a 40-wide track, half as tall
+/// as it is wide, with a knob exactly as tall as the track and sitting flush
+/// against one end. Nothing here is read from a theme, so the widget is usable
+/// with no design system at all — which is the point of it living in the
+/// primitive layer rather than in a kit.
+///
+/// The three v1 kits (`md-switch`, `cupertino-switch`, `fluent-switch`) each
+/// supplied three *independent* numbers instead — 52 × 32 with a 24 knob — and
+/// none of those three satisfy the derivation above (`52 * 0.5 != 32`, and a 24
+/// knob inside a 32-tall track does not fill it). So a kit that passes tokens
+/// and a caller that passes nothing would otherwise draw different shapes under
+/// the same name, and neither shape is derivable from the other.
+///
+/// Hence the three overrides below. Each defaults to the derivation, so every
+/// existing caller is unaffected, and a kit can state its own numbers.
+///
+/// `knob_inset` deserves a note: v1 got its 2px gap by putting `padding(2.0)`
+/// on the *track* and centring the knob inside it, which is a layout decision
+/// expressed as decoration. The knob's position depends on that padding, so it
+/// is a geometric parameter here, not a paint one. Reproducing v1 with a 52-wide
+/// track and no inset would put the knob flush against the track's end and leave
+/// a visibly different gap.
 pub struct Switch {
     label: String,
     on: bool,
     on_toggle: Option<BoolCallback>,
     track_width: f64,
+    /// Explicit track height. `None` derives half the track's width.
+    track_height: Option<f64>,
+    /// Explicit knob diameter. `None` uses the track's height.
+    knob_diameter: Option<f64>,
+    /// Gap between the knob and the track end it sits against.
+    knob_inset: f64,
+    palette: SwitchPalette,
+    /// Whether hover and press shift the track's colour.
+    ///
+    /// On by default, because feedback on an interactive control is worth more
+    /// than palette fidelity. All three v1 kits had no hover or press styling at
+    /// all, so a kit reproducing them turns this off rather than passing four
+    /// near-identical colours to achieve the same result.
+    tints: bool,
     state: InteractionState,
     revision: Revision,
 }
@@ -1664,6 +1739,11 @@ impl Switch {
             on: false,
             on_toggle: None,
             track_width: 40.0,
+            track_height: None,
+            knob_diameter: None,
+            knob_inset: 0.0,
+            palette: SwitchPalette::default(),
+            tints: true,
             state: InteractionState::default(),
             revision: Revision::default(),
         }
@@ -1685,6 +1765,67 @@ impl Switch {
         self.on_toggle = Some(Box::new(callback));
         self.revision.bump();
         self
+    }
+
+    /// An explicit track size, overriding the derived height.
+    ///
+    /// Without this the height is half the width, which no v1 kit's tokens
+    /// satisfy. A caller passing both numbers gets exactly the box it asked
+    /// for rather than a shape related to it.
+    pub fn track_size(mut self, width: f64, height: f64) -> Self {
+        self.track_width = width;
+        self.track_height = Some(height);
+        self.revision.bump();
+        self
+    }
+
+    /// An explicit knob diameter, overriding "as tall as the track".
+    ///
+    /// A knob shorter than its track is the normal case once a kit sets the two
+    /// independently, so deriving one from the other is not an option.
+    pub fn knob_size(mut self, diameter: f64) -> Self {
+        self.knob_diameter = Some(diameter);
+        self.revision.bump();
+        self
+    }
+
+    /// The gap between the knob and the track end it rests against.
+    ///
+    /// Defaults to flush. All three v1 kits used 2.
+    pub fn knob_inset(mut self, inset: f64) -> Self {
+        self.knob_inset = inset;
+        self.revision.bump();
+        self
+    }
+
+    /// The colours to paint with.
+    pub fn palette(mut self, palette: SwitchPalette) -> Self {
+        self.palette = palette;
+        self.revision.bump();
+        self
+    }
+
+    /// Whether hover and press shift the track's colour. Defaults to `true`.
+    pub fn tints(mut self, tints: bool) -> Self {
+        self.tints = tints;
+        self.revision.bump();
+        self
+    }
+
+    /// The palette in use.
+    pub fn switch_palette(&self) -> SwitchPalette {
+        self.palette
+    }
+
+    /// The interaction state, mutably.
+    ///
+    /// Read-only access exists via [`Switch::interaction`], but a test or an
+    /// embedder driving hover and press from outside the event loop needs to
+    /// set them, and reaching in through a setter per flag would grow with the
+    /// flags. An embedded switch is driven by the host, not by [`Switch`]'s own
+    /// event handling, so this is the supported path rather than a test hook.
+    pub fn state_mut(&mut self) -> &mut InteractionState {
+        &mut self.state
     }
 
     pub fn is_on(&self) -> bool {
@@ -1714,7 +1855,10 @@ impl Switch {
     /// The track rectangle, laid flush to the left edge.
     pub fn track_bounds(&self, bounds: Rect) -> Rect {
         let width = self.track_width.min(bounds.width());
-        let height = (width * 0.5).min(bounds.height());
+        let height = match self.track_height {
+            Some(h) => h.min(bounds.height()),
+            None => (width * 0.5).min(bounds.height()),
+        };
         Rect {
             x0: bounds.x0,
             y0: bounds.y0 + (bounds.height() - height) / 2.0,
@@ -1726,18 +1870,67 @@ impl Switch {
     /// The knob rectangle for the current state.
     pub fn knob_bounds(&self, bounds: Rect) -> Rect {
         let track = self.track_bounds(bounds);
-        let diameter = track.height();
-        let x = if self.on {
-            track.x1 - diameter
-        } else {
-            track.x0
+        let diameter = match self.knob_diameter {
+            Some(d) => d.min(track.height()),
+            None => track.height(),
         };
+        let x = if self.on {
+            track.x1 - self.knob_inset - diameter
+        } else {
+            track.x0 + self.knob_inset
+        };
+        // Vertically centred on the track rather than stretched to it, so an
+        // explicit `knob_size` yields a square knob. Spanning the track's full
+        // height would make the diameter mean two different things -- width
+        // here, height there -- and a 24 knob in a 32 track would render as a
+        // 24x32 rectangle.
+        let y = track.y0 + (track.height() - diameter) / 2.0;
         Rect {
             x0: x,
-            y0: track.y0,
+            y0: y,
             x1: x + diameter,
-            y1: track.y1,
+            y1: y + diameter,
         }
+    }
+
+    /// The track's fill colour, resolving disabled, then interaction tints.
+    ///
+    /// Disabled is checked before the tints because it wins outright: a kit
+    /// that supplies an explicit disabled colour has said what it wants, and a
+    /// hover tint on top of it would be inventing a fifth state nobody asked
+    /// for. This widget's own default keeps the pre-palette behaviour, where a
+    /// disabled switch was the base colour at half alpha.
+    fn track_fill(&self) -> Color {
+        let (base, pressed, hovered) = if self.on {
+            (self.palette.track_on, Color::rgb(0x2A, 0x7D, 0x51), self.palette.track_on)
+        } else {
+            (
+                self.palette.track_off,
+                Color::rgb(0xA0, 0xAE, 0xC0),
+                Color::rgb(0xB8, 0xC2, 0xCC),
+            )
+        };
+        if self.state.disabled {
+            return self.palette.track_disabled.unwrap_or_else(|| disabled_tint(base));
+        }
+        if !self.tints {
+            return base;
+        }
+        resolved_color(base, pressed, hovered, self.state)
+    }
+
+    /// The knob's fill. Never tinted: the knob is the affordance, and shifting
+    /// it on hover would move the thing the pointer is aimed at.
+    fn thumb_fill(&self) -> Color {
+        let base = if self.on {
+            self.palette.thumb_on
+        } else {
+            self.palette.track_knob_off
+        };
+        if self.state.disabled {
+            return self.palette.thumb_disabled.unwrap_or_else(|| disabled_tint(base));
+        }
+        base
     }
 
     pub fn semantics_hint(&self) -> SemanticsHint {
@@ -1778,7 +1971,7 @@ impl Widget for Switch {
         } else {
             SWITCH_TRACK_WIDTH
         };
-        let track_h = track_w * 0.5;
+        let track_h = self.track_height.map_or(track_w * 0.5, |h| h as f32);
         Some(
             floom_core::LayoutRequest::new()
                 .width(track_w + INDICATOR_LABEL_GAP + label_width(&self.label))
@@ -1812,24 +2005,12 @@ impl Widget for Switch {
         }
         let track = self.track_bounds(bounds);
         let knob = self.knob_bounds(bounds);
-        let on_color = Color::rgb(0x38, 0xA1, 0x69);
-        let track_color = if self.on {
-            resolved_color(
-                on_color,
-                mix(on_color, Color::BLACK, 0.18),
-                on_color,
-                self.state,
-            )
-        } else {
-            resolved_color(
-                Color::rgb(0xCB, 0xD5, 0xE0),
-                Color::rgb(0xA0, 0xAE, 0xC0),
-                Color::rgb(0xB8, 0xC2, 0xCC),
-                self.state,
-            )
-        };
-        cx.fill_rounded_rect(track, track.height() as f32 / 2.0, track_color);
-        cx.fill_rounded_rect(knob, knob.height() as f32 / 2.0, Color::WHITE);
+        cx.fill_rounded_rect(
+            track,
+            track.height() as f32 / 2.0,
+            self.track_fill(),
+        );
+        cx.fill_rounded_rect(knob, knob.height() as f32 / 2.0, self.thumb_fill());
         let label_origin = Point::new(track.x1 + 6.0, bounds.y0);
         cx.fill_text(
             label_origin,

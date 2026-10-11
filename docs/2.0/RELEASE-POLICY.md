@@ -2,7 +2,7 @@
 
 This is the gate a release has to pass, and the promise it makes once it has.
 Every claim here that can be checked mechanically is checked:
-`crates/floom2/tests/docs_parity.rs` asserts that the test targets and benchmark
+`crates/floom/tests/docs_parity.rs` asserts that the test targets and benchmark
 targets named below actually exist, and that the golden-example list matches
 `docs/2.0/EXAMPLES.md`.
 
@@ -30,16 +30,15 @@ to be inferred:
 
 | surface | guarantee | enforced by |
 | --- | --- | --- |
-| `floom2::prelude` — the names a beginner gets from one glob | locked: a removal or rename is breaking | `crates/floom2/tests/prelude_surface.rs` (inventory of 46 names) |
-| `floom2` feature-bundle names (`desktop`, `mobile`, `web`, `embedded`, `renderer-gpu`, `renderer-software`, `devtools`) | locked | `crates/floom2/tests/feature_graph.rs` |
+| `floom::prelude` — the names a beginner gets from one glob | locked: a removal or rename is breaking | `crates/floom/tests/prelude_surface.rs` (inventory of 46 names) |
+| `floom` feature-bundle names (`desktop`, `mobile`, `web`, `embedded`, `renderer-gpu`, `renderer-software`, `devtools`) | locked | `crates/floom/tests/feature_graph.rs` |
 | `floom-core::Widget` / `WidgetAny` | locked | the whole workspace compiles against them |
 | `floom-renderer::Renderer`, `floom-platform::{Platform, Window, Surface, Clipboard, Ime}`, `floom-native::{NativeViewProvider, NativeViewController}` | locked — these are the plugin ABIs | the ABI contract suites below |
 | `floom-app::WidgetHost` | locked | prelude + migration tests |
 | `floom-widgets` public widget API | locked | `crates/floom-widgets` tests |
-| `floom2::advanced`, L5 framework crates, design systems | stable: may change in a minor release with a changelog entry | — |
+| `floom::advanced`, L5 framework crates, design systems | stable: may change in a minor release with a changelog entry | — |
 | L8 tooling (`floom-testkit` … `floom-agent`) | **no** compatibility guarantee — dev-time only, never shipped in an app binary | the `default` feature graph test |
-| `floom` (the v1 monolith) | compat tier, see [Deprecation](#deprecation-policy) | `tests/compat_prelude.rs` |
-
+| ~~`floom` (the v1 monolith)~~ | **removed** — the crate is gone; see [Deprecation](#deprecation-policy) | `crates/floom/tests/migration.rs` asserts v1 source no longer compiles |
 ## Supported targets and tested OS ranges
 
 "Tested" means the criteria at the bottom of this page were run on that target
@@ -58,7 +57,7 @@ nothing more.
 | `wasm32-unknown-unknown` | `floom-platform-web` | **target-gated** (Phase 19) |
 | no-std / bare metal | `floom-platform-embedded` | **target-gated** (Phase 19) |
 
-The headless core (`floom2` with no feature bundle) has no OS dependency at
+The headless core (`floom` with no feature bundle) has no OS dependency at
 all: the whole workspace test suite runs without a display, and that is what
 makes the headless rows in this table trustworthy.
 
@@ -81,14 +80,15 @@ Platform ABI (`floom-platform`):
 
 Facade and compatibility:
 
-- `crates/floom2/tests/prelude_surface.rs` — the beginner surface is pinned by name
-- `crates/floom2/tests/feature_graph.rs` — the default build links no windowing,
+- `crates/floom/tests/prelude_surface.rs` — the beginner surface is pinned by name
+- `crates/floom/tests/feature_graph.rs` — the default build links no windowing,
   renderer, GPU or tooling crate; each bundle adds exactly its own
-- `crates/floom2/tests/migration.rs` — the before/after snippets in
+- `crates/floom/tests/migration.rs` — the before/after snippets in
   `docs/2.0/MIGRATION.md` compile and behave as documented
-- `crates/floom2/tests/docs_parity.rs` — the three docs pages agree with the tree
-- `tests/compat_prelude.rs` — `floom::compat::v1_prelude` is a faithful mirror
-  of `floom::prelude`
+- `crates/floom/tests/docs_parity.rs` — the three docs pages agree with the tree
+- `crates/floom/tests/migration.rs` — the v1 snippets in `docs/2.0/MIGRATION.md`
+  are `compile_fail` doctests: they assert that v1 source no longer builds,
+  which is the property a porting app actually needs checked
 
 ## Performance, size and scale gates
 
@@ -96,20 +96,32 @@ Facade and compatibility:
 
 | example | bytes |
 | --- | --- |
-| `floom2-hello` | 2,694,256 (≈ 2.6 MiB) — the headless floor |
-| `floom2-counter` | 2,835,248 (≈ 2.7 MiB) |
-| `floom2-window` (`--features real`) | 11,626,912 (≈ 11.1 MiB) — what desktop + GPU costs on top |
+| `floom-hello` | 2,694,256 (≈ 2.6 MiB) — the headless floor |
+| `floom-counter` | 2,835,248 (≈ 2.7 MiB) |
+| `floom-window` (`--features real`) | 11,626,912 (≈ 11.1 MiB) — what desktop + GPU costs on top |
 
 A release that grows the headless floor by more than 10 % without a written
 reason is a question, not a merge.
 
 **Benchmarks.** `cargo bench`, run on the reference machine (macOS 26.6.2,
-Apple M4 Pro). Bench targets at the workspace root: `event_dispatch`,
-`style_computation`, `painting`, `layout`, `animation`, `text`,
-`view_creation`, `runtime_baseline`, `scene_baseline`, `render_baseline`. Plus
-per-crate suites in `floom-layout`, `floom-virtual`, `floom-text`,
-`floom-runtime-core`, `floom-renderer-vello`, `floom-native`, `floom-store`,
-`floom-animation`, `floom-accessibility`, `floom-widgets-data`.
+Apple M4 Pro). There is no workspace-root bench crate: each suite lives with the
+crate it measures, and this list is the set. A target named here that does not
+exist fails `the_bench_targets_named_by_the_policy_exist` in
+`crates/floom/tests/docs_parity.rs`.
+
+| crate | target | what it measures |
+| --- | --- | --- |
+| `floom-layout` | `incremental` | relayout after a subtree change |
+| `floom-runtime-core` | `element_arena` | element lookup and dirty propagation |
+| `floom-virtual` | `scroll` | visible-range computation |
+| `floom-text` | `shaping` | text shaping |
+| `floom-renderer-software` | `self_draw` | CPU rasterisation |
+| `floom-renderer-vello` | `scene_render` | GPU scene render |
+| `floom-native` | `rows` | native view slot reuse |
+| `floom-store` | `selector` | reactive selector evaluation |
+| `floom-animation` | `frame_rates` | animation clock |
+| `floom-accessibility` | `tree` | semantics tree build |
+| `floom-widgets-data` | `virtual_rows` | virtualised data rows |
 
 Two different gates, and it matters which one is being quoted:
 
@@ -134,7 +146,7 @@ Two different gates, and it matters which one is being quoted:
 **Idle.** An idle window must not burn a core:
 
 ```sh
-FLOOM2_WINDOW_IDLE=1 FLOOM2_WINDOW_IDLE_SECS=8 cargo run -p floom2-window --features real
+FLOOM2_WINDOW_IDLE=1 FLOOM2_WINDOW_IDLE_SECS=8 cargo run -p floom-window --features real
 ```
 
 Last measured (macOS 26.6.2, Apple M4 Pro), at the case's own 30 s horizon and
@@ -147,8 +159,8 @@ window server sends in the first second — so they are recorded, not gated. A
 window that keeps producing frames while nothing is happening fails the release.
 
 **Scale.** The two virtualization claims are asserted, not asserted-once:
-`examples/floom2-virtual-list` proves 38 elements materialized for 100 000 rows
-(0.04 %), and `examples/floom2-datagrid` proves equal paint ops (44 vs 44) for
+`examples/floom-virtual-list` proves 38 elements materialized for 100 000 rows
+(0.04 %), and `examples/floom-datagrid` proves equal paint ops (44 vs 44) for
 1 000 versus 100 000 rows, with a row pool capped at 16. Both are re-run by
 `scripts/run-golden-examples.sh`.
 
@@ -162,7 +174,7 @@ window that keeps producing frames while nothing is happening fails the release.
   workspace still imports it (342 files do today).
 - **2.0 deprecations.** Mark with `#[deprecated]` and a replacement, then
   remove at the next minor release. No silent removals from a locked surface.
-- **The `floom` name.** Held by the monolith. The facade is `floom2` until the
+- **The `floom` name.** Held by the monolith. The facade is `floom` until the
   monolith retires; renaming it is then a one-line change, and it is a major
   event, not a minor one.
 
@@ -178,8 +190,7 @@ Every release, in this order:
 3. `bash scripts/run-golden-examples.sh` — every headless golden example runs
    and passes. Compiling them is not enough; their assertions are the content.
 4. `cargo fmt --package=<each touched package>` — clean. Never `cargo fmt
-   --all`: the v1 crate is edition 2024 with pre-existing drift, and
-   reformatting it buries the diff.
+   --all`: it buries the diff in crates the release does not touch.
 5. Metal smoke: the window-idle command above, on a real display.
-6. Record the four criteria, the release sizes and the test count in
-   `.superpowers/sdd/progress-floom-2.md`.
+6. Record the four criteria, the release sizes and the test count in the
+   release notes for the tag.

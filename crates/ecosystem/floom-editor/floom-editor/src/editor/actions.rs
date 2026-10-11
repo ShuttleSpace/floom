@@ -7,7 +7,7 @@ use floom_editor_core::{
     movement::Movement,
     register::Register,
 };
-use floom_legacy_reactive::{SignalGet, SignalUpdate, SignalWith};
+use floom_signal::{SignalGet, SignalUpdate, SignalWith};
 use ui_events::keyboard::Modifiers;
 
 use super::{

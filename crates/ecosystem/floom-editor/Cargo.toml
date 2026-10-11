@@ -9,7 +9,7 @@ version = "0.1.0"
 
 [workspace.dependencies]
 floom = { path = "../../floom", default-features = false, features = ["default-image-formats", "vger", "serde"] }
-floom-legacy-reactive = { path = "../../floom-legacy-reactive" }
+floom-signal = { path = "../../../floom-signal" }
 
 # `floom` is reached by path, and a `[patch]` only applies to the workspace that
 # declares it — floom's own patches do not reach this nested workspace. So the

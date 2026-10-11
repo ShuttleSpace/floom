@@ -19,7 +19,7 @@ use floom_editor_core::{
     selection::Selection,
     word::WordCursor,
 };
-use floom_legacy_reactive::SignalGet;
+use floom_signal::SignalGet;
 use lapce_xi_rope::Rope;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};

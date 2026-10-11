@@ -68,7 +68,7 @@ use floom_editor_core::{
     cursor::CursorAffinity,
     word::WordCursor,
 };
-use floom_legacy_reactive::Scope;
+use floom_signal::Scope;
 use lapce_xi_rope::{Interval, Rope};
 
 use super::{layout::TextLayoutLine, listener::Listener};
@@ -1972,7 +1972,7 @@ mod tests {
         buffer::rope_text::{RopeText, RopeTextRef, RopeTextVal},
         cursor::CursorAffinity,
     };
-    use floom_legacy_reactive::Scope;
+    use floom_signal::Scope;
     use lapce_xi_rope::Rope;
     use smallvec::smallvec;
 

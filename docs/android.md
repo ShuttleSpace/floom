@@ -364,7 +364,7 @@ scripts/build-apk.sh -t arm64-v8a          # -> target/android/*.apk
    handles. The legacy `copypasta` desktop path is untouched. The round-trip is
    now proven, not just written: the example writes a distinctive probe string and
    reads it back after the window gains focus
-   (`clipboard read after focus = Some("floom2-android clipboard probe 9f3c")`),
+   (`clipboard read after focus = Some("floom-android clipboard probe 9f3c")`),
    and the value is visible from *outside* the process too — Android's own
    clipboard suggestion chip shows it above the keyboard. One trap worth keeping:
    a read issued at startup is denied, because `ClipboardService` refuses apps it

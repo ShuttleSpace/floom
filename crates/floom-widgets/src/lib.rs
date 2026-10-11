@@ -24,6 +24,7 @@ pub mod native;
 pub mod nav;
 pub mod navigation;
 pub mod primitives;
+pub mod progress_linear;
 pub mod ripple;
 pub mod surface;
 pub mod text_input;
@@ -56,7 +57,7 @@ pub use compose::{OverlayHost, popup_placement_rect,
 };
 pub use controls::{
     Button, Checkbox, InteractionState, Pressable, Progress, Radio, Select, SelectPopup,
-    SelectStyle, Slider, Switch, TextField, popup_height,
+    SelectStyle, Slider, Switch, SwitchPalette, TextField, popup_height,
 };
 /// The layout vocabulary a widget author needs alongside [`Stack`] and
 /// [`Surface::border_edges`]: the main axis a stack runs on, how its children
@@ -75,7 +76,13 @@ pub use list_item::{ListItemRow, ListItemStyle, SlotBuilder};
 pub use native::NativeSurface;
 pub use nav::{NavHandle, NavHost};
 pub use navigation::{NavDestination, NavigationBar, NavigationDrawer, NavigationRail};
-pub use primitives::{Container, Divider, Icon, Image, ImageFit, SemanticsHint, Spacer, Text};
+pub use primitives::{
+    Container, Divider, Icon, Image, ImageFit, RuleAlignment, SemanticsHint, Spacer, Text,
+};
+pub use progress_linear::{
+    FillPlacement, INDETERMINATE_WIDTH_PCT, Indeterminate, LinearProgress, LinearProgressStyle,
+    PercentRounding, SLIDING_TRAVEL_PCT, fill_percent,
+};
 pub use ripple::{Phase, Ripple, ripple};
 /// A decorated box with children: v1's `Container::new(child).style(..)`.
 pub use surface::Surface;

@@ -17,24 +17,32 @@ set -euo pipefail
 
 # Keep the list alphabetical and in sync with docs/2.0/EXAMPLES.md.
 EXAMPLES=(
-  floom2-calculator
-  floom2-capabilities
-  floom2-chart
-  floom2-counter
-  floom2-datagrid
-  floom2-demo
-  floom2-editor
-  floom2-forms
-  floom2-hello
-  floom2-list
-  floom2-motion
-  floom2-native-plugin
-  floom2-navigation
-  floom2-progress-ring
-  floom2-shader
-  floom2-style
-  floom2-transform
-  floom2-virtual-list
+  # Matches the headless column of docs/2.0/EXAMPLES.md exactly.
+  # `crates/floom/tests/docs_parity.rs` asserts the two lists are equal, so a
+  # rename on either side fails here rather than at run time.
+  #
+  # `floom2-calculator` was in this list until now and has no directory.
+  #
+  # The four `-demo` names carry a suffix to clear a collision with a crate of
+  # the same name -- floom-editor, floom-forms, floem-navigation, floom-style
+  # are all crates in this workspace.
+  floom-capabilities
+  floom-chart
+  floom-counter
+  floom-datagrid
+  floom-demo
+  floom-editor-demo
+  floom-forms-demo
+  floom-hello
+  floom-list
+  floom-motion
+  floom-native-plugin
+  floom-navigation-demo
+  floom-progress-ring
+  floom-shader
+  floom-style-demo
+  floom-transform
+  floom-virtual-list
 )
 
 failures=0

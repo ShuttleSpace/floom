@@ -1027,6 +1027,35 @@ impl Widget for Spacer {
 // Divider
 // ---------------------------------------------------------------------------
 
+/// Where a rule sits on its *cross* axis.
+///
+/// ## Why this is a parameter and not a decision
+///
+/// The three v1 design systems (`md_divider`, `cupertino_divider`,
+/// `fluent_divider`) all wrote the same thing: a horizontal rule with
+/// `height(thickness).width_full()` and no vertical placement at all. In a
+/// container taller than the rule, "no placement" means the rule lands on the
+/// container's **start edge** — the top.
+///
+/// This widget was written before those crates were ported, and it centres the
+/// rule on the cross axis. That is a different component wearing the same name,
+/// and neither position is obviously the correct one: a rule under a heading
+/// wants to touch the heading, and a rule between two columns of equal content
+/// wants the middle.
+///
+/// Centring stays the default because it is what every existing caller already
+/// gets and two golden tests pin it. `Start` exists so the ported kits can
+/// reproduce v1 exactly rather than being silently moved.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RuleAlignment {
+    /// Centred on the cross axis. The default, and this widget's original
+    /// behaviour.
+    Center,
+    /// Flush with the cross axis' start edge — top for a horizontal rule, left
+    /// for a vertical one. **What all three v1 kits produced.**
+    Start,
+}
+
 /// A thin rule separating content along one axis.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Divider {
@@ -1035,6 +1064,7 @@ pub struct Divider {
     axis: Axis,
     /// Inset applied to both ends of the rule.
     indent: f64,
+    alignment: RuleAlignment,
     revision: Revision,
 }
 
@@ -1045,6 +1075,7 @@ impl Divider {
             color: Color::rgb(0, 0, 0),
             axis: Axis::default(),
             indent: 0.0,
+            alignment: RuleAlignment::Center,
             revision: Revision::default(),
         }
     }
@@ -1073,12 +1104,32 @@ impl Divider {
         self
     }
 
+    /// Where the rule sits on its cross axis. Defaults to
+    /// [`RuleAlignment::Center`]; see that type for why `Start` exists.
+    pub fn alignment(mut self, alignment: RuleAlignment) -> Self {
+        self.alignment = alignment;
+        self.revision.bump();
+        self
+    }
+
+    /// The rule's cross-axis placement.
+    pub fn rule_alignment(&self) -> RuleAlignment {
+        self.alignment
+    }
+
     /// The rect the rule occupies inside `bounds`.
     pub fn resolve_bounds(&self, bounds: Rect) -> Rect {
         let thickness = self.thickness.max(0.0);
         match self.axis {
             Axis::Horizontal => {
-                let y = bounds.y0 + (bounds.height() - thickness) / 2.0;
+                let y = match self.alignment {
+                    RuleAlignment::Center => bounds.y0 + (bounds.height() - thickness) / 2.0,
+                    // v1 wrote no vertical placement, which puts the rule on the
+                    // container's top edge. Reproduced rather than corrected: a
+                    // ported kit that silently moved its rule is a visual
+                    // regression nobody would attribute to this change.
+                    RuleAlignment::Start => bounds.y0,
+                };
                 Rect {
                     x0: bounds.x0 + self.indent,
                     y0: y,
@@ -1087,7 +1138,10 @@ impl Divider {
                 }
             }
             Axis::Vertical => {
-                let x = bounds.x0 + (bounds.width() - thickness) / 2.0;
+                let x = match self.alignment {
+                    RuleAlignment::Center => bounds.x0 + (bounds.width() - thickness) / 2.0,
+                    RuleAlignment::Start => bounds.x0,
+                };
                 Rect {
                     x0: x,
                     y0: bounds.y0 + self.indent,

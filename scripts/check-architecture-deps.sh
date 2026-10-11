@@ -209,22 +209,14 @@ for w in sorted(WIDGET_HINTS):
 # neutral schema crate that happens to live under framework/.
 LAYERS: dict[str, int] = {}
 for _names, _level in [
-    # Legacy v1 crates (under `legacy/`): the bottom of the graph. Anything may
-    # depend *down* onto them; nothing may depend up out of them. Keeping them
-    # in the table turns a stray legacy → 2.0 edge into a failure instead of a
-    # silently skipped dependency.
-    (
-        [
-            "floom-legacy-renderer", "floom-legacy-renderer-vello",
-            "floom-legacy-renderer-skia", "floom-legacy-renderer-vger",
-            "floom-legacy-renderer-tiny-skia", "floom-legacy-reactive",
-            "floom-legacy-test",
-        ],
-        0,
-    ),
     (["floom-types"], 0),
     (["floom-core"], 1),
-    (["floom-runtime-core", "floom-runtime", "floom-scheduler"], 2),
+    # `floom-signal` is the reactive runtime (it was `floom-legacy-reactive`
+    # until this layer's members stopped being v1 leftovers). It sits at L2 with
+    # the runtime core that bridges it, not at L0 with where it used to live: it
+    # is not v1 code, and `floom-runtime-core` depends on it to turn signal
+    # writes into dirty flags.
+    (["floom-runtime-core", "floom-scheduler", "floom-signal"], 2),
     (
         [
             "floom-layout", "floom-style", "floom-text", "floom-scene",
@@ -248,15 +240,14 @@ for _names, _level in [
     ),
     (
         [
-            "floom-animation", "floom-focus", "floom-gesture", "floom-overlay",
-            "floom-theme", "floom-store", "floom-task", "floom-forms",
+            "floom-animation", "floom-focus", "floom-gesture", "floom-overlay", "floom-store", "floom-task", "floom-forms",
             "floom-navigation", "floom-persistence", "floom-services",
             "floom-error", "floom-ime", "floom-editor",
-            # Design systems sit beside `floom-theme` (which they extend) and
-            # below the widgets they style. They are renderer-neutral: their
-            # output is `floom_style` property values, not paint calls.
-            "floom-design", "floom-material", "floom-cupertino", "floom-fluent",
-            "floom-harmony",
+            # The design systems (`floom-theme`, `floom-design`, `floom-material`,
+            # `floom-cupertino`, `floom-fluent`, `floom-harmony`) are deliberately
+            # absent. They moved to the `floom-ui` workspace, which the root
+            # workspace `exclude`s, so this gate never sees them as members and
+            # cannot enforce their edges. Their own build is checked there.
         ],
         5,
     ),
@@ -268,11 +259,15 @@ for _names, _level in [
     # `floom-codegen` is the native-glue compiler (Phase 18); `floom-ui-ir` is
     # the versioned UI intermediate representation (Phase 22.1).
     (["floom-testkit", "floom-snapshot", "floom-codegen", "floom-ui-ir", "floom-dsl", "floom-hot-reload", "floom-inspector", "floom-devtools", "floom-profiler", "floom-agent", "floom-accuracy"], 8),
-    # L9: the public facade (`floom2::prelude`), Phase 29.1. It aggregates the
-    # whole stack — including the L8 devtools bundle behind a feature — so it
-    # sits above everything it re-exports. Unlike the L8 tooling tier it IS
-    # shipped as part of an application binary.
-    (["floom2"], 9),
+    # L9: the public facade (`floom::prelude`). It aggregates the whole stack —
+    # including the L8 devtools bundle behind a feature — so it sits above
+    # everything it re-exports. Unlike the L8 tooling tier it IS shipped as part
+    # of an application binary.
+    (["floom"], 9),
+    # `floom-cli` scaffolds projects against the facade and links none of the
+    # stack; it has to sit above the layer it names, or a scaffolded project
+    # could point at a crate the CLI itself does not.
+    (["floom-cli"], 9),
 ]:
     for _n in _names:
         LAYERS[_n] = _level
@@ -361,16 +356,25 @@ if reach:
         f"{', '.join(reach)} (the v1 reactive crate, not a 2.0 layer)"
     )
 
-# --- Legacy allowlist: monolithic floom mixes concerns ---
-LEGACY_ALLOW = {
-    "floom",  # app+widgets+platform+paint until migration
+# --- Facade allowlist: the public crate mixes concerns on purpose ---
+#
+# It aggregates the whole stack on purpose -- that is what a facade is for --
+# so "it depends on both a renderer and a platform" is its definition, not a
+# finding. The allowlist exists so the checker does not spend the rest of its
+# output repeating it.
+#
+# This entry used to read "legacy monolith", naming a v1 crate that no longer
+# exists. The name outlived its referent in the same way `floom-legacy-reactive`
+# did, and the message it printed described a mixing that no longer had a cause.
+FACADE_ALLOW = {
+    "floom",  # the public facade: aggregates the stack below it
 }
 if "floom" in packages:
     deps = pkg_deps("floom")
     mixed = sorted((deps & PLATFORM_HINTS) | (deps & GPU_HINTS) | (deps & RENDERER_PACKAGES))
     notes.append(
-        "ALLOWLIST floom (legacy monolith): mixes platform/GPU/renderer — "
-        f"sample deps present: {mixed[:12]}{'...' if len(mixed) > 12 else ''}"
+        "ALLOWLIST floom (facade): aggregates platform/GPU/renderer by design — "
+        f"{len(mixed)} such deps, expected"
     )
 
 print("=== Floom architecture dependency check ===")

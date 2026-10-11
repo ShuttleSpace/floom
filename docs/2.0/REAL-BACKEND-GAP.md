@@ -231,7 +231,7 @@ pub trait Ime { fn set_enabled / set_cursor_area }
 - **诚实放弃的部分**：字符网格表达不了的东西（矢量 path、图片、滤镜、自定义 shader、渐变）**跳过而非近似**。近似（例如拿渐变的第一个色标当纯色）是对"场景到底要了什么"的沉默说谎。跳过量由 `PaintStats::skipped` 计数暴露，调用方能自己看见画面少了什么。
 - **已交付（T1 切片）**：`crates/floom-renderer-tui` —— `TuiGrid`（字符网格 + 单元 => 列的映射 + 直 alpha 合成）、ANSI truecolor 编码（同色相邻不重复发转义）、`TuiPresenter`（`Presenter`，输出到可注入的 writer，便于测试逐字节断言）、以及 `present_diff`（首帧清屏归位、之后只发差异单元格的 cursor home，是终端性能的关键）。覆盖 stripe：单元测试（grid/ansi/presenter）21 项 + `crates/floom-app/tests/tui_backend.rs` 三条端到端（真实 `WidgetHost` + `Text` widget 的字符落到网格、重复帧稳定性、列宽改变映射随之改变）。变异战役 7 杀 7（`scripts/mutate-t1-tui.sh`）。
 - **已交付（T2 切片）**：`crates/floom-platform-tui` —— 终端尺寸探测（unix `TIOCGWINSZ` ioctl，回落 `COLUMNS`/`LINES`，再回落 80×24）、`InputParser`（状态机把字节翻成 `PlatformEvent`：ASCII 与 UTF-8 **经由 `ImeCommit` 提交**，因此 CJK 等非 Latin 输入不丢；箭头/Home/End/Delete/PageUp/PageDown 经 `KeyCode`，Ctrl/Alt 和 CSI `;mod` 修饰正确还原）、OSC 52 剪贴板（`set_text` 写 base64 序列，`get_text` 返回 `None`，因终端回读需要同步应答协议）。`TuiPlatform` 复用 `HostPlatform` 承担窗口/事件簿记（与 embedded 同构），`ime()` 返回 `None`（终端无原生输入法表面）。覆盖 stripe：平台 crate 单元测试 16 项（`scripts/mutate-t2-tui.sh` 见下）+ `crates/floom-app/tests/tui_platform.rs` 三条端到端（`AppRunner` 驱动真实 widget 树：建窗→首帧渲染标签、注入 Latin 文本被分发进树、注入 CJK `你` 也经 IME 路径被提交）。
-- **已交付（T3 切片 — 真实运行闭环，2026-09-28）**：把 T1/T2 的 `TuiPresenter` + `TuiPlatform` 接到一个真正的终端事件循环。`crates/floom-platform-tui/src/run.rs` 实现 `run::<TuiApp>`：`TerminalGuard` 进入时切 raw mode + 交替屏（仅 tty；管道/CI 检测后原样留空，故 headless 也能跑）、安装 `SIGWINCH` 处理 resize、`stdin` 字节流经独立线程喂入、Ctrl-C(0x03)/Ctrl-D(0x04) 作为退出信号（不进 widget 树）、`Drop` 自动恢复终端。`floom2::run_tui(build)`（`#[cfg(feature = "tui")]`）是门面单调用入口，`examples/hello` 是可运行示例。验证：`cargo run -p floom-platform-tui --example hello` 以管道（headless）运行，0 错将 `Hello from floom2 TUI!` 渲染进字符网格；宿主 `cargo check -p floom2 --features tui` 0 错；`floom-renderer-tui` **21** + `floom-platform-tui` **22** 单测全绿。TUI 自此从"测试里能跑"升级为"`cargo run` 能用"——原 §4.4「仍缺」段已关闭。
+- **已交付（T3 切片 — 真实运行闭环，2026-09-28）**：把 T1/T2 的 `TuiPresenter` + `TuiPlatform` 接到一个真正的终端事件循环。`crates/floom-platform-tui/src/run.rs` 实现 `run::<TuiApp>`：`TerminalGuard` 进入时切 raw mode + 交替屏（仅 tty；管道/CI 检测后原样留空，故 headless 也能跑）、安装 `SIGWINCH` 处理 resize、`stdin` 字节流经独立线程喂入、Ctrl-C(0x03)/Ctrl-D(0x04) 作为退出信号（不进 widget 树）、`Drop` 自动恢复终端。`floom::run_tui(build)`（`#[cfg(feature = "tui")]`）是门面单调用入口，`examples/hello` 是可运行示例。验证：`cargo run -p floom-platform-tui --example hello` 以管道（headless）运行，0 错将 `Hello from floom TUI!` 渲染进字符网格；宿主 `cargo check -p floom --features tui` 0 错；`floom-renderer-tui` **21** + `floom-platform-tui` **22** 单测全绿。TUI 自此从"测试里能跑"升级为"`cargo run` 能用"——原 §4.4「仍缺」段已关闭。
 
 ### 4.3 Harmony（路径已清晰，硬伤降级）
 
@@ -295,8 +295,8 @@ pub trait Ime { fn set_enabled / set_cursor_area }
 
 - [x] `cargo check --target aarch64-linux-android -p floom-platform-android` 通过（真实 `Platform` 实现接入）。**已达成**（0 错 0 警）。
 - [x] 应用层链路能为 Android 编译：`cargo check -p floom-app --target aarch64-linux-android` 通过（app runner + vello renderer + L4 后端）。
-- [x] 可运行入口已落地：`examples/floom2-android`（`cdylib` + `android_main` → `set_android_app` → `AndroidRunner`/`run`），交叉编译 `--features real` 0 错 0 警（登记于 `docs/2.0/EXAMPLES.md`）。
-- [x] 在 Pixel 模拟器（含 Play 的 x86_64 或 arm64 镜像）打开**一个空 floom 窗口**，vello/wgpu-Vulkan 成功呈现首帧。**已达成（2026-09-19）**：`system-images;android-34;google_apis;arm64-v8a` + Pixel 6 profile 建 AVD `floom2api34`，无头启动（`-gpu swiftshader_indirect`）后 logcat 出 `GPU adapter: SwiftShader Device (LLVM 10.0.0) (Vulkan)` 与 `Displayed com.example.floom2/android.app.NativeActivity: +4s709ms`，screencap 可见按钮。
+- [x] 可运行入口已落地：`examples/floom-android`（`cdylib` + `android_main` → `set_android_app` → `AndroidRunner`/`run`），交叉编译 `--features real` 0 错 0 警（登记于 `docs/2.0/EXAMPLES.md`）。
+- [x] 在 Pixel 模拟器（含 Play 的 x86_64 或 arm64 镜像）打开**一个空 floom 窗口**，vello/wgpu-Vulkan 成功呈现首帧。**已达成（2026-09-19）**：`system-images;android-34;google_apis;arm64-v8a` + Pixel 6 profile 建 AVD `floom2api34`，无头启动（`-gpu swiftshader_indirect`）后 logcat 出 `GPU adapter: SwiftShader Device (LLVM 10.0.0) (Vulkan)` 与 `Displayed com.example.floom/android.app.NativeActivity: +4s709ms`，screencap 可见按钮。
 - [x] 派发一次 tap → `poll_events` 收到 `PlatformEvent::Pointer`（`floom-gesture::TouchRecognizer` 判为 tap）。**已达成（2026-09-19）**：`adb shell input tap` 落在按钮**可见位置**的中心 → `PointerButton src=Touch{finger_id:0} mapped=Primary` → `on_click` → 计数 +1（logcat `pointer -> button click, counter = 2`）；对照组（同一 x、按钮外）不触发。
 - [x] **Clipboard / Ime 经 JNI 生效**（证明系统服务桥通）。**已达成（2026-09-19）**：`impl Clipboard` / `impl Ime` 不再是 inert stub，两者都在模拟器上取到真实回值 —— 见 §7.2.2。
 - [ ] `safe_area_insets` 经 JNI 返回非默认值。**未达成**：`safe_area/android.rs` 仍返回 `Insets::ZERO`。它与"键盘出现没人通知应用"是同一个 `WindowInsets` 通知缺口（§7.2.2 末尾），宜一同解决。
@@ -318,7 +318,7 @@ pub trait Ime { fn set_enabled / set_cursor_area }
 三处改动把 `Clipboard` / `Ime` 从 stub 变成真实现，且都**只在设备上可核实**：
 
 1. **桥没接线**：`floom-platform-mobile::jni` 早已写好 `set_java_vm`/`set_activity`，但**没有任何代码调用它们** —— 于是 12 个能力包全是死的。现由 `floom-platform-android::run` 在启动时从 `AndroidApp::vm_as_ptr`/`activity_as_ptr` 交接（setter 收 `*mut c_void`，后端不必依赖 `jni`）。
-2. **Clipboard**：Android 无 NDK 剪贴板 API，只能走 JNI 的 `ClipboardManager`。实测 `write=true`；`read_back=None` 是 **Android 10+ 的焦点限制**，系统日志给出确证原因：`Denying clipboard access to com.example.floom2, application is not in focus`（首次读发生在 `ActivityTaskManager` 报 `Displayed` 之前约 30ms）。焦点稳定后再读 → `Some("floom2-android clipboard probe 9f3c")`，**逐字节一致**，证明值确实存在于系统剪贴板而非仅进程内。
+2. **Clipboard**：Android 无 NDK 剪贴板 API，只能走 JNI 的 `ClipboardManager`。实测 `write=true`；`read_back=None` 是 **Android 10+ 的焦点限制**，系统日志给出确证原因：`Denying clipboard access to com.example.floom, application is not in focus`（首次读发生在 `ActivityTaskManager` 报 `Displayed` 之前约 30ms）。焦点稳定后再读 → `Some("floom-android clipboard probe 9f3c")`，**逐字节一致**，证明值确实存在于系统剪贴板而非仅进程内。
 3. **Ime**：winit 的 `request_ime_update` 走 NDK `ANativeActivity_showSoftInput`，对 `NativeActivity` **不可能生效** —— 请求走完全链后被框架拒绝：`Ignoring showSoftInput() as view=…NativeContentView is not served` / `onFailed at PHASE_CLIENT_VIEW_SERVED`。改为 Java 侧通行做法：向 activity 挂一个 1×1、alpha=0 的 `EditText` 锚点并让 `InputMethodManager` 为**它**显示输入法（`floom-platform-mobile` 的 `keyboard::soft_input::android`）。实测 `mServedView=android.widget.EditText{… 0,0-1,1}`、`mInputShown=true`、`ImeTracker: onShown`，截屏可见键盘。
 
 **仍未收口、且已定位到确切位置的一处**：**键盘出现时没有任何事件通知应用**。`android-activity` 会抛 `MainEvent::InsetsChanged`，而 winit 的 Android 后端把它丢掉了（`winit-android/src/event_loop.rs`：`TODO: handle Android InsetsChanged notification`）；窗口虽声明 `adjustResize` 却**并未真的 resize**，所以也不产生窗口事件。后果有二：应用**无法避开被键盘遮住的区域**（`soft_keyboard_state()` 读得出 336.4 logical px 的高度，但要有人先把它唤醒）；`safe_area_insets` 同样缺这条通知。修法是在该 fork 里转发 `InsetsChanged`（或由锚点注册 `OnApplyWindowInsetsListener` 回调 Rust）。
@@ -376,8 +376,8 @@ pub trait Ime { fn set_enabled / set_cursor_area }
 **本估算自身已交付（编译级）**：
 
 - `crates/floom-platform-android`：接入 lapce/winit fork 的真实 `Platform` 实现（`AndroidPlatform` / `AndroidWindow` / `AndroidDriver` / `run` / `set_android_app`），key/modifier 映射在 L4 本地实现（不依赖 winit）；host 与 `aarch64-linux-android` 双零警告，架构门 PASS。
-- `examples/floom2-android`：把 L4 后端 + `AppRunner<VelloGpuPresenter>` 接成可被 `native-activity` 加载的 `cdylib`（`android_main`），含 APK 模板（`AndroidManifest.xml` / `scripts/build-apk.sh`）。
-- 上方两项均在 `docs/2.0/EXAMPLES.md` 登记，由 `crates/floom2/tests/docs_parity.rs` 与 `examples/` 目录、架构门 `LAYERS` 对账。
+- `examples/floom-android`：把 L4 后端 + `AppRunner<VelloGpuPresenter>` 接成可被 `native-activity` 加载的 `cdylib`（`android_main`），含 APK 模板（`AndroidManifest.xml` / `scripts/build-apk.sh`）。
+- 上方两项均在 `docs/2.0/EXAMPLES.md` 登记，由 `crates/floom/tests/docs_parity.rs` 与 `examples/` 目录、架构门 `LAYERS` 对账。
 
 设备级余项（首帧 / tap / JNI 回值）见 §7.2，被 AVD 镜像门控。
 

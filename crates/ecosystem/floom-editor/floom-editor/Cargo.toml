@@ -10,7 +10,7 @@ path = "src/lib.rs"
 
 [dependencies]
 floom.workspace = true
-floom-legacy-reactive.workspace = true
+floom-signal.workspace = true
 floom-editor-core = { path = "../floom-editor-core" }
 lapce-xi-rope = "0.4.0"
 peniko = { version = "0.6.0", features = ["serde"] }

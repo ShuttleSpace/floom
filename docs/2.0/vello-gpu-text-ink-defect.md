@@ -1,6 +1,6 @@
 # 缺陷：vello GPU presenter 不绘制裸 `Text` 节点（macOS/Metal）
 
-> 发现日期：2026-09-28 · 发现途径：给 `floom2::run_desktop` 做 Metal 冒烟截图
+> 发现日期：2026-09-28 · 发现途径：给 `floom::run_desktop` 做 Metal 冒烟截图
 > 状态：**未修，已定位到分层边界** · 影响面：所有走 `VelloGpuPresenter` 的 v2 应用
 
 ## 症状
@@ -11,10 +11,10 @@
 
 | 示例 | 可见 | 不可见 |
 |---|---|---|
-| `floom2-window --features real` | 渐变 `Image`、蓝色 `Button` | `Text::new("clicked 0 times")` |
-| `floom2-run-desktop`（本次新增） | 蓝色 `Button` | `Text::new("run_desktop: a real winit window")` |
+| `floom-window --features real` | 渐变 `Image`、蓝色 `Button` | `Text::new("clicked 0 times")` |
+| `floom-run-desktop`（本次新增） | 蓝色 `Button` | `Text::new("run_desktop: a real winit window")` |
 
-`floom2-window` 是本次改动之前就存在的示例，**同样不可见** —— 所以这不是 `run_desktop`
+`floom-window` 是本次改动之前就存在的示例，**同样不可见** —— 所以这不是 `run_desktop`
 引入的回归，而是先存在的后端缺陷。
 
 ## 已排除的原因（有证据）
@@ -29,7 +29,7 @@
   与 `:1934` 两个测试，它们断言了像素级 ink）。
 - **不是编码器不发字形命令**：`gpu.rs:1418` 的 `SceneNode::Text` 分支会
   `draw_glyphs(...).transform(...).brush(...)`，并在 `:1451` 计 `stats.glyph_runs += 1`。
-  `floom2-window` 运行日志 `frame 300: rasters 19557 (partial 1)` 说明确有光栅化发生。
+  `floom-window` 运行日志 `frame 300: rasters 19557 (partial 1)` 说明确有光栅化发生。
 
 ## 像素证据
 
@@ -57,11 +57,11 @@
 ## 复现
 
 ```bash
-cargo run -p floom2-run-desktop                 # 本次新增的最小示例
+cargo run -p floom-run-desktop                 # 本次新增的最小示例
 osascript -e 'tell application "System Events" to get {position,size} of window 1'
 screencapture -x -R<x>,<y>,480,272 /tmp/shot.png
 # 或用既有示例
-FLOOM2_WINDOW_IDLE=1 cargo run -p floom2-window --features real
+FLOOM2_WINDOW_IDLE=1 cargo run -p floom-window --features real
 ```
 
 ## 建议的修法方向

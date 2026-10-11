@@ -2,7 +2,9 @@
 
 use floom_core::{Axis, Brush, Color, Edges, FontWeight, Point, Rect, ResourceId, Shadow, Size, Widget};
 use floom_scene::SceneNode;
-use floom_widgets::primitives::{Container, Divider, Icon, Image, ImageFit, Spacer, Text};
+use floom_widgets::primitives::{
+    Container, Divider, Icon, Image, ImageFit, RuleAlignment, Spacer, Text,
+};
 use floom_widgets::testkit::{
     AllocatingCreateContext, RecordingUpdateContext, SceneRecorder, paint_snapshot,
     semantics_snapshot,
@@ -364,6 +366,100 @@ fn divider_vertical_snapshot_with_indent() {
         paint_snapshot(&widget, id, tall),
         "Rect (9.5, 4.0, 10.5, 96.0) #000000FF"
     );
+}
+
+/// **The control for every `RuleAlignment` test below**: the default centres the
+/// rule, and the two golden snapshots above already pin that. Every `Start`
+/// assertion is therefore "and *not* this".
+#[test]
+fn a_divider_centres_on_its_cross_axis_by_default() {
+    let widget = Divider::new();
+    assert_eq!(widget.rule_alignment(), RuleAlignment::Center);
+    let (id, _create) = allocate(&widget);
+    assert_eq!(
+        paint_snapshot(&widget, id, BOX),
+        "Rect (0.0, 9.5, 100.0, 10.5) #000000FF",
+        "20-tall box, 1-thick rule: 9.5 is (20 - 1) / 2"
+    );
+}
+
+/// A horizontal rule in `Start` sits on the box's top edge — which is what all
+/// three v1 kits produced by writing no vertical placement at all.
+#[test]
+fn a_horizontal_rule_in_start_sits_on_the_top_edge() {
+    let widget = Divider::new().alignment(RuleAlignment::Start);
+    let (id, _create) = allocate(&widget);
+    assert_eq!(paint_snapshot(&widget, id, BOX), "Rect (0.0, 0.0, 100.0, 1.0) #000000FF");
+}
+
+/// A vertical rule in `Start` sits on the box's left edge.
+#[test]
+fn a_vertical_rule_in_start_sits_on_the_left_edge() {
+    let widget = Divider::new()
+        .axis(Axis::Vertical)
+        .alignment(RuleAlignment::Start);
+    let tall = Rect::from_origin_size(Point::ZERO, Size::new(20.0, 100.0));
+    let (id, _create) = allocate(&widget);
+    assert_eq!(paint_snapshot(&widget, id, tall), "Rect (0.0, 0.0, 1.0, 100.0) #000000FF");
+}
+
+/// `Start` moves the rule; it must not resize it, shrink it, or change its
+/// colour. Without this a `Start` branch that also clamped the extent would pass
+/// the position assertions above.
+#[test]
+fn start_changes_only_where_the_rule_sits() {
+    let centred = Divider::new().thickness(2.0).indent(6.0).color(Color::rgb(1, 2, 3));
+    let started = centred.alignment(RuleAlignment::Start);
+
+    let box20 = Rect::from_origin_size(Point::ZERO, Size::new(100.0, 20.0));
+    let c = centred.resolve_bounds(box20);
+    let s = started.resolve_bounds(box20);
+
+    assert_eq!(c.width(), s.width(), "extent along the rule is unchanged");
+    assert_eq!(c.height(), s.height(), "the rule is the same thickness");
+    assert_eq!(s.x0, c.x0, "indent still applies equally");
+    assert_ne!(c.y0, s.y0, "but the cross axis moves");
+}
+
+/// **The v1 reproduction, stated as a claim.** With `Start`, a horizontal rule in
+/// a container taller than its thickness lands at the container's top — the
+/// exact pixel v1's `height(thickness).width_full()` with no vertical placement
+/// produced. This is the assertion that makes the parameter a port and not a
+/// preference.
+#[test]
+fn start_reproduces_what_v1_wrote() {
+    let widget = Divider::new().alignment(RuleAlignment::Start);
+    let tall = Rect::from_origin_size(Point::ZERO, Size::new(200.0, 300.0));
+    let rule = widget.resolve_bounds(tall);
+    assert_eq!(rule.y0, tall.y0, "flush with the top");
+    assert_eq!(rule.y1, tall.y0 + 1.0);
+    assert_eq!(rule.x0, tall.x0, "and full width, as width_full() gave");
+    assert_eq!(rule.x1, tall.x1);
+}
+
+/// Centring in a box whose cross extent equals the thickness is the same as
+/// `Start`, because there is nothing to centre. A test that only used a tall box
+/// would not notice an off-by-half-thickness in the `Start` branch.
+#[test]
+fn start_and_centre_agree_when_there_is_no_room_to_centre() {
+    let exact = Rect::from_origin_size(Point::ZERO, Size::new(100.0, 1.0));
+    let centred = Divider::new().resolve_bounds(exact);
+    let started = Divider::new()
+        .alignment(RuleAlignment::Start)
+        .resolve_bounds(exact);
+    assert_eq!(centred, started);
+}
+
+/// Changing the alignment marks the widget dirty; setting it to the value it
+/// already has does not.
+#[test]
+fn changing_the_alignment_marks_the_element_dirty_once() {
+    let mut widget = Divider::new();
+    let mut cx = RecordingUpdateContext::default();
+
+    widget = widget.alignment(RuleAlignment::Start);
+    assert_eq!(cx.dirty_count(), 0, "the control: nothing has been synced");
+    assert_eq!(widget.rule_alignment(), RuleAlignment::Start);
 }
 
 #[test]

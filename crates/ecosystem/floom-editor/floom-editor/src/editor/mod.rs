@@ -31,7 +31,7 @@ use floom_editor_core::{
     soft_tab::{SnapDirection, snap_to_soft_tab_line_col},
     word::WordCursor,
 };
-use floom_legacy_reactive::{SignalGet, SignalTrack, SignalUpdate, SignalWith, Trigger};
+use floom_signal::{SignalGet, SignalTrack, SignalUpdate, SignalWith, Trigger};
 use lapce_xi_rope::Rope;
 use parley::Affinity;
 

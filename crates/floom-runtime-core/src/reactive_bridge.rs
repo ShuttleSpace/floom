@@ -4,7 +4,7 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use floom_legacy_reactive::{Effect, ReactiveId, Runtime, RwSignal, Scope, SignalGet};
+use floom_signal::{Effect, ReactiveId, Runtime, RwSignal, Scope, SignalGet};
 use floom_types::ElementId;
 
 use crate::arena::ElementArena;

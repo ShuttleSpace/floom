@@ -19,7 +19,6 @@ floom-snapshot = { path = "../floom-snapshot", version = "0.2.0" }
 # contract (Phase 26) — the loop closes over vocabulary that already exists.
 floom-agent = { path = "../floom-agent", version = "0.2.0" }
 floom-ui-ir = { path = "../floom-ui-ir", version = "0.2.0" }
-floom-design = { path = "../floom-design", version = "0.2.0" }
 # Scene nodes are read directly out of the retained graph for geometry and
 # colour probes.
 floom-scene = { path = "../floom-scene", version = "0.2.0" }

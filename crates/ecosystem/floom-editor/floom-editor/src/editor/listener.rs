@@ -1,4 +1,4 @@
-use floom_legacy_reactive::{RwSignal, Scope, SignalGet, SignalUpdate};
+use floom_signal::{RwSignal, Scope, SignalGet, SignalUpdate};
 
 /// A signal listener that receives 'events' from the outside and runs the callback.
 ///

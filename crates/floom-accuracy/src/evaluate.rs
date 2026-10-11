@@ -10,7 +10,7 @@
 //! against the measurements directly, because a floor is a ">= " claim, not an
 //! exact value.
 
-use floom_design::contrast_ratio;
+use floom_types::contrast_ratio;
 use floom_snapshot::PixelSnapshot;
 use floom_testkit::{Selector, TestApp};
 use floom_types::{Point, Rect};

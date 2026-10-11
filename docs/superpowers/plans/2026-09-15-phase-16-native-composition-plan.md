@@ -359,7 +359,7 @@ the host.*
 - Test: `crates/floom-app/tests/native.rs` (testkit)
 - Test: `crates/floom-platform-desktop/tests/winit_capabilities.rs` (a session
   that never built a bridge does not advertise `NATIVE_VIEW`)
-- Example: `examples/floom2-probe` (installs the provider over a real window and
+- Example: `examples/floom-probe` (installs the provider over a real window and
   dumps both the OS subview tree and the framework's participant states — the
   device half of D1–D3, run by hand)
 

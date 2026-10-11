@@ -42,7 +42,7 @@ use floom_native::{
     NativeViewId, NativeViewKind, NativeViewPool, NativeViewProvider,
 };
 use floom_overlay::{CompositorProp, OverlayManager};
-use floom_runtime::{EventRouter, Hit, HitRegion, RouteStop};
+use floom_runtime_core::{EventRouter, Hit, HitRegion, RouteStop};
 use floom_runtime_core::IdAllocator;
 use floom_scene::{Resource, ResourceKind, ResourceRegistry, Scene, SceneNode, SceneNodeId};
 use floom_text::{LayoutCache, TextAlign, TextLayoutOptions, TextShaper};

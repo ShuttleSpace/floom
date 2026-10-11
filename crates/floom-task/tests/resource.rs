@@ -1,4 +1,4 @@
-use floom_legacy_reactive::Scope;
+use floom_signal::Scope;
 use floom_task::{CancelToken, ResourceState, SyncExecutor, resource, spawn, ui_spawn};
 use std::cell::Cell;
 use std::rc::Rc;

@@ -22,4 +22,4 @@ floom-types = { path = "../floom-types", version = "0.2.0" }
 [dev-dependencies]
 # Tests author documents in the DSL.
 floom-dsl = { path = "../floom-dsl", version = "0.2.0" }
-floom-legacy-reactive = { path = "../floom-legacy-reactive", version = "0.2.0" }
+floom-signal = { path = "../floom-signal", version = "0.2.0" }

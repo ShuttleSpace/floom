@@ -122,7 +122,7 @@ Phase 16 计划 `docs/superpowers/plans/2026-09-15-phase-16-native-composition-p
 按「headless 可验证 → 解锁设备用例」这个排序规则：
 
 1. **16.4 step 3 = D11（推荐）** —— 唯一还能在本机往前推的一项。
-   要让 `examples/floom2-probe` 真的调一次 `begin_native_transition`，然后肉眼判断
+   要让 `examples/floom-probe` 真的调一次 `begin_native_transition`，然后肉眼判断
    "是一张在动的图，接缝处不闪"。headless 半已就绪，缺的只是探针的发起 + 一双眼。
 2. **16.2 Win32 / X11** —— 只剩两个 trait impl（翻译层与桥都已就位），但本机
    `cfg` 掉，编译不到，四判据一条都过不了。需要 Windows / Linux 构建目标。

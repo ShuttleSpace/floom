@@ -15,7 +15,7 @@ use floom_editor_core::{
     selection::Selection,
     word::WordCursor,
 };
-use floom_legacy_reactive::{Effect, RwSignal, Scope, SignalGet, SignalTrack, SignalUpdate, SignalWith};
+use floom_signal::{Effect, RwSignal, Scope, SignalGet, SignalTrack, SignalUpdate, SignalWith};
 use lapce_xi_rope::{Rope, RopeDelta};
 use smallvec::{SmallVec, smallvec};
 use ui_events::keyboard::Modifiers;

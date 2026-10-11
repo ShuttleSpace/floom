@@ -1,7 +1,7 @@
 use super::{BindingRegistry, ReactiveBinding, SignalSource};
 use crate::arena::ElementArena;
 use crate::dirty::{DirtyFlags, DirtySet};
-use floom_legacy_reactive::{RwSignal, SignalUpdate};
+use floom_signal::{RwSignal, SignalUpdate};
 use std::cell::RefCell;
 use std::rc::Rc;
 

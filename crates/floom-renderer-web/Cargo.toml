@@ -23,3 +23,11 @@ web-sys = { version = "0.3", features = [
     "CssStyleDeclaration",
     "ImageData",
 ] }
+
+[dev-dependencies]
+# The tests drive `WebPresenter` directly and inspect its CPU buffer, which is
+# the presenter's real output on a non-wasm target: the blit is a no-op there,
+# so everything worth asserting is observable without a browser.
+floom-scene = { path = "../floom-scene", version = "0.2.0" }
+floom-types = { path = "../floom-types", version = "0.2.0" }
+floom-renderer = { path = "../floom-renderer", version = "0.2.0" }

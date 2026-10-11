@@ -36,7 +36,7 @@ depends only downward, so no dependency rule is violated. "Headless" is the
 point: no window, no GPU — a real backend later supplies a surface and pumps
 `frame()`. That makes the whole thing verifiable on this machine today.
 
-`examples/floom2-counter` is the first runnable floom-2 app, and
+`examples/floom-counter` is the first runnable floom-2 app, and
 `crates/floom-app/tests/counter.rs` is the first test that drives a whole app.
 
 ## Two real bugs the shell surfaced
