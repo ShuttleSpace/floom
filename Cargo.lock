@@ -854,6 +854,33 @@ dependencies = [
 ]
 
 [[package]]
+name = "floom"
+version = "0.2.0"
+dependencies = [
+ "floom-animation",
+ "floom-app",
+ "floom-core",
+ "floom-devtools",
+ "floom-layout",
+ "floom-platform",
+ "floom-platform-android",
+ "floom-platform-desktop",
+ "floom-platform-embedded",
+ "floom-platform-harmony",
+ "floom-platform-ios",
+ "floom-platform-tui",
+ "floom-platform-web",
+ "floom-renderer-software",
+ "floom-renderer-tui",
+ "floom-renderer-vello",
+ "floom-renderer-web",
+ "floom-scene",
+ "floom-signal",
+ "floom-types",
+ "floom-widgets",
+]
+
+[[package]]
 name = "floom-accessibility"
 version = "0.2.0"
 dependencies = [
@@ -869,7 +896,6 @@ dependencies = [
  "floom-accessibility",
  "floom-agent",
  "floom-core",
- "floom-design",
  "floom-scene",
  "floom-snapshot",
  "floom-testkit",
@@ -897,6 +923,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "floom-android-example"
+version = "0.1.0"
+dependencies = [
+ "floem-winit",
+ "floom-app",
+ "floom-core",
+ "floom-layout",
+ "floom-platform",
+ "floom-platform-android",
+ "floom-platform-mobile",
+ "floom-renderer-vello",
+ "floom-types",
+ "floom-widgets",
+]
+
+[[package]]
 name = "floom-animation"
 version = "0.2.0"
 dependencies = [
@@ -916,7 +958,6 @@ dependencies = [
  "floom-focus",
  "floom-forms",
  "floom-layout",
- "floom-legacy-reactive",
  "floom-native",
  "floom-overlay",
  "floom-platform",
@@ -924,16 +965,44 @@ dependencies = [
  "floom-renderer",
  "floom-renderer-software",
  "floom-renderer-tui",
- "floom-runtime",
  "floom-runtime-core",
  "floom-scene",
  "floom-services",
+ "floom-signal",
  "floom-testkit",
  "floom-text",
  "floom-types",
  "floom-widgets",
  "image",
  "smallvec",
+]
+
+[[package]]
+name = "floom-capabilities"
+version = "0.2.0"
+dependencies = [
+ "floem-winit",
+ "floom-app",
+ "floom-core",
+ "floom-layout",
+ "floom-platform",
+ "floom-platform-android",
+ "floom-platform-desktop",
+ "floom-platform-ios",
+ "floom-platform-mobile",
+ "floom-platform-web",
+ "floom-renderer-vello",
+ "floom-types",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-chart"
+version = "0.2.0"
+dependencies = [
+ "floom",
+ "floom-renderer",
+ "floom-signal",
 ]
 
 [[package]]
@@ -957,22 +1026,68 @@ dependencies = [
 ]
 
 [[package]]
+name = "floom-counter"
+version = "0.2.0"
+dependencies = [
+ "floom-app",
+ "floom-core",
+ "floom-layout",
+ "floom-types",
+ "floom-widgets",
+]
+
+[[package]]
 name = "floom-cupertino"
 version = "0.2.0"
 dependencies = [
  "floom-design",
  "floom-scene",
- "floom-snapshot",
  "floom-style",
  "floom-theme",
  "floom-types",
 ]
 
 [[package]]
+name = "floom-datagrid"
+version = "0.2.0"
+dependencies = [
+ "floom-core",
+ "floom-types",
+ "floom-virtual",
+ "floom-widgets",
+ "floom-widgets-data",
+]
+
+[[package]]
+name = "floom-demo"
+version = "0.2.0"
+dependencies = [
+ "floem-winit",
+ "floom-app",
+ "floom-core",
+ "floom-cupertino",
+ "floom-fluent",
+ "floom-forms",
+ "floom-harmony",
+ "floom-layout",
+ "floom-material",
+ "floom-platform",
+ "floom-platform-android",
+ "floom-platform-desktop",
+ "floom-platform-harmony",
+ "floom-platform-ios",
+ "floom-platform-mobile",
+ "floom-platform-web",
+ "floom-renderer-vello",
+ "floom-types",
+ "floom-widgets",
+ "floom-widgets-data",
+]
+
+[[package]]
 name = "floom-design"
 version = "0.2.0"
 dependencies = [
- "floom-accessibility",
  "floom-scene",
  "floom-style",
  "floom-theme",
@@ -988,8 +1103,8 @@ dependencies = [
  "floom-dsl",
  "floom-hot-reload",
  "floom-inspector",
- "floom-legacy-reactive",
  "floom-runtime-core",
+ "floom-signal",
  "floom-style",
  "floom-types",
  "floom-ui-ir",
@@ -1010,6 +1125,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "floom-editor-demo"
+version = "0.2.0"
+dependencies = [
+ "floom-editor",
+]
+
+[[package]]
 name = "floom-error"
 version = "0.2.0"
 
@@ -1019,7 +1141,6 @@ version = "0.2.0"
 dependencies = [
  "floom-design",
  "floom-scene",
- "floom-snapshot",
  "floom-style",
  "floom-theme",
  "floom-types",
@@ -1037,6 +1158,14 @@ name = "floom-forms"
 version = "0.2.0"
 
 [[package]]
+name = "floom-forms-demo"
+version = "0.2.0"
+dependencies = [
+ "floom",
+ "floom-forms",
+]
+
+[[package]]
 name = "floom-gesture"
 version = "0.2.0"
 dependencies = [
@@ -1049,10 +1178,16 @@ version = "0.2.0"
 dependencies = [
  "floom-design",
  "floom-scene",
- "floom-snapshot",
  "floom-style",
  "floom-theme",
  "floom-types",
+]
+
+[[package]]
+name = "floom-hello"
+version = "0.2.0"
+dependencies = [
+ "floom",
 ]
 
 [[package]]
@@ -1090,26 +1225,42 @@ dependencies = [
 ]
 
 [[package]]
-name = "floom-legacy-reactive"
+name = "floom-list"
 version = "0.2.0"
 dependencies = [
- "parking_lot",
- "smallvec",
+ "floom",
+]
+
+[[package]]
+name = "floom-macos"
+version = "0.2.0"
+dependencies = [
+ "floom-app",
+ "floom-core",
+ "floom-layout",
+ "floom-platform",
+ "floom-platform-desktop",
+ "floom-renderer-vello",
+ "floom-types",
+ "floom-widgets",
 ]
 
 [[package]]
 name = "floom-material"
 version = "0.2.0"
 dependencies = [
- "floom-app",
  "floom-design",
- "floom-layout",
  "floom-scene",
- "floom-snapshot",
  "floom-style",
  "floom-theme",
  "floom-types",
- "floom-widgets",
+]
+
+[[package]]
+name = "floom-motion"
+version = "0.2.0"
+dependencies = [
+ "floom",
 ]
 
 [[package]]
@@ -1122,8 +1273,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "floom-native-plugin"
+version = "0.2.0"
+dependencies = [
+ "floom-native",
+ "floom-types",
+]
+
+[[package]]
 name = "floom-navigation"
 version = "0.2.0"
+
+[[package]]
+name = "floom-navigation-demo"
+version = "0.2.0"
+dependencies = [
+ "floom-navigation",
+]
 
 [[package]]
 name = "floom-overlay"
@@ -1239,11 +1405,33 @@ dependencies = [
 ]
 
 [[package]]
+name = "floom-probe"
+version = "0.2.0"
+dependencies = [
+ "floom-animation",
+ "floom-app",
+ "floom-core",
+ "floom-layout",
+ "floom-platform",
+ "floom-platform-desktop",
+ "floom-renderer-vello",
+ "floom-types",
+ "floom-widgets",
+]
+
+[[package]]
 name = "floom-profiler"
 version = "0.2.0"
 dependencies = [
  "floom-inspector",
  "serde_json",
+]
+
+[[package]]
+name = "floom-progress-ring"
+version = "0.2.0"
+dependencies = [
+ "floom",
 ]
 
 [[package]]
@@ -1313,14 +1501,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "floom-runtime"
+name = "floom-run-desktop"
 version = "0.2.0"
 dependencies = [
- "floom-core",
- "floom-legacy-reactive",
- "floom-runtime-core",
- "floom-scheduler",
- "floom-types",
+ "floom",
 ]
 
 [[package]]
@@ -1330,7 +1514,8 @@ dependencies = [
  "bitflags 2.11.0",
  "criterion",
  "floom-core",
- "floom-legacy-reactive",
+ "floom-scheduler",
+ "floom-signal",
  "floom-types",
  "smallvec",
 ]
@@ -1353,6 +1538,22 @@ name = "floom-services"
 version = "0.2.0"
 
 [[package]]
+name = "floom-shader"
+version = "0.2.0"
+dependencies = [
+ "floom",
+ "floom-renderer",
+]
+
+[[package]]
+name = "floom-signal"
+version = "0.2.0"
+dependencies = [
+ "parking_lot",
+ "smallvec",
+]
+
+[[package]]
 name = "floom-snapshot"
 version = "0.2.0"
 dependencies = [
@@ -1373,7 +1574,7 @@ name = "floom-store"
 version = "0.2.0"
 dependencies = [
  "criterion",
- "floom-legacy-reactive",
+ "floom-signal",
 ]
 
 [[package]]
@@ -1385,10 +1586,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "floom-style-demo"
+version = "0.2.0"
+dependencies = [
+ "floom",
+ "floom-material",
+ "floom-renderer",
+]
+
+[[package]]
 name = "floom-task"
 version = "0.2.0"
 dependencies = [
- "floom-legacy-reactive",
+ "floom-signal",
 ]
 
 [[package]]
@@ -1424,6 +1634,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "floom-transform"
+version = "0.2.0"
+dependencies = [
+ "floom",
+ "floom-renderer",
+]
+
+[[package]]
 name = "floom-types"
 version = "0.2.0"
 
@@ -1455,15 +1673,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "floom-virtual-list"
+version = "0.2.0"
+dependencies = [
+ "floom-core",
+ "floom-types",
+ "floom-virtual",
+]
+
+[[package]]
 name = "floom-widgets"
 version = "0.2.0"
 dependencies = [
  "floom-accessibility",
  "floom-core",
  "floom-ime",
- "floom-legacy-reactive",
  "floom-navigation",
  "floom-scene",
+ "floom-signal",
  "floom-text",
  "floom-types",
 ]
@@ -1483,254 +1710,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "floom2"
-version = "0.2.0"
-dependencies = [
- "floom-animation",
- "floom-app",
- "floom-core",
- "floom-devtools",
- "floom-layout",
- "floom-legacy-reactive",
- "floom-platform",
- "floom-platform-android",
- "floom-platform-desktop",
- "floom-platform-embedded",
- "floom-platform-harmony",
- "floom-platform-ios",
- "floom-platform-tui",
- "floom-platform-web",
- "floom-renderer-software",
- "floom-renderer-tui",
- "floom-renderer-vello",
- "floom-renderer-web",
- "floom-scene",
- "floom-types",
- "floom-widgets",
-]
-
-[[package]]
-name = "floom2-android-example"
-version = "0.1.0"
-dependencies = [
- "floem-winit",
- "floom-app",
- "floom-core",
- "floom-layout",
- "floom-platform",
- "floom-platform-android",
- "floom-platform-mobile",
- "floom-renderer-vello",
- "floom-types",
- "floom-widgets",
-]
-
-[[package]]
-name = "floom2-capabilities"
-version = "0.2.0"
-dependencies = [
- "floem-winit",
- "floom-app",
- "floom-core",
- "floom-layout",
- "floom-platform",
- "floom-platform-android",
- "floom-platform-desktop",
- "floom-platform-ios",
- "floom-platform-mobile",
- "floom-platform-web",
- "floom-renderer-vello",
- "floom-types",
- "floom-widgets",
-]
-
-[[package]]
-name = "floom2-chart"
-version = "0.2.0"
-dependencies = [
- "floom-legacy-reactive",
- "floom-renderer",
- "floom2",
-]
-
-[[package]]
-name = "floom2-counter"
-version = "0.2.0"
-dependencies = [
- "floom-app",
- "floom-core",
- "floom-layout",
- "floom-types",
- "floom-widgets",
-]
-
-[[package]]
-name = "floom2-datagrid"
-version = "0.2.0"
-dependencies = [
- "floom-core",
- "floom-types",
- "floom-virtual",
- "floom-widgets",
- "floom-widgets-data",
-]
-
-[[package]]
-name = "floom2-demo"
-version = "0.2.0"
-dependencies = [
- "floem-winit",
- "floom-app",
- "floom-core",
- "floom-cupertino",
- "floom-fluent",
- "floom-forms",
- "floom-harmony",
- "floom-layout",
- "floom-material",
- "floom-platform",
- "floom-platform-android",
- "floom-platform-desktop",
- "floom-platform-harmony",
- "floom-platform-ios",
- "floom-platform-mobile",
- "floom-platform-web",
- "floom-renderer-vello",
- "floom-types",
- "floom-widgets",
- "floom-widgets-data",
-]
-
-[[package]]
-name = "floom2-editor"
-version = "0.2.0"
-dependencies = [
- "floom-editor",
-]
-
-[[package]]
-name = "floom2-forms"
-version = "0.2.0"
-dependencies = [
- "floom-forms",
- "floom2",
-]
-
-[[package]]
-name = "floom2-hello"
-version = "0.2.0"
-dependencies = [
- "floom2",
-]
-
-[[package]]
-name = "floom2-list"
-version = "0.2.0"
-dependencies = [
- "floom2",
-]
-
-[[package]]
-name = "floom2-macos"
-version = "0.2.0"
-dependencies = [
- "floom-app",
- "floom-core",
- "floom-layout",
- "floom-platform",
- "floom-platform-desktop",
- "floom-renderer-vello",
- "floom-types",
- "floom-widgets",
-]
-
-[[package]]
-name = "floom2-motion"
-version = "0.2.0"
-dependencies = [
- "floom2",
-]
-
-[[package]]
-name = "floom2-native-plugin"
-version = "0.2.0"
-dependencies = [
- "floom-native",
- "floom-types",
-]
-
-[[package]]
-name = "floom2-navigation"
-version = "0.2.0"
-dependencies = [
- "floom-navigation",
-]
-
-[[package]]
-name = "floom2-probe"
-version = "0.2.0"
-dependencies = [
- "floom-animation",
- "floom-app",
- "floom-core",
- "floom-layout",
- "floom-platform",
- "floom-platform-desktop",
- "floom-renderer-vello",
- "floom-types",
- "floom-widgets",
-]
-
-[[package]]
-name = "floom2-progress-ring"
-version = "0.2.0"
-dependencies = [
- "floom2",
-]
-
-[[package]]
-name = "floom2-run-desktop"
-version = "0.2.0"
-dependencies = [
- "floom2",
-]
-
-[[package]]
-name = "floom2-shader"
-version = "0.2.0"
-dependencies = [
- "floom-renderer",
- "floom2",
-]
-
-[[package]]
-name = "floom2-style"
-version = "0.2.0"
-dependencies = [
- "floom-material",
- "floom-renderer",
- "floom2",
-]
-
-[[package]]
-name = "floom2-transform"
-version = "0.2.0"
-dependencies = [
- "floom-renderer",
- "floom2",
-]
-
-[[package]]
-name = "floom2-virtual-list"
-version = "0.2.0"
-dependencies = [
- "floom-core",
- "floom-types",
- "floom-virtual",
-]
-
-[[package]]
-name = "floom2-window"
+name = "floom-window"
 version = "0.2.0"
 dependencies = [
  "floom-animation",
