@@ -8,6 +8,7 @@ mod element;
 mod native;
 mod overlay;
 mod repaint;
+mod scroll;
 mod semantics;
 mod widget;
 mod widget_any;
@@ -17,6 +18,7 @@ pub use context::{CreateContext, EventContext, PaintContext, SemanticsContext, U
 pub use element::{Element, ElementKind};
 pub use floom_types::{AnimationSpec, Brush, Color, CompositorProp, Easing, Edges, ElementId, Event, Filter, FontWeight, ImeUpdate, InputMode, Insets, Key, KeyEvent, KeyPhase, Length, Modifiers, NamedKey, NativeCompositionMode, NativeSnapshot, NativeViewKind, OverlayHandle, OverlayKind, Point, PointerButton, PointerEvent, PointerKind, PointerPhase, PresenceChannel, PresenceTransition, Rect, RepeatMode, RepeatSpec, ResourceId, ScrollEvent, Shadow, Size, Transition};
 pub use native::{NativeGrant, NativeRequest};
+pub use scroll::{ScrollOffset, clamp_offset, max_offset};
 pub use overlay::OverlayRequest;
 pub use repaint::{has_repaint_requests, request_repaint, take_repaint_requests};
 pub use semantics::{SemanticsHint, SemanticsRole, SemanticsState};
