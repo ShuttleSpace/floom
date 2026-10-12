@@ -180,6 +180,23 @@ pub trait EventContext {
         let _ = offset;
     }
 
+    /// The same answer [`UpdateContext::content_size`] gives, on the path a
+    /// wheel arrives by.
+    ///
+    /// A scrolling container needs the content's extent to clamp against, and a
+    /// wheel event arrives here rather than in `update`. The host has already
+    /// measured it for [`Widget::needs_content_size`] widgets, so the answer is
+    /// the same number — this is the same measurement, read at the moment it is
+    /// needed rather than cached and re-read.
+    ///
+    /// Defaults to `None`, for the same reason [`UpdateContext::content_size`]
+    /// does: a host that does not lay out has no figure, and zero would be
+    /// indistinguishable from empty.
+    fn content_size(&mut self, id: ElementId) -> Option<Size> {
+        let _ = id;
+        None
+    }
+
     /// Asks the host to place `request.content` above the whole tree.
     ///
     /// Returns whether a host accepted it. A widget must check: hosts without

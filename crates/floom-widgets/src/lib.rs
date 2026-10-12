@@ -21,7 +21,6 @@ pub mod icon_button;
 pub mod labeled;
 pub mod list_item;
 pub mod native;
-pub mod nav;
 pub mod navigation;
 pub mod primitives;
 pub mod progress_linear;
@@ -74,10 +73,10 @@ pub use icon_button::{
 pub use labeled::Labeled;
 pub use list_item::{ListItemRow, ListItemStyle, SlotBuilder};
 pub use native::NativeSurface;
-pub use nav::{NavHandle, NavHost};
 pub use navigation::{NavDestination, NavigationBar, NavigationDrawer, NavigationRail};
 pub use primitives::{
     Container, Divider, Icon, Image, ImageFit, RuleAlignment, SemanticsHint, Spacer, Text,
+    emit_semantics,
 };
 pub use progress_linear::{
     FillPlacement, INDETERMINATE_WIDTH_PCT, Indeterminate, LinearProgress, LinearProgressStyle,

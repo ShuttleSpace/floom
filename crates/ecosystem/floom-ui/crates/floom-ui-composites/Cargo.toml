@@ -1,0 +1,37 @@
+[package]
+name = "floom-ui-composites"
+version = "0.1.0"
+edition = "2021"
+
+# Composite controls that are not the property of any one design system.
+#
+# These used to live in floem-widgets, which is the wrong layer for them. A
+# counter, a tab bar and a tree are *design decisions someone made*, not
+# primitives: there is no reason for the engine to have an opinion about what a
+# navigation rail looks like or which glyph a tree row carries. A primitive has
+# no way to take a design system's answer, so these widgets either hard-coded
+# one (which is a design system smuggled into the engine) or exposed enough
+# knobs to be a kit in miniature.
+#
+# What is left in floem-widgets is what a kit composes *out of*: boxes, text,
+# icons, pressable surfaces. This crate is one layer above that, and floem-ui's
+# per-design-system crates are one layer above this.
+#
+# It lives here rather than in floem-widgets because the dependency runs the
+# other way: the kits depend on floem-widgets, so anything in floem-widgets
+# that depended on this would close the loop.
+
+[dependencies]
+floom-core = { path = "../../../../floom-core" }
+floom-types = { path = "../../../../floom-types" }
+floom-scene = { path = "../../../../floom-scene" }
+floom-widgets = { path = "../../../../floom-widgets" }
+floom-navigation = { path = "../../../../floom-navigation" }
+floom-signal = { path = "../../../../floom-signal" }
+floom-text = { path = "../../../../floom-text" }
+floom-accessibility = { path = "../../../../floom-accessibility" }
+floom-overlay = { path = "../../../../floom-overlay" }
+
+[dev-dependencies]
+floom-app = { path = "../../../../floom-app" }
+floom-layout = { path = "../../../../floom-layout" }

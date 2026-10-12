@@ -415,6 +415,23 @@ name = "floom-types"
 version = "0.2.0"
 
 [[package]]
+name = "floom-ui-composites"
+version = "0.1.0"
+dependencies = [
+ "floom-accessibility",
+ "floom-app",
+ "floom-core",
+ "floom-layout",
+ "floom-navigation",
+ "floom-overlay",
+ "floom-scene",
+ "floom-signal",
+ "floom-text",
+ "floom-types",
+ "floom-widgets",
+]
+
+[[package]]
 name = "floom-virtual"
 version = "0.2.0"
 dependencies = [

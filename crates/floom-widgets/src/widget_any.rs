@@ -157,7 +157,6 @@ impl_widget_any!(
     crate::controls::Select,
     crate::controls::SelectPopup,
     crate::compose::Stack,
-    crate::nav::NavHost,
     crate::compose::Conditional,
     crate::compose::PresenceLeaf,
     crate::compose::Crossfade,

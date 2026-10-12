@@ -3089,6 +3089,23 @@ impl WidgetHost {
         let mut scroll_requests: Vec<(ElementId, ScrollOffset)> = Vec::new();
         let mut overlay_commands: Vec<OverlayCommand> = Vec::new();
 
+        // Measured per dispatch rather than cached from the update pass: the
+        // wheel may arrive before any update has run for this node, and a
+        // container that clamped against a stale extent would stop at the wrong
+        // end. Only the widgets that opted in are measured, and only along this
+        // route — a wheel targets one subtree, and the rest of the tree has no
+        // reason to be walked for it.
+        let mut content_sizes: Vec<Option<Size>> = Vec::new();
+        content_sizes.resize(self.nodes.len(), None);
+        for stop in &route {
+            let Some(index) = self.index_of(stop.id) else {
+                continue;
+            };
+            if !self.nodes[index].dead && self.nodes[index].widget.needs_content_size() {
+                content_sizes[index] = self.content_size(index);
+            }
+        }
+
         for stop in route {
             let Some(index) = self.index_of(stop.id) else {
                 continue;
@@ -3103,6 +3120,7 @@ impl WidgetHost {
                 &mut focus_requests,
                 &mut scroll_requests,
                 &mut overlay_commands,
+                &content_sizes,
             ) {
                 handled = true;
                 break;
@@ -3168,12 +3186,14 @@ impl WidgetHost {
         focus_requests: &mut Vec<ElementId>,
         scroll_requests: &mut Vec<(ElementId, ScrollOffset)>,
         overlay_commands: &mut Vec<OverlayCommand>,
+        content_sizes: &[Option<Size>],
     ) -> bool {
         let node = &mut self.nodes[index];
         let mut cx = NodeEventContext {
             target: stop.id,
             bounds: node.bounds,
             event,
+            content_size: content_sizes.get(index).copied().flatten(),
             focus_requests,
             scroll_requests,
             ime_caret: &mut self.ime_caret,
@@ -4646,6 +4666,11 @@ struct NodeEventContext<'a> {
     bounds: Rect,
     event: Event,
     focus_requests: &'a mut Vec<ElementId>,
+    /// This widget's measured content extent, for the widgets that asked to be
+    /// told — see [`UpdateContext::content_size`]. A wheel event arrives here
+    /// rather than in `update`, and a scrolling container needs the extent to
+    /// clamp against.
+    content_size: Option<Size>,
     /// Scroll offsets this widget asked for, drained by the host after the event
     /// returns.
     ///
@@ -4693,6 +4718,10 @@ impl EventContext for NodeEventContext<'_> {
 
     fn request_scroll(&mut self, offset: ScrollOffset) {
         self.scroll_requests.push((self.target, offset));
+    }
+
+    fn content_size(&mut self, _id: ElementId) -> Option<Size> {
+        self.content_size
     }
 
     fn open_overlay(&mut self, request: OverlayRequest) -> bool {

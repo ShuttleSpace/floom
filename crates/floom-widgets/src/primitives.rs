@@ -115,7 +115,16 @@ impl Revision {
     }
 }
 
-pub(crate) fn emit_semantics(hint: SemanticsHint, cx: &mut dyn SemanticsContext) {
+/// Publishes `hint` to assistive technology.
+///
+/// Public because implementing [`Widget::semantics`](floom_core::Widget::semantics)
+/// means writing these four steps, and a crate outside this one — the
+/// composites in `floom-ui-composites` publish the same way — has no way to
+/// reach them otherwise. Nine lines of "set the role, set the label, set the
+/// bounds" is not a thing each caller should re-derive, and the early return
+/// for an empty hint is the part most likely to be got wrong: publishing an
+/// empty role clears whatever an ancestor published.
+pub fn emit_semantics(hint: SemanticsHint, cx: &mut dyn SemanticsContext) {
     if hint.role == SemanticsRole::None && hint.label.is_none() {
         return;
     }
