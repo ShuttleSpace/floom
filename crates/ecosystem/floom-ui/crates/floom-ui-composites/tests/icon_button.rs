@@ -24,10 +24,8 @@ use floom_widgets::testkit::{
     AllocatingCreateContext, RecordingUpdateContext, TestEventContext, paint_snapshot,
     semantics_snapshot,
 };
-use floom_widgets::{
-    IconButton, IconButtonIcon, IconButtonPaint, IconButtonStyle, IconButtonVariant, Pressable,
-    Ripple, Surface, VectorIcon,
-};
+use floom_widgets::{Pressable, Ripple, Surface, VectorIcon};
+use floom_ui_composites::{IconButton, IconButtonIcon, IconButtonPaint, IconButtonStyle, IconButtonVariant};
 
 const BOX: Rect = Rect {
     x0: 0.0,

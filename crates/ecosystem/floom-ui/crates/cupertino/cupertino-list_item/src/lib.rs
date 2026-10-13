@@ -4,7 +4,7 @@
 //!
 //! **90 of 107 substantive lines** are identical across the three kits' v1
 //! `list_item`s, and the row's whole structure is in that shared part. So the shape
-//! went to the engine as [`floom_widgets::ListItemRow`]; what is left here is
+//! went to the engine as [`floom_ui_composites::ListItemRow`]; what is left here is
 //! Cupertino's five numbers, its two colours, and the title's font weight.
 //!
 //! ## The one place this kit is *not* like its two siblings
@@ -46,7 +46,8 @@ use std::sync::Arc;
 use floom_signal::{RwSignal, SignalGet};
 use floom_types::{Color as PaintColor, FontWeight};
 
-use floom_widgets::{ListItemRow, ListItemStyle, SlotBuilder};
+use floom_ui_composites::{SlotBuilder};
+use floom_ui_composites::{ListItemRow, ListItemStyle};
 
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::list_item::ListItemProps;
@@ -200,7 +201,7 @@ impl CupertinoListItem {
     ///
     /// Every field is a read v1 also made, at the same moment. Three of them are
     /// literals here rather than token reads, because that is what v1 did — see the
-    /// table at the top of this file, and `floom_widgets::ListItemRow`'s note on why
+    /// table at the top of this file, and `floom_ui_composites::ListItemRow`'s note on why
     /// the disagreement with `ListItemTokens` is preserved rather than fixed.
     pub fn resolved_style(&self) -> ListItemStyle {
         let theme = self.theme.get();

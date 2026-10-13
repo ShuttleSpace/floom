@@ -10,7 +10,7 @@
 //! turned out to be that the architecture had already made the decision — the host owns
 //! presence, through `OverlayKind::Dialog`, `OverlayHandle` and the state-driven overlay
 //! door — and the only thing missing was a flag a caller can *hold*. That is
-//! [`floom_widgets::SharedFlag`], an `Arc<Mutex<bool>>`, for the same reason
+//! [`floom_widgets::text_input::SharedFlag`], an `Arc<Mutex<bool>>`, for the same reason
 //! `TextInput`'s buffer is an `Arc<Mutex<String>>`: a slot closure has to be `Send + Sync`.
 //!
 //! So the five v1 methods around `open` all become three:
@@ -63,7 +63,8 @@ use floom_types::Color as PaintColor;
 use floom_types::FontWeight;
 
 use floom_core::{Child, ChildKey, LayoutRequest};
-use floom_widgets::{Dialog, SharedFlag, read_flag, shared_flag, write_flag};
+use floom_widgets::{Dialog};
+use floom_widgets::text_input::{SharedFlag, read_flag, shared_flag, write_flag};
 
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::dialog::DialogProps;

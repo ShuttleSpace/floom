@@ -18,7 +18,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use floom_core::{Axis, Child, ChildKey, LayoutRequest, Point, Size};
 use floom_testkit::TestApp;
 use floom_widgets::{
-    BottomSheet, Button, Conditional, Dialog, Grid, List, NavigationBar, NavigationDrawer, Popup,
+    BottomSheet, Button, Conditional, Dialog, Grid, List, Popup,
     Stack, Tabs, Text,
 };
 
@@ -377,69 +377,3 @@ fn bottom_sheet_mounts_a_bottom_layer_when_shown() {
     assert_eq!(app.frame().painted, 1, "sheet layer fully unmounted");
 }
 
-#[test]
-fn navigation_bar_swaps_the_highlight_on_click() {
-    let bar = NavigationBar::new()
-        .destination("Home")
-        .destination("Search");
-    let mut app = TestApp::unpinned(VIEWPORT, bar);
-    let id = app.root();
-    assert_eq!(app.frame().painted, 3, "bar + two destinations");
-
-    let selection = app.widget::<NavigationBar>(id).selection();
-    assert_eq!(selection.load(Ordering::SeqCst), 0);
-
-    assert!(
-        app.labels().iter().any(|l| l == "● Home"),
-        "first is highlighted"
-    );
-
-    let search = app.node("Search");
-    assert!(app.tap(search), "destination must be hittable");
-    app.frame();
-    assert_eq!(
-        selection.load(Ordering::SeqCst),
-        1,
-        "clicking a destination flips selection"
-    );
-    assert!(
-        app.labels().iter().any(|l| l == "● Search"),
-        "highlight moved to the new destination"
-    );
-    assert_eq!(app.frame().painted, 3, "still bar + two destinations");
-}
-
-/// A drawer is a modal panel, so its surface belongs above the tree for exactly
-/// the reason a dialog's does: it covers the *window*, not whichever box it
-/// happened to be declared in.
-#[test]
-fn navigation_drawer_mounts_its_panel_as_a_host_overlay() {
-    let drawer = NavigationDrawer::new()
-        .header("Menu")
-        .destination("Home")
-        .destination("Settings");
-    let mut app = TestApp::unpinned(VIEWPORT, drawer);
-    let id = app.root();
-    assert_eq!(app.frame().painted, 1, "hidden drawer is alone");
-    assert_eq!(
-        app.overlay_count(),
-        0,
-        "and nothing is stacked above the tree"
-    );
-
-    app.widget_mut::<NavigationDrawer>(id).set_present(true);
-    assert!(
-        app.widget::<NavigationDrawer>(id).is_present(),
-        "the widget reports itself present right away"
-    );
-    app.frame();
-    assert_eq!(app.overlay_count(), 1, "the panel is a host overlay now");
-    // drawer node + column + panel + header + two destinations: the in-tree
-    // `Overlay` layer the fallback used is gone, so there is one node fewer.
-    assert_eq!(app.frame().painted, 6, "drawer panel fully mounted");
-
-    app.widget_mut::<NavigationDrawer>(id).set_present(false);
-    app.frame();
-    assert_eq!(app.overlay_count(), 0, "closing takes it off the stack");
-    assert_eq!(app.frame().painted, 1, "drawer panel fully unmounted");
-}

@@ -5,7 +5,7 @@
 //! A combobox and an autocomplete share 93% of their code and differ in exactly one
 //! way: **an autocomplete's field accepts text that is not an option.** Everything else —
 //! the field, the chevron, the filter, the rows, the panel placement — is the engine's
-//! [`floom_widgets::Combobox`], promoted once and shared by both.
+//! [`floom_ui_composites::Combobox`], promoted once and shared by both.
 //!
 //! That one difference moves two things, and both live here rather than in the engine:
 //!
@@ -14,7 +14,7 @@
 //!   answer and an index cannot express it. The engine's index-based `on_change` is
 //!   therefore *adapted* here rather than replaced.
 //! * **the commit point.** Losing focus reconciles the typed text against the list, which
-//!   is [`floom_widgets::commit`]. v1 wrote that rule out at four lines; here it is one
+//!   is [`floom_ui_composites::commit`]. v1 wrote that rule out at four lines; here it is one
 //!   call.
 //!
 //! ## The one behaviour the port cannot reproduce
@@ -46,7 +46,8 @@
 use floom_signal::{RwSignal, SignalGet};
 use floom_types::Color as PaintColor;
 
-use floom_widgets::{Combobox, ComboboxStyle, Commit, SharedPick, commit, select};
+use floom_ui_composites::{SharedPick, commit, select};
+use floom_ui_composites::{Combobox, ComboboxStyle, Commit};
 
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::autocomplete::AutocompleteProps;

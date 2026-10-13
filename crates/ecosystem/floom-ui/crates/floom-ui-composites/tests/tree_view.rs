@@ -10,10 +10,8 @@
 use floom_core::Widget;
 
 use floom_widgets::testkit::AllocatingCreateContext;
-use floom_widgets::{
-    Pressable, Stack, Surface, Text, TreeNode, TreeView, TreeViewStyle, VectorIcon,
-    node_at, toggle_path, visible_rows,
-};
+use floom_widgets::{Pressable, Stack, Surface, Text, VectorIcon};
+use floom_ui_composites::{TreeNode, TreeView, TreeViewStyle, node_at, toggle_path, visible_rows};
 
 /// Material-ish numbers, distinguishable so a wrong field is visible.
 fn style() -> TreeViewStyle {

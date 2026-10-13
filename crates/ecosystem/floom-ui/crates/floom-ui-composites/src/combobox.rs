@@ -61,8 +61,8 @@ use floom_core::{
 };
 use floom_types::OverlayKind;
 
-use crate::compose::{PopupPlacement, popup_placement_rect};
-use crate::text_input::SharedBuffer;
+use floom_widgets::compose::{PopupPlacement, popup_placement_rect};
+use floom_widgets::text_input::SharedBuffer;
 
 /// The selection state: which option is chosen, and whether the list is up.
 ///
@@ -465,12 +465,12 @@ fn alpha(color: Color, alpha: u8) -> Color {
 
 use floom_types::Shadow;
 
-use crate::compose::{OverlayHost, Stack};
-use crate::surface::Surface;
-use crate::primitives::{Role, SemanticsHint, StateBits as SemanticsState, Text};
-use crate::text_input::{TextInput, TextInputStyle};
-use crate::vector_icon::VectorIcon;
-use crate::controls::Pressable;
+use floom_widgets::compose::{OverlayHost, Stack};
+use floom_widgets::surface::Surface;
+use floom_widgets::primitives::{Role, SemanticsHint, StateBits as SemanticsState, Text};
+use floom_widgets::text_input::{TextInput, TextInputStyle};
+use floom_widgets::vector_icon::VectorIcon;
+use floom_widgets::controls::Pressable;
 
 /// A text field, a chevron, and a filtered list under them.
 pub struct Combobox {
@@ -959,7 +959,7 @@ impl Widget for Combobox {
     fn paint(&self, _cx: &mut dyn PaintContext, _id: ElementId) {}
 
     fn semantics(&self, cx: &mut dyn SemanticsContext, _id: ElementId) {
-        crate::primitives::emit_semantics(self.hint(), cx);
+        floom_widgets::primitives::emit_semantics(self.hint(), cx);
     }
 }
 

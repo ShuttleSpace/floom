@@ -6,7 +6,7 @@
 //! `Arc<AtomicUsize>`, so a destination button can flip selection from its own
 //! `on_click` and `update` notices the change.
 //!
-//! Following [`crate::compose::Tabs`], the active index is mixed into every
+//! Following [`floom_widgets::compose::Tabs`], the active index is mixed into every
 //! button's [`ChildKey`]. Flipping selection therefore re-keys the strip, the
 //! host remounts it, and the highlight updates — no in-place mutation of a
 //! mounted button is needed.
@@ -20,9 +20,9 @@ use floom_core::{
     OverlayKind, OverlayRequest, PaintContext, SemanticsContext, UpdateContext, Widget, WidgetAny,
 };
 
-use crate::compose::{Overlay, OverlayHost, Stack};
-use crate::controls::Button;
-use crate::primitives::{SemanticsHint, Text};
+use floom_widgets::compose::{Overlay, OverlayHost, Stack};
+use floom_widgets::controls::Button;
+use floom_widgets::primitives::{SemanticsHint, Text};
 
 /// One selectable navigation destination.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -227,7 +227,7 @@ impl Widget for NavigationBar {
     fn paint(&self, _cx: &mut dyn PaintContext, _id: ElementId) {}
 
     fn semantics(&self, cx: &mut dyn SemanticsContext, _id: ElementId) {
-        crate::primitives::emit_semantics(self.semantics_hint(), cx);
+        floom_widgets::primitives::emit_semantics(self.semantics_hint(), cx);
     }
 }
 
@@ -340,7 +340,7 @@ impl Widget for NavigationRail {
     fn paint(&self, _cx: &mut dyn PaintContext, _id: ElementId) {}
 
     fn semantics(&self, cx: &mut dyn SemanticsContext, _id: ElementId) {
-        crate::primitives::emit_semantics(self.semantics_hint(), cx);
+        floom_widgets::primitives::emit_semantics(self.semantics_hint(), cx);
     }
 }
 
@@ -561,7 +561,7 @@ impl Widget for NavigationDrawer {
     fn paint(&self, _cx: &mut dyn PaintContext, _id: ElementId) {}
 
     fn semantics(&self, cx: &mut dyn SemanticsContext, _id: ElementId) {
-        crate::primitives::emit_semantics(self.semantics_hint(), cx);
+        floom_widgets::primitives::emit_semantics(self.semantics_hint(), cx);
     }
 }
 

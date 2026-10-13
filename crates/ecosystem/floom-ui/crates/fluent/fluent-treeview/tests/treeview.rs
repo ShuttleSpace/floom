@@ -9,7 +9,8 @@ use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::global_theme::DesignSystem;
 use floom_core_theme::props::treeview::TreeviewNode;
 use floom_core_theme::theme::{MultiTheme, Theme};
-use floom_widgets::{TreeNode, TreeView, visible_rows};
+use floom_ui_composites::{visible_rows};
+use floom_ui_composites::{TreeNode, TreeView};
 
 use floom_widget_fluent_treeview::{FluentTreeview, to_engine_nodes};
 
@@ -185,7 +186,7 @@ fn a_toggle_through_the_shared_forest_is_visible() {
     let shared = view.tree();
     assert_eq!(view.rows().len(), 3);
 
-    floom_widgets::toggle_path(&shared, &[0, 0]);
+    floom_ui_composites::toggle_path(&shared, &[0, 0]);
     assert_eq!(
         view.rows().len(),
         2,

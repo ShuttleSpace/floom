@@ -8,7 +8,7 @@
 //! the type name, the `DesignSystem` handed to `MultiTheme`, and whether the theme
 //! came from `theme_signal()` or a fresh `MultiTheme`.
 //!
-//! So the shape went to the engine as [`floom_widgets::IconButton`] — the
+//! So the shape went to the engine as [`floom_ui_composites::IconButton`] — the
 //! composition (`Ripple(Pressable(Surface(icon)))`), the disabled rule, the
 //! ripple-ink rule, and the fact that the glyph follows `disabled` while its size
 //! does not. What is left here is the translation from Material's tokens to an
@@ -35,7 +35,7 @@ use std::sync::Arc;
 
 use floom_types::Color as PaintColor;
 
-use floom_widgets::{IconButton, IconButtonPaint, IconButtonStyle, IconButtonVariant};
+use floom_ui_composites::{IconButton, IconButtonPaint, IconButtonStyle, IconButtonVariant};
 use floom_widget_md_icon::MdIcon;
 
 use floom_widget_md_icon::MdIconStyle;

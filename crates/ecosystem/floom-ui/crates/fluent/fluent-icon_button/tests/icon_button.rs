@@ -208,14 +208,14 @@ fn the_disabled_colours_are_two_alphas_of_on_surface() {
 #[test]
 fn every_props_variant_maps_to_an_engine_variant() {
     for (props, expected) in [
-        (PropsVariant::Text, floom_widgets::IconButtonVariant::Text),
+        (PropsVariant::Text, floom_ui_composites::IconButtonVariant::Text),
         (
             PropsVariant::Contained,
-            floom_widgets::IconButtonVariant::Contained,
+            floom_ui_composites::IconButtonVariant::Contained,
         ),
         (
             PropsVariant::Outlined,
-            floom_widgets::IconButtonVariant::Outlined,
+            floom_ui_composites::IconButtonVariant::Outlined,
         ),
     ] {
         assert_eq!(

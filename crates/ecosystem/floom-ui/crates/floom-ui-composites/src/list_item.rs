@@ -50,11 +50,11 @@ use floom_core::{
 };
 use floom_types::FontWeight;
 
-use crate::compose::Stack;
-use crate::controls::Pressable;
-use crate::primitives::Text;
-use crate::ripple::Ripple;
-use crate::surface::Surface;
+use floom_widgets::compose::Stack;
+use floom_widgets::controls::Pressable;
+use floom_widgets::primitives::Text;
+use floom_widgets::ripple::Ripple;
+use floom_widgets::surface::Surface;
 
 /// A replayed content builder — the shape of every 2.0 slot.
 pub type SlotBuilder = Arc<dyn Fn() -> Box<dyn WidgetAny> + Send + Sync + 'static>;
@@ -340,7 +340,7 @@ impl Widget for ListItemRow {
         cx.alloc_child()
     }
 
-    /// Deliberately empty, for the reason [`crate::icon_button::IconButton`]
+    /// Deliberately empty, for the reason [`floom_ui_composites::icon_button::IconButton`]
     /// gives: this widget holds no state, so there is no change of its own to
     /// report. Every node is visited each frame regardless.
     fn update(&mut self, _cx: &mut dyn UpdateContext, _id: floom_core::ElementId) {}

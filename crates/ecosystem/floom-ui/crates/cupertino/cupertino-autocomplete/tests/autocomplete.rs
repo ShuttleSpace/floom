@@ -227,7 +227,7 @@ fn the_panel_gap_is_zero() {
 #[test]
 fn the_engine_default_would_have_been_wrong_here() {
     assert_eq!(
-        floom_widgets::ComboboxStyle::default().panel_gap,
+        floom_ui_composites::ComboboxStyle::default().panel_gap,
         4.0,
         "which is exactly why the value above is written rather than inherited"
     );

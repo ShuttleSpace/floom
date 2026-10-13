@@ -11,7 +11,7 @@ use std::sync::Arc;
 use floom_core::{ElementId, Key, KeyPhase, Widget, WidgetAny};
 use floom_types::{OverlayHandle, Rect};
 
-use floom_widgets::combobox::{ComboPick, Combobox, SharedPick};
+use floom_ui_composites::combobox::{ComboPick, Combobox, SharedPick};
 use floom_widgets::testkit::{
     AllocatingCreateContext, RecordingUpdateContext, TestEventContext, paint_snapshot,
 };

@@ -25,7 +25,7 @@ use floom_core::{ElementId, Widget};
 use floom_types::{OverlayKind, Rect};
 
 use floom_widgets::testkit::RecordingUpdateContext;
-use floom_widgets::{read_flag, write_flag};
+use floom_widgets::text_input::{read_flag, write_flag};
 
 use floom_core_theme::theme::Theme;
 use floom_widget_cupertino_dialog::{CupertinoDialog, to_engine_weight};

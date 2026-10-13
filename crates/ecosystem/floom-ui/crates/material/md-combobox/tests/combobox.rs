@@ -8,7 +8,8 @@ use floom_core::Widget;
 use floom_types::{OverlayKind, Rect};
 
 use floom_widgets::testkit::{AllocatingCreateContext, RecordingUpdateContext};
-use floom_widgets::{ComboboxStyle, PopupPlacement};
+use floom_widgets::{PopupPlacement};
+use floom_ui_composites::{ComboboxStyle};
 
 use floom_core_theme::theme::Theme;
 use floom_widget_md_combobox::MdCombobox;

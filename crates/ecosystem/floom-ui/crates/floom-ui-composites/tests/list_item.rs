@@ -13,9 +13,8 @@ use floom_core::{Align, Axis, Length, Widget, WidgetAny};
 use floom_types::{FontWeight, Point, PointerEvent, Rect};
 
 use floom_widgets::testkit::{AllocatingCreateContext, TestEventContext, paint_snapshot};
-use floom_widgets::{
-    ListItemRow, ListItemStyle, Pressable, Ripple, Stack, Surface, Text,
-};
+use floom_widgets::{Pressable, Ripple, Stack, Surface, Text};
+use floom_ui_composites::{ListItemRow, ListItemStyle};
 
 const BOX: Rect = Rect {
     x0: 0.0,

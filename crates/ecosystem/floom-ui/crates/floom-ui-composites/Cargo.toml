@@ -33,5 +33,6 @@ floom-accessibility = { path = "../../../../floom-accessibility" }
 floom-overlay = { path = "../../../../floom-overlay" }
 
 [dev-dependencies]
+floom-testkit = { path = "../../../../floom-testkit" }
 floom-app = { path = "../../../../floom-app" }
 floom-layout = { path = "../../../../floom-layout" }

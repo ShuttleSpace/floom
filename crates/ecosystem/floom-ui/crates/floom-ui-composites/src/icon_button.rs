@@ -44,10 +44,10 @@ use floom_core::{
     WidgetAny,
 };
 
-use crate::controls::Pressable;
-use crate::vector_icon::VectorIcon;
-use crate::ripple::Ripple;
-use crate::surface::Surface;
+use floom_widgets::controls::Pressable;
+use floom_widgets::vector_icon::VectorIcon;
+use floom_widgets::ripple::Ripple;
+use floom_widgets::surface::Surface;
 
 /// Which of the three appearances an icon button takes.
 ///
@@ -355,7 +355,7 @@ impl Widget for IconButton {
         cx.alloc_child()
     }
 
-    /// Deliberately empty, for the reason [`crate::compose::SelectGroup::update`]
+    /// Deliberately empty, for the reason [`floom_widgets::compose::SelectGroup::update`]
     /// gives: everything this widget can change is a change *to a child*, and every
     /// node is visited each frame, so the child reports its own change. Marking
     /// dirty here too would be a second report of a change already reported.

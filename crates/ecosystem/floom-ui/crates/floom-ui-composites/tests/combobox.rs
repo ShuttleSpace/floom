@@ -11,7 +11,7 @@ use std::sync::{Arc, Mutex};
 use floom_core::{Color, OverlayHandle, WidgetAny};
 use floom_types::{OverlayKind, Rect};
 
-use floom_widgets::combobox::{
+use floom_ui_composites::combobox::{
     ComboPick, ComboboxStyle, SharedPick, matching, panel_placement, panel_rect,
     panel_request, select, sync_query_to_selection, visible_options,
     Commit,

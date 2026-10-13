@@ -84,7 +84,7 @@ impl Default for SemanticsHint {
 /// Starts "unpainted" so the first [`Widget::update`] after creation marks the
 /// element dirty.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) struct Revision {
+pub struct Revision {
     current: u64,
     painted: u64,
 }
@@ -100,12 +100,14 @@ impl Default for Revision {
 
 impl Revision {
     /// Call from every mutating builder.
-    pub(crate) fn bump(&mut self) {
+    /// Marks the widget as changed since it last painted.
+    pub fn bump(&mut self) {
         self.current = self.current.wrapping_add(1);
     }
 
     /// Marks `id` dirty at most once per batch of mutations.
-    pub(crate) fn sync(&mut self, cx: &mut dyn UpdateContext, id: ElementId) -> bool {
+    /// Reports whether the element needs painting, given the host.
+    pub fn sync(&mut self, cx: &mut dyn UpdateContext, id: ElementId) -> bool {
         if self.painted == self.current {
             return false;
         }

@@ -136,9 +136,7 @@ macro_rules! impl_widget_any_decorative {
 }
 
 impl_widget_any!(
-    crate::badge::Badge,
     crate::primitives::Text,
-    crate::labeled::Labeled,
     crate::primitives::Icon,
     crate::vector_icon::VectorIcon,
     crate::primitives::Image,
@@ -168,9 +166,6 @@ impl_widget_any!(
     crate::compose::SelectGroup,
     crate::compose::Popup,
     crate::compose::BottomSheet,
-    crate::navigation::NavigationBar,
-    crate::navigation::NavigationRail,
-    crate::navigation::NavigationDrawer,
     crate::native::NativeSurface,
 );
 

@@ -15,6 +15,22 @@
 //! one consumer outside the crate. The rest followed once the layering held.
 
 mod any;
-mod nav;
+pub mod badge;
+pub mod combobox;
+pub mod icon_button;
+pub mod labeled;
+pub mod list_item;
+pub mod nav;
+pub mod navigation;
+pub mod tree_view;
 
+pub use badge::{Badge};
+pub use combobox::{ComboPick, Combobox, ComboboxStyle, Commit, SharedPick};
+pub use combobox::{commit, matching, panel_placement, panel_rect, panel_request, select, sync_query_to_selection, visible_options};
+pub use icon_button::{IconButton, IconButtonIcon, IconButtonPaint, IconButtonStyle, IconButtonVariant};
+pub use labeled::{Labeled};
+pub use list_item::{ListItemRow, ListItemStyle, SlotBuilder};
 pub use nav::{NavHandle, NavHost};
+pub use navigation::{NavDestination, NavigationBar, NavigationDrawer, NavigationRail};
+pub use tree_view::{RowRef, SharedTree, TreeNode, TreeView, TreeViewStyle};
+pub use tree_view::{node_at, toggle_path, visible_rows};

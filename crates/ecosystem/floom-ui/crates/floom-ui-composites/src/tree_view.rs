@@ -58,11 +58,11 @@ use floom_core::{
 };
 use floom_types::FontWeight;
 
-use crate::compose::Stack;
-use crate::controls::Pressable;
-use crate::primitives::Text;
-use crate::surface::Surface;
-use crate::vector_icon::VectorIcon;
+use floom_widgets::compose::Stack;
+use floom_widgets::controls::Pressable;
+use floom_widgets::primitives::Text;
+use floom_widgets::surface::Surface;
+use floom_widgets::vector_icon::VectorIcon;
 
 /// One node in the tree.
 ///
@@ -551,7 +551,7 @@ impl Widget for TreeView {
         cx.alloc_child()
     }
 
-    /// Deliberately empty, for the reason [`crate::compose::SelectGroup::update`]
+    /// Deliberately empty, for the reason [`floom_widgets::compose::SelectGroup::update`]
     /// gives: a toggle changes *which rows exist*, and the host rebuilds children for
     /// a node that asks — so marking dirty here would be a second report of a change
     /// the row that was clicked has already caused.

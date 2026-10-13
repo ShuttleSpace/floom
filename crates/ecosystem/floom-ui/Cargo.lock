@@ -394,6 +394,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "floom-testkit"
+version = "0.2.0"
+dependencies = [
+ "floom-app",
+ "floom-core",
+ "floom-layout",
+ "floom-platform",
+ "floom-renderer-software",
+ "floom-scene",
+ "floom-types",
+]
+
+[[package]]
 name = "floom-text"
 version = "0.2.0"
 dependencies = [
@@ -426,6 +439,7 @@ dependencies = [
  "floom-overlay",
  "floom-scene",
  "floom-signal",
+ "floom-testkit",
  "floom-text",
  "floom-types",
  "floom-widgets",
@@ -470,6 +484,7 @@ dependencies = [
  "floom-core-theme",
  "floom-signal",
  "floom-types",
+ "floom-ui-composites",
  "floom-widget-md-icon",
  "floom-widget-runtime",
  "floom-widgets",
@@ -483,6 +498,7 @@ dependencies = [
  "floom-core-theme",
  "floom-signal",
  "floom-types",
+ "floom-ui-composites",
  "floom-widget-runtime",
  "floom-widgets",
 ]
@@ -519,6 +535,7 @@ dependencies = [
  "floom-core-theme",
  "floom-signal",
  "floom-types",
+ "floom-ui-composites",
  "floom-widget-md-icon",
  "floom-widget-runtime",
  "floom-widgets",
@@ -556,6 +573,7 @@ dependencies = [
  "floom-core-theme",
  "floom-signal",
  "floom-types",
+ "floom-ui-composites",
  "floom-widget-md-icon",
  "floom-widget-runtime",
  "floom-widgets",
@@ -569,6 +587,7 @@ dependencies = [
  "floom-core-theme",
  "floom-signal",
  "floom-types",
+ "floom-ui-composites",
  "floom-widget-runtime",
  "floom-widgets",
 ]
@@ -605,6 +624,7 @@ dependencies = [
  "floom-core-theme",
  "floom-signal",
  "floom-types",
+ "floom-ui-composites",
  "floom-widget-md-icon",
  "floom-widget-runtime",
  "floom-widgets",
@@ -631,6 +651,7 @@ dependencies = [
  "floom-core-theme",
  "floom-signal",
  "floom-types",
+ "floom-ui-composites",
  "floom-widget-md-icon",
  "floom-widget-runtime",
  "floom-widgets",
@@ -668,6 +689,7 @@ dependencies = [
  "floom-core-theme",
  "floom-signal",
  "floom-types",
+ "floom-ui-composites",
  "floom-widget-md-icon",
  "floom-widget-runtime",
  "floom-widgets",
@@ -755,6 +777,7 @@ dependencies = [
  "floom-core-theme",
  "floom-signal",
  "floom-types",
+ "floom-ui-composites",
  "floom-widget-md-icon",
  "floom-widget-runtime",
  "floom-widgets",
@@ -780,6 +803,7 @@ dependencies = [
  "floom-core-theme",
  "floom-signal",
  "floom-types",
+ "floom-ui-composites",
  "floom-widget-runtime",
  "floom-widgets",
 ]
@@ -828,6 +852,7 @@ dependencies = [
  "floom-core-theme",
  "floom-signal",
  "floom-types",
+ "floom-ui-composites",
  "floom-widget-md-icon",
  "floom-widget-runtime",
  "floom-widgets",

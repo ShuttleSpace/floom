@@ -5,7 +5,7 @@
 //! 87% cross-kit overlap, and the shared part is where all the difficulty lives: the
 //! expansion state, the flattening, and the fact that expanding a node changes
 //! *which rows exist*. So that went to the engine as
-//! [`floom_widgets::TreeView`]; what is left here is Cupertino's numbers and its icon
+//! [`floom_ui_composites::TreeView`]; what is left here is Cupertino's numbers and its icon
 //! names.
 //!
 //! ## What the port changed
@@ -17,7 +17,7 @@
 //!   2.0's `PaintContext` has no cursor vocabulary.
 //! * the tree's expansion state moved from a `RwSignal<Vec<TreeviewNode>>` that v1
 //!   mutated in place to the engine's shared forest, for the reason
-//!   `floom_widgets::TreeView` gives: no row can own an answer that changes how many
+//!   `floom_ui_composites::TreeView` gives: no row can own an answer that changes how many
 //!   rows follow it.
 //! * `Empty::new().style(..)` for a childless node's expander and for a node with no
 //!   icon became an **empty box of the same size** rather than an absent one, because
@@ -31,7 +31,8 @@
 use floom_signal::{RwSignal, SignalGet};
 use floom_types::Color as PaintColor;
 
-use floom_widgets::{TreeNode, TreeView, TreeViewStyle, VectorIcon};
+use floom_widgets::{VectorIcon};
+use floom_ui_composites::{TreeNode, TreeView, TreeViewStyle};
 
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::treeview::{TreeviewNode, TreeviewProps};
@@ -84,7 +85,7 @@ pub struct CupertinoTreeview {
     ///
     /// Held here as well as inside the widget so a caller that already had a
     /// `TreeviewProps` can watch the tree, and so `nodes(..)` can replace it.
-    tree: floom_widgets::SharedTree,
+    tree: floom_ui_composites::SharedTree,
     on_node_click: Option<std::sync::Arc<dyn Fn(String) + Send + Sync + 'static>>,
 }
 
@@ -139,7 +140,7 @@ impl CupertinoTreeview {
     }
 
     /// The shared forest, for a caller that wants to read it.
-    pub fn tree(&self) -> floom_widgets::SharedTree {
+    pub fn tree(&self) -> floom_ui_composites::SharedTree {
         self.tree.clone()
     }
 

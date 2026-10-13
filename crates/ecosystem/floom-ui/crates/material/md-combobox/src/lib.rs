@@ -4,7 +4,7 @@
 //!
 //! 91% cross-kit overlap — the three v1 crates differ by 26 lines, all of it type
 //! names, the icon source, the theme source, and one `.margin_top(4.0)`. So the shared
-//! part went to the engine as [`floom_widgets::Combobox`] and what is left here is
+//! part went to the engine as [`floom_ui_composites::Combobox`] and what is left here is
 //! Material's numbers, its icon names, and its props.
 //!
 //! ## What the port changed
@@ -35,7 +35,8 @@
 use floom_signal::{RwSignal, SignalGet};
 use floom_types::Color as PaintColor;
 
-use floom_widgets::{Combobox, ComboboxStyle, SharedPick};
+use floom_ui_composites::{SharedPick};
+use floom_ui_composites::{Combobox, ComboboxStyle};
 
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::combobox::ComboboxProps;

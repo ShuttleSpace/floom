@@ -10,7 +10,7 @@ use floom_widgets::testkit::{
     AllocatingCreateContext, RecordingUpdateContext, SceneRecorder, paint_snapshot,
     semantics_snapshot,
 };
-use floom_widgets::Badge;
+use floom_ui_composites::Badge;
 
 const BOX: Rect = Rect {
     x0: 0.0,

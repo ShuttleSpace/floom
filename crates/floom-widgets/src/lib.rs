@@ -11,24 +11,17 @@
 
 #![forbid(unsafe_code)]
 
-pub mod badge;
 pub mod canvas;
-pub mod combobox;
 pub mod compose;
 pub mod controls;
 pub mod counter;
-pub mod icon_button;
-pub mod labeled;
-pub mod list_item;
 pub mod native;
-pub mod navigation;
 pub mod primitives;
 pub mod progress_linear;
 pub mod ripple;
 pub mod surface;
 pub mod text_input;
 pub mod svg_path;
-pub mod tree_view;
 pub mod testkit;
 pub mod vector_icon;
 mod widget_any;
@@ -41,12 +34,7 @@ pub use widget_any::{to_core_role, to_core_state};
 
 /// Self-drawn surfaces: a closure-driven drawing board, a WGSL shader box and
 /// a loading spinner.
-pub use badge::Badge;
 pub use canvas::{Canvas, ShaderBox, Spinner};
-pub use combobox::{
-    ComboPick, Combobox, Commit, commit, ComboboxStyle, SharedPick, matching, panel_placement, panel_rect,
-    panel_request, select, sync_query_to_selection, visible_options,
-};
 pub use counter::{Counter, CounterState, CounterStyle, SharedCounter, Step, clamp_value, step_value};
 pub use compose::{OverlayHost, popup_placement_rect, 
     Accordion, AccordionIndicator, AccordionStyle, AnimatedContent, BottomSheet, Conditional,
@@ -67,15 +55,9 @@ pub use controls::{
 /// one — so `use floom_widgets::*;` followed by `Stack::new(Axis::Horizontal)`
 /// did not compile. One axis type, exported from here, cannot drift back.
 pub use floom_core::{Align, Axis, Edges};
-pub use icon_button::{
-    IconButton, IconButtonIcon, IconButtonPaint, IconButtonStyle, IconButtonVariant,
-};
-pub use labeled::Labeled;
-pub use list_item::{ListItemRow, ListItemStyle, SlotBuilder};
 pub use native::NativeSurface;
-pub use navigation::{NavDestination, NavigationBar, NavigationDrawer, NavigationRail};
 pub use primitives::{
-    Container, Divider, Icon, Image, ImageFit, RuleAlignment, SemanticsHint, Spacer, Text,
+    Container, Divider, Icon, Image, ImageFit, Revision, RuleAlignment, SemanticsHint, Spacer, Text,
     emit_semantics,
 };
 pub use progress_linear::{
@@ -88,8 +70,5 @@ pub use surface::Surface;
 pub use text_input::{SharedBuffer, SharedFlag, read_flag, shared_flag, write_flag, TextInput, TextInputStyle, clamp_to_char_boundary};
 /// SVG path data -> `Path`, for the icon sets the kits ship as `d="..."`.
 pub use svg_path::parse_path_data;
-pub use tree_view::{
-    RowRef, SharedTree, TreeNode, TreeView, TreeViewStyle, node_at, toggle_path, visible_rows,
-};
 /// An icon drawn from an outline, for kits with no SVG pipeline in 2.0.
 pub use vector_icon::VectorIcon;

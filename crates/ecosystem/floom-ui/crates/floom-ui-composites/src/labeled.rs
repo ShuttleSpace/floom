@@ -58,8 +58,8 @@ impl Labeled {
         self
     }
 
-    pub fn semantics_hint(&self) -> crate::primitives::SemanticsHint {
-        crate::primitives::SemanticsHint::labeled(self.role, self.label.clone())
+    pub fn semantics_hint(&self) -> floom_widgets::primitives::SemanticsHint {
+        floom_widgets::primitives::SemanticsHint::labeled(self.role, self.label.clone())
     }
 }
 
@@ -84,7 +84,7 @@ impl Widget for Labeled {
     fn paint(&self, _cx: &mut dyn floom_core::PaintContext, _id: ElementId) {}
 
     fn semantics(&self, cx: &mut dyn SemanticsContext, _id: ElementId) {
-        crate::primitives::emit_semantics(self.semantics_hint(), cx);
+        floom_widgets::primitives::emit_semantics(self.semantics_hint(), cx);
     }
 }
 
@@ -98,7 +98,7 @@ mod tests {
         let box_ = Labeled::new(SemanticsRole::Group, "Card")
             .request(LayoutRequest::new().height(120.0))
             .child(LayoutRequest::new().fill(), || {
-                Box::new(crate::primitives::Text::new("hello"))
+                Box::new(floom_widgets::primitives::Text::new("hello"))
             });
         let children = box_.children();
         assert_eq!(children.len(), 1);

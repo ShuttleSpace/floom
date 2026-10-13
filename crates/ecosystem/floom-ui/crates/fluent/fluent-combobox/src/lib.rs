@@ -4,7 +4,7 @@
 //!
 //! 91% cross-kit overlap — the three v1 crates differ by 26 lines, all of it type
 //! names, the icon source, the theme source, and one `.margin_top(4.0)`. So the shared
-//! part went to the engine as [`floom_widgets::Combobox`]; what is left here is
+//! part went to the engine as [`floom_ui_composites::Combobox`]; what is left here is
 //! Fluent's numbers and its icon names.
 //!
 //! ## The one number that differs from Material, and stays different
@@ -46,7 +46,7 @@
 //! v1 returned a `FluentComboboxStyle` of its own, carrying a `design_system`
 //! string. That string was never read by anything — it is the same class of thing as
 //! the kit names themselves — and the port drops it along with the struct, returning
-//! [`floom_widgets::ComboboxStyle`] instead. That is the same trade `md-treeview` made,
+//! [`floom_ui_composites::ComboboxStyle`] instead. That is the same trade `md-treeview` made,
 //! and the same one `md-combobox` made: a kit style struct that only differs by a name
 //! is a second thing to keep in step.
 //!
@@ -59,7 +59,8 @@
 use floom_signal::{RwSignal, SignalGet};
 use floom_types::Color as PaintColor;
 
-use floom_widgets::{Combobox, ComboboxStyle, SharedPick};
+use floom_ui_composites::{SharedPick};
+use floom_ui_composites::{Combobox, ComboboxStyle};
 
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::combobox::ComboboxProps;
