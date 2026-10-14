@@ -1,19 +1,24 @@
 //! `Counter` — the `- / value / +` stepper.
 //!
-//! ## Why this is in the engine
+//! ## Why it is here rather than in a kit
 //!
 //! All three kits build the same control out of the same parts. Measured across
 //! `md_counter`, `cupertino_counter` and `fluent_counter`: after normalising the
 //! kit names away, the three sources differ in **five lines, all of them the
 //! theme signal** — Material reads the process-global `theme_signal()`, while
 //! Cupertino and Fluent each build their own `RwSignal<MultiTheme>`. Every design
-//! value comes from `CounterTokens`, and the one literal (`font_size(16.0)` on the
-//! value readout) is the same literal in all three.
+//! value comes from `CounterTokens`, and the one literal (`font_size(16.0)` on
+//! the value readout) is the same literal in all three.
 //!
-//! So this is not "the same component with three skins". It is one component, and
-//! promoting it follows the plan's own rule: *prefer promoting a component that
-//! appears in all three kits over porting it three times.* A kit crate here is a
-//! token adapter of about forty lines.
+//! So the three kits agree, completely, and there is no disagreement to preserve.
+//! What is left in each of them is a translation from design tokens to
+//! `CounterStyle` plus that one literal — about forty lines each.
+//!
+//! That agreement is the reason this widget was promoted rather than ported three
+//! times, and it is *not* a reason for it to be in the engine. Where a component
+//! lives is a question of who is allowed to decide what it is; the fact that all
+//! three design systems happen to answer the same way says nothing about that.
+//! So it moved up a layer with the tree, the navigation rail and the select.
 //!
 //! ## What is here rather than in a kit
 //!
@@ -22,54 +27,6 @@
 //!   the value is clamped whenever a bound changes, and each step is applied and
 //!   *then* clamped;
 //! * that `on_change` fires **even when the value did not move** (see below).
-//!
-//! ## Three decisions that are not obvious
-//!
-//! **1. `on_change` fires on a no-op step.** v1 wrote
-//! `let nv = clamp(..); value.set(nv); cb(nv)` — unconditionally. So pressing
-//! `+` at the maximum still calls back, with the unchanged value.
-//!
-//! That is preserved, and it is worth naming because the *engine's own* other
-//! stepper does the opposite: `Slider::set_value` returns early when the
-//! quantized value equals the current one and does not call back. Two stateful
-//! steppers in one crate, two opposite policies, both defensible. The counter's
-//! is the one the port has to keep, because callers were written against it; the
-//! slider's is the one that is easier to live with. Changing either is a decision,
-//! so each is pinned by a test.
-//!
-//! **2. `clamp_value` applies `min` first and `max` second, and the order is
-//! observable.** With `min = 10` and `max = 3`, a value of 5 comes out as **3**,
-//! not 10: `max` is applied last and wins. An inverted range is a caller error,
-//! but "which bound wins" is still a behaviour someone may depend on, so it is
-//! spelled out in a test rather than left to the reader of two `if let`s.
-//!
-//! **3. Arithmetic is saturating, and this one *is* a divergence.** v1 wrote
-//! `value.get() + step` on an `i64`. At `i64::MAX` with a positive step that
-//! panics in a debug build — a stepper that aborts the process when the user
-//! holds the button down is not a behaviour worth preserving, so `step_value`
-//! saturates. There is no kit to disagree with here; it is arithmetic, not design.
-//!
-//! ## No revision on the value, and why
-//!
-//! There is deliberately no `Revision` on the value, and that is a difference from
-//! `TextInput`, which has one. A revision needs `&mut self` to bump, and a
-//! counter's step buttons are *its own children* pressing *it* through a shared
-//! handle — there is no `&mut` on the way. `TreeView` has the same shape and the
-//! same answer: the value lives in the `Arc<Mutex<..>>`, and the host re-reads it
-//! when it next builds the subtree. The cost is that a value changed from outside
-//! the widget is not self-invalidating; the caller marks the tree dirty. That is
-//! the same bargain `TreeView` makes, and it is why the shared handle is public.
-//!
-//! ## Theme-agnostic
-//!
-//! Every colour is supplied. [`CounterStyle::default`] is neutral grey on
-//! purpose: the three kits read `surface_variant`, `on_surface` and `outline`,
-//! and a default that happened to equal Material's would make an unstyled counter
-//! silently Material's — the failure mode this port has already hit twice
-//! (`panel_gap`, `black`).
-//!
-//! The *sizes* in the default are `CounterTokens::default()`'s, because all three
-//! kits read that one table; a kit that wants different numbers passes them.
 
 use std::sync::{Arc, Mutex};
 
@@ -80,10 +37,9 @@ use floom_core::{
 };
 use floom_types::Color;
 
-use crate::compose::Stack;
-use crate::controls::Pressable;
-use crate::primitives::{Revision, SemanticsHint, Text, emit_semantics};
-use crate::surface::Surface;
+use floom_widgets::{
+    Pressable, Revision, SemanticsHint, Stack, Surface, Text, emit_semantics,
+};
 
 /// The counter's mutable state, shared between the widget and its callers.
 ///

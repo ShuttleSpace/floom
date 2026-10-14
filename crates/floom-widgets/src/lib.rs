@@ -14,7 +14,6 @@
 pub mod canvas;
 pub mod compose;
 pub mod controls;
-pub mod counter;
 pub mod native;
 pub mod primitives;
 pub mod progress_linear;
@@ -35,7 +34,6 @@ pub use widget_any::{to_core_role, to_core_state};
 /// Self-drawn surfaces: a closure-driven drawing board, a WGSL shader box and
 /// a loading spinner.
 pub use canvas::{Canvas, ShaderBox, Spinner};
-pub use counter::{Counter, CounterState, CounterStyle, SharedCounter, Step, clamp_value, step_value};
 pub use compose::{OverlayHost, popup_placement_rect, 
     Accordion, AccordionIndicator, AccordionStyle, AnimatedContent, BottomSheet, Conditional,
     Crossfade, Dialog, Grid, List, Opacity, Overlay, Popup, PopupPlacement, SelectGroup,

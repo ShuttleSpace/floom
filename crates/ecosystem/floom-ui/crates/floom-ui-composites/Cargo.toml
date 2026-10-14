@@ -36,6 +36,8 @@ floom-overlay = { path = "../../../../floom-overlay" }
 [dev-dependencies]
 # The select/form binding test needs the form model, which lives below the widgets.
 floom-forms = { path = "../../../../floom-forms" }
+# The popup test drives real platform events through TestApp.
+floom-platform = { path = "../../../../floom-platform" }
 floom-testkit = { path = "../../../../floom-testkit" }
 floom-app = { path = "../../../../floom-app" }
 floom-layout = { path = "../../../../floom-layout" }

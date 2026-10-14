@@ -442,6 +442,7 @@ dependencies = [
  "floom-layout",
  "floom-navigation",
  "floom-overlay",
+ "floom-platform",
  "floom-scene",
  "floom-signal",
  "floom-testkit",
@@ -477,6 +478,7 @@ dependencies = [
  "floom-core-theme",
  "floom-signal",
  "floom-types",
+ "floom-ui-composites",
  "floom-widget-runtime",
  "floom-widgets",
 ]
@@ -576,6 +578,7 @@ dependencies = [
  "floom-core-theme",
  "floom-signal",
  "floom-types",
+ "floom-ui-composites",
  "floom-widget-runtime",
  "floom-widgets",
 ]
@@ -728,6 +731,7 @@ dependencies = [
  "floom-core-theme",
  "floom-signal",
  "floom-types",
+ "floom-ui-composites",
  "floom-widget-runtime",
  "floom-widgets",
 ]

@@ -16,6 +16,10 @@
 //!    "which error you get" is still a behaviour, and `f32::clamp` would have given
 //!    the other answer — so it is spelled out rather than left to the reader.
 //!
+//! This file moved with the widget out of `floom-widgets/tests/counter.rs`, for
+//! the reason the rest of this crate's tests did: a test of a widget's behaviour
+//! belongs with the widget.
+
 //! ## The saturating arithmetic is a divergence, and it is deliberate
 //!
 //! v1 wrote `value.get() + step` on an `i64`, which panics in a debug build at
@@ -28,9 +32,8 @@ use floom_accessibility::SemanticsRole;
 use floom_core::{ElementId, Widget};
 use floom_types::{Color, Length};
 
-use floom_widgets::counter::{CounterState, Step, clamp_value, step_value};
+use floom_ui_composites::{Counter, CounterState, CounterStyle, SharedCounter, Step, clamp_value, step_value};
 use floom_widgets::testkit::RecordingUpdateContext;
-use floom_widgets::{Counter, CounterStyle, SharedCounter};
 
 const ID: ElementId = ElementId::new(1, 1);
 

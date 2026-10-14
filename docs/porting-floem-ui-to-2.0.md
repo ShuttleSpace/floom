@@ -62,6 +62,20 @@ decision about what a control *is* lives in `floom-ui-composites`, one layer up:
 | `ListItem`, `TreeView`, `Combobox` | collections over content |
 | `IconButton` | a pressable with a glyph in it |
 | `Select` / `SelectPopup` | a single-choice control |
+| `Counter` | the `- / value / +` stepper |
+
+`Counter` is the case worth being careful about, because its own module
+documentation argued for the opposite conclusion. It measured all three kits and
+found they differ in five lines, all of them the theme signal — "promote it
+rather than port it three times". That measurement is still true and is why the
+kits are forty lines each. But *where a component lives* is a question about who
+is allowed to decide what the component is, and three design systems happening to
+answer the same way says nothing about that. It moved up with the rest, and the
+three kits keep the disagreement-free shape they were ported into.
+
+`Counter` was also never in `floom_widgets`'s `WidgetAny` list, so it could be
+constructed, returned from a public method, mounted, and then not be recoverable
+by type — the same hole `Ripple` had. It registers now.
 
 `Select` went last, and the move is what exposed the two things that were
 waiting under it:

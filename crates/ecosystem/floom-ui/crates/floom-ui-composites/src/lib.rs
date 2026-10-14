@@ -17,6 +17,7 @@
 mod any;
 pub mod badge;
 pub mod combobox;
+pub mod counter;
 pub mod icon_button;
 pub mod labeled;
 pub mod list_item;
@@ -28,6 +29,7 @@ pub mod tree_view;
 pub use badge::{Badge};
 pub use combobox::{ComboPick, Combobox, ComboboxStyle, Commit, SharedPick};
 pub use combobox::{commit, matching, panel_placement, panel_rect, panel_request, select, sync_query_to_selection, visible_options};
+pub use counter::{Counter, CounterState, CounterStyle, SharedCounter, Step, clamp_value, step_value};
 pub use icon_button::{IconButton, IconButtonIcon, IconButtonPaint, IconButtonStyle, IconButtonVariant};
 pub use labeled::{Labeled};
 pub use list_item::{ListItemRow, ListItemStyle, SlotBuilder};

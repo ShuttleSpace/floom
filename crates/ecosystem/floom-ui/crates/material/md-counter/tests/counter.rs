@@ -18,7 +18,7 @@
 
 use std::sync::{Arc, Mutex};
 
-use floom_widgets::Counter;
+use floom_ui_composites::Counter;
 
 use floom_widget_md_counter::{READOUT_FONT_SIZE, MdCounter};
 
