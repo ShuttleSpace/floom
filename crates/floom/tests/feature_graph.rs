@@ -82,7 +82,7 @@ fn default_features_are_headless_and_backend_free() {
     // true under any future rename.
     for line in graph.lines() {
         assert!(
-            !line.contains("crates/floem/"),
+            !line.contains("crates/floom/"),
             "the v1 monolith must not be a normal dependency of the facade:\n{graph}"
         );
     }

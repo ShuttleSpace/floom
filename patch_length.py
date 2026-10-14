@@ -131,11 +131,11 @@ new = "pub use compose::{\n    Align, Axis, Child, ChildBuilder, ChildKey, Inset
 assert s.count(old) == 1, ('re-export', s.count(old))
 io.open(p, 'w', encoding='utf-8').write(s.replace(old, new))
 
-# ------------------------------------------------------------- floem-layout
+# ------------------------------------------------------------- floom-layout
 p = 'crates/floom-layout/src/taffy_adapter.rs'
 s = io.open(p, encoding='utf-8').read()
 
-old = """use floem_types::{Insets, Point, Rect, Size as GeoSize};"""
+old = """use floom_types::{Insets, Point, Rect, Size as GeoSize};"""
 new = """use floom_core::Length;
 use floom_types::{Insets, Point, Rect, Size as GeoSize};"""
 assert s.count(old) == 1, ('import', s.count(old))

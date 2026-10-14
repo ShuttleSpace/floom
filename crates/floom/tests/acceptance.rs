@@ -102,6 +102,14 @@ const LIB_DIRS: &[&str] = &[
     "legacy",
     "vendor",
     "ecosystem",
+    // Every crate in this repo lives under `crates/`, and the matrix leans on
+    // that constantly: "`floom-platform-desktop` (… incl. `lifecycle.rs`)"
+    // names the crate first and then files *inside* it, and the resolver only
+    // knows which directory a bare filename is relative to if the bare crate
+    // name resolved. Without `crates` here that idiom silently fails on every
+    // line that uses it, which is the exact failure this suite exists to catch
+    // being reported instead of the rot it was written to find.
+    "crates",
     ".github",
     ".superpowers",
 ];

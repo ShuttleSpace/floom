@@ -56,7 +56,7 @@
 //! diagnostic:
 //!
 //! ```compile_fail
-//! use floem2::prelude::*;
+//! use floom::prelude::*;
 //! let v1_label = || "v1 label".to_string();
 //! let mut host = WidgetHost::new();
 //! host.mount_root(LayoutStyle::default(), v1_label);
@@ -417,11 +417,22 @@ pub mod prelude {
     pub use floom_widgets::NativeSurface;
     pub use floom_widgets::{
         AnimatedContent, BottomSheet, Button, Canvas, Checkbox, Conditional, Container, Crossfade,
-        Dialog, Divider, Grid, Icon, Image, ImageFit, InteractionState, Labeled, List,
-        NavDestination, NavHandle, NavHost, NavigationBar, NavigationDrawer, NavigationRail,
-        Opacity, Overlay, Popup, Progress, Radio, Select, ShaderBox, SharedTransitionLayout,
-        Slider, Spacer, Spinner, Stack, Switch, Tabs, Text, TextField,
+        Dialog, Divider, Grid, Icon, Image, ImageFit, InteractionState, List, Opacity, Overlay,
+        Popup, Progress, Radio, Select, ShaderBox, SharedTransitionLayout, Slider, Spacer,
+        Spinner, Stack, Switch, Tabs, Text, TextField,
     };
+
+    // --- Composite controls (floom-ui-composites, one layer up) ----------
+    // `Labeled`, `NavHandle`, `NavHost`, `NavDestination`, `NavigationBar`,
+    // `NavigationDrawer` and `NavigationRail` used to be `floom_widgets`
+    // modules and used to be re-exported here. They are not primitives: a
+    // navigation rail is a decision about what navigation looks like, and
+    // that decision is not the engine's to make. They now live in
+    // `floom-ui-composites`, which sits in the `floom-ui` workspace -- a
+    // *separate* workspace the root one `exclude`s. So the prelude cannot name
+    // them: a crate that ships in an app binary does not get to depend on a
+    // satellite workspace to keep a promise it made before the layering was
+    // right. Depend on `floom-ui-composites` directly for these seven.
 
     // --- App shell (floom-app) -------------------------------------------
     pub use floom_app::{AppRunner, FrameStats, NodeId, RunStats, WidgetHost};

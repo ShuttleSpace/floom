@@ -306,6 +306,7 @@ members = [
     "crates/floom-core-theme",
     "crates/floom-testing",
     "crates/floom-widget-runtime",
+  "crates/floom-ui-composites",
     "crates/fluent/fluent-card",
     "crates/fluent/fluent-counter",
     "crates/fluent/fluent-icon_button",
@@ -332,7 +333,6 @@ members = [
     "crates/material/md-progress_linear",
     "crates/material/md-toolbar",
     "crates/material/md-treeview",
-  "crates/floom-ui-composites",
 ]
 
 resolver = "2"

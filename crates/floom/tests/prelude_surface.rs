@@ -51,16 +51,16 @@ fn prelude_exports_the_semantic_widget_surface() {
     exists::<Popup>();
     exists::<BottomSheet>();
 
-    // Navigation.
-    exists::<NavHandle>();
-    exists::<NavHost>();
-    exists::<NavDestination>();
-    exists::<NavigationBar>();
-    exists::<NavigationDrawer>();
-    exists::<NavigationRail>();
-
-    // Labelled + native.
-    exists::<Labeled>();
+    // Navigation and labelled-value composites are deliberately absent.
+    // `Labeled`, `NavHandle`, `NavHost`, `NavDestination`, `NavigationBar`,
+    // `NavigationDrawer` and `NavigationRail` were re-exported here while they
+    // were `floom_widgets` modules. They moved up a layer into
+    // `floom-ui-composites`, which lives in the separate `floom-ui` workspace,
+    // and a shipped facade does not take a dependency on a satellite workspace
+    // to keep a name it promised before the layering was right. See
+    // `the_prelude_does_not_promise_the_composites` below, which is the
+    // assertion; this comment is only there so the absence is not mistaken for
+    // an oversight the next time somebody reads this list.
     exists::<NativeSurface>();
 }
 
@@ -253,4 +253,63 @@ fn prelude_widgets_participate_in_input_routing() {
         1,
         "a stray release is not a click"
     );
+}
+
+/// The seven names the prelude used to promise, as the negative half of the
+/// stability contract above.
+///
+/// A *positive* assertion cannot express "this must not resolve": naming
+/// `NavHost` in a type position would stop this file compiling, which is a
+/// failure of the test suite rather than a statement about the prelude. So the
+/// absence is checked where it is actually decidable — the facade's own
+/// manifest and the source of the prelude module.
+///
+/// The manifest half matters as much as the source half. Re-exporting the name
+/// requires the dependency, and the dependency is the thing that is wrong: it
+/// would put the shipped L9 facade above a crate the root workspace `exclude`s.
+#[test]
+fn the_prelude_does_not_promise_the_composites() {
+    const MOVED: [&str; 7] = [
+        "Labeled",
+        "NavHandle",
+        "NavHost",
+        "NavDestination",
+        "NavigationBar",
+        "NavigationDrawer",
+        "NavigationRail",
+    ];
+
+    let crate_dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
+    let read = |name: &str| {
+        std::fs::read_to_string(crate_dir.join(name))
+            .unwrap_or_else(|e| panic!("cannot read {name}: {e}"))
+    };
+
+    let manifest = read("Cargo.toml");
+    assert!(
+        !manifest.contains("floom-ui-composites"),
+        "the facade must not depend on the satellite crate: a shipped crate does \
+         not take an L9 -> excluded-workspace edge to keep a name"
+    );
+
+    // The `pub mod prelude { .. }` body, comment lines dropped: a name in a
+    // comment is prose *about* the surface, not a promise made by it, and the
+    // note in `src/lib.rs` is required to name all seven.
+    let lib = read("src/lib.rs");
+    let start = lib.find("pub mod prelude {").expect("prelude module");
+    let body = &lib[start..];
+    let body = &body[..body.find("\n}\n").expect("unterminated prelude module")];
+    let code: String = body
+        .lines()
+        .filter(|l| !l.trim_start().starts_with("//"))
+        .collect::<Vec<_>>()
+        .join("\n");
+
+    for name in MOVED {
+        assert!(
+            !code.contains(name),
+            "`{name}` moved to `floom-ui-composites` and must not come back to \
+             `floom::prelude`"
+        );
+    }
 }
