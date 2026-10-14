@@ -40,3 +40,37 @@ macro_rules! impl_widget_any {
 }
 
 impl_widget_any!(crate::nav::NavHost);
+
+// `Select` is the first widget here that publishes semantics of its own, so it
+// needs the same lowering `floom-widgets` does: a hint naming this fork's
+// accessibility vocabulary becomes the engine-neutral one `floom-core` owns.
+// The mapping is called rather than re-spelled -- two copies of a role table is
+// how the two vocabularies drift apart, which is why `to_core_role` /
+// `to_core_state` are `pub`. It is spelled inline rather than as a `From` impl
+// because `From` over two foreign types is an orphan-rule violation.
+macro_rules! impl_widget_any_labelled {
+    ($($ty:ty),* $(,)?) => {
+        $(
+            impl WidgetAny for $ty {
+                fn as_any(&self) -> &dyn Any {
+                    self
+                }
+
+                fn as_any_mut(&mut self) -> &mut dyn Any {
+                    self
+                }
+
+                fn semantics_hint(&self) -> Option<SemanticsHint> {
+                    let hint = <$ty>::semantics_hint(self);
+                    Some(SemanticsHint {
+                        role: floom_widgets::to_core_role(hint.role),
+                        label: hint.label,
+                        state: floom_widgets::to_core_state(hint.state),
+                    })
+                }
+            }
+        )*
+    };
+}
+
+impl_widget_any_labelled!(crate::select::Select, crate::select::SelectPopup);

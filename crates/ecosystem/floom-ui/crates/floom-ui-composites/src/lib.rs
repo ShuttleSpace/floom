@@ -22,6 +22,7 @@ pub mod labeled;
 pub mod list_item;
 pub mod nav;
 pub mod navigation;
+pub mod select;
 pub mod tree_view;
 
 pub use badge::{Badge};
@@ -31,6 +32,7 @@ pub use icon_button::{IconButton, IconButtonIcon, IconButtonPaint, IconButtonSty
 pub use labeled::{Labeled};
 pub use list_item::{ListItemRow, ListItemStyle, SlotBuilder};
 pub use nav::{NavHandle, NavHost};
+pub use select::{IndexCallback, Select, SelectPopup, SelectStyle, popup_height};
 pub use navigation::{NavDestination, NavigationBar, NavigationDrawer, NavigationRail};
 pub use tree_view::{RowRef, SharedTree, TreeNode, TreeView, TreeViewStyle};
 pub use tree_view::{node_at, toggle_path, visible_rows};

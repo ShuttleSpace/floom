@@ -152,8 +152,6 @@ impl_widget_any!(
     crate::controls::Switch,
     crate::controls::Slider,
     crate::controls::Progress,
-    crate::controls::Select,
-    crate::controls::SelectPopup,
     crate::compose::Stack,
     crate::compose::Conditional,
     crate::compose::PresenceLeaf,

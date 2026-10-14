@@ -11,7 +11,7 @@ use std::sync::Arc;
 
 use floom_core::{Rect, Widget};
 use floom_widgets::testkit::{AllocatingCreateContext, SceneRecorder};
-use floom_widgets::{Select, SelectStyle};
+use floom_ui_composites::{Select, SelectStyle};
 
 use floom_core_theme::global_theme::DesignSystem;
 use floom_core_theme::theme::{MultiTheme, Theme};

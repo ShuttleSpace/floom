@@ -50,6 +50,40 @@
    - **API**: `track_height` field name (Fluent convention)
    - **Tests**: 20 passing (engine + 20 kit tests)
 
+### ✅ Composite controls moved out of the engine
+
+`floom-widgets` is now primitives plus controls only. Everything that encodes a
+decision about what a control *is* lives in `floom-ui-composites`, one layer up:
+
+| moved | what it is |
+| --- | --- |
+| `NavHost`, `NavigationBar` / `Rail` / `Drawer` | navigation |
+| `Badge`, `Labeled` | decoration and labelling |
+| `ListItem`, `TreeView`, `Combobox` | collections over content |
+| `IconButton` | a pressable with a glyph in it |
+| `Select` / `SelectPopup` | a single-choice control |
+
+`Select` went last, and the move is what exposed the two things that were
+waiting under it:
+
+* **`Widget::set_focused`.** The host dispatched focus through a hand-written
+  list of the engine's control types. A control that lived above `floom-widgets`
+  could not be added to it, so moving one would have silently dropped its focus
+  ring -- no test would fail. The list is now a default-no-op method on
+  `Widget`, the same shape `overlay_opened` / `overlay_closed` already had, and
+  the eight controls that track focus override it.
+* **`text_width_at` and `paint_icon` are public.** The `Select` measures its
+  options at the style's font size and draws a kit-supplied chevron. Both are
+  conventions rather than conveniences -- the empty-string rule and the
+  empty-path / no-transform guards -- so they were exported rather than
+  re-derived at the new call site.
+
+`floom::prelude` no longer re-exports `Select`, `Labeled` or the five
+navigation types. They come from `floom-ui-composites`, which is in the
+`floom-ui` workspace -- one the root workspace `exclude`s, and a shipped facade
+does not take an L9 edge into a satellite workspace to keep a name it promised
+before the layering was right.
+
 ### ✅ Documentation Updates
 - **`docs/porting-floem-ui-to-2.0.md`** updated with:
   - Clear disagreement matrix for each kit

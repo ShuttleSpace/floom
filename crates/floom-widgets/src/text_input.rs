@@ -399,6 +399,11 @@ fn next_boundary(text: &str, offset: usize) -> usize {
 }
 
 impl Widget for TextInput {
+    fn set_focused(&mut self, focused: bool) {
+        // Forward to the inherent builder, which bumps the revision.
+        TextInput::set_focused(self, focused);
+    }
+
     fn create(&self, cx: &mut dyn CreateContext) -> ElementId {
         cx.alloc_child()
     }

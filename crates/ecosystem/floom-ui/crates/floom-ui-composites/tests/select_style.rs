@@ -9,9 +9,8 @@
 
 use floom_core::{ElementId, Point, Rect, Widget};
 use floom_types::Color;
-use floom_widgets::controls::{
-    Button, Select, SelectStyle, popup_height,
-};
+use floom_ui_composites::{Select, SelectStyle, popup_height};
+use floom_widgets::controls::Button;
 use floom_widgets::testkit::{
     AllocatingCreateContext, SceneRecorder, TestEventContext, paint_snapshot_any,
 };
@@ -405,7 +404,7 @@ fn a_row_is_found_below_the_panel_padding_not_at_the_popup_edge() {
     let (mut content, bounds) = popup_of(&mut select, id);
     let popup = content
         .as_any_mut()
-        .downcast_mut::<floom_widgets::SelectPopup>()
+        .downcast_mut::<floom_ui_composites::SelectPopup>()
         .expect("the content is a popup list");
 
     assert_eq!(popup.row_at(bounds, bounds.y0 + 2.0), None);

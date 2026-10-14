@@ -6,3 +6,6 @@ edition = "2021"
 [dependencies]
 floom-core-theme = { workspace = true }
 floom-widget-fluent-icon = { workspace = true }
+# The engine's `Select` moved up a layer; this kit adapts its tokens to
+# the composite, not to the widget crate it left.
+floom-ui-composites = { path = "../../floom-ui-composites" }

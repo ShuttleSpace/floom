@@ -10,3 +10,6 @@ floom-widget-md-icon = { workspace = true }
 floom-signal = { path = "../../../../../floom-signal" }
 floom-types = { path = "../../../../../floom-types" }
 floom-widgets = { path = "../../../../../floom-widgets" }
+# The engine's `Select` moved up a layer; this kit adapts its tokens to
+# the composite, not to the widget crate it left.
+floom-ui-composites = { path = "../../floom-ui-composites" }

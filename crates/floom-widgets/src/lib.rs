@@ -43,9 +43,15 @@ pub use compose::{OverlayHost, popup_placement_rect,
     Scroll, ScrollAxes, SelectionMode, SharedTransitionLayout, Stack, Tabs,
 };
 pub use controls::{
-    Button, Checkbox, InteractionState, Pressable, Progress, Radio, Select, SelectPopup,
-    SelectStyle, Slider, Switch, SwitchPalette, TextField, popup_height,
+    Button, Checkbox, InteractionState, Pressable, Progress, Radio, Slider, Switch,
+    SwitchPalette, TextField,
 };
+/// Intrinsic width of a string at an arbitrary font size.
+///
+/// Public because widgets above this crate measure their own labels at a size
+/// the engine does not choose. `floom-ui-composites`' `Select` is the caller;
+/// a kit cannot re-derive it without re-deriving the empty-string rule too.
+pub use controls::{paint_icon, text_width_at};
 /// The layout vocabulary a widget author needs alongside [`Stack`] and
 /// [`Surface::border_edges`]: the main axis a stack runs on, how its children
 /// sit on each axis, and which of a box's four edges an outline is drawn on.

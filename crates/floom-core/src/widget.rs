@@ -187,4 +187,20 @@ pub trait Widget {
     ) {
         let _ = (cx, id, handle, content);
     }
+    /// The host moved keyboard focus onto this widget, or took it off.
+    ///
+    /// A widget that paints a focus ring needs to know; one that does not
+    /// ignores the call, which is what the default does.
+    ///
+    /// This used to be a downcast list inside the host — `if let Some(control)
+    /// = widget.downcast_mut::<Button>()` — which meant the host had to be told
+    /// about every focusable control, and a control that lived above the host's
+    /// own widget crate could not be added to it at all. The list was a
+    /// correctness trap dressed as an implementation detail: a new focusable
+    /// widget compiled, mounted, tracked focus and painted no ring, and nothing
+    /// failed. Same shape as [`overlay_opened`] / [`overlay_closed`]: the host
+    /// asks the tree, the widget answers.
+    fn set_focused(&mut self, focused: bool) {
+        let _ = focused;
+    }
 }

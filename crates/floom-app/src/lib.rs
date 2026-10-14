@@ -3965,26 +3965,17 @@ impl WidgetHost {
 
 /// Best-effort focus notification for widgets that model focus themselves.
 ///
-/// Only the controls know they own an `InteractionState`, so the downcast is
-/// tried per concrete control type. Widgets that ignore focus simply no-op.
+/// A plain trait call: `Widget::set_focused` defaults to a no-op, so a widget
+/// that paints no focus ring ignores it and one that does overrides it.
+///
+/// This used to downcast through a hand-written list of the engine's controls,
+/// which meant the host had to be edited every time a focusable widget was
+/// added — and a widget that lived above `floom-widgets` could not be listed at
+/// all. The failure was silent: such a widget mounted, tracked focus, painted
+/// no ring, and every test still passed. The same shape as
+/// `overlay_opened` / `overlay_closed`: the host asks, the widget answers.
 fn set_widget_focused(widget: &mut dyn WidgetAny, focused: bool) {
-    macro_rules! try_focus {
-        ($($ty:ty),*) => {
-            $( if let Some(control) = widget.as_any_mut().downcast_mut::<$ty>() {
-                control.set_focused(focused);
-                return;
-            } )*
-        };
-    }
-    try_focus!(
-        floom_widgets::Button,
-        floom_widgets::TextField,
-        floom_widgets::Checkbox,
-        floom_widgets::Radio,
-        floom_widgets::Switch,
-        floom_widgets::Slider,
-        floom_widgets::Select
-    );
+    widget.set_focused(focused);
 }
 
 // --- context implementations -----------------------------------------------

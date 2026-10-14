@@ -249,6 +249,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "floom-forms"
+version = "0.2.0"
+
+[[package]]
 name = "floom-harmony"
 version = "0.2.0"
 dependencies = [
@@ -434,6 +438,7 @@ dependencies = [
  "floom-accessibility",
  "floom-app",
  "floom-core",
+ "floom-forms",
  "floom-layout",
  "floom-navigation",
  "floom-overlay",
@@ -473,6 +478,16 @@ dependencies = [
  "floom-signal",
  "floom-types",
  "floom-widget-runtime",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-cupertino-icon"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-types",
  "floom-widgets",
 ]
 
@@ -562,6 +577,16 @@ dependencies = [
  "floom-signal",
  "floom-types",
  "floom-widget-runtime",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-fluent-icon"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-types",
  "floom-widgets",
 ]
 

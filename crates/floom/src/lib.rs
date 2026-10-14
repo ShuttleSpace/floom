@@ -418,8 +418,8 @@ pub mod prelude {
     pub use floom_widgets::{
         AnimatedContent, BottomSheet, Button, Canvas, Checkbox, Conditional, Container, Crossfade,
         Dialog, Divider, Grid, Icon, Image, ImageFit, InteractionState, List, Opacity, Overlay,
-        Popup, Progress, Radio, Select, ShaderBox, SharedTransitionLayout, Slider, Spacer,
-        Spinner, Stack, Switch, Tabs, Text, TextField,
+        Popup, Progress, Radio, ShaderBox, SharedTransitionLayout, Slider, Spacer, Spinner,
+        Stack, Switch, Tabs, Text, TextField,
     };
 
     // --- Composite controls (floom-ui-composites, one layer up) ----------

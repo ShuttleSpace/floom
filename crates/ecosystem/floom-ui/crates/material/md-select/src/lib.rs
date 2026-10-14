@@ -16,7 +16,7 @@
 use floom_signal::{RwSignal, SignalGet};
 use floom_types::Color as PaintColor;
 
-use floom_widgets::{Select, SelectStyle};
+use floom_ui_composites::{Select, SelectStyle};
 
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::select::SelectProps;
