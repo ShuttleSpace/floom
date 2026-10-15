@@ -74,3 +74,24 @@ macro_rules! impl_widget_any_labelled {
 }
 
 impl_widget_any_labelled!(crate::select::Select, crate::select::SelectPopup);
+
+impl_widget_any_labelled!(
+    crate::accordion::Accordion,
+    crate::accordion::SelectGroup,
+    crate::bottom_sheet::BottomSheet,
+    crate::dialog::Dialog,
+    crate::overlay::Overlay,
+    crate::popup::Popup,
+    crate::tabs::Tabs,
+);
+
+// The leaves and rows are structural: they exist so a parent can hand the host
+// a stable `ChildKey` per panel, per indicator or per option, and the content
+// they wrap publishes the semantics. A row that also claimed a role would
+// double up in the semantics tree -- the same reason `SelectGroupRow` was
+// decorative where the `Pressable` inside it was not.
+impl_widget_any!(
+    crate::accordion::AccordionPanelLeaf,
+    crate::accordion::AccordionIndicatorSlot,
+    crate::accordion::SelectGroupRow,
+);

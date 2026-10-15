@@ -27,6 +27,8 @@
 # back to `members`.
 
 exclude = [
+  "crates/fluent/fluent-icon",
+  "crates/cupertino/cupertino-icon",
   "crates/cupertino/cupertino-select",
   "crates/fluent/fluent-select",
   "crates/material/md-select",
@@ -298,7 +300,6 @@ members = [
     "crates/cupertino/cupertino-card",
     "crates/cupertino/cupertino-counter",
     "crates/cupertino/cupertino-icon_button",
-  "crates/cupertino/cupertino-icon",
     "crates/cupertino/cupertino-list_item",
     "crates/cupertino/cupertino-progress_linear",
     "crates/cupertino/cupertino-treeview",
@@ -306,11 +307,9 @@ members = [
     "crates/floom-testing",
     "crates/floom-widget-runtime",
   "crates/floom-ui-composites",
-  "crates/material/md-icon",
     "crates/fluent/fluent-card",
     "crates/fluent/fluent-counter",
     "crates/fluent/fluent-icon_button",
-  "crates/fluent/fluent-icon",
     "crates/fluent/fluent-list_item",
     "crates/fluent/fluent-progress_linear",
     "crates/fluent/fluent-treeview",
@@ -327,7 +326,8 @@ members = [
     "crates/material/md-dialog",
     "crates/material/md-expansion_panels",
     "crates/material/md-footer",
-      "crates/material/md-icon_button",
+      "crates/material/md-icon",
+  "crates/material/md-icon_button",
     "crates/material/md-item_group",
     "crates/material/md-list_item",
     "crates/material/md-progress_linear",

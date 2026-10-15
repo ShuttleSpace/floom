@@ -183,7 +183,14 @@ impl Border {
     }
 }
 
-pub(crate) fn stroke_rounded_outline(
+/// Strokes a rounded rectangle inset by half the line width, so the stroke
+/// lands inside `bounds` rather than straddling it.
+///
+/// Public because widgets above this crate draw their own outlines -- the
+/// accordion's panel and the dialog's card are two of them -- and the inset is
+/// the whole point: a stroke drawn on the edge reads half a pixel too wide and
+/// clips against whatever clips the box.
+pub fn stroke_rounded_outline(
     cx: &mut dyn PaintContext,
     bounds: Rect,
     radius: f64,

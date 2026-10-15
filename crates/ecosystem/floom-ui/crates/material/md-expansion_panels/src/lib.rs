@@ -60,7 +60,8 @@ use floom_core::{LayoutRequest, WidgetAny};
 use floom_core::PresenceTransition;
 use floom_signal::{RwSignal, SignalGet};
 use floom_types::Color as PaintColor;
-use floom_widgets::{Accordion, AccordionStyle, VectorIcon};
+use floom_ui_composites::{Accordion, AccordionStyle};
+use floom_widgets::{VectorIcon};
 
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::expansion_panels::ExpansionPanelsProps;

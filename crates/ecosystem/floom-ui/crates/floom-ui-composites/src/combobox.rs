@@ -61,7 +61,7 @@ use floom_core::{
 };
 use floom_types::OverlayKind;
 
-use floom_widgets::compose::{PopupPlacement, popup_placement_rect};
+use crate::{PopupPlacement, popup_placement_rect};
 use floom_widgets::text_input::SharedBuffer;
 
 /// The selection state: which option is chosen, and whether the list is up.
@@ -465,7 +465,8 @@ fn alpha(color: Color, alpha: u8) -> Color {
 
 use floom_types::Shadow;
 
-use floom_widgets::compose::{OverlayHost, Stack};
+use crate::{OverlayHost};
+use floom_widgets::{Stack};
 use floom_widgets::surface::Surface;
 use floom_widgets::primitives::{Role, SemanticsHint, StateBits as SemanticsState, Text};
 use floom_widgets::text_input::{TextInput, TextInputStyle};

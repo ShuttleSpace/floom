@@ -54,7 +54,7 @@ fn the_tokens_and_colours_reach_the_engine_style() {
         "v1 wrote `.border(1.0)` as a literal, not a token"
     );
 
-    use floom_widgets::SelectGroupStyle;
+    use floom_ui_composites::SelectGroupStyle;
     let expect = SelectGroupStyle {
         gap: resolved.gap,
         pad: resolved.pad,
@@ -137,7 +137,7 @@ fn one_widget_answers_both_accessors() {
 
 #[test]
 fn the_mode_and_mandatory_props_reach_the_widget() {
-    use floom_widgets::SelectionMode;
+    use floom_ui_composites::SelectionMode;
 
     let single = three_rows().view(None::<fn(usize)>, None::<fn(Vec<usize>)>);
     assert_eq!(single.selection_mode(), SelectionMode::Single);
@@ -234,7 +234,7 @@ fn the_resolved_style_is_enough_to_build_the_widget() {
 
     // And a hand-built widget with those exact numbers is indistinguishable from
     // the port's own.
-    let by_hand = floom_widgets::SelectGroup::new().style(floom_widgets::SelectGroupStyle {
+    let by_hand = floom_ui_composites::SelectGroup::new().style(floom_ui_composites::SelectGroupStyle {
         gap: resolved.gap,
         pad: resolved.pad,
         radius: resolved.radius,

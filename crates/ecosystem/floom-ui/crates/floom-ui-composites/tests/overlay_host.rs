@@ -17,7 +17,8 @@ use floom_core::{Child, ChildKey, ElementId, LayoutRequest, OverlayRequest, Upda
 use floom_types::{OverlayHandle, OverlayKind, Rect};
 
 use floom_widgets::testkit::{AllocatingCreateContext, RecordingUpdateContext};
-use floom_widgets::{OverlayHost, Popup, Text};
+use floom_ui_composites::{OverlayHost, Popup};
+use floom_widgets::Text;
 
 /// A control in the middle of nowhere, so a test that "looks right" has to mean it.
 const ANCHOR: Rect = Rect {

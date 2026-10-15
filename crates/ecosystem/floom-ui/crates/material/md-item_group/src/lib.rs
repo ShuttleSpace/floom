@@ -36,7 +36,7 @@
 
 use floom_signal::{RwSignal, SignalGet};
 use floom_types::{Color as PaintColor, Insets};
-use floom_widgets::{SelectGroup, SelectGroupStyle, SelectionMode};
+use floom_ui_composites::{SelectGroup, SelectGroupStyle, SelectionMode};
 
 use floom_widget_runtime::theme_signal;
 

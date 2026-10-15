@@ -416,10 +416,9 @@ pub mod prelude {
     // --- Semantic widgets (floom-widgets) -------------------------------
     pub use floom_widgets::NativeSurface;
     pub use floom_widgets::{
-        AnimatedContent, BottomSheet, Button, Canvas, Checkbox, Conditional, Container, Crossfade,
-        Dialog, Divider, Grid, Icon, Image, ImageFit, InteractionState, List, Opacity, Overlay,
-        Popup, Progress, Radio, ShaderBox, SharedTransitionLayout, Slider, Spacer, Spinner,
-        Stack, Switch, Tabs, Text, TextField,
+        AnimatedContent, Button, Canvas, Checkbox, Conditional, Container, Crossfade, Divider,
+        Grid, Icon, Image, ImageFit, InteractionState, List, Opacity, Progress, Radio, ShaderBox,
+        SharedTransitionLayout, Slider, Spacer, Spinner, Stack, Switch, Text, TextField,
     };
 
     // --- Composite controls (floom-ui-composites, one layer up) ----------
@@ -433,6 +432,13 @@ pub mod prelude {
     // them: a crate that ships in an app binary does not get to depend on a
     // satellite workspace to keep a promise it made before the layering was
     // right. Depend on `floom-ui-composites` directly for these seven.
+
+    // The following five joined them: `Overlay`, `Dialog`, `Popup`, `BottomSheet`
+    // and `Tabs`. A modal card, a tab strip and an anchored panel are the same
+    // kind of decision, so the "why" is one note rather than five. What is left
+    // in the engine is the layout vocabulary -- `Stack`, `List`, `Grid`,
+    // `Conditional`, `Crossfade`, `AnimatedContent`, `Opacity`, `Scroll` -- which is
+    // arithmetic rather than product.
 
     // --- App shell (floom-app) -------------------------------------------
     pub use floom_app::{AppRunner, FrameStats, NodeId, RunStats, WidgetHost};

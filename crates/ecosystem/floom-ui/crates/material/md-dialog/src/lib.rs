@@ -59,7 +59,7 @@ use floom_types::Color as PaintColor;
 use floom_types::FontWeight;
 
 use floom_core::{Child, ChildKey, LayoutRequest};
-use floom_widgets::{Dialog};
+use floom_ui_composites::{Dialog};
 use floom_widgets::text_input::{SharedFlag, read_flag, shared_flag, write_flag};
 
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};

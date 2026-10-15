@@ -14,9 +14,10 @@
 use floom_core::{ChildKey, LayoutRequest, Widget, WidgetAny};
 use floom_types::{OverlayKind, Rect};
 
-use floom_widgets::compose::{PopupPlacement, popup_placement_rect};
+use floom_ui_composites::{PopupPlacement, popup_placement_rect};
 use floom_widgets::testkit::{AllocatingCreateContext, RecordingUpdateContext};
-use floom_widgets::{Popup, Text};
+use floom_ui_composites::Popup;
+use floom_widgets::Text;
 
 /// A control in the middle of nowhere, so a test that "looks right" has to mean it.
 const ANCHOR: Rect = Rect {

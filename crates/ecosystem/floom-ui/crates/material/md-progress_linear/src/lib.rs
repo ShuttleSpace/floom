@@ -55,9 +55,7 @@
 
 use floom_signal::{RwSignal, SignalGet};
 use floom_types::Color as PaintColor;
-use floom_widgets::{
-    FillPlacement, Indeterminate, LinearProgress, LinearProgressStyle, PercentRounding,
-};
+use floom_widgets::{FillPlacement, Indeterminate, LinearProgress, LinearProgressStyle, PercentRounding};
 
 use floom_widget_runtime::theme_signal;
 

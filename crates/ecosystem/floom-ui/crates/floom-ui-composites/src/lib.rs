@@ -16,6 +16,13 @@
 
 mod any;
 pub mod badge;
+pub mod accordion;
+pub mod bottom_sheet;
+pub mod dialog;
+pub mod overlay;
+pub mod overlay_bookkeeping;
+pub mod popup;
+pub mod tabs;
 pub mod combobox;
 pub mod counter;
 pub mod icon_button;
@@ -25,6 +32,14 @@ pub mod nav;
 pub mod navigation;
 pub mod select;
 pub mod tree_view;
+
+pub use accordion::{Accordion, AccordionIndicator, AccordionStyle, SelectGroup, SelectGroupStyle, SelectionMode};
+pub use bottom_sheet::BottomSheet;
+pub use dialog::Dialog;
+pub use overlay::Overlay;
+pub use overlay_bookkeeping::OverlayHost;
+pub use popup::{Popup, PopupPlacement, popup_placement_rect};
+pub use tabs::Tabs;
 
 pub use badge::{Badge};
 pub use combobox::{ComboPick, Combobox, ComboboxStyle, Commit, SharedPick};

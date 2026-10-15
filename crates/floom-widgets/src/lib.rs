@@ -34,11 +34,9 @@ pub use widget_any::{to_core_role, to_core_state};
 /// Self-drawn surfaces: a closure-driven drawing board, a WGSL shader box and
 /// a loading spinner.
 pub use canvas::{Canvas, ShaderBox, Spinner};
-pub use compose::{OverlayHost, popup_placement_rect, 
-    Accordion, AccordionIndicator, AccordionStyle, AnimatedContent, BottomSheet, Conditional,
-    Crossfade, Dialog, Grid, List, Opacity, Overlay, Popup, PopupPlacement, SelectGroup,
-    SelectGroupStyle,
-    Scroll, ScrollAxes, SelectionMode, SharedTransitionLayout, Stack, Tabs,
+pub use compose::{
+    AnimatedContent, Conditional, Crossfade, Grid, List, Opacity, Scroll, ScrollAxes,
+    SharedTransitionLayout, Stack,
 };
 pub use controls::{
     Button, Checkbox, InteractionState, Pressable, Progress, Radio, Slider, Switch,
@@ -62,7 +60,7 @@ pub use floom_core::{Align, Axis, Edges};
 pub use native::NativeSurface;
 pub use primitives::{
     Container, Divider, Icon, Image, ImageFit, Revision, RuleAlignment, SemanticsHint, Spacer, Text,
-    emit_semantics,
+    emit_semantics, stroke_rounded_outline,
 };
 pub use progress_linear::{
     FillPlacement, INDETERMINATE_WIDTH_PCT, Indeterminate, LinearProgress, LinearProgressStyle,

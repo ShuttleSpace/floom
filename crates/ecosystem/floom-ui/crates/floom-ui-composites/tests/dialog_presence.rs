@@ -28,7 +28,8 @@ use floom_core::{Child, ChildKey, ElementId, LayoutRequest, Widget, WidgetAny};
 use floom_types::{OverlayKind, Rect};
 
 use floom_widgets::testkit::{AllocatingCreateContext, RecordingUpdateContext};
-use floom_widgets::{Dialog, SharedFlag, read_flag, shared_flag, write_flag};
+use floom_ui_composites::Dialog;
+use floom_widgets::{SharedFlag, read_flag, shared_flag, write_flag};
 
 /// A viewport, because a dialog covers the window rather than its own box.
 const VIEWPORT: Rect = Rect {

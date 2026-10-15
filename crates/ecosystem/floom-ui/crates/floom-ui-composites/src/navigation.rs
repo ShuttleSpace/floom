@@ -20,7 +20,8 @@ use floom_core::{
     OverlayKind, OverlayRequest, PaintContext, SemanticsContext, UpdateContext, Widget, WidgetAny,
 };
 
-use floom_widgets::compose::{Overlay, OverlayHost, Stack};
+use crate::{Overlay, OverlayHost};
+use floom_widgets::{Stack};
 use floom_widgets::controls::Button;
 use floom_widgets::primitives::{SemanticsHint, Text};
 

@@ -154,16 +154,9 @@ impl_widget_any!(
     crate::controls::Progress,
     crate::compose::Stack,
     crate::compose::Conditional,
-    crate::compose::PresenceLeaf,
     crate::compose::Crossfade,
+    crate::compose::PresenceLeaf,
     crate::compose::Opacity,
-    crate::compose::Overlay,
-    crate::compose::Dialog,
-    crate::compose::Tabs,
-    crate::compose::Accordion,
-    crate::compose::SelectGroup,
-    crate::compose::Popup,
-    crate::compose::BottomSheet,
     crate::native::NativeSurface,
 );
 
@@ -173,9 +166,6 @@ impl_widget_any!(
 // checkbox role and the selected state — a row that also claimed a role would
 // double up in the semantics tree.
 impl_widget_any_decorative!(
-    crate::compose::AccordionPanelLeaf,
-    crate::compose::AccordionIndicatorSlot,
-    crate::compose::SelectGroupRow,
     // The ripple is a *wrapper* whose whole job is to paint ink over whatever it
     // holds, so it publishes nothing: the button inside it is what names itself and
     // carries the role. It was missing here entirely, which meant `Ripple` could be

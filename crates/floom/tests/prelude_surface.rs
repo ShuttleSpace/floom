@@ -41,14 +41,9 @@ fn prelude_exports_the_semantic_widget_surface() {
     exists::<Stack>();
     exists::<List<String>>();
     exists::<Grid<String>>();
-    exists::<Tabs>();
     exists::<Conditional>();
     exists::<Crossfade>();
     exists::<SharedTransitionLayout>();
-    exists::<Dialog>();
-    exists::<Overlay>();
-    exists::<Popup>();
-    exists::<BottomSheet>();
 
     // Navigation and labelled-value composites are deliberately absent.
     // `Labeled`, `NavHandle`, `NavHost`, `NavDestination`, `NavigationBar`,
@@ -254,7 +249,7 @@ fn prelude_widgets_participate_in_input_routing() {
     );
 }
 
-/// The eight names the prelude used to promise, as the negative half of the
+/// The thirteen names the prelude used to promise, as the negative half of the
 /// stability contract above.
 ///
 /// A *positive* assertion cannot express "this must not resolve": naming
@@ -268,7 +263,7 @@ fn prelude_widgets_participate_in_input_routing() {
 /// would put the shipped L9 facade above a crate the root workspace `exclude`s.
 #[test]
 fn the_prelude_does_not_promise_the_composites() {
-    const MOVED: [&str; 8] = [
+    const MOVED: [&str; 13] = [
         "Labeled",
         "NavHandle",
         "NavHost",
@@ -277,6 +272,11 @@ fn the_prelude_does_not_promise_the_composites() {
         "NavigationDrawer",
         "NavigationRail",
         "Select",
+        "Overlay",
+        "Dialog",
+        "Popup",
+        "BottomSheet",
+        "Tabs",
     ];
 
     let crate_dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));

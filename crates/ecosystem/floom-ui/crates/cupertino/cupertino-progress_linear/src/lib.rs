@@ -8,10 +8,7 @@
 
 use floom_signal::{RwSignal, SignalGet};
 use floom_types::Color as PaintColor;
-use floom_widgets::{
-    FillPlacement, INDETERMINATE_WIDTH_PCT, Indeterminate, LinearProgress, LinearProgressStyle,
-    PercentRounding,
-};
+use floom_widgets::{FillPlacement, INDETERMINATE_WIDTH_PCT, Indeterminate, LinearProgress, LinearProgressStyle, PercentRounding};
 
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens, ProgressLinearTokens};
 use floom_core_theme::props::progress_linear::ProgressLinearProps;

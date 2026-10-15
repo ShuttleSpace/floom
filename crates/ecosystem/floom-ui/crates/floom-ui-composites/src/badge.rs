@@ -3,7 +3,7 @@
 //! Theme-agnostic by design. A 2.0 widget takes explicit values rather than
 //! reading a global theme signal, so resolving the palette (which design
 //! system, error colour, token sizes) is the *kit's* job — see
-//! `docs/porting-floem-ui-to-2.0.md`.
+//! `docs/porting-floom-ui-to-2.0.md`.
 
 use floom_accessibility::SemanticsRole;
 use floom_core::{

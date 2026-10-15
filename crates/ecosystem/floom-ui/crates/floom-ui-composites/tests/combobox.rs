@@ -17,7 +17,8 @@ use floom_ui_composites::combobox::{
     Commit,
     commit,
 };
-use floom_widgets::{PopupPlacement, TextInput};
+use floom_ui_composites::PopupPlacement;
+use floom_widgets::TextInput;
 
 const ANCHOR: Rect = Rect {
     x0: 30.0,
