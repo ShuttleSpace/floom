@@ -21,8 +21,6 @@
 //! `floom-widget-fluent-icon-paths`: data has no v1 dependency, and the SVG
 //! wrapper that crate also exports is what the v1 half uses.
 
-use std::sync::Arc;
-
 use floom_core::{Point, Rect, Size};
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::select::SelectProps;
@@ -51,7 +49,6 @@ fn to_paint(c: Color) -> PaintColor {
 pub struct FluentSelect {
     props: SelectProps,
     theme: RwSignal<MultiTheme>,
-    on_change: Option<Arc<dyn Fn(usize) + Send + Sync + 'static>>,
 }
 
 impl FluentSelect {
@@ -61,7 +58,6 @@ impl FluentSelect {
                 floom_core_theme::global_theme::DesignSystem::Fluent,
             )),
             props: SelectProps::default(),
-            on_change: None,
         }
     }
 
@@ -88,7 +84,7 @@ impl FluentSelect {
     }
 
     pub fn on_change(mut self, callback: impl Fn(usize) + Send + Sync + 'static) -> Self {
-        self.on_change = Some(Arc::new(callback));
+        self.props.on_change = Some(Box::new(callback));
         self
     }
 
@@ -180,7 +176,8 @@ impl FluentSelect {
             select = select.selected(index);
         }
 
-        if let Some(on_change) = self.on_change {
+        let on_change = self.props.on_change;
+        if let Some(on_change) = on_change {
             select = select.on_change(move |index| on_change(index));
         }
 

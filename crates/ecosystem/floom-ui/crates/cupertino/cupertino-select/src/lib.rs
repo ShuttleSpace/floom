@@ -24,8 +24,6 @@
 //! now lives in `floom-widget-cupertino-icon-paths` -- data has no v1
 //! dependency, and the SVG wrapper it also exports is what the v1 half uses.
 
-use std::sync::Arc;
-
 use floom_signal::{RwSignal, SignalGet};
 
 use floom_core::{Point, Rect, Size};
@@ -55,7 +53,6 @@ fn to_paint(c: Color) -> PaintColor {
 pub struct CupertinoSelect {
     props: SelectProps,
     theme: RwSignal<MultiTheme>,
-    on_change: Option<Arc<dyn Fn(usize) + Send + Sync + 'static>>,
 }
 
 impl CupertinoSelect {
@@ -65,7 +62,6 @@ impl CupertinoSelect {
                 floom_core_theme::global_theme::DesignSystem::Cupertino,
             )),
             props: SelectProps::default(),
-            on_change: None,
         }
     }
 
@@ -92,7 +88,7 @@ impl CupertinoSelect {
     }
 
     pub fn on_change(mut self, callback: impl Fn(usize) + Send + Sync + 'static) -> Self {
-        self.on_change = Some(Arc::new(callback));
+        self.props.on_change = Some(Box::new(callback));
         self
     }
 
@@ -189,7 +185,8 @@ impl CupertinoSelect {
             select = select.selected(index);
         }
 
-        if let Some(on_change) = self.on_change {
+        let on_change = self.props.on_change;
+        if let Some(on_change) = on_change {
             select = select.on_change(move |index| on_change(index));
         }
 

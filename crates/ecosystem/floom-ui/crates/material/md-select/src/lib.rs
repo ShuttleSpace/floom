@@ -45,7 +45,6 @@ fn resolve_icon(name: &str) -> Option<floom_widgets::VectorIcon> {
 pub struct MdSelect {
     props: SelectProps,
     theme: RwSignal<MultiTheme>,
-    on_change: Option<std::sync::Arc<dyn Fn(usize) + Send + Sync + 'static>>,
     /// The chevron, as a *name* rather than a `VectorIcon`.
     ///
     /// It is resolved at `view()` so the kit can pick its own glyph without
@@ -63,7 +62,6 @@ impl MdSelect {
                 floom_core_theme::global_theme::DesignSystem::Material,
             )),
             props,
-            on_change: None,
             icon: "arrow_drop_down".to_string(),
         }
     }
@@ -98,16 +96,7 @@ impl MdSelect {
     }
 
     pub fn on_change(mut self, callback: impl Fn(usize) + Send + Sync + 'static) -> Self {
-        let cb = std::sync::Arc::new(callback);
-        // props.on_change keeps v1 shape (Option<usize>) for compatibility
-        let cb2 = cb.clone();
-        self.props.on_change = Some(Box::new(move |idx: Option<usize>| {
-            if let Some(i) = idx {
-                cb2(i);
-            }
-        }));
-        // Internal on_change uses engine shape (usize)
-        self.on_change = Some(cb);
+        self.props.on_change = Some(Box::new(callback));
         self
     }
 
@@ -202,7 +191,6 @@ impl MdSelect {
         let options = self.props.options.clone();
         let selected = self.props.selected;
         let disabled = self.props.disabled;
-        let on_change = self.on_change.clone();
 
         let mut select = Select::new(options)
             .style(style)
@@ -220,6 +208,7 @@ impl MdSelect {
             select = select.selected(index);
         }
 
+        let on_change = self.props.on_change;
         if let Some(on_change) = on_change {
             select = select.on_change(move |index| on_change(index));
         }
