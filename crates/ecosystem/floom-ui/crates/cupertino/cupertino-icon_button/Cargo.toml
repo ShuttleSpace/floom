@@ -19,7 +19,7 @@ floom-signal = { path = "../../../../../floom-signal" }
 floom-core = { path = "../../../../../floom-core" }
 floom-types = { path = "../../../../../floom-types" }
 floom-widgets = { path = "../../../../../floom-widgets" }
-floom-widget-md-icon = { path = "../../material/md-icon" }
+floom-widget-cupertino-icon = { path = "../cupertino-icon" }
 
 [dev-dependencies]
 floom-core-theme = { workspace = true }

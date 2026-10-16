@@ -94,7 +94,7 @@ fn an_explicit_size_replaces_the_token_and_leaves_the_glyph() {
 /// that exists, a kit can be wired to the wrong theme and no assertion here will
 /// notice. Recorded in `docs/porting-floem-ui-to-2.0.md` rather than papered over
 /// with a test that passes for the wrong reason.
-#[test]#[test]
+#[test]
 fn the_crate_really_reads_cupertino_tokens() {
     let style = button().resolved_style();
     let theme = cupertino();
@@ -261,33 +261,39 @@ fn the_kit_hands_the_engine_a_pressable_box() {
     );
 }
 
-/// The icon's colour is overridden to the button's — and the control says why it
-/// has to be.
+/// The button's colour wins over the icon's own — and this kit can see it.
 ///
-/// For this kit the two happen to be **equal**: `MdIcon`'s own foreground is
-/// `on_surface_variant`, which is exactly what v1 used for the button's enabled
-/// glyph. So an enabled Material icon button cannot tell an override from no
-/// override, and this test's first version asserted they differed and failed.
+/// `CupertinoIcon`'s own `resolved_style().color` is `on_surface`, while the
+/// button's enabled `foreground` is `on_surface_variant`. So the override is
+/// *observable* here: the mounted glyph carries the button's colour and not the
+/// icon's own.
 ///
-/// That is worth knowing rather than papering over: the override is only
-/// *observable* on the disabled path, and only because `MdIcon` has no notion of
-/// being inside a disabled button. So the enabled assertion below is deliberately a
-/// `==`: it pins the agreement, and the disabled test is the one that pins the
-/// override.
+/// That is the state this test wanted to be in and could not be for a while. Both
+/// `*-icon_button` kits were written as line-for-line copies of `md-icon_button`,
+/// Material icon and all, and Material's icon foreground is `on_surface_variant`
+/// — exactly the button's foreground. With both kits on Material's icon the two
+/// were equal, so an enabled button could not tell an override from no override,
+/// and an earlier version of this test asserting they *differed* failed. The
+/// assertion was weakened to `==` to match, with the agreement pinned as a control.
+///
+/// Now that each kit names its own glyph, the difference is back, and the
+/// enabled path pins the override for real. The control is gone because the thing
+/// it controlled no longer holds: see `a_disabled_buttons_glyph_is_the_disabled_foreground`
+/// for the path that was already observable.
 #[test]
-fn the_glyph_takes_the_buttons_colour_and_material_agrees_with_its_own() {
+fn the_glyph_takes_the_buttons_colour_and_not_the_icons_own() {
     let style = button().resolved_style();
     let icon_own = to_paint(button().icon_style().color);
 
-    assert_eq!(
+    assert_ne!(
         style.foreground, icon_own,
-        "%s's `MdIcon` foreground and the button's enabled glyph are the same \
-         colour, so while enabled the override is a no-op"
+        "this kit's icon foreground and the button's enabled glyph are different \
+         colours, so the override is observable while enabled"
     );
     assert_eq!(
         button().view().icon().fill(),
         style.foreground,
-        "and the mounted icon carries it"
+        "the mounted icon carries the button's colour, not its own"
     );
 }
 
@@ -351,7 +357,6 @@ fn the_props_report_the_click_callback() {
     // callback that is not `Send + Sync` and a second copy would be a second node
     // pretending to be the first.
     let view = button.view();
-    let mut ripple = view.children()[0].build();
     let mut ripple = view.children()[0].build();
     let mut inner = {
         let ripple = ripple.as_any_mut().downcast_mut::<Ripple>().unwrap();

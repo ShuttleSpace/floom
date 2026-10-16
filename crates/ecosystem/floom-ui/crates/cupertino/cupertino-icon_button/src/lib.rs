@@ -17,10 +17,10 @@
 //!
 //! ## What the port changed
 //!
-//! * `svg(icon)` — a v1 view that drew a path — is [`MdIcon`], already ported, and
-//!   `MdIcon::resolve()` is what hands 2.0 a widget. Its `resolved_style` colour is
-//!   *overridden* below, because v1 computed the glyph colour from the button's
-//!   disabled state and `MdIcon` has no notion of being inside a disabled button.
+//! * `svg(icon)` — a v1 view that drew a path — is [`CupertinoIcon`], which is
+//!   ported, and `CupertinoIcon::resolve()` is what hands 2.0 a widget. Its
+//!   `resolved_style` colour is separate from the button's disabled state, and
+//!   `CupertinoIcon` has no notion of being inside a disabled button.
 //! * `.action(..)` became [`Pressable`] inside the engine widget. v1 wrote
 //!   `if !disabled { .. }` inside the action closure, which guarded the pointer but
 //!   not the keyboard; 2.0's gate is in `Pressable` and covers both. That is an
@@ -36,9 +36,9 @@ use std::sync::Arc;
 use floom_types::Color as PaintColor;
 
 use floom_ui_composites::{IconButton, IconButtonPaint, IconButtonStyle, IconButtonVariant};
-use floom_widget_md_icon::MdIcon;
+use floom_widget_cupertino_icon::CupertinoIcon;
 
-use floom_widget_md_icon::MdIconStyle;
+use floom_widget_cupertino_icon::CupertinoIconStyle;
 
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::icon_button::{IconButtonProps, IconButtonVariant as PropsVariant};
@@ -205,8 +205,8 @@ impl CupertinoIconButton {
 
     /// The icon's resolved style, for a caller that wants to read the button's
     /// colours rather than mount it.
-    pub fn icon_style(&self) -> MdIconStyle {
-        MdIcon::new(self.props.icon.clone())
+    pub fn icon_style(&self) -> CupertinoIconStyle {
+        CupertinoIcon::new(self.props.icon.clone())
             .size(self.resolved_style().icon_size)
             .with_theme(self.theme.get())
             .resolved_style()
@@ -220,9 +220,9 @@ impl CupertinoIconButton {
     /// `Child::new(key, request, move || Box::new(button.view()))`.
     ///
     /// The style is resolved *here*, once, and the icon's colour is overridden to
-    /// the button's disabled state — `MdIcon::resolve` would otherwise use the
-    /// icon's own idea of the foreground, which knows nothing about being inside a
-    /// button that is currently disabled.
+    /// the button's disabled state — `CupertinoIcon::resolve` would otherwise use
+    /// the icon's own idea of the foreground, which knows nothing about being
+    /// inside a button that is currently disabled.
     pub fn view(self) -> IconButton {
         let style = self.resolved_style();
         let icon_color = if self.props.disabled {
@@ -230,7 +230,7 @@ impl CupertinoIconButton {
         } else {
             style.foreground
         };
-        let icon = MdIcon::new(self.props.icon.clone())
+        let icon = CupertinoIcon::new(self.props.icon.clone())
             .size(style.icon_size)
             .with_theme(self.theme.get())
             .resolve()

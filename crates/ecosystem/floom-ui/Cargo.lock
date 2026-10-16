@@ -509,7 +509,7 @@ dependencies = [
  "floom-signal",
  "floom-types",
  "floom-ui-composites",
- "floom-widget-md-icon",
+ "floom-widget-cupertino-icon",
  "floom-widget-runtime",
  "floom-widgets",
 ]
@@ -630,7 +630,7 @@ dependencies = [
  "floom-signal",
  "floom-types",
  "floom-ui-composites",
- "floom-widget-md-icon",
+ "floom-widget-fluent-icon",
  "floom-widget-runtime",
  "floom-widgets",
 ]
