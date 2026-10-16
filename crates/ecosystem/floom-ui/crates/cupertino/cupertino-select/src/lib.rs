@@ -1,265 +1,199 @@
-use std::rc::Rc;
+//! Cupertino's select (dropdown), ported to the Floom 2.0 widget API.
+//!
+//! ## What the port kept, and from where
+//!
+//! v1's own `view()` was a hand-built dropdown: an `RwSignal<bool>` for open,
+//! an `Overlay::new(panel)` positioned from a `LayoutChangedListener`, and one
+//! `Label` per option rebuilt on every hover. All of that is the engine's
+//! [`Select`] now -- the overlay, the keyboard, the highlight -- so what is left
+//! here is the token translation plus the one value that is not a token.
+//!
+//! Two of v1's numbers survived into the port and are worth naming:
+//!
+//! * the hovered row is `primary`@**12**, where Material and Fluent use
+//!   `on_surface`@8. That is a different *source* colour, which is why
+//!   [`SelectStyle`] carries resolved colours rather than an alpha over one
+//!   theme colour.
+//! * a disabled trigger is a *fill* change here (`on_surface`@4) and a *border*
+//!   change in Material. Same state, opposite mechanism.
+//!
+//! ## The chevron
+//!
+//! The icon name is this kit's, because three kits' icon sets disagree on what
+//! "expand" looks like. `cupertino-icon` is still a v1 crate, so its path data
+//! now lives in `floom-widget-cupertino-icon-paths` -- data has no v1
+//! dependency, and the SVG wrapper it also exports is what the v1 half uses.
 
-use floom::event::EventPropagation;
-use floom::prelude::*;
-use floom_widget_cupertino_icon::cupertino_icon_svg;
-use floom::style::CursorStyle;
-use floom::view::AnyView;
-use floom::IntoView;
-use floom::context::{LayoutChanged, LayoutChangedListener};
-use floom::reactive::RwSignal;
+use std::sync::Arc;
+
+use floom_signal::{RwSignal, SignalGet};
+
+use floom_core::{Point, Rect, Size};
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::select::SelectProps;
 use floom_core_theme::theme::{MultiTheme, Theme};
 use floom_core_theme::tokens::color::Color;
-use floom_core_theme::tokens::color_ext::*;
+use floom_core_theme::tokens::color_ext::with_alpha;
+use floom_types::Color as PaintColor;
+use floom_ui_composites::{Select, SelectStyle};
+use floom_widget_cupertino_icon_paths::cupertino_icon_path;
+use floom_widgets::VectorIcon;
 
 const DESIGN_SYSTEM: &str = "cupertino";
 
-#[derive(Debug, Clone, PartialEq)]
-pub struct CupertinoSelectStyle {
-    pub design_system: &'static str,
-    pub background: Color,
-    pub foreground: Color,
-    pub border_color: Color,
-    pub height: f32,
-    pub padding_horizontal: f32,
-    pub border_radius: f32,
-    pub min_width: f32,
-    pub item_height: f32,
+/// Design-system colour -> engine colour.
+fn to_paint(c: Color) -> PaintColor {
+    PaintColor {
+        r: c.r,
+        g: c.g,
+        b: c.b,
+        a: c.a,
+    }
 }
 
+/// Cupertino's select (dropdown).
 pub struct CupertinoSelect {
     props: SelectProps,
-    selected: RwSignal<Option<usize>>,
-    open: RwSignal<bool>,
     theme: RwSignal<MultiTheme>,
+    on_change: Option<Arc<dyn Fn(usize) + Send + Sync + 'static>>,
 }
 
 impl CupertinoSelect {
     pub fn new() -> Self {
-        let props = SelectProps::default();
         Self {
-            selected: RwSignal::new(props.selected),
-            open: RwSignal::new(false),
-            theme: RwSignal::new(MultiTheme::new_for(floom_core_theme::global_theme::DesignSystem::Cupertino)),
-            props,
+            theme: RwSignal::new(MultiTheme::new_for(
+                floom_core_theme::global_theme::DesignSystem::Cupertino,
+            )),
+            props: SelectProps::default(),
+            on_change: None,
         }
     }
+
+    /// Replace the option list.
     pub fn options(mut self, options: Vec<String>) -> Self {
         self.props.options = options;
         self
     }
+
+    /// Choose an option up front.
     pub fn selected(mut self, selected: Option<usize>) -> Self {
         self.props.selected = selected;
-        self.selected.set(selected);
         self
     }
+
     pub fn placeholder(mut self, placeholder: impl Into<String>) -> Self {
         self.props.placeholder = placeholder.into();
         self
     }
+
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.props.disabled = disabled;
         self
     }
-    pub fn on_change(mut self, callback: impl Fn(Option<usize>) + 'static) -> Self {
-        self.props.on_change = Some(Box::new(callback));
+
+    pub fn on_change(mut self, callback: impl Fn(usize) + Send + Sync + 'static) -> Self {
+        self.on_change = Some(Arc::new(callback));
         self
     }
+
     pub fn props(&self) -> &SelectProps {
         &self.props
     }
-    pub fn open_signal(&self) -> RwSignal<bool> {
-        self.open
-    }
-    pub fn theme(&self) -> RwSignal<MultiTheme> {
-        self.theme
-    }
+
     pub fn with_theme(mut self, theme: MultiTheme) -> Self {
         self.theme = RwSignal::new(theme);
         self
     }
-    pub fn resolved_style(&self) -> CupertinoSelectStyle {
+
+    pub fn resolved_style(&self) -> SelectStyle {
         let theme = self.theme.get();
         let ComponentTokens::Select(tokens) = theme.component(ComponentId::Select) else {
             unreachable!("ComponentId::Select must resolve to SelectTokens")
         };
-        CupertinoSelectStyle {
-            design_system: DESIGN_SYSTEM,
-            background: theme.colors().surface,
-            foreground: theme.colors().on_surface,
-            border_color: theme.colors().outline,
+        let surface = theme.colors().surface;
+        let on_surface = theme.colors().on_surface;
+        let outline = theme.colors().outline;
+        let primary = theme.colors().primary;
+
+        SelectStyle {
+            // --- geometry, from `SelectTokens` ---
             height: tokens.height,
             padding_horizontal: tokens.padding_horizontal,
             border_radius: tokens.border_radius,
             min_width: tokens.min_width,
             item_height: tokens.item_height,
+            panel_max_height: tokens.panel_max_height,
+            icon_size: tokens.icon_size,
+
+            // --- v1's call-site constants, Cupertino's values ---
+            trigger_gap: 8.0,
+            row_padding_horizontal: 12.0,
+            panel_gap: 0.0,
+            panel_padding: 4.0,
+            border_width: 1.0,
+            text_size: theme.typography().body.medium.font_size,
+            panel_shadow_blur: 12.0,
+            panel_shadow_spread: 1.0,
+
+            // --- base colours ---
+            surface: to_paint(surface),
+            on_surface: to_paint(on_surface),
+            outline: to_paint(outline),
+            // Placeholder and chevron are both `on_surface`@140 -- undimmed in
+            // Material's case (`on_surface_variant` at 255), 160 for Fluent's
+            // chevron, so the three kits give three answers to one question.
+            placeholder: to_paint(with_alpha(on_surface, 140)),
+            chevron: to_paint(with_alpha(on_surface, 140)),
+            // v1's Cupertino panel drew no border at all.
+            panel_border: to_paint(Color::rgba(0, 0, 0, 0)),
+            panel_shadow: to_paint(Color::rgba(0, 0, 0, 24)),
+
+            // --- the interactive bands ---
+            //
+            // This is the kit's one real disagreement with Material: a hovered
+            // row is `primary`@12 here and `on_surface`@8 there.
+            hover_row: to_paint(with_alpha(primary, 12)),
+            selected_row: to_paint(with_alpha(primary, 24)),
+
+            // --- disabled, which is a fill change here ---
+            disabled_text: to_paint(with_alpha(on_surface, 97)),
+            disabled_chevron: to_paint(with_alpha(on_surface, 97)),
+            disabled_border: to_paint(with_alpha(on_surface, 38)),
+            disabled_background: to_paint(with_alpha(on_surface, 4)),
         }
     }
 
-    /// Build a renderable Cupertino select with a dropdown of options.
-    pub fn view(self) -> impl View {
-        let theme = self.theme;
-        let open = self.open;
-        let selected = self.selected;
-        let on_change = Rc::new(self.props.on_change);
-        let disabled = self.props.disabled;
+    /// The select, ready to mount.
+    pub fn view(self) -> Select {
+        let style = self.resolved_style();
         let options = self.props.options.clone();
-        let options_for_label = options.clone();
-        let options_for_style = options.clone();
-        let placeholder = self.props.placeholder.clone();
+        let selected = self.props.selected;
+        let disabled = self.props.disabled;
 
-        let tokens = match theme.get().component(ComponentId::Select) {
-            ComponentTokens::Select(t) => t,
-            _ => unreachable!(),
-        };
-        let height = tokens.height;
-        let padding_horizontal = tokens.padding_horizontal;
-        let radius = tokens.border_radius;
-        let min_width = tokens.min_width;
-        let item_height = tokens.item_height;
-        let icon_size = tokens.icon_size;
+        let mut select = Select::new(options)
+            .style(style)
+            .disabled(disabled)
+            .placeholder(self.props.placeholder);
 
-        let origin = RwSignal::new((0.0f64, 0.0f64));
-        let trigger_h = RwSignal::new(0.0f32);
+        // The chevron's *shape* is this kit's; its size and colour are the
+        // style's. `VectorIcon::from_path_data` takes the path the v1 crate
+        // still hands to SVG, so nothing is parsed twice.
+        // The path data is authored in a 24x24 view box, which is the one thing
+        // `from_path_data` needs besides the string.
+        select = select.chevron(VectorIcon::from_path_data(
+            cupertino_icon_path("expand_more"),
+            Rect::from_origin_size(Point::new(0.0, 0.0), Size::new(24.0, 24.0)),
+        ));
 
-        let label_text = Label::derived(move || {
-            let idx = selected.get();
-            match idx {
-                Some(i) if i < options_for_label.len() => options_for_label[i].clone(),
-                _ => placeholder.clone(),
-            }
-        })
-        .style(move |s| {
-            let t = theme.get();
-            let idx = selected.get();
-            let is_placeholder = idx.map(|i| i >= options_for_style.len()).unwrap_or(true);
-            let c = if disabled {
-                with_alpha(t.colors().on_surface, 97)
-            } else if is_placeholder {
-                with_alpha(t.colors().on_surface, 140)
-            } else {
-                t.colors().on_surface
-            };
-            s.color(c.to_peniko())
-                .font_size(t.typography().body.medium.font_size)
-                .flex_basis(1.0)
-                .flex_grow(1.0)
-        });
+        if let Some(index) = selected {
+            select = select.selected(index);
+        }
 
-        let chevron = svg(move || cupertino_icon_svg("expand_more")).style(move |s| {
-            let t = theme.get();
-            s.color(with_alpha(t.colors().on_surface, 140).to_peniko())
-                .size(icon_size, icon_size)
-        });
+        if let Some(on_change) = self.on_change {
+            select = select.on_change(move |index| on_change(index));
+        }
 
-        let trigger = Container::new(
-            Stack::horizontal((label_text, chevron)).style(|s| s.items_center().justify_between().gap(8.0)),
-        )
-        .style(move |s| {
-            let t = theme.get();
-            let border = if disabled {
-                with_alpha(t.colors().on_surface, 38)
-            } else {
-                t.colors().outline
-            };
-            let bg = if disabled {
-                with_alpha(t.colors().on_surface, 4)
-            } else {
-                t.colors().surface
-            };
-            s.height(height)
-                .min_width(min_width)
-                .padding_horiz(padding_horizontal)
-                .border(1.0)
-                .border_color(border.to_peniko())
-                .border_radius(radius)
-                .background(bg.to_peniko())
-                .items_center()
-                .cursor(CursorStyle::Pointer)
-                .apply_if(disabled, |s| s.set_disabled(true).cursor(CursorStyle::Default))
-                .hover(move |s| {
-                    let t = theme.get();
-                    s.border_color(with_alpha(t.colors().primary, 160).to_peniko())
-                })
-        })
-        .on_event(listener::Click, move |_, _| {
-            if !disabled {
-                open.set(!open.get());
-            }
-            EventPropagation::Continue
-        });
-
-        let rows: Vec<AnyView> = options
-            .iter()
-            .enumerate()
-            .map(|(i, opt)| {
-                let on_select = on_change.clone();
-                let sel_sig = selected;
-                let open_sig = open;
-                let theme_row = theme;
-                let opt = opt.clone();
-                Label::new(opt)
-                    .style(move |s| {
-                        let t = theme_row.get();
-                        let is_sel = sel_sig.get() == Some(i);
-                        s.width_pct(100.0)
-                            .padding_horiz(12.0)
-                            .height(item_height)
-                            .items_center()
-                            .color(t.colors().on_surface.to_peniko())
-                            .font_size(t.typography().body.medium.font_size)
-                            .background(
-                                if is_sel {
-                                    with_alpha(t.colors().primary, 24).to_peniko()
-                                } else {
-                                    Color::rgba(0, 0, 0, 0).to_peniko()
-                                },
-                            )
-                            .cursor(CursorStyle::Pointer)
-                            .hover(move |s| {
-                                let t = theme_row.get();
-                                s.background(with_alpha(t.colors().primary, 12).to_peniko())
-                            })
-                    })
-                    .on_event(listener::Click, move |_, _| {
-                        sel_sig.set(Some(i));
-                        if let Some(cb) = on_select.as_ref() {
-                            cb(Some(i));
-                        }
-                        open_sig.set(false);
-                        EventPropagation::Continue
-                    })
-                    .into_any()
-            })
-            .collect();
-
-        let panel = Container::new(list(rows)).style(move |s| {
-            let t = theme.get();
-            let (ox, oy) = origin.get();
-            let h = trigger_h.get() as f64;
-            s.absolute()
-                .inset_top(oy + h)
-                .inset_left(ox)
-                .min_width(min_width)
-                .padding(4.0)
-                .background(t.colors().surface.to_peniko())
-                .border_radius(radius)
-                .box_shadow_blur(12.0)
-                .box_shadow_spread(1.0)
-                .box_shadow_color(with_alpha(Color::rgba(0, 0, 0, 255), 24).to_peniko())
-                .apply_if(!open.get(), |s| s.hide())
-        });
-        let dropdown = Overlay::new(panel);
-
-        Container::new(Stack::vertical((trigger, dropdown)))
-            .style(|s| s.items_start())
-            .on_event(LayoutChangedListener, move |_cx, layout: &LayoutChanged| {
-                origin.set((layout.new_window_origin.x, layout.new_window_origin.y));
-                trigger_h.set(layout.new_box.size().height as f32);
-                EventPropagation::Continue
-            })
+        select
     }
 }
 

@@ -484,6 +484,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "floom-widget-cupertino-icon-paths"
+version = "0.1.0"
+
+[[package]]
 name = "floom-widget-cupertino-icon_button"
 version = "0.1.0"
 dependencies = [
@@ -518,6 +522,20 @@ dependencies = [
  "floom-core-theme",
  "floom-signal",
  "floom-types",
+ "floom-widget-runtime",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-cupertino-select"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-ui-composites",
+ "floom-widget-cupertino-icon-paths",
  "floom-widget-runtime",
  "floom-widgets",
 ]
@@ -574,6 +592,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "floom-widget-fluent-icon-paths"
+version = "0.1.0"
+
+[[package]]
 name = "floom-widget-fluent-icon_button"
 version = "0.1.0"
 dependencies = [
@@ -608,6 +630,20 @@ dependencies = [
  "floom-core-theme",
  "floom-signal",
  "floom-types",
+ "floom-widget-runtime",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-fluent-select"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-ui-composites",
+ "floom-widget-fluent-icon-paths",
  "floom-widget-runtime",
  "floom-widgets",
 ]
@@ -828,6 +864,20 @@ dependencies = [
  "floom-core-theme",
  "floom-signal",
  "floom-types",
+ "floom-widget-runtime",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-md-select"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-ui-composites",
+ "floom-widget-md-icon",
  "floom-widget-runtime",
  "floom-widgets",
 ]

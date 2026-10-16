@@ -6,9 +6,7 @@ use floom_core_theme::props::icon::IconProps;
 use floom_core_theme::theme::{MultiTheme, Theme};
 use floom_core_theme::tokens::color::Color;
 
-mod icons;
-pub use icons::cupertino_icon_path;
-pub use icons::cupertino_icon_svg;
+pub use floom_widget_cupertino_icon_paths::{cupertino_icon_path, cupertino_icon_svg};
 
 const DESIGN_SYSTEM: &str = "cupertino";
 
@@ -81,7 +79,7 @@ impl CupertinoIcon {
         let theme = self.theme;
         let name = self.props.name.clone();
         let size = self.props.size;
-        svg(move || icons::cupertino_icon_svg(&name)).style(move |s| {
+        svg(move || cupertino_icon_svg(&name)).style(move |s| {
             let t = theme.get();
             let ComponentTokens::Icon(tokens) = t.component(ComponentId::Icon) else {
                 unreachable!()

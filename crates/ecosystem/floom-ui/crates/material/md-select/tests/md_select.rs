@@ -202,18 +202,43 @@ fn the_mounted_trigger_paints_a_chevron_in_the_kits_colour() {
 }
 
 #[test]
-fn choosing_reports_the_index_as_an_option() {
+fn choosing_reports_the_index() {
     let seen = Arc::new(AtomicUsize::new(0));
     let sink = seen.clone();
     let mut select: Select = MdSelect::new()
         .options(vec!["Red".into(), "Green".into()])
-        .on_change(move |index| {
-            sink.store(index.map(|i| i + 1).unwrap_or(0), Ordering::SeqCst);
-        })
+        .on_change(move |index| sink.store(index + 1, Ordering::SeqCst))
         .view();
 
     assert!(select.select(1), "the index is in range");
-    assert_eq!(seen.load(Ordering::SeqCst), 2, "`Some(1)` became 2");
+    assert_eq!(seen.load(Ordering::SeqCst), 2, "the chosen index became 2");
+
+    // Re-picking the open row still reports, which is what lets a kit treat the
+    // choice as a confirmation rather than only as a change. This is the
+    // opposite of what `Slider::set_value` does, and both are pinned on purpose.
+    assert!(select.select(1), "re-picking reports too");
+    assert_eq!(seen.load(Ordering::SeqCst), 2, "same index, reported again");
+}
+
+/// The callback carries a plain index, not an `Option`.
+///
+/// v1's select reported `Option<usize>` because its `RwSignal` could be cleared,
+/// and the engine's cannot: `Select::choose` writes `Some(index)` on every
+/// successful pick, so there is no "unchoose" state to carry. This test is
+/// here so the difference is recorded rather than quietly assumed — it pins the
+/// `+ 1` encoding the kit uses, which only works because the value is never
+/// `None`.
+#[test]
+fn the_callback_carries_a_plain_index() {
+    let seen = Arc::new(AtomicUsize::new(0));
+    let sink = seen.clone();
+    let mut select: Select = MdSelect::new()
+        .options(vec!["Red".into(), "Green".into()])
+        .on_change(move |index| sink.store(index + 1, Ordering::SeqCst))
+        .view();
+
+    select.select(0);
+    assert_eq!(seen.load(Ordering::SeqCst), 1, "index 0 became 1, never 0");
 }
 
 #[test]

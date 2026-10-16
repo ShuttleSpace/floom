@@ -1,5 +1,16 @@
-//! Minimal Fluent-style icon path set (24x24 viewBox, `fill="currentColor"`).
-//! Only a curated subset is included; everything else falls back to a dot.
+//! Path data for the Cupertino icon set, 24x24 view box.
+//!
+//! This used to be the `icons` module of `floom-widget-cupertino-icon`, which is
+//! still a v1 crate and therefore cannot be a dependency of a 2.0 one. The
+//! data itself has never depended on anything: a `&str` of path data is the
+//! whole value, and the SVG wrapper around it is v1's problem. So the module
+//! became its own crate, and both halves name it.
+//!
+//! See `floom-widget-md-icon` for the kit that went the other way: it was ported
+//! whole, so its `icons` stayed inside it.
+
+//! Minimal Cupertino-style icon path set (24x24 viewBox, `fill="currentColor"`).
+//! Mirrors the Material subset; everything else falls back to a dot.
 
 const FALLBACK: &str = "M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z";
 
@@ -8,7 +19,7 @@ const FALLBACK: &str = "M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z";
 /// Public because a kit's widget needs the *path*, not the SVG markup around it: the
 /// engine draws a `VectorIcon`, and wrapping a path in `<svg><path d=.../></svg>` only
 /// to strip it straight back off is the kind of detour that ends up parsed twice.
-pub fn fluent_icon_path(name: &str) -> &'static str {
+pub fn cupertino_icon_path(name: &str) -> &'static str {
     match name.to_lowercase().replace(['_', '-', ' '], "").as_str() {
         "menu" => "M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z",
         "close" => "M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z",
@@ -41,10 +52,10 @@ pub fn fluent_icon_path(name: &str) -> &'static str {
     }
 }
 
-/// Build a full SVG markup string for a named Fluent icon.
-pub fn fluent_icon_svg(name: &str) -> String {
+/// Build a full SVG markup string for a named Cupertino icon.
+pub fn cupertino_icon_svg(name: &str) -> String {
     format!(
         "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"currentColor\"><path d=\"{}\"/></svg>",
-        fluent_icon_path(name)
+        cupertino_icon_path(name)
     )
 }

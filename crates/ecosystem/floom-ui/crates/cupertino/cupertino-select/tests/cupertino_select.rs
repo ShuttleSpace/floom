@@ -256,18 +256,42 @@ fn the_mounted_trigger_paints_a_chevron_in_the_kits_colour() {
 }
 
 #[test]
-fn choosing_reports_the_index_as_an_option() {
+fn choosing_reports_the_index() {
     let seen = Arc::new(AtomicUsize::new(0));
     let sink = seen.clone();
     let mut select: Select = CupertinoSelect::new()
         .options(vec!["Red".into(), "Green".into()])
-        .on_change(move |index| {
-            sink.store(index.map(|i| i + 1).unwrap_or(0), Ordering::SeqCst);
-        })
+        .on_change(move |index| sink.store(index + 1, Ordering::SeqCst))
         .view();
 
     assert!(select.select(1), "the index is in range");
-    assert_eq!(seen.load(Ordering::SeqCst), 2, "`Some(1)` became 2");
+    assert_eq!(seen.load(Ordering::SeqCst), 2, "index 1 became 2");
+
+    // Re-picking the open row still reports, which is what lets a kit treat a
+    // choice as a confirmation rather than only as a change. `Slider::set_value`
+    // does the opposite and both are pinned on purpose.
+    assert!(select.select(1), "re-picking reports too");
+    assert_eq!(seen.load(Ordering::SeqCst), 2, "same index, reported again");
+}
+
+/// The callback carries a plain index, not an `Option`.
+///
+/// v1's select reported `Option<usize>` because its `RwSignal` could be cleared;
+/// the engine's cannot -- `Select::choose` writes `Some(index)` on every
+/// successful pick, so there is no "unchoose" state to carry. This is recorded
+/// here rather than quietly assumed, because the `+ 1` encoding the kit uses
+/// only works while the value is never `None`.
+#[test]
+fn the_callback_carries_a_plain_index() {
+    let seen = Arc::new(AtomicUsize::new(0));
+    let sink = seen.clone();
+    let mut select: Select = CupertinoSelect::new()
+        .options(vec!["Red".into(), "Green".into()])
+        .on_change(move |index| sink.store(index + 1, Ordering::SeqCst))
+        .view();
+
+    select.select(0);
+    assert_eq!(seen.load(Ordering::SeqCst), 1, "index 0 became 1, never 0");
 }
 
 /// A kit that hands the engine an empty option list still mounts; an empty list

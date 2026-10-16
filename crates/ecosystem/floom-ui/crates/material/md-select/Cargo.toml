@@ -13,3 +13,9 @@ floom-widgets = { path = "../../../../../floom-widgets" }
 # The engine's `Select` moved up a layer; this kit adapts its tokens to
 # the composite, not to the widget crate it left.
 floom-ui-composites = { path = "../../floom-ui-composites" }
+
+[dev-dependencies]
+floom-core = { path = "../../../../../floom-core" }
+# The assertions measure painted geometry, which needs the recording testkit
+# the engine ships.
+floom-widgets = { path = "../../../../../floom-widgets" }

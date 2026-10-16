@@ -4,8 +4,22 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+# The theme signal comes from floem-widget-runtime, which is already ported.
 floom-core-theme = { workspace = true }
-floom-widget-cupertino-icon = { workspace = true }
-# The engine's `Select` moved up a layer; this kit adapts its tokens to
-# the composite, not to the widget crate it left.
+floom-widget-runtime = { workspace = true, features = ["cupertino"] }
+# The chevron's path data, which has no v1 dependency of its own. The v1
+# `cupertino-icon` crate re-exports the same data plus the SVG wrapper it needs.
+floom-widget-cupertino-icon-paths = { path = "../cupertino-icon-paths" }
+# The engine's `Select` moved up a layer; this kit adapts its tokens to the
+# composite, not to the widget crate it left.
 floom-ui-composites = { path = "../../floom-ui-composites" }
+floom-signal = { path = "../../../../../floom-signal" }
+floom-core = { path = "../../../../../floom-core" }
+floom-types = { path = "../../../../../floom-types" }
+floom-widgets = { path = "../../../../../floom-widgets" }
+
+[dev-dependencies]
+floom-core-theme = { workspace = true }
+floom-core = { path = "../../../../../floom-core" }
+floom-types = { path = "../../../../../floom-types" }
+floom-widgets = { path = "../../../../../floom-widgets" }
