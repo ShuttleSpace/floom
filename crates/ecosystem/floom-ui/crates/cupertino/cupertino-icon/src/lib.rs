@@ -1,6 +1,7 @@
-use floom::prelude::*;
-use floom::reactive::{RwSignal, SignalGet};
-use floom::views::{Decorators, svg};
+use floom_signal::{RwSignal, SignalGet};
+use floom_types::Rect;
+use floom_widgets::VectorIcon;
+
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::icon::IconProps;
 use floom_core_theme::theme::{MultiTheme, Theme};
@@ -74,20 +75,21 @@ impl CupertinoIcon {
         }
     }
 
-    /// Build a renderable Cupertino icon.
-    pub fn view(self) -> impl View {
-        let theme = self.theme;
-        let name = self.props.name.clone();
-        let size = self.props.size;
-        svg(move || cupertino_icon_svg(&name)).style(move |s| {
-            let t = theme.get();
-            let ComponentTokens::Icon(tokens) = t.component(ComponentId::Icon) else {
-                unreachable!()
-            };
-            let sz = size.unwrap_or(tokens.size);
-            s.size(sz, sz)
-                .color(t.colors().on_surface_variant.to_peniko())
-        })
+    /// The path data for this kit's named glyph.
+    ///
+    /// A kit's icon table is data, so a caller that wants the `d` attribute
+    /// rather than a widget reads it here instead of unwrapping a `VectorIcon`.
+    pub fn path_data(&self) -> &'static str {
+        cupertino_icon_path(&self.props.name)
+    }
+
+    /// The icon as an engine `VectorIcon`.
+    ///
+    /// This is the 2.0 replacement for v1's `view()`. Total and unwrap-free: an
+    /// unknown name gives the set's fallback, because that is what the path table
+    /// returns.
+    pub fn resolve(&self) -> VectorIcon {
+        cupertino_icon(&self.props.name)
     }
 }
 
@@ -115,7 +117,7 @@ impl CupertinoIcon {
 ///
 /// Named rather than inlined, because it is a property of the *data*: the table, the
 /// engine widget built from it, and the test that checks the fallback all read it.
-pub const VIEW_BOX: floom_types::Rect = floom_types::Rect {
+pub const VIEW_BOX: Rect = Rect {
     x0: 0.0,
     y0: 0.0,
     x1: 24.0,
@@ -127,9 +129,9 @@ pub const VIEW_BOX: floom_types::Rect = floom_types::Rect {
 /// Total and unwrap-free: an unknown name gives the set's fallback, because that is
 /// what the path table returns and inventing a second notion of "missing" here would be
 /// a second answer to the same question.
-pub fn cupertino_icon(name: &str) -> floom_widgets::VectorIcon {
+pub fn cupertino_icon(name: &str) -> VectorIcon {
     // `from_path_data` rather than `new(parse_path_data(..))`: the engine already has
     // the pair, and a kit that spells it the long way is a kit whose icon table and
     // every other icon in the workspace are parsed by two different-looking routes.
-    floom_widgets::VectorIcon::from_path_data(cupertino_icon_path(name), VIEW_BOX)
+    VectorIcon::from_path_data(cupertino_icon_path(name), VIEW_BOX)
 }

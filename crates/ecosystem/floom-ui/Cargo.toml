@@ -27,8 +27,6 @@
 # back to `members`.
 
 exclude = [
-  "crates/fluent/fluent-icon",
-  "crates/cupertino/cupertino-icon",
     "crates/cupertino/cupertino-alert",
     "crates/cupertino/cupertino-app",
     "crates/cupertino/cupertino-app_bar",
@@ -297,6 +295,7 @@ members = [
     "crates/cupertino/cupertino-card",
     "crates/cupertino/cupertino-counter",
     "crates/cupertino/cupertino-icon_button",
+    "crates/cupertino/cupertino-icon",
     "crates/cupertino/cupertino-list_item",
     "crates/cupertino/cupertino-progress_linear",
     "crates/cupertino/cupertino-select",
@@ -310,6 +309,7 @@ members = [
     "crates/fluent/fluent-card",
     "crates/fluent/fluent-counter",
     "crates/fluent/fluent-icon_button",
+    "crates/fluent/fluent-icon",
     "crates/fluent/fluent-list_item",
     "crates/fluent/fluent-progress_linear",
     "crates/fluent/fluent-select",
