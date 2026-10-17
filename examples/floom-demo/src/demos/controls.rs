@@ -1,7 +1,7 @@
 //! Controls: the interactive widgets.
 
 use floom_core::{Axis, Color, LayoutRequest, WidgetAny};
-use floom_widgets::{Button, Checkbox, Progress, Radio, Spinner, Stack, Switch, TextField};
+use floom_widgets::{Button, Checkbox, Progress, Spinner, Stack, Switch, TextField};
 
 use super::{Demo, Section};
 
@@ -21,7 +21,7 @@ pub(super) fn demos() -> Vec<Demo> {
         },
         Demo {
             id: "toggles",
-            title: "Checkbox, Radio & Switch",
+            title: "Checkbox & Switch",
             section: Section::Controls,
             build: build_toggles,
         },
@@ -72,15 +72,20 @@ fn build_text_field() -> Box<dyn WidgetAny> {
     )
 }
 
+/// The two toggles that are still primitives.
+///
+/// `Radio` sat between the checkbox and the switch here until it moved to
+/// `floom-ui-composites`: it is the one of the three whose appearance is
+/// contested (a stroked ring in every kit, a filled disc in the engine), so it
+/// is no longer something the root workspace can reach. `floom-demo` cannot
+/// depend on the satellite `floom-ui` workspace to keep a demo row, so the row
+/// is one widget shorter; the gallery still builds, which is what the demo is for.
 fn build_toggles() -> Box<dyn WidgetAny> {
     Box::new(
         Stack::new(Axis::Vertical)
             .gap(8.0)
             .push_layout(LayoutRequest::new().width(200.0).height(28.0), || {
                 Box::new(Checkbox::new("Checkbox").checked(true))
-            })
-            .push_layout(LayoutRequest::new().width(200.0).height(28.0), || {
-                Box::new(Radio::new("Radio").selected(true))
             })
             .push_layout(LayoutRequest::new().width(200.0).height(28.0), || {
                 Box::new(Switch::new("Switch").on(true))

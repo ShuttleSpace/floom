@@ -11,7 +11,7 @@ use floom_core::{
 use floom_scene::SceneNode;
 use floom_types::{Brush, Color, KeyEvent, Length, Modifiers, PointerEvent, PointerPhase};
 use floom_widgets::controls::{
-    Button, Checkbox, Pressable, Progress, Radio, Switch, SwitchPalette, TextField,
+    Button, Checkbox, Pressable, Progress, Switch, SwitchPalette, TextField,
 };
 use floom_widgets::primitives::Text;
 use floom_widgets::Stack;
@@ -244,7 +244,7 @@ fn text_field_submit_reports_current_value() {
     assert_eq!(submitted.take(), "hi");
 }
 
-// --- Checkbox / Radio / Switch ---------------------------------------------
+// --- Checkbox / Switch -----------------------------------------------------
 
 #[test]
 fn checkbox_toggles_and_publishes_checked_state() {
@@ -263,19 +263,6 @@ fn checkbox_toggles_and_publishes_checked_state() {
 
     fire_down_up(&mut box_widget, id, Point::new(4.0, 4.0));
     assert!(!box_widget.is_checked());
-}
-
-#[test]
-fn radio_selects_once_and_stays_selected() {
-    let selections = Rc::new(Cell::new(0));
-    let counter = selections.clone();
-    let mut radio = Radio::new("Option A").on_select(move || counter.set(counter.get() + 1));
-    let id = allocate(&radio);
-
-    fire_down_up(&mut radio, id, Point::new(4.0, 4.0));
-    fire_down_up(&mut radio, id, Point::new(4.0, 4.0));
-    assert!(radio.is_selected());
-    assert_eq!(selections.get(), 1, "re-selecting must not re-notify");
 }
 
 #[test]

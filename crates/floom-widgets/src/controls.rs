@@ -32,9 +32,9 @@ const LABEL_FONT_SIZE: f32 = 14.0;
 const BUTTON_PADDING: f32 = 8.0;
 /// Vertical padding around a Button's label (each side).
 const BUTTON_VERTICAL_PADDING: f32 = 4.0;
-/// Gap between a CheckBox/Radio/Switch indicator and its label.
+/// Gap between a CheckBox/Switch indicator and its label.
 const INDICATOR_LABEL_GAP: f32 = 6.0;
-/// The indicator square's side (CheckBox box / Radio dot diameter).
+/// The indicator square's side (the CheckBox box).
 const INDICATOR_SIDE: f32 = 16.0;
 /// Switch track width; its height is half of this.
 const SWITCH_TRACK_WIDTH: f32 = 40.0;
@@ -150,12 +150,31 @@ fn mix(a: Color, b: Color, t: f32) -> Color {
 }
 
 /// Dims a colour toward transparency to render the disabled appearance.
-fn disabled_tint(c: Color) -> Color {
+///
+/// Public because it is a convention rather than a private detail: halving the
+/// alpha is what "disabled" means to every control in this crate, so a widget
+/// that resolves its own palette — a `Radio` in `floom-ui-composites`, whose
+/// style leaves the disabled colour as `None` — has to dim the same way. Copying
+/// the rule is how two widgets end up disagreeing about what a disabled control
+/// looks like, which is the exact failure `RadioStyle::disabled_color` exists to
+/// let a kit opt out of.
+pub fn disabled_tint(c: Color) -> Color {
     Color::rgba(c.r, c.g, c.b, c.a / 2)
 }
 
 /// Resolves the base colour through the interaction state.
-fn resolved_color(base: Color, pressed: Color, hovered: Color, state: InteractionState) -> Color {
+///
+/// The ranking is the other half of the convention: disabled outranks pressed,
+/// which outranks hovered, and a disabled control dims its *base* colour
+/// however the pointer is behaving. `PointerPhase::Down` sets `hovered` and
+/// `pressed` together, so a resolution that ranked hover higher would let a
+/// press paint its hover colour and never its own.
+///
+/// Public for the reason [`disabled_tint`] is: `floom-ui-composites`' `Radio`
+/// resolves two optional interaction variants through this rather than
+/// re-deriving the order, so that a style which names no variant falls back to
+/// exactly what an unstyled control in this crate paints.
+pub fn resolved_color(base: Color, pressed: Color, hovered: Color, state: InteractionState) -> Color {
     if state.disabled {
         return disabled_tint(base);
     }
@@ -1298,7 +1317,7 @@ impl Widget for TextField {
 }
 
 // ---------------------------------------------------------------------------
-// Checkbox / Radio / Switch
+// Checkbox / Switch
 // ---------------------------------------------------------------------------
 
 pub type BoolCallback = Box<dyn Fn(bool)>;
@@ -1484,198 +1503,6 @@ impl Widget for Checkbox {
 
     fn semantics(&self, cx: &mut dyn SemanticsContext, _id: ElementId) {
         crate::primitives::emit_semantics(self.semantics_hint(), cx);
-    }
-}
-
-/// One radio option. Grouping (mutual exclusion) is owned by the caller.
-pub struct Radio {
-    label: String,
-    selected: bool,
-    on_select: Option<Callback>,
-    state: InteractionState,
-    revision: Revision,
-}
-
-impl Radio {
-    pub fn new(label: impl Into<String>) -> Self {
-        Self {
-            label: label.into(),
-            selected: false,
-            on_select: None,
-            state: InteractionState::default(),
-            revision: Revision::default(),
-        }
-    }
-
-    pub fn selected(mut self, selected: bool) -> Self {
-        self.selected = selected;
-        self.revision.bump();
-        self
-    }
-
-    pub fn disabled(mut self, disabled: bool) -> Self {
-        self.state.disabled = disabled;
-        self.revision.bump();
-        self
-    }
-
-    pub fn on_select(mut self, callback: impl Fn() + 'static) -> Self {
-        self.on_select = Some(Box::new(callback));
-        self.revision.bump();
-        self
-    }
-
-    pub fn is_selected(&self) -> bool {
-        self.selected
-    }
-
-    pub fn interaction(&self) -> InteractionState {
-        self.state
-    }
-
-    pub fn set_focused(&mut self, focused: bool) -> &mut Self {
-        if self.state.focused != focused {
-            self.state.focused = focused;
-            self.revision.bump();
-        }
-        self
-    }
-
-    pub fn select(&mut self) {
-        if self.selected {
-            return;
-        }
-        self.selected = true;
-        self.revision.bump();
-        if let Some(callback) = &self.on_select {
-            callback();
-        }
-    }
-
-    pub fn semantics_hint(&self) -> SemanticsHint {
-        let mut state = self.state.to_semantics();
-        if self.selected {
-            state |= SemanticsState::CHECKED;
-        }
-        SemanticsHint::labeled(SemanticsRole::Radio, self.label.clone()).with_state(state)
-    }
-}
-
-impl std::fmt::Debug for Radio {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("Radio")
-            .field("label", &self.label)
-            .field("selected", &self.selected)
-            .finish_non_exhaustive()
-    }
-}
-
-impl Widget for Radio {
-    fn set_focused(&mut self, focused: bool) {
-        // Forward to the inherent builder, which bumps the revision.
-        Radio::set_focused(self, focused);
-    }
-
-    fn create(&self, cx: &mut dyn CreateContext) -> ElementId {
-        cx.alloc_child()
-    }
-
-    fn update(&mut self, cx: &mut dyn UpdateContext, id: ElementId) {
-        self.revision.sync(cx, id);
-    }
-
-    /// Intrinsic size: indicator circle + gap + label extent (same geometry
-    /// as [`Checkbox`]).
-    fn layout_request(&self) -> Option<floom_core::LayoutRequest> {
-        if self.label.is_empty() {
-            return None;
-        }
-        Some(
-            floom_core::LayoutRequest::new()
-                .width(INDICATOR_SIDE + INDICATOR_LABEL_GAP + label_width(&self.label))
-                .height(INDICATOR_SIDE.max(label_height(&self.label))),
-        )
-    }
-
-    fn event(&mut self, cx: &mut dyn EventContext, id: ElementId) -> bool {
-        match track_pointer(&mut self.state, cx, id) {
-            Press::Activate => {
-                self.select();
-                true
-            }
-            Press::Consumed => true,
-            Press::Ignored => {
-                if let Event::Key(key) = cx.event() {
-                    if is_activation_key(&key, self.state) {
-                        self.select();
-                        return true;
-                    }
-                }
-                false
-            }
-        }
-    }
-
-    fn paint(&self, cx: &mut dyn PaintContext, _id: ElementId) {
-        let bounds = cx.bounds();
-        if bounds.width() <= 0.0 || bounds.height() <= 0.0 {
-            return;
-        }
-        let outer = self.dot_bounds(bounds);
-        if self.selected {
-            let inner = Rect {
-                x0: outer.x0 + outer.width() * 0.25,
-                y0: outer.y0 + outer.height() * 0.25,
-                x1: outer.x1 - outer.width() * 0.25,
-                y1: outer.y1 - outer.height() * 0.25,
-            };
-            cx.fill_rounded_rect(
-                outer,
-                outer.width() as f32 / 2.0,
-                Color::rgb(0x9A, 0xA5, 0xB1),
-            );
-            cx.fill_rounded_rect(
-                inner,
-                inner.width() as f32 / 2.0,
-                Color::rgb(0x2B, 0x6C, 0xB0),
-            );
-        } else {
-            cx.fill_rounded_rect(
-                outer,
-                outer.width() as f32 / 2.0,
-                resolved_color(
-                    Color::WHITE,
-                    Color::rgb(0xE2, 0xE8, 0xF0),
-                    Color::rgb(0xF5, 0xF7, 0xFA),
-                    self.state,
-                ),
-            );
-        }
-        let label_origin = Point::new(outer.x1 + 6.0, bounds.y0);
-        cx.fill_text(
-            label_origin,
-            &self.label,
-            LABEL_FONT_SIZE,
-            FontWeight::Normal,
-            Color::BLACK,
-        );
-    }
-
-    fn semantics(&self, cx: &mut dyn SemanticsContext, _id: ElementId) {
-        crate::primitives::emit_semantics(self.semantics_hint(), cx);
-    }
-}
-
-impl Radio {
-    /// The circular indicator bounds.
-    pub fn dot_bounds(&self, bounds: Rect) -> Rect {
-        let diameter = bounds.height().min(16.0);
-        Rect {
-            x0: bounds.x0,
-            y0: bounds.y0 + (bounds.height() - diameter) / 2.0,
-            x1: bounds.x0 + diameter,
-            y1: bounds.y0 + (bounds.height() + diameter) / 2.0,
-        }
     }
 }
 

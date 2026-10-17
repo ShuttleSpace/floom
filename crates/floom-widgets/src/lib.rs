@@ -39,8 +39,7 @@ pub use compose::{
     SharedTransitionLayout, Stack,
 };
 pub use controls::{
-    Button, Checkbox, InteractionState, Pressable, Progress, Radio, Switch, SwitchPalette,
-    TextField,
+    Button, Checkbox, InteractionState, Pressable, Progress, Switch, SwitchPalette, TextField,
 };
 /// Intrinsic width of a string at an arbitrary font size.
 ///
@@ -48,6 +47,16 @@ pub use controls::{
 /// the engine does not choose. `floom-ui-composites`' `Select` is the caller;
 /// a kit cannot re-derive it without re-deriving the empty-string rule too.
 pub use controls::{paint_icon, text_width_at};
+/// The engine's one rule for what a disabled control looks like, and the
+/// interaction ranking it sits in.
+///
+/// Exported beside [`paint_icon`] and [`text_width_at`] for the same reason:
+/// each encodes a convention rather than an implementation, and a widget above
+/// this crate re-deriving one is how two controls end up disagreeing about it.
+/// `Radio` in `floom-ui-composites` is the caller — its style leaves
+/// `disabled_color` as `None` precisely so that "no colour named" falls through
+/// to this half-alpha dim rather than to a dim of its own devising.
+pub use controls::{disabled_tint, resolved_color};
 /// The layout vocabulary a widget author needs alongside [`Stack`] and
 /// [`Surface::border_edges`]: the main axis a stack runs on, how its children
 /// sit on each axis, and which of a box's four edges an outline is drawn on.

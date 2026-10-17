@@ -148,7 +148,6 @@ impl_widget_any!(
     crate::controls::Pressable,
     crate::controls::TextField,
     crate::controls::Checkbox,
-    crate::controls::Radio,
     crate::controls::Switch,
     crate::controls::Progress,
     crate::compose::Stack,

@@ -1,9 +1,16 @@
 //! Composite controls size themselves from their label.
 //!
-//! `Button`/`Checkbox`/`Radio`/`Switch` report an intrinsic extent through
+//! `Button`/`Checkbox`/`Switch` report an intrinsic extent through
 //! `layout_request` (measured label + padding/indicator geometry). The host
 //! applies that as *default* sizing: unpinned controls shrink-wrap their
 //! content, an explicit mount style still wins.
+//!
+//! `Radio` used to be named here too. It has no test in this file: the control
+//! it would have shared a body with (`Slider`) moved out with its own
+//! measurement, and the checkbox row above already covers "indicator + gap +
+//! label, height fits both" for the two indicators that stayed. The radio's
+//! measurement lives in `floom-ui-composites/tests/radio_measure.rs`, where the
+//! widget does.
 
 use floom_app::{NodeId, WidgetHost};
 use floom_layout::{LayoutStyle, Length};

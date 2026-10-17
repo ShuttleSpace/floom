@@ -417,7 +417,7 @@ pub mod prelude {
     pub use floom_widgets::NativeSurface;
     pub use floom_widgets::{
         AnimatedContent, Button, Canvas, Checkbox, Conditional, Container, Crossfade, Divider,
-        Grid, Icon, Image, ImageFit, InteractionState, List, Opacity, Progress, Radio, ShaderBox,
+        Grid, Icon, Image, ImageFit, InteractionState, List, Opacity, Progress, ShaderBox,
         SharedTransitionLayout, Spacer, Spinner, Stack, Switch, Text, TextField,
     };
 
@@ -446,6 +446,15 @@ pub mod prelude {
     // hard-coded colours and two magic numbers inside the engine to a
     // `SliderStyle` a kit fills in. Same edge, same answer: depend on
     // `floom-ui-composites` for it.
+
+    // `Radio` moved up for the same reason, and it is the sharpest case of the
+    // lot: the engine painted a *filled disc* with a smaller disc on top, while
+    // all three kits paint a *stroked ring* with a filled dot. That is a
+    // different shape rather than a different colour, so it could not be reached
+    // by adding knobs -- the paint had to be rewritten around a `RadioStyle`, and
+    // the style's default is the engine's old disc written as a ring. `Progress`
+    // and `Checkbox` stay: neither's appearance is contested, so neither had a
+    // reason to move.
 
     // --- App shell (floom-app) -------------------------------------------
     pub use floom_app::{AppRunner, FrameStats, NodeId, RunStats, WidgetHost};
