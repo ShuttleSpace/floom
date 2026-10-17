@@ -231,8 +231,16 @@ impl TextField {
         }
     }
 
+    /// The field's initial text.
+    ///
+    /// The caret lands at the **end** of it, not at the offset it had before.
+    /// `set_value` clamps the caret into range so a programmatic update mid-typing
+    /// does not throw away the user's position, but at construction there is no
+    /// position to keep: it is zero, and leaving it there meant that a field
+    /// pre-filled with "Ada" inserted the first keystroke *before* the A.
     pub fn value(mut self, value: impl Into<String>) -> Self {
         self.set_value(value.into());
+        self.caret = self.value.chars().count();
         self
     }
 

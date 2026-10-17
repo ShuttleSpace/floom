@@ -594,6 +594,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "floom-widget-cupertino-text-field"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-ui-composites",
+ "floom-widget-runtime",
+ "floom-widgets",
+]
+
+[[package]]
 name = "floom-widget-cupertino-treeview"
 version = "0.1.0"
 dependencies = [
@@ -735,6 +748,19 @@ dependencies = [
  "floom-core-theme",
  "floom-signal",
  "floom-types",
+ "floom-widget-runtime",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-fluent-text-field"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-ui-composites",
  "floom-widget-runtime",
  "floom-widgets",
 ]
@@ -995,6 +1021,19 @@ dependencies = [
  "floom-core-theme",
  "floom-signal",
  "floom-types",
+ "floom-widget-runtime",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-md-text-field"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-ui-composites",
  "floom-widget-runtime",
  "floom-widgets",
 ]
