@@ -1,9 +1,7 @@
 //! Controls: the interactive widgets.
 
 use floom_core::{Axis, Color, LayoutRequest, WidgetAny};
-use floom_widgets::{
-    Button, Checkbox, Progress, Radio, Select, Slider, Spinner, Stack, Switch, TextField,
-};
+use floom_widgets::{Button, Checkbox, Progress, Radio, Spinner, Stack, Switch, TextField};
 
 use super::{Demo, Section};
 
@@ -28,16 +26,10 @@ pub(super) fn demos() -> Vec<Demo> {
             build: build_toggles,
         },
         Demo {
-            id: "slider-progress",
-            title: "Slider & Progress",
+            id: "progress",
+            title: "Progress",
             section: Section::Controls,
-            build: build_slider_progress,
-        },
-        Demo {
-            id: "select",
-            title: "Select",
-            section: Section::Controls,
-            build: build_select,
+            build: build_progress,
         },
         Demo {
             id: "spinner",
@@ -96,31 +88,15 @@ fn build_toggles() -> Box<dyn WidgetAny> {
     )
 }
 
-fn build_slider_progress() -> Box<dyn WidgetAny> {
+fn build_progress() -> Box<dyn WidgetAny> {
     Box::new(
         Stack::new(Axis::Vertical)
             .gap(10.0)
-            .push_layout(LayoutRequest::new().width(220.0).height(24.0), || {
-                Box::new(Slider::new(0.35, 0.0, 1.0))
-            })
             .push_layout(LayoutRequest::new().width(220.0).height(8.0), || {
                 Box::new(Progress::determinate(0.6))
             })
             .push_layout(LayoutRequest::new().width(220.0).height(8.0), || {
                 Box::new(Progress::indeterminate())
-            }),
-    )
-}
-
-fn build_select() -> Box<dyn WidgetAny> {
-    Box::new(
-        Stack::new(Axis::Vertical)
-            .gap(8.0)
-            .push_layout(LayoutRequest::new().width(180.0).height(32.0), || {
-                Box::new(Select::new(["Rust", "Swift", "Kotlin"]))
-            })
-            .push_layout(LayoutRequest::new().width(180.0).height(32.0), || {
-                Box::new(Select::new(["Small", "Medium", "Large"]).selected(1))
             }),
     )
 }

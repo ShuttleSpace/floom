@@ -19,6 +19,7 @@
 
 mod benchmark;
 mod evaluate;
+mod labeled;
 mod screens;
 mod tokens;
 

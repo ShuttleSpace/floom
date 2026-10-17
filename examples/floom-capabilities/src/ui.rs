@@ -40,7 +40,7 @@ use floom_platform_mobile::packages::{
     keyboard::soft_input, local_auth, location, notifications, share, system_chrome, url_launcher,
     vibration,
 };
-use floom_widgets::{Button, Container, Spacer, Stack, Tabs, Text};
+use floom_widgets::{Button, Container, Spacer, Stack, Text};
 
 use crate::probe::{self, Row, State};
 
@@ -338,7 +338,7 @@ fn run_action(id: &str) {
     }
 }
 
-/// The whole gallery: a title, the two tabs, and a footer naming the host.
+/// The whole gallery: a title, both panels, and a footer naming the host.
 ///
 /// Returns a concrete `Stack` rather than a `Box<dyn WidgetAny>`: every backend
 /// hands this to `WidgetHost::mount_root`, which takes `impl WidgetAny`, and a
@@ -368,9 +368,16 @@ pub fn gallery_root() -> Stack {
         })
         .push_layout(LayoutRequest::new().fill(), || {
             Box::new(
-                Tabs::new()
-                    .tab("Readings", readings_tab())
-                    .tab("Actions", actions_tab()),
+                Stack::new(Axis::Vertical)
+                    .gap(10.0)
+                    .push_layout(LayoutRequest::new().height(18.0), || {
+                        Box::new(Text::new("Readings").size(13.0).color(HEAD))
+                    })
+                    .push_layout(LayoutRequest::new().fill(), || readings_tab().build())
+                    .push_layout(LayoutRequest::new().height(18.0), || {
+                        Box::new(Text::new("Actions").size(13.0).color(HEAD))
+                    })
+                    .push_layout(LayoutRequest::new().fill(), || actions_tab().build()),
             )
         })
         .push_layout(LayoutRequest::new().height(16.0), move || {

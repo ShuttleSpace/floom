@@ -10,8 +10,9 @@
 use floom_accessibility::SemanticsRole;
 use floom_core::{Align, Axis, Child, ChildKey, LayoutRequest, WidgetAny};
 use floom_types::{Color, Size};
-use floom_widgets::{Checkbox, Container, Labeled, Spacer, Stack, Switch, Text};
+use floom_widgets::{Checkbox, Container, Spacer, Stack, Switch, Text};
 
+use crate::labeled::Labeled;
 use crate::tokens::ScreenTokens;
 
 /// The window every gallery screen is drawn in. The reference contracts

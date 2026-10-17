@@ -10,10 +10,10 @@
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-use floom_core::{Axis, Child, ChildKey, LayoutRequest, SemanticsRole};
+use floom_core::{Axis, Child, ChildKey, LayoutRequest, OverlayKind, SemanticsRole};
 use floom_testkit::{DEFAULT_SIZE, Selector, TestApp};
-use floom_types::{Point, Size};
-use floom_widgets::{Button, Checkbox, Popup, Stack, Switch, Text, TextField};
+use floom_types::{Point, Rect, Size};
+use floom_widgets::{Button, Checkbox, Stack, Switch, Text, TextField};
 
 /// A button that counts its clicks.
 ///
@@ -173,24 +173,25 @@ fn settling_an_already_settled_tree_finds_nothing_to_do() {
 }
 
 /// The case worth naming: a change made the way an app callback makes one —
-/// straight into the tree, with no platform event to announce it. The tree owes
+/// straight into the host, with no platform event to announce it. The tree owes
 /// a frame and the platform has nothing queued to deliver it, so waiting for
 /// the platform to speak would wait forever. `settle` asks for the frame
 /// instead, and rides out the overlay's entry animation while it is at it.
+///
+/// The overlay goes up through the harness's own door rather than through a
+/// popup widget: what is under test is `settle`, and the overlay only has to
+/// be something the tree owes frames for.
 #[test]
 fn settling_runs_the_frames_an_out_of_band_change_owes() {
-    let mut app = TestApp::unpinned(
-        Size::new(240.0, 320.0),
-        Popup::new().label("menu").content(Child::new(
-            ChildKey::index(0),
-            LayoutRequest::new(),
-            || Box::new(Text::new("item")),
-        )),
-    );
-    let popup = app.find_widget::<Popup>().expect("the popup mounted");
-    assert_eq!(app.overlay_count(), 0, "it starts hidden");
+    let mut app = TestApp::new(Size::new(240.0, 320.0), Button::new("anchor"));
+    assert_eq!(app.overlay_count(), 0, "nothing is up yet");
 
-    app.widget_mut::<Popup>(popup).set_present(true);
+    app.host_mut().open_overlay(
+        OverlayKind::Popup,
+        false,
+        Rect::from_origin_size(Point::new(8.0, 8.0), Size::new(120.0, 40.0)),
+        Text::new("item"),
+    );
     assert!(app.settle(), "settling ran the frames the change owed");
     assert_eq!(app.overlay_count(), 1, "and the overlay is up");
     assert!(!app.damaged());

@@ -22,7 +22,6 @@ mod controls;
 mod data;
 mod forms;
 mod motion;
-mod navigation;
 mod primitives;
 mod styling;
 
@@ -32,15 +31,20 @@ mod styling;
 pub enum Section {
     /// `Text`, `Icon`, `Divider`, `Spacer`, `Container`, `Canvas`.
     Primitives,
-    /// `Button`, `Checkbox`, `Radio`, `Switch`, `Slider`, `Select`, `TextField`,
-    /// `Progress`, `Spinner`.
+    /// `Button`, `Checkbox`, `Radio`, `Switch`, `TextField`, `Progress`,
+    /// `Spinner`. `Slider` and `Select` are design-system choices and live in
+    /// the kit crates, one layer up.
     Controls,
-    /// `Stack`, `List`, `Grid`, `Tabs`, `Dialog`, `Overlay`, `Conditional`.
+    /// `Stack`, `List`, `Grid`, `Conditional`, `Scroll`. `Tabs` and the modal
+    /// surfaces are design-system choices and live in the kit crates, one
+    /// layer up.
     Composites,
     /// `Crossfade`, `AnimatedContent`, `Opacity`, `SharedTransitionLayout`,
     /// `floom-animation` tweens and easing.
     Motion,
-    /// `NavHost`, `NavDestination`, `NavigationBar`/`Drawer`/`Rail`.
+    /// Reserved. The nav *containers* are design-system choices and live in the
+    /// kit crates; routing itself is `floom-navigation`, demonstrated by the
+    /// `floom-navigation-demo` example.
     Navigation,
     /// `floom-widgets-data` grids and charts.
     Data,
@@ -101,7 +105,6 @@ fn registry() -> &'static [Demo] {
             controls::demos(),
             composites::demos(),
             motion::demos(),
-            navigation::demos(),
             data::demos(),
             forms::demos(),
             styling::demos(),

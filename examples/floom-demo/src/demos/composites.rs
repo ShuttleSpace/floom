@@ -1,10 +1,7 @@
 //! Composites: widgets that arrange or swap other widgets.
 
 use floom_core::{Axis, Child, ChildKey, Color, LayoutRequest, WidgetAny};
-use floom_widgets::{
-    BottomSheet, Button, Conditional, Container, Dialog, Grid, List, Overlay, Popup, Stack, Tabs,
-    Text,
-};
+use floom_widgets::{Conditional, Container, Grid, List, Stack, Text};
 
 use super::{Demo, Section};
 
@@ -23,22 +20,10 @@ pub(super) fn demos() -> Vec<Demo> {
             build: build_grid,
         },
         Demo {
-            id: "tabs",
-            title: "Tabs",
-            section: Section::Composites,
-            build: build_tabs,
-        },
-        Demo {
             id: "conditional",
-            title: "Conditional & Overlay",
+            title: "Conditional & Layers",
             section: Section::Composites,
             build: build_conditional,
-        },
-        Demo {
-            id: "dialog",
-            title: "Dialog, Popup & BottomSheet",
-            section: Section::Composites,
-            build: build_dialog,
         },
     ]
 }
@@ -85,31 +70,11 @@ fn build_grid() -> Box<dyn WidgetAny> {
     )
 }
 
-fn build_tabs() -> Box<dyn WidgetAny> {
-    Box::new(
-        Stack::new(Axis::Vertical).push_layout(LayoutRequest::new().height(120.0), || {
-            Box::new(
-                Tabs::new()
-                    .tab(
-                        "One",
-                        Child::new(ChildKey::index(0), LayoutRequest::new(), || {
-                            Box::new(Text::new("first panel"))
-                        }),
-                    )
-                    .tab(
-                        "Two",
-                        Child::new(ChildKey::index(0), LayoutRequest::new(), || {
-                            Box::new(Text::new("second panel"))
-                        }),
-                    ),
-            )
-        }),
-    )
-}
-
-/// A `Conditional` that is on, beside an `Overlay` covering its parent's box.
-/// Both build their subtrees inside their own builder, so nothing but a plain
-/// `fn` is captured.
+/// A `Conditional` that is on, beside a layer covering its parent's box.
+///
+/// The layer is an absolute-fill `Container` stacked over the content — the
+/// engine's own in-tree overlay vocabulary, and all a root-workspace user
+/// needs for "something painted above this box".
 fn build_conditional() -> Box<dyn WidgetAny> {
     Box::new(
         Stack::new(Axis::Vertical)
@@ -127,59 +92,14 @@ fn build_conditional() -> Box<dyn WidgetAny> {
                         .push_layout(LayoutRequest::new(), || {
                             Box::new(Text::new("under the layer"))
                         })
-                        .push_layout(LayoutRequest::new(), || {
-                            Box::new(Overlay::new().content(Child::new(
-                                ChildKey::index(0),
-                                LayoutRequest::new(),
-                                || {
-                                    Box::new(
-                                        Container::new()
-                                            .background(Color::rgba(70, 120, 220, 90))
-                                            .radius(6.0),
-                                    )
-                                },
-                            )))
+                        .push_layout(LayoutRequest::new().absolute_fill(), || {
+                            Box::new(
+                                Container::new()
+                                    .background(Color::rgba(70, 120, 220, 90))
+                                    .radius(6.0),
+                            )
                         }),
                 )
             }),
     )
-}
-
-/// Modals are *shown* by the app, not by the gallery: leaving one present would
-/// bury every other demo, so this row carries the trigger and the three
-/// surfaces are declared hidden. Their bodies still build, which is what keeps
-/// this demo honest about what the widgets need.
-fn build_dialog() -> Box<dyn WidgetAny> {
-    Box::new(
-        Stack::new(Axis::Vertical)
-            .gap(10.0)
-            .push_layout(LayoutRequest::new().width(160.0).height(36.0), || {
-                Box::new(Button::new("Open dialog").on_click(|| {}))
-            })
-            .push_layout(LayoutRequest::new(), || {
-                let mut dialog = Dialog::new().title("Dialog").body(dialog_body());
-                dialog.set_present(false);
-                Box::new(dialog)
-            })
-            .push_layout(LayoutRequest::new(), || {
-                let mut popup = Popup::new().content(dialog_body());
-                popup.set_present(false);
-                Box::new(popup)
-            })
-            .push_layout(LayoutRequest::new(), || {
-                let mut sheet = BottomSheet::new()
-                    .title("Sheet")
-                    .height(180.0)
-                    .body(dialog_body());
-                sheet.set_present(false);
-                Box::new(sheet)
-            }),
-    )
-}
-
-/// The one body all three surfaces are given.
-fn dialog_body() -> Child {
-    Child::new(ChildKey::index(0), LayoutRequest::new(), || {
-        Box::new(Text::new("modal body"))
-    })
 }
