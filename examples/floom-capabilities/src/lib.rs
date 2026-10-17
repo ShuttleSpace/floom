@@ -2,8 +2,10 @@
 //!
 //! Where [`floom-demo`](https://docs.rs/floom-demo) answers "what can Floom
 //! *draw*?", this crate answers "what can Floom *ask the OS*?" — the layer between
-//! a widget tree and the device it runs on. Eighteen capabilities, nine actions,
-//! one tree, and the same code on every platform.
+//! a widget tree and the device it runs on. Twelve readings, eight actions, one
+//! tree, and the same code on every platform. Those twelve cover all thirteen of
+//! the capability packages `floom-platform-mobile` declares, so nothing this
+//! table shows is invented.
 //!
 //! ```text
 //!                    probe::all()          probe::actions()
@@ -19,8 +21,8 @@
 //!
 //! ## Why the absences are the interesting part
 //!
-//! On a desktop host, **every one of the eighteen readings is `—`** — a Mac has
-//! no battery API, no `Vibrator`, no `UIDevice`. The gallery prints that rather
+//! On a desktop host, **every one of the twelve readings is `—` or `!`** — a Mac
+//! has no battery API, no `Vibrator`, no `UIDevice`. The gallery prints that rather
 //! than a plausible default, because a capability demo that reported "battery
 //! 100%" everywhere would be indistinguishable from one that works.
 //! `battery_state()` really does return `level: 1.0` on a host, and the one test
@@ -47,9 +49,9 @@
 //!
 //! * **Readings and actions are different tabs.** A reading has no side effects,
 //!   so it is safe to open on someone else's phone. An action vibrates, shares,
-//!   opens a URL or throws a permission dialog, so it only ever runs when the
-//!   user presses it. Nothing in the Actions tab fires at startup.
-//! * **Sections with headings.** Eighteen undifferentiated rows is a wall, so the
+//!   retints the OS bars or throws a permission dialog, so it only ever runs when
+//!   the user presses it. Nothing in the Actions tab fires at startup.
+//! * **Sections with headings.** Twelve undifferentiated rows is a wall, so the
 //!   table is broken into six labelled sections.
 //!
 //! ## Running

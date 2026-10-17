@@ -14,11 +14,33 @@
 //!   inert by design; see the crate root of `floom-platform-mobile`).
 //! * [`State::Error`] — the platform has it, but the call failed (denied
 //!   permission, no hardware, a broken bridge). The reason is kept verbatim.
+//!
+//! ## What is deliberately not here
+//!
+//! This module once carried rows for `app_info`, `screen`, `accessibility_prefs`,
+//! `orientation` and `url_launcher`. None of those packages exists: the package
+//! list in the `floom-platform-mobile` crate root names thirteen, and
+//! they are not among them. The rows were dropped rather than redirected at the
+//! nearest approximate API, because each is a different question from the one it
+//! claimed to answer — `Capability::OPEN_URL` is a flag with no operation behind
+//! it, and a window's `scale_factor` is not a screen's pixel density.
+//!
+//! That is not a gap being papered over. `docs/platform-and-plugins.md` puts this
+//! surface in the *platform layer*, which "provides only what a window cannot be
+//! built without", and sends every other device API to a plugin under
+//! `crates/floom-plugin-<capability>/` reached through a Kotlin/Swift
+//! host library. None of those crates exist yet, and a host-inert stub written
+//! here would put a capability in the wrong layer while claiming it works.
+//!
+//! One real package is absent from the readings for a different reason:
+//! `system_chrome` is setter-only (`set_system_chrome_style`), with no getter, so
+//! there is nothing to *read* — and calling a setter to produce a reading would
+//! give the Readings tab the side effect it exists to avoid. It appears in
+//! [`actions`] instead.
 
 use floom_platform_mobile::packages::{
-    accessibility_prefs, app_info, battery, clipboard, connectivity, device_info,
-    keyboard::soft_input, local_auth, location, notifications, orientation, safe_area, screen,
-    sensors, system_chrome, url_launcher, vibration,
+    battery, clipboard, connectivity, device_info, keyboard::soft_input, local_auth, location,
+    notifications, safe_area, sensors, vibration,
 };
 
 /// What a capability reported.
@@ -116,27 +138,6 @@ pub fn device_info() -> Row {
     )
 }
 
-pub fn app_info() -> Row {
-    let a = app_info::info();
-    Row::value(
-        "app_info",
-        "bundle id, display name, version, build",
-        native_or_absent(format!("{} · {} {} ({})", a.id, a.version, a.build, a.name)),
-    )
-}
-
-pub fn screen() -> Row {
-    let m = screen::metrics();
-    Row::value(
-        "screen",
-        "logical size, pixel ratio, density",
-        native_or_absent(format!(
-            "{:.0}×{:.0} · scale {:.2} · {:.0} dpi",
-            m.width, m.height, m.scale, m.density_dpi
-        )),
-    )
-}
-
 // --- power and connectivity ------------------------------------------------
 
 pub fn battery() -> Row {
@@ -182,47 +183,40 @@ pub fn connectivity() -> Row {
 
 // --- input and sensors -----------------------------------------------------
 
+/// Motion and environment sensors — availability only.
+///
+/// This row used to claim a "live reading" by calling `sensors::reading(kind)`.
+/// That function does exist, in the `ios.rs`/`android.rs` arms, but it was never
+/// re-exported from `mod.rs` so it is not reachable from here, and both arms are
+/// `TODO` stubs that return `None` regardless. The reachable surface is
+/// `available_sensors` plus `is_sensor_available`, so the row asks what those can
+/// answer. Printing an x/y/z triple would have meant reporting a `SensorReading`
+/// that nothing in the crate constructs.
 pub fn sensors() -> Row {
+    const QUESTION: &str = "which sensor kinds this device reports";
     if !native_capability_host() {
-        return Row::value("sensors", "available hardware, live reading", State::Absent);
+        return Row::value("sensors", QUESTION, State::Absent);
     }
-    let available = sensors::available_sensors();
-    if available.is_empty() {
-        return Row::value(
-            "sensors",
-            "available hardware, live reading",
-            State::Value("no motion sensors reported".into()),
-        );
-    }
-    // Read the first kind that actually produces a sample. Which one that is
-    // varies by device, so the row reports the reading it managed to take
-    // rather than pretending a fixed sensor exists.
-    let mut taken: Option<(sensors::SensorKind, sensors::SensorReading)> = None;
-    for kind in &available {
-        if let Some(r) = sensors::reading(*kind) {
-            taken = Some((*kind, r));
-            break;
-        }
-    }
-    match taken {
-        None => Row::value(
-            "sensors",
-            "available hardware, live reading",
-            State::Value(format!("{} present, no sample yet", available.len())),
-        ),
-        Some((kind, r)) => Row::value(
-            "sensors",
-            "available hardware, live reading",
+    let present: Vec<String> = sensors::SensorKind::all()
+        .iter()
+        .filter(|k| sensors::is_sensor_available(**k))
+        .map(|k| format!("{k:?}"))
+        .collect();
+    Row::value(
+        "sensors",
+        QUESTION,
+        // Honest even on a phone: the native arms are still `TODO`, so an empty
+        // list here means "nothing wired behind the bridge yet", not "this
+        // device has no sensors".
+        if present.is_empty() {
             State::Value(format!(
-                "{:?} among {} · x {:.3} y {:.3} z {:.3}",
-                kind,
-                available.len(),
-                r.x,
-                r.y,
-                r.z
-            )),
-        ),
-    }
+                "none of the {} known kinds reported",
+                sensors::SensorKind::all().len()
+            ))
+        } else {
+            State::Value(present.join(", "))
+        },
+    )
 }
 
 // --- privacy and authorization ---------------------------------------------
@@ -272,70 +266,29 @@ pub fn notifications() -> Row {
     )
 }
 
-// --- accessibility and appearance ------------------------------------------
+// --- the OS-drawn space ---------------------------------------------------
 
-pub fn accessibility_prefs() -> Row {
-    if !native_capability_host() {
-        return Row::value(
-            "accessibility_prefs",
-            "reduced motion, bold text, reduced transparency",
-            State::Absent,
-        );
-    }
-    Row::value(
-        "accessibility_prefs",
-        "reduced motion, bold text, reduced transparency",
-        State::Value(format!(
-            "motion {} · bold {} · transparency {}",
-            if accessibility_prefs::prefers_reduced_motion() {
-                "reduced"
-            } else {
-                "normal"
-            },
-            if accessibility_prefs::is_bold_text() {
-                "on"
-            } else {
-                "off"
-            },
-            if accessibility_prefs::prefers_reduced_transparency() {
-                "reduced"
-            } else {
-                "normal"
-            }
-        )),
-    )
-}
-
+/// The region the OS reserves for its own chrome: notch, home indicator,
+/// status bar.
+///
+/// `safe_area_insets()` cannot answer "unavailable" — its host arm returns
+/// `Insets::ZERO`, which the package documents as *unknown* rather than *nothing
+/// reserved*. So the row gates on [`native_capability_host`] and reports what was
+/// measured; on a desktop it says `—` instead of asserting a Mac has no notch
+/// after a call that never asked.
 pub fn safe_area() -> Row {
-    match safe_area::try_safe_area_insets() {
-        Ok(i) => Row::value(
-            "safe_area",
-            "OS-reserved insets (notch, home indicator)",
-            State::Value(format!(
-                "top {:.0} · right {:.0} · bottom {:.0} · left {:.0}",
-                i.top, i.right, i.bottom, i.left
-            )),
-        ),
-        Err(e) => Row::value(
-            "safe_area",
-            "OS-reserved insets (notch, home indicator)",
-            State::Error(e),
-        ),
-    }
-}
-
-pub fn orientation() -> Row {
+    const QUESTION: &str = "OS-reserved insets (notch, home indicator)";
     if !native_capability_host() {
-        return Row::value(
-            "orientation",
-            "current interface orientation",
-            State::Absent,
-        );
+        return Row::value("safe_area", QUESTION, State::Absent);
     }
+    let i = safe_area::safe_area_insets();
     Row::value(
-        "orientation",
-        "current interface orientation",
-        State::Value(format!("{:?}", orientation::current())),
+        "safe_area",
+        QUESTION,
+        State::Value(format!(
+            "top {:.0} · right {:.0} · bottom {:.0} · left {:.0}",
+            i.top, i.right, i.bottom, i.left
+        )),
     )
 }
 
@@ -414,30 +367,6 @@ pub fn clipboard_write() -> Row {
 
 // --- actions the user triggers ---------------------------------------------
 
-pub fn url_launcher() -> Row {
-    if !native_capability_host() {
-        return Row::value(
-            "url_launcher",
-            "probe whether a URL can be opened",
-            State::Absent,
-        );
-    }
-    const PROBE_URL: &str = "https://example.com";
-    if url_launcher::can_open(PROBE_URL) {
-        Row::value(
-            "url_launcher",
-            "probe whether a URL can be opened",
-            State::Value(format!("{PROBE_URL} is openable")),
-        )
-    } else {
-        Row::value(
-            "url_launcher",
-            "probe whether a URL can be opened",
-            State::Value(format!("{PROBE_URL} refused")),
-        )
-    }
-}
-
 pub fn can_vibrate() -> Row {
     if !native_capability_host() {
         return Row::value("vibration", "haptics engine present", State::Absent);
@@ -465,7 +394,6 @@ pub fn actions() -> Vec<(&'static str, &'static str)> {
         ("vibration::vibrate", "device::vibrate"),
         ("vibration::haptic_feedback", "device::haptic"),
         ("share::share_text", "device::share"),
-        ("url_launcher::open", "device::open_url"),
         ("local_auth::authenticate", "device::authenticate"),
         (
             "location::request_authorization",
@@ -475,7 +403,10 @@ pub fn actions() -> Vec<(&'static str, &'static str)> {
             "notifications::request_authorization",
             "device::request_notifications",
         ),
-        ("system_chrome::set_edge_to_edge", "device::edge_to_edge"),
+        (
+            "system_chrome::set_system_chrome_style",
+            "device::system_chrome",
+        ),
         // The soft keyboard is the only action whose *absence* is still
         // observable: the call succeeds vacuously on a host (there is nothing to
         // show), which is exactly why it is worth a button — the reader sees
@@ -485,24 +416,6 @@ pub fn actions() -> Vec<(&'static str, &'static str)> {
             "device::show_keyboard",
         ),
     ]
-}
-
-/// Read `system_chrome`'s one host-answered question: is the status bar style
-/// under application control?
-pub fn status_bar_controlled() -> Row {
-    if !native_capability_host() {
-        return Row::value(
-            "system_chrome",
-            "status bar style under app control",
-            State::Absent,
-        );
-    }
-    let controlled = system_chrome::status_bar_style_is_application_controlled();
-    Row::value(
-        "system_chrome",
-        "status bar style under app control",
-        State::Value(if controlled { "yes" } else { "no" }.into()),
-    )
 }
 
 fn truncate(s: &str, max: usize) -> String {
@@ -526,8 +439,6 @@ pub fn all() -> Vec<Row> {
     vec![
         // identity
         device_info(),
-        app_info(),
-        screen(),
         // power and network
         battery(),
         connectivity(),
@@ -538,16 +449,12 @@ pub fn all() -> Vec<Row> {
         local_auth(),
         notifications(),
         // appearance and the OS-drawn space
-        accessibility_prefs(),
         safe_area(),
-        orientation(),
-        status_bar_controlled(),
         keyboard(),
         // the clipboard round-trip
         clipboard_read(),
         clipboard_write(),
-        // launchers
-        url_launcher(),
+        // haptics
         can_vibrate(),
     ]
 }
@@ -555,7 +462,7 @@ pub fn all() -> Vec<Row> {
 /// Section headers, each naming the **first row** it covers.
 ///
 /// Flutter's gallery and Slint's demos both break a long list into labelled
-/// sections, because eighteen rows in one undifferentiated column is a wall. The
+/// sections, because twelve rows in one undifferentiated column is a wall. The
 /// header is keyed to a row name rather than to an index so that inserting a row
 /// inside a section cannot silently move the boundary; the test below is what
 /// makes that claim true rather than merely intended.
@@ -564,8 +471,8 @@ pub const GROUPS: [(&str, &str); 6] = [
     ("Power and network", "battery"),
     ("Input and sensors", "sensors"),
     ("Privacy and authorization", "location"),
-    ("Appearance and OS-drawn space", "accessibility_prefs"),
-    ("Clipboard and launchers", "clipboard (read)"),
+    ("Appearance and OS-drawn space", "safe_area"),
+    ("Clipboard and haptics", "clipboard (read)"),
 ];
 
 /// The group header that introduces `row_name`, if any.

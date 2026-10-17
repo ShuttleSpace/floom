@@ -4,8 +4,8 @@
 //! use, and for the same reason: **a reading and an action are not the same kind
 //! of claim.** The first tab only observes the device, so opening it has no side
 //! effects and is safe on someone else's phone. The second tab vibrates,
-//! shares, opens URLs and asks for permissions, so every row there is a button
-//! the user presses deliberately.
+//! shares, retints the OS bars and asks for permissions, so every row there is a
+//! button the user presses deliberately.
 //!
 //! Both tabs render from the same [`crate::probe`] data, so a device that cannot
 //! serve a capability says so in both.
@@ -37,8 +37,7 @@
 
 use floom_core::{Align, Axis, Child, ChildKey, Color, LayoutRequest, WidgetAny};
 use floom_platform_mobile::packages::{
-    keyboard::soft_input, local_auth, location, notifications, share, system_chrome, url_launcher,
-    vibration,
+    keyboard::soft_input, local_auth, location, notifications, share, system_chrome, vibration,
 };
 use floom_widgets::{Button, Container, Spacer, Stack, Text};
 
@@ -93,8 +92,8 @@ fn gap(extent: f64) -> Box<dyn WidgetAny> {
 /// One capability's row: its name, the question it answers, and the answer.
 ///
 /// The name is `INK` whatever the state, because the *capability existing* is a
-/// fact; only the answer's ink varies. That way a table of eighteen `—` still
-/// reads as eighteen capabilities rather than as a broken screen.
+/// fact; only the answer's ink varies. That way a table of twelve `—` still
+/// reads as twelve capabilities rather than as a broken screen.
 fn capability_row(row: &'static Row) -> Box<dyn WidgetAny> {
     let name = row.name;
     let question = row.question;
@@ -310,8 +309,6 @@ fn run_action(id: &str) {
             .map(|()| "medium impact".to_string()),
         "device::share" => share::share_text("hello from floom-capabilities")
             .map(|()| "share sheet opened".to_string()),
-        "device::open_url" => url_launcher::open("https://example.com")
-            .map(|()| "handed example.com to the OS".to_string()),
         "device::authenticate" => {
             local_auth::authenticate("prove it is you").map(|()| "authenticated".to_string())
         }
@@ -319,8 +316,18 @@ fn run_action(id: &str) {
             .map(|()| format!("now {:?}", location::authorization_status())),
         "device::request_notifications" => notifications::request_authorization()
             .map(|()| format!("now {}", notifications::are_notifications_enabled())),
-        "device::edge_to_edge" => {
-            system_chrome::set_edge_to_edge(true).map(|()| "edge-to-edge on".to_string())
+        // `set_system_chrome_style` is the whole of `system_chrome`'s public
+        // surface: there is no edge-to-edge toggle to ask for and no getter to
+        // read back, so the button applies a concrete style and reports whether
+        // the platform accepted it.
+        "device::system_chrome" => {
+            system_chrome::set_system_chrome_style(system_chrome::SystemChromeStyle {
+                status_bar_color: Some(Color::rgb(0x1a, 0x1a, 0x1a)),
+                navigation_bar_color: Some(Color::rgb(0x1a, 0x1a, 0x1a)),
+                status_bar_icon_brightness: system_chrome::BarIconBrightness::Light,
+                navigation_bar_icon_brightness: system_chrome::BarIconBrightness::Light,
+            })
+            .map(|()| "dark bars, light icons".to_string())
         }
         // Succeeds vacuously on a host: there is no soft keyboard to show, and
         // the package documents that as `Ok(())` rather than `Err` so callers
