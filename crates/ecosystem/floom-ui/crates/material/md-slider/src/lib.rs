@@ -1,27 +1,58 @@
-use std::rc::Rc;
+//! Material 3 slider, ported to the 2.0 widget API.
+//!
+//! ## What the port changed
+//!
+//! * v1's `list(vec![filled, halo, thumb])` -- three `Container`s, each with a
+//!   closure style re-deriving the value's fraction on its own -- is the
+//!   engine's `Slider` widget now: one `Widget` with `layout_request` and
+//!   `paint`, computing the fraction once per paint rather than once per box.
+//! * v1's `update(ratio)` closure (clamp, quantise, `live.set`, notify) is the
+//!   engine's `quantize`/`set_value`, driven by pointer events instead of by
+//!   hand-written `PointerDown`/`PointerMove`/`PointerUp` listeners plus
+//!   `request_pointer_capture`.
+//! * v1's three `RwSignal`s -- `live`, `dragging`, `hover` -- are gone: the
+//!   widget owns the value and an `InteractionState`, and reports through
+//!   `on_change`.
+//! * `value_signal` is gone from the API as well as the implementation, and no
+//!   replacement was invented for it. v1 needed it because a host that rebuilt
+//!   the view on every `value` change made a drag flash back to the old value;
+//!   the engine's widget holds its value across paints, so that failure cannot
+//!   happen. Re-publishing the engine's value as a signal would put the rebuild
+//!   back, which is the very thing v1 was avoiding.
+//!
+//! ## What is left here
+//!
+//! Token translation, and the two things v1 drew that the other two kits do not
+//! have: the halo behind the thumb, and a token-derived disabled palette.
 
-use floom::event::EventPropagation;
-use floom::prelude::*;
-use floom::view::AnyView;
-use floom::style::CursorStyle;
-use floom::views::{Decorators, Empty};
+use floom_signal::{RwSignal, SignalGet};
+use floom_types::Color as PaintColor;
+
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::slider::SliderProps;
 use floom_core_theme::theme::{MultiTheme, Theme};
 use floom_core_theme::tokens::color::Color;
-use floom_core_theme::tokens::color_ext::*;
+use floom_core_theme::tokens::color_ext::with_alpha;
+use floom_ui_composites::{Slider, SliderStyle};
 use floom_widget_runtime::theme_signal;
 
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub struct MdSliderStyle {
-    pub design_system: &'static str,
-    pub track_color: Color,
-    pub thumb_color: Color,
-    pub track_height: f32,
-    pub thumb_size: f32,
-    pub thumb_radius: f32,
+/// v1 drew the halo 40px across in both states, so the two sizes are one number.
+const HALO_SIZE: f32 = 40.0;
+/// The hovered halo's alpha, in percent. [`MdSlider::resolved_style`] says
+/// where v1's dragging alpha went.
+const HALO_ALPHA: u8 = 20;
+
+/// Design-system colour -> engine colour.
+fn to_paint(c: Color) -> PaintColor {
+    PaintColor {
+        r: c.r,
+        g: c.g,
+        b: c.b,
+        a: c.a,
+    }
 }
 
+/// Material's slider.
 pub struct MdSlider {
     props: SliderProps,
     theme: RwSignal<MultiTheme>,
@@ -65,15 +96,6 @@ impl MdSlider {
         self
     }
 
-    /// Bind the slider to an external signal. The slider reads its displayed
-    /// value from `value` and writes back to it on every drag, so the host does
-    /// not need to rebuild the slider to track changes (prevents the drag
-    /// "flash-back" seen when the host rebuilds on every `value` change).
-    pub fn value_signal(mut self, value: RwSignal<f32>) -> Self {
-        self.props.value_signal = Some(value);
-        self
-    }
-
     pub fn props(&self) -> &SliderProps {
         &self.props
     }
@@ -87,194 +109,103 @@ impl MdSlider {
         self
     }
 
-    pub fn resolved_style(&self) -> MdSliderStyle {
+    /// Material's appearance, as the engine's `SliderStyle`.
+    ///
+    /// Three of v1's numbers are this kit's own: the halo, the disabled
+    /// palette, and a track at 97 percent of `on_surface_variant` where the
+    /// other two kits use an undimmed `surface_variant`.
+    pub fn resolved_style(&self) -> SliderStyle {
         let theme = self.theme.get();
         let ComponentTokens::Slider(tokens) = theme.component(ComponentId::Slider) else {
             unreachable!("ComponentId::Slider must resolve to SliderTokens")
         };
-        MdSliderStyle {
-            design_system: "material",
-            track_color: with_alpha(theme.colors().on_surface_variant, 97),
-            thumb_color: theme.colors().primary,
+        let colors = theme.colors();
+        let primary = colors.primary;
+
+        // `SliderStyle` carries no disabled colours, and that is deliberate --
+        // do not add one. The engine paints a disabled slider with whatever
+        // colours the style was given, so a kit is the only thing that knows
+        // `props.disabled` at the moment it builds the widget. Composing the
+        // disabled palette here is that knowledge being used once, where it
+        // belongs; v1 composed it the same way, in the three style closures.
+        let (track, filled, thumb) = if self.props.disabled {
+            (
+                to_paint(with_alpha(colors.on_surface_variant, 60)),
+                to_paint(with_alpha(primary, 120)),
+                to_paint(with_alpha(primary, 120)),
+            )
+        } else {
+            (
+                to_paint(with_alpha(colors.on_surface_variant, 97)),
+                to_paint(primary),
+                to_paint(primary),
+            )
+        };
+
+        SliderStyle {
+            // --- from `SliderTokens`, as v1 read them ---
             track_height: tokens.track_height,
             thumb_size: tokens.thumb_size,
             thumb_radius: tokens.thumb_radius,
+
+            track_color: track,
+            filled_color: filled,
+            thumb_color: thumb,
+
+            // v1 gave none of the three boxes a hover or press colour of its
+            // own -- it left every interaction state to the style layer's
+            // defaults. `None` is the faithful answer, and a different answer
+            // from `Some`: `None` means "no variant of this kit's own", so the
+            // base colour is painted, rather than the engine's hard-coded
+            // hover and press blues.
+            track_hovered_color: None,
+            filled_hovered_color: None,
+            filled_pressed_color: None,
+
+            // Material is the only one of the three kits whose thumb carries a
+            // halo, and the only one whose v1 slider drew one at all: a 40px
+            // `primary` circle, at 20 percent while hovered and at 30 percent
+            // while dragging.
+            //
+            // Only the hovered alpha survives. `SliderStyle` has one
+            // `halo_color` for both states -- it varies the halo's *size* by
+            // state, not its colour -- so v1's 30 percent has nowhere to go.
+            // The engine's own doc comment on the field names 20 percent as
+            // this kit's number, which is why that is the one carried.
+            halo_color: Some(to_paint(with_alpha(primary, HALO_ALPHA))),
+            halo_size: HALO_SIZE,
+            halo_size_dragging: HALO_SIZE,
+
+            // v1's Material slider drew no shadow on its thumb.
+            shadow_blur: 0.0,
+            shadow_spread: 0.0,
+            shadow_color: PaintColor::TRANSPARENT,
         }
     }
 
-    /// Build a renderable, interactive Material 3 slider.
-    pub fn view(self) -> impl View {
-        let theme = self.theme;
-        let min = self.props.min;
-        let max = self.props.max;
-        let step = self.props.step;
-        let on_change: Option<Rc<Box<dyn Fn(f32)>>> = self.props.on_change.map(Rc::new);
-        let disabled = RwSignal::new(self.props.disabled);
-        let live = self
-            .props
-            .value_signal
-            .unwrap_or_else(|| RwSignal::new(self.props.value.clamp(min, max)));
-        let dragging = RwSignal::new(false);
-        let hover = RwSignal::new(false);
+    /// The slider, ready to mount.
+    pub fn view(self) -> Slider {
+        let style = self.resolved_style();
 
-        let tokens = match theme.get().component(ComponentId::Slider) {
-            ComponentTokens::Slider(t) => t,
-            _ => unreachable!(),
-        };
-        let track_height = tokens.track_height;
-        let thumb_size = tokens.thumb_size;
+        // `SliderProps` speaks `f32` because it is the theme crate's shared
+        // struct, still shared with the kits that have not been ported, while
+        // the engine's slider is `f64`. So the widening happens here, once.
+        let mut slider = Slider::new(
+            f64::from(self.props.value),
+            f64::from(self.props.min),
+            f64::from(self.props.max),
+        )
+        .step(f64::from(self.props.step))
+        .disabled(self.props.disabled)
+        .style(style);
 
-        // Shared value updater: maps a 0..=1 ratio to the nearest stepped value.
-        let update = Rc::new({
-            let live = live;
-            let on_change = on_change.clone();
-            move |ratio: f32| {
-                let span = (max - min).max(f32::MIN_POSITIVE);
-                let raw = min + ratio * span;
-                let steps = ((raw - min) / step).round();
-                let mut v = min + steps * step;
-                v = v.clamp(min, max);
-                live.set(v);
-                if let Some(cb) = on_change.as_ref() {
-                    cb(v);
-                }
-            }
-        });
+        // And the narrowing back, on the way out.
+        let on_change = self.props.on_change;
+        if let Some(on_change) = on_change {
+            slider = slider.on_change(move |value| on_change(value as f32));
+        }
 
-        let filled: AnyView = Container::new(Empty::new())
-            .style(move |s| {
-                let t = theme.get();
-                let span = (max - min).max(f32::MIN_POSITIVE);
-                let ratio: f64 = ((live.get() - min) / span).clamp(0.0, 1.0) as f64;
-                let c = if disabled.get() {
-                    with_alpha(t.colors().primary, 120)
-                } else {
-                    t.colors().primary
-                };
-                s.absolute()
-                    .width_pct(ratio * 100.0)
-                    .height_pct(100.0)
-                    .background(c.to_peniko())
-            })
-            .into_any();
-
-        let thumb: AnyView = Container::new(Empty::new())
-            .style(move |s| {
-                let t = theme.get();
-                let span = (max - min).max(f32::MIN_POSITIVE);
-                let ratio: f64 = ((live.get() - min) / span).clamp(0.0, 1.0) as f64;
-                let c = if disabled.get() {
-                    with_alpha(t.colors().primary, 120)
-                } else {
-                    t.colors().primary
-                };
-                s.absolute()
-                    .size(thumb_size, thumb_size)
-                    .inset_top_pct(50.0)
-                    .inset_left_pct(ratio * 100.0)
-                    .translate_x(-(thumb_size as f64 / 2.0))
-                    .translate_y(-(thumb_size as f64 / 2.0))
-                    .border_radius(tokens.thumb_radius)
-                    .background(c.to_peniko())
-            })
-            .into_any();
-
-        let halo: AnyView = Container::new(Empty::new())
-            .style(move |s| {
-                let t = theme.get();
-                let span = (max - min).max(f32::MIN_POSITIVE);
-                let ratio: f64 = ((live.get() - min) / span).clamp(0.0, 1.0) as f64;
-                let active = hover.get() || dragging.get();
-                let alpha = if dragging.get() { 30 } else { 20 };
-                let dy = -((40.0 - track_height as f64) / 2.0);
-                s.absolute()
-                    .size(40.0, 40.0)
-                    .inset_left_pct(ratio * 100.0)
-                    .translate_x(-20.0)
-                    .translate_y(dy)
-                    .border_radius(9999.0)
-                    .background(with_alpha(t.colors().primary, alpha).to_peniko())
-                    .apply_if(!active, |s| s.hide())
-            })
-            .into_any();
-
-        let mut track = list(vec![filled, halo, thumb]).style(move |s| {
-            let t = theme.get();
-            let c = if disabled.get() {
-                with_alpha(t.colors().on_surface_variant, 60)
-            } else {
-                with_alpha(t.colors().on_surface_variant, 97)
-            };
-            s.width_full()
-                .height(track_height)
-                .border_radius(track_height / 2.0)
-                .background(c.to_peniko())
-                .cursor(CursorStyle::Pointer)
-                .set_disabled(disabled.get())
-        });
-
-        let track_id = track.id();
-
-        track = track
-            .on_event(listener::PointerDown, {
-                let update = update.clone();
-                let track_id = track_id;
-                let dragging = dragging;
-                let disabled = disabled;
-                move |cx, pbe| {
-                    if !disabled.get() {
-                        if let Some(sz) = track_id.get_size() {
-                            let w = sz.width as f32;
-                            if w > 0.0 {
-                                let p = pbe.state.logical_point();
-                                let ratio = ((p.x as f32) / w).clamp(0.0, 1.0);
-                                update(ratio);
-                            }
-                        }
-                        if let Some(pid) = pbe.pointer.pointer_id {
-                            cx.request_pointer_capture(pid);
-                        }
-                        dragging.set(true);
-                    }
-                    EventPropagation::Continue
-                }
-            })
-            .on_event(listener::PointerMove, {
-                let update = update.clone();
-                let track_id = track_id;
-                let dragging = dragging;
-                let disabled = disabled;
-                move |_, pu| {
-                    if !disabled.get() && dragging.get() {
-                        if let Some(sz) = track_id.get_size() {
-                            let w = sz.width as f32;
-                            if w > 0.0 {
-                                let p = pu.current.logical_point();
-                                let ratio = ((p.x as f32) / w).clamp(0.0, 1.0);
-                                update(ratio);
-                            }
-                        }
-                    }
-                    EventPropagation::Continue
-                }
-            })
-            .on_event(listener::PointerUp, {
-                let dragging = dragging;
-                move |_, _| {
-                    dragging.set(false);
-                    EventPropagation::Continue
-                }
-            })
-            .on_event(listener::PointerEnter, move |_, _| {
-                hover.set(true);
-                EventPropagation::Continue
-            })
-            .on_event(listener::PointerLeave, move |_, _| {
-                hover.set(false);
-                EventPropagation::Continue
-            });
-
-        track
+        slider
     }
 }
 
@@ -283,3 +214,13 @@ impl Default for MdSlider {
         Self::new()
     }
 }
+
+/// The engine's `SliderStyle`, under this kit's old name.
+///
+/// v1's own `MdSliderStyle` carried `design_system`, `track_color`,
+/// `thumb_color` and three geometry numbers, and nothing ever read it -- v1's
+/// `view()` resolved the colours from the theme directly. The alias keeps the
+/// name resolvable for callers without pretending a struct still exists. The
+/// `design_system` field has no successor: the engine's style names no design
+/// system, because it is not one.
+pub type MdSliderStyle = SliderStyle;

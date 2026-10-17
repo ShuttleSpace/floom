@@ -379,15 +379,20 @@ impl Widget for Slider {
         self.revision.sync(cx, id);
     }
 
-    /// Intrinsic size: the thumb's diameter tall (it is the tallest thing the
-    /// slider paints) and a default track length wide -- a track is
-    /// meaningless at zero width, and callers who want it to fill their
-    /// container pin the width explicitly.
+    /// Intrinsic size: the style's own geometry, tall enough for whichever of
+    /// the thumb and the track is bigger.
+    ///
+    /// The height has to come from the style rather than from a constant: a kit
+    /// that gives its thumb a 28px diameter would otherwise be laid out 16px
+    /// tall and have the bottom of it clipped away. The width stays the
+    /// default track length, because a track is meaningless at zero width and
+    /// a caller who wants it to fill its container pins the width explicitly.
     fn layout_request(&self) -> Option<floom_core::LayoutRequest> {
+        let tall = self.style_.thumb_size.max(self.style_.track_height);
         Some(
             floom_core::LayoutRequest::new()
                 .width(SLIDER_TRACK_WIDTH)
-                .height(SLIDER_THUMB),
+                .height(tall),
         )
     }
 

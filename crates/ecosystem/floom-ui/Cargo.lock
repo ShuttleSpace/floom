@@ -554,6 +554,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "floom-widget-cupertino-slider"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-ui-composites",
+ "floom-widgets",
+]
+
+[[package]]
 name = "floom-widget-cupertino-switch"
 version = "0.1.0"
 dependencies = [
@@ -671,6 +683,18 @@ dependencies = [
  "floom-ui-composites",
  "floom-widget-fluent-icon-paths",
  "floom-widget-runtime",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-fluent-slider"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-ui-composites",
  "floom-widgets",
 ]
 
@@ -904,6 +928,19 @@ dependencies = [
  "floom-types",
  "floom-ui-composites",
  "floom-widget-md-icon",
+ "floom-widget-runtime",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-md-slider"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-ui-composites",
  "floom-widget-runtime",
  "floom-widgets",
 ]
