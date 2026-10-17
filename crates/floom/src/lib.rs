@@ -418,7 +418,7 @@ pub mod prelude {
     pub use floom_widgets::{
         AnimatedContent, Button, Canvas, Checkbox, Conditional, Container, Crossfade, Divider,
         Grid, Icon, Image, ImageFit, InteractionState, List, Opacity, Progress, Radio, ShaderBox,
-        SharedTransitionLayout, Slider, Spacer, Spinner, Stack, Switch, Text, TextField,
+        SharedTransitionLayout, Spacer, Spinner, Stack, Switch, Text, TextField,
     };
 
     // --- Composite controls (floom-ui-composites, one layer up) ----------
@@ -439,6 +439,13 @@ pub mod prelude {
     // in the engine is the layout vocabulary -- `Stack`, `List`, `Grid`,
     // `Conditional`, `Crossfade`, `AnimatedContent`, `Opacity`, `Scroll` -- which is
     // arithmetic rather than product.
+
+    // `Slider` moved up with them, for the sharper version of the same reason:
+    // what a slider *does* -- clamp, quantise, drag, the keyboard walk -- is a
+    // primitive, but what it *looks like* is not, so its paint went from six
+    // hard-coded colours and two magic numbers inside the engine to a
+    // `SliderStyle` a kit fills in. Same edge, same answer: depend on
+    // `floom-ui-composites` for it.
 
     // --- App shell (floom-app) -------------------------------------------
     pub use floom_app::{AppRunner, FrameStats, NodeId, RunStats, WidgetHost};

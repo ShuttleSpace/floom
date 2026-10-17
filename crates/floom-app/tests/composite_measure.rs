@@ -8,7 +8,7 @@
 use floom_app::{NodeId, WidgetHost};
 use floom_layout::{LayoutStyle, Length};
 use floom_types::Size;
-use floom_widgets::controls::{Button, Checkbox, Progress, Slider, Switch, TextField};
+use floom_widgets::controls::{Button, Checkbox, Progress, Switch, TextField};
 use floom_widgets::primitives::{Divider, Icon, Image, Spacer};
 
 fn node_bounds(host: &WidgetHost, node: NodeId) -> floom_types::Rect {
@@ -169,11 +169,12 @@ fn textfield_keeps_a_minimum_width_and_measures_its_text() {
     );
 }
 
-/// Slider and Progress have no text to measure: their intrinsic extents come
-/// from the geometry they paint (the 16px thumb) or from a convention (an 8px
-/// bar of default length).
+/// A progress bar has no text to measure either: its intrinsic extent is a
+/// convention rather than a measurement -- an 8px bar of default length. The
+/// slider that shared this test moved to `floom-ui-composites`, which is where
+/// its own measurement lives now.
 #[test]
-fn slider_and_progress_report_their_painted_geometry() {
+fn progress_reports_its_painted_geometry() {
     let mut host = WidgetHost::new();
     host.set_size(Size::new(400.0, 200.0));
     let root = host.mount_root(
@@ -183,19 +184,8 @@ fn slider_and_progress_report_their_painted_geometry() {
         },
         floom_widgets::Container::new(),
     );
-    let slider = host.mount(root, LayoutStyle::default(), Slider::new(0.5, 0.0, 1.0));
     let progress = host.mount(root, LayoutStyle::default(), Progress::determinate(0.5));
     host.frame();
-
-    let slider_bounds = node_bounds(&host, slider);
-    assert!(
-        (slider_bounds.height() - 16.0).abs() < 1.5,
-        "slider height = thumb diameter, got {slider_bounds:?}"
-    );
-    assert!(
-        slider_bounds.width() > 100.0,
-        "slider has a usable track, got {slider_bounds:?}"
-    );
 
     let progress_bounds = node_bounds(&host, progress);
     assert!(

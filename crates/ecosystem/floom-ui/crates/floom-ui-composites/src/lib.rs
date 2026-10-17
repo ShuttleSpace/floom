@@ -31,6 +31,7 @@ pub mod list_item;
 pub mod nav;
 pub mod navigation;
 pub mod select;
+pub mod slider;
 pub mod tree_view;
 
 pub use accordion::{Accordion, AccordionIndicator, AccordionStyle, SelectGroup, SelectGroupStyle, SelectionMode};
@@ -50,6 +51,7 @@ pub use labeled::{Labeled};
 pub use list_item::{ListItemRow, ListItemStyle, SlotBuilder};
 pub use nav::{NavHandle, NavHost};
 pub use select::{IndexCallback, Select, SelectPopup, SelectStyle, popup_height};
+pub use slider::{Slider, SliderStyle};
 pub use navigation::{NavDestination, NavigationBar, NavigationDrawer, NavigationRail};
 pub use tree_view::{RowRef, SharedTree, TreeNode, TreeView, TreeViewStyle};
 pub use tree_view::{node_at, toggle_path, visible_rows};

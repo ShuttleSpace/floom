@@ -82,6 +82,7 @@ impl_widget_any_labelled!(
     crate::dialog::Dialog,
     crate::overlay::Overlay,
     crate::popup::Popup,
+    crate::slider::Slider,
     crate::tabs::Tabs,
 );
 

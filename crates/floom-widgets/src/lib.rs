@@ -39,8 +39,8 @@ pub use compose::{
     SharedTransitionLayout, Stack,
 };
 pub use controls::{
-    Button, Checkbox, InteractionState, Pressable, Progress, Radio, Slider, Switch,
-    SwitchPalette, TextField,
+    Button, Checkbox, InteractionState, Pressable, Progress, Radio, Switch, SwitchPalette,
+    TextField,
 };
 /// Intrinsic width of a string at an arbitrary font size.
 ///

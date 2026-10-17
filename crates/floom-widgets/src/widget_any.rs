@@ -150,7 +150,6 @@ impl_widget_any!(
     crate::controls::Checkbox,
     crate::controls::Radio,
     crate::controls::Switch,
-    crate::controls::Slider,
     crate::controls::Progress,
     crate::compose::Stack,
     crate::compose::Conditional,
