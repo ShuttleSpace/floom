@@ -1,44 +1,107 @@
-use std::rc::Rc;
+//! Material 3 radio, ported to the 2.0 widget API.
+//!
+//! ## What the port changed
+//!
+//! * v1 was a `Stack::horizontal` over three `Container`s -- an absolutely
+//!   positioned halo, a dot and a bordered circle -- driven by seven
+//!   `on_event` listeners. It is the engine's `Radio` widget now: one `Widget`
+//!   with `layout_request` and `paint`, which strokes the ring as an annulus and
+//!   fills the dot rather than drawing a bordered box.
+//! * The `checked`, `hover`, `pressed` and `focused` `RwSignal`s are gone. The
+//!   widget owns the selection and an `InteractionState`; a kit asking whether it
+//!   is hovered was reaching past its own layer.
+//! * v1's `on_change` was `Fn(bool)` and reported the new value. The engine's
+//!   `on_select` is `Fn()` and toggles internally, so `view` reconstructs the
+//!   value from the `checked` prop the widget was built with. See the note there.
+//! * The `cursor(Pointer)` and the `gap(8.0)` are gone with the style layer. The
+//!   engine's `Radio` has no cursor, and its own `INDICATOR_LABEL_GAP` is 6, so
+//!   the label sits two points closer than it did. Reported rather than
+//!   approximated: there is no cursor field on the style and no gap field either.
+//!
+//! ## Material's halo is not suppressed when disabled
+//!
+//! All three kits draw a state layer behind the ring; all three disagree about
+//! when it appears. Material's is the only one that answers all three of hover,
+//! press and focus, the only one with a pressed tint distinct from its resting
+//! one, and the only one whose halo does not carry
+//! `RadioHalo::suppressed_when_disabled`. v1 wrote no disabled check into its
+//! `apply_if(!active, hide)`, so the style as written had no disabled rule.
+//!
+//! One caveat, because it is the sort of thing a reader should not have to
+//! reverse-engineer: v1 *also* guarded each of `hover`, `pressed` and `focused`
+//! with `if !disabled`, so a v1 Material radio never actually reached a state
+//! that would have drawn the halo while disabled either. The two readings --
+//! "the halo carries no disabled rule" and "the halo never appeared" -- agree on
+//! every pixel v1 drew and disagree only about the flag. This port sets the flag
+//! the way the style is written rather than the way the event handlers happened
+//! to guard, because the flag is a claim about the design system and the guards
+//! were a claim about the pointer. It is pinned by a test, and a test that says
+//! so is better than a comment nobody reads.
 
-use floom::event::EventPropagation;
-use floom::prelude::*;
-use floom::style::CursorStyle;
+use floom_signal::{RwSignal, SignalGet};
+use floom_types::Color as PaintColor;
+
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::radio::RadioProps;
 use floom_core_theme::theme::{MultiTheme, Theme};
 use floom_core_theme::tokens::color::Color;
-use floom_core_theme::tokens::color_ext::*;
+use floom_core_theme::tokens::color_ext::with_alpha;
+use floom_ui_composites::{Radio, RadioHalo, RadioStyle};
 use floom_widget_runtime::theme_signal;
 
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub struct MdRadioStyle {
-    pub selected_color: Color,
-    pub unselected_color: Color,
-    pub size: f32,
-    pub border_width: f32,
-    pub label_font_size: f32,
+/// v1's halo was `.size(40.0, 40.0)`: an absolute number, not `size + pad * 2.0`
+/// as the other two kits wrote. It is also this kit's touch target, because in v1
+/// the halo *was* the thing that overflowed the ring and took the clicks -- there
+/// was no separate hit area to carry, so there is no separate number here either.
+/// v1 wrote `gap(8.0)`; the engine's shared `INDICATOR_LABEL_GAP` is 6.0.
+const LABEL_GAP: f32 = 8.0;
+
+const HALO_SIZE: f32 = 40.0;
+
+/// The halo's alpha while hovered or focused, and while pressed. Material is the
+/// only kit of the three with a second alpha at all.
+const HALO_ALPHA: u8 = 20;
+const HALO_ALPHA_PRESSED: u8 = 30;
+
+/// v1 dimmed the disabled radio to `on_surface` at 38. It wrote that expression
+/// twice -- once for the ring, once for the label -- and left the dot at a plain
+/// `primary`, so the third layer is a difference the engine's single
+/// `disabled_color` cannot carry. See `resolved_style`.
+const DISABLED_ALPHA: u8 = 38;
+
+/// Design-system colour -> engine colour.
+fn to_paint(c: Color) -> PaintColor {
+    PaintColor {
+        r: c.r,
+        g: c.g,
+        b: c.b,
+        a: c.a,
+    }
 }
 
+/// Material's radio. One option; grouping is the host's job, in this version and
+/// in v1's.
 pub struct MdRadio {
     props: RadioProps,
-    checked: RwSignal<bool>,
     theme: RwSignal<MultiTheme>,
 }
 
 impl MdRadio {
     pub fn new(label: impl Into<String>) -> Self {
-        let props = RadioProps {
-            label: label.into(),
-            ..Default::default()
-        };
         Self {
-            checked: RwSignal::new(props.checked),
+            props: RadioProps {
+                label: label.into(),
+                ..Default::default()
+            },
             theme: theme_signal(),
-            props,
         }
     }
 
     /// Grouping value (informational; the host wires mutual exclusion).
+    ///
+    /// v1 carried it on the props and the engine's `Radio` has nowhere to put
+    /// one. It stays here because the *group* is what reads it, and the group is
+    /// still the host's to build.
     pub fn value(mut self, value: impl Into<String>) -> Self {
         self.props.value = value.into();
         self
@@ -46,7 +109,6 @@ impl MdRadio {
 
     pub fn checked(mut self, checked: bool) -> Self {
         self.props.checked = checked;
-        self.checked.set(checked);
         self
     }
 
@@ -60,8 +122,11 @@ impl MdRadio {
         self
     }
 
+    /// v1 answered this from an `RwSignal` it kept in step with the prop. There is
+    /// no signal now -- the mounted widget owns the value -- so this is the prop
+    /// it was built with, which is the same number before the first activation.
     pub fn is_checked(&self) -> bool {
-        self.checked.get()
+        self.props.checked
     }
 
     pub fn props(&self) -> &RadioProps {
@@ -77,178 +142,151 @@ impl MdRadio {
         self
     }
 
-    pub fn resolved_style(&self) -> MdRadioStyle {
+    /// Material's appearance, as the engine's `RadioStyle`.
+    ///
+    /// ## Why this composes the disabled colour instead of branching
+    ///
+    /// `md-slider` had to branch over three colours when disabled, because its
+    /// three layers dimmed to three *different* token alphas -- 60, 120 and 120.
+    /// Here every layer dims to the same `on_surface`@38, which v1 wrote as one
+    /// expression and repeated. So `RadioStyle`'s single `disabled_color` holds
+    /// the whole answer and there is nothing to branch on: the only question is
+    /// whether there *is* a disabled colour, and the builder's `disabled` flag
+    /// answers it.
+    ///
+    /// Do not add per-layer disabled fields to the style for symmetry. A second
+    /// layer that wanted a different colour is the signal that `disabled_color`
+    /// is too small a shape, and that is the engine's type to widen -- once, for
+    /// every kit -- rather than a field each kit fills in the same way.
+    ///
+    /// ## What is here that is not a token
+    ///
+    /// `touch_target` and the halo's size are both the flat [`HALO_SIZE`], and
+    /// they are the same number on purpose: in v1 the halo *was* the hit area.
+    pub fn resolved_style(&self) -> RadioStyle {
         let theme = self.theme.get();
         let ComponentTokens::Radio(tokens) = theme.component(ComponentId::Radio) else {
             unreachable!("ComponentId::Radio must resolve to RadioTokens")
         };
-        let checked = self.is_checked();
-        MdRadioStyle {
-            selected_color: if checked {
-                theme.colors().primary
-            } else {
-                theme.colors().outline
-            },
-            unselected_color: theme.colors().outline,
+        let colors = theme.colors();
+
+        // `None` while enabled, and `None` is not "no dim": `RadioStyle`'s doc
+        // says a `None` `disabled_color` falls through to the engine's own
+        // half-alpha tint. Writing `Some(colors.on_surface)` unconditionally would
+        // dim every enabled radio to `on_surface` at 38, which is a different
+        // mistake than the one this line is there to avoid.
+        let disabled_color = self
+            .props
+            .disabled
+            .then(|| to_paint(with_alpha(colors.on_surface, DISABLED_ALPHA)));
+
+        RadioStyle {
+            // --- from `RadioTokens`, as v1 read them ---
             size: tokens.size,
             border_width: tokens.border_width,
+            // v1 drew `gap(8.0)` between the ring and the label. The engine's
+            // shared `INDICATOR_LABEL_GAP` is 6.0, so restore it explicitly
+            // rather than let every kit's label drift two points left.
+            label_gap: LABEL_GAP,
             label_font_size: tokens.label_font_size,
+
+            // --- this kit's own numbers ---
+            touch_target: HALO_SIZE,
+
+            // v1's circle was `.border(bw).border_color(..)` with no
+            // `background`, so the middle of every radio showed whatever its
+            // parent was painted with. The engine's default fills it white, and a
+            // `Some` here would be a white disc inside a transparent ring.
+            interior_color: None,
+
+            // v1's `selected_color` was the *current* ring colour --
+            // `if checked { primary } else { outline }` -- so it duplicated
+            // `unselected_color` and meant neither. Splitting that one
+            // conditional into the style's two independent fields is the whole
+            // reason the field exists twice.
+            selected_color: to_paint(colors.primary),
+            unselected_color: to_paint(colors.outline),
+            // v1's dot container read `colors().primary` with no disabled branch
+            // anywhere, so a *disabled* v1 radio drew a dim ring around a
+            // full-strength dot. `disabled_color` covers the dot here as well,
+            // because one field for all three layers is the shape the engine chose
+            // and nothing in `RadioStyle` can exempt one of them. Reported rather
+            // than worked around: reproducing the old pixels would mean a
+            // per-layer disabled colour in the engine, which is not this port's
+            // to add -- and one dim ring with one dim dot is a better radio than
+            // the asymmetry was.
+            selected_dot_color: to_paint(colors.primary),
+
+            // v1 had no hover or press colour for the ring at all: its entire
+            // interaction answer was the halo. `None` means "no variant of this
+            // kit's own", which is a real answer and not the same as the engine's
+            // default, where both are `Some` and would repaint a Material radio
+            // under the pointer in two greys it never had.
+            unselected_hovered_color: None,
+            unselected_pressed_color: None,
+
+            disabled_color,
+
+            label_color: to_paint(colors.on_surface),
+
+            halo: RadioHalo {
+                color: to_paint(with_alpha(colors.primary, HALO_ALPHA)),
+                // The only kit of the three whose pressed tint differs from its
+                // resting one. v1 read one alpha per state from the same signal.
+                color_pressed: Some(to_paint(with_alpha(colors.primary, HALO_ALPHA_PRESSED))),
+                // Absolute, not `size + 8`: see `HALO_SIZE`, and the test that
+                // pins the difference from the other two kits.
+                size: HALO_SIZE,
+                // v1's `active` was `hover || pressed || focused` -- all three
+                // gates, and no fourth one for the disabled state.
+                on_hover: true,
+                on_press: true,
+                on_focus: true,
+                suppressed_when_disabled: false,
+            },
         }
     }
 
-    /// Build a renderable, interactive Material 3 radio button.
-    pub fn view(self) -> impl View {
-        let theme = self.theme;
-        let checked = self.checked;
-        let disabled = self.props.disabled;
-        let on_change = Rc::new(self.props.on_change);
-        let label_text = self.props.label.clone();
-        let hover = RwSignal::new(false);
-        let pressed = RwSignal::new(false);
-        let focused = RwSignal::new(false);
+    /// The radio, ready to mount.
+    ///
+    /// ## `on_select` is `Fn()`, and the kit still owes its caller a `Fn(bool)`
+    ///
+    /// The engine owns the value and says only "the user activated me". The new
+    /// value is therefore computed here, from the `checked` prop the widget was
+    /// built with: an activation is a `false -> true` edge, so it is `!was`.
+    ///
+    /// That is correct for a builder-time `selected` prop, which is all a kit
+    /// has. It is *not* a bridge to the live value, and none was invented: a
+    /// `value_signal` or an `RwSignal` here would be a second source of truth for
+    /// a widget that already owns one, and v1 needed it only because a host that
+    /// rebuilt the view on every `value` change would flash a drag back. A radio
+    /// that a kit genuinely needed to observe live should say so rather than be
+    /// handed a signal that disagrees with the engine the moment both are wrong.
+    ///
+    /// `RadioProps::on_change` is a `Box<dyn Fn(bool)>` whose `Clone` impl
+    /// deliberately drops the callback, so it is moved rather than borrowed --
+    /// which works only because `view` consumes the kit.
+    ///
+    /// One consequence worth stating plainly: the engine fires `on_select` only on
+    /// that edge, and only from unselected, so the value a `Fn(bool)` receives here
+    /// is always `true`. v1's toggle handler could also report `false`, because
+    /// clicking a selected radio cleared it. That is not reachable from this
+    /// side -- the engine has no unselect, and faking one would mean the kit
+    /// disagreeing with the widget about whether it is selected.
+    pub fn view(self) -> Radio {
+        let style = self.resolved_style();
+        let was = self.props.checked;
+        let label = self.props.label;
+        let on_change = self.props.on_change;
 
-        let tokens = match theme.get().component(ComponentId::Radio) {
-            ComponentTokens::Radio(t) => t,
-            _ => unreachable!(),
-        };
-        let size = tokens.size;
-        let bw = tokens.border_width;
-        let label_fs = tokens.label_font_size;
-
-        let halo = Container::new(Empty::new()).style(move |s| {
-            let t = theme.get();
-            let active = hover.get() || pressed.get() || focused.get();
-            let alpha = if pressed.get() { 30 } else { 20 };
-            let extra = 40.0 - size as f64;
-            s.absolute()
-                .inset_top(0.0)
-                .inset_left(0.0)
-                .size(40.0, 40.0)
-                .translate_x(-(extra / 2.0))
-                .translate_y(-(extra / 2.0))
-                .border_radius(9999.0)
-                .background(with_alpha(t.colors().primary, alpha).to_peniko())
-                .apply_if(!active, |s| s.hide())
-        });
-
-        let dot = Container::new(Empty::new()).style(move |s| {
-            let t = theme.get();
-            s.size(size * 0.5, size * 0.5)
-                .border_radius(9999.0)
-                .background(t.colors().primary.to_peniko())
-                .apply_if(!checked.get(), |s| s.hide())
-        });
-
-        let circle = Container::new(
-            Stack::new((halo, dot))
-                .style(|s| s.width_full().height_full().items_center().justify_center()),
-        )
-        .style(move |s| {
-            let t = theme.get();
-            let c = if checked.get() {
-                t.colors().primary
-            } else {
-                t.colors().outline
-            };
-            let c = if disabled {
-                with_alpha(t.colors().on_surface, 38)
-            } else {
-                c
-            };
-            s.size(size, size)
-                .border_radius(9999.0)
-                .border(bw)
-                .border_color(c.to_peniko())
-                .items_center()
-                .justify_center()
-        });
-
-        let label_view = Label::new(label_text).style(move |s| {
-            let t = theme.get();
-            let c = if disabled {
-                with_alpha(t.colors().on_surface, 38)
-            } else {
-                t.colors().on_surface
-            };
-            s.color(c.to_peniko()).font_size(label_fs)
-        });
-
-        let toggle = Rc::new(move || {
-            if !disabled {
-                let next = !checked.get();
-                checked.set(next);
-                if let Some(cb) = on_change.as_ref() {
-                    cb(next);
-                }
-            }
-        });
-
-        Stack::horizontal((circle, label_view))
-            .style(|s| s.items_center().gap(8.0).cursor(CursorStyle::Pointer))
-            .on_event(listener::Click, {
-                let toggle = toggle.clone();
-                move |_, _| {
-                    toggle();
-                    EventPropagation::Continue
-                }
-            })
-            .on_event(listener::KeyDown, move |_, e: &KeyboardEvent| {
-                if e.key == Key::Named(NamedKey::Enter) || e.key == Key::Character(" ".to_string()) {
-                    toggle();
-                }
-                EventPropagation::Continue
-            })
-            .on_event(listener::PointerEnter, {
-                let hover = hover;
-                move |_, _| {
-                    if !disabled {
-                        hover.set(true);
-                    }
-                    EventPropagation::Continue
-                }
-            })
-            .on_event(listener::PointerLeave, {
-                let hover = hover;
-                let pressed = pressed;
-                move |_, _| {
-                    hover.set(false);
-                    pressed.set(false);
-                    EventPropagation::Continue
-                }
-            })
-            .on_event(listener::PointerDown, {
-                let pressed = pressed;
-                move |_, _| {
-                    if !disabled {
-                        pressed.set(true);
-                    }
-                    EventPropagation::Continue
-                }
-            })
-            .on_event(listener::PointerUp, {
-                let pressed = pressed;
-                move |_, _| {
-                    pressed.set(false);
-                    EventPropagation::Continue
-                }
-            })
-            .on_event(listener::FocusGained, {
-                let focused = focused;
-                move |_, _| {
-                    if !disabled {
-                        focused.set(true);
-                    }
-                    EventPropagation::Continue
-                }
-            })
-            .on_event(listener::FocusLost, {
-                let focused = focused;
-                move |_, _| {
-                    focused.set(false);
-                    EventPropagation::Continue
-                }
-            })
-            .style(move |s| s.set_disabled(disabled).keyboard_navigable())
+        let mut radio = Radio::new(label)
+            .selected(was)
+            .disabled(self.props.disabled)
+            .style(style);
+        if let Some(on_change) = on_change {
+            radio = radio.on_select(move || on_change(!was));
+        }
+        radio
     }
 }
 
@@ -257,3 +295,14 @@ impl Default for MdRadio {
         Self::new(String::new())
     }
 }
+
+/// The engine's `RadioStyle`, under this kit's old name.
+///
+/// v1's `MdRadioStyle` carried `selected_color`, `unselected_color`, `size`,
+/// `border_width` and `label_font_size` -- and `selected_color` was the current
+/// ring colour rather than the selected one, so the struct said the same thing
+/// twice and nothing read it anyway. The alias keeps the name resolvable for
+/// callers without pretending a struct still exists. The `design_system` field
+/// has no successor: the engine's style names no design system, because it is not
+/// one.
+pub type MdRadioStyle = RadioStyle;

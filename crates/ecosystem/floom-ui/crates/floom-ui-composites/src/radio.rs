@@ -121,6 +121,12 @@ pub struct RadioStyle {
     pub disabled_color: Option<Color>,
 
     // --- label ---
+    /// The gap between the ring's right edge and the label's left edge.
+    ///
+    /// All three v1 kits wrote `8.0`; the engine's shared
+    /// `INDICATOR_LABEL_GAP` is `6.0`, so without this field the port would
+    /// move every kit's label two points left with nothing to show for it.
+    pub label_gap: f32,
     /// The label's font size. All three kits read it from `RadioTokens`.
     pub label_font_size: f32,
     /// The label's ink. All three kits use `on_surface`.
@@ -158,6 +164,7 @@ impl Default for RadioStyle {
             unselected_hovered_color: Some(Color::rgb(0xF5, 0xF7, 0xFA)),
             unselected_pressed_color: Some(Color::rgb(0xE2, 0xE8, 0xF0)),
             disabled_color: None,
+            label_gap: INDICATOR_LABEL_GAP,
             label_font_size: 14.0,
             label_color: Color::BLACK,
             halo: RadioHalo::default(),
@@ -433,7 +440,7 @@ impl Widget for Radio {
         .height as f32;
         Some(
             floom_core::LayoutRequest::new()
-                .width(side + INDICATOR_LABEL_GAP + label_width)
+                .width(side + self.style_.label_gap + label_width)
                 .height(side.max(label_height)),
         )
     }
@@ -543,7 +550,7 @@ impl Widget for Radio {
         }
 
         cx.fill_text(
-            Point::new(ring.x1 + f64::from(INDICATOR_LABEL_GAP), bounds.y0),
+            Point::new(ring.x1 + f64::from(self.style_.label_gap), bounds.y0),
             &self.label,
             style.label_font_size,
             FontWeight::Normal,
