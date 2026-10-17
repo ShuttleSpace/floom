@@ -81,9 +81,15 @@ fn to_paint(c: Color) -> PaintColor {
 ///
 /// That is not tidiness: v1 used `fluent_icon_svg`, and Fluent's `expand_more` is
 /// a different glyph from Material's. Using the Material table here would render a
-/// Material chevron in a Fluent control, and nothing would fail — which is exactly
-/// what happened to `fluent-treeview`, whose v1 source genuinely used `MdIcon`, so
-/// that one *is* Material's chevron and is left alone.
+/// Material chevron in a Fluent control, and nothing would fail.
+///
+/// Four other kits did exactly that: `fluent-treeview`, `cupertino-treeview`,
+/// `fluent-icon_button` and `cupertino-icon_button` all reached for
+/// `MdIcon` during the port. The first two claimed to be exceptions -- their
+/// comments said v1 "genuinely used" it -- which turned out to be a reading of
+/// their own import rather than of v1: both had used their own table and
+/// lost it. All four are repointed now.
+
 fn resolve_icon(name: &str) -> Option<floom_widgets::VectorIcon> {
     Some(floom_widget_fluent_icon::fluent_icon(name))
 }

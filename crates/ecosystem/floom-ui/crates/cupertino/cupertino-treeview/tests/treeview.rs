@@ -14,7 +14,7 @@ use floom_ui_composites::{TreeNode, TreeView};
 
 use floom_widget_cupertino_treeview::{CupertinoTreeview, to_engine_nodes};
 
-/// Activate Material and hand back a theme that will read it.
+/// Activate Cupertino and hand back a theme that will read it.
 ///
 /// `MultiTheme::new_for(ds)` does **not** select `ds` — it reads a process-global at
 /// every access (the porting plan's correction 9).

@@ -10,11 +10,12 @@
 //!
 //! ## What the port changed
 //!
-//! * `MdIcon::new("expand_more").view().style(..).on_event(Click, ..)` — the
-//!   `.view()` had no 2.0 meaning and the chain after it was v1's `Decorators`. In
-//!   2.0 the icon is a widget and a clickable one is that widget inside a
-//!   [`Pressable`]. v1's pointer cursor is gone for the fourth time in this port;
-//!   2.0's `PaintContext` has no cursor vocabulary.
+//! * v1's `svg(move || cupertino_icon_svg(chevron_name))` became a `VectorIcon` from
+//!   this kit's own table, because v1 handed out SVG *markup* and the engine draws
+//!   path data. In 2.0 the icon is a widget and a clickable one is that widget inside
+//!   a [`Pressable`], which is the work v1's `Decorators` chain did on the `svg` call.
+//!   v1's pointer cursor is gone for the fourth time in this port; 2.0's `PaintContext`
+//!   has no cursor vocabulary.
 //! * the tree's expansion state moved from a `RwSignal<Vec<TreeviewNode>>` that v1
 //!   mutated in place to the engine's shared forest, for the reason
 //!   `floom_ui_composites::TreeView` gives: no row can own an answer that changes how many
@@ -74,7 +75,10 @@ pub fn to_engine_nodes(nodes: &[TreeviewNode]) -> Vec<TreeNode> {
 /// Icon names are resolved by the kit, because three kits' icon sets differ and the
 /// engine has no business choosing between them.
 fn resolve_icon(name: &str) -> Option<VectorIcon> {
-    floom_widget_md_icon::MdIcon::new(name).resolve().into()
+    // This kit's own table. v1 used `cupertino_icon_svg`, and its `expand_more` is a
+    // different glyph from Material's — a lookup that reached for the Material table
+    // would draw a Material chevron in a Cupertino control and nothing would fail.
+    Some(floom_widget_cupertino_icon::cupertino_icon(name))
 }
 
 /// Cupertino's tree view.
