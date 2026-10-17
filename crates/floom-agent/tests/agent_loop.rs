@@ -4,19 +4,26 @@
 //! The fixture is a real widget tree — a checkbox and a text field — and the
 //! agent only ever sees protocol responses. Every assertion is made from what
 //! crossed the wire: a screenshot hash, a semantics entry, a counter.
+//!
+//! The text field is the engine's `TextInput`. It used to be `TextField`, which
+//! moved to the satellite `floom-ui` workspace that this crate cannot depend on.
+//! `TextInput` announces its *text* as its accessible name where `TextField`
+//! announced its placeholder while empty, so the two tests that type into it
+//! select it by role rather than by the label it used to publish; what they
+//! assert afterwards is unchanged.
 
 use floom_agent::{
     AgentError, AgentSession, Command, Command::*, LocalClient, LocalServer, Payload, Selector,
 };
 use floom_core::Axis;
 use floom_testkit::TestApp;
-use floom_widgets::{Checkbox, Stack, TextField};
+use floom_widgets::{Checkbox, Stack, TextInput};
 
 fn fixture() -> TestApp {
     let stack = Stack::new(Axis::Vertical)
         .gap(12.0)
         .push(|| Box::new(Checkbox::new("Agree")))
-        .push(|| Box::new(TextField::new().placeholder("Name")));
+        .push(|| Box::new(TextInput::with_text("").placeholder("Name")));
     TestApp::new(floom_types::Size::new(320.0, 160.0), stack)
 }
 
@@ -99,7 +106,7 @@ fn type_text_reaches_the_field_over_the_wire() {
         &mut server,
         &mut session,
         TypeText {
-            selector: Selector::Label("Name".into()),
+            selector: Selector::Role("textfield".into()),
             text: "Ada".into(),
         },
     ) {
@@ -191,7 +198,7 @@ fn performance_counters_add_up_over_the_session() {
         &mut server,
         &mut session,
         TypeText {
-            selector: Selector::Label("Name".into()),
+            selector: Selector::Role("textfield".into()),
             text: "Grace".into(),
         },
     )

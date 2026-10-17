@@ -85,6 +85,7 @@ impl_widget_any_labelled!(
     crate::radio::Radio,
     crate::slider::Slider,
     crate::tabs::Tabs,
+    crate::text_field::TextField,
 );
 
 // The leaves and rows are structural: they exist so a parent can hand the host

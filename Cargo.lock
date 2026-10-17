@@ -1163,6 +1163,7 @@ version = "0.2.0"
 dependencies = [
  "floom",
  "floom-forms",
+ "floom-widgets",
 ]
 
 [[package]]
@@ -1688,7 +1689,6 @@ dependencies = [
  "floom-accessibility",
  "floom-app",
  "floom-core",
- "floom-ime",
  "floom-layout",
  "floom-navigation",
  "floom-scene",

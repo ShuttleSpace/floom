@@ -10,9 +10,7 @@ use floom_core::{
 };
 use floom_scene::SceneNode;
 use floom_types::{Brush, Color, KeyEvent, Length, Modifiers, PointerEvent, PointerPhase};
-use floom_widgets::controls::{
-    Button, Checkbox, Pressable, Progress, Switch, SwitchPalette, TextField,
-};
+use floom_widgets::controls::{Button, Checkbox, Pressable, Progress, Switch, SwitchPalette};
 use floom_widgets::primitives::Text;
 use floom_widgets::Stack;
 use floom_widgets::testkit::{
@@ -130,118 +128,6 @@ fn button_reports_disabled_and_focusable_semantics() {
             .state
             .contains(SemanticsState::ENABLED)
     );
-}
-
-// --- TextField -------------------------------------------------------------
-
-#[test]
-fn text_field_edits_at_the_caret() {
-    let mut field = TextField::new().placeholder("name");
-    let id = allocate(&field);
-    field.set_focused(true);
-
-    for ch in ['a', 'b', 'c'] {
-        dispatch(&mut field, id, ROW, KeyEvent::down(Key::Char(ch)).into());
-    }
-    assert_eq!(field.text(), "abc");
-    assert_eq!(field.caret(), 3);
-
-    dispatch(
-        &mut field,
-        id,
-        ROW,
-        KeyEvent::down(Key::Named(NamedKey::ArrowLeft)).into(),
-    );
-    dispatch(
-        &mut field,
-        id,
-        ROW,
-        KeyEvent::down(Key::Named(NamedKey::Backspace)).into(),
-    );
-    assert_eq!(field.text(), "ac");
-    assert_eq!(field.caret(), 1);
-
-    dispatch(
-        &mut field,
-        id,
-        ROW,
-        KeyEvent::down(Key::Named(NamedKey::Delete)).into(),
-    );
-    assert_eq!(field.text(), "a");
-}
-
-#[test]
-fn text_field_caret_never_splits_a_codepoint() {
-    let mut field = TextField::new();
-    let id = allocate(&field);
-    field.set_focused(true);
-
-    for ch in ['中', '文'] {
-        dispatch(&mut field, id, ROW, KeyEvent::down(Key::Char(ch)).into());
-    }
-    assert_eq!(field.text(), "中文");
-
-    dispatch(
-        &mut field,
-        id,
-        ROW,
-        KeyEvent::down(Key::Named(NamedKey::ArrowLeft)).into(),
-    );
-    dispatch(
-        &mut field,
-        id,
-        ROW,
-        KeyEvent::down(Key::Named(NamedKey::Backspace)).into(),
-    );
-    assert_eq!(field.text(), "文", "caret moved one char, not one byte");
-}
-
-#[test]
-fn text_field_shortcuts_are_not_text_input() {
-    let mut field = TextField::new();
-    let id = allocate(&field);
-    field.set_focused(true);
-
-    dispatch(
-        &mut field,
-        id,
-        ROW,
-        KeyEvent::down(Key::Char('a'))
-            .with_modifiers(Modifiers::CONTROL)
-            .into(),
-    );
-    assert_eq!(field.text(), "", "Ctrl+A is a shortcut, not typing");
-}
-
-#[test]
-fn text_field_shows_placeholder_until_filled() {
-    let empty = TextField::new().placeholder("name");
-    let id = allocate(&empty);
-    let hint = empty.semantics_hint();
-    assert_eq!(hint.label.as_deref(), Some("name"));
-    assert_eq!(
-        semantics_snapshot(&empty, id, ROW),
-        "label=\"name\" (0.0, 0.0, 200.0, 32.0)"
-    );
-}
-
-#[test]
-fn text_field_submit_reports_current_value() {
-    let submitted = Rc::new(Cell::new(String::new()));
-    let sink = submitted.clone();
-    let mut field = TextField::new().value("hi").on_submit(move |text| {
-        sink.set(text.to_string());
-    });
-    let id = allocate(&field);
-    field.set_focused(true);
-
-    dispatch(
-        &mut field,
-        id,
-        ROW,
-        KeyEvent::down(Key::Named(NamedKey::Enter)).into(),
-    );
-    assert_eq!(submitted.take(), "hi");
 }
 
 // --- Checkbox / Switch -----------------------------------------------------

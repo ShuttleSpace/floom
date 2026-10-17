@@ -5,6 +5,13 @@
 //! applies that as *default* sizing: unpinned controls shrink-wrap their
 //! content, an explicit mount style still wins.
 //!
+//! `TextField` used to be named here too, and its case moved out with the
+//! widget: its measurement is pinned in
+//! `floom-ui-composites/tests/text_field_measure.rs`, which asserts the same
+//! 120px floor and 2x8 inset against the engine's numbers *and* against a
+//! style's own -- the second half is new, and is why the move needed a file
+//! rather than a deletion.
+//!
 //! `Radio` used to be named here too. It has no test in this file: the control
 //! it would have shared a body with (`Slider`) moved out with its own
 //! measurement, and the checkbox row above already covers "indicator + gap +
@@ -15,7 +22,7 @@
 use floom_app::{NodeId, WidgetHost};
 use floom_layout::{LayoutStyle, Length};
 use floom_types::Size;
-use floom_widgets::controls::{Button, Checkbox, Progress, Switch, TextField};
+use floom_widgets::controls::{Button, Checkbox, Progress, Switch};
 use floom_widgets::primitives::{Divider, Icon, Image, Spacer};
 
 fn node_bounds(host: &WidgetHost, node: NodeId) -> floom_types::Rect {
@@ -125,54 +132,6 @@ fn checkbox_includes_indicator_and_label_extent() {
     assert!(
         (switch_bounds.height() - 20.0).abs() < 1.5,
         "switch height = track height, got {switch_bounds:?}"
-    );
-}
-
-/// A text field's intrinsic width covers the shown text plus padding, never
-/// below the 120px minimum so an empty input stays usable; the height rests
-/// on the line height even with no value and no placeholder.
-#[test]
-fn textfield_keeps_a_minimum_width_and_measures_its_text() {
-    let mut host = WidgetHost::new();
-    host.set_size(Size::new(400.0, 200.0));
-    let root = host.mount_root(
-        LayoutStyle {
-            align_items: floom_layout::AlignItems::Start,
-            ..LayoutStyle::default()
-        },
-        floom_widgets::Container::new(),
-    );
-    // Empty field: floored at the minimum width.
-    let empty = host.mount(root, LayoutStyle::default(), TextField::new());
-    // A long value grows past the minimum.
-    let long_value = "a reasonably long piece of typed text";
-    let filled = host.mount(
-        root,
-        LayoutStyle::default(),
-        TextField::new().value(long_value),
-    );
-    host.frame();
-
-    let empty_bounds = node_bounds(&host, empty);
-    assert!(
-        (empty_bounds.width() - 120.0).abs() < 1.5,
-        "empty field floored at 120px, got {empty_bounds:?}"
-    );
-    assert!(
-        empty_bounds.height() >= 20.0,
-        "empty field still has a text row's height, got {empty_bounds:?}"
-    );
-
-    let filled_bounds = node_bounds(&host, filled);
-    let measured = floom_text::measure_text(long_value, 14.0, f64::INFINITY);
-    assert!(
-        (filled_bounds.width() - (measured.width + 16.0)).abs() < 1.5,
-        "filled field = text + 2x8 padding, got {filled_bounds:?} (text {})",
-        measured.width
-    );
-    assert!(
-        filled_bounds.width() > empty_bounds.width(),
-        "typed text widens the field past the minimum"
     );
 }
 

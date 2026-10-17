@@ -2,7 +2,7 @@
 //! cases in `.superpowers/sdd/device-verification-2026-09-15.md` need.
 //!
 //! `examples/floom-window` is deliberately a 222-line proof that the pipeline
-//! runs — a counter, a label, a gradient. It contains no `TextField`, no
+//! runs — a counter, a label, a gradient. It contains no text field, no
 //! `Dialog`, no `Select`, so none of the R1/R2 cases (real IME candidate window,
 //! popups escaping their parent's box, light dismiss, the entry animation,
 //! focus under a modal) could be driven against it. This example exists to be
@@ -16,7 +16,7 @@
 //!
 //! | control | case |
 //! | --- | --- |
-//! | two `TextField`s | R1-1…R1-4 (composition, candidate window, moving focus) |
+//! | two `TextInput`s | R1-1…R1-4 (composition, candidate window, moving focus) |
 //! | a `Select` | R2-1 (the reference: what an escaping popup looks like) |
 //! | `Dialog` (modal) | R2-4 (scrim must not dismiss), R2-8 (keyboard under a modal) |
 //! | `Popup` (non-modal) | R2-3 (click outside dismisses), R2-6 (fade in, then still) |
@@ -56,7 +56,7 @@ use floom_renderer_vello::VelloGpuPresenter;
 use floom_types::{NativeViewKind, Size, WindowId};
 use floom_widgets::{
     BottomSheet, Button, Dialog, NativeSurface, NavDestination, NavigationDrawer, Popup, Select,
-    Stack, Text, TextField,
+    Stack, Text, TextInput,
 };
 
 /// Which surface the last click asked for. Buttons write, the frame hook reads.
@@ -384,10 +384,10 @@ fn main() {
         // Two fields, so focus can be moved between two composition owners
         // (R1-4: only one composition may ever be live).
         .push_layout(LayoutRequest::new().width(240.0).height(28.0), || {
-            Box::new(TextField::new().placeholder("IME field A — type 你好 here"))
+            Box::new(TextInput::with_text("").placeholder("IME field A — type 你好 here"))
         })
         .push_layout(LayoutRequest::new().width(240.0).height(28.0), || {
-            Box::new(TextField::new().placeholder("IME field B — tab between the two"))
+            Box::new(TextInput::with_text("").placeholder("IME field B — tab between the two"))
         })
         .push_layout(LayoutRequest::new().width(240.0).height(28.0), || {
             Box::new(Select::new(["alpha", "beta", "gamma"]))

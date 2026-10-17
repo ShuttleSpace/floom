@@ -13,6 +13,11 @@
 //! a real windowing backend would deliver. Every interaction asserts on two
 //! things: the control's state moved, and the frame that followed had damage to
 //! paint.
+//!
+//! The text-field case used to live here too. It moved to
+//! `floom-ui-composites/tests/text_field_host.rs` with the widget, because the
+//! root workspace cannot reach a crate in the satellite `floom-ui` workspace; the
+//! two controls that stayed keep the file's original subject.
 
 use std::cell::Cell;
 use std::rc::Rc;
@@ -20,39 +25,7 @@ use std::rc::Rc;
 use floom_platform::KeyCode;
 use floom_testkit::TestApp;
 use floom_types::{Point, Size};
-use floom_widgets::{Checkbox, Switch, TextField};
-
-#[test]
-fn typing_reaches_the_focused_text_field() {
-    let mut app = TestApp::new(Size::new(200.0, 32.0), TextField::new().placeholder("name"));
-    let field = app.root();
-    assert_eq!(app.widget::<TextField>(field).text(), "");
-
-    // Nothing holds focus yet, so the character has nowhere to go.
-    assert!(!app.key(KeyCode::from_char('a')));
-    assert_eq!(app.widget::<TextField>(field).text(), "");
-
-    // Clicking focuses it…
-    app.press(Point::new(100.0, 16.0));
-    app.release(Point::new(100.0, 16.0));
-    assert!(app.is_focused(field), "pressing a text field focuses it");
-
-    // …and now committed text lands in the value, caret advancing with it.
-    assert!(app.commit("hi"), "typing repainted the field");
-    assert_eq!(app.widget::<TextField>(field).text(), "hi");
-    assert_eq!(app.widget::<TextField>(field).caret(), 2);
-
-    // Backspace removes the character before the caret.
-    assert!(app.key(KeyCode::BACKSPACE));
-    assert_eq!(app.widget::<TextField>(field).text(), "h");
-    assert_eq!(app.widget::<TextField>(field).caret(), 1);
-
-    // A plain character key arrives as text input too, not as a shortcut.
-    assert!(app.key(KeyCode::from_char('i')));
-    assert_eq!(app.widget::<TextField>(field).text(), "hi");
-
-    app.settle();
-}
+use floom_widgets::{Checkbox, Switch};
 
 #[test]
 fn a_click_toggles_a_checkbox() {

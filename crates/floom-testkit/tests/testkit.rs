@@ -13,7 +13,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use floom_core::{Axis, Child, ChildKey, LayoutRequest, OverlayKind, SemanticsRole};
 use floom_testkit::{DEFAULT_SIZE, Selector, TestApp};
 use floom_types::{Point, Rect, Size};
-use floom_widgets::{Button, Checkbox, Stack, Switch, Text, TextField};
+use floom_widgets::{Button, Checkbox, Stack, Switch, Text};
 
 /// A button that counts its clicks.
 ///
@@ -114,41 +114,12 @@ fn a_press_alone_does_not_complete_a_click() {
     assert_eq!(clicks.load(Ordering::SeqCst), 1);
 }
 
-#[test]
-fn type_text_focuses_the_target_then_commits() {
-    let mut app = TestApp::new(Size::new(200.0, 32.0), TextField::new().placeholder("name"));
-    assert_eq!(app.widget::<TextField>(app.root()).text(), "");
-
-    assert!(app.type_text(app.root(), "hi"), "typing repainted");
-    assert_eq!(app.widget::<TextField>(app.root()).text(), "hi");
-    assert!(app.is_focused(app.root()), "typing focused the field");
-
-    // Committed text goes through the same path, and the field announces it.
-    app.commit(" there");
-    assert_eq!(app.widget::<TextField>(app.root()).text(), "hi there");
-    app.assert_text(app.root(), "hi there");
-}
-
-#[test]
-fn a_preedit_does_not_change_the_value() {
-    let mut app = TestApp::new(Size::new(200.0, 32.0), TextField::new().placeholder("name"));
-    app.focus(app.root());
-
-    app.preedit("ni");
-    let field = app.widget::<TextField>(app.root());
-    assert_eq!(
-        field.text(),
-        "",
-        "an in-progress composition is not text yet"
-    );
-    assert_eq!(field.preedit(), "ni");
-    assert!(field.is_composing());
-
-    app.commit("你");
-    let field = app.widget::<TextField>(app.root());
-    assert_eq!(field.text(), "你", "committing finalizes the composition");
-    assert!(!field.is_composing());
-}
+// The two IME cases that were here moved to `floom-ui-composites/tests/text_field.rs`
+// with the widget: a `floom-testkit` test cannot mount a widget from the satellite
+// `floom-ui` workspace, and the field is the only thing in the tree that has a
+// value or a composition for those two assertions to be about. They still test
+// this crate -- `floom-ui-composites` depends on `floom-testkit`, so the same `TestApp`
+// delivers the typed text and the preedit underneath.
 
 #[test]
 fn a_tap_on_a_checkbox_toggles_it() {

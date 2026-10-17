@@ -12,7 +12,7 @@ use floom_layout::LayoutStyle;
 use floom_platform::{FakePlatform, KeyCode, Platform, PlatformEvent, WindowConfig};
 use floom_renderer_software::SoftwarePresenter;
 use floom_types::{Color, Point, Size, Length};
-use floom_widgets::{Button, Container, Stack, Text, TextField};
+use floom_widgets::{Button, Container, Stack, Text};
 
 /// A tiny window (64×48 logical, scale 1) so pixel arithmetic stays trivial.
 fn small_window() -> WindowConfig {
@@ -280,92 +280,6 @@ fn keyboard_ime_and_suspend_flow_through() {
     platform.resume();
     settle(&mut platform, &mut runner);
     assert!(runner.presenter_ready(), "resume re-attaches the surface");
-}
-
-/// An IME preedit lands on the focused text field and reports its caret rect
-/// to the platform; committing finalizes the text and dismisses the popup.
-///
-/// This is the gap R1 closes: the runner used to drop `ImePreedit` entirely,
-/// so a composition could never reach a widget. Now the runner routes the
-/// preedit to the focused field, which owns the `floom_ime` state machine and
-/// renders the marked text inline, and hands the OS the caret rect to anchor
-/// its popup — then clears that area when the composition commits.
-#[test]
-fn ime_preedit_updates_focused_field_then_commit_finalizes() {
-    let mut platform = FakePlatform::new();
-    let mut host = WidgetHost::new();
-    // Pinned to the window: this test exercises IME routing, not the field's
-    // intrinsic (content-fitting) size, so clicks land squarely on it.
-    let field = host.mount_root(
-        LayoutStyle {
-            width: Some(Length::Px(64.0)),
-            height: Some(Length::Px(48.0)),
-            ..LayoutStyle::default()
-        },
-        TextField::new(),
-    );
-    let mut runner = AppRunner::new(host, SoftwarePresenter::new());
-
-    let win = platform.create_window(small_window());
-    settle(&mut platform, &mut runner);
-
-    // Focus the field by clicking it (the field is the root, so it fills the
-    // whole 64×48 viewport). IME composition is meaningless without a target.
-    platform.inject_pointer_click(win, Point::new(32.0, 24.0));
-    settle(&mut platform, &mut runner);
-    assert_eq!(
-        runner.host().focused(),
-        Some(runner.host().node_id(field)),
-        "the field is focused after the click"
-    );
-
-    // A preedit arrives: the focused field owns the composition state.
-    platform.push_event(PlatformEvent::ImePreedit {
-        window: win,
-        text: "あ".into(),
-    });
-    settle(&mut platform, &mut runner);
-
-    let tf = runner
-        .host()
-        .widget::<TextField>(field)
-        .expect("field alive");
-    assert_eq!(tf.preedit(), "あ", "preedit text reached the field");
-    assert!(tf.is_composing(), "a composition is in flight");
-    assert_eq!(tf.text(), "", "nothing committed yet");
-
-    // The composition caret rect was reported to the platform so the OS popup
-    // can anchor above the right glyph.
-    let area = platform.ime_cursor_area().expect("caret area reported");
-    assert!(
-        area.1.width > 0.0 && area.1.height > 0.0,
-        "composing caret area is non-zero: {:?}",
-        area
-    );
-
-    // Committing finalizes the text and clears the composition.
-    platform.push_event(PlatformEvent::ImeCommit {
-        window: win,
-        text: "ok".into(),
-    });
-    settle(&mut platform, &mut runner);
-
-    let tf = runner
-        .host()
-        .widget::<TextField>(field)
-        .expect("field alive");
-    assert_eq!(tf.text(), "ok", "committed text landed in the field");
-    assert!(!tf.is_composing(), "composition ended on commit");
-    assert_eq!(tf.preedit(), "", "preedit cleared on commit");
-
-    // The runner dismissed the OS popup by pushing a zero-size cursor area.
-    let area = platform.ime_cursor_area().expect("area still reported");
-    assert_eq!(
-        (area.1.width, area.1.height),
-        (0.0, 0.0),
-        "popup dismissed (zero-size caret area): {:?}",
-        area
-    );
 }
 
 // ---------------------------------------------------------------------------

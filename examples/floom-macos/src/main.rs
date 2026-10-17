@@ -44,7 +44,7 @@ use floom_platform::{Clipboard, Ime, WindowConfig};
 use floom_platform_desktop::winit_backend::{WinitApp, WinitPlatform, run};
 use floom_renderer_vello::VelloGpuPresenter;
 use floom_types::{ElementId, Size, WindowId};
-use floom_widgets::{Button, Stack, Text, TextField};
+use floom_widgets::{Button, Stack, Text, TextInput};
 
 /// Text written to the clipboard by the startup probe and read back both
 /// immediately and after the first click. Distinctive on purpose: it has to be
@@ -252,12 +252,12 @@ impl MacWindowApp {
     /// Printed only on change, because the frame hook runs every frame.
     fn sync_text_field(&mut self) {
         let Some(node) = self.field else { return };
-        let Some(field) = self.runner.host().widget::<TextField>(node) else {
+        let Some(field) = self.runner.host().widget::<TextInput>(node) else {
             return;
         };
-        let text = field.text().to_string();
-        let preedit = field.preedit().to_string();
-        let composing = field.is_composing();
+        let text = field.text();
+        let preedit = field.preedit().unwrap_or_default().to_string();
+        let composing = field.preedit().is_some();
         if text == self.last_text
             && preedit == self.last_preedit
             && composing == self.last_composing
@@ -314,9 +314,7 @@ fn main() {
             // can prove characters arrived, but only pixels can show whether
             // they were drawn. (Typing over it is unaffected.)
             Box::new(
-                TextField::new()
-                    .value("你好世界")
-                    .placeholder("click here, then type"),
+                TextInput::with_text("你好世界").placeholder("click here, then type"),
             )
         })
         .push_layout(LayoutRequest::new().width(160.0).height(40.0), move || {
@@ -381,7 +379,7 @@ fn find_text_field(runner: &AppRunner<VelloGpuPresenter>) -> Option<NodeId> {
     let host = runner.host();
     for index in 0..host.node_count() {
         if let Some(node) = host.node_at(index) {
-            if host.widget::<TextField>(node).is_some() {
+            if host.widget::<TextInput>(node).is_some() {
                 return Some(node);
             }
         }
@@ -400,8 +398,8 @@ fn describe_focus(runner: &AppRunner<VelloGpuPresenter>, id: ElementId) -> Strin
         if host.node_id(node) != id {
             continue;
         }
-        if host.widget::<TextField>(node).is_some() {
-            return format!("TextField@{index}");
+        if host.widget::<TextInput>(node).is_some() {
+            return format!("TextInput@{index}");
         }
         if host.widget::<Button>(node).is_some() {
             return format!("Button@{index}");

@@ -2,12 +2,12 @@
 //!
 //! The forms crate never names a widget: a [`FieldBinding`] pairs a
 //! getter/setter with whatever control the app uses. These demos mount real
-//! `TextField`s and render the controller's own verdict beside them, so what
+//! `TextInput`s and render the controller's own verdict beside them, so what
 //! the gallery shows is the same `FormController` an app would drive.
 
 use floom_core::{Axis, Color, LayoutRequest, WidgetAny};
 use floom_forms::{FieldBinding, FormController, rules};
-use floom_widgets::{Stack, Text, TextField};
+use floom_widgets::{Stack, Text, TextInput};
 
 use super::{Demo, Section};
 
@@ -41,9 +41,9 @@ fn build_validation() -> Box<dyn WidgetAny> {
     // The binding is the bridge: the app owns the control, the form owns the
     // value, and neither has to know the other's type.
     let binding = FieldBinding::new(
-        |field: &TextField| field.text().to_string(),
-        |field: &mut TextField, value: &str| {
-            *field = std::mem::replace(field, TextField::new()).value(value);
+        |field: &TextInput| field.text(),
+        |field: &mut TextInput, value: &str| {
+            field.set_text(value);
         },
     );
 
@@ -54,12 +54,12 @@ fn build_validation() -> Box<dyn WidgetAny> {
     form.add_rule("email", rules::email());
     form.add_rule("password", rules::min_length(8));
 
-    // The controls exist only long enough to be read: a `TextField` is not
-    // `Send + Sync`, so it cannot be captured by a `Child` builder. What the
-    // builders capture is the *value* a form field ended up holding, which is
-    // also the direction the data really flows.
-    let email_value = binding.read(&TextField::new().value("alice@example"));
-    let password_value = binding.read(&TextField::new().value("short"));
+    // The controls exist only long enough to be read: a `TextInput` owns a
+    // `Mutex`, so it cannot be captured by a `Child` builder. What the builders
+    // capture is the *value* a form field ended up holding, which is also the
+    // direction the data really flows.
+    let email_value = binding.read(&TextInput::with_text("alice@example"));
+    let password_value = binding.read(&TextInput::with_text("short"));
     form.set_value("email", email_value.clone());
     form.set_value("password", password_value.clone());
     form.touch_all();
@@ -86,7 +86,7 @@ fn build_validation() -> Box<dyn WidgetAny> {
                 Box::new(Text::new("Email").size(12.0))
             })
             .push_layout(LayoutRequest::new().width(240.0).height(34.0), move || {
-                Box::new(TextField::new().value(email_value.clone()))
+                Box::new(TextInput::with_text(email_value.clone()))
             })
             .push_layout(LayoutRequest::new().height(16.0), move || {
                 Box::new(
@@ -99,7 +99,7 @@ fn build_validation() -> Box<dyn WidgetAny> {
                 Box::new(Text::new("Password").size(12.0))
             })
             .push_layout(LayoutRequest::new().width(240.0).height(34.0), move || {
-                Box::new(TextField::new().value(password_value.clone()))
+                Box::new(TextInput::with_text(password_value.clone()))
             })
             .push_layout(LayoutRequest::new().height(16.0), move || {
                 Box::new(

@@ -1,7 +1,7 @@
 //! Controls: the interactive widgets.
 
 use floom_core::{Axis, Color, LayoutRequest, WidgetAny};
-use floom_widgets::{Button, Checkbox, Progress, Spinner, Stack, Switch, TextField};
+use floom_widgets::{Button, Checkbox, Progress, Spinner, Stack, Switch};
 
 use super::{Demo, Section};
 
@@ -12,12 +12,6 @@ pub(super) fn demos() -> Vec<Demo> {
             title: "Button",
             section: Section::Controls,
             build: build_buttons,
-        },
-        Demo {
-            id: "text-field",
-            title: "TextField",
-            section: Section::Controls,
-            build: build_text_field,
         },
         Demo {
             id: "toggles",
@@ -56,22 +50,11 @@ fn build_buttons() -> Box<dyn WidgetAny> {
     )
 }
 
-fn build_text_field() -> Box<dyn WidgetAny> {
-    Box::new(
-        Stack::new(Axis::Vertical)
-            .gap(8.0)
-            .push_layout(LayoutRequest::new().width(260.0).height(36.0), || {
-                Box::new(TextField::new().placeholder("empty field"))
-            })
-            .push_layout(LayoutRequest::new().width(260.0).height(36.0), || {
-                Box::new(TextField::new().value("prefilled text"))
-            })
-            .push_layout(LayoutRequest::new().width(260.0).height(36.0), || {
-                Box::new(TextField::new().value("read-only").disabled(true))
-            }),
-    )
-}
-
+/// `TextField` had a demo row here until it moved to `floom-ui-composites`: it is
+/// the widest of the moved controls, because what a text field *looks like* is
+/// four kinds of ink and a focus affordance, and the engine's paint had no way
+/// to name any of them. `floom-demo` cannot depend on the satellite `floom`
+/// workspace to keep a gallery row, so the row is gone.
 /// The two toggles that are still primitives.
 ///
 /// `Radio` sat between the checkbox and the switch here until it moved to

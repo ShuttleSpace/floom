@@ -26,7 +26,7 @@ use floom_native::{
 use floom_overlay::OverlayKind;
 use floom_testkit::TestApp;
 use floom_types::{Point, Rect, ResourceId, Size};
-use floom_widgets::controls::{Button, TextField};
+use floom_widgets::controls::Button;
 use floom_widgets::primitives::Container;
 use floom_widgets::NativeSurface;
 
@@ -792,82 +792,6 @@ fn a_passthrough_participant_lets_the_widget_underneath_have_it() {
     app.click(Point::new(100.0, 60.0));
 
     assert_eq!(clicked.get(), 1, "a passthrough participant is transparent");
-}
-
-// --- focus and IME yield ---------------------------------------------------
-
-/// Focusing a participant blurs the framework element and stops the framework
-/// publishing an IME caret: two owners of the candidate window makes it jump
-/// between them (decision D4).
-#[test]
-fn focusing_a_participant_blurs_the_framework_and_masks_the_caret() {
-    let mut app = empty_app();
-    let root = app.root();
-    let field = app
-        .host_mut()
-        .mount(root, at(0.0, 0.0, 200.0, 40.0), TextField::new());
-    let surface = app.host_mut().mount(
-        root,
-        at(0.0, 60.0, 200.0, 40.0),
-        NativeSurface::new(NativeViewKind::TextInput).focusable(true),
-    );
-    let (fake, log) = provider();
-    app.host_mut().set_native_provider(fake);
-    app.frame();
-
-    // The framework composes, and publishes a caret for the OS popup.
-    app.focus(field);
-    app.preedit("にほん");
-    assert!(
-        app.host().ime_caret_rect().is_some(),
-        "a composing text field publishes its caret"
-    );
-
-    // The native text field takes focus.
-    app.focus(surface);
-    assert_eq!(log.focuses(), 1, "the provider was told to focus");
-    assert!(
-        app.host().focused().is_none(),
-        "the framework element let go, rather than sharing"
-    );
-    assert!(app.host().native_focused().is_some());
-    assert!(
-        app.host().ime_caret_rect().is_none(),
-        "and stopped publishing a caret while the participant owns the popup"
-    );
-}
-
-/// Handing focus back restores both halves: the framework element it displaced
-/// gets the keyboard again, and the caret comes back with it.
-#[test]
-fn handing_focus_back_restores_the_framework() {
-    let mut app = empty_app();
-    let root = app.root();
-    let field = app
-        .host_mut()
-        .mount(root, at(0.0, 0.0, 200.0, 40.0), TextField::new());
-    let surface = app.host_mut().mount(
-        root,
-        at(0.0, 60.0, 200.0, 40.0),
-        NativeSurface::new(NativeViewKind::TextInput).focusable(true),
-    );
-    let (fake, log) = provider();
-    app.host_mut().set_native_provider(fake);
-    app.frame();
-
-    app.focus(field);
-    app.preedit("にほん");
-    app.focus(surface);
-    assert!(app.host().focused().is_none());
-
-    app.focus(field);
-    assert_eq!(log.blurs(), 1, "the provider was told to give focus up");
-    assert!(
-        app.host().focused().is_some(),
-        "focus came back to the framework element it displaced"
-    );
-    assert!(app.host().ime_caret_rect().is_some(), "caret and all");
-    assert_eq!(app.host().focused(), Some(app.host().node_id(field)));
 }
 
 // --- virtualized rows ------------------------------------------------------

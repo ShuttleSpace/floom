@@ -29,7 +29,7 @@ mod android {
     use floom_platform_mobile::packages::keyboard::soft_input::soft_keyboard_state;
     use floom_renderer_vello::VelloGpuPresenter;
     use floom_types::{Size, WindowId};
-    use floom_widgets::{Button, Stack, Text, TextField};
+    use floom_widgets::{Button, Stack, Text, TextInput};
     use winit::platform::android::activity::AndroidApp;
 
     /// Text written to the clipboard by the one-shot service probe, and expected
@@ -227,15 +227,15 @@ mod android {
         /// only on change, because the frame hook runs on every frame.
         fn sync_text_field(&mut self) {
             let Some(node) = self.field else { return };
-            let Some(field) = self.runner.host().widget::<TextField>(node) else {
+            let Some(field) = self.runner.host().widget::<TextInput>(node) else {
                 return;
             };
-            let text = field.text().to_string();
-            let preedit = field.preedit().to_string();
+            let text = field.text();
+            let preedit = field.preedit().unwrap_or_default().to_string();
             if text == self.last_text && preedit == self.last_preedit {
                 return;
             }
-            let composing = field.is_composing();
+            let composing = field.preedit().is_some();
             eprintln!(
                 "floom-android: text field text={text:?} preedit={preedit:?} composing={composing}"
             );
@@ -285,7 +285,7 @@ mod android {
         let host = runner.host();
         for index in 0..host.node_count() {
             if let Some(node) = host.node_at(index) {
-                if host.widget::<TextField>(node).is_some() {
+                if host.widget::<TextInput>(node).is_some() {
                     return Some(node);
                 }
             }
@@ -353,7 +353,7 @@ mod android {
                 }))
             })
             .push_layout(LayoutRequest::new().width(260.0).height(40.0), || {
-                Box::new(TextField::new().placeholder("tap me, then type"))
+                Box::new(TextInput::with_text("").placeholder("tap me, then type"))
             });
 
         host.mount_root(LayoutStyle::default(), root);

@@ -418,7 +418,7 @@ pub mod prelude {
     pub use floom_widgets::{
         AnimatedContent, Button, Canvas, Checkbox, Conditional, Container, Crossfade, Divider,
         Grid, Icon, Image, ImageFit, InteractionState, List, Opacity, Progress, ShaderBox,
-        SharedTransitionLayout, Spacer, Spinner, Stack, Switch, Text, TextField,
+        SharedTransitionLayout, Spacer, Spinner, Stack, Switch, Text,
     };
 
     // --- Composite controls (floom-ui-composites, one layer up) ----------
@@ -455,6 +455,14 @@ pub mod prelude {
     // the style's default is the engine's old disc written as a ring. `Progress`
     // and `Checkbox` stay: neither's appearance is contested, so neither had a
     // reason to move.
+
+    // `TextField` moved up too, and it is the widest of the six: what a text
+    // field *does* -- hold a string, keep a caret in it, own an IME composition
+    // and render the preedit inline -- is primitive, but what it *looks like* is
+    // four kinds of ink (a rim, a fill, a placeholder, a committed run and an
+    // underlined preedit) plus a focus affordance, and the engine's paint had no
+    // way to express one. Its `paint` now reads a `TextFieldStyle` a kit fills
+    // in, whose default is the engine's old hard-coded fill and inks.
 
     // --- App shell (floom-app) -------------------------------------------
     pub use floom_app::{AppRunner, FrameStats, NodeId, RunStats, WidgetHost};

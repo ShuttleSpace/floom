@@ -8,12 +8,12 @@
 //!    field has been visited (or after a submit attempt).
 //! 3. **Control bindings** — the forms crate never names a widget; a
 //!    [`FieldBinding`] pairs a getter/setter with the control type the app
-//!    actually uses (here `floom::prelude::TextField`).
+//!    actually uses (here `floom_widgets::TextInput`).
 //!
 //! Run with `cargo run -p floom-forms-demo`.
 
-use floom::prelude::TextField;
 use floom_forms::{FieldBinding, FormController, Validation, rules};
+use floom_widgets::TextInput;
 
 fn main() {
     let mut form = FormController::new()
@@ -31,14 +31,14 @@ fn main() {
     // (2) Typing into controls. The binding is the bridge: the app owns the
     // control, the form owns the value.
     let binding = FieldBinding::new(
-        |field: &TextField| field.text().to_string(),
-        |field: &mut TextField, value: &str| {
-            *field = std::mem::replace(field, TextField::new()).value(value);
+        |field: &TextInput| field.text(),
+        |field: &mut TextInput, value: &str| {
+            field.set_text(value);
         },
     );
 
-    let mut email = TextField::new().value("alice@example");
-    let mut password = TextField::new().value("short");
+    let mut email = TextInput::with_text("alice@example");
+    let mut password = TextInput::with_text("short");
 
     form.set_value("email", binding.read(&email));
     form.set_value("password", binding.read(&password));
