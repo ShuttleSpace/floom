@@ -46,7 +46,8 @@ use floom_core_theme::props::radio::RadioProps;
 use floom_core_theme::theme::{MultiTheme, Theme};
 use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color_ext::with_alpha;
-use floom_ui_composites::{FocusRing, Radio, RadioHalo, RadioStyle};
+use floom_ui_composites::{FocusRing, Radio, RadioStyle};
+use floom_ui_composites::state::{LayerShape, StateLayer};
 use floom_widget_runtime::theme_signal;
 
 /// v1's halo was `.size(40.0, 40.0)`: an absolute number, not `size + pad * 2.0`
@@ -229,7 +230,7 @@ impl MdRadio {
 
             label_color: to_paint(colors.on_surface),
 
-            halo: RadioHalo {
+            halo: StateLayer {
                 color: to_paint(with_alpha(colors.primary, HALO_ALPHA)),
                 // The only kit of the three whose pressed tint differs from its
                 // resting one. v1 read one alpha per state from the same signal.
@@ -237,6 +238,7 @@ impl MdRadio {
                 // Absolute, not `size + 8`: see `HALO_SIZE`, and the test that
                 // pins the difference from the other two kits.
                 size: HALO_SIZE,
+                shape: LayerShape::Circle,
                 // v1's `active` was `hover || pressed || focused` -- all three
                 // gates, and no fourth one for the disabled state.
                 on_hover: true,

@@ -27,7 +27,8 @@ use std::rc::Rc;
 
 use floom_core::{Color, ElementId, Point, Rect, Widget};
 use floom_types::PointerEvent;
-use floom_ui_composites::{Radio, RadioHalo, RadioStyle};
+use floom_ui_composites::state::{LayerShape, StateLayer};
+use floom_ui_composites::{Radio, RadioStyle};
 use floom_widgets::testkit::{dispatch, AllocatingCreateContext, PaintOp, SceneRecorder};
 use floom_widgets::text_width_at;
 
@@ -368,10 +369,10 @@ fn material_opens_all_three_halo_gates_and_suppresses_none() {
     );
     assert_ne!(
         halo,
-        RadioHalo::default(),
+        StateLayer::default(),
         "the default draws nothing at all"
     );
-    assert_eq!(RadioHalo::default().size, 0.0);
+    assert_eq!(StateLayer::default().size, 0.0);
 }
 
 /// **The tripwire for the two kits converging.** v1 hard-coded

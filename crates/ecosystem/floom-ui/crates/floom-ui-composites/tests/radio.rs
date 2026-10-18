@@ -15,7 +15,8 @@ use std::rc::Rc;
 
 use floom_core::{ElementId, Key, NamedKey, Point, Rect, Widget};
 use floom_types::{Color, KeyEvent, PointerEvent};
-use floom_ui_composites::{Radio, RadioHalo, RadioStyle};
+use floom_ui_composites::state::{LayerShape, StateLayer};
+use floom_ui_composites::{Radio, RadioStyle};
 use floom_widgets::testkit::{AllocatingCreateContext, dispatch, paint_snapshot};
 
 /// The box the control is laid out in for every test here: wide enough for the
@@ -174,7 +175,7 @@ fn the_default_style_is_the_pre_style_pixels() {
     );
     assert_eq!(style.label_font_size, 14.0);
     assert_eq!(style.label_color, Color::BLACK);
-    assert_eq!(style.halo, RadioHalo::default(), "the engine drew no halo");
+    assert_eq!(style.halo, StateLayer::default(), "the engine drew no halo");
     assert_eq!(
         style.halo.size, 0.0,
         "and a default halo has no diameter, rather than a leftover constant"
@@ -438,10 +439,11 @@ fn a_disabled_radio_keeps_its_label_undimmed_by_default() {
 #[test]
 fn a_halo_draws_only_for_the_states_its_gates_open() {
     let style = RadioStyle {
-        halo: RadioHalo {
+        halo: StateLayer {
             color: Color::rgb(0x1A, 0x73, 0xE8),
             color_pressed: Some(Color::rgb(0x0B, 0x57, 0xA0)),
             size: 40.0,
+            shape: LayerShape::Circle,
             on_hover: true,
             on_press: true,
             on_focus: false,
@@ -496,11 +498,12 @@ fn a_halo_draws_only_for_the_states_its_gates_open() {
 fn the_halo_is_painted_before_the_ring() {
     let style = RadioStyle {
         unselected_hovered_color: None,
-        halo: RadioHalo {
+        halo: StateLayer {
             color: Color::rgb(0x1A, 0x73, 0xE8),
             size: 40.0,
+            shape: LayerShape::Circle,
             on_hover: true,
-            ..RadioHalo::default()
+            ..StateLayer::default()
         },
         ..RadioStyle::default()
     };

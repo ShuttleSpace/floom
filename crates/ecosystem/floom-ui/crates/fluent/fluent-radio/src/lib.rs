@@ -50,7 +50,8 @@ use floom_core_theme::props::radio::RadioProps;
 use floom_core_theme::theme::{MultiTheme, Theme};
 use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color_ext::with_alpha;
-use floom_ui_composites::{FocusRing, Radio, RadioHalo, RadioStyle};
+use floom_ui_composites::{FocusRing, Radio, RadioStyle};
+use floom_ui_composites::state::{LayerShape, StateLayer};
 
 /// v1's `let pad = 4.0`, applied to each side of the halo -- which is also the
 /// halo's diameter and, in v1, the control's hit area. Material's halo is a flat
@@ -241,7 +242,7 @@ impl FluentRadio {
 
             label_color: to_paint(colors.on_surface),
 
-            halo: RadioHalo {
+            halo: StateLayer {
                 // `on_surface`, not `primary` -- the one number that separates
                 // this kit from Cupertino's, and the reason the two crates stay
                 // separate rather than sharing an implementation.
@@ -253,6 +254,7 @@ impl FluentRadio {
                 // Relative, four points of padding on each side. Material's is a
                 // flat 40, and the two must not converge.
                 size: halo_size,
+                shape: LayerShape::Circle,
                 // v1's condition was `hover && !disabled`, and nothing else ever
                 // turned the halo on -- no press, no focus (see the module doc).
                 on_hover: true,

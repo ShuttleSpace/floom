@@ -29,7 +29,10 @@
 //! Everything except `paint` came across unchanged: the same revision model,
 //! the same pointer and keyboard handling, the same semantics.
 
-use crate::focus::FocusRing;
+use crate::{
+    focus::FocusRing,
+    state::{LayerShape, StateLayer},
+};
 use floom_accessibility::{SemanticsRole, SemanticsState};
 use floom_core::{
     Color, CreateContext, ElementId, Event, EventContext, Key, KeyEvent, KeyPhase, NamedKey,
@@ -41,35 +44,6 @@ use floom_widgets::{InteractionState, Revision, SemanticsHint, emit_semantics, r
 
 /// Gap between the ring's right edge and the start of the label.
 const INDICATOR_LABEL_GAP: f32 = 6.0;
-
-/// The state layer behind a radio's ring.
-///
-/// All three v1 kits draw one, but none of them draws the same one, and the
-/// gates differ as much as the tints do: Material's halo also answers focus and
-/// is drawn even when the radio is disabled, while Cupertino's and Fluent's are
-/// hover-only and disappear entirely when disabled. The defaults draw nothing
-/// at all, which is what the engine did before this type existed.
-#[derive(Debug, Clone, Copy, PartialEq, Default)]
-pub struct RadioHalo {
-    /// The halo while hovered or focused. Material uses `primary`@20,
-    /// Cupertino `primary`@10, Fluent `on_surface`@8.
-    pub color: Color,
-    /// The halo while pressed. Only Material had one (`primary`@30); `None`
-    /// means the halo keeps `color`.
-    pub color_pressed: Option<Color>,
-    /// The halo's diameter, centred on the ring. Material's is a flat 40,
-    /// Cupertino's and Fluent's are `size + 8`.
-    pub size: f32,
-    /// Draw the halo while hovered.
-    pub on_hover: bool,
-    /// Draw the halo while pressed.
-    pub on_press: bool,
-    /// Draw the halo while focused. Only Material's did.
-    pub on_focus: bool,
-    /// Draw nothing while disabled. Cupertino's and Fluent's did this; Material's
-    /// did not, so Material sets `false`.
-    pub suppressed_when_disabled: bool,
-}
 
 /// How a radio looks.
 ///
@@ -134,7 +108,7 @@ pub struct RadioStyle {
     pub label_color: Color,
 
     /// The state layer behind the ring.
-    pub halo: RadioHalo,
+    pub halo: StateLayer,
 
     /// The ring drawn around the whole control while focused.
     ///
@@ -180,7 +154,7 @@ impl Default for RadioStyle {
             label_gap: INDICATOR_LABEL_GAP,
             label_font_size: 14.0,
             label_color: Color::BLACK,
-            halo: RadioHalo::default(),
+            halo: StateLayer::default(),
             // The engine drew no focus affordance of any kind, and the halo
             // defaults to answering none of the states.
             focus_ring: None,
@@ -313,11 +287,12 @@ impl Radio {
     /// circle asked to appear at different moments, and there is no single
     /// boolean for "Material's" that is also true of Cupertino's.
     fn halo_shows(&self) -> bool {
-        let halo = self.style_.halo;
-        let gated = (self.state.hovered && halo.on_hover)
-            || (self.state.pressed && halo.on_press)
-            || (self.state.focused && halo.on_focus);
-        gated && !(halo.suppressed_when_disabled && self.state.disabled)
+        self.style_.halo.shows(
+            self.state.hovered,
+            self.state.pressed,
+            self.state.focused,
+            self.state.disabled,
+        )
     }
 
     /// A colour the interaction variants do not reach, with the style's one
@@ -535,16 +510,20 @@ impl Widget for Radio {
             }
         }
 
+        let halo = self.style_.halo;
         if self.halo_shows() {
-            let diameter = f64::from(style.halo.size);
+            // A radio's layer is always a circle; the `Box` arm is the
+            // checkbox's, and a radio that wrote one would be a kit asking for a
+            // shape this control does not draw.
+            debug_assert!(
+                matches!(halo.shape, LayerShape::Circle),
+                "a radio's state layer is a circle; `Box` is the checkbox's"
+            );
+            let diameter = f64::from(halo.size);
             cx.fill_rounded_rect(
                 Self::circle_at(centre, diameter),
                 (diameter / 2.0) as f32,
-                if self.state.pressed {
-                    style.halo.color_pressed.unwrap_or(style.halo.color)
-                } else {
-                    style.halo.color
-                },
+                halo.ink(self.state.pressed),
             );
         }
 
