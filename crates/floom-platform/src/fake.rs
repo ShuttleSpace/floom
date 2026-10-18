@@ -3,7 +3,7 @@
 use std::collections::HashMap;
 use std::time::Instant;
 
-use floom_types::{DisplayInfo, PlatformId, Point, ScaleFactor, Size, SurfaceId, WindowId};
+use floom_types::{CursorStyle, DisplayInfo, PlatformId, Point, ScaleFactor, Size, SurfaceId, WindowId};
 
 use crate::capabilities::{Capability, PlatformCapabilities};
 use crate::event::PlatformEvent;
@@ -43,9 +43,27 @@ struct FakeWindow {
     state: WindowState,
     surface: Option<FakeSurface>,
     next_surface: u32,
+    /// The last cursor the host asked for.
+    ///
+    /// Recorded rather than applied, so a test can assert on what a control
+    /// resolved to. This is the same trick `ime_cursor_area` plays for the
+    /// composition caret.
+    cursor: Option<CursorStyle>,
+    /// How many times `set_cursor` was called, whatever the value.
+    ///
+    /// Counting separately from `cursor` is the point: a runner that pushes the
+    /// same answer on every pointer move leaves `cursor` looking correct and is
+    /// still doing a platform round trip per motion event. Only a count shows
+    /// that.
+    cursor_calls: u32,
 }
 
 impl Window for FakeWindow {
+    fn set_cursor(&mut self, cursor: CursorStyle) {
+        self.cursor = Some(cursor);
+        self.cursor_calls += 1;
+    }
+
     fn id(&self) -> WindowId {
         self.id
     }
@@ -228,6 +246,31 @@ impl HostPlatform {
     pub fn ime_cursor_area(&self) -> Option<(Point, Size)> {
         self.ime_cursor_area
     }
+
+    /// The cursor the host last asked `window` to show, or `None` if it never
+    /// asked.
+    ///
+    /// `CursorStyle::Default` and "never asked" are different answers and this
+    /// keeps them apart: the first is a reset after leaving a control, the second
+    /// means nothing under the pointer has ever resolved.
+    /// How many times `window` has been told which cursor to show.
+    ///
+    /// The value in [`Self::cursor`] cannot answer "did the runner skip the
+    /// redundant call", because a redundant call leaves it unchanged.
+    pub fn cursor_calls(&self, window: WindowId) -> u32 {
+        self.windows
+            .values()
+            .find(|w| w.id == window)
+            .map(|w| w.cursor_calls)
+            .unwrap_or(0)
+    }
+
+    pub fn cursor(&self, window: WindowId) -> Option<CursorStyle> {
+        self.windows
+            .values()
+            .find(|w| w.id == window)
+            .and_then(|w| w.cursor)
+    }
 }
 
 impl Platform for HostPlatform {
@@ -251,6 +294,8 @@ impl Platform for HostPlatform {
             state: WindowState::Normal,
             surface: None,
             next_surface: 0,
+            cursor: None,
+            cursor_calls: 0,
         };
         let surface = window.create_surface(SurfaceConfig {
             size: config.size,

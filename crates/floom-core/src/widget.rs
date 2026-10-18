@@ -203,4 +203,18 @@ pub trait Widget {
     fn set_focused(&mut self, focused: bool) {
         let _ = focused;
     }
+    /// The pointer shape to show while this widget is under the pointer.
+    ///
+    /// A default method, so no existing widget has to answer.
+    ///
+    /// The cursor is a property of what kind of thing a widget is, not of a
+    /// design system. A button is a pointer under Material, Cupertino and
+    /// Fluent alike, so this deliberately does *not* go in a style type and
+    /// does *not* get a builder. Do not add a `cursor` field to any style and
+    /// do not add a `.cursor()` builder to any widget: a kit that could make a
+    /// button not-a-button's cursor would be expressing something that is never
+    /// right.
+    fn cursor(&self) -> floom_types::CursorStyle {
+        floom_types::CursorStyle::Default
+    }
 }

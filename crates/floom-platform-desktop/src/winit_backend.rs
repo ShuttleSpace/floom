@@ -50,7 +50,7 @@ use floom_platform::{
     Clipboard, Ime, KeyCode, Modifiers, Platform, PlatformCapabilities, PlatformEvent,
     SurfaceConfig, SurfaceTarget, Window, WindowConfig, WindowState,
 };
-use floom_types::{DisplayInfo, PlatformId, Point, ScaleFactor, Size, SurfaceId, WindowId};
+use floom_types::{CursorStyle, DisplayInfo, PlatformId, Point, ScaleFactor, Size, SurfaceId, WindowId};
 
 use winit::application::ApplicationHandler;
 use winit::event::{Ime as WinitIme, StartCause, WindowEvent};
@@ -60,6 +60,13 @@ use winit::window::{
     ImeCapabilities, ImeEnableRequest, ImeRequest, ImeRequestData, Window as WinitWindow,
     WindowAttributes, WindowId as WinitWindowId,
 };
+
+// The `floom-winit` fork keeps `CursorIcon` private -- it does
+// `use cursor_icon::CursorIcon;` internally -- so naming a shape means naming the
+// `cursor-icon` crate itself. That is already a transitive dependency of the fork
+// at one version in `Cargo.lock`, so this adds a line rather than a download, and
+// Cargo unifies the two references to the same type.
+use cursor_icon::CursorIcon;
 
 use crate::winit_input;
 
@@ -147,6 +154,18 @@ impl Window for WinitWindowAdapter {
 
     fn request_redraw(&mut self) {
         self.native.request_redraw();
+    }
+
+    /// Winit takes `&self`, so this stays a plain read-and-forward; the
+    /// `&mut` is only there because the platform contract's other requests are
+    /// all mutating.
+    fn set_cursor(&mut self, cursor: CursorStyle) {
+        let icon = match cursor {
+            CursorStyle::Default => CursorIcon::Default,
+            CursorStyle::Pointer => CursorIcon::Pointer,
+            CursorStyle::Text => CursorIcon::Text,
+        };
+        self.native.set_cursor(icon.into());
     }
 
     fn surface_id(&self) -> Option<SurfaceId> {

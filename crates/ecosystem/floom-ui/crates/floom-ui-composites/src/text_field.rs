@@ -875,4 +875,14 @@ impl Widget for TextField {
     fn semantics(&self, cx: &mut dyn SemanticsContext, _id: ElementId) {
         emit_semantics(self.semantics_hint(), cx);
     }
+
+    fn cursor(&self) -> floom_types::CursorStyle {
+        // A disabled control gets the platform arrow: a pointer over a
+        // thing that cannot be clicked is a promise the control cannot keep.
+        if self.state.disabled {
+            floom_types::CursorStyle::Default
+        } else {
+            floom_types::CursorStyle::Text
+        }
+    }
 }

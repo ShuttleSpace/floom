@@ -1331,6 +1331,7 @@ dependencies = [
 name = "floom-platform-desktop"
 version = "0.2.0"
 dependencies = [
+ "cursor-icon",
  "floem-winit",
  "floom-accessibility",
  "floom-native",

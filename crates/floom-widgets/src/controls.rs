@@ -590,6 +590,16 @@ impl Widget for Button {
     fn semantics(&self, cx: &mut dyn SemanticsContext, _id: ElementId) {
         crate::primitives::emit_semantics(self.semantics_hint(), cx);
     }
+
+        fn cursor(&self) -> floom_types::CursorStyle {
+        // A disabled control gets the platform arrow: a pointer over a
+        // thing that cannot be clicked is a promise the control cannot keep.
+        if self.state.disabled {
+            floom_types::CursorStyle::Default
+        } else {
+            floom_types::CursorStyle::Pointer
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -967,7 +977,6 @@ impl std::fmt::Debug for Checkbox {
             .finish_non_exhaustive()
     }
 }
-
 impl Widget for Checkbox {
     fn set_focused(&mut self, focused: bool) {
         // Forward to the inherent builder, which bumps the revision.
@@ -1057,6 +1066,16 @@ impl Widget for Checkbox {
 
     fn semantics(&self, cx: &mut dyn SemanticsContext, _id: ElementId) {
         crate::primitives::emit_semantics(self.semantics_hint(), cx);
+    }
+
+    fn cursor(&self) -> floom_types::CursorStyle {
+        // A disabled control gets the platform arrow: a pointer over a
+        // thing that cannot be clicked is a promise the control cannot keep.
+        if self.state.disabled {
+            floom_types::CursorStyle::Default
+        } else {
+            floom_types::CursorStyle::Pointer
+        }
     }
 }
 
@@ -1441,6 +1460,16 @@ impl Widget for Switch {
 
     fn semantics(&self, cx: &mut dyn SemanticsContext, _id: ElementId) {
         crate::primitives::emit_semantics(self.semantics_hint(), cx);
+    }
+
+    fn cursor(&self) -> floom_types::CursorStyle {
+        // A disabled control gets the platform arrow: a pointer over a
+        // thing that cannot be clicked is a promise the control cannot keep.
+        if self.state.disabled {
+            floom_types::CursorStyle::Default
+        } else {
+            floom_types::CursorStyle::Pointer
+        }
     }
 }
 

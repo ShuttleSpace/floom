@@ -31,7 +31,7 @@ pub use color::Color;
 pub use display::{DisplayInfo, ScaleFactor};
 pub use event::{
     Event, ImeUpdate, Key, KeyEvent, KeyPhase, Modifiers, NamedKey, PointerButton, PointerEvent,
-    PointerKind, PointerPhase, ScrollEvent,
+    PointerKind, PointerPhase, CursorStyle, ScrollEvent,
 };
 pub use geometry::{Constraints, Edges, Insets, Length, Point, Rect, Size, Transform};
 pub use ids::{ElementId, NativeViewId, PlatformId, ResourceId, SceneNodeId, SurfaceId, WindowId};

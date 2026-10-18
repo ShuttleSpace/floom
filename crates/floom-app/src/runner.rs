@@ -38,8 +38,8 @@ use floom_platform::{Platform, PlatformEvent, SurfaceTarget};
 use floom_renderer::{AttachedSurface, ExternalFrame, Presenter, SurfaceHandles};
 use floom_services::{Scope, Services};
 use floom_types::{
-    Event, ImeUpdate, Key, KeyEvent, KeyPhase, Modifiers, Point, PointerEvent, PointerKind,
-    PointerPhase, Rect, ScrollEvent, Size, SurfaceId, WindowId,
+    CursorStyle, Event, ImeUpdate, Key, KeyEvent, KeyPhase, Modifiers, Point, PointerEvent,
+    PointerKind, PointerPhase, Rect, ScrollEvent, Size, SurfaceId, WindowId,
 };
 
 use crate::{FrameStats, WidgetHost};
@@ -75,6 +75,15 @@ struct WindowRecord {
     surface: Option<SurfaceId>,
     size: Size,
     scale: f64,
+    /// The cursor this window is currently showing, or `None` if the host has
+    /// never been asked.
+    ///
+    /// Kept so the runner can skip the call when nothing changed: a pointer
+    /// move arrives per motion event, and setting a cursor shape is a platform
+    /// round trip, not a memory write. `None` and `Some(Default)` are different
+    /// answers -- "never asked" versus "reset after leaving a control" -- so the
+    /// default is stored rather than inferred from an absent field.
+    cursor: Option<CursorStyle>,
 }
 
 /// Connects a platform, a widget host and a presenter.
@@ -226,6 +235,7 @@ impl<R: Presenter> AppRunner<R> {
                         surface: Some(surface),
                         size,
                         scale,
+                        cursor: None,
                     },
                 );
                 if !self.order.contains(&window) {
@@ -301,6 +311,7 @@ impl<R: Presenter> AppRunner<R> {
                         .into(),
                     "pointer move",
                 );
+                self.sync_cursor(platform, window, position);
                 self.request_repaint(platform, window);
             }
             PlatformEvent::PointerButton {
@@ -327,6 +338,11 @@ impl<R: Presenter> AppRunner<R> {
                     .into(),
                     "pointer button",
                 );
+                // A touch device may tap without a hover ever arriving first, so
+                // the cursor is resolved here too. `sync_cursor` skips the work
+                // when the answer has not changed, so the second call costs a
+                // hit test and nothing more.
+                self.sync_cursor(platform, window, position);
                 self.request_repaint(platform, window);
             }
             PlatformEvent::Scroll {
@@ -524,6 +540,29 @@ impl<R: Presenter> AppRunner<R> {
     /// In a real window this turns into `request_redraw`; on a poll-driven
     /// backend it queues a `RedrawRequested` for the next pump. Idempotent per
     /// frame — the platform coalesces redraw requests.
+    /// Puts the window's cursor where the widget under `position` wants it.
+    ///
+    /// Skips the platform call when the answer is unchanged, because a pointer
+    /// move arrives per motion event and setting a shape is a round trip.
+    fn sync_cursor<P: Platform>(
+        &mut self,
+        platform: &mut P,
+        window: WindowId,
+        position: Point,
+    ) {
+        let wanted = self.host.resolve_cursor(position);
+        let Some(record) = self.windows.get_mut(&window.index()) else {
+            return;
+        };
+        if record.cursor == Some(wanted) {
+            return;
+        }
+        record.cursor = Some(wanted);
+        if let Some(w) = platform.window_mut(window) {
+            w.set_cursor(wanted);
+        }
+    }
+
     fn request_repaint<P: Platform>(&mut self, platform: &mut P, window: WindowId) {
         if self.windows.contains_key(&window.index()) {
             platform.request_frame(window);

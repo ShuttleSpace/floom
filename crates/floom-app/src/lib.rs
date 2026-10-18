@@ -49,7 +49,7 @@ use floom_scene::{Resource, ResourceKind, ResourceRegistry, Scene, SceneNode, Sc
 use floom_text::{LayoutCache, TextAlign, TextLayoutOptions, TextShaper};
 use floom_types::NativeCapture;
 use floom_types::ScrollEvent;
-use floom_types::{ClipRegion, resolve_clip};
+use floom_types::{ClipRegion, CursorStyle, resolve_clip};
 use floom_widgets::WidgetAny;
 use smallvec::SmallVec;
 
@@ -3255,6 +3255,23 @@ impl WidgetHost {
             }
         }
         self.router.resolve_target(point)
+    }
+
+    /// The pointer shape for a point: whatever the widget under it asks for, or
+    /// the platform default over empty space.
+    ///
+    /// Resolution goes through `resolve_pointer` rather than the hit tester
+    /// directly, so an open overlay answers for its own subtree and the cursor
+    /// follows the same element a click would. Overlay nodes live in the same
+    /// `nodes` vec as everything else -- `overlay_node` hands back an index into
+    /// it -- so `index_of` covers both trees.
+    fn resolve_cursor(&self, point: Point) -> CursorStyle {
+        let Some(hit) = self.resolve_pointer(point) else {
+            return CursorStyle::Default;
+        };
+        self.index_of(hit.target)
+            .map(|index| self.nodes[index].widget.cursor())
+            .unwrap_or(CursorStyle::Default)
     }
 
     // --- native composition ------------------------------------------------
