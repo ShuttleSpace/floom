@@ -624,3 +624,23 @@ fn the_three_design_systems_still_resolve_identical_tokens() {
     assert_eq!(fluent_tokens.size, radio_tokens().size);
     assert_eq!(fluent_tokens.size, style().size);
 }
+
+/// Material answers focus with its halo, not with a ring.
+///
+/// This is the control for the other two kits' tests: a `FocusRing` here would
+/// be a second focus affordance on the same control, and Material's v1 drew
+/// exactly one -- the 40px halo, gated on focus as well as hover and press.
+#[test]
+fn material_answers_focus_with_the_halo_and_draws_no_ring() {
+    let style = style();
+
+    assert_eq!(
+        style.focus_ring, None,
+        "v1 drew no outline on this kit's radio; `None` is that answer, not an \
+         absence of one"
+    );
+    assert_eq!(
+        style.halo.on_focus, true,
+        "the halo is what carries focus here, so its focus gate is open"
+    );
+}

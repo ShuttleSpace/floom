@@ -19,6 +19,7 @@ pub mod badge;
 pub mod accordion;
 pub mod bottom_sheet;
 pub mod dialog;
+pub mod focus;
 pub mod overlay;
 pub mod overlay_bookkeeping;
 pub mod popup;
@@ -38,6 +39,7 @@ pub mod text_field;
 
 pub use accordion::{Accordion, AccordionIndicator, AccordionStyle, SelectGroup, SelectGroupStyle, SelectionMode};
 pub use bottom_sheet::BottomSheet;
+pub use focus::FocusRing;
 pub use dialog::Dialog;
 pub use overlay::Overlay;
 pub use overlay_bookkeeping::OverlayHost;

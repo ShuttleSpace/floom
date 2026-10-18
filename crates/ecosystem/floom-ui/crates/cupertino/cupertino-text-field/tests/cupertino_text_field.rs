@@ -652,14 +652,9 @@ fn the_focus_affordance_is_a_hovered_rim_of_primary_at_120() {
         "and the resting rim is the same one point"
     );
     assert_eq!(
-        style.focus_outline_width, 0.0,
-        "and no ring outside the box: Material draws none either, Fluent's `2.0` \
-         is the third answer"
-    );
-    assert_eq!(
-        style.focus_outline_color,
-        TextFieldStyle::default().focus_outline_color,
-        "a ring colour nothing reads stays at the default rather than being named"
+        style.focus_ring, None,
+        "and no ring outside the box: Material draws none either, and Fluent's \
+         `2.0` in `primary` is the third answer"
     );
     assert_eq!(style.border_color_focused, tint(colors.primary, 255));
 
@@ -669,7 +664,7 @@ fn the_focus_affordance_is_a_hovered_rim_of_primary_at_120() {
         "control: Material thickens its rim on focus"
     );
     assert_ne!(
-        style.focus_outline_width, 2.0,
+        style.focus_ring.as_ref().map(|r| r.width), Some(2.0),
         "control: Fluent rings the box"
     );
 }

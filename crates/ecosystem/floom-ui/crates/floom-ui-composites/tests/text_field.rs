@@ -21,7 +21,7 @@ use floom_core::{ElementId, Key, NamedKey, Point, Rect, Widget};
 use floom_testkit::TestApp;
 use floom_text::measure_text;
 use floom_types::{Color, KeyEvent, Length, Modifiers, PointerEvent, Size};
-use floom_ui_composites::{TextField, TextFieldStyle};
+use floom_ui_composites::{FocusRing, TextField, TextFieldStyle};
 use floom_widgets::testkit::{
     dispatch, paint_snapshot, semantics_snapshot, AllocatingCreateContext,
 };
@@ -235,10 +235,11 @@ fn the_default_style_is_the_pre_style_pixels() {
     assert_eq!(style.border_color_disabled, Color::WHITE, "ditto");
 
     assert_eq!(
-        style.focus_outline_width, 0.0,
-        "the engine had no focus ring to draw"
+        style.focus_ring, None,
+        "the engine had no focus ring to draw, and `None` is that answer rather \
+         than a ring of no thickness -- which is why the field is an `Option` and \
+         not a width"
     );
-    assert_eq!(style.focus_outline_color, Color::TRANSPARENT, "ditto");
 
     assert_eq!(style.background_color, Color::WHITE);
     assert_eq!(
@@ -465,8 +466,12 @@ fn a_style_with_a_rim_strokes_one_inside_the_bounds_and_insets_the_text() {
 #[test]
 fn the_focus_ring_is_drawn_outside_the_layout_box() {
     let ringed = TextFieldStyle {
-        focus_outline_width: 2.0,
-        focus_outline_color: Color::rgb(0x2B, 0x6C, 0xB0),
+        focus_ring: Some(FocusRing {
+            width: 2.0,
+            color: Color::rgb(0x2B, 0x6C, 0xB0),
+            gap: 0.0,
+            radius: None,
+        }),
         border_radius: 4.0,
         ..TextFieldStyle::default()
     };

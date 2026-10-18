@@ -48,7 +48,7 @@ use floom_core_theme::props::radio::RadioProps;
 use floom_core_theme::theme::{MultiTheme, Theme};
 use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color_ext::with_alpha;
-use floom_ui_composites::{Radio, RadioHalo, RadioStyle};
+use floom_ui_composites::{FocusRing, Radio, RadioHalo, RadioStyle};
 
 /// v1's `let pad = 4.0`, applied to each side of the halo -- which is also the
 /// halo's diameter and, in v1, the control's hit area. Material's halo is a flat
@@ -69,6 +69,8 @@ const HALO_ALPHA: u8 = 10;
 /// `primary`, so the third layer is a difference the engine's single
 /// `disabled_color` cannot carry. See `resolved_style`.
 const DISABLED_ALPHA: u8 = 38;
+/// v1 wrote `outline(2.0)`; `FocusRing` carries the number as a field.
+const FOCUS_RING_WIDTH: f32 = 2.0;
 
 /// Design-system colour -> engine colour.
 fn to_paint(c: Color) -> PaintColor {
@@ -252,7 +254,20 @@ impl CupertinoRadio {
                 on_focus: false,
                 suppressed_when_disabled: true,
             },
-        }
+        
+            // v1 ended this closure with
+            // `.focus(|s| s.outline(2.0).outline_color(colors().primary))`, so a
+            // focused Cupertino radio drew a 2px `primary` ring around the whole
+            // control -- indicator and label together, because the closure was
+            // on the container holding both. That is exactly a `FocusRing`, and
+            // `halo.on_focus` is `false` above so the two mechanisms do not both
+            // fire.
+            focus_ring: Some(FocusRing {
+                width: FOCUS_RING_WIDTH,
+                color: to_paint(colors.primary),
+                gap: 0.0,
+                radius: None,
+            })}
     }
 
     /// The radio, ready to mount.

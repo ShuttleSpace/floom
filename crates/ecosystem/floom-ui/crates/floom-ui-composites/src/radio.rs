@@ -29,6 +29,7 @@
 //! Everything except `paint` came across unchanged: the same revision model,
 //! the same pointer and keyboard handling, the same semantics.
 
+use crate::focus::FocusRing;
 use floom_accessibility::{SemanticsRole, SemanticsState};
 use floom_core::{
     Color, CreateContext, ElementId, Event, EventContext, Key, KeyEvent, KeyPhase, NamedKey,
@@ -134,6 +135,18 @@ pub struct RadioStyle {
 
     /// The state layer behind the ring.
     pub halo: RadioHalo,
+
+    /// The ring drawn around the whole control while focused.
+    ///
+    /// Cupertino's and Fluent's v1 radios both drew `outline(2.0)` in the theme's
+    /// `primary` around the ring *and the label*, which is this. Material's drew
+    /// none, because its halo already answers focus -- see [`RadioHalo::on_focus`]
+    /// -- so Material leaves this `None` and the two mechanisms do not both fire.
+    ///
+    /// Around the control's whole bounds, not the indicator's: v1 put the
+    /// `focus` closure on the container holding both, which is what a keyboard
+    /// user needs to see.
+    pub focus_ring: Option<FocusRing>,
 }
 
 /// The palette and geometry the engine hard-coded before a radio had a style.
@@ -168,6 +181,9 @@ impl Default for RadioStyle {
             label_font_size: 14.0,
             label_color: Color::BLACK,
             halo: RadioHalo::default(),
+            // The engine drew no focus affordance of any kind, and the halo
+            // defaults to answering none of the states.
+            focus_ring: None,
         }
     }
 }
@@ -509,6 +525,15 @@ impl Widget for Radio {
         let style = self.style_;
         let ring = self.dot_bounds(bounds);
         let centre = ring.center();
+
+        // First, so the halo and the rim both sit inside it. v1 put the focus
+        // closure on the container that held the indicator *and the label*, so
+        // the ring goes around the whole control's bounds.
+        if let Some(focus_ring) = style.focus_ring {
+            if self.state.focused {
+                focus_ring.paint(cx, bounds, 0.0);
+            }
+        }
 
         if self.halo_shows() {
             let diameter = f64::from(style.halo.size);

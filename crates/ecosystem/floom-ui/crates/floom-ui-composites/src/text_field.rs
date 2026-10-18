@@ -30,6 +30,7 @@
 //! A `TextField` built without a style still paints what it painted before the
 //! move.
 
+use crate::focus::FocusRing;
 use floom_accessibility::SemanticsRole;
 use floom_core::{
     Color, CreateContext, ElementId, Event, EventContext, Key, KeyPhase, NamedKey, PaintContext,
@@ -87,12 +88,15 @@ pub struct TextFieldStyle {
     /// The rim while disabled. All three kits: `on_surface`@38.
     pub border_color_disabled: Color,
 
-    // --- the focus outline, drawn *outside* the rim ---
-    /// Only Fluent drew one: a `2.0`-wide `primary` ring around the field while
-    /// focused. `0.0` draws none, which is what Material and Cupertino want --
-    /// Material thickens its rim instead.
-    pub focus_outline_width: f32,
-    pub focus_outline_color: Color,
+    // --- the focus affordance ---
+    /// The ring drawn around the field while focused.
+    ///
+    /// Only Fluent drew one, and what it drew was `2.0` wide in `primary`, flush
+    /// against the field -- so it is a `FocusRing` rather than two loose fields,
+    /// because the radios want the same four numbers and Material answers focus
+    /// by thickening its rim instead. `None` draws no ring, which is what
+    /// Material and Cupertino want.
+    pub focus_ring: Option<FocusRing>,
 
     // --- the fill ---
     /// Behind the text. All three kits: `surface`.
@@ -155,8 +159,7 @@ impl Default for TextFieldStyle {
             border_color_focused: Color::WHITE,
             border_color_hovered: None,
             border_color_disabled: Color::WHITE,
-            focus_outline_width: 0.0,
-            focus_outline_color: Color::TRANSPARENT,
+            focus_ring: None,
             background_color: Color::WHITE,
             background_color_hovered: Some(Color::rgb(0xF5, 0xF7, 0xFA)),
             background_color_pressed: Some(Color::WHITE),
@@ -778,21 +781,10 @@ impl Widget for TextField {
             cx.fill_rect(bounds, fill);
         }
 
-        if style.focus_outline_width > 0.0 && self.state.focused {
-            let width = f64::from(style.focus_outline_width);
-            let outside = Rect {
-                x0: bounds.x0 - width,
-                y0: bounds.y0 - width,
-                x1: bounds.x1 + width,
-                y1: bounds.y1 + width,
-            };
-            stroke_rounded_outline(
-                cx,
-                outside,
-                f64::from(style.border_radius) + width,
-                width,
-                style.focus_outline_color,
-            );
+        if let Some(ring) = style.focus_ring {
+            if self.state.focused {
+                ring.paint(cx, bounds, style.border_radius);
+            }
         }
 
         let rim_width = self.rim_width();

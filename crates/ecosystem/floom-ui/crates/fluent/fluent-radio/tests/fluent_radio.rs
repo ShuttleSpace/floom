@@ -667,3 +667,47 @@ fn the_three_design_systems_still_resolve_identical_tokens() {
     assert_eq!(fluent_tokens.size, radio_tokens().size);
     assert_eq!(fluent_tokens.size, style().size);
 }
+
+/// The focus affordance v1 drew and the engine had no field for until now.
+///
+/// v1 ended its style closure with
+/// `.focus(|s| s.outline(2.0).outline_color(colors().primary))`, so a focused
+/// Fluent radio drew a 2px `primary` ring around the whole control -- the
+/// indicator and the label together, because the closure was on the container
+/// holding both. That is a `FocusRing` with no gap and no pinned radius.
+#[test]
+fn the_focus_affordance_is_a_ring_around_the_whole_control() {
+    let binding = theme();
+    let colors = binding.colors();
+    let style = style();
+
+    let ring = style
+        .focus_ring
+        .expect("v1 drew `outline(2.0)` in `primary` and this is that ring");
+    assert_eq!(ring.width, 2.0, "v1 wrote `outline(2.0)`");
+    assert_eq!(ring.color.r, colors.primary.r, "in `primary`");
+    assert_eq!(ring.color.g, colors.primary.g);
+    assert_eq!(ring.color.b, colors.primary.b);
+    assert_eq!(
+        ring.gap,
+        0.0,
+        "flush against the control: Compose's `outline()` has no inset"
+    );
+    assert_eq!(
+        ring.radius, None,
+        "no pinned radius, so the ring follows whatever the control's own \
+         corners are"
+    );
+
+    assert_eq!(
+        style.halo.on_focus,
+        false,
+        "and the halo does not also answer focus, or a focused radio would \
+         carry two focus affordances at once"
+    );
+    assert_ne!(
+        ring.color.r, colors.on_surface.r,
+        "control: Fluent's *halo* is `on_surface`@8, which is a different answer \
+         and must not be confused with this one"
+    );
+}

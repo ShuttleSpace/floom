@@ -614,7 +614,7 @@ fn the_props_cross_into_the_widget() {
 /// assertions below is one of those answers, and a "harmonise the kits" edit
 /// that moved this kit onto another kit's answer lands on exactly one of them.
 ///
-/// The two `focus_outline` lines are worth reading together: `0.0` is also the
+/// The `focus_ring` assertions are worth reading together: `0.0` is also the
 /// engine's default, so on its own this assertion says nothing. What it rules out
 /// is Fluent -- and that is the point, because the *other* two answers are
 /// reachable from the default and this one is not.
@@ -631,14 +631,9 @@ fn the_focus_affordance_is_a_thicker_rim() {
          conditional is this kit's entire focus affordance"
     );
     assert_eq!(
-        style.focus_outline_width, 0.0,
+        style.focus_ring, None,
         "no ring outside the box: Material and Cupertino both draw none, and \
-         Fluent's `2.0` is the third answer"
-    );
-    assert_eq!(
-        style.focus_outline_color,
-        TextFieldStyle::default().focus_outline_color,
-        "a ring colour nothing reads stays at the default rather than being named"
+         Fluent's `2.0` in `primary` is the third answer"
     );
     assert!(
         style.border_color_hovered.is_none(),
@@ -652,7 +647,7 @@ fn the_focus_affordance_is_a_thicker_rim() {
         style.border_width_focused, 1.0,
         "control: Cupertino's and Fluent's rims never thicken"
     );
-    assert_ne!(style.focus_outline_width, 2.0, "control: Fluent's ring");
+    assert_ne!(style.focus_ring.as_ref().map(|r| r.width), Some(2.0), "control: Fluent's ring");
     assert_ne!(
         style.border_color_hovered,
         Some(tint(colors.primary, 120)),

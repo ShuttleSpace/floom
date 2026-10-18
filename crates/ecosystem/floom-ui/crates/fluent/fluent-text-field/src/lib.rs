@@ -41,8 +41,7 @@
 //! Fluent rings. Its `view()` ended with
 //! `.focus(|s| s.outline(2.0).outline_color(t.colors().primary.to_peniko()))`, so
 //! the only difference from the other two crates is a `2.0`-wide `primary`
-//! outline drawn *outside* the rim, which is the engine's `focus_outline_width`
-//! and `focus_outline_color`. Its rim stays one point thick and it drew no
+//! outline drawn *outside* the rim, which is the engine's `FocusRing`. Its rim stays one point thick and it drew no
 //! hovered rim, so `border_width_focused` is `BORDER_WIDTH` and
 //! `border_color_hovered` is `None`. Material thickens its rim instead and
 //! Cupertino tints it on hover; neither of those is this kit's answer, and a test
@@ -125,7 +124,7 @@ use floom_core_theme::props::text_field::TextFieldProps;
 use floom_core_theme::theme::{MultiTheme, Theme};
 use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color_ext::with_alpha;
-use floom_ui_composites::{TextField, TextFieldStyle};
+use floom_ui_composites::{FocusRing, TextField, TextFieldStyle};
 
 /// v1's rim at rest and while focused -- Fluent's focus affordance is a ring
 /// *outside* the rim, so the rim itself never changes thickness.
@@ -144,7 +143,8 @@ const DISABLED_FILL_ALPHA: u8 = 4;
 
 /// v1's `.focus(|s| s.outline(2.0).outline_color(primary))`: the only focus ring
 /// of the three kits, stroked outside the layout box so it is visible at all.
-const FOCUS_OUTLINE_WIDTH: f32 = 2.0;
+/// v1 wrote `outline(2.0)`; `FocusRing` carries the number as a field.
+const FOCUS_RING_WIDTH: f32 = 2.0;
 
 /// Design-system colour -> engine colour.
 fn to_paint(c: Color) -> PaintColor {
@@ -291,14 +291,6 @@ impl FluentTextField {
             border_color_hovered: None,
             border_color_disabled: tinted(colors.on_surface, DISABLED_ALPHA),
 
-            // --- the focus ring, drawn outside the rim ---
-            // The one focus ring of the three. v1's `.focus(|s| s.outline(2.0)...)`
-            // put it on the wrapping `Container`, i.e. outside the field, which
-            // is where `TextField` strokes it: inside the layout box the ring
-            // would be clipped and never seen at all. Material thickens its rim
-            // and Cupertino tints it instead.
-            focus_outline_width: FOCUS_OUTLINE_WIDTH,
-            focus_outline_color: to_paint(colors.primary),
 
             // --- the fill ---
             background_color: to_paint(colors.surface),
@@ -326,6 +318,21 @@ impl FluentTextField {
             //   hover that this port has no licence to make.
             // * `placeholder_color` and `preedit_color` -- the two colours no v1
             //   source ever named; see the module doc.
+            // --- the focus ring, drawn outside the rim ---
+            // v1 ended its style closure with
+            // `.focus(|s| s.outline(2.0).outline_color(t.colors().primary))` on
+            // the wrapping `Container`, so a focused Fluent field drew a 2px
+            // `primary` ring *outside* the field -- which is where `TextField`
+            // strokes it, because inside the layout box the ring would be
+            // clipped and never seen at all. Material and Cupertino drew no such
+            // ring: Material answers focus by thickening its rim instead, which
+            // is `border_width_focused` above.
+            focus_ring: Some(FocusRing {
+                width: FOCUS_RING_WIDTH,
+                color: to_paint(colors.primary),
+                gap: 0.0,
+                radius: None,
+            }),
             ..TextFieldStyle::default()
         }
     }

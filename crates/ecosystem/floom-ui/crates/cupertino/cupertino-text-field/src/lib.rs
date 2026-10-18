@@ -43,7 +43,7 @@
 //! difference from the other two crates is that `border_color_hovered` is
 //! a `Some` carrying `primary` at alpha 120 rather than `None`. Its rim stays
 //! one point thick while focused and it drew no focus ring, so
-//! `border_width_focused` is `BORDER_WIDTH` and `focus_outline_width` is `0.0`.
+//! `border_width_focused` is `BORDER_WIDTH` and `focus_ring` is `None`.
 //! Material thickens its rim instead and
 //! Fluent rings the box; neither of those is this kit's answer, and a test says
 //! so.
@@ -291,13 +291,6 @@ impl CupertinoTextField {
             border_color_hovered: Some(tinted(colors.primary, HOVERED_BORDER_ALPHA)),
             border_color_disabled: tinted(colors.on_surface, DISABLED_ALPHA),
 
-            // --- the focus ring, drawn outside the rim ---
-            // No ring outside the box. This kit's focus answer is the rim's
-            // colour, so the width is zero -- and the colour, which `paint` only
-            // reads when the width is positive, stays at the engine's default
-            // rather than being named here. Material draws no ring either;
-            // Fluent's `2.0` is the third answer.
-            focus_outline_width: 0.0,
 
             // --- the fill ---
             background_color: to_paint(colors.surface),
@@ -325,6 +318,13 @@ impl CupertinoTextField {
             //   hover that this port has no licence to make.
             // * `placeholder_color` and `preedit_color` -- the two colours no v1
             //   source ever named; see the module doc.
+            // --- the focus ring, drawn outside the rim ---
+            // No ring outside the box, and `None` is an answer rather than an
+            // absence of one: Material answers focus by thickening its rim
+            // (`border_width_focused` above), Cupertino by nothing at all, and
+            // Fluent's `2.0` `primary` ring is the third. Compose's `outline()`
+            // has no inset, so the two that draw one draw it flush.
+            focus_ring: None,
             ..TextFieldStyle::default()
         }
     }

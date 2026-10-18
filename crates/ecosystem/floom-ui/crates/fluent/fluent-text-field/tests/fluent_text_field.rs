@@ -627,7 +627,7 @@ fn the_props_cross_into_the_widget() {
 /// focus, Material thickens its rim, Cupertino tints it on hover.
 ///
 /// The two `border_width_focused` lines are the whole of this kit's answer
-/// against Material's, and the `assert_ne` on `focus_outline_width` is the whole
+/// against Material's, and the `assert_ne` on `focus_ring` is the whole
 /// of it against Cupertino's -- so all three answers are named in one place.
 #[test]
 fn the_focus_affordance_is_a_ring_outside_the_box() {
@@ -635,15 +635,24 @@ fn the_focus_affordance_is_a_ring_outside_the_box() {
     let colors = binding.colors();
     let style = style();
 
+    let ring = style
+        .focus_ring
+        .expect("v1 drew `.focus(|s| s.outline(2.0).outline_color(primary))`, and \
+                 that ring IS this kit's focus affordance");
+    assert_eq!(ring.width, 2.0, "v1 wrote `outline(2.0)`");
     assert_eq!(
-        style.focus_outline_width, 2.0,
-        "v1 wrote `.focus(|s| s.outline(2.0).outline_color(primary))`, and that ring \
-         IS this kit's focus affordance"
-    );
-    assert_eq!(
-        style.focus_outline_color,
+        ring.color,
         tint(colors.primary, 255),
         "v1's ring was an undimmed `primary`"
+    );
+    assert_eq!(
+        ring.gap,
+        0.0,
+        "flush against the field: Compose's `outline()` has no inset"
+    );
+    assert_eq!(
+        ring.radius, None,
+        "no pinned radius, so the ring follows the field's own corners"
     );
     assert_eq!(style.border_width, 1.0, "v1 wrote `.border(1.0)`");
     assert_eq!(
@@ -664,8 +673,13 @@ fn the_focus_affordance_is_a_ring_outside_the_box() {
         "control: Material thickens its rim from 1 to 2 on focus"
     );
     assert_ne!(
-        style.focus_outline_width, 0.0,
+        style.focus_ring, None,
         "control: Material and Cupertino both draw no ring at all"
+    );
+    assert_ne!(
+        ring.color,
+        tint(colors.primary, 120),
+        "control: Cupertino's answer tints the *rim* at 120, it does not ring"
     );
     assert_ne!(
         style.border_color_hovered,

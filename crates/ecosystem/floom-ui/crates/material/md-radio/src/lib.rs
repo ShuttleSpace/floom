@@ -46,7 +46,7 @@ use floom_core_theme::props::radio::RadioProps;
 use floom_core_theme::theme::{MultiTheme, Theme};
 use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color_ext::with_alpha;
-use floom_ui_composites::{Radio, RadioHalo, RadioStyle};
+use floom_ui_composites::{FocusRing, Radio, RadioHalo, RadioStyle};
 use floom_widget_runtime::theme_signal;
 
 /// v1's halo was `.size(40.0, 40.0)`: an absolute number, not `size + pad * 2.0`
@@ -244,7 +244,11 @@ impl MdRadio {
                 on_focus: true,
                 suppressed_when_disabled: false,
             },
-        }
+        
+            // Material answers focus with its halo instead -- see
+            // `RadioHalo::on_focus` -- so it must not also carry a ring, or a
+            // focused Material radio would show both at once.
+            focus_ring: None,}
     }
 
     /// The radio, ready to mount.

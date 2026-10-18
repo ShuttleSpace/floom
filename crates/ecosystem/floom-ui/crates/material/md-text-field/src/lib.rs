@@ -42,7 +42,7 @@
 //! `.border(if focused.get() { 2.0 } else { 1.0 })`, so the entire difference
 //! from the other two crates is that `border_width_focused` is `2.0` rather than
 //! `1.0`. It drew no hovered rim and no focus ring, which is why
-//! `border_color_hovered` is `None` and `focus_outline_width` is `0.0` here.
+//! `border_color_hovered` is `None` and `focus_ring` is `None` here.
 //! Cupertino tints the rim on hover instead, and Fluent rings the box on focus
 //! instead; neither of those is this kit's answer, and a test says so.
 //!
@@ -269,13 +269,6 @@ impl MdTextField {
             border_color_hovered: None,
             border_color_disabled: tinted(colors.on_surface, DISABLED_ALPHA),
 
-            // --- the focus ring, drawn outside the rim ---
-            // No ring outside the box. This kit's focus answer is the thicker rim
-            // above, so the width is zero -- and the colour, which `paint` only
-            // reads when the width is positive, stays at the engine's default
-            // rather than being named here. Cupertino draws no ring either;
-            // Fluent's `2.0` is the third answer.
-            focus_outline_width: 0.0,
 
             // --- the fill ---
             background_color: to_paint(colors.surface),
@@ -303,6 +296,13 @@ impl MdTextField {
             //   hover that this port has no licence to make.
             // * `placeholder_color` and `preedit_color` -- the two colours no v1
             //   source ever named; see the module doc.
+            // --- the focus ring, drawn outside the rim ---
+            // No ring outside the box, and `None` is an answer rather than an
+            // absence of one: Material answers focus by thickening its rim
+            // (`border_width_focused` above), Cupertino by nothing at all, and
+            // Fluent's `2.0` `primary` ring is the third. Compose's `outline()`
+            // has no inset, so the two that draw one draw it flush.
+            focus_ring: None,
             ..TextFieldStyle::default()
         }
     }
