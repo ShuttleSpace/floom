@@ -29,7 +29,6 @@ fn prelude_exports_the_semantic_widget_surface() {
 
     // Controls.
     exists::<Button>();
-    exists::<Checkbox>();
     exists::<Progress>();
     exists::<Switch>();
     exists::<InteractionState>();
@@ -246,7 +245,7 @@ fn prelude_widgets_participate_in_input_routing() {
     );
 }
 
-/// The sixteen names the prelude used to promise, as the negative half of the
+/// The seventeen names the prelude used to promise, as the negative half of the
 /// stability contract above.
 ///
 /// A *positive* assertion cannot express "this must not resolve": naming
@@ -260,7 +259,7 @@ fn prelude_widgets_participate_in_input_routing() {
 /// would put the shipped L9 facade above a crate the root workspace `exclude`s.
 #[test]
 fn the_prelude_does_not_promise_the_composites() {
-    const MOVED: [&str; 16] = [
+    const MOVED: [&str; 17] = [
         "Labeled",
         "NavHandle",
         "NavHost",
@@ -277,6 +276,7 @@ fn the_prelude_does_not_promise_the_composites() {
         "Slider",
         "Radio",
         "TextField",
+        "Checkbox",
     ];
 
     let crate_dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));

@@ -13,7 +13,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use floom_core::{Axis, Child, ChildKey, LayoutRequest, OverlayKind, SemanticsRole};
 use floom_testkit::{DEFAULT_SIZE, Selector, TestApp};
 use floom_types::{Point, Rect, Size};
-use floom_widgets::{Button, Checkbox, Stack, Switch, Text};
+use floom_widgets::{Button, Stack, Switch, Text};
 
 /// A button that counts its clicks.
 ///
@@ -115,21 +115,12 @@ fn a_press_alone_does_not_complete_a_click() {
 }
 
 // The two IME cases that were here moved to `floom-ui-composites/tests/text_field.rs`
-// with the widget: a `floom-testkit` test cannot mount a widget from the satellite
-// `floom-ui` workspace, and the field is the only thing in the tree that has a
-// value or a composition for those two assertions to be about. They still test
-// this crate -- `floom-ui-composites` depends on `floom-testkit`, so the same `TestApp`
-// delivers the typed text and the preedit underneath.
-
-#[test]
-fn a_tap_on_a_checkbox_toggles_it() {
-    let mut app = TestApp::new(Size::new(200.0, 32.0), Checkbox::new("Agree"));
-    assert!(!app.widget::<Checkbox>("Agree").is_checked());
-
-    app.tap("Agree");
-    assert!(app.widget::<Checkbox>("Agree").is_checked());
-    app.assert_text("Agree", "Agree");
-}
+// with the widget, and so did `a_tap_on_a_checkbox_toggles_it` -- to
+// `floom-ui-composites/tests/checkbox_host.rs`. A `floom-testkit` test cannot mount a widget
+// from the satellite `floom-ui` workspace, and in both cases the widget under test was the
+// only thing in the tree that had a value to toggle or a composition to complete for
+// the assertion to be about. They still test this crate -- `floom-ui-composites` depends on
+// `floom-testkit`, so the same `TestApp` delivers the same tap underneath.
 
 #[test]
 fn settling_an_already_settled_tree_finds_nothing_to_do() {

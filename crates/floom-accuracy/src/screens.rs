@@ -10,7 +10,7 @@
 use floom_accessibility::SemanticsRole;
 use floom_core::{Align, Axis, Child, ChildKey, LayoutRequest, WidgetAny};
 use floom_types::{Color, Size};
-use floom_widgets::{Checkbox, Container, Spacer, Stack, Switch, Text};
+use floom_widgets::{Container, Spacer, Stack, Switch, Text};
 
 use crate::labeled::Labeled;
 use crate::tokens::ScreenTokens;
@@ -213,8 +213,16 @@ impl Screen {
                 control_child("enable-sync", move || {
                     Box::new(Switch::new("Enable sync").on(true))
                 }),
+                // This row was a `Checkbox` until that moved to
+                // `floom-ui-composites`, which lives in the `floom-ui`
+                // workspace the root one excludes and which this
+                // measurement harness cannot depend on. `Switch` is the
+                // same role -- a labelled two-state control that publishes
+                // `CHECKED` -- and `extra_rows` still names the label, so
+                // the assertion that every screen publishes its labels is
+                // testing the same thing it was.
                 control_child("notifications", move || {
-                    Box::new(Checkbox::new("Show notifications"))
+                    Box::new(Switch::new("Show notifications"))
                 }),
             ],
             Screen::Dashboard => vec![

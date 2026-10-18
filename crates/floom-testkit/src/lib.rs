@@ -7,11 +7,11 @@
 //!
 //! ```no_run
 //! use floom_testkit::TestApp;
-//! use floom_widgets::Checkbox;
+//! use floom_widgets::Switch;
 //!
-//! let mut app = TestApp::new(floom_types::Size::new(200.0, 32.0), Checkbox::new("Agree"));
+//! let mut app = TestApp::new(floom_types::Size::new(200.0, 32.0), Switch::new("Agree"));
 //! assert!(app.tap("Agree"), "the click repainted");
-//! assert!(app.widget::<Checkbox>("Agree").is_checked());
+//! assert!(app.widget::<Switch>("Agree").is_on());
 //! ```
 //!
 //! # What it is, and what it is not

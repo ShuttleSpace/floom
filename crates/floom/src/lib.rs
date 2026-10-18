@@ -416,8 +416,8 @@ pub mod prelude {
     // --- Semantic widgets (floom-widgets) -------------------------------
     pub use floom_widgets::NativeSurface;
     pub use floom_widgets::{
-        AnimatedContent, Button, Canvas, Checkbox, Conditional, Container, Crossfade, Divider,
-        Grid, Icon, Image, ImageFit, InteractionState, List, Opacity, Progress, ShaderBox,
+        AnimatedContent, Button, Canvas, Conditional, Container, Crossfade, Divider, Grid, Icon,
+        Image, ImageFit, InteractionState, List, Opacity, Progress, ShaderBox,
         SharedTransitionLayout, Spacer, Spinner, Stack, Switch, Text,
     };
 
@@ -452,9 +452,18 @@ pub mod prelude {
     // all three kits paint a *stroked ring* with a filled dot. That is a
     // different shape rather than a different colour, so it could not be reached
     // by adding knobs -- the paint had to be rewritten around a `RadioStyle`, and
-    // the style's default is the engine's old disc written as a ring. `Progress`
-    // and `Checkbox` stay: neither's appearance is contested, so neither had a
-    // reason to move.
+    // the style's default is the engine's old disc written as a ring.
+    //
+    // `Checkbox` moved up last, and it is the sibling case: the engine painted a
+    // bare `#2B6CB0` fill with the character `U+2714` on it and no rim at all,
+    // where all three kits paint a 2px rim around the box, a transparent
+    // unchecked interior and a vector mark at `size * 0.7`. The disagreement is
+    // wider than a radio's -- it is a shape (the rim), an absence (the
+    // transparent fill) and two mechanisms (a state layer, and a focus ring on
+    // two of the three) rather than one colour each -- so the paint had to be
+    // rewritten around a `CheckboxStyle` whose default is the engine's old fill.
+    // `Progress` and `Switch` stay: neither's appearance is contested, so
+    // neither had a reason to move.
 
     // `TextField` moved up too, and it is the widest of the six: what a text
     // field *does* -- hold a string, keep a caret in it, own an IME composition

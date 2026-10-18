@@ -31,9 +31,9 @@ mod styling;
 pub enum Section {
     /// `Text`, `Icon`, `Divider`, `Spacer`, `Container`, `Canvas`.
     Primitives,
-    /// `Button`, `Checkbox`, `Switch`, `Progress`, `Spinner`. `Slider`,
-    /// `Select`, `Radio` and `TextField` are design-system choices and live in
-    /// the kit crates, one layer up.
+    /// `Button`, `Switch`, `Progress`, `Spinner`. `Slider`, `Select`,
+    /// `Radio`, `TextField` and `Checkbox` are design-system choices and live
+    /// in the kit crates, one layer up.
     Controls,
     /// `Stack`, `List`, `Grid`, `Conditional`, `Scroll`. `Tabs` and the modal
     /// surfaces are design-system choices and live in the kit crates, one

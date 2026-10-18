@@ -10,7 +10,7 @@ use floom_core::{
 };
 use floom_scene::SceneNode;
 use floom_types::{Brush, Color, KeyEvent, Length, Modifiers, PointerEvent, PointerPhase};
-use floom_widgets::controls::{Button, Checkbox, Pressable, Progress, Switch, SwitchPalette};
+use floom_widgets::controls::{Button, Pressable, Progress, Switch, SwitchPalette};
 use floom_widgets::primitives::Text;
 use floom_widgets::Stack;
 use floom_widgets::testkit::{
@@ -130,27 +130,11 @@ fn button_reports_disabled_and_focusable_semantics() {
     );
 }
 
-// --- Checkbox / Switch -----------------------------------------------------
+// --- Switch ----------------------------------------------------------------
 
-#[test]
-fn checkbox_toggles_and_publishes_checked_state() {
-    let mut box_widget = Checkbox::new("Accept terms");
-    let id = allocate(&box_widget);
-    assert!(!box_widget.is_checked());
-
-    fire_down_up(&mut box_widget, id, Point::new(4.0, 4.0));
-    assert!(box_widget.is_checked());
-    assert!(
-        box_widget
-            .semantics_hint()
-            .state
-            .contains(SemanticsState::CHECKED)
-    );
-
-    fire_down_up(&mut box_widget, id, Point::new(4.0, 4.0));
-    assert!(!box_widget.is_checked());
-}
-
+/// `Checkbox` used to open this section. Its two cases moved with the widget to
+/// `floom-ui-composites/tests/checkbox.rs`: the control is no longer reachable
+/// from the root workspace, so a test of it has to live where the widget does.
 #[test]
 fn switch_knob_tracks_state() {
     let mut switch = Switch::new("Wi-Fi");
@@ -536,17 +520,8 @@ fn control_paint_snapshots_are_stable() {
         "label is painted: {snapshot}"
     );
 
-    let checkbox = Checkbox::new("Accept").checked(true);
-    let id = allocate(&checkbox);
-    let snapshot = paint_snapshot(&checkbox, id, ROW);
-    assert!(
-        snapshot.contains("#2B6CB0FF"),
-        "checked box is filled: {snapshot}"
-    );
-    assert!(
-        snapshot.contains("\"Accept\""),
-        "label follows the box: {snapshot}"
-    );
+    // The checkbox that shared this test moved with the widget to
+    // `floom-ui-composites/tests/checkbox.rs`.
 }
 
 // --- A3: a gradient in a real control ---------------------------------------

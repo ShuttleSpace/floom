@@ -31,10 +31,12 @@ const LABEL_FONT_SIZE: f32 = 14.0;
 const BUTTON_PADDING: f32 = 8.0;
 /// Vertical padding around a Button's label (each side).
 const BUTTON_VERTICAL_PADDING: f32 = 4.0;
-/// Gap between a CheckBox/Switch indicator and its label.
+/// Gap between a Switch's track and its label.
+///
+/// The checkbox that used to share this constant now measures its own gap from
+/// `CheckboxStyle::label_gap`, because all three kits wrote `8.0` and the
+/// engine's `6.0` had to survive as the default.
 const INDICATOR_LABEL_GAP: f32 = 6.0;
-/// The indicator square's side (the CheckBox box).
-const INDICATOR_SIDE: f32 = 16.0;
 /// Switch track width; its height is half of this.
 const SWITCH_TRACK_WIDTH: f32 = 40.0;
 /// Progress bar height: the bar paints its whole box, so its intrinsic size
@@ -881,203 +883,10 @@ impl Widget for Pressable {
 }
 
 // ---------------------------------------------------------------------------
-// Checkbox / Switch
+// Switch
 // ---------------------------------------------------------------------------
 
 pub type BoolCallback = Box<dyn Fn(bool)>;
-
-/// A tri-state-free boolean checkbox.
-pub struct Checkbox {
-    label: String,
-    checked: bool,
-    on_toggle: Option<BoolCallback>,
-    state: InteractionState,
-    revision: Revision,
-}
-
-impl Checkbox {
-    pub fn new(label: impl Into<String>) -> Self {
-        Self {
-            label: label.into(),
-            checked: false,
-            on_toggle: None,
-            state: InteractionState::default(),
-            revision: Revision::default(),
-        }
-    }
-
-    pub fn checked(mut self, checked: bool) -> Self {
-        self.checked = checked;
-        self.revision.bump();
-        self
-    }
-
-    pub fn disabled(mut self, disabled: bool) -> Self {
-        self.state.disabled = disabled;
-        self.revision.bump();
-        self
-    }
-
-    pub fn on_toggle(mut self, callback: impl Fn(bool) + 'static) -> Self {
-        self.on_toggle = Some(Box::new(callback));
-        self.revision.bump();
-        self
-    }
-
-    pub fn is_checked(&self) -> bool {
-        self.checked
-    }
-
-    pub fn interaction(&self) -> InteractionState {
-        self.state
-    }
-
-    pub fn set_focused(&mut self, focused: bool) -> &mut Self {
-        if self.state.focused != focused {
-            self.state.focused = focused;
-            self.revision.bump();
-        }
-        self
-    }
-
-    /// Flips the value and notifies the change callback.
-    pub fn toggle(&mut self) {
-        self.checked = !self.checked;
-        self.revision.bump();
-        if let Some(callback) = &self.on_toggle {
-            callback(self.checked);
-        }
-    }
-
-    /// The box glyph area (a square inset from the left edge).
-    pub fn box_bounds(&self, bounds: Rect) -> Rect {
-        let side = bounds.height().min(16.0);
-        Rect {
-            x0: bounds.x0,
-            y0: bounds.y0 + (bounds.height() - side) / 2.0,
-            x1: bounds.x0 + side,
-            y1: bounds.y0 + (bounds.height() + side) / 2.0,
-        }
-    }
-
-    pub fn semantics_hint(&self) -> SemanticsHint {
-        let mut state = self.state.to_semantics();
-        if self.checked {
-            state |= SemanticsState::CHECKED;
-        }
-        SemanticsHint::labeled(SemanticsRole::CheckBox, self.label.clone()).with_state(state)
-    }
-}
-
-impl std::fmt::Debug for Checkbox {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("Checkbox")
-            .field("label", &self.label)
-            .field("checked", &self.checked)
-            .finish_non_exhaustive()
-    }
-}
-impl Widget for Checkbox {
-    fn set_focused(&mut self, focused: bool) {
-        // Forward to the inherent builder, which bumps the revision.
-        Checkbox::set_focused(self, focused);
-    }
-
-    fn create(&self, cx: &mut dyn CreateContext) -> ElementId {
-        cx.alloc_child()
-    }
-
-    fn update(&mut self, cx: &mut dyn UpdateContext, id: ElementId) {
-        self.revision.sync(cx, id);
-    }
-
-    /// Intrinsic size: indicator square + gap + label extent. The requested
-    /// height keeps the box at its full 16px side (paint shrinks it to fit
-    /// shorter bounds).
-    fn layout_request(&self) -> Option<floom_core::LayoutRequest> {
-        if self.label.is_empty() {
-            return None;
-        }
-        Some(
-            floom_core::LayoutRequest::new()
-                .width(INDICATOR_SIDE + INDICATOR_LABEL_GAP + label_width(&self.label))
-                .height(INDICATOR_SIDE.max(label_height(&self.label))),
-        )
-    }
-
-    fn event(&mut self, cx: &mut dyn EventContext, id: ElementId) -> bool {
-        match track_pointer(&mut self.state, cx, id) {
-            Press::Activate => {
-                self.toggle();
-                true
-            }
-            Press::Consumed => true,
-            Press::Ignored => {
-                if let Event::Key(key) = cx.event() {
-                    if is_activation_key(&key, self.state) {
-                        self.toggle();
-                        return true;
-                    }
-                }
-                false
-            }
-        }
-    }
-
-    fn paint(&self, cx: &mut dyn PaintContext, _id: ElementId) {
-        let bounds = cx.bounds();
-        if bounds.width() <= 0.0 || bounds.height() <= 0.0 {
-            return;
-        }
-        let box_rect = self.box_bounds(bounds);
-        let accent = Color::rgb(0x2B, 0x6C, 0xB0);
-        let fill = if self.checked {
-            resolved_color(accent, mix(accent, Color::BLACK, 0.18), accent, self.state)
-        } else {
-            resolved_color(
-                Color::WHITE,
-                Color::rgb(0xE2, 0xE8, 0xF0),
-                Color::rgb(0xF5, 0xF7, 0xFA),
-                self.state,
-            )
-        };
-        cx.fill_rect(box_rect, fill);
-        if self.checked {
-            let mut buf = [0u8; 4];
-            let check = '\u{2714}'.encode_utf8(&mut buf);
-            let origin = Point::new(box_rect.x0 + 2.0, box_rect.y0 + 1.0);
-            cx.fill_text(
-                origin,
-                check,
-                box_rect.height() as f32,
-                FontWeight::Normal,
-                Color::WHITE,
-            );
-        }
-        let label_origin = Point::new(box_rect.x1 + 6.0, bounds.y0);
-        cx.fill_text(
-            label_origin,
-            &self.label,
-            LABEL_FONT_SIZE,
-            FontWeight::Normal,
-            Color::BLACK,
-        );
-    }
-
-    fn semantics(&self, cx: &mut dyn SemanticsContext, _id: ElementId) {
-        crate::primitives::emit_semantics(self.semantics_hint(), cx);
-    }
-
-    fn cursor(&self) -> floom_types::CursorStyle {
-        // A disabled control gets the platform arrow: a pointer over a
-        // thing that cannot be clicked is a promise the control cannot keep.
-        if self.state.disabled {
-            floom_types::CursorStyle::Default
-        } else {
-            floom_types::CursorStyle::Pointer
-        }
-    }
-}
 
 /// The colours a [`Switch`] paints with.
 ///

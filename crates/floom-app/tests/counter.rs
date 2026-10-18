@@ -7,7 +7,7 @@ use floom_app::WidgetHost;
 use floom_core::{Key, NamedKey, Point, Rect, Size, Length};
 use floom_layout::{AlignItems, FlexDirection, JustifyContent, LayoutStyle};
 use floom_types::{KeyEvent, Modifiers, PointerEvent};
-use floom_widgets::{Button, Checkbox, Container, Text};
+use floom_widgets::{Button, Container, Switch, Text};
 
 /// `Counter` app: a label, a decrement button and an increment button.
 struct Counter {
@@ -358,17 +358,22 @@ fn semantics_parents_children_in_mount_order() {
     let mut host = WidgetHost::new();
     host.set_size(Size::new(100.0, 100.0));
     let root = host.mount_root(column(0.0), Container::new());
-    let checkbox = host.mount(root, fixed(80.0, 20.0), Checkbox::new("Ship it"));
+    // A labelled two-state control, which is all this test needs as a
+    // vehicle. It was a `Checkbox` until that moved to
+    // `floom-ui-composites`, in the satellite workspace the root one
+    // excludes; `Switch` publishes the same `CHECKED` state and is still a
+    // primitive.
+    let toggle = host.mount(root, fixed(80.0, 20.0), Switch::new("Ship it"));
     host.frame();
 
     let root_node = host
         .semantics()
         .get(host.node_id(root))
         .expect("root is published once it has semantic children");
-    assert_eq!(root_node.children, vec![host.node_id(checkbox)]);
+    assert_eq!(root_node.children, vec![host.node_id(toggle)]);
 
     // Toggling through the host updates shared semantics state.
-    let bounds = host.bounds(checkbox);
+    let bounds = host.bounds(toggle);
     let centre = Rect::ZERO;
     let _ = centre;
     let at = Point::new(bounds.x0 + 2.0, bounds.y0 + bounds.height() / 2.0);
@@ -376,10 +381,10 @@ fn semantics_parents_children_in_mount_order() {
     host.dispatch(PointerEvent::primary_up(at).into());
     host.frame();
 
-    assert!(host.widget::<Checkbox>(checkbox).unwrap().is_checked());
+    assert!(host.widget::<Switch>(toggle).unwrap().is_on());
     assert!(
         host.semantics()
-            .get(host.node_id(checkbox))
+            .get(host.node_id(toggle))
             .unwrap()
             .state
             .contains(floom_accessibility::SemanticsState::CHECKED)

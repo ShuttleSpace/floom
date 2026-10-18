@@ -11,12 +11,12 @@ use floom_agent::{
 };
 use floom_core::Axis;
 use floom_testkit::TestApp;
-use floom_widgets::{Checkbox, Stack};
+use floom_widgets::{Stack, Switch};
 
 fn fixture() -> TestApp {
     let stack = Stack::new(Axis::Vertical)
         .gap(12.0)
-        .push(|| Box::new(Checkbox::new("Agree")));
+        .push(|| Box::new(Switch::new("Agree")));
     TestApp::new(floom_types::Size::new(320.0, 120.0), stack)
 }
 

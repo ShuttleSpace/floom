@@ -79,6 +79,7 @@ impl_widget_any_labelled!(
     crate::accordion::Accordion,
     crate::accordion::SelectGroup,
     crate::bottom_sheet::BottomSheet,
+    crate::checkbox::Checkbox,
     crate::dialog::Dialog,
     crate::overlay::Overlay,
     crate::popup::Popup,

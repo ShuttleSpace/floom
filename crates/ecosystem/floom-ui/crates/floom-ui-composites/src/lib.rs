@@ -37,6 +37,7 @@ pub mod slider;
 pub mod radio;
 pub mod tree_view;
 pub mod text_field;
+pub mod checkbox;
 
 pub use accordion::{Accordion, AccordionIndicator, AccordionStyle, SelectGroup, SelectGroupStyle, SelectionMode};
 pub use bottom_sheet::BottomSheet;
@@ -63,3 +64,4 @@ pub use navigation::{NavDestination, NavigationBar, NavigationDrawer, Navigation
 pub use tree_view::{RowRef, SharedTree, TreeNode, TreeView, TreeViewStyle};
 pub use tree_view::{node_at, toggle_path, visible_rows};
 pub use text_field::{TextCallback, TextField, TextFieldStyle};
+pub use checkbox::{Checkbox, CheckboxStyle};

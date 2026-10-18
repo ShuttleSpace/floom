@@ -31,7 +31,7 @@ use floom_core::Axis;
 use floom_layout::LayoutStyle;
 use floom_snapshot::{PixelSnapshot, SceneSnapshot, SemanticsSnapshot, snapshots_dir};
 use floom_types::{Color, Size};
-use floom_widgets::{Button, Checkbox, Container, Stack, Text, WidgetAny};
+use floom_widgets::{Button, Container, Stack, Switch, Text, WidgetAny};
 
 /// Mount `widget` as the root of a host of `size`, run one frame, and hand the
 /// host back. One frame is enough: layout, paint and semantics are all filled in
@@ -67,19 +67,24 @@ fn text_scene_matches_golden() {
     snap.assert(snapshots_dir!(), "widget_text_scene");
 }
 
+/// The checkbox that used to carry this golden moved to
+/// `floom-ui-composites`, in the satellite workspace the root one excludes, so
+/// the scene this file records is now the switch -- the same claim (two
+/// states, a different scene) about the two-state control that is still a
+/// primitive.
 #[test]
-fn checkbox_scene_differs_between_states_and_the_checked_one_is_golden() {
-    let off = mounted(BOX, Checkbox::new("Remember me").checked(false));
-    let on = mounted(BOX, Checkbox::new("Remember me").checked(true));
+fn switch_scene_differs_between_states_and_the_checked_one_is_golden() {
+    let off = mounted(BOX, Switch::new("Remember me").on(false));
+    let on = mounted(BOX, Switch::new("Remember me").on(true));
     let off_snap = SceneSnapshot::of(off.scene());
     let on_snap = SceneSnapshot::of(on.scene());
-    // The control: if these matched, the "checked" flag would not be reaching
+    // The control: if these matched, the "on" flag would not be reaching
     // the scene at all and the golden below would be recording nothing.
     assert_ne!(
         off_snap.hash, on_snap.hash,
         "checking the box must change what it paints"
     );
-    on_snap.assert(snapshots_dir!(), "widget_checkbox_checked_scene");
+    on_snap.assert(snapshots_dir!(), "widget_switch_checked_scene");
 }
 
 #[test]
@@ -90,7 +95,7 @@ fn a_stack_of_three_widgets_is_golden_as_a_composite() {
             .gap(8.0)
             .push(|| Box::new(Text::new("title")))
             .push(|| Box::new(Button::new("Save")))
-            .push(|| Box::new(Checkbox::new("Remember me").checked(true))),
+            .push(|| Box::new(Switch::new("Remember me").on(true))),
     );
     let snap = SceneSnapshot::of(host.scene());
     // Three children plus the stack's own box: the composite is doing layout,
@@ -122,8 +127,8 @@ fn button_semantics_matches_golden() {
 
 #[test]
 fn a_disabled_widget_reports_a_different_semantics_than_an_enabled_one() {
-    let enabled = mounted(BOX, Checkbox::new("Remember me"));
-    let disabled = mounted(BOX, Checkbox::new("Remember me").disabled(true));
+    let enabled = mounted(BOX, Switch::new("Remember me"));
+    let disabled = mounted(BOX, Switch::new("Remember me").disabled(true));
     let a = SemanticsSnapshot::of(enabled.semantics());
     let b = SemanticsSnapshot::of(disabled.semantics());
     assert_ne!(

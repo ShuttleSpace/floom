@@ -17,12 +17,18 @@ use floom_agent::{
 };
 use floom_core::Axis;
 use floom_testkit::TestApp;
-use floom_widgets::{Checkbox, Stack, TextInput};
+use floom_widgets::{Stack, Switch, TextInput};
 
+/// The tree this file taps is a labelled two-state control and a text
+/// field. It was a `Checkbox` until that moved to `floom-ui-composites`,
+/// which sits in the satellite `floom-ui` workspace the root one
+/// `exclude`s; `Switch` is the same shape -- a label, a boolean,
+/// `CHECKED` in the semantics tree -- and is still a primitive, so the
+/// wire assertions below are unchanged.
 fn fixture() -> TestApp {
     let stack = Stack::new(Axis::Vertical)
         .gap(12.0)
-        .push(|| Box::new(Checkbox::new("Agree")))
+        .push(|| Box::new(Switch::new("Agree")))
         .push(|| Box::new(TextInput::with_text("").placeholder("Name")));
     TestApp::new(floom_types::Size::new(320.0, 160.0), stack)
 }

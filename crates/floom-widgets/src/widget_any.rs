@@ -146,7 +146,6 @@ impl_widget_any!(
     crate::primitives::Divider,
     crate::controls::Button,
     crate::controls::Pressable,
-    crate::controls::Checkbox,
     crate::controls::Switch,
     crate::controls::Progress,
     crate::compose::Stack,

@@ -1,6 +1,6 @@
 //! Composite controls size themselves from their label.
 //!
-//! `Button`/`Checkbox`/`Switch` report an intrinsic extent through
+//! `Button`/`Switch` report an intrinsic extent through
 //! `layout_request` (measured label + padding/indicator geometry). The host
 //! applies that as *default* sizing: unpinned controls shrink-wrap their
 //! content, an explicit mount style still wins.
@@ -14,15 +14,20 @@
 //!
 //! `Radio` used to be named here too. It has no test in this file: the control
 //! it would have shared a body with (`Slider`) moved out with its own
-//! measurement, and the checkbox row above already covers "indicator + gap +
-//! label, height fits both" for the two indicators that stayed. The radio's
-//! measurement lives in `floom-ui-composites/tests/radio_measure.rs`, where the
-//! widget does.
+//! measurement. The radio's measurement lives in
+//! `floom-ui-composites/tests/radio_measure.rs`, where the widget does.
+//!
+//! `Checkbox` was the row those notes kept pointing at -- it is the control
+//! "indicator + gap + label, height fits both" was actually measured on -- and
+//! it has gone the same way. Its measurement is now in
+//! `floom-ui-composites/tests/checkbox_measure.rs`, where its own style is
+//! readable. What is left of that row below is the switch, which is still a
+//! primitive.
 
 use floom_app::{NodeId, WidgetHost};
 use floom_layout::{LayoutStyle, Length};
 use floom_types::Size;
-use floom_widgets::controls::{Button, Checkbox, Progress, Switch};
+use floom_widgets::controls::{Button, Progress, Switch};
 use floom_widgets::primitives::{Divider, Icon, Image, Spacer};
 
 fn node_bounds(host: &WidgetHost, node: NodeId) -> floom_types::Rect {
@@ -101,10 +106,15 @@ fn pinned_style_beats_the_button_intrinsic_size() {
     );
 }
 
-/// A checkbox's intrinsic width covers the 16px indicator, the 6px gap and
-/// the label; the height fits both indicator and label.
+/// A switch's intrinsic width covers the 40px track, the 6px gap and the label;
+/// the height fits the track rather than the label.
+///
+/// This row measured a checkbox beside it, and that is where the "indicator +
+/// gap + label" claim was made for both. The checkbox half moved with the widget
+/// to `floom-ui-composites/tests/checkbox_measure.rs`; the assertions below are
+/// the ones that stayed.
 #[test]
-fn checkbox_includes_indicator_and_label_extent() {
+fn switch_includes_indicator_and_label_extent() {
     let mut host = WidgetHost::new();
     host.set_size(Size::new(400.0, 200.0));
     let root = host.mount_root(
@@ -115,23 +125,21 @@ fn checkbox_includes_indicator_and_label_extent() {
         floom_widgets::Container::new(),
     );
     let label = "Ship it";
-    let check = host.mount(root, LayoutStyle::default(), Checkbox::new(label));
     let short = host.mount(root, LayoutStyle::default(), Switch::new(label));
     host.frame();
 
-    let bounds = node_bounds(&host, check);
+    let bounds = node_bounds(&host, short);
     let measured = floom_text::measure_text(label, 14.0, f64::INFINITY);
     assert!(
-        (bounds.width() - (16.0 + 6.0 + measured.width)).abs() < 1.5,
-        "checkbox width = box + gap + label, got {bounds:?}"
+        (bounds.width() - (40.0 + 6.0 + measured.width)).abs() < 1.5,
+        "switch width = track + gap + label, got {bounds:?} (label {})",
+        measured.width
     );
-    assert!(bounds.height() >= 16.0, "indicator keeps its 16px side");
-
-    // The switch's track (40x20) makes it taller than the checkbox's 16px box.
-    let switch_bounds = node_bounds(&host, short);
+    // The 40x20 track is taller than the label's 14px line, so the height follows
+    // the track rather than the text.
     assert!(
-        (switch_bounds.height() - 20.0).abs() < 1.5,
-        "switch height = track height, got {switch_bounds:?}"
+        (bounds.height() - 20.0).abs() < 1.5,
+        "switch height = track height, got {bounds:?}"
     );
 }
 

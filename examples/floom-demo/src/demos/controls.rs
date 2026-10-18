@@ -1,7 +1,7 @@
 //! Controls: the interactive widgets.
 
 use floom_core::{Axis, Color, LayoutRequest, WidgetAny};
-use floom_widgets::{Button, Checkbox, Progress, Spinner, Stack, Switch};
+use floom_widgets::{Button, Progress, Spinner, Stack, Switch};
 
 use super::{Demo, Section};
 
@@ -15,7 +15,7 @@ pub(super) fn demos() -> Vec<Demo> {
         },
         Demo {
             id: "toggles",
-            title: "Checkbox & Switch",
+            title: "Switch",
             section: Section::Controls,
             build: build_toggles,
         },
@@ -55,21 +55,21 @@ fn build_buttons() -> Box<dyn WidgetAny> {
 /// four kinds of ink and a focus affordance, and the engine's paint had no way
 /// to name any of them. `floom-demo` cannot depend on the satellite `floom`
 /// workspace to keep a gallery row, so the row is gone.
-/// The two toggles that are still primitives.
+/// The last of the three toggles, and the only one still a primitive.
 ///
-/// `Radio` sat between the checkbox and the switch here until it moved to
-/// `floom-ui-composites`: it is the one of the three whose appearance is
-/// contested (a stroked ring in every kit, a filled disc in the engine), so it
-/// is no longer something the root workspace can reach. `floom-demo` cannot
-/// depend on the satellite `floom-ui` workspace to keep a demo row, so the row
-/// is one widget shorter; the gallery still builds, which is what the demo is for.
+/// `Radio` sat here first and left for `floom-ui-composites`: it is the one whose
+/// appearance is contested (a stroked ring in every kit, a filled disc in the
+/// engine). `Checkbox` followed it, and is the wider of the two disagreements --
+/// the engine painted a bare fill with a font glyph and no rim, where every kit
+/// paints a 2px rim, a transparent unchecked interior and a vector mark, and
+/// where two of the three draw a focus ring and one answers focus with a state
+/// layer instead. `floom-demo` cannot depend on the satellite `floom-ui` workspace
+/// to keep a demo row, so the row is now one widget wide; the gallery still
+/// builds, which is what the demo is for.
 fn build_toggles() -> Box<dyn WidgetAny> {
     Box::new(
         Stack::new(Axis::Vertical)
             .gap(8.0)
-            .push_layout(LayoutRequest::new().width(200.0).height(28.0), || {
-                Box::new(Checkbox::new("Checkbox").checked(true))
-            })
             .push_layout(LayoutRequest::new().width(200.0).height(28.0), || {
                 Box::new(Switch::new("Switch").on(true))
             }),
