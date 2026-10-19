@@ -9,12 +9,14 @@
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 
-use floom_core::{LayoutRequest, Widget};
-use floom_types::Rect;
-use floom_widgets::testkit::{SceneRecorder, TestEventContext};
+use floom_core::{ElementId, LayoutRequest, Widget};
+use floom_signal::SignalGet;
+use floom_types::{Color, Rect};
+use floom_widgets::testkit::{AllocatingCreateContext, PaintOp, SceneRecorder, TestEventContext};
 use floom_widgets::{Button, Ripple};
 
 use floom_core_theme::props::button::ButtonVariant;
+use floom_core_theme::theme::Theme;
 use floom_widget_md_button::MdButton;
 
 const BOX: Rect = Rect {
@@ -178,4 +180,127 @@ fn the_button_sits_inside_token_padding() {
     let mut recorder = SceneRecorder::new(BOX);
     recorder.finish();
     let _: fn(&dyn Widget) = |_| {};
+}
+
+/// Theme colour -> engine colour. The style speaks the theme's colour type and
+/// the paint records the engine's; they are distinct types with the same shape.
+fn to_engine(c: floom_core_theme::tokens::color::Color) -> Color {
+    Color { r: c.r, g: c.g, b: c.b, a: c.a }
+}
+
+/// The fill and the label the engine actually painted.
+fn painted(b: &MdButton) -> (Option<Color>, Option<Color>) {
+    let mut b = b.resolve();
+    let mut create = AllocatingCreateContext::new();
+    let id: ElementId = b.create(&mut create);
+    let mut recorder = SceneRecorder::new(BOX);
+    b.paint(&mut recorder, id);
+    recorder.finish();
+    let ops = recorder.ops();
+
+    let fill = ops.iter().find_map(|op| match op {
+        PaintOp::RoundedRect { color, .. } => Some(*color),
+        PaintOp::Rect { color, .. } => Some(*color),
+        _ => None,
+    });
+    let label = ops.iter().find_map(|op| match op {
+        PaintOp::Text { color, .. } => Some(*color),
+        _ => None,
+    });
+    (fill, label)
+}
+
+/// The radius the fill was painted with.
+fn painted_radius(b: &MdButton) -> f32 {
+    let mut b = b.resolve();
+    let mut create = AllocatingCreateContext::new();
+    let id: ElementId = b.create(&mut create);
+    let mut recorder = SceneRecorder::new(BOX);
+    b.paint(&mut recorder, id);
+    recorder.finish();
+    recorder
+        .ops()
+        .iter()
+        .find_map(|op| match op {
+            PaintOp::RoundedRect { radius, .. } => Some(*radius),
+            _ => None,
+        })
+        .expect("the button paints a rounded fill")
+}
+
+/// The fill the engine paints is the kit's *background*, and the label it
+/// paints is the kit's *foreground*.
+///
+/// The engine `Button` paints a fill and a label, and they are two different
+/// knobs: `Button::color` is the fill, `Button::text_color` is the label. A kit
+/// that passes the foreground to `color` paints a foreground-coloured button
+/// with a white label on it -- and it compiles, and the style resolves, and the
+/// click fires. Nothing about the API says the button is upside down, so this
+/// is asserted against the *paint*: the style struct alone cannot catch the
+/// swap.
+#[test]
+fn the_fill_is_the_background_and_the_label_is_the_foreground() {
+    let b = button();
+    let style = b.resolved_style();
+    let (fill, label) = painted(&b);
+    assert_eq!(
+        fill,
+        Some(to_engine(style.background)),
+        "the fill must be the background"
+    );
+    assert_eq!(
+        label,
+        Some(to_engine(style.foreground)),
+        "the label must be the foreground"
+    );
+    assert_ne!(
+        style.background, style.foreground,
+        "a primary button's fill and label must differ, or the swap is invisible"
+    );
+}
+
+/// The disabled palette reaches the pixels at v1's alphas: 12 for the fill and
+/// 38 for the label.
+///
+/// The engine halves the alpha of a disabled control's fill and its label, so
+/// the kit hands it a double-alpha colour and the halving lands on v1's value.
+/// A test that read the *style* would see the doubled alpha and think the value
+/// was wrong; a test that reads the *paint* sees v1's 12 and 38.
+#[test]
+fn the_disabled_palette_reaches_the_pixels_at_v1s_alphas() {
+    let b = MdButton::new().label("Save").disabled(true);
+    let (fill, label) = painted(&b);
+    assert_eq!(
+        fill.map(|c| c.a),
+        Some(12),
+        "the disabled fill must land on v1's 12/255"
+    );
+    assert_eq!(
+        label.map(|c| c.a),
+        Some(38),
+        "the disabled label must land on v1's 38/255"
+    );
+}
+
+/// Material's button is a pill: the fill is drawn with `radius().full`.
+#[test]
+fn the_fill_is_drawn_with_the_full_radius() {
+    let b = button();
+    let style = b.resolved_style();
+    assert_eq!(painted_radius(&b), style.border_radius);
+    assert_eq!(style.border_radius, b.theme().get().radius().full);
+}
+
+/// The hover fill is the M3 state layer: 8% of the variant's own foreground
+/// mixed over the base fill. This is where Material differs from Cupertino and
+/// Fluent, whose hover is a flat foreground tint.
+#[test]
+fn the_hover_fill_is_the_eight_percent_state_layer() {
+    let style = button().resolved_style();
+    let expected = floom_core_theme::tokens::color_ext::mix(
+        style.background,
+        style.foreground,
+        0.08,
+    );
+    assert_eq!(style.hover_background, expected);
 }

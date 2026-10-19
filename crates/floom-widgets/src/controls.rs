@@ -307,6 +307,16 @@ pub struct Button {
     base: Color,
     text_color: Color,
     radius: f32,
+    /// The fill to use while the pointer is over the button, when a kit names one.
+    ///
+    /// `None` (the default) derives the hover fill from the base colour, which is
+    /// right for a filled button. A kit whose base fill is *transparent* -- a ghost
+    /// or a text button -- has no colour to derive from, so it names the hover
+    /// fill itself rather than getting an invisible one.
+    hover: Option<Color>,
+    /// The fill to use while the button is pressed. `None` derives it the same way
+    /// `hover` does.
+    press: Option<Color>,
     state: InteractionState,
     revision: Revision,
     /// The implicit colour transition, when set: hovering / pressing fades the
@@ -342,6 +352,8 @@ impl Button {
             base: Color::rgb(0x2B, 0x6C, 0xB0),
             text_color: Color::WHITE,
             radius: 4.0,
+            hover: None,
+            press: None,
             state: InteractionState::default(),
             revision: Revision::default(),
             transition: None,
@@ -358,6 +370,49 @@ impl Button {
 
     pub fn color(mut self, base: Color) -> Self {
         self.base = base;
+        self.revision.bump();
+        self
+    }
+
+    /// The colour of the label.
+    ///
+    /// A button *is* its label -- it paints a run of text and nothing else -- so
+    /// the label's colour is a property of the button rather than of a child it
+    /// holds. Without this the label is always white, which is only right for a
+    /// button whose fill happens to be dark.
+    pub fn text_color(mut self, color: Color) -> Self {
+        self.text_color = color;
+        self.revision.bump();
+        self
+    }
+
+    /// The corner radius of the button's fill.
+    ///
+    /// `0.0` paints a square-cornered button; anything above rounds the corners
+    /// by that many pixels. A pill is a radius at least half the button's height.
+    pub fn radius(mut self, radius: f32) -> Self {
+        self.radius = radius;
+        self.revision.bump();
+        self
+    }
+
+    /// The fill to use while the pointer is over the button.
+    ///
+    /// Without one, the hover fill is derived from the base colour (darker on
+    /// press, lighter on hover). A kit whose base fill is transparent names the
+    /// hover fill here instead, so the button still answers the pointer.
+    ///
+    /// The named colour *replaces* the base fill, it is not blended with it --
+    /// which is what a design system that specifies a hover fill means.
+    pub fn hover_color(mut self, color: Color) -> Self {
+        self.hover = Some(color);
+        self.revision.bump();
+        self
+    }
+
+    /// The fill to use while the button is pressed. See [`Button::hover_color`].
+    pub fn press_color(mut self, color: Color) -> Self {
+        self.press = Some(color);
         self.revision.bump();
         self
     }
@@ -390,8 +445,15 @@ impl Button {
     /// The fill colour the current interaction state resolves to, absent any
     /// transition — the value the fill is *heading toward*.
     fn resolved_fill(&self) -> Color {
+        let (pressed, hovered) = self.emphasis_colors();
+        resolved_color(self.base, pressed, hovered, self.state)
+    }
+
+    /// The pressed and hovered fills: the ones a kit named, or the base colour's
+    /// own emphasis when it named none.
+    fn emphasis_colors(&self) -> (Color, Color) {
         let (darker, lighter) = emphasis(self.base);
-        resolved_color(self.base, darker, lighter, self.state)
+        (self.press.unwrap_or(darker), self.hover.unwrap_or(lighter))
     }
 
     /// Seeds the implicit transition when the pointer changed the state such
@@ -407,9 +469,9 @@ impl Button {
         if self.transition.is_none() {
             return;
         }
-        let (darker, lighter) = emphasis(self.base);
-        let old_target = resolved_color(self.base, darker, lighter, before);
-        let new_target = resolved_color(self.base, darker, lighter, self.state);
+        let (pressed, hovered) = self.emphasis_colors();
+        let old_target = resolved_color(self.base, pressed, hovered, before);
+        let new_target = resolved_color(self.base, pressed, hovered, self.state);
         if old_target == new_target {
             return;
         }

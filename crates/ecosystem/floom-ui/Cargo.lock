@@ -473,6 +473,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "floom-widget-cupertino-button"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widgets",
+]
+
+[[package]]
 name = "floom-widget-cupertino-card"
 version = "0.1.0"
 dependencies = [
@@ -680,6 +691,17 @@ dependencies = [
  "floom-types",
  "floom-ui-composites",
  "floom-widget-runtime",
+]
+
+[[package]]
+name = "floom-widget-fluent-button"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widgets",
 ]
 
 [[package]]
