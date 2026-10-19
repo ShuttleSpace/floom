@@ -510,6 +510,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "floom-widget-cupertino-button_group"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widgets",
+]
+
+[[package]]
 name = "floom-widget-cupertino-card"
 version = "0.1.0"
 dependencies = [
@@ -546,6 +557,17 @@ dependencies = [
  "floom-ui-composites",
  "floom-widget-cupertino-icon",
  "floom-widget-runtime",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-cupertino-container"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
  "floom-widgets",
 ]
 
@@ -603,6 +625,17 @@ dependencies = [
 
 [[package]]
 name = "floom-widget-cupertino-footer"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-cupertino-grid"
 version = "0.1.0"
 dependencies = [
  "floom-core",
@@ -877,6 +910,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "floom-widget-fluent-button_group"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widgets",
+]
+
+[[package]]
 name = "floom-widget-fluent-card"
 version = "0.1.0"
 dependencies = [
@@ -913,6 +957,17 @@ dependencies = [
  "floom-ui-composites",
  "floom-widget-fluent-icon",
  "floom-widget-runtime",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-fluent-container"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
  "floom-widgets",
 ]
 
@@ -970,6 +1025,17 @@ dependencies = [
 
 [[package]]
 name = "floom-widget-fluent-footer"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-fluent-grid"
 version = "0.1.0"
 dependencies = [
  "floom-core",
@@ -1246,6 +1312,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "floom-widget-md-button_group"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widget-runtime",
+ "floom-widgets",
+]
+
+[[package]]
 name = "floom-widget-md-card"
 version = "0.1.0"
 dependencies = [
@@ -1281,6 +1359,18 @@ dependencies = [
  "floom-types",
  "floom-ui-composites",
  "floom-widget-md-icon",
+ "floom-widget-runtime",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-md-container"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
  "floom-widget-runtime",
  "floom-widgets",
 ]
@@ -1340,6 +1430,18 @@ dependencies = [
 
 [[package]]
 name = "floom-widget-md-footer"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widget-runtime",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-md-grid"
 version = "0.1.0"
 dependencies = [
  "floom-core",
