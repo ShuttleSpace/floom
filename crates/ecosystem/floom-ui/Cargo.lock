@@ -577,6 +577,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "floom-widget-cupertino-item_group"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-ui-composites",
+ "floom-widgets",
+]
+
+[[package]]
 name = "floom-widget-cupertino-list"
 version = "0.1.0"
 dependencies = [
@@ -817,6 +829,18 @@ dependencies = [
  "floom-ui-composites",
  "floom-widget-fluent-icon",
  "floom-widget-runtime",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-fluent-item_group"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-ui-composites",
  "floom-widgets",
 ]
 

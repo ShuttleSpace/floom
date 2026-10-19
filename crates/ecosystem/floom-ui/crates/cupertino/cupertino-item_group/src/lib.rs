@@ -1,15 +1,74 @@
-use std::rc::Rc;
+//! Cupertino item group, ported to the Floom 2.0 widget API.
+//!
+//! This is a **token-to-style wrapper**, and the shortest port in the library —
+//! deliberately. Where `md-toolbar` kept its own composition and `md-footer` kept
+//! its own layout registration, this component's whole job turned out to be the
+//! state machine, and the state machine is not this component's:
+//!
+//! `md-item_group`, `cupertino-item_group` and `fluent-item_group` are 209, 208
+//! and 208 lines with **123 of 149** substantive lines identical. Everything they
+//! share — the shared selection state, the single/multiple/mandatory click rules,
+//! the row's two appearances, the click target, and the padding that is `pad`
+//! across and `pad / 2` down — is [`floom_widgets::SelectGroup`], promoted into
+//! the engine for the same reason [`floom_widgets::Accordion`] was.
+//!
+//! What is left here is the part that genuinely differs per design system: which
+//! tokens, and which colours mean "chosen". For Cupertino that is its own
+//! `ItemGroupTokens` and its own palette — the rows, the surface they sit on,
+//! and the pair of colours that means "this row is chosen" are all
+//! Cupertino's.
+//!
+//! # What changed from v1
+//!
+//! * **Two signals became one shared state.** v1 held `single: RwSignal<usize>`
+//!   *and* `multi: RwSignal<Vec<usize>>`, kept in step by hand, and read
+//!   `multi.contains(&i)` to decide a row's appearance. A value that changes after
+//!   mount cannot be held in a signal and read during render in 2.0, so the
+//!   selection is one `Arc<Mutex<Vec<bool>>>` and the two accessors
+//!   ([`CupertinoItemGroup::selected`] and [`CupertinoItemGroup::selected_multi`]) are derived
+//!   from it rather than stored beside it.
+//! * **`cursor(CursorStyle::Pointer)` is gone.** 2.0's `PaintContext` has no
+//!   cursor vocabulary, so the pointer is not carried over; the row is still a
+//!   `Pressable`, so it is still activatable by keyboard, which the pointer was
+//!   not. Recorded rather than worked around.
+//! * **`hide()` on an empty group has no 2.0 equivalent**, so an empty group is a
+//!   stack with no children. See `SelectGroup`'s doc.
+//! * **Semantics are an addition, not a translation.** v1's rows were a
+//!   `Container` with a click handler: invisible to a screen reader. Rows here are
+//!   radios (single mode) or checkboxes (multiple).
 
-use floom::event::EventPropagation;
-use floom::prelude::*;
-use floom::reactive::RwSignal;
-use floom::style::CursorStyle;
-use floom::view::AnyView;
-use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
+use floom_signal::{RwSignal, SignalGet};
+use floom_types::{Color as PaintColor, Insets};
+use floom_ui_composites::{SelectGroup, SelectGroupStyle, SelectionMode};
+
+use floom_core_theme::component_tokens::{ComponentId, ComponentTokens, ItemGroupTokens};
 use floom_core_theme::props::item_group::ItemGroupProps;
 use floom_core_theme::theme::{MultiTheme, Theme};
 use floom_core_theme::tokens::color::Color;
 
+/// A builder for one row's content.
+///
+/// An [`std::sync::Arc`] because a 2.0 slot is a replayed `Fn`: every rebuild
+/// needs its own copy to move into it.
+pub type RowBuilder =
+    std::sync::Arc<dyn Fn() -> Box<dyn floom_core::WidgetAny> + Send + Sync + 'static>;
+
+/// Design-system colour -> engine colour.
+fn to_paint(c: Color) -> PaintColor {
+    PaintColor {
+        r: c.r,
+        g: c.g,
+        b: c.b,
+        a: c.a,
+    }
+}
+
+fn item_group_tokens(theme: &MultiTheme) -> ItemGroupTokens {
+    match theme.component(ComponentId::ItemGroup) {
+        ComponentTokens::ItemGroup(t) => t,
+        _ => unreachable!("ComponentId::ItemGroup must resolve to ItemGroupTokens"),
+    }
+}
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct CupertinoItemGroupStyle {
@@ -25,38 +84,61 @@ pub struct CupertinoItemGroupStyle {
     pub radius: f32,
 }
 
+/// One row, as it was declared.
+struct ItemRow {
+    label: Option<String>,
+    content: RowBuilder,
+}
+
 pub struct CupertinoItemGroup {
     props: ItemGroupProps,
     theme: RwSignal<MultiTheme>,
-    items: Vec<AnyView>,
-    single: RwSignal<usize>,
-    multi: RwSignal<Vec<usize>>,
-    on_change: Option<Box<dyn Fn(usize)>>,
-    on_change_multi: Option<Box<dyn Fn(Vec<usize>)>>,
+    rows: Vec<ItemRow>,
+    /// The chosen row before mount. v1's `selected(usize)` set both signals; here
+    /// it seeds the one shared state.
+    initial: Option<usize>,
 }
 
 impl CupertinoItemGroup {
     pub fn new() -> Self {
         Self {
             props: ItemGroupProps::default(),
-            theme: RwSignal::new(MultiTheme::new_for(floom_core_theme::global_theme::DesignSystem::Cupertino)),
-            items: Vec::new(),
-            single: RwSignal::new(0),
-            multi: RwSignal::new(Vec::new()),
-            on_change: None,
-            on_change_multi: None,
+            theme: RwSignal::new(MultiTheme::new_for(
+                floom_core_theme::global_theme::DesignSystem::Cupertino,
+            )),
+            rows: Vec::new(),
+            initial: None,
         }
     }
 
-    /// Provide the selectable item views. `AnyView` is owned (not `Clone`).
-    pub fn items(mut self, items: Vec<AnyView>) -> Self {
-        self.items = items;
+    /// Append a named row.
+    pub fn row(
+        mut self,
+        label: impl Into<String>,
+        content: impl Fn() -> Box<dyn floom_core::WidgetAny> + Send + Sync + 'static,
+    ) -> Self {
+        self.rows.push(ItemRow {
+            label: Some(label.into()),
+            content: std::sync::Arc::new(content),
+        });
         self
     }
 
+    /// Append a row with no accessible name.
+    pub fn row_unlabelled(
+        mut self,
+        content: impl Fn() -> Box<dyn floom_core::WidgetAny> + Send + Sync + 'static,
+    ) -> Self {
+        self.rows.push(ItemRow {
+            label: None,
+            content: std::sync::Arc::new(content),
+        });
+        self
+    }
+
+    /// Choose a row before mount. v1's `selected(usize)`.
     pub fn selected(mut self, selected: usize) -> Self {
-        self.single = RwSignal::new(selected);
-        self.multi = RwSignal::new(vec![selected]);
+        self.initial = Some(selected);
         self
     }
 
@@ -70,33 +152,22 @@ impl CupertinoItemGroup {
         self
     }
 
-    pub fn on_change(mut self, callback: impl Fn(usize) + 'static) -> Self {
-        self.on_change = Some(Box::new(callback));
+    pub fn props(&self) -> &ItemGroupProps {
+        &self.props
+    }
+
+    pub fn theme(&self) -> RwSignal<MultiTheme> {
+        self.theme
+    }
+
+    pub fn with_theme(mut self, theme: MultiTheme) -> Self {
+        self.theme = RwSignal::new(theme);
         self
-    }
-
-    pub fn on_change_multi(mut self, callback: impl Fn(Vec<usize>) + 'static) -> Self {
-        self.on_change_multi = Some(Box::new(callback));
-        self
-    }
-
-    /// The component owns these signals (mirrors `Dialog::open_signal()`); the consumer
-    /// obtains them and reads selection state.
-    pub fn selected_signal(&self) -> RwSignal<usize> {
-        self.single
-    }
-
-    pub fn selected_multi_signal(&self) -> RwSignal<Vec<usize>> {
-        self.multi
     }
 
     pub fn resolved_style(&self) -> CupertinoItemGroupStyle {
         let theme = self.theme.get();
-        let ComponentTokens::ItemGroup(tokens) =
-            theme.component(ComponentId::ItemGroup)
-        else {
-            unreachable!("ComponentId::ItemGroup must resolve to ItemGroupTokens")
-        };
+        let tokens = item_group_tokens(&theme);
         CupertinoItemGroupStyle {
             design_system: "cupertino",
             surface_variant: theme.colors().surface_variant,
@@ -111,94 +182,123 @@ impl CupertinoItemGroup {
         }
     }
 
-    pub fn view(self) -> impl View {
-        let theme = self.theme;
-        let items = self.items;
-        let n = items.len();
-        let on_change: Rc<Option<Box<dyn Fn(usize)>>> = Rc::new(self.on_change);
-        let on_change_multi: Rc<Option<Box<dyn Fn(Vec<usize>)>>> = Rc::new(self.on_change_multi);
-        let multiple = self.props.multiple;
-        let mandatory = self.props.mandatory;
-        let single = self.single;
-        let multi = self.multi;
-
-        let tokens = match theme.get().component(ComponentId::ItemGroup) {
-            ComponentTokens::ItemGroup(t) => t,
-            _ => unreachable!(),
-        };
-        let gap = tokens.gap;
-        let pad = tokens.pad;
-        let radius = tokens.radius;
-
-        let rows: Vec<AnyView> = items
-            .into_iter()
-            .enumerate()
-            .map(|(i, item)| {
-                let single = single;
-                let multi = multi.clone();
-                let on_change = on_change.clone();
-                let on_change_multi = on_change_multi.clone();
-                let multiple = multiple;
-                let mandatory = mandatory;
-                Container::new(item)
-                    .style(move |s| {
-                        let selected = multi.get().contains(&i);
-                        let t = theme.get();
-                        let (bg, fg, border) = if selected {
-                            (
-                                t.colors().primary_container.to_peniko(),
-                                t.colors().on_primary_container.to_peniko(),
-                                t.colors().primary.to_peniko(),
-                            )
-                        } else {
-                            (
-                                t.colors().surface_variant.to_peniko(),
-                                t.colors().on_surface.to_peniko(),
-                                t.colors().outline.to_peniko(),
-                            )
-                        };
-                        s.padding_horiz(pad)
-                            .padding_vert(pad / 2.0)
-                            .border_radius(radius)
-                            .border(1.0)
-                            .border_color(border)
-                            .background(bg)
-                            .color(fg)
-                            .cursor(CursorStyle::Pointer)
-                    })
-                    .on_event(listener::Click, move |_, _| {
-                        if multiple {
-                            let mut cur = multi.get();
-                            if let Some(pos) = cur.iter().position(|x| *x == i) {
-                                if !(mandatory && cur.len() == 1) {
-                                    cur.remove(pos);
-                                }
-                            } else {
-                                cur.push(i);
-                            }
-                            multi.set(cur.clone());
-                            single.set(i);
-                            if let Some(cb) = on_change_multi.as_ref() {
-                                cb(cur);
-                            }
-                        } else {
-                            let cur = single.get();
-                            if !(mandatory && cur == i) {
-                                single.set(i);
-                                multi.set(vec![i]);
-                                if let Some(cb) = on_change.as_ref() {
-                                    cb(i);
-                                }
-                            }
-                        }
-                        EventPropagation::Continue
-                    })
-                    .into_any()
-            })
-            .collect();
-
-        Stack::vertical_from_iter(rows).style(move |s| s.gap(gap).width_pct(100.0).apply_if(n == 0, |s| s.hide()))
+    /// The engine's style, which is the whole translation.
+    ///
+    /// The row's two appearances are named here rather than at the call site
+    /// because "chosen" means a *pair* of colours plus a third for the outline, and
+    /// a caller that styled a chosen row's box while leaving its label in the
+    /// unchosen ink would have a bug the compiler cannot see.
+    pub fn select_group_style(&self) -> SelectGroupStyle {
+        let style = self.resolved_style();
+        SelectGroupStyle {
+            gap: style.gap,
+            pad: style.pad,
+            radius: style.radius,
+            // v1 wrote `.border(1.0)` unconditionally — a fixed 1px, not a token.
+            border_width: 1.0,
+            background: to_paint(style.surface_variant),
+            foreground: to_paint(style.on_surface),
+            border_color: to_paint(style.outline),
+            selected_background: to_paint(style.primary_container),
+            selected_foreground: to_paint(style.on_primary_container),
+            selected_border_color: to_paint(style.primary),
+        }
     }
+
+    /// The colour a row's *content* should be drawn in.
+    ///
+    /// v1 wrote `.color(fg)` on the row's box. 2.0's `Surface` paints a fill and
+    /// only the child knows it is text, so the ink is a question for the caller —
+    /// the same answer `md-footer` gives, and the third component to need it.
+    pub fn foreground(&self, selected: bool) -> PaintColor {
+        if selected {
+            to_paint(self.resolved_style().on_primary_container)
+        } else {
+            to_paint(self.resolved_style().on_surface)
+        }
+    }
+
+    /// The row's padding, for a caller that wants it.
+    ///
+    /// v1 wrote `padding_horiz(pad).padding_vert(pad / 2.0)`, which is *not* a
+    /// uniform inset; [`SelectGroup`] applies the same asymmetry and this reports
+    /// it rather than rounding it to something tidier.
+    pub fn padding(&self) -> Insets {
+        let pad = f64::from(self.resolved_style().pad);
+        Insets {
+            left: pad,
+            right: pad,
+            top: pad / 2.0,
+            bottom: pad / 2.0,
+        }
+    }
+
+    /// The group as an engine widget: the rows, the shared selection, and the
+    /// click rules.
+    ///
+    /// `on_change_single` and `on_change_multi` are both reported: v1 had two
+    /// callbacks because it had two signals, and a caller that only cares about one
+    /// mode should not have to know which. [`Self::selection`] is the one to read
+    /// after mount.
+    pub fn view(
+        self,
+        on_change_single: Option<impl Fn(usize) + Send + Sync + 'static>,
+        on_change_multi: Option<impl Fn(Vec<usize>) + Send + Sync + 'static>,
+    ) -> SelectGroup {
+        let mode = if self.props.multiple {
+            SelectionMode::Multiple
+        } else {
+            SelectionMode::Single
+        };
+        let single = on_change_single.map(std::sync::Arc::new);
+        let multi = on_change_multi.map(std::sync::Arc::new);
+
+        let mut group = SelectGroup::new()
+            .mode(mode)
+            .mandatory(self.props.mandatory)
+            .style(self.select_group_style());
+        if let Some(index) = self.initial {
+            group = group.selected([index]);
+        }
+        group = group.on_change(move |next| {
+            // Both callbacks, in the order a caller would expect: the single one
+            // with the most recently chosen row, then the full set.
+            if let Some(single) = &single {
+                if let Some(last) = next.last() {
+                    single(*last);
+                }
+            }
+            if let Some(multi) = &multi {
+                multi(next.clone());
+            }
+        });
+        for row in self.rows {
+            // Wrapped rather than passed as the `Arc` itself: the slot wants an
+            // `Fn`, and an `Arc<dyn Fn>` is one by being callable. This is also why
+            // the alias above exists — a rebuild needs its own handle to move into
+            // the slot.
+            let content = row.content;
+            group = match row.label {
+                Some(label) => group.row(label, move || content()),
+                None => group.row_unlabelled(move || content()),
+            };
+        }
+        group
+    }
+}
+
+/// The chosen row, the way v1's `selected_signal` reported it.
+///
+/// A snapshot rather than a signal: the selection is shared state now, and a caller
+/// that wants to *observe* it reads this from the widget it holds rather than
+/// holding a second copy of the truth.
+pub fn selected(group: &SelectGroup) -> Option<usize> {
+    group.selection().last().copied()
+}
+
+/// The chosen rows, the way v1's `selected_multi_signal` reported them.
+pub fn selected_multi(group: &SelectGroup) -> Vec<usize> {
+    group.selection()
 }
 
 impl Default for CupertinoItemGroup {
