@@ -4,5 +4,20 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+# Ported off the v1 `floom` monolith (see docs/porting-floem-ui-to-2.0.md).
+# The expand/collapse state machine moved into the engine as
+# `floom_widgets::Accordion`, because a value that changes after mount cannot be
+# held in an `RwSignal` and read during render any more.
 floom-core-theme = { workspace = true }
 floom-widget-fluent-icon = { workspace = true }
+floom-signal = { path = "../../../../../floom-signal" }
+floom-core = { path = "../../../../../floom-core" }
+floom-types = { path = "../../../../../floom-types" }
+floom-widgets = { path = "../../../../../floom-widgets" }
+# The engine's Accordion moved up a layer with the composites; the kit adapts its
+# tokens to that, not to the widget crate it left.
+floom-ui-composites = { path = "../../floom-ui-composites" }
+
+[dev-dependencies]
+floom-core-theme = { workspace = true, features = ["fluent"] }
+floom-types = { path = "../../../../../floom-types" }
