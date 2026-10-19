@@ -569,6 +569,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "floom-widget-cupertino-overlay"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-ui-composites",
+ "floom-widget-runtime",
+ "floom-widgets",
+]
+
+[[package]]
 name = "floom-widget-cupertino-progress_linear"
 version = "0.1.0"
 dependencies = [
@@ -754,6 +767,19 @@ dependencies = [
 
 [[package]]
 name = "floom-widget-fluent-list_item"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-ui-composites",
+ "floom-widget-runtime",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-fluent-overlay"
 version = "0.1.0"
 dependencies = [
  "floom-core",
@@ -1064,6 +1090,19 @@ dependencies = [
 
 [[package]]
 name = "floom-widget-md-list_item"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-ui-composites",
+ "floom-widget-runtime",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-md-overlay"
 version = "0.1.0"
 dependencies = [
  "floom-core",

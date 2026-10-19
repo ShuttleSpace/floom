@@ -78,7 +78,6 @@ exclude = [
     "crates/cupertino/cupertino-navigation_drawer",
     "crates/cupertino/cupertino-number_input",
     "crates/cupertino/cupertino-otp_input",
-    "crates/cupertino/cupertino-overlay",
     "crates/cupertino/cupertino-pagination",
     "crates/cupertino/cupertino-parallax",
     "crates/cupertino/cupertino-progress_circular",
@@ -161,7 +160,6 @@ exclude = [
     "crates/fluent/fluent-navigation_drawer",
     "crates/fluent/fluent-number_input",
     "crates/fluent/fluent-otp_input",
-    "crates/fluent/fluent-overlay",
     "crates/fluent/fluent-pagination",
     "crates/fluent/fluent-parallax",
     "crates/fluent/fluent-progress_circular",
@@ -235,7 +233,6 @@ exclude = [
     "crates/material/md-navigation_drawer",
     "crates/material/md-number_input",
     "crates/material/md-otp_input",
-    "crates/material/md-overlay",
     "crates/material/md-pagination",
     "crates/material/md-parallax",
     "crates/material/md-progress_circular",
@@ -334,7 +331,10 @@ members = [
   "crates/material/md-list",
     "crates/material/md-text-field",
     "crates/material/md-toolbar",
-    "crates/material/md-treeview",
+    "crates/material/md-treeview",    "crates/material/md-overlay",
+    "crates/cupertino/cupertino-overlay",
+    "crates/fluent/fluent-overlay",
+
 ]
 
 resolver = "2"

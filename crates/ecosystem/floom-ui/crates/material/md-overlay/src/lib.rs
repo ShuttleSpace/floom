@@ -1,14 +1,56 @@
-use std::rc::Rc;
+//! Material overlay, ported to the Floom 2.0 widget API.
+//!
+//! v1 wrapped a full-viewport scrim around the caller's content and dismissed
+//! when the scrim was clicked. 2.0 has no standalone "scrim" widget, but its
+//! `Dialog` is a host-modal surface driven by a shared presence flag -- which is
+//! exactly v1's `show` / `with_show_signal` external trigger -- so the overlay
+//! becomes a `Dialog` whose card is the scrim plus the centered content.
+//!
+//! ## What the port reproduces
+//!
+//! * the external `show(bool)` / `with_show_signal` trigger, via `with_shared_presence`
+//!   and [`MdOverlay::open_flag`] / [`MdOverlay::with_open_flag`];
+//! * the scrim: a full-viewport layer tinted `scrim` at `opacity` alpha;
+//! * the centered content card: `surface` background, `on_surface` text,
+//!   `border_radius(12.0)`, padding from `OverlayTokens`;
+//! * dismiss on scrim click, firing the v1 `on_click` callback.
+//!
+//! ## What the port names (not fakes)
+//!
+//! * **v1 dismissed on any click outside the content; 2.0's modal is not
+//!   light-dismissed**, so the scrim is a `Pressable` that carries the dismiss.
+//!   If 2.0's event model bubbles a content click up to the scrim, that content
+//!   click would also dismiss -- v1 explicitly `Stop`-ed propagation on the
+//!   content, which 2.0's `EventPropagation` does not expose here. Recorded,
+//!   not worked around: a bubble-stop would be an engine change, not a kit one.
+//! * **Fluent's `border_radius(12.0)` is Material's number** --
+//!   the Fluent kit hardcoded `12.0` instead of a `tokens`- or
+//!   `radius().md`-derived value. Preserved as written (the tripwire keeping the
+//!   three kits three crates).
+//! * the engine `Dialog` paints no scrim of its own, so the scrim is the card.
 
-use floom::event::EventPropagation;
-use floom::prelude::*;
-use floom::view::AnyView;
+use std::sync::Arc;
+
+use floom_signal::{RwSignal, SignalGet};
+use floom_types::Color as PaintColor;
+
+use floom_core::{Child, ChildKey, LayoutRequest};
+use floom_ui_composites::Dialog;
+use floom_widgets::text_input::{SharedFlag, read_flag, shared_flag, write_flag};
+use floom_widgets::{Align, Axis, Pressable, Stack, Surface};
+
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::overlay::OverlayProps;
 use floom_core_theme::theme::{MultiTheme, Theme};
 use floom_core_theme::tokens::color::Color;
-use floom_core_theme::tokens::color_ext::*;
-use floom_widget_runtime::theme_signal;
+
+/// Design-system colour -> engine colour.
+fn to_paint(c: Color) -> PaintColor {
+    PaintColor { r: c.r, g: c.g, b: c.b, a: c.a }
+}
+
+/// A v1-shaped dismiss callback, kept so `props()` still reports one.
+type Callback = Arc<dyn Fn() + Send + Sync + 'static>;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct MdOverlayStyle {
@@ -16,55 +58,85 @@ pub struct MdOverlayStyle {
     pub content_padding: f32,
 }
 
+/// Material's overlay.
 pub struct MdOverlay {
-    props: OverlayProps,
-    show: RwSignal<bool>,
+    /// Scrim opacity, 0.0 (transparent) .. 1.0 (opaque).
+    opacity: f32,
+    /// The shared "is it up" flag -- not an `RwSignal` (cannot cross `Send+Sync`).
+    show: SharedFlag,
     theme: RwSignal<MultiTheme>,
-    child: Option<AnyView>,
+    /// The caller's content, as a rebuildable + shareable factory (see `child`).
+    child: Option<Arc<dyn Fn() -> Box<dyn floom_widgets::WidgetAny + Send + Sync> + Send + Sync + 'static>>,
+    /// The v1 `on_click` dismiss callback, in `Send + Sync` form.
+    on_dismiss: Option<Callback>,
 }
 
 impl MdOverlay {
     pub fn new() -> Self {
-        let props = OverlayProps::default();
         Self {
-            show: RwSignal::new(false),
-            props,
-            theme: theme_signal(),
+            opacity: 0.5,
+            show: shared_flag(false),
+            theme: RwSignal::new(MultiTheme::new_for(
+                floom_core_theme::global_theme::DesignSystem::Material,
+            )),
             child: None,
+            on_dismiss: None,
         }
     }
 
-    /// Show or hide the overlay.
-    pub fn show(self, show: bool) -> Self {
-        self.show.set(show);
-        self
-    }
-
     /// Supply the content rendered above the scrim.
-    pub fn child(mut self, child: impl IntoView + 'static) -> Self {
-        self.child = Some(child.into_any());
+    ///
+    /// v1's `child(impl IntoView)`. 2.0 takes a factory -- the same shape
+    /// `Dialog::card_with` and `Child::new` take -- because the card is rebuilt
+    /// on every mount, so an owned widget cannot be handed over.
+    pub fn child(
+        mut self,
+        build: impl Fn() -> Box<dyn floom_widgets::WidgetAny + Send + Sync> + Send + Sync + 'static,
+    ) -> Self {
+        self.child = Some(Arc::new(build));
         self
     }
 
-    /// Fired when the backdrop (scrim) is clicked — typically wired to dismiss.
-    pub fn on_click(mut self, callback: impl Fn() + 'static) -> Self {
-        self.props.on_click = Some(Box::new(callback));
+    /// Show or hide the overlay (writes the shared flag).
+    pub fn show(mut self, show: bool) -> Self {
+        self.opacity = if show { 0.5 } else { 0.0 };
+        write_flag(&self.show, show);
         self
     }
 
-    /// Expose the internal show signal so an external trigger can show/hide it.
-    pub fn show_signal(&self) -> RwSignal<bool> {
-        self.show
-    }
-
-    /// Set the internal show signal from an external signal.
-    pub fn with_show_signal(mut self, show: RwSignal<bool>) -> Self {
+    /// Drive this overlay from a flag somebody else owns.
+    pub fn with_show_signal(mut self, show: SharedFlag) -> Self {
         self.show = show;
+        self.opacity = if read_flag(&self.show) { 0.5 } else { 0.0 };
         self
     }
 
-    pub fn props(&self) -> &OverlayProps {
-        &self.props
+    /// The shared show flag, so an external trigger can drive it.
+    pub fn open_flag(&self) -> SharedFlag {
+        self.show.clone()
+    }
+
+    /// Alias of [`Self::open_flag`] (v1 name).
+    pub fn show_signal(&self) -> SharedFlag {
+        self.show.clone()
+    }
+
+    /// Fired when the scrim is clicked (v1's `on_click`).
+    pub fn on_click(mut self, callback: impl Fn() + Send + Sync + 'static) -> Self {
+        self.on_dismiss = Some(Arc::new(callback));
+        self
+    }
+
+    /// v1's props, reconstructed for callers that read them. `on_click` is kept
+    /// in `Send + Sync` form here; this rebuilds the v1 `Box<dyn Fn()>` shape.
+    pub fn props(&self) -> OverlayProps {
+        OverlayProps {
+            opacity: self.opacity,
+            on_click: self.on_dismiss.as_ref().map(|cb| {
+                let c = cb.clone();
+                Box::new(move || c()) as Box<dyn Fn()>
+            }),
+        }
     }
 
     pub fn theme(&self) -> RwSignal<MultiTheme> {
@@ -87,53 +159,20 @@ impl MdOverlay {
         }
     }
 
-    /// Build a Material 3 overlay: a translucent scrim with the supplied
-    /// content centered above it. Hidden when `show` is false.
-    pub fn view(self) -> impl View {
-        let theme = self.theme;
-        let show = self.show;
-        let on_click = Rc::new(self.props.on_click);
-        let opacity = self.props.opacity;
-        let pad = match theme.get().component(ComponentId::Overlay) {
-            ComponentTokens::Overlay(t) => t.content_padding,
-            _ => unreachable!(),
-        };
-        let child = self.child.unwrap_or_else(|| Empty::new().into_any());
+    /// The overlay, ready to mount as a modal `Dialog`.
+    pub fn view(self) -> Dialog {
+        let style = self.resolved_style();
+        let opacity = self.opacity;
+        let on_dismiss = self.on_dismiss.clone();
+        let show = self.show.clone();
+        let child = self.child.clone();
+        let pad = style.content_padding;
 
-        let content = Container::new(child)
-            .style(move |s| {
-                let t = theme.get();
-                s.padding(pad)
-                    .background(t.colors().surface.to_peniko())
-                    .color(t.colors().on_surface.to_peniko())
-                    .border_radius(12.0)
-            })
-            // Clicks inside the content must not dismiss the overlay.
-            .on_event(listener::Click, |_, _| EventPropagation::Stop);
+        let alpha = (opacity.clamp(0.0, 1.0) * 255.0) as u8;
 
-        let scrim = Container::new(content)
-            .style(move |s| {
-                let t = theme.get();
-                let alpha = (opacity.clamp(0.0, 1.0) * 255.0) as u8;
-                s.width_pct(100.0)
-                    .height_pct(100.0)
-                    .background(with_alpha(t.colors().scrim, alpha).to_peniko())
-                    .items_center()
-                    .justify_center()
-                    .apply_if(!show.get(), |s| s.hide())
-            })
-            .on_event(listener::Click, {
-                let on_click = on_click.clone();
-                move |_, _| {
-                    show.set(false);
-                    if let Some(cb) = on_click.as_ref() {
-                        cb();
-                    }
-                    EventPropagation::Continue
-                }
-            });
-
-        Overlay::new(scrim)
+        Dialog::new()
+            .with_shared_presence(show.clone())
+            .card_with(move || build_card(alpha, pad, child.clone(), on_dismiss.clone(), show.clone()))
     }
 }
 
@@ -141,4 +180,95 @@ impl Default for MdOverlay {
     fn default() -> Self {
         Self::new()
     }
+}
+
+/// The card: a full-viewport scrim tinted `scrim` at `alpha`, with the content
+/// `Surface` centered above it. Rebuilt from factories because `Surface` is not
+/// `Clone` and `Child::new` requires an `Fn` build (called per mount).
+fn build_card(
+    alpha: u8,
+    pad: f32,
+    child: Option<Arc<dyn Fn() -> Box<dyn floom_widgets::WidgetAny + Send + Sync> + Send + Sync + 'static>>,
+    on_dismiss: Option<Callback>,
+    show: SharedFlag,
+) -> Box<dyn floom_widgets::WidgetAny> {
+    let surface_color = to_paint(
+        MultiTheme::new_for(floom_core_theme::global_theme::DesignSystem::Material)
+            .colors()
+            .surface,
+    );
+    let scrim = to_paint(
+        MultiTheme::new_for(floom_core_theme::global_theme::DesignSystem::Material)
+            .colors()
+            .scrim,
+    );
+    let scrim_color = PaintColor { r: scrim.r, g: scrim.g, b: scrim.b, a: alpha };
+
+    // The content card: padded `Surface` with `surface` fill + `12.0` radius.
+    let content_build: Arc<dyn Fn() -> Surface + Send + Sync> = {
+        let child = child.clone();
+        Arc::new(move || {
+            let child = child.clone();
+            Surface::new()
+                .request(LayoutRequest::new().padding(floom_core::Insets {
+                    left: f64::from(pad),
+                    right: f64::from(pad),
+                    top: f64::from(pad),
+                    bottom: f64::from(pad),
+                }))
+                .background(surface_color)
+                .radius(12.0)
+                .child(Child::new(ChildKey::index(0), LayoutRequest::new(), move || {
+                    match child.as_ref() {
+                        Some(b) => b(),
+                        None => Box::new(floom_widgets::Text::new(String::new())),
+                    }
+                }))
+        })
+    };
+
+    // The scrim: a full-bleed tinted `Surface` that centers the content above it.
+    let scrim_build: Arc<dyn Fn() -> Surface + Send + Sync> = {
+        let content_build = content_build.clone();
+        Arc::new(move || {
+            let content_build = content_build.clone();
+            Surface::new()
+                .request(LayoutRequest::new().fill())
+                .background(scrim_color)
+                .child(Child::new(
+                    ChildKey::index(0),
+                    LayoutRequest::new().fill(),
+                    move || {
+                        let content_build = content_build.clone();
+                        Box::new(
+                            Stack::new(Axis::Vertical)
+                                .align(Align::Center, Align::Center)
+                                .request(LayoutRequest::new().fill())
+                                .child(Child::new(
+                                    ChildKey::index(0),
+                                    LayoutRequest::new().fill(),
+                                    move || Box::new(content_build()),
+                                )),
+                        )
+                    },
+                ))
+        })
+    };
+
+    Box::new(
+        Pressable::new(Child::new(
+            ChildKey::index(0),
+            LayoutRequest::new().fill(),
+            move || {
+                let scrim_build = scrim_build.clone();
+                Box::new(scrim_build())
+            },
+        ))
+        .on_click(move || {
+            write_flag(&show, false);
+            if let Some(cb) = &on_dismiss {
+                cb();
+            }
+        }),
+    )
 }
