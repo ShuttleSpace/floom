@@ -972,6 +972,11 @@ impl Widget for Container {
 pub struct Spacer {
     extent: f64,
     axis: Axis,
+    /// The flex-grow factor, when this spacer absorbs free space.
+    ///
+    /// `None` for a fixed-extent spacer. A flexible spacer has one -- 1.0 for
+    /// [`Spacer::flexible`], and whatever the caller asked for otherwise.
+    grow: Option<f32>,
     revision: Revision,
 }
 
@@ -981,6 +986,7 @@ impl Spacer {
         Self {
             extent,
             axis: Axis::default(),
+            grow: None,
             revision: Revision::default(),
         }
     }
@@ -991,6 +997,26 @@ impl Spacer {
     /// without a separate variant.
     pub fn flexible() -> Self {
         Self::new(f64::INFINITY)
+    }
+
+    /// A spacer that absorbs free space by a *factor*.
+    ///
+    /// [`Spacer::flexible`] is this with a factor of 1.0. A factor is what a
+    /// flex row reads to divide the free space between its children, so a kit
+    /// whose spacer takes a grow factor -- the design systems' spacers do --
+    /// can name the factor rather than rounding it to "all of it".
+    pub fn growing(factor: f32) -> Self {
+        Self {
+            extent: 0.0,
+            axis: Axis::default(),
+            grow: Some(factor),
+            revision: Revision::default(),
+        }
+    }
+
+    /// The flex-grow factor, when this spacer absorbs free space.
+    pub fn grow_factor(&self) -> Option<f32> {
+        self.grow
     }
 
     pub fn axis(mut self, axis: Axis) -> Self {
@@ -1004,7 +1030,7 @@ impl Spacer {
     }
 
     pub fn is_flexible(&self) -> bool {
-        self.extent.is_infinite()
+        self.grow.is_some() || self.extent.is_infinite()
     }
 
     pub fn semantics_hint(&self) -> SemanticsHint {
@@ -1026,6 +1052,9 @@ impl Widget for Spacer {
     /// understands as "absorb the free space" — express it as `grow`, the
     /// same thing a flex child would say.
     fn layout_request(&self) -> Option<LayoutRequest> {
+        if let Some(grow) = self.grow {
+            return Some(LayoutRequest::new().grow(grow));
+        }
         if self.is_flexible() {
             return Some(LayoutRequest::new().grow(1.0));
         }
