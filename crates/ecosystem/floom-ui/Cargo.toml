@@ -27,7 +27,6 @@
 # back to `members`.
 
 exclude = [
-    "crates/cupertino/cupertino-alert",
     "crates/cupertino/cupertino-app",
     "crates/cupertino/cupertino-app_bar",
     "crates/cupertino/cupertino-autocomplete",
@@ -107,7 +106,6 @@ exclude = [
     "crates/cupertino/cupertino-validation_messages",
     "crates/cupertino/cupertino-virtual_scroller",
     "crates/cupertino/cupertino-window",
-    "crates/fluent/fluent-alert",
     "crates/fluent/fluent-app",
     "crates/fluent/fluent-app_bar",
     "crates/fluent/fluent-autocomplete",
@@ -278,6 +276,7 @@ members = [
     "crates/cupertino/cupertino-radio",
     "crates/cupertino/cupertino-checkbox",
     "crates/cupertino/cupertino-badge",
+    "crates/cupertino/cupertino-alert",
     "crates/cupertino/cupertino-footer",
     "crates/cupertino/cupertino-button",
     "crates/cupertino/cupertino-list",
@@ -300,6 +299,7 @@ members = [
     "crates/fluent/fluent-radio",
     "crates/fluent/fluent-checkbox",
     "crates/fluent/fluent-badge",
+    "crates/fluent/fluent-alert",
     "crates/fluent/fluent-footer",
     "crates/fluent/fluent-button",
     "crates/fluent/fluent-list",

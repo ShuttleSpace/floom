@@ -462,6 +462,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "floom-widget-cupertino-alert"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widget-cupertino-icon",
+ "floom-widgets",
+]
+
+[[package]]
 name = "floom-widget-cupertino-badge"
 version = "0.1.0"
 dependencies = [
@@ -690,6 +702,18 @@ dependencies = [
  "floom-ui-composites",
  "floom-widget-cupertino-icon",
  "floom-widget-runtime",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-fluent-alert"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widget-fluent-icon",
  "floom-widgets",
 ]
 
