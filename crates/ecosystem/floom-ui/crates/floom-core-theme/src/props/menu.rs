@@ -1,6 +1,11 @@
 pub struct MenuItem {
     pub label: String,
-    pub on_select: Option<Box<dyn Fn()>>,
+    // `Send + Sync` because every engine clickable that forwards this closure
+    // (`Checkbox::on_toggle`, `Pressable::on_click`, `ListItemRow::on_click`)
+    // requires it, and a menu/radio/list item's selection callback is no
+    // different. v1 took a bare `Box<dyn Fn()>`; the port makes the only
+    // direction that lets a kit hand the closure straight to the widget.
+    pub on_select: Option<Box<dyn Fn() + Send + Sync>>,
 }
 impl Clone for MenuItem {
     fn clone(&self) -> Self {

@@ -1,15 +1,69 @@
-use floom::event::EventPropagation;
-use floom::prelude::*;
-use floom::style::CursorStyle;
-use floom::view::AnyView;
-use floom::views::{Decorators, Label};
+//! Material 3 list, ported to the Floom 2.0 widget API.
+//!
+//! v1 was a `Container` of `Label` rows, each with a hovered background and a
+//! click listener. The row is the engine's `ListItemRow` now -- a `Pressable`
+//! with interaction state, which is what any hover answer would have to read --
+//! so what is left is the token translation and the container's own numbers.
+//!
+//! ## What v1 drew that this port cannot
+//!
+//! **The row's hovered background.** v1 wrote
+//! `.hover(|s| s.background(with_alpha(primary, 8)))` on every row.
+//! `ListItemStyle` has one static `background`, and `ListItemRow` owns the
+//! interaction state without exposing a variant of it. So the hover is gone, and
+//! it is reported rather than approximated: a `background_hovered` on
+//! `ListItemStyle` is a decision about a component three kits use for three
+//! different reasons, and `RadioStyle` is the precedent for *not* carrying a
+//! variant the engine cannot answer.
+//!
+//! **The container's horizontal padding.** v1 put `.padding(8.0)` on a
+//! `Container`, which paints a background and a radius and holds no children --
+//! it is a leaf. The pattern in this engine for "a painted box with content over
+//! it" is a `Stack` whose first child is an `absolute_fill` `Container` and whose
+//! remaining children are `Spacer`s and the content. That gives the vertical
+//! inset exactly. The horizontal inset is dropped rather than faked, because
+//! there is no way to indent the rows without shrinking them, and every row
+//! already draws a wider `padding_horizontal` of its own.
+//!
+//! ## What this kit answers, and what the other two answer instead
+//!
+//! | | container radius | row hover |
+//! | --- | --- | --- |
+//! | Material | `8.0`, hardcoded | `primary`@8 |
+//! | Cupertino | `radius().md` | `primary`@8 |
+//! | Fluent | `radius().md` | `primary`@8 |
+//!
+//! The radius is the only number this kit owns outright. v1 hardcoded it rather
+//! than reading `radius()`, which is exactly the disagreement, so it is a field
+//! here rather than a value read a second time in a second place.
+
+use floom_core::LayoutRequest;
+use floom_core::Axis;
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::list::ListProps;
 use floom_core_theme::props::menu::MenuItem;
 use floom_core_theme::theme::{MultiTheme, Theme};
 use floom_core_theme::tokens::color::Color;
-use floom_core_theme::tokens::color_ext::*;
+use floom_core_theme::tokens::color_ext::with_alpha;
+use floom_signal::{RwSignal, SignalGet};
+use std::sync::Arc;
+use floom_types::Color as PaintColor;
+use floom_ui_composites::{ListItemRow, ListItemStyle};
 use floom_widget_runtime::theme_signal;
+use floom_widgets::compose::Stack;
+use floom_widgets::primitives::{Container, Spacer};
+
+/// The row's geometry, drawn from `ListTokens`.
+///
+/// Carried separately from the style because a row is built inside a closure and
+/// the resolved style is `Copy` anyway, but the geometry is what `ListItemStyle`
+/// takes field-by-field.
+#[derive(Debug, Clone, Copy)]
+pub struct MdRowGeometry {
+    pub height: f32,
+    pub padding_horizontal: f32,
+    pub gap: f32,
+}
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct MdListStyle {
@@ -18,8 +72,17 @@ pub struct MdListStyle {
     pub text_color: Color,
     pub item_height: f32,
     pub padding: f32,
+    pub padding_horizontal: f32,
     pub min_width: f32,
     pub gap: f32,
+    /// The row's fill while hovered. All three kits wrote `primary`@8 and none
+    /// of the three can draw it -- see the module doc. Carried anyway, because a
+    /// style that omits a value the kit had is indistinguishable from one that
+    /// chose to leave it at a default.
+    pub hover_color: Color,
+    /// The container's corner radius.
+    pub border_radius: f32,
+    pub label_font_size: f32,
 }
 
 pub struct MdList {
@@ -36,7 +99,11 @@ impl MdList {
     }
 
     /// Push a clickable list item.
-    pub fn item(mut self, label: impl Into<String>, callback: impl Fn() + 'static) -> Self {
+    pub fn item(
+        mut self,
+        label: impl Into<String>,
+        callback: impl Fn() + Send + Sync + 'static,
+    ) -> Self {
         self.props.items.push(MenuItem {
             label: label.into(),
             on_select: Some(Box::new(callback)),
@@ -73,71 +140,81 @@ impl MdList {
             text_color: theme.colors().on_surface,
             item_height: tokens.item_height,
             padding: tokens.padding,
+            padding_horizontal: tokens.padding_horizontal,
             min_width: tokens.min_width,
             gap: tokens.gap,
+            hover_color: with_alpha(theme.colors().primary, 8),
+            // v1 hardcoded `8.0` rather than reading `radius()`, which is the
+            // whole of this kit's container answer against the other two.
+            border_radius: 8.0,
+            label_font_size: theme.typography().body.medium.font_size,
         }
     }
 
-    /// Build a renderable, interactive Material 3 list surface.
-    pub fn view(self) -> impl View {
-        let theme = self.theme;
+    /// Build a renderable, interactive Material list.
+    pub fn view(self) -> Stack {
+        let style = self.resolved_style();
+        let padding = style.padding;
+        let gap = style.gap;
+        let (surface, radius, min_width) = (
+            to_paint(style.surface_color),
+            style.border_radius,
+            style.min_width,
+        );
+        let items = self.props.items;
 
-        let tokens = match theme.get().component(ComponentId::List) {
-            ComponentTokens::List(t) => t,
-            _ => unreachable!(),
-        };
-        let item_height = tokens.item_height;
-        let padding = tokens.padding;
-        let min_width = tokens.min_width;
-        let gap = tokens.gap;
-        let padding_horizontal = tokens.padding_horizontal;
-
-        let rows: Vec<AnyView> = self
-            .props
-            .items
-            .into_iter()
-            .map(|item| {
-                let label = item.label;
-                let on_select = item.on_select;
-                let theme_hover = theme;
-                Container::new(Label::new(label))
-                    .style(move |s| {
-                        let t = theme.get();
-                        s.width_pct(100.0)
-                            .height(item_height)
-                            .padding_horiz(padding_horizontal)
-                            .items_center()
-                            .color(t.colors().on_surface.to_peniko())
-                            .font_size(t.typography().body.medium.font_size)
-                            .cursor(CursorStyle::Pointer)
-                            .hover(move |s| {
-                                let t = theme_hover.get();
-                                s.background(with_alpha(t.colors().primary, 8).to_peniko())
-                            })
-                    })
-                    .on_event(listener::Click, move |_, _| {
-                        if let Some(cb) = &on_select {
-                            cb();
-                        }
-                        EventPropagation::Continue
-                    })
-                    .into_any()
+        // A `Container` is a leaf in this engine, so "a filled box with content
+        // in it" is a `Stack` whose first child fills it absolutely, then the
+        // vertical padding, then the rows.
+        let mut stack = Stack::new(Axis::Vertical)
+            .gap(gap)
+            .request(LayoutRequest::new().min_width(min_width))
+            .push_layout(LayoutRequest::new().absolute_fill(), move || {
+                Box::new(Container::new().background(surface).radius(radius))
             })
-            .collect();
+            .push_layout(LayoutRequest::new().height(padding), move || {
+                Box::new(Spacer::new(padding as f64).axis(Axis::Vertical))
+            });
 
-        Container::new(list(rows).style(move |s| s.gap(gap)))
-            .style(move |s| {
-                let t = theme.get();
-                s.min_width(min_width)
-                    .padding(padding)
-                    .background(t.colors().surface.to_peniko())
-                    .border_radius(8.0)
-            })
+        for item in items {
+            let on_select = Arc::new(item.on_select);
+            let title = Arc::new(item.label);
+            let geometry = MdRowGeometry {
+                height: style.item_height,
+                padding_horizontal: style.padding_horizontal,
+                gap,
+            };
+            stack = stack.push(move || {
+                let on_select = on_select.clone();
+                let title = title.clone();
+                Box::new(
+                    ListItemRow::new(title.as_str())
+                        .style(MdList::row_style(geometry))
+                        .on_click(move || {
+                            if let Some(cb) = on_select.as_ref() {
+                                cb();
+                            }
+                        }),
+                )
+            });
+        }
+
+        stack.push_layout(LayoutRequest::new().height(padding), move || {
+            Box::new(Spacer::new(padding as f64).axis(Axis::Vertical))
+        })
+    }
+
+    fn row_style(geometry: MdRowGeometry) -> ListItemStyle {
+        ListItemStyle {
+            min_height: geometry.height,
+            padding_horizontal: geometry.padding_horizontal as f64,
+            gap: geometry.gap,
+            ..ListItemStyle::default()
+        }
     }
 }
 
-impl Default for MdList {
-    fn default() -> Self {
-        Self::new()
-    }
+/// List colour -> engine colour.
+fn to_paint(c: Color) -> PaintColor {
+    PaintColor::rgba(c.r, c.g, c.b, c.a)
 }
