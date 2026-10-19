@@ -462,6 +462,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "floom-widget-cupertino-badge"
+version = "0.1.0"
+dependencies = [
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-ui-composites",
+ "floom-widget-runtime",
+]
+
+[[package]]
 name = "floom-widget-cupertino-card"
 version = "0.1.0"
 dependencies = [
@@ -645,6 +656,17 @@ dependencies = [
  "floom-widget-cupertino-icon",
  "floom-widget-runtime",
  "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-fluent-badge"
+version = "0.1.0"
+dependencies = [
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-ui-composites",
+ "floom-widget-runtime",
 ]
 
 [[package]]
@@ -858,6 +880,17 @@ dependencies = [
  "floom-widget-md-icon",
  "floom-widget-runtime",
  "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-md-badge"
+version = "0.1.0"
+dependencies = [
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-ui-composites",
+ "floom-widget-runtime",
 ]
 
 [[package]]

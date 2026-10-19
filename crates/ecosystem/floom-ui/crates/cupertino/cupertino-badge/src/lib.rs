@@ -1,15 +1,28 @@
-use floom::prelude::*;
-use floom::reactive::RwSignal;
-use floom::view::AnyView;
-use floom::IntoView;
+//! Cupertino badge, ported to the Floom 2.0 widget API.
+//!
+//! v1 wrapped a child with an absolutely-positioned bubble at the top-right
+//! corner. 2.0's `Badge` is the bubble itself. So what is left is the token
+//! translation: read the palette (`error` / `on_error`) and the `BadgeTokens`,
+//! hand them to `Badge`, and return it.
+//!
+//! See `floom-widget-md-badge`'s module docs for the full rationale of what the
+//! port drops (the overlay over a child). The only thing this kit answers
+//! differently from Material is nothing in the palette -- both use `error` /
+//! `on_error` -- so the two are kept only because the engine widget plus a
+//! two-line palette is the whole port and the family is trivially three crates.
+
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::badge::BadgeProps;
 use floom_core_theme::theme::{MultiTheme, Theme};
 use floom_core_theme::tokens::color::Color;
+use floom_signal::{RwSignal, SignalGet};
+use floom_types::Color as PaintColor;
+use floom_ui_composites::Badge;
+use floom_widget_runtime::theme_signal;
 
 const DESIGN_SYSTEM: &str = "cupertino";
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct CupertinoBadgeStyle {
     pub design_system: &'static str,
     pub bubble_color: Color,
@@ -23,7 +36,6 @@ pub struct CupertinoBadgeStyle {
 pub struct CupertinoBadge {
     props: BadgeProps,
     theme: RwSignal<MultiTheme>,
-    child: Option<AnyView>,
 }
 
 impl CupertinoBadge {
@@ -33,33 +45,37 @@ impl CupertinoBadge {
                 content: String::new(),
                 dot: false,
             },
-            theme: RwSignal::new(MultiTheme::new_for(floom_core_theme::global_theme::DesignSystem::Cupertino)),
-            child: None,
+            theme: RwSignal::new(MultiTheme::new_for(
+                floom_core_theme::global_theme::DesignSystem::Cupertino,
+            )),
         }
     }
+
+    /// Set the text shown inside the badge. Ignored when `dot` is set.
     pub fn content(mut self, content: impl Into<String>) -> Self {
         self.props.content = content.into();
         self
     }
+
+    /// Render as a plain dot with no text.
     pub fn dot(mut self, dot: bool) -> Self {
         self.props.dot = dot;
         self
     }
-    /// Set the view that the badge is attached to.
-    pub fn child(mut self, child: impl IntoView + 'static) -> Self {
-        self.child = Some(child.into_any());
-        self
-    }
+
     pub fn props(&self) -> &BadgeProps {
         &self.props
     }
+
     pub fn theme(&self) -> RwSignal<MultiTheme> {
         self.theme
     }
+
     pub fn with_theme(mut self, theme: MultiTheme) -> Self {
         self.theme = RwSignal::new(theme);
         self
     }
+
     pub fn resolved_style(&self) -> CupertinoBadgeStyle {
         let theme = self.theme.get();
         let ComponentTokens::Badge(tokens) = theme.component(ComponentId::Badge) else {
@@ -76,61 +92,18 @@ impl CupertinoBadge {
         }
     }
 
-    /// Build a renderable Cupertino badge wrapping its child with a bubble at top-right.
-    pub fn view(self) -> impl View {
-        let theme = self.theme;
-        let dot = self.props.dot;
-        let content = self.props.content.clone();
-        let child = self.child.unwrap_or_else(|| Empty::new().into_any());
-
-        let tokens = match theme.get().component(ComponentId::Badge) {
-            ComponentTokens::Badge(t) => t,
-            _ => unreachable!(),
-        };
-        let font_size = tokens.font_size;
-        let min_size = tokens.min_size;
-        let padding = tokens.padding;
-        let dot_size = tokens.dot_size;
-
-        let is_empty = !dot && content.is_empty();
-
-        let bubble = if dot {
-            Container::new(Empty::new())
-                .style(move |s| {
-                    let t = theme.get();
-                    let off = dot_size / 2.0;
-                    s.absolute()
-                        .inset_top(-off)
-                        .inset_right(-off)
-                        .size(dot_size, dot_size)
-                        .background(t.colors().error.to_peniko())
-                        .border_radius(t.radius().full)
-                        .apply_if(is_empty, |s| s.hide())
-                })
-                .into_any()
-        } else {
-            Container::new(Label::new(content))
-                .style(move |s| {
-                    let t = theme.get();
-                    let off = min_size / 2.0;
-                    s.absolute()
-                        .inset_top(-off)
-                        .inset_right(-off)
-                        .min_width(min_size)
-                        .min_height(min_size)
-                        .padding_horiz(padding)
-                        .background(t.colors().error.to_peniko())
-                        .color(t.colors().on_error.to_peniko())
-                        .font_size(font_size)
-                        .border_radius(t.radius().full)
-                        .items_center()
-                        .justify_center()
-                        .apply_if(is_empty, |s| s.hide())
-                })
-                .into_any()
-        };
-
-        Container::new(stack((child, bubble))).style(|s| s.items_start())
+    /// Build a renderable Cupertino badge bubble.
+    pub fn view(self) -> Badge {
+        let style = self.resolved_style();
+        Badge::new()
+            .content(self.props.content)
+            .dot(self.props.dot)
+            .background(to_paint(style.bubble_color))
+            .foreground(to_paint(style.text_color))
+            .font_size(style.font_size)
+            .min_size(style.min_size)
+            .padding(style.padding)
+            .dot_size(style.dot_size)
     }
 }
 
@@ -138,4 +111,9 @@ impl Default for CupertinoBadge {
     fn default() -> Self {
         Self::new()
     }
+}
+
+/// List colour -> engine colour.
+fn to_paint(c: Color) -> PaintColor {
+    PaintColor::rgba(c.r, c.g, c.b, c.a)
 }
