@@ -89,7 +89,7 @@ impl CupertinoDivider {
             // two of the three kits behaved this way, so "correcting" it would
             // change two systems' behaviour on the strength of one.
             theme: RwSignal::new(MultiTheme::new_for(
-                floom_core_theme::global_theme::DesignSystem::CUPERTINO,
+                floom_core_theme::global_theme::DesignSystem::Cupertino,
             )),
         }
     }

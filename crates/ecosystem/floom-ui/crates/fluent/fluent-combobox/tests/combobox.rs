@@ -66,15 +66,15 @@ fn the_engine_default_is_materials_four() {
 /// And the two really place the panel differently, four pixels apart.
 #[test]
 fn the_two_kits_gap_the_panel_differently() {
-    let mine = floom_widgets::combobox::panel_placement(style().panel_gap, 320.0);
-    let materials = floom_widgets::combobox::panel_placement(4.0, 320.0);
+    let mine = floom_ui_composites::combobox::panel_placement(style().panel_gap, 320.0);
+    let materials = floom_ui_composites::combobox::panel_placement(4.0, 320.0);
     assert_eq!(
-        floom_widgets::combobox::panel_rect(mine, FIELD).y0,
+        floom_ui_composites::combobox::panel_rect(mine, FIELD).y0,
         FIELD.y1,
         "flush, for this kit"
     );
     assert_eq!(
-        floom_widgets::combobox::panel_rect(materials, FIELD).y0,
+        floom_ui_composites::combobox::panel_rect(materials, FIELD).y0,
         FIELD.y1 + 4.0,
         "and four below, for Material"
     );

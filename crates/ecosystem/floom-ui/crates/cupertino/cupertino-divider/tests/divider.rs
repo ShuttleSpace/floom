@@ -19,6 +19,7 @@
 //! Every test here has a control: without one, "the rule is at the top" also
 //! passes for a rule that is at the top *because nothing else was tried*.
 
+use floom_signal::SignalUpdate;
 use floom_types::Rect;
 use floom_widgets::{Divider, RuleAlignment};
 
