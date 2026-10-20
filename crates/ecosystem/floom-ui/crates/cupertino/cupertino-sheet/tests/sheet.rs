@@ -61,6 +61,11 @@ fn paint(c: floom_core_theme::tokens::color::Color) -> Color {
 /// Opened through the engine's own door, so the test sees what the host would
 /// have built: the scrim, then the aligned stack, then the panel.
 fn panel_of(kit: CupertinoSheet) -> Box<dyn floom_core::WidgetAny> {
+    // v1 hid the sheet while it was closed, so the panel and the scrim
+    // only exist while it is up: the flag opens it before the host would
+    // have built anything.
+    let flag = kit.open_flag();
+    floom_widgets::write_flag(&flag, true);
     let mut dialog = kit.view();
     let mut cx = RecordingUpdateContext::with_viewport(VIEWPORT, VIEWPORT);
     dialog.update(&mut cx, ID);
@@ -90,6 +95,11 @@ fn panel_ops(kit: CupertinoSheet) -> Vec<PaintOp> {
 
 /// The scrim's paint ops: the card the host mounts.
 fn scrim_ops(kit: CupertinoSheet) -> Vec<PaintOp> {
+    // v1 hid the sheet while it was closed, so the panel and the scrim
+    // only exist while it is up: the flag opens it before the host would
+    // have built anything.
+    let flag = kit.open_flag();
+    floom_widgets::write_flag(&flag, true);
     let mut dialog = kit.view();
     let mut cx = RecordingUpdateContext::with_viewport(VIEWPORT, VIEWPORT);
     dialog.update(&mut cx, ID);
@@ -148,7 +158,7 @@ fn the_tokens_and_colours_reach_the_style() {
 
 #[test]
 fn the_design_system_is_named_in_the_style() {
-    assert_eq!(kit().resolved_style().design_system, "material");
+    assert_eq!(kit().resolved_style().design_system, "cupertino");
 }
 
 /// v1 wrote `with_alpha(scrim_color, 160)`, which *replaces* the scrim token's

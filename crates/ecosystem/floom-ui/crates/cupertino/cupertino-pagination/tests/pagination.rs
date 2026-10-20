@@ -340,11 +340,19 @@ fn a_disabled_arrow_does_not_answer() {
 /// The props report the totals and the chosen page.
 #[test]
 fn the_props_report_the_totals() {
-    let kit = kit().total(7).current(3);
-    assert_eq!(kit.props().total, 7);
-    assert_eq!(kit.props().current, 3);
+    let totals = kit().total(7).current(3);
+    assert_eq!(totals.props().total, 7);
+    assert_eq!(totals.props().current, 3);
     assert!(
-        kit.props().on_change.is_some(),
+        totals.props().on_change.is_none(),
+        "and there is no callback, because none was given"
+    );
+
+    // v1's props held the callback too, so a kit that was given one reports
+    // one.
+    let with_callback = kit().total(7).current(3).on_change(|_| {});
+    assert!(
+        with_callback.props().on_change.is_some(),
         "v1's props held the callback too"
     );
 }

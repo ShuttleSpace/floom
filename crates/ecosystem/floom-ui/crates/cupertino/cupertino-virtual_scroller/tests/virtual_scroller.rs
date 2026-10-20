@@ -110,7 +110,19 @@ fn the_tokens_and_colours_reach_the_style() {
         floom_core_theme::component_tokens::ComponentTokens::VirtualScroller(tokens) => tokens,
         _ => unreachable!(),
     };
-    assert_eq!(style.item_height, tokens.item_height, "the token's row height");
+    // v1's rule: the prop's row height when it is positive and the token's
+    // when it is not. The props' default is 44, so the token's is the
+    // fallback rather than the number in play.
+    assert_eq!(
+        style.item_height,
+        kit().props().item_height,
+        "the prop's row height wins"
+    );
+    assert_eq!(
+        kit().item_height(0.0).resolved_style().item_height,
+        tokens.item_height,
+        "and the token's is the fallback"
+    );
     assert_eq!(style.row_gap, tokens.row_gap, "the token's row gap");
     assert_eq!(style.font_size, tokens.font_size, "the token's font size");
     assert_eq!(style.surface, theme().colors().surface, "the viewport's fill");

@@ -418,7 +418,11 @@ fn choosing_a_day_sets_the_value_and_closes_the_calendar() {
     widget.update(&mut cx, id);
     let children = widget.children();
     assert_eq!(children.len(), 1, "the in-tree fallback");
-    let mut calendar = children[0].build();
+    // The in-tree fallback puts the calendar on the overlay's layer, so the
+    // calendar is one level deeper than the picker: the layer, then the
+    // calendar the layer holds.
+    let layer = children[0].build();
+    let mut calendar = layer.children().remove(0).build();
 
     let bounds = Rect {
         x0: 0.0,

@@ -122,9 +122,15 @@ fn the_width_is_the_prop_s_and_the_token_is_the_fallback() {
     let style = kit().resolved_style();
     assert_eq!(style.width, kit().props().width, "the prop's width wins");
     let kit = kit().width(0.0);
+    let tokens = match theme()
+        .component(floom_core_theme::component_tokens::ComponentId::NavigationDrawer)
+    {
+        floom_core_theme::component_tokens::ComponentTokens::NavigationDrawer(tokens) => tokens,
+        _ => unreachable!(),
+    };
     assert_eq!(
         kit.resolved_style().width,
-        300.0,
+        tokens.width,
         "and the token's is the fallback, which is what v1 wrote"
     );
 }

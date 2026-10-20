@@ -393,13 +393,22 @@ impl MaterialSpeedDial {
 
         // The fan is mounted only while the dial is open. v1's `dyn_view`
         // answered the same question with an `Empty` view.
-        let fan = Conditional::new(false)
-            .when_flag(open.clone())
-            .show(Child::new(
-                ChildKey::index(0),
-                LayoutRequest::new(),
-                move || Box::new(buttons.clone()),
-            ));
+        //
+        // `Conditional::new(false)` starts "not yet seen", so the first update
+        // reads the flag as a *change*: a dial that starts closed would have
+        // its fan mounted at once, and the button's tap -- which is what opens
+        // the dial -- would find the flag already "seen" and never open it.
+        // `sync_when` is the engine's door for a widget that already knows the
+        // answer, and it is the one the navigation drawers use.
+        let mut fan = Conditional::new(false).when_flag(open.clone());
+        if !read_flag(&open) {
+            fan.sync_when(false);
+        }
+        let fan = fan.show(Child::new(
+            ChildKey::index(0),
+            LayoutRequest::new(),
+            move || Box::new(buttons.clone()),
+        ));
 
         let fan_slot = {
             let fan = fan;

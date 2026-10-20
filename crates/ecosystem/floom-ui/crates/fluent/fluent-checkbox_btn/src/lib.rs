@@ -185,6 +185,9 @@ impl FluentCheckboxBtn {
 
     /// The initial checked state.
     pub fn checked(mut self, checked: bool) -> Self {
+        // v1 wrote the state into the props as well as into the signal, so
+        // `props()` reported it.
+        self.props.checked = checked;
         self.set_checked(checked);
         self
     }

@@ -78,7 +78,7 @@ use floom_signal::{RwSignal, SignalGet};
 use floom_types::Color as PaintColor;
 use floom_types::{FontWeight, Insets, Shadow};
 use floom_ui_composites::Overlay;
-use floom_widgets::text_input::{SharedFlag, shared_flag, write_flag};
+use floom_widgets::text_input::{SharedFlag, read_flag, shared_flag, write_flag};
 use floom_widgets::{Align, Axis, Conditional, Pressable, Stack, Surface, Text};
 
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
@@ -379,8 +379,16 @@ impl MaterialSnackbar {
 
         // The snackbar is mounted only while it is up. v1 hid the same layer
         // with `apply_if(!open, |s| s.hide())`.
-        let content = Conditional::new(false)
-            .when_flag(show.clone())
+        // `Conditional::new(false)` starts "not yet seen", so the first update
+        // reads the flag as a *change*: a snackbar that starts closed would
+        // mount its bar and play the exit -- a bar sliding away on the first
+        // frame. `sync_when` is the engine's door for a widget that already
+        // knows the answer, and it is the one the navigation drawers use.
+        let mut content = Conditional::new(false).when_flag(show.clone());
+        if !read_flag(&show) {
+            content.sync_when(false);
+        }
+        let content = content
             .enter(PresenceTransition::slide(ANIMATION_SECONDS, SLIDE_DISTANCE))
             .exit(PresenceTransition::slide(ANIMATION_SECONDS, SLIDE_DISTANCE))
             .show(Child::new(

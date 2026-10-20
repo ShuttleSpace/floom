@@ -325,15 +325,15 @@ fn the_two_values_are_shared_with_the_caller() {
 
 // --- the theme source -----------------------------------------------------
 
-/// The theme: v1's Cupertino range slider read the *app-wide* theme signal, so
-/// a change of theme re-themes it with everything else.
+/// The theme: v1's Cupertino range slider took a *snapshot* of its own design
+/// system, so a change of the app-wide theme does not reach it.
 #[test]
-fn the_theme_is_the_app_wide_one() {
+fn the_theme_is_a_snapshot_of_its_own_design_system() {
     // Not `kit()`: the helper hands the widget a theme of its own, which is
     // exactly the thing this test is about.
-    assert_eq!(
+    assert_ne!(
         CupertinoRangeSlider::new().theme().id(),
         floom_core_theme::global_theme::theme_signal().id(),
-        "v1's Cupertino range slider read the app-wide signal, not a snapshot"
+        "v1's Cupertino range slider took a snapshot, not the app-wide signal"
     );
 }

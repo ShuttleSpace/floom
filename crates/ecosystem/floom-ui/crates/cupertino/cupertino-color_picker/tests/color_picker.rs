@@ -162,9 +162,30 @@ fn the_picker_is_painted_in_v1_s_colours() {
     let style = kit().resolved_style();
     let surface = kit().view();
     let ops = ops_of(&surface);
-    let fills = fills(&ops);
-    assert_eq!(fills.first(), Some(&paint(style.outline)), "the border");
-    assert_eq!(fills.get(1), Some(&paint(style.surface)), "the fill");
+    // The picker's fill is the surface colour.
+    assert_eq!(fills(&ops).first(), Some(&paint(style.surface)), "the fill");
+    // And its border is v1's: `outline` at 80, one point thick. A border is
+    // a stroke and not a fill, so it is not among the fills.
+    let (width, colour) = ops
+        .iter()
+        .find_map(|op| match op {
+            PaintOp::Path {
+                stroke: Some((width, colour)),
+                ..
+            } => Some((*width, *colour)),
+            _ => None,
+        })
+        .expect("the picker is outlined");
+    assert_eq!(
+        width,
+        f64::from(style.border_width),
+        "v1's border is one point thick"
+    );
+    assert_eq!(
+        colour,
+        paint(floom_core_theme::tokens::color_ext::with_alpha(style.outline, style.border_alpha)),
+        "in v1's border colour"
+    );
 }
 
 /// The square is painted with v1's three layers: the hue underneath, the white

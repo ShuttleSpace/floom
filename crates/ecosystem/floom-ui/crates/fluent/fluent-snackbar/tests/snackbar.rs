@@ -153,8 +153,8 @@ fn the_tokens_and_colours_reach_the_style() {
     assert_eq!(style.action_gap, tokens.action_gap, "the token's gap");
     assert_eq!(
         style.surface_color,
-        theme().colors().on_surface,
-        "the bar's fill"
+        floom_core_theme::tokens::color_ext::with_alpha(theme().colors().on_surface, 235),
+        "the bar's fill: v1's Fluent bar was `on_surface` at 235, not opaque"
     );
     assert_eq!(
         style.text_color,
@@ -179,7 +179,12 @@ fn the_design_system_is_named_in_the_style() {
 #[test]
 fn the_bar_is_painted_in_v1_s_colours() {
     let resolved = kit().resolved_style();
-    let overlay = kit().message("Saved").view();
+    let overlay = kit()
+        .message("Saved")
+        // v1 hid the bar while the snackbar was closed, so the bar is
+        // only there to look at while it is up.
+        .with_open_flag(floom_widgets::shared_flag(true))
+        .view();
     let surface = bar(&overlay).expect("the bar is up");
     assert_eq!(
         bar_fill(&surface),
@@ -197,7 +202,13 @@ fn the_bar_is_painted_in_v1_s_colours() {
 #[test]
 fn the_action_is_painted_in_v1_s_ink() {
     let resolved = kit().resolved_style();
-    let overlay = kit().message("Saved").action_label(Some("Undo".into())).view();
+    let overlay = kit()
+        .message("Saved")
+        .action_label(Some("Undo".into()))
+        // v1 hid the bar while the snackbar was closed, so the bar is
+        // only there to look at while it is up.
+        .with_open_flag(floom_widgets::shared_flag(true))
+        .view();
     let surface = bar(&overlay).expect("the bar is up");
     assert_eq!(
         action_ink(&surface),
@@ -250,7 +261,12 @@ fn the_action_closes_the_snackbar() {
 /// There is no action without a label.
 #[test]
 fn there_is_no_action_without_a_label() {
-    let overlay = kit().message("Saved").view();
+    let overlay = kit()
+        .message("Saved")
+        // v1 hid the bar while the snackbar was closed, so the bar is
+        // only there to look at while it is up.
+        .with_open_flag(floom_widgets::shared_flag(true))
+        .view();
     let surface = bar(&overlay).expect("the bar is up");
     let row = surface.children().remove(0).build();
     assert_eq!(row.children().len(), 1, "only the message");

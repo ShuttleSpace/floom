@@ -21,10 +21,10 @@
 //! * the panel's colour: `surface`; the content's ink: `on_surface`;
 //! * the panel's inner padding, the side sheets' width, the shadow's blur and
 //!   spread and the scrim's colour: the tokens;
-//! * the panel's corner radius: the theme's `radius().md`. v1's paint used it
+//! * the panel's corner radius: the theme's `radius().sm`. v1's paint used it
 //!   and v1's style reported the *token* instead -- for Fluent the two are
-//!   both 10.0, so they agree, but they come from different places and the
-//!   style reports both;
+//!   2.0 and 8.0, so they disagree, but they come from different places and
+//!   the style reports both;
 //! * the scrim's alpha: 160, a v1 literal -- and it *replaces* the scrim
 //!   token's own alpha rather than multiplying it, so the token's alpha never
 //!   shows;
@@ -208,14 +208,14 @@ impl FluentSheet {
             unreachable!("ComponentId::Sheet must resolve to SheetTokens")
         };
         FluentSheetStyle {
-            design_system: "cupertino",
+            design_system: "fluent",
             panel_color: theme.colors().surface,
             content_color: theme.colors().on_surface,
-            // v1's paint: `border_radius(theme.radius().md)` on the top and
+            // v1's paint: `border_radius(theme.radius().sm)` on the top and
             // bottom sheets -- not the token.
-            corner_radius: theme.radius().md,
-            // v1's style reported the token. For Fluent the two are both
-            // 10.0, so they agree.
+            corner_radius: theme.radius().sm,
+            // v1's style reported the token. For Fluent the two are 2.0 and
+            // 8.0, so they disagree.
             token_corner_radius: tokens.corner_radius,
             side_width: tokens.side_width,
             elevated: self.props.elevated,

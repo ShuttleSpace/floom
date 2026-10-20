@@ -61,9 +61,15 @@ fn ops_of(widget: &dyn Widget) -> Vec<PaintOp> {
 }
 
 /// One option's row: the ring, and the label beside it.
+///
+/// The group's own decoration sits between the row and the row's content: the
+/// group, the row, the `Pressable` that catches the click, and the `Surface`
+/// the group paints the row's fill on. The content -- the stack that holds the
+/// ring and the label -- is inside that surface.
 fn row_of(group: &SelectGroup, index: usize) -> Box<dyn Widget> {
     let pressable = group.children()[index].build().children().remove(0).build();
-    pressable.children().remove(0).build()
+    let surface = pressable.children().remove(0).build();
+    surface.children().remove(0).build()
 }
 
 /// The ring of one option: the outline, and the dot inside it.

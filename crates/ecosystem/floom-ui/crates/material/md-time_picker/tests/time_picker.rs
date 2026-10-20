@@ -338,7 +338,11 @@ fn the_hour_wraps_over_twenty_four() {
     widget.update(&mut cx, id);
     let children = widget.children();
     assert_eq!(children.len(), 1, "the in-tree fallback");
-    let mut panel = children[0].build();
+    // The in-tree fallback puts the panel on the overlay's layer, so the panel
+    // is one level deeper than the picker: the layer, then the panel the
+    // layer holds.
+    let layer = children[0].build();
+    let mut panel = layer.children().remove(0).build();
 
     let bounds = panel_rect(&style);
     let down = hour_down(&style, bounds);

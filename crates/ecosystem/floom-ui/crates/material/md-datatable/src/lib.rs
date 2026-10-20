@@ -122,6 +122,8 @@ pub struct MaterialDataTableStyle {
     pub design_system: &'static str,
     /// The frame's fill.
     pub surface: Color,
+    /// The header row's fill. v1's `surface_variant`.
+    pub surface_variant: Color,
     /// The cells' ink -- the header's and the body cells'.
     pub on_surface: Color,
     /// v1's style reported this; v1's paint never used it.
@@ -224,6 +226,8 @@ impl MaterialDataTable {
         MaterialDataTableStyle {
             design_system: "material",
             surface: theme.colors().surface,
+            // v1's header row was filled with the surface variant.
+            surface_variant: theme.colors().surface_variant,
             on_surface: theme.colors().on_surface,
             // v1's style reported this and v1's paint never used it.
             on_surface_variant: theme.colors().on_surface_variant,
@@ -294,7 +298,8 @@ impl MaterialDataTable {
         let header = row_surface(
             header_cells,
             style.header_height,
-            Some(to_paint(style.surface)),
+            // v1's header row was filled with the surface variant.
+            Some(to_paint(style.surface_variant)),
             (style.divider_width, to_paint(style.header_divider)),
         );
         body = body.push(move || Box::new(header.clone()));

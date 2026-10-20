@@ -121,7 +121,17 @@ fn the_tokens_and_colours_reach_the_style() {
 /// The height is the prop's when it is positive, and the token's otherwise.
 #[test]
 fn the_height_is_the_prop_s_when_it_is_positive() {
-    assert_eq!(kit().resolved_style().height, 200.0, "the token's height");
+    // The token's height, read from the token: the three kits' tokens do not
+    // agree on it.
+    let tokens = match theme().component(floom_core_theme::component_tokens::ComponentId::Carousel) {
+        floom_core_theme::component_tokens::ComponentTokens::Carousel(tokens) => tokens,
+        _ => unreachable!(),
+    };
+    assert_eq!(
+        kit().resolved_style().height,
+        tokens.height,
+        "the token's height"
+    );
     assert_eq!(
         kit().height(300.0).resolved_style().height,
         300.0,

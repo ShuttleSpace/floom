@@ -133,7 +133,8 @@ fn the_design_system_is_named_in_the_style() {
 #[test]
 fn the_layer_is_painted_the_scrim_colour() {
     let resolved = kit().resolved_style();
-    let layer = layer(kit());
+    // The layer is only there while the drawer is up.
+    let layer = layer(kit().open(true));
     let fill = ops_of(&*layer).iter().find_map(|op| match op {
         PaintOp::RoundedRect { color, .. } => Some(*color),
         PaintOp::Rect { color, .. } => Some(*color),

@@ -17,7 +17,10 @@
 //!
 //! * the ring's size, the row's height and the gap between rows: the tokens;
 //! * the ring's outline, the dot inside it, and the label's ink and weight:
-//!   this kit's own.
+//!   this kit's own;
+//! * the dot's presence: only the chosen option has one. v1 *hid* the dot
+//!   rather than painting it in another colour, and 2.0 has no `hide()`, so
+//!   the port leaves the dot out of an unchosen ring altogether.
 //!
 //! ## What the three kits disagree about
 //!
@@ -211,7 +214,7 @@ impl MaterialRadioGroup {
                     )
                     .background(to_paint(style.selected_color))
                     .radius(style.radius);
-                let ring = Surface::new()
+                let mut ring = Surface::new()
                     .request(
                         LayoutRequest::new()
                             .width(style.radio_size)
@@ -221,15 +224,22 @@ impl MaterialRadioGroup {
                             .cross_align(Align::Center),
                     )
                     .radius(style.radius)
-                    .border(RING_BORDER, if chosen {
-                    to_paint(style.selected_color)
-                } else {
-                    to_paint(style.unselected_color)
-                })
-                    .push({
+                    .border(
+                        RING_BORDER,
+                        if chosen {
+                            to_paint(style.selected_color)
+                        } else {
+                            to_paint(style.unselected_color)
+                        },
+                    );
+                // v1 hid the dot when the option was not chosen, so the port does
+                // not put the dot in the ring at all.
+                if chosen {
+                    ring = ring.push({
                         let dot = dot.clone();
                         move || Box::new(dot.clone())
                     });
+                }
 
                 let row = Stack::new(Axis::Horizontal)
                     // v1's row gap: 8, a literal

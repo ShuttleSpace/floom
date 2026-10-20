@@ -30,14 +30,11 @@
 //! * the bar's shadow: a black-at-40 blur of 16 with a spread of 1;
 //! * where the bar sits: centred at the bottom, 24 above the bottom edge.
 //!
-//! ## What this kit carries that Cupertino's does not
+//! ## What this kit carries that Material's does not
 //! 
 //! * **The radius.** v1's style reported the token's radius while its paint
-//!   drew the theme's `lg` radius. The port reports what it paints, because a
-//!   style that does not say what the widget draws is not the widget's output.
-//! * **The action is left out.** v1 always built the action and hid it when
-//!   there was no label; 2.0 has no `hide()`, so the port leaves it out -- the
-//!   same thing v1's Cupertino and Fluent snackbars did.
+//!   drew the theme's `lg` radius. The port reports both: `border_radius` is
+//!   v1's number and `painted_border_radius` is the one the bar is drawn with.
 //! * **The message takes the room.** v1 gave the message `flex_basis(1.0)`
 //!   and `flex_grow(1.0)`. 2.0's `LayoutRequest` has a `flex_grow` but no
 //!   `flex_basis`, so the port keeps the grow and drops the basis.
@@ -69,6 +66,11 @@
 //!   the way out. 2.0's presence transition carries one channel per element,
 //!   so the port slides -- the motion that says "this came from the bottom" --
 //!   and the fade is dropped.
+//! * **The action was always built.** v1's Cupertino snackbar gave the row an
+//!   action view even when there was no label -- an empty label -- so the row
+//!   carried a second child and the gap between them. The port leaves the
+//!   action out when there is no label, which is what v1's Material and
+//!   Fluent snackbars did.
 //! * **The pointer cursor.** v1 gave the action `cursor(CursorStyle::Pointer)`.
 //!   2.0's `Pressable` does not answer `Widget::cursor`, so the pointer is
 //!   not carried over.
@@ -96,7 +98,7 @@ use floom_signal::{RwSignal, SignalGet};
 use floom_types::Color as PaintColor;
 use floom_types::{FontWeight, Insets, Shadow};
 use floom_ui_composites::Overlay;
-use floom_widgets::text_input::{SharedFlag, shared_flag, write_flag};
+use floom_widgets::text_input::{SharedFlag, read_flag, shared_flag, write_flag};
 use floom_widgets::{Align, Axis, Conditional, Pressable, Stack, Surface, Text};
 
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
@@ -132,7 +134,11 @@ pub struct CupertinoSnackbarStyle {
     /// The action's ink.
     pub action_color: Color,
     pub padding: f32,
+    /// v1's style reported the token's radius.
     pub border_radius: f32,
+    /// The radius the bar is *painted* with: v1's paint drew the theme's
+    /// `lg` radius, which is not the token's.
+    pub painted_border_radius: f32,
     pub min_height: f32,
     pub font_size: f32,
     pub max_width: f32,
@@ -267,7 +273,10 @@ impl CupertinoSnackbar {
             padding: tokens.padding,
             // v1 painted the theme's `lg` radius while its style reported
             // the token's: the port reports what it paints.
-            border_radius: theme.radius().lg,
+            // v1 painted the theme's `lg` radius while its style reported
+            // the token's: the port reports both.
+            border_radius: tokens.border_radius,
+            painted_border_radius: theme.radius().lg,
             min_height: tokens.min_height,
             font_size: tokens.font_size,
             max_width: tokens.max_width,
@@ -382,7 +391,7 @@ impl CupertinoSnackbar {
                 bottom: f64::from(style.padding),
             })
             .background(to_paint(style.surface_color))
-            .radius(style.border_radius)
+            .radius(style.painted_border_radius)
             .shadow(style.shadow)
             .push(move || Box::new(row.clone()));
 
@@ -403,8 +412,16 @@ impl CupertinoSnackbar {
 
         // The snackbar is mounted only while it is up. v1 hid the same layer
         // with `apply_if(!open, |s| s.hide())`.
-        let content = Conditional::new(false)
-            .when_flag(show.clone())
+        // `Conditional::new(false)` starts "not yet seen", so the first update
+        // reads the flag as a *change*: a snackbar that starts closed would
+        // mount its bar and play the exit -- a bar sliding away on the first
+        // frame. `sync_when` is the engine's door for a widget that already
+        // knows the answer, and it is the one the navigation drawers use.
+        let mut content = Conditional::new(false).when_flag(show.clone());
+        if !read_flag(&show) {
+            content.sync_when(false);
+        }
+        let content = content
             .enter(PresenceTransition::slide(ANIMATION_SECONDS, SLIDE_DISTANCE))
             .exit(PresenceTransition::slide(ANIMATION_SECONDS, SLIDE_DISTANCE))
             .show(Child::new(
