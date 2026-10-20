@@ -29,7 +29,6 @@
 exclude = [
     "crates/cupertino/cupertino-app",
     "crates/cupertino/cupertino-app_bar",
-    "crates/cupertino/cupertino-avatar",
     "crates/cupertino/cupertino-banner",
     "crates/cupertino/cupertino-bottom_navigation",
     "crates/cupertino/cupertino-breadcrumbs",
@@ -83,7 +82,6 @@ exclude = [
     "crates/cupertino/cupertino-window",
     "crates/fluent/fluent-app",
     "crates/fluent/fluent-app_bar",
-    "crates/fluent/fluent-avatar",
     "crates/fluent/fluent-banner",
     "crates/fluent/fluent-bottom_navigation",
     "crates/fluent/fluent-breadcrumbs",
@@ -137,7 +135,6 @@ exclude = [
     "crates/fluent/fluent-window",
     "crates/material/md-app",
     "crates/material/md-app_bar",
-    "crates/material/md-avatar",
     "crates/material/md-banner",
     "crates/material/md-bottom_navigation",
     "crates/material/md-breadcrumbs",
@@ -334,6 +331,9 @@ members = [
     "crates/cupertino/cupertino-icons_provider",
     "crates/fluent/fluent-defaults_provider",
     "crates/fluent/fluent-icons_provider",
+    "crates/material/md-avatar",
+    "crates/cupertino/cupertino-avatar",
+    "crates/fluent/fluent-avatar",
 
 ]
 
