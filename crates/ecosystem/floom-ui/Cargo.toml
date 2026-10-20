@@ -65,7 +65,6 @@ exclude = [
     "crates/cupertino/cupertino-tabs",
     "crates/cupertino/cupertino-textarea",
     "crates/cupertino/cupertino-time_picker",
-    "crates/cupertino/cupertino-timeline",
     "crates/cupertino/cupertino-validation_messages",
     "crates/cupertino/cupertino-virtual_scroller",
     "crates/cupertino/cupertino-window",
@@ -107,7 +106,6 @@ exclude = [
     "crates/fluent/fluent-tabs",
     "crates/fluent/fluent-textarea",
     "crates/fluent/fluent-time_picker",
-    "crates/fluent/fluent-timeline",
     "crates/fluent/fluent-validation_messages",
     "crates/fluent/fluent-virtual_scroller",
     "crates/fluent/fluent-window",
@@ -149,7 +147,6 @@ exclude = [
     "crates/material/md-tabs",
     "crates/material/md-textarea",
     "crates/material/md-time_picker",
-    "crates/material/md-timeline",
     "crates/material/md-validation_messages",
     "crates/material/md-virtual_scroller",
     "crates/material/md-window",
@@ -334,6 +331,9 @@ members = [
     "crates/material/md-empty_state",
     "crates/cupertino/cupertino-empty_state",
     "crates/fluent/fluent-empty_state",
+    "crates/material/md-timeline",
+    "crates/cupertino/cupertino-timeline",
+    "crates/fluent/fluent-timeline",
 
 ]
 

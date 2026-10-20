@@ -33,6 +33,9 @@
 //! * **The child is a slot, not a view.** v1's `child(..)` took an
 //!   `impl IntoView`; 2.0's takes a [`Child`], because a 2.0 widget is mounted
 //!   by its parent rather than returned.
+//! * **The accessors.** v1's empty states had no `props()`, `theme()` or
+//!   `with_theme()`. The port gives them all three, because a kit that cannot
+//!   be given a theme cannot be tested against one.
 
 use floom_core::Child;
 use floom_core::LayoutRequest;

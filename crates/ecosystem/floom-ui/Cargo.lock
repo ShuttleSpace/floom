@@ -1095,6 +1095,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "floom-widget-cupertino-timeline"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widgets",
+]
+
+[[package]]
 name = "floom-widget-cupertino-toolbar"
 version = "0.1.0"
 dependencies = [
@@ -1755,6 +1766,17 @@ dependencies = [
 
 [[package]]
 name = "floom-widget-fluent-theme_provider"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-fluent-timeline"
 version = "0.1.0"
 dependencies = [
  "floom-core",
@@ -2454,6 +2476,18 @@ dependencies = [
 
 [[package]]
 name = "floom-widget-md-theme_provider"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widget-runtime",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-md-timeline"
 version = "0.1.0"
 dependencies = [
  "floom-core",
