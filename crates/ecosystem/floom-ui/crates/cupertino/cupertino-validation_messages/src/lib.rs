@@ -8,18 +8,17 @@
 //! The engine's vocabulary: a column of `Text` leaves, and a shared list the
 //! caller pushes into and pulls out of.
 //!
-//! ## The engine gap
+//! ## What the port uses
 //!
-//! **The engine has no shared list.** It has a shared bool (`SharedFlag`), a
-//! shared string (`SharedBuffer`) and a shared map (`SharedMap`), and a list of
-//! messages is none of those: a `SharedMap` keyed by index would lose the
-//! order, and a `SharedBuffer` would have to carry a separator that a message
-//! could contain.
+//! The engine's [`ValidationMessagesList`]: a list of error messages, drawn
+//! from a shared [`SharedList`]. The engine grew both for this -- it had a
+//! shared bool, a shared string and a shared map, but no shared *list*, and a
+//! list of messages is none of those: a map keyed by index would lose the
+//! order, and a buffer would have to carry a separator that a message could
+//! contain.
 //!
-//! So the kit holds an `Arc<Mutex<Vec<String>>>` of its own, and that type is
-//! the gap the engine should close. It is the same shape as the engine's
-//! shared types -- an `Arc` over a `Mutex` -- so a caller that holds the
-//! handle reads and writes it exactly as it would a `SharedFlag`.
+//! The list re-declares its `Text` children whenever the messages change,
+//! because 2.0's tree is built once.
 //!
 //! ## What this kit answers
 //!
@@ -52,15 +51,13 @@
 //! not; the port gives all three the same field, so a caller can read which
 //! design system a style came from.
 
-use std::sync::{Arc, Mutex};
-
 use floom_core::{
     Axis, Child, ChildKey, CreateContext, ElementId, LayoutRequest, PaintContext, SemanticsContext,
     UpdateContext, Widget,
 };
 use floom_signal::{RwSignal, SignalGet};
 use floom_types::Color as PaintColor;
-use floom_widgets::Text;
+use floom_ui_composites::{ValidationMessagesList, ValidationMessagesStyle};
 
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::validation_messages::ValidationMessagesProps;
@@ -72,11 +69,12 @@ use floom_core_theme::tokens::color::Color;
 /// The engine has no shared list -- see the module documentation -- so the kit
 /// holds one of its own: the same shape as the engine's shared types, an
 /// `Arc` over a `Mutex`.
-pub type SharedMessages = Arc<Mutex<Vec<String>>>;
+/// The messages, shared with whoever writes them.
+pub type SharedMessages = floom_widgets::SharedList;
 
 /// A fresh, empty list.
 fn shared_messages() -> SharedMessages {
-    Arc::new(Mutex::new(Vec::new()))
+    floom_widgets::shared_list(Vec::new())
 }
 
 /// The validation messages' appearance, in the terms v1 used.
@@ -214,16 +212,16 @@ impl CupertinoValidationMessages {
 
     /// The list: the messages, in the theme's error colour, with the gap
     /// between them.
-    pub fn view(self) -> CupertinoValidationMessagesList {
+    pub fn view(self) -> ValidationMessagesList {
         let style = self.resolved_style();
-        CupertinoValidationMessagesList {
-            messages: self.messages,
-            // The props, not the tokens: v1's paint used the props.
-            font_size: style.painted_font_size,
-            gap: style.painted_gap,
-            error_color: to_paint(style.error_color),
-            last: Vec::new(),
-        }
+        ValidationMessagesList::new()
+            .style(ValidationMessagesStyle {
+                text_color: to_paint(style.error_color),
+                // The props, not the tokens: v1's paint used the props.
+                font_size: style.painted_font_size,
+                gap: style.painted_gap,
+            })
+            .messages(self.messages)
     }
 }
 
@@ -237,68 +235,6 @@ impl Default for CupertinoValidationMessages {
 ///
 /// The engine has no shared list, so the kit holds one -- see the module
 /// documentation.
-pub struct CupertinoValidationMessagesList {
-    messages: SharedMessages,
-    font_size: f32,
-    gap: f32,
-    error_color: PaintColor,
-    /// The messages as they were when this widget last looked, so a change is
-    /// a change rather than a fresh read every frame.
-    last: Vec<String>,
-}
-
-impl CupertinoValidationMessagesList {
-    /// The messages as they are right now.
-    pub fn current_messages(&self) -> Vec<String> {
-        self.messages
-            .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner())
-            .clone()
-    }
-}
-
-impl Widget for CupertinoValidationMessagesList {
-    fn create(&self, cx: &mut dyn CreateContext) -> ElementId {
-        cx.alloc_child()
-    }
-
-    fn update(&mut self, cx: &mut dyn UpdateContext, id: ElementId) {
-        let now = self.current_messages();
-        if now == self.last {
-            return;
-        }
-        self.last = now;
-        // The list changed, so the messages have to be re-declared. The host
-        // visits every node each frame, so no notification has to travel.
-        cx.mark_children_dirty(id);
-    }
-
-    fn children(&self) -> Vec<Child> {
-        self.current_messages()
-            .into_iter()
-            .enumerate()
-            .map(|(index, message)| {
-                let color = self.error_color;
-                let font_size = self.font_size;
-                Child::new(
-                    ChildKey::index(index),
-                    LayoutRequest::new(),
-                    move || Box::new(Text::new(message.clone()).size(font_size).color(color)),
-                )
-            })
-            .collect()
-    }
-
-    fn layout_request(&self) -> Option<LayoutRequest> {
-        Some(LayoutRequest::new().stack(Axis::Vertical, self.gap))
-    }
-
-    fn paint(&self, _cx: &mut dyn PaintContext, _id: ElementId) {}
-
-    fn semantics(&self, cx: &mut dyn SemanticsContext, _id: ElementId) {
-        floom_widgets::emit_semantics(floom_widgets::SemanticsHint::decorative(), cx);
-    }
-}
 
 /// Theme colour -> engine colour.
 fn to_paint(c: Color) -> PaintColor {

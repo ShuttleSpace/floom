@@ -76,6 +76,42 @@ pub fn shared_map(map: HashMap<String, String>) -> SharedMap {
     Arc::new(Mutex::new(map))
 }
 
+/// A shared list of strings.
+///
+/// The third shape of shared state the engine has, after the flag and the
+/// buffer: a list that changes as a whole. A validation list is the case that
+/// needed it -- a set of messages the caller pushes and pulls, which is neither
+/// one string nor a pair of them.
+pub type SharedList = Arc<Mutex<Vec<String>>>;
+
+/// A fresh shared list, initialised to `list`.
+pub fn shared_list(list: Vec<String>) -> SharedList {
+    Arc::new(Mutex::new(list))
+}
+
+/// Read a shared list, treating a poisoned mutex as empty.
+///
+/// A caller that poisoned the mutex is as stuck as the widget is, and
+/// panicking here would take down a paint pass over a list nobody was looking
+/// at.
+pub fn read_list(list: &SharedList) -> Vec<String> {
+    list.lock()
+        .map(|guard| guard.clone())
+        .unwrap_or_default()
+}
+
+/// Write a shared list. Reports whether it changed, so a caller can skip a
+/// frame.
+pub fn write_list(list: &SharedList, value: Vec<String>) -> bool {
+    match list.lock() {
+        Ok(mut guard) if *guard != value => {
+            *guard = value;
+            true
+        }
+        _ => false,
+    }
+}
+
 /// A fresh shared flag, initialised to `value`.
 pub fn shared_flag(value: bool) -> SharedFlag {
     Arc::new(Mutex::new(value))

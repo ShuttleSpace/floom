@@ -19,8 +19,9 @@ use floom_widgets::testkit::{AllocatingCreateContext, PaintOp, SceneRecorder};
 use floom_core_theme::global_theme::DesignSystem;
 use floom_core_theme::theme::{MultiTheme, Theme};
 
+use floom_ui_composites::ValidationMessagesList;
 use floom_widget_cupertino_validation_messages::{
-    CupertinoValidationMessages, CupertinoValidationMessagesList, CupertinoValidationMessagesStyle,
+    CupertinoValidationMessages, CupertinoValidationMessagesStyle,
 };
 
 const BOX: Rect = Rect {
@@ -63,7 +64,7 @@ fn ops_of(widget: &dyn Widget) -> Vec<PaintOp> {
 }
 
 /// The text, the size and the ink one message painted.
-fn message_painted(list: &CupertinoValidationMessagesList, index: usize) -> (String, f32, Color) {
+fn message_painted(list: &ValidationMessagesList, index: usize) -> (String, f32, Color) {
     let message = list.children()[index].build();
     ops_of(&*message)
         .iter()
