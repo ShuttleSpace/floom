@@ -44,6 +44,10 @@ pub struct AccordionStyle {
     /// Height of each header row, in logical px.
     pub header_height: f32,
     /// Inset between the header's outline and its content, horizontally.
+    ///
+    /// v1 wrote this as `padding_horiz(..)` on the header's own box. It is
+    /// spent as the header row's padding, so the title sits that far from the
+    /// panel's edge.
     pub header_padding: f32,
     /// Inset between the revealed content's edge and its own content.
     pub content_padding: f32,
@@ -386,6 +390,14 @@ fn header_child(
             let open_flag = open.clone();
             let row = Stack::new(Axis::Horizontal)
                 .align(Align::Start, Align::Center)
+                // v1's header: `padding_horiz(content_padding)`, the inset
+                // between the header's edge and its title. The number was in
+                // the style from the start and nothing spent it, so a header
+                // sat flush against the panel's edge while the style said
+                // otherwise.
+                .request(
+                    LayoutRequest::new().padding_horiz(f64::from(style.header_padding)),
+                )
                 .push({
                     let title = title.clone();
                     move || {
@@ -1910,6 +1922,40 @@ mod accordion_tests {
             .expect("the accordion is a stack");
         assert_eq!(req.axis, Some(Axis::Vertical));
         assert_eq!(req.gap, Some(7.0));
+    }
+
+    /// The header's own padding, spent.
+    ///
+    /// `header_padding` was in the style from the first version of this widget
+    /// and nothing read it, so a header sat flush against the panel's edge
+    /// while the style said otherwise. v1 wrote the same inset as
+    /// `padding_horiz(..)` on the header's box, and the number in the style is
+    /// that number.
+    #[test]
+    fn the_header_spends_its_padding() {
+        let (accordion, _) = one_panel();
+        let accordion = accordion.style(AccordionStyle {
+            header_padding: 8.0,
+            ..AccordionStyle::default()
+        });
+        // The panel holds the header, the header holds a pressable, and the
+        // pressable holds the row the padding belongs to.
+        let leaf = accordion.children()[0].build();
+        let pressable = leaf.children().remove(0).build();
+        let row = pressable.children().remove(0).build();
+        let request = row
+            .layout_request()
+            .expect("the header's row asks for its own space");
+        assert_eq!(
+            request.padding,
+            Some(Insets {
+                left: 8.0,
+                right: 8.0,
+                top: 0.0,
+                bottom: 0.0,
+            }),
+            "the inset between the header's edge and its title"
+        );
     }
 
     #[test]

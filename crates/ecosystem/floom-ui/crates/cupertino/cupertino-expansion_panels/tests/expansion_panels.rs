@@ -16,6 +16,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 
 use floom_core::{Axis, Widget};
+use floom_types::Insets;
 use floom_widgets::VectorIcon;
 
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens, ExpansionPanelsTokens};
@@ -352,5 +353,35 @@ fn the_colours_are_this_design_system_s_own() {
         theme.colors().primary,
         Color::rgb(0, 122, 255),
         "Cupertino's own primary"
+    );
+}
+
+/// The header's own inset: v1 wrote `padding_horiz(content_padding)` on the
+/// header's box.
+///
+/// The engine's `Accordion` carries the number in its style -- and used to
+/// leave it unspent, so the title sat flush against the panel's edge while the
+/// style said otherwise.
+#[test]
+fn the_header_is_padded_at_the_sides() {
+    let style = CupertinoExpansionPanels::new().resolved_style();
+    let accordion = panels(1).resolve();
+    // The panel holds the header, the header holds a pressable, and the
+    // pressable holds the header's row.
+    let leaf = accordion.children()[0].build();
+    let pressable = leaf.children().remove(0).build();
+    let row = pressable.children().remove(0).build();
+    let request = row
+        .layout_request()
+        .expect("the header's row asks for its own space");
+    assert_eq!(
+        request.padding,
+        Some(Insets {
+            left: f64::from(style.header_padding),
+            right: f64::from(style.header_padding),
+            top: 0.0,
+            bottom: 0.0,
+        }),
+        "v1: `padding_horiz(content_padding)` on the header"
     );
 }
