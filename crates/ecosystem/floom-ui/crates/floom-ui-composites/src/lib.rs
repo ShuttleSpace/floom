@@ -16,6 +16,7 @@
 
 mod any;
 pub mod badge;
+pub mod chip;
 pub mod accordion;
 pub mod bottom_sheet;
 pub mod dialog;
@@ -39,7 +40,10 @@ pub mod tree_view;
 pub mod text_field;
 pub mod checkbox;
 
-pub use accordion::{Accordion, AccordionIndicator, AccordionStyle, SelectGroup, SelectGroupStyle, SelectionMode};
+pub use accordion::{
+    Accordion, AccordionIndicator, AccordionStyle, ContentPlacement, SelectGroup, SelectGroupStyle,
+    SelectionMode,
+};
 pub use bottom_sheet::BottomSheet;
 pub use focus::FocusRing;
 pub use state::{LayerShape, StateLayer};
@@ -50,6 +54,7 @@ pub use popup::{Popup, PopupPlacement, popup_placement_rect};
 pub use tabs::Tabs;
 
 pub use badge::{Badge};
+pub use chip::{Chip};
 pub use combobox::{ComboPick, Combobox, ComboboxStyle, Commit, SharedPick};
 pub use combobox::{commit, matching, panel_placement, panel_rect, panel_request, select, sync_query_to_selection, visible_options};
 pub use counter::{Counter, CounterState, CounterStyle, SharedCounter, Step, clamp_value, step_value};

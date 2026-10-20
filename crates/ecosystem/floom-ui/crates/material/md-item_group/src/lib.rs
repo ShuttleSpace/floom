@@ -34,9 +34,12 @@
 //!   `Container` with a click handler: invisible to a screen reader. Rows here are
 //!   radios (single mode) or checkboxes (multiple).
 
+use floom_core::Axis;
 use floom_signal::{RwSignal, SignalGet};
 use floom_types::{Color as PaintColor, Insets};
-use floom_ui_composites::{SelectGroup, SelectGroupStyle, SelectionMode};
+use floom_ui_composites::{
+    ContentPlacement, SelectGroup, SelectGroupStyle, SelectionMode,
+};
 
 use floom_widget_runtime::theme_signal;
 
@@ -189,7 +192,20 @@ impl MdItemGroup {
         let style = self.resolved_style();
         SelectGroupStyle {
             gap: style.gap,
+            // v1's rows ran down the page: a vertical stack of items.
+            axis: Axis::Vertical,
+            // v1's rows had no height of their own -- they grew with the item.
+            height: None,
             pad: style.pad,
+            // v1's item text sat directly under the top padding, not in the
+            // middle of the row.
+            content_placement: ContentPlacement::Top,
+            // v1's item group was a radio group: tapping the chosen row left it
+            // chosen.
+            toggles_off_in_single_mode: false,
+            // v1's item group read `mandatory` in *both* modes -- the last
+            // chosen item could not be un-chosen.
+            mandatory_in_multiple_mode: true,
             radius: style.radius,
             // v1 wrote `.border(1.0)` unconditionally — a fixed 1px, not a token.
             border_width: 1.0,

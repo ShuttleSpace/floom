@@ -593,8 +593,42 @@ pub enum SelectionMode {
 pub struct SelectGroupStyle {
     /// Gap between rows.
     pub gap: f32,
+    /// The direction the rows run in.
+    ///
+    /// Vertical is the default and what every existing caller gets. A group of
+    /// chips runs the other way -- v1's chip group was a *row* of chips, not a
+    /// column of them -- and the direction is the caller's answer, not the
+    /// engine's.
+    pub axis: Axis,
+    /// A fixed height for every row, when the rows have one.
+    ///
+    /// `None` lets each row be as tall as its content, which is what a list of
+    /// items wants. A chip wants a fixed height, and the content's own height
+    /// cannot be relied on to produce it.
+    pub height: Option<f32>,
     /// Row padding: `pad` horizontally, `pad / 2` vertically, as v1 wrote it.
     pub pad: f32,
+    /// Where a row's content sits inside the row's box.
+    ///
+    /// The two shapes the floem-ui kits ask for are not the same shape: a list of
+    /// items puts its text directly under the top padding, while a chip centres
+    /// its label in the chip. The padding is symmetric, so centring the content
+    /// in the content box puts it in the middle of the whole box -- which is
+    /// what v1's `items_center` did.
+    pub content_placement: ContentPlacement,
+    /// Whether tapping the chosen row in single mode un-chooses it.
+    ///
+    /// A radio does not; a chip does. v1's item group kept the radio's answer
+    /// and v1's chip group kept the chip's, and the difference is the whole
+    /// reason a chip group is not an item group.
+    pub toggles_off_in_single_mode: bool,
+    /// Whether `mandatory` is enforced when several rows may be chosen.
+    ///
+    /// v1's item group enforced it and v1's chip group did not -- in v1's chip
+    /// group the `mandatory` prop was only read in the single-mode branch, so
+    /// several chips could all be un-chosen. The flag is here so both answers
+    /// survive.
+    pub mandatory_in_multiple_mode: bool,
     pub radius: f32,
     /// The outline's thickness. `0.0` draws none.
     pub border_width: f32,
@@ -612,7 +646,12 @@ impl Default for SelectGroupStyle {
     fn default() -> Self {
         Self {
             gap: 4.0,
+            axis: Axis::Vertical,
+            height: None,
             pad: 16.0,
+            content_placement: ContentPlacement::Top,
+            toggles_off_in_single_mode: false,
+            mandatory_in_multiple_mode: true,
             radius: 8.0,
             border_width: 1.0,
             background: Color::rgb(0xF5, 0xF5, 0xF5),
@@ -625,12 +664,35 @@ impl Default for SelectGroupStyle {
     }
 }
 
+/// Where a row's content sits inside the row's box.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum ContentPlacement {
+    /// At the top of the content box, under the padding.
+    ///
+    /// v1's item row: the text sat directly under the top padding, and the row
+    /// grew to fit. This is the default because it is what a list of items wants.
+    #[default]
+    Top,
+    /// Centred in the content box.
+    ///
+    /// v1's chip: the label was centred in the chip. The padding is symmetric,
+    /// so a label centred in the content box is centred in the whole chip too.
+    Centred,
+}
+
 /// One row's content.
 struct SelectRow {
     /// What assistive technology calls the row. v1 had no semantics at all for
     /// these rows — see [`SelectGroup`] on why the port adds them.
     label: Option<String>,
-    content: ChildBuilder,
+    /// The row's content, built knowing whether *this* row is selected.
+    ///
+    /// The flag is the point: v1 coloured a chosen row's **ink** as well as its
+    /// fill, and 2.0's `Surface` paints a fill while only the child knows it is
+    /// text. A content builder that could not see the selection could not
+    /// follow it, so a kit whose ink changes with the selection had no way to
+    /// say so.
+    content: Arc<dyn Fn(bool) -> Box<dyn floom_core::WidgetAny> + Send + Sync + 'static>,
 }
 
 /// A stack of rows, any number of which can be selected.
@@ -701,6 +763,25 @@ impl SelectGroup {
     ) -> Self {
         self.rows.push(SelectRow {
             label: Some(label.into()),
+            content: Arc::new(move |_| content()),
+        });
+        self
+    }
+
+    /// Append a row whose content knows whether its row is selected.
+    ///
+    /// The flag is the point. v1 coloured a chosen row's **ink** as well as its
+    /// fill, and 2.0's `Surface` paints a fill while only the child knows it is
+    /// text — so a kit whose text changes with the selection needs the content
+    /// builder to be able to see it. Use [`Self::row`] when the content does not
+    /// change.
+    pub fn row_with_state(
+        mut self,
+        label: impl Into<String>,
+        content: impl Fn(bool) -> Box<dyn floom_core::WidgetAny> + Send + Sync + 'static,
+    ) -> Self {
+        self.rows.push(SelectRow {
+            label: Some(label.into()),
             content: Arc::new(content),
         });
         self
@@ -713,7 +794,7 @@ impl SelectGroup {
     ) -> Self {
         self.rows.push(SelectRow {
             label: None,
-            content: Arc::new(content),
+            content: Arc::new(move |_| content()),
         });
         self
     }
@@ -853,7 +934,14 @@ impl Widget for SelectGroup {
                 // The rules live in `SelectGroup::choose`, reached through a
                 // closure that owns the same four values a row does. A row cannot
                 // call `&self`: it is not the group.
-                let changed = apply_choose(&selected, index, mode, mandatory);
+                let changed = apply_choose(
+                    &selected,
+                    index,
+                    mode,
+                    mandatory,
+                    style.toggles_off_in_single_mode,
+                    style.mandatory_in_multiple_mode,
+                );
                 if changed {
                     if let Some(callback) = &on_change {
                         callback(is_selected_indices(&selected));
@@ -871,9 +959,13 @@ impl Widget for SelectGroup {
                 content,
                 toggle,
             };
+            let height = style.height;
             out.push(Child::new(
                 ChildKey::index(index),
-                LayoutRequest::new(),
+                match height {
+                    Some(height) => LayoutRequest::new().height(height),
+                    None => LayoutRequest::new(),
+                },
                 move || Box::new(leaf.clone()),
             ));
         }
@@ -881,7 +973,7 @@ impl Widget for SelectGroup {
     }
 
     fn layout_request(&self) -> Option<LayoutRequest> {
-        Some(LayoutRequest::new().stack(Axis::Vertical, self.style.gap))
+        Some(LayoutRequest::new().stack(self.style.axis, self.style.gap))
     }
 
     fn paint(&self, _cx: &mut dyn PaintContext, _id: ElementId) {}
@@ -903,7 +995,7 @@ pub(crate) struct SelectGroupRow {
     mode: SelectionMode,
     label: Option<String>,
     style: SelectGroupStyle,
-    content: ChildBuilder,
+    content: Arc<dyn Fn(bool) -> Box<dyn floom_core::WidgetAny> + Send + Sync + 'static>,
     toggle: Arc<dyn Fn() + Send + Sync>,
 }
 
@@ -967,7 +1059,7 @@ impl Widget for SelectGroupRow {
     }
 
     fn layout_request(&self) -> Option<LayoutRequest> {
-        Some(LayoutRequest::new().fill())
+        Some(LayoutRequest::new().stack(self.style.axis, self.style.gap))
     }
 
     fn paint(&self, _cx: &mut dyn PaintContext, _id: ElementId) {}
@@ -981,7 +1073,7 @@ impl Widget for SelectGroupRow {
 fn row_surface(
     style: SelectGroupStyle,
     selected: bool,
-    content: ChildBuilder,
+    content: Arc<dyn Fn(bool) -> Box<dyn floom_core::WidgetAny> + Send + Sync + 'static>,
 ) -> floom_widgets::Surface {
     let (background, border) = if selected {
         (style.selected_background, style.selected_border_color)
@@ -1001,7 +1093,15 @@ fn row_surface(
     if style.border_width > 0.0 {
         surface = surface.border(style.border_width, border);
     }
-    surface.push(move || content())
+    // A chip centres its label; a list of items puts its text under the top
+    // padding. The padding is symmetric, so a label centred in the content box
+    // is centred in the whole chip -- which is what v1's `items_center` did.
+    if style.content_placement == ContentPlacement::Centred {
+        surface = surface.request(LayoutRequest::new().cross_align(Align::Center));
+    }
+    // The content is built with the row's own selection, so an ink that changes
+    // with the selection can change.
+    surface.push(move || content(selected))
 }
 
 /// `SelectGroup::choose`, as a free function over the shared state.
@@ -1010,6 +1110,8 @@ fn apply_choose(
     index: usize,
     mode: SelectionMode,
     mandatory: bool,
+    toggles_off_in_single_mode: bool,
+    mandatory_in_multiple_mode: bool,
 ) -> bool {
     let mut guard = selected.lock().unwrap_or_else(|e| e.into_inner());
     if guard.len() <= index {
@@ -1021,6 +1123,11 @@ fn apply_choose(
             if mandatory && was {
                 return false;
             }
+            // A chip can be tapped off; a radio cannot.
+            if toggles_off_in_single_mode && was {
+                guard[index] = false;
+                return true;
+            }
             for slot in guard.iter_mut() {
                 *slot = false;
             }
@@ -1030,7 +1137,7 @@ fn apply_choose(
         SelectionMode::Multiple => {
             if was {
                 let chosen = guard.iter().filter(|s| **s).count();
-                if mandatory && chosen <= 1 {
+                if mandatory_in_multiple_mode && mandatory && chosen <= 1 {
                     return false;
                 }
                 guard[index] = false;
@@ -1387,7 +1494,8 @@ mod select_group_tests {
     #[test]
     fn a_row_paints_the_selected_appearance_when_selected() {
         let style = SelectGroupStyle::default();
-        let content: ChildBuilder = Arc::new(|| Box::new(Text::new("row")));
+        let content: Arc<dyn Fn(bool) -> Box<dyn floom_core::WidgetAny> + Send + Sync + 'static> =
+            Arc::new(|_| Box::new(Text::new("row")));
 
         let unselected = row_surface(style, false, content.clone());
         let selected = row_surface(style, true, content);
@@ -1417,7 +1525,7 @@ mod select_group_tests {
             border_width: 2.0,
             ..SelectGroupStyle::default()
         };
-        let surface = row_surface(style, false, Arc::new(|| Box::new(Text::new("row"))));
+        let surface = row_surface(style, false, Arc::new(|_| Box::new(Text::new("row"))));
         let border = surface
             .decoration()
             .border_spec()
@@ -1433,7 +1541,7 @@ mod select_group_tests {
             border_width: 0.0,
             ..SelectGroupStyle::default()
         };
-        let surface = row_surface(style, false, Arc::new(|| Box::new(Text::new("row"))));
+        let surface = row_surface(style, false, Arc::new(|_| Box::new(Text::new("row"))));
         assert!(surface.decoration().border_spec().is_none());
     }
 
@@ -1446,7 +1554,7 @@ mod select_group_tests {
             pad: 16.0,
             ..SelectGroupStyle::default()
         };
-        let surface = row_surface(style, false, Arc::new(|| Box::new(Text::new("row"))));
+        let surface = row_surface(style, false, Arc::new(|_| Box::new(Text::new("row"))));
         let declared = surface.layout_request().expect("a padded surface");
         assert_eq!(
             declared.padding,
@@ -1481,6 +1589,155 @@ mod select_group_tests {
         };
         assert_eq!(role_of(SelectionMode::Single), SemanticsRole::Radio);
         assert_eq!(role_of(SelectionMode::Multiple), SemanticsRole::CheckBox);
+    }
+
+    /// A chip can be tapped off; a radio cannot.
+    ///
+    /// v1's chip group un-chose the chosen chip when it was tapped again in
+    /// single mode, and v1's item group did not. The style says which.
+    #[test]
+    fn a_row_tapped_again_is_un_chosen_when_the_style_says_so() {
+        let mut group = SelectGroup::new().row("One", || Box::new(Text::new("row")));
+        group = group.style(SelectGroupStyle {
+            toggles_off_in_single_mode: true,
+            ..SelectGroupStyle::default()
+        });
+        click_row(&group, 0);
+        assert_eq!(group.selection(), vec![0], "the first tap chooses it");
+        click_row(&group, 0);
+        assert!(
+            group.selection().is_empty(),
+            "and the second tap takes it off, the way a chip does"
+        );
+    }
+
+    /// The control for the above: without the flag, the row stays chosen.
+    #[test]
+    fn a_row_tapped_again_stays_chosen_by_default() {
+        let group = three_rows();
+        click_row(&group, 0);
+        click_row(&group, 0);
+        assert_eq!(group.selection(), vec![0], "a radio does not come off");
+    }
+
+    /// v1's chip group read `mandatory` only in the single-mode branch, so
+    /// several chips could all be un-chosen. v1's item group enforced it in both.
+    #[test]
+    fn mandatory_can_be_left_out_of_the_multiple_mode_rule() {
+        let mut group = SelectGroup::new()
+            .row("One", || Box::new(Text::new("row")))
+            .row("Two", || Box::new(Text::new("row")));
+        group = group.multiple(true).mandatory(true).style(SelectGroupStyle {
+            mandatory_in_multiple_mode: false,
+            ..SelectGroupStyle::default()
+        });
+        click_row(&group, 0);
+        click_row(&group, 0);
+        assert!(
+            group.selection().is_empty(),
+            "the last chosen chip comes off, the way v1's chip group did"
+        );
+    }
+
+    /// The control for the above: by default, the last chosen row stays.
+    #[test]
+    fn mandatory_keeps_the_last_chosen_row_by_default() {
+        let mut group = SelectGroup::new()
+            .row("One", || Box::new(Text::new("row")))
+            .row("Two", || Box::new(Text::new("row")));
+        group = group.multiple(true).mandatory(true);
+        click_row(&group, 0);
+        click_row(&group, 0);
+        assert_eq!(group.selection(), vec![0], "the last one stays chosen");
+    }
+
+    /// A chip centres its label; a list of items puts its text under the top
+    /// padding. The padding is symmetric, so a label centred in the content box
+    /// is centred in the whole chip -- which is what v1's `items_center` did.
+    #[test]
+    fn a_row_can_centre_its_content() {
+        let mut group = SelectGroup::new().row("One", || Box::new(Text::new("row")));
+        group = group.style(SelectGroupStyle {
+            content_placement: ContentPlacement::Centred,
+            ..SelectGroupStyle::default()
+        });
+        // The row holds a pressable, the pressable holds the surface, and the
+        // surface is the box the content sits in.
+        let row = group.children()[0].build().children().remove(0).build();
+        let pressable = row.children().remove(0).build();
+        let surface = pressable
+            .as_any()
+            .downcast_ref::<floom_widgets::Surface>()
+            .expect("a surface");
+        let request = surface.layout_request().expect("a surface asks for its own space");
+        assert_eq!(request.cross_align, Some(Align::Center));
+    }
+
+    /// The rows run along the direction the style names.
+    ///
+    /// A group of chips runs the other way -- v1's chip group was a *row* of chips
+    /// -- and the direction is the caller's answer, not the engine's.
+    #[test]
+    fn the_rows_run_along_the_styles_axis() {
+        let mut group = SelectGroup::new().row("One", || Box::new(Text::new("row")));
+        group = group.style(SelectGroupStyle {
+            axis: Axis::Horizontal,
+            ..SelectGroupStyle::default()
+        });
+        let request = group.layout_request().expect("a group asks for its own space");
+        assert_eq!(request.axis, Some(Axis::Horizontal));
+        assert_eq!(request.gap, Some(4.0), "and the style's gap between them");
+    }
+
+    /// A row can have a fixed height, when the rows are chips rather than items.
+    #[test]
+    fn a_row_can_have_a_fixed_height() {
+        let mut group = SelectGroup::new().row("One", || Box::new(Text::new("row")));
+        group = group.style(SelectGroupStyle {
+            height: Some(32.0),
+            ..SelectGroupStyle::default()
+        });
+        let request = group.children()[0].layout;
+        assert_eq!(request.height, Some(floom_types::Length::Px(32.0)));
+    }
+
+    /// A row's content is built knowing whether *that* row is selected.
+    ///
+    /// v1 coloured a chosen row's **ink** as well as its fill, and 2.0's
+    /// `Surface` paints a fill while only the child knows it is text -- so a kit
+    /// whose text changes with the selection needs the content builder to be
+    /// able to see it. `row_with_state` is that door.
+    #[test]
+    fn a_row_s_content_is_built_with_its_own_selection() {
+        let mut group = SelectGroup::new()
+            .row_with_state("One", |selected| {
+                Box::new(Text::new(if selected { "on" } else { "off" }))
+            })
+            .row_with_state("Two", |selected| {
+                Box::new(Text::new(if selected { "on" } else { "off" }))
+            });
+        group = group.selected([0]);
+
+        let content_of = |index: usize| {
+            // The row holds a pressable, and the pressable holds the surface, and
+            // the surface holds the content.
+            let row = group.children()[index].build().children().remove(0).build();
+            let pressable = row.children().remove(0).build();
+            let surface = pressable
+                .as_any()
+                .downcast_ref::<floom_widgets::Surface>()
+                .expect("a surface")
+                .clone();
+            let text = surface.children()[0].build();
+            text.as_any()
+                .downcast_ref::<Text>()
+                .expect("a text")
+                .content()
+                .to_string()
+        };
+
+        assert_eq!(content_of(0), "on", "the chosen row says so");
+        assert_eq!(content_of(1), "off", "and the unchosen one does not");
     }
 
     /// The reader, not a captured value: a row is not rebuilt when the selection

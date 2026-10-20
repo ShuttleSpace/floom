@@ -57,7 +57,12 @@ fn the_tokens_and_colours_reach_the_engine_style() {
     use floom_ui_composites::SelectGroupStyle;
     let expect = SelectGroupStyle {
         gap: resolved.gap,
+        axis: floom_core::Axis::Vertical,
+        height: None,
         pad: resolved.pad,
+        content_placement: floom_ui_composites::ContentPlacement::Top,
+        toggles_off_in_single_mode: false,
+        mandatory_in_multiple_mode: true,
         radius: resolved.radius,
         border_width: 1.0,
         background: paint(resolved.surface_variant),
@@ -236,7 +241,12 @@ fn the_resolved_style_is_enough_to_build_the_widget() {
     // the port's own.
     let by_hand = floom_ui_composites::SelectGroup::new().style(floom_ui_composites::SelectGroupStyle {
         gap: resolved.gap,
+        axis: floom_core::Axis::Vertical,
+        height: None,
         pad: resolved.pad,
+        content_placement: floom_ui_composites::ContentPlacement::Top,
+        toggles_off_in_single_mode: false,
+        mandatory_in_multiple_mode: true,
         radius: resolved.radius,
         border_width: 1.0,
         background: paint(resolved.surface_variant),
