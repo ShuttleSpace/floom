@@ -677,9 +677,24 @@ impl Conditional {
     /// a test -- drives the child in and out. The flag's value at the moment
     /// this is built seeds the first frame, so a conditional that starts open
     /// is open immediately rather than a frame later.
+    ///
+    /// The seed is the flag's *own* value, and not its opposite, which is what
+    /// [`Self::new`] starts from: `new` deliberately begins "not yet seen" so
+    /// that a fixed `when` reconciles on the first frame, and a conditional
+    /// built that way reads its own starting state as a *departure* -- playing
+    /// an exit transition for a child that was never there, and mounting that
+    /// child for the length of the exit. A conditional that already knows the
+    /// answer says so here, the same way [`Self::sync_when`] says it to a
+    /// parent.
     pub fn when_flag(mut self, flag: crate::text_input::SharedFlag) -> Self {
-        self.when = crate::text_input::read_flag(&flag);
-        self.last_when = !self.when;
+        let when = crate::text_input::read_flag(&flag);
+        self.when = when;
+        self.last_when = when;
+        self.phase = if when {
+            PresencePhase::Shown
+        } else {
+            PresencePhase::Hidden
+        };
         self.flag = Some(flag);
         self
     }
