@@ -752,6 +752,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "floom-widget-cupertino-progress_circular"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widgets",
+]
+
+[[package]]
 name = "floom-widget-cupertino-progress_linear"
 version = "0.1.0"
 dependencies = [
@@ -1161,6 +1172,17 @@ dependencies = [
  "floom-types",
  "floom-ui-composites",
  "floom-widget-runtime",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-fluent-progress_circular"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
  "floom-widgets",
 ]
 
@@ -1577,6 +1599,18 @@ dependencies = [
  "floom-signal",
  "floom-types",
  "floom-ui-composites",
+ "floom-widget-runtime",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-md-progress_circular"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
  "floom-widget-runtime",
  "floom-widgets",
 ]

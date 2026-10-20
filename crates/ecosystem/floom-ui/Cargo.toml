@@ -66,7 +66,6 @@ exclude = [
     "crates/cupertino/cupertino-otp_input",
     "crates/cupertino/cupertino-pagination",
     "crates/cupertino/cupertino-parallax",
-    "crates/cupertino/cupertino-progress_circular",
     "crates/cupertino/cupertino-pull_to_refresh",
     "crates/cupertino/cupertino-radio-group",
     "crates/cupertino/cupertino-range_slider",
@@ -131,7 +130,6 @@ exclude = [
     "crates/fluent/fluent-otp_input",
     "crates/fluent/fluent-pagination",
     "crates/fluent/fluent-parallax",
-    "crates/fluent/fluent-progress_circular",
     "crates/fluent/fluent-pull_to_refresh",
     "crates/fluent/fluent-radio-group",
     "crates/fluent/fluent-range_slider",
@@ -196,7 +194,6 @@ exclude = [
     "crates/material/md-otp_input",
     "crates/material/md-pagination",
     "crates/material/md-parallax",
-    "crates/material/md-progress_circular",
     "crates/material/md-pull_to_refresh",
     "crates/material/md-radio-group",
     "crates/material/md-range_slider",
@@ -334,6 +331,9 @@ members = [
     "crates/material/md-list_group",
     "crates/cupertino/cupertino-list_group",
     "crates/fluent/fluent-list_group",
+    "crates/material/md-progress_circular",
+    "crates/cupertino/cupertino-progress_circular",
+    "crates/fluent/fluent-progress_circular",
 
 ]
 

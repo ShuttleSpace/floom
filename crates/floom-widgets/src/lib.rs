@@ -12,6 +12,7 @@
 #![forbid(unsafe_code)]
 
 pub mod canvas;
+pub mod circular_progress;
 pub mod compose;
 pub mod controls;
 pub mod native;
@@ -34,6 +35,7 @@ pub use widget_any::{to_core_role, to_core_state};
 /// Self-drawn surfaces: a closure-driven drawing board, a WGSL shader box and
 /// a loading spinner.
 pub use canvas::{Canvas, ShaderBox, Spinner};
+pub use circular_progress::{CircularProgress, CircularProgressStyle};
 pub use compose::{
     AnimatedContent, Conditional, Crossfade, Grid, List, Opacity, Scroll, ScrollAxes,
     SharedTransitionLayout, Stack,

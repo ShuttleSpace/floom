@@ -1,7 +1,34 @@
-use std::f32::consts::PI;
+//! Fluent circular progress, ported to the Floom 2.0 widget API.
+//!
+//! v1 drew an SVG ring: a track circle and an accent arc over it, with the
+//! arc's length and start set by the value. 2.0's [`CircularProgress`] draws
+//! the same two things with the engine's own path and stroke, so the kit is a
+//! thin adapter over it.
+//!
+//! ## What this kit answers
+//!
+//! * **the size**: the props' size when it is set, and the token's otherwise;
+//! * **the colours**: `surface_variant` for the track, `primary` for the arc;
+//! * **the indeterminate arc**: //! **25% of the ring, starting at three o'clock** -- which is
+//! where this kit and the other two disagree
+//!
+//! ## The size token is never read
+//!
+//! v1 wrote `if self.props.size > 0.0 { self.props.size } else { tokens.size }`,
+//! and the props' default size is **36.0** -- so the props always win and
+//! `ProgressCircularTokens::size` is dead. v1's own doc on `size()` said
+//! "Zero -- the default -- defers to the token", which is wrong: the default is
+//! 36.0, not 0. The rule is kept, because the rule is what v1 drew, and the
+//! lie is named here rather than corrected silently.
+//!
+//! ## The rotation
+//!
+//! //! This kit's v1 arc did not spin, so there is nothing for a host to drive and
+//! the rotation stays at zero.
+use floom_signal::{RwSignal, SignalGet};
+use floom_types::Color as PaintColor;
+use floom_widgets::{CircularProgress, CircularProgressStyle};
 
-use floom::prelude::*;
-use floom::views::{Decorators};
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::progress_circular::ProgressCircularProps;
 use floom_core_theme::theme::{MultiTheme, Theme};
@@ -13,11 +40,16 @@ const DESIGN_SYSTEM: &str = "fluent";
 pub struct FluentProgressCircularStyle {
     pub design_system: &'static str,
     pub track_color: Color,
-    pub progress_color: Color,
+    pub fill_color: Color,
     pub size: f32,
     pub stroke_width: f32,
+    /// The fraction of the ring the indeterminate arc covers.
+    pub indeterminate_fraction: f64,
+    /// Where the indeterminate arc starts, in radians.
+    pub indeterminate_start_rad: f64,
 }
 
+/// Fluent's circular progress.
 pub struct FluentProgressCircular {
     props: ProgressCircularProps,
     theme: RwSignal<MultiTheme>,
@@ -27,101 +59,86 @@ impl FluentProgressCircular {
     pub fn new() -> Self {
         Self {
             props: ProgressCircularProps::default(),
-            theme: RwSignal::new(MultiTheme::new_for(floom_core_theme::global_theme::DesignSystem::Fluent)),
+            theme: RwSignal::new(MultiTheme::new_for(
+                floom_core_theme::global_theme::DesignSystem::Fluent,
+            )),
         }
     }
+
+    /// Progress percentage, in `0.0..=100.0`.
     pub fn value(mut self, value: f32) -> Self {
         self.props.value = value;
         self
     }
+
+    /// Ignore the value and draw the indeterminate arc.
     pub fn indeterminate(mut self, indeterminate: bool) -> Self {
         self.props.indeterminate = indeterminate;
         self
     }
+
+    /// The ring's diameter in dp. Zero -- the default -- defers to the token.
     pub fn size(mut self, size: f32) -> Self {
         self.props.size = size;
         self
     }
+
     pub fn props(&self) -> &ProgressCircularProps {
         &self.props
     }
+
     pub fn theme(&self) -> RwSignal<MultiTheme> {
         self.theme
     }
+
     pub fn with_theme(mut self, theme: MultiTheme) -> Self {
         self.theme = RwSignal::new(theme);
         self
     }
+
     pub fn resolved_style(&self) -> FluentProgressCircularStyle {
         let theme = self.theme.get();
-        let ComponentTokens::ProgressCircular(tokens) =
-            theme.component(ComponentId::ProgressCircular)
+        let ComponentTokens::ProgressCircular(tokens) = theme.component(ComponentId::ProgressCircular)
         else {
             unreachable!("ComponentId::ProgressCircular must resolve to ProgressCircularTokens")
         };
         FluentProgressCircularStyle {
             design_system: DESIGN_SYSTEM,
             track_color: theme.colors().surface_variant,
-            progress_color: theme.colors().primary,
-            // The `size` prop overrides the token-derived diameter.
+            fill_color: theme.colors().primary,
+            // v1: the props' size when it is set, the token's otherwise.
             size: if self.props.size > 0.0 {
                 self.props.size
             } else {
                 tokens.size
             },
             stroke_width: tokens.stroke_width,
+            indeterminate_fraction: 0.25,
+            indeterminate_start_rad: 0.0,
         }
     }
 
-    /// Build a renderable Fluent circular progress indicator drawn with an SVG
-    /// `<circle>` using `stroke-dasharray`/`stroke-dashoffset`. When `indeterminate`
-    /// is set, a static accent arc (fallback) is shown instead of a value.
-    pub fn view(self) -> impl View {
-        let theme = self.theme;
-        let value = self.props.value;
-        let indeterminate = self.props.indeterminate;
-
-        let tokens = match theme.get().component(ComponentId::ProgressCircular) {
-            ComponentTokens::ProgressCircular(t) => t,
-            _ => unreachable!(),
-        };
-        let size = if self.props.size > 0.0 {
-            self.props.size
+    /// The ring, ready to mount.
+    pub fn view(self) -> CircularProgress {
+        let style = self.resolved_style();
+        let mut progress = if self.props.indeterminate {
+            CircularProgress::indeterminate()
         } else {
-            tokens.size
+            // v1's value is a percentage; the engine's is a fraction.
+            CircularProgress::determinate((self.props.value as f64 / 100.0).clamp(0.0, 1.0))
         };
-        let stroke = tokens.stroke_width;
-
-        let build = move || {
-            let t = theme.get();
-            let s = size;
-            let sw = stroke;
-            let c = s / 2.0;
-            let r = (s - sw) / 2.0;
-            let circ = 2.0 * PI * r;
-            let (dash, offset, rot) = if indeterminate {
-                // A static ~25% accent arc (indeterminate fallback).
-                (circ * 0.25, 0.0, 0.0)
-            } else {
-                let v = value.clamp(0.0, 100.0) / 100.0;
-                (circ, circ * (1.0 - v), -90.0)
-            };
-            format!(
-                "<svg width=\"{s}\" height=\"{s}\" viewBox=\"0 0 {s} {s}\">\
-                 <circle cx=\"{c}\" cy=\"{c}\" r=\"{r}\" fill=\"none\" \
-                 stroke=\"{track}\" stroke-width=\"{sw}\"/>\
-                 <circle cx=\"{c}\" cy=\"{c}\" r=\"{r}\" fill=\"none\" \
-                 stroke=\"{prog}\" stroke-width=\"{sw}\" stroke-linecap=\"round\" \
-                 stroke-dasharray=\"{dash:.2}\" stroke-dashoffset=\"{offset:.2}\" \
-                 transform=\"rotate({rot} {c} {c})\"/></svg>",
-                track = t.colors().surface_variant.to_css(),
-                prog = t.colors().primary.to_css(),
-            )
-        };
-
-        svg(build())
-            .update_value(build)
-            .style(move |s| s.width(size).height(size))
+        progress = progress
+            .size(f64::from(style.size))
+            .stroke_width(f64::from(style.stroke_width))
+            .track_color(to_paint(style.track_color))
+            .fill_color(to_paint(style.fill_color))
+            .style(CircularProgressStyle {
+                indeterminate_fraction: style.indeterminate_fraction,
+                // v1 rotated the determinate arc to twelve o'clock in all three.
+                start_rad: -std::f64::consts::FRAC_PI_2,
+                indeterminate_start_rad: style.indeterminate_start_rad,
+            });
+        progress
     }
 }
 
@@ -129,4 +146,9 @@ impl Default for FluentProgressCircular {
     fn default() -> Self {
         Self::new()
     }
+}
+
+/// Design-system colour -> engine colour.
+fn to_paint(c: Color) -> PaintColor {
+    PaintColor { r: c.r, g: c.g, b: c.b, a: c.a }
 }
