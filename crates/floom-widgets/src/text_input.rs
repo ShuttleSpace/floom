@@ -38,6 +38,7 @@
 //! Both are recorded rather than worked around, and both are the kind of thing that
 //! should be fixed before a text input grows selection handles.
 
+use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
 use floom_core::{
@@ -60,6 +61,20 @@ pub type SharedBuffer = Arc<Mutex<String>>;
 /// `open_signal()` — "so an external trigger (e.g. a button) can drive it" — and an
 /// `RwSignal` is `Rc`-based and cannot cross a `Send + Sync` slot boundary.
 pub type SharedFlag = Arc<Mutex<bool>>;
+
+/// A map shared between a widget and whoever drives it.
+///
+/// The third of the family, and for the same reason as the other two: a value a
+/// caller can read and write from outside the tree, in a form a `Send + Sync`
+/// slot closure can hold. v1's providers held their overrides in an
+/// `RwSignal<HashMap<String, String>>` -- `Rc`-based, so it could not cross a
+/// slot boundary at all.
+pub type SharedMap = Arc<Mutex<HashMap<String, String>>>;
+
+/// A fresh shared map, initialised to `map`.
+pub fn shared_map(map: HashMap<String, String>) -> SharedMap {
+    Arc::new(Mutex::new(map))
+}
 
 /// A fresh shared flag, initialised to `value`.
 pub fn shared_flag(value: bool) -> SharedFlag {

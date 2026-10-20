@@ -596,6 +596,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "floom-widget-cupertino-defaults_provider"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widgets",
+]
+
+[[package]]
 name = "floom-widget-cupertino-dialog"
 version = "0.1.0"
 dependencies = [
@@ -717,6 +728,17 @@ dependencies = [
  "floom-ui-composites",
  "floom-widget-cupertino-icon",
  "floom-widget-runtime",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-cupertino-icons_provider"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
  "floom-widgets",
 ]
 
@@ -1108,6 +1130,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "floom-widget-fluent-defaults_provider"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widgets",
+]
+
+[[package]]
 name = "floom-widget-fluent-dialog"
 version = "0.1.0"
 dependencies = [
@@ -1229,6 +1262,17 @@ dependencies = [
  "floom-ui-composites",
  "floom-widget-fluent-icon",
  "floom-widget-runtime",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-fluent-icons_provider"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
  "floom-widgets",
 ]
 
@@ -1625,6 +1669,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "floom-widget-md-defaults_provider"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widget-runtime",
+ "floom-widgets",
+]
+
+[[package]]
 name = "floom-widget-md-dialog"
 version = "0.1.0"
 dependencies = [
@@ -1746,6 +1802,18 @@ dependencies = [
  "floom-types",
  "floom-ui-composites",
  "floom-widget-md-icon",
+ "floom-widget-runtime",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-md-icons_provider"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
  "floom-widget-runtime",
  "floom-widgets",
 ]

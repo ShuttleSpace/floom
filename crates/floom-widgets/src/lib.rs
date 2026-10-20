@@ -80,7 +80,7 @@ pub use progress_linear::{
 pub use ripple::{Phase, Ripple, ripple};
 /// A decorated box with children: v1's `Container::new(child).style(..)`.
 pub use surface::Surface;
-pub use text_input::{SharedBuffer, SharedFlag, read_flag, shared_flag, write_flag, TextInput, TextInputStyle, clamp_to_char_boundary};
+pub use text_input::{SharedBuffer, SharedFlag, SharedMap, read_flag, shared_flag, shared_map, write_flag, TextInput, TextInputStyle, clamp_to_char_boundary};
 /// SVG path data -> `Path`, for the icon sets the kits ship as `d="..."`.
 pub use svg_path::parse_path_data;
 /// An icon drawn from an outline, for kits with no SVG pipeline in 2.0.
