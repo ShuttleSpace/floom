@@ -27,7 +27,6 @@
 # back to `members`.
 
 exclude = [
-    "crates/cupertino/cupertino-app",
     "crates/cupertino/cupertino-app_bar",
     "crates/cupertino/cupertino-banner",
     "crates/cupertino/cupertino-bottom_navigation",
@@ -39,7 +38,6 @@ exclude = [
     "crates/cupertino/cupertino-chip_group",
     "crates/cupertino/cupertino-color_picker",
     "crates/cupertino/cupertino-confirm_edit",
-    "crates/cupertino/cupertino-data_iterator",
     "crates/cupertino/cupertino-datatable",
     "crates/cupertino/cupertino-date_picker",
     "crates/cupertino/cupertino-empty_state",
@@ -78,7 +76,6 @@ exclude = [
     "crates/cupertino/cupertino-validation_messages",
     "crates/cupertino/cupertino-virtual_scroller",
     "crates/cupertino/cupertino-window",
-    "crates/fluent/fluent-app",
     "crates/fluent/fluent-app_bar",
     "crates/fluent/fluent-banner",
     "crates/fluent/fluent-bottom_navigation",
@@ -90,7 +87,6 @@ exclude = [
     "crates/fluent/fluent-chip_group",
     "crates/fluent/fluent-color_picker",
     "crates/fluent/fluent-confirm_edit",
-    "crates/fluent/fluent-data_iterator",
     "crates/fluent/fluent-datatable",
     "crates/fluent/fluent-date_picker",
     "crates/fluent/fluent-empty_state",
@@ -129,7 +125,6 @@ exclude = [
     "crates/fluent/fluent-validation_messages",
     "crates/fluent/fluent-virtual_scroller",
     "crates/fluent/fluent-window",
-    "crates/material/md-app",
     "crates/material/md-app_bar",
     "crates/material/md-banner",
     "crates/material/md-bottom_navigation",
@@ -141,7 +136,6 @@ exclude = [
     "crates/material/md-chip_group",
     "crates/material/md-color_picker",
     "crates/material/md-confirm_edit",
-    "crates/material/md-data_iterator",
     "crates/material/md-datatable",
     "crates/material/md-date_picker",
     "crates/material/md-empty_state",
@@ -334,6 +328,12 @@ members = [
     "crates/cupertino/cupertino-kbd",
     "crates/fluent/fluent-code",
     "crates/fluent/fluent-kbd",
+    "crates/material/md-app",
+    "crates/material/md-data_iterator",
+    "crates/cupertino/cupertino-app",
+    "crates/cupertino/cupertino-data_iterator",
+    "crates/fluent/fluent-app",
+    "crates/fluent/fluent-data_iterator",
 
 ]
 
