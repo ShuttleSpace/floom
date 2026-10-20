@@ -31,6 +31,7 @@ pub mod counter;
 pub mod icon_button;
 pub mod labeled;
 pub mod list_item;
+pub mod hover;
 pub mod menu;
 pub mod nav;
 pub mod navigation;
@@ -62,6 +63,7 @@ pub use combobox::{commit, matching, panel_placement, panel_rect, panel_request,
 pub use counter::{Counter, CounterState, CounterStyle, SharedCounter, Step, clamp_value, step_value};
 pub use icon_button::{IconButton, IconButtonIcon, IconButtonPaint, IconButtonStyle, IconButtonVariant};
 pub use labeled::{Labeled};
+pub use hover::HoverBox;
 pub use menu::{Menu, MenuItem, MenuStyle};
 pub use list_item::{ListItemRow, ListItemStyle, SlotBuilder};
 pub use nav::{NavHandle, NavHost};

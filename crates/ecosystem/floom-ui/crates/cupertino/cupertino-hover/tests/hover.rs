@@ -20,7 +20,8 @@ use floom_widgets::testkit::{
 use floom_core_theme::global_theme::DesignSystem;
 use floom_core_theme::theme::{MultiTheme, Theme};
 
-use floom_widget_cupertino_hover::{CupertinoHover, CupertinoHoverBox, CupertinoHoverStyle};
+use floom_widget_cupertino_hover::{CupertinoHover, CupertinoHoverStyle};
+use floom_ui_composites::HoverBox;
 
 const BOX: Rect = Rect {
     x0: 0.0,
@@ -64,7 +65,7 @@ fn ops_of(widget: &dyn Widget) -> Vec<PaintOp> {
 }
 
 /// The pointer arriving on the box, and the pointer leaving it again.
-fn pointer_over(hover: &mut CupertinoHoverBox, arriving: bool) {
+fn pointer_over(hover: &mut HoverBox, arriving: bool) {
     let mut create = AllocatingCreateContext::new();
     let id: ElementId = hover.create(&mut create);
     let mut pointer = PointerEvent::primary_down(AT);
@@ -78,7 +79,7 @@ fn pointer_over(hover: &mut CupertinoHoverBox, arriving: bool) {
 }
 
 /// The fill the box painted, if it painted one.
-fn fill_painted(hover: &CupertinoHoverBox) -> Option<Color> {
+fn fill_painted(hover: &HoverBox) -> Option<Color> {
     ops_of(hover).into_iter().find_map(|op| match op {
         PaintOp::Rect { color, .. } => Some(color),
         _ => None,

@@ -5,20 +5,15 @@
 //!
 //! ## What the port uses
 //!
-//! The engine's vocabulary, and one thing of its own. The box is a `Surface`-ish
-//! fill over the caller's child, and the *hover* is shared state: a
-//! [`SharedFlag`], the same bool-behind-an-`Arc<Mutex<_>>` the engine's
-//! `TextInput` and the floem-ui menus use, because a value that changes after
-//! mount cannot be held in a signal.
+//! The engine's [`HoverBox`]: a box that fills while the pointer is over it,
+//! around the caller's child. The engine grew it for this -- the engine's
+//! `Chip` paints its own hover fill because a chip *is* the widget, and here
+//! the widget is a box around somebody else's content.
 //!
-//! ## The engine gap
-//!
-//! **The engine has no "fills while the pointer is over it" widget.** The
-//! engine's `Chip` paints its own hover fill because a chip *is* the widget;
-//! here the widget is a box around somebody else's content, and the engine has
-//! nothing for that. The kit holds one, and this paragraph is the record of
-//! that. The engine should grow one.
-//!
+//! The *hover* is shared state: a [`SharedFlag`], the same
+//! bool-behind-an-`Arc<Mutex<_>>` the engine's `TextInput` and the floem-ui
+//! menus use, because a value that changes after mount cannot be held in a
+//! signal.
 //! ## What this kit answers
 //!
 //! * the fill under the pointer: `on_surface` at the token's `highlight_alpha`;
@@ -54,13 +49,11 @@
 
 use std::sync::Arc;
 
-use floom_core::{
-    Child, ChildKey, CreateContext, ElementId, Event, EventContext, LayoutRequest, PaintContext,
-    PointerPhase, SemanticsContext, UpdateContext, Widget, WidgetAny,
-};
+use floom_core::{Child, ChildKey, LayoutRequest, WidgetAny};
 use floom_signal::{RwSignal, SignalGet};
 use floom_types::Color as PaintColor;
-use floom_widgets::{SharedFlag, read_flag, shared_flag, write_flag};
+use floom_ui_composites::HoverBox;
+use floom_widgets::{SharedFlag, read_flag, shared_flag};
 
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::hover::HoverProps;
@@ -180,7 +173,7 @@ impl MaterialHover {
 
     /// The box: the child, and the fill that appears while the pointer is over
     /// it.
-    pub fn view(self) -> MaterialHoverBox {
+    pub fn view(self) -> HoverBox {
         let style = self.resolved_style();
         let child = match self.child {
             Some(child) => Child::new(ChildKey::index(0), LayoutRequest::new(), move || child()),
@@ -190,13 +183,14 @@ impl MaterialHover {
                 Box::new(floom_widgets::Text::new(""))
             }),
         };
-        MaterialHoverBox {
-            child,
-            hovered: self.hovered,
-            highlight: to_paint(style.highlight_color),
-            on_hover_change: self.on_hover_change,
-            last_hovered: false,
+        let mut hover_box = HoverBox::new()
+            .child(child)
+            .highlight(to_paint(style.highlight_color))
+            .hovered_flag(self.hovered);
+        if let Some(callback) = self.on_hover_change {
+            hover_box = hover_box.on_hover_change(move |hovered| callback(hovered));
         }
+        hover_box
     }
 }
 
@@ -210,99 +204,6 @@ impl Default for MaterialHover {
 ///
 /// The engine has no "fills while the pointer is over it" widget, so the kit
 /// holds one -- see the module documentation.
-pub struct MaterialHoverBox {
-    child: Child,
-    /// Whether the pointer is over the box.
-    hovered: SharedFlag,
-    /// The fill under the pointer.
-    highlight: PaintColor,
-    on_hover_change: Option<Callback>,
-    /// What the flag was when this widget last acted, so a change is a change
-    /// rather than a fresh read every frame.
-    last_hovered: bool,
-}
-
-impl MaterialHoverBox {
-    /// Whether the pointer is over the box right now.
-    pub fn is_hovered(&self) -> bool {
-        read_flag(&self.hovered)
-    }
-
-    /// The shared hover flag, so a caller can drive it from outside.
-    pub fn hovered_flag(&self) -> SharedFlag {
-        self.hovered.clone()
-    }
-
-    /// Writes the flag and reports the change.
-    fn set_hovered(&mut self, hovered: bool) {
-        if !write_flag(&self.hovered, hovered) {
-            return;
-        }
-        if let Some(callback) = &self.on_hover_change {
-            callback(hovered);
-        }
-    }
-}
-
-impl Widget for MaterialHoverBox {
-    fn create(&self, cx: &mut dyn CreateContext) -> ElementId {
-        cx.alloc_child()
-    }
-
-    fn update(&mut self, cx: &mut dyn UpdateContext, id: ElementId) {
-        let hovered = read_flag(&self.hovered);
-        if hovered == self.last_hovered {
-            return;
-        }
-        self.last_hovered = hovered;
-        // The fill is this box's own decoration, so this box is what has to
-        // invalidate it. A repaint and nothing else: the box does not move.
-        cx.mark_dirty(id);
-    }
-
-    fn children(&self) -> Vec<Child> {
-        vec![self.child.clone()]
-    }
-
-    fn layout_request(&self) -> Option<LayoutRequest> {
-        None
-    }
-
-    /// The fill under the pointer, under the child.
-    ///
-    /// A widget paints itself before its children, so the fill lands *under*
-    /// the content -- the way v1's `Container` background did.
-    fn paint(&self, cx: &mut dyn PaintContext, _id: ElementId) {
-        if !read_flag(&self.hovered) {
-            return;
-        }
-        let bounds = cx.bounds();
-        if bounds.width() <= 0.0 || bounds.height() <= 0.0 {
-            return;
-        }
-        cx.fill_rect(bounds, self.highlight);
-    }
-
-    /// The pointer arriving and leaving.
-    ///
-    /// The event is not consumed: v1's hover let the event through, so a
-    /// click on the child still reached the child.
-    fn event(&mut self, cx: &mut dyn EventContext, _id: ElementId) -> bool {
-        let Event::Pointer(pointer) = cx.event() else {
-            return false;
-        };
-        match pointer.phase {
-            PointerPhase::Enter | PointerPhase::Move => self.set_hovered(true),
-            PointerPhase::Leave | PointerPhase::Cancel => self.set_hovered(false),
-            _ => {}
-        }
-        false
-    }
-
-    fn semantics(&self, cx: &mut dyn SemanticsContext, _id: ElementId) {
-        floom_widgets::emit_semantics(floom_widgets::SemanticsHint::decorative(), cx);
-    }
-}
 
 /// Theme colour -> engine colour.
 fn to_paint(c: Color) -> PaintColor {
