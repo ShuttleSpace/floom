@@ -1,5 +1,16 @@
+use floom_core_theme::global_theme::DesignSystem;
 use floom_core_theme::theme::{MultiTheme, Theme};
 use floom_widget_cupertino_menu::CupertinoMenu;
+
+///
+/// The design system has to be *selected*, not merely built: `MultiTheme`
+/// holds all three palettes and reads the active one, and `activate` is a
+/// documented no-op. Without this the test would read Material's tokens and
+/// assert this kit's numbers.
+fn theme() -> MultiTheme {
+    floom_core_theme::global_theme::set_design_system(DesignSystem::Cupertino);
+    MultiTheme::new_for(DesignSystem::Cupertino)
+}
 
 #[test]
 fn menu_exposes_neutral_contract_api() {
@@ -13,7 +24,7 @@ fn menu_exposes_neutral_contract_api() {
 
 #[test]
 fn menu_style_resolves_from_cupertino_theme() {
-    let theme = MultiTheme::new_for(floom_core_theme::global_theme::DesignSystem::Cupertino);
+    let theme = theme();
     let style = CupertinoMenu::new()
         .with_theme(theme.clone())
         .resolved_style();

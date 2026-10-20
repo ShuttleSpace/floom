@@ -45,7 +45,6 @@ exclude = [
       "crates/cupertino/cupertino-image",
     "crates/cupertino/cupertino-infinite_scroller",
     "crates/cupertino/cupertino-main",
-    "crates/cupertino/cupertino-menu",
     "crates/cupertino/cupertino-navigation_drawer",
     "crates/cupertino/cupertino-number_input",
     "crates/cupertino/cupertino-otp_input",
@@ -89,7 +88,6 @@ exclude = [
       "crates/fluent/fluent-image",
     "crates/fluent/fluent-infinite_scroller",
     "crates/fluent/fluent-main",
-    "crates/fluent/fluent-menu",
     "crates/fluent/fluent-navigation_drawer",
     "crates/fluent/fluent-number_input",
     "crates/fluent/fluent-otp_input",
@@ -133,7 +131,6 @@ exclude = [
     "crates/material/md-image",
     "crates/material/md-infinite_scroller",
     "crates/material/md-main",
-    "crates/material/md-menu",
     "crates/material/md-navigation_drawer",
     "crates/material/md-number_input",
     "crates/material/md-otp_input",
@@ -334,6 +331,9 @@ members = [
     "crates/material/md-tooltip",
     "crates/cupertino/cupertino-tooltip",
     "crates/fluent/fluent-tooltip",
+    "crates/material/md-menu",
+    "crates/cupertino/cupertino-menu",
+    "crates/fluent/fluent-menu",
 
 ]
 
