@@ -334,9 +334,19 @@ pub enum PresenceChannel {
     Fade,
     /// Uniform scale about the box's centre: `from → 1` on the way in.
     Grow { from: f32 },
-    /// Vertical offset in points: `dy → 0` on the way in, so a positive `dy`
-    /// slides *up* into place.
-    Slide { dy: f32 },
+    /// Offset along one axis, in points: `distance → 0` on the way in, so a
+    /// positive distance slides *up* (or in from the left) into place.
+    Slide { axis: SlideAxis, distance: f32 },
+}
+
+/// Which axis a [`PresenceChannel::Slide`] travels along.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum SlideAxis {
+    /// Horizontal, so the content travels along x.
+    #[default]
+    X,
+    /// Vertical, so the content travels along y.
+    Y,
 }
 
 impl PresenceChannel {
@@ -347,7 +357,7 @@ impl PresenceChannel {
         match *self {
             Self::Fade => (0.0, 1.0),
             Self::Grow { from } => (f64::from(from), 1.0),
-            Self::Slide { dy } => (f64::from(dy), 0.0),
+            Self::Slide { distance, .. } => (f64::from(distance), 0.0),
         }
     }
 
@@ -359,7 +369,10 @@ impl PresenceChannel {
         match *self {
             Self::Fade => CompositorProp::Opacity(0.0),
             Self::Grow { .. } => CompositorProp::Scale(1.0),
-            Self::Slide { .. } => CompositorProp::TranslateY(0.0),
+            Self::Slide { axis, .. } => match axis {
+                SlideAxis::X => CompositorProp::TranslateX(0.0),
+                SlideAxis::Y => CompositorProp::TranslateY(0.0),
+            },
         }
     }
 }
@@ -407,7 +420,27 @@ impl PresenceTransition {
     /// A slide of `dy` points up into place over `duration_secs`.
     pub const fn slide(duration_secs: f64, dy: f32) -> Self {
         Self {
-            channel: PresenceChannel::Slide { dy },
+            channel: PresenceChannel::Slide {
+                axis: SlideAxis::Y,
+                distance: dy,
+            },
+            duration_secs,
+            easing: Easing::Linear,
+        }
+    }
+
+    /// A slide of `dx` points in from the left over `duration_secs`.
+    ///
+    /// The horizontal twin of [`Self::slide`]. A positive `dx` starts the
+    /// content that far to the *right* of its resting place and travels left
+    /// into it, which is the same sign convention the vertical one uses: a
+    /// positive distance is the offset the content starts at.
+    pub const fn slide_x(duration_secs: f64, dx: f32) -> Self {
+        Self {
+            channel: PresenceChannel::Slide {
+                axis: SlideAxis::X,
+                distance: dx,
+            },
             duration_secs,
             easing: Easing::Linear,
         }

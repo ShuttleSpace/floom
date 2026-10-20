@@ -1,0 +1,114 @@
+//! Fluent slide transition: the transition it plays, and the flag that
+//! drives it.
+//!
+//! ## The claim
+//!
+//! v1 mounted the child only while a `show` signal was true, and played an
+//! animation on the way in and on the way out. The assertions are about those
+//! two things: the transition the kit chooses, and the child following the
+//! shared flag.
+
+use floom_core::{ElementId, Widget};
+use floom_types::{PresenceChannel, PresenceTransition, SlideAxis};
+use floom_widgets::testkit::{AllocatingCreateContext, RecordingUpdateContext};
+
+use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
+use floom_core_theme::global_theme::{DesignSystem, set_design_system};
+use floom_core_theme::props::slide_transition::SlideDirection;
+use floom_core_theme::theme::{MultiTheme, Theme};
+
+use floom_widget_fluent_slide_transition::{
+    FluentSlideTransition, FluentSlideTransitionStyle,
+};
+
+/// The Fluent theme, with Fluent selected.
+///
+/// `MultiTheme::new_for(ds)` does *not* select `ds` -- it builds all three and
+/// `activate` is a documented no-op -- and a `MultiTheme` reads the *active*
+/// design system at read time. So a test that wants Fluent's own values has to
+/// select Fluent, and `set_design_system` writes a thread-local, so the
+/// selection is this test's alone.
+fn theme() -> MultiTheme {
+    floom_core_theme::global_theme::set_design_system(DesignSystem::Fluent);
+    MultiTheme::new_for(DesignSystem::Fluent)
+}
+
+fn tokens() -> floom_core_theme::component_tokens::SlideTransitionTokens {
+    let theme = theme();
+    match theme.component(ComponentId::SlideTransition) {
+        ComponentTokens::SlideTransition(t) => t,
+        _ => unreachable!(),
+    }
+}
+
+/// The style resolves the token's own numbers.
+#[test]
+fn the_style_resolves_the_tokens() {
+    let theme = theme();
+    let style: FluentSlideTransitionStyle = FluentSlideTransition::new().with_theme(theme.clone()).resolved_style();
+    assert_eq!(style.design_system, "fluent");
+    assert_eq!(style.duration_ms, tokens().duration_ms);
+    assert_eq!(style.offset, tokens().offset);
+    assert_eq!(style.direction, SlideDirection::X, "the default");
+    let _ = theme;
+}
+
+/// The transition is the one this kit plays.
+#[test]
+fn the_transition_is_the_one_this_kit_plays() {
+    let kit = FluentSlideTransition::new().with_theme(theme());
+    let transition = kit.transition().expect("this kit plays a transition");
+    assert_eq!(
+        transition.channel,
+        PresenceChannel::Slide {
+            axis: SlideAxis::X,
+            distance: tokens().offset,
+        },
+        "v1's slide travelled along x by the token's offset"
+    );
+    assert_eq!(
+        transition.duration_secs, f64::from(tokens().duration_ms) / 1000.0,
+        "the token's duration, in seconds"
+    );
+}
+
+/// The content is mounted only while the flag says so.
+#[test]
+fn the_content_follows_the_flag() {
+    let kit = FluentSlideTransition::new()
+        .with_theme(theme())
+        .child(|| Box::new(floom_widgets::Text::new("body")));
+    let flag = kit.show_signal();
+
+    floom_widgets::text_input::write_flag(&flag, true);
+    let mut conditional = kit.view();
+    let mut create = AllocatingCreateContext::new();
+    let id: ElementId = conditional.create(&mut create);
+    let mut ctx = RecordingUpdateContext::default();
+    conditional.update(&mut ctx, id);
+    assert_eq!(
+        conditional.children().len(),
+        1,
+        "the flag is true, so the content is mounted"
+    );
+
+    // The flag goes back to false: the *exit* starts, and the content stays
+    // mounted while it plays -- a departure that vanished at once would not be
+    // a departure.
+    floom_widgets::text_input::write_flag(&flag, false);
+    conditional.update(&mut ctx, id);
+    assert_eq!(
+        conditional.children().len(),
+        1,
+        "the content stays mounted while its exit plays"
+    );
+
+    // And it is gone once the host says the exit has finished.
+    conditional.animation_finished(&mut ctx, id);
+    conditional.update(&mut ctx, id);
+    assert_eq!(
+        conditional.children().len(),
+        0,
+        "and it unmounts once the exit has played"
+    );
+}

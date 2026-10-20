@@ -1,25 +1,54 @@
-use std::time::Duration;
+//! Fluent slide transition, ported to the Floom 2.0 widget API.
+//!
+//! v1 mounted the child only while a `show` signal was true, and played an
+//! animation on the way in and on the way out. 2.0's [`Conditional`] is that
+//! shape: it mounts and unmounts a subtree, and keeps an exiting one mounted
+//! until its exit has played, so the departure is visible.
+//!
+//! ## The signal became a flag
+//!
+//! v1 held an `RwSignal<bool>`, which is `Rc`-based and cannot cross a `Send +
+//! Sync` slot boundary -- so the port holds a [`SharedFlag`], the same
+//! `Arc<Mutex<bool>>` the text input's buffer uses, and the engine's
+//! `Conditional` reads it in `update`. The signal is therefore still the
+//! caller's: [`FluentSlideTransition::show_signal`] hands it over, and whoever writes it drives
+//! the child in and out.
+//!
+use std::sync::Arc;
 
-use floom::prelude::*;
-use floom::reactive::RwSignal;
-use floom::view::AnyView;
-use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
-use floom_core_theme::props::slide_transition::{SlideDirection, SlideTransitionProps};
+use floom_core::{ChildKey, LayoutRequest, WidgetAny};
+use floom_signal::{RwSignal, SignalGet};
+use floom_types::PresenceTransition;
+use floom_widgets::{Conditional, Text};
+use floom_widgets::text_input::{SharedFlag, shared_flag, write_flag};
+
+use floom_core_theme::component_tokens::{ComponentId, ComponentTokens, SlideTransitionTokens};
+use floom_core_theme::props::slide_transition::{SlideTransitionProps, SlideDirection};
 use floom_core_theme::theme::{MultiTheme, Theme};
+
+const DESIGN_SYSTEM: &str = "fluent";
+
+/// A builder for the content, replayed each time it is mounted.
+///
+/// A 2.0 slot is a replayed `Fn`, so the content cannot be a value: it is
+/// built again every time it appears.
+pub type ChildBuilder = Arc<dyn Fn() -> Box<dyn WidgetAny> + Send + Sync + 'static>;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct FluentSlideTransitionStyle {
     pub design_system: &'static str,
     pub duration_ms: f32,
+    /// How far the content travels, in pixels.
     pub offset: f32,
-    pub direction: SlideDirection,
-}
+    pub direction: SlideDirection,}
 
+/// Fluent's slide transition.
 pub struct FluentSlideTransition {
     props: SlideTransitionProps,
-    child: Option<Box<dyn Fn() -> AnyView>>,
+    child: Option<ChildBuilder>,
     theme: RwSignal<MultiTheme>,
-    show: RwSignal<bool>,
+    /// The shared "is it showing" flag.
+    show: SharedFlag,
 }
 
 impl FluentSlideTransition {
@@ -27,89 +56,104 @@ impl FluentSlideTransition {
         Self {
             props: SlideTransitionProps::default(),
             child: None,
-            theme: RwSignal::new(MultiTheme::new_for(floom_core_theme::global_theme::DesignSystem::Fluent)),
-            show: RwSignal::new(false),
+            theme: RwSignal::new(MultiTheme::new_for(
+                floom_core_theme::global_theme::DesignSystem::Fluent,
+            )),
+            show: shared_flag(false),
         }
     }
 
-    /// Set the element that slides in / out. Takes a factory closure because the child is
-    /// mounted and unmounted (re-created) on every enter/leave, so it must be rebuildable.
-    pub fn child<F, IV>(mut self, child: F) -> Self
-    where
-        F: Fn() -> IV + 'static,
-        IV: IntoView + 'static,
-    {
-        self.child = Some(Box::new(move || child().into_any()));
+    /// Set the content that appears and disappears.
+    ///
+    /// v1 took a factory closure for the same reason this does: the child is
+    /// mounted and unmounted on every enter and leave, so it must be
+    /// rebuildable.
+    pub fn child(mut self, build: impl Fn() -> Box<dyn WidgetAny> + Send + Sync + 'static) -> Self {
+        self.child = Some(Arc::new(build));
         self
     }
 
-    /// Choose the travel axis (X = horizontal, Y = vertical). Defaults to X.
-    pub fn direction(mut self, direction: SlideDirection) -> Self {
-        self.props.direction = direction;
+    /// The shared flag that shows and hides the content.
+    ///
+    /// v1's `show_signal()`: an external trigger -- a button, a route -- writes
+    /// it and the content follows.
+    pub fn show_signal(&self) -> SharedFlag {
+        self.show.clone()
+    }
+
+    /// Shows or hides the content, through the shared flag.
+    pub fn show(mut self, show: bool) -> Self {
+        write_flag(&self.show, show);
         self
     }
 
-    /// Expose the internal show signal so an external trigger (e.g. a button) can enter or
-    /// leave the transition. Mirrors `Dialog::open_signal()`.
-    pub fn show_signal(&self) -> RwSignal<bool> {
-        self.show
+    pub fn props(&self) -> &SlideTransitionProps {
+        &self.props
     }
 
-    /// Set the internal `show` signal from an external signal.
-    pub fn with_show_signal(mut self, show: RwSignal<bool>) -> Self {
-        self.show = show;
+    pub fn theme(&self) -> RwSignal<MultiTheme> {
+        self.theme
+    }
+
+    pub fn with_theme(mut self, theme: MultiTheme) -> Self {
+        self.theme = RwSignal::new(theme);
         self
     }
 
     pub fn resolved_style(&self) -> FluentSlideTransitionStyle {
         let theme = self.theme.get();
-        let ComponentTokens::SlideTransition(tokens) =
-            theme.component(ComponentId::SlideTransition)
-        else {
+        let ComponentTokens::SlideTransition(tokens) = theme.component(ComponentId::SlideTransition) else {
             unreachable!("ComponentId::SlideTransition must resolve to SlideTransitionTokens")
         };
         FluentSlideTransitionStyle {
-            design_system: "fluent",
+            design_system: DESIGN_SYSTEM,
             duration_ms: tokens.duration_ms,
             offset: tokens.offset,
             direction: self.props.direction,
         }
     }
 
-    pub fn view(self) -> impl View {
+    /// The transition this kit plays, if it plays one.
+    ///
+    /// The same transition on the way in and on the way out, which is what v1
+    /// did: one animation, run forwards and backwards.
+    pub fn transition(&self) -> Option<PresenceTransition> {
         let style = self.resolved_style();
-        let show = self.show;
-        let child_factory = self.child;
-        // Pre-extract the Copy fields so the animation closure owns copies ('static)
-        // instead of borrowing `style` from the outer closure.
-        let direction = style.direction;
-        let offset = style.offset;
+        self.transition_for(&style)
+    }
 
-        dyn_view(move || -> AnyView {
-            if show.get() {
-                let child = match &child_factory {
-                    Some(f) => f(),
-                    None => Empty::new().into_any(),
-                };
-                // Start off-screen by `offset` px on the chosen axis, settle at 0.
-                Container::new(child)
-                    .animation(move |a| {
-                        a.run_on_create(true)
-                            .run_on_remove(true)
-                            .duration(Duration::from_millis(style.duration_ms as u64))
-                            .keyframe(0, |f| {
-                                f.style(|s| match direction {
-                                    SlideDirection::X => s.translate_x(offset),
-                                    SlideDirection::Y => s.translate_y(offset),
-                                })
-                            })
-                            .keyframe(100, |f| f.computed_style())
-                    })
-                    .into_any()
-            } else {
-                Empty::new().into_any()
+    /// The transition for a resolved style. Split out so `transition` and
+    /// `view` cannot disagree about which one they mean.
+    fn transition_for(&self, style: &FluentSlideTransitionStyle) -> Option<PresenceTransition> {
+        Some(match style.direction {
+            SlideDirection::X => {
+                PresenceTransition::slide_x(f64::from(style.duration_ms) / 1000.0, style.offset)
+            }
+            SlideDirection::Y => {
+                PresenceTransition::slide(f64::from(style.duration_ms) / 1000.0, style.offset)
             }
         })
+    }
+
+    /// The content, mounted only while the flag says so.
+    pub fn view(self) -> Conditional {
+        let style = self.resolved_style();
+        // v1's slide: a translation of `offset` pixels along the chosen axis,
+        // settling at zero. The engine's slide channel names its axis, so a
+        // horizontal slide is a horizontal slide.
+        let transition = self.transition_for(&style);        let child = self.child.clone();
+        let show = self.show.clone();
+
+        let mut conditional = Conditional::new(false)
+            .when_flag(show)
+            .show_with(ChildKey::index(0), LayoutRequest::new(), move || match child.clone() {
+                Some(build) => build(),
+                None => Box::new(Text::new(String::new())),
+            });
+        if let Some(transition) = transition {
+            conditional = conditional.enter(transition).exit(transition);
+        }
+        conditional
     }
 }
 

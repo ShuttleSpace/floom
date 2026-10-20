@@ -1,23 +1,51 @@
-use std::time::Duration;
+//! Cupertino fade transition, ported to the Floom 2.0 widget API.
+//!
+//! v1 mounted the child only while a `show` signal was true, and played an
+//! animation on the way in and on the way out. 2.0's [`Conditional`] is that
+//! shape: it mounts and unmounts a subtree, and keeps an exiting one mounted
+//! until its exit has played, so the departure is visible.
+//!
+//! ## The signal became a flag
+//!
+//! v1 held an `RwSignal<bool>`, which is `Rc`-based and cannot cross a `Send +
+//! Sync` slot boundary -- so the port holds a [`SharedFlag`], the same
+//! `Arc<Mutex<bool>>` the text input's buffer uses, and the engine's
+//! `Conditional` reads it in `update`. The signal is therefore still the
+//! caller's: [`CupertinoFadeTransition::show_signal`] hands it over, and whoever writes it drives
+//! the child in and out.
+//!
+use std::sync::Arc;
 
-use floom::prelude::*;
-use floom::reactive::RwSignal;
-use floom::view::AnyView;
-use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
-use floom_core_theme::props::fade_transition::FadeTransitionProps;
+use floom_core::{ChildKey, LayoutRequest, WidgetAny};
+use floom_signal::{RwSignal, SignalGet};
+use floom_types::PresenceTransition;
+use floom_widgets::{Conditional, Text};
+use floom_widgets::text_input::{SharedFlag, shared_flag, write_flag};
+
+use floom_core_theme::component_tokens::{ComponentId, ComponentTokens, FadeTransitionTokens};
+use floom_core_theme::props::fade_transition::{FadeTransitionProps, };
 use floom_core_theme::theme::{MultiTheme, Theme};
+
+const DESIGN_SYSTEM: &str = "cupertino";
+
+/// A builder for the content, replayed each time it is mounted.
+///
+/// A 2.0 slot is a replayed `Fn`, so the content cannot be a value: it is
+/// built again every time it appears.
+pub type ChildBuilder = Arc<dyn Fn() -> Box<dyn WidgetAny> + Send + Sync + 'static>;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct CupertinoFadeTransitionStyle {
     pub design_system: &'static str,
-    pub duration_ms: f32,
-}
+    pub duration_ms: f32,}
 
+/// Cupertino's fade transition.
 pub struct CupertinoFadeTransition {
     props: FadeTransitionProps,
-    child: Option<Box<dyn Fn() -> AnyView>>,
+    child: Option<ChildBuilder>,
     theme: RwSignal<MultiTheme>,
-    show: RwSignal<bool>,
+    /// The shared "is it showing" flag.
+    show: SharedFlag,
 }
 
 impl CupertinoFadeTransition {
@@ -25,67 +53,94 @@ impl CupertinoFadeTransition {
         Self {
             props: FadeTransitionProps::default(),
             child: None,
-            theme: RwSignal::new(MultiTheme::new_for(floom_core_theme::global_theme::DesignSystem::Cupertino)),
-            show: RwSignal::new(false),
+            theme: RwSignal::new(MultiTheme::new_for(
+                floom_core_theme::global_theme::DesignSystem::Cupertino,
+            )),
+            show: shared_flag(false),
         }
     }
 
-    /// Set the element that fades in / out. Takes a factory closure because the child is
-    /// mounted and unmounted (re-created) on every enter/leave, so it must be rebuildable.
-    pub fn child<F, IV>(mut self, child: F) -> Self
-    where
-        F: Fn() -> IV + 'static,
-        IV: IntoView + 'static,
-    {
-        self.child = Some(Box::new(move || child().into_any()));
+    /// Set the content that appears and disappears.
+    ///
+    /// v1 took a factory closure for the same reason this does: the child is
+    /// mounted and unmounted on every enter and leave, so it must be
+    /// rebuildable.
+    pub fn child(mut self, build: impl Fn() -> Box<dyn WidgetAny> + Send + Sync + 'static) -> Self {
+        self.child = Some(Arc::new(build));
         self
     }
 
-    /// Expose the internal show signal so an external trigger (e.g. a button) can enter or
-    /// leave the transition. Mirrors `Dialog::open_signal()`.
-    pub fn show_signal(&self) -> RwSignal<bool> {
-        self.show
+    /// The shared flag that shows and hides the content.
+    ///
+    /// v1's `show_signal()`: an external trigger -- a button, a route -- writes
+    /// it and the content follows.
+    pub fn show_signal(&self) -> SharedFlag {
+        self.show.clone()
+    }
+
+    /// Shows or hides the content, through the shared flag.
+    pub fn show(mut self, show: bool) -> Self {
+        write_flag(&self.show, show);
+        self
+    }
+
+    pub fn props(&self) -> &FadeTransitionProps {
+        &self.props
+    }
+
+    pub fn theme(&self) -> RwSignal<MultiTheme> {
+        self.theme
+    }
+
+    pub fn with_theme(mut self, theme: MultiTheme) -> Self {
+        self.theme = RwSignal::new(theme);
+        self
     }
 
     pub fn resolved_style(&self) -> CupertinoFadeTransitionStyle {
         let theme = self.theme.get();
-        let ComponentTokens::FadeTransition(tokens) =
-            theme.component(ComponentId::FadeTransition)
-        else {
+        let ComponentTokens::FadeTransition(tokens) = theme.component(ComponentId::FadeTransition) else {
             unreachable!("ComponentId::FadeTransition must resolve to FadeTransitionTokens")
         };
         CupertinoFadeTransitionStyle {
-            design_system: "cupertino",
+            design_system: DESIGN_SYSTEM,
             duration_ms: tokens.duration_ms,
         }
     }
 
-    pub fn view(self) -> impl View {
-        let CupertinoFadeTransitionStyle { duration_ms, .. } = self.resolved_style();
-        let show = self.show;
-        let child_factory = self.child;
+    /// The transition this kit plays, if it plays one.
+    ///
+    /// The same transition on the way in and on the way out, which is what v1
+    /// did: one animation, run forwards and backwards.
+    pub fn transition(&self) -> Option<PresenceTransition> {
+        let style = self.resolved_style();
+        self.transition_for(&style)
+    }
 
-        dyn_view(move || -> AnyView {
-            if show.get() {
-                let child = match &child_factory {
-                    Some(f) => f(),
-                    None => Empty::new().into_any(),
-                };
-                // `move` + a Copy `duration_ms` so the stored animation closure is 'static
-                // (otherwise it would borrow `style` from this outer closure).
-                Container::new(child)
-                    .animation(move |a| {
-                        a.run_on_create(true)
-                            .run_on_remove(true)
-                            .duration(Duration::from_millis(duration_ms as u64))
-                            .keyframe(0, |f| f.style(|s| s.opacity(0.0)))
-                            .keyframe(100, |f| f.style(|s| s.opacity(1.0)))
-                    })
-                    .into_any()
-            } else {
-                Empty::new().into_any()
-            }
-        })
+    /// The transition for a resolved style. Split out so `transition` and
+    /// `view` cannot disagree about which one they mean.
+    fn transition_for(&self, style: &CupertinoFadeTransitionStyle) -> Option<PresenceTransition> {
+        Some(PresenceTransition::fade(f64::from(style.duration_ms) / 1000.0))
+    }
+
+    /// The content, mounted only while the flag says so.
+    pub fn view(self) -> Conditional {
+        let style = self.resolved_style();
+        // v1's fade: opacity 0 -> 1 over the token's duration, played on
+        // create and on remove.
+        let transition = self.transition_for(&style);        let child = self.child.clone();
+        let show = self.show.clone();
+
+        let mut conditional = Conditional::new(false)
+            .when_flag(show)
+            .show_with(ChildKey::index(0), LayoutRequest::new(), move || match child.clone() {
+                Some(build) => build(),
+                None => Box::new(Text::new(String::new())),
+            });
+        if let Some(transition) = transition {
+            conditional = conditional.enter(transition).exit(transition);
+        }
+        conditional
     }
 }
 

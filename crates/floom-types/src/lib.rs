@@ -37,7 +37,7 @@ pub use geometry::{Constraints, Edges, Insets, Length, Point, Rect, Size, Transf
 pub use ids::{ElementId, NativeViewId, PlatformId, ResourceId, SceneNodeId, SurfaceId, WindowId};
 pub use motion::{
     AnimationSpec, CompositorChannel, CompositorProp, Easing, PresenceChannel, PresenceTransition,
-    RepeatMode, RepeatSpec, Transition, cubic_bezier_at, damped_spring,
+    RepeatMode, RepeatSpec, SlideAxis, Transition, cubic_bezier_at, damped_spring,
 };
 pub use native::{InputMode, NativeCapture, NativeCompositionMode, NativeSnapshot, NativeViewKind};
 pub use overlay::{OverlayHandle, OverlayKind};

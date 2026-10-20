@@ -616,6 +616,14 @@ pub struct Conditional {
     /// folds its end into the tree (unmount a finished exit, rest a finished
     /// enter).
     finished: bool,
+    /// A shared flag to follow instead of a fixed `when`.
+    ///
+    /// A kit whose visibility is driven from outside -- a button that opens a
+    /// panel -- cannot hold an `RwSignal` in the tree, because a slot closure
+    /// has to be `Send + Sync` and an `RwSignal` is `Rc`-based. The flag is the
+    /// same `Arc<Mutex<bool>>` the text input's buffer uses, and it is read in
+    /// `update`, so the tree follows whoever writes it.
+    flag: Option<crate::text_input::SharedFlag>,
 }
 
 /// Where a presence child is in its life cycle.
@@ -659,7 +667,21 @@ impl Conditional {
             phase,
             rev: 0,
             finished: false,
+            flag: None,
         }
+    }
+
+    /// Follows a shared flag rather than a fixed boolean.
+    ///
+    /// The flag is read in `update`, so whoever writes it -- a button, a route,
+    /// a test -- drives the child in and out. The flag's value at the moment
+    /// this is built seeds the first frame, so a conditional that starts open
+    /// is open immediately rather than a frame later.
+    pub fn when_flag(mut self, flag: crate::text_input::SharedFlag) -> Self {
+        self.when = crate::text_input::read_flag(&flag);
+        self.last_when = !self.when;
+        self.flag = Some(flag);
+        self
     }
 
     /// Sets the (single) child shown while `when` is true.
@@ -685,10 +707,20 @@ impl Conditional {
         self
     }
 
+    /// The transition played as the child appears, if there is one.
+    pub fn enter_transition(&self) -> Option<PresenceTransition> {
+        self.enter
+    }
+
     /// The transition played as the child leaves (and before it unmounts).
     pub fn exit(mut self, transition: PresenceTransition) -> Self {
         self.exit = Some(transition);
         self
+    }
+
+    /// The transition played as the child leaves, if there is one.
+    pub fn exit_transition(&self) -> Option<PresenceTransition> {
+        self.exit
     }
 
     /// Convenience for symmetric enter/exit transitions.
@@ -760,6 +792,12 @@ impl Widget for Conditional {
                 _ => {}
             }
             return;
+        }
+
+        // A conditional that follows a flag reads it here, so the tree follows
+        // whoever writes it.
+        if let Some(flag) = self.flag.clone() {
+            self.when = crate::text_input::read_flag(&flag);
         }
 
         if self.when != self.last_when {

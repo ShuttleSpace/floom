@@ -611,6 +611,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "floom-widget-cupertino-expand_transition"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widgets",
+]
+
+[[package]]
 name = "floom-widget-cupertino-expansion_panels"
 version = "0.1.0"
 dependencies = [
@@ -620,6 +631,17 @@ dependencies = [
  "floom-types",
  "floom-ui-composites",
  "floom-widget-cupertino-icon",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-cupertino-fade_transition"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
  "floom-widgets",
 ]
 
@@ -788,6 +810,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "floom-widget-cupertino-scale_transition"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widgets",
+]
+
+[[package]]
 name = "floom-widget-cupertino-select"
 version = "0.1.0"
 dependencies = [
@@ -798,6 +831,17 @@ dependencies = [
  "floom-ui-composites",
  "floom-widget-cupertino-icon-paths",
  "floom-widget-runtime",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-cupertino-slide_transition"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
  "floom-widgets",
 ]
 
@@ -1035,6 +1079,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "floom-widget-fluent-expand_transition"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widgets",
+]
+
+[[package]]
 name = "floom-widget-fluent-expansion_panels"
 version = "0.1.0"
 dependencies = [
@@ -1044,6 +1099,17 @@ dependencies = [
  "floom-types",
  "floom-ui-composites",
  "floom-widget-fluent-icon",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-fluent-fade_transition"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
  "floom-widgets",
 ]
 
@@ -1212,6 +1278,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "floom-widget-fluent-scale_transition"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widgets",
+]
+
+[[package]]
 name = "floom-widget-fluent-select"
 version = "0.1.0"
 dependencies = [
@@ -1222,6 +1299,17 @@ dependencies = [
  "floom-ui-composites",
  "floom-widget-fluent-icon-paths",
  "floom-widget-runtime",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-fluent-slide_transition"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
  "floom-widgets",
 ]
 
@@ -1463,6 +1551,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "floom-widget-md-expand_transition"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widget-runtime",
+ "floom-widgets",
+]
+
+[[package]]
 name = "floom-widget-md-expansion_panels"
 version = "0.1.0"
 dependencies = [
@@ -1472,6 +1572,18 @@ dependencies = [
  "floom-types",
  "floom-ui-composites",
  "floom-widget-md-icon",
+ "floom-widget-runtime",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-md-fade_transition"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
  "floom-widget-runtime",
  "floom-widgets",
 ]
@@ -1641,6 +1753,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "floom-widget-md-scale_transition"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widget-runtime",
+ "floom-widgets",
+]
+
+[[package]]
 name = "floom-widget-md-select"
 version = "0.1.0"
 dependencies = [
@@ -1650,6 +1774,18 @@ dependencies = [
  "floom-types",
  "floom-ui-composites",
  "floom-widget-md-icon",
+ "floom-widget-runtime",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-md-slide_transition"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
  "floom-widget-runtime",
  "floom-widgets",
 ]

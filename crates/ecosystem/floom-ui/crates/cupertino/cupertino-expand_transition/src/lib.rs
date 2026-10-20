@@ -1,24 +1,62 @@
-use std::time::Duration;
+//! Cupertino expand transition, ported to the Floom 2.0 widget API.
+//!
+//! v1 mounted the child only while a `show` signal was true, and played an
+//! animation on the way in and on the way out. 2.0's [`Conditional`] is that
+//! shape: it mounts and unmounts a subtree, and keeps an exiting one mounted
+//! until its exit has played, so the departure is visible.
+//!
+//! ## The signal became a flag
+//!
+//! v1 held an `RwSignal<bool>`, which is `Rc`-based and cannot cross a `Send +
+//! Sync` slot boundary -- so the port holds a [`SharedFlag`], the same
+//! `Arc<Mutex<bool>>` the text input's buffer uses, and the engine's
+//! `Conditional` reads it in `update`. The signal is therefore still the
+//! caller's: [`CupertinoExpandTransition::show_signal`] hands it over, and whoever writes it drives
+//! the child in and out.
+//!
+//! ## The height cannot be animated
+//!
+//! v1's expand transition animated the *height*: the box went from zero to the
+//! content's natural height, with the overflow clipped so the content did not
+//! spill out while it collapsed. 2.0 cannot do that: the host only re-runs
+//! layout when layout is dirty, so a box cannot change its height per frame --
+//! the same gap the expansion panels record (B4, "size"). The content is
+//! therefore its final height from the first frame, and the transition this kit
+//! offers is the compositor-only one, which is what `floom-widgets`' linear
+//! progress does with its sliding segment.
+//!
+use std::sync::Arc;
 
-use floom::prelude::*;
-use floom::reactive::RwSignal;
-use floom::taffy::style::Overflow;
-use floom::view::AnyView;
-use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
-use floom_core_theme::props::expand_transition::ExpandTransitionProps;
+use floom_core::{ChildKey, LayoutRequest, WidgetAny};
+use floom_signal::{RwSignal, SignalGet};
+use floom_types::PresenceTransition;
+use floom_widgets::{Conditional, Text};
+use floom_widgets::text_input::{SharedFlag, shared_flag, write_flag};
+
+use floom_core_theme::component_tokens::{ComponentId, ComponentTokens, ExpandTransitionTokens};
+use floom_core_theme::props::expand_transition::{ExpandTransitionProps, };
 use floom_core_theme::theme::{MultiTheme, Theme};
+
+const DESIGN_SYSTEM: &str = "cupertino";
+
+/// A builder for the content, replayed each time it is mounted.
+///
+/// A 2.0 slot is a replayed `Fn`, so the content cannot be a value: it is
+/// built again every time it appears.
+pub type ChildBuilder = Arc<dyn Fn() -> Box<dyn WidgetAny> + Send + Sync + 'static>;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct CupertinoExpandTransitionStyle {
     pub design_system: &'static str,
-    pub duration_ms: f32,
-}
+    pub duration_ms: f32,}
 
+/// Cupertino's expand transition.
 pub struct CupertinoExpandTransition {
     props: ExpandTransitionProps,
-    child: Option<Box<dyn Fn() -> AnyView>>,
+    child: Option<ChildBuilder>,
     theme: RwSignal<MultiTheme>,
-    show: RwSignal<bool>,
+    /// The shared "is it showing" flag.
+    show: SharedFlag,
 }
 
 impl CupertinoExpandTransition {
@@ -26,75 +64,95 @@ impl CupertinoExpandTransition {
         Self {
             props: ExpandTransitionProps::default(),
             child: None,
-            theme: RwSignal::new(MultiTheme::new_for(floom_core_theme::global_theme::DesignSystem::Cupertino)),
-            show: RwSignal::new(false),
+            theme: RwSignal::new(MultiTheme::new_for(
+                floom_core_theme::global_theme::DesignSystem::Cupertino,
+            )),
+            show: shared_flag(false),
         }
     }
 
-    /// Set the element that expands / collapses. Takes a factory closure because the child is
-    /// mounted and unmounted (re-created) on every enter/leave, so it must be rebuildable.
-    pub fn child<F, IV>(mut self, child: F) -> Self
-    where
-        F: Fn() -> IV + 'static,
-        IV: IntoView + 'static,
-    {
-        self.child = Some(Box::new(move || child().into_any()));
+    /// Set the content that appears and disappears.
+    ///
+    /// v1 took a factory closure for the same reason this does: the child is
+    /// mounted and unmounted on every enter and leave, so it must be
+    /// rebuildable.
+    pub fn child(mut self, build: impl Fn() -> Box<dyn WidgetAny> + Send + Sync + 'static) -> Self {
+        self.child = Some(Arc::new(build));
         self
     }
 
-    /// Expose the internal show signal so an external trigger (e.g. a button) can enter or
-    /// leave the transition. Mirrors `Dialog::open_signal()`.
-    pub fn show_signal(&self) -> RwSignal<bool> {
-        self.show
+    /// The shared flag that shows and hides the content.
+    ///
+    /// v1's `show_signal()`: an external trigger -- a button, a route -- writes
+    /// it and the content follows.
+    pub fn show_signal(&self) -> SharedFlag {
+        self.show.clone()
     }
 
-    /// Set the internal `show` signal from an external signal.
-    pub fn with_show_signal(mut self, show: RwSignal<bool>) -> Self {
-        self.show = show;
+    /// Shows or hides the content, through the shared flag.
+    pub fn show(mut self, show: bool) -> Self {
+        write_flag(&self.show, show);
+        self
+    }
+
+    pub fn props(&self) -> &ExpandTransitionProps {
+        &self.props
+    }
+
+    pub fn theme(&self) -> RwSignal<MultiTheme> {
+        self.theme
+    }
+
+    pub fn with_theme(mut self, theme: MultiTheme) -> Self {
+        self.theme = RwSignal::new(theme);
         self
     }
 
     pub fn resolved_style(&self) -> CupertinoExpandTransitionStyle {
         let theme = self.theme.get();
-        let ComponentTokens::ExpandTransition(tokens) =
-            theme.component(ComponentId::ExpandTransition)
-        else {
+        let ComponentTokens::ExpandTransition(tokens) = theme.component(ComponentId::ExpandTransition) else {
             unreachable!("ComponentId::ExpandTransition must resolve to ExpandTransitionTokens")
         };
         CupertinoExpandTransitionStyle {
-            design_system: "cupertino",
+            design_system: DESIGN_SYSTEM,
             duration_ms: tokens.duration_ms,
         }
     }
 
-    pub fn view(self) -> impl View {
-        let CupertinoExpandTransitionStyle { duration_ms, .. } = self.resolved_style();
-        let show = self.show;
-        let child_factory = self.child;
+    /// The transition this kit plays, if it plays one.
+    ///
+    /// The same transition on the way in and on the way out, which is what v1
+    /// did: one animation, run forwards and backwards.
+    pub fn transition(&self) -> Option<PresenceTransition> {
+        let style = self.resolved_style();
+        self.transition_for(&style)
+    }
 
-        dyn_view(move || -> AnyView {
-            if show.get() {
-                let child = match &child_factory {
-                    Some(f) => f(),
-                    None => Empty::new().into_any(),
-                };
-                // Height animates 0 -> natural (computed). Overflow is clipped so the
-                // content does not spill out of the collapsing box during the transition.
-                // `move` + Copy `duration_ms` keeps the stored animation closure 'static.
-                Container::new(child)
-                    .style(|s| s.overflow_x(Overflow::Clip).overflow_y(Overflow::Clip))
-                    .animation(move |a| {
-                        a.run_on_create(true)
-                            .run_on_remove(true)
-                            .duration(Duration::from_millis(duration_ms as u64))
-                            .keyframe(0, |f| f.style(|s| s.height(0.0)))
-                            .keyframe(100, |f| f.computed_style())
-                    })
-                    .into_any()
-            } else {
-                Empty::new().into_any()
-            }
-        })
+    /// The transition for a resolved style. Split out so `transition` and
+    /// `view` cannot disagree about which one they mean.
+    fn transition_for(&self, style: &CupertinoExpandTransitionStyle) -> Option<PresenceTransition> {
+        // v1's expand animated the *height*, which 2.0 cannot: the host only
+        // re-runs layout when layout is dirty, so a box cannot change its height
+        // per frame. See the module note.
+        None
+    }
+
+    /// The content, mounted only while the flag says so.
+    pub fn view(self) -> Conditional {
+        let style = self.resolved_style();
+        let transition = self.transition_for(&style);        let child = self.child.clone();
+        let show = self.show.clone();
+
+        let mut conditional = Conditional::new(false)
+            .when_flag(show)
+            .show_with(ChildKey::index(0), LayoutRequest::new(), move || match child.clone() {
+                Some(build) => build(),
+                None => Box::new(Text::new(String::new())),
+            });
+        if let Some(transition) = transition {
+            conditional = conditional.enter(transition).exit(transition);
+        }
+        conditional
     }
 }
 
