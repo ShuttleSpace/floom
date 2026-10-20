@@ -6,6 +6,9 @@ edition = "2021"
 [dependencies]
 # Ported off the v1 `floom` monolith (see docs/porting-floem-ui-to-2.0.md).
 floom-core-theme = { workspace = true }
+# v1's Material list group read the app-wide theme signal, not a
+# snapshot of one design system.
+floom-widget-runtime = { workspace = true, features = ["material"] }
 floom-signal = { path = "../../../../../floom-signal" }
 floom-core = { path = "../../../../../floom-core" }
 floom-types = { path = "../../../../../floom-types" }

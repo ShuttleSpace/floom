@@ -2154,6 +2154,7 @@ dependencies = [
  "floom-types",
  "floom-ui-composites",
  "floom-widget-md-icon",
+ "floom-widget-runtime",
  "floom-widgets",
 ]
 

@@ -17,7 +17,24 @@
 //! v1 padded the *items* -- each row took `indent` or `content_padding` of
 //! horizontal padding -- and the stack around them took the vertical padding.
 //! The accordion's own `content_padding` would put that inset on the body box
-//! instead, so the kit leaves it at zero and keeps the padding where v1 had it.
+//! on *all four* sides, and v1 had no horizontal inset there, so the
+//! accordion's is left at zero and the kit's own stack carries the vertical
+//! one.
+//!
+//! ## What v1 drew that this port does not
+//!
+//! * **The outline around the header row.** v1 put a 1px outline on the
+//!   *header* -- `border(1.0).border_color(with_alpha(outline, 30))` -- so the
+//!   outline was the header row's own box. 2.0's accordion draws the outline
+//!   around the *panel*: the header and, while it is open, the rows. The box
+//!   that would have to carry the header's outline is a leaf, and a leaf
+//!   cannot hold the row it would be outlining; the engine says as much, and
+//!   outlining the panel is what Material 3's outlined expansion panel does.
+//!   The width and the colour are v1's; the shape is the engine's.
+//! * **`cursor(CursorStyle::Pointer)` on the header.** 2.0's paint context has
+//!   no cursor vocabulary, so the pointer is not carried over; the header is
+//!   still a `Pressable`, so it is still activatable by keyboard, which the
+//!   pointer was not.
 //!
 //! ## The chevron
 //!
@@ -220,7 +237,16 @@ impl CupertinoListGroup {
             }, move || {
                 // v1's items: a vertical stack, each row padded, with the stack
                 // itself padded vertically.
-                let mut stack = Stack::new(Axis::Vertical).gap(row_gap);
+                let mut stack = Stack::new(Axis::Vertical)
+                    .gap(row_gap)
+                    // v1: `padding_vert(content_padding)` on the stack that
+                    // holds the items. The accordion's own `content_padding`
+                    // would inset the body box on *all four* sides, and v1 had
+                    // no horizontal inset there -- the rows carried their own --
+                    // so the vertical inset belongs here.
+                    .request(
+                        LayoutRequest::new().padding_vert(f64::from(vertical_padding)),
+                    );
                 for label in items.iter() {
                     let label = label.clone();
                     let color = item_color;
