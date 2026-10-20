@@ -585,6 +585,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "floom-widget-cupertino-date_adapter_provider"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widgets",
+]
+
+[[package]]
 name = "floom-widget-cupertino-dialog"
 version = "0.1.0"
 dependencies = [
@@ -595,6 +606,17 @@ dependencies = [
  "floom-ui-composites",
  "floom-widget-cupertino-icon",
  "floom-widget-runtime",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-cupertino-display_provider"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
  "floom-widgets",
 ]
 
@@ -761,6 +783,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "floom-widget-cupertino-locale_provider"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widgets",
+]
+
+[[package]]
 name = "floom-widget-cupertino-overlay"
 version = "0.1.0"
 dependencies = [
@@ -901,6 +934,17 @@ dependencies = [
  "floom-types",
  "floom-ui-composites",
  "floom-widget-runtime",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-cupertino-theme_provider"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
  "floom-widgets",
 ]
 
@@ -1053,6 +1097,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "floom-widget-fluent-date_adapter_provider"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widgets",
+]
+
+[[package]]
 name = "floom-widget-fluent-dialog"
 version = "0.1.0"
 dependencies = [
@@ -1063,6 +1118,17 @@ dependencies = [
  "floom-ui-composites",
  "floom-widget-fluent-icon",
  "floom-widget-runtime",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-fluent-display_provider"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
  "floom-widgets",
 ]
 
@@ -1229,6 +1295,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "floom-widget-fluent-locale_provider"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widgets",
+]
+
+[[package]]
 name = "floom-widget-fluent-overlay"
 version = "0.1.0"
 dependencies = [
@@ -1369,6 +1446,17 @@ dependencies = [
  "floom-types",
  "floom-ui-composites",
  "floom-widget-runtime",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-fluent-theme_provider"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
  "floom-widgets",
 ]
 
@@ -1525,6 +1613,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "floom-widget-md-date_adapter_provider"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widget-runtime",
+ "floom-widgets",
+]
+
+[[package]]
 name = "floom-widget-md-dialog"
 version = "0.1.0"
 dependencies = [
@@ -1534,6 +1634,18 @@ dependencies = [
  "floom-types",
  "floom-ui-composites",
  "floom-widget-md-icon",
+ "floom-widget-runtime",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-md-display_provider"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
  "floom-widget-runtime",
  "floom-widgets",
 ]
@@ -1703,6 +1815,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "floom-widget-md-locale_provider"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widget-runtime",
+ "floom-widgets",
+]
+
+[[package]]
 name = "floom-widget-md-overlay"
 version = "0.1.0"
 dependencies = [
@@ -1848,6 +1972,18 @@ dependencies = [
  "floom-signal",
  "floom-types",
  "floom-ui-composites",
+ "floom-widget-runtime",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-md-theme_provider"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
  "floom-widget-runtime",
  "floom-widgets",
 ]
