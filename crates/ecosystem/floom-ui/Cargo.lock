@@ -723,6 +723,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "floom-widget-cupertino-floating_action_button"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widgets",
+]
+
+[[package]]
 name = "floom-widget-cupertino-footer"
 version = "0.1.0"
 dependencies = [
@@ -1313,6 +1324,17 @@ dependencies = [
 
 [[package]]
 name = "floom-widget-fluent-fade_transition"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-fluent-floating_action_button"
 version = "0.1.0"
 dependencies = [
  "floom-core",
@@ -1926,6 +1948,18 @@ dependencies = [
 
 [[package]]
 name = "floom-widget-md-fade_transition"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widget-runtime",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-md-floating_action_button"
 version = "0.1.0"
 dependencies = [
  "floom-core",

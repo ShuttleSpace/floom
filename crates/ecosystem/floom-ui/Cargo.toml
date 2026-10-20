@@ -42,7 +42,6 @@ exclude = [
     "crates/cupertino/cupertino-date_picker",
     "crates/cupertino/cupertino-empty_state",
     "crates/cupertino/cupertino-file_input",
-    "crates/cupertino/cupertino-floating_action_button",
     "crates/cupertino/cupertino-form",
     "crates/cupertino/cupertino-hover",
       "crates/cupertino/cupertino-image",
@@ -90,7 +89,6 @@ exclude = [
     "crates/fluent/fluent-date_picker",
     "crates/fluent/fluent-empty_state",
     "crates/fluent/fluent-file_input",
-    "crates/fluent/fluent-floating_action_button",
     "crates/fluent/fluent-form",
     "crates/fluent/fluent-hover",
       "crates/fluent/fluent-image",
@@ -138,7 +136,6 @@ exclude = [
     "crates/material/md-date_picker",
     "crates/material/md-empty_state",
     "crates/material/md-file_input",
-    "crates/material/md-floating_action_button",
     "crates/material/md-form",
     "crates/material/md-hover",
     "crates/material/md-image",
@@ -334,6 +331,9 @@ members = [
     "crates/material/md-responsive",
     "crates/cupertino/cupertino-responsive",
     "crates/fluent/fluent-responsive",
+    "crates/material/md-floating_action_button",
+    "crates/cupertino/cupertino-floating_action_button",
+    "crates/fluent/fluent-floating_action_button",
 
 ]
 
