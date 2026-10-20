@@ -558,6 +558,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "floom-widget-cupertino-code"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widgets",
+]
+
+[[package]]
 name = "floom-widget-cupertino-combobox"
 version = "0.1.0"
 dependencies = [
@@ -762,6 +773,17 @@ dependencies = [
  "floom-signal",
  "floom-types",
  "floom-ui-composites",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-cupertino-kbd"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
  "floom-widgets",
 ]
 
@@ -1103,6 +1125,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "floom-widget-fluent-code"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widgets",
+]
+
+[[package]]
 name = "floom-widget-fluent-combobox"
 version = "0.1.0"
 dependencies = [
@@ -1307,6 +1340,17 @@ dependencies = [
  "floom-signal",
  "floom-types",
  "floom-ui-composites",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-fluent-kbd"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
  "floom-widgets",
 ]
 
@@ -1652,6 +1696,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "floom-widget-md-code"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widget-runtime",
+ "floom-widgets",
+]
+
+[[package]]
 name = "floom-widget-md-combobox"
 version = "0.1.0"
 dependencies = [
@@ -1861,6 +1917,18 @@ dependencies = [
  "floom-signal",
  "floom-types",
  "floom-ui-composites",
+ "floom-widget-runtime",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-md-kbd"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
  "floom-widget-runtime",
  "floom-widgets",
 ]
