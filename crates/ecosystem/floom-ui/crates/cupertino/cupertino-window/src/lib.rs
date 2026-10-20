@@ -20,9 +20,10 @@
 //! itself when the page changes.
 //!
 //! The viewer is a shared shape: all three kits are the same widget with
-//! different tokens, so it belongs in `floom-ui-composites` beside the
-//! engine's own `Tabs`. That piece is missing from the engine -- it is the gap
-//! this port names -- and until it exists each kit carries its own copy.
+//! different tokens, so it belongs in `floom-ui-composites`. The engine has no
+//! viewer composite -- its `Tabs` is the nearest thing to one -- so that piece
+//! is missing, and it is the gap this port names. Until it exists, each kit
+//! carries its own copy.
 //!
 //! ## What this kit answers
 //!
@@ -51,10 +52,9 @@
 //!   and the dots. 2.0's `Pressable` does not answer `Widget::cursor`, so the
 //!   pointer is not carried. The arrows and the dots are still clickable, and
 //!   by keyboard too, which the pointer was not.
-//! * **The callback in the props.** v1 kept the change callback in the kit
-//!   rather than in the props, so there is nothing to move: the port keeps it
-//!   there and makes it `Send + Sync`, because 2.0's slots are shared between
-//!   threads.
+//! * **The callback's shape.** v1 kept the change callback in the kit rather
+//!   than in the props; the port keeps it there and makes it `Send + Sync`,
+//!   because 2.0's slots are shared between threads.
 //! * **The accessors.** v1's window had no `props()`, no `theme()` and no
 //!   `with_theme()`. The port gives it all three, because a kit that cannot be
 //!   given a theme cannot be tested against one.
