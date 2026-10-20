@@ -92,6 +92,8 @@ pub struct LayoutStyle {
     pub max_width: Option<Length>,
     pub max_height: Option<Length>,
     pub flex_grow: f32,
+    /// The box's height as a fraction of its width: `1.0` is a square.
+    pub aspect_ratio: Option<f32>,
     pub gap: f32,
     /// Space reserved outside the box, inside its parent.
     pub margin: Insets,
@@ -114,6 +116,7 @@ impl Default for LayoutStyle {
             max_width: None,
             max_height: None,
             flex_grow: 0.0,
+            aspect_ratio: None,
             gap: 0.0,
             margin: Insets::ZERO,
             padding: Insets::ZERO,
@@ -201,6 +204,7 @@ impl LayoutStyle {
                 height: dimension(self.max_height),
             },
             flex_grow: self.flex_grow,
+            aspect_ratio: self.aspect_ratio,
             gap: taffy::Size {
                 width: LengthPercentage::length(self.gap),
                 height: LengthPercentage::length(self.gap),

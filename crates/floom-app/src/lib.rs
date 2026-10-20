@@ -677,6 +677,7 @@ fn request_to_style(req: &LayoutRequest) -> LayoutStyle {
     style.max_width = req.max_width;
     style.max_height = req.max_height;
     style.flex_grow = req.flex_grow.unwrap_or(0.0);
+    style.aspect_ratio = req.aspect_ratio;
     if let Some(axis) = req.axis {
         style.flex_direction = match axis {
             Axis::Horizontal => FlexDirection::Row,

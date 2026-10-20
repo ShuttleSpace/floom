@@ -58,7 +58,6 @@ exclude = [
     "crates/cupertino/cupertino-radio-group",
     "crates/cupertino/cupertino-range_slider",
     "crates/cupertino/cupertino-rating",
-    "crates/cupertino/cupertino-responsive",
       "crates/cupertino/cupertino-sheet",
     "crates/cupertino/cupertino-skeleton_loader",
     "crates/cupertino/cupertino-slide_group",
@@ -107,7 +106,6 @@ exclude = [
     "crates/fluent/fluent-radio-group",
     "crates/fluent/fluent-range_slider",
     "crates/fluent/fluent-rating",
-    "crates/fluent/fluent-responsive",
       "crates/fluent/fluent-sheet",
     "crates/fluent/fluent-skeleton_loader",
     "crates/fluent/fluent-slide_group",
@@ -156,7 +154,6 @@ exclude = [
     "crates/material/md-radio-group",
     "crates/material/md-range_slider",
     "crates/material/md-rating",
-    "crates/material/md-responsive",
     "crates/material/md-sheet",
     "crates/material/md-skeleton_loader",
     "crates/material/md-slide_group",
@@ -334,6 +331,9 @@ members = [
     "crates/cupertino/cupertino-data_iterator",
     "crates/fluent/fluent-app",
     "crates/fluent/fluent-data_iterator",
+    "crates/material/md-responsive",
+    "crates/cupertino/cupertino-responsive",
+    "crates/fluent/fluent-responsive",
 
 ]
 

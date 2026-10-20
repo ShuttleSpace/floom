@@ -124,6 +124,13 @@ pub struct LayoutRequest {
     pub max_height: Option<Length>,
     /// Fraction of leftover space this box claims along the parent's main axis.
     pub flex_grow: Option<f32>,
+    /// The box's height as a fraction of its width: `1.0` is a square.
+    ///
+    /// The other dimension is derived rather than stated, which is the whole
+    /// point: a media box that must be 16:9 cannot say "width 200, height 112.5"
+    /// without knowing its width first. v1's `aspect_ratio(..)` was the same
+    /// idea, and the first component to need it was the responsive media box.
+    pub aspect_ratio: Option<f32>,
     /// Direction this box lays out *its own* children in.
     pub axis: Option<Axis>,
     pub gap: Option<f32>,
@@ -163,6 +170,7 @@ impl LayoutRequest {
             max_width: None,
             max_height: None,
             flex_grow: None,
+            aspect_ratio: None,
             axis: None,
             gap: None,
             main_align: None,
@@ -223,6 +231,16 @@ impl LayoutRequest {
     /// Grow to fill leftover space on the parent's main axis.
     pub const fn grow(mut self, grow: f32) -> Self {
         self.flex_grow = Some(grow);
+        self
+    }
+
+    /// The box's height as a fraction of its width: `1.0` is a square.
+    ///
+    /// The other dimension is derived rather than stated, which is the whole
+    /// point: a media box that must be 16:9 cannot say "width 200, height 112.5"
+    /// without knowing its width first.
+    pub const fn aspect_ratio(mut self, ratio: f32) -> Self {
+        self.aspect_ratio = Some(ratio);
         self
     }
 
