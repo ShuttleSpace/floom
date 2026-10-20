@@ -4,4 +4,22 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+# Ported off the v1 `floom` monolith (see docs/porting-floem-ui-to-2.0.md).
+#
+# The `features = ["fluent"]` is on the *dev*-dependency: this kit takes a
+# snapshot of its own design system rather than reading the app-wide theme
+# signal, so it needs no `floom-widget-runtime`. All three design-system
+# features are the *same* gate -- `#[cfg(any(feature = "material", feature =
+# "cupertino", feature = "fluent"))]` -- so enabling the wrong one compiles
+# just as well. They are presence flags, not data selectors.
 floom-core-theme = { workspace = true }
+floom-signal = { path = "../../../../../floom-signal" }
+floom-core = { path = "../../../../../floom-core" }
+floom-types = { path = "../../../../../floom-types" }
+floom-widgets = { path = "../../../../../floom-widgets" }
+
+[dev-dependencies]
+floom-core-theme = { workspace = true, features = ["fluent"] }
+floom-core = { path = "../../../../../floom-core" }
+floom-types = { path = "../../../../../floom-types" }
+floom-widgets = { path = "../../../../../floom-widgets" }

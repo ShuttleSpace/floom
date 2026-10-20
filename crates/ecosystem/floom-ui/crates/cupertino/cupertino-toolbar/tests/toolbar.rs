@@ -79,7 +79,7 @@ fn the_title_carries_the_medium_weight() {
 
 #[test]
 fn the_token_weight_conversion_does_not_repeat_the_theme_bug() {
-    // `floem_core_theme`'s own `FontWeight::to_floom` maps both `ExtraBold` and
+    // `floom_core_theme`'s own `FontWeight::to_floom` maps both `ExtraBold` and
     // `Black` onto parley's `EXTRA_BOLD`, so the two are indistinguishable there.
     // It has no call site in any of the three kits, so it is recorded rather than
     // changed; the kit's own conversion must not inherit it.

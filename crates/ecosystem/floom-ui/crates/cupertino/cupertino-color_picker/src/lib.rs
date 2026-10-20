@@ -1,25 +1,107 @@
-use std::rc::Rc;
+//! Cupertino colour picker, ported to the Floom 2.0 widget API.
+//!
+//! A colour picker is a square of colour -- saturation across, value down --
+//! under a hue strip and an alpha strip, with a preview of the chosen colour
+//! and a field that spells it out in hex.
+//!
+//! ## What the port uses
+//!
+//! The engine's brush. v1 drew the square and the two strips as inline SVG
+//! documents -- a `<linearGradient>` for the white ramp, another for the black
+//! one, and a third for the hue -- and handed the markup to an SVG widget.
+//! 2.0 has no SVG pipeline, but it does have a linear brush, so the port
+//! paints the same gradients with the same stops at the same offsets: the
+//! picture is the same, the mechanism is not.
+//!
+//! ## What this kit answers
+//!
+//! * the square's size, the strips' height, the thumb's size and the corner
+//!   radius: the tokens;
+//! * the picker's fill: `surface`; its border: `outline` at 80;
+//! * the hex field's ink: `on_surface`; its placeholder's: `on_surface_variant`;
+//! * the thumb's border: white.
+//!
+//! ## The numbers v1 wrote as literals
+//!
+//! The picker's padding (12), the gap under the square and under each strip
+//! (12), the gap between the preview and the field (12), the preview's size
+//! (40), the field's width (120) and its text size (14), the border's
+//! thickness (1), and the thumb's border (2).
+//!
+//! ## The differences this port names rather than reproduces
+//!
+//! * **The square's box.** v1's outer box was `width(sv_width)` with a padding
+//!   of 12, so its content box was 24 narrower than the 240-wide square it
+//!   held and the square overflowed it. The port's outer box is
+//!   `sv_width + 24` wide, so the square fits inside the padding.
+//! * **The hex is committed as it is typed.** v1 committed the field on
+//!   focus-lost; 2.0's text input has no focus-lost event, so the port
+//!   commits whenever the text parses -- and only when the parsed colour is
+//!   not the one already held, so a colour dragged in the square does not
+//!   report itself twice.
+//! * **A drag that leaves the area ends.** v1 asked the host for pointer
+//!   capture, so a drag that ran off the square kept tracking. 2.0's
+//!   `EventContext` has no capture door, so the drag ends where the pointer
+//!   leaves the area.
+//!
+//! ## The theme source
+//!
+//! v1's Cupertino colour picker took a *snapshot* of its own design system --
+//! `MultiTheme::new_for(DesignSystem::Cupertino)` -- so a change of the
+//! app-wide theme does not reach it. The port keeps that.
 
-use floom::event::EventPropagation;
-use floom::prelude::*;
-use floom::reactive::RwSignal;
-use floom::style::CursorStyle;
-use floom::taffy::style::Overflow;
-use floom::view::AnyView;
-use floom::views::{Container, Decorators, Empty, Stack, TextInput, svg};
+//! ## What v1 wrote that this port does not carry
+//!
+//! * **`color_signal()` was an `RwSignal<Color>`.** 2.0's shared state is a
+//!   mutex-guarded cell, the same shape the engine's `SharedFlag` and
+//!   `SharedBuffer` have, because a value that changes after mount cannot be
+//!   held in a signal.
+//! * **The accessors.** v1's Cupertino colour picker had no `props()`,
+//!   `theme()` or `with_theme()`. The port gives all three kits the same
+//!   three, because a kit that cannot be given a theme cannot be tested
+//!   against one.
+
+use std::sync::{Arc, Mutex};
+
+use floom_core::{
+    CreateContext, ElementId, Event, EventContext, LayoutRequest, PaintContext, Point, Rect,
+    UpdateContext, Widget, WidgetAny,
+};
+use floom_signal::{RwSignal, SignalGet};
+use floom_types::{Brush, Color as PaintColor, CursorStyle, Insets, PointerButton, PointerPhase};
+use floom_widgets::primitives::Revision;
+use floom_widgets::{Align, Axis, Stack, Surface, TextInput, TextInputStyle};
+
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::color_picker::ColorPickerProps;
 use floom_core_theme::theme::{MultiTheme, Theme};
 use floom_core_theme::tokens::color::Color;
-use floom_core_theme::tokens::color_ext::*;
+use floom_core_theme::tokens::color_ext::{with_alpha, WHITE};
 
+/// The hex field's placeholder, as v1 wrote it.
+const HEX_PLACEHOLDER: &str = "#rrggbb";
+
+/// The chosen colour, shared between the kit and the tree it built.
+///
+/// v1 held an `RwSignal<Color>` and a `RwSignal<String>` for the hex. 2.0's
+/// slots are shared between threads and an `RwSignal` is `Rc`-based, so a
+/// value that changes after mount cannot be a signal; these are
+/// mutex-guarded cells instead, the same shape the engine's `SharedFlag` and
+/// `SharedBuffer` have.
+pub type SharedColor = Arc<Mutex<Color>>;
+
+/// The hex text, shared with the text input.
+pub type SharedHex = Arc<Mutex<String>>;
+
+/// The colour v1 started on.
+const DEFAULT_COLOR: Color = Color::rgb(33, 150, 243);
 
 // ----- HSV <-> RGB helpers (pure; safe to swap across design systems) -----
 
-fn rgb_to_hsv(c: Color) -> (f32, f32, f32) {
-    let r = c.r as f32 / 255.0;
-    let g = c.g as f32 / 255.0;
-    let b = c.b as f32 / 255.0;
+fn rgb_to_hsv(c: Color) -> (f64, f64, f64) {
+    let r = f64::from(c.r) / 255.0;
+    let g = f64::from(c.g) / 255.0;
+    let b = f64::from(c.b) / 255.0;
     let max = r.max(g).max(b);
     let min = r.min(g).min(b);
     let d = max - min;
@@ -39,7 +121,7 @@ fn rgb_to_hsv(c: Color) -> (f32, f32, f32) {
     (h, s, v)
 }
 
-fn hsv_to_rgb(h: f32, s: f32, v: f32) -> Color {
+fn hsv_to_rgb(h: f64, s: f64, v: f64) -> Color {
     let h = (h % 360.0 + 360.0) % 360.0;
     let c = v * s;
     let x = c * (1.0 - ((h / 60.0) % 2.0 - 1.0).abs());
@@ -80,58 +162,41 @@ fn hex_to_color(s: &str) -> Option<Color> {
     Some(Color::rgb(r, g, b))
 }
 
-fn build_sv(hue: Color, w: f32, h: f32) -> String {
-    format!(
-        "<svg xmlns='http://www.w3.org/2000/svg' width='{w}' height='{h}' viewBox='0 0 {w} {h}'>\
-         <defs>\
-         <linearGradient id='ws' x1='0' y1='0' x2='1' y2='0'>\
-         <stop offset='0' stop-color='white'/><stop offset='1' stop-color='white' stop-opacity='0'/></linearGradient>\
-         <linearGradient id='vb' x1='0' y1='0' x2='0' y2='1'>\
-         <stop offset='0' stop-color='black' stop-opacity='0'/><stop offset='1' stop-color='black'/></linearGradient>\
-         </defs>\
-         <rect width='{w}' height='{h}' fill='{hue_c}'/>\
-         <rect width='{w}' height='{h}' fill='url(#ws)'/>\
-         <rect width='{w}' height='{h}' fill='url(#vb)'/></svg>",
-        w = w,
-        h = h,
-        hue_c = hue.to_css()
-    )
+/// The chosen colour, treating a poisoned cell as the default.
+fn read_color(color: &SharedColor) -> Color {
+    match color.lock() {
+        Ok(guard) => *guard,
+        Err(_) => DEFAULT_COLOR,
+    }
 }
 
-fn build_hue(w: f32, h: f32, r: f32) -> String {
-    format!(
-        "<svg xmlns='http://www.w3.org/2000/svg' width='{w}' height='{h}' viewBox='0 0 {w} {h}'>\
-         <defs><linearGradient id='hue' x1='0' y1='0' x2='1' y2='0'>\
-         <stop offset='0' stop-color='#ff0000'/>\
-         <stop offset='0.167' stop-color='#ffff00'/>\
-         <stop offset='0.333' stop-color='#00ff00'/>\
-         <stop offset='0.5' stop-color='#00ffff'/>\
-         <stop offset='0.667' stop-color='#0000ff'/>\
-         <stop offset='0.833' stop-color='#ff00ff'/>\
-         <stop offset='1' stop-color='#ff0000'/></linearGradient></defs>\
-         <rect width='{w}' height='{h}' rx='{r}' fill='url(#hue)'/></svg>",
-        w = w,
-        h = h,
-        r = r
-    )
+/// Sets the colour, the hex text and tells the caller -- in v1's order.
+fn commit_color(
+    color: &SharedColor,
+    hex: &SharedHex,
+    on_change: &Option<Arc<dyn Fn(Color) + Send + Sync>>,
+    value: Color,
+) {
+    if let Ok(mut guard) = color.lock() {
+        *guard = value;
+    }
+    let text = color_to_hex(value);
+    if let Ok(mut buffer) = hex.lock() {
+        if *buffer != text {
+            *buffer = text;
+        }
+    }
+    if let Some(callback) = on_change {
+        callback(value);
+    }
 }
 
-fn build_alpha(c: Color, w: f32, h: f32, r: f32) -> String {
-    let a0 = Color::rgba(c.r, c.g, c.b, 0).to_css();
-    let a1 = Color::rgba(c.r, c.g, c.b, 255).to_css();
-    format!(
-        "<svg xmlns='http://www.w3.org/2000/svg' width='{w}' height='{h}' viewBox='0 0 {w} {h}'>\
-         <defs><linearGradient id='al' x1='0' y1='0' x2='1' y2='0'>\
-         <stop offset='0' stop-color='{a0}'/><stop offset='1' stop-color='{a1}'/></linearGradient></defs>\
-         <rect width='{w}' height='{h}' rx='{r}' fill='url(#al)'/></svg>",
-        w = w,
-        h = h,
-        r = r,
-        a0 = a0,
-        a1 = a1
-    )
-}
-
+/// The colour picker's appearance, in the terms v1 used.
+///
+/// The first block is v1's own list. The second block is what v1's paint used
+/// but v1's style never reported -- the padding, the border's thickness, the
+/// margins, the preview's size and the field's width and size. A style that
+/// does not say what the widget draws is not the widget's output.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct CupertinoColorPickerStyle {
     pub design_system: &'static str,
@@ -143,53 +208,112 @@ pub struct CupertinoColorPickerStyle {
     pub slider_height: f32,
     pub thumb_size: f32,
     pub radius: f32,
+    // --- what v1's paint used and v1's style did not report ---
+    /// The hex field's ink.
+    pub on_surface_variant: Color,
+    /// The picker's padding. v1's `.padding(12.0)`.
+    pub padding: f32,
+    /// The border's thickness. v1's `.border(1.0)`.
+    pub border_width: f32,
+    /// The border's alpha. v1's `with_alpha(outline, 80)`.
+    pub border_alpha: u8,
+    /// The gap above each of the strips and above the preview row.
+    /// v1's `.margin_top(12.0)`.
+    pub margin_top: f32,
+    /// The gap between the preview and the hex field. v1's `.gap(12.0)`.
+    pub row_gap: f32,
+    /// The preview's size. v1's `.size(40.0, 40.0)`.
+    pub preview_size: f32,
+    /// The hex field's width. v1's `.width(120.0)`.
+    pub hex_width: f32,
+    /// The hex field's text size. v1's `.font_size(14.0)`.
+    pub hex_font_size: f32,
+    /// The thumb's border. v1's `.border(2.0)`.
+    pub thumb_border_width: f32,
+    /// The thumb's border colour. v1's `WHITE`.
+    pub thumb_border_color: Color,
 }
 
+/// Cupertino's colour picker.
 pub struct CupertinoColorPicker {
     props: ColorPickerProps,
     theme: RwSignal<MultiTheme>,
-    color: RwSignal<Color>,
-    hex: RwSignal<String>,
-    on_change: Option<Box<dyn Fn(Color)>>,
+    /// The chosen colour, shared with the tree it builds.
+    color: SharedColor,
+    /// The hex text, shared with the text input.
+    hex: SharedHex,
+    /// The callback, held as a `Send + Sync` handle because the tree's slots
+    /// have to be.
+    on_change: Option<Arc<dyn Fn(Color) + Send + Sync>>,
 }
 
 impl CupertinoColorPicker {
     pub fn new() -> Self {
-        let c = Color::rgb(33, 150, 243);
         Self {
             props: ColorPickerProps::default(),
-            theme: RwSignal::new(MultiTheme::new_for(floom_core_theme::global_theme::DesignSystem::Cupertino)),
-            color: RwSignal::new(c),
-            hex: RwSignal::new(color_to_hex(c)),
+            theme: RwSignal::new(MultiTheme::new_for(
+                floom_core_theme::global_theme::DesignSystem::Cupertino,
+            )),
+            color: Arc::new(Mutex::new(DEFAULT_COLOR)),
+            hex: Arc::new(Mutex::new(color_to_hex(DEFAULT_COLOR))),
             on_change: None,
         }
     }
 
+    /// The colour to start on.
     pub fn value(mut self, value: Color) -> Self {
-        self.color = RwSignal::new(value);
-        self.hex = RwSignal::new(color_to_hex(value));
+        if let Ok(mut guard) = self.color.lock() {
+            *guard = value;
+        }
+        if let Ok(mut buffer) = self.hex.lock() {
+            *buffer = color_to_hex(value);
+        }
         self
     }
 
+    /// Whether the alpha strip is shown.
     pub fn show_alpha(mut self, show_alpha: bool) -> Self {
         self.props.show_alpha = show_alpha;
         self
     }
 
-    pub fn on_change(mut self, callback: impl Fn(Color) + 'static) -> Self {
-        self.on_change = Some(Box::new(callback));
+    /// Called with the colour the user chose.
+    ///
+    /// `Send + Sync` is required, not incidental: 2.0 rebuilds a widget inside
+    /// a slot closure the host may hand between threads, so the callback has
+    /// to be both clonable and thread-safe to be rebuilt into the tree.
+    pub fn on_change(mut self, callback: impl Fn(Color) + Send + Sync + 'static) -> Self {
+        self.on_change = Some(Arc::new(callback));
         self
     }
 
-    pub fn color_signal(&self) -> RwSignal<Color> {
-        self.color
+    pub fn props(&self) -> &ColorPickerProps {
+        &self.props
+    }
+
+    pub fn theme(&self) -> RwSignal<MultiTheme> {
+        self.theme
+    }
+
+    pub fn with_theme(mut self, theme: MultiTheme) -> Self {
+        self.theme = RwSignal::new(theme);
+        self
+    }
+
+    /// The chosen colour, shared with the tree: the 2.0 answer to v1's
+    /// `color_signal()`.
+    pub fn color(&self) -> SharedColor {
+        self.color.clone()
+    }
+
+    /// The hex text, shared with the field.
+    pub fn hex(&self) -> SharedHex {
+        self.hex.clone()
     }
 
     pub fn resolved_style(&self) -> CupertinoColorPickerStyle {
         let theme = self.theme.get();
-        let ComponentTokens::ColorPicker(tokens) =
-            theme.component(ComponentId::ColorPicker)
-        else {
+        let ComponentTokens::ColorPicker(tokens) = theme.component(ComponentId::ColorPicker) else {
             unreachable!("ComponentId::ColorPicker must resolve to ColorPickerTokens")
         };
         CupertinoColorPickerStyle {
@@ -202,344 +326,560 @@ impl CupertinoColorPicker {
             slider_height: tokens.slider_height,
             thumb_size: tokens.thumb_size,
             radius: tokens.radius,
+            on_surface_variant: theme.colors().on_surface_variant,
+            padding: 12.0,
+            border_width: 1.0,
+            border_alpha: 80,
+            margin_top: 12.0,
+            row_gap: 12.0,
+            preview_size: 40.0,
+            hex_width: 120.0,
+            hex_font_size: 14.0,
+            thumb_border_width: 2.0,
+            thumb_border_color: WHITE,
         }
     }
 
-    pub fn view(self) -> impl View {
-        let theme = self.theme;
-        let color = self.color;
-        let hex = self.hex;
-        let on_change: Rc<Option<Box<dyn Fn(Color)>>> = Rc::new(self.on_change);
+    /// The picker, ready to mount.
+    pub fn view(self) -> Surface {
+        let style = self.resolved_style();
+        let color = self.color.clone();
+        let hex = self.hex.clone();
+        let on_change = self.on_change.clone();
         let show_alpha = self.props.show_alpha;
 
-        let tokens = match theme.get().component(ComponentId::ColorPicker) {
-            ComponentTokens::ColorPicker(t) => t,
-            _ => unreachable!(),
-        };
-        let sv_w = tokens.sv_width;
-        let sv_h = tokens.sv_height;
-        let slider_h = tokens.slider_height;
-        let thumb = tokens.thumb_size;
-        let radius = tokens.radius;
+        let mut stack = Stack::new(Axis::Vertical);
 
-        let commit = Rc::new({
-            let color = color;
-            let hex = hex;
-            let on_change = on_change.clone();
-            move |c: Color| {
-                color.set(c);
-                hex.set(color_to_hex(c));
-                if let Some(cb) = on_change.as_ref() {
-                    cb(c);
-                }
-            }
-        });
+        // The square: saturation across, value down.
+        let square_color = color.clone();
+        let square_hex = hex.clone();
+        let square_change = on_change.clone();
+        stack = stack.push_layout(
+            LayoutRequest::new()
+                .width(style.sv_width)
+                .height(style.sv_height),
+            move || {
+                let color = square_color.clone();
+                let painted = read_color(&color);
+                Box::new(CupertinoColorArea {
+                    kind: AreaKind::Square,
+                    style,
+                    color,
+                    hex: square_hex.clone(),
+                    on_change: square_change.clone(),
+                    dragging: false,
+                    painted,
+                    revision: Revision::default(),
+                }) as Box<dyn WidgetAny>
+            },
+        );
 
-        // --- SV square ---
-        let sv_svg = svg(move || {
-            let (h, _, _) = rgb_to_hsv(color.get());
-            build_sv(hsv_to_rgb(h, 1.0, 1.0), sv_w, sv_h)
-        })
-        .update_value(move || {
-            let (h, _, _) = rgb_to_hsv(color.get());
-            build_sv(hsv_to_rgb(h, 1.0, 1.0), sv_w, sv_h)
-        })
-        .style(move |s| s.absolute().width_pct(100.0).height_pct(100.0));
+        // The hue strip.
+        let hue_color = color.clone();
+        let hue_hex = hex.clone();
+        let hue_change = on_change.clone();
+        stack = stack.push_layout(
+            LayoutRequest::new()
+                .width(style.sv_width)
+                .height(style.slider_height)
+                .margin(Insets {
+                    top: f64::from(style.margin_top),
+                    right: 0.0,
+                    bottom: 0.0,
+                    left: 0.0,
+                }),
+            move || {
+                let color = hue_color.clone();
+                let painted = read_color(&color);
+                Box::new(CupertinoColorArea {
+                    kind: AreaKind::Hue,
+                    style,
+                    color,
+                    hex: hue_hex.clone(),
+                    on_change: hue_change.clone(),
+                    dragging: false,
+                    painted,
+                    revision: Revision::default(),
+                }) as Box<dyn WidgetAny>
+            },
+        );
 
-        let sv_thumb = Container::new(Empty::new()).style(move |s| {
-            let (_, sat, val) = rgb_to_hsv(color.get());
-            let cur = color.get();
-            s.absolute()
-                .size(thumb, thumb)
-                .inset_left((sat * sv_w - thumb / 2.0) as f64)
-                .inset_top(((1.0 - val) * sv_h - thumb / 2.0) as f64)
-                .border_radius(9999.0)
-                .border(2.0)
-                .border_color(WHITE.to_peniko())
-                .background(cur.to_peniko())
-        });
-
-        let mut sv_area = Stack::new((sv_svg.into_any(), sv_thumb.into_any())).style(move |s| {
-            s.width(sv_w)
-                .height(sv_h)
-                .border_radius(radius)
-                .overflow_x(Overflow::Clip)
-                .overflow_y(Overflow::Clip)
-                .cursor(CursorStyle::Pointer)
-        });
-        let sv_id = sv_area.id();
-        let sv_dragging = RwSignal::new(false);
-        sv_area = sv_area
-            .on_event(listener::PointerDown, {
-                let commit = commit.clone();
-                let sv_id = sv_id;
-                let color = color;
-                let dragging = sv_dragging;
-                move |cx, pbe| {
-                    if let Some(sz) = sv_id.get_size() {
-                        let w = sz.width as f32;
-                        let h = sz.height as f32;
-                        if w > 0.0 && h > 0.0 {
-                            let p = pbe.state.logical_point();
-                            let sat = (p.x as f32 / w).clamp(0.0, 1.0);
-                            let val = (1.0 - (p.y as f32 / h)).clamp(0.0, 1.0);
-                            let (hh, _, _) = rgb_to_hsv(color.get());
-                            let mut c = hsv_to_rgb(hh, sat, val);
-                            c.a = color.get().a;
-                            commit(c);
-                        }
-                    }
-                    if let Some(pid) = pbe.pointer.pointer_id {
-                        cx.request_pointer_capture(pid);
-                    }
-                    dragging.set(true);
-                    EventPropagation::Continue
-                }
-            })
-            .on_event(listener::PointerMove, {
-                let commit = commit.clone();
-                let sv_id = sv_id;
-                let color = color;
-                let dragging = sv_dragging;
-                move |_, pu| {
-                    if dragging.get() {
-                        if let Some(sz) = sv_id.get_size() {
-                            let w = sz.width as f32;
-                            let h = sz.height as f32;
-                            if w > 0.0 && h > 0.0 {
-                                let p = pu.current.logical_point();
-                                let sat = (p.x as f32 / w).clamp(0.0, 1.0);
-                                let val = (1.0 - (p.y as f32 / h)).clamp(0.0, 1.0);
-                                let (hh, _, _) = rgb_to_hsv(color.get());
-                                let mut c = hsv_to_rgb(hh, sat, val);
-                                c.a = color.get().a;
-                                commit(c);
-                            }
-                        }
-                    }
-                    EventPropagation::Continue
-                }
-            })
-            .on_event(listener::PointerUp, {
-                let dragging = sv_dragging;
-                move |_, _| {
-                    dragging.set(false);
-                    EventPropagation::Continue
-                }
-            });
-
-        // --- Hue slider ---
-        let hue_svg = svg(move || build_hue(sv_w, slider_h, radius))
-            .update_value(move || build_hue(sv_w, slider_h, radius))
-            .style(move |s| s.absolute().width_pct(100.0).height_pct(100.0));
-        let hue_thumb = Container::new(Empty::new()).style(move |s| {
-            let (h, _, _) = rgb_to_hsv(color.get());
-            let pure = hsv_to_rgb(h, 1.0, 1.0);
-            s.absolute()
-                .size(thumb, thumb)
-                .inset_left((h / 360.0 * sv_w - thumb / 2.0) as f64)
-                .inset_top((slider_h / 2.0 - thumb / 2.0) as f64)
-                .border_radius(9999.0)
-                .border(2.0)
-                .border_color(WHITE.to_peniko())
-                .background(pure.to_peniko())
-        });
-        let mut hue_area =
-            Stack::new((hue_svg.into_any(), hue_thumb.into_any())).style(move |s| {
-                s.width(sv_w)
-                    .height(slider_h)
-                    .margin_top(12.0)
-                    .border_radius(radius)
-                    .overflow_x(Overflow::Clip)
-                    .overflow_y(Overflow::Clip)
-                    .cursor(CursorStyle::Pointer)
-            });
-        let hue_id = hue_area.id();
-        let hue_dragging = RwSignal::new(false);
-        hue_area = hue_area
-            .on_event(listener::PointerDown, {
-                let commit = commit.clone();
-                let hue_id = hue_id;
-                let color = color;
-                let dragging = hue_dragging;
-                move |cx, pbe| {
-                    if let Some(sz) = hue_id.get_size() {
-                        let w = sz.width as f32;
-                        if w > 0.0 {
-                            let p = pbe.state.logical_point();
-                            let ratio = (p.x as f32 / w).clamp(0.0, 1.0);
-                            let (_, s, v) = rgb_to_hsv(color.get());
-                            let mut c = hsv_to_rgb(ratio * 360.0, s, v);
-                            c.a = color.get().a;
-                            commit(c);
-                        }
-                    }
-                    if let Some(pid) = pbe.pointer.pointer_id {
-                        cx.request_pointer_capture(pid);
-                    }
-                    dragging.set(true);
-                    EventPropagation::Continue
-                }
-            })
-            .on_event(listener::PointerMove, {
-                let commit = commit.clone();
-                let hue_id = hue_id;
-                let color = color;
-                let dragging = hue_dragging;
-                move |_, pu| {
-                    if dragging.get() {
-                        if let Some(sz) = hue_id.get_size() {
-                            let w = sz.width as f32;
-                            if w > 0.0 {
-                                let p = pu.current.logical_point();
-                                let ratio = (p.x as f32 / w).clamp(0.0, 1.0);
-                                let (_, s, v) = rgb_to_hsv(color.get());
-                                let mut c = hsv_to_rgb(ratio * 360.0, s, v);
-                                c.a = color.get().a;
-                                commit(c);
-                            }
-                        }
-                    }
-                    EventPropagation::Continue
-                }
-            })
-            .on_event(listener::PointerUp, {
-                let dragging = hue_dragging;
-                move |_, _| {
-                    dragging.set(false);
-                    EventPropagation::Continue
-                }
-            });
-
-        let mut stack_children: Vec<AnyView> = Vec::new();
-        stack_children.push(sv_area.into_any());
-        stack_children.push(hue_area.into_any());
-
-        // --- Alpha slider ---
+        // The alpha strip, if the picker was asked for one.
         if show_alpha {
-            let alpha_svg = svg(move || build_alpha(color.get(), sv_w, slider_h, radius))
-                .update_value(move || build_alpha(color.get(), sv_w, slider_h, radius))
-                .style(move |s| s.absolute().width_pct(100.0).height_pct(100.0));
-            let alpha_thumb = Container::new(Empty::new()).style(move |s| {
-                let cur = color.get();
-                let ratio = cur.a as f32 / 255.0;
-                s.absolute()
-                    .size(thumb, thumb)
-                    .inset_left((ratio * sv_w - thumb / 2.0) as f64)
-                    .inset_top((slider_h / 2.0 - thumb / 2.0) as f64)
-                    .border_radius(9999.0)
-                    .border(2.0)
-                    .border_color(WHITE.to_peniko())
-                    .background(cur.to_peniko())
-            });
-            let mut alpha_area =
-                Stack::new((alpha_svg.into_any(), alpha_thumb.into_any())).style(move |s| {
-                    s.width(sv_w)
-                        .height(slider_h)
-                        .margin_top(12.0)
-                        .border_radius(radius)
-                        .overflow_x(Overflow::Clip)
-                        .overflow_y(Overflow::Clip)
-                        .cursor(CursorStyle::Pointer)
-                });
-            let alpha_id = alpha_area.id();
-            let alpha_dragging = RwSignal::new(false);
-            alpha_area = alpha_area
-                .on_event(listener::PointerDown, {
-                    let commit = commit.clone();
-                    let alpha_id = alpha_id;
-                    let color = color;
-                    let dragging = alpha_dragging;
-                    move |cx, pbe| {
-                        if let Some(sz) = alpha_id.get_size() {
-                            let w = sz.width as f32;
-                            if w > 0.0 {
-                                let p = pbe.state.logical_point();
-                                let ratio = (p.x as f32 / w).clamp(0.0, 1.0);
-                                let mut c = color.get();
-                                c.a = (ratio * 255.0).round().clamp(0.0, 255.0) as u8;
-                                commit(c);
-                            }
-                        }
-                        if let Some(pid) = pbe.pointer.pointer_id {
-                            cx.request_pointer_capture(pid);
-                        }
-                        dragging.set(true);
-                        EventPropagation::Continue
-                    }
-                })
-                .on_event(listener::PointerMove, {
-                    let commit = commit.clone();
-                    let alpha_id = alpha_id;
-                    let color = color;
-                    let dragging = alpha_dragging;
-                    move |_, pu| {
-                        if dragging.get() {
-                            if let Some(sz) = alpha_id.get_size() {
-                                let w = sz.width as f32;
-                                if w > 0.0 {
-                                    let p = pu.current.logical_point();
-                                    let ratio = (p.x as f32 / w).clamp(0.0, 1.0);
-                                    let mut c = color.get();
-                                    c.a = (ratio * 255.0).round().clamp(0.0, 255.0) as u8;
-                                    commit(c);
-                                }
-                            }
-                        }
-                        EventPropagation::Continue
-                    }
-                })
-                .on_event(listener::PointerUp, {
-                    let dragging = alpha_dragging;
-                    move |_, _| {
-                        dragging.set(false);
-                        EventPropagation::Continue
-                    }
-                });
-            stack_children.push(alpha_area.into_any());
+            let alpha_color = color.clone();
+            let alpha_hex = hex.clone();
+            let alpha_change = on_change.clone();
+            stack = stack.push_layout(
+                LayoutRequest::new()
+                    .width(style.sv_width)
+                    .height(style.slider_height)
+                    .margin(Insets {
+                        top: f64::from(style.margin_top),
+                        right: 0.0,
+                        bottom: 0.0,
+                        left: 0.0,
+                    }),
+                move || {
+                    let color = alpha_color.clone();
+                    let painted = read_color(&color);
+                    Box::new(CupertinoColorArea {
+                        kind: AreaKind::Alpha,
+                        style,
+                        color,
+                        hex: alpha_hex.clone(),
+                        on_change: alpha_change.clone(),
+                        dragging: false,
+                        painted,
+                        revision: Revision::default(),
+                    }) as Box<dyn WidgetAny>
+                },
+            );
         }
 
-        // --- preview + hex input ---
-        let preview = Container::new(Empty::new()).style(move |s| {
-            let cur = color.get();
-            s.size(40.0, 40.0)
-                .border_radius(radius)
-                .border(1.0)
-                .border_color(theme.get().colors().outline.to_peniko())
-                .background(cur.to_peniko())
-        });
-        let hex_input = TextInput::new(hex)
-            .placeholder("#rrggbb")
-            .style(move |s| {
-                s.color(theme.get().colors().on_surface.to_peniko())
-                    .font_size(14.0)
-                    .width(120.0)
-            })
-            .on_event(listener::FocusLost, move |_, _| {
-                let txt = hex.get();
-                if let Some(c) = hex_to_color(&txt) {
-                    commit(c);
-                }
-                EventPropagation::Continue
+        // The preview and the hex field.
+        let preview_color = color.clone();
+        let field_color = color.clone();
+        let field_hex = hex.clone();
+        let field_change = on_change.clone();
+        let field_ink = to_paint(style.on_surface);
+        let field_placeholder = to_paint(style.on_surface_variant);
+        let bottom = Stack::new(Axis::Horizontal)
+            .gap(style.row_gap)
+            // v1's `.items_center()`.
+            .align(Align::Center, Align::Center)
+            .push_layout(
+                LayoutRequest::new()
+                    .width(style.preview_size)
+                    .height(style.preview_size),
+                move || {
+                    let color = preview_color.clone();
+                    let painted = read_color(&color);
+                    Box::new(CupertinoColorSwatch {
+                        style,
+                        color,
+                        painted,
+                        revision: Revision::default(),
+                    }) as Box<dyn WidgetAny>
+                },
+            )
+            .push_layout(LayoutRequest::new().width(style.hex_width), move || {
+                Box::new(
+                    TextInput::new(field_hex.clone())
+                        .placeholder(HEX_PLACEHOLDER)
+                        .style(TextInputStyle {
+                            font_size: style.hex_font_size,
+                            color: field_ink,
+                            placeholder_color: field_placeholder,
+                            // v1's field had no fill of its own.
+                            background: None,
+                            border_width: 0.0,
+                            ..TextInputStyle::default()
+                        })
+                        .on_change({
+                            // v1 committed the hex on focus-lost; 2.0's text
+                            // input has no focus-lost event, so the port
+                            // commits whenever the text parses -- and only
+                            // when the parsed colour is not the one already
+                            // held, so a colour dragged in the square does
+                            // not report itself twice.
+                            let color = field_color.clone();
+                            let hex = field_hex.clone();
+                            let on_change = field_change.clone();
+                            move |text: String| {
+                                let Some(parsed) = hex_to_color(&text) else {
+                                    return;
+                                };
+                                let current = read_color(&color);
+                                if parsed.r != current.r
+                                    || parsed.g != current.g
+                                    || parsed.b != current.b
+                                {
+                                    commit_color(&color, &hex, &on_change, parsed);
+                                }
+                            }
+                        }),
+                ) as Box<dyn WidgetAny>
             });
-        let bottom = Stack::horizontal((preview.into_any(), hex_input.into_any())).style(move |s| {
-            s.margin_top(12.0).gap(12.0).items_center()
-        });
-        stack_children.push(bottom.into_any());
 
-        Stack::new(stack_children).style(move |s| {
-            s.width(sv_w)
-                .padding(12.0)
-                .border_radius(radius)
-                .background(theme.get().colors().surface.to_peniko())
-                .border(1.0)
-                .border_color(with_alpha(theme.get().colors().outline, 80).to_peniko())
-        })
+        stack = stack.push_layout(
+            LayoutRequest::new()
+                .width(style.sv_width)
+                .height(style.preview_size)
+                .margin(Insets {
+                    top: f64::from(style.margin_top),
+                    right: 0.0,
+                    bottom: 0.0,
+                    left: 0.0,
+                }),
+            move || Box::new(bottom.clone()) as Box<dyn WidgetAny>,
+        );
+
+        Surface::new()
+            .request(LayoutRequest::new().width(style.sv_width + style.padding * 2.0))
+            .padding(Insets::uniform(f64::from(style.padding)))
+            .background(to_paint(style.surface))
+            .radius(style.radius)
+            .border(
+                style.border_width,
+                to_paint(with_alpha(style.outline, style.border_alpha)),
+            )
+            .push(move || Box::new(stack.clone()) as Box<dyn WidgetAny>)
     }
 }
 
 impl Default for CupertinoColorPicker {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+/// Which gradient an area draws, and what a drag on it means.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum AreaKind {
+    /// The square: saturation across, value down.
+    Square,
+    /// The hue strip.
+    Hue,
+    /// The alpha strip.
+    Alpha,
+}
+
+/// One of the picker's three areas: the square, the hue strip or the alpha
+/// strip.
+///
+/// Each paints itself and handles its own drag, because 2.0 keeps a mounted
+/// child's widget when its key survives a rebuild -- so an area that read the
+/// colour when it was built would keep the colour it was built with.
+struct CupertinoColorArea {
+    kind: AreaKind,
+    style: CupertinoColorPickerStyle,
+    color: SharedColor,
+    hex: SharedHex,
+    on_change: Option<Arc<dyn Fn(Color) + Send + Sync>>,
+    /// Whether a drag is in progress.
+    dragging: bool,
+    /// The colour the area last painted, so a change is a change.
+    painted: Color,
+    revision: Revision,
+}
+
+impl CupertinoColorArea {
+    /// The colour a point in the area means, and whether it means anything.
+    fn colour_at(&self, bounds: Rect, point: Point) -> Option<Color> {
+        let current = read_color(&self.color);
+        if bounds.width() <= 0.0 || bounds.height() <= 0.0 {
+            return None;
+        }
+        match self.kind {
+            AreaKind::Square => {
+                let (hue, _, _) = rgb_to_hsv(current);
+                let sat = ((point.x - bounds.x0) / bounds.width()).clamp(0.0, 1.0);
+                let val = (1.0 - (point.y - bounds.y0) / bounds.height()).clamp(0.0, 1.0);
+                let mut value = hsv_to_rgb(hue, sat, val);
+                value.a = current.a;
+                Some(value)
+            }
+            AreaKind::Hue => {
+                let (_, sat, val) = rgb_to_hsv(current);
+                let ratio = ((point.x - bounds.x0) / bounds.width()).clamp(0.0, 1.0);
+                let mut value = hsv_to_rgb(ratio * 360.0, sat, val);
+                value.a = current.a;
+                Some(value)
+            }
+            AreaKind::Alpha => {
+                let ratio = ((point.x - bounds.x0) / bounds.width()).clamp(0.0, 1.0);
+                let mut value = current;
+                value.a = (ratio * 255.0).round().clamp(0.0, 255.0) as u8;
+                Some(value)
+            }
+        }
+    }
+
+    /// The thumb's box, for the colour the area currently shows.
+    fn thumb_rect(&self, bounds: Rect) -> Rect {
+        let style = self.style;
+        let current = read_color(&self.color);
+        let thumb = f64::from(style.thumb_size);
+        let (x, y) = match self.kind {
+            AreaKind::Square => {
+                let (_, sat, val) = rgb_to_hsv(current);
+                (
+                    bounds.x0 + sat * bounds.width() - thumb / 2.0,
+                    bounds.y0 + (1.0 - val) * bounds.height() - thumb / 2.0,
+                )
+            }
+            AreaKind::Hue => {
+                let (hue, _, _) = rgb_to_hsv(current);
+                (
+                    bounds.x0 + hue / 360.0 * bounds.width() - thumb / 2.0,
+                    bounds.y0 + (bounds.height() - thumb) / 2.0,
+                )
+            }
+            AreaKind::Alpha => {
+                let ratio = f64::from(current.a) / 255.0;
+                (
+                    bounds.x0 + ratio * bounds.width() - thumb / 2.0,
+                    bounds.y0 + (bounds.height() - thumb) / 2.0,
+                )
+            }
+        };
+        Rect {
+            x0: x,
+            y0: y,
+            x1: x + thumb,
+            y1: y + thumb,
+        }
+    }
+
+    /// The colour the thumb is filled with: the chosen one, except on the hue
+    /// strip, where it is the pure hue.
+    fn thumb_colour(&self) -> Color {
+        let current = read_color(&self.color);
+        match self.kind {
+            AreaKind::Hue => {
+                let (hue, _, _) = rgb_to_hsv(current);
+                hsv_to_rgb(hue, 1.0, 1.0)
+            }
+            _ => current,
+        }
+    }
+}
+
+impl WidgetAny for CupertinoColorArea {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
+        self
+    }
+
+    /// The three areas are sliders, and each says what it slides.
+    ///
+    /// v1 published nothing at all here: the square and the two strips were
+    /// SVG documents with no name. The port gives them a slider role and a
+    /// label, which is an addition rather than a translation.
+    fn semantics_hint(&self) -> Option<floom_core::SemanticsHint> {
+        let label = match self.kind {
+            AreaKind::Square => "Saturation and brightness",
+            AreaKind::Hue => "Hue",
+            AreaKind::Alpha => "Opacity",
+        };
+        Some(floom_core::SemanticsHint::labeled(
+            floom_core::SemanticsRole::Slider,
+            label,
+        ))
+    }
+}
+
+impl Widget for CupertinoColorArea {
+    fn create(&self, cx: &mut dyn CreateContext) -> ElementId {
+        cx.alloc_child()
+    }
+
+    fn update(&mut self, cx: &mut dyn UpdateContext, id: ElementId) {
+        // The colour moved, so the gradient or the thumb moved with it.
+        let current = read_color(&self.color);
+        if current != self.painted {
+            self.painted = current;
+            self.revision.bump();
+        }
+        self.revision.sync(cx, id);
+    }
+
+    fn event(&mut self, cx: &mut dyn EventContext, _id: ElementId) -> bool {
+        let Event::Pointer(pointer) = cx.event() else {
+            return false;
+        };
+        let bounds = cx.bounds();
+        match pointer.phase {
+            PointerPhase::Down => {
+                // A move carries no button, so the button is only checked where
+                // there is one.
+                if pointer.button != Some(PointerButton::Primary) {
+                    return false;
+                }
+                if let Some(value) = self.colour_at(bounds, pointer.position) {
+                    commit_color(&self.color, &self.hex, &self.on_change, value);
+                }
+                self.dragging = true;
+                true
+            }
+            PointerPhase::Move => {
+                if self.dragging {
+                    if let Some(value) = self.colour_at(bounds, pointer.position) {
+                        commit_color(&self.color, &self.hex, &self.on_change, value);
+                    }
+                    true
+                } else {
+                    false
+                }
+            }
+            PointerPhase::Up => {
+                self.dragging = false;
+                true
+            }
+            _ => false,
+        }
+    }
+
+    fn paint(&self, cx: &mut dyn PaintContext, _id: ElementId) {
+        let bounds = cx.bounds();
+        if bounds.width() <= 0.0 || bounds.height() <= 0.0 {
+            return;
+        }
+        let style = self.style;
+        match self.kind {
+            AreaKind::Square => {
+                let current = read_color(&self.color);
+                let (hue, _, _) = rgb_to_hsv(current);
+                let pure = hsv_to_rgb(hue, 1.0, 1.0);
+                // The hue underneath, then the white ramp across it, then the
+                // black ramp down it -- v1's three SVG layers, in this order.
+                cx.fill_rect(bounds, to_paint(pure));
+                let white = Brush::linear(
+                    &[
+                        (0.0, PaintColor::rgb(255, 255, 255)),
+                        (1.0, PaintColor::rgba(255, 255, 255, 0)),
+                    ],
+                    Point::new(bounds.x0, bounds.y0),
+                    Point::new(bounds.x1, bounds.y0),
+                );
+                cx.fill_rect_brush(bounds, &white);
+                let black = Brush::linear(
+                    &[
+                        (0.0, PaintColor::rgba(0, 0, 0, 0)),
+                        (1.0, PaintColor::rgb(0, 0, 0)),
+                    ],
+                    Point::new(bounds.x0, bounds.y0),
+                    Point::new(bounds.x0, bounds.y1),
+                );
+                cx.fill_rect_brush(bounds, &black);
+            }
+            AreaKind::Hue => {
+                let brush = Brush::linear(
+                    &[
+                        (0.0, PaintColor::rgb(255, 0, 0)),
+                        (0.167, PaintColor::rgb(255, 255, 0)),
+                        (0.333, PaintColor::rgb(0, 255, 0)),
+                        (0.5, PaintColor::rgb(0, 255, 255)),
+                        (0.667, PaintColor::rgb(0, 0, 255)),
+                        (0.833, PaintColor::rgb(255, 0, 255)),
+                        (1.0, PaintColor::rgb(255, 0, 0)),
+                    ],
+                    Point::new(bounds.x0, bounds.y0),
+                    Point::new(bounds.x1, bounds.y0),
+                );
+                cx.fill_rounded_rect_brush(bounds, style.radius, &brush);
+            }
+            AreaKind::Alpha => {
+                let current = read_color(&self.color);
+                let brush = Brush::linear(
+                    &[
+                        (0.0, PaintColor::rgba(current.r, current.g, current.b, 0)),
+                        (1.0, PaintColor::rgba(current.r, current.g, current.b, 255)),
+                    ],
+                    Point::new(bounds.x0, bounds.y0),
+                    Point::new(bounds.x1, bounds.y0),
+                );
+                cx.fill_rounded_rect_brush(bounds, style.radius, &brush);
+            }
+        }
+        // The thumb: a white ring around the colour the area shows.
+        let thumb = self.thumb_rect(bounds);
+        let border = f64::from(style.thumb_border_width);
+        cx.fill_rounded_rect(
+            thumb,
+            style.thumb_size / 2.0,
+            to_paint(style.thumb_border_color),
+        );
+        cx.fill_rounded_rect(
+            Rect {
+                x0: thumb.x0 + border,
+                y0: thumb.y0 + border,
+                x1: (thumb.x1 - border).max(thumb.x0 + border),
+                y1: (thumb.y1 - border).max(thumb.y0 + border),
+            },
+            (style.thumb_size / 2.0 - border as f32).max(0.0),
+            to_paint(self.thumb_colour()),
+        );
+    }
+
+    fn cursor(&self) -> CursorStyle {
+        CursorStyle::Pointer
+    }
+}
+
+/// The preview: the chosen colour in a rounded square.
+struct CupertinoColorSwatch {
+    style: CupertinoColorPickerStyle,
+    color: SharedColor,
+    /// The colour the swatch last painted, so a change is a change.
+    painted: Color,
+    revision: Revision,
+}
+
+impl WidgetAny for CupertinoColorSwatch {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
+        self
+    }
+
+    /// The preview is an image of the chosen colour.
+    fn semantics_hint(&self) -> Option<floom_core::SemanticsHint> {
+        Some(floom_core::SemanticsHint::labeled(
+            floom_core::SemanticsRole::Image,
+            color_to_hex(read_color(&self.color)),
+        ))
+    }
+}
+
+impl Widget for CupertinoColorSwatch {
+    fn create(&self, cx: &mut dyn CreateContext) -> ElementId {
+        cx.alloc_child()
+    }
+
+    fn update(&mut self, cx: &mut dyn UpdateContext, id: ElementId) {
+        let current = read_color(&self.color);
+        if current != self.painted {
+            self.painted = current;
+            self.revision.bump();
+        }
+        self.revision.sync(cx, id);
+    }
+
+    fn paint(&self, cx: &mut dyn PaintContext, _id: ElementId) {
+        let bounds = cx.bounds();
+        if bounds.width() <= 0.0 || bounds.height() <= 0.0 {
+            return;
+        }
+        let style = self.style;
+        let current = read_color(&self.color);
+        // The border, then the colour inside it.
+        cx.fill_rounded_rect(bounds, style.radius, to_paint(style.outline));
+        let inset = f64::from(style.border_width);
+        cx.fill_rounded_rect(
+            Rect {
+                x0: bounds.x0 + inset,
+                y0: bounds.y0 + inset,
+                x1: (bounds.x1 - inset).max(bounds.x0 + inset),
+                y1: (bounds.y1 - inset).max(bounds.y0 + inset),
+            },
+            (style.radius - style.border_width).max(0.0),
+            to_paint(current),
+        );
+    }
+}
+
+/// Theme colour -> engine colour.
+fn to_paint(c: Color) -> PaintColor {
+    PaintColor {
+        r: c.r,
+        g: c.g,
+        b: c.b,
+        a: c.a,
     }
 }

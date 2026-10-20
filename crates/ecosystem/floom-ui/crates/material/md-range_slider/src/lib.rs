@@ -1,48 +1,225 @@
-use std::rc::Rc;
+//! Material range slider, ported to the Floom 2.0 widget API.
+//!
+//! A range slider is a track with two thumbs: a low one and a high one. The
+//! band between them is the selection, and dragging either thumb moves it --
+//! the low thumb stops at the high one, and the high thumb stops at the low
+//! one.
+//!
+//! ## What the port uses
+//!
+//! A kit-local widget. The engine's `Slider` is a *single*-valued control: it
+//! paints a track, a fill that runs from the left end to its value, and one
+//! thumb. A range slider needs a fill that starts where the low thumb is, and
+//! `SliderStyle` has no way to say that -- its fill always starts at zero.
+//! Two engine sliders side by side would be two tracks, two fills and two
+//! drags, which is not this component.
+//!
+//! So the port carries the widget itself, on the engine's own contract: a
+//! [`floom_core::Widget`] with a `layout_request`, a `paint`, and pointer
+//! handling in `event`, reading the same `Event` / `EventContext` /
+//! `PaintContext` vocabulary the engine's `Slider` reads.
+//!
+//! ## The engine gap
+//!
+//! **The engine has no range slider.** The shape belongs in
+//! `floom-ui-composites` beside `Slider` -- it is that widget with two values
+//! -- and the three kits' copies of it behave identically, so the three
+//! crates here carry the same widget three times. That duplication is the
+//! thing to fix, not the design; this port could not put it there because
+//! that crate is being edited concurrently.
+//!
+//! ## What this kit answers
+//!
+//! * the track's thickness, the thumb's size and the thumb's radius: the
+//!   tokens;
+//! * the track's colour: `surface_variant`; the band and the two thumbs:
+//!   `primary`;
+//! * the disabled palette: `surface_variant` and `primary` at 120 alpha, which
+//!   is what v1's three style closures composed.
+//!
+//! ## What v1 had that this port does not carry
+//!
+//! * **The style struct.** v1's range slider had none: no `resolved_style`,
+//!   no `MdRangeSliderStyle`. The port *adds* one, and the fields it carries
+//!   are the ones the paint uses.
+//! * **The two signals.** v1 handed out `low_signal()` and `high_signal()`.
+//!   A 2.0 slot closure is `Send + Sync` and an `RwSignal` is `Rc`-based, so
+//!   the two values live in the engine's `SharedMap` instead, under the keys
+//!   `low` and `high`. The map holds strings, so the two values travel as
+//!   their decimal text; `f32`'s `Display` round-trips exactly, so nothing is
+//!   lost -- but this is the engine's map shape, not a typed handle.
+//! * **The pointer capture.** v1 asked for pointer capture on the way down,
+//!   so a drag that left the track kept tracking. 2.0's `EventContext` has no
+//!   capture request -- the engine's own `Slider` has the same gap -- so a
+//!   drag that leaves the track ends at the edge.
+//! * **The callback's shape.** v1's was `Box<dyn Fn((f32, f32))>`; the port's
+//!   is `Arc<dyn Fn((f32, f32)) + Send + Sync>`, because a callback that
+//!   reaches a 2.0 slot has to cross a thread boundary. The props' own
+//!   `on_change` slot stays empty: the shared props type is
+//!   `Box<dyn Fn((f32, f32))>` and cannot hold the `Send + Sync` handle the
+//!   kit uses.
+//! * **The step of zero.** v1 divided by `step` without looking at it, so a
+//!   zero step produced `NaN`. The port quantises only for a positive step,
+//!   which is the rule the engine's own `Slider` uses.
+//!
+//! ## The numbers v1 wrote as literals
+//!
+//! None: every number v1's range slider used came from the tokens.
+//!
+//! ## The theme
+//!
+//! Material reads the app-wide theme signal, so a change of theme re-themes
+//! the slider along with everything else. Cupertino and Fluent take a snapshot
+//! of their own design system instead -- which is what v1 did, and what the
+//! other two kits in this family still do.
 
-use floom::event::EventPropagation;
-use floom::prelude::*;
-use floom::view::AnyView;
-use floom::style::CursorStyle;
-use floom::views::{Decorators, Empty};
+use std::collections::HashMap;
+use std::sync::Arc;
+
+use floom_core::{
+    CreateContext, ElementId, Event, EventContext, LayoutRequest, PaintContext, Rect,
+    UpdateContext, Widget, WidgetAny,
+};
+use floom_signal::{RwSignal, SignalGet};
+use floom_types::{Color as PaintColor, CursorStyle, PointerButton, PointerPhase};
+use floom_widgets::{Revision, SharedMap, shared_map};
+
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::range_slider::RangeSliderProps;
 use floom_core_theme::theme::{MultiTheme, Theme};
 use floom_core_theme::tokens::color::Color;
-use floom_core_theme::tokens::color_ext::*;
+use floom_core_theme::tokens::color_ext::with_alpha;
 use floom_widget_runtime::theme_signal;
 
-/// Material 3 range slider with two draggable thumbs selecting a (low, high)
-/// interval. The track handles all pointer interaction; thumbs are visual.
-pub struct MdRangeSlider {
-    props: RangeSliderProps,
-    theme: RwSignal<MultiTheme>,
-    low: RwSignal<f32>,
-    high: RwSignal<f32>,
+/// The key the low value lives under in the shared map.
+const LOW_KEY: &str = "low";
+/// The key the high value lives under in the shared map.
+const HIGH_KEY: &str = "high";
+
+/// Theme colour -> engine colour.
+fn to_paint(c: Color) -> PaintColor {
+    PaintColor {
+        r: c.r,
+        g: c.g,
+        b: c.b,
+        a: c.a,
+    }
 }
 
-impl MdRangeSlider {
+/// Read the two values out of the shared map.
+///
+/// A poisoned mutex reads as "no value": the caller that poisoned it is as
+/// stuck as the widget is, and panicking inside a paint pass over a number
+/// nobody is looking at would take the frame down with it.
+fn read_range(range: &SharedMap) -> (f32, f32) {
+    let Ok(guard) = range.lock() else {
+        return (0.0, 0.0);
+    };
+    let low = guard
+        .get(LOW_KEY)
+        .and_then(|value| value.parse::<f32>().ok())
+        .unwrap_or(0.0);
+    let high = guard
+        .get(HIGH_KEY)
+        .and_then(|value| value.parse::<f32>().ok())
+        .unwrap_or(0.0);
+    (low, high)
+}
+
+/// Write the two values into the shared map.
+fn write_range(range: &SharedMap, low: f32, high: f32) {
+    let Ok(mut guard) = range.lock() else {
+        return;
+    };
+    guard.insert(LOW_KEY.to_string(), format!("{low}"));
+    guard.insert(HIGH_KEY.to_string(), format!("{high}"));
+}
+
+/// A value's place along the track, as a fraction of the range.
+fn fraction(value: f32, min: f32, max: f32) -> f32 {
+    let span = (max - min).max(f32::MIN_POSITIVE);
+    ((value - min) / span).clamp(0.0, 1.0)
+}
+
+/// A pointer's place along the track, as a fraction of the track's width.
+fn ratio_at(bounds: Rect, x: f64) -> f32 {
+    if bounds.width() <= 0.0 {
+        return 0.0;
+    }
+    (((x - bounds.x0) / bounds.width()) as f32).clamp(0.0, 1.0)
+}
+
+/// The range slider's appearance, in the terms v1 used.
+///
+/// v1 had no style struct at all, so every field here is one the port *adds*:
+/// these are the numbers and the colours the paint reads, and a style that
+/// does not say what the widget draws is not the widget's output.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct MaterialRangeSliderStyle {
+    pub design_system: &'static str,
+    /// The track's fill.
+    pub track_color: Color,
+    /// The band between the two thumbs.
+    pub fill_color: Color,
+    /// The two thumbs.
+    pub thumb_color: Color,
+    /// The track's thickness.
+    pub track_height: f32,
+    /// The thumb's diameter.
+    pub thumb_size: f32,
+    /// The thumb's corner radius. 9999 is a circle whatever the size, and the
+    /// renderers clamp a radius to half the box.
+    pub thumb_radius: f32,
+}
+
+/// Material's range slider.
+pub struct MaterialRangeSlider {
+    props: RangeSliderProps,
+    theme: RwSignal<MultiTheme>,
+    /// The two values, shared with whoever drives the slider.
+    range: SharedMap,
+    /// The change callback, in the shape a 2.0 slot needs.
+    ///
+    /// Not the props' own slot: the shared props type is `Box<dyn Fn(..)>`, and
+    /// a `Box<dyn Fn(..)>` cannot be held by a `Send + Sync` closure.
+    on_change: Option<Arc<dyn Fn((f32, f32)) + Send + Sync + 'static>>,
+}
+
+impl MaterialRangeSlider {
     pub fn new() -> Self {
         let props = RangeSliderProps::default();
         let min = props.min;
         let max = props.max;
+        let range = shared_map(HashMap::new());
+        // v1 clamped the initial pair into the range, and so does this.
+        write_range(
+            &range,
+            props.low.clamp(min, max),
+            props.high.clamp(min, max),
+        );
         Self {
-            low: RwSignal::new(props.low.clamp(min, max)),
-            high: RwSignal::new(props.high.clamp(min, max)),
             props,
             theme: theme_signal(),
+            range,
+            on_change: None,
         }
     }
 
+    /// The low end of the selection.
     pub fn low(mut self, low: f32) -> Self {
         self.props.low = low;
-        self.low = RwSignal::new(low.clamp(self.props.min, self.props.max));
+        let clamped = low.clamp(self.props.min, self.props.max);
+        let (_, high) = read_range(&self.range);
+        write_range(&self.range, clamped, high);
         self
     }
 
+    /// The high end of the selection.
     pub fn high(mut self, high: f32) -> Self {
         self.props.high = high;
-        self.high = RwSignal::new(high.clamp(self.props.min, self.props.max));
+        let clamped = high.clamp(self.props.min, self.props.max);
+        let (low, _) = read_range(&self.range);
+        write_range(&self.range, low, clamped);
         self
     }
 
@@ -66,8 +243,14 @@ impl MdRangeSlider {
         self
     }
 
-    pub fn on_change(mut self, callback: impl Fn((f32, f32)) + 'static) -> Self {
-        self.props.on_change = Some(Box::new(callback));
+    /// Fired whenever either thumb moves, with the pair.
+    ///
+    /// `Send + Sync`, where v1's was not: the callback reaches a 2.0 slot.
+    pub fn on_change(
+        mut self,
+        callback: impl Fn((f32, f32)) + Send + Sync + 'static,
+    ) -> Self {
+        self.on_change = Some(Arc::new(callback));
         self
     }
 
@@ -79,204 +262,319 @@ impl MdRangeSlider {
         self.theme
     }
 
-    pub fn low_signal(&self) -> RwSignal<f32> {
-        self.low
+    pub fn with_theme(mut self, theme: MultiTheme) -> Self {
+        self.theme = RwSignal::new(theme);
+        self
     }
 
-    pub fn high_signal(&self) -> RwSignal<f32> {
-        self.high
+    /// The shared map the two values live in. v1's `low_signal` and
+    /// `high_signal`, in the shape a 2.0 caller can hold.
+    pub fn range(&self) -> SharedMap {
+        self.range.clone()
     }
 
-    pub fn view(self) -> impl View {
-        let theme = self.theme;
-        let min = self.props.min;
-        let max = self.props.max;
-        let step = self.props.step;
-        let on_change: Option<Rc<Box<dyn Fn((f32, f32))>>> = self.props.on_change.map(Rc::new);
-        let disabled = RwSignal::new(self.props.disabled);
-        let low = self.low;
-        let high = self.high;
-        let dragging: RwSignal<Option<usize>> = RwSignal::new(None);
+    /// The low end, as it stands.
+    pub fn low_value(&self) -> f32 {
+        read_range(&self.range).0
+    }
 
-        let tokens = match theme.get().component(ComponentId::RangeSlider) {
-            ComponentTokens::RangeSlider(t) => t,
-            _ => unreachable!(),
+    /// The high end, as it stands.
+    pub fn high_value(&self) -> f32 {
+        read_range(&self.range).1
+    }
+
+    pub fn resolved_style(&self) -> MaterialRangeSliderStyle {
+        let theme = self.theme.get();
+        let ComponentTokens::RangeSlider(tokens) = theme.component(ComponentId::RangeSlider) else {
+            unreachable!("ComponentId::RangeSlider must resolve to RangeSliderTokens")
         };
-        let track_height = tokens.track_height;
-        let thumb_size = tokens.thumb_size;
-
-        let update = Rc::new({
-            let low = low;
-            let high = high;
-            let on_change = on_change.clone();
-            move |which: usize, ratio: f32| {
-                let span = (max - min).max(f32::MIN_POSITIVE);
-                let raw = min + ratio * span;
-                let steps = ((raw - min) / step).round();
-                let mut v = (min + steps * step).clamp(min, max);
-                match which {
-                    0 => {
-                        let hi = high.get();
-                        if v > hi {
-                            v = hi;
-                        }
-                        low.set(v);
-                    }
-                    _ => {
-                        let lo = low.get();
-                        if v < lo {
-                            v = lo;
-                        }
-                        high.set(v);
-                    }
-                }
-                if let Some(cb) = on_change.as_ref() {
-                    cb((low.get(), high.get()));
-                }
-            }
-        });
-
-        let ratio_of = move |v: f32| -> f64 {
-            let span = (max - min).max(f32::MIN_POSITIVE);
-            ((v - min) / span).clamp(0.0, 1.0) as f64
+        let colors = theme.colors();
+        // v1's disabled palette, composed in its three style closures: the
+        // track and the band at 120 alpha.
+        let (track, fill, thumb) = if self.props.disabled {
+            (
+                with_alpha(colors.surface_variant, 120),
+                with_alpha(colors.primary, 120),
+                with_alpha(colors.primary, 120),
+            )
+        } else {
+            (colors.surface_variant, colors.primary, colors.primary)
         };
+        MaterialRangeSliderStyle {
+            design_system: "material",
+            track_color: track,
+            fill_color: fill,
+            thumb_color: thumb,
+            track_height: tokens.track_height,
+            thumb_size: tokens.thumb_size,
+            thumb_radius: tokens.thumb_radius,
+        }
+    }
 
-        let filled: AnyView = Container::new(Empty::new())
-            .style(move |s| {
-                let t = theme.get();
-                let lo_r = ratio_of(low.get());
-                let hi_r = ratio_of(high.get());
-                let c = if disabled.get() {
-                    with_alpha(t.colors().primary, 120)
-                } else {
-                    t.colors().primary
-                };
-                s.absolute()
-                    .inset_left_pct(lo_r * 100.0)
-                    .width_pct((hi_r - lo_r) * 100.0)
-                    .height_pct(100.0)
-                    .background(c.to_peniko())
-            })
-            .into_any();
-
-        let thumb_low: AnyView = Container::new(Empty::new())
-            .style(move |s| {
-                let t = theme.get();
-                let r = ratio_of(low.get());
-                let c = if disabled.get() {
-                    with_alpha(t.colors().primary, 120)
-                } else {
-                    t.colors().primary
-                };
-                s.absolute()
-                    .size(thumb_size, thumb_size)
-                    .inset_left_pct(r * 100.0)
-                    .translate_x(-(thumb_size as f64 / 2.0))
-                    .border_radius(tokens.thumb_radius)
-                    .background(c.to_peniko())
-            })
-            .into_any();
-
-        let thumb_high: AnyView = Container::new(Empty::new())
-            .style(move |s| {
-                let t = theme.get();
-                let r = ratio_of(high.get());
-                let c = if disabled.get() {
-                    with_alpha(t.colors().primary, 120)
-                } else {
-                    t.colors().primary
-                };
-                s.absolute()
-                    .size(thumb_size, thumb_size)
-                    .inset_left_pct(r * 100.0)
-                    .translate_x(-(thumb_size as f64 / 2.0))
-                    .border_radius(tokens.thumb_radius)
-                    .background(c.to_peniko())
-            })
-            .into_any();
-
-        let mut track = list(vec![filled, thumb_low, thumb_high]).style(move |s| {
-            let t = theme.get();
-            let c = if disabled.get() {
-                with_alpha(t.colors().surface_variant, 120)
-            } else {
-                t.colors().surface_variant
-            };
-            s.width_full()
-                .height(track_height)
-                .border_radius(track_height / 2.0)
-                .background(c.to_peniko())
-                .cursor(CursorStyle::Pointer)
-                .set_disabled(disabled.get())
-        });
-
-        let track_id = track.id();
-
-        track = track
-            .on_event(listener::PointerDown, {
-                let update = update.clone();
-                let track_id = track_id;
-                let dragging = dragging;
-                let low = low;
-                let high = high;
-                let disabled = disabled;
-                move |cx, pbe| {
-                    if !disabled.get() {
-                        if let Some(sz) = track_id.get_size() {
-                            let w = sz.width as f32;
-                            if w > 0.0 {
-                                let p = pbe.state.logical_point();
-                                let ratio = ((p.x as f32) / w).clamp(0.0, 1.0);
-                                let lo_r = ratio_of(low.get());
-                                let hi_r = ratio_of(high.get());
-                                let which =
-                                    if ((ratio as f64) - lo_r).abs() <= ((ratio as f64) - hi_r).abs() { 0 } else { 1 };
-                                dragging.set(Some(which));
-                                update(which, ratio);
-                            }
-                        }
-                        if let Some(pid) = pbe.pointer.pointer_id {
-                            cx.request_pointer_capture(pid);
-                        }
-                    }
-                    EventPropagation::Continue
-                }
-            })
-            .on_event(listener::PointerMove, {
-                let update = update.clone();
-                let track_id = track_id;
-                let dragging = dragging;
-                let disabled = disabled;
-                move |_, pu| {
-                    if !disabled.get() {
-                        if let Some(which) = dragging.get() {
-                            if let Some(sz) = track_id.get_size() {
-                                let w = sz.width as f32;
-                                if w > 0.0 {
-                                    let p = pu.current.logical_point();
-                                    let ratio = ((p.x as f32) / w).clamp(0.0, 1.0);
-                                    update(which, ratio);
-                                }
-                            }
-                        }
-                    }
-                    EventPropagation::Continue
-                }
-            })
-            .on_event(listener::PointerUp, {
-                let dragging = dragging;
-                move |_, _| {
-                    dragging.set(None);
-                    EventPropagation::Continue
-                }
-            });
-
-        track
+    /// The slider, ready to mount.
+    pub fn view(self) -> MaterialRangeSliderWidget {
+        let style = self.resolved_style();
+        MaterialRangeSliderWidget {
+            style,
+            min: self.props.min,
+            max: self.props.max,
+            step: self.props.step,
+            disabled: self.props.disabled,
+            range: self.range,
+            on_change: self.on_change,
+            dragging: None,
+            pressed: false,
+            revision: Revision::default(),
+        }
     }
 }
 
-impl Default for MdRangeSlider {
+impl Default for MaterialRangeSlider {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+/// The range slider's widget: the track, the band between the two thumbs, and
+/// the two thumbs.
+///
+/// The engine gap, in one type: the engine has no range slider, so this is the
+/// widget a range slider needs, written against the engine's contract. It
+/// belongs in `floom-ui-composites` beside `Slider`.
+pub struct MaterialRangeSliderWidget {
+    style: MaterialRangeSliderStyle,
+    min: f32,
+    max: f32,
+    step: f32,
+    disabled: bool,
+    range: SharedMap,
+    on_change: Option<Arc<dyn Fn((f32, f32)) + Send + Sync + 'static>>,
+    /// Which thumb the pointer is holding: `0` is the low one, `1` the high one.
+    dragging: Option<usize>,
+    /// The pointer is down on the track.
+    pressed: bool,
+    revision: Revision,
+}
+
+impl MaterialRangeSliderWidget {
+    /// The low end, as it stands.
+    pub fn low(&self) -> f32 {
+        read_range(&self.range).0
+    }
+
+    /// The high end, as it stands.
+    pub fn high(&self) -> f32 {
+        read_range(&self.range).1
+    }
+
+    /// The shared map the two values live in.
+    pub fn range(&self) -> SharedMap {
+        self.range.clone()
+    }
+
+    /// Write the low end, clamped into the range.
+    pub fn set_low(&mut self, low: f32) {
+        let clamped = low.clamp(self.min, self.max);
+        let (_, high) = read_range(&self.range);
+        write_range(&self.range, clamped, high);
+        self.revision.bump();
+    }
+
+    /// Write the high end, clamped into the range.
+    pub fn set_high(&mut self, high: f32) {
+        let clamped = high.clamp(self.min, self.max);
+        let (low, _) = read_range(&self.range);
+        write_range(&self.range, low, clamped);
+        self.revision.bump();
+    }
+
+    /// Whether the slider answers the pointer.
+    pub fn is_disabled(&self) -> bool {
+        self.disabled
+    }
+
+    /// v1's `update(which, ratio)`: quantise, clamp into the range, keep the
+    /// two thumbs from crossing, write, and notify.
+    fn move_thumb(&mut self, which: usize, ratio: f32) {
+        let (mut low, mut high) = read_range(&self.range);
+        let span = (self.max - self.min).max(f32::MIN_POSITIVE);
+        let raw = self.min + ratio * span;
+        let mut value = if self.step > 0.0 {
+            let steps = ((raw - self.min) / self.step).round();
+            (self.min + steps * self.step).clamp(self.min, self.max)
+        } else {
+            raw.clamp(self.min, self.max)
+        };
+        match which {
+            0 => {
+                if value > high {
+                    value = high;
+                }
+                low = value;
+            }
+            _ => {
+                if value < low {
+                    value = low;
+                }
+                high = value;
+            }
+        }
+        write_range(&self.range, low, high);
+        self.revision.bump();
+        if let Some(on_change) = &self.on_change {
+            on_change((low, high));
+        }
+    }
+}
+
+impl Widget for MaterialRangeSliderWidget {
+    fn create(&self, cx: &mut dyn CreateContext) -> ElementId {
+        cx.alloc_child()
+    }
+
+    fn update(&mut self, cx: &mut dyn UpdateContext, id: ElementId) {
+        self.revision.sync(cx, id);
+    }
+
+    /// The track is the box: v1's track was `height(track_height)` and
+    /// `width_full`, and the thumbs were painted over it.
+    fn layout_request(&self) -> Option<LayoutRequest> {
+        Some(
+            LayoutRequest::new()
+                .width_pct(100.0)
+                .height(self.style.track_height),
+        )
+    }
+
+    fn event(&mut self, cx: &mut dyn EventContext, id: ElementId) -> bool {
+        if self.disabled {
+            return false;
+        }
+        let Event::Pointer(pointer) = cx.event() else {
+            return false;
+        };
+        match pointer.phase {
+            PointerPhase::Enter | PointerPhase::Move => {
+                if self.pressed {
+                    let which = self.dragging.unwrap_or(0);
+                    let ratio = ratio_at(cx.bounds(), pointer.position.x);
+                    self.move_thumb(which, ratio);
+                    return true;
+                }
+                false
+            }
+            PointerPhase::Leave | PointerPhase::Cancel => {
+                self.pressed = false;
+                self.dragging = None;
+                false
+            }
+            PointerPhase::Down if pointer.button == Some(PointerButton::Primary) => {
+                let ratio = ratio_at(cx.bounds(), pointer.position.x);
+                let (low, high) = read_range(&self.range);
+                // v1 picked the *nearer* thumb and dragged that one.
+                let which = if (ratio - fraction(low, self.min, self.max)).abs()
+                    <= (ratio - fraction(high, self.min, self.max)).abs()
+                {
+                    0
+                } else {
+                    1
+                };
+                self.dragging = Some(which);
+                self.pressed = true;
+                cx.request_focus(id);
+                self.move_thumb(which, ratio);
+                true
+            }
+            PointerPhase::Up if pointer.button == Some(PointerButton::Primary) => {
+                let was_pressed = self.pressed;
+                self.pressed = false;
+                self.dragging = None;
+                was_pressed
+            }
+            _ => false,
+        }
+    }
+
+    /// The track, then the band between the two thumbs, then the thumbs.
+    ///
+    /// That order is v1's: the band and the thumbs were absolutely positioned
+    /// children of the track, and the track's own fill was underneath them.
+    fn paint(&self, cx: &mut dyn PaintContext, _id: ElementId) {
+        let bounds = cx.bounds();
+        if bounds.width() <= 0.0 || bounds.height() <= 0.0 {
+            return;
+        }
+        let (low, high) = read_range(&self.range);
+        let low_ratio = f64::from(fraction(low, self.min, self.max));
+        let high_ratio = f64::from(fraction(high, self.min, self.max));
+
+        // The track: a pill, centred in the box.
+        let height = f64::from(self.style.track_height).min(bounds.height());
+        let track = Rect {
+            x0: bounds.x0,
+            y0: bounds.y0 + (bounds.height() - height) / 2.0,
+            x1: bounds.x1,
+            y1: bounds.y0 + (bounds.height() + height) / 2.0,
+        };
+        cx.fill_rounded_rect(
+            track,
+            (height / 2.0) as f32,
+            to_paint(self.style.track_color),
+        );
+
+        // The band between the two thumbs. v1's band was a plain rectangle
+        // with no radius, drawn over the rounded track.
+        let band = Rect {
+            x0: track.x0 + track.width() * low_ratio,
+            x1: track.x0 + track.width() * high_ratio,
+            y0: track.y0,
+            y1: track.y1,
+        };
+        cx.fill_rect(band, to_paint(self.style.fill_color));
+
+        // The two thumbs, centred on their values.
+        let diameter = f64::from(self.style.thumb_size);
+        for ratio in [low_ratio, high_ratio] {
+            let centre = track.x0 + track.width() * ratio;
+            let thumb = Rect {
+                x0: centre - diameter / 2.0,
+                x1: centre + diameter / 2.0,
+                y0: track.y0 + height / 2.0 - diameter / 2.0,
+                y1: track.y0 + height / 2.0 + diameter / 2.0,
+            };
+            cx.fill_rounded_rect(thumb, self.style.thumb_radius, to_paint(self.style.thumb_color));
+        }
+    }
+
+    fn cursor(&self) -> CursorStyle {
+        // v1 set `CursorStyle::Pointer` on the track.
+        if self.disabled {
+            CursorStyle::Default
+        } else {
+            CursorStyle::Pointer
+        }
+    }
+}
+
+impl WidgetAny for MaterialRangeSliderWidget {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
+        self
+    }
+
+    /// The pair, as a label.
+    ///
+    /// An addition rather than a translation: v1's range slider published no
+    /// accessibility description at all, and a control nobody can read is a
+    /// control nobody can use.
+    fn semantics_hint(&self) -> Option<floom_core::SemanticsHint> {
+        let (low, high) = read_range(&self.range);
+        Some(floom_core::SemanticsHint::labeled(
+            floom_core::SemanticsRole::Slider,
+            format!("{low} to {high}"),
+        ))
     }
 }

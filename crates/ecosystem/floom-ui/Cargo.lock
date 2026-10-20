@@ -532,6 +532,40 @@ dependencies = [
 ]
 
 [[package]]
+name = "floom-widget-cupertino-banner"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-cupertino-bottom_navigation"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-cupertino-breadcrumbs"
+version = "0.1.0"
+dependencies = [
+ "floom-accessibility",
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widgets",
+]
+
+[[package]]
 name = "floom-widget-cupertino-button"
 version = "0.1.0"
 dependencies = [
@@ -554,6 +588,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "floom-widget-cupertino-calendar"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widgets",
+]
+
+[[package]]
 name = "floom-widget-cupertino-card"
 version = "0.1.0"
 dependencies = [
@@ -562,6 +607,17 @@ dependencies = [
  "floom-signal",
  "floom-types",
  "floom-widget-runtime",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-cupertino-carousel"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
  "floom-widgets",
 ]
 
@@ -576,6 +632,18 @@ dependencies = [
  "floom-ui-composites",
  "floom-widget-cupertino-icon-paths",
  "floom-widget-runtime",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-cupertino-checkbox_btn"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widget-cupertino-icon",
  "floom-widgets",
 ]
 
@@ -615,6 +683,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "floom-widget-cupertino-color_picker"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widgets",
+]
+
+[[package]]
 name = "floom-widget-cupertino-combobox"
 version = "0.1.0"
 dependencies = [
@@ -625,6 +704,18 @@ dependencies = [
  "floom-ui-composites",
  "floom-widget-cupertino-icon",
  "floom-widget-runtime",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-cupertino-confirm_edit"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widget-cupertino-icon",
  "floom-widgets",
 ]
 
@@ -664,6 +755,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "floom-widget-cupertino-datatable"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widgets",
+]
+
+[[package]]
 name = "floom-widget-cupertino-date_adapter_provider"
 version = "0.1.0"
 dependencies = [
@@ -671,6 +773,18 @@ dependencies = [
  "floom-core-theme",
  "floom-signal",
  "floom-types",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-cupertino-date_picker"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-ui-composites",
  "floom-widgets",
 ]
 
@@ -769,6 +883,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "floom-widget-cupertino-file_input"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widgets",
+]
+
+[[package]]
 name = "floom-widget-cupertino-floating_action_button"
 version = "0.1.0"
 dependencies = [
@@ -791,7 +916,29 @@ dependencies = [
 ]
 
 [[package]]
+name = "floom-widget-cupertino-form"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widgets",
+]
+
+[[package]]
 name = "floom-widget-cupertino-grid"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-cupertino-hover"
 version = "0.1.0"
 dependencies = [
  "floom-core",
@@ -834,6 +981,28 @@ dependencies = [
 
 [[package]]
 name = "floom-widget-cupertino-icons_provider"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-cupertino-image"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-cupertino-infinite_scroller"
 version = "0.1.0"
 dependencies = [
  "floom-core",
@@ -928,6 +1097,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "floom-widget-cupertino-main"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widgets",
+]
+
+[[package]]
 name = "floom-widget-cupertino-menu"
 version = "0.1.0"
 dependencies = [
@@ -936,6 +1116,40 @@ dependencies = [
  "floom-signal",
  "floom-types",
  "floom-ui-composites",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-cupertino-navigation_drawer"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-ui-composites",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-cupertino-number-input"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-cupertino-otp-input"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
  "floom-widgets",
 ]
 
@@ -949,6 +1163,28 @@ dependencies = [
  "floom-types",
  "floom-ui-composites",
  "floom-widget-runtime",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-cupertino-pagination"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-cupertino-parallax"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
  "floom-widgets",
 ]
 
@@ -976,6 +1212,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "floom-widget-cupertino-pull_to_refresh"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widgets",
+]
+
+[[package]]
 name = "floom-widget-cupertino-radio"
 version = "0.1.0"
 dependencies = [
@@ -997,6 +1244,29 @@ dependencies = [
  "floom-signal",
  "floom-types",
  "floom-ui-composites",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-cupertino-range_slider"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-cupertino-rating"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widget-cupertino-icon",
  "floom-widgets",
 ]
 
@@ -1037,6 +1307,40 @@ dependencies = [
 ]
 
 [[package]]
+name = "floom-widget-cupertino-sheet"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-ui-composites",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-cupertino-skeleton_loader"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-cupertino-slide_group"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widgets",
+]
+
+[[package]]
 name = "floom-widget-cupertino-slide_transition"
 version = "0.1.0"
 dependencies = [
@@ -1060,6 +1364,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "floom-widget-cupertino-snackbar"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-ui-composites",
+ "floom-widgets",
+]
+
+[[package]]
 name = "floom-widget-cupertino-spacer"
 version = "0.1.0"
 dependencies = [
@@ -1067,6 +1383,41 @@ dependencies = [
  "floom-core-theme",
  "floom-signal",
  "floom-types",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-cupertino-sparkline"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-cupertino-speed_dial"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widget-cupertino-icon",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-cupertino-stepper"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widget-cupertino-icon",
  "floom-widgets",
 ]
 
@@ -1079,6 +1430,39 @@ dependencies = [
  "floom-signal",
  "floom-types",
  "floom-widget-runtime",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-cupertino-system_bar"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-cupertino-table"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-cupertino-tabs"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
  "floom-widgets",
 ]
 
@@ -1107,6 +1491,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "floom-widget-cupertino-textarea"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widgets",
+]
+
+[[package]]
 name = "floom-widget-cupertino-theme_provider"
 version = "0.1.0"
 dependencies = [
@@ -1114,6 +1509,18 @@ dependencies = [
  "floom-core-theme",
  "floom-signal",
  "floom-types",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-cupertino-time_picker"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-ui-composites",
  "floom-widgets",
 ]
 
@@ -1162,6 +1569,39 @@ dependencies = [
  "floom-ui-composites",
  "floom-widget-cupertino-icon",
  "floom-widget-runtime",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-cupertino-validation_messages"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-cupertino-virtual_scroller"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-cupertino-window"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
  "floom-widgets",
 ]
 
@@ -1236,6 +1676,40 @@ dependencies = [
 ]
 
 [[package]]
+name = "floom-widget-fluent-banner"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-fluent-bottom_navigation"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-fluent-breadcrumbs"
+version = "0.1.0"
+dependencies = [
+ "floom-accessibility",
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widgets",
+]
+
+[[package]]
 name = "floom-widget-fluent-button"
 version = "0.1.0"
 dependencies = [
@@ -1258,6 +1732,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "floom-widget-fluent-calendar"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widgets",
+]
+
+[[package]]
 name = "floom-widget-fluent-card"
 version = "0.1.0"
 dependencies = [
@@ -1266,6 +1751,17 @@ dependencies = [
  "floom-signal",
  "floom-types",
  "floom-widget-runtime",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-fluent-carousel"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
  "floom-widgets",
 ]
 
@@ -1280,6 +1776,18 @@ dependencies = [
  "floom-ui-composites",
  "floom-widget-fluent-icon-paths",
  "floom-widget-runtime",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-fluent-checkbox_btn"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widget-fluent-icon",
  "floom-widgets",
 ]
 
@@ -1319,6 +1827,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "floom-widget-fluent-color_picker"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widgets",
+]
+
+[[package]]
 name = "floom-widget-fluent-combobox"
 version = "0.1.0"
 dependencies = [
@@ -1329,6 +1848,18 @@ dependencies = [
  "floom-ui-composites",
  "floom-widget-fluent-icon",
  "floom-widget-runtime",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-fluent-confirm_edit"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widget-fluent-icon",
  "floom-widgets",
 ]
 
@@ -1368,6 +1899,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "floom-widget-fluent-datatable"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widgets",
+]
+
+[[package]]
 name = "floom-widget-fluent-date_adapter_provider"
 version = "0.1.0"
 dependencies = [
@@ -1375,6 +1917,18 @@ dependencies = [
  "floom-core-theme",
  "floom-signal",
  "floom-types",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-fluent-date_picker"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-ui-composites",
  "floom-widgets",
 ]
 
@@ -1473,6 +2027,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "floom-widget-fluent-file_input"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widgets",
+]
+
+[[package]]
 name = "floom-widget-fluent-floating_action_button"
 version = "0.1.0"
 dependencies = [
@@ -1495,7 +2060,29 @@ dependencies = [
 ]
 
 [[package]]
+name = "floom-widget-fluent-form"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widgets",
+]
+
+[[package]]
 name = "floom-widget-fluent-grid"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-fluent-hover"
 version = "0.1.0"
 dependencies = [
  "floom-core",
@@ -1538,6 +2125,28 @@ dependencies = [
 
 [[package]]
 name = "floom-widget-fluent-icons_provider"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-fluent-image"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-fluent-infinite_scroller"
 version = "0.1.0"
 dependencies = [
  "floom-core",
@@ -1632,6 +2241,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "floom-widget-fluent-main"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widgets",
+]
+
+[[package]]
 name = "floom-widget-fluent-menu"
 version = "0.1.0"
 dependencies = [
@@ -1640,6 +2260,40 @@ dependencies = [
  "floom-signal",
  "floom-types",
  "floom-ui-composites",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-fluent-navigation_drawer"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-ui-composites",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-fluent-number-input"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-fluent-otp-input"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
  "floom-widgets",
 ]
 
@@ -1653,6 +2307,28 @@ dependencies = [
  "floom-types",
  "floom-ui-composites",
  "floom-widget-runtime",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-fluent-pagination"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-fluent-parallax"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
  "floom-widgets",
 ]
 
@@ -1680,6 +2356,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "floom-widget-fluent-pull_to_refresh"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widgets",
+]
+
+[[package]]
 name = "floom-widget-fluent-radio"
 version = "0.1.0"
 dependencies = [
@@ -1701,6 +2388,29 @@ dependencies = [
  "floom-signal",
  "floom-types",
  "floom-ui-composites",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-fluent-range_slider"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-fluent-rating"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widget-fluent-icon",
  "floom-widgets",
 ]
 
@@ -1741,6 +2451,40 @@ dependencies = [
 ]
 
 [[package]]
+name = "floom-widget-fluent-sheet"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-ui-composites",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-fluent-skeleton_loader"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-fluent-slide_group"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widgets",
+]
+
+[[package]]
 name = "floom-widget-fluent-slide_transition"
 version = "0.1.0"
 dependencies = [
@@ -1764,6 +2508,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "floom-widget-fluent-snackbar"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-ui-composites",
+ "floom-widgets",
+]
+
+[[package]]
 name = "floom-widget-fluent-spacer"
 version = "0.1.0"
 dependencies = [
@@ -1771,6 +2527,41 @@ dependencies = [
  "floom-core-theme",
  "floom-signal",
  "floom-types",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-fluent-sparkline"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-fluent-speed_dial"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widget-fluent-icon",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-fluent-stepper"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widget-fluent-icon",
  "floom-widgets",
 ]
 
@@ -1783,6 +2574,39 @@ dependencies = [
  "floom-signal",
  "floom-types",
  "floom-widget-runtime",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-fluent-system_bar"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-fluent-table"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-fluent-tabs"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
  "floom-widgets",
 ]
 
@@ -1811,6 +2635,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "floom-widget-fluent-textarea"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widgets",
+]
+
+[[package]]
 name = "floom-widget-fluent-theme_provider"
 version = "0.1.0"
 dependencies = [
@@ -1818,6 +2653,18 @@ dependencies = [
  "floom-core-theme",
  "floom-signal",
  "floom-types",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-fluent-time_picker"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-ui-composites",
  "floom-widgets",
 ]
 
@@ -1866,6 +2713,39 @@ dependencies = [
  "floom-ui-composites",
  "floom-widget-fluent-icon",
  "floom-widget-runtime",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-fluent-validation_messages"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-fluent-virtual_scroller"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-fluent-window"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
  "floom-widgets",
 ]
 
@@ -1944,6 +2824,43 @@ dependencies = [
 ]
 
 [[package]]
+name = "floom-widget-md-banner"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widget-runtime",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-md-bottom_navigation"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widget-runtime",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-md-breadcrumbs"
+version = "0.1.0"
+dependencies = [
+ "floom-accessibility",
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widget-runtime",
+ "floom-widgets",
+]
+
+[[package]]
 name = "floom-widget-md-button"
 version = "0.1.0"
 dependencies = [
@@ -1968,7 +2885,31 @@ dependencies = [
 ]
 
 [[package]]
+name = "floom-widget-md-calendar"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widget-runtime",
+ "floom-widgets",
+]
+
+[[package]]
 name = "floom-widget-md-card"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widget-runtime",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-md-carousel"
 version = "0.1.0"
 dependencies = [
  "floom-core",
@@ -1988,6 +2929,19 @@ dependencies = [
  "floom-signal",
  "floom-types",
  "floom-ui-composites",
+ "floom-widget-md-icon",
+ "floom-widget-runtime",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-md-checkbox_btn"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
  "floom-widget-md-icon",
  "floom-widget-runtime",
  "floom-widgets",
@@ -2032,6 +2986,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "floom-widget-md-color_picker"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widget-runtime",
+ "floom-widgets",
+]
+
+[[package]]
 name = "floom-widget-md-combobox"
 version = "0.1.0"
 dependencies = [
@@ -2040,6 +3006,19 @@ dependencies = [
  "floom-signal",
  "floom-types",
  "floom-ui-composites",
+ "floom-widget-md-icon",
+ "floom-widget-runtime",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-md-confirm_edit"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
  "floom-widget-md-icon",
  "floom-widget-runtime",
  "floom-widgets",
@@ -2083,6 +3062,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "floom-widget-md-datatable"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widget-runtime",
+ "floom-widgets",
+]
+
+[[package]]
 name = "floom-widget-md-date_adapter_provider"
 version = "0.1.0"
 dependencies = [
@@ -2090,6 +3081,19 @@ dependencies = [
  "floom-core-theme",
  "floom-signal",
  "floom-types",
+ "floom-widget-runtime",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-md-date_picker"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-ui-composites",
  "floom-widget-runtime",
  "floom-widgets",
 ]
@@ -2195,6 +3199,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "floom-widget-md-file_input"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widget-runtime",
+ "floom-widgets",
+]
+
+[[package]]
 name = "floom-widget-md-floating_action_button"
 version = "0.1.0"
 dependencies = [
@@ -2219,7 +3235,31 @@ dependencies = [
 ]
 
 [[package]]
+name = "floom-widget-md-form"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widget-runtime",
+ "floom-widgets",
+]
+
+[[package]]
 name = "floom-widget-md-grid"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widget-runtime",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-md-hover"
 version = "0.1.0"
 dependencies = [
  "floom-core",
@@ -2258,6 +3298,30 @@ dependencies = [
 
 [[package]]
 name = "floom-widget-md-icons_provider"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widget-runtime",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-md-image"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widget-runtime",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-md-infinite_scroller"
 version = "0.1.0"
 dependencies = [
  "floom-core",
@@ -2358,6 +3422,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "floom-widget-md-main"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widget-runtime",
+ "floom-widgets",
+]
+
+[[package]]
 name = "floom-widget-md-menu"
 version = "0.1.0"
 dependencies = [
@@ -2366,6 +3442,43 @@ dependencies = [
  "floom-signal",
  "floom-types",
  "floom-ui-composites",
+ "floom-widget-runtime",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-md-navigation_drawer"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-ui-composites",
+ "floom-widget-runtime",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-md-number-input"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widget-runtime",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-md-otp-input"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
  "floom-widget-runtime",
  "floom-widgets",
 ]
@@ -2384,6 +3497,30 @@ dependencies = [
 ]
 
 [[package]]
+name = "floom-widget-md-pagination"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widget-runtime",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-md-parallax"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widget-runtime",
+ "floom-widgets",
+]
+
+[[package]]
 name = "floom-widget-md-progress_circular"
 version = "0.1.0"
 dependencies = [
@@ -2397,6 +3534,18 @@ dependencies = [
 
 [[package]]
 name = "floom-widget-md-progress_linear"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widget-runtime",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-md-pull_to_refresh"
 version = "0.1.0"
 dependencies = [
  "floom-core",
@@ -2429,6 +3578,31 @@ dependencies = [
  "floom-signal",
  "floom-types",
  "floom-ui-composites",
+ "floom-widget-runtime",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-md-range_slider"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widget-runtime",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-md-rating"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widget-md-icon",
  "floom-widget-runtime",
  "floom-widgets",
 ]
@@ -2472,6 +3646,43 @@ dependencies = [
 ]
 
 [[package]]
+name = "floom-widget-md-sheet"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-ui-composites",
+ "floom-widget-runtime",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-md-skeleton_loader"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widget-runtime",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-md-slide_group"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widget-runtime",
+ "floom-widgets",
+]
+
+[[package]]
 name = "floom-widget-md-slide_transition"
 version = "0.1.0"
 dependencies = [
@@ -2497,6 +3708,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "floom-widget-md-snackbar"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-ui-composites",
+ "floom-widget-runtime",
+ "floom-widgets",
+]
+
+[[package]]
 name = "floom-widget-md-spacer"
 version = "0.1.0"
 dependencies = [
@@ -2509,7 +3733,81 @@ dependencies = [
 ]
 
 [[package]]
+name = "floom-widget-md-sparkline"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widget-runtime",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-md-speed_dial"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widget-md-icon",
+ "floom-widget-runtime",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-md-stepper"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widget-md-icon",
+ "floom-widget-runtime",
+ "floom-widgets",
+]
+
+[[package]]
 name = "floom-widget-md-switch"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widget-runtime",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-md-system_bar"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widget-runtime",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-md-table"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widget-runtime",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-md-tabs"
 version = "0.1.0"
 dependencies = [
  "floom-core",
@@ -2546,6 +3844,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "floom-widget-md-textarea"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widget-runtime",
+ "floom-widgets",
+]
+
+[[package]]
 name = "floom-widget-md-theme_provider"
 version = "0.1.0"
 dependencies = [
@@ -2553,6 +3863,19 @@ dependencies = [
  "floom-core-theme",
  "floom-signal",
  "floom-types",
+ "floom-widget-runtime",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-md-time_picker"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-ui-composites",
  "floom-widget-runtime",
  "floom-widgets",
 ]
@@ -2604,6 +3927,42 @@ dependencies = [
  "floom-types",
  "floom-ui-composites",
  "floom-widget-md-icon",
+ "floom-widget-runtime",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-md-validation_messages"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widget-runtime",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-md-virtual_scroller"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widget-runtime",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-md-window"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
  "floom-widget-runtime",
  "floom-widgets",
 ]
