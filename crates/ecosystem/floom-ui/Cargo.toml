@@ -27,7 +27,6 @@
 # back to `members`.
 
 exclude = [
-    "crates/cupertino/cupertino-app_bar",
     "crates/cupertino/cupertino-banner",
     "crates/cupertino/cupertino-bottom_navigation",
     "crates/cupertino/cupertino-breadcrumbs",
@@ -50,7 +49,6 @@ exclude = [
     "crates/cupertino/cupertino-pagination",
     "crates/cupertino/cupertino-parallax",
     "crates/cupertino/cupertino-pull_to_refresh",
-    "crates/cupertino/cupertino-radio-group",
     "crates/cupertino/cupertino-range_slider",
     "crates/cupertino/cupertino-rating",
       "crates/cupertino/cupertino-sheet",
@@ -68,7 +66,6 @@ exclude = [
     "crates/cupertino/cupertino-validation_messages",
     "crates/cupertino/cupertino-virtual_scroller",
     "crates/cupertino/cupertino-window",
-    "crates/fluent/fluent-app_bar",
     "crates/fluent/fluent-banner",
     "crates/fluent/fluent-bottom_navigation",
     "crates/fluent/fluent-breadcrumbs",
@@ -91,7 +88,6 @@ exclude = [
     "crates/fluent/fluent-pagination",
     "crates/fluent/fluent-parallax",
     "crates/fluent/fluent-pull_to_refresh",
-    "crates/fluent/fluent-radio-group",
     "crates/fluent/fluent-range_slider",
     "crates/fluent/fluent-rating",
       "crates/fluent/fluent-sheet",
@@ -109,7 +105,6 @@ exclude = [
     "crates/fluent/fluent-validation_messages",
     "crates/fluent/fluent-virtual_scroller",
     "crates/fluent/fluent-window",
-    "crates/material/md-app_bar",
     "crates/material/md-banner",
     "crates/material/md-bottom_navigation",
     "crates/material/md-breadcrumbs",
@@ -132,7 +127,6 @@ exclude = [
     "crates/material/md-pagination",
     "crates/material/md-parallax",
     "crates/material/md-pull_to_refresh",
-    "crates/material/md-radio-group",
     "crates/material/md-range_slider",
     "crates/material/md-rating",
     "crates/material/md-sheet",
@@ -334,6 +328,12 @@ members = [
     "crates/material/md-timeline",
     "crates/cupertino/cupertino-timeline",
     "crates/fluent/fluent-timeline",
+    "crates/material/md-radio-group",
+    "crates/cupertino/cupertino-radio-group",
+    "crates/fluent/fluent-radio-group",
+    "crates/material/md-app_bar",
+    "crates/cupertino/cupertino-app_bar",
+    "crates/fluent/fluent-app_bar",
 
 ]
 

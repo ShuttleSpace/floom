@@ -751,6 +751,12 @@ pub struct SelectGroup {
     selected: Arc<Mutex<Vec<bool>>>,
     mode: SelectionMode,
     mandatory: bool,
+    /// Whether every row is turned off.
+    ///
+    /// A group's whole rows can be disabled, not just one: v1's radio group had
+    /// exactly that, and the gate belongs on the `Pressable` so it covers the
+    /// keyboard as well as the pointer.
+    disabled: bool,
     style: SelectGroupStyle,
     on_change: Option<Arc<dyn Fn(Vec<usize>) + Send + Sync>>,
 }
@@ -762,6 +768,7 @@ impl SelectGroup {
             selected: Arc::new(Mutex::new(Vec::new())),
             mode: SelectionMode::Single,
             mandatory: false,
+            disabled: false,
             style: SelectGroupStyle::default(),
             on_change: None,
         }
@@ -814,6 +821,21 @@ impl SelectGroup {
     pub fn mode(mut self, mode: SelectionMode) -> Self {
         self.mode = mode;
         self
+    }
+
+    /// Turns every row off.
+    ///
+    /// The gate is on the row's own `Pressable`, so it covers the keyboard as
+    /// well as the pointer -- v1's radio group guarded the click in the
+    /// closure, which covered the pointer only.
+    pub fn disabled(mut self, disabled: bool) -> Self {
+        self.disabled = disabled;
+        self
+    }
+
+    /// Whether every row is turned off.
+    pub fn is_disabled(&self) -> bool {
+        self.disabled
     }
 
     /// Several rows may be chosen.
@@ -939,6 +961,7 @@ impl Widget for SelectGroup {
             let content = row.content.clone();
             let mode = self.mode;
             let mandatory = self.mandatory;
+            let disabled = self.disabled;
             let style = self.style;
             let on_change = self.on_change.clone();
 
@@ -967,6 +990,7 @@ impl Widget for SelectGroup {
                 last_selected: false,
                 mode,
                 label,
+                disabled,
                 style,
                 content,
                 toggle,
@@ -1006,6 +1030,8 @@ pub(crate) struct SelectGroupRow {
     last_selected: bool,
     mode: SelectionMode,
     label: Option<String>,
+    /// Whether the whole group is turned off.
+    disabled: bool,
     style: SelectGroupStyle,
     content: Arc<dyn Fn(bool) -> Box<dyn floom_core::WidgetAny> + Send + Sync + 'static>,
     toggle: Arc<dyn Fn() + Send + Sync>,
@@ -1037,6 +1063,7 @@ impl Widget for SelectGroupRow {
                 let index = self.index;
                 let selected = self.selected.clone();
                 let label = self.label.clone();
+                let disabled = self.disabled;
                 let content = self.content.clone();
                 let style = self.style;
                 let mode = self.mode;
@@ -1055,7 +1082,8 @@ impl Widget for SelectGroupRow {
                         move || Box::new(surface.clone()),
                     ))
                     .role(role)
-                    .selected_from(move || is_selected(&selected_flag, index));
+                    .selected_from(move || is_selected(&selected_flag, index))
+                    .disabled(disabled);
                     // Cloned, not moved: this closure is replayed, so the label has to survive
                     // being handed to a rebuilt `Pressable`.
                     if let Some(label) = label.clone() {
@@ -1922,6 +1950,32 @@ mod accordion_tests {
             .expect("the accordion is a stack");
         assert_eq!(req.axis, Some(Axis::Vertical));
         assert_eq!(req.gap, Some(7.0));
+    }
+
+    /// A group can be turned off.
+    ///
+    /// v1's radio group had exactly this: every option disabled at once. The
+    /// gate is on the row's own `Pressable`, so it covers the keyboard as well
+    /// as the pointer -- v1 guarded the click in the closure, which covered the
+    /// pointer only.
+    #[test]
+    fn a_disabled_group_does_not_answer() {
+        let mut group = SelectGroup::new()
+            .row("One", || Box::new(Text::new("row")))
+            .disabled(true);
+        assert!(group.is_disabled(), "the group is turned off");
+
+        let children = group.children();
+        assert_eq!(children.len(), 1, "the row is still there");
+        let mut pressable = children[0].build().children().remove(0).build();
+        let pressable = pressable
+            .as_any_mut()
+            .downcast_mut::<Pressable>()
+            .expect("a row's slot mounts a pressable");
+        assert!(
+            pressable.interaction().disabled,
+            "and its pressable is disabled, so the click cannot land"
+        );
     }
 
     /// The header's own padding, spent.

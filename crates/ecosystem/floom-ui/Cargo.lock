@@ -485,6 +485,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "floom-widget-cupertino-app_bar"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widgets",
+]
+
+[[package]]
 name = "floom-widget-cupertino-autocomplete"
 version = "0.1.0"
 dependencies = [
@@ -978,6 +989,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "floom-widget-cupertino-radio-group"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-ui-composites",
+ "floom-widgets",
+]
+
+[[package]]
 name = "floom-widget-cupertino-responsive"
 version = "0.1.0"
 dependencies = [
@@ -1156,6 +1179,17 @@ dependencies = [
 
 [[package]]
 name = "floom-widget-fluent-app"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-fluent-app_bar"
 version = "0.1.0"
 dependencies = [
  "floom-core",
@@ -1659,6 +1693,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "floom-widget-fluent-radio-group"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-ui-composites",
+ "floom-widgets",
+]
+
+[[package]]
 name = "floom-widget-fluent-responsive"
 version = "0.1.0"
 dependencies = [
@@ -1838,6 +1884,18 @@ dependencies = [
 
 [[package]]
 name = "floom-widget-md-app"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-widget-runtime",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-md-app_bar"
 version = "0.1.0"
 dependencies = [
  "floom-core",
@@ -2351,6 +2409,19 @@ dependencies = [
 
 [[package]]
 name = "floom-widget-md-radio"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-ui-composites",
+ "floom-widget-runtime",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-md-radio-group"
 version = "0.1.0"
 dependencies = [
  "floom-core",
