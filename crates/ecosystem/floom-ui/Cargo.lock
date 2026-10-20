@@ -569,6 +569,30 @@ dependencies = [
 ]
 
 [[package]]
+name = "floom-widget-cupertino-chip"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-ui-composites",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-cupertino-chip_group"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-ui-composites",
+ "floom-widgets",
+]
+
+[[package]]
 name = "floom-widget-cupertino-code"
 version = "0.1.0"
 dependencies = [
@@ -1176,6 +1200,30 @@ dependencies = [
  "floom-ui-composites",
  "floom-widget-fluent-icon-paths",
  "floom-widget-runtime",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-fluent-chip"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-ui-composites",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-fluent-chip_group"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-ui-composites",
  "floom-widgets",
 ]
 
@@ -1791,6 +1839,32 @@ dependencies = [
  "floom-types",
  "floom-ui-composites",
  "floom-widget-md-icon",
+ "floom-widget-runtime",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-md-chip"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-ui-composites",
+ "floom-widget-runtime",
+ "floom-widgets",
+]
+
+[[package]]
+name = "floom-widget-md-chip_group"
+version = "0.1.0"
+dependencies = [
+ "floom-core",
+ "floom-core-theme",
+ "floom-signal",
+ "floom-types",
+ "floom-ui-composites",
  "floom-widget-runtime",
  "floom-widgets",
 ]
