@@ -15,6 +15,7 @@
 //! one consumer outside the crate. The rest followed once the layering held.
 
 mod any;
+pub mod shared;
 pub mod builders;
 pub mod badge;
 pub mod chip;
@@ -34,6 +35,7 @@ pub mod tabs_bar;
 pub mod combobox;
 pub mod counter;
 pub mod icon_button;
+pub mod infinite_scroller;
 pub mod labeled;
 pub mod list_item;
 pub mod hover;
@@ -76,6 +78,7 @@ pub use combobox::{ComboPick, Combobox, ComboboxStyle, Commit, SharedPick};
 pub use combobox::{commit, matching, panel_placement, panel_rect, panel_request, select, sync_query_to_selection, visible_options};
 pub use counter::{Counter, CounterState, CounterStyle, SharedCounter, Step, clamp_value, step_value};
 pub use icon_button::{IconButton, IconButtonIcon, IconButtonPaint, IconButtonStyle, IconButtonVariant};
+pub use infinite_scroller::{InfiniteScrollerView, SharedHeight, shared_height};
 pub use labeled::{Labeled};
 pub use hover::HoverBox;
 pub use menu::{Menu, MenuItem, MenuStyle};
@@ -93,6 +96,7 @@ pub use tooltip::{Tooltip, TooltipStyle};
 pub use validation_messages::{ValidationMessagesList, ValidationMessagesStyle};
 pub use virtual_scroller::VirtualScroller;
 pub use builders::WidgetBuilder;
+pub use shared::{SharedNumber, read_number, shared_number, write_number};
 pub use window_viewer::{WindowViewer, WindowViewerStyle};
 pub use text_field::{TextCallback, TextField, TextFieldStyle};
 pub use checkbox::{Checkbox, CheckboxStyle};

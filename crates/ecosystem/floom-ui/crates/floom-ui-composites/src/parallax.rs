@@ -29,42 +29,23 @@
 //! owns the scroll source -- while the shared number makes it writable.
 
 use std::any::Any;
-use std::sync::{Arc, Mutex};
+use crate::shared::SharedNumber;
 
 use floom_core::{
     AnimationSpec, Child, CompositorProp, CreateContext, ElementId, PaintContext, UpdateContext,
     Widget, WidgetAny,
 };
 
-/// The engine's shared family has a flag, a buffer and a map, and no number,
-/// so this is one of its own.
-pub type SharedScroll = Arc<Mutex<f32>>;
+/// The shared number, under the name the parallax knows it by.
+pub type SharedScroll = SharedNumber;
 
 /// A fresh shared scroll offset.
-pub fn shared_scroll(value: f32) -> SharedScroll {
-    Arc::new(Mutex::new(value))
-}
-
+pub use crate::shared::shared_number as shared_scroll;
 /// Read the shared offset, treating a poisoned mutex as "no scroll".
-///
-/// The same posture as the engine's `read_flag`: a caller that poisoned the
-/// mutex is as stuck as the widget is, and panicking here would take down a
-/// paint pass over a number nobody was looking at.
-pub fn read_scroll(scroll: &SharedScroll) -> f32 {
-    scroll.lock().map(|guard| *guard).unwrap_or(0.0)
-}
-
+pub use crate::shared::read_number as read_scroll;
 /// Write the shared offset. Reports whether it changed, so a caller can skip a
 /// frame.
-pub fn write_scroll(scroll: &SharedScroll, value: f32) -> bool {
-    match scroll.lock() {
-        Ok(mut guard) if *guard != value => {
-            *guard = value;
-            true
-        }
-        _ => false,
-    }
-}
+pub use crate::shared::write_number as write_scroll;
 
 /// The parallax layer: the content, moved by `-scroll * factor`.
 ///

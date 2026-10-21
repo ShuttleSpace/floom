@@ -11,6 +11,9 @@ floom-signal = { path = "../../../../../floom-signal" }
 floom-core = { path = "../../../../../floom-core" }
 floom-types = { path = "../../../../../floom-types" }
 floom-widgets = { path = "../../../../../floom-widgets" }
+# The engine's InfiniteScrollerView: a viewport that asks for the next
+# page when the user reaches the end.
+floom-ui-composites = { path = "../../floom-ui-composites" }
 
 [dev-dependencies]
 floom-core-theme = { workspace = true, features = ["material"] }

@@ -7,17 +7,16 @@
 //! ## What the port uses
 //!
 //! The engine's vocabulary for the box -- a [`Surface`] for the viewport's
-//! fill and outline, a [`Stack`] for the column, a [`Text`] for the loading
-//! label -- and a **kit-local scroller** for the two things the engine does
-//! not have.
+//! fill and outline -- and the engine's `InfiniteScrollerView` for the two
+//! things the engine's own widgets do not have.
 //!
 //! The engine's own `Scroll` is a viewport that scrolls, and it is the right
 //! answer for a box that only scrolls. It cannot answer the question an
 //! infinite scroller asks -- *how close to the end is the user?* -- because
 //! its offset is its own business and nothing outside it can read it. So the
-//! port carries a scroller of its own, and the gap is named in the engine's
-//! favour: this belongs in `floom-ui-composites` beside the other scroll
-//! composites, and until it is there, three kits carry three copies of it.
+//! scroller keeps an offset of its own and asks the host to scroll; that is
+//! the gap, and it is still the engine's to close: a `Scroll` that can hand
+//! its offset to a descendant would take it away.
 //!
 //! ## What this kit answers
 //!
@@ -62,13 +61,11 @@
 
 use std::sync::{Arc, Mutex};
 
-use floom_core::{
-    Child, ChildKey, CreateContext, ElementId, Event, EventContext, LayoutRequest, PaintContext,
-    ScrollOffset, UpdateContext, Widget, WidgetAny,
-};
+use floom_core::{Child, LayoutRequest};
 use floom_signal::{RwSignal, SignalGet};
-use floom_types::{ClipShape, Color as PaintColor};
-use floom_widgets::{read_flag, shared_flag, write_flag, Align, Axis, SharedFlag, Spacer, Stack, Surface, Text};
+use floom_ui_composites::InfiniteScrollerView;
+use floom_types::Color as PaintColor;
+use floom_widgets::{shared_flag, write_flag, SharedFlag, Surface};
 
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::infinite_scroller::InfiniteScrollerProps;
@@ -76,15 +73,12 @@ use floom_core_theme::theme::{MultiTheme, Theme};
 use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color_ext::with_alpha;
 
-/// The loading label's size. A v1 literal.
-const LOADING_FONT_SIZE: f32 = 13.0;
-
 /// How tall the scrollable content is, shared between the kit and the host.
 ///
 /// A shared cell rather than a signal: 2.0's slots are `Send + Sync` and a
 /// signal is `Rc`-based. The engine has a shared type for a bool, a string and
 /// a map, and none for a number, so the kit carries its own.
-pub type SharedHeight = Arc<Mutex<f32>>;
+pub type SharedHeight = floom_ui_composites::SharedHeight;
 
 /// A fresh height cell, starting at `height`.
 pub fn shared_height(height: f32) -> SharedHeight {
@@ -92,10 +86,6 @@ pub fn shared_height(height: f32) -> SharedHeight {
 }
 
 /// Read the height, treating a poisoned cell as zero.
-fn read_height(height: &SharedHeight) -> f32 {
-    height.lock().map(|guard| *guard).unwrap_or(0.0)
-}
-
 /// The infinite scroller's appearance, in the terms v1 used.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct CupertinoInfiniteScrollerStyle {
@@ -197,7 +187,7 @@ impl CupertinoInfiniteScroller {
     }
 
     /// The loading state to start in.
-    pub fn loading(mut self, loading: bool) -> Self {
+    pub fn loading(self, loading: bool) -> Self {
         write_flag(&self.loading, loading);
         self
     }
@@ -253,25 +243,21 @@ impl CupertinoInfiniteScroller {
             // v1's `.border(1.0)` and `.border_color(outline at 80)`.
             .border(1.0, outline)
             .push(move || {
-                Box::new(CupertinoInfiniteScrollerView {
-                    content: CupertinoInfiniteScrollerContent {
-                        height: content_height.clone(),
-                        loading: loading.clone(),
-                        child: child.clone(),
+                let mut scroller = InfiniteScrollerView::new()
+                    .content(
+                        child.clone(),
+                        content_height.clone(),
+                        loading.clone(),
                         loading_height,
                         idle_height,
                         ink,
-                        font_size: LOADING_FONT_SIZE,
-                        last_loading: false,
-                    },
-                    height: content_height.clone(),
-                    loading: loading.clone(),
-                    on_load_more: on_load_more.clone(),
-                    threshold,
-                    viewport,
-                    offset: Arc::new(Mutex::new(0.0)),
-                    last_height: 0.0,
-                })
+                    )
+                    .threshold(threshold)
+                    .viewport(viewport);
+                if let Some(on_load_more) = on_load_more.clone() {
+                    scroller = scroller.on_load_more(move || on_load_more());
+                }
+                Box::new(scroller)
             })
     }
 }
@@ -282,226 +268,6 @@ impl Default for CupertinoInfiniteScroller {
     }
 }
 
-/// The scrollable content: the caller's child and the loading footer.
-///
-/// A widget of its own because two of its numbers change after the tree is
-/// mounted: the height the host keeps updating, and the loading flag that
-/// decides what the footer is. In 2.0 a box's size is its own
-/// `layout_request`, and a `Stack` built once keeps the size it was built
-/// with.
-#[derive(Clone)]
-struct CupertinoInfiniteScrollerContent {
-    /// How tall the content is.
-    height: SharedHeight,
-    /// Whether a page is being fetched.
-    loading: SharedFlag,
-    /// The caller's content.
-    child: Option<Child>,
-    /// The footer's height while a page is being fetched.
-    loading_height: f32,
-    /// The footer's height while it is not.
-    idle_height: f32,
-    /// The loading label's ink.
-    ink: PaintColor,
-    /// The loading label's size.
-    font_size: f32,
-    /// The loading state this widget last declared its children for.
-    last_loading: bool,
-}
-
-impl Widget for CupertinoInfiniteScrollerContent {
-    fn create(&self, cx: &mut dyn CreateContext) -> ElementId {
-        cx.alloc_child()
-    }
-
-    fn update(&mut self, cx: &mut dyn UpdateContext, id: ElementId) {
-        let loading = read_flag(&self.loading);
-        if loading != self.last_loading {
-            self.last_loading = loading;
-            // The footer is a different child in each state -- a label while a
-            // page is being fetched, an empty box otherwise -- so the box has
-            // to be rebuilt rather than repainted.
-            cx.mark_children_dirty(id);
-        }
-    }
-
-    fn children(&self) -> Vec<Child> {
-        let mut children: Vec<Child> = Vec::new();
-        if let Some(child) = &self.child {
-            children.push(child.clone());
-        }
-        if read_flag(&self.loading) {
-            let ink = self.ink;
-            let font_size = self.font_size;
-            let height = self.loading_height;
-            children.push(Child::new(
-                ChildKey::keyed(1),
-                LayoutRequest::new().width_pct(100.0).height(height),
-                move || {
-                    Box::new(
-                        Stack::new(Axis::Horizontal)
-                            .request(
-                                LayoutRequest::new()
-                                    .width_pct(100.0)
-                                    .height(height)
-                                    .main_align(Align::Center)
-                                    .cross_align(Align::Center),
-                            )
-                            .push(move || Box::new(Text::new("Loading…").size(font_size).color(ink))),
-                    )
-                },
-            ));
-        } else {
-            let height = self.idle_height;
-            children.push(Child::new(
-                ChildKey::keyed(0),
-                LayoutRequest::new().width_pct(100.0).height(height),
-                move || Box::new(Spacer::new(f64::from(height)).axis(Axis::Vertical)),
-            ));
-        }
-        children
-    }
-
-    fn layout_request(&self) -> Option<LayoutRequest> {
-        Some(
-            LayoutRequest::new()
-                .width_pct(100.0)
-                .height(read_height(&self.height))
-                .stack(Axis::Vertical, 0.0),
-        )
-    }
-
-    fn paint(&self, _cx: &mut dyn PaintContext, _id: ElementId) {}
-}
-
-impl WidgetAny for CupertinoInfiniteScrollerContent {
-    fn as_any(&self) -> &dyn std::any::Any {
-        self
-    }
-
-    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
-        self
-    }
-
-    fn semantics_hint(&self) -> Option<floom_core::SemanticsHint> {
-        None
-    }
-}
-
-/// The viewport: it owns the scroll offset and asks for the next page when
-/// the user reaches the end.
-#[derive(Clone)]
-struct CupertinoInfiniteScrollerView {
-    /// The content: the caller's child and the loading footer.
-    content: CupertinoInfiniteScrollerContent,
-    /// How tall the content is.
-    height: SharedHeight,
-    /// Whether a page is being fetched: the re-fire guard.
-    loading: SharedFlag,
-    /// The kit's handle on the callback.
-    on_load_more: Option<Arc<dyn Fn() + Send + Sync + 'static>>,
-    /// How close to the end the user has to be.
-    threshold: f32,
-    /// The viewport's height.
-    viewport: f32,
-    /// The scroll offset, in pixels from the top.
-    ///
-    /// Shared, because the widget is rebuilt whenever its parent re-declares
-    /// its children, and a plain field would put the viewport back at the top
-    /// every time anything else in the tree changed.
-    offset: Arc<Mutex<f64>>,
-    /// The height this widget last laid its content out at.
-    last_height: f32,
-}
-
-/// Read the offset, treating a poisoned cell as the top.
-fn read_offset(offset: &Arc<Mutex<f64>>) -> f64 {
-    offset.lock().map(|guard| *guard).unwrap_or(0.0)
-}
-
-/// Write the offset, ignoring a poisoned cell.
-fn write_offset(offset: &Arc<Mutex<f64>>, value: f64) {
-    if let Ok(mut guard) = offset.lock() {
-        *guard = value;
-    }
-}
-
-impl Widget for CupertinoInfiniteScrollerView {
-    fn create(&self, cx: &mut dyn CreateContext) -> ElementId {
-        cx.alloc_child()
-    }
-
-    fn update(&mut self, cx: &mut dyn UpdateContext, id: ElementId) {
-        let height = read_height(&self.height);
-        if height != self.last_height {
-            self.last_height = height;
-            // The content's height is the content's own `layout_request`, and
-            // only a reconcile re-reads it.
-            cx.mark_children_dirty(id);
-        }
-    }
-
-    fn children(&self) -> Vec<Child> {
-        let content = self.content.clone();
-        vec![Child::new(
-            ChildKey::index(0),
-            LayoutRequest::new().width_pct(100.0),
-            move || Box::new(content.clone()),
-        )]
-    }
-
-    fn layout_request(&self) -> Option<LayoutRequest> {
-        Some(LayoutRequest::new().width_pct(100.0).stack(Axis::Vertical, 0.0))
-    }
-
-    fn event(&mut self, cx: &mut dyn EventContext, _id: ElementId) -> bool {
-        let Event::Scroll(delta) = cx.event() else {
-            return false;
-        };
-        let max =
-            (f64::from(read_height(&self.height)) - f64::from(self.viewport)).max(0.0);
-        let current = read_offset(&self.offset);
-        let next = (current + delta.delta_y).clamp(0.0, f64::from(max));
-        if next != current {
-            write_offset(&self.offset, next);
-            cx.request_scroll(ScrollOffset::new(0.0, next));
-        }
-        // v1's end test: within `threshold` of the end, and not already
-        // fetching a page.
-        if max > 0.0 && next >= max - f64::from(self.threshold) && !read_flag(&self.loading) {
-            if let Some(on_load_more) = &self.on_load_more {
-                on_load_more();
-            }
-        }
-        true
-    }
-
-    fn paint(&self, _cx: &mut dyn PaintContext, _id: ElementId) {}
-
-    /// The viewport clips its content.
-    ///
-    /// Without the clip the content paints over whatever is beside it, which
-    /// is the one thing a scroll area exists to prevent.
-    fn clip(&self) -> Option<ClipShape> {
-        Some(ClipShape::Box)
-    }
-}
-
-impl WidgetAny for CupertinoInfiniteScrollerView {
-    fn as_any(&self) -> &dyn std::any::Any {
-        self
-    }
-
-    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
-        self
-    }
-
-    fn semantics_hint(&self) -> Option<floom_core::SemanticsHint> {
-        None
-    }
-}
-
-/// Theme colour -> engine colour.
 fn to_paint(c: Color) -> PaintColor {
     PaintColor { r: c.r, g: c.g, b: c.b, a: c.a }
 }
