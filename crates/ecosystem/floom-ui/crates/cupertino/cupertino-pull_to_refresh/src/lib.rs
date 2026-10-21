@@ -6,8 +6,12 @@
 //!
 //! ## What the port uses
 //!
-//! The engine's vocabulary, plus two widgets this module owns:
+//! The engine's `PullToRefresh`: the column that watches the drag and the
+//! indicator that says what would happen if the user let go now. The three
+//! floem-ui pull-to-refresh kits each used to carry their own copy of both.
 //!
+//! The engine's vocabulary, plus the two widgets the engine owns:
+
 //! ```text
 //! Surface            the tinted box: the background, the full width
 //!  └ Column          the column: the indicator, then the caller's content
@@ -91,28 +95,18 @@
 
 use std::sync::{Arc, Mutex};
 
-use floom_core::{Child, ChildKey, CreateContext, ElementId, LayoutRequest, UpdateContext, Widget,
-    WidgetAny};
+use floom_core::{Child};
 use floom_signal::{RwSignal, SignalGet};
+use floom_ui_composites::{PullToRefresh, PullToRefreshStyle};
 use floom_types::Color as PaintColor;
 use floom_widgets::text_input::{SharedFlag, read_flag, shared_flag, write_flag};
-use floom_widgets::{Align, Axis, Surface, Text};
+use floom_widgets::{Surface};
 
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::pull_to_refresh::PullToRefreshProps;
 use floom_core_theme::theme::{MultiTheme, Theme};
 use floom_core_theme::tokens::color::Color;
 
-/// The label v1 showed while the user was pulling.
-const PULL_LABEL: &str = "↓ Pull to refresh";
-/// The label v1 showed while the refresh was in flight.
-const REFRESH_LABEL: &str = "↻ Refreshing…";
-/// The label's size. A v1 literal.
-const INDICATOR_FONT_SIZE: f32 = 13.0;
-/// The tallest the indicator ever gets. A v1 literal.
-const INDICATOR_MAX_HEIGHT: f32 = 28.0;
-/// Below this pull the indicator is not drawn at all. A v1 literal.
-const INDICATOR_VISIBLE_PULL: f32 = 0.5;
 
 /// The pull distance, shared between the kit and whoever drives the gesture.
 ///
@@ -120,7 +114,12 @@ const INDICATOR_VISIBLE_PULL: f32 = 0.5;
 /// (`SharedBuffer`) and a map (`SharedMap`); a *distance* is none of those, so
 /// this is the same `Arc<Mutex<f32>>` shape the engine's own `Scroll` uses for
 /// its offset.
-pub type PullDistance = Arc<Mutex<f32>>;
+pub type PullDistance = floom_ui_composites::SharedNumber;
+
+/// The label's size. A v1 literal.
+const INDICATOR_FONT_SIZE: f32 = 13.0;
+/// The tallest the indicator ever gets. A v1 literal.
+const INDICATOR_MAX_HEIGHT: f32 = 28.0;
 
 /// The pull-to-refresh's appearance, in the terms v1 used.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -266,28 +265,23 @@ impl CupertinoPullToRefresh {
     /// The box, the column, and the column's two children.
     pub fn view(self) -> Surface {
         let style = self.resolved_style();
-        let background = to_paint(style.background);
-        let column = CupertinoPullToRefreshColumn {
-            style,
-            pull: self.pull.clone(),
-            refreshing: self.refreshing.clone(),
-            on_refresh: self.on_refresh.clone(),
-            child: self.child,
-            reported_pull: None,
-            reported_refreshing: false,
-            fired: false,
-        };
-
-        Surface::new()
-            .request(
-                LayoutRequest::new()
-                    .width_pct(100.0)
-                    // v1's `items_start()`: the column sits at the top of the
-                    // box, and at its own width on the other axis.
-                    .cross_align(Align::Start),
-            )
-            .background(background)
-            .push(move || Box::new(column.clone()))
+        let mut refresh = PullToRefresh::new()
+            .style(PullToRefreshStyle {
+                background: to_paint(style.background),
+                on_surface_variant: to_paint(style.on_surface_variant),
+                max_pull: style.max_pull,
+                threshold: style.threshold,
+                indicator_size: style.indicator_size,
+                indicator_font_size: style.indicator_font_size,
+                indicator_max_height: style.indicator_max_height,
+            })
+            .pull(self.pull.clone())
+            .refreshing(self.refreshing.clone())
+            .child(self.child.clone());
+        if let Some(on_refresh) = self.on_refresh.clone() {
+            refresh = refresh.on_refresh(move || on_refresh());
+        }
+        refresh.build()
     }
 }
 
@@ -301,190 +295,6 @@ impl Default for CupertinoPullToRefresh {
 ///
 /// A kit-local widget because the engine has none that re-declares its
 /// children when a shared value changes -- see the module note.
-#[derive(Clone)]
-struct CupertinoPullToRefreshColumn {
-    style: CupertinoPullToRefreshStyle,
-    pull: PullDistance,
-    refreshing: SharedFlag,
-    on_refresh: Option<Arc<dyn Fn() + Send + Sync + 'static>>,
-    child: Option<Child>,
-    /// The pull as of the last update, so a change is a change.
-    reported_pull: Option<f32>,
-    /// The refreshing flag as of the last update.
-    reported_refreshing: bool,
-    /// Whether the refresh has already fired for this pull.
-    fired: bool,
-}
-
-impl Widget for CupertinoPullToRefreshColumn {
-    fn create(&self, cx: &mut dyn CreateContext) -> ElementId {
-        cx.alloc_child()
-    }
-
-    fn update(&mut self, cx: &mut dyn UpdateContext, id: ElementId) {
-        let pull = read_pull(&self.pull);
-        let refreshing = read_flag(&self.refreshing);
-        if self.reported_pull != Some(pull) || self.reported_refreshing != refreshing {
-            self.reported_pull = Some(pull);
-            self.reported_refreshing = refreshing;
-            // The indicator's height is the pull, and a node's own layout
-            // request is only re-read when its parent reconciles. The parent
-            // here is this widget, so this is the reconcile to ask for.
-            cx.mark_children_dirty(id);
-        }
-        // v1 fired the refresh when the pointer came up past the threshold.
-        // The drag is the caller's here, so the threshold is crossed by
-        // whoever writes the pull distance.
-        if !self.fired && pull >= self.style.threshold {
-            self.fired = true;
-            write_flag(&self.refreshing, true);
-            if let Some(on_refresh) = &self.on_refresh {
-                on_refresh();
-            }
-        }
-        if pull <= 0.0 {
-            // Back at the top: the next pull fires again.
-            self.fired = false;
-        }
-    }
-
-    fn children(&self) -> Vec<Child> {
-        let indicator = CupertinoPullToRefreshIndicator {
-            style: self.style,
-            pull: self.pull.clone(),
-            refreshing: self.refreshing.clone(),
-            reported_label: None,
-        };
-        let mut out = vec![Child::new(
-            ChildKey::index(0),
-            LayoutRequest::new(),
-            move || Box::new(indicator.clone()),
-        )];
-        if let Some(child) = &self.child {
-            out.push(Child::new(
-                ChildKey::index(1),
-                LayoutRequest::new(),
-                {
-                    let child = child.clone();
-                    move || child.build()
-                },
-            ));
-        }
-        out
-    }
-
-    fn layout_request(&self) -> Option<LayoutRequest> {
-        // v1's `Stack::vertical((indicator, child))`.
-        Some(LayoutRequest::new().stack(Axis::Vertical, 0.0))
-    }
-}
-
-impl WidgetAny for CupertinoPullToRefreshColumn {
-    fn as_any(&self) -> &dyn std::any::Any {
-        self
-    }
-
-    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
-        self
-    }
-
-    fn semantics_hint(&self) -> Option<floom_core::SemanticsHint> {
-        None
-    }
-}
-
-/// The indicator: the label, and the height that is the pull.
-#[derive(Clone)]
-struct CupertinoPullToRefreshIndicator {
-    style: CupertinoPullToRefreshStyle,
-    pull: PullDistance,
-    refreshing: SharedFlag,
-    /// The label as of the last update.
-    reported_label: Option<&'static str>,
-}
-
-impl CupertinoPullToRefreshIndicator {
-    /// The label v1 would have drawn right now.
-    fn label(&self) -> &'static str {
-        if read_flag(&self.refreshing) {
-            REFRESH_LABEL
-        } else {
-            PULL_LABEL
-        }
-    }
-
-    /// Whether v1 would have drawn anything at all.
-    fn visible(&self) -> bool {
-        read_pull(&self.pull) > INDICATOR_VISIBLE_PULL || read_flag(&self.refreshing)
-    }
-
-    /// The height v1 gave the label's box.
-    fn height(&self) -> f32 {
-        if !self.visible() {
-            return 0.0;
-        }
-        if read_flag(&self.refreshing) {
-            self.style.indicator_max_height
-        } else {
-            read_pull(&self.pull).min(self.style.indicator_max_height)
-        }
-    }
-}
-
-impl Widget for CupertinoPullToRefreshIndicator {
-    fn create(&self, cx: &mut dyn CreateContext) -> ElementId {
-        cx.alloc_child()
-    }
-
-    fn update(&mut self, cx: &mut dyn UpdateContext, id: ElementId) {
-        let label = self.label();
-        if self.reported_label != Some(label) {
-            self.reported_label = Some(label);
-            // A child's content is fixed when it is built, so a new label is a
-            // new key: the text is remounted rather than restyled.
-            cx.mark_children_dirty(id);
-        }
-    }
-
-    fn children(&self) -> Vec<Child> {
-        if !self.visible() {
-            // v1 drew an `Empty` here: nothing at all, and no height.
-            return Vec::new();
-        }
-        let label = self.label();
-        let font_size = self.style.indicator_font_size;
-        let color = to_paint(self.style.on_surface_variant);
-        vec![Child::new(
-            ChildKey::from(label),
-            LayoutRequest::new(),
-            move || Box::new(Text::new(label).size(font_size).color(color)),
-        )]
-    }
-
-    fn layout_request(&self) -> Option<LayoutRequest> {
-        Some(LayoutRequest::new().height(self.height()))
-    }
-}
-
-impl WidgetAny for CupertinoPullToRefreshIndicator {
-    fn as_any(&self) -> &dyn std::any::Any {
-        self
-    }
-
-    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
-        self
-    }
-
-    fn semantics_hint(&self) -> Option<floom_core::SemanticsHint> {
-        None
-    }
-}
-
-/// Read the shared pull distance. A poisoned mutex reads as "not pulled".
-fn read_pull(pull: &PullDistance) -> f32 {
-    pull.lock().map(|guard| *guard).unwrap_or(0.0)
-}
-
 /// Theme colour -> engine colour.
 fn to_paint(c: Color) -> PaintColor {
     PaintColor { r: c.r, g: c.g, b: c.b, a: c.a }

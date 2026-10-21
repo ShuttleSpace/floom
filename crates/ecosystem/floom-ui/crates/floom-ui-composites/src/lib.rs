@@ -30,6 +30,7 @@ pub mod overlay;
 pub mod overlay_bookkeeping;
 pub mod parallax;
 pub mod popup;
+pub mod pull_to_refresh;
 pub mod tabs;
 pub mod tabs_bar;
 pub mod color_picker;
@@ -72,6 +73,7 @@ pub use overlay::Overlay;
 pub use overlay_bookkeeping::OverlayHost;
 pub use parallax::{ParallaxLayer, SharedScroll, read_scroll, shared_scroll, write_scroll};
 pub use popup::{Popup, PopupPlacement, popup_placement_rect};
+pub use pull_to_refresh::{PullToRefresh, PullToRefreshStyle};
 pub use tabs::Tabs;
 pub use tabs_bar::{TabsBar, TabsBarStyle};
 

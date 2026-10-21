@@ -418,6 +418,7 @@ dependencies = [
  "parley",
  "peniko",
  "rustc-hash",
+ "swash",
 ]
 
 [[package]]
@@ -1226,6 +1227,7 @@ dependencies = [
  "floom-core-theme",
  "floom-signal",
  "floom-types",
+ "floom-ui-composites",
  "floom-widgets",
 ]
 
@@ -2383,6 +2385,7 @@ dependencies = [
  "floom-core-theme",
  "floom-signal",
  "floom-types",
+ "floom-ui-composites",
  "floom-widgets",
 ]
 
@@ -3585,6 +3588,7 @@ dependencies = [
  "floom-core-theme",
  "floom-signal",
  "floom-types",
+ "floom-ui-composites",
  "floom-widget-runtime",
  "floom-widgets",
 ]
