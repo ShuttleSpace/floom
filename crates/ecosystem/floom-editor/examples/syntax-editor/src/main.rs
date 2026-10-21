@@ -1,248 +1,169 @@
-use floom::{
-    action::inspect,
-    prelude::*,
-    text::{Attrs, AttrsList, FamilyOwned, FontWeight, FontWidth},
-};
-use floom_editor::{
-    editor::{
-        EditorStyle,
-        core::{
-            buffer::rope_text::RopeText, cursor::CursorAffinity, editor::EditType,
-            selection::Selection,
-        },
-        id::EditorId,
-        layout::TextLayoutLine,
-        text::{Document, SimpleStylingBuilder, Styling, WrapMethod, default_dark_color},
-    },
-    text_editor,
-};
-use std::borrow::Cow;
-use std::cell::RefCell;
-use std::rc::Rc;
-use std::sync::LazyLock;
-use syntect::highlighting::{
-    FontStyle, HighlightState, Highlighter, RangedHighlightIterator, ThemeSet,
-};
-use syntect::parsing::{ParseState, ScopeStack, SyntaxReference, SyntaxSet};
+//! The editor with syntax highlighting.
+//!
+//! The v1 example used `syntect` to highlight Rust. This one uses a small
+//! hand-written scanner instead, because what the example is here to show is
+//! the *port's* `Styling` trait: a styling that answers with the ranges of a
+//! line that differ from the base style, and the editor turning those ranges
+//! into ink.
+//!
+//! A real highlighter would implement the same trait — the ranges are the
+//! whole contract.
+//!
+//! Run with `cargo run -p syntax-editor`.
 
-pub static SYNTAXSET: LazyLock<SyntaxSet> = LazyLock::new(SyntaxSet::load_defaults_newlines);
-pub static THEMES: LazyLock<ThemeSet> = LazyLock::new(ThemeSet::load_defaults);
+use std::sync::Arc;
 
-struct SyntaxHighlightingStyle<'a> {
-    pub syntax: &'a SyntaxReference,
-    pub highlighter: Highlighter<'a>,
-    pub style: Rc<dyn Styling>,
-    pub doc: Option<Rc<dyn Document>>,
-    pub states: RefCell<Vec<(ParseState, HighlightState)>>,
+use floom::prelude::*;
+use floom_editor::{EditorStyle, Styling, TextEditor, text_editor};
+use floom_types::{Color, FontFamily, FontWeight, TextSpan, TextStyle};
+
+/// The keywords the scanner highlights.
+const KEYWORDS: &[&str] = &[
+    "fn", "let", "mut", "if", "else", "match", "for", "while", "loop", "struct", "enum", "impl",
+    "trait", "use", "mod", "pub", "return", "break", "continue", "const", "static", "type", "where",
+    "in", "as", "ref", "self", "Some", "None", "Ok", "Err",
+];
+
+/// A styling that colours the keywords and the string literals.
+struct RustStyling {
+    keyword: Color,
+    string: Color,
+    number: Color,
 }
 
-impl SyntaxHighlightingStyle<'_> {
-    pub fn new(style: Rc<dyn Styling>) -> Self {
-        let theme = &THEMES.themes["base16-ocean.dark"];
-        let rust = SYNTAXSET.find_syntax_by_extension("rs").unwrap();
-        let highlighter = Highlighter::new(theme);
-
-        SyntaxHighlightingStyle {
-            syntax: rust,
-            highlighter,
-            style,
-            doc: None,
-            states: RefCell::new(Vec::new()),
+impl Default for RustStyling {
+    fn default() -> Self {
+        Self {
+            keyword: Color::rgb(0xCC, 0x78, 0xDD),
+            string: Color::rgb(0x6A, 0xB2, 0x6A),
+            number: Color::rgb(0xD1, 0x9A, 0x66),
         }
     }
-
-    pub fn set_doc(&mut self, doc: Rc<dyn Document>) {
-        self.doc = Some(doc);
-    }
 }
 
-impl Styling for SyntaxHighlightingStyle<'_> {
+impl Styling for RustStyling {
     fn id(&self) -> u64 {
-        self.style.id()
+        1
     }
 
-    fn font_size(&self, edid: EditorId, line: usize) -> usize {
-        self.style.font_size(edid, line)
+    fn font_size(&self) -> f32 {
+        15.0
     }
 
-    fn line_height(&self, edid: EditorId, line: usize) -> f32 {
-        self.style.line_height(edid, line)
+    fn line_height(&self) -> f32 {
+        22.0
     }
 
-    fn font_family(&self, edid: EditorId, line: usize) -> Cow<'_, [FamilyOwned]> {
-        self.style.font_family(edid, line)
+    fn font_family(&self) -> FontFamily {
+        FontFamily::Monospace
     }
 
-    fn weight(&self, edid: EditorId, line: usize) -> FontWeight {
-        self.style.weight(edid, line)
+    fn weight(&self) -> FontWeight {
+        FontWeight::Normal
     }
 
-    fn italic_style(&self, edid: EditorId, line: usize) -> floom::text::FontStyle {
-        self.style.italic_style(edid, line)
+    fn tab_width(&self) -> usize {
+        4
     }
 
-    fn font_width(&self, edid: EditorId, line: usize) -> FontWidth {
-        self.style.font_width(edid, line)
-    }
-
-    fn indent_line(&self, edid: EditorId, line: usize, line_content: &str) -> usize {
-        self.style.indent_line(edid, line, line_content)
-    }
-
-    fn tab_width(&self, edid: EditorId, line: usize) -> usize {
-        self.style.tab_width(edid, line)
-    }
-
-    fn atomic_soft_tabs(&self, edid: EditorId, line: usize) -> bool {
-        self.style.atomic_soft_tabs(edid, line)
-    }
-
-    fn apply_attr_styles(
-        &self,
-        _edid: EditorId,
-        _style: &EditorStyle,
-        line: usize,
-        default: Attrs,
-        attrs: &mut AttrsList,
-    ) {
-        attrs.clear_spans();
-        if let Some(doc) = &self.doc {
-            // states are cached every 16 lines
-            let mut states_cache = self.states.borrow_mut();
-            let start = (line >> 4).min(states_cache.len());
-            states_cache.truncate(start);
-            let mut states = states_cache.last().cloned().unwrap_or_else(|| {
-                (
-                    ParseState::new(self.syntax),
-                    HighlightState::new(&self.highlighter, ScopeStack::new()),
-                )
-            });
-
-            for line_no in start..=line {
-                let text = doc.rope_text().line_content(line).to_string();
-                if let Ok(ops) = states.0.parse_line(&text, &SYNTAXSET) {
-                    if line_no == line {
-                        for (style, _text, range) in RangedHighlightIterator::new(
-                            &mut states.1,
-                            &ops,
-                            &text,
-                            &self.highlighter,
-                        ) {
-                            let mut attr = default.clone();
-                            if style.font_style.contains(FontStyle::ITALIC) {
-                                attr = attr.font_style(floom::text::FontStyle::Italic);
-                            }
-                            if style.font_style.contains(FontStyle::BOLD) {
-                                attr = attr.weight(FontWeight::BOLD);
-                            }
-                            attr = attr.color(Color::from_rgba8(
-                                style.foreground.r,
-                                style.foreground.g,
-                                style.foreground.b,
-                                style.foreground.a,
-                            ));
-
-                            attrs.add_span(range, attr);
-                        }
+    fn style_line(&self, _line: usize, text: &str, base: TextStyle) -> Vec<TextSpan> {
+        let mut spans = Vec::new();
+        let bytes = text.as_bytes();
+        let mut index = 0usize;
+        while index < bytes.len() {
+            let c = bytes[index] as char;
+            if c == '"' {
+                // A string literal: to the closing quote, or to the end of the
+                // line if the string is not closed.
+                let start = index;
+                index += 1;
+                while index < bytes.len() && bytes[index] != b'"' {
+                    if bytes[index] == b'\\' {
+                        index += 1;
                     }
+                    index += 1;
                 }
-
-                if line_no & 0xF == 0xF {
-                    states_cache.push(states.clone());
-                }
+                index = (index + 1).min(bytes.len());
+                spans.push(TextSpan {
+                    range: start..index,
+                    style: TextStyle {
+                        color: self.string,
+                        ..base
+                    },
+                });
+                continue;
             }
+            if c.is_ascii_alphabetic() || c == '_' {
+                let start = index;
+                while index < bytes.len()
+                    && ((bytes[index] as char).is_ascii_alphanumeric() || bytes[index] == b'_')
+                {
+                    index += 1;
+                }
+                let word = &text[start..index];
+                if KEYWORDS.contains(&word) {
+                    spans.push(TextSpan {
+                        range: start..index,
+                        style: TextStyle {
+                            color: self.keyword,
+                            ..base
+                        },
+                    });
+                }
+                continue;
+            }
+            if c.is_ascii_digit() {
+                let start = index;
+                while index < bytes.len() && (bytes[index] as char).is_ascii_digit() {
+                    index += 1;
+                }
+                spans.push(TextSpan {
+                    range: start..index,
+                    style: TextStyle {
+                        color: self.number,
+                        ..base
+                    },
+                });
+                continue;
+            }
+            index += 1;
         }
+        spans
     }
-
-    fn apply_layout_styles(
-        &self,
-        edid: EditorId,
-        style: &EditorStyle,
-        line: usize,
-        layout_line: &mut TextLayoutLine,
-    ) {
-        self.style
-            .apply_layout_styles(edid, style, line, layout_line)
-    }
-
-    fn paint_caret(&self, edid: EditorId, line: usize) -> bool {
-        self.style.paint_caret(edid, line)
-    }
-}
-
-fn app_view() -> impl IntoView {
-    let global_style = SimpleStylingBuilder::default()
-        .wrap(WrapMethod::None)
-        .font_family(vec![
-            FamilyOwned::Name("Fira Code".to_string()),
-            FamilyOwned::Name("Consolas".to_string()),
-            FamilyOwned::Monospace,
-        ])
-        .build();
-
-    let mut style = SyntaxHighlightingStyle::new(Rc::new(global_style));
-
-    let editor = text_editor(
-        r#"fn fib(n: i32) -> i32 {
-	if n == 0 || n == 1 {
-		return n;
-	} else {
-		return fib(n - 1) + fib(n - 2);
-	}
-}
-
-#[cfg(test)]
-mod tests {
-	use super::*;
-
-	#[test]
-	fn test_fib() {
-	    assert_eq!(fib(0), 0);
-	    assert_eq!(fib(1), 1);
-	    assert_eq!(fib(2), 1);
-	    assert_eq!(fib(3), 2);
-	    assert_eq!(fib(4), 3);
-	    assert_eq!(fib(5), 5);
-	}
-}
-"#,
-    );
-
-    let hide_gutter = RwSignal::new(false);
-
-    style.set_doc(editor.doc().clone());
-    let editor = editor
-        .styling(style)
-        .editor_style(default_dark_color)
-        .editor_style(move |s| s.hide_gutter(hide_gutter.get()))
-        .style(|s| s.size_full());
-
-    let doc = editor.doc();
-
-    Stack::new((
-        editor,
-        Stack::new((
-            Button::new("Clear").action(move || {
-                doc.edit_single(
-                    Selection::region(0, doc.text().len(), CursorAffinity::Backward),
-                    "",
-                    EditType::DeleteSelection,
-                );
-            }),
-            Button::new("Gutter").action(move || {
-                hide_gutter.update(|hide| *hide = !*hide);
-            }),
-        ))
-        .style(|s| s.width_full().flex_row().items_center().justify_center()),
-    ))
-    .style(|s| s.size_full().flex_col().items_center().justify_center())
-    .on_event_stop(el::KeyUp, |_, KeyboardEvent { key, .. }| {
-        if *key == Key::Named(NamedKey::F11) {
-            inspect();
-        }
-    })
 }
 
 fn main() {
-    floom::launch(app_view)
+    let text = "fn main() {\n    \
+                let mut total = 0;\n    \
+                for i in 0..10 {\n        \
+                total += i * 2;\n    \
+                }\n    \
+                println!(\"total is {}\", total);\n\
+                }\n";
+
+    let editor: TextEditor = text_editor(text.to_string())
+        .style(EditorStyle::dark())
+        .styling(Arc::new(RustStyling::default()));
+
+    let result = floom::run_desktop("floom — syntax editor", Size::new(720.0, 480.0), {
+        let editor = editor.clone();
+        move |host: &mut WidgetHost| {
+            let root = Stack::new(Axis::Vertical)
+                .gap(8.0)
+                .child(Child::new(
+                    ChildKey::index(0),
+                    LayoutRequest::new().fill(),
+                    {
+                        let editor = editor.clone();
+                        move || Box::new(editor.clone())
+                    },
+                ));
+            host.mount_root(LayoutStyle::default(), root);
+        }
+    });
+
+    if let Err(err) = result {
+        eprintln!("desktop loop failed: {err}");
+        std::process::exit(1);
+    }
 }

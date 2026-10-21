@@ -4,10 +4,12 @@
 //! [`GlyphRun`] / [`LaidOutText`] only — they must not own shaping.
 
 mod cache;
+mod editor_layout;
 mod layout;
 mod measure;
 
 pub use cache::{DEFAULT_LAYOUT_CACHE_CAPACITY, LayoutCache};
+pub use editor_layout::{CaretAffinity, StyledRun, TextBrush, TextLayout};
 pub use layout::{
     Glyph, GlyphRun, LaidOutText, LineMetrics, TextAlign, TextLayoutOptions, TextShaper,
 };

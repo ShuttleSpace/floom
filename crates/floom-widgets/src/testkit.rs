@@ -13,7 +13,7 @@ use floom_core::{
     Widget, WidgetAny,
 };
 use floom_scene::{Resource, ResourceKind, ResourceRegistry, Scene, SceneNode};
-use floom_types::PointerEvent;
+use floom_types::{PointerEvent, StyledText};
 
 /// A renderer-neutral record of a single paint operation.
 #[derive(Debug, Clone, PartialEq)]
@@ -36,6 +36,21 @@ pub enum PaintOp {
         /// the retained scene node points at a glyph *resource*, and this
         /// recorder deliberately shapes nothing, so the request is the only
         /// observable that survives.
+        weight: FontWeight,
+        color: Color,
+    },
+    /// Text described in *ranges* rather than as one string.
+    ///
+    /// The ranges are the whole point of the op: a line with a highlighted
+    /// range is one op with several inks, and the op log is the only place a
+    /// widget test can see them — the retained scene node points at a glyph
+    /// *resource*, and this recorder deliberately shapes nothing.
+    StyledText {
+        origin: Point,
+        size: f32,
+        text: String,
+        /// The ranges that differ from the base style, and their inks.
+        spans: Vec<(std::ops::Range<usize>, Color)>,
         weight: FontWeight,
         color: Color,
     },
@@ -128,6 +143,27 @@ impl PaintOp {
                 origin.y,
                 size,
                 text,
+                if weight.is_normal() {
+                    String::new()
+                } else {
+                    format!(" @{weight:?}")
+                },
+                fmt_color(*color)
+            ),
+            PaintOp::StyledText {
+                origin,
+                size,
+                text,
+                spans,
+                weight,
+                color,
+            } => format!(
+                "StyledText ({:.1}, {:.1}) {:.1} {:?} spans={:?}{} {}",
+                origin.x,
+                origin.y,
+                size,
+                text,
+                spans,
                 if weight.is_normal() {
                     String::new()
                 } else {
@@ -400,6 +436,37 @@ impl PaintContext for SceneRecorder {
             offset_x: shadow.offset_x,
             offset_y: shadow.offset_y,
             spread: shadow.spread,
+        });
+    }
+
+    fn fill_styled_text(&mut self, origin: Point, styled: &StyledText) {
+        // No shaping happens here (`floom-text` owns that), so the retained
+        // node gets a placeholder advance box just to keep a bounds hint — the
+        // same placeholder the plain text op gets.
+        let advance = Size::new(
+            styled.text.chars().count() as f64 * f64::from(styled.base.size) * 0.5,
+            f64::from(styled.base.size) * 1.2,
+        );
+        let glyphs = self.registry.insert(Resource {
+            kind: ResourceKind::glyph_runs(Vec::new()),
+        });
+        self.scene.insert(SceneNode::Text {
+            origin,
+            size: advance,
+            glyphs,
+            color: styled.base.color,
+        });
+        self.ops.push(PaintOp::StyledText {
+            origin,
+            size: styled.base.size,
+            text: styled.text.clone(),
+            spans: styled
+                .spans
+                .iter()
+                .map(|span| (span.range.clone(), span.style.color))
+                .collect(),
+            weight: styled.base.weight,
+            color: styled.base.color,
         });
     }
 

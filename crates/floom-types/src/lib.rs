@@ -46,7 +46,7 @@ pub use path::{
     Stroke, resolve_clip,
 };
 pub use shader::Shader;
-pub use text::FontWeight;
+pub use text::{FontFamily, FontWeight, StyledText, TextSpan, TextStyle, TextWrap};
 
 #[cfg(test)]
 mod dependency_boundary_tests {

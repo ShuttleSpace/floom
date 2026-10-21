@@ -124,6 +124,14 @@ pub struct LineMetrics {
     pub width: f32,
     /// Byte range into the source string (UTF-8).
     pub text_range: std::ops::Range<usize>,
+    /// The top of the line box, in layout units.
+    ///
+    /// The line box is taller than the ink when the line has leading, and the
+    /// leading is what a selection background has to cover to read as a
+    /// highlight rather than as a band across the glyphs.
+    pub min_coord: f32,
+    /// The bottom of the line box, in layout units.
+    pub max_coord: f32,
 }
 
 /// Fully shaped + wrapped text ready for painting.
@@ -193,6 +201,8 @@ impl TextShaper {
                 descent: metrics.descent,
                 width: metrics.advance,
                 text_range: line.text_range(),
+                min_coord: metrics.min_coord,
+                max_coord: metrics.max_coord,
             });
 
             for item in line.items() {

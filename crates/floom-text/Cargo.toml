@@ -11,6 +11,10 @@ rust-version.workspace = true
 floom-types = { path = "../floom-types", version = "0.2.0" }
 peniko = { workspace = true }
 parley = { workspace = true }
+# The `scale` feature is what lets the editor layout measure a glyph's ink
+# bounds, which is what makes a selection rectangle cover the glyphs it
+# covers rather than their advances.
+swash = { workspace = true, features = ["scale"] }
 rustc-hash.workspace = true
 
 [dev-dependencies]

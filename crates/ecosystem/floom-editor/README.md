@@ -14,5 +14,19 @@ floom-editor = { path = "crates/ecosystem/floom-editor/floom-editor" }
 ```
 
 ```rust
-use floom_editor::{editor::text::SimpleStyling, text_editor};
+use floom_editor::{EditorStyle, SimpleStyling, text_editor};
+use std::sync::Arc;
+
+let editor = text_editor("hello\nworld").style(EditorStyle::dark());
 ```
+
+The editor is a Floom 2.0 `Widget`: it is mounted into a 2.0 host like any
+other, and it paints the document, the caret, the selection and the gutter
+itself. The port's scope — and the parts of the v1 editor it does *not*
+reproduce — are in
+[`docs/porting-floem-editor-to-2.0.md`](../../../docs/porting-floem-editor-to-2.0.md)
+and in the crate's own module note.
+
+The *model* — the rope buffer, the cursor, the selection, the word motions —
+is `floom-editor-core`, which now lives in the root workspace at
+`crates/floom-editor-core` and is framework-free.

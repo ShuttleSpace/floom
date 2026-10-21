@@ -11,4 +11,4 @@ path = "src/main.rs"
 [dependencies]
 floom.workspace = true
 floom-editor = { path = "../../floom-editor" }
-syntect = "5.2.0"
+floom-types.workspace = true

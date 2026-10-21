@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["floom-editor-core", "floom-editor", "examples/editor", "examples/syntax-editor"]
+members = ["floom-editor", "examples/editor", "examples/syntax-editor"]
 
 [workspace.package]
 edition = "2024"
@@ -8,8 +8,27 @@ license = "MIT"
 version = "0.1.0"
 
 [workspace.dependencies]
-floom = { path = "../../floom", default-features = false, features = ["default-image-formats", "vger", "serde"] }
-floom-signal = { path = "../../../floom-signal" }
+# The public facade, for the examples' `run_desktop` entry point. The satellite
+# reaches the framework crates directly (below) rather than through it, the way
+# the `floom-ui` satellite does.
+floom = { path = "../../floom", default-features = false, features = ["desktop", "renderer-gpu"] }
+
+# The framework crates the ported editor is built on.
+floom-core = { path = "../../floom-core" }
+floom-ime = { path = "../../floom-ime" }
+floom-signal = { path = "../../floom-signal" }
+floom-task = { path = "../../floom-task" }
+floom-text = { path = "../../floom-text" }
+floom-types = { path = "../../floom-types" }
+floom-widgets = { path = "../../floom-widgets" }
+
+# The app shell and the harnesses the tests drive.
+floom-app = { path = "../../floom-app" }
+floom-layout = { path = "../../floom-layout" }
+floom-platform = { path = "../../floom-platform" }
+floom-renderer-software = { path = "../../floom-renderer-software" }
+floom-scene = { path = "../../floom-scene" }
+floom-testkit = { path = "../../floom-testkit" }
 
 # `floom` is reached by path, and a `[patch]` only applies to the workspace that
 # declares it — floom's own patches do not reach this nested workspace. So the

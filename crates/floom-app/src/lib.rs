@@ -49,7 +49,7 @@ use floom_scene::{Resource, ResourceKind, ResourceRegistry, Scene, SceneNode, Sc
 use floom_text::{LayoutCache, TextAlign, TextLayoutOptions, TextShaper};
 use floom_types::NativeCapture;
 use floom_types::ScrollEvent;
-use floom_types::{ClipRegion, CursorStyle, resolve_clip};
+use floom_types::{ClipRegion, CursorStyle, StyledText, resolve_clip};
 use floom_widgets::WidgetAny;
 use smallvec::SmallVec;
 
@@ -432,6 +432,12 @@ pub struct WidgetHost {
     /// is already cached. The entry carries the text for verification, so a
     /// u64 collision degrades to a re-intern, never to a wrong resource.
     glyph_cache: HashMap<u64, GlyphCacheEntry>,
+    /// Interned text nodes for *styled* descriptions, keyed by a hash of the
+    /// description. A styled description is more than a string — it carries
+    /// the ranges that differ from the base style — so it cannot share the
+    /// plain text's cache, and it needs its own because the shape it produces
+    /// is one text node *per ink*.
+    styled_glyph_cache: HashMap<u64, StyledGlyphCacheEntry>,
     /// Parley-backed shaper that produces the runs stored in `resources`.
     shaper: TextShaper,
     /// Shaped-text cache keyed by (text + layout options). `fill_text` reuses
@@ -830,6 +836,7 @@ impl WidgetHost {
             scene: Scene::new(),
             resources: ResourceRegistry::new(),
             glyph_cache: HashMap::new(),
+            styled_glyph_cache: HashMap::new(),
             shaper: TextShaper::new(),
             text_layout_cache: LayoutCache::new(),
             pending_scene_removals: Vec::new(),
@@ -2511,6 +2518,7 @@ impl WidgetHost {
                 scene: &mut self.scene,
                 resources: &mut self.resources,
                 glyphs: &mut self.glyph_cache,
+                styled_glyphs: &mut self.styled_glyph_cache,
                 shaper: &mut self.shaper,
                 layout_cache: &mut self.text_layout_cache,
                 composite,
@@ -4232,6 +4240,59 @@ struct GlyphCacheEntry {
     id: ResourceId,
 }
 
+/// The interned text nodes for one styled description.
+///
+/// The description is kept alongside the ids so a hash collision degrades to a
+/// re-intern rather than to the wrong resource — the same rule the plain
+/// glyph cache follows.
+#[derive(Debug, Clone)]
+struct StyledGlyphCacheEntry {
+    styled: StyledText,
+    /// One entry per ink in the description: the scene carries one colour per
+    /// text node, so a line with three inks is three nodes over one layout.
+    nodes: Vec<(floom_types::Color, ResourceId)>,
+    /// The size of the shaped text, shared by every node of the description.
+    size: floom_types::Size,
+}
+
+/// How many styled descriptions the host keeps shaped at once.
+///
+/// The bound is the point: an editor's description changes on every
+/// keystroke, so an unbounded cache would grow for as long as the editor is
+/// open, and the entries it holds are a cache of a shape that is cheap to
+/// rebuild.
+const STYLED_GLYPH_CACHE_LIMIT: usize = 256;
+
+/// Hashes a styled description for [`WidgetHost::styled_glyph_cache`].
+///
+/// Everything that can change the shaped result belongs in the key: the text,
+/// the base style, the typeface, the wrapping, the tab width, the break
+/// width, and every span. Leaving the spans out would be the same bug the
+/// plain cache had before the weight joined its key — a highlighted line
+/// handed back the runs of an unhighlighted one, which is the same text in
+/// the wrong ink with nothing downstream to tell.
+fn styled_glyph_hash(styled: &StyledText) -> u64 {
+    use std::hash::{Hash, Hasher};
+    let mut hasher = std::collections::hash_map::DefaultHasher::new();
+    styled.text.hash(&mut hasher);
+    styled.base.size.to_bits().hash(&mut hasher);
+    styled.base.weight.to_value().hash(&mut hasher);
+    styled.base.color.hash(&mut hasher);
+    styled.family.hash(&mut hasher);
+    styled.wrap.hash(&mut hasher);
+    styled.tab_width.hash(&mut hasher);
+    styled.max_width.map(f32::to_bits).hash(&mut hasher);
+    styled.spans.len().hash(&mut hasher);
+    for span in &styled.spans {
+        span.range.start.hash(&mut hasher);
+        span.range.end.hash(&mut hasher);
+        span.style.size.to_bits().hash(&mut hasher);
+        span.style.weight.to_value().hash(&mut hasher);
+        span.style.color.hash(&mut hasher);
+    }
+    hasher.finish()
+}
+
 /// Hashes (text, font size, weight) for [`WidgetHost::glyph_cache`].
 ///
 /// Text content and size together decide glyph ids and positions, so both
@@ -4254,6 +4315,7 @@ struct NodePaintContext<'a> {
     scene: &'a mut Scene,
     resources: &'a mut ResourceRegistry,
     glyphs: &'a mut HashMap<u64, GlyphCacheEntry>,
+    styled_glyphs: &'a mut HashMap<u64, StyledGlyphCacheEntry>,
     shaper: &'a mut TextShaper,
     layout_cache: &'a mut LayoutCache,
     /// The overlay entry animation this node is being painted under, if any —
@@ -4307,6 +4369,73 @@ impl NodePaintContext<'_> {
             && entry.size_bits == font_size.to_bits()
             && entry.weight == weight.to_value())
         .then_some(entry.id)
+    }
+
+    /// The interned text nodes for a styled description, one per ink.
+    ///
+    /// The scene carries one colour per text node, so a line with three inks
+    /// is three nodes over one layout. Grouping the runs by their ink changes
+    /// the *draw order* of the inks — it becomes the order they were first
+    /// seen rather than the order they appear in the text — which for text
+    /// that does not overlap is the same picture.
+    fn styled_glyph_nodes(
+        &mut self,
+        styled: &StyledText,
+    ) -> (Vec<(floom_types::Color, ResourceId)>, floom_types::Size) {
+        let key = styled_glyph_hash(styled);
+        if let Some(entry) = self.styled_glyphs.get(&key) {
+            if entry.styled == *styled {
+                return (entry.nodes.clone(), entry.size);
+            }
+        }
+        // Shape the description exactly as the caller laid it out: the same
+        // description, shaped by the same shaper, so the glyphs the caller
+        // measured the caret against are the glyphs that get painted.
+        let layout = floom_text::TextLayout::new(styled);
+        let size = layout.size();
+        let mut groups: Vec<(floom_types::Color, Vec<floom_text::GlyphRun>)> = Vec::new();
+        for run in layout.runs() {
+            let glyph_run = floom_text::GlyphRun {
+                font: run.font.clone(),
+                font_size: run.font_size,
+                origin: run.origin,
+                glyphs: run.glyphs.clone(),
+            };
+            match groups.iter_mut().find(|(color, _)| *color == run.color) {
+                Some((_, runs)) => runs.push(glyph_run),
+                None => groups.push((run.color, vec![glyph_run])),
+            }
+        }
+        let mut nodes = Vec::with_capacity(groups.len());
+        for (color, runs) in groups {
+            // The string the runs were shaped from travels with the resource.
+            // It is the only cheap chance to do so: shaping is lossy (a
+            // ligature or a fallback font makes glyph id -> character
+            // many-to-many), so a backend that needs characters rather than
+            // ink cannot recover them later.
+            let id = self.resources.insert(Resource {
+                kind: ResourceKind::glyph_runs_with_text(runs, styled.text.as_str()),
+            });
+            nodes.push((color, id));
+        }
+        // The cache is bounded, because an editor produces a *new*
+        // description on every keystroke and an unbounded map would grow for
+        // as long as the editor is open. Dropping the whole map is the crude
+        // way to bound it, and it is the right one here: the entries are a
+        // cache of a shape that is cheap to rebuild, and a map that evicts one
+        // entry at a time would need an order the hash map does not have.
+        if self.styled_glyphs.len() >= STYLED_GLYPH_CACHE_LIMIT {
+            self.styled_glyphs.clear();
+        }
+        self.styled_glyphs.insert(
+            key,
+            StyledGlyphCacheEntry {
+                styled: styled.clone(),
+                nodes: nodes.clone(),
+                size,
+            },
+        );
+        (nodes, size)
     }
 
     /// Interns a shaped glyph run, reusing the resource across frames.
@@ -4509,6 +4638,21 @@ impl PaintContext for NodePaintContext<'_> {
             glyphs,
             color,
         });
+    }
+
+    fn fill_styled_text(&mut self, origin: Point, styled: &StyledText) {
+        if styled.text.is_empty() || styled.base.size <= 0.0 {
+            return;
+        }
+        let (nodes, size) = self.styled_glyph_nodes(styled);
+        for (color, glyphs) in nodes {
+            self.push(floom_scene::SceneNode::Text {
+                origin,
+                size,
+                glyphs,
+                color,
+            });
+        }
     }
 
     fn draw_image(&mut self, bounds: Rect, image: ResourceId) {

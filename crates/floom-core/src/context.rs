@@ -2,6 +2,7 @@
 
 use floom_types::{
     Brush, Color, ElementId, Event, Filter, FontWeight, Point, Rect, ResourceId, Shadow, Size,
+    StyledText,
 };
 
 /// Context available while creating an element from a widget.
@@ -349,6 +350,33 @@ pub trait PaintContext {
         color: Color,
     ) {
         let _ = (origin, text, size, weight, color);
+    }
+
+    /// Text described in *ranges* rather than as one string.
+    ///
+    /// The plain [`Self::fill_text`] op carries one string in one ink. An
+    /// editor needs more than that: a line can be a keyword in one colour, a
+    /// string literal in another, and the rest in a third, and the geometry
+    /// the caret uses has to be the geometry of *that* text.
+    ///
+    /// So this op carries a [`StyledText`] — the text, the style it starts
+    /// with, and the ranges that differ — and the host shapes it. The
+    /// description is *data*, not a shaped result, so it crosses the layer
+    /// boundary without the lower layer naming the higher layer's types; and
+    /// because the editor lays out with the *same* description it paints
+    /// with, the caret lands on the pixels.
+    ///
+    /// The host shapes the description exactly as given. It does not re-wrap
+    /// the text to the element's box the way [`Self::fill_text`] does,
+    /// because a caller that laid out against a width and a host that wrapped
+    /// against a different one would put the caret and the pixels in
+    /// different places.
+    ///
+    /// Defaults to a no-op, like [`Self::fill_text`]: a host that cannot shape
+    /// styled text draws nothing rather than drawing the text in one colour
+    /// and calling it highlighted.
+    fn fill_styled_text(&mut self, origin: Point, styled: &StyledText) {
+        let _ = (origin, styled);
     }
 
     /// Fills an arbitrary vector path.

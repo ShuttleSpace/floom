@@ -243,6 +243,11 @@ for _names, _level in [
             "floom-animation", "floom-focus", "floom-gesture", "floom-overlay", "floom-store", "floom-task", "floom-forms",
             "floom-navigation", "floom-persistence", "floom-services",
             "floom-error", "floom-ime", "floom-editor",
+            # `floom-editor-core` is the editor's *model* -- a rope buffer, a
+            # cursor, a selection, modes, registers, movement and word motions.
+            # It reaches for nothing inside the workspace, so it sits with the
+            # other model crates and the checker sees no edges at all.
+            "floom-editor-core",
             # The design systems (`floom-theme`, `floom-design`, `floom-material`,
             # `floom-cupertino`, `floom-fluent`, `floom-harmony`) are deliberately
             # absent. They moved to the `floom-ui` workspace, which the root
