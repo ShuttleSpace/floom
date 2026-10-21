@@ -64,6 +64,7 @@ use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::checkbox::CheckboxProps;
 use floom_core_theme::theme::{MultiTheme, Theme};
 use floom_core_theme::tokens::color::Color;
+use floom_core_theme::tokens::color::to_engine_color as to_paint;
 use floom_core_theme::tokens::color_ext::with_alpha;
 use floom_ui_composites::state::{LayerShape, StateLayer};
 use floom_ui_composites::{Checkbox, CheckboxStyle};
@@ -99,16 +100,6 @@ const LAYER_ALPHA_PRESSED: u8 = 30;
 const DISABLED_CONTAINER_ALPHA: u8 = 12;
 const DISABLED_ALPHA: u8 = 38;
 
-/// Design-system colour -> engine colour. A field copy: both are plain
-/// `{r, g, b, a}` byte structs.
-fn to_paint(c: Color) -> PaintColor {
-    PaintColor {
-        r: c.r,
-        g: c.g,
-        b: c.b,
-        a: c.a,
-    }
-}
 
 /// Material's checkbox. One boolean; grouping is the host's job, in this version
 /// and in v1's.

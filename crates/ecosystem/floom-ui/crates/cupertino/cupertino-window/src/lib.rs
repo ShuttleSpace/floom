@@ -84,6 +84,7 @@ use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::window::WindowProps;
 use floom_core_theme::theme::{MultiTheme, Theme};
 use floom_core_theme::tokens::color::Color;
+use floom_core_theme::tokens::color::to_engine_color as to_paint;
 use floom_core_theme::tokens::color_ext::with_alpha;
 
 /// The gap between the dots. A v1 literal.
@@ -297,6 +298,3 @@ impl Default for CupertinoWindow {
     }
 }
 
-fn to_paint(c: Color) -> PaintColor {
-    PaintColor { r: c.r, g: c.g, b: c.b, a: c.a }
-}

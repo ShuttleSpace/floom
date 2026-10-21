@@ -96,6 +96,7 @@ use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::bottom_navigation::BottomNavigationProps;
 use floom_core_theme::theme::{MultiTheme, Theme};
 use floom_core_theme::tokens::color::Color;
+use floom_core_theme::tokens::color::to_engine_color as to_paint;
 use floom_core_theme::tokens::color_ext::with_alpha;
 
 /// A builder for one destination's icon.
@@ -278,20 +279,5 @@ impl FluentBottomNavigation {
 impl Default for FluentBottomNavigation {
     fn default() -> Self {
         Self::new()
-    }
-}
-
-/// The bar: a row of destinations and the box they sit in.
-///
-/// The engine has no bottom navigation, so the kit holds one -- see the module
-/// documentation.
-
-/// Theme colour -> engine colour.
-fn to_paint(c: Color) -> PaintColor {
-    PaintColor {
-        r: c.r,
-        g: c.g,
-        b: c.b,
-        a: c.a,
     }
 }

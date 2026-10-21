@@ -43,11 +43,8 @@ use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::overlay::OverlayProps;
 use floom_core_theme::theme::{MultiTheme, Theme};
 use floom_core_theme::tokens::color::Color;
+use floom_core_theme::tokens::color::to_engine_color as to_paint;
 
-/// Design-system colour -> engine colour.
-fn to_paint(c: Color) -> PaintColor {
-    PaintColor { r: c.r, g: c.g, b: c.b, a: c.a }
-}
 
 /// A v1-shaped dismiss callback, kept so `props()` still reports one.
 type Callback = Arc<dyn Fn() + Send + Sync + 'static>;

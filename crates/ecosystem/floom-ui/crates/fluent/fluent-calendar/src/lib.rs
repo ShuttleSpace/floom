@@ -92,6 +92,7 @@ use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::calendar::{CalendarDate as ThemeDate, CalendarProps};
 use floom_core_theme::theme::{MultiTheme, Theme};
 use floom_core_theme::tokens::color::Color;
+use floom_core_theme::tokens::color::to_engine_color as to_paint;
 
 
 
@@ -271,14 +272,4 @@ impl Default for FluentCalendar {
     fn default() -> Self {
         Self::new()
     }
-}
-
-/// The calendar's body: the header, the weekday row and the grid.
-///
-/// A widget of its own because the state it draws changes after the tree is
-/// mounted. The keys its children carry hold that state, so the parts that
-/// changed are remounted and the parts that did not are not.
-/// Theme colour -> engine colour.
-fn to_paint(c: Color) -> PaintColor {
-    PaintColor { r: c.r, g: c.g, b: c.b, a: c.a }
 }

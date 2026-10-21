@@ -63,6 +63,7 @@ use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::validation_messages::ValidationMessagesProps;
 use floom_core_theme::theme::{MultiTheme, Theme};
 use floom_core_theme::tokens::color::Color;
+use floom_core_theme::tokens::color::to_engine_color as to_paint;
 
 /// The shared list of messages.
 ///
@@ -228,20 +229,5 @@ impl FluentValidationMessages {
 impl Default for FluentValidationMessages {
     fn default() -> Self {
         Self::new()
-    }
-}
-
-/// The list of messages.
-///
-/// The engine has no shared list, so the kit holds one -- see the module
-/// documentation.
-
-/// Theme colour -> engine colour.
-fn to_paint(c: Color) -> PaintColor {
-    PaintColor {
-        r: c.r,
-        g: c.g,
-        b: c.b,
-        a: c.a,
     }
 }

@@ -15,6 +15,7 @@ use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::badge::BadgeProps;
 use floom_core_theme::theme::{MultiTheme, Theme};
 use floom_core_theme::tokens::color::Color;
+use floom_core_theme::tokens::color::to_engine_color as to_paint;
 use floom_signal::{RwSignal, SignalGet};
 use floom_types::Color as PaintColor;
 use floom_ui_composites::Badge;
@@ -113,7 +114,3 @@ impl Default for FluentBadge {
     }
 }
 
-/// List colour -> engine colour.
-fn to_paint(c: Color) -> PaintColor {
-    PaintColor::rgba(c.r, c.g, c.b, c.a)
-}

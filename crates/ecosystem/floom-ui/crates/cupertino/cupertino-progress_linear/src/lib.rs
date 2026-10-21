@@ -14,6 +14,7 @@ use floom_core_theme::component_tokens::{ComponentId, ComponentTokens, ProgressL
 use floom_core_theme::props::progress_linear::ProgressLinearProps;
 use floom_core_theme::theme::{MultiTheme, Theme};
 use floom_core_theme::tokens::color::Color;
+use floom_core_theme::tokens::color::to_engine_color as to_paint;
 use floom_widget_runtime::theme_signal;
 
 fn progress_linear_tokens(theme: &MultiTheme) -> ProgressLinearTokens {
@@ -23,9 +24,6 @@ fn progress_linear_tokens(theme: &MultiTheme) -> ProgressLinearTokens {
     }
 }
 
-fn to_paint(c: Color) -> PaintColor {
-    PaintColor { r: c.r, g: c.g, b: c.b, a: c.a }
-}
 
 /// Cupertino's resolved appearance.
 #[derive(Debug, Clone, Copy, PartialEq)]

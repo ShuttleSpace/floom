@@ -47,6 +47,7 @@ use floom_core_theme::global_theme::DesignSystem;
 use floom_core_theme::props::radio::RadioProps;
 use floom_core_theme::theme::{MultiTheme, Theme};
 use floom_core_theme::tokens::color::Color;
+use floom_core_theme::tokens::color::to_engine_color as to_paint;
 use floom_core_theme::tokens::color_ext::with_alpha;
 use floom_ui_composites::{FocusRing, Radio, RadioStyle};
 use floom_ui_composites::state::{LayerShape, StateLayer};
@@ -73,15 +74,6 @@ const DISABLED_ALPHA: u8 = 38;
 /// v1 wrote `outline(2.0)`; `FocusRing` carries the number as a field.
 const FOCUS_RING_WIDTH: f32 = 2.0;
 
-/// Design-system colour -> engine colour.
-fn to_paint(c: Color) -> PaintColor {
-    PaintColor {
-        r: c.r,
-        g: c.g,
-        b: c.b,
-        a: c.a,
-    }
-}
 
 /// Cupertino's radio. One option; grouping is the host's job, in this version and
 /// in v1's.

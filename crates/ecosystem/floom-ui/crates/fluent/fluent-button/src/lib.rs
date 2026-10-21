@@ -79,6 +79,7 @@ use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::button::{ButtonProps, ButtonSize, ButtonVariant};
 use floom_core_theme::theme::{MultiTheme, Theme};
 use floom_core_theme::tokens::color::Color;
+use floom_core_theme::tokens::color::to_engine_color as to_paint;
 use floom_core_theme::tokens::color_ext::*;
 
 const DESIGN_SYSTEM: &str = "fluent";
@@ -319,16 +320,6 @@ fn undim(c: PaintColor) -> PaintColor {
     PaintColor { a: c.a.saturating_mul(2), ..c }
 }
 
-/// Design-system colour -> engine colour. Both are plain `{r, g, b, a}` byte
-/// structs; `Color::to_peniko` goes the other way.
-fn to_paint(c: Color) -> PaintColor {
-    PaintColor {
-        r: c.r,
-        g: c.g,
-        b: c.b,
-        a: c.a,
-    }
-}
 
 /// The label as its own widget, for callers that want to compose by hand.
 pub fn label_widget(text: &str) -> Text {

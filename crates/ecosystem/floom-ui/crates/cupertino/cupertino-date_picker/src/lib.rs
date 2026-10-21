@@ -98,6 +98,7 @@ use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::date_picker::{DatePickerProps, DateValue as ThemeDateValue};
 use floom_core_theme::theme::{MultiTheme, Theme};
 use floom_core_theme::tokens::color::Color;
+use floom_core_theme::tokens::color::to_engine_color as to_paint;
 use floom_core_theme::tokens::color_ext::with_alpha;
 
 /// The month the calendar shows when nothing is chosen: August 2026.
@@ -362,13 +363,3 @@ impl Default for CupertinoDatePicker {
     }
 }
 
-/// The mounted picker: the field, and the calendar it opens.
-
-fn to_paint(c: Color) -> PaintColor {
-    PaintColor {
-        r: c.r,
-        g: c.g,
-        b: c.b,
-        a: c.a,
-    }
-}

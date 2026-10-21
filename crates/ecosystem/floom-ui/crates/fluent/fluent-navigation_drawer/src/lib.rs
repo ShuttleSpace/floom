@@ -70,6 +70,7 @@ use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::navigation_drawer::{NavigationDrawerProps, NavigationDrawerSide};
 use floom_core_theme::theme::{MultiTheme, Theme};
 use floom_core_theme::tokens::color::Color;
+use floom_core_theme::tokens::color::to_engine_color as to_paint;
 use floom_core_theme::tokens::color_ext::with_alpha;
 
 /// The scrim's alpha. A v1 literal.
@@ -414,7 +415,3 @@ fn presence(open: &SharedFlag, transition: PresenceTransition, child: Child) -> 
     conditional.presence(transition).show(child)
 }
 
-/// Theme colour -> engine colour.
-fn to_paint(c: Color) -> PaintColor {
-    PaintColor { r: c.r, g: c.g, b: c.b, a: c.a }
-}

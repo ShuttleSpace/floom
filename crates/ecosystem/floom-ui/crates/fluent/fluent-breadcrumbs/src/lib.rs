@@ -85,6 +85,7 @@ use floom_widgets::{Align, Axis, Pressable, Stack, Surface, Text};
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::theme::{MultiTheme, Theme};
 use floom_core_theme::tokens::color::Color;
+use floom_core_theme::tokens::color::to_engine_color as to_paint;
 
 /// A callback in the shape 2.0's slots need.
 type Callback = Arc<dyn Fn(usize) + Send + Sync + 'static>;
@@ -292,7 +293,3 @@ impl Default for FluentBreadcrumbs {
     }
 }
 
-/// Theme colour -> engine colour.
-fn to_paint(c: Color) -> PaintColor {
-    PaintColor { r: c.r, g: c.g, b: c.b, a: c.a }
-}

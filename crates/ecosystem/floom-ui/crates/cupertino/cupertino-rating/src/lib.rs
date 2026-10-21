@@ -66,6 +66,7 @@ use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::rating::RatingProps;
 use floom_core_theme::theme::{MultiTheme, Theme};
 use floom_core_theme::tokens::color::Color;
+use floom_core_theme::tokens::color::to_engine_color as to_paint;
 use floom_widget_cupertino_icon::{VIEW_BOX, cupertino_icon_path};
 
 const DESIGN_SYSTEM: &str = "cupertino";
@@ -334,7 +335,3 @@ impl Default for CupertinoRating {
     }
 }
 
-/// Theme colour -> engine colour.
-fn to_paint(c: Color) -> PaintColor {
-    PaintColor { r: c.r, g: c.g, b: c.b, a: c.a }
-}

@@ -50,6 +50,7 @@ use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::toolbar::ToolbarProps;
 use floom_core_theme::theme::{MultiTheme, Theme};
 use floom_core_theme::tokens::color::Color;
+use floom_core_theme::tokens::color::to_engine_color as to_paint;
 use floom_core_theme::tokens::color_ext::*;
 
 /// Opaque black, the base the toolbar's elevation shadow tints.
@@ -106,15 +107,6 @@ impl ToolbarTokensHeightNote {
 pub type ActionsBuilder =
     std::sync::Arc<dyn Fn() -> Box<dyn WidgetAny> + Send + Sync + 'static>;
 
-/// Design-system colour -> engine colour.
-fn to_paint(c: Color) -> PaintColor {
-    PaintColor {
-        r: c.r,
-        g: c.g,
-        b: c.b,
-        a: c.a,
-    }
-}
 
 /// The theme's weight -> the engine's.
 ///

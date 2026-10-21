@@ -58,3 +58,17 @@ impl Color {
         )
     }
 }
+
+/// The theme's colour -> the engine's.
+///
+/// The theme keeps its own colour type; the engine paints with its own. This
+/// is the boundary between them, and it belongs here rather than in each of
+/// the kits that stand at it.
+pub fn to_engine_color(c: Color) -> floom_types::Color {
+    floom_types::Color {
+        r: c.r,
+        g: c.g,
+        b: c.b,
+        a: c.a,
+    }
+}

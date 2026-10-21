@@ -48,6 +48,7 @@ use floom_core_theme::component_tokens::{ComponentId, ComponentTokens, ItemGroup
 use floom_core_theme::props::item_group::ItemGroupProps;
 use floom_core_theme::theme::{MultiTheme, Theme};
 use floom_core_theme::tokens::color::Color;
+use floom_core_theme::tokens::color::to_engine_color as to_paint;
 
 /// A builder for one row's content.
 ///
@@ -56,15 +57,6 @@ use floom_core_theme::tokens::color::Color;
 pub type RowBuilder =
     std::sync::Arc<dyn Fn() -> Box<dyn floom_core::WidgetAny> + Send + Sync + 'static>;
 
-/// Design-system colour -> engine colour.
-fn to_paint(c: Color) -> PaintColor {
-    PaintColor {
-        r: c.r,
-        g: c.g,
-        b: c.b,
-        a: c.a,
-    }
-}
 
 fn item_group_tokens(theme: &MultiTheme) -> ItemGroupTokens {
     match theme.component(ComponentId::ItemGroup) {

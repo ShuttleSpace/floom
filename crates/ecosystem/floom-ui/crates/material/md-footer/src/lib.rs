@@ -46,6 +46,7 @@ use floom_core_theme::component_tokens::{ComponentId, ComponentTokens, FooterTok
 use floom_core_theme::props::footer::FooterProps;
 use floom_core_theme::theme::{MultiTheme, Theme};
 use floom_core_theme::tokens::color::Color;
+use floom_core_theme::tokens::color::to_engine_color as to_paint;
 use floom_core_theme::tokens::color_ext::*;
 
 /// Opaque black, the base the elevation shadow tints.
@@ -71,15 +72,6 @@ const ELEVATION_ALPHA: u8 = 30;
 pub type ChildBuilder =
     std::sync::Arc<dyn Fn() -> Box<dyn WidgetAny> + Send + Sync + 'static>;
 
-/// Design-system colour -> engine colour.
-fn to_paint(c: Color) -> PaintColor {
-    PaintColor {
-        r: c.r,
-        g: c.g,
-        b: c.b,
-        a: c.a,
-    }
-}
 
 fn footer_tokens(theme: &MultiTheme) -> FooterTokens {
     match theme.component(ComponentId::Footer) {

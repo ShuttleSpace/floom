@@ -21,6 +21,7 @@ use floom_core_theme::component_tokens::{ComponentId, ComponentTokens, ListSubhe
 use floom_core_theme::props::list_subheader::ListSubheaderProps;
 use floom_core_theme::theme::{MultiTheme, Theme};
 use floom_core_theme::tokens::color::Color;
+use floom_core_theme::tokens::color::to_engine_color as to_paint;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct CupertinoListSubheaderStyle {
@@ -120,7 +121,3 @@ impl Default for CupertinoListSubheader {
     }
 }
 
-/// Design-system colour -> engine colour.
-fn to_paint(c: Color) -> PaintColor {
-    PaintColor { r: c.r, g: c.g, b: c.b, a: c.a }
-}

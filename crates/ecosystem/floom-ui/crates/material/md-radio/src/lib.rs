@@ -45,6 +45,7 @@ use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::radio::RadioProps;
 use floom_core_theme::theme::{MultiTheme, Theme};
 use floom_core_theme::tokens::color::Color;
+use floom_core_theme::tokens::color::to_engine_color as to_paint;
 use floom_core_theme::tokens::color_ext::with_alpha;
 use floom_ui_composites::{FocusRing, Radio, RadioStyle};
 use floom_ui_composites::state::{LayerShape, StateLayer};
@@ -70,15 +71,6 @@ const HALO_ALPHA_PRESSED: u8 = 30;
 /// `disabled_color` cannot carry. See `resolved_style`.
 const DISABLED_ALPHA: u8 = 38;
 
-/// Design-system colour -> engine colour.
-fn to_paint(c: Color) -> PaintColor {
-    PaintColor {
-        r: c.r,
-        g: c.g,
-        b: c.b,
-        a: c.a,
-    }
-}
 
 /// Material's radio. One option; grouping is the host's job, in this version and
 /// in v1's.

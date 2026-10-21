@@ -1,3 +1,4 @@
+use floom_core_theme::tokens::color::to_engine_color as to_paint;
 //! Fluent linear progress, ported to Floom 2.0.
 //! Key: centred flow child (Centred), rounded fill, exact percent, static segment.
 use floom_signal::{RwSignal, SignalGet};
@@ -6,7 +7,7 @@ use floom_widgets::{FillPlacement, Indeterminate, LinearProgress, LinearProgress
 use floom_core_theme::{component_tokens::{ComponentId, ComponentTokens, ProgressLinearTokens}, props::progress_linear::ProgressLinearProps, theme::{MultiTheme, Theme}, tokens::color::Color};
 use floom_widget_runtime::theme_signal;
 fn progress_linear_tokens(t:&MultiTheme)->ProgressLinearTokens{match t.component(ComponentId::ProgressLinear){ComponentTokens::ProgressLinear(x)=>x,_=>unreachable!()}}
-fn to_paint(c:Color)->PaintColor{PaintColor{r:c.r,g:c.g,b:c.b,a:c.a}}
+
 #[derive(Debug,Clone,Copy,PartialEq)]pub struct FluentProgressLinearStyle{pub design_system:&'static str,pub track_height:f32,pub border_radius:f32,pub fill_radius:f32,pub track_color:Color,pub progress_color:Color}
 pub struct FluentProgressLinear{props:ProgressLinearProps,theme:RwSignal<MultiTheme>}
 impl FluentProgressLinear{pub fn new()->Self{Self{props:ProgressLinearProps::default(),theme:theme_signal()}}

@@ -10,6 +10,8 @@ edition = "2021"
 # to (`peniko::Color`, `parley::style::FontWeight`). See
 # `docs/porting-floem-ui-to-2.0.md`.
 floom-signal = { path = "../../../../floom-signal" }
+# The engine's colour type, for the boundary conversion.
+floom-types = { path = "../../../../floom-types" }
 peniko = "0.6"
 parley = "0.7"
 

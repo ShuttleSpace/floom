@@ -71,6 +71,7 @@ use floom_widgets::{Axis, Stack, Surface};
 use floom_core_theme::layout::layout_signal;
 use floom_core_theme::theme::{MultiTheme, Theme};
 use floom_core_theme::tokens::color::Color;
+use floom_core_theme::tokens::color::to_engine_color as to_paint;
 use floom_widget_runtime::theme_signal;
 
 /// The main region's appearance, in the terms v1 used.
@@ -203,7 +204,3 @@ impl Default for MaterialMain {
     }
 }
 
-/// Theme colour -> engine colour.
-fn to_paint(c: Color) -> PaintColor {
-    PaintColor { r: c.r, g: c.g, b: c.b, a: c.a }
-}

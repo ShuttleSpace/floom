@@ -100,6 +100,7 @@ use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::form::FormProps;
 use floom_core_theme::theme::{MultiTheme, Theme};
 use floom_core_theme::tokens::color::Color;
+use floom_core_theme::tokens::color::to_engine_color as to_paint;
 use floom_widget_runtime::theme_signal;
 
 /// A callback in the shape 2.0's slots need.
@@ -476,7 +477,3 @@ fn build_button(ctx: &SubmitContext, valid: bool) -> Box<dyn floom_widgets::Widg
     )
 }
 
-/// Theme colour -> engine colour.
-fn to_paint(c: Color) -> PaintColor {
-    PaintColor { r: c.r, g: c.g, b: c.b, a: c.a }
-}

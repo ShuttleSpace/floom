@@ -41,6 +41,7 @@ use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::slider::SliderProps;
 use floom_core_theme::theme::{MultiTheme, Theme};
 use floom_core_theme::tokens::color::Color;
+use floom_core_theme::tokens::color::to_engine_color as to_paint;
 use floom_core_theme::tokens::color_ext::with_alpha;
 use floom_ui_composites::{Slider, SliderStyle};
 
@@ -50,15 +51,6 @@ const THUMB_SHADOW_BLUR: f32 = 3.0;
 const THUMB_SHADOW_SPREAD: f32 = 0.0;
 const THUMB_SHADOW_ALPHA: u8 = 60;
 
-/// Design-system colour -> engine colour.
-fn to_paint(c: Color) -> PaintColor {
-    PaintColor {
-        r: c.r,
-        g: c.g,
-        b: c.b,
-        a: c.a,
-    }
-}
 
 /// Cupertino's slider.
 pub struct CupertinoSlider {

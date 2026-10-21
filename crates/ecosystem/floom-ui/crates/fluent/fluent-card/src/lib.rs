@@ -40,6 +40,7 @@ use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::card::CardProps;
 use floom_core_theme::theme::{MultiTheme, Theme};
 use floom_core_theme::tokens::color::Color;
+use floom_core_theme::tokens::color::to_engine_color as to_paint;
 use floom_core_theme::tokens::color_ext::*;
 use floom_core_theme::tokens::shadow::ShadowData;
 
@@ -50,15 +51,6 @@ use floom_core_theme::tokens::shadow::ShadowData;
 pub type ContentBuilder =
     std::sync::Arc<dyn Fn() -> Box<dyn floom_core::WidgetAny> + Send + Sync + 'static>;
 
-/// Design-system colour -> engine colour.
-fn to_paint(c: Color) -> PaintColor {
-    PaintColor {
-        r: c.r,
-        g: c.g,
-        b: c.b,
-        a: c.a,
-    }
-}
 
 /// Translate a design-system shadow token into the engine-neutral `Shadow`.
 ///

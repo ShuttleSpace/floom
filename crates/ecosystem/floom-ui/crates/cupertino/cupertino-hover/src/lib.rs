@@ -59,6 +59,7 @@ use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::hover::HoverProps;
 use floom_core_theme::theme::{MultiTheme, Theme};
 use floom_core_theme::tokens::color::Color;
+use floom_core_theme::tokens::color::to_engine_color as to_paint;
 use floom_core_theme::tokens::color_ext::with_alpha;
 
 /// A builder for the box's content.
@@ -200,20 +201,5 @@ impl CupertinoHover {
 impl Default for CupertinoHover {
     fn default() -> Self {
         Self::new()
-    }
-}
-
-/// The box that fills while the pointer is over it.
-///
-/// The engine has no "fills while the pointer is over it" widget, so the kit
-/// holds one -- see the module documentation.
-
-/// Theme colour -> engine colour.
-fn to_paint(c: Color) -> PaintColor {
-    PaintColor {
-        r: c.r,
-        g: c.g,
-        b: c.b,
-        a: c.a,
     }
 }

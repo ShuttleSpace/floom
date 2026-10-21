@@ -41,19 +41,11 @@ use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::alert::{AlertProps, AlertVariant};
 use floom_core_theme::theme::{MultiTheme, Theme};
 use floom_core_theme::tokens::color::Color;
+use floom_core_theme::tokens::color::to_engine_color as to_paint;
 use floom_core_theme::tokens::color_ext::*;
 use floom_core_theme::tokens::typography::FontWeight as ThemeFontWeight;
 use floom_widget_cupertino_icon::CupertinoIcon;
 
-/// Design-system colour -> engine colour.
-fn to_paint(c: Color) -> PaintColor {
-    PaintColor {
-        r: c.r,
-        g: c.g,
-        b: c.b,
-        a: c.a,
-    }
-}
 
 /// The theme's weight enum -> the engine's.
 ///

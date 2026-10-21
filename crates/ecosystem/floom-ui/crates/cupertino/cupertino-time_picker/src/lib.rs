@@ -97,6 +97,7 @@ use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::time_picker::{TimePickerProps, TimeValue as ThemeTimeValue};
 use floom_core_theme::theme::{MultiTheme, Theme};
 use floom_core_theme::tokens::color::Color;
+use floom_core_theme::tokens::color::to_engine_color as to_paint;
 use floom_core_theme::tokens::color_ext::with_alpha;
 
 const INCREASE: &str = "+";
@@ -355,13 +356,3 @@ impl Default for CupertinoTimePicker {
     }
 }
 
-/// The mounted picker: the field, and the panel it opens.
-
-fn to_paint(c: Color) -> PaintColor {
-    PaintColor {
-        r: c.r,
-        g: c.g,
-        b: c.b,
-        a: c.a,
-    }
-}

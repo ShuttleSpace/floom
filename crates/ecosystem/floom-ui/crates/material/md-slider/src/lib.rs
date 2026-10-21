@@ -32,6 +32,7 @@ use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::slider::SliderProps;
 use floom_core_theme::theme::{MultiTheme, Theme};
 use floom_core_theme::tokens::color::Color;
+use floom_core_theme::tokens::color::to_engine_color as to_paint;
 use floom_core_theme::tokens::color_ext::with_alpha;
 use floom_ui_composites::{Slider, SliderStyle};
 use floom_widget_runtime::theme_signal;
@@ -42,15 +43,6 @@ const HALO_SIZE: f32 = 40.0;
 /// where v1's dragging alpha went.
 const HALO_ALPHA: u8 = 20;
 
-/// Design-system colour -> engine colour.
-fn to_paint(c: Color) -> PaintColor {
-    PaintColor {
-        r: c.r,
-        g: c.g,
-        b: c.b,
-        a: c.a,
-    }
-}
 
 /// Material's slider.
 pub struct MdSlider {

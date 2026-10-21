@@ -67,6 +67,7 @@ use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::expansion_panels::ExpansionPanelsProps;
 use floom_core_theme::theme::{MultiTheme, Theme};
 use floom_core_theme::tokens::color::Color;
+use floom_core_theme::tokens::color::to_engine_color as to_paint;
 use floom_core_theme::tokens::color_ext::*;
 use floom_widget_runtime::theme_signal;
 
@@ -337,14 +338,3 @@ impl Default for MdExpansionPanels {
 /// v1's `Label` drew at the controls' shared label size; kept here so the header
 /// title does not silently change size when a component is ported.
 const LABEL_FONT_SIZE: f32 = 14.0;
-
-/// Design-system colour -> engine colour. Both are plain `{r, g, b, a}` byte
-/// structs, so this is a field copy.
-fn to_paint(c: Color) -> PaintColor {
-    PaintColor {
-        r: c.r,
-        g: c.g,
-        b: c.b,
-        a: c.a,
-    }
-}

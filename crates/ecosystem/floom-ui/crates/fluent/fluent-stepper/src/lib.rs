@@ -94,6 +94,7 @@ use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::stepper::StepperProps;
 use floom_core_theme::theme::{MultiTheme, Theme};
 use floom_core_theme::tokens::color::Color;
+use floom_core_theme::tokens::color::to_engine_color as to_paint;
 use floom_types::Color as PaintColor;
 use floom_widget_fluent_icon::{VIEW_BOX, FluentIcon};
 
@@ -117,15 +118,6 @@ const CONNECTOR_MIN_WIDTH: f32 = 16.0;
 /// The tick's size, as a fraction of the marker's. A v1 literal.
 const CHECK_SCALE: f32 = 0.55;
 
-/// Theme colour -> engine colour.
-fn to_paint(c: Color) -> PaintColor {
-    PaintColor {
-        r: c.r,
-        g: c.g,
-        b: c.b,
-        a: c.a,
-    }
-}
 
 /// Read the selected step out of the shared map.
 fn read_selected(selected: &SharedMap) -> usize {

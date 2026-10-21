@@ -96,6 +96,7 @@ use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::confirm_edit::ConfirmEditProps;
 use floom_core_theme::theme::{MultiTheme, Theme};
 use floom_core_theme::tokens::color::Color;
+use floom_core_theme::tokens::color::to_engine_color as to_paint;
 use floom_widget_md_icon::{MD_ICON_VIEW_BOX, MdIcon};
 use floom_widget_runtime::theme_signal;
 
@@ -112,15 +113,6 @@ const INPUT_PADDING_HORIZ: f32 = 8.0;
 /// The field's outline width. A v1 literal.
 const INPUT_BORDER: f32 = 1.0;
 
-/// Theme colour -> engine colour.
-fn to_paint(c: Color) -> PaintColor {
-    PaintColor {
-        r: c.r,
-        g: c.g,
-        b: c.b,
-        a: c.a,
-    }
-}
 
 /// Write a shared buffer.
 fn write_buffer(buffer: &SharedBuffer, text: impl Into<String>) {

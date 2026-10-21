@@ -37,6 +37,7 @@ use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::progress_circular::ProgressCircularProps;
 use floom_core_theme::theme::{MultiTheme, Theme};
 use floom_core_theme::tokens::color::Color;
+use floom_core_theme::tokens::color::to_engine_color as to_paint;
 use floom_widget_runtime::theme_signal;
 
 const DESIGN_SYSTEM: &str = "material";
@@ -161,7 +162,3 @@ impl Default for MaterialProgressCircular {
     }
 }
 
-/// Design-system colour -> engine colour.
-fn to_paint(c: Color) -> PaintColor {
-    PaintColor { r: c.r, g: c.g, b: c.b, a: c.a }
-}

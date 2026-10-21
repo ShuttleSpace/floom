@@ -106,6 +106,7 @@ use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::pull_to_refresh::PullToRefreshProps;
 use floom_core_theme::theme::{MultiTheme, Theme};
 use floom_core_theme::tokens::color::Color;
+use floom_core_theme::tokens::color::to_engine_color as to_paint;
 
 
 /// The pull distance, shared between the kit and whoever drives the gesture.
@@ -289,13 +290,4 @@ impl Default for CupertinoPullToRefresh {
     fn default() -> Self {
         Self::new()
     }
-}
-
-/// The column: the indicator, then the caller's content.
-///
-/// A kit-local widget because the engine has none that re-declares its
-/// children when a shared value changes -- see the module note.
-/// Theme colour -> engine colour.
-fn to_paint(c: Color) -> PaintColor {
-    PaintColor { r: c.r, g: c.g, b: c.b, a: c.a }
 }

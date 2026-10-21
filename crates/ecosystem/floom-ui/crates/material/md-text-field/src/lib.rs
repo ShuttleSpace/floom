@@ -110,6 +110,7 @@ use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::text_field::TextFieldProps;
 use floom_core_theme::theme::{MultiTheme, Theme};
 use floom_core_theme::tokens::color::Color;
+use floom_core_theme::tokens::color::to_engine_color as to_paint;
 use floom_core_theme::tokens::color_ext::with_alpha;
 use floom_ui_composites::{TextField, TextFieldStyle};
 use floom_widget_runtime::theme_signal;
@@ -127,15 +128,6 @@ const DISABLED_ALPHA: u8 = 38;
 /// v1's disabled fill: `on_surface` at 4.
 const DISABLED_FILL_ALPHA: u8 = 4;
 
-/// Design-system colour -> engine colour.
-fn to_paint(c: Color) -> PaintColor {
-    PaintColor {
-        r: c.r,
-        g: c.g,
-        b: c.b,
-        a: c.a,
-    }
-}
 
 /// The design-system colour at an explicit alpha, in the engine's type.
 ///

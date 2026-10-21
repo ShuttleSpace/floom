@@ -75,6 +75,7 @@ use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::button::{ButtonProps, ButtonSize, ButtonVariant};
 use floom_core_theme::theme::{MultiTheme, Theme};
 use floom_core_theme::tokens::color::Color;
+use floom_core_theme::tokens::color::to_engine_color as to_paint;
 use floom_core_theme::tokens::color_ext::*;
 use floom_widget_runtime::theme_signal;
 
@@ -370,16 +371,6 @@ fn undim(c: PaintColor) -> PaintColor {
     PaintColor { a: c.a.saturating_mul(2), ..c }
 }
 
-/// Design-system colour -> engine colour. Both are plain `{r, g, b, a}` byte
-/// structs; `Color::to_peniko` goes the other way.
-fn to_paint(c: Color) -> PaintColor {
-    PaintColor {
-        r: c.r,
-        g: c.g,
-        b: c.b,
-        a: c.a,
-    }
-}
 
 /// The M3 state layer: an 8% (hover) / 12% (press) overlay of the variant's own
 /// foreground colour, mixed over the base fill.
