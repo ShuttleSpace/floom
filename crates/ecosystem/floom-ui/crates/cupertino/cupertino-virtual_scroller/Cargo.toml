@@ -10,6 +10,9 @@ floom-signal = { path = "../../../../../floom-signal" }
 floom-core = { path = "../../../../../floom-core" }
 floom-types = { path = "../../../../../floom-types" }
 floom-widgets = { path = "../../../../../floom-widgets" }
+# The engine's VirtualScroller: a viewport that mounts only the rows
+# it can show.
+floom-ui-composites = { path = "../../floom-ui-composites" }
 
 [dev-dependencies]
 floom-core-theme = { workspace = true, features = ["cupertino"] }

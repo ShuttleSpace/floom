@@ -15,6 +15,7 @@
 //! one consumer outside the crate. The rest followed once the layering held.
 
 mod any;
+pub mod builders;
 pub mod badge;
 pub mod chip;
 pub mod confirm_edit;
@@ -47,6 +48,7 @@ pub mod range_slider;
 pub mod tree_view;
 pub mod text_field;
 pub mod validation_messages;
+pub mod virtual_scroller;
 pub mod window_viewer;
 pub mod tooltip;
 pub mod checkbox;
@@ -89,6 +91,8 @@ pub use tree_view::{RowRef, SharedTree, TreeNode, TreeView, TreeViewStyle};
 pub use tree_view::{node_at, toggle_path, visible_rows};
 pub use tooltip::{Tooltip, TooltipStyle};
 pub use validation_messages::{ValidationMessagesList, ValidationMessagesStyle};
+pub use virtual_scroller::VirtualScroller;
+pub use builders::WidgetBuilder;
 pub use window_viewer::{WindowViewer, WindowViewerStyle};
 pub use text_field::{TextCallback, TextField, TextFieldStyle};
 pub use checkbox::{Checkbox, CheckboxStyle};
