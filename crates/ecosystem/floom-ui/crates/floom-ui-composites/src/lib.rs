@@ -35,6 +35,7 @@ pub mod tabs_bar;
 pub mod color_picker;
 pub mod combobox;
 pub mod counter;
+pub mod date_picker;
 pub mod icon_button;
 pub mod infinite_scroller;
 pub mod labeled;
@@ -80,6 +81,10 @@ pub use color_picker::{ColorPicker, ColorPickerStyle, SharedColor, SharedHex, co
 pub use combobox::{ComboPick, Combobox, ComboboxStyle, Commit, SharedPick};
 pub use combobox::{commit, matching, panel_placement, panel_rect, panel_request, select, sync_query_to_selection, visible_options};
 pub use counter::{Counter, CounterState, CounterStyle, SharedCounter, Step, clamp_value, step_value};
+pub use date_picker::{
+    DatePicker, DatePickerState, DatePickerStyle, DateValue, DEFAULT_VIEW_MONTH,
+    SharedDateState, read_date_state, write_date_state,
+};
 pub use icon_button::{IconButton, IconButtonIcon, IconButtonPaint, IconButtonStyle, IconButtonVariant};
 pub use infinite_scroller::{InfiniteScrollerView, SharedHeight, shared_height};
 pub use labeled::{Labeled};

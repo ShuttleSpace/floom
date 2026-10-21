@@ -21,10 +21,10 @@ use floom_widgets::testkit::{
 };
 
 use floom_core_theme::global_theme::DesignSystem;
-use floom_core_theme::props::date_picker::DateValue;
+use floom_core_theme::props::date_picker::DateValue as ThemeDateValue;
 use floom_core_theme::theme::{MultiTheme, Theme};
 
-use floom_widget_cupertino_date_picker::{CupertinoDatePicker, CupertinoDatePickerStyle};
+use floom_widget_cupertino_date_picker::{CupertinoDatePicker, CupertinoDatePickerStyle, DateValue};
 
 /// The field's box, in the tests' coordinate space.
 const FIELD: Rect = Rect {
@@ -494,7 +494,7 @@ fn the_props_report_the_date_and_the_placeholder() {
         .disabled(true);
     assert_eq!(
         kit.props().value,
-        Some(DateValue {
+        Some(ThemeDateValue {
             year: 2026,
             month: 8,
             day: 20
