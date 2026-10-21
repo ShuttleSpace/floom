@@ -56,6 +56,7 @@ pub mod virtual_scroller;
 pub mod window_viewer;
 pub mod time_picker;
 pub mod tooltip;
+pub mod carousel;
 pub mod checkbox;
 
 pub use accordion::{
@@ -111,4 +112,5 @@ pub use builders::WidgetBuilder;
 pub use shared::{SharedNumber, read_number, shared_number, write_number};
 pub use window_viewer::{WindowViewer, WindowViewerStyle};
 pub use text_field::{TextCallback, TextField, TextFieldStyle};
+pub use carousel::{Carousel, CarouselStyle, current_index, set_index};
 pub use checkbox::{Checkbox, CheckboxStyle};

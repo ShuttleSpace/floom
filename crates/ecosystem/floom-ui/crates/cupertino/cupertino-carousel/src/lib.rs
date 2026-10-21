@@ -5,6 +5,10 @@
 //!
 //! ## What the port uses
 //!
+//! The engine's `Carousel`: the box, the slides, the arrows and the dots. The
+//! three floem-ui carousel kits each used to carry their own copy of all of
+//! it, down to the dot that repaints itself when the slide moves.
+//!
 //! The engine's vocabulary:
 //!
 //! * a [`Surface`] for the slide area: the fill, the radius, the outline;
@@ -66,19 +70,17 @@
 
 use std::sync::Arc;
 
-use floom_core::{Child, ChildKey, CreateContext, ElementId, Inset, LayoutRequest, PaintContext, Position,
-    UpdateContext, Widget, WidgetAny};
+use floom_core::Child;
 use floom_signal::{RwSignal, SignalGet};
+use floom_ui_composites::{Carousel, CarouselStyle, current_index, set_index};
 use floom_types::Color as PaintColor;
-use floom_types::{CursorStyle, Insets};
-use floom_widgets::text_input::{SharedFlag, read_flag, shared_flag, write_flag};
-use floom_widgets::{Align, Axis, Conditional, Pressable, Stack, Surface, Text};
+use floom_widgets::text_input::{SharedFlag, shared_flag, write_flag};
+use floom_widgets::Surface;
 
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::carousel::CarouselProps;
 use floom_core_theme::theme::{MultiTheme, Theme};
 use floom_core_theme::tokens::color::Color;
-use floom_core_theme::tokens::color_ext::with_alpha;
 
 /// The outline's alpha. A v1 literal.
 const BORDER_ALPHA: u8 = 80;
@@ -89,9 +91,6 @@ const ARROW_WIDTH: f32 = 40.0;
 /// The arrow glyph's size, as a fraction of the arrow's size. A v1 literal.
 const ARROW_FONT_RATIO: f32 = 0.6;
 /// The dots' distance from the bottom, as a fraction of the area's height.
-/// A v1 literal.
-const DOTS_BOTTOM_RATIO: f32 = 0.02;
-
 /// The carousel's appearance, in the terms v1 used.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct CupertinoCarouselStyle {
@@ -269,194 +268,33 @@ impl CupertinoCarousel {
     /// The carousel: the area, the slides, the arrows and the dots.
     pub fn view(self) -> Surface {
         let style = self.resolved_style();
-        let count = self.slides.len();
-        let flags = self.flags.clone();
-        let on_change = self.on_change.clone();
-
-        let surface = to_paint(style.surface);
-        let on_surface = to_paint(style.on_surface);
-        let primary = to_paint(style.primary);
-        let border_color = to_paint(with_alpha(style.outline, style.border_alpha));
-        let arrow_font_size = style.arrow_font_size;
-
-        let mut area = Stack::new(Axis::Vertical);
-        let mut key = 0usize;
-
-        // The slides: only the current one is mounted.
-        for (index, slide) in self.slides.into_iter().enumerate() {
-            let flag = flags[index].clone();
-            area = area.child(Child::new(
-                ChildKey::index(key),
-                // v1's slides were absolutely positioned over the area.
-                LayoutRequest::new().absolute_fill(),
-                move || {
-                    Box::new(
-                        Conditional::new(false)
-                            .when_flag(flag.clone())
-                            .show(Child::new(
-                                ChildKey::index(0),
-                                LayoutRequest::new().width_pct(100.0).height_pct(100.0),
-                                {
-                                    let slide = slide.clone();
-                                    move || slide.build()
-                                },
-                            )),
-                    ) as Box<dyn WidgetAny>
-                },
-            ));
-            key += 1;
+        let mut carousel = Carousel::new()
+            .style(CarouselStyle {
+                surface: to_paint(style.surface),
+                on_surface: to_paint(style.on_surface),
+                on_surface_variant: to_paint(style.on_surface_variant),
+                primary: to_paint(style.primary),
+                border_radius: style.border_radius,
+                height: style.height,
+                dot_size: style.dot_size,
+                arrow_size: style.arrow_size,
+                outline: to_paint(style.outline),
+                border_width: style.border_width,
+                border_alpha: style.border_alpha,
+                dot_gap: style.dot_gap,
+                dot_inactive_opacity: style.dot_inactive_opacity,
+                arrow_font_size: style.arrow_font_size,
+                arrow_width: style.arrow_width,
+                slide_gap: style.slide_gap,
+            })
+            .slides(self.slides.clone())
+            .flags(self.flags.clone())
+            .show_arrows(self.props.show_arrows)
+            .show_dots(self.props.show_dots);
+        if let Some(on_change) = self.on_change.clone() {
+            carousel = carousel.on_change(move |index| on_change(index));
         }
-
-        // The arrows: only when there is somewhere to go.
-        //
-        // `Pressable` is a builder rather than a `Clone` value, so each arrow
-        // is built inside the closure that mounts it.
-        if self.props.show_arrows && count > 1 {
-            area = area.child(Child::new(
-                ChildKey::index(key),
-                arrow_request(true, style.arrow_width),
-                {
-                    let flags_prev = flags.clone();
-                    let on_change_prev = on_change.clone();
-                    move || {
-                        let flags_prev = flags_prev.clone();
-                        let on_change_prev = on_change_prev.clone();
-                        Box::new(
-                            Pressable::new(Child::new(
-                                ChildKey::index(0),
-                                // v1's `items_center()` on a row: the glyph is
-                                // centred on the cross axis.
-                                LayoutRequest::new().cross_align(Align::Center),
-                                move || {
-                                    Box::new(
-                                        Text::new("‹").size(arrow_font_size).color(on_surface),
-                                    )
-                                },
-                            ))
-                            .on_click(move || {
-                                let current = current_index(&flags_prev);
-                                let next = if current == 0 { count - 1 } else { current - 1 };
-                                set_index(&flags_prev, next);
-                                if let Some(on_change) = &on_change_prev {
-                                    on_change(next);
-                                }
-                            }),
-                        ) as Box<dyn WidgetAny>
-                    }
-                },
-            ));
-            key += 1;
-
-            area = area.child(Child::new(
-                ChildKey::index(key),
-                arrow_request(false, style.arrow_width),
-                {
-                    let flags_next = flags.clone();
-                    let on_change_next = on_change.clone();
-                    move || {
-                        let flags_next = flags_next.clone();
-                        let on_change_next = on_change_next.clone();
-                        Box::new(
-                            Pressable::new(Child::new(
-                                ChildKey::index(0),
-                                LayoutRequest::new().cross_align(Align::Center),
-                                move || {
-                                    Box::new(
-                                        Text::new("›").size(arrow_font_size).color(on_surface),
-                                    )
-                                },
-                            ))
-                            .on_click(move || {
-                                let current = current_index(&flags_next);
-                                let next = if current >= count - 1 { 0 } else { current + 1 };
-                                set_index(&flags_next, next);
-                                if let Some(on_change) = &on_change_next {
-                                    on_change(next);
-                                }
-                            }),
-                        ) as Box<dyn WidgetAny>
-                    }
-                },
-            ));
-            key += 1;
-        }
-
-        // The dots: one per slide, the current one in the primary colour.
-        if self.props.show_dots && count > 0 {
-            let mut dots = Stack::new(Axis::Horizontal)
-                // v1's `justify_center().items_center().gap(0.0)`.
-                .align(Align::Center, Align::Center)
-                .gap(0.0);
-            for index in 0..count {
-                let dot = Child::new(
-                    ChildKey::index(0),
-                    LayoutRequest::new(),
-                    {
-                        let dot = CupertinoCarouselDot {
-                            flag: flags[index].clone(),
-                            size: style.dot_size,
-                            // v1's `border_radius(dot_size / 2.0)`: a circle.
-                            radius: style.dot_size / 2.0,
-                            active: primary,
-                            inactive: to_paint(with_alpha(
-                                style.on_surface,
-                                (style.dot_inactive_opacity * 255.0) as u8,
-                            )),
-                            reported: false,
-                        };
-                        move || Box::new(dot.clone())
-                    },
-                );
-                dots = dots.child(Child::new(
-                    ChildKey::index(index),
-                    LayoutRequest::new()
-                        .width(style.dot_size)
-                        .height(style.dot_size)
-                        // v1's `margin(dot_gap / 2.0)`.
-                        .margin(Insets::uniform(f64::from(style.dot_gap / 2.0))),
-                    {
-                        let flags_dot = flags.clone();
-                        let on_change_dot = on_change.clone();
-                        move || {
-                            let flags_dot = flags_dot.clone();
-                            let on_change_dot = on_change_dot.clone();
-                            Box::new(
-                                Pressable::new(dot.clone()).on_click(move || {
-                                    set_index(&flags_dot, index);
-                                    if let Some(on_change) = &on_change_dot {
-                                        on_change(index);
-                                    }
-                                }),
-                            ) as Box<dyn WidgetAny>
-                        }
-                    },
-                ));
-            }
-            // v1's overlay: the row, at the bottom of the area, centred.
-            let overlay = Stack::new(Axis::Horizontal)
-                .align(Align::Center, Align::Center)
-                .child(Child::new(
-                    ChildKey::index(0),
-                    LayoutRequest::new(),
-                    move || Box::new(dots.clone()),
-                ));
-            area = area.child(Child::new(
-                ChildKey::index(key),
-                dots_request(style.height, style.dot_size),
-                move || Box::new(overlay.clone()),
-            ));
-        }
-
-        Surface::new()
-            .request(LayoutRequest::new().width_pct(100.0).height(style.height))
-            .background(surface)
-            .radius(style.border_radius)
-            .border(style.border_width, border_color)
-            .child(Child::new(
-                ChildKey::index(0),
-                LayoutRequest::new().fill(),
-                move || Box::new(area.clone()),
-            ))
+        carousel.build()
     }
 }
 
@@ -467,108 +305,6 @@ impl Default for CupertinoCarousel {
 }
 
 /// The index of the slide that is showing.
-fn current_index(flags: &[SharedFlag]) -> usize {
-    flags.iter().position(|flag| read_flag(flag)).unwrap_or(0)
-}
-
-/// Make one slide the showing one, and the others not.
-fn set_index(flags: &[SharedFlag], index: usize) {
-    for (position, flag) in flags.iter().enumerate() {
-        write_flag(flag, position == index);
-    }
-}
-
-/// One indicator dot: its size, its colour, and whether it is the current one.
-///
-/// A kit-local widget because the dot's *colour* follows the current slide,
-/// and a child's decoration is fixed when it is built: the engine has no
-/// widget that repaints itself when a shared flag moves.
-#[derive(Clone)]
-struct CupertinoCarouselDot {
-    flag: SharedFlag,
-    size: f32,
-    radius: f32,
-    active: PaintColor,
-    inactive: PaintColor,
-    /// Whether the dot was the current one as of the last update.
-    reported: bool,
-}
-
-impl Widget for CupertinoCarouselDot {
-    fn create(&self, cx: &mut dyn CreateContext) -> ElementId {
-        cx.alloc_child()
-    }
-
-    fn update(&mut self, cx: &mut dyn UpdateContext, id: ElementId) {
-        let current = read_flag(&self.flag);
-        if current != self.reported {
-            self.reported = current;
-            // The dot's colour is the only thing that moved.
-            cx.mark_dirty(id);
-        }
-    }
-
-    fn layout_request(&self) -> Option<LayoutRequest> {
-        Some(LayoutRequest::new().width(self.size).height(self.size))
-    }
-
-    fn paint(&self, cx: &mut dyn PaintContext, _id: ElementId) {
-        let color = if read_flag(&self.flag) {
-            self.active
-        } else {
-            self.inactive
-        };
-        let bounds = cx.bounds();
-        cx.fill_rounded_rect(bounds, self.radius, color);
-    }
-
-    fn cursor(&self) -> CursorStyle {
-        // v1's dots were clickable and said so with the cursor.
-        CursorStyle::Pointer
-    }
-}
-
-impl WidgetAny for CupertinoCarouselDot {
-    fn as_any(&self) -> &dyn std::any::Any {
-        self
-    }
-
-    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
-        self
-    }
-
-    fn semantics_hint(&self) -> Option<floom_core::SemanticsHint> {
-        None
-    }
-}
-
-/// The arrow's own box: v1's absolute arrow, pinned to the chosen edge.
-fn arrow_request(left: bool, width: f32) -> LayoutRequest {
-    let mut request = LayoutRequest::new().width(width).height_pct(100.0);
-    request.position = Some(Position::Absolute);
-    request.inset = Some(Inset {
-        left: if left { Some(0.0) } else { None },
-        top: Some(0.0),
-        right: if left { None } else { Some(0.0) },
-        bottom: None,
-    });
-    request
-}
-
-/// The dots' overlay: v1's absolute strip along the bottom of the area.
-fn dots_request(height: f32, dot_size: f32) -> LayoutRequest {
-    let mut request = LayoutRequest::new().height(dot_size * 2.0);
-    request.position = Some(Position::Absolute);
-    request.inset = Some(Inset {
-        left: Some(0.0),
-        top: None,
-        right: Some(0.0),
-        // v1 wrote `inset_bottom_pct(2.0)`: two per cent of the area's
-        // height, which the kit knows.
-        bottom: Some(height * DOTS_BOTTOM_RATIO),
-    });
-    request
-}
 
 /// Theme colour -> engine colour.
 fn to_paint(c: Color) -> PaintColor {
