@@ -17,6 +17,7 @@
 mod any;
 pub mod badge;
 pub mod chip;
+pub mod confirm_edit;
 pub mod accordion;
 pub mod bottom_navigation;
 pub mod bottom_sheet;
@@ -66,6 +67,7 @@ pub use tabs_bar::{TabsBar, TabsBarStyle};
 
 pub use badge::{Badge};
 pub use chip::{Chip};
+pub use confirm_edit::{ConfirmEdit, ConfirmEditGlyphs, ConfirmEditStyle};
 pub use combobox::{ComboPick, Combobox, ComboboxStyle, Commit, SharedPick};
 pub use combobox::{commit, matching, panel_placement, panel_rect, panel_request, select, sync_query_to_selection, visible_options};
 pub use counter::{Counter, CounterState, CounterStyle, SharedCounter, Step, clamp_value, step_value};
