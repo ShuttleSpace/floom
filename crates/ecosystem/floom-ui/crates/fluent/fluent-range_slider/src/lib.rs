@@ -19,14 +19,16 @@
 //! handling in `event`, reading the same `Event` / `EventContext` /
 //! `PaintContext` vocabulary the engine's `Slider` reads.
 //!
-//! ## The engine gap
+//! ## What the port uses
 //!
-//! **The engine has no range slider.** The shape belongs in
-//! `floom-ui-composites` beside `Slider` -- it is that widget with two values
-//! -- and the three kits' copies of it behave identically, so the three
-//! crates here carry the same widget three times. That duplication is the
-//! thing to fix, not the design; this port could not put it there because
-//! that crate is being edited concurrently.
+//! The engine's [`RangeSlider`]: a track with two thumbs. The engine's own
+//! `Slider` is a *single*-valued control -- it paints a fill that runs from the
+//! left end to its value, and it has no way to say that the fill should start
+//! where the low thumb is -- so two engine sliders side by side would be two
+//! tracks, two fills and two drags, which is not this component. The engine
+//! grew the two-valued one for this, and the three kits now say only what
+//! they answer: the track's colour, the band's colour, the thumbs' colour and
+//! the three sizes.
 //!
 //! ## What this kit answers
 //!
@@ -82,6 +84,7 @@ use floom_core::{
 };
 use floom_signal::{RwSignal, SignalGet};
 use floom_types::{Color as PaintColor, CursorStyle, PointerButton, PointerPhase};
+use floom_ui_composites::{RangeSlider, RangeSliderStyle};
 use floom_widgets::{Revision, SharedMap, shared_map};
 
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
@@ -315,269 +318,29 @@ impl FluentRangeSlider {
     }
 
     /// The slider, ready to mount.
-    pub fn view(self) -> FluentRangeSliderWidget {
+    pub fn view(self) -> RangeSlider {
         let style = self.resolved_style();
-        FluentRangeSliderWidget {
-            style,
-            min: self.props.min,
-            max: self.props.max,
-            step: self.props.step,
-            disabled: self.props.disabled,
-            range: self.range,
-            on_change: self.on_change,
-            dragging: None,
-            pressed: false,
-            revision: Revision::default(),
+        let mut slider = RangeSlider::new()
+            .style(RangeSliderStyle {
+                track_color: to_paint(style.track_color),
+                fill_color: to_paint(style.fill_color),
+                thumb_color: to_paint(style.thumb_color),
+                track_height: style.track_height,
+                thumb_size: style.thumb_size,
+                thumb_radius: style.thumb_radius,
+            })
+            .bounds(self.props.min, self.props.max, self.props.step)
+            .disabled(self.props.disabled)
+            .values(self.range.clone());
+        if let Some(on_change) = self.on_change.clone() {
+            slider = slider.on_change(move |value| on_change(value));
         }
+        slider
     }
 }
 
 impl Default for FluentRangeSlider {
     fn default() -> Self {
         Self::new()
-    }
-}
-
-/// The range slider's widget: the track, the band between the two thumbs, and
-/// the two thumbs.
-///
-/// The engine gap, in one type: the engine has no range slider, so this is the
-/// widget a range slider needs, written against the engine's contract. It
-/// belongs in `floom-ui-composites` beside `Slider`.
-pub struct FluentRangeSliderWidget {
-    style: FluentRangeSliderStyle,
-    min: f32,
-    max: f32,
-    step: f32,
-    disabled: bool,
-    range: SharedMap,
-    on_change: Option<Arc<dyn Fn((f32, f32)) + Send + Sync + 'static>>,
-    /// Which thumb the pointer is holding: `0` is the low one, `1` the high one.
-    dragging: Option<usize>,
-    /// The pointer is down on the track.
-    pressed: bool,
-    revision: Revision,
-}
-
-impl FluentRangeSliderWidget {
-    /// The low end, as it stands.
-    pub fn low(&self) -> f32 {
-        read_range(&self.range).0
-    }
-
-    /// The high end, as it stands.
-    pub fn high(&self) -> f32 {
-        read_range(&self.range).1
-    }
-
-    /// The shared map the two values live in.
-    pub fn range(&self) -> SharedMap {
-        self.range.clone()
-    }
-
-    /// Write the low end, clamped into the range.
-    pub fn set_low(&mut self, low: f32) {
-        let clamped = low.clamp(self.min, self.max);
-        let (_, high) = read_range(&self.range);
-        write_range(&self.range, clamped, high);
-        self.revision.bump();
-    }
-
-    /// Write the high end, clamped into the range.
-    pub fn set_high(&mut self, high: f32) {
-        let clamped = high.clamp(self.min, self.max);
-        let (low, _) = read_range(&self.range);
-        write_range(&self.range, low, clamped);
-        self.revision.bump();
-    }
-
-    /// Whether the slider answers the pointer.
-    pub fn is_disabled(&self) -> bool {
-        self.disabled
-    }
-
-    /// v1's `update(which, ratio)`: quantise, clamp into the range, keep the
-    /// two thumbs from crossing, write, and notify.
-    fn move_thumb(&mut self, which: usize, ratio: f32) {
-        let (mut low, mut high) = read_range(&self.range);
-        let span = (self.max - self.min).max(f32::MIN_POSITIVE);
-        let raw = self.min + ratio * span;
-        let mut value = if self.step > 0.0 {
-            let steps = ((raw - self.min) / self.step).round();
-            (self.min + steps * self.step).clamp(self.min, self.max)
-        } else {
-            raw.clamp(self.min, self.max)
-        };
-        match which {
-            0 => {
-                if value > high {
-                    value = high;
-                }
-                low = value;
-            }
-            _ => {
-                if value < low {
-                    value = low;
-                }
-                high = value;
-            }
-        }
-        write_range(&self.range, low, high);
-        self.revision.bump();
-        if let Some(on_change) = &self.on_change {
-            on_change((low, high));
-        }
-    }
-}
-
-impl Widget for FluentRangeSliderWidget {
-    fn create(&self, cx: &mut dyn CreateContext) -> ElementId {
-        cx.alloc_child()
-    }
-
-    fn update(&mut self, cx: &mut dyn UpdateContext, id: ElementId) {
-        self.revision.sync(cx, id);
-    }
-
-    /// The track is the box: v1's track was `height(track_height)` and
-    /// `width_full`, and the thumbs were painted over it.
-    fn layout_request(&self) -> Option<LayoutRequest> {
-        Some(
-            LayoutRequest::new()
-                .width_pct(100.0)
-                .height(self.style.track_height),
-        )
-    }
-
-    fn event(&mut self, cx: &mut dyn EventContext, id: ElementId) -> bool {
-        if self.disabled {
-            return false;
-        }
-        let Event::Pointer(pointer) = cx.event() else {
-            return false;
-        };
-        match pointer.phase {
-            PointerPhase::Enter | PointerPhase::Move => {
-                if self.pressed {
-                    let which = self.dragging.unwrap_or(0);
-                    let ratio = ratio_at(cx.bounds(), pointer.position.x);
-                    self.move_thumb(which, ratio);
-                    return true;
-                }
-                false
-            }
-            PointerPhase::Leave | PointerPhase::Cancel => {
-                self.pressed = false;
-                self.dragging = None;
-                false
-            }
-            PointerPhase::Down if pointer.button == Some(PointerButton::Primary) => {
-                let ratio = ratio_at(cx.bounds(), pointer.position.x);
-                let (low, high) = read_range(&self.range);
-                // v1 picked the *nearer* thumb and dragged that one.
-                let which = if (ratio - fraction(low, self.min, self.max)).abs()
-                    <= (ratio - fraction(high, self.min, self.max)).abs()
-                {
-                    0
-                } else {
-                    1
-                };
-                self.dragging = Some(which);
-                self.pressed = true;
-                cx.request_focus(id);
-                self.move_thumb(which, ratio);
-                true
-            }
-            PointerPhase::Up if pointer.button == Some(PointerButton::Primary) => {
-                let was_pressed = self.pressed;
-                self.pressed = false;
-                self.dragging = None;
-                was_pressed
-            }
-            _ => false,
-        }
-    }
-
-    /// The track, then the band between the two thumbs, then the thumbs.
-    ///
-    /// That order is v1's: the band and the thumbs were absolutely positioned
-    /// children of the track, and the track's own fill was underneath them.
-    fn paint(&self, cx: &mut dyn PaintContext, _id: ElementId) {
-        let bounds = cx.bounds();
-        if bounds.width() <= 0.0 || bounds.height() <= 0.0 {
-            return;
-        }
-        let (low, high) = read_range(&self.range);
-        let low_ratio = f64::from(fraction(low, self.min, self.max));
-        let high_ratio = f64::from(fraction(high, self.min, self.max));
-
-        // The track: a pill, centred in the box.
-        let height = f64::from(self.style.track_height).min(bounds.height());
-        let track = Rect {
-            x0: bounds.x0,
-            y0: bounds.y0 + (bounds.height() - height) / 2.0,
-            x1: bounds.x1,
-            y1: bounds.y0 + (bounds.height() + height) / 2.0,
-        };
-        cx.fill_rounded_rect(
-            track,
-            (height / 2.0) as f32,
-            to_paint(self.style.track_color),
-        );
-
-        // The band between the two thumbs. v1's band was a plain rectangle
-        // with no radius, drawn over the rounded track.
-        let band = Rect {
-            x0: track.x0 + track.width() * low_ratio,
-            x1: track.x0 + track.width() * high_ratio,
-            y0: track.y0,
-            y1: track.y1,
-        };
-        cx.fill_rect(band, to_paint(self.style.fill_color));
-
-        // The two thumbs, centred on their values.
-        let diameter = f64::from(self.style.thumb_size);
-        for ratio in [low_ratio, high_ratio] {
-            let centre = track.x0 + track.width() * ratio;
-            let thumb = Rect {
-                x0: centre - diameter / 2.0,
-                x1: centre + diameter / 2.0,
-                y0: track.y0 + height / 2.0 - diameter / 2.0,
-                y1: track.y0 + height / 2.0 + diameter / 2.0,
-            };
-            cx.fill_rounded_rect(thumb, self.style.thumb_radius, to_paint(self.style.thumb_color));
-        }
-    }
-
-    fn cursor(&self) -> CursorStyle {
-        // v1 set `CursorStyle::Pointer` on the track.
-        if self.disabled {
-            CursorStyle::Default
-        } else {
-            CursorStyle::Pointer
-        }
-    }
-}
-
-impl WidgetAny for FluentRangeSliderWidget {
-    fn as_any(&self) -> &dyn std::any::Any {
-        self
-    }
-
-    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
-        self
-    }
-
-    /// The pair, as a label.
-    ///
-    /// An addition rather than a translation: v1's range slider published no
-    /// accessibility description at all, and a control nobody can read is a
-    /// control nobody can use.
-    fn semantics_hint(&self) -> Option<floom_core::SemanticsHint> {
-        let (low, high) = read_range(&self.range);
-        Some(floom_core::SemanticsHint::labeled(
-            floom_core::SemanticsRole::Slider,
-            format!("{low} to {high}"),
-        ))
     }
 }
