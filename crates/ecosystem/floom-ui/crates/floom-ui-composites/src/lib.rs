@@ -26,6 +26,7 @@ pub mod overlay;
 pub mod overlay_bookkeeping;
 pub mod popup;
 pub mod tabs;
+pub mod tabs_bar;
 pub mod combobox;
 pub mod counter;
 pub mod icon_button;
@@ -57,6 +58,7 @@ pub use overlay::Overlay;
 pub use overlay_bookkeeping::OverlayHost;
 pub use popup::{Popup, PopupPlacement, popup_placement_rect};
 pub use tabs::Tabs;
+pub use tabs_bar::{TabsBar, TabsBarStyle};
 
 pub use badge::{Badge};
 pub use chip::{Chip};
