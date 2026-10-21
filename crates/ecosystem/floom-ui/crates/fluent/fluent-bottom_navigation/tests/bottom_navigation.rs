@@ -25,7 +25,7 @@ use floom_core_theme::global_theme::DesignSystem;
 use floom_core_theme::theme::{MultiTheme, Theme};
 
 use floom_widget_fluent_bottom_navigation::{
-    FluentBottomNavigation, FluentBottomNavigationBar, FluentBottomNavigationStyle, IconBuilder,
+    FluentBottomNavigation, BottomNavigationBar, FluentBottomNavigationStyle, IconBuilder,
 };
 
 const BOX: Rect = Rect {
@@ -82,7 +82,7 @@ fn icon() -> IconBuilder {
 }
 
 /// The label one destination shows.
-fn label_of(bar: &FluentBottomNavigationBar, index: usize) -> Box<dyn WidgetAny> {
+fn label_of(bar: &BottomNavigationBar, index: usize) -> Box<dyn WidgetAny> {
     let pressable = bar.children()[index].build();
     let destination = pressable.children().remove(0).build();
     let mut children = destination.children();
@@ -92,7 +92,7 @@ fn label_of(bar: &FluentBottomNavigationBar, index: usize) -> Box<dyn WidgetAny>
 }
 
 /// The text, the size and the ink one destination's label painted.
-fn label_painted(bar: &FluentBottomNavigationBar, index: usize) -> (String, f32, Color) {
+fn label_painted(bar: &BottomNavigationBar, index: usize) -> (String, f32, Color) {
     let label = label_of(bar, index);
     ops_of(&*label)
         .iter()
@@ -104,13 +104,13 @@ fn label_painted(bar: &FluentBottomNavigationBar, index: usize) -> (String, f32,
 }
 
 /// The destination's own box: the pressable and the content inside it.
-fn destination_of(bar: &FluentBottomNavigationBar, index: usize) -> Box<dyn WidgetAny> {
+fn destination_of(bar: &BottomNavigationBar, index: usize) -> Box<dyn WidgetAny> {
     let pressable = bar.children()[index].build();
     pressable.children().remove(0).build()
 }
 
 /// Taps a destination, the way the host would.
-fn tap(bar: &FluentBottomNavigationBar, index: usize) {
+fn tap(bar: &BottomNavigationBar, index: usize) {
     let mut mounted = bar.children()[index].build();
     let pressable = mounted
         .as_any_mut()

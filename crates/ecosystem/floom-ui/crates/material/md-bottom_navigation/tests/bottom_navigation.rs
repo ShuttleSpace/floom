@@ -23,7 +23,7 @@ use floom_core_theme::global_theme::DesignSystem;
 use floom_core_theme::theme::{MultiTheme, Theme};
 
 use floom_widget_md_bottom_navigation::{
-    IconBuilder, MaterialBottomNavigation, MaterialBottomNavigationBar, MaterialBottomNavigationStyle,
+    IconBuilder, MaterialBottomNavigation, BottomNavigationBar, MaterialBottomNavigationStyle,
 };
 
 const BOX: Rect = Rect {
@@ -80,12 +80,12 @@ fn icon() -> IconBuilder {
 }
 
 /// The destination's own box: the slot it is mounted in.
-fn destination_slot(bar: &MaterialBottomNavigationBar, index: usize) -> LayoutRequest {
+fn destination_slot(bar: &BottomNavigationBar, index: usize) -> LayoutRequest {
     bar.children()[index].layout
 }
 
 /// The label one destination shows.
-fn label_of(bar: &MaterialBottomNavigationBar, index: usize) -> Box<dyn WidgetAny> {
+fn label_of(bar: &BottomNavigationBar, index: usize) -> Box<dyn WidgetAny> {
     let pressable = bar.children()[index].build();
     let destination = pressable.children().remove(0).build();
     let mut children = destination.children();
@@ -95,7 +95,7 @@ fn label_of(bar: &MaterialBottomNavigationBar, index: usize) -> Box<dyn WidgetAn
 }
 
 /// The text, the size and the ink one destination's label painted.
-fn label_painted(bar: &MaterialBottomNavigationBar, index: usize) -> (String, f32, Color) {
+fn label_painted(bar: &BottomNavigationBar, index: usize) -> (String, f32, Color) {
     let label = label_of(bar, index);
     ops_of(&*label)
         .iter()
@@ -107,7 +107,7 @@ fn label_painted(bar: &MaterialBottomNavigationBar, index: usize) -> (String, f3
 }
 
 /// Taps a destination, the way the host would.
-fn tap(bar: &MaterialBottomNavigationBar, index: usize) {
+fn tap(bar: &BottomNavigationBar, index: usize) {
     let mut mounted = bar.children()[index].build();
     let pressable = mounted
         .as_any_mut()

@@ -18,6 +18,7 @@ mod any;
 pub mod badge;
 pub mod chip;
 pub mod accordion;
+pub mod bottom_navigation;
 pub mod bottom_sheet;
 pub mod dialog;
 pub mod focus;
@@ -50,6 +51,7 @@ pub use accordion::{
     Accordion, AccordionIndicator, AccordionStyle, ContentPlacement, SelectGroup, SelectGroupStyle,
     SelectionMode,
 };
+pub use bottom_navigation::{BottomNavigationBar, BottomNavigationStyle, IconBuilder};
 pub use bottom_sheet::BottomSheet;
 pub use focus::FocusRing;
 pub use state::{LayerShape, StateLayer};

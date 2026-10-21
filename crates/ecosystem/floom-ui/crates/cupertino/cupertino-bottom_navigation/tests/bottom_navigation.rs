@@ -25,7 +25,7 @@ use floom_core_theme::global_theme::DesignSystem;
 use floom_core_theme::theme::{MultiTheme, Theme};
 
 use floom_widget_cupertino_bottom_navigation::{
-    CupertinoBottomNavigation, CupertinoBottomNavigationBar, CupertinoBottomNavigationStyle,
+    CupertinoBottomNavigation, BottomNavigationBar, CupertinoBottomNavigationStyle,
     IconBuilder,
 };
 
@@ -86,7 +86,7 @@ fn icon() -> IconBuilder {
 ///
 /// The destination is a box, a pressable and then the content, so the label is
 /// three levels down.
-fn label_of(bar: &CupertinoBottomNavigationBar, index: usize) -> Box<dyn WidgetAny> {
+fn label_of(bar: &BottomNavigationBar, index: usize) -> Box<dyn WidgetAny> {
     let host = bar.children()[index].build();
     let pressable = host.children().remove(0).build();
     let destination = pressable.children().remove(0).build();
@@ -97,7 +97,7 @@ fn label_of(bar: &CupertinoBottomNavigationBar, index: usize) -> Box<dyn WidgetA
 }
 
 /// The text, the size and the ink one destination's label painted.
-fn label_painted(bar: &CupertinoBottomNavigationBar, index: usize) -> (String, f32, Color) {
+fn label_painted(bar: &BottomNavigationBar, index: usize) -> (String, f32, Color) {
     let label = label_of(bar, index);
     ops_of(&*label)
         .iter()
@@ -109,7 +109,7 @@ fn label_painted(bar: &CupertinoBottomNavigationBar, index: usize) -> (String, f
 }
 
 /// Taps a destination, the way the host would.
-fn tap(bar: &CupertinoBottomNavigationBar, index: usize) {
+fn tap(bar: &BottomNavigationBar, index: usize) {
     let host = bar.children()[index].build();
     let mut mounted = host.children().remove(0).build();
     let pressable = mounted
