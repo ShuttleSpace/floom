@@ -10,6 +10,9 @@ floom-signal = { path = "../../../../../floom-signal" }
 floom-core = { path = "../../../../../floom-core" }
 floom-types = { path = "../../../../../floom-types" }
 floom-widgets = { path = "../../../../../floom-widgets" }
+# The engine's ColorPicker: a square, two strips, a preview and a hex
+# field.
+floom-ui-composites = { path = "../../floom-ui-composites" }
 
 [dev-dependencies]
 floom-core-theme = { workspace = true, features = ["cupertino"] }
