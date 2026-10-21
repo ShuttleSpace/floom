@@ -45,6 +45,7 @@ pub mod range_slider;
 pub mod tree_view;
 pub mod text_field;
 pub mod validation_messages;
+pub mod window_viewer;
 pub mod tooltip;
 pub mod checkbox;
 
@@ -84,5 +85,6 @@ pub use tree_view::{RowRef, SharedTree, TreeNode, TreeView, TreeViewStyle};
 pub use tree_view::{node_at, toggle_path, visible_rows};
 pub use tooltip::{Tooltip, TooltipStyle};
 pub use validation_messages::{ValidationMessagesList, ValidationMessagesStyle};
+pub use window_viewer::{WindowViewer, WindowViewerStyle};
 pub use text_field::{TextCallback, TextField, TextFieldStyle};
 pub use checkbox::{Checkbox, CheckboxStyle};
