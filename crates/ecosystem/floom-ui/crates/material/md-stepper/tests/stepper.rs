@@ -384,7 +384,7 @@ fn a_change_of_selection_asks_for_a_new_row() {
 fn a_click_on_an_editable_step_moves_the_selection() {
     let seen = std::sync::Arc::new(std::sync::Mutex::new(usize::MAX));
     let sink = seen.clone();
-    let mut widget = kit()
+    let widget = kit()
         .items(steps(&["One", "Two"]))
         .selected(1)
         .editable(true)

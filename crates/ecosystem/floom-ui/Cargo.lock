@@ -1420,6 +1420,7 @@ dependencies = [
  "floom-core-theme",
  "floom-signal",
  "floom-types",
+ "floom-ui-composites",
  "floom-widget-cupertino-icon",
  "floom-widgets",
 ]
@@ -2569,6 +2570,7 @@ dependencies = [
  "floom-core-theme",
  "floom-signal",
  "floom-types",
+ "floom-ui-composites",
  "floom-widget-fluent-icon",
  "floom-widgets",
 ]
@@ -3778,6 +3780,7 @@ dependencies = [
  "floom-core-theme",
  "floom-signal",
  "floom-types",
+ "floom-ui-composites",
  "floom-widget-md-icon",
  "floom-widget-runtime",
  "floom-widgets",

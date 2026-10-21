@@ -17,20 +17,22 @@
 //! row of numbered steps with connectors -- and v1 never drew a counter in
 //! it, so the engine's `Counter` is not the thing to reach for here.
 //!
-//! ## The engine gap
+//! ## The engine's stepper
 //!
-//! **The engine has no stepper**, and the one thing the vocabulary cannot do
-//! is *follow the selection*. 2.0's tree is built once: a child's builder
-//! closure runs when its slot is mounted, and a slot that is still there is
-//! not built again. v1's stepper read its `RwSignal<usize>` inside a style
-//! closure, so the row's colours followed the selection as it moved. Here the
-//! colours are decided when the row is built, so the kit-local widget reads
-//! the selection in `update` and asks the host to reconcile its children --
-//! and the row's slot key carries the selection, so the row that is rebuilt
-//! is a new row.
+//! The one thing the vocabulary cannot do on its own is *follow the
+//! selection*. 2.0's tree is built once: a child's builder closure runs when
+//! its slot is mounted, and a slot that is still there is not built again.
+//! v1's stepper read its `RwSignal<usize>` inside a style closure, so the
+//! row's colours followed the selection as it moved. Here the colours are
+//! decided when the row is built, so the widget reads the selection in
+//! `update` and asks the host to reconcile its children -- and the row's slot
+//! key carries the selection, so the row that is rebuilt is a new row.
 //!
-//! The shape belongs in `floom-ui-composites` beside `Select` and `Menu`; it
-//! is in the kit because that crate is being edited concurrently.
+//! That widget is the engine's now: `floom_ui_composites::Stepper` is a row
+//! of steps, one of them current, and the three kits use it. The one thing
+//! the engine cannot know is the glyph a completed step carries: it is a
+//! design system's own icon, so the kit hands the stepper the path data and
+//! the box it is drawn in.
 //!
 //! ## What this kit answers
 //!
@@ -84,19 +86,15 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use floom_core::{
-    Child, ChildKey, CreateContext, ElementId, LayoutRequest, UpdateContext, Widget, WidgetAny,
-};
 use floom_signal::{RwSignal, SignalGet};
-use floom_types::{Color as PaintColor, FontWeight, Insets};
-use floom_widgets::{
-    Align, Axis, Pressable, SharedMap, Stack, Surface, Text, VectorIcon, shared_map,
-};
+use floom_ui_composites::{Stepper, StepperStyle, StepperTick};
+use floom_widgets::{SharedMap, shared_map};
 
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::stepper::StepperProps;
 use floom_core_theme::theme::{MultiTheme, Theme};
 use floom_core_theme::tokens::color::Color;
+use floom_types::Color as PaintColor;
 use floom_widget_fluent_icon::{VIEW_BOX, FluentIcon};
 
 /// The key the selected step lives under in the shared map.
@@ -215,7 +213,7 @@ impl FluentStepper {
     }
 
     /// The initially-active step index.
-    pub fn selected(mut self, selected: usize) -> Self {
+    pub fn selected(self, selected: usize) -> Self {
         write_selected(&self.selected, selected);
         self
     }
@@ -303,17 +301,42 @@ impl FluentStepper {
     }
 
     /// The stepper, ready to mount.
-    pub fn view(self) -> FluentStepperWidget {
+    pub fn view(self) -> Stepper {
         let style = self.resolved_style();
-        FluentStepperWidget {
-            style,
-            items: self.items,
-            selected: self.selected.clone(),
-            editable: self.props.editable,
-            non_linear: self.props.non_linear,
-            on_change: self.on_change,
-            built_for: read_selected(&self.selected),
+        let mut stepper = Stepper::new()
+            .style(StepperStyle {
+                step_size: style.step_size,
+                connector_width: style.connector_width,
+                gap: style.gap,
+                label_font_size: style.label_font_size,
+                primary: to_paint(style.primary),
+                on_primary: to_paint(style.on_primary),
+                surface: to_paint(style.surface),
+                on_surface: to_paint(style.on_surface),
+                on_surface_variant: to_paint(style.on_surface_variant),
+                outline: to_paint(style.outline),
+                outline_variant: to_paint(style.outline_variant),
+                marker_font_size: style.marker_font_size,
+                marker_radius: style.marker_radius,
+                marker_border: style.marker_border,
+                item_gap: style.item_gap,
+                padding_horiz: style.padding_horiz,
+                padding_vert: style.padding_vert,
+                connector_min_width: style.connector_min_width,
+                check_scale: style.check_scale,
+            })
+            .labels(self.items)
+            .selection(self.selected.clone())
+            .editable(self.props.editable)
+            .non_linear(self.props.non_linear)
+            .tick(StepperTick {
+                path: FluentIcon::new("check").path_data(),
+                view_box: VIEW_BOX,
+            });
+        if let Some(on_change) = self.on_change {
+            stepper = stepper.on_change(move |index| on_change(index));
         }
+        stepper
     }
 }
 
@@ -321,345 +344,4 @@ impl Default for FluentStepper {
     fn default() -> Self {
         Self::new()
     }
-}
-
-/// The stepper's widget: the row of steps, rebuilt when the selection moves.
-///
-/// The engine gap, in one type: the engine has no stepper, and the engine's
-/// tree does not rebuild a subtree on its own, so the widget that owns the row
-/// asks for the rebuild.
-pub struct FluentStepperWidget {
-    style: FluentStepperStyle,
-    items: Vec<String>,
-    selected: SharedMap,
-    editable: bool,
-    non_linear: bool,
-    on_change: Option<Arc<dyn Fn(usize) + Send + Sync + 'static>>,
-    /// The selection the row was last built for.
-    built_for: usize,
-}
-
-impl FluentStepperWidget {
-    /// The selected step, as it stands.
-    pub fn selected(&self) -> usize {
-        read_selected(&self.selected)
-    }
-
-    /// The shared map the selected step lives in.
-    pub fn selected_map(&self) -> SharedMap {
-        self.selected.clone()
-    }
-
-    /// Move the selection.
-    ///
-    /// The row is rebuilt by the host on the next frame, because the colours
-    /// follow the selection.
-    pub fn set_selected(&self, index: usize) {
-        write_selected(&self.selected, index);
-    }
-
-    /// The step labels.
-    pub fn items(&self) -> &[String] {
-        &self.items
-    }
-}
-
-impl Widget for FluentStepperWidget {
-    fn create(&self, cx: &mut dyn CreateContext) -> ElementId {
-        cx.alloc_child()
-    }
-
-    /// The selection moved: the row's colours follow it, and 2.0's tree is
-    /// built once, so the row has to be rebuilt for them to move.
-    fn update(&mut self, cx: &mut dyn UpdateContext, id: ElementId) {
-        let selected = read_selected(&self.selected);
-        if selected != self.built_for {
-            self.built_for = selected;
-            cx.mark_children_dirty(id);
-            cx.mark_dirty(id);
-        }
-    }
-
-    /// The row, as one slot whose key carries the selection.
-    ///
-    /// The key is what makes the rebuild a rebuild: the host diffs children by
-    /// key, so a new key mounts a new row and unmounts the old one.
-    fn children(&self) -> Vec<Child> {
-        let selected = read_selected(&self.selected);
-        vec![Child::new(
-            ChildKey::keyed(selected as u64),
-            LayoutRequest::new(),
-            {
-                let style = self.style;
-                let items = self.items.clone();
-                let selected = self.selected.clone();
-                let editable = self.editable;
-                let non_linear = self.non_linear;
-                let on_change = self.on_change.clone();
-                move || {
-                    build_row(
-                        style,
-                        items.clone(),
-                        selected.clone(),
-                        editable,
-                        non_linear,
-                        on_change.clone(),
-                    )
-                }
-            },
-        )]
-    }
-
-    /// v1's outer container: the full width, padded 8 across and 12 down.
-    fn layout_request(&self) -> Option<LayoutRequest> {
-        Some(
-            LayoutRequest::new()
-                .width_pct(100.0)
-                .padding(Insets {
-                    left: f64::from(self.style.padding_horiz),
-                    right: f64::from(self.style.padding_horiz),
-                    top: f64::from(self.style.padding_vert),
-                    bottom: f64::from(self.style.padding_vert),
-                }),
-        )
-    }
-}
-
-impl WidgetAny for FluentStepperWidget {
-    fn as_any(&self) -> &dyn std::any::Any {
-        self
-    }
-
-    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
-        self
-    }
-
-    /// Nothing of its own: each step's `Pressable` names itself.
-    fn semantics_hint(&self) -> Option<floom_core::SemanticsHint> {
-        None
-    }
-}
-
-/// The row: the steps and the connectors between them.
-///
-/// v1 returned an empty view when there were no steps; an empty row is an
-/// empty stack here, which paints nothing.
-fn build_row(
-    style: FluentStepperStyle,
-    items: Vec<String>,
-    selected: SharedMap,
-    editable: bool,
-    non_linear: bool,
-    on_change: Option<Arc<dyn Fn(usize) + Send + Sync + 'static>>,
-) -> Box<dyn WidgetAny> {
-    let count = items.len();
-    let mut row = Stack::new(Axis::Horizontal)
-        .gap(style.gap)
-        // v1's `.items_center()` on the row.
-        .align(Align::Start, Align::Center)
-        .request(LayoutRequest::new().width_pct(100.0));
-
-    for (index, label) in items.iter().enumerate() {
-        row = row.push({
-            let style = style;
-            let label = label.clone();
-            let selected = selected.clone();
-            let editable = editable;
-            let non_linear = non_linear;
-            let on_change = on_change.clone();
-            move || {
-                build_step(
-                    style,
-                    index,
-                    label.clone(),
-                    selected.clone(),
-                    editable,
-                    non_linear,
-                    on_change.clone(),
-                )
-            }
-        });
-
-        if index + 1 < count {
-            row = row.push({
-                let style = style;
-                let selected = selected.clone();
-                let index = index;
-                move || build_connector(style, index, selected.clone())
-            });
-        }
-    }
-
-    Box::new(row) as Box<dyn WidgetAny>
-}
-
-/// One step: its marker and its label, clickable when the rules allow it.
-fn build_step(
-    style: FluentStepperStyle,
-    index: usize,
-    label: String,
-    selected: SharedMap,
-    editable: bool,
-    non_linear: bool,
-    on_change: Option<Arc<dyn Fn(usize) + Send + Sync + 'static>>,
-) -> Box<dyn WidgetAny> {
-    let current = read_selected(&selected);
-    let completed = index < current;
-    let done = current >= index;
-
-    // The marker's colours: a step that is current or behind is filled; one
-    // that is still ahead is not.
-    let (background, foreground, border) = if done {
-        (style.primary, style.on_primary, style.primary)
-    } else {
-        (
-            style.surface,
-            style.on_surface_variant,
-            style.outline,
-        )
-    };
-
-    // The label's colours.
-    let label_color = if current == index {
-        style.on_surface
-    } else if current > index {
-        style.primary
-    } else {
-        style.on_surface_variant
-    };
-    let label_weight = if current == index {
-        FontWeight::Medium
-    } else {
-        FontWeight::Normal
-    };
-
-    // The tick's path, resolved once: the glyph does not change with the
-    // selection, only the step it is drawn in does.
-    let check_path = FluentIcon::new("check").path_data();
-
-    let step = Stack::new(Axis::Vertical)
-        .gap(style.item_gap)
-        // v1's `.items_center()` on the step.
-        .align(Align::Start, Align::Center)
-        .push({
-            let style = style;
-            let completed = completed;
-            let index = index;
-            let foreground = foreground;
-            let background = background;
-            let border = border;
-            move || {
-                Box::new(
-                    Surface::new()
-                        .request(
-                            LayoutRequest::new()
-                                .width(style.step_size)
-                                .height(style.step_size)
-                                // v1's `.items_center().justify_center()`.
-                                .main_align(Align::Center)
-                                .cross_align(Align::Center),
-                        )
-                        .radius(style.marker_radius)
-                        .background(to_paint(background))
-                        .border(style.marker_border, to_paint(border))
-                        .push({
-                            let style = style;
-                            let completed = completed;
-                            let index = index;
-                            let foreground = foreground;
-                            let check_path = check_path;
-                            move || -> Box<dyn WidgetAny> {
-                                if completed {
-                                    // v1 chose between `on_primary` and
-                                    // `on_surface_variant` for the tick, and the
-                                    // tick is only drawn for a step that is
-                                    // behind the current one -- where the choice
-                                    // is always `on_primary`.
-                                    Box::new(
-                                        VectorIcon::from_path_data(check_path, VIEW_BOX)
-                                            .size(style.step_size * style.check_scale)
-                                            .color(to_paint(style.on_primary)),
-                                    )
-                                } else {
-                                    Box::new(
-                                        Text::new(format!("{}", index + 1))
-                                            .size(style.marker_font_size)
-                                            .weight(FontWeight::Medium)
-                                            .color(to_paint(foreground)),
-                                    )
-                                }
-                            }
-                        }),
-                ) as Box<dyn WidgetAny>
-            }
-        })
-        .push({
-            let style = style;
-            let label = label.clone();
-            let label_color = label_color;
-            let label_weight = label_weight;
-            move || {
-                Box::new(
-                    Text::new(label.clone())
-                        .size(style.label_font_size)
-                        .weight(label_weight)
-                        .color(to_paint(label_color)),
-                ) as Box<dyn WidgetAny>
-            }
-        });
-
-    // v1's rule: a step is clickable when it is behind the current one and
-    // the stepper is editable, or when the stepper is non-linear.
-    let clickable = (editable && index < current) || non_linear;
-    if clickable {
-        Box::new(
-            Pressable::new(Child::new(
-                ChildKey::index(0),
-                LayoutRequest::new(),
-                move || Box::new(step.clone()) as Box<dyn WidgetAny>,
-            ))
-            .on_click({
-                let selected = selected.clone();
-                let on_change = on_change.clone();
-                move || {
-                    write_selected(&selected, index);
-                    if let Some(on_change) = &on_change {
-                        on_change(index);
-                    }
-                }
-            })
-            // An addition rather than a translation: v1's stepper published no
-            // accessibility description, and a button nobody can name is a
-            // button nobody can use.
-            .label(label),
-        ) as Box<dyn WidgetAny>
-    } else {
-        Box::new(step) as Box<dyn WidgetAny>
-    }
-}
-
-/// The connector between two steps.
-fn build_connector(
-    style: FluentStepperStyle,
-    index: usize,
-    selected: SharedMap,
-) -> Box<dyn WidgetAny> {
-    let current = read_selected(&selected);
-    // v1: the connector behind the current step is `primary`, the one ahead of
-    // it is `outline_variant`.
-    let color = if index < current {
-        style.primary
-    } else {
-        style.outline_variant
-    };
-    Box::new(
-        Surface::new()
-            .request(
-                LayoutRequest::new()
-                    .height(style.connector_width)
-                    .grow(1.0)
-                    .min_width(style.connector_min_width),
-            )
-            .background(to_paint(color)),
-    ) as Box<dyn WidgetAny>
 }
