@@ -19,10 +19,10 @@ use floom_widgets::testkit::{
 };
 
 use floom_core_theme::global_theme::DesignSystem;
-use floom_core_theme::props::time_picker::TimeValue;
+use floom_core_theme::props::time_picker::TimeValue as ThemeTimeValue;
 use floom_core_theme::theme::{MultiTheme, Theme};
 
-use floom_widget_fluent_time_picker::{FluentTimePicker, FluentTimePickerStyle};
+use floom_widget_fluent_time_picker::{FluentTimePicker, FluentTimePickerStyle, TimeValue};
 
 /// The field's box, in the tests' coordinate space.
 const FIELD: Rect = Rect {
@@ -396,7 +396,7 @@ fn the_props_report_the_time_and_the_placeholder() {
         .disabled(true);
     assert_eq!(
         kit.props().value,
-        Some(TimeValue {
+        Some(ThemeTimeValue {
             hour: 7,
             minute: 30
         })

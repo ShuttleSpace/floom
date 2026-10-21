@@ -36,7 +36,7 @@ use floom_types::{Brush, CursorStyle, PointerButton, PointerPhase};
 use floom_widgets::{Align, Axis, Stack, Surface, TextInput, TextInputStyle};
 
 /// The theme's own alpha helper: a colour with its alpha replaced.
-fn with_alpha(color: Color, alpha: u8) -> Color {
+pub fn with_alpha(color: Color, alpha: u8) -> Color {
     Color { r: color.r, g: color.g, b: color.b, a: alpha }
 }
 

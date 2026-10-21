@@ -53,6 +53,7 @@ pub mod text_field;
 pub mod validation_messages;
 pub mod virtual_scroller;
 pub mod window_viewer;
+pub mod time_picker;
 pub mod tooltip;
 pub mod checkbox;
 
@@ -75,7 +76,7 @@ pub use tabs_bar::{TabsBar, TabsBarStyle};
 pub use badge::{Badge};
 pub use chip::{Chip};
 pub use confirm_edit::{ConfirmEdit, ConfirmEditGlyphs, ConfirmEditStyle};
-pub use color_picker::{ColorPicker, ColorPickerStyle, SharedColor, SharedHex, color_to_hex, hex_to_color};
+pub use color_picker::{ColorPicker, ColorPickerStyle, SharedColor, SharedHex, color_to_hex, hex_to_color, with_alpha};
 pub use combobox::{ComboPick, Combobox, ComboboxStyle, Commit, SharedPick};
 pub use combobox::{commit, matching, panel_placement, panel_rect, panel_request, select, sync_query_to_selection, visible_options};
 pub use counter::{Counter, CounterState, CounterStyle, SharedCounter, Step, clamp_value, step_value};
@@ -94,6 +95,10 @@ pub use radio::{Radio, RadioStyle};
 pub use navigation::{NavDestination, NavigationBar, NavigationDrawer, NavigationRail};
 pub use tree_view::{RowRef, SharedTree, TreeNode, TreeView, TreeViewStyle};
 pub use tree_view::{node_at, toggle_path, visible_rows};
+pub use time_picker::{
+    SharedTimeState, TimePicker, TimePickerState, TimePickerStyle, TimeValue, read_state,
+    write_state,
+};
 pub use tooltip::{Tooltip, TooltipStyle};
 pub use validation_messages::{ValidationMessagesList, ValidationMessagesStyle};
 pub use virtual_scroller::VirtualScroller;
