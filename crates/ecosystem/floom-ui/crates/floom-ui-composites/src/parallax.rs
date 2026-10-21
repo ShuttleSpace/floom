@@ -1,0 +1,162 @@
+//! `ParallaxLayer` -- content that moves at a fraction of the page's rate.
+//!
+//! A layer and nothing else: it declares no size of its own -- v1's
+//! `Container` had none either -- so the caller's slot decides how big the
+//! layer is. The content is moved by `-scroll * factor`.
+//!
+//! ## The translate is a compositor channel
+//!
+//! `LayoutRequest` has no translate, so the layer declares one: a zero-length
+//! tween whose endpoints are the offset it wants, which the host parks on the
+//! node and folds onto the whole subtree. The key of that tween carries the
+//! revision, so a moved offset is a new declaration -- and the host sees it
+//! as one.
+//!
+//! ## The offset is a shared number
+//!
+//! The engine's shared family has a flag, a buffer and a map, and no number.
+//! So the engine has one now: [`SharedScroll`], a shared `f32`, beside the
+//! others. A host owns the scroll source and writes to it; the layer reads
+//! it.
+//!
+//! ## Why the host owns the offset
+//!
+//! The engine's `Scroll` keeps its offset in a private
+//! `Arc<Mutex<ScrollOffset>>` and applies **one** offset to its whole
+//! subtree, so a descendant cannot ask an ancestor how far it has scrolled,
+//! and a layer inside it moves at the page's rate rather than a fraction of
+//! it. That gap is the engine's, and this keeps v1's contract -- the host
+//! owns the scroll source -- while the shared number makes it writable.
+
+use std::any::Any;
+use std::sync::{Arc, Mutex};
+
+use floom_core::{
+    AnimationSpec, Child, CompositorProp, CreateContext, ElementId, PaintContext, UpdateContext,
+    Widget, WidgetAny,
+};
+
+/// The engine's shared family has a flag, a buffer and a map, and no number,
+/// so this is one of its own.
+pub type SharedScroll = Arc<Mutex<f32>>;
+
+/// A fresh shared scroll offset.
+pub fn shared_scroll(value: f32) -> SharedScroll {
+    Arc::new(Mutex::new(value))
+}
+
+/// Read the shared offset, treating a poisoned mutex as "no scroll".
+///
+/// The same posture as the engine's `read_flag`: a caller that poisoned the
+/// mutex is as stuck as the widget is, and panicking here would take down a
+/// paint pass over a number nobody was looking at.
+pub fn read_scroll(scroll: &SharedScroll) -> f32 {
+    scroll.lock().map(|guard| *guard).unwrap_or(0.0)
+}
+
+/// Write the shared offset. Reports whether it changed, so a caller can skip a
+/// frame.
+pub fn write_scroll(scroll: &SharedScroll, value: f32) -> bool {
+    match scroll.lock() {
+        Ok(mut guard) if *guard != value => {
+            *guard = value;
+            true
+        }
+        _ => false,
+    }
+}
+
+/// The parallax layer: the content, moved by `-scroll * factor`.
+///
+/// It is a layer and nothing else: it declares no size of its own -- v1's
+/// `Container` had none either -- so the caller's slot decides how big the
+/// layer is.
+pub struct ParallaxLayer {
+    /// The content being moved.
+    child: Option<Child>,
+    /// The host-provided scroll offset.
+    scroll: SharedScroll,
+    /// How much of the offset the content is moved by.
+    factor: f32,
+    /// The offset this widget last read.
+    last_offset: f32,
+    /// Bumped when the offset moves.
+    ///
+    /// The host reconciles a widget's declaration against the one it is
+    /// already running, and an unchanged declaration is left alone. The offset
+   /// is part of the declaration, so a moved offset is a new declaration --
+    /// and the key is what makes the host see it as one.
+    rev: u64,
+}
+
+impl ParallaxLayer {
+    pub fn new(child: Option<Child>, scroll: SharedScroll, factor: f32) -> Self {
+        Self {
+            child,
+            scroll,
+            factor,
+            last_offset: 0.0,
+            rev: 0,
+        }
+    }
+
+    /// The offset this layer last read.
+    pub fn offset(&self) -> f32 {
+        self.last_offset
+    }
+}
+
+impl Widget for ParallaxLayer {
+    fn create(&self, cx: &mut dyn CreateContext) -> ElementId {
+        cx.alloc_child()
+    }
+
+    /// Read the offset, and ask for a repaint when it moved.
+    fn update(&mut self, cx: &mut dyn UpdateContext, id: ElementId) {
+        let offset = read_scroll(&self.scroll);
+        if offset != self.last_offset {
+            self.last_offset = offset;
+            self.rev = self.rev.wrapping_add(1);
+            cx.mark_dirty(id);
+        }
+    }
+
+    fn children(&self) -> Vec<Child> {
+        match &self.child {
+            Some(child) => vec![child.clone()],
+            None => Vec::new(),
+        }
+    }
+
+    /// v1's `translate_y(-scroll * factor)`.
+    ///
+    /// The engine's translate is a compositor channel, so the layer declares
+    /// one: a zero-length tween whose endpoints are the offset it wants,
+    /// which the host parks on the node and folds onto the whole subtree.
+    fn animation(&self) -> Option<AnimationSpec> {
+        let ty = -f64::from(self.last_offset) * f64::from(self.factor);
+        Some(
+            AnimationSpec::new(ty, ty, 0.0)
+                .with_prop(CompositorProp::TranslateY(0.0))
+                .with_key(self.rev),
+        )
+    }
+
+    fn paint(&self, _cx: &mut dyn PaintContext, _id: ElementId) {}
+}
+
+impl WidgetAny for ParallaxLayer {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
+    }
+
+    fn semantics_hint(&self) -> Option<floom_core::SemanticsHint> {
+        // A layer that moves: it publishes nothing of its own, and the content
+        // inside it publishes whatever it is.
+        None
+    }
+}
