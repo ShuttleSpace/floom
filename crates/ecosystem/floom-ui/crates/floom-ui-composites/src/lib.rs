@@ -18,6 +18,7 @@ mod any;
 pub mod shared;
 pub mod builders;
 pub mod badge;
+pub mod calendar;
 pub mod chip;
 pub mod confirm_edit;
 pub mod accordion;
@@ -78,6 +79,10 @@ pub use tabs::Tabs;
 pub use tabs_bar::{TabsBar, TabsBarStyle};
 
 pub use badge::{Badge};
+pub use calendar::{
+    Calendar, CalendarDate, CalendarStyle, SharedDate, SharedMonth, read_month, read_value,
+    write_month, write_value,
+};
 pub use chip::{Chip};
 pub use confirm_edit::{ConfirmEdit, ConfirmEditGlyphs, ConfirmEditStyle};
 pub use color_picker::{ColorPicker, ColorPickerStyle, SharedColor, SharedHex, color_to_hex, hex_to_color, with_alpha};
