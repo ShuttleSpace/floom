@@ -1,6 +1,6 @@
-use floom_core_theme::tokens::color::to_engine_color as to_paint;
 //! Fluent linear progress, ported to Floom 2.0.
 //! Key: centred flow child (Centred), rounded fill, exact percent, static segment.
+use floom_core_theme::tokens::color::to_engine_color as to_paint;
 use floom_signal::{RwSignal, SignalGet};
 use floom_types::Color as PaintColor;
 use floom_widgets::{FillPlacement, Indeterminate, LinearProgress, LinearProgressStyle, PercentRounding};
