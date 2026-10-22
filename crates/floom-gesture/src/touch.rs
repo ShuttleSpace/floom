@@ -372,12 +372,23 @@ mod tests {
             }
         ));
         let end_events = r.handle(end(35.0, 0.0));
-        // Synchronous timing → velocity (0,0), but Fling is still emitted.
+        // Synchronous timing → the velocity is negligible, but Fling is still
+        // emitted: the scroller needs the end-of-gesture cue even when the
+        // release velocity is zero.
         assert!(end_events.contains(&GestureEvent::ScrollEnd));
+        // The velocity itself is *not* asserted to be zero. It is computed
+        // from wall-clock timestamps, and whether two samples land within a
+        // microsecond of each other is a property of the machine, not of the
+        // code — asserting zero here made this test fail roughly one run in
+        // three. What is a property of the code is that the velocity is
+        // finite and inside the clamp, which is what the tracker's own test
+        // covers for the zero case.
         assert!(
-            end_events
-                .iter()
-                .any(|e| matches!(e, GestureEvent::Fling { vx, vy } if *vx == 0.0 && *vy == 0.0))
+            end_events.iter().any(|e| matches!(
+                e,
+                GestureEvent::Fling { vx, vy } if vx.is_finite() && vy.is_finite()
+            )),
+            "a fling must be emitted, with a finite velocity: {end_events:?}"
         );
         assert!(!r.is_scrolling());
     }

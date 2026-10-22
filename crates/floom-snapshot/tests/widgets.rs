@@ -219,7 +219,9 @@ fn every_widget_golden_is_accounted_for() {
         .collect();
     let expected = [
         "widget_text_scene.snap",
-        "widget_checkbox_checked_scene.snap",
+        // The two-state control's golden follows the control: the fixture
+        // uses a `Switch`, so the golden is the switch's scene.
+        "widget_switch_checked_scene.snap",
         "widget_stack_composite_scene.snap",
         "widget_button_semantics.snap",
         "widget_container_pixel.snap",
