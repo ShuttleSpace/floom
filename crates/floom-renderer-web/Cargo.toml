@@ -8,6 +8,10 @@ description = "Web/WASM canvas presenter for Floom 2.0 (CPU scene rasterizer + c
 
 [dependencies]
 floom-renderer = { path = "../floom-renderer", version = "0.2.0" }
+# The pixel golden: the web's own buffer, hashed and compared against a file.
+# The comparison against the software reference catches a divergence between
+# the two; the golden catches a change that moves both.
+floom-snapshot = { path = "../floom-snapshot", version = "0.2.0" }
 floom-renderer-software = { path = "../floom-renderer-software", version = "0.2.0" }
 floom-scene = { path = "../floom-scene", version = "0.2.0" }
 floom-types = { path = "../floom-types", version = "0.2.0" }
@@ -31,3 +35,7 @@ web-sys = { version = "0.3", features = [
 floom-scene = { path = "../floom-scene", version = "0.2.0" }
 floom-types = { path = "../floom-types", version = "0.2.0" }
 floom-renderer = { path = "../floom-renderer", version = "0.2.0" }
+# The pixel golden: the web's own buffer, hashed and compared against a file.
+# The comparison against the software reference catches a divergence between
+# the two; the golden catches a change that moves both.
+floom-snapshot = { path = "../floom-snapshot", version = "0.2.0" }

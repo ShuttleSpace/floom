@@ -28,7 +28,7 @@ use floom_scene::{ResourceRegistry, Scene};
 use floom_types::{Color, Point, Rect, Size, SurfaceId, WindowId};
 
 pub mod frames;
-pub use frames::{FrameDigest, FrameDiff, GoldenFrames, parse_sequence};
+pub use frames::{FrameDiff, FrameDigest, GoldenFrames, parse_sequence};
 
 /// Stable, dependency-free 64-bit hash (FNV-1a, 64-bit offset basis).
 pub fn fnv1a(bytes: &[u8]) -> u64 {
@@ -134,14 +134,59 @@ impl PixelSnapshot {
         let empty = ResourceRegistry::new();
         let res = resources.unwrap_or(&empty);
         presenter.present(scene, res);
+        let width = presenter.width();
+        let height = presenter.height();
         let rgba = presenter.pixels().to_vec();
-        let hash = format!("{:016x}", fnv1a(&rgba));
+        // The same hashing as `of_buffer`, so a golden written through one
+        // constructor is comparable with one written through the other.
+        let snapshot = Self::of_buffer(&rgba, width, height);
+        snapshot
+    }
+
+    /// A snapshot of a buffer a backend produced.
+    ///
+    /// The other half of the type: [`PixelSnapshot::of`] renders through the
+    /// software presenter, which is the *reference* — but a reference is not a
+    /// coverage. A backend that renders its own pixels needs a golden too,
+    /// and this is how it gets one: the backend hands over its buffer, and the
+    /// same hashing and the same golden file apply.
+    ///
+    /// The width and height are the **physical** ones, so a buffer that is
+    /// the wrong size is a different snapshot rather than a re-hash of a
+    /// different picture.
+    pub fn of_buffer(rgba: &[u8], width: u32, height: u32) -> Self {
+        // The dimensions go into the hash, not just the buffer.
+        //
+        // The same bytes in a different shape are a different picture — a
+        // 1×1 buffer and a 2×1 buffer of the same pixel are not the same
+        // image, and a hash that could not tell them apart would let a
+        // backend change the shape of its output without the golden
+        // noticing.
+        let mut hashed = Vec::with_capacity(rgba.len() + 8);
+        hashed.extend_from_slice(&width.to_le_bytes());
+        hashed.extend_from_slice(&height.to_le_bytes());
+        hashed.extend_from_slice(rgba);
+        let hash = format!("{:016x}", fnv1a(&hashed));
         Self {
-            width: presenter.width(),
-            height: presenter.height(),
+            width,
+            height,
             hash,
-            rgba,
+            rgba: rgba.to_vec(),
         }
+    }
+
+    /// The alpha of one pixel, or `None` outside the buffer.
+    ///
+    /// A convenience for the probe style the software backend's tests use:
+    /// "this pixel is inked" only means something next to "the same picture
+    /// without it is clear", and a probe reads better than an index
+    /// calculation.
+    pub fn alpha(&self, x: u32, y: u32) -> Option<u8> {
+        if x >= self.width || y >= self.height {
+            return None;
+        }
+        let index = ((y as usize) * self.width as usize + x as usize) * 4;
+        self.rgba.get(index + 3).copied()
     }
 
     /// Golden-file compare / update. The golden stores `WxH <hash>` so a resize

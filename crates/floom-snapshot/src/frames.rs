@@ -67,7 +67,10 @@ impl FrameDigest {
     /// ignore its right-hand 4 px, which is exactly where a card's shadow sits.
     pub fn of(snap: &PixelSnapshot, grid: usize) -> Self {
         assert!(grid > 0, "a digest needs at least one cell");
-        assert!(snap.width > 0 && snap.height > 0, "an empty frame digests to nothing");
+        assert!(
+            snap.width > 0 && snap.height > 0,
+            "an empty frame digests to nothing"
+        );
         let w = snap.width as usize;
         let h = snap.height as usize;
         let mut cells = Vec::with_capacity(grid * grid);
@@ -113,7 +116,10 @@ impl FrameDigest {
 
     /// The digest as stored: a header line, then one row of hex cells per line.
     pub fn text(&self) -> String {
-        let mut out = format!("{}x{} grid {} tol {}\n", self.width, self.height, self.grid, DEFAULT_TOL);
+        let mut out = format!(
+            "{}x{} grid {} tol {}\n",
+            self.width, self.height, self.grid, DEFAULT_TOL
+        );
         for row in 0..self.grid {
             let line: Vec<String> = (0..self.grid)
                 .map(|col| {
@@ -134,7 +140,13 @@ impl FrameDigest {
         // "96x48 grid 12 tol 2"
         let (dims, rest) = header.split_once(' ')?;
         let (w, h) = dims.split_once('x')?;
-        let grid: usize = rest.split("grid ").nth(1)?.split_whitespace().next()?.parse().ok()?;
+        let grid: usize = rest
+            .split("grid ")
+            .nth(1)?
+            .split_whitespace()
+            .next()?
+            .parse()
+            .ok()?;
         let mut cells = Vec::with_capacity(grid * grid);
         for line in lines {
             for tok in line.split_whitespace() {
@@ -328,7 +340,10 @@ impl GoldenFrames {
             ),
         };
         let expected = parse_sequence(&prev).unwrap_or_else(|| {
-            panic!("frame golden `{name}` at {} is not a frame sequence", path.display())
+            panic!(
+                "frame golden `{name}` at {} is not a frame sequence",
+                path.display()
+            )
         });
 
         assert_eq!(
@@ -384,11 +399,7 @@ pub fn parse_sequence(text: &str) -> Option<Vec<(String, FrameDigest)>> {
     if let (Some(l), Some(d)) = (label, FrameDigest::parse(&body)) {
         out.push((l, d));
     }
-    if out.is_empty() {
-        None
-    } else {
-        Some(out)
-    }
+    if out.is_empty() { None } else { Some(out) }
 }
 
 #[cfg(test)]
@@ -456,7 +467,10 @@ mod tests {
         let base = solid(48, 24, Color::rgb(30, 90, 200));
         let other = shifted(&base, 64);
         let d = FrameDigest::of(&base, 12).diff(&FrameDigest::of(&other, 12), DEFAULT_TOL);
-        assert!(d.moved() && d.worst >= 64, "a real change must be seen: {d:?}");
+        assert!(
+            d.moved() && d.worst >= 64,
+            "a real change must be seen: {d:?}"
+        );
     }
 
     #[test]
