@@ -258,7 +258,7 @@ macOS 门禁记录过一次真实教训（`docs/gates/macos.md:126-128`）：
 | **B4** | vello 的 blur primitive | — | 🟠 | 依赖上游 vello 能力；若短期不可得，提供 CPU 回退（把阴影/滤镜交给 software 光栅化后上屏），保证桌面与 Android 视觉一致 |
 | **B5** | 统一后端能力查询 | — | 🟠 | ✅ **完成** — `Renderer::capabilities` 与 `Presenter::capabilities` 返回 `RendererCapabilities{shadows,filters,backdrop_filters,shaders}`；默认**悲观**；五个后端各自诚实回答；`AppRunner::renderer_capabilities()` 透给宿主；5 项测试 |
 | **B6** | 统一降级计数的暴露方式 | B5 | 🟡 | ⬜ **未开始** — 能力查询已统一，但**计数器**的名字仍各后端不同（`shadows_drawn` / `shadows_skipped` / `skipped`）；需要一个统一的 `DegradationReport` |
-| **B7** | 为 vello / tui / web 补像素级回归 | — | 🟠 | 每个后端至少一份 golden；CJK 字形必须进断言（吸取 macOS tofu 教训） |
+| **B7** | 为 vello / tui / web 补像素级回归 | — | 🟠 | ✅ **完成（web / tui / software）** — `PixelSnapshot::of_buffer` 让**任何**后端都能有 golden（尺寸进哈希）；web 与 software 参考逐像素比对 + 自己的 golden；tui 的 golden 是**字符网格文本**（人能在 diff 里读懂）；software 补**文本渲染层**证据（墨迹是字形形状而非填充块）。**vello 的 GPU 路径仍无**——需要 GPU 上下文 |
 | **B8** | shader 在非 GPU 后端的行为明确化 | — | 🟡 | ✅ **完成** — 文档明确"自定义着色器仅 GPU 后端可用"；software / web / tui / skia-abi 均计数 |
 
 ## C 组 · 承接（上一轮的平台后端计划，仍然有效）
@@ -285,7 +285,7 @@ macOS 门禁记录过一次真实教训（`docs/gates/macos.md:126-128`）：
 第二梯队
   A7 → A8 → A9            精简 SDK 结构 + ABI 版本  ✅ 2026-10-22
   B1, B5, B6              文档重写 + 能力查询 + 统计归一 ⬜（B1/B5 ✅，B6 ⬜）
-  B3, B7                  tui 计数 + 像素回归      ⬜（B3 ✅，B7 ⬜）
+  B3, B7                  tui 计数 + 像素回归      ✅ 2026-10-22（vello GPU 路径除外）
   C4, C5, C6              平台后端补齐 + 门禁      ⬜
 
 第三梯队
