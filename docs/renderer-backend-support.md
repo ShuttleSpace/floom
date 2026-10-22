@@ -142,10 +142,18 @@ that vocabulary.
   backdrop filter. Counting is not rendering; a card with a shadow looks
   flat on the desktop and on Android until vello grows a blur primitive or
   the software path is used as a fallback.
-- **Pixel-level tests outside the software backend.** The macOS gate found a
-  real rendering defect — CJK glyphs drawn as tofu — that no CI check
-  caught, because the golden frames were ASCII. Only the software backend
-  has pixel-level discipline today.
+- **Pixel-level tests for the GPU path.** The web, the terminal and the
+  software backend have pixel evidence now — the web compares itself against
+  the reference buffer pixel for pixel, the terminal's golden is its
+  character grid as text, and the software backend has text evidence that
+  the ink is a glyph *shape* rather than a filled box. The vello GPU path
+  has none, because producing a comparable buffer from it needs a GPU
+  context, and CI has none.
+- **The CJK case is only covered where the font is.** `floom-text` asserts
+  that CJK does not shape to `.notdef`, and that test is macOS-gated
+  because it needs a font that is installed — an environment property
+  rather than a code one. The rendering-level evidence is therefore Latin,
+  and the CJK evidence stays where the font is known to exist.
 - **One vocabulary for the counters.** The capability query is in place
   (`Renderer::capabilities` and `Presenter::capabilities`), and a host can
   ask before it draws. The *counters* are still spelled slightly differently
