@@ -183,6 +183,55 @@ not another.
 so a Swift or Java plugin has the contract to implement without having to
 find it.
 
+### A worked example
+
+`crates/floom-plugin-nativeview` is a plugin whose capability is a **native
+view**, and its native half is **Objective-C** — the language AppKit is
+written in, because a plugin that contributes a view has to reach the
+framework it contributes to.
+
+```
+crates/floom-plugin-nativeview/
+├── build.rs                      compiles native/macos/floom_nativeview.m
+├── native/
+│   ├── common/floom_nativeview.h         the plugin's own four-function ABI
+│   └── macos/floom_nativeview.m          the Objective-C half
+├── src/lib.rs                    the Rust half
+├── examples/native_view.rs       the whole chain, on the main thread
+└── tests/native_view.rs          the boundary, headless
+```
+
+The chain, end to end:
+
+1. the Objective-C half's constructor hands its provider vtable to the Rust
+   half — the native code is the only party that knows when it is ready;
+2. the app asks the plugin for a provider and hands it the host's window;
+3. the framework drives the provider through the ordinary Rust
+   `NativeViewProvider` trait, so the controller's lifecycle invariants apply
+   to a Swift or Java provider exactly as they apply to a Rust one;
+4. the Objective-C half makes a real `NSView`, puts it in the window's
+   content view, and places it.
+
+The example prints what happened:
+
+```text
+window: <NSWindow: 0x7f9796c04100>
+capabilities: modes=[Overlay] snapshot=false focusable=false
+bound in mode Overlay
+backing scale: 2
+placed at 10,15 100x50 (points)
+```
+
+That last line is the whole coordinate story in one: the framework snapped to
+whole **device** pixels, and the native half divided by the window's backing
+scale to get AppKit's **points** — once each, on the side that owns that
+coordinate space.
+
+The window half is an **example** rather than a test for one reason: AppKit
+wants the main thread, and a test harness does not give one. The
+framework-side half — the C ABI, the provider, the lifecycle — is covered by
+the test suite on every platform.
+
 ### How this is verified
 
 `floom create --plugin` scaffolds the whole thing, and the generated crate's
@@ -191,6 +240,13 @@ check that fails if the boundary is stubbed. The CLI's tests assert that the
 header, the desktop half, the Android shim and the Swift half all name the
 same symbols, because that is the failure the single-header design exists to
 prevent.
+
+For the provider ABI, the proof is stronger, because the failure it prevents
+is invisible: the header is compiled by the platform's own C compiler, and
+the program it compiles reports every struct's size and every field's offset
+— which are compared against the Rust mirror's, field by field. A
+hand-written ABI drifts, and the symptom is not a compile error but a
+provider writing into a struct the framework reads at the wrong offsets.
 
 
 ## Existing capabilities

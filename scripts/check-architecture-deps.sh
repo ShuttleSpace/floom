@@ -241,6 +241,10 @@ for _names, _level in [
     ),
     (
         [
+            # A plugin sits above the platform layer and below the widgets:
+            # it may depend on the platform adapters and the native ABI, and
+            # nothing may depend on it but an application.
+            "floom-plugin-nativeview",
             "floom-animation", "floom-focus", "floom-gesture", "floom-overlay", "floom-store", "floom-task", "floom-forms",
             "floom-navigation", "floom-persistence", "floom-services",
             "floom-error", "floom-ime", "floom-editor",

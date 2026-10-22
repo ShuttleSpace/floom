@@ -25,6 +25,7 @@ Companion pages: [`EXAMPLES.md`](EXAMPLES.md) (the golden examples),
 | `floom-platform`, `floom-platform-desktop`, `floom-platform-android`, `floom-platform-ios`, `floom-platform-harmony`, `floom-platform-web`, `floom-platform-embedded`, `floom-platform-tui`, `floom-ui-events-winit` | L4 | the windowing ABI plus concrete backends (including one whose target is a character grid) |
 | `floom-native` | L4 | native view composition: capability negotiation, slots, pooling |
 | `floom-native-ffi` | L4 | the C ABI for native composition providers: a Swift, Java, C++ or ArkTS provider, driven by Rust |
+| `floom-plugin-nativeview` | L5 | a plugin whose capability is a native view, written in Objective-C |
 | `floom-platform-mobile` | L4 | mobile OS capabilities (camera, location, sensors, vibration) behind one ABI, with `jni` / `objc2` backends |
 | `floom-animation`, `floom-focus`, `floom-gesture`, `floom-overlay`, `floom-store`, `floom-task`, `floom-forms`, `floom-navigation`, `floom-persistence`, `floom-services`, `floom-error`, `floom-ime`, `floom-editor`, `floom-editor-core` | L5 | framework services, widget-free by design |
 | _(design systems)_ | — | `floom-theme`, `floom-design`, `floom-material`, `floom-cupertino`, `floom-fluent`, `floom-harmony` live in the `floom-ui` workspace, which the root workspace `exclude`s. They emit `floom-style` property values rather than paint calls, and their own dependency graph is checked by that workspace's build, not by `scripts/check-architecture-deps.sh`. |
