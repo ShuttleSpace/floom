@@ -1,6 +1,14 @@
 //! Haptic feedback and vibration.
 //!
 //! Adapted from `gpui-mobile` (Apache-2.0).
+//!
+//! A **capability plugin**: one capability, one crate, opt-in by
+//! dependency. The SDK does not carry it — an app that wants this
+//! capability adds this crate, and an app that does not, does not link
+//! it.
+//!
+//! Where an arm is not wired yet, the call reports that plainly rather
+//! than returning a value that looks measured.
 
 #[cfg(target_os = "android")]
 mod android;

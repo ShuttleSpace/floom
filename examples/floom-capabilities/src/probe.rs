@@ -38,10 +38,19 @@
 //! give the Readings tab the side effect it exists to avoid. It appears in
 //! [`actions`] instead.
 
-use floom_platform_mobile::packages::{
-    battery, clipboard, connectivity, device_info, keyboard::soft_input, local_auth, location,
-    notifications, safe_area, sensors, vibration,
-};
+// The capabilities that are plugins, and the two that are facts about the
+// window and so belong to the platform. A capability is a plugin: an app that
+// wants the battery depends on the battery crate, and the SDK itself does not
+// carry it.
+use floom_platform_mobile::packages::{clipboard, keyboard::soft_input, safe_area};
+use floom_plugin_battery as battery;
+use floom_plugin_connectivity as connectivity;
+use floom_plugin_device_info as device_info;
+use floom_plugin_local_auth as local_auth;
+use floom_plugin_location as location;
+use floom_plugin_notifications as notifications;
+use floom_plugin_sensors as sensors;
+use floom_plugin_vibration as vibration;
 
 /// What a capability reported.
 #[derive(Debug, Clone, PartialEq)]

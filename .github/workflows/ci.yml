@@ -56,6 +56,11 @@ jobs:
         --package=floom-layout --package=floom-style --package=floom-virtual
         --package=floom-native --package=floom-native-ffi
         --package=floom-plugin-nativeview
+        --package=floom-plugin-battery --package=floom-plugin-connectivity
+        --package=floom-plugin-device-info --package=floom-plugin-local-auth
+        --package=floom-plugin-location --package=floom-plugin-notifications
+        --package=floom-plugin-sensors --package=floom-plugin-share
+        --package=floom-plugin-vibration
         --package=floom-accessibility --package=floom-theme --package=floom-focus --package=floom-gesture
         --package=floom-animation --package=floom-overlay --package=floom-store --package=floom-task
         --package=floom-forms --package=floom-navigation --package=floom-persistence --package=floom-services

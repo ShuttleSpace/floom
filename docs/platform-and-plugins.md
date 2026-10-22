@@ -251,18 +251,32 @@ provider writing into a struct the framework reads at the wrong offsets.
 
 ## Existing capabilities
 
-`crates/floom-platform-mobile/src/packages/` already follows this shape with the
-`mod.rs` + `ios.rs` + `android.rs` dispatch convention (host-inert stubs where a
-backend is not wired yet):
+The mobile capabilities were **thirteen packages inside the platform adapter**,
+and they are now **nine plugin crates**, with the adapter keeping only what is
+the platform's own business.
 
-`vibration`, `keyboard`, `safe_area`, `system_chrome`, `clipboard`,
-`device_info`, `battery`, `connectivity`, `location`, `sensors`, `local_auth`,
-`notifications`, `share`.
+| | before | after |
+|---|---|---|
+| `floom-platform-mobile` | 13 capability packages, plus the whole iOS dependency tree | 4 packages: `clipboard` and `keyboard` (the two of `floom-platform`'s three traits that mobile implements) and `safe_area` / `system_chrome` (facts about a *window*, not capabilities a plugin provides) |
+| the capabilities | linked into every mobile app that touched the platform adapter | one crate each, opt-in by dependency: `floom-plugin-battery`, `-connectivity`, `-device-info`, `-local-auth`, `-location`, `-notifications`, `-sensors`, `-share`, `-vibration` |
+
+That is the whole of "the SDK stays small": a capability in the adapter is
+compiled into every app on that platform whether it wants the capability or
+not; a capability in its own crate is linked only by the apps that ask for it.
+Moving them also removed the adapter's entire iOS dependency tree — the
+capability that needed `objc2` brought its own framework bindings with it.
+
+The rule is enforced rather than promised: the architecture gate refuses a
+dependency from a `floom-platform-*` crate to a `floom-plugin-*` crate. The
+platform reaching *up* to a plugin is the edge that would put the capability
+back in.
 
 `camera` is intentionally **not** there yet: it is a streaming media surface
 rather than a single-shot query, so it is the first real test of rule 2 — it
 wants a Kotlin host library (`CameraX`) and a Swift one (`AVFoundation`), with
-frames handed over as an external texture rather than copied per frame.
+frames handed over as an external texture rather than copied per frame. It
+would be a plugin, and it would be the one that contributes a **native view**,
+so it is the first thing to need the provider ABI.
 
 ## Relationship to `floom/src/platform`
 

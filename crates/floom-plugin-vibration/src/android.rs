@@ -1,10 +1,10 @@
 //! Android haptics and vibration via JNI.
 //!
 //! Adapted from `gpui-mobile` (Apache-2.0). Uses the minimal bridge in
-//! [`crate::jni`] instead of `gpui-mobile`'s full `android/jni.rs`.
+//! [`floom_platform_mobile::jni`] instead of `gpui-mobile`'s full `android/jni.rs`.
 
 use super::HapticFeedback;
-use crate::jni::{self as jni_helpers, JniExt, obj};
+use floom_platform_mobile::jni::{self as jni_helpers, JniExt, obj};
 use jni::objects::{JObject, JValue};
 
 pub fn vibrate(duration_ms: u32) -> Result<(), String> {

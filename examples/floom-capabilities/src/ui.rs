@@ -36,9 +36,12 @@
 //! relying on it would silently render flush-left.)
 
 use floom_core::{Align, Axis, Child, ChildKey, Color, LayoutRequest, WidgetAny};
-use floom_platform_mobile::packages::{
-    keyboard::soft_input, local_auth, location, notifications, share, system_chrome, vibration,
-};
+use floom_platform_mobile::packages::{keyboard::soft_input, system_chrome};
+use floom_plugin_local_auth as local_auth;
+use floom_plugin_location as location;
+use floom_plugin_notifications as notifications;
+use floom_plugin_share as share;
+use floom_plugin_vibration as vibration;
 use floom_widgets::{Button, Container, Spacer, Stack, Text};
 
 use crate::probe::{self, Row, State};

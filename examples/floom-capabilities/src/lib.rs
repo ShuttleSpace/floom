@@ -3,9 +3,14 @@
 //! Where [`floom-demo`](https://docs.rs/floom-demo) answers "what can Floom
 //! *draw*?", this crate answers "what can Floom *ask the OS*?" — the layer between
 //! a widget tree and the device it runs on. Twelve readings, eight actions, one
-//! tree, and the same code on every platform. Those twelve cover all thirteen of
-//! the capability packages `floom-platform-mobile` declares, so nothing this
-//! table shows is invented.
+//! tree, and the same code on every platform. Those twelve cover every
+//! capability Floom knows about, so nothing this table shows is invented.
+//!
+//! Every capability it shows is a **plugin** — `floom-plugin-battery`,
+//! `floom-plugin-vibration`, and the rest — and this example depends on the
+//! ones it demonstrates. The SDK itself carries none of them: a capability
+//! lives in its own crate, and an app that wants the battery links the
+//! battery and nothing else.
 //!
 //! ```text
 //!                    probe::all()          probe::actions()

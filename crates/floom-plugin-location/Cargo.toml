@@ -1,0 +1,15 @@
+[package]
+name = "floom-plugin-location"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "A Floom plugin: the device's location"
+rust-version.workspace = true
+publish = false
+
+# A plugin owns a *capability* and the host owns the *transport*. It depends
+# on the platform layer and on nothing above it: no widget stack, no renderer,
+# no facade. An app that wants this capability adds this crate; an app that
+# does not, does not link it.
+[dependencies]

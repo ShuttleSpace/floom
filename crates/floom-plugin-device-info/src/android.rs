@@ -6,7 +6,7 @@ use super::DeviceInfo;
 
 pub fn device_info() -> DeviceInfo {
     // TODO: read `android.os.Build` (MODEL, MANUFACTURER, DEVICE, BRAND) and
-    // `Build.VERSION` (RELEASE, SDK_INT) via the JNI bridge in `crate::jni`.
+    // `Build.VERSION` (RELEASE, SDK_INT) via the JNI bridge in `floom_platform_mobile::jni`.
     DeviceInfo::default()
 }
 

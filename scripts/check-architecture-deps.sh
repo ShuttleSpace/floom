@@ -117,6 +117,12 @@ PLATFORM_HINTS = {
     "objc2", "objc2-app-kit", "objc2-ui-kit", "android_logger", "ndk", "jni",
     "napi", "napi-derive", "accesskit_unix", "accesskit_macos", "accesskit_windows",
     "muda", "rfd", "copypasta", "clipboard-win", "windows-sys",
+    # The platform *adapters* -- the crates that translate one OS into the
+    # `floom-platform` traits. They are the crates a capability must never
+    # live in, and the ones a capability plugin must never depend on upward.
+    "floom-platform", "floom-platform-desktop", "floom-platform-android",
+    "floom-platform-ios", "floom-platform-harmony", "floom-platform-web",
+    "floom-platform-embedded", "floom-platform-tui", "floom-platform-mobile",
 }
 GPU_HINTS = {
     "wgpu", "vello", "vger", "floem-vger", "skia-safe", "metal", "ash",
@@ -197,6 +203,31 @@ for w in sorted(WIDGET_HINTS):
     if not bad_renderer and not bad_platform:
         notes.append(f"OK {w}: no concrete renderer or platform dependency")
 
+# --- A platform adapter must not depend on a capability plugin ---
+#
+# The direction is core → platform and plugin → platform. A platform adapter
+# reaching *up* to a plugin is the edge that would put a capability back into
+# the SDK: the adapter is a dependency of every app on that platform, so a
+# capability reachable from it is linked into every one of them.
+#
+# This is the rule that makes "the SDK stays small" structural rather than a
+# promise. It is also the rule that would have caught the thirteen capability
+# packages that used to live inside `floom-platform-mobile`.
+for p in sorted(PLATFORM_HINTS):
+    if p not in packages:
+        notes.append(f"SKIP {p}: not in workspace yet")
+        continue
+    deps = pkg_deps(p)
+    bad_plugins = {d for d in deps if d.startswith("floom_plugin_")}
+    if bad_plugins:
+        failures.append(
+            f"FORBIDDEN {p} → capability plugin {sorted(bad_plugins)}: "
+            "a platform adapter must not carry a capability; the capability "
+            "belongs in a plugin the app opts into"
+        )
+    else:
+        notes.append(f"OK {p}: no capability plugin dependency")
+
 # --- Layer order: no crate may depend on a crate above it ---
 #
 # The spec's §6 dependency flow (types → core → runtime → layout/text/scene →
@@ -245,6 +276,18 @@ for _names, _level in [
             # it may depend on the platform adapters and the native ABI, and
             # nothing may depend on it but an application.
             "floom-plugin-nativeview",
+            # The capability plugins. Each is one capability, opt-in by
+            # dependency: an app that does not want the battery does not link
+            # the battery.
+            "floom-plugin-battery",
+            "floom-plugin-connectivity",
+            "floom-plugin-device-info",
+            "floom-plugin-local-auth",
+            "floom-plugin-location",
+            "floom-plugin-notifications",
+            "floom-plugin-sensors",
+            "floom-plugin-share",
+            "floom-plugin-vibration",
             "floom-animation", "floom-focus", "floom-gesture", "floom-overlay", "floom-store", "floom-task", "floom-forms",
             "floom-navigation", "floom-persistence", "floom-services",
             "floom-error", "floom-ime", "floom-editor",

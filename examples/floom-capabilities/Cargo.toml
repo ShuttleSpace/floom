@@ -62,6 +62,18 @@ floom-platform = { path = "../../crates/floom-platform", version = "0.2.0" }
 # All 13 capability packages this example demonstrates. Same layer (L4) as the
 # platform backends, so the architecture gate permits the edge.
 floom-platform-mobile = { path = "../../crates/floom-platform-mobile", version = "0.2.0" }
+
+# The capabilities this gallery demonstrates. Each is a plugin, so the gallery
+# depends on the ones it shows and the SDK does not carry any of them.
+floom-plugin-battery = { path = "../../crates/floom-plugin-battery", version = "0.2.0" }
+floom-plugin-connectivity = { path = "../../crates/floom-plugin-connectivity", version = "0.2.0" }
+floom-plugin-device-info = { path = "../../crates/floom-plugin-device-info", version = "0.2.0" }
+floom-plugin-local-auth = { path = "../../crates/floom-plugin-local-auth", version = "0.2.0" }
+floom-plugin-location = { path = "../../crates/floom-plugin-location", version = "0.2.0" }
+floom-plugin-notifications = { path = "../../crates/floom-plugin-notifications", version = "0.2.0" }
+floom-plugin-sensors = { path = "../../crates/floom-plugin-sensors", version = "0.2.0" }
+floom-plugin-share = { path = "../../crates/floom-plugin-share", version = "0.2.0" }
+floom-plugin-vibration = { path = "../../crates/floom-plugin-vibration", version = "0.2.0" }
 floom-types = { path = "../../crates/floom-types", version = "0.2.0" }
 floom-widgets = { path = "../../crates/floom-widgets", version = "0.2.0" }
 

@@ -244,7 +244,7 @@ macOS 门禁记录过一次真实教训（`docs/gates/macos.md:126-128`）：
 | **A10** | 插件支持 web / harmony / tui | A1–A3 | 🟠 | ✅ **完成（构建层）** | 六个平台的原生半边齐备；web(wasm32) 与 ohos 交叉编译通过；设备/浏览器运行未验证 |
 | **A6** | 落地第一个真实插件 | A1–A5 | 🔴 | ✅ **完成（macOS）** | `crates/floom-plugin-nativeview`：原生半边是 Objective-C，真实 `NSView` 进真实 `NSWindow`，由框架控制器经 C ABI 驱动。**未覆盖 camera/webview 这类真能力**——需要设备 |
 | **A6b** | 插件的 provider 如何到达宿主 | A5 | 🟠 | 🟡 **部分** | 插件的 Rust 半边暴露 `provider(host_window)`，宿主在 `WidgetHost::set_native_provider` 处安装。**注册表**（按 kind 选 provider）未做 |
-| **A7** | 把 `floom-platform-mobile/packages/` 迁出为插件 | A5、A6 | 🟠 | ⬜ **未开始** | 13 个包按能力拆成 `floom-plugin-<capability>/`；适配器只留窗口/剪贴板/IME；架构脚本加"平台层不得含能力包"检查 |
+| **A7** | 把 `floom-platform-mobile/packages/` 迁出为插件 | A5、A6 | 🟠 | ✅ **完成** | 13 个包 → 适配器留 4 个（clipboard/keyboard/safe_area/system_chrome）+ **9 个 `floom-plugin-<capability>/`**；适配器甩掉整棵 iOS 依赖树；架构门禁新增"平台适配器不得依赖插件"规则（已验证会拦） |
 | **A8** | 补 SDK 精简的**结构性**约束 | A7 | 🟡 | ⬜ **未开始** | `scripts/check-architecture-deps.sh` 增加规则：`floom-platform*` 不得声明 `camera/video/webview/bluetooth` 能力；`Capability` 位与实际实现一一对应 |
 | **A9** | 插件 ABI 版本协商落地 | A1 | 🟡 | ✅ **完成** | `floom_<name>_abi_version()` 参与 enable 校验，版本不符时拒绝并给出明确错误 |
 

@@ -991,6 +991,15 @@ dependencies = [
  "floom-platform-ios",
  "floom-platform-mobile",
  "floom-platform-web",
+ "floom-plugin-battery",
+ "floom-plugin-connectivity",
+ "floom-plugin-device-info",
+ "floom-plugin-local-auth",
+ "floom-plugin-location",
+ "floom-plugin-notifications",
+ "floom-plugin-sensors",
+ "floom-plugin-share",
+ "floom-plugin-vibration",
  "floom-renderer-vello",
  "floom-types",
  "floom-widgets",
@@ -1395,12 +1404,8 @@ dependencies = [
 name = "floom-platform-mobile"
 version = "0.2.0"
 dependencies = [
- "block2",
- "core-foundation",
- "core-foundation-sys",
  "floom-types",
  "jni 0.22.4",
- "objc2",
 ]
 
 [[package]]
@@ -1429,6 +1434,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "floom-plugin-battery"
+version = "0.2.0"
+
+[[package]]
+name = "floom-plugin-connectivity"
+version = "0.2.0"
+
+[[package]]
+name = "floom-plugin-device-info"
+version = "0.2.0"
+
+[[package]]
+name = "floom-plugin-local-auth"
+version = "0.2.0"
+
+[[package]]
+name = "floom-plugin-location"
+version = "0.2.0"
+
+[[package]]
 name = "floom-plugin-nativeview"
 version = "0.2.0"
 dependencies = [
@@ -1438,6 +1463,27 @@ dependencies = [
  "objc2",
  "objc2-app-kit",
  "objc2-foundation",
+]
+
+[[package]]
+name = "floom-plugin-notifications"
+version = "0.2.0"
+
+[[package]]
+name = "floom-plugin-sensors"
+version = "0.2.0"
+
+[[package]]
+name = "floom-plugin-share"
+version = "0.2.0"
+
+[[package]]
+name = "floom-plugin-vibration"
+version = "0.2.0"
+dependencies = [
+ "floom-platform-mobile",
+ "jni 0.22.4",
+ "objc2",
 ]
 
 [[package]]

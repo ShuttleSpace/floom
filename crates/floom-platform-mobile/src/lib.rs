@@ -1,9 +1,41 @@
-//! Mobile OS-capability packages for Floom 2.0.
+//! The mobile platform layer for Floom 2.0.
 //!
-//! This crate follows the *packages* pattern popularised by
-//! [`gpui-mobile`](https://github.com/itsbalamurali/gpui-mobile): each mobile
-//! capability (vibration, camera, location, sensors, …) lives in its own
-//! module under [`packages`] with three files:
+//! This crate is a **platform adapter**, and it is deliberately small. It
+//! carries two things:
+//!
+//! * the **JNI bridge** — the JavaVM, the activity, and the helpers the
+//!   platform's own packages use to reach Android. It is meaningful only on
+//!   Android, and the `jni` crate is a target-gated dependency, so nothing
+//!   pulls it on any other target.
+//! * the **packages** that are the platform's own business rather than a
+//!   capability: the clipboard and the soft keyboard (the two of
+//!   `floom-platform`'s three traits that mobile implements) and the two
+//!   facts about a window — the safe-area insets and the system chrome.
+//!
+//! # What is not here
+//!
+//! Every *capability* — the battery, the connectivity, the device's identity,
+//! the biometrics, the location, the notifications, the sensors, the share
+//! sheet, the haptics — is a **plugin**: one crate under
+//! `crates/floom-plugin-<capability>/`, opt-in by dependency, reaching the OS
+//! through a native host library.
+//!
+//! The split is not cosmetic, and it is the difference between an SDK that
+//! stays small and one that does not. A capability here would be compiled and
+//! linked into every mobile app that depends on the platform adapter, whether
+//! it wanted the capability or not. A capability in its own crate is linked
+//! only by the apps that ask for it.
+//!
+//! The rule is enforced rather than merely documented: the architecture gate
+//! refuses a dependency from a `floom-platform-*` crate to a
+//! `floom-plugin-*` crate, because the platform reaching *up* to a plugin is
+//! the direction that would put the capability back in.
+//!
+//! # The packages pattern
+//!
+//! What is left here follows the *packages* pattern popularised by
+//! [`gpui-mobile`](https://github.com/itsbalamurali/gpui-mobile): each
+//! package is a module with three files —
 //!
 //! ```text
 //! packages/<name>/
@@ -14,22 +46,7 @@
 //!
 //! The host (non-mobile) `#[cfg]` arm in `mod.rs` returns
 //! `Err("… only available on iOS and Android")`, so the crate still compiles
-//! and is a no-op on desktop/web. Capability modules are feature-gated in the
-//! manifest so a shipping app only pulls the backends it actually uses.
-//!
-//! This is a *capability* layer, deliberately separate from the per-OS window
-//! / event backends in `floom-platform-{android,ios,harmony,…}`. Those own
-//! the winit glue; this crate owns the device APIs that an app calls once a
-//! window exists.
-//!
-//! # Why a separate crate, and not a reorganisation of the whole tree?
-//!
-//! Floom's workspace is already a mature, layered graph (L0–L9; see
-//! `scripts/check-architecture-deps.sh`). The packages pattern is a *local*
-//! convention for mobile OS glue, not a replacement for that layering. We add
-//! one focused crate that follows it rather than reshaping every directory.
-//! Reorganising the entire project into `packages/*` would discard a better,
-//! intentional structure and re-break the architecture gate.
+//! and is a no-op on desktop and web.
 //!
 //! # Attribution
 //!
@@ -37,8 +54,7 @@
 //! adapted from `gpui-mobile`, used under its Apache-2.0 option.
 
 // The JNI bridge is only meaningful on Android; it pulls in the `jni` crate,
-// which is a target-gated dependency. On iOS the vibration backend uses objc2,
-// and on the host the capability APIs are inert no-ops, so neither needs it.
+// which is a target-gated dependency.
 #[cfg(target_os = "android")]
 pub mod jni;
 pub mod packages;
