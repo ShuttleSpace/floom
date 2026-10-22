@@ -1,0 +1,1 @@
+{"nodes": [{"id": "pkg_floom_plugin_connectivity", "label": "floom-plugin-connectivity", "file_type": "code", "type": "package", "ecosystem": "cargo", "source_file": "crates/floom-plugin-connectivity/Cargo.toml", "source_location": "L1"}], "edges": []}
