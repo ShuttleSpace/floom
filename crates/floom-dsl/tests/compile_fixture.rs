@@ -48,13 +48,19 @@ fn scratch_crate(name: &str, lib_rs: &str) -> PathBuf {
     let crate_dir = root.join("target/dsl-fixture").join(name);
     std::fs::create_dir_all(crate_dir.join("src")).expect("create scratch crate");
 
+    // The composite controls live in the satellite `floom-ui` workspace, so a
+    // program that uses them needs that crate as a dependency. It is a path
+    // dependency across a workspace boundary, which is fine for a scratch
+    // crate with its own `[workspace]`.
     let manifest = format!(
         "[package]\nname = \"dsl-fixture-{name}\"\nversion = \"0.0.0\"\nedition = \"2024\"\n\n\
          [dependencies]\n\
          floom-core = {{ path = \"{}/crates/floom-core\" }}\n\
          floom-types = {{ path = \"{}/crates/floom-types\" }}\n\
-         floom-widgets = {{ path = \"{}/crates/floom-widgets\" }}\n\n\
+         floom-widgets = {{ path = \"{}/crates/floom-widgets\" }}\n\
+         floom-ui-composites = {{ path = \"{}/crates/ecosystem/floom-ui/crates/floom-ui-composites\" }}\n\n\
          [workspace]\n",
+        root.display(),
         root.display(),
         root.display(),
         root.display()
@@ -85,8 +91,13 @@ fn cargo_check(crate_dir: &PathBuf) -> Result<String, String> {
 #[test]
 fn the_emitted_program_type_checks_against_the_real_widget_api() {
     let compiled = floom_dsl::compile(SAMPLE).expect("the sample is valid");
-    let emitted =
-        floom_dsl::emit(&compiled.document, &floom_dsl::EmitOptions::default()).expect("emits");
+    // The sample uses a checkbox, and the checkbox lives in the composite
+    // crate — so the program is emitted against that widget set.
+    let options = floom_dsl::EmitOptions {
+        widgets: floom_dsl::WidgetSource::WithComposites,
+        ..floom_dsl::EmitOptions::default()
+    };
+    let emitted = floom_dsl::emit(&compiled.document, &options).expect("emits");
     // `variant` has no seat in the widget builder and a named handler becomes
     // an empty closure — both are documented approximations, reported in
     // `unmapped`. They still emit compilable code, which is what this fixture
@@ -95,6 +106,36 @@ fn the_emitted_program_type_checks_against_the_real_widget_api() {
     let crate_dir = scratch_crate("positive", &emitted.code);
     cargo_check(&crate_dir)
         .unwrap_or_else(|stderr| panic!("the generated program does not compile:\n{stderr}"));
+}
+
+#[test]
+fn a_program_emitted_against_the_primitives_alone_still_compiles() {
+    // The other half of the widget-set choice: an app that depends only on
+    // `floom-widgets` cannot name a checkbox, so the emitter substitutes a
+    // placeholder — and says so, rather than emitting a call to a type that
+    // does not exist.
+    let compiled = floom_dsl::compile(SAMPLE).expect("the sample is valid");
+    let emitted = floom_dsl::emit(&compiled.document, &floom_dsl::EmitOptions::default())
+        .expect("emits");
+
+    assert!(
+        !emitted.code.contains("Checkbox::new("),
+        "a widget the chosen set cannot name must not be called:\n{}",
+        emitted.code
+    );
+    assert!(
+        emitted
+            .unmapped
+            .iter()
+            .any(|u| u.reason.contains("Checkbox")),
+        "the substitution must be reported, not silent: {:?}",
+        emitted.unmapped
+    );
+
+    let crate_dir = scratch_crate("primitives-only", &emitted.code);
+    cargo_check(&crate_dir).unwrap_or_else(|stderr| {
+        panic!("the generated program does not compile:\n{stderr}")
+    });
 }
 
 #[test]

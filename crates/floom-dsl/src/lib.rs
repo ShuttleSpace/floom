@@ -36,7 +36,7 @@ mod parser;
 use std::fmt;
 
 pub use ast::{Ast, AstAttr, AstAttrName, AstNode, AstValue};
-pub use emit::{EmitError, EmitOptions, Emitted, Unmapped, emit};
+pub use emit::{EmitError, EmitOptions, Emitted, Unmapped, WidgetSource, emit};
 pub use lexer::{Span, Token, lex};
 pub use lower::{Bound, lower};
 pub use parser::parse;
