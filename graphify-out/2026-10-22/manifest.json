@@ -12,9 +12,9 @@
     "semantic_hash": ""
   },
   "crates/ecosystem/floom-editor/examples/editor/src/main.rs": {
-    "mtime": 1792598624.274893,
-    "seen": 1792634955.190513,
-    "ast_hash": "59e5f2e66837b7528306ba809982ba9c",
+    "mtime": 1792638848.9417844,
+    "seen": 1792642207.287194,
+    "ast_hash": "76db4004ef0d14c63fbca46cc17728b4",
     "semantic_hash": ""
   },
   "crates/ecosystem/floom-editor/examples/syntax-editor/Cargo.toml": {
@@ -36,9 +36,9 @@
     "semantic_hash": ""
   },
   "crates/ecosystem/floom-editor/floom-editor/src/lib.rs": {
-    "mtime": 1792595734.078538,
-    "seen": 1792634955.1905239,
-    "ast_hash": "6a1d93893c9afed3d94f40ad6e082645",
+    "mtime": 1792638906.9976623,
+    "seen": 1792642207.287564,
+    "ast_hash": "dcfa4f3b9489e66cf55d5b7654fa6306",
     "semantic_hash": ""
   },
   "crates/ecosystem/floom-editor/floom-editor/src/text_editor.rs": {
@@ -5496,15 +5496,15 @@
     "semantic_hash": ""
   },
   "crates/floom-cli/src/main.rs": {
-    "mtime": 1792636968.8461823,
-    "seen": 1792637486.68089,
-    "ast_hash": "12cfc0500ba13023b376da642b0dc0be",
+    "mtime": 1792640934.1792312,
+    "seen": 1792642207.4461079,
+    "ast_hash": "8ab2a216e1d9ed50897b3243052be170",
     "semantic_hash": ""
   },
   "crates/floom-cli/src/templates.rs": {
-    "mtime": 1792636968.8477764,
-    "seen": 1792637486.680894,
-    "ast_hash": "e278771adda7e4bb08ab412bd7dad64b",
+    "mtime": 1792640763.2167513,
+    "seen": 1792642207.446201,
+    "ast_hash": "301ef86e38df3631d398c2d0f7fe63be",
     "semantic_hash": ""
   },
   "crates/floom-codegen/Cargo.toml": {
@@ -5670,9 +5670,9 @@
     "semantic_hash": ""
   },
   "crates/floom-dsl/src/emit.rs": {
-    "mtime": 1791003454.1447752,
-    "seen": 1791008391.457371,
-    "ast_hash": "8723796004ad7e3af648267768fe651e",
+    "mtime": 1792639614.0629559,
+    "seen": 1792642207.4487848,
+    "ast_hash": "992f741aecc5aa42fcc3c1429c09d0c3",
     "semantic_hash": ""
   },
   "crates/floom-dsl/src/lexer.rs": {
@@ -5682,9 +5682,9 @@
     "semantic_hash": ""
   },
   "crates/floom-dsl/src/lib.rs": {
-    "mtime": 1791003454.14767,
-    "seen": 1791008391.457373,
-    "ast_hash": "2cfe363fe722ec46464a11fdf147a5e7",
+    "mtime": 1792639463.5155008,
+    "seen": 1792642207.4488919,
+    "ast_hash": "1d4cac5c53a49db225495804e6e6f608",
     "semantic_hash": ""
   },
   "crates/floom-dsl/src/lower.rs": {
@@ -5700,9 +5700,9 @@
     "semantic_hash": ""
   },
   "crates/floom-dsl/tests/compile_fixture.rs": {
-    "mtime": 1791003660.2519698,
-    "seen": 1791008391.457376,
-    "ast_hash": "3918d0ad89de38884ea02fd3ef0dc96b",
+    "mtime": 1792639560.605787,
+    "seen": 1792642207.449176,
+    "ast_hash": "841c083b9884eb97f366b209d8ae5956",
     "semantic_hash": ""
   },
   "crates/floom-editor/Cargo.toml": {
@@ -5802,9 +5802,9 @@
     "semantic_hash": ""
   },
   "crates/floom-gesture/src/touch.rs": {
-    "mtime": 1791003454.1726692,
-    "seen": 1791008391.457408,
-    "ast_hash": "7fe203516a1254d81c6fa54b3684f6a6",
+    "mtime": 1792641289.9190452,
+    "seen": 1792642207.452009,
+    "ast_hash": "5e6c1322963305116b2cca56934cd011",
     "semantic_hash": ""
   },
   "crates/floom-gesture/tests/arena.rs": {
@@ -6990,9 +6990,9 @@
     "semantic_hash": ""
   },
   "crates/floom-snapshot/tests/widgets.rs": {
-    "mtime": 1792335408.5096862,
-    "seen": 1792505030.363772,
-    "ast_hash": "0aa0555909612fbce320afcbd713d645",
+    "mtime": 1792641780.8868167,
+    "seen": 1792642207.474984,
+    "ast_hash": "d49084687960188884caf0b28300fe02",
     "semantic_hash": ""
   },
   "crates/floom-store/Cargo.toml": {
@@ -7104,8 +7104,8 @@
     "semantic_hash": ""
   },
   "crates/floom-text/src/layout.rs": {
-    "mtime": 1792637044.8177142,
-    "seen": 1792637486.709882,
+    "mtime": 1792638830.8438687,
+    "seen": 1792642207.476556,
     "ast_hash": "0e4b5f576816ec83a214a9f5e9b8b99e",
     "semantic_hash": ""
   },
@@ -8922,9 +8922,9 @@
     "semantic_hash": ""
   },
   "crates/ecosystem/floom-editor/README.md": {
-    "mtime": 1792598724.401338,
-    "seen": 1792634955.373606,
-    "ast_hash": "dd7fe42453ba1b75856e88020ef6ecfe",
+    "mtime": 1792638966.4397116,
+    "seen": 1792642207.521844,
+    "ast_hash": "f30330cc649adb25d7fa882a98ec5170",
     "semantic_hash": ""
   },
   "crates/ecosystem/floom-ui/.agents/floom-ui/skills/SKILL.md": {
@@ -9546,9 +9546,9 @@
     "semantic_hash": ""
   },
   "docs/platform-and-plugins.md": {
-    "mtime": 1792636968.848918,
-    "seen": 1792637486.755716,
-    "ast_hash": "edf7f78a06e2c93056916d143dde1cea",
+    "mtime": 1792641023.1134162,
+    "seen": 1792642207.5329869,
+    "ast_hash": "e57a9492cb211624947fd1295c6aec44",
     "semantic_hash": ""
   },
   "docs/superpowers/2026-09-17-progress-report.md": {
@@ -9990,8 +9990,8 @@
     "semantic_hash": ""
   },
   "crates/floom-types/src/text.rs": {
-    "mtime": 1792636960.4896524,
-    "seen": 1792637486.711387,
+    "mtime": 1792638830.8444335,
+    "seen": 1792642207.478179,
     "ast_hash": "bd8e474c17474c31c1b432f9a0969fa0",
     "semantic_hash": ""
   },
@@ -13074,27 +13074,27 @@
     "semantic_hash": ""
   },
   "crates/ecosystem/floom-editor/floom-editor/src/editor.rs": {
-    "mtime": 1792599108.5783226,
-    "seen": 1792634955.1905222,
-    "ast_hash": "f6713b7e3238f088fd83c7da1b890731",
+    "mtime": 1792639352.234843,
+    "seen": 1792642207.287561,
+    "ast_hash": "27cc36d1cd20a5488e50f98404301294",
     "semantic_hash": ""
   },
   "crates/ecosystem/floom-editor/floom-editor/src/style.rs": {
-    "mtime": 1792595507.9081497,
-    "seen": 1792634955.1905248,
-    "ast_hash": "eff1624c0fb2f05d1e81d2514f721891",
+    "mtime": 1792638830.8414192,
+    "seen": 1792642207.2875671,
+    "ast_hash": "379555d53ef7fa855c8fc9ca41be3abe",
     "semantic_hash": ""
   },
   "crates/ecosystem/floom-editor/floom-editor/src/styling.rs": {
-    "mtime": 1792595540.782588,
-    "seen": 1792634955.190526,
-    "ast_hash": "a37d68731ca3f33295e5ff7297ab9cc1",
+    "mtime": 1792638918.3736377,
+    "seen": 1792642207.28757,
+    "ast_hash": "fce6e9b2c8d15f52cbbcf42065f1527f",
     "semantic_hash": ""
   },
   "crates/ecosystem/floom-editor/floom-editor/tests/paint.rs": {
-    "mtime": 1792599056.9998577,
-    "seen": 1792634955.1905448,
-    "ast_hash": "9d1cb0e34780d1f02da49f0d935a36ea",
+    "mtime": 1792639362.357585,
+    "seen": 1792642207.2876632,
+    "ast_hash": "e28bae06bfef3763990bfa41b30daa31",
     "semantic_hash": ""
   },
   "crates/ecosystem/floom-ui/crates/floom-ui-composites/src/bottom_navigation.rs": {
@@ -13338,21 +13338,27 @@
     "semantic_hash": ""
   },
   "crates/floom-text/src/editor_layout.rs": {
-    "mtime": 1792637103.4676282,
-    "seen": 1792637486.709879,
+    "mtime": 1792638830.843083,
+    "seen": 1792642207.476553,
     "ast_hash": "491bdf59e13693b331129a4dc81924b6",
     "semantic_hash": ""
   },
   "docs/plugin-and-renderer-audit.md": {
-    "mtime": 1792636382.0669928,
-    "seen": 1792637486.755718,
-    "ast_hash": "741d5571f4b610f504ab6d6b9fe5f823",
+    "mtime": 1792641041.7081873,
+    "seen": 1792642207.532991,
+    "ast_hash": "d08d0b5dd7a7f520eadeda79a250b215",
     "semantic_hash": ""
   },
   "docs/porting-floem-editor-to-2.0.md": {
-    "mtime": 1792599067.6847262,
-    "seen": 1792634955.38533,
-    "ast_hash": "d517e2c321b4b2ea7b2a5811f3e3ebe1",
+    "mtime": 1792638958.368233,
+    "seen": 1792642207.532994,
+    "ast_hash": "282c0b551c7352fac1ddfe612671b917",
+    "semantic_hash": ""
+  },
+  "docs/superpowers/decisions/2026-10-22-dsl-widget-set-is-a-parameter.md": {
+    "mtime": 1792639669.1871405,
+    "seen": 1792642207.5342479,
+    "ast_hash": "b9864a1fcbd087511a71654768a4dbad",
     "semantic_hash": ""
   }
 }
