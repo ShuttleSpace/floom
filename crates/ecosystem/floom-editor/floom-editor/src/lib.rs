@@ -16,23 +16,36 @@
 //! The two agree because they are given the same value, which is what keeps
 //! the caret on the glyphs rather than near them.
 //!
+//! ## What is here
+//!
+//! The editing experience: the text, the caret, the selection, the gutter, the
+//! keyboard, the mouse, the scrolling — and the three things that were named
+//! as gaps in the first port and are now closed:
+//!
+//! * **Soft wrap.** A line too long for the text area breaks into several
+//!   rows, and the engine decides where. The gutter still numbers the *line*
+//!   once, and the caret, the selection and the scroll all agree about which
+//!   row is which.
+//! * **Multiple cursors.** The selection is one or more regions, and every
+//!   edit applies to all of them. Alt and a click adds a caret;
+//!   Control-Alt with the up and down arrows adds one above or below.
+//! * **Visible whitespace and indent guides.** A space is a dot and a tab is
+//!   an arrow; a guide is a line at each tab stop the indentation reaches.
+//!   Both are off by default and both are drawn over the text.
+//!
 //! ## What is not here
 //!
 //! The v1 editor was eleven thousand lines, and a port that claimed to have
 //! reproduced all of it would be a port that had reproduced none of it. What
-//! is here is the editing experience — the text, the caret, the selection, the
-//! gutter, the keyboard, the mouse, the scrolling — and what is *not* here is
-//! named, in [`editor`], at the place where it would have been:
+//! is *not* here is named, in [`editor`], at the place where it would have
+//! been:
 //!
-//! * **Soft wrap.** The engine wraps; the editor does not use it yet. A long
-//!   line runs past the right edge.
-//! * **Multiple cursors.** One selection, one caret.
 //! * **Modal editing.** The v1 editor had a modal mode with its own keymap.
-//! * **Phantom text, IME preedit, indent guides, visible whitespace.** The v1
-//!   editor drew all four.
-//! * **Per-line styling.** v1's `Styling` answered per line; this one answers
-//!   per document, because the line height has to be the same on every line
-//!   for the scroll position to mean anything.
+//! * **Phantom text and IME preedit.** v1 drew both: the phantom text is the
+//!   text an editor shows without holding it, and the preedit is the text the
+//!   input method is composing. The preedit needs the host's composition, and
+//!   the host does not hand one to a widget yet — so the editor cannot draw
+//!   what it is never told.
 //! * **The command system.** v1 had a `Command` enum, a command registry, and
 //!   a keymap that dispatched into it. This port's keyboard handling is
 //!   direct.

@@ -22,8 +22,9 @@ let editor = text_editor("hello\nworld").style(EditorStyle::dark());
 
 The editor is a Floom 2.0 `Widget`: it is mounted into a 2.0 host like any
 other, and it paints the document, the caret, the selection and the gutter
-itself. The port's scope — and the parts of the v1 editor it does *not*
-reproduce — are in
+itself. It soft-wraps long lines, it takes more than one caret, and it can
+draw the whitespace and the indent guides. The port's scope — and the parts
+of the v1 editor it does *not* reproduce — are in
 [`docs/porting-floem-editor-to-2.0.md`](../../../docs/porting-floem-editor-to-2.0.md)
 and in the crate's own module note.
 

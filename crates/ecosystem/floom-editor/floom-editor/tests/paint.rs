@@ -18,7 +18,7 @@ use floom_editor::{EditorStyle, Styling, TextEditor, text_editor};
 use floom_layout::LayoutStyle;
 use floom_scene::{ResourceKind, SceneNode};
 use floom_types::{
-    Brush, Color, Event, FontFamily, FontWeight, Modifiers, Point, Size, TextSpan, TextStyle,
+    Brush, Color, Event, FontFamily, FontWeight, Modifiers, Point, Rect, Size, TextSpan, TextStyle,
 };
 
 /// A viewport the editor fills.
@@ -259,7 +259,7 @@ fn the_editor_scrolls_to_keep_the_caret_on_screen() {
     host.frame();
 
     assert!(
-        state.lock().unwrap().scroll > 0.0,
+        state.lock().unwrap().scroll_line > 0 || state.lock().unwrap().scroll_offset > 0.0,
         "the editor scrolled the caret off the screen"
     );
 }
@@ -276,11 +276,10 @@ fn a_selection_is_painted_in_the_selections_colour() {
     let state = editor.state();
     {
         let mut state = state.lock().unwrap();
-        state.sel = floom_editor_core::selection::SelRegion::new(
+        state.sel = floom_editor_core::selection::Selection::region(
             0,
             5,
             floom_editor_core::cursor::CursorAffinity::Forward,
-            None,
         );
         state.generation += 1;
     }
@@ -299,10 +298,360 @@ fn a_selection_is_painted_in_the_selections_colour() {
     );
 }
 
+/// The rectangles painted in `color`.
+fn rects_of_colour(host: &WidgetHost, color: Color) -> Vec<Rect> {
+    host.scene()
+        .iter()
+        .filter_map(|(_, node)| match node {
+            SceneNode::Rect { bounds, fill, .. } if *fill == Brush::Solid(color) => Some(*bounds),
+            _ => None,
+        })
+        .collect()
+}
+
 /// A styling that highlights the first word of every line.
 struct KeywordStyling;
 
+/// The editor with soft wrap on.
+fn wrapped_editor(text: &str) -> TextEditor {
+    text_editor(text).style(EditorStyle {
+        soft_wrap: true,
+        ..EditorStyle::default()
+    })
+}
+
+/// A long line, long enough to wrap in the viewport.
+fn long_line() -> String {
+    "word ".repeat(80)
+}
+
+/// A wrapped line is still one line, and the gutter numbers it once.
+///
+/// The line is several rows on screen, but it is one line of the document,
+/// and the gutter says so: a number per row would say the document had more
+/// lines than it does.
+#[test]
+fn a_wrapped_line_is_numbered_once_in_the_gutter() {
+    let host = mount(wrapped_editor(&long_line()));
+    assert_eq!(
+        nodes_with_text(&host, "1").len(),
+        1,
+        "the gutter numbered the wrapped line more than once"
+    );
+}
+
+/// The caret on a wrapped line is on its own row.
+///
+/// The caret is measured against the layout, and the layout knows which row
+/// the caret's byte is on. A caret that stayed on the first row of a wrapped
+/// line would be in the wrong place, and the scene is where that shows.
+#[test]
+fn the_caret_on_a_wrapped_line_is_on_its_own_row() {
+    let style = EditorStyle {
+        soft_wrap: true,
+        ..EditorStyle::default()
+    };
+    let text = long_line();
+    let editor = text_editor(&text).style(style.clone());
+    let state = editor.state();
+    {
+        let mut state = state.lock().unwrap();
+        state.set_caret(0);
+    }
+    let mut host = mount(editor.clone());
+
+    let first = rects_of_colour(&host, style.cursor_color);
+    assert_eq!(first.len(), 1, "one caret");
+    let first_y = first[0].y0;
+
+    {
+        let mut state = state.lock().unwrap();
+        state.set_caret(text.len());
+    }
+    host.frame();
+
+    let last = rects_of_colour(&host, style.cursor_color);
+    assert_eq!(last.len(), 1, "one caret");
+    assert!(
+        last[0].y0 > first_y + 10.0,
+        "the caret at the end of the wrapped line is on a later row: {first:?} then {last:?}"
+    );
+}
+
+/// Two carets are painted as two carets.
+///
+/// A selection with two regions is the editor's multiple cursors, and each of
+/// them is a caret on screen. An editor that drew one of them would be an
+/// editor that had lost one.
+#[test]
+fn two_carets_are_painted_as_two_carets() {
+    let style = EditorStyle::default();
+    let editor = text_editor("hello world");
+    let state = editor.state();
+    {
+        let mut state = state.lock().unwrap();
+        state.sel = two_carets(0, 6);
+        state.generation += 1;
+    }
+    let host = mount(editor);
+    let carets = rects_of_colour(&host, style.cursor_color);
+    assert_eq!(carets.len(), 2, "two carets, two rectangles");
+}
+
+/// Typing with two carets types at both of them.
+///
+/// The second caret is after the first one's text, so the first insertion
+/// shifts it: an editor that typed at both carets but put the second one in
+/// the wrong place would leave the text looking edited but wrong.
+#[test]
+fn typing_with_two_carets_types_at_both() {
+    let editor = text_editor("ab\ncd");
+    let state = editor.state();
+    {
+        let mut state = state.lock().unwrap();
+        state.sel = two_carets(0, 3);
+        state.generation += 1;
+    }
+    let mut host = mount(editor.clone());
+    let id = host.root().expect("the editor is the root");
+    host.set_focus(host.node_id(id));
+
+    host.dispatch(Event::Key(KeyEvent {
+        phase: KeyPhase::Down,
+        key: Key::Char('x'),
+        modifiers: Modifiers::NONE,
+    }));
+    host.frame();
+
+    assert_eq!(
+        document_text(&editor),
+        "xab\nxcd",
+        "the character was typed at both carets"
+    );
+}
+
+/// Alt and a click adds a caret rather than moving the one that is there.
+#[test]
+fn alt_and_a_click_adds_a_caret() {
+    let editor = text_editor("hello world");
+    let state = editor.state();
+    let mut host = mount(editor.clone());
+    let id = host.root().expect("the editor is the root");
+    host.set_focus(host.node_id(id));
+
+    host.dispatch(Event::Pointer(PointerEvent {
+        phase: floom_core::PointerPhase::Down,
+        kind: floom_core::PointerKind::Mouse,
+        button: Some(floom_core::PointerButton::Primary),
+        position: Point::new(56.0 + 30.0, 6.0),
+        modifiers: Modifiers::ALT,
+        click_count: 1,
+    }));
+    host.frame();
+
+    assert_eq!(
+        state.lock().unwrap().caret_count(),
+        2,
+        "the click added a caret instead of moving one"
+    );
+}
+
+/// The whitespace is drawn when it is asked for.
+///
+/// The markers are the point of the feature: a space is invisible until
+/// something is drawn in its place.
+#[test]
+fn the_whitespace_is_drawn_when_it_is_asked_for() {
+    let style = EditorStyle {
+        show_whitespace: true,
+        ..EditorStyle::default()
+    };
+    let host = mount(text_editor("a b").style(style.clone()));
+    assert_eq!(
+        rects_of_colour(&host, style.whitespace_color).len(),
+        1,
+        "one space, one marker"
+    );
+
+    // And it is not drawn when it is not asked for.
+    let plain = EditorStyle::default();
+    let host = mount(text_editor("a b").style(plain.clone()));
+    assert_eq!(
+        rects_of_colour(&host, plain.whitespace_color).len(),
+        0,
+        "the whitespace was drawn without being asked for"
+    );
+}
+
+/// The indent guides are drawn when they are asked for.
+///
+/// Eight spaces of indentation, four to a tab stop, is two guides.
+#[test]
+fn the_indent_guides_are_drawn_when_they_are_asked_for() {
+    let style = EditorStyle {
+        show_indent_guides: true,
+        ..EditorStyle::default()
+    };
+    let host = mount(text_editor("        x").style(style.clone()));
+    assert_eq!(
+        rects_of_colour(&host, style.indent_guide_color).len(),
+        2,
+        "two tab stops of indentation, two guides"
+    );
+}
+
+/// A click on the second line puts the caret on that line.
+///
+/// The layout knows only its own line, so the offset it answers is an offset
+/// into that line — and the editor has to add where the line starts. An
+/// editor that forgot would put the caret on the first line of the document
+/// no matter which line was clicked.
+#[test]
+fn a_click_on_the_second_line_puts_the_caret_on_that_line() {
+    let editor = text_editor("hello\nworld");
+    let state = editor.state();
+    let mut host = mount(editor.clone());
+    let id = host.root().expect("the editor is the root");
+    host.set_focus(host.node_id(id));
+
+    // The line height is 24, so y = 30 is on the second line.
+    host.dispatch(Event::Pointer(PointerEvent::primary_down(Point::new(
+        56.0 + 30.0,
+        30.0,
+    ))));
+    host.frame();
+
+    let cursor = state.lock().unwrap().cursor();
+    assert!(
+        cursor >= 6,
+        "the caret landed at {cursor}, which is on the first line"
+    );
+}
+
+/// The caret on the second line moves as the offset moves.
+///
+/// The offset is a document offset and the layout is a line's, so the editor
+/// has to translate. An editor that did not would put every caret on a
+/// later line at the end of that line, and the difference between two
+/// offsets on the same line would be invisible.
+#[test]
+fn the_caret_on_the_second_line_moves_as_the_offset_moves() {
+    let style = EditorStyle::default();
+    let editor = text_editor("hello\nworld");
+    let state = editor.state();
+    {
+        let mut state = state.lock().unwrap();
+        state.set_caret(6);
+    }
+    let mut host = mount(editor.clone());
+
+    let first = rects_of_colour(&host, style.cursor_color);
+    assert_eq!(first.len(), 1, "one caret");
+
+    {
+        let mut state = state.lock().unwrap();
+        state.set_caret(9);
+    }
+    host.frame();
+
+    let second = rects_of_colour(&host, style.cursor_color);
+    assert_eq!(second.len(), 1, "one caret");
+    assert!(
+        second[0].x0 > first[0].x0,
+        "the caret moved right with the offset: {first:?} then {second:?}"
+    );
+}
+
+/// A document that fits on the screen does not scroll away.
+///
+/// The viewport is 300 tall and a three-line document is 72, so there is
+/// nowhere to scroll to. An editor that let the wheel push the text off the
+/// screen would be an editor that could lose the text.
+#[test]
+fn a_document_that_fits_does_not_scroll_away() {
+    let editor = text_editor("one\ntwo\nthree");
+    let mut host = mount(editor.clone());
+    let id = host.root().expect("the editor is the root");
+    host.set_focus(host.node_id(id));
+
+    host.dispatch(Event::Scroll(floom_types::ScrollEvent {
+        delta_x: 0.0,
+        delta_y: 500.0,
+        position: Point::new(100.0, 100.0),
+        modifiers: Modifiers::NONE,
+    }));
+    host.frame();
+
+    assert_eq!(
+        nodes_with_text(&host, "one").len(),
+        1,
+        "the first line scrolled off the screen"
+    );
+    assert_eq!(
+        nodes_with_text(&host, "three").len(),
+        1,
+        "the last line scrolled off the screen"
+    );
+}
+
+/// Scrolling to the end keeps the last line on screen.
+///
+/// The scroll stops with the last line's bottom at the viewport's bottom, so
+/// the last line is still there — an editor that scrolls its last line off
+/// the bottom has nothing left to show.
+#[test]
+fn scrolling_to_the_end_keeps_the_last_line_on_screen() {
+    let text = (0..40)
+        .map(|index| format!("line {index}"))
+        .collect::<Vec<_>>()
+        .join("\n");
+    let editor = text_editor(text);
+    let mut host = mount(editor.clone());
+    let id = host.root().expect("the editor is the root");
+    host.set_focus(host.node_id(id));
+
+    host.dispatch(Event::Scroll(floom_types::ScrollEvent {
+        delta_x: 0.0,
+        delta_y: 5000.0,
+        position: Point::new(100.0, 100.0),
+        modifiers: Modifiers::NONE,
+    }));
+    host.frame();
+
+    assert_eq!(
+        nodes_with_text(&host, "line 39").len(),
+        1,
+        "the last line is not on screen"
+    );
+    assert_eq!(
+        nodes_with_text(&host, "line 0").len(),
+        0,
+        "the first line is still on screen after scrolling to the end"
+    );
+    // The last line's *bottom* is at the viewport's bottom, not its top: the
+    // scroll stops at the end of the document rather than at the end of the
+    // last line's row.
+    let SceneNode::Text { origin, .. } = nodes_with_text(&host, "line 39")[0] else {
+        panic!("the last line is not a text node");
+    };
+    assert!(
+        origin.y > 200.0,
+        "the last line is at the top of the viewport, not the bottom: {origin:?}"
+    );
+}
+
+/// A selection with two carets, as the editor's state holds it.
+fn two_carets(first: usize, second: usize) -> floom_editor_core::selection::Selection {
+    use floom_editor_core::cursor::CursorAffinity;
+    use floom_editor_core::selection::{SelRegion, Selection};
+    let mut selection = Selection::new();
+    selection.add_region(SelRegion::caret(first, CursorAffinity::Forward));
+    selection.add_region(SelRegion::caret(second, CursorAffinity::Forward));
+    selection
+}
+
 impl Styling for KeywordStyling {
+
     fn id(&self) -> u64 {
         7
     }

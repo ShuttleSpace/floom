@@ -1,14 +1,15 @@
 //! How the text is set: the size, the face, and the ranges that differ.
 //!
 //! v1's `Styling` trait answered per *line*, because a document could set one
-//! line in a different face from the next. The port's trait answers per
-//! *document*, and the difference is named rather than hidden: an editor
-//! whose line heights all agree is the only kind this port lays out, because
-//! the scroll position is a line number and a line's height has to be the
-//! same as its neighbours' for that to mean anything.
+//! line in a different face from the next. This one does too: the trait's
+//! `style_line` is handed the line's number and the line's own text, and
+//! answers the ranges that differ from the base style.
 //!
-//! The *ranges* are still per line, because syntax highlighting is per line
-//! and that is the feature the ranges exist for.
+//! What is *not* per line is the line's height. Every row is the same height,
+//! because the scroll position counts rows and a row whose height depended on
+//! its content would be a row the scroll could not name. The height is the
+//! trait's `line_height`, and the editor tells the engine what it is so the
+//! engine's rows and the editor's rows are the same rows.
 
 use floom_types::{FontFamily, FontWeight, TextSpan, TextStyle};
 
@@ -63,8 +64,7 @@ pub trait Styling: Send + Sync {
 
 /// The plain styling: one size, one face, no highlighted ranges.
 ///
-/// This is v1's `SimpleStyling`, with the per-line parameters dropped (see the
-/// module note) and the setters kept.
+/// This is v1's `SimpleStyling` with the setters kept.
 #[derive(Debug, Clone, PartialEq)]
 pub struct SimpleStyling {
     id: u64,

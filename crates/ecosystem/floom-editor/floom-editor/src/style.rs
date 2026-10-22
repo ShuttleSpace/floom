@@ -49,6 +49,23 @@ pub struct EditorStyle {
     pub gutter_width: f64,
     /// The gap between the gutter and the text, in logical pixels.
     pub gutter_padding: f64,
+    /// Whether a line too long for the text area wraps.
+    ///
+    /// Off by default, which is what v1 did: a line that wraps is a line that
+    /// is several rows on screen, and an editor that wrapped by surprise would
+    /// move the text under the reader's eyes.
+    pub soft_wrap: bool,
+    /// Whether the whitespace is drawn.
+    ///
+    /// The whitespace is drawn *over* the text, so it can be turned off
+    /// without changing a thing about the text itself.
+    pub show_whitespace: bool,
+    /// The ink of the whitespace markers.
+    pub whitespace_color: Color,
+    /// Whether the indent guides are drawn.
+    pub show_indent_guides: bool,
+    /// The ink of the indent guides.
+    pub indent_guide_color: Color,
 }
 
 impl Default for EditorStyle {
@@ -75,6 +92,11 @@ impl Default for EditorStyle {
             weight: FontWeight::Normal,
             gutter_width: 56.0,
             gutter_padding: 12.0,
+            soft_wrap: false,
+            show_whitespace: false,
+            whitespace_color: Color::rgb(0xC4, 0xC5, 0xCC),
+            show_indent_guides: false,
+            indent_guide_color: Color::rgb(0xE0, 0xE0, 0xE4),
         }
     }
 }

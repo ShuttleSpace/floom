@@ -56,7 +56,7 @@ renderer-neutral:
 | `TextStyle` | size, weight, ink |
 | `TextSpan` | a byte range and the style that differs from the base |
 | `TextWrap` | `None` or `Word` |
-| `StyledText` | the text, the base style, the spans, the family, the wrap, the tab width, the break width |
+| `StyledText` | the text, the base style, the spans, the family, the wrap, the tab width, the break width, the line height |
 
 `StyledText` is *data*, not a shaped result, and that is the whole design: the
 same description can be laid out for geometry and painted for ink, and the two
@@ -75,6 +75,7 @@ it:
 | `selection_rects(range)` | what rectangles does the selection cover? |
 | `line_metrics_at(offset, affinity)` | what are the metrics of the caret's line? |
 | `visual_line_count` / `visual_line_y` / `line_text_range` | how many lines, where do they start, what do they cover? |
+| `row_pitch()` / `row_of_offset()` | how far apart the rows are, and which row a byte is on |
 | `runs()` | the shaped runs, **with their ink** |
 
 Two behaviours the v1 layout had are reproduced deliberately, because they are
@@ -163,28 +164,99 @@ closure is `Send + Sync` and a signal is `Rc`-based.
 
 ### What is not ported, and where it is named
 
-The gaps are named in `floom-editor`'s `lib.rs` module note, and each one is a
-difference rather than a silent omission:
+The gaps are named in `floom-editor`'s `lib.rs` module note, and each one is
+a difference rather than a silent omission.
 
-* **Soft wrap.** The engine wraps — `TextWrap::Word` with a `max_width`, and
-  `TextLayout::lines()` reports the wrapped visual lines with their source
-  ranges — and the editor does not use it yet. A long line runs past the right
-  edge. Landing it means the scroll position, the gutter and the "which line
-  is the caret on" question all have to agree that a source line can be
-  several lines on screen.
-* **Multiple cursors.** One selection, one caret.
+The first round of the port closed three of them, and the second round closed
+three more:
+
+| the gap | how it landed |
+| --- | --- |
+| **Soft wrap** | the editor's line model became a *row* model: a source line is one or more rows, the engine breaks the line, and the gutter, the caret, the selection and the scroll all count rows |
+| **Multiple cursors** | the selection is the editor core's own multi-region `Selection`, and every edit applies to all of its regions |
+| **Visible whitespace** | a space is a dot in the middle of its advance, a tab is a line across its width |
+| **Indent guides** | a vertical line at each tab stop the line's indentation reaches |
+| **Per-line styling** | already per line: the trait's `style_line` is handed the line's number and the line's text |
+| **The command system** | still not ported: the keyboard handling is direct |
+
+What is *still* not ported:
+
 * **Modal editing.** v1 had a modal mode with its own keymap.
-* **Phantom text, IME preedit, indent guides, visible whitespace.** v1 drew
-  all four.
-* **Per-line styling.** v1's `Styling` answered per line; this one answers per
-  document, because the line height has to be the same on every line for the
-  scroll position to mean anything.
-* **The command system.** v1 had a `Command` enum, a registry and a keymap
-  that dispatched into it. The port's keyboard handling is direct.
+* **Phantom text and IME preedit.** v1 drew both. The preedit needs the
+  host's composition, and the host does not hand one to a widget yet — so the
+  editor cannot draw what it is never told. The phantom text is a drawing
+  feature the editor could implement on its own, and has not.
 
 And one *host* rule, which is not a gap in the port but a limit in the
 framework: **the host consumes Tab for focus navigation before any widget
 sees it**, so an editor's indent-on-Tab cannot fire through `dispatch`.
+
+### The row model
+
+Soft wrap is the change that reaches furthest, because it changes what a
+line *is*.
+
+Before, a line was a line: the scroll offset was a number of lines, the
+gutter counted lines, and the caret was on a line. A line that was too long
+ran past the edge, which was the honest way to say "the editor does not wrap
+yet" without pretending otherwise.
+
+Now a source line is one or more **rows**. The engine breaks the line, and
+the widget asks the layout how many rows it took. Three things have to agree
+for that to work, and all three are the engine's answers rather than the
+widget's guesses:
+
+* **The row height.** The engine is told the height — `StyledText` grew a
+  `line_height` field, and the shaper's line height makes the rows exactly
+  that far apart. The widget does not measure the rows it did not lay out; it
+  counts them.
+* **The caret's row.** `TextLayout::row_of_offset` answers which row a byte
+  is on, so the caret is drawn on the row the byte is on rather than on the
+  line's first row.
+* **The selection's rows.** The selection rectangles come back per row, and
+  each is placed on the row it belongs to.
+
+The scroll is anchored on a *source line* rather than on a pixel offset into
+the document, which is what keeps the whole thing cheap: scrolling forward
+is one line of layout, and scrolling back is one line of layout. A pixel
+offset would have needed the height of every line above the viewport, which
+is a whole document of layout for a number that moves a little at a time.
+
+### Multiple cursors
+
+The selection was a single region and is now the editor core's own
+multi-region `Selection`. The core already knew how to edit several regions
+at once — `Buffer::edit` takes a list of them and applies them as one delta
+— so the model needed no change at all; only the *view* had to stop
+assuming there was one region.
+
+The parts that had to be thought about:
+
+* **Where the carets end up.** An edit at one caret shifts the text at every
+  caret after it, so a caret is not "its region's start plus the content's
+  length" but that plus every earlier region's change. The arithmetic is in
+  `caret_positions`.
+* **What an arrow key does.** It moves *every* caret, by the same rule
+  rather than the same distance: two carets on different lines both go up a
+  line and both land on their own columns.
+* **What the selection does when it moves.** It collapses, because that is
+  what an arrow key does — a selection is a thing to be left behind, not
+  dragged along.
+
+### The two offset bugs this work found
+
+The port's first round had two bugs that its tests could not see, because
+every one of them used a single-line document.
+
+The layout knows only *its own* line: its offsets are offsets into that
+line's text. The editor was handing it *document* offsets — the selection's
+range, and the caret's position — without translating them into the line's
+coordinates. On the first line the two are the same number, which is why
+nothing looked wrong; on any other line the caret was drawn at the end of the
+line and a click landed on the first line of the document.
+
+Both are fixed, and both have a test that fails without the fix — which was
+checked by reverting the fix and watching the two tests go red.
 
 ## Examples
 
@@ -199,15 +271,20 @@ Two, both on `floom::run_desktop`:
 
 ## Tests
 
-* `floom-text`: 20 unit tests over the new layout — the line count, the hit
+* `floom-text`: 24 unit tests over the new layout — the line count, the hit
   test, the caret's movement, the selection's rectangles, a span's ink, the
-  wrap modes, the tab mapping, the visual line's source range.
-* `floom-editor`: eight **paint-level** tests that mount the editor in a
+  wrap modes, the tab mapping, the visual line's source range, the row pitch,
+  and the row a byte is on.
+* `floom-editor`: seventeen **paint-level** tests that mount the editor in a
   `WidgetHost`, frame it, and read the **scene** — the text is painted, the
   caret is painted in the caret's colour, a line with two inks is two text
   nodes, a keystroke reaches the document, a shifted letter is typed in upper
   case, a click places the caret, the editor scrolls to keep the caret on
-  screen, and a selection is painted in the selection's colour.
+  screen, a selection is painted in the selection's colour, a wrapped line is
+  numbered once and its caret is on its own row, two carets are two carets,
+  typing with two carets types at both, alt and a click adds a caret, the
+  whitespace and the indent guides are drawn, and a click on the second line
+  puts the caret on the second line.
 
 The paint-level discipline is the point: a widget that compiles and does
 nothing passes every test that looks at its own state, and so does a widget

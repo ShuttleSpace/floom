@@ -179,4 +179,12 @@ pub struct StyledText {
     pub tab_width: Option<usize>,
     /// The width the layout breaks at. `None` means "as wide as it needs to be".
     pub max_width: Option<f32>,
+    /// The height of one line, in logical pixels. `None` uses the font's own.
+    ///
+    /// This is the *pitch* between lines, not the height of the ink: a layout
+    /// that breaks its text into several lines puts each of them this far
+    /// down. An editor needs the pitch to be a number it knows rather than one
+    /// it has to measure, because the scroll position is a number of lines and
+    /// the caret's rectangle is a box on one of them.
+    pub line_height: Option<f32>,
 }

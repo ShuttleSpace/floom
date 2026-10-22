@@ -64,7 +64,7 @@ use floom_types::{
 use parley::layout::{Alignment, AlignmentOptions, Layout, PositionedLayoutItem};
 use parley::style::{
     FontFamily as ParleyFontFamily, FontStack, FontStyle as ParleyFontStyle, GenericFamily,
-    OverflowWrap, StyleProperty, TextWrapMode,
+    LineHeight as ParleyLineHeight, OverflowWrap, StyleProperty, TextWrapMode,
 };
 use parley::{Affinity, Cursor, FontContext, LayoutContext, Selection};
 use peniko::FontData;
@@ -256,6 +256,8 @@ pub struct TextLayout {
     wrap: TextWrap,
     /// The width the text breaks at.
     max_width: Option<f32>,
+    /// The pitch between the lines, when the caller asked for one.
+    line_height: Option<f32>,
     /// The shaped result.
     layout: Layout<TextBrush>,
     /// The shaped runs, in paint order.
@@ -292,6 +294,7 @@ impl TextLayout {
             wrap,
             tab_width,
             max_width,
+            line_height,
         } = styled;
 
         let (display, tab_map) = match tab_width {
@@ -308,6 +311,7 @@ impl TextLayout {
             family: family.clone(),
             wrap: *wrap,
             max_width: *max_width,
+            line_height: *line_height,
             layout: Layout::new(),
             runs: Vec::new(),
             lines: Vec::new(),
@@ -354,6 +358,41 @@ impl TextLayout {
     /// The number of visual lines.
     pub fn visual_line_count(&self) -> usize {
         self.lines.len()
+    }
+
+    /// The distance between the layout's rows.
+    ///
+    /// The pitch is the shaper's line height, and it is the same for every
+    /// row: a caller that knows it can place the fourth row without asking
+    /// where the third one ended, which is what makes a scroll position
+    /// expressible as a number of rows.
+    ///
+    /// A layout that asked for a line height gets exactly that; one that did
+    /// not gets the font's own.
+    pub fn row_pitch(&self) -> f64 {
+        self.lines
+            .first()
+            .map(|l| f64::from(l.line_height))
+            .unwrap_or(0.0)
+    }
+
+    /// The row a source byte offset is on.
+    ///
+    /// The row is the index of the *wrapped* line the offset is on: a source
+    /// line that breaks into three rows has three row indices, and an offset
+    /// in its third one answers `2`.
+    ///
+    /// `None` for an empty layout, which has no rows to speak of — though it
+    /// still has one line, so a caller that wants "which row" for an empty
+    /// document gets `0` from [`Self::visual_line_count`] and nothing here.
+    pub fn row_of_offset(&self, offset: usize) -> Option<usize> {
+        if self.layout.is_empty() {
+            return None;
+        }
+        let display = self.orig_to_display(offset.min(self.text.len()));
+        let cursor = Cursor::from_byte_index(&self.layout, display, Affinity::Downstream);
+        let bbox = cursor.geometry(&self.layout, 0.0);
+        Some(self.line_index_for_y(bbox.y0 as f32))
     }
 
     /// The baseline of visual line `nth`.
@@ -662,6 +701,14 @@ impl TextLayout {
         builder.push_default(StyleProperty::TextWrapMode(wrap_mode));
         builder.push_default(StyleProperty::OverflowWrap(OverflowWrap::BreakWord));
 
+        // The line height is the *pitch* between the lines, not the height of
+        // the ink: the shaper puts each line's baseline exactly this far below
+        // the previous one's, which is what makes "the third line" a position
+        // a caller can compute rather than measure.
+        if let Some(height) = styled.line_height {
+            builder.push_default(StyleProperty::LineHeight(ParleyLineHeight::Absolute(height)));
+        }
+
         let mut layout = builder.build(display);
 
         let max_advance = match styled.wrap {
@@ -690,6 +737,7 @@ impl TextLayout {
                 text_range: self.display_to_orig_range(line.text_range()),
                 min_coord: metrics.min_coord,
                 max_coord: metrics.max_coord,
+                line_height: metrics.line_height,
             });
 
             for item in line.items() {
@@ -864,6 +912,7 @@ mod tests {
             wrap: TextWrap::None,
             tab_width: None,
             max_width: None,
+            line_height: None,
         }
     }
 
@@ -990,5 +1039,62 @@ mod tests {
         assert_eq!(layout.line_text_range(0), Some(0..6));
         assert_eq!(layout.line_text_range(1), Some(6..11));
         assert_eq!(layout.visual_line_count(), 2);
+    }
+
+    /// The line height the caller asked for is the distance between the rows.
+    ///
+    /// This is the property an editor's scroll position rests on: the scroll
+    /// offset is a number of rows, and a row is a line height below the last
+    /// one. If the shaper put the rows anywhere else, the caret would be
+    /// measured against one set of rows and painted against another.
+    #[test]
+    fn the_requested_line_height_is_the_distance_between_the_rows() {
+        let mut styled = plain("one\ntwo\nthree");
+        styled.line_height = Some(40.0);
+        let layout = TextLayout::new(&styled);
+        assert_eq!(layout.row_pitch(), 40.0, "the pitch is what was asked for");
+        let lines = layout.lines();
+        assert!(
+            (lines[1].baseline - lines[0].baseline - 40.0).abs() < 0.01,
+            "the second row's baseline is {} below the first's",
+            lines[1].baseline - lines[0].baseline
+        );
+        assert!(
+            (lines[2].baseline - lines[1].baseline - 40.0).abs() < 0.01,
+            "and the third's is {} below the second's",
+            lines[2].baseline - lines[1].baseline
+        );
+    }
+
+    /// A layout that did not ask for a line height still reports a pitch.
+    #[test]
+    fn a_layout_without_a_line_height_still_has_a_pitch() {
+        let layout = TextLayout::new(&plain("hello"));
+        assert!(
+            layout.row_pitch() > 0.0,
+            "the font's own line height is a pitch"
+        );
+    }
+
+    /// An offset in a wrapped line answers the row it is on.
+    ///
+    /// The row is what an editor places the caret on, so an offset in the
+    /// second wrapped row must answer `1` rather than `0`.
+    #[test]
+    fn an_offset_in_a_wrapped_line_answers_its_row() {
+        let mut styled = plain("the quick brown fox jumps over the lazy dog");
+        styled.wrap = TextWrap::Word;
+        styled.max_width = Some(60.0);
+        styled.line_height = Some(20.0);
+        let layout = TextLayout::new(&styled);
+        assert!(layout.visual_line_count() > 1, "the text wrapped");
+        assert_eq!(layout.row_of_offset(0), Some(0), "the start is the first row");
+        // The last byte is on the last row.
+        let last = layout.row_of_offset(styled.text.len() - 1);
+        assert_eq!(
+            last,
+            Some(layout.visual_line_count() - 1),
+            "the end is on the last row"
+        );
     }
 }

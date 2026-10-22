@@ -132,6 +132,13 @@ pub struct LineMetrics {
     pub min_coord: f32,
     /// The bottom of the line box, in layout units.
     pub max_coord: f32,
+    /// The distance between this line's baseline and the next one's.
+    ///
+    /// This is the *pitch*, not the height of the ink: a line box with leading
+    /// is shorter than the space the next line starts in. A caller that places
+    /// lines uses this, because "the next line" starts a pitch below, not an
+    /// ink height below.
+    pub line_height: f32,
 }
 
 /// Fully shaped + wrapped text ready for painting.
@@ -203,6 +210,7 @@ impl TextShaper {
                 text_range: line.text_range(),
                 min_coord: metrics.min_coord,
                 max_coord: metrics.max_coord,
+                line_height: metrics.line_height,
             });
 
             for item in line.items() {

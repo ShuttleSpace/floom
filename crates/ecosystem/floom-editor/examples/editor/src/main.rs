@@ -22,11 +22,26 @@ fn main() {
              Double-click selects a word, triple-click a line.\n\
              \n\
              Type to edit. The arrow keys, Home, End, Backspace and Delete\n\
-             all work; hold Control (or Command) for word motions.\n"
+             all work; hold Control (or Command) for word motions.\n\
+             \n\
+             Alt and a click adds a caret, and Control-Alt with the up and\n\
+             down arrows adds one above or below. Typing with several carets\n\
+             types at all of them.\n\
+             \n\
+             The whitespace is drawn as a dot for a space and an arrow for a\n\
+             tab, and the guides down the left are the indentation.\n"
                 .to_string()
         });
 
-    let editor = text_editor(text).style(EditorStyle::dark());
+    // Soft wrap, the whitespace markers and the indent guides are all off by
+    // default: an editor that draws them without being asked is an editor
+    // that draws them over somebody else's text.
+    let editor = text_editor(text).style(EditorStyle {
+        soft_wrap: true,
+        show_whitespace: true,
+        show_indent_guides: true,
+        ..EditorStyle::dark()
+    });
     let state = editor.state();
 
     let result = floom::run_desktop("floom — editor", Size::new(720.0, 480.0), {
