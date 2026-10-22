@@ -166,12 +166,12 @@ impl FakeNativeProvider {
     /// expected to honour it, so a test that forgets to send one fails.
     pub fn new() -> Self {
         Self::with_capabilities(NativeCapabilities {
-            modes: &[
+            modes: std::borrow::Cow::Borrowed(&[
                 NativeCompositionMode::Overlay,
                 NativeCompositionMode::Texture,
                 NativeCompositionMode::Surface,
                 NativeCompositionMode::Offscreen,
-            ],
+            ]),
             snapshot: true,
             input: InputModes::ALL,
             focusable: true,
@@ -306,7 +306,11 @@ impl Default for FakeNativeProvider {
 
 impl NativeViewProvider for FakeNativeProvider {
     fn capabilities(&self) -> NativeCapabilities {
-        self.capabilities
+        // Cloned rather than moved: the capabilities are a `Cow`, so a
+        // borrowed list clones as a borrow and an owned one copies its
+        // allocation. A fake provider's capabilities never change, so this
+        // is a pointer bump in the common case.
+        self.capabilities.clone()
     }
 
     fn create(&mut self, slot: NativeSlot, kind: NativeViewKind) -> Result<(), NativeError> {

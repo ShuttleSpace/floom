@@ -20,6 +20,7 @@
 //! the lifecycle invariants listed in the plan (`destroy` for every `create`, a
 //! recycled slot re-bound before any `apply`, no double freeze).
 
+use std::borrow::Cow;
 use std::fmt;
 
 use floom_types::{NativeCapture, Rect};
@@ -107,11 +108,19 @@ impl Default for InputModes {
 ///
 /// `modes` is ordered strongest-first *for that provider*; the host never
 /// assumes a cross-platform ordering.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+///
+/// The modes are a `Cow` rather than a `&'static` slice because a provider's
+/// capabilities need not be known at compile time. A Rust provider answers
+/// from a constant, so it borrows and allocates nothing; a provider reached
+/// over the C ABI answers from a list the native side built at runtime, so it
+/// owns. The controller asks for the capabilities on every `apply`, so the
+/// difference between borrowing and allocating is the difference between a
+/// frame that allocates and a frame that does not — and only the C side pays.
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct NativeCapabilities {
     /// Composition modes this provider can do, in the provider's own order of
     /// preference.
-    pub modes: &'static [NativeCompositionMode],
+    pub modes: Cow<'static, [NativeCompositionMode]>,
     /// Whether [`NativeViewProvider::snapshot`] can freeze a participant into a
     /// texture for a transition.
     pub snapshot: bool,
@@ -127,24 +136,24 @@ pub struct NativeCapabilities {
 
 impl NativeCapabilities {
     pub const NONE: Self = Self {
-        modes: &[],
+        modes: Cow::Borrowed(&[]),
         snapshot: false,
         input: InputModes::NONE,
         focusable: false,
         clip: ClipSupport::Unsupported,
     };
 
-    pub fn supports(self, mode: NativeCompositionMode) -> bool {
+    pub fn supports(&self, mode: NativeCompositionMode) -> bool {
         self.modes.contains(&mode)
     }
 
     /// The provider's own first choice, if it has any modes at all.
-    pub fn preferred(self) -> Option<NativeCompositionMode> {
+    pub fn preferred(&self) -> Option<NativeCompositionMode> {
         self.modes.first().copied()
     }
 
     /// Whether a rect that needs cropping can be handed to this provider at all.
-    pub fn can_crop(self) -> bool {
+    pub fn can_crop(&self) -> bool {
         !matches!(self.clip, ClipSupport::Unsupported)
     }
 
@@ -155,7 +164,7 @@ impl NativeCapabilities {
     /// widget needs to be occludable. A participant that cannot be composited
     /// at all yields `None`, which the host turns into a typed error at mount
     /// time rather than a blank region at paint time.
-    pub fn negotiate(self, preferred: &[NativeCompositionMode]) -> Option<NativeCompositionMode> {
+    pub fn negotiate(&self, preferred: &[NativeCompositionMode]) -> Option<NativeCompositionMode> {
         preferred.iter().copied().find(|m| self.supports(*m))
     }
 
@@ -168,7 +177,7 @@ impl NativeCapabilities {
     /// one, which is the honest answer for a plane-based backend — the host
     /// then hides the participant rather than letting it draw outside its box.
     pub fn negotiate_croppable(
-        self,
+        &self,
         preferred: &[NativeCompositionMode],
     ) -> Option<NativeCompositionMode> {
         preferred
@@ -361,9 +370,13 @@ pub enum NativeError {
     AlreadyFrozen(NativeSlot),
     /// `restore` on a slot that is not frozen.
     NotFrozen(NativeSlot),
-    /// The provider refused. Carries a static reason because this crosses the
-    /// OS boundary where a rich error type is not worth the plumbing.
-    Provider(&'static str),
+    /// The provider refused.
+    ///
+    /// A `Cow` rather than a `&'static str` because the reason is often the
+    /// provider's own: a native implementation that refuses to create a
+    /// participant says why, and a static string would throw that away. A
+    /// Rust provider still hands over a borrowed literal.
+    Provider(Cow<'static, str>),
 }
 
 impl fmt::Display for NativeError {
@@ -466,7 +479,7 @@ mod tests {
 
     fn caps(modes: &'static [NativeCompositionMode]) -> NativeCapabilities {
         NativeCapabilities {
-            modes,
+            modes: Cow::Borrowed(modes),
             snapshot: true,
             input: InputModes::ALL,
             focusable: true,
@@ -674,7 +687,7 @@ mod tests {
     #[test]
     fn a_provider_that_has_not_declared_cropping_is_assumed_unable() {
         let declared = NativeCapabilities {
-            modes: OVERLAY_ONLY,
+            modes: Cow::Borrowed(OVERLAY_ONLY),
             snapshot: false,
             input: InputModes::ALL,
             focusable: false,

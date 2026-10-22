@@ -1288,6 +1288,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "floom-native-ffi"
+version = "0.2.0"
+dependencies = [
+ "floom-native",
+ "floom-types",
+]
+
+[[package]]
 name = "floom-native-plugin"
 version = "0.2.0"
 dependencies = [

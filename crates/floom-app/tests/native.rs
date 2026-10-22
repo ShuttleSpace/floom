@@ -60,7 +60,7 @@ fn cropless_provider() -> (FakeNativeProvider, NativeCommandLog) {
 /// about rather than compositing anyway.
 fn surface_only_cropless() -> FakeNativeProvider {
     FakeNativeProvider::with_capabilities(NativeCapabilities {
-        modes: &[NativeCompositionMode::Surface],
+        modes: std::borrow::Cow::Borrowed(&[NativeCompositionMode::Surface]),
         snapshot: false,
         input: InputModes::ALL,
         focusable: false,
@@ -1047,7 +1047,7 @@ fn the_freeze_lifecycle_rejects_double_and_stray_calls() {
 fn a_provider_that_cannot_snapshot_keeps_the_live_view() {
     let mut app = empty_app();
     let cannot = FakeNativeProvider::with_capabilities(NativeCapabilities {
-        modes: &[NativeCompositionMode::Overlay],
+        modes: std::borrow::Cow::Borrowed(&[NativeCompositionMode::Overlay]),
         snapshot: false,
         input: InputModes::ALL,
         focusable: false,
@@ -1181,7 +1181,7 @@ fn a_frozen_participant_is_animated_then_goes_live() {
 fn a_transition_without_a_snapshot_animates_nothing() {
     let mut app = empty_app();
     let mut cannot = FakeNativeProvider::with_capabilities(NativeCapabilities {
-        modes: &[NativeCompositionMode::Overlay],
+        modes: std::borrow::Cow::Borrowed(&[NativeCompositionMode::Overlay]),
         snapshot: false,
         input: InputModes::ALL,
         focusable: false,

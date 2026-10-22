@@ -232,6 +232,7 @@ for _names, _level in [
             "floom-platform-ios", "floom-platform-harmony", "floom-platform-web",
             "floom-platform-embedded", "floom-platform-tui", "floom-platform-mobile",
             "floom-native",
+            "floom-native-ffi",
             # winit event-loop adapter; no internal floom deps, consumed by the
             # desktop platform layer above.
             "floom-ui-events-winit",

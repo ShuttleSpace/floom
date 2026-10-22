@@ -406,9 +406,9 @@ impl<H: NativeViewHost> DesktopNativeBridge<H> {
     pub fn over(host: H) -> Self {
         let caps = NativeCapabilities {
             modes: if host.can_snapshot() {
-                OVERLAY_THEN_TEXTURE
+                std::borrow::Cow::Borrowed(OVERLAY_THEN_TEXTURE)
             } else {
-                OVERLAY_ONLY
+                std::borrow::Cow::Borrowed(OVERLAY_ONLY)
             },
             snapshot: host.can_snapshot(),
             input: host.input_modes(),
@@ -442,7 +442,9 @@ impl<H: NativeViewHost> DesktopNativeBridge<H> {
 
 impl<H: NativeViewHost> NativeViewProvider for DesktopNativeBridge<H> {
     fn capabilities(&self) -> NativeCapabilities {
-        self.caps
+        // Cloned rather than moved: the capabilities are a `Cow`, so a
+        // borrowed list clones as a borrow.
+        self.caps.clone()
     }
 
     fn create(&mut self, slot: NativeSlot, kind: NativeViewKind) -> Result<(), NativeError> {

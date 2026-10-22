@@ -9,6 +9,7 @@
 //! Testing them against [`FakeNativeProvider`] is the point: it is what makes
 //! 16.2 (diff, clipping, z-order, hit-test subtraction, focus yield) and 16.4
 //! (snapshot transitions) assertable without a single OS bridge existing.
+use std::borrow::Cow;
 
 use floom_native::{
     ClipSupport, FakeNativeProvider, InputMode, InputModes, NativeCapabilities, NativeCommand,
@@ -338,7 +339,7 @@ fn destroying_a_frozen_participant_hands_the_texture_back_first() {
 #[test]
 fn a_provider_that_cannot_snapshot_says_so_without_being_asked_twice() {
     let caps = NativeCapabilities {
-        modes: OVERLAY_ONLY,
+        modes: Cow::Borrowed(OVERLAY_ONLY),
         snapshot: false,
         ..NativeCapabilities::default()
     };
@@ -398,7 +399,7 @@ fn focus_is_exclusive_and_the_previous_participant_is_blurred() {
 #[test]
 fn focus_on_a_non_focusable_provider_is_refused() {
     let caps = NativeCapabilities {
-        modes: OVERLAY_ONLY,
+        modes: Cow::Borrowed(OVERLAY_ONLY),
         focusable: false,
         ..NativeCapabilities::default()
     };
@@ -452,7 +453,7 @@ fn a_participant_nobody_can_composite_is_refused_at_bind_time() {
 #[test]
 fn negotiation_falls_back_and_the_host_records_what_it_got() {
     let caps = NativeCapabilities {
-        modes: TEXTURE_ONLY,
+        modes: Cow::Borrowed(TEXTURE_ONLY),
         snapshot: false,
         input: InputModes::ALL,
         focusable: true,
@@ -472,7 +473,7 @@ fn negotiation_falls_back_and_the_host_records_what_it_got() {
 #[test]
 fn applying_a_mode_the_provider_lacks_is_refused() {
     let caps = NativeCapabilities {
-        modes: TEXTURE_ONLY,
+        modes: Cow::Borrowed(TEXTURE_ONLY),
         ..NativeCapabilities::default()
     };
     let mut c = NativeViewController::new(FakeNativeProvider::with_capabilities(caps));
@@ -490,7 +491,7 @@ fn applying_a_mode_the_provider_lacks_is_refused() {
 #[test]
 fn an_input_mode_the_provider_lacks_is_refused() {
     let caps = NativeCapabilities {
-        modes: &[OVERLAY],
+        modes: Cow::Borrowed(&[OVERLAY]),
         input: InputModes::PASSTHROUGH_ONLY,
         ..NativeCapabilities::default()
     };

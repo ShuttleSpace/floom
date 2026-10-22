@@ -41,7 +41,7 @@ impl NativeViewProvider for TextInputBridge {
     fn capabilities(&self) -> NativeCapabilities {
         NativeCapabilities {
             // Overlay only: exactly the shape of an X11/Win32 bridge (Phase 16).
-            modes: &[NativeCompositionMode::Overlay],
+            modes: std::borrow::Cow::Borrowed(&[NativeCompositionMode::Overlay]),
             snapshot: false,
             input: InputModes::PASSTHROUGH_ONLY,
             focusable: true,

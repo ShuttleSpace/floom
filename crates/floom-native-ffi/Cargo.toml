@@ -1,0 +1,22 @@
+[package]
+name = "floom-native-ffi"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "The C ABI for native composition providers: a Swift, Java, C++ or ArkTS provider, driven by Rust"
+rust-version.workspace = true
+
+# This crate is the FFI boundary: it holds the `#[repr(C)]` mirror of
+# `include/floom_native_provider.h` and the adapter that presents a native
+# provider as a Rust `NativeViewProvider`. It is the only crate in the native
+# layer that contains `unsafe`, and it is a separate crate precisely so that
+# `floom-native` can keep `#![forbid(unsafe_code)]`.
+[dependencies]
+floom-native = { path = "../floom-native", version = "0.2.0" }
+floom-types = { path = "../floom-types", version = "0.2.0" }
+
+[dev-dependencies]
+# The C test compiles a provider with the platform compiler and drives it
+# through the Rust controller, so the ABI is proved from C's side rather than
+# assumed from Rust's.

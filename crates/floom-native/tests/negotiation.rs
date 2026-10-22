@@ -15,6 +15,7 @@
 //!   time), and
 //! - refusing a participant that could have been composited (a feature that
 //!   silently does not work on one platform).
+use std::borrow::Cow;
 
 use floom_native::{
     ClipSupport, FakeNativeProvider, InputMode, InputModes, NativeCapabilities,
@@ -47,7 +48,7 @@ const CAPABILITY_SETS: [(&str, &[NativeCompositionMode]); 3] = [
 
 fn caps(modes: &'static [NativeCompositionMode], clip: ClipSupport) -> NativeCapabilities {
     NativeCapabilities {
-        modes,
+        modes: Cow::Borrowed(modes),
         snapshot: true,
         input: InputModes::ALL,
         focusable: true,
