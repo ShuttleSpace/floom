@@ -23,8 +23,12 @@ use floom_widgets::{Stack, Switch, TextInput};
 /// field. It was a `Checkbox` until that moved to `floom-ui-composites`,
 /// which sits in the satellite `floom-ui` workspace the root one
 /// `exclude`s; `Switch` is the same shape -- a label, a boolean,
-/// `CHECKED` in the semantics tree -- and is still a primitive, so the
-/// wire assertions below are unchanged.
+/// `CHECKED` in the semantics tree -- and is still a primitive.
+///
+/// The one thing the move changed is the **role**: `Switch` publishes
+/// `SemanticsRole::Switch`, which the wire spells `switch`, where
+/// `Checkbox` published `checkbox`. The assertions below are updated
+/// accordingly; the label, the checked state and the geometry are unchanged.
 fn fixture() -> TestApp {
     let stack = Stack::new(Axis::Vertical)
         .gap(12.0)
@@ -174,8 +178,11 @@ fn the_tree_reports_live_nodes_with_geometry() {
                 .nodes
                 .iter()
                 .find(|n| n.label.as_deref() == Some("Agree"))
-                .expect("the checkbox is on screen");
-            assert_eq!(agree.role, "checkbox");
+                .expect("the switch is on screen");
+            assert_eq!(
+                agree.role, "switch",
+                "the fixture is a `Switch`, and `Switch` publishes the `switch` role"
+            );
             assert!(agree.width > 0.0 && agree.height > 0.0, "laid out");
         }
         other => panic!("tree returned {other:?}"),
