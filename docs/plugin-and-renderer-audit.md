@@ -274,20 +274,56 @@ macOS 门禁记录过一次真实教训（`docs/gates/macos.md:126-128`）：
 
 ```
 第一梯队（阻塞，其余都依赖它）
-  A1 → A2 → A3 → A6      插件链路接通并被真实插件验证
-  A5                      原生合成路径跨语言化
-  B2                      skia 定位澄清
-  C1, C2, C3              恢复可构建 + 能力诚实
+  A1 → A2 → A3            插件链路接通          ✅ 2026-10-22
+  A5                      原生合成路径跨语言化    ⬜ 下一批
+  A6                      第一个真实能力插件      ⬜ 依赖 A5
+  B2                      skia 定位澄清          ⬜
+  C1, C2, C3              恢复可构建 + 能力诚实   ⬜
 
 第二梯队
-  A7 → A8 → A9            精简 SDK 结构 + ABI 版本
-  B1, B5, B6              文档重写 + 能力查询 + 统计归一
-  B3, B7                  tui 计数 + 像素回归
-  C4, C5, C6              平台后端补齐 + 门禁
+  A7 → A8 → A9            精简 SDK 结构 + ABI 版本  ⬜（A9 已随 A1 完成）
+  B1, B5, B6              文档重写 + 能力查询 + 统计归一 ⬜
+  B3, B7                  tui 计数 + 像素回归      ⬜
+  C4, C5, C6              平台后端补齐 + 门禁      ⬜
 
 第三梯队
-  B4, B8                  vello blur / shader 行为文档
+  B4, B8                  vello blur / shader 行为文档 ⬜
 ```
+
+### 批次 1 的实际结果（2026-10-22）
+
+A1 / A2 / A3 / A4 / A9 完成。**插件的 FFI 链路在仓库内打通并验证**：
+
+- `floom create --plugin` 生成的 crate 直接 `cargo test` 通过（5 项）；
+- `nm` 显示 4 个 `floom_<name>_*` 符号在二进制里——原生半边确实被编译并链接；
+- 生成工程自带的 `the_version_comes_from_the_native_half` 断言版本号来自原生
+  （原生返回 `"<name> 0.1.0"`，crate 版本是 `"0.1.0"`）——这是唯一能证明调用
+  真的跨过边界的断言；
+- 删掉 `native/desktop/` 后插件**仍然编译**、测试仍然全过（host-inert 路径验证）；
+- `example/` 对 facade 的 `cargo check` 通过（1m12s，`desktop` + `renderer-gpu`）；
+- CLI 新增 8 项生成物结构测试，全套 28 项通过。
+
+**未验证的部分**（明确记录，不当作已完成）：Android 的 JNI C shim 与 iOS 的
+`@_cdecl` 导出**没有在设备/模拟器上跑过**——它们只经过了符号名一致性的静态
+检查。A2 的验收标准里"Android 走 cargo-ndk/cmake，iOS 走 xcodeframework"
+这一条**尚未实现**：目前 `build.rs` 只对 C 平台（桌面/Android shim）用 `cc`，
+iOS 分支只是检测已存在的 xcframework 并链接，没有驱动 `xcodebuild`。
+
+### 与本次工作相邻但不属于它的两个失败
+
+1. **`floom-dsl --test compile_fixture`** — DSL 的 `emit.rs` 无条件
+   `use floom_widgets::{Checkbox, Radio, Select, Slider, TextField}`，而这些控件
+   已随 widget 迁移移进卫星工作区 `crates/ecosystem/floom-ui/`（根 workspace
+   `exclude` 了它）。**这是一个设计决策，不该由我单方面替迁移方选**：
+   - (a) 收窄 DSL 的 emit 词表（把这几个 kind 降级为已有的 placeholder 机制，
+     与 `Grid`/`List`/`Overlay` 同一处理）——约 10 行，代价是 DSL 暂时表达不了
+     `checkbox`/`radio`/`select`/`slider`/`text_field`；
+   - (b) 让 DSL 的目标 widget 路径可配置（`EmitOptions` 里加一项），默认
+     `floom_widgets`，依赖卫星的应用指向 `floom_ui_composites`——保留表达力，
+     但要动 API。**推荐 (b)**，因为 DSL 的词表与 UI IR 的 `NodeKind` 仍然一致，
+   收窄它会让 IR 和 DSL 再次分叉。
+2. **`floom-text` / `floom-types` 的 `line_height`** — 工作树里有未提交的
+   在制品（给 `StyledText` 加 `line_height`），是并行的编辑器工作，未纳入本次提交。
 
 ## 一句话总结
 
