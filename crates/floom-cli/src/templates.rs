@@ -257,6 +257,19 @@ pub fn plugin_lib_rs(name: &str) -> String {
 //! The native half implements the contract in `native/common/floom_{ident}.h`;
 //! this file calls it through `extern "C"`. There is no serialization boundary
 //! and no runtime lookup — the symbols resolve when the crate is linked.
+//!
+//! # How each platform reaches its native half
+//!
+//! The contract is the same everywhere; only the transport differs.
+//!
+//! | Platform | Native half | Transport |
+//! |---|---|---|
+//! | desktop | C | linked into this crate |
+//! | Android | Kotlin | a C shim, over JNI |
+//! | iOS | Swift | `@_cdecl`, linked as a framework |
+//! | web | JavaScript | imported by the wasm module |
+//! | OpenHarmony | ArkTS | N-API |
+//! | TUI | — | none: the terminal has no native surface, and the plugin says so |
 
 /// The capability id this plugin answers with.
 ///
@@ -273,19 +286,224 @@ pub const ABI_VERSION: i32 = 1;
 
 /// The native half, when `build.rs` found one for this target.
 ///
-/// `build.rs` emits `floom_plugin_native` only after it has compiled a native
-/// half for the current target, so the `extern` block below never names a
+/// `build.rs` emits `floom_plugin_native` only after it has found a native
+/// half for the current target, so the declarations below never name a
 /// symbol the linker cannot find.
 #[cfg(floom_plugin_native)]
 mod ffi {{
-    use std::os::raw::{{c_char, c_int}};
+    /// The C ABI, on every platform whose native half is C, Swift, or
+    /// Kotlin through a C shim.
+    #[cfg(not(target_arch = "wasm32"))]
+    mod raw {{
+        use std::os::raw::{{c_char, c_int}};
 
-    unsafe extern "C" {{
-        pub fn floom_{ident}_version() -> *const c_char;
-        pub fn floom_{ident}_enable() -> c_int;
-        pub fn floom_{ident}_disable();
-        pub fn floom_{ident}_capability() -> c_int;
-        pub fn floom_{ident}_abi_version() -> c_int;
+        unsafe extern "C" {{
+            pub fn floom_{ident}_version() -> *const c_char;
+            pub fn floom_{ident}_enable() -> c_int;
+            pub fn floom_{ident}_disable();
+            pub fn floom_{ident}_capability() -> c_int;
+            pub fn floom_{ident}_abi_version() -> c_int;
+        }}
+    }}
+
+    /// The web's native half is JavaScript, so the wasm module *imports* it
+    /// by name rather than linking it.
+    #[cfg(target_arch = "wasm32")]
+    mod raw {{
+        use wasm_bindgen::prelude::*;
+
+        /// The module is resolved relative to the crate root and inlined into
+        /// the wasm bundle, so the path here and the file on disk have to
+        /// agree.
+        #[wasm_bindgen(module = "/native/web/js/floom_{ident}.js")]
+        extern "C" {{
+            #[wasm_bindgen(js_name = floom_{ident}_version)]
+            pub fn floom_{ident}_version() -> String;
+            #[wasm_bindgen(js_name = floom_{ident}_enable)]
+            pub fn floom_{ident}_enable() -> i32;
+            #[wasm_bindgen(js_name = floom_{ident}_disable)]
+            pub fn floom_{ident}_disable();
+            #[wasm_bindgen(js_name = floom_{ident}_capability)]
+            pub fn floom_{ident}_capability() -> i32;
+            #[wasm_bindgen(js_name = floom_{ident}_abi_version)]
+            pub fn floom_{ident}_abi_version() -> i32;
+        }}
+    }}
+
+    /// The native half's version.
+    pub fn version() -> String {{
+        #[cfg(not(target_arch = "wasm32"))]
+        {{
+            // SAFETY: the native half returns a NUL-terminated string that
+            // stays valid until the next call into this plugin. Nothing here
+            // frees it, and the copy is made before the next call can happen.
+            let ptr = unsafe {{ raw::floom_{ident}_version() }};
+            if ptr.is_null() {{
+                return String::new();
+            }}
+            unsafe {{ std::ffi::CStr::from_ptr(ptr) }}
+                .to_string_lossy()
+                .into_owned()
+        }}
+        #[cfg(target_arch = "wasm32")]
+        {{
+            raw::floom_{ident}_version()
+        }}
+    }}
+
+    /// Claims the plugin's platform state. `0` is success.
+    pub fn enable() -> i32 {{
+        #[cfg(not(target_arch = "wasm32"))]
+        {{
+            // SAFETY: called on the host thread during startup, before any
+            // frame. The native half compiled against this header, so the
+            // call matches its declaration.
+            unsafe {{ raw::floom_{ident}_enable() }}
+        }}
+        #[cfg(target_arch = "wasm32")]
+        {{
+            raw::floom_{ident}_enable()
+        }}
+    }}
+
+    /// Releases whatever `enable` claimed.
+    pub fn disable() {{
+        #[cfg(not(target_arch = "wasm32"))]
+        {{
+            // SAFETY: the native half tolerates a disable without a matching
+            // enable.
+            unsafe {{ raw::floom_{ident}_disable() }};
+        }}
+        #[cfg(target_arch = "wasm32")]
+        {{
+            raw::floom_{ident}_disable();
+        }}
+    }}
+
+    /// The capability id, as the native half reports it.
+    pub fn capability() -> i32 {{
+        #[cfg(not(target_arch = "wasm32"))]
+        {{
+            // SAFETY: the native half returns a plain integer.
+            unsafe {{ raw::floom_{ident}_capability() }}
+        }}
+        #[cfg(target_arch = "wasm32")]
+        {{
+            raw::floom_{ident}_capability()
+        }}
+    }}
+
+    /// The ABI version the native half was compiled against.
+    pub fn abi_version() -> i32 {{
+        #[cfg(not(target_arch = "wasm32"))]
+        {{
+            // SAFETY: the native half returns a plain integer.
+            unsafe {{ raw::floom_{ident}_abi_version() }}
+        }}
+        #[cfg(target_arch = "wasm32")]
+        {{
+            raw::floom_{ident}_abi_version()
+        }}
+    }}
+}}
+
+/// The OpenHarmony half, and the bridge the host supplies to it.
+///
+/// # Why the plugin does not depend on N-API
+///
+/// OpenHarmony exposes OS services only through ArkTS, and ArkTS reaches Rust
+/// through N-API — but **a HAP links one N-API module**, and that module
+/// belongs to the host. A plugin that exported its own `#[napi]` functions
+/// would be a second module, and the host would have to merge it.
+///
+/// So the plugin owns the *capability* and the host owns the *transport*:
+/// the host hands the plugin an [`ArkTsBridge`] over whatever channel it
+/// already has, and the plugin's native half reaches ArkTS through it.
+///
+/// # Why there is a C shim at all
+///
+/// The C ABI says the native half implements the four entry points, and for
+/// OpenHarmony the native half is the C shim in `native/ohos/`. The shim
+/// cannot reach ArkTS by itself: the N-API environment lives in Rust, and a C
+/// file cannot obtain one. So the shim calls one Rust-exported helper,
+/// `floo_{ident}_arkts_call`, which does the N-API work.
+#[cfg(target_env = "ohos")]
+pub mod ohos {{
+    use std::ffi::CStr;
+    use std::os::raw::{{c_char, c_int}};
+    use std::sync::{{Arc, OnceLock, RwLock}};
+
+    /// A handle on the ArkTS half.
+    ///
+    /// The host implements it over N-API and hands it to
+    /// [`register_bridge`]. The trait is object-safe and `Send + Sync`
+    /// because the call happens on whichever thread the host's event loop
+    /// runs on, and the handle outlives the registration.
+    pub trait ArkTsBridge: Send + Sync {{
+        /// Calls `method` on the bridge, with an optional argument.
+        ///
+        /// Returns the method's result as text. An `Err` is the bridge's own
+        /// message, and it is what the C ABI's `enable` turns into a
+        /// non-zero code.
+        fn call(&self, method: &str, arg: Option<&str>) -> Result<String, String>;
+    }}
+
+    fn slot() -> &'static RwLock<Option<Arc<dyn ArkTsBridge>>> {{
+        static SLOT: OnceLock<RwLock<Option<Arc<dyn ArkTsBridge>>>> = OnceLock::new();
+        SLOT.get_or_init(|| RwLock::new(None))
+    }}
+
+    /// Registers the ArkTS half's bridge.
+    ///
+    /// Called by the **host**, once, at startup — not by the plugin. A plugin
+    /// that registered its own bridge would be a second N-API module, and a
+    /// HAP has room for one.
+    ///
+    /// Replacing an existing bridge is allowed: a host that recreates its
+    /// window registers again.
+    pub fn register_bridge(bridge: Arc<dyn ArkTsBridge>) {{
+        let mut guard = slot().write().unwrap_or_else(|e| e.into_inner());
+        *guard = Some(bridge);
+    }}
+
+    /// Whether a bridge has been registered.
+    pub fn has_bridge() -> bool {{
+        slot().read().unwrap_or_else(|e| e.into_inner()).is_some()
+    }}
+
+    /// Calls a method on the registered bridge.
+    ///
+    /// The C shim calls this. `0` is success; a negative code is a failure
+    /// the shim turns into the ABI's non-zero return.
+    ///
+    /// # Safety
+    ///
+    /// `method` must be a NUL-terminated string, or null. `arg` must be a
+    /// NUL-terminated string or null. Both are read for the duration of the
+    /// call.
+    // Rust 2024 requires the `unsafe` marker on the attribute itself.
+    #[unsafe(no_mangle)]
+    pub unsafe extern "C" fn floom_{ident}_arkts_call(
+        method: *const c_char,
+        arg: *const c_char,
+    ) -> c_int {{
+        let bridge = {{ slot().read().unwrap_or_else(|e| e.into_inner()).clone() }};
+        let Some(bridge) = bridge else {{
+            return -1;
+        }};
+        if method.is_null() {{
+            return -2;
+        }}
+        let method = unsafe {{ CStr::from_ptr(method) }}.to_string_lossy().into_owned();
+        let arg = if arg.is_null() {{
+            None
+        }} else {{
+            Some(unsafe {{ CStr::from_ptr(arg) }}.to_string_lossy().into_owned())
+        }};
+        match bridge.call(&method, arg.as_deref()) {{
+            Ok(_) => 0,
+            Err(_) => -3,
+        }}
     }}
 }}
 
@@ -293,22 +511,14 @@ mod ffi {{
 ///
 /// Falls back to this crate's version when there is no native half, so the
 /// number is never a lie: it says what the caller can actually get.
-pub fn version() -> &'static str {{
+pub fn version() -> String {{
     #[cfg(floom_plugin_native)]
     {{
-        // SAFETY: the native half returns a NUL-terminated static string that
-        // stays valid until the next call into this plugin. Nothing here frees
-        // it, and the borrow ends before the next call can happen.
-        let ptr = unsafe {{ ffi::floom_{ident}_version() }};
-        if ptr.is_null() {{
-            return env!("CARGO_PKG_VERSION");
-        }}
-        let cstr = unsafe {{ std::ffi::CStr::from_ptr(ptr) }};
-        cstr.to_str().unwrap_or(env!("CARGO_PKG_VERSION"))
+        ffi::version()
     }}
     #[cfg(not(floom_plugin_native))]
     {{
-        env!("CARGO_PKG_VERSION")
+        env!("CARGO_PKG_VERSION").to_string()
     }}
 }}
 
@@ -322,16 +532,13 @@ pub fn version() -> &'static str {{
 pub fn enable() -> Result<(), String> {{
     #[cfg(floom_plugin_native)]
     {{
-        // SAFETY: called on the host thread during startup, before any frame.
-        // The native half is the one that compiled against this header, so the
-        // call matches its declaration.
-        let abi = unsafe {{ ffi::floom_{ident}_abi_version() }};
+        let abi = ffi::abi_version();
         if abi != ABI_VERSION {{
             return Err(format!(
                 "native half speaks ABI version {{abi}}, this crate speaks {{ABI_VERSION}}"
             ));
         }}
-        let rc = unsafe {{ ffi::floom_{ident}_enable() }};
+        let rc = ffi::enable();
         if rc != 0 {{
             return Err(format!("native enable failed with code {{rc}}"));
         }}
@@ -350,8 +557,7 @@ pub fn enable() -> Result<(), String> {{
 pub fn disable() {{
     #[cfg(floom_plugin_native)]
     {{
-        // SAFETY: the native half tolerates a disable without a matching enable.
-        unsafe {{ ffi::floom_{ident}_disable() }};
+        ffi::disable();
     }}
 }}
 
@@ -363,8 +569,7 @@ pub fn disable() {{
 pub fn capability() -> Option<i32> {{
     #[cfg(floom_plugin_native)]
     {{
-        // SAFETY: the native half returns a plain integer.
-        Some(unsafe {{ ffi::floom_{ident}_capability() }})
+        Some(ffi::capability())
     }}
     #[cfg(not(floom_plugin_native))]
     {{
@@ -508,6 +713,12 @@ pub fn plugin_cargo_toml(name: &str, floom_path: Option<&str>) -> String {
          [build-dependencies]\n\
          cc = \"1\"\n\
          \n\
+         [target.'cfg(target_arch = \"wasm32\")'.dependencies]\n\
+         # The web's native half is JavaScript, and the wasm module imports it.\n\
+         # `wasm-bindgen` is what declares that import and what the bundler\n\
+         # processes, so it is a dependency of the wasm build only.\n\
+         wasm-bindgen = \"0.2\"\n\
+         \n\
          [dev-dependencies]\n\
          # A plugin is tested without a device: the pure-Rust half is an ordinary\n\
          # crate, so `cargo test` covers it and the native half is covered by the\n\
@@ -563,17 +774,32 @@ fn main() {{
         std::env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR is set by cargo"),
     );
     let target_os = std::env::var("CARGO_CFG_TARGET_OS").unwrap_or_default();
+    let target_env = std::env::var("CARGO_CFG_TARGET_ENV").unwrap_or_default();
+    let target_arch = std::env::var("CARGO_CFG_TARGET_ARCH").unwrap_or_default();
 
     // Which directory holds this target's native half.
     //
     // The desktop half is one directory for all three desktop targets: the C
     // ABI it implements is the same, and a per-OS copy would be three files
     // that differ only in a `#ifdef`.
-    let platform_dir = match target_os.as_str() {{
-        "linux" | "macos" | "windows" => "desktop",
-        "android" => "android",
-        "ios" => "ios",
-        _ => "",
+    //
+    // OpenHarmony is `target_os = "linux"` with `target_env = "ohos"`, so the
+    // environment has to be checked before the OS: matching on the OS alone
+    // would send an OHOS build to the desktop half.
+    //
+    // The web is chosen by *architecture*, not by OS: a wasm32 target is the
+    // web wherever it is built, and there is no other wasm32 target a plugin
+    // would be built for.
+    let platform_dir = if target_arch == "wasm32" {{
+        "web"
+    }} else {{
+        match (target_os.as_str(), target_env.as_str()) {{
+            ("linux", "ohos") => "ohos",
+            ("android", _) => "android",
+            ("ios", _) => "ios",
+            ("linux", _) | ("macos", _) | ("windows", _) => "desktop",
+            _ => "",
+        }}
     }};
 
     if platform_dir.is_empty() {{
@@ -615,6 +841,32 @@ fn main() {{
             .warnings(true)
             .compile("floom_{ident}");
         println!("cargo:rustc-cfg=floom_plugin_native");
+        return;
+    }}
+
+    // The web's native half is JavaScript, imported by the wasm module, so
+    // there is nothing to compile here: the module is bundled by the app's
+    // build (wasm-bindgen or a bundler), and the Rust side declares the
+    // imports by module name.
+    if platform_dir == "web" {{
+        println!("cargo:rustc-cfg=floom_plugin_native");
+        println!(
+            "cargo:warning={name}: the web half is JavaScript; make sure the \
+             bundler picks up native/web/js/floom_{ident}.js"
+        );
+        return;
+    }}
+
+    // OpenHarmony's native half is ArkTS, reached over N-API. The four ABI
+    // functions are implemented on the Rust side for that platform, because
+    // the N-API environment lives in Rust and a C shim cannot obtain one --
+    // so there is nothing to compile here either.
+    if platform_dir == "ohos" {{
+        println!("cargo:rustc-cfg=floom_plugin_native");
+        println!(
+            "cargo:warning={name}: the OpenHarmony half is ArkTS over N-API; the \
+             ArkTS side must call register_bridge at startup"
+        );
         return;
     }}
 
@@ -928,6 +1180,279 @@ int floom_{ident}_abi_version(void);
         name = name,
         ident = ident,
         upper = ident.to_uppercase()
+    )
+}
+
+/// A plugin's web half: the JavaScript module the wasm module imports.
+///
+/// The four functions keep the names the C ABI gives them, so the contract is
+/// the same one every other platform implements — the transport is what
+/// differs. On the web the wasm module *imports* them rather than linking
+/// them, and `wasm-bindgen` resolves the import to this file.
+///
+/// The module path in `src/lib.rs` and this file's path have to agree: the
+/// import is resolved relative to the crate root.
+pub fn plugin_web_js(name: &str) -> String {
+    let ident = name.replace('-', "_");
+    format!(
+        r#"// The web half of the `{name}` plugin.
+//
+// The wasm module imports these four functions by name. The names are the
+// ones the C ABI in `native/common/floom_{ident}.h` uses, so the contract is
+// the same one every other platform implements — only the transport differs:
+// here the wasm module imports JavaScript rather than linking a native
+// library.
+//
+// Replace the bodies with the real work. The names do not change.
+
+export function floom_{ident}_version() {{
+    return "{name} 0.1.0";
+}}
+
+export function floom_{ident}_enable() {{
+    // 0 is success; anything else is a refusal, and the Rust side turns it
+    // into a message.
+    return 0;
+}}
+
+export function floom_{ident}_disable() {{}}
+
+export function floom_{ident}_capability() {{
+    return 0;
+}}
+
+export function floom_{ident}_abi_version() {{
+    return 1;
+}}
+"#
+    )
+}
+
+/// A plugin's `native/web/README.md`.
+pub fn plugin_web_readme(name: &str) -> String {
+    let ident = name.replace('-', "_");
+    format!(
+        r#"# The web half
+
+`js/floom_{ident}.js` is the web implementation of the C ABI in
+`../common/floom_{ident}.h`.
+
+On every other platform the native half is **linked** into the binary. On the
+web it cannot be: there is no native library to link, so the wasm module
+**imports** these functions instead, and `wasm-bindgen` resolves the import
+to the JavaScript file.
+
+That means two things have to line up, and both are checked by the build
+rather than by a person:
+
+- the module path in `src/lib.rs` (`/native/web/js/floom_{ident}.js`) and this
+  file's path;
+- the exported names and the ones the Rust side declares.
+
+`wasm-bindgen` turns the import into a JS module the bundler resolves, so the
+app's build has to run it over the wasm output. `floom-renderer-web` already
+depends on `wasm-bindgen`, so the app's web toolchain has it.
+
+## No serialization on the web either
+
+The version crosses as a JS string and the rest as numbers. That is the one
+place the "no serialization" rule bends: a JS string is UTF-16 and a Rust
+string is UTF-8, so the boundary has to convert. Everything else — the
+capability id, the enable code — is an integer in both.
+"#
+    )
+}
+
+/// A plugin's OpenHarmony half: the ArkTS class that carries the capability.
+///
+/// ArkTS is the language OpenHarmony's OS services are reached through, so it
+/// is the language the capability is written in. The class is plain
+/// ArkTS/TypeScript: the plugin's own business, with the platform's
+/// frameworks available to it.
+pub fn plugin_ohos_ets(name: &str) -> String {
+    let class = format!("{}Plugin", crate::native_project::kotlin_class_name(name));
+    format!(
+        r#"// The OpenHarmony half of the `{name}` plugin.
+//
+// ArkTS is where OpenHarmony's OS services live, so the capability is written
+// here. The Rust side reaches this class through the bridge the **host**
+// registers — see `../README.md` for why the host owns that.
+//
+// The method names are the ones the C shim asks for: `enable`, `disable`,
+// `isAvailable` and `perform`.
+
+export class {class} {{
+    /** Set by the host before any plugin call. */
+    private appContext: ESObject | null = null;
+
+    /**
+     * Claims the plugin's platform state.
+     *
+     * Returning a string rather than throwing keeps the boundary in the same
+     * shape in both directions: Rust reads a message, it does not have to
+     * unwind an ArkTS exception across FFI.
+     */
+    enable(): string | null {{
+        return null;
+    }}
+
+    /** Releases whatever `enable` claimed. */
+    disable(): void {{}}
+
+    /** Whether the plugin currently has what it needs to run. */
+    isAvailable(): boolean {{
+        return this.appContext !== null;
+    }}
+
+    /**
+     * Runs the plugin's work and reports whether it succeeded.
+     *
+     * Returning a `string` error rather than throwing keeps the boundary in
+     * the same shape in both directions.
+     */
+    perform(): string | null {{
+        return null;
+    }}
+}}
+"#
+    )
+}
+
+/// A plugin's OpenHarmony C shim — the C ABI, implemented over the bridge.
+///
+/// The shim cannot reach ArkTS by itself: the N-API environment lives in
+/// Rust, and a C file cannot obtain one. So it calls the one Rust-exported
+/// helper, `floo_{ident}_arkts_call`, which does the N-API work.
+pub fn plugin_ohos_c_shim(name: &str) -> String {
+    let ident = name.replace('-', "_");
+    format!(
+        r#"/* The OpenHarmony C shim for the `{name}` plugin.
+ *
+ * Implements the contract in `native/common/floom_{ident}.h` and reaches the
+ * ArkTS half through the bridge the host registered.
+ *
+ * The bridge call goes through `floom_{ident}_arkts_call`, which Rust
+ * exports: the N-API environment lives in Rust, and a C file cannot obtain
+ * one. That single indirection is the whole price of keeping the C ABI as the
+ * contract on a platform whose OS services are reachable only from ArkTS.
+ */
+
+#include "floom_{ident}.h"
+
+/* `NULL` for the "no argument" case below. */
+#include <stddef.h>
+
+/* Exported by the Rust half. Returns 0 on success, negative on failure. */
+extern int floom_{ident}_arkts_call(const char *method, const char *arg);
+
+const char *floom_{ident}_version(void) {{
+    /* Owned by the callee: the next call into this plugin invalidates it. */
+    static const char version[] = "{name} 0.1.0";
+    return version;
+}}
+
+int floom_{ident}_enable(void) {{
+    return floom_{ident}_arkts_call("enable", NULL) == 0 ? 0 : 1;
+}}
+
+void floom_{ident}_disable(void) {{
+    (void)floom_{ident}_arkts_call("disable", NULL);
+}}
+
+int floom_{ident}_capability(void) {{
+    return 0;
+}}
+
+int floom_{ident}_abi_version(void) {{
+    return FLOOM_{upper}_ABI_VERSION;
+}}
+"#,
+        ident = ident,
+        upper = ident.to_uppercase()
+    )
+}
+
+/// A plugin's `native/ohos/README.md`.
+pub fn plugin_ohos_readme(name: &str) -> String {
+    let ident = name.replace('-', "_");
+    let class = format!("{}Plugin", crate::native_project::kotlin_class_name(name));
+    format!(
+        r#"# The OpenHarmony half
+
+Two files:
+
+- `ets/{class}.ets` — the ArkTS class that carries the capability. ArkTS is
+  where OpenHarmony's OS services live, so this is where the capability is
+  written.
+- `floom_{ident}_ohos.c` — the C shim that implements the C ABI in
+  `../common/floom_{ident}.h` and reaches the ArkTS class through the
+  bridge.
+
+## The host owns the bridge
+
+A HAP links **one** N-API module, and it belongs to the host. A plugin that
+exported its own `#[napi]` functions would be a second module, so the plugin
+does not have one: the host holds the N-API environment and hands the plugin
+an `ArkTsBridge` at startup.
+
+```rust
+// in the host, once, at startup
+{name}::ohos::register_bridge(std::sync::Arc::new(MyBridge::new(env, obj)));
+```
+
+`MyBridge` is the host's own type: it implements
+`{name}::ohos::ArkTsBridge` over N-API and calls the ArkTS class's methods.
+
+## Building
+
+The shim is C, so it is compiled by `build.rs` with the OpenHarmony NDK's
+clang — the same toolchain the host is built with. The cross-compile needs:
+
+```sh
+export CARGO_TARGET_AARCH64_UNKNOWN_LINUX_OHOS_LINKER="$OHOS_NDK/llvm/bin/aarch64-unknown-linux-ohos-clang"
+```
+
+Without it the shim does not compile, `build.rs` says so, and the plugin
+falls back to reporting that it has no native half for this target.
+
+## Not verified on device
+
+This half has been cross-compiled, not run. The OpenHarmony path in Floom 2.0
+is itself incomplete — `floom-platform-harmony` is still a stub — so this
+half is ahead of the host it would run in.
+"#
+    )
+}
+
+/// A plugin's `native/tui/README.md`.
+pub fn plugin_tui_readme(name: &str) -> String {
+    format!(
+        r#"# The terminal half of `{name}`
+
+There isn't one, and that is the honest answer rather than a missing file.
+
+A terminal is not a platform with OS services: it is a character grid. There
+is no camera behind it, no sensor, no secure enclave, no window manager. A
+capability that means something on a phone has no meaning here, and the
+plugin says so rather than pretending.
+
+## What happens instead
+
+A terminal build compiles the plugin and reports that it has no native half
+for the target. `enable()` returns an error saying exactly that, so a host
+can ask for the capability and learn that the platform does not have it.
+
+If a capability *does* have a terminal meaning — a clipboard, a colour
+query, a terminal query — it belongs in the C half in `../desktop/`, which is
+compiled for a terminal build like any other desktop build, because a
+terminal app is an ordinary program on the host operating system.
+
+## Why the plugin is not broken by this
+
+`build.rs` finds no native half for a terminal target, so it does not emit
+`floom_plugin_native`, and the Rust half's `extern` block is not compiled in.
+Nothing is linked that is not there, and the plugin still builds.
+"#
     )
 }
 

@@ -99,7 +99,9 @@ crates/floom-plugin-<capability>/
     ├── desktop/             the desktop half (C)
     ├── android/             the Android half (Gradle + Kotlin + a C shim)
     ├── ios/                 the iOS half (Swift, exported with `@_cdecl`)
-    └── ohos/                the OpenHarmony half (ArkTS + a C shim)
+    ├── ohos/                the OpenHarmony half (ArkTS + a C shim)
+    ├── web/                 the web half (JavaScript)
+    └── tui/                 nothing: the terminal has no native surface
 ```
 
 `build.rs` is what compiles the native half, and it emits
@@ -112,6 +114,43 @@ same question as "does this plugin have a native half for this OS" — a plugin
 generated for Android only, compiled on Linux, has no Linux half, and a
 `target_os` check would declare the extern block anyway and fail at link time
 in a crate that should have compiled.
+
+### How each platform reaches its native half
+
+The contract is the same everywhere. Only the transport differs, and the
+difference lives in the plugin's own crate — never in the contract.
+
+| Platform | Native half | Transport |
+|---|---|---|
+| desktop | C | compiled by `build.rs` and linked in |
+| Android | Kotlin | a C shim that reaches Kotlin over JNI |
+| iOS | Swift | `@_cdecl`, linked as a framework |
+| web | JavaScript | imported by the wasm module (`wasm-bindgen`) |
+| OpenHarmony | ArkTS | a C shim that reaches ArkTS through a Rust-exported helper |
+| TUI | — | none: the terminal has no OS capability surface |
+
+Two of these need a word.
+
+**The web cannot link.** There is no native library to link into a wasm
+module, so the module *imports* the JavaScript instead, and `wasm-bindgen`
+resolves the import to `native/web/js/floom_<name>.js`. The names are the
+ABI's names; only the direction differs.
+
+**OpenHarmony's environment lives in Rust.** A HAP links *one* N-API module
+and it belongs to the host, so a plugin cannot export its own `#[napi]`
+functions — it would be a second module. The plugin therefore owns the
+*capability* and the host owns the *transport*: the host hands the plugin an
+`ArkTsBridge` at startup, and the plugin's C shim reaches ArkTS through the
+one helper Rust exports (`floom_<name>_arkts_call`). The C ABI is still
+implemented by the native half; the helper is a platform-internal transport,
+not part of the contract.
+
+**The terminal has nothing.** A character grid is not a platform with OS
+services: no camera, no sensor, no enclave. A terminal build compiles the
+plugin and `enable()` reports that there is no native half for the target,
+rather than pretending. A capability that *does* have a terminal meaning
+belongs in the desktop C half, because a terminal app is an ordinary program
+on the host operating system.
 
 ### How this is verified
 

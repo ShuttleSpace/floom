@@ -550,6 +550,11 @@ fn emit_plugin_platform(opts: &CreateOpts, root: &Path, platform: &str) -> Resul
     fs::create_dir_all(&dir).map_err(|e| format!("{}: {e}", dir.display()))?;
     let lib = native_project::lib_name(&opts.name);
 
+    // A platform with a native half of its own gets a README that explains
+    // that half; the generic one is written first and this one second, so the
+    // specific text is the one that survives.
+    let mut specific_readme: Option<String> = None;
+
     match platform {
         "android" => {
             write(&dir.join("settings.gradle.kts"), &native_project::android_plugin_settings_gradle(&opts.name))?;
@@ -614,8 +619,46 @@ fn emit_plugin_platform(opts: &CreateOpts, root: &Path, platform: &str) -> Resul
         // would have had to produce an *executable* to match the app template,
         // which is the wrong shape for a library.
         "windows" | "linux" | "macos" => {}
+        "web" => {
+            // The web's native half is JavaScript, imported by the wasm
+            // module rather than linked into it.
+            let js_dir = dir.join("js");
+            fs::create_dir_all(&js_dir).map_err(|e| format!("{}: {e}", js_dir.display()))?;
+            write(
+                &js_dir.join(format!("floom_{}.js", opts.name.replace('-', "_"))),
+                &templates::plugin_web_js(&opts.name),
+            )?;
+            specific_readme = Some(templates::plugin_web_readme(&opts.name));
+        }
         "ohos" => {
-            write(&dir.join("oh-package.json5"), &templates::ohos_package_json(&opts.name))?;
+            // OpenHarmony's native half is ArkTS, reached through a C shim
+            // that implements the same C ABI as every other platform.
+            let ets_dir = dir.join("ets");
+            fs::create_dir_all(&ets_dir).map_err(|e| format!("{}: {e}", ets_dir.display()))?;
+            write(
+                &ets_dir.join(format!(
+                    "{}Plugin.ets",
+                    native_project::kotlin_class_name(&opts.name)
+                )),
+                &templates::plugin_ohos_ets(&opts.name),
+            )?;
+            write(
+                &dir.join(format!("floom_{}_ohos.c", opts.name.replace('-', "_"))),
+                &templates::plugin_ohos_c_shim(&opts.name),
+            )?;
+            // The ArkTS half is an ArkTS package, so the host's HAP can depend
+            // on it the way it depends on any other.
+            write(
+                &dir.join("oh-package.json5"),
+                &templates::ohos_package_json(&opts.name),
+            )?;
+            specific_readme = Some(templates::plugin_ohos_readme(&opts.name));
+        }
+        "tui" => {
+            // A terminal has no OS capability surface, so there is no native
+            // half to write. The README says so, which is more useful than a
+            // file that would have to explain itself.
+            specific_readme = Some(templates::plugin_tui_readme(&opts.name));
         }
         _ => {}
     }
@@ -628,7 +671,11 @@ fn emit_plugin_platform(opts: &CreateOpts, root: &Path, platform: &str) -> Resul
     write(
         &dir.join("README.md"),
         &templates::plugin_platform_readme(label, opener),
-    )
+    )?;
+    if let Some(readme) = specific_readme {
+        write(&dir.join("README.md"), &readme)?;
+    }
+    Ok(())
 }
 
 #[cfg(test)]
@@ -821,6 +868,89 @@ mod tests {
         assert!(
             swift.contains("@_cdecl(\"floom_swift_enable\")"),
             "the Swift half must export the C ABI with `@_cdecl`"
+        );
+    }
+
+    #[test]
+    fn the_web_half_is_a_javascript_module_the_wasm_imports() {
+        // The web is the one platform where the native half cannot be
+        // linked: there is no native library to link, so the wasm module
+        // imports JavaScript. The import path and the file on disk have to
+        // agree, and the names have to be the ABI's names.
+        let dir = scaffold("web", &["web"]);
+        let js = read(&dir, "native/web/js/floom_web.js");
+        let lib_rs = read(&dir, "src/lib.rs");
+
+        for sym in ABI_SYMBOLS {
+            let symbol = format!("floom_web_{sym}");
+            assert!(
+                js.contains(&format!("export function {symbol}(")),
+                "the JavaScript half must export {symbol}"
+            );
+        }
+        assert!(
+            js.contains("export function floom_web_abi_version("),
+            "the ABI version is a function too, not only a macro"
+        );
+
+        // The import path in the Rust half, resolved relative to the crate
+        // root, has to be the file that was written.
+        assert!(
+            lib_rs.contains("/native/web/js/floom_web.js"),
+            "the wasm import must name the module that was written:\n{lib_rs}"
+        );
+        assert!(
+            dir.join("native/web/js/floom_web.js").is_file(),
+            "the module the import names must exist"
+        );
+    }
+
+    #[test]
+    fn the_ohos_half_is_arkts_behind_a_c_shim() {
+        // OpenHarmony's OS services are reachable only from ArkTS, so the
+        // capability is written in ArkTS. The C ABI is implemented by a shim
+        // next to it, which reaches ArkTS through the one helper Rust
+        // exports.
+        let dir = scaffold("ohos", &["ohos"]);
+        let ets = read(&dir, "native/ohos/ets/OhosPlugin.ets");
+        let shim = read(&dir, "native/ohos/floom_ohos_ohos.c");
+        let lib_rs = read(&dir, "src/lib.rs");
+
+        for sym in ABI_SYMBOLS {
+            let symbol = format!("floom_ohos_{sym}");
+            assert!(
+                shim.contains(&symbol),
+                "the C shim must implement {symbol}"
+            );
+        }
+        assert!(
+            shim.contains("floom_ohos_arkts_call"),
+            "the shim reaches ArkTS through the Rust-exported helper"
+        );
+        assert!(
+            lib_rs.contains("floom_ohos_arkts_call"),
+            "Rust must export the helper the shim calls:\n{lib_rs}"
+        );
+        assert!(
+            ets.contains("export class OhosPlugin"),
+            "the capability is written in ArkTS"
+        );
+    }
+
+    #[test]
+    fn the_terminal_half_says_there_is_none() {
+        // A terminal has no OS capability surface. The half says so, which is
+        // more useful than a file that would have to explain itself.
+        let dir = scaffold("tui", &["tui"]);
+        let readme = read(&dir, "native/tui/README.md");
+
+        assert!(
+            readme.contains("no native half"),
+            "the terminal half must say what the platform does not have:\n{readme}"
+        );
+        assert!(
+            !dir.join("native/tui").join("floom_tui.c").exists(),
+            "there is no native half to write for a terminal"
         );
     }
 
