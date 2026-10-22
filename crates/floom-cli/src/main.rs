@@ -307,17 +307,45 @@ fn create_plugin(opts: &CreateOpts, root: &Path) -> Result<(), String> {
         &templates::plugin_lib_rs(&opts.name),
     )?;
 
-    // The C ABI sits at the top level, beside `src/` and every platform
+    // The C ABI sits at `native/common/`, beside `src/` and every platform
     // directory, because it belongs to the plugin rather than to any one
-    // platform: each platform's code implements it, and `bindgen` reads it to
-    // generate the Rust side. Written once, outside the platform loop.
-    write(&root.join("floom.h"), &templates::plugin_header_rs(&opts.name))?;
+    // platform: each platform's code implements it, and `build.rs` reads it to
+    // find the sources that implement it. Written once, outside the platform
+    // loop.
+    //
+    // The path is `native/common/floom_<name>.h` and not `floom.h` at the root:
+    // `build.rs` watches `native/` as a whole and every platform's source
+    // `#include`s this header by that name, so a header that lived somewhere
+    // else would be included by a path that does not exist.
+    let common_dir = root.join("native").join("common");
+    fs::create_dir_all(&common_dir).map_err(|e| format!("{}: {e}", common_dir.display()))?;
+    write(
+        &common_dir.join(format!("floom_{}.h", opts.name.replace('-', "_"))),
+        &templates::plugin_header_rs(&opts.name),
+    )?;
+
+    // The reference desktop native half. It is what makes the generated
+    // plugin compile, link and pass its tests on the machine that generated
+    // it: the C ABI is proven to work before there is any real capability
+    // behind it.
+    let desktop_dir = root.join("native").join("desktop");
+    fs::create_dir_all(&desktop_dir).map_err(|e| format!("{}: {e}", desktop_dir.display()))?;
+    write(
+        &desktop_dir.join(format!("floom_{}.c", opts.name.replace('-', "_"))),
+        &templates::plugin_native_c(&opts.name),
+    )?;
+    write(
+        &desktop_dir.join("README.md"),
+        &templates::plugin_desktop_readme(&opts.name),
+    )?;
 
     // --- native halves -------------------------------------------------
     //
-    // Beside `src/`, not under `native/`: a Flutter plugin puts `android/` at the
-    // top level and Android Studio opens it directly. A nested `native/android/`
-    // is the same files one level harder to find.
+    // Under `native/`, next to the `common/` directory that holds the C ABI.
+    // The desktop half is written above rather than in this loop, because it
+    // is *one* directory for all three desktop targets: the C ABI it
+    // implements is the same, and a per-OS copy would be three files that
+    // differ only in a `#ifdef`.
     for p in &opts.platforms {
         emit_plugin_platform(opts, root, p)?;
     }
@@ -508,8 +536,17 @@ fn emit_app_platform(opts: &CreateOpts, root: &Path, platform: &str) -> Result<(
 /// platform: a Gradle library, a podspec, a CMake static library. It never owns
 /// an activity, a bundle id or an `Info.plist`, because the host owns those, and
 /// emitting them would make two plugins fight over the host's identity.
+///
+/// # Why `native/<platform>/` and not `<platform>/`
+///
+/// The layout mirrors the plugin's own README and the path `build.rs` looks
+/// in: the native half for a platform lives under `native/`, next to the
+/// `common/` directory that holds the C ABI. A plugin that put its platform
+/// directories at the root would have a `build.rs` that compiles
+/// `native/desktop/` and a `src/lib.rs` that a reader cannot connect to the
+/// Kotlin file three directories away.
 fn emit_plugin_platform(opts: &CreateOpts, root: &Path, platform: &str) -> Result<(), String> {
-    let dir = root.join(platform);
+    let dir = root.join("native").join(platform);
     fs::create_dir_all(&dir).map_err(|e| format!("{}: {e}", dir.display()))?;
     let lib = native_project::lib_name(&opts.name);
 
@@ -544,6 +581,14 @@ fn emit_plugin_platform(opts: &CreateOpts, root: &Path, platform: &str) -> Resul
                 )),
                 &native_project::android_plugin_kotlin(&opts.name),
             )?;
+            // The C shim: the C ABI, implemented over JNI. Kotlin cannot export
+            // a C symbol, so this is where the four entry points live.
+            let cpp_dir = dir.join("src").join("main").join("cpp");
+            fs::create_dir_all(&cpp_dir).map_err(|e| format!("{}: {e}", cpp_dir.display()))?;
+            write(
+                &cpp_dir.join(format!("floom_{}_android.c", opts.name.replace('-', "_"))),
+                &native_project::android_plugin_c_shim(&opts.name),
+            )?;
         }
         "ios" => {
             write(
@@ -563,9 +608,12 @@ fn emit_plugin_platform(opts: &CreateOpts, root: &Path, platform: &str) -> Resul
                 &native_project::ios_bridging_header(&opts.name),
             )?;
         }
-        "windows" | "linux" => {
-            write(&dir.join("CMakeLists.txt"), &native_project::desktop_cmake(platform, &opts.name, &lib))?;
-        }
+        // The desktop half is C, and `build.rs` compiles it — so there is no
+        // CMake project for it. Two compilers over the same source is how a
+        // plugin ends up with duplicate symbols at link time, and the CMake
+        // would have had to produce an *executable* to match the app template,
+        // which is the wrong shape for a library.
+        "windows" | "linux" | "macos" => {}
         "ohos" => {
             write(&dir.join("oh-package.json5"), &templates::ohos_package_json(&opts.name))?;
         }
@@ -581,4 +629,245 @@ fn emit_plugin_platform(opts: &CreateOpts, root: &Path, platform: &str) -> Resul
         &dir.join("README.md"),
         &templates::plugin_platform_readme(label, opener),
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The repository root, found from this crate's manifest directory.
+    fn repo_root() -> PathBuf {
+        PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .and_then(|p| p.parent())
+            .expect("crates/floom-cli sits two levels below the root")
+            .to_path_buf()
+    }
+
+    /// Scaffold a plugin into a scratch directory and return it.
+    fn scaffold(name: &str, platforms: &[&str]) -> PathBuf {
+        let root = repo_root();
+        let dir = root.join("target").join(format!("floom-cli-test-{name}"));
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(&dir).expect("scratch directory");
+
+        let opts = CreateOpts {
+            name: name.to_string(),
+            template: Template::Plugin,
+            platforms: platforms.iter().map(|s| s.to_string()).collect(),
+            org: "com.example".to_string(),
+            floom_crate: "floom".to_string(),
+            floom_path: Some(root.join("crates").join("floom").display().to_string()),
+            platform_path: Some(
+                root.join("crates")
+                    .join("floom-platform")
+                    .display()
+                    .to_string(),
+            ),
+            force: true,
+        };
+        create_plugin(&opts, &dir).expect("scaffold the plugin");
+        dir
+    }
+
+    fn read(dir: &Path, rel: &str) -> String {
+        fs::read_to_string(dir.join(rel))
+            .unwrap_or_else(|e| panic!("{}: {e}", dir.join(rel).display()))
+    }
+
+    /// The four entry points the C ABI is made of.
+    const ABI_SYMBOLS: &[&str] = &["version", "enable", "disable", "capability"];
+
+    /// Whether a Kotlin source *declares* an `external fun`.
+    ///
+    /// Only declarations count, not the prose: the generated Kotlin explains
+    /// at length why an `external fun` would be the wrong contract, and a
+    /// check that cannot tell an explanation from a declaration would have to
+    /// be deleted rather than fixed.
+    fn declares_external_fun(source: &str) -> bool {
+        source.lines().any(|line| {
+            let trimmed = line.trim();
+            !trimmed.starts_with("//")
+                && !trimmed.starts_with('*')
+                && trimmed.contains("external fun")
+        })
+    }
+
+    #[test]
+    fn the_c_abi_header_is_the_one_the_native_half_includes() {
+        // The header is the contract, and every native half includes it by the
+        // name `build.rs` puts on the include path. A mismatch here is a
+        // compile error in the generated project, reported from the C
+        // compiler and naming a header nobody can find.
+        let dir = scaffold("abiheader", &["macos"]);
+        let source = read(&dir, "native/desktop/floom_abiheader.c");
+
+        assert!(
+            source.contains("#include \"floom_abiheader.h\""),
+            "the desktop half must include the header by the name it is written under"
+        );
+    }
+
+    #[test]
+    fn the_header_and_every_native_half_agree_on_the_symbol_names() {
+        // This is the check that catches the failure mode the whole design
+        // exists to prevent: two halves that each name the same capability
+        // differently. The header declares the symbols; the C half, the Android
+        // shim and the Swift half define them. If any pair disagrees, the
+        // plugin links against symbols that do not exist — and the failure
+        // appears as an undefined symbol at link time, on a machine that is
+        // not the one that wrote the code.
+        let dir = scaffold("symbols", &["android", "ios", "macos"]);
+        let header = read(&dir, "native/common/floom_symbols.h");
+        let desktop = read(&dir, "native/desktop/floom_symbols.c");
+        let android = read(&dir, "native/android/src/main/cpp/floom_symbols_android.c");
+        let swift = read(&dir, "native/ios/Classes/SymbolsPlugin.swift");
+
+        for sym in ABI_SYMBOLS {
+            let symbol = format!("floom_symbols_{sym}");
+            assert!(
+                header.contains(&symbol),
+                "the header must declare {symbol}"
+            );
+            assert!(
+                desktop.contains(&symbol),
+                "the desktop half must define {symbol}"
+            );
+            assert!(
+                android.contains(&symbol),
+                "the Android shim must define {symbol}"
+            );
+            assert!(
+                swift.contains(&symbol),
+                "the Swift half must export {symbol}"
+            );
+        }
+
+        // The ABI version is a function as well as a macro, because the Rust
+        // half has to be able to ask a plugin it did not compile what it was
+        // built against.
+        assert!(header.contains("floom_symbols_abi_version"));
+        assert!(desktop.contains("floom_symbols_abi_version"));
+        assert!(android.contains("floom_symbols_abi_version"));
+        assert!(swift.contains("floom_symbols_abi_version"));
+    }
+
+    #[test]
+    fn the_rust_half_calls_the_abi_behind_the_flag_build_rs_emits() {
+        // The extern block is behind `floom_plugin_native`, and `build.rs` is
+        // what emits it. If either side stops agreeing, the plugin either fails
+        // to link or reaches for symbols that are not there.
+        let dir = scaffold("cfg", &["macos"]);
+        let build_rs = read(&dir, "build.rs");
+        let lib_rs = read(&dir, "src/lib.rs");
+
+        assert!(
+            build_rs.contains("cargo:rustc-cfg=floom_plugin_native"),
+            "build.rs must emit the flag the Rust half gates on"
+        );
+        assert!(
+            build_rs.contains("cargo:rustc-check-cfg=cfg(floom_plugin_native)"),
+            "build.rs must declare the flag, or every build warns about an unknown cfg"
+        );
+        assert!(
+            lib_rs.contains("#[cfg(floom_plugin_native)]"),
+            "the extern block must be behind the flag"
+        );
+        assert!(
+            lib_rs.contains("cc::Build::new()") == false,
+            "the Rust half must not compile anything; build.rs does that"
+        );
+        assert!(
+            build_rs.contains("cc::Build::new()"),
+            "build.rs is what compiles the native half"
+        );
+    }
+
+    #[test]
+    fn the_kotlin_half_is_called_by_rather_than_calling_out() {
+        // `external fun` in Kotlin declares the *opposite* contract — Rust
+        // exporting to Kotlin — and the two halves then disagree about who
+        // owns the capability. The Kotlin half is reached by the C shim over
+        // JNI, so its methods are ordinary static methods.
+        let dir = scaffold("kotlin", &["android"]);
+        let kotlin = read(
+            &dir,
+            "native/android/src/main/kotlin/dev/floom/plugin/KotlinPlugin.kt",
+        );
+
+        assert!(
+            !declares_external_fun(&kotlin),
+            "the Kotlin half must not declare `external fun`: that is the \
+             opposite contract, and the C shim is what reaches Kotlin"
+        );
+        assert!(
+            kotlin.contains("@JvmStatic"),
+            "the C shim looks the methods up as static methods, so they need \
+             `@JvmStatic` or `GetStaticMethodID` fails"
+        );
+        assert!(
+            dir.join("native/android/src/main/cpp/floom_kotlin_android.c").is_file(),
+            "the C shim is where the C ABI is implemented on Android"
+        );
+    }
+
+    #[test]
+    fn the_swift_half_exports_the_c_abi() {
+        // `@objc static func` is an Objective-C method, not a C symbol: the
+        // Rust half's `extern "C"` declaration would not resolve against it.
+        let dir = scaffold("swift", &["ios"]);
+        let swift = read(&dir, "native/ios/Classes/SwiftPlugin.swift");
+
+        assert!(
+            swift.contains("@_cdecl(\"floom_swift_enable\")"),
+            "the Swift half must export the C ABI with `@_cdecl`"
+        );
+    }
+
+    #[test]
+    fn the_generated_plugin_is_its_own_workspace() {
+        // A plugin is developed on its own. Without an empty `[workspace]` in
+        // its manifest, generating it inside a checkout makes cargo walk up,
+        // find the enclosing workspace and refuse to build it.
+        let dir = scaffold("workspace", &["macos"]);
+        let manifest = read(&dir, "Cargo.toml");
+
+        assert!(
+            manifest.contains("[workspace]"),
+            "the plugin manifest must declare an empty [workspace]"
+        );
+        assert!(
+            manifest.contains("cc = \"1\""),
+            "build.rs compiles the native half, so `cc` is a build dependency"
+        );
+    }
+
+    #[test]
+    fn the_native_half_lives_where_build_rs_looks_for_it() {
+        // `build.rs` reads `native/<platform>/`; the platform halves are
+        // written to the root. A plugin whose files are in two places has a
+        // build script that finds nothing and a reader who cannot connect the
+        // Kotlin file to the header it includes.
+        let dir = scaffold("layout", &["android", "ios", "macos"]);
+
+        for rel in [
+            "native/common/floom_layout.h",
+            "native/desktop/floom_layout.c",
+            "native/android/src/main/cpp/floom_layout_android.c",
+            "native/ios/Classes/LayoutPlugin.swift",
+        ] {
+            assert!(
+                dir.join(rel).is_file(),
+                "{rel} must exist under native/"
+            );
+        }
+        assert!(
+            !dir.join("android").exists(),
+            "the platform half must not be written beside src/"
+        );
+        assert!(
+            !dir.join("ios").exists(),
+            "the platform half must not be written beside src/"
+        );
+    }
 }

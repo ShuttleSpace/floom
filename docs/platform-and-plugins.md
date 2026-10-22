@@ -58,6 +58,71 @@ its API would otherwise destabilise the core.
 5. **Never be depended on by the core.** Dependencies point core → platform,
    plugin → platform. Platform → plugin is a boundary violation.
 
+## The C ABI is the contract
+
+The boundary between the two halves is **one header**, and the header says
+which side implements what:
+
+```c
+/* native/common/floom_<capability>.h */
+const char *floom_<capability>_version(void);
+int floom_<capability>_enable(void);
+void floom_<capability>_disable(void);
+int floom_<capability>_capability(void);
+int floom_<capability>_abi_version(void);
+```
+
+**The native half implements these; the Rust half calls them.** That direction
+is what makes one header portable: a C file implements them directly, Swift
+implements them with `@_cdecl`, and Kotlin is reached through a C shim that
+forwards over JNI. The Rust side is identical for all three.
+
+The opposite direction — Rust exports, native calls — is what Kotlin's
+`external fun` gives you, and it is a *different* contract: it cannot express
+a Rust-owned capability, and it makes the Rust crate the thing that has to
+know about each platform. One header, one direction, no second contract to
+keep in sync.
+
+The ABI version is a **function** as well as a macro, because the Rust half has
+to be able to ask a plugin it did not compile what it was built against, and a
+compile-time macro cannot answer that.
+
+### The layout
+
+```
+crates/floom-plugin-<capability>/
+├── Cargo.toml
+├── build.rs                 compiles the native half, emits the cfg
+├── src/lib.rs               the `extern "C"` declarations and the Rust API
+└── native/
+    ├── common/              the C ABI header — the single source of truth
+    ├── desktop/             the desktop half (C)
+    ├── android/             the Android half (Gradle + Kotlin + a C shim)
+    ├── ios/                 the iOS half (Swift, exported with `@_cdecl`)
+    └── ohos/                the OpenHarmony half (ArkTS + a C shim)
+```
+
+`build.rs` is what compiles the native half, and it emits
+`cargo:rustc-cfg=floom_plugin_native` **only** when it found and compiled one
+for the current target. The Rust half's `extern` block is behind that flag, so
+it never names a symbol the linker cannot find.
+
+That flag is not a `target_os` check on purpose. "Which OS am I on" is not the
+same question as "does this plugin have a native half for this OS" — a plugin
+generated for Android only, compiled on Linux, has no Linux half, and a
+`target_os` check would declare the extern block anyway and fail at link time
+in a crate that should have compiled.
+
+### How this is verified
+
+`floom create --plugin` scaffolds the whole thing, and the generated crate's
+own tests assert that the version it reports comes from the native half — a
+check that fails if the boundary is stubbed. The CLI's tests assert that the
+header, the desktop half, the Android shim and the Swift half all name the
+same symbols, because that is the failure the single-header design exists to
+prevent.
+
+
 ## Existing capabilities
 
 `crates/floom-platform-mobile/src/packages/` already follows this shape with the

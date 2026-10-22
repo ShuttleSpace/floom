@@ -225,11 +225,28 @@ pub fn root_readme(name: &str, platforms: &[String]) -> String {
 /// a plain function rather than a closure because a plugin is a link-time
 /// dependency in Floom, not a runtime-discovered one: by the time the app runs,
 /// `enable` is already in the binary.
+///
+/// # How the two halves meet
+///
+/// The native half implements the four functions in `native/common/floom.h`
+/// and this file calls them through `extern "C"`. There is no serialization
+/// and no runtime lookup: a call is a machine call, and the symbols resolve
+/// when the crate is linked.
+///
+/// # Host-inert by construction
+///
+/// The `extern` block is behind `#[cfg(floom_plugin_native)]`, a flag that
+/// `build.rs` emits **only** when it found and compiled a native half for the
+/// current target. A plugin built for a platform it does not have a native
+/// half for still compiles, and its `enable` says so instead of failing to
+/// link. That is the difference between "this plugin does not support Linux"
+/// and "this crate does not build on Linux".
 pub fn plugin_lib_rs(name: &str) -> String {
+    let ident = name.replace('-', "_");
     format!(
         r#"//! {name} — a Floom plugin.
 //!
-//! The public surface is three functions and a capability. A caller does:
+//! The public surface is four functions and a capability. A caller does:
 //!
 //! ```ignore
 //! {name}::register();
@@ -237,38 +254,122 @@ pub fn plugin_lib_rs(name: &str) -> String {
 //! let version = {name}::version();
 //! ```
 //!
-//! Everything below would normally be an `extern "C"` call into `native/`. It is
-//! stubbed so that `floom create --plugin` produces a crate that compiles and
-//! tests on a machine with no Android SDK, no Xcode and no NDK — the same reason
-//! Flutter emits no Gradle project for platforms it was not asked for.
+//! The native half implements the contract in `native/common/floom_{ident}.h`;
+//! this file calls it through `extern "C"`. There is no serialization boundary
+//! and no runtime lookup — the symbols resolve when the crate is linked.
+
+/// The capability id this plugin answers with.
+///
+/// Stable across releases: the Rust side matches it against the enum it was
+/// compiled with. Change it only when the capability itself changes.
+pub const CAPABILITY_ID: i32 = 0;
+
+/// The ABI version this Rust half was compiled against.
+///
+/// A native half whose major version differs is refused rather than called:
+/// the two halves exchange pointers and integers whose meaning is defined by
+/// this number, and a mismatch means the definitions do not line up.
+pub const ABI_VERSION: i32 = 1;
+
+/// The native half, when `build.rs` found one for this target.
+///
+/// `build.rs` emits `floom_plugin_native` only after it has compiled a native
+/// half for the current target, so the `extern` block below never names a
+/// symbol the linker cannot find.
+#[cfg(floom_plugin_native)]
+mod ffi {{
+    use std::os::raw::{{c_char, c_int}};
+
+    unsafe extern "C" {{
+        pub fn floom_{ident}_version() -> *const c_char;
+        pub fn floom_{ident}_enable() -> c_int;
+        pub fn floom_{ident}_disable();
+        pub fn floom_{ident}_capability() -> c_int;
+        pub fn floom_{ident}_abi_version() -> c_int;
+    }}
+}}
 
 /// The plugin's version, as reported by the native layer.
 ///
-/// Statically known until `native/` is wired up. `unimplemented!` would be a
-/// lie in a template: the app that runs `floom create --plugin` and prints this
-/// should see a number.
+/// Falls back to this crate's version when there is no native half, so the
+/// number is never a lie: it says what the caller can actually get.
 pub fn version() -> &'static str {{
-    env!("CARGO_PKG_VERSION")
+    #[cfg(floom_plugin_native)]
+    {{
+        // SAFETY: the native half returns a NUL-terminated static string that
+        // stays valid until the next call into this plugin. Nothing here frees
+        // it, and the borrow ends before the next call can happen.
+        let ptr = unsafe {{ ffi::floom_{ident}_version() }};
+        if ptr.is_null() {{
+            return env!("CARGO_PKG_VERSION");
+        }}
+        let cstr = unsafe {{ std::ffi::CStr::from_ptr(ptr) }};
+        cstr.to_str().unwrap_or(env!("CARGO_PKG_VERSION"))
+    }}
+    #[cfg(not(floom_plugin_native))]
+    {{
+        env!("CARGO_PKG_VERSION")
+    }}
 }}
 
 /// Claims the plugin's platform state.
 ///
-/// Called once by the host, through [`floom_platform::register_plugin`]. A real
-/// implementation forwards to the native registration:
-/// ```ignore
-/// // SAFETY: called on the host thread during startup, before any frame.
-/// let rc = unsafe {{ {name}_ffi::floom_{name}_enable() }};
-/// if rc != 0 {{
-///     return Err("native enable failed".to_string());
-/// }}
-/// Ok(())
-/// ```
-///
-/// Returns the plugin's own message on failure, not a wrapped type: the
-/// registry puts this string in [`floom_platform::PluginError::Failed`] and a
-/// wrapper here would only be stripped again.
+/// Called once by the host, through [`floom_platform::register_plugin`]. It
+/// forwards to the native half's `enable`, and the native half's own error
+/// message comes back verbatim: the registry puts this string in
+/// [`floom_platform::PluginError::Failed`], and a wrapper here would only be
+/// stripped again.
 pub fn enable() -> Result<(), String> {{
-    Ok(())
+    #[cfg(floom_plugin_native)]
+    {{
+        // SAFETY: called on the host thread during startup, before any frame.
+        // The native half is the one that compiled against this header, so the
+        // call matches its declaration.
+        let abi = unsafe {{ ffi::floom_{ident}_abi_version() }};
+        if abi != ABI_VERSION {{
+            return Err(format!(
+                "native half speaks ABI version {{abi}}, this crate speaks {{ABI_VERSION}}"
+            ));
+        }}
+        let rc = unsafe {{ ffi::floom_{ident}_enable() }};
+        if rc != 0 {{
+            return Err(format!("native enable failed with code {{rc}}"));
+        }}
+        Ok(())
+    }}
+    #[cfg(not(floom_plugin_native))]
+    {{
+        Err("this plugin has no native half for the current target".to_string())
+    }}
+}}
+
+/// Releases whatever [`enable`] claimed.
+///
+/// Safe to call without a matching enable, and a no-op when there is no
+/// native half.
+pub fn disable() {{
+    #[cfg(floom_plugin_native)]
+    {{
+        // SAFETY: the native half tolerates a disable without a matching enable.
+        unsafe {{ ffi::floom_{ident}_disable() }};
+    }}
+}}
+
+/// The capability id, as the native half reports it.
+///
+/// `None` when there is no native half: an absent plugin reports no
+/// capability, rather than reporting the default one and looking like a
+/// plugin that happens to do nothing.
+pub fn capability() -> Option<i32> {{
+    #[cfg(floom_plugin_native)]
+    {{
+        // SAFETY: the native half returns a plain integer.
+        Some(unsafe {{ ffi::floom_{ident}_capability() }})
+    }}
+    #[cfg(not(floom_plugin_native))]
+    {{
+        None
+    }}
 }}
 
 /// Registers this plugin with the process-wide table.
@@ -286,17 +387,50 @@ mod tests {{
     use super::*;
 
     #[test]
-    fn version_is_the_crate_version() {{
-        assert_eq!(version(), env!("CARGO_PKG_VERSION"));
+    fn version_is_never_empty() {{
+        assert!(!version().is_empty());
+    }}
+
+    #[test]
+    fn the_version_comes_from_the_native_half() {{
+        // The native half reports "{name} 0.1.0"; the crate's own version is
+        // "0.1.0". They differ on purpose, because this test is the only one
+        // that proves the call crossed the boundary rather than returning a
+        // constant — every other assertion in this file passes just as well
+        // with a stubbed native half.
+        #[cfg(floom_plugin_native)]
+        assert!(
+            version().starts_with("{name} "),
+            "expected the native half's version, got {{:?}}",
+            version()
+        );
+        #[cfg(not(floom_plugin_native))]
+        assert_eq!(
+            version(),
+            env!("CARGO_PKG_VERSION"),
+            "without a native half the version is the crate's own"
+        );
     }}
 
     #[test]
     fn enable_is_idempotent() {{
-        // Two enables must both succeed: a host may enable every plugin at
-        // startup and an app may also enable one on demand, and a plugin that
-        // rejected the second call would turn that into a crash.
-        enable().unwrap();
-        enable().unwrap();
+        // Two enables must both behave the same way: a host may enable every
+        // plugin at startup and an app may also enable one on demand, and a
+        // plugin that rejected the second call would turn that into a crash.
+        let first = enable();
+        let second = enable();
+        assert_eq!(
+            first.is_ok(),
+            second.is_ok(),
+            "the two enables must agree about whether this target has a native half"
+        );
+        if let Err(detail) = first {{
+            assert!(
+                !detail.is_empty(),
+                "a failure has to say something: an empty message is the one a \\
+                 caller cannot act on"
+            );
+        }}
     }}
 
     #[test]
@@ -305,23 +439,43 @@ mod tests {{
         let handle = floom_platform::plugin("{name}");
         assert!(handle.is_registered());
         assert!(!handle.is_enabled());
-        handle.enable().unwrap();
+        // The enable is not unwrapped: this test is about the *registration*,
+        // and a target with no native half has nothing to enable. Asserting
+        // success here would make the test fail for a reason that has nothing
+        // to do with what it checks.
+        let _ = handle.enable();
         assert!(handle.is_enabled());
+    }}
+
+    #[test]
+    fn capability_agrees_with_the_presence_of_a_native_half() {{
+        // A plugin with no native half must not claim a capability: a caller
+        // that branches on `capability().is_some()` would otherwise take the
+        // native path and fail at the first call.
+        assert_eq!(
+            capability().is_some(),
+            cfg!(floom_plugin_native),
+            "a capability must exist exactly when there is a native half to answer for it"
+        );
     }}
 }}
 "#,
-        name = name
+        name = name,
+        ident = ident
     )
 }
 
 /// A plugin's `Cargo.toml`.
 ///
-/// Two things differ from `cargo_toml`, and both are the point of a plugin:
+/// Three things differ from `cargo_toml`, and all three are the point of a
+/// plugin:
 ///
 /// * it depends on `floom-platform` for `Capability` and `PluginError`, not on
 ///   the `floom` facade, because a plugin must not pull in the whole widget
 ///   stack;
-/// * `build.rs` is declared, because the native half is compiled at build time.
+/// * `build.rs` is declared, because the native half is compiled at build time;
+/// * `cc` is a build dependency, because `build.rs` compiles the native half's
+///   C sources with it.
 pub fn plugin_cargo_toml(name: &str, floom_path: Option<&str>) -> String {
     let dep = match floom_path {
         Some(p) => format!(
@@ -339,14 +493,20 @@ pub fn plugin_cargo_toml(name: &str, floom_path: Option<&str>) -> String {
          description = \"A Floom plugin: {name}\"\n\
          build = \"build.rs\"\n\
          \n\
+         # A plugin is developed on its own, like the example beside it: an\n\
+         # empty `[workspace]` keeps it out of whatever workspace happens to\n\
+         # contain it, so `cargo build` here builds the plugin and not the\n\
+         # directory it was generated into.\n\
+         [workspace]\n\
+         \n\
          [dependencies]\n\
          {dep}\n\
          \n\
-         # Uncomment once native/ is populated. `bindgen` runs on the C header\n\
-         # in native/common, and the generated module is what the `extern \"C\"`\n\
-         # calls in src/lib.rs go through.\n\
-         # [build-dependencies]\n\
-         # bindgen = \"0.71\"\n\
+         # `build.rs` compiles the native half's C sources with this. It is a\n\
+         # build dependency, not a runtime one: the native code is linked into\n\
+         # this crate, so the app never loads it by name.\n\
+         [build-dependencies]\n\
+         cc = \"1\"\n\
          \n\
          [dev-dependencies]\n\
          # A plugin is tested without a device: the pure-Rust half is an ordinary\n\
@@ -357,34 +517,214 @@ pub fn plugin_cargo_toml(name: &str, floom_path: Option<&str>) -> String {
 
 /// `build.rs` for a plugin.
 ///
-/// Deliberately a no-op rather than an absent file: the manifest declares
-/// `build = "build.rs"`, so the file has to exist, and a no-op build script that
-/// prints what it *would* do is more useful to whoever opens the generated
-/// project than an empty file.
+/// This is where the two halves meet. It finds the native half for the
+/// **current target**, compiles it, links it into the crate, and tells the
+/// Rust side it exists by emitting `cargo:rustc-cfg=floom_plugin_native`. The
+/// Rust half's `extern "C"` block is behind that flag, so it never names a
+/// symbol the linker cannot find.
+///
+/// # Why the flag instead of `#[cfg(target_os = ...)]`
+///
+/// A target OS is not the same question as "does this plugin have a native
+/// half for this target". A plugin generated for Android only, compiled on
+/// Linux, has no Linux half — but a `target_os` check would declare the extern
+/// block anyway and fail at link time with an undefined symbol, which is a
+/// build error in a crate that should have compiled. The flag answers the
+/// question that is actually being asked.
+///
+/// # Host-inert
+///
+/// No native half for this target is not an error. The plugin compiles, and its
+/// `enable` reports that there is no native half — a message a caller can act
+/// on, rather than a link failure.
 pub fn plugin_build_rs(name: &str) -> String {
+    let ident = name.replace('-', "_");
     format!(
         r#"//! Build script for the `{name}` plugin.
 //!
-//! Currently a no-op: `native/` is not populated yet, so there is nothing to
-//! compile and nothing to link. When it is, this is where each platform is
-//! compiled and linked into the same binary as the Rust half.
+//! Compiles the native half for the current target and links it into this
+//! crate. The native half implements the contract in
+//! `native/common/floom_{name}.h`; the Rust half in `src/lib.rs` calls it
+//! through `extern "C"`.
+//!
+//! There is no runtime plugin discovery and therefore no serialization
+//! boundary: a call from the app is a machine call, resolved when this crate
+//! is linked.
+
+use std::path::PathBuf;
 
 fn main() {{
-    // The header `bindgen` would read, once native/common/floom_{name}.h exists.
-    println!("cargo:rerun-if-changed=native/common/floom_{name}.h");
+    println!("cargo:rerun-if-changed=native");
+    // The Rust side gates its `extern` block on this flag, so it has to be
+    // declared as an expected cfg or every build warns about an unknown one.
+    println!("cargo:rustc-check-cfg=cfg(floom_plugin_native)");
 
-    // Per platform, once the native sources land:
+    let manifest = PathBuf::from(
+        std::env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR is set by cargo"),
+    );
+    let target_os = std::env::var("CARGO_CFG_TARGET_OS").unwrap_or_default();
+
+    // Which directory holds this target's native half.
     //
-    //   android/  -> `cargo-ndk` or a `cmake` invocation building a `.so` for
-    //                each ABI; `println!("cargo:rustc-link-lib=...")`.
-    //   ios/      -> `xcodebuild -create-xcframework`, linked as a framework.
-    //   ohos/     -> the OHOS NDK, same shape as android.
-    //
-    // The native code is compiled *into this crate*, not shipped beside it.
-    // There is no runtime plugin discovery and therefore no serialization
-    // boundary: `src/lib.rs` calls `extern "C"` directly.
+    // The desktop half is one directory for all three desktop targets: the C
+    // ABI it implements is the same, and a per-OS copy would be three files
+    // that differ only in a `#ifdef`.
+    let platform_dir = match target_os.as_str() {{
+        "linux" | "macos" | "windows" => "desktop",
+        "android" => "android",
+        "ios" => "ios",
+        _ => "",
+    }};
+
+    if platform_dir.is_empty() {{
+        println!(
+            "cargo:warning={name}: no native half for target_os={{target_os}}; \
+             the plugin compiles but enable() will report it"
+        );
+        return;
+    }}
+
+    let native_dir = manifest.join("native").join(platform_dir);
+    if !native_dir.is_dir() {{
+        println!(
+            "cargo:warning={name}: native/{{platform_dir}} does not exist; \
+             the plugin compiles but enable() will report it"
+        );
+        return;
+    }}
+
+    // The C sources for this platform. A platform whose native half is not C
+    // (iOS is Swift) has none, and is handled below.
+    let mut sources: Vec<PathBuf> = std::fs::read_dir(&native_dir)
+        .map(|entries| {{
+            entries
+                .filter_map(|e| e.ok())
+                .map(|e| e.path())
+                .filter(|p| p.extension().is_some_and(|ext| ext == "c"))
+                .collect()
+        }})
+        .unwrap_or_default();
+    sources.sort();
+
+    if !sources.is_empty() {{
+        cc::Build::new()
+            .files(&sources)
+            .include(manifest.join("native").join("common"))
+            .include(&native_dir)
+            .flag_if_supported("-std=c11")
+            .warnings(true)
+            .compile("floom_{ident}");
+        println!("cargo:rustc-cfg=floom_plugin_native");
+        return;
+    }}
+
+    // iOS: the native half is Swift, so `cc` cannot compile it. It is built by
+    // `xcodebuild` into an xcframework, which this script links when it is
+    // there.
+    if target_os == "ios" {{
+        let framework = native_dir.join("libfloom_{ident}.xcframework");
+        if framework.is_dir() {{
+            println!("cargo:rustc-link-search=native/ios/libfloom_{ident}.xcframework");
+            println!("cargo:rustc-link-lib=static=floom_{ident}");
+            println!("cargo:rustc-cfg=floom_plugin_native");
+        }} else {{
+            println!(
+                "cargo:warning={name}: native/ios/libfloom_{ident}.xcframework not found; \
+                 build it with xcodebuild first (see native/ios/README.md). \
+                 The plugin compiles but enable() will report it"
+            );
+        }}
+        return;
+    }}
+
+    println!(
+        "cargo:warning={name}: native/{{platform_dir}} has no .c source; \
+         the plugin compiles but enable() will report it"
+    );
 }}
 "#
+    )
+}
+
+/// A plugin's `native/desktop/README.md`.
+///
+/// The desktop half is the one platform whose native code `build.rs` compiles
+/// directly, so this directory has no build system of its own. The README says
+/// so, because a reader who expects a CMake project will look for one.
+pub fn plugin_desktop_readme(name: &str) -> String {
+    let ident = name.replace('-', "_");
+    format!(
+        r#"# The desktop native half
+
+This directory holds the desktop implementation of the C ABI in
+`../common/floom_{ident}.h`.
+
+**There is no CMake project here, and that is deliberate.** `build.rs` compiles
+the `.c` files in this directory with the `cc` crate and links them into the
+Rust crate, so the native code is in the binary from the first build. A second
+build system over the same sources would compile them twice and produce
+duplicate symbols at link time.
+
+One directory serves Linux, macOS and Windows: the C ABI it implements is the
+same on all three, and a per-OS copy would be three files that differ only in
+an `#ifdef`.
+
+Replace the body of `floom_{ident}_enable` with the real work. The header is
+the contract, and nothing above it changes.
+"#
+    )
+}
+
+/// A plugin's reference native half: a C file implementing the C ABI.
+///
+/// It is the **desktop** half, and it is deliberately trivial — it claims
+/// nothing and reports its version. It exists so that a freshly generated
+/// plugin compiles, links and passes its tests on the machine that generated
+/// it, which is the only way to tell that the boundary works before there is
+/// any real capability to put behind it.
+///
+/// Replace it with the real implementation: the C ABI is the contract, and
+/// nothing above it changes.
+pub fn plugin_native_c(name: &str) -> String {
+    let ident = name.replace('-', "_");
+    format!(
+        r#"/* The desktop native half of the `{name}` plugin.
+ *
+ * Implements the contract in `native/common/floom_{name}.h`. This is the
+ * reference implementation: it claims nothing and reports its version, so a
+ * generated plugin compiles, links and passes its tests before there is any
+ * real capability behind it.
+ *
+ * Replace the bodies with the real work. The ABI does not change.
+ */
+
+#include "floom_{ident}.h"
+
+const char *floom_{ident}_version(void) {{
+    /* Owned by the callee: the next call into this plugin invalidates it. */
+    static const char version[] = "{name} 0.1.0";
+    return version;
+}}
+
+int floom_{ident}_enable(void) {{
+    /* Nothing to claim yet. Return 0 for success, non-zero to refuse. */
+    return 0;
+}}
+
+void floom_{ident}_disable(void) {{
+    /* Nothing to release. */
+}}
+
+int floom_{ident}_capability(void) {{
+    return 0;
+}}
+
+int floom_{ident}_abi_version(void) {{
+    return FLOOM_{upper}_ABI_VERSION;
+}}
+"#,
+        ident = ident,
+        upper = ident.to_uppercase()
     )
 }
 
@@ -501,6 +841,27 @@ fn main() {{
 /// `std::string` crossing this boundary is a smell: it means something is
 /// copying a string because the boundary could not express it, which is the
 /// method-channel cost arriving through the back door.
+///
+/// # Who implements what
+///
+/// The header is the **single source of truth** for the boundary, and it says
+/// which side implements each symbol: the **native half implements them, the
+/// Rust half calls them**. That direction is what makes the header portable —
+/// a C file, a Swift `@_cdecl` function and a Kotlin-backed C shim all satisfy
+/// it, and the Rust side is identical for all three.
+///
+/// The opposite direction (Rust exports, native calls) is what `external fun`
+/// in Kotlin gives you, and it is a *different* contract: it cannot express a
+/// Rust-owned capability, and it makes the Rust crate the thing that has to
+/// know about each platform. One header, one direction, no second contract to
+/// keep in sync.
+///
+/// # The ABI version is a function, not only a macro
+///
+/// `FLOOM_<NAME>_ABI_VERSION` is a compile-time constant the *native* half
+/// asserts, and `floom_<name>_abi_version()` returns it at runtime. The macro
+/// alone is not enough: the Rust half has to be able to ask a plugin it did
+/// not compile what it was built against, and a macro cannot answer that.
 pub fn plugin_header_rs(name: &str) -> String {
     let ident = name.replace('-', "_");
     format!(
@@ -509,6 +870,11 @@ pub fn plugin_header_rs(name: &str) -> String {
  * Everything here is a plain C ABI: no serialization, no runtime lookup, no
  * registry. The Rust half calls these symbols directly, and they resolve when
  * the crate is linked.
+ *
+ * The **native half implements** these functions; the **Rust half calls**
+ * them. Every platform satisfies the same contract: a C file implements them
+ * directly, Swift implements them with `@_cdecl`, and Kotlin is reached
+ * through a C shim that forwards over JNI.
  *
  * Strings are returned as `const char *` owned by the callee. The caller must
  * not free them; the next call into the same plugin invalidates the previous
@@ -544,6 +910,15 @@ void floom_{ident}_disable(void);
  * this against the enum it was compiled with. */
 int floom_{ident}_capability(void);
 
+/* The ABI version this half was actually compiled against.
+ *
+ * A function rather than only the macro above, because the Rust half has to be
+ * able to ask a plugin it did not compile itself what it was built against —
+ * a compile-time macro cannot answer that question. Returns
+ * `FLOOM_{upper}_ABI_VERSION`.
+ */
+int floom_{ident}_abi_version(void);
+
 #ifdef __cplusplus
 }} /* extern "C" */
 #endif
@@ -568,33 +943,48 @@ pub fn plugin_example_cargo_toml(
     platform_path: Option<&str>,
 ) -> String {
     let dep = match floom_path {
-        Some(p) => format!("{f} = {{ path = \"{p}\" }}", f = floom_crate),
-        None => format!("{f} = {{ version = \"0.2\" }}", f = floom_crate),
+        Some(p) => format!(
+            "{f} = {{ path = \"{p}\", features = [\"desktop\", \"renderer-gpu\"] }}",
+            f = floom_crate
+        ),
+        None => format!(
+            "{f} = {{ version = \"0.2\", features = [\"desktop\", \"renderer-gpu\"] }}",
+            f = floom_crate
+        ),
     };
     let platform_dep = match platform_path {
         Some(p) => format!("floom-platform = {{ path = \"{p}\" }}"),
         None => "floom-platform = { version = \"0.2\" }".to_string(),
     };
+    // A raw string rather than a `\`-continued one: the continuation escape
+    // strips the leading whitespace of the line it continues onto, so a
+    // comment written one-line-per-source-line comes out indented
+    // differently from itself. The manifest is read by a person first and by
+    // cargo second, and a comment that is indented differently from its
+    // neighbours is a comment that gets rewritten before it gets read.
     format!(
-        "[package]\n\
-         name = \"floom-plugin-{name}-example\"\n\
-         version = \"0.1.0\"\n\
-         edition = \"2024\"\n\
-         publish = false\n\
-         \n\
-         [dependencies]\n\
-         floom-plugin-{name} = {{ path = \"..\" }}\n\
-         # The registry the plugin registers itself into. The example depends on
-         # it directly because it calls `plugin(\"{name}\").enable()`, which a
-\
-         # plugin's own re-exports would otherwise hide.
-\
-         {platform_dep}\n\
-         {dep}\n\
-         \n\
-         # The example's own target directory, so building it does not fight\n\
-         # with a `cargo build` of the plugin above it.\n\
-         [workspace]\n"
+        r#"[package]
+name = "floom-plugin-{name}-example"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[dependencies]
+floom-plugin-{name} = {{ path = ".." }}
+# The registry the plugin registers itself into. The example depends on
+# it directly because it calls `plugin("{name}").enable()`, which a
+# plugin's own re-exports would otherwise hide.
+{platform_dep}
+# `desktop` and `renderer-gpu` are what `run_desktop` needs: one picks
+# the winit-backed desktop platform adapter, the other the presenter
+# that paints into its window. Without both, `run_desktop` does not
+# exist and the example does not compile.
+{dep}
+
+# The example's own target directory, so building it does not fight
+# with a `cargo build` of the plugin above it.
+[workspace]
+"#
     )
 }
 

@@ -887,16 +887,35 @@ import android.content.Context
  * depends on the Dart package and the tooling generates a registrant that
  * registers a *named* class on its behalf.
  *
+ * ## The direction of the boundary
+ *
+ * These methods are **called by Rust**, not by the host app and not by
+ * Kotlin's own `external` declarations. The C ABI in
+ * `native/common/floom_{name}.h` is the contract; the C shim in
+ * `src/main/cpp/` implements it and reaches this class over JNI.
+ *
+ * That direction is the one the header states: the native half implements the
+ * four entry points, the Rust half calls them. An `external fun` here would
+ * declare the *opposite* contract — Rust exporting to Kotlin — and the two
+ * halves would then disagree about who owns the capability.
+ *
  * ## Adding framework dependencies
  *
  * Add them to `build.gradle.kts`, not here. `androidx.camera:camera-*` are AARs
  * from Maven; Gradle is the only thing in this toolchain that can resolve one,
  * and a Rust `Cargo.toml` cannot express the dependency at all.
+ *
+ * ## @JvmStatic
+ *
+ * The C shim looks the methods up as *static* methods on this class, so every
+ * one that Rust calls has to carry `@JvmStatic`. Without it the method is an
+ * instance method on the singleton and `GetStaticMethodID` fails with
+ * "NoSuchMethodError", which names the JVM rather than the missing annotation.
  */
 object {class} {{
 
     /** Set by the host before any plugin call. */
-    private lateinit var appContext: Context
+    private var appContext: Context? = null
 
     /**
      * Called from Rust once, at enable time.
@@ -905,12 +924,19 @@ object {class} {{
      * any one activity, and holding an Activity here is how a plugin ends up
      * leaking a destroyed window.
      */
-    external fun attach(context: Context)
+    @JvmStatic
+    fun attach(context: Context) {{
+        appContext = context.applicationContext
+    }}
 
-    external fun detach()
+    @JvmStatic
+    fun detach() {{
+        appContext = null
+    }}
 
     /** Whether the plugin currently has what it needs to run. */
-    external fun isAvailable(): Boolean
+    @JvmStatic
+    fun isAvailable(): Boolean = appContext != null
 
     /**
      * Runs the plugin's work and reports whether it succeeded.
@@ -919,19 +945,196 @@ object {class} {{
      * same shape in both directions: Rust reads a message, it does not have to
      * unwrap a JVM exception across FFI.
      */
-    external fun perform(): String?
-
-    /** Kotlin-side wrapper that turns the JNI call into an idiomatic Kotlin one. */
-    fun enable(context: Context) {{
-        appContext = context.applicationContext
-        attach(appContext)
-    }}
-
-    fun disable() {{
-        detach()
-    }}
+    @JvmStatic
+    fun perform(): String? = null
 }}
 "#
+    )
+}
+
+/// A plugin's Android C shim — the C ABI, implemented over JNI.
+///
+/// Kotlin cannot export a C symbol, so the four entry points the C ABI
+/// declares are implemented here and reach Kotlin over JNI. The shim is the
+/// only thing that knows about both sides.
+///
+/// ## Where the JavaVM comes from
+///
+/// `JNI_GetCreatedJavaVMs` rather than a handle passed in from Rust. The
+/// alternative — Rust looking the VM up and handing it over — would make the
+/// C ABI's signature platform-specific, and the header is supposed to be the
+/// one contract every platform implements. Asking the JVM for the VM it
+/// already has keeps the ABI argument-free and portable.
+pub fn android_plugin_c_shim(name: &str) -> String {
+    let ident = name.replace('-', "_");
+    let class = format!("{}Plugin", kotlin_class_name(name));
+    format!(
+        r#"/* The Android C shim for the `{name}` plugin.
+ *
+ * Implements the contract in `native/common/floom_{name}.h` and reaches the
+ * Kotlin half over JNI. This file is the only place that knows about both
+ * sides: the C ABI above it, and Kotlin below.
+ *
+ * Compiled into the plugin's own shared library by `build.rs`, with the
+ * NDK's `jni.h` on the include path.
+ */
+
+#include "floom_{ident}.h"
+
+#include <jni.h>
+#include <stdlib.h>
+#include <string.h>
+
+/* The Kotlin class, in JNI's slash-separated form. */
+#define PLUGIN_CLASS "dev/floom/plugin/{name}/{class}"
+
+/* The VM this shim talks to. Fetched once, on first use. */
+static JavaVM *g_vm = NULL;
+
+/* The application context, as a global ref. */
+static jobject g_context = NULL;
+
+/*
+ * Fetch the VM, attaching this thread to it if the thread is not the one that
+ * created it.
+ *
+ * `JNI_GetCreatedJavaVMs` reports the VMs the process has, which is always
+ * exactly one on Android. `AttachCurrentThread` is a no-op when the thread is
+ * already attached, so it is safe to call unconditionally.
+ */
+static JNIEnv *plugin_env(void) {{
+    JNIEnv *env = NULL;
+
+    if (g_vm == NULL) {{
+        jsize count = 0;
+        if (JNI_GetCreatedJavaVMs(&g_vm, 1, &count) != JNI_OK || count == 0) {{
+            return NULL;
+        }}
+    }}
+
+    if ((*g_vm)->GetEnv(g_vm, (void **)&env, JNI_VERSION_1_6) != JNI_OK) {{
+        if ((*g_vm)->AttachCurrentThread(g_vm, &env, NULL) != JNI_OK) {{
+            return NULL;
+        }}
+    }}
+
+    return env;
+}}
+
+/*
+ * The application context, as a global ref.
+ *
+ * `ActivityThread.currentApplication()` is how the application is reached
+ * without the plugin knowing anything about the host's activity: a plugin
+ * outlives any one activity, and asking for the activity would be how it ends
+ * up holding a destroyed window.
+ */
+static jobject plugin_application_context(JNIEnv *env) {{
+    jclass thread = (*env)->FindClass(env, "android/app/ActivityThread");
+    if (thread == NULL) {{
+        (*env)->ExceptionClear(env);
+        return NULL;
+    }}
+
+    jmethodID current = (*env)->GetStaticMethodID(
+        env, thread, "currentApplication", "()Landroid/app/Application;");
+    if (current == NULL) {{
+        (*env)->ExceptionClear(env);
+        return NULL;
+    }}
+
+    jobject app = (*env)->CallStaticObjectMethod(env, thread, current);
+    (*env)->DeleteLocalRef(env, thread);
+    if (app == NULL) {{
+        (*env)->ExceptionClear(env);
+        return NULL;
+    }}
+
+    jobject global = (*env)->NewGlobalRef(env, app);
+    (*env)->DeleteLocalRef(env, app);
+    return global;
+}}
+
+const char *floom_{ident}_version(void) {{
+    /* Owned by the callee: the next call into this plugin invalidates it. */
+    static const char version[] = "{name} 0.1.0";
+    return version;
+}}
+
+int floom_{ident}_enable(void) {{
+    JNIEnv *env = plugin_env();
+    if (env == NULL) {{
+        return 1;
+    }}
+
+    jclass cls = (*env)->FindClass(env, PLUGIN_CLASS);
+    if (cls == NULL) {{
+        (*env)->ExceptionClear(env);
+        return 2;
+    }}
+
+    jmethodID attach = (*env)->GetStaticMethodID(
+        env, cls, "attach", "(Landroid/content/Context;)V");
+    if (attach == NULL) {{
+        (*env)->ExceptionClear(env);
+        return 3;
+    }}
+
+    jobject context = plugin_application_context(env);
+    if (context == NULL) {{
+        return 4;
+    }}
+
+    (*env)->CallStaticVoidMethod(env, cls, attach, context);
+    if ((*env)->ExceptionCheck(env)) {{
+        (*env)->ExceptionClear(env);
+        return 5;
+    }}
+
+    /* The global ref outlives the enable: the plugin holds the context until
+     * it is detached. */
+    if (g_context != NULL) {{
+        (*env)->DeleteGlobalRef(env, g_context);
+    }}
+    g_context = context;
+
+    return 0;
+}}
+
+void floom_{ident}_disable(void) {{
+    JNIEnv *env = plugin_env();
+    if (env == NULL) {{
+        return;
+    }}
+
+    jclass cls = (*env)->FindClass(env, PLUGIN_CLASS);
+    if (cls != NULL) {{
+        jmethodID detach = (*env)->GetStaticMethodID(env, cls, "detach", "()V");
+        if (detach != NULL) {{
+            (*env)->CallStaticVoidMethod(env, cls, detach);
+            if ((*env)->ExceptionCheck(env)) {{
+                (*env)->ExceptionClear(env);
+            }}
+        }}
+    }}
+
+    if (g_context != NULL) {{
+        (*env)->DeleteGlobalRef(env, g_context);
+        g_context = NULL;
+    }}
+}}
+
+int floom_{ident}_capability(void) {{
+    return 0;
+}}
+
+int floom_{ident}_abi_version(void) {{
+    return FLOOM_{upper}_ABI_VERSION;
+}}
+"#,
+        ident = ident,
+        class = class,
+        upper = ident.to_uppercase()
     )
 }
 
@@ -978,8 +1181,19 @@ end
 }
 
 /// A plugin's Swift entry point.
+///
+/// The `@_cdecl` functions are the C ABI: they are what the Rust half calls
+/// through `extern "C"`. The Swift class above them is where the real work
+/// goes — a `@_cdecl` function is a C entry point and cannot carry a Swift
+/// receiver, so it forwards to the class.
+///
+/// The direction is the one the header states: the native half implements the
+/// entry points, the Rust half calls them. An `@objc` method would be the
+/// opposite contract, and the two halves would then disagree about who owns
+/// the capability.
 pub fn ios_plugin_swift(name: &str) -> String {
     let class = format!("{}Plugin", kotlin_class_name(name));
+    let ident = name.replace('-', "_");
     format!(
         r#"import Foundation
 
@@ -1009,7 +1223,52 @@ public final class {class}: NSObject {{
     @objc({class}Bridge)
     private static var bridgeMarker: Any = {class}()
 }}
-"#
+
+// --- The C ABI ------------------------------------------------------------
+//
+// These are the functions the Rust half calls. `@_cdecl` gives them C linkage
+// and an unmangled symbol name, which is what the linker resolves against the
+// `extern "C"` declaration in `src/lib.rs`.
+//
+// A C entry point cannot have a Swift receiver, so each one forwards to the
+// class above. That is the whole cost of the boundary: one forwarding function
+// per entry point, and nothing else.
+
+@_cdecl("floom_{ident}_version")
+public func floom_{ident}_version() -> UnsafePointer<CChar> {{
+    // Owned by the callee: the next call into this plugin invalidates it.
+    // `static let` gives it that lifetime for free.
+    return "{name} 0.1.0"
+}}
+
+@_cdecl("floom_{ident}_enable")
+public func floom_{ident}_enable() -> Int32 {{
+    if let error = {class}.enable() {{
+        // The message cannot be returned through the ABI — it is an `int` — so
+        // it goes to the log and the code says only that it failed.
+        NSLog("floom-plugin-{name}: enable failed: %@", error)
+        return 1
+    }}
+    return 0
+}}
+
+@_cdecl("floom_{ident}_disable")
+public func floom_{ident}_disable() {{
+    {class}.disable()
+}}
+
+@_cdecl("floom_{ident}_capability")
+public func floom_{ident}_capability() -> Int32 {{
+    0
+}}
+
+@_cdecl("floom_{ident}_abi_version")
+public func floom_{ident}_abi_version() -> Int32 {{
+    1
+}}
+"#,
+        class = class,
+        ident = ident
     )
 }
 

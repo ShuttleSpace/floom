@@ -1,0 +1,299 @@
+# 插件化架构与渲染后端审计规划
+
+审计日期：2026-10-22。范围：需求 1（SDK 只内置最基本平台能力，其余走原生语言插件 + FFI）与需求 2（渲染后端缺口对齐）。
+
+本文是 `docs/backend-readiness-audit.md` 的续篇：前者审计"平台后端是否生产级"，本文审计"插件机制是否成立"与"渲染后端是否对齐"。两者的结论可以合并成一张总计划表。
+
+---
+
+# 第一部分 · 插件化架构审计（需求 1）
+
+## 1.1 目标与现状的差距
+
+要求的形态：
+
+> SDK 只内置最基本的平台能力（窗口、剪贴板、IME）；camera / video / webview / bluetooth 等，
+> 像 Flutter 插件那样用原生语言（Java / Swift / C++ / C# / JS / ETS）开发，
+> 通过 FFI 与 Rust 运行时交互，保证 SDK 精简。
+
+这个形态在本仓库里**已有相当完整的机制骨架**，但**链路在最后两步断开**。这是关键判断——不是"什么都没有"，而是"最后两步没接上"。
+
+## 1.2 已经具备的机制（有代码证据）
+
+| 机制 | 位置 | 状态 |
+|---|---|---|
+| 插件注册表 | `crates/floom-platform/src/plugins.rs` | ✅ 完整，8 个测试。函数指针注册（非字符串查找）、幂等 enable、失败不重试 |
+| 原生视图 ABI | `crates/floom-native/src/abi.rs` | ✅ 完整，`NativeViewProvider` 9 方法 + 能力协商 + 21 个测试 |
+| 合成控制器 | `crates/floom-native/src/controller.rs` | ✅ 生命周期不变量由控制器强制，后端无法私自破坏 |
+| 槽位池 | `crates/floom-native/src/pool.rs` | ✅ generation 复位的回收语义 |
+| CLI 插件脚手架 | `crates/floom-cli/src/main.rs:295` `create_plugin` | ✅ 生成 `Cargo.toml` + `build.rs` + `src/lib.rs` + `floom.h` + 各平台原生半边 + `example/` + README |
+| C ABI 头模板 | `crates/floom-cli/src/templates.rs:504` `plugin_header_rs` | ✅ 4 个符号：`version` / `enable` / `disable` / `capability`，带 ABI version 宏 |
+| Kotlin 插件半边 | `crates/floom-cli/src/native_project.rs:874` | ⚠️ 有代码，但契约方向与 C ABI 头相反（见 G3） |
+| Swift 插件半边 | `crates/floom-cli/src/native_project.rs:981` | ⚠️ 有代码，但没有导出 C ABI 符号（见 G4） |
+| 桌面 CMake 半边 | `crates/floom-cli/src/native_project.rs:1050` | ✅ GTK / AppKit / Win32 三套 |
+| 可运行示例 | `examples/floom-native-plugin/src/main.rs` | ✅ 协商 + 生命周期 + 池化三段断言 |
+
+**结论：机制是够用的，缺的是接线与验证。**
+
+## 1.3 缺口清单（按严重度）
+
+### 已修复（2026-10-22，批次 1）
+
+| # | 缺口 | 状态 | 证据 |
+|---|---|---|---|
+| G1 | `build.rs` 是空操作，原生代码从不被编译或链接 | **已修** | `templates.rs::plugin_build_rs` 现在按目标平台探测 `native/<platform>/`，用 `cc` 编译 `.c` 并发出 `cargo:rustc-cfg=floom_plugin_native`。生成工程的 `target/debug/build/*/output` 里有该 cfg；`nm` 显示 `_floom_sample_enable` 等 4 个符号已在二进制里 |
+| G2 | Rust 半边不绑定也不调用 C ABI | **已修** | `templates.rs::plugin_lib_rs` 现在有真正的 `unsafe extern "C"` 块，`version()`/`enable()`/`disable()`/`capability()` 全部走原生。生成工程的测试 `the_version_comes_from_the_native_half` 断言版本号来自原生半边（原生返回 `"sample 0.1.0"`，crate 版本是 `"0.1.0"`）——这是唯一能证明调用真的跨过边界的断言 |
+| G3 | Kotlin 半边与 C ABI 头方向相反 | **已修** | `native_project.rs::android_plugin_kotlin` 去掉了 `external fun`，改为 `@JvmStatic` 普通方法，由 `native_project.rs::android_plugin_c_shim`（JNI C shim）调用。方向统一为"原生实现、Rust 调用" |
+| G4 | Swift 半边没有实现 C ABI | **已修** | `native_project.rs::ios_plugin_swift` 增加 `@_cdecl("floom_<name>_enable")` 等 4 个导出 |
+| G8 | 头文件路径不一致 | **已修** | 统一到 `native/common/floom_<name>.h`；`build.rs` 监视 `native/` 整目录；C 源 `#include "floom_<name>.h"` |
+
+### 仍然开放
+
+| # | 缺口 | 影响 |
+|---|---|---|
+| G5 | `NativeViewProvider` 是纯 Rust trait，没有 C ABI 外壳 | Swift/Java/C++ 插件**无法参与原生合成**（camera/video/webview 的关键路径）。这是需求 1 最核心的一环 |
+| G6 | 仓库内零个真实插件 | 机制已在仓库内通过端到端验证（生成 → 编译 → 测试 → 符号核对），但**仍没有一个真实能力**跑在上面 |
+| G7 | `packages/` 住在平台适配器里，违反教义第 5 条 | `floom-platform-mobile/src/packages/` 已有 13 个能力包（3 真 8 stub + 2 全 stub），本应拆成插件 |
+| G9 | `Capability` 位里没有 camera/video/webview/bluetooth | 这本身是对的；但要等 G7 完成后，"SDK 精简"才是结构性事实而非口号 |
+
+### 附带修掉的既有问题
+
+- **插件 manifest 缺 `[workspace]`**：在 checkout 内生成插件会让 cargo 向上找到外层 workspace 并拒绝构建。
+- **生成的示例工程不编译**：`example/Cargo.toml` 依赖 `floom` 时没有开 `desktop` + `renderer-gpu`，而示例调用的 `run_desktop` 需要这两个 feature。
+- **示例 manifest 的注释缩进错乱**：模板里那几行漏了续行转义，生成的 TOML 注释第一行没缩进、其余行有 9 空格。
+- **插件的桌面半边被生成为应用 CMake**（`add_executable` + `main.c`）：插件应是库；且桌面半边已由 `build.rs` 用 `cc` 编译，再来一个 CMake 会造成重复符号。已改为只写 `native/desktop/README.md` 说明这件事。
+
+### 新增的固化验证（`crates/floom-cli/src/main.rs` 的 `mod tests`，28 项）
+
+| 测试 | 守住什么 |
+|---|---|
+| `the_header_and_every_native_half_agree_on_the_symbol_names` | 头、C 半边、Android shim、Swift 半边**四者符号名一致**——这是"两份契约"缺陷（G3/G4）的自动拦截 |
+| `the_version_comes_from_the_native_half`（生成工程内） | 证明调用真的跨过了边界，而非返回常量 |
+| `the_c_abi_header_is_the_one_the_native_half_includes` | C 源按 `build.rs` 给的 include 路径引用头文件 |
+| `the_rust_half_calls_the_abi_behind_the_flag_build_rs_emits` | `extern` 块与 `build.rs` 发出的 cfg 一致 |
+| `the_kotlin_half_is_called_by_rather_than_calling_out` | Kotlin 不声明 `external fun`（只看声明，不看散文） |
+| `the_swift_half_exports_the_c_abi` | Swift 用 `@_cdecl` 导出 |
+| `the_generated_plugin_is_its_own_workspace` | 插件 manifest 有 `[workspace]` 且 `cc` 是 build-dependency |
+| `the_native_half_lives_where_build_rs_looks_for_it` | 平台半边落在 `native/<platform>/`，不是根目录 |
+
+
+## 1.4 结论
+
+| 维度 | 判定 |
+|---|---|
+| 教义（为什么这样切） | ✅ 清晰、正确，有成本论证 |
+| 注册表机制 | ✅ 完整可用 |
+| C ABI 契约 | ✅ **已定稿**：头文件是唯一事实源，原生实现、Rust 调用 |
+| 原生合成 ABI | ⚠️ 语义完整，但 **Rust-only**（G5） |
+| 跨语言 FFI 边界 | ✅ **桌面已打通并验证**；Android/iOS 半边代码已就位但**未在设备上验证** |
+| 真实插件验证 | ⚠️ 机制已端到端验证，但**仍无真实能力插件**（G6） |
+| SDK 精简的结构性落实 | ❌ **未落实**（G7、G9） |
+
+**一句话**：契约已定稿、桌面链路已打通并验证；剩下的是**原生合成路径的跨语言化**（G5）、
+**一个真实能力插件**（G6）、以及**把能力包搬出平台适配器**（G7）。
+
+---
+
+# 第二部分 · 渲染后端缺口审计（需求 2）
+
+## 2.1 审计基准
+
+场景词汇表 = `crates/floom-scene/src/node.rs` 的 `enum SceneNode`（12 个变体）：
+`GroupPush/GroupPop`、`Rect{bounds,fill,radius,shadow}`、`Path{path,fill,stroke}`、
+`ClipPush/ClipPop`、`FilterPush/FilterPop`、`BackdropFilter{rect,filter}`、
+`Shader{bounds,shader}`、`Image{bounds,image,alpha}`、`Text{origin,size,glyphs,color}`。
+
+原则（`docs/renderer-backend-support.md` 引用的 `floom-types::Shadow`）：**降级必须被计数，不得静默**。
+
+## 2.2 覆盖矩阵
+
+| 场景节点 | software | vello (GPU) | skia | web | tui |
+|---|---|---|---|---|---|
+| `Rect` 填充 | ✅ 绘制 | ✅ 绘制 | ⚠️ 仅记录 | ✅ | ✅ 仅纯色 |
+| `Rect` 圆角 | ✅ | ✅ | ⚠️ 仅记录 | ✅ | ❌ 静默忽略 |
+| `Rect` 阴影 | ✅ **honor spread** | ⏭️ 计数 `shadows_skipped` | ⚠️ 仅记录 | ✅ | ❌ **静默忽略** |
+| `Path` 填充/描边 | ✅ | ✅ | ⚠️ 仅记录 | ✅ | ⏭️ 计数 `skipped` |
+| `Image` | ✅ | ✅ | ⚠️ 仅记录 | ✅ | ⏭️ 计数 |
+| `Text` | ✅ | ✅ | ⚠️ 仅记录 | ✅ | ✅ |
+| `ClipPush/Pop` | ✅ | ✅ | ⚠️ 仅记录 | ✅ | ✅ |
+| `GroupPush/Pop` | ✅ | ✅ | ⚠️ 仅记录 | ✅ | ⏭️ 计数 |
+| `FilterPush/Pop` | ✅ `filters_drawn` | ⏭️ 计数 `filters_skipped` | ⚠️ 仅记录 | ✅ | ⏭️ 计数 |
+| `BackdropFilter` | ✅ `backdrops_drawn` | ⏭️ 计数 | ⚠️ 仅记录 | ✅ | ⏭️ 计数 |
+| `Shader` | ⏭️ 计数 `shaders_skipped` | ✅ `shaders_drawn` | ⚠️ 仅记录 | ⏭️ 计数 | ⏭️ 计数 |
+
+图例：✅ 真渲染 · ⏭️ 跳过但计数（符合原则）· ⚠️ 只记录不提交 · ❌ 静默忽略（违反原则）
+
+## 2.3 缺口清单
+
+### R1 · skia 在 2.0 里不是渲染器 🔴
+
+`crates/floom-renderer-skia/src/lib.rs:1`：
+
+```
+//! Skia-oriented Scene adapter (command recording; GPU submit stays in legacy crate).
+```
+
+`SkiaRendererAdapter` 只有 `commands: Vec<SkiaCommand>` 和 `frames: u64`
+（`lib.rs:85-89`），**没有任何 skip 计数器**。后果：
+
+- 它不渲染任何像素；
+- 它连"降级被记录"这条原则都不满足——`Shader` / `FilterPush` / `BackdropFilter`
+  全都被忠实记录成命令，但没有任何路径会执行它们；
+- **没有 `tests/` 目录**（其余四个后端都有）。
+
+按当前状态，它是一个"意图记录器"，却和真正的后端并排放在 `floom-renderer-*` 命名空间里，
+容易被误认为已实现。
+
+### R2 · vello 没有 blur primitive，GPU 路径缺三类效果 🟠
+
+`crates/floom-renderer-vello/src/gpu.rs`：
+
+- 阴影：`gpu.rs:1389-1394` —— 填充渲染，阴影不渲染，`stats.shadow_skips += 1`
+- 滤镜域：`gpu.rs:1263-1267` —— 内容照常画（不模糊），`totals.filters_skipped += 1`
+- 背景滤镜：`gpu.rs:1661-1666` —— 什么都不画，`stats.filter_skips += 1`
+
+三者**都计数了**，符合"不静默"原则，但 GPU 路径上**阴影 / 毛玻璃 / 模糊全部缺失**。
+这是 vello 作为默认 GPU 后端最大的功能缺口——桌面与 Android 都走这条路径。
+
+### R3 · software 没有 shader runtime 🟡
+
+`crates/floom-renderer-software/src/lib.rs:1161-1163`：`shaders_skipped += 1`。
+已计数，符合原则。WGSL 只在 vello 上跑（`gpu.rs` 的 `shaders_drawn`）。
+
+### R4 · tui 覆盖面最窄，且有 3 处静默忽略 🟡
+
+`crates/floom-renderer-tui/src/grid.rs:216-289`：
+
+- 静默忽略 `Rect.shadow` —— `SceneNode::Rect { bounds, fill, .. }`（`grid.rs:220`），
+  `..` 把 `radius` 和 `shadow` 一起吞掉，**不计数**。
+- 静默忽略 `Rect.radius` —— 同上，圆角在字符网格上无法表达，但**没有记一笔**。
+- 渐变填充被 `grid.rs:221-224` 计数跳过（✅ 合规）。
+
+其余跳过的（Path / Image / Shader / Group / Filter / Backdrop）走 `_ => grid.stats.skipped_one()`（`grid.rs:287`），✅ 合规。
+
+字符网格没有软边缘，阴影与圆角"无法表达"是事实——但按本仓库自己的原则，
+**"做不到"也要计数**，否则一个带阴影的卡片在 TUI 上会静默变成无阴影卡片，没人知道。
+
+### R5 · `Renderer` trait 没有能力查询 🟠（架构缺口）
+
+`crates/floom-renderer/src/lib.rs:55-81` 的 `Renderer` trait 只有
+`begin_frame` / `render_scene` / `render_scene_with_resources` / `end_frame` / `trim_caches`。
+
+**没有"我支持什么"的查询接口**。每个后端各自暴露自己的 stats
+（vello 的 `VelloStats`、software 的 `SoftwareStats`、tui 的 `PaintStats`），
+字段名还不一样（`shadows_skipped` vs `shadows_drawn` vs `skipped`）。
+
+后果：host 无法在运行前知道"这个后端会不会把我的阴影丢掉"，
+也无法把不同后端的降级归一上报给用户。`Capability` 位只描述**平台**，不描述**渲染后端**。
+
+### R6 · `docs/renderer-backend-support.md` 已过时 🟠
+
+该文档基于 v1 的 `PaintContext::draw_shadow` 默认空实现来写
+（`docs/renderer-backend-support.md:12-23`）。但 2.0 里：
+
+- 阴影是 `SceneNode::Rect` 的一个字段，不是 `PaintContext` 的方法；
+- `floom-renderer` 的 `Renderer` trait 上**根本没有 `draw_shadow`**；
+- `floom-renderer-software` 仍有 `draw_shadow`（`lib.rs:738`），但那是它自己的
+  `PaintContext` 实现，不是 ABI 的一部分。
+
+文档里"floom-renderer-web 丢阴影且无计数"这一条**已经不成立**：
+2.0 的 `WebPresenter` 内部就是 `SoftwareRenderer`（`crates/floom-renderer-web/src/lib.rs:74,120`），
+阴影经软件光栅化后 `put_image_data` 上屏，覆盖率与 software 完全一致。
+
+**文档会误导后续实现者**，必须重写为本节的矩阵。
+
+### R7 · 像素级回归只有 software 有 🟡
+
+| 后端 | tests/ | 像素级断言 |
+|---|---|---|
+| software | `brush.rs` `filters.rs` `paths.rs` `shadow_spread.rs` `transforms.rs` | ✅ |
+| vello | 无 | ❌ |
+| web | `web_presenter.rs` | ❌（只断言不崩） |
+| skia | 无 | ❌ |
+| tui | 无 | ❌ |
+
+macOS 门禁记录过一次真实教训（`docs/gates/macos.md:126-128`）：
+"CJK tofu 这个缺陷 CI 抓不到，因为 `floom-snapshot` 的 golden 是 ASCII"。
+**只有 software 有像素级纪律**，意味着另外四个后端的渲染正确性没有回归网。
+
+## 2.4 结论
+
+| 后端 | 判定 |
+|---|---|
+| `floom-renderer-software` | ✅ **参考实现**，唯一有像素级回归的后端 |
+| `floom-renderer-vello` | ✅ 真渲染，但缺阴影 / 滤镜 / 背景滤镜（已计数） |
+| `floom-renderer-web` | ✅ 继承 software 全覆盖；上限是 CPU 光栅化 |
+| `floom-renderer-tui` | ⚠️ 覆盖面最窄；3 处静默忽略违反原则 |
+| `floom-renderer-skia` | ❌ **不是渲染器**，只记录命令，无计数器，无测试 |
+
+---
+
+# 第三部分 · 计划表
+
+优先级：🔴 阻塞 / 🟠 高 / 🟡 中 / 🟢 低
+
+## A 组 · 插件与 FFI（需求 1）
+
+| ID | 任务 | 依赖 | 级别 | 状态 | 验收标准 |
+|---|---|---|---|---|---|
+| **A1** | 统一插件契约方向：C ABI 头为唯一事实源 | — | 🔴 | ✅ **完成** | 头文件明确"原生实现、Rust 调用"；Kotlin 半边改为 `@JvmStatic` + C shim；Swift 半边 `@_cdecl` 导出 |
+| **A2** | 实现 `build.rs`：按目标平台编译并链接原生半边 | A1 | 🔴 | ✅ **完成（桌面）** | `nm` 能看到 `floom_<name>_enable` 符号；桌面走 `cc`。**Android/iOS 的构建接线仍待设备验证** |
+| **A3** | Rust 半边绑定 C ABI | A1 | 🔴 | ✅ **完成** | `version()` / `enable()` / `disable()` / `capability()` 真实走 `extern "C"`，由生成工程的测试断言 |
+| **A4** | 修路径不一致（G8） | — | 🟡 | ✅ **完成** | 头文件统一到 `native/common/floom_<name>.h`；`build.rs` 监视路径、C 源 `#include` 三者一致 |
+| **A5** | 给 `NativeViewProvider` 加 C ABI 外壳 | A1 | 🔴 | ⬜ **未开始** | 新增 `NativeViewProviderV1` C 结构体 + 函数指针表；Swift/Java 插件可实现；Rust 侧现有 trait 保持兼容（由薄适配层转接） |
+| **A6** | 落地第一个真实插件（建议 `camera` 或 `file-dialog`） | A1–A5 | 🔴 | ⬜ **未开始** | 仓库内出现 `crates/floom-plugin-<name>/`；在目标设备/模拟器上跑通；作为 `register_plugin` 的真实调用点 |
+| **A7** | 把 `floom-platform-mobile/packages/` 迁出为插件 | A5、A6 | 🟠 | ⬜ **未开始** | 13 个包按能力拆成 `floom-plugin-<capability>/`；适配器只留窗口/剪贴板/IME；架构脚本加"平台层不得含能力包"检查 |
+| **A8** | 补 SDK 精简的**结构性**约束 | A7 | 🟡 | ⬜ **未开始** | `scripts/check-architecture-deps.sh` 增加规则：`floom-platform*` 不得声明 `camera/video/webview/bluetooth` 能力；`Capability` 位与实际实现一一对应 |
+| **A9** | 插件 ABI 版本协商落地 | A1 | 🟡 | ✅ **完成** | `floom_<name>_abi_version()` 参与 enable 校验，版本不符时拒绝并给出明确错误 |
+
+## B 组 · 渲染后端对齐（需求 2）
+
+| ID | 任务 | 依赖 | 级别 | 验收标准 |
+|---|---|---|---|---|
+| **B1** | 重写 `docs/renderer-backend-support.md` 为 2.0 场景节点矩阵 | — | 🟠 | 删除 v1 `PaintContext::draw_shadow` 论述；改为 12 变体 × 5 后端矩阵；修正"web 无阴影计数"的过时结论 |
+| **B2** | skia 要么补提交路径 + 计数器 + 测试，要么明确降级为"意图记录器" | — | 🔴 | 要么出像素，要么改名（如 `floom-renderer-skia-adapter`）并从 `floom` facade 的 `renderer-gpu` 语义中摘出；两者都不可容忍现状 |
+| **B3** | tui 补齐静默忽略的计数 | — | 🟡 | `shadow` / `radius` 不可表达时计入 `skipped`，与 `Path`/`Image` 同口径 |
+| **B4** | vello 的 blur primitive | — | 🟠 | 依赖上游 vello 能力；若短期不可得，提供 CPU 回退（把阴影/滤镜交给 software 光栅化后上屏），保证桌面与 Android 视觉一致 |
+| **B5** | 统一后端能力查询 | — | 🟠 | `Renderer` trait 增 `fn capabilities(&self) -> RendererCapabilities`，含 `shadows/filters/backdrop/shaders` 四个布尔；host 可在运行前查询 |
+| **B6** | 统一降级计数的暴露方式 | B5 | 🟡 | 五个后端的 stats 归一到同一组语义（drawn / skipped），或提供统一的 `DegradationReport` |
+| **B7** | 为 vello / tui / web 补像素级回归 | — | 🟠 | 每个后端至少一份 golden；CJK 字形必须进断言（吸取 macOS tofu 教训） |
+| **B8** | shader 在非 GPU 后端的行为明确化 | — | 🟡 | software / web / tui 的 `shaders_skipped` 已有计数；补文档说明"自定义着色器仅 GPU 后端可用" |
+
+## C 组 · 承接（上一轮的平台后端计划，仍然有效）
+
+| ID | 任务 | 级别 | 备注 |
+|---|---|---|---|
+| C1 | 修复 `native_appkit.rs:340` 的 `objc2` 编译错误 | 🔴 | `NSArray::iter` 已移除 |
+| C2 | 恢复 workspace 构建（widget 迁移断链） | 🔴 | `floom-accuracy` + 多个示例 |
+| C3 | 能力位诚实性：`DesktopPlatform` 不再声称未实现的 `CLIPBOARD`/`IME` | 🔴 | |
+| C4 | 实现 `OPEN_URL` / `FILE_DIALOG`（或按 A7 改为插件） | 🟠 | 与 A7 联动 |
+| C5 | iOS / Harmony / Web / Embedded 真实后端 | 🟠 | Phase 19 |
+| C6 | 各平台门禁补设备验证 | 🟠 | `docs/gates/*` 无 `fail` |
+
+## 执行顺序
+
+```
+第一梯队（阻塞，其余都依赖它）
+  A1 → A2 → A3 → A6      插件链路接通并被真实插件验证
+  A5                      原生合成路径跨语言化
+  B2                      skia 定位澄清
+  C1, C2, C3              恢复可构建 + 能力诚实
+
+第二梯队
+  A7 → A8 → A9            精简 SDK 结构 + ABI 版本
+  B1, B5, B6              文档重写 + 能力查询 + 统计归一
+  B3, B7                  tui 计数 + 像素回归
+  C4, C5, C6              平台后端补齐 + 门禁
+
+第三梯队
+  B4, B8                  vello blur / shader 行为文档
+```
+
+## 一句话总结
+
+- **需求 1**：机制（注册表 + ABI + 脚手架）**齐备**，但跨语言 FFI 那一段是空的——
+  `build.rs` 不编译、`extern "C"` 不绑定、Kotlin/Swift 与头文件各说各话、`NativeViewProvider` 是 Rust-only。
+  补上 A1–A6 即可成立，A7–A9 负责把"SDK 精简"从口号变成结构约束。
+- **需求 2**：software 是参考实现，vello/web/tui 基本对齐（降级都有计数），
+  **skia 根本不是渲染器**，tui 有 3 处静默忽略，`Renderer` trait 缺能力查询，
+  支撑文档基于 v1 API 已过时。B1–B3 是低成本高回报，B4 依赖上游。
