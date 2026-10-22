@@ -21,8 +21,8 @@ pub mod run;
 pub mod terminal;
 
 use floom_platform::{
-    Capability, Clipboard, HostPlatform, Ime, Platform, PlatformCapabilities, PlatformEvent, Window,
-    WindowConfig,
+    Capability, Clipboard, HostPlatform, Ime, Platform, PlatformCapabilities, PlatformEvent,
+    Window, WindowConfig,
 };
 use floom_types::{PlatformId, Size, WindowId};
 
@@ -189,8 +189,7 @@ impl Clipboard for TuiPlatform {
 
 /// Standard base64 with `=` padding — what OSC 52 expects.
 fn base64_encode(input: &str) -> String {
-    const TABLE: &[u8; 64] =
-        b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    const TABLE: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
     let bytes = input.as_bytes();
     let mut out = String::with_capacity((bytes.len() + 2) / 3 * 4);
     for chunk in bytes.chunks(3) {

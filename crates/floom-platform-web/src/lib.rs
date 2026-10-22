@@ -185,7 +185,11 @@ mod tests {
         let mut p = WebPlatform::new("floom-canvas");
         assert!(!p.capabilities().supports(Capability::WEBGPU));
         assert!(p.capabilities().supports(Capability::SOFTWARE_RENDER));
-        assert!(p.capabilities().supports(Capability::NATIVE_VIEW));
+        // No native view on the web: the browser has no subwindow to put one
+        // in, and the backend produces no provider. Claiming the capability
+        // would make every `NativeSurface` mount fail at runtime instead of
+        // being refused up front.
+        assert!(!p.capabilities().supports(Capability::NATIVE_VIEW));
 
         let win = p.create_window(WindowConfig {
             title: "web".into(),
@@ -206,7 +210,10 @@ mod tests {
             "request_frame must enqueue a RedrawRequested"
         );
         assert!(p.take_pending_frame(), "request_frame sets pending_frame");
-        assert!(!p.take_pending_frame(), "pending_frame is cleared once read");
+        assert!(
+            !p.take_pending_frame(),
+            "pending_frame is cleared once read"
+        );
     }
 
     #[test]
@@ -217,10 +224,10 @@ mod tests {
         let mut events = Vec::new();
         p.poll_events(&mut events);
         assert!(
-            events
-                .iter()
-                .any(|e| matches!(e, PlatformEvent::WindowResized { size, .. } if *size
-                    == Size::new(640.0, 480.0))),
+            events.iter().any(
+                |e| matches!(e, PlatformEvent::WindowResized { size, .. } if *size
+                    == Size::new(640.0, 480.0))
+            ),
             "resize_to must enqueue a WindowResized with the new size"
         );
     }

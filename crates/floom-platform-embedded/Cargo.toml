@@ -4,14 +4,13 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
-description = "Embedded / DRM-framebuffer platform adapter for Floom 2.0"
+description = "Embedded platform adapter for Floom 2.0: a framebuffer and a software rasteriser"
 rust-version.workspace = true
 
-[features]
-default = []
-# Real DRM/KMS backend is feature-gated; default path is headless framebuffer sim.
-drm = []
-
+# There is no `drm` feature, and there is not meant to be one yet. The
+# platform presents into a simulated framebuffer; a DRM/KMS backend does not
+# exist, so a feature flag for it would be a promise with nothing behind it.
+# The `Capability::DRM_KMS` bit comes back with the code that honours it.
 [dependencies]
 floom-accessibility = { path = "../floom-accessibility", version = "0.2.0" }
 floom-platform = { path = "../floom-platform", version = "0.2.0" }

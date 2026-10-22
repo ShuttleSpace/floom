@@ -3,7 +3,9 @@
 use std::collections::HashMap;
 use std::time::Instant;
 
-use floom_types::{CursorStyle, DisplayInfo, PlatformId, Point, ScaleFactor, Size, SurfaceId, WindowId};
+use floom_types::{
+    CursorStyle, DisplayInfo, PlatformId, Point, ScaleFactor, Size, SurfaceId, WindowId,
+};
 
 use crate::capabilities::{Capability, PlatformCapabilities};
 use crate::event::PlatformEvent;
@@ -140,6 +142,12 @@ impl Default for HostPlatform {
 }
 
 impl HostPlatform {
+    /// A host platform with a window and a soft keyboard.
+    ///
+    /// The clipboard is **not** claimed: this adapter's clipboard is a
+    /// `String` in this process, and a clipboard another process cannot read
+    /// is not a clipboard. A test that wants to exercise the capability
+    /// gating says so by setting the capabilities.
     pub fn new() -> Self {
         Self {
             id: PlatformId::new(1, 1),

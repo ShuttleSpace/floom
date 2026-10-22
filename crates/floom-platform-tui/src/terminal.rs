@@ -61,8 +61,12 @@ fn detect_size_impl() -> Option<TerminalSize> {
 }
 
 fn env_size() -> Option<TerminalSize> {
-    let cols = std::env::var("COLUMNS").ok().and_then(|s| s.parse::<usize>().ok());
-    let rows = std::env::var("LINES").ok().and_then(|s| s.parse::<usize>().ok());
+    let cols = std::env::var("COLUMNS")
+        .ok()
+        .and_then(|s| s.parse::<usize>().ok());
+    let rows = std::env::var("LINES")
+        .ok()
+        .and_then(|s| s.parse::<usize>().ok());
     match (cols, rows) {
         (Some(c), Some(r)) if c > 0 && r > 0 => Some(TerminalSize::new(c, r)),
         _ => None,

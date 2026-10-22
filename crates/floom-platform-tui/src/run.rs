@@ -239,7 +239,10 @@ mod tests {
             matches!(e, PlatformEvent::WindowResized { window: w, size }
                 if *w == window && size.width as usize == 120 && size.height as usize == 40)
         });
-        assert!(resized, "a resize must produce a WindowResized event: {events:?}");
+        assert!(
+            resized,
+            "a resize must produce a WindowResized event: {events:?}"
+        );
     }
 
     #[test]

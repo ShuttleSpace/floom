@@ -26,7 +26,10 @@ impl TuiApp for HelloApp {
         // Build the host + runner once, on the first frame hook.
         if self.runner.is_none() {
             let mut host = WidgetHost::new();
-            host.mount_root(LayoutStyle::default(), Text::new("Hello from floom2 TUI!").size(14.0));
+            host.mount_root(
+                LayoutStyle::default(),
+                Text::new("Hello from floom2 TUI!").size(14.0),
+            );
             let size = platform.size();
             let presenter = TuiPresenter::new(
                 floom_renderer_tui::TerminalSize::new(size.cols, size.rows),

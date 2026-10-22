@@ -23,7 +23,11 @@ mod tests {
     fn focus_and_ime_bridge_hooks() {
         let mut p = ios_platform();
         assert!(!p.capabilities().supports(Capability::ACCESSIBILITY));
-        assert!(p.capabilities().supports(Capability::IME));
+        // The iOS backend is a stand-in until the UIKit platform lands, and a
+        // stand-in has no soft keyboard: its IME is an in-memory map, and
+        // claiming the capability would say text typed on a phone reaches the
+        // framework when nothing does that yet.
+        assert!(!p.capabilities().supports(Capability::IME));
 
         let win = p.create_window(WindowConfig::default());
         p.set_enabled(win, true);

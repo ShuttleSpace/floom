@@ -46,11 +46,9 @@ mod wasm {
     use std::cell::RefCell;
     use std::rc::Rc;
 
-    use wasm_bindgen::prelude::*;
     use wasm_bindgen::JsCast;
-    use web_sys::{
-        EventTarget, KeyboardEvent, PointerEvent as DomPointerEvent, WheelEvent,
-    };
+    use wasm_bindgen::prelude::*;
+    use web_sys::{EventTarget, KeyboardEvent, PointerEvent as DomPointerEvent, WheelEvent};
 
     use floom_platform::{KeyCode, Platform, PlatformEvent, PointerButton, WindowConfig};
     use floom_types::{Modifiers, Point, Size};
@@ -97,12 +95,10 @@ mod wasm {
 
         // One persistent rAF closure; `schedule` re-arms it.
         let rc = state.clone();
-        let closure = Closure::wrap(
-            Box::new(move || {
-                rc.borrow_mut().platform.set_raf_pending(false);
-                tick(rc.clone());
-            }) as Box<dyn FnMut()>,
-        );
+        let closure = Closure::wrap(Box::new(move || {
+            rc.borrow_mut().platform.set_raf_pending(false);
+            tick(rc.clone());
+        }) as Box<dyn FnMut()>);
         FRAME.with(|slot| *slot.borrow_mut() = Some(closure));
 
         install_listeners(&state, canvas_id)?;
@@ -177,9 +173,7 @@ mod wasm {
         canvas_id: &str,
     ) -> Result<(), String> {
         let window = web_sys::window().ok_or_else(|| "no window".to_string())?;
-        let doc = window
-            .document()
-            .ok_or_else(|| "no document".to_string())?;
+        let doc = window.document().ok_or_else(|| "no document".to_string())?;
 
         let canvas: EventTarget = doc
             .get_element_by_id(canvas_id)
@@ -399,24 +393,48 @@ mod wasm {
     }
 
     impl HasModifiers for KeyboardEvent {
-        fn has_shift(&self) -> bool { self.shift_key() }
-        fn has_ctrl(&self) -> bool { self.ctrl_key() }
-        fn has_alt(&self) -> bool { self.alt_key() }
-        fn has_meta(&self) -> bool { self.meta_key() }
+        fn has_shift(&self) -> bool {
+            self.shift_key()
+        }
+        fn has_ctrl(&self) -> bool {
+            self.ctrl_key()
+        }
+        fn has_alt(&self) -> bool {
+            self.alt_key()
+        }
+        fn has_meta(&self) -> bool {
+            self.meta_key()
+        }
     }
 
     impl HasModifiers for DomPointerEvent {
-        fn has_shift(&self) -> bool { self.shift_key() }
-        fn has_ctrl(&self) -> bool { self.ctrl_key() }
-        fn has_alt(&self) -> bool { self.alt_key() }
-        fn has_meta(&self) -> bool { self.meta_key() }
+        fn has_shift(&self) -> bool {
+            self.shift_key()
+        }
+        fn has_ctrl(&self) -> bool {
+            self.ctrl_key()
+        }
+        fn has_alt(&self) -> bool {
+            self.alt_key()
+        }
+        fn has_meta(&self) -> bool {
+            self.meta_key()
+        }
     }
 
     impl HasModifiers for WheelEvent {
-        fn has_shift(&self) -> bool { self.shift_key() }
-        fn has_ctrl(&self) -> bool { self.ctrl_key() }
-        fn has_alt(&self) -> bool { self.alt_key() }
-        fn has_meta(&self) -> bool { self.meta_key() }
+        fn has_shift(&self) -> bool {
+            self.shift_key()
+        }
+        fn has_ctrl(&self) -> bool {
+            self.ctrl_key()
+        }
+        fn has_alt(&self) -> bool {
+            self.alt_key()
+        }
+        fn has_meta(&self) -> bool {
+            self.meta_key()
+        }
     }
 
     /// Build a [`Modifiers`] bit-set from a DOM event's modifier flags.

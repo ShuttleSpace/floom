@@ -151,7 +151,10 @@ impl InputParser {
                     Some(Outcome::Key(KeyCode::from_char(c), mods))
                 }
             }
-            0x01..=0x1a => Some(Outcome::Key(KeyCode::letter(b - 1), Modifiers::CONTROL.union(mods))),
+            0x01..=0x1a => Some(Outcome::Key(
+                KeyCode::letter(b - 1),
+                Modifiers::CONTROL.union(mods),
+            )),
             _ => None,
         }
     }
@@ -246,7 +249,9 @@ fn csi_modifiers(seq: &[u8]) -> Modifiers {
         5 => Modifiers::CONTROL,
         6 => Modifiers::CONTROL.union(Modifiers::SHIFT),
         7 => Modifiers::CONTROL.union(Modifiers::ALT),
-        8 => Modifiers::CONTROL.union(Modifiers::ALT).union(Modifiers::SHIFT),
+        8 => Modifiers::CONTROL
+            .union(Modifiers::ALT)
+            .union(Modifiers::SHIFT),
         _ => Modifiers::NONE,
     }
 }
@@ -270,11 +275,7 @@ fn atoi(bytes: &[u8]) -> Option<u8> {
             return None;
         }
     }
-    if any {
-        Some(n as u8)
-    } else {
-        None
-    }
+    if any { Some(n as u8) } else { None }
 }
 
 #[cfg(test)]

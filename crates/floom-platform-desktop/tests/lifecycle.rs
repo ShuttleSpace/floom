@@ -7,8 +7,14 @@ use floom_types::{Point, Size};
 #[test]
 fn desktop_window_and_input_mapping() {
     let mut p = DesktopPlatform::new();
-    assert!(p.capabilities().supports(Capability::CLIPBOARD));
+    // The soft keyboard is real on every desktop target. The *system*
+    // clipboard is not yet: this adapter holds the text in process, so the
+    // capability is claimed only where the implementation is a real one.
     assert!(p.capabilities().supports(Capability::IME));
+    #[cfg(target_os = "macos")]
+    assert!(p.capabilities().supports(Capability::CLIPBOARD));
+    #[cfg(not(target_os = "macos"))]
+    assert!(!p.capabilities().supports(Capability::CLIPBOARD));
 
     let win = p.create_window(WindowConfig {
         title: "desk".into(),

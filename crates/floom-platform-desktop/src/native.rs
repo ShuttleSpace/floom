@@ -538,6 +538,14 @@ pub fn desktop_capabilities(native_view: bool) -> PlatformCapabilities {
     if native_view {
         caps.caps |= Capability::NATIVE_VIEW;
     }
+    // The *system* clipboard is real on macOS, where it is `NSPasteboard`, and
+    // not yet on the others, where the adapter still holds the text in this
+    // process. A clipboard another process cannot read is not a clipboard, so
+    // the capability follows the implementation rather than the ambition: an
+    // app that asks may be told "no", and that answer is true.
+    if cfg!(target_os = "macos") {
+        caps.caps |= Capability::CLIPBOARD;
+    }
     caps
 }
 
@@ -1073,9 +1081,10 @@ mod tests {
             "a session with a bridge must advertise it"
         );
         assert_eq!(
-            desktop_capabilities(false),
-            PlatformCapabilities::desktop_default(),
-            "the bridge is the only thing this flag may be keyed on"
+            desktop_capabilities(false).supports(Capability::CLIPBOARD),
+            desktop_capabilities(true).supports(Capability::CLIPBOARD),
+            "the bridge says nothing about the clipboard: the two answers are \
+             derived from different things, and neither is derived from the other"
         );
 
         let bridge = DesktopNativeBridge::over(RecordingHost::new(Size::new(100.0, 10.0), 1.0));

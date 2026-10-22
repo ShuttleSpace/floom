@@ -51,6 +51,9 @@ capability bit to an implementation.
 2. **`desktop_default()` claims `OPEN_URL` and `FILE_DIALOG`**
    (`capabilities.rs:33-43`) — neither has any implementation anywhere in the 2.0
    tree (grep: only the capability bits exist).
+   **Fixed 2026-10-22:** both bits, and `DRM_KMS` with them, are **deleted**.
+   A bit that nothing implements is a promise nobody keeps, and deleting it
+   makes claiming one a compile error rather than a lie.
 3. **macOS build is currently broken**: `native_appkit.rs:340` calls
    `NSArray::iter`, removed in the pinned `objc2` — `cargo check -p
    floom-platform-desktop` fails with E0599. The `--features winit` path compiles.
@@ -62,6 +65,10 @@ capability bit to an implementation.
 5. **`desktop_default()` a11y adapter declares `NATIVE_BRIDGE`** while no
    in-tree code calls any OS accessibility API (macOS `NSAccessibility` grep is
    empty outside the legacy monolith).
+   **Fixed 2026-10-22:** the desktop adapter no longer claims the bridge by
+   default. The claim is derived from the bridge's presence
+   (`with_native_bridge()`), so the two cannot drift. The bridge itself is
+   still missing, which is what `docs/gates/macos.md` item 3 records.
 
 ## What is genuinely production-grade today
 

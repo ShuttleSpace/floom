@@ -36,7 +36,11 @@ fn fake_platform_window_lifecycle() {
 
 #[test]
 fn fake_clipboard_and_ime_capability_gated() {
-    let mut p = FakePlatform::new();
+    // The clipboard is asked for explicitly: the default host platform does
+    // not claim one, because its clipboard is in process.
+    let mut p = FakePlatform::new().with_capabilities(PlatformCapabilities {
+        caps: Capability::WINDOWING | Capability::IME | Capability::CLIPBOARD,
+    });
     assert!(p.set_text("hi"));
     assert_eq!(p.get_text().as_deref(), Some("hi"));
 
@@ -56,6 +60,40 @@ fn a11y_stub_capabilities_explicit() {
     let caps = PlatformCapabilities::unsupported_a11y_stub();
     assert!(!caps.supports(Capability::ACCESSIBILITY));
     assert!(caps.supports(Capability::TOUCH));
+}
+
+#[test]
+fn a_stub_claims_no_soft_keyboard() {
+    // A stand-in's IME is an in-memory map. Claiming the capability would say
+    // that text typed on a phone reaches the framework, and the real backend
+    // would have to remember to take the claim back — which is the drift the
+    // capability set exists to prevent.
+    let caps = PlatformCapabilities::unsupported_a11y_stub();
+    assert!(
+        !caps.supports(Capability::IME),
+        "a stand-in has no keyboard; the real backend claims the IME"
+    );
+}
+
+#[test]
+fn a_capability_with_no_implementation_has_no_bit() {
+    // The enforcement is the bit set itself: a bit that nothing implements
+    // cannot be claimed, because there is nothing to set. These three were
+    // here once, with no implementation behind any of them, and a platform
+    // could claim them and be believed.
+    //
+    // The check is a compile-time one — the names below do not exist — so this
+    // test is the *record* of the removal rather than the mechanism.
+    //
+    //   Capability::OPEN_URL    — no implementation anywhere
+    //   Capability::FILE_DIALOG — no implementation anywhere
+    //   Capability::DRM_KMS     — a cargo feature with no DRM code behind it
+    //
+    // A platform that grows one of these adds the bit back, and the table in
+    // `capabilities.rs` says which implementation is behind it.
+    let caps = PlatformCapabilities::desktop_default();
+    assert!(caps.supports(Capability::WINDOWING));
+    assert!(caps.supports(Capability::SOFTWARE_RENDER));
 }
 
 #[test]

@@ -1,4 +1,10 @@
-//! Embedded platform: headless framebuffer simulation (+ optional DRM feature).
+//! Embedded platform: a framebuffer and a software rasteriser.
+//!
+//! There is no DRM/KMS backend, and nothing pretends there is: the platform
+//! presents into a simulated framebuffer, and the capability that would say
+//! "this composites through DRM" is not in the bit set at all. It comes back
+//! with the code that would honour it — and with a question worth asking
+//! then: whether the platform has a DRM/KMS backend at all.
 
 pub mod accessibility;
 
@@ -51,11 +57,10 @@ pub struct EmbeddedPlatform {
 
 impl EmbeddedPlatform {
     pub fn new(width: u32, height: u32) -> Self {
-        let drm = cfg!(feature = "drm");
         Self {
             host: HostPlatform::new()
                 .with_id(PlatformId::new(30, 1))
-                .with_capabilities(PlatformCapabilities::embedded_default(drm)),
+                .with_capabilities(PlatformCapabilities::embedded_default()),
             fb: Framebuffer::new(width, height),
         }
     }
@@ -71,10 +76,6 @@ impl EmbeddedPlatform {
     /// Present a solid color into the simulated framebuffer (software path).
     pub fn present_solid(&mut self, r: u8, g: u8, b: u8) {
         self.fb.fill_rgba(r, g, b, 255);
-    }
-
-    pub fn drm_enabled(&self) -> bool {
-        self.host.capabilities().supports(Capability::DRM_KMS)
     }
 }
 
@@ -123,7 +124,6 @@ mod tests {
     #[test]
     fn framebuffer_software_path() {
         let mut p = EmbeddedPlatform::new(320, 240);
-        assert!(!p.drm_enabled());
         assert!(p.capabilities().supports(Capability::SOFTWARE_RENDER));
 
         let win = p.create_window(WindowConfig::default());

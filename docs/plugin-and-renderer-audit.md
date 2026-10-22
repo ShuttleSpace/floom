@@ -245,7 +245,7 @@ macOS 门禁记录过一次真实教训（`docs/gates/macos.md:126-128`）：
 | **A6** | 落地第一个真实插件 | A1–A5 | 🔴 | ✅ **完成（macOS）** | `crates/floom-plugin-nativeview`：原生半边是 Objective-C，真实 `NSView` 进真实 `NSWindow`，由框架控制器经 C ABI 驱动。**未覆盖 camera/webview 这类真能力**——需要设备 |
 | **A6b** | 插件的 provider 如何到达宿主 | A5 | 🟠 | 🟡 **部分** | 插件的 Rust 半边暴露 `provider(host_window)`，宿主在 `WidgetHost::set_native_provider` 处安装。**注册表**（按 kind 选 provider）未做 |
 | **A7** | 把 `floom-platform-mobile/packages/` 迁出为插件 | A5、A6 | 🟠 | ✅ **完成** | 13 个包 → 适配器留 4 个（clipboard/keyboard/safe_area/system_chrome）+ **9 个 `floom-plugin-<capability>/`**；适配器甩掉整棵 iOS 依赖树；架构门禁新增"平台适配器不得依赖插件"规则（已验证会拦） |
-| **A8** | 补 SDK 精简的**结构性**约束 | A7 | 🟡 | ⬜ **未开始** | `scripts/check-architecture-deps.sh` 增加规则：`floom-platform*` 不得声明 `camera/video/webview/bluetooth` 能力；`Capability` 位与实际实现一一对应 |
+| **A8** | 补 SDK 精简的**结构性**约束 | A7 | 🟡 | ✅ **完成** | `Capability` 位集收缩到"每个位背后都有实现"：`OPEN_URL`/`FILE_DIALOG`/`DRM_KMS` 三个无实现的位**删除**（声称它们从此是编译错误）；stub 不再声称软键盘；web 不再声称 `NATIVE_VIEW`；桌面剪贴板跟随实现（只有 macOS 是真 `NSPasteboard`）；桌面 a11y 的 `NATIVE_BRIDGE` 改为随桥的存在派生 |
 | **A9** | 插件 ABI 版本协商落地 | A1 | 🟡 | ✅ **完成** | `floom_<name>_abi_version()` 参与 enable 校验，版本不符时拒绝并给出明确错误 |
 
 ## B 组 · 渲染后端对齐（需求 2）
@@ -268,7 +268,7 @@ macOS 门禁记录过一次真实教训（`docs/gates/macos.md:126-128`）：
 | C1 | 修复 `native_appkit.rs:340` 的 `objc2` 编译错误 | 🔴 | `NSArray::iter` 已移除 |
 | C2 | 恢复 workspace 构建（widget 迁移断链） | 🔴 | `floom-accuracy` + 多个示例 |
 | C3 | 能力位诚实性：`DesktopPlatform` 不再声称未实现的 `CLIPBOARD`/`IME` | 🔴 | |
-| C4 | 实现 `OPEN_URL` / `FILE_DIALOG`（或按 A7 改为插件） | 🟠 | 与 A7 联动 |
+| C4 | 实现 `OPEN_URL` / `FILE_DIALOG` | 🟠 | A8 后这两个位**已删除**——没有实现的位不该存在。真要做时：加回位 + 实现（它们是插件的活，见 A7） |
 | C5 | iOS / Harmony / Web / Embedded 真实后端 | 🟠 | Phase 19 |
 | C6 | 各平台门禁补设备验证 | 🟠 | `docs/gates/*` 无 `fail` |
 

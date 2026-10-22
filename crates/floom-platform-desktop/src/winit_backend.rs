@@ -50,7 +50,9 @@ use floom_platform::{
     Clipboard, Ime, KeyCode, Modifiers, Platform, PlatformCapabilities, PlatformEvent,
     SurfaceConfig, SurfaceTarget, Window, WindowConfig, WindowState,
 };
-use floom_types::{CursorStyle, DisplayInfo, PlatformId, Point, ScaleFactor, Size, SurfaceId, WindowId};
+use floom_types::{
+    CursorStyle, DisplayInfo, PlatformId, Point, ScaleFactor, Size, SurfaceId, WindowId,
+};
 
 use winit::application::ApplicationHandler;
 use winit::event::{Ime as WinitIme, StartCause, WindowEvent};

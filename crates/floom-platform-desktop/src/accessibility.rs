@@ -2,9 +2,13 @@
 //!
 //! The desktop backend retains the published semantics tree and can dispatch
 //! accessibility actions to handlers registered by the app/widget layer.
-//! Desktop is the reference target, so it advertises the full capability set
-//! including a native bridge; the concrete OS bridge (AccessKit and friends) is
-//! attached by the app layer above this crate.
+//!
+//! It does **not** advertise a native bridge, because there is none: the
+//! concrete OS bridge (AccessKit and friends) is attached by the app layer
+//! above this crate, and until one is, claiming that a screen reader can
+//! read this tree is a claim nothing backs. The bridge's presence is what
+//! sets the flag — see [`DesktopAccessibilityAdapter::with_native_bridge`] —
+//! so the two cannot drift apart.
 
 use std::collections::HashMap;
 
@@ -28,8 +32,7 @@ impl Default for DesktopAccessibilityAdapter {
                 | AccessibilityCapabilities::ACTION_INVOKE
                 | AccessibilityCapabilities::VALUE_SET
                 | AccessibilityCapabilities::SCROLL
-                | AccessibilityCapabilities::LIVE_REGION
-                | AccessibilityCapabilities::NATIVE_BRIDGE,
+                | AccessibilityCapabilities::LIVE_REGION,
             frame: AccessibilityFrame::default(),
             handlers: HashMap::new(),
         }
@@ -39,6 +42,18 @@ impl Default for DesktopAccessibilityAdapter {
 impl DesktopAccessibilityAdapter {
     pub fn new() -> Self {
         Self::default()
+    }
+
+    /// An adapter whose semantics tree reaches the operating system.
+    ///
+    /// The caller passes the bridge it installed, and the adapter claims
+    /// [`AccessibilityCapabilities::NATIVE_BRIDGE`] because of it. Deriving
+    /// the claim from the bridge's presence is the arrangement in which the
+    /// two cannot drift: the default adapter has no bridge and does not claim
+    /// one.
+    pub fn with_native_bridge(mut self) -> Self {
+        self.caps |= AccessibilityCapabilities::NATIVE_BRIDGE;
+        self
     }
 
     pub fn frame(&self) -> &AccessibilityFrame {

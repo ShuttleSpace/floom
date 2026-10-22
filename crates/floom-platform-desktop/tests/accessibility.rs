@@ -30,9 +30,11 @@ fn applies_diff_into_retained_frame() {
         Some("Save")
     );
 
-    // Desktop is the reference target and advertises the full profile.
+    // The tree is retained and the actions are dispatchable, but no operating
+    // system can read it yet: the adapter claims no native bridge until one
+    // is installed.
     assert!(
-        adapter
+        !adapter
             .capabilities()
             .contains(AccessibilityCapabilities::NATIVE_BRIDGE)
     );
@@ -40,6 +42,14 @@ fn applies_diff_into_retained_frame() {
         adapter
             .capabilities()
             .contains(AccessibilityCapabilities::SCREEN_READER)
+    );
+
+    // A caller that installs a bridge says so, and the claim follows.
+    let bridged = DesktopAccessibilityAdapter::new().with_native_bridge();
+    assert!(
+        bridged
+            .capabilities()
+            .contains(AccessibilityCapabilities::NATIVE_BRIDGE)
     );
 }
 

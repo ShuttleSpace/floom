@@ -65,6 +65,10 @@ objc2-foundation = { version = "0.3", default-features = false, features = [
     "NSString",
     "NSGeometry",
     "NSObject",
+    # `NSArray::iter` — the native-view host walks a parent's subviews
+    # through it. Without the feature the method is not compiled at all, so
+    # the call is a compile error rather than a missing capability.
+    "NSEnumerator",
 ] }
 
 [dev-dependencies]

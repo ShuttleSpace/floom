@@ -462,11 +462,12 @@ impl Platform for AndroidPlatform {
         self.id
     }
     fn capabilities(&self) -> PlatformCapabilities {
-        // Windowing + touch + IME are real, and so is the clipboard now that
-        // `run` hands the JVM to the capability bridge. a11y remains the
+        // Windowing and touch are real, and so are the soft keyboard and the
+        // clipboard: the platform polls the anchor view's `Editable` for
+        // typed text and reaches `ClipboardManager` over JNI. a11y remains the
         // mobile L-stub — that is the one capability still absent.
         let mut caps = PlatformCapabilities::unsupported_a11y_stub();
-        caps.caps |= Capability::CLIPBOARD;
+        caps.caps |= Capability::IME | Capability::CLIPBOARD;
         caps
     }
     fn create_window(&mut self, config: WindowConfig) -> WindowId {

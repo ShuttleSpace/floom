@@ -335,7 +335,10 @@ mod tests {
         register_plugin(&name, counting(&COUNT));
         assert!(unregister_plugin(&name));
         assert!(!plugin(&name).is_registered());
-        assert!(!unregister_plugin(&name), "removing twice is false, not a panic");
+        assert!(
+            !unregister_plugin(&name),
+            "removing twice is false, not a panic"
+        );
     }
 
     #[test]
