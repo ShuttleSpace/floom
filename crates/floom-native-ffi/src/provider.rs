@@ -46,6 +46,14 @@ pub struct CProvider {
     modes: OnceCell<Cow<'static, [NativeCompositionMode]>>,
 }
 
+impl std::fmt::Debug for CProvider {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("CProvider")
+            .field("vtable", &self.vtable)
+            .finish_non_exhaustive()
+    }
+}
+
 impl CProvider {
     /// Wrap a native provider.
     ///
@@ -64,6 +72,33 @@ impl CProvider {
     /// The native provider's own pointer, for handing back to the native side.
     pub fn as_raw(&self) -> *const FloomNativeProviderV1 {
         self.vtable
+    }
+
+    /// Tell the provider which window it is compositing into.
+    ///
+    /// A provider is an instance per window, so the window does not change
+    /// over its life and is given once. `host_window` is the platform's
+    /// opaque handle: an `NSView *` on macOS, an `ANativeWindow *` on
+    /// Android, a `Window` on X11.
+    ///
+    /// A provider with no `attach` entry point is left alone: one that hands
+    /// the framework pixels rather than a view never needs a window.
+    ///
+    /// # Safety
+    ///
+    /// `host_window` must be a handle the platform keeps valid for as long
+    /// as the provider lives, or null.
+    pub unsafe fn with_host(self, host_window: *const c_void) -> Result<Self, CProviderError> {
+        let Some(attach) = self.table().attach else {
+            return Ok(self);
+        };
+        // SAFETY: the entry point is present in the vtable, and the handle
+        // outlives the provider by the caller's contract.
+        let rc = unsafe { attach(self.self_ptr(), host_window) };
+        if rc != 0 {
+            return Err(CProviderError::AttachRefused(rc));
+        }
+        Ok(self)
     }
 
     /// The vtable, as a reference.
@@ -110,6 +145,11 @@ pub enum CProviderError {
     /// Named rather than numbered, because "the provider has no `apply`" is
     /// a thing a person can fix and "entry 3 is null" is not.
     MissingEntry(&'static str),
+    /// The provider refused the host's window.
+    ///
+    /// Carries the code the provider returned, because the provider is the
+    /// only one that knows what the code means.
+    AttachRefused(i32),
 }
 
 impl std::fmt::Display for CProviderError {
@@ -122,6 +162,10 @@ impl std::fmt::Display for CProviderError {
             Self::MissingEntry(name) => {
                 write!(f, "the native provider has no `{name}` entry point")
             }
+            Self::AttachRefused(code) => write!(
+                f,
+                "the native provider refused the host's window with code {code}"
+            ),
         }
     }
 }

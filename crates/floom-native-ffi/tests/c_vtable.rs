@@ -52,6 +52,10 @@ struct Provider {
     refuse: bool,
 }
 
+unsafe extern "C" fn attach(_self: *mut c_void, _host_window: *const c_void) -> i32 {
+    0
+}
+
 unsafe extern "C" fn capabilities(self_: *mut c_void) -> FloomNativeCapabilities {
     let _ = self_;
     FloomNativeCapabilities {
@@ -140,6 +144,7 @@ fn vtable(provider: &mut Provider) -> FloomNativeProviderV1 {
     FloomNativeProviderV1 {
         abi_version: ABI_VERSION,
         self_: provider as *mut Provider as *mut c_void,
+        attach: Some(attach),
         capabilities: Some(capabilities),
         create: Some(create),
         destroy: Some(destroy),

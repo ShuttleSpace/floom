@@ -43,6 +43,13 @@
 pub mod abi;
 pub mod provider;
 
+/// The provider trait and its vocabulary.
+///
+/// Re-exported so a plugin that implements the C ABI needs one dependency
+/// rather than two: the trait it must satisfy lives here, and the ABI that
+/// satisfies it lives here too.
+pub use floom_native;
+
 pub use abi::{
     ABI_VERSION, FloomNativeCapabilities, FloomNativeDeviceRect, FloomNativeProviderV1,
     FloomNativeSlot, FloomNativeState,

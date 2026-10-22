@@ -249,6 +249,10 @@ fn the_header_and_the_rust_mirror_agree_on_the_layout() {
             offset_of!(abi::FloomNativeProviderV1, self_),
         ),
         (
+            "FloomNativeProviderV1.attach",
+            offset_of!(abi::FloomNativeProviderV1, attach),
+        ),
+        (
             "FloomNativeProviderV1.capabilities",
             offset_of!(abi::FloomNativeProviderV1, capabilities),
         ),

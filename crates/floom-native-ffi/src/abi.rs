@@ -105,6 +105,10 @@ pub struct FloomNativeProviderV1 {
     pub abi_version: u32,
     /// The provider's own state pointer.
     pub self_: *mut core::ffi::c_void,
+    /// The host's window, given once. Optional: a provider that hands the
+    /// framework pixels rather than a view never needs one.
+    pub attach:
+        Option<unsafe extern "C" fn(*mut core::ffi::c_void, *const core::ffi::c_void) -> i32>,
     pub capabilities:
         Option<unsafe extern "C" fn(*mut core::ffi::c_void) -> FloomNativeCapabilities>,
     pub create: Option<

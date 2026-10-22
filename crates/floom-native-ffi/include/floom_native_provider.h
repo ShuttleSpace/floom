@@ -200,6 +200,23 @@ typedef struct {
     uint32_t abi_version;
     /* The provider's own state; passed back to every call. */
     void *self;
+    /*
+     * The host's window, given once.
+     *
+     * A provider is an instance per window, so the window does not change
+     * over the provider's life: telling it once is enough, and a per-call
+     * parameter would be a lie about that.
+     *
+     * What it *is* depends on the platform: an `NSView *` on macOS, an
+     * `ANativeWindow *` on Android, a `Window` on X11. A provider that
+     * composites its own view — a camera preview, a web view — needs it to
+     * put the view somewhere.
+     *
+     * May be NULL, and may be absent from the vtable entirely: a provider
+     * that hands the framework pixels rather than a view never needs a
+     * window. Returns 0 on success, non-zero to refuse the provider.
+     */
+    int32_t (*attach)(void *self, const void *host_window);
     /* What this provider can do. Queried at bind time. */
     FloomNativeCapabilities (*capabilities)(void *self);
     /*

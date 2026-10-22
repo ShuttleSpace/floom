@@ -165,6 +165,7 @@ int main(void) {
     REPORT_SIZE(FloomNativeProviderV1);
     REPORT_OFFSET(FloomNativeProviderV1, abi_version);
     REPORT_OFFSET(FloomNativeProviderV1, self);
+    REPORT_OFFSET(FloomNativeProviderV1, attach);
     REPORT_OFFSET(FloomNativeProviderV1, capabilities);
     REPORT_OFFSET(FloomNativeProviderV1, create);
     REPORT_OFFSET(FloomNativeProviderV1, destroy);
