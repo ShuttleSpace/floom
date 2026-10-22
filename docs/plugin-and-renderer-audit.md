@@ -240,7 +240,7 @@ macOS 门禁记录过一次真实教训（`docs/gates/macos.md:126-128`）：
 | **A2** | 实现 `build.rs`：按目标平台编译并链接原生半边 | A1 | 🔴 | ✅ **完成（桌面）** | `nm` 能看到 `floom_<name>_enable` 符号；桌面走 `cc`。**Android/iOS 的构建接线仍待设备验证** |
 | **A3** | Rust 半边绑定 C ABI | A1 | 🔴 | ✅ **完成** | `version()` / `enable()` / `disable()` / `capability()` 真实走 `extern "C"`，由生成工程的测试断言 |
 | **A4** | 修路径不一致（G8） | — | 🟡 | ✅ **完成** | 头文件统一到 `native/common/floom_<name>.h`；`build.rs` 监视路径、C 源 `#include` 三者一致 |
-| **A5** | 给 `NativeViewProvider` 加 C ABI 外壳 | A1 | 🔴 | ⬜ **未开始** | 新增 `NativeViewProviderV1` C 结构体 + 函数指针表；Swift/Java 插件可实现；Rust 侧现有 trait 保持兼容（由薄适配层转接） |
+| **A5** | 给 `NativeViewProvider` 加 C ABI 外壳 | A1 | 🔴 | ✅ **完成** | 新增 `crates/floom-native-ffi`：`FloomNativeProviderV1` C 结构体 + 函数指针表 + `CProvider` 适配层。C 侧量自己的 `sizeof`/`offsetof` 与 Rust 镜像逐项比对；Rust 侧用同形状函数指针表跑通控制器全生命周期 |
 | **A10** | 插件支持 web / harmony / tui | A1–A3 | 🟠 | ✅ **完成（构建层）** | 六个平台的原生半边齐备；web(wasm32) 与 ohos 交叉编译通过；设备/浏览器运行未验证 |
 | **A6** | 落地第一个真实插件（建议 `camera` 或 `file-dialog`） | A1–A5 | 🔴 | ⬜ **未开始** | 仓库内出现 `crates/floom-plugin-<name>/`；在目标设备/模拟器上跑通；作为 `register_plugin` 的真实调用点 |
 | **A7** | 把 `floom-platform-mobile/packages/` 迁出为插件 | A5、A6 | 🟠 | ⬜ **未开始** | 13 个包按能力拆成 `floom-plugin-<capability>/`；适配器只留窗口/剪贴板/IME；架构脚本加"平台层不得含能力包"检查 |

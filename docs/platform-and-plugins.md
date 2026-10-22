@@ -152,6 +152,37 @@ rather than pretending. A capability that *does* have a terminal meaning
 belongs in the desktop C half, because a terminal app is an ordinary program
 on the host operating system.
 
+### A plugin that contributes a native view
+
+Some capabilities are not a query but a **view**: a camera preview, a web
+view, a video. Those are *native participants* — views the framework does not
+paint — and they have a second contract, the **provider ABI**
+(`crates/floom-native-ffi/include/floom_native_provider.h`).
+
+The two contracts answer different questions:
+
+| | The plugin's own ABI | The provider ABI |
+|---|---|---|
+| asks | is the capability available? | how is the native view created, placed and torn down? |
+| shape | four functions, the plugin is a singleton | a versioned struct of function pointers, the provider is an instance per window |
+| lives in | `native/common/floom_<name>.h` | `native/common/floom_native_provider.h` |
+
+The provider's shape is a struct rather than a set of named symbols because a
+provider carries a `self` pointer: there is one per window, not one per
+process. The ABI version lives *in* the struct, so the Rust side can ask a
+provider it did not compile what it was built against and refuse it.
+
+Everything the provider receives crosses in **whole device pixels**, never
+logical ones and never a float. The logical-to-device conversion happens
+once, on the Rust side, in `to_device` — and it happens once because a
+platform cannot place a view at a fractional pixel, and letting each provider
+invent its own rounding is how a half-pixel seam appears on one platform and
+not another.
+
+`floom create --plugin` writes the provider header next to the plugin's own,
+so a Swift or Java plugin has the contract to implement without having to
+find it.
+
 ### How this is verified
 
 `floom create --plugin` scaffolds the whole thing, and the generated crate's

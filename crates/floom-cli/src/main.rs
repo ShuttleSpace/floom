@@ -324,6 +324,15 @@ fn create_plugin(opts: &CreateOpts, root: &Path) -> Result<(), String> {
         &templates::plugin_header_rs(&opts.name),
     )?;
 
+    // The framework's provider ABI, for a plugin whose capability is a native
+    // view. It sits beside the plugin's own header rather than replacing it:
+    // the two are different contracts, and a plugin that contributes a native
+    // view implements both.
+    write(
+        &common_dir.join("floom_native_provider.h"),
+        templates::PROVIDER_HEADER,
+    )?;
+
     // The reference desktop native half. It is what makes the generated
     // plugin compile, link and pass its tests on the machine that generated
     // it: the C ABI is proven to work before there is any real capability
@@ -951,6 +960,28 @@ mod tests {
         assert!(
             !dir.join("native/tui").join("floom_tui.c").exists(),
             "there is no native half to write for a terminal"
+        );
+    }
+
+    #[test]
+    fn the_provider_header_the_plugin_gets_is_the_crates_own() {
+        // The CLI embeds the framework's provider ABI rather than depending on
+        // the crate that owns it, because the CLI is dependency-free on
+        // purpose. An embedded copy can drift, so it is checked against the
+        // original: a plugin that implements a stale header would fail to
+        // link, on a machine that is not the one that generated it.
+        let real = include_str!("../../floom-native-ffi/include/floom_native_provider.h");
+        assert_eq!(
+            templates::PROVIDER_HEADER,
+            real,
+            "the CLI's copy of the provider header has drifted from the crate's"
+        );
+
+        let dir = scaffold("providerheader", &["macos"]);
+        let written = read(&dir, "native/common/floom_native_provider.h");
+        assert_eq!(
+            written, real,
+            "the header the plugin gets is the crate's, byte for byte"
         );
     }
 

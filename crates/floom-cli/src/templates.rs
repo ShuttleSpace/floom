@@ -898,6 +898,23 @@ fn main() {{
     )
 }
 
+/// The framework's native-composition provider ABI, for a plugin that
+/// contributes a native view.
+///
+/// A plugin whose capability is a *native view* — a camera preview, a web
+/// view, a video — implements this header's vtable as well as the plugin's
+/// own four-function ABI. The two are different contracts: the plugin's own
+/// says whether the capability is available, and this one says how the native
+/// view is created, placed and torn down.
+///
+/// The header is embedded rather than depended on, because the CLI is
+/// deliberately dependency-free — it must build from std alone so that
+/// `floom create` is available on a machine that has nothing but Rust. The
+/// copy is checked against the crate's own header by a test, so the two
+/// cannot drift.
+pub const PROVIDER_HEADER: &str =
+    include_str!("../../floom-native-ffi/include/floom_native_provider.h");
+
 /// A plugin's `native/desktop/README.md`.
 ///
 /// The desktop half is the one platform whose native code `build.rs` compiles
