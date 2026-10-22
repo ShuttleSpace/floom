@@ -21,7 +21,8 @@ Companion pages: [`EXAMPLES.md`](EXAMPLES.md) (the golden examples),
 | `floom-core` | L1 | the element/widget contract: `Widget`, `WidgetAny`, contexts, semantics vocabulary |
 | `floom-runtime-core`, `floom-scheduler`, `floom-signal` | L2 | element arena, dirty propagation, task ordering, and the reactive runtime that drives them (it was `floom-legacy-reactive`; it is v2's own and sits here, not at L0) |
 | `floom-layout`, `floom-style`, `floom-text`, `floom-scene`, `floom-virtual`, `floom-accessibility` | L3 | layout engine, style resolution, text shaping, the retained scene, virtualization geometry, the semantics schema |
-| `floom-renderer`, `floom-renderer-software`, `floom-renderer-vello`, `floom-renderer-skia`, `floom-renderer-tui`, `floom-renderer-web` | L4 | the renderer ABI plus concrete backends (including one whose target is a character grid rather than pixels, and one that blits a raster buffer to a `<canvas>`) |
+| `floom-renderer`, `floom-renderer-software`, `floom-renderer-vello`, `floom-renderer-tui`, `floom-renderer-web` | L4 | the renderer ABI plus concrete backends (including one whose target is a character grid rather than pixels, and one that blits a raster buffer to a `<canvas>`) |
+| `floom-renderer-skia-abi` | L4 | the **recording** side of the Skia ABI: a scene becomes Skia-shaped commands, and the counters say what a real submit path would have to honour. Not a renderer — it draws no pixels |
 | `floom-platform`, `floom-platform-desktop`, `floom-platform-android`, `floom-platform-ios`, `floom-platform-harmony`, `floom-platform-web`, `floom-platform-embedded`, `floom-platform-tui`, `floom-ui-events-winit` | L4 | the windowing ABI plus concrete backends (including one whose target is a character grid) |
 | `floom-native` | L4 | native view composition: capability negotiation, slots, pooling |
 | `floom-native-ffi` | L4 | the C ABI for native composition providers: a Swift, Java, C++ or ArkTS provider, driven by Rust |
@@ -122,6 +123,10 @@ replaceable without touching the parts with the most logic:
 
 1. Implement the ABI trait from `floom-renderer` (or `floom-platform`) in a new
    `crates/floom-renderer-<name>` / `crates/floom-platform-<name>` crate.
+   A renderer answers `capabilities()` with what it can actually draw, and a
+   platform answers `capabilities()` with what it can actually do — a
+   capability that is claimed and not honoured is worse than one that is
+   missing, so both defaults are pessimistic.
 2. Register it in **three** places: the root `Cargo.toml` `members` list, the
    same file's `default-members` list, and the `LAYERS` table in
    `scripts/check-architecture-deps.sh`. (If you add a whole new top-level

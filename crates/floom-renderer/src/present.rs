@@ -113,6 +113,24 @@ pub trait Presenter {
         0
     }
 
+    /// What this presenter can draw.
+    ///
+    /// The same question the [`Renderer`](crate::Renderer) trait's
+    /// `capabilities` answers, asked of the object a host actually holds: a
+    /// presenter is what is attached to a window, and the host asks it
+    /// whether to draw a shadow before it draws one.
+    ///
+    /// The default is the pessimistic answer — a presenter that has not said
+    /// otherwise is assumed to draw shapes and text and nothing else. A
+    /// presenter that *can* draw a shadow has to say so, and one that cannot
+    /// has to be believed.
+    ///
+    /// A software presenter inherits the software renderer's answer, because
+    /// it is the software renderer doing the drawing.
+    fn capabilities(&self) -> crate::RendererCapabilities {
+        crate::RendererCapabilities::NONE
+    }
+
     /// Hands a just-frozen participant's pixels to the presenter, so the
     /// texture it was frozen into can be drawn as an ordinary scene image.
     ///

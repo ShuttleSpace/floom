@@ -35,7 +35,9 @@ use std::collections::HashMap;
 
 use floom_error::{ErrorBoundary, Outcome};
 use floom_platform::{Platform, PlatformEvent, SurfaceTarget};
-use floom_renderer::{AttachedSurface, ExternalFrame, Presenter, SurfaceHandles};
+use floom_renderer::{
+    AttachedSurface, ExternalFrame, Presenter, RendererCapabilities, SurfaceHandles,
+};
 use floom_services::{Scope, Services};
 use floom_types::{
     CursorStyle, Event, ImeUpdate, Key, KeyEvent, KeyPhase, Modifiers, Point, PointerEvent,
@@ -184,6 +186,18 @@ impl<R: Presenter> AppRunner<R> {
 
     pub fn presenter_mut(&mut self) -> &mut R {
         &mut self.presenter
+    }
+
+    /// What this app's renderer can draw.
+    ///
+    /// The question a host asks **before** it draws: a shadow the backend
+    /// will drop looks exactly like a shadow that was never asked for, and
+    /// the only way to tell them apart is to ask in advance.
+    ///
+    /// It is the renderer's answer, not a copy of it, so the host and the
+    /// presenter can never disagree about what will happen.
+    pub fn renderer_capabilities(&self) -> RendererCapabilities {
+        self.presenter.capabilities()
     }
 
     pub fn stats(&self) -> RunStats {
@@ -544,12 +558,7 @@ impl<R: Presenter> AppRunner<R> {
     ///
     /// Skips the platform call when the answer is unchanged, because a pointer
     /// move arrives per motion event and setting a shape is a round trip.
-    fn sync_cursor<P: Platform>(
-        &mut self,
-        platform: &mut P,
-        window: WindowId,
-        position: Point,
-    ) {
+    fn sync_cursor<P: Platform>(&mut self, platform: &mut P, window: WindowId, position: Point) {
         let wanted = self.host.resolve_cursor(position);
         let Some(record) = self.windows.get_mut(&window.index()) else {
             return;

@@ -12,9 +12,9 @@
 //! a test would be the wrong reason.
 
 use floom_app::WidgetHost;
+use floom_core::{Align, Axis};
 use floom_layout::LayoutStyle;
 use floom_scene::SceneNode;
-use floom_core::{Align, Axis};
 use floom_types::{Color, Insets, Rect, Size};
 use floom_widgets::{Stack, Surface, Text};
 
@@ -307,10 +307,9 @@ fn a_definite_child_width_is_stretched_by_the_default_cross_axis() {
                 Surface::new()
                     .background(Color::WHITE)
                     .padding_horiz(0.0)
-                    .push_layout(
-                        floom_core::LayoutRequest::new().width(120.0),
-                        || Box::new(Text::new("x")),
-                    ),
+                    .push_layout(floom_core::LayoutRequest::new().width(120.0), || {
+                        Box::new(Text::new("x"))
+                    }),
             )
         }),
     );

@@ -43,8 +43,8 @@ use floom_native::{
     NativeViewId, NativeViewKind, NativeViewPool, NativeViewProvider,
 };
 use floom_overlay::{CompositorProp, OverlayManager};
-use floom_runtime_core::{EventRouter, Hit, HitRegion, RouteStop};
 use floom_runtime_core::IdAllocator;
+use floom_runtime_core::{EventRouter, Hit, HitRegion, RouteStop};
 use floom_scene::{Resource, ResourceKind, ResourceRegistry, Scene, SceneNode, SceneNodeId};
 use floom_text::{LayoutCache, TextAlign, TextLayoutOptions, TextShaper};
 use floom_types::NativeCapture;
@@ -1935,7 +1935,6 @@ impl WidgetHost {
         (index < self.nodes.len()).then_some(NodeId(index))
     }
 
-
     /// The union of `index`'s descendants' boxes, relative to its own box, or
     /// `None` when it has no content.
     ///
@@ -1959,7 +1958,8 @@ impl WidgetHost {
             return None;
         };
         self.content_stack.clear();
-        self.content_stack.extend(self.nodes[index].children.iter().copied());
+        self.content_stack
+            .extend(self.nodes[index].children.iter().copied());
         let mut union: Option<Rect> = None;
         while let Some(i) = self.content_stack.pop() {
             if self.nodes[i].dead {
@@ -1970,7 +1970,8 @@ impl WidgetHost {
             if self.nodes[i].is_overlay {
                 continue;
             }
-            self.content_stack.extend(self.nodes[i].children.iter().copied());
+            self.content_stack
+                .extend(self.nodes[i].children.iter().copied());
             let Some(&Some(rect)) = self.layout_absolute.get(i) else {
                 continue;
             };
@@ -2346,7 +2347,8 @@ impl WidgetHost {
         self.painted_absolute.clear();
         self.painted_absolute.resize(self.nodes.len(), None);
         self.scroll_inherited.clear();
-        self.scroll_inherited.resize(self.nodes.len(), ScrollOffset::ZERO);
+        self.scroll_inherited
+            .resize(self.nodes.len(), ScrollOffset::ZERO);
         for index in 0..self.nodes.len() {
             if self.nodes[index].dead {
                 continue;

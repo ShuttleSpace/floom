@@ -15,7 +15,7 @@ use floom_animation::{AnimKind, Tween};
 use floom_app::WidgetHost;
 use floom_layout::LayoutStyle;
 use floom_scene::SceneNode;
-use floom_types::{CompositorProp, Point, Rect, Size, Transform, Length};
+use floom_types::{CompositorProp, Length, Point, Rect, Size, Transform};
 use floom_widgets::Canvas;
 
 fn rect_canvas() -> Canvas {

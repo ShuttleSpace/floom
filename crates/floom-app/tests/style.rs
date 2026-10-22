@@ -10,7 +10,7 @@
 use floom_app::WidgetHost;
 use floom_layout::LayoutStyle;
 use floom_scene::SceneNode;
-use floom_types::{Brush, Color, Path, Point, Rect, Shadow, Size, Length};
+use floom_types::{Brush, Color, Length, Path, Point, Rect, Shadow, Size};
 use floom_widgets::{Canvas, Container};
 
 const RAMP: fn() -> Brush = || {

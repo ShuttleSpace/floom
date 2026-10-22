@@ -7,79 +7,147 @@ offset silhouette and count what it could not do — *the degradation is
 recorded, never silent*" is a stated design principle (`floom-types::Shadow`),
 and a principle with no ledger decays. This file is the ledger.
 
-## The contract
+## The rule
 
-`PaintContext::draw_shadow` has a default no-op body:
+A request a backend cannot honour is **counted**, and the count is surfaced
+through the backend's stats. A silent skip reads as a feature that quietly
+does nothing, and there is no way to tell that apart from a feature that was
+never asked for.
 
-```rust
-fn draw_shadow(&mut self, rect: Rect, radius: f32, shadow: &Shadow) {
-    let _ = (rect, radius, shadow);
-}
-```
+Every backend has a `*Stats` struct with the counters below. The names match
+across backends on purpose: a caller reads one number the same way whichever
+backend produced it.
 
-So a backend that does not override it **drops every shadow request without
-counting it**. That is the silent degradation the principle forbids, and it is
-the gap this file tracks. `Filter` (blur / backdrop blur) has the same shape
-and is tracked the same way below.
+## The vocabulary
 
-## Status
+The 2.0 scene vocabulary is `floom-scene`'s `SceneNode` — twelve variants:
 
-`spread` is CSS's fourth `box-shadow` length and dilates the silhouette
-*before* the blur. Implementations must do that, not widen the blur kernel —
-a widened blur reads as "a fatter, softer shadow", which is a different effect
-and the most likely wrong implementation.
+| Variant | What it asks for |
+|---|---|
+| `GroupPush` / `GroupPop` | a transform scope |
+| `Rect { bounds, fill, radius, shadow }` | a shape, optionally rounded, optionally shadowed |
+| `Path { path, fill, stroke }` | a vector path, filled and/or stroked |
+| `ClipPush` / `ClipPop` | a clip region |
+| `FilterPush` / `FilterPop` | a filter scope |
+| `BackdropFilter { rect, filter }` | a filter over the pixels already drawn |
+| `Shader { bounds, shader }` | a custom WGSL program |
+| `Image { bounds, image, alpha }` | a raster image |
+| `Text { origin, size, glyphs, color }` | laid-out text |
 
-| Backend | `draw_shadow` | Shadow rendered | `spread` honoured | Degradation counted | TODO |
-|---|---|---|---|---|---|
-| `floom-renderer-software` | yes | yes — SDF silhouette, 3× box blur, per-pixel | **yes** | `shadows_drawn` | reference implementation |
-| `floom-renderer-vello` | no (GPU path only) | **no** — fill renders, shadow does not | n/a | `shadows_skipped` | needs a blur primitive in vello; must dilate, then blur |
-| `floom-renderer-skia` | no | no | n/a | **no** | must implement, and add a counter |
-| `floom-renderer-web` | no | no | n/a | **no** | must implement (canvas/WebGPU shadow), and add a counter |
-| `floom-renderer-tui` | no | no | n/a | **no** | decide: drop, or render as a hard silhouette |
+## The matrix
 
-### Per-backend notes
+| Backend | Renders pixels? | Rounded corners | Drop shadow | Filter scope | Backdrop filter | Custom shader | Pixel-level tests |
+|---|---|---|---|---|---|---|---|
+| `floom-renderer-software` | **yes** | **yes** | **yes**, honouring `spread` | **yes** | **yes** | ⏭️ counted | **yes** |
+| `floom-renderer-vello` | **yes** (GPU) | **yes** | ⏭️ counted | ⏭️ counted | ⏭️ counted | **yes** | no |
+| `floom-renderer-web` | **yes** (CPU, blitted to a `<canvas>`) | **yes** | **yes** | **yes** | **yes** | ⏭️ counted | no |
+| `floom-renderer-tui` | **yes** (character cells) | ⏭️ counted | ⏭️ counted | ⏭️ counted | ⏭️ counted | ⏭️ counted | no |
+| `floom-renderer-skia-abi` | **no** — it records | ⏭️ counted | ⏭️ counted | ⏭️ counted | ⏭️ counted | ⏭️ counted | n/a |
 
-**`floom-renderer-vello`** — the closest to correct today, and still not
-correct. `gpu.rs` renders the node's fill, finds no blur primitive in vello, and
-increments `stats.shadow_skips`, which surfaces as `shadows_skipped`. That
-satisfies "never silent". It renders *no* shadow at all. When vello grows a blur
-primitive, the implementation must dilate the silhouette by `spread` first and
-its render-cache key must include it (it does as of the `spread` change — the
-key omitted `spread` initially, which would have let two nodes differing only in
-spread collide in the cache).
+Legend: **yes** = rendered · ⏭️ counted = skipped, and the count says so.
 
-**`floom-renderer-skia`** — drops shadows with no counter. Skia has native
-elevation/blur support, so this is the cheapest of the three to fix, but it
-currently fails the "never silent" rule.
+## Per-backend notes
 
-**`floom-renderer-web`** — drops shadows with no counter. The web backend needs
-a decision rather than an implementation: a canvas 2D context has
-`shadowBlur`/`shadowOffset` but **no spread**, so a faithful `spread` needs a
-WebGPU or filter path, and the canvas fallback must report the truncation.
+### `floom-renderer-software` — the reference
 
-**`floom-renderer-tui`** — a character grid has no soft edges. The honest
-options are to drop shadows deliberately (and say so in the docs rather than
-leaving it as an accident of a default method body), or to approximate with a
-hard offset silhouette. It should not attempt a blur.
+The only backend that answers per pixel, and the one every other backend is
+checked against. It renders rounded corners, drop shadows (with `spread`
+dilating the silhouette *before* the blur, as CSS does), filter scopes,
+backdrop filters, images and text.
 
-## Rules for whoever implements these
+It has no shader runtime, so a `Shader` node is skipped and counted
+(`shaders_skipped`). A WGSL program needs a GPU runtime, and the software
+rasteriser is not one.
 
-1. **Dilate, do not blur-alias.** Apply `spread` to the silhouette before the
-   blur; see `Shadow::spread` and the software backend's SDF.
+Its pixel-level tests (`crates/floom-renderer-software/tests/`) are the
+discipline the other backends copy.
+
+### `floom-renderer-vello` — the GPU path, and its one real gap
+
+The default desktop and Android backend. It renders shapes, paths, images,
+text and custom shaders.
+
+It has **no blur primitive**, so three requests are degraded:
+
+- a drop shadow is not drawn (`shadows_skipped`);
+- a filter scope draws its content sharp rather than filtered
+  (`filters_skipped`);
+- a backdrop filter draws nothing (`filters_skipped`).
+
+All three are counted, so the degradation is a number rather than an absence.
+The fix is upstream: when vello grows a blur primitive, the shadow must
+**dilate the silhouette by `spread` first** and then blur it, and the
+render-cache key must include `spread` (it does).
+
+### `floom-renderer-web` — the software path, blitted
+
+The web presenter rasterises on the CPU through `SoftwareRenderer` and blits
+the buffer into a `<canvas>`, so it inherits the software backend's coverage
+exactly: rounded corners, drop shadows with `spread`, filter scopes and
+backdrop filters all work.
+
+What it does not have is a shader runtime, so a `Shader` node is skipped and
+counted, the same as on the software path.
+
+### `floom-renderer-tui` — a character grid
+
+The narrowest backend, and honest about it. It renders solid-filled rects and
+text; everything else is skipped and counted.
+
+Two of the degradations are worth naming because they used to be **silent**:
+
+- a **rounded corner** and a **drop shadow** are both impossible on a
+  character grid, and both were swallowed by a `..` in the match arm. They are
+  counted now, so a card that lost its shadow is a number rather than an
+  absence.
+
+The clip is tracked as a stack of rects, because a pushed region applies to
+everything drawn after the marker. A path clip is approximated by its declared
+extent, which is conservative in the safe direction: a glyph inside the
+bounds but outside the path is still drawn.
+
+### `floom-renderer-skia-abi` — a recorder, not a renderer
+
+This one links no Skia, opens no surface and puts no pixel on a screen. It
+turns a scene into **Skia-shaped commands** — `canvas.save()`,
+`canvas.concat(matrix)`, `canvas.clipPath` — and counts what a submit path
+would have to degrade.
+
+It was called `floom-renderer-skia` until 2026-10-22, and that name was a
+backend-shaped lie: a crate that sits among the backends and draws nothing
+is one. The rename says what it is, so nobody reaches for it expecting
+pixels.
+
+The commands are already in Skia's own vocabulary, so a real submit path is a
+translation rather than a redesign, and the contract tests in the crate pin
+that vocabulary.
+
+## The rules for whoever implements a submit path
+
+1. **Dilate, do not blur-alias.** Apply `spread` to the silhouette *before*
+   the blur; see `Shadow::spread` and the software backend's SDF. Folding it
+   into the blur instead is a different, and much rarer, effect.
 2. **Account for it in `reach()`.** A damage region built from
-   `Shadow::reach()` must contain a dilated shadow. Negative spread is clamped
-   at zero there because erosion cannot extend reach.
-3. **Count what you could not do.** Add a `shadows_skipped`-style counter and
-   surface it, rather than overwriting the default no-op body.
-4. **Test against the software backend.** The software renderer answers per
-   pixel and is the reference; `crates/floom-renderer-software/tests/` holds
-   the pixel-level discipline to copy.
+   `Shadow::reach()` must contain a dilated shadow. Negative spread is
+   clamped at zero there, because erosion cannot extend reach.
+3. **Count what you could not do.** Add a `*_skipped` counter and surface it,
+   rather than overwriting a default no-op body.
+4. **Test against the software backend.** It answers per pixel and is the
+   reference; `crates/floom-renderer-software/tests/` holds the discipline to
+   copy.
 
-## Also unrendered
+## The gaps that remain
 
-Not shadows, but the same failure mode — recorded here so the pattern is
-visible:
-
-| Feature | Contract | Backends answering | Gap |
-|---|---|---|---|
-| `Filter::Blur` | `PaintContext` filter hooks | software (via `backdrop_filter`/`filter`) | same as above: default no-op elsewhere |
+- **vello's blur.** The GPU path has no shadow, no filter scope and no
+  backdrop filter. Counting is not rendering; a card with a shadow looks
+  flat on the desktop and on Android until vello grows a blur primitive or
+  the software path is used as a fallback.
+- **Pixel-level tests outside the software backend.** The macOS gate found a
+  real rendering defect — CJK glyphs drawn as tofu — that no CI check
+  caught, because the golden frames were ASCII. Only the software backend
+  has pixel-level discipline today.
+- **One vocabulary for the counters.** The capability query is in place
+  (`Renderer::capabilities` and `Presenter::capabilities`), and a host can
+  ask before it draws. The *counters* are still spelled slightly differently
+  between backends, so a caller that wants to report "how much was dropped"
+  across backends has to know which one it is holding.

@@ -41,8 +41,14 @@ pub struct PaintStats {
     pub rects: usize,
     pub text_runs: usize,
     /// Nodes this backend cannot express — paths, images, filters, shaders,
-    /// group transforms, and non-solid fills. See the crate docs for why these
-    /// are dropped rather than approximated.
+    /// group transforms, non-solid fills, and the rounded corners and drop
+    /// shadows of a rect. See the crate docs for why these are dropped rather
+    /// than approximated.
+    ///
+    /// A rect that has both a radius and a shadow counts **twice**: each is a
+    /// separate thing that was asked for and cannot be had, and the number is
+    /// meant to be read as "how many requests were dropped", not "how many
+    /// nodes were dropped".
     pub skipped: usize,
     /// Glyphs whose cell fell outside the grid.
     pub clipped_glyphs: usize,
@@ -217,7 +223,24 @@ pub fn paint_scene(grid: &mut TuiGrid, scene: &Scene, resources: &ResourceRegist
     let mut clips: Vec<Rect> = Vec::new();
     for (_id, node) in scene.iter() {
         match node {
-            SceneNode::Rect { bounds, fill, .. } => {
+            SceneNode::Rect {
+                bounds,
+                fill,
+                radius,
+                shadow,
+            } => {
+                // A character grid has no soft edges and no blur, so a
+                // rounded corner and a drop shadow are both things it cannot
+                // express. They are counted, because "cannot express" is not
+                // the same as "was not asked for": a card with a shadow that
+                // silently loses it looks like a card with no shadow, and
+                // nobody can tell the difference by looking.
+                if *radius > 0.0 {
+                    grid.stats.skipped_one();
+                }
+                if shadow.is_some() {
+                    grid.stats.skipped_one();
+                }
                 let Some(color) = solid_color(fill) else {
                     grid.stats.skipped_one();
                     continue;
@@ -321,7 +344,7 @@ fn in_clips(x: f64, y: f64, clips: &[Rect]) -> bool {
 mod tests {
     use super::*;
     use floom_scene::{Resource, SceneNode};
-    use floom_text::{TextAlign, TextLayoutOptions, TextShaper, FontWeight};
+    use floom_text::{FontWeight, TextAlign, TextLayoutOptions, TextShaper};
     use floom_types::Point;
 
     fn default_fill_cell() -> Cell {
@@ -345,6 +368,81 @@ mod tests {
                 );
             }
         }
+    }
+
+    /// A rounded corner and a drop shadow are things a character grid cannot
+    /// express, and saying so is the point.
+    ///
+    /// The rule the whole renderer layer follows is that a degradation is
+    /// recorded, never silent. A card with a shadow that quietly loses it
+    /// looks exactly like a card with no shadow, and nobody can tell the
+    /// difference by looking.
+    #[test]
+    fn a_rounded_corner_and_a_shadow_are_counted_as_dropped() {
+        let mut scene = Scene::new();
+        scene.begin_update();
+        let _ = scene.insert(SceneNode::Rect {
+            bounds: floom_types::Rect {
+                x0: 0.0,
+                y0: 0.0,
+                x1: 20.0,
+                y1: 10.0,
+            },
+            fill: floom_types::Brush::from(floom_types::Color::rgb(1, 2, 3)),
+            radius: 4.0,
+            shadow: Some(floom_types::Shadow {
+                color: floom_types::Color::rgba(0, 0, 0, 128),
+                offset_x: 0.0,
+                offset_y: 2.0,
+                blur: 4.0,
+                spread: 0.0,
+            }),
+        });
+        scene.finish_update();
+
+        let mut g = grid(4, 2, 40.0, 20.0);
+        paint_scene(&mut g, &scene, &ResourceRegistry::default());
+
+        assert_eq!(
+            g.stats().skipped,
+            2,
+            "the radius and the shadow are two separate requests that cannot \
+             be had, and each is counted"
+        );
+        assert_eq!(
+            g.stats().rects,
+            1,
+            "and the rect itself was still drawn: a degraded request is not a \
+             dropped node"
+        );
+    }
+
+    /// A plain rect is not a degradation.
+    ///
+    /// The other half of the rule: a counter that always reads zero is as
+    /// useless as one that is never read.
+    #[test]
+    fn a_plain_rect_is_not_a_degradation() {
+        let mut scene = Scene::new();
+        scene.begin_update();
+        let _ = scene.insert(SceneNode::Rect {
+            bounds: floom_types::Rect {
+                x0: 0.0,
+                y0: 0.0,
+                x1: 20.0,
+                y1: 10.0,
+            },
+            fill: floom_types::Brush::from(floom_types::Color::rgb(1, 2, 3)),
+            radius: 0.0,
+            shadow: None,
+        });
+        scene.finish_update();
+
+        let mut g = grid(4, 2, 40.0, 20.0);
+        paint_scene(&mut g, &scene, &ResourceRegistry::default());
+
+        assert_eq!(g.stats().skipped, 0);
+        assert_eq!(g.stats().rects, 1);
     }
 
     #[test]

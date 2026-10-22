@@ -95,7 +95,11 @@ fn a_scroll_offset_moves_the_subtree_exactly() {
     settle(&mut host);
 
     let after = host.bounds(children[0]);
-    assert_eq!(after.y0 - before.y0, 50.0, "moved down by exactly the offset");
+    assert_eq!(
+        after.y0 - before.y0,
+        50.0,
+        "moved down by exactly the offset"
+    );
     assert_eq!(after.x0, before.x0, "an axis with no offset does not move");
 }
 
@@ -133,7 +137,11 @@ fn hit_regions_follow_the_scrolled_pixels() {
     // The child occupies the top-left, so a click at the origin reaches it.
     app.press(Point::new(10.0, 10.0));
     app.release(Point::new(10.0, 10.0));
-    assert_eq!(hit.load(Ordering::SeqCst), 1, "the child is at the origin before scrolling");
+    assert_eq!(
+        hit.load(Ordering::SeqCst),
+        1,
+        "the child is at the origin before scrolling"
+    );
 
     // Scroll it 50px down. A hit region left behind by the scroll would make
     // the list clickable at the wrong rows while looking perfectly correct, so
@@ -143,9 +151,15 @@ fn hit_regions_follow_the_scrolled_pixels() {
         // its own state changes. Storing it in the widget alone would move
         // nothing: the host owns the tree and is the only party that can apply it.
         let node = app.find_widget::<ProbeRoot>().expect("root widget");
-        let scroll = app.host_mut().widget::<ProbeRoot>(node).unwrap().scroll.clone();
+        let scroll = app
+            .host_mut()
+            .widget::<ProbeRoot>(node)
+            .unwrap()
+            .scroll
+            .clone();
         scroll.set(ScrollOffset::new(0.0, 50.0));
-        app.host_mut().set_scroll_offset(node, ScrollOffset::new(0.0, 50.0));
+        app.host_mut()
+            .set_scroll_offset(node, ScrollOffset::new(0.0, 50.0));
     }
     app.frame();
 
@@ -160,7 +174,11 @@ fn hit_regions_follow_the_scrolled_pixels() {
 
     app.press(Point::new(10.0, 60.0));
     app.release(Point::new(10.0, 60.0));
-    assert_eq!(hit.load(Ordering::SeqCst), 2, "and the child is hit where it is drawn");
+    assert_eq!(
+        hit.load(Ordering::SeqCst),
+        2,
+        "and the child is hit where it is drawn"
+    );
 }
 
 /// A root that owns one clickable child and a scroll offset the test can set.
@@ -534,7 +552,11 @@ fn a_wheel_event_scrolls_the_subtree_end_to_end() {
     host.dispatch(wheel(60.0));
     settle(&mut host);
 
-    assert_eq!(offset.get().y, 60.0, "the widget clamped and stored the offset");
+    assert_eq!(
+        offset.get().y,
+        60.0,
+        "the widget clamped and stored the offset"
+    );
     assert_eq!(
         host.bounds(child).y0 - before.y0,
         60.0,
@@ -585,9 +607,15 @@ struct MeasuresContent {
 }
 
 impl ::floom_core::WidgetAny for MeasuresContent {
-    fn as_any(&self) -> &dyn std::any::Any { self }
-    fn as_any_mut(&mut self) -> &mut dyn std::any::Any { self }
-    fn semantics_hint(&self) -> Option<::floom_core::SemanticsHint> { None }
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
+        self
+    }
+    fn semantics_hint(&self) -> Option<::floom_core::SemanticsHint> {
+        None
+    }
 }
 
 impl ::floom_core::Widget for MeasuresContent {
@@ -604,7 +632,9 @@ impl ::floom_core::Widget for MeasuresContent {
     fn children(&self) -> Vec<::floom_core::Child> {
         vec![::floom_core::Child::new(
             0,
-            ::floom_core::LayoutRequest::new().width(120.0).height(400.0),
+            ::floom_core::LayoutRequest::new()
+                .width(120.0)
+                .height(400.0),
             || Box::new(Filler) as Box<dyn ::floom_core::WidgetAny>,
         )]
     }
@@ -629,7 +659,9 @@ fn a_widget_that_opts_in_is_told_its_content_extent() {
             height: Some(Length::Px(200.0)),
             ..LayoutStyle::default()
         },
-        MeasuresContent { answer: log.clone() },
+        MeasuresContent {
+            answer: log.clone(),
+        },
     );
     settle(&mut host);
     // A second frame: the first has no layout to measure against.
@@ -660,7 +692,9 @@ fn the_extent_is_independent_of_where_the_widget_sits() {
                 height: Some(Length::Px(600.0)),
                 ..LayoutStyle::default()
             },
-            MeasuresContent { answer: log.clone() },
+            MeasuresContent {
+                answer: log.clone(),
+            },
         );
         // A spacer above the container, so the container's own box sits
         // somewhere other than the origin.
@@ -675,7 +709,13 @@ fn the_extent_is_independent_of_where_the_widget_sits() {
         );
         settle(&mut host);
         host.frame();
-        log.lock().unwrap().iter().rev().find(|v| v.is_some()).copied().flatten()
+        log.lock()
+            .unwrap()
+            .iter()
+            .rev()
+            .find(|v| v.is_some())
+            .copied()
+            .flatten()
     }
 
     let at_origin = measure_at(0.0_f32);
@@ -701,18 +741,37 @@ fn the_extent_does_not_change_when_the_container_scrolls() {
             height: Some(Length::Px(200.0)),
             ..LayoutStyle::default()
         },
-        MeasuresContent { answer: log.clone() },
+        MeasuresContent {
+            answer: log.clone(),
+        },
     );
     settle(&mut host);
     host.frame();
-    let before = log.lock().unwrap().iter().rev().find(|v| v.is_some()).copied().flatten();
+    let before = log
+        .lock()
+        .unwrap()
+        .iter()
+        .rev()
+        .find(|v| v.is_some())
+        .copied()
+        .flatten();
 
     host.set_scroll_offset(root, ScrollOffset::new(0.0, 150.0));
     settle(&mut host);
     host.frame();
-    let after = log.lock().unwrap().iter().rev().find(|v| v.is_some()).copied().flatten();
+    let after = log
+        .lock()
+        .unwrap()
+        .iter()
+        .rev()
+        .find(|v| v.is_some())
+        .copied()
+        .flatten();
 
-    assert_eq!(before, after, "content did not shrink because the viewport moved");
+    assert_eq!(
+        before, after,
+        "content did not shrink because the viewport moved"
+    );
 }
 
 /// The default is `false`, so a tree with no scroll container never pays for a
@@ -723,15 +782,26 @@ fn the_extent_does_not_change_when_the_container_scrolls() {
 fn a_widget_that_does_not_opt_in_is_not_measured() {
     struct Plain;
     impl ::floom_core::WidgetAny for Plain {
-        fn as_any(&self) -> &dyn std::any::Any { self }
-        fn as_any_mut(&mut self) -> &mut dyn std::any::Any { self }
-        fn semantics_hint(&self) -> Option<::floom_core::SemanticsHint> { None }
+        fn as_any(&self) -> &dyn std::any::Any {
+            self
+        }
+        fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
+            self
+        }
+        fn semantics_hint(&self) -> Option<::floom_core::SemanticsHint> {
+            None
+        }
     }
     impl ::floom_core::Widget for Plain {
         fn create(&self, _cx: &mut dyn ::floom_core::CreateContext) -> ::floom_core::ElementId {
             ::floom_core::ElementId::new(0, 0)
         }
-        fn update(&mut self, _cx: &mut dyn ::floom_core::UpdateContext, _id: ::floom_core::ElementId) {}
+        fn update(
+            &mut self,
+            _cx: &mut dyn ::floom_core::UpdateContext,
+            _id: ::floom_core::ElementId,
+        ) {
+        }
         fn paint(&self, _cx: &mut dyn ::floom_core::PaintContext, _id: ::floom_core::ElementId) {}
     }
 
@@ -755,9 +825,15 @@ fn a_widget_that_did_not_opt_in_is_told_nothing() {
     struct Unopted(::std::sync::Arc<::std::sync::Mutex<Vec<Option<::floom_types::Size>>>>);
 
     impl ::floom_core::WidgetAny for Unopted {
-        fn as_any(&self) -> &dyn std::any::Any { self }
-        fn as_any_mut(&mut self) -> &mut dyn std::any::Any { self }
-        fn semantics_hint(&self) -> Option<::floom_core::SemanticsHint> { None }
+        fn as_any(&self) -> &dyn std::any::Any {
+            self
+        }
+        fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
+            self
+        }
+        fn semantics_hint(&self) -> Option<::floom_core::SemanticsHint> {
+            None
+        }
     }
 
     impl ::floom_core::Widget for Unopted {
@@ -765,7 +841,11 @@ fn a_widget_that_did_not_opt_in_is_told_nothing() {
             cx.alloc_child()
         }
 
-        fn update(&mut self, cx: &mut dyn ::floom_core::UpdateContext, id: ::floom_core::ElementId) {
+        fn update(
+            &mut self,
+            cx: &mut dyn ::floom_core::UpdateContext,
+            id: ::floom_core::ElementId,
+        ) {
             // Asks anyway. The default `needs_content_size` is `false`.
             if let Ok(mut log) = self.0.lock() {
                 log.push(cx.content_size(id));
@@ -775,7 +855,9 @@ fn a_widget_that_did_not_opt_in_is_told_nothing() {
         fn children(&self) -> Vec<::floom_core::Child> {
             vec![::floom_core::Child::new(
                 0,
-                ::floom_core::LayoutRequest::new().width(120.0).height(400.0),
+                ::floom_core::LayoutRequest::new()
+                    .width(120.0)
+                    .height(400.0),
                 || Box::new(Filler) as Box<dyn ::floom_core::WidgetAny>,
             )]
         }
@@ -830,7 +912,9 @@ fn scrolling_by_the_whole_content_still_reports_the_whole_content() {
             height: Some(Length::Px(200.0)),
             ..LayoutStyle::default()
         },
-        MeasuresContent { answer: log.clone() },
+        MeasuresContent {
+            answer: log.clone(),
+        },
     );
     settle(&mut host);
     host.frame();
@@ -841,7 +925,14 @@ fn scrolling_by_the_whole_content_still_reports_the_whole_content() {
     settle(&mut host);
     host.frame();
 
-    let after = log.lock().unwrap().iter().rev().find(|v| v.is_some()).copied().flatten();
+    let after = log
+        .lock()
+        .unwrap()
+        .iter()
+        .rev()
+        .find(|v| v.is_some())
+        .copied()
+        .flatten();
     assert_eq!(
         after,
         Some(Size::new(120.0, 400.0)),
@@ -885,7 +976,9 @@ fn a_container_sitting_low_reports_the_same_extent() {
             height: Some(Length::Px(200.0)),
             ..LayoutStyle::default()
         },
-        MeasuresContent { answer: log.clone() },
+        MeasuresContent {
+            answer: log.clone(),
+        },
     );
     settle(&mut host);
     host.frame();
@@ -896,7 +989,14 @@ fn a_container_sitting_low_reports_the_same_extent() {
         "the control: the container really is offset, at y={origin}"
     );
 
-    let reported = log.lock().unwrap().iter().rev().find(|v| v.is_some()).copied().flatten();
+    let reported = log
+        .lock()
+        .unwrap()
+        .iter()
+        .rev()
+        .find(|v| v.is_some())
+        .copied()
+        .flatten();
     assert_eq!(
         reported,
         Some(Size::new(120.0, 400.0)),

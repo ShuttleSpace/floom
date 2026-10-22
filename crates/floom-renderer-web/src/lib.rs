@@ -6,7 +6,9 @@
 //! context on `present`. This keeps the web backend's pixel output identical to
 //! the headless software presenter while giving it a live on-screen surface.
 
-use floom_renderer::{AttachedSurface, FrameInfo, Presenter, RenderTarget, Renderer};
+use floom_renderer::{
+    AttachedSurface, FrameInfo, Presenter, RenderTarget, Renderer, RendererCapabilities,
+};
 use floom_renderer_software::SoftwareRenderer;
 use floom_scene::{ResourceRegistry, Scene};
 use floom_types::Size;
@@ -130,6 +132,18 @@ impl Presenter for WebPresenter {
 
     fn frames_presented(&self) -> u64 {
         self.frames
+    }
+
+    /// The software renderer's answer, because the software renderer is what
+    /// does the drawing.
+    ///
+    /// The web rasterises on the CPU and blits the buffer into a `<canvas>`,
+    /// so it inherits the software backend's coverage exactly: rounded
+    /// corners, drop shadows with `spread` honoured, filter scopes and
+    /// backdrop filters all work. A custom shader it cannot run, because it
+    /// has no shader runtime.
+    fn capabilities(&self) -> RendererCapabilities {
+        self.renderer.capabilities()
     }
 }
 

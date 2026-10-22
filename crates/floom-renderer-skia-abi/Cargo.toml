@@ -1,10 +1,10 @@
 [package]
-name = "floom-renderer-skia"
+name = "floom-renderer-skia-abi"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
-description = "Skia Scene adapter for Floom 2.0 Renderer ABI (recording layer)"
+description = "The Skia side of Floom 2.0's renderer ABI: a recording adapter, and the counters that say what a Skia submit path would have to honour"
 rust-version.workspace = true
 
 [dependencies]

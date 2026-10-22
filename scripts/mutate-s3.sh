@@ -38,7 +38,7 @@ GEOM=crates/floom-types/src/geometry.rs
 PATHS=crates/floom-types/src/path.rs
 SWLIB=crates/floom-renderer-software/src/lib.rs
 APPLIB=crates/floom-app/src/lib.rs
-SKIA=crates/floom-renderer-skia/src/lib.rs
+SKIA=crates/floom-renderer-skia-abi/src/lib.rs
 VELLO=crates/floom-renderer-vello/src/lib.rs
 
 # 1. scale_around drops its pivot (scales about the origin instead)
@@ -146,7 +146,7 @@ mutate_one "$SKIA" \
   "                SceneNode::GroupPush { transform } => {
                     self.commands.push(SkiaCommand::PushTransform {
                         a: 1.0," \
-  "cargo test -q -p floom-renderer-skia" \
+  "cargo test -q -p floom-renderer-skia-abi" \
   "skia-push-transform-carries-matrix"
 
 # 12. vello headless: PushTransform records an identity transform

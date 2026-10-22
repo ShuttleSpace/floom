@@ -36,7 +36,11 @@ fn window() -> WindowConfig {
 /// Mounts `widget` as the root and settles the frame loop.
 fn runner_with<W2: WidgetAny + 'static>(
     widget: W2,
-) -> (FakePlatform, AppRunner<SoftwarePresenter>, floom_types::WindowId) {
+) -> (
+    FakePlatform,
+    AppRunner<SoftwarePresenter>,
+    floom_types::WindowId,
+) {
     let mut platform = FakePlatform::new();
     let id = platform.create_window(window());
     let mut host = WidgetHost::new();
@@ -251,7 +255,11 @@ fn each_control_under_the_pointer_answers_for_itself() {
     // platform -- so the difference came from the widget and nothing else.
     let (mut platform2, mut runner2, win2) = runner_with(Button::new("Save"));
     assert!(
-        point_showing(&sweep(&mut platform2, &mut runner2, win2), CursorStyle::Pointer).is_some(),
+        point_showing(
+            &sweep(&mut platform2, &mut runner2, win2),
+            CursorStyle::Pointer
+        )
+        .is_some(),
         "the button asked for the pointer"
     );
 }

@@ -2,8 +2,8 @@
 //! (premultiplied RGBA8) → `WidgetHost::register_image_decoded` → a scene
 //! node an `Image` widget renders from.
 
-use floom_core::Length;
 use floom_app::{WidgetHost, decode_image};
+use floom_core::Length;
 use floom_scene::{ResourceKind, SceneNode};
 use std::io::Cursor;
 

@@ -18,7 +18,7 @@ pub use budget::{CacheTrimTelemetry, GpuCacheBudget, MemoryPressure};
 #[cfg(feature = "gpu")]
 pub use gpu::{GpuFrameStats, VelloGpuPresenter};
 
-use floom_renderer::{FrameInfo, Renderer};
+use floom_renderer::{FrameInfo, Renderer, RendererCapabilities};
 use floom_scene::{DamageRegion, Scene, SceneNode};
 use floom_types::{Filter, Rect};
 
@@ -201,6 +201,21 @@ impl Renderer for VelloRendererAdapter {
 
     fn trim_caches(&mut self) {
         self.last_cmd_len = 0;
+    }
+
+    /// Shadows and filters are degraded, shaders are not.
+    ///
+    /// Vello has no blur primitive, so a drop shadow, a filter scope and a
+    /// backdrop filter are all requests it cannot honour — it counts them,
+    /// and this says so before the frame is drawn. A custom shader it *can*
+    /// run: the WGSL program is compiled into a pipeline and rendered.
+    fn capabilities(&self) -> RendererCapabilities {
+        RendererCapabilities {
+            shadows: false,
+            filters: false,
+            backdrop_filters: false,
+            shaders: true,
+        }
     }
 }
 

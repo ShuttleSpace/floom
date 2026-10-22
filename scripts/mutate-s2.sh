@@ -39,7 +39,7 @@ RASTER=crates/floom-renderer-software/src/raster.rs
 SWLIB=crates/floom-renderer-software/src/lib.rs
 APPLIB=crates/floom-app/src/lib.rs
 CANVAS=crates/floom-widgets/src/canvas.rs
-SKIA=crates/floom-renderer-skia/src/lib.rs
+SKIA=crates/floom-renderer-skia-abi/src/lib.rs
 
 # 1. stroke outline: drop contour orientation normalisation
 mutate_one "$TYPES" \
@@ -123,7 +123,7 @@ mutate_one "$CANVAS" \
 mutate_one "$SKIA" \
   "                SceneNode::ClipPop => self.commands.push(SkiaCommand::PopClip)," \
   "                SceneNode::ClipPop => {}," \
-  "cargo test -q -p floom-renderer-skia" \
+  "cargo test -q -p floom-renderer-skia-abi" \
   "skia-pop-clip-recorded"
 
 echo "=== campaign results ==="

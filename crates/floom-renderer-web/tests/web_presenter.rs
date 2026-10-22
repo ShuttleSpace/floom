@@ -56,7 +56,13 @@ fn filled_scene() -> Scene {
 /// An attached presenter at `logical`, on a screen of `scale`.
 fn attached(logical: Size, scale: f64) -> WebPresenter {
     let mut p = WebPresenter::new();
-    let surface = AttachedSurface::new(WindowId::new(1, 0), SurfaceId::new(1, 0), logical, scale, None);
+    let surface = AttachedSurface::new(
+        WindowId::new(1, 0),
+        SurfaceId::new(1, 0),
+        logical,
+        scale,
+        None,
+    );
     assert!(p.attach(surface), "the web presenter always attaches");
     p
 }

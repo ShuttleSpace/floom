@@ -1628,8 +1628,8 @@ fn host_with_shared() -> (
     NodeId,
     std::sync::Arc<std::sync::atomic::AtomicBool>,
 ) {
-    use std::sync::atomic::{AtomicBool, Ordering};
     use std::sync::Arc;
+    use std::sync::atomic::{AtomicBool, Ordering};
 
     let mut host = WidgetHost::new();
     host.set_size(Size::new(200.0, 120.0));

@@ -20,7 +20,7 @@ use floom_layout::LayoutStyle;
 use floom_renderer::{AttachedSurface, Presenter};
 use floom_renderer_software::SoftwarePresenter;
 use floom_scene::SceneNode;
-use floom_types::{Color, Shader, Size, SurfaceId, WindowId, Length};
+use floom_types::{Color, Length, Shader, Size, SurfaceId, WindowId};
 use floom_widgets::{Container, ShaderBox};
 
 const WGSL: &str = "@fragment fn fs_main(in: VsOut) -> @location(0) vec4<f32> { \

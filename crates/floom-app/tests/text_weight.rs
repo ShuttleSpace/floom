@@ -17,7 +17,7 @@
 use floom_app::{NodeId, WidgetHost};
 use floom_core::FontWeight;
 use floom_layout::LayoutStyle;
-use floom_scene::{ResourceKind, SceneNode, ResourceId};
+use floom_scene::{ResourceId, ResourceKind, SceneNode};
 use floom_types::{Rect, Size};
 use floom_widgets::{Container, Text};
 
@@ -150,16 +150,14 @@ fn the_two_glyph_resources_differ_in_content() {
         Text::new("Weight check").weight(FontWeight::Bold),
     );
 
-    let runs_at = |host: &WidgetHost, nth: usize| {
-        match &host
-            .resources()
-            .get(glyphs_of(host, nth))
-            .expect("the interned resource")
-            .kind
-        {
-            ResourceKind::GlyphRun { runs, .. } => runs.clone(),
-            other => panic!("the text node's resource is not a glyph run: {other:?}"),
-        }
+    let runs_at = |host: &WidgetHost, nth: usize| match &host
+        .resources()
+        .get(glyphs_of(host, nth))
+        .expect("the interned resource")
+        .kind
+    {
+        ResourceKind::GlyphRun { runs, .. } => runs.clone(),
+        other => panic!("the text node's resource is not a glyph run: {other:?}"),
     };
     assert_ne!(
         runs_at(&host, 0),
@@ -283,10 +281,7 @@ fn a_label_that_fits_on_one_line_paints_on_one_line() {
             "{text:?} wrapped to {} lines even though it fits in one",
             painted.height / 14.0
         );
-        assert!(
-            painted.width > 0.0,
-            "{text:?} measured nothing at all"
-        );
+        assert!(painted.width > 0.0, "{text:?} measured nothing at all");
     }
 }
 

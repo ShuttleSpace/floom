@@ -252,14 +252,14 @@ macOS 门禁记录过一次真实教训（`docs/gates/macos.md:126-128`）：
 
 | ID | 任务 | 依赖 | 级别 | 验收标准 |
 |---|---|---|---|---|
-| **B1** | 重写 `docs/renderer-backend-support.md` 为 2.0 场景节点矩阵 | — | 🟠 | 删除 v1 `PaintContext::draw_shadow` 论述；改为 12 变体 × 5 后端矩阵；修正"web 无阴影计数"的过时结论 |
-| **B2** | skia 要么补提交路径 + 计数器 + 测试，要么明确降级为"意图记录器" | — | 🔴 | 要么出像素，要么改名（如 `floom-renderer-skia-adapter`）并从 `floom` facade 的 `renderer-gpu` 语义中摘出；两者都不可容忍现状 |
-| **B3** | tui 补齐静默忽略的计数 | — | 🟡 | `shadow` / `radius` 不可表达时计入 `skipped`，与 `Path`/`Image` 同口径 |
+| **B1** | 重写 `docs/renderer-backend-support.md` 为 2.0 场景节点矩阵 | — | 🟠 | ✅ **完成** — 12 变体 × 5 后端矩阵；修正"web 无阴影计数"的过时结论（2.0 的 web 内部就是 software 渲染器）；新增"留下的缺口"一节 |
+| **B2** | skia 要么补提交路径 + 计数器 + 测试，要么明确降级为"意图记录器" | — | 🔴 | ✅ **完成** — 改名 `floom-renderer-skia-abi`（**它本来就不是渲染器**：零外部依赖、只被自己的测试用、facade 不导出）；补 `shaders_skipped`/`filters_skipped`/`shadows_skipped`；补 3 项测试（5 → 8） |
+| **B3** | tui 补齐静默忽略的计数 | — | 🟡 | ✅ **完成** — `radius` 与 `shadow` 不再被 `..` 吞掉，各计一次；补 2 项测试（21 → 23） |
 | **B4** | vello 的 blur primitive | — | 🟠 | 依赖上游 vello 能力；若短期不可得，提供 CPU 回退（把阴影/滤镜交给 software 光栅化后上屏），保证桌面与 Android 视觉一致 |
-| **B5** | 统一后端能力查询 | — | 🟠 | `Renderer` trait 增 `fn capabilities(&self) -> RendererCapabilities`，含 `shadows/filters/backdrop/shaders` 四个布尔；host 可在运行前查询 |
-| **B6** | 统一降级计数的暴露方式 | B5 | 🟡 | 五个后端的 stats 归一到同一组语义（drawn / skipped），或提供统一的 `DegradationReport` |
+| **B5** | 统一后端能力查询 | — | 🟠 | ✅ **完成** — `Renderer::capabilities` 与 `Presenter::capabilities` 返回 `RendererCapabilities{shadows,filters,backdrop_filters,shaders}`；默认**悲观**；五个后端各自诚实回答；`AppRunner::renderer_capabilities()` 透给宿主；5 项测试 |
+| **B6** | 统一降级计数的暴露方式 | B5 | 🟡 | ⬜ **未开始** — 能力查询已统一，但**计数器**的名字仍各后端不同（`shadows_drawn` / `shadows_skipped` / `skipped`）；需要一个统一的 `DegradationReport` |
 | **B7** | 为 vello / tui / web 补像素级回归 | — | 🟠 | 每个后端至少一份 golden；CJK 字形必须进断言（吸取 macOS tofu 教训） |
-| **B8** | shader 在非 GPU 后端的行为明确化 | — | 🟡 | software / web / tui 的 `shaders_skipped` 已有计数；补文档说明"自定义着色器仅 GPU 后端可用" |
+| **B8** | shader 在非 GPU 后端的行为明确化 | — | 🟡 | ✅ **完成** — 文档明确"自定义着色器仅 GPU 后端可用"；software / web / tui / skia-abi 均计数 |
 
 ## C 组 · 承接（上一轮的平台后端计划，仍然有效）
 
@@ -276,20 +276,20 @@ macOS 门禁记录过一次真实教训（`docs/gates/macos.md:126-128`）：
 
 ```
 第一梯队（阻塞，其余都依赖它）
-  A1 → A2 → A3            插件链路接通          ✅ 2026-10-22
-  A5                      原生合成路径跨语言化    ⬜ 下一批
-  A6                      第一个真实能力插件      ⬜ 依赖 A5
-  B2                      skia 定位澄清          ⬜
-  C1, C2, C3              恢复可构建 + 能力诚实   ⬜
+  A1 → A2 → A3            插件链路接通            ✅ 2026-10-22
+  A5                      原生合成路径跨语言化      ✅ 2026-10-22
+  A6                      第一个真实能力插件        ✅ 2026-10-22
+  B2                      skia 定位澄清            ✅ 2026-10-22
+  C1, C2, C3              恢复可构建 + 能力诚实     ✅ 2026-10-22
 
 第二梯队
-  A7 → A8 → A9            精简 SDK 结构 + ABI 版本  ⬜（A9 已随 A1 完成）
-  B1, B5, B6              文档重写 + 能力查询 + 统计归一 ⬜
-  B3, B7                  tui 计数 + 像素回归      ⬜
+  A7 → A8 → A9            精简 SDK 结构 + ABI 版本  ✅ 2026-10-22
+  B1, B5, B6              文档重写 + 能力查询 + 统计归一 ⬜（B1/B5 ✅，B6 ⬜）
+  B3, B7                  tui 计数 + 像素回归      ⬜（B3 ✅，B7 ⬜）
   C4, C5, C6              平台后端补齐 + 门禁      ⬜
 
 第三梯队
-  B4, B8                  vello blur / shader 行为文档 ⬜
+  B4, B8                  vello blur / shader 行为文档 ⬜（B8 ✅，B4 ⬜）
 ```
 
 ### 批次 1 的实际结果（2026-10-22）

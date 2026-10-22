@@ -156,7 +156,11 @@ fn negative_spread_erodes_the_silhouette_inward() {
 fn reach_accounts_for_positive_spread_but_not_negative() {
     let base = hard(0.0);
     assert_eq!(
-        Shadow { spread: 0.0, ..base }.reach(),
+        Shadow {
+            spread: 0.0,
+            ..base
+        }
+        .reach(),
         0.0,
         "a zero shadow reaches nothing"
     );

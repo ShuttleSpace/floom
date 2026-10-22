@@ -51,6 +51,49 @@ impl FrameInfo {
     }
 }
 
+/// What a renderer backend can and cannot do.
+///
+/// A host asks this **before** it draws, so it can decide whether to ask for
+/// an effect at all. The alternative is drawing it and finding out afterwards
+/// that the backend dropped it — and a dropped shadow is indistinguishable
+/// from a shadow that was never asked for.
+///
+/// The four flags are the requests that differ between backends today. A
+/// request that *every* backend honours is not a flag: it is a fact of the
+/// scene vocabulary, and a flag for it would be noise.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct RendererCapabilities {
+    /// The backend draws a drop shadow behind a shape.
+    ///
+    /// `spread` is honoured where it is drawn: the silhouette is dilated
+    /// *before* the blur, as CSS does, rather than the blur being widened.
+    pub shadows: bool,
+    /// The backend applies a filter to a scope's contents.
+    pub filters: bool,
+    /// The backend applies a filter to the pixels already drawn.
+    pub backdrop_filters: bool,
+    /// The backend runs a custom shader program.
+    pub shaders: bool,
+}
+
+impl RendererCapabilities {
+    /// Everything a backend can do.
+    pub const ALL: Self = Self {
+        shadows: true,
+        filters: true,
+        backdrop_filters: true,
+        shaders: true,
+    };
+
+    /// Nothing: a backend that draws shapes and text only.
+    pub const NONE: Self = Self {
+        shadows: false,
+        filters: false,
+        backdrop_filters: false,
+        shaders: false,
+    };
+}
+
 /// Backend-neutral renderer contract.
 pub trait Renderer {
     /// Begin a frame against `target`.
@@ -78,6 +121,20 @@ pub trait Renderer {
 
     /// Optional: clear caches after resource eviction.
     fn trim_caches(&mut self) {}
+
+    /// What this backend can do.
+    ///
+    /// The default is the pessimistic answer: a backend that has not said
+    /// otherwise is assumed to be able to do nothing beyond shapes and text.
+    /// A backend that renders a shadow has to say so, and a backend that
+    /// cannot render one has to be believed.
+    ///
+    /// This is the same rule the platform capabilities follow, and the same
+    /// reason: a capability that is claimed and not honoured is worse than one
+    /// that is missing.
+    fn capabilities(&self) -> RendererCapabilities {
+        RendererCapabilities::NONE
+    }
 }
 
 /// Render one scene through any [`Renderer`] backend.

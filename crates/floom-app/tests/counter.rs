@@ -4,7 +4,7 @@
 //! mount widgets, pump a frame, route input, assert what landed in the scene.
 
 use floom_app::WidgetHost;
-use floom_core::{Key, NamedKey, Point, Rect, Size, Length};
+use floom_core::{Key, Length, NamedKey, Point, Rect, Size};
 use floom_layout::{AlignItems, FlexDirection, JustifyContent, LayoutStyle};
 use floom_types::{KeyEvent, Modifiers, PointerEvent};
 use floom_widgets::{Button, Container, Switch, Text};
@@ -251,10 +251,15 @@ fn tab_key_moves_focus_and_flags_keyboard_navigation() {
     );
 
     // A second Tab advances further; Shift+Tab walks it straight back.
-    assert!(counter
+    assert!(
+        counter
+            .host
+            .dispatch(KeyEvent::down(Key::Named(NamedKey::Tab)).into())
+    );
+    let second = counter
         .host
-        .dispatch(KeyEvent::down(Key::Named(NamedKey::Tab)).into()));
-    let second = counter.host.focused().expect("second Tab focuses something");
+        .focused()
+        .expect("second Tab focuses something");
     assert_ne!(first, second, "Tab should advance focus");
 
     counter.host.dispatch(

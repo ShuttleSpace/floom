@@ -19,3 +19,7 @@ floom-scene = { path = "../floom-scene", version = "0.2.0" }
 raw-window-handle = { workspace = true }
 
 [dev-dependencies]
+# The capability query is checked against the backends that answer it
+# differently: the software rasteriser and the character grid.
+floom-renderer-software = { path = "../floom-renderer-software", version = "0.2.0" }
+floom-renderer-tui = { path = "../floom-renderer-tui", version = "0.2.0" }

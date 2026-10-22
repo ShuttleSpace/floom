@@ -17,13 +17,11 @@
 
 use std::io::Write;
 
-use floom_renderer::{AttachedSurface, FrameInfo, Presenter};
+use floom_renderer::{AttachedSurface, FrameInfo, Presenter, RendererCapabilities};
 use floom_scene::{ResourceRegistry, Scene};
 use floom_types::Size;
 
-use crate::{
-    DiffStats, PaintStats, TuiGrid, diff_encode, encode_with_stats, paint_scene,
-};
+use crate::{DiffStats, PaintStats, TuiGrid, diff_encode, encode_with_stats, paint_scene};
 
 /// How many characters the terminal has.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -126,6 +124,17 @@ impl<W: Write> Presenter for TuiPresenter<W> {
 
     fn frames_presented(&self) -> u64 {
         self.frames
+    }
+
+    /// A character grid has no soft edges and no shader runtime.
+    ///
+    /// A rounded corner, a drop shadow, a filter scope, a backdrop filter and
+    /// a custom shader are all requests a terminal cannot honour. The grid
+    /// counts each of them (`PaintStats::skipped`), and this says so before
+    /// the frame is drawn — a host can then decide not to ask for a shadow it
+    /// was never going to get.
+    fn capabilities(&self) -> RendererCapabilities {
+        RendererCapabilities::NONE
     }
 }
 
@@ -344,7 +353,10 @@ mod tests {
         let before = presenter.sink().clone().len();
         let stats = presenter.present_diff(&scene, &registry); // identical
         assert!(!stats.full_repaint);
-        assert_eq!(stats.changed_cells, 0, "nothing moved between identical frames");
+        assert_eq!(
+            stats.changed_cells, 0,
+            "nothing moved between identical frames"
+        );
         let patch_len = presenter.sink().clone().len() - before;
         assert!(
             patch_len < before,

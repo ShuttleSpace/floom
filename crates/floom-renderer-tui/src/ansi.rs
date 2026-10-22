@@ -294,7 +294,10 @@ mod tests {
             out.starts_with(RESET),
             "a diff starts from a known colour baseline"
         );
-        assert!(out.contains("\u{1b}[1;1H"), "the changed cell is positioned");
+        assert!(
+            out.contains("\u{1b}[1;1H"),
+            "the changed cell is positioned"
+        );
         assert!(out.contains('Y'), "the new glyph is written");
         // The new foreground SGR for (11,22,33).
         assert!(out.contains("\u{1b}[38;2;11;22;33m"));

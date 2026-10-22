@@ -26,7 +26,7 @@ mod raster;
 
 pub use presenter::SoftwarePresenter;
 
-use floom_renderer::{FrameInfo, RenderTarget, Renderer};
+use floom_renderer::{FrameInfo, RenderTarget, Renderer, RendererCapabilities};
 use floom_scene::{DamageRegion, Rect, ResourceKind, ResourceRegistry, Scene, SceneNode};
 use floom_types::{Brush, Color, Filter, Point, Polyline, Shadow, Transform};
 use raster::{ClipStack, Scissor};
@@ -1607,12 +1607,28 @@ impl Renderer for SoftwareRenderer {
     fn end_frame(&mut self) {
         self.frames += 1;
     }
+
+    /// Everything but a custom shader.
+    ///
+    /// The software rasteriser draws rounded corners, drop shadows with
+    /// `spread` honoured, filter scopes and backdrop filters. It has no
+    /// shader runtime, so a WGSL program is the one request it cannot
+    /// honour — and it says so here, before the frame is drawn, rather than
+    /// only in a counter afterwards.
+    fn capabilities(&self) -> RendererCapabilities {
+        RendererCapabilities {
+            shadows: true,
+            filters: true,
+            backdrop_filters: true,
+            shaders: false,
+        }
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use floom_renderer::{FrameInfo, render_once};
+    use floom_renderer::{FrameInfo, RendererCapabilities, render_once};
     use floom_scene::{Point, SceneNode, Size};
     use floom_types::Color;
 

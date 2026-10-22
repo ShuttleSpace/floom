@@ -14,7 +14,8 @@
 //! assert on.
 
 use floom_renderer::{
-    AttachedSurface, FrameInfo, Presenter, RenderTarget, Renderer, SurfaceHandles,
+    AttachedSurface, FrameInfo, Presenter, RenderTarget, Renderer, RendererCapabilities,
+    SurfaceHandles,
 };
 use floom_scene::{ResourceRegistry, Scene};
 use floom_types::Size;
@@ -143,6 +144,12 @@ impl Presenter for SoftwarePresenter {
 
     fn frames_presented(&self) -> u64 {
         self.frames
+    }
+
+    /// The software renderer's answer, because the software renderer is what
+    /// does the drawing.
+    fn capabilities(&self) -> RendererCapabilities {
+        self.renderer.capabilities()
     }
 }
 

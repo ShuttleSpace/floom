@@ -1520,13 +1520,15 @@ dependencies = [
 name = "floom-renderer"
 version = "0.2.0"
 dependencies = [
+ "floom-renderer-software",
+ "floom-renderer-tui",
  "floom-scene",
  "floom-types",
  "raw-window-handle",
 ]
 
 [[package]]
-name = "floom-renderer-skia"
+name = "floom-renderer-skia-abi"
 version = "0.2.0"
 dependencies = [
  "floom-renderer",

@@ -21,7 +21,7 @@
 use floom_app::WidgetHost;
 use floom_layout::LayoutStyle;
 use floom_scene::SceneNode;
-use floom_types::{Color, Filter, Size, Length};
+use floom_types::{Color, Filter, Length, Size};
 use floom_widgets::Container;
 
 const INK: Color = Color::rgb(20, 30, 40);

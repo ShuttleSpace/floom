@@ -17,7 +17,9 @@ use std::cell::Cell;
 use std::rc::Rc;
 
 use floom_animation::{AnimKind, CompositorProp, Easing, Tween};
-use floom_core::{CreateContext, ElementId, NativeGrant, NativeRequest, UpdateContext, Widget, WidgetAny, Length};
+use floom_core::{
+    CreateContext, ElementId, Length, NativeGrant, NativeRequest, UpdateContext, Widget, WidgetAny,
+};
 use floom_layout::{AbsoluteInset, LayoutStyle, Position};
 use floom_native::{
     ClipSupport, FakeNativeProvider, InputMode, InputModes, NativeCapabilities, NativeCommandLog,
@@ -26,9 +28,9 @@ use floom_native::{
 use floom_overlay::OverlayKind;
 use floom_testkit::TestApp;
 use floom_types::{Point, Rect, ResourceId, Size};
+use floom_widgets::NativeSurface;
 use floom_widgets::controls::Button;
 use floom_widgets::primitives::Container;
-use floom_widgets::NativeSurface;
 
 // --- scaffolding -----------------------------------------------------------
 

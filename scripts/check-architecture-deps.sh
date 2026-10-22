@@ -136,7 +136,12 @@ RENDERER_PACKAGES = {
     # 2.0 renderer ABI + backends, under `render/`. `floom-renderer` is the
     # abstract ABI (the one widgets are allowed to name); the rest are concrete.
     "floom-renderer", "floom-renderer-vello", "floom-renderer-software",
-    "floom-renderer-skia", "floom-renderer-tui",
+    # `floom-renderer-skia-abi` is the *recording* side of the Skia ABI, not a
+    # backend: it turns a scene into Skia-shaped commands and counts what a
+    # submit path would have to honour. It is not a renderer, and it is
+    # registered here so that the rule "a renderer must not depend on widget
+    # crates" applies to it too.
+    "floom-renderer-skia-abi", "floom-renderer-tui",
 }
 WIDGET_HINTS = {"floom-widgets", "floom-widgets-data", "floom-widgets-media"}
 # Legacy underscore spelling still referenced by pre-2.0 crates.
@@ -258,7 +263,7 @@ for _names, _level in [
     (
         [
             "floom-renderer", "floom-renderer-software", "floom-renderer-vello",
-            "floom-renderer-skia", "floom-renderer-tui", "floom-renderer-web",
+            "floom-renderer-skia-abi", "floom-renderer-tui", "floom-renderer-web",
             "floom-platform", "floom-platform-desktop", "floom-platform-android",
             "floom-platform-ios", "floom-platform-harmony", "floom-platform-web",
             "floom-platform-embedded", "floom-platform-tui", "floom-platform-mobile",

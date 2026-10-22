@@ -11,7 +11,7 @@ use floom_app::{AppRunner, RunStats, WidgetHost};
 use floom_layout::LayoutStyle;
 use floom_platform::{FakePlatform, KeyCode, Platform, PlatformEvent, WindowConfig};
 use floom_renderer_software::SoftwarePresenter;
-use floom_types::{Color, Point, Size, Length};
+use floom_types::{Color, Length, Point, Size};
 use floom_widgets::{Button, Container, Stack, Text};
 
 /// A tiny window (64×48 logical, scale 1) so pixel arithmetic stays trivial.

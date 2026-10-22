@@ -55,7 +55,7 @@
 
 use floom_renderer::{
     AttachedSurface, ExternalFrame, ExternalTextureCache, ExternalTextureStats, ImportDecision,
-    Presenter, SurfaceHandles,
+    Presenter, RendererCapabilities, SurfaceHandles,
 };
 use floom_scene::{ResourceKind, ResourceRegistry, Scene, SceneNode};
 use floom_types::{ClipRegion, PathSeg, Rect, Shader, Size, SurfaceId, WindowId};
@@ -294,12 +294,7 @@ fn node_fingerprint(node: &SceneNode) -> u64 {
                     // `spread` belongs in this key: it is part of the request,
                     // so two nodes differing only in it must not collide in
                     // the render cache.
-                    for v in [
-                        shadow.blur,
-                        shadow.offset_x,
-                        shadow.offset_y,
-                        shadow.spread,
-                    ] {
+                    for v in [shadow.blur, shadow.offset_x, shadow.offset_y, shadow.spread] {
                         hasher.write_u64(v.to_bits());
                     }
                 }
@@ -1429,7 +1424,8 @@ impl VelloGpuPresenter {
                 color,
                 ..
             } => {
-                let Some(ResourceKind::GlyphRun { runs, .. }) = resources.get(*glyphs).map(|r| &r.kind)
+                let Some(ResourceKind::GlyphRun { runs, .. }) =
+                    resources.get(*glyphs).map(|r| &r.kind)
                 else {
                     // Dangling or wrong-kind id: skip rather than fail.
                     return stats;
@@ -2242,6 +2238,22 @@ impl Presenter for VelloGpuPresenter {
 
     fn frames_presented(&self) -> u64 {
         self.stats.frames
+    }
+
+    /// Shadows and filters are degraded, shaders are not.
+    ///
+    /// Vello has no blur primitive, so a drop shadow, a filter scope and a
+    /// backdrop filter are all requests the GPU path cannot honour — it
+    /// counts them (`shadows_skipped`, `filters_skipped`), and this says so
+    /// before the frame is drawn. A custom shader it *can* run: the WGSL
+    /// program is compiled into a pipeline and rendered.
+    fn capabilities(&self) -> RendererCapabilities {
+        RendererCapabilities {
+            shadows: false,
+            filters: false,
+            backdrop_filters: false,
+            shaders: true,
+        }
     }
 }
 
