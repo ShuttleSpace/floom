@@ -6570,9 +6570,9 @@
     "semantic_hash": ""
   },
   "crates/floom-renderer-vello/src/gpu.rs": {
-    "mtime": 1792732291.72084,
-    "seen": 1792732768.644684,
-    "ast_hash": "f05337f1b4fc1a576714ff9b2391937e",
+    "mtime": 1792741663.2288256,
+    "seen": 1792741893.409068,
+    "ast_hash": "d95c03731ba54642761e316d79282a24",
     "semantic_hash": ""
   },
   "crates/floom-renderer-vello/src/lib.rs": {
@@ -9888,9 +9888,9 @@
     "semantic_hash": ""
   },
   "docs/renderer-backend-support.md": {
-    "mtime": 1792731493.0489879,
-    "seen": 1792732768.68836,
-    "ast_hash": "c00a27c2c9c4a67a356a97e84a148551",
+    "mtime": 1792741728.7235935,
+    "seen": 1792741893.46322,
+    "ast_hash": "e7c013e2533c9303dda3595f39c7f9b8",
     "semantic_hash": ""
   },
   "crates/ecosystem/floom-ui/crates/cupertino/cupertino-card/tests/card.rs": {
@@ -13170,9 +13170,9 @@
     "semantic_hash": ""
   },
   "docs/plugin-and-renderer-audit.md": {
-    "mtime": 1792732669.7904456,
-    "seen": 1792732768.688237,
-    "ast_hash": "e4e993a6654767d18bab4008157528cb",
+    "mtime": 1792741769.482633,
+    "seen": 1792741893.463051,
+    "ast_hash": "1249ed3459c10bbc442e5a808b8563ce",
     "semantic_hash": ""
   },
   "docs/porting-floem-editor-to-2.0.md": {
@@ -13548,9 +13548,9 @@
     "semantic_hash": ""
   },
   "crates/floom-renderer/tests/degradation.rs": {
-    "mtime": 1792732291.5794652,
-    "seen": 1792732768.6452851,
-    "ast_hash": "72e76b4f4f06a29d14b5437b8184911f",
+    "mtime": 1792741236.9718301,
+    "seen": 1792741893.4102201,
+    "ast_hash": "1a63ddfb97331e5872587d879726a004",
     "semantic_hash": ""
   }
 }
