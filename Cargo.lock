@@ -1520,8 +1520,10 @@ dependencies = [
 name = "floom-renderer"
 version = "0.2.0"
 dependencies = [
+ "floom-renderer-skia-abi",
  "floom-renderer-software",
  "floom-renderer-tui",
+ "floom-renderer-vello",
  "floom-scene",
  "floom-types",
  "raw-window-handle",
