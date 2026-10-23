@@ -148,12 +148,19 @@
 
 `crates/floom-renderer-vello/src/gpu.rs`：
 
-- 阴影：`gpu.rs:1389-1394` —— 填充渲染，阴影不渲染，`stats.shadow_skips += 1`
-- 滤镜域：`gpu.rs:1263-1267` —— 内容照常画（不模糊），`totals.filters_skipped += 1`
-- 背景滤镜：`gpu.rs:1661-1666` —— 什么都不画，`stats.filter_skips += 1`
+- 阴影：**已修复（B4）** —— `Rect` 的阴影经 `draw_blurred_rounded_rect` 真画出来
+  （offset 折进 rect、spread 同时增大 rect 与圆角、blur 折成 σ），`shadows_drawn` 计数。
+  `Path` / `GlyphRun` 的阴影仍 `shadows_skipped`——原语只能糊圆角矩形。
+- 滤镜域：`gpu.rs` —— 内容照常画（不模糊），`totals.filters_skipped += 1`
+- 背景滤镜：`gpu.rs` —— 什么都不画，`stats.filter_skips += 1`
 
-三者**都计数了**，符合"不静默"原则，但 GPU 路径上**阴影 / 毛玻璃 / 模糊全部缺失**。
-这是 vello 作为默认 GPU 后端最大的功能缺口——桌面与 Android 都走这条路径。
+后两者**已核实无法实现**，不是没人做：
+① vello 全部 13 个命令无一读回已光栅化像素；② 层机制只做 blend 合成、无后处理钩子；
+③ **栅格化只发生一次且在最后**——`BackdropFilter` 在流中段时整个 scene 已编码完，
+要兑现它就得把前半光栅化→读回→模糊→画成图像→后半光栅化，而 API 一次只渲染一个 scene。
+所以这是**缺一个落脚点**，不是缺一个 blur。software 能做到只因为它自己拥有像素缓冲。
+
+三者都计数了，符合"不静默"原则。
 
 ### R3 · software 没有 shader runtime 🟡
 
@@ -221,7 +228,7 @@ macOS 门禁记录过一次真实教训（`docs/gates/macos.md:126-128`）：
 | 后端 | 判定 |
 |---|---|
 | `floom-renderer-software` | ✅ **参考实现**，唯一有像素级回归的后端 |
-| `floom-renderer-vello` | ✅ 真渲染，但缺阴影 / 滤镜 / 背景滤镜（已计数） |
+| `floom-renderer-vello` | ✅ 真渲染；Rect 阴影已画（B4）；滤镜/背景滤镜已核实无法实现（结构性，非工作量） |
 | `floom-renderer-web` | ✅ 继承 software 全覆盖；上限是 CPU 光栅化 |
 | `floom-renderer-tui` | ⚠️ 覆盖面最窄；3 处静默忽略违反原则 |
 | `floom-renderer-skia` | ❌ **不是渲染器**，只记录命令，无计数器，无测试 |
