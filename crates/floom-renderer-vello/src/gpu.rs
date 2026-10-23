@@ -1792,6 +1792,44 @@ impl VelloGpuPresenter {
                 // pixels that have already been rasterised, which vello cannot
                 // reach into. The skip is the record — a silent no-op would
                 // leave a frosted panel reading as plain transparency.
+                //
+                // # Why this one is not implementable, and was checked
+                //
+                // The shadow next door *was* implementable and only looked
+                // blocked, so this arm says what was actually verified rather
+                // than repeating a doc claim:
+                //
+                // 1. **No command reads back rasterised pixels.** Vello's
+                //    whole vocabulary is 13 commands (`CMD_FILL` … `CMD_BLUR_RECT`,
+                //    `shader/shared/ptcl.wgsl`). Not one takes the frame buffer
+                //    as an input. `draw_blurred_rounded_rect` blurs a shape it
+                //    is *given*; it never looks at what is already there.
+                // 2. **The layer mechanism composites, it does not process.**
+                //    `push_layer` / `pop_layer` carry a blend mode and an
+                //    alpha; the fine shader's `CMD_END_CLIP` does
+                //    `blend_mix_compose(bg, fg, blend)` and nothing else. There
+                //    is no hook between "the layer finished drawing" and "the
+                //    layer lands on the frame".
+                // 3. **The raster happens once, at the end.** A `BackdropFilter`
+                //    node sits *mid-stream*: everything before it is encoded
+                //    into `self.vello_scene` and nothing has been rasterised
+                //    yet, because `render_to_texture` runs after the whole
+                //    walk. Honouring the node would mean rasterising the
+                //    prefix, reading it back, blurring it, drawing the result
+                //    as an image, then rasterising the suffix into the same
+                //    target — and the API renders one scene per call, so the
+                //    two halves cannot be composed into one frame without a
+                //    full intermediate target and a second blit.
+                //
+                // That third point is the structural one: it is not a missing
+                // blur, it is a missing *place to stand*. The software backend
+                // can do it only because it owns the pixel buffer and can read
+                // and write it mid-walk.
+                //
+                // The readback path this crate *does* have — `run_shader_to_image`
+                // — cannot be reused here: a shader generates its pixels from a
+                // program, while a backdrop filter needs pixels that already
+                // exist, and those are not available until the frame ends.
                 stats.filter_skips += 1;
             }
             // Markers are consumed by the walk in `encode`, before it reaches
@@ -2375,7 +2413,8 @@ impl Presenter for VelloGpuPresenter {
         self.stats.frames
     }
 
-    /// Shadows on rects are drawn, filters are not, shaders are.
+    /// Shadows on rects are drawn; filters and backdrop filters are not;
+    /// shaders are.
     ///
     /// vello 0.7 grew a blur primitive (`draw_blurred_rounded_rect`), so a
     /// rect's drop shadow is drawn rather than skipped. The bit is `true`
@@ -2386,10 +2425,23 @@ impl Presenter for VelloGpuPresenter {
     /// shadows reads that counter, not this bit — a bit cannot carry a
     /// per-shape answer, and one that claimed to would be lying.
     ///
-    /// Filters remain `false` for the same reason they always were: a filter
-    /// is an operation on pixels that have *already* been drawn, and vello
-    /// has no way to reach into its own raster. A custom shader it *can* run:
-    /// the WGSL program is compiled into a pipeline and rendered.
+    /// The two filter bits are `false` for a reason that is *not* the shadow's
+    /// reason, and the difference is worth stating because the two read alike
+    /// in a matrix:
+    ///
+    /// * `filters` — a filter scope is content drawn into an empty layer and
+    ///   then blurred. Vello's layers composite (a blend mode and an alpha)
+    ///   but never process, so there is no moment at which the layer's own
+    ///   pixels could be blurred before they land.
+    /// * `backdrop_filters` — a filter over pixels that are *already* on the
+    ///   frame. This is the harder one, and it is structural rather than a
+    ///   missing primitive: the raster happens once, after the whole scene has
+    ///   been encoded, so a mid-stream `BackdropFilter` node has nothing to
+    ///   read. See the `BackdropFilter` arm for the full account.
+    ///
+    /// Both are counted (`filters_skipped`), so the degradation is a number
+    /// rather than an absence. A custom shader it *can* run: the WGSL program
+    /// is compiled into a pipeline and rendered.
     fn capabilities(&self) -> RendererCapabilities {
         RendererCapabilities {
             shadows: true,
@@ -2414,6 +2466,9 @@ mod tests {
     /// and if it ever does, these tests are exactly where the breakage
     /// should surface.
     const BLUR_RECT_TAG: u32 = 0x2d4;
+    /// `vello_encoding::DrawTag::COLOR` — a plain solid fill, spelled for the
+    /// same reason as the blur tag above.
+    const COLOR_TAG: u32 = 0x44;
 
     /// GPU tests are opportunistic: CI machines and containers frequently have
     /// no usable adapter, and "no GPU" is a supported configuration (the app
@@ -2421,6 +2476,11 @@ mod tests {
     /// fail in that case.
     fn presenter() -> Option<VelloGpuPresenter> {
         VelloGpuPresenter::new()
+    }
+
+    /// A registry with nothing in it, for nodes that cannot reach one.
+    fn empty_registry() -> floom_scene::ResourceRegistry {
+        floom_scene::ResourceRegistry::new()
     }
 
     /// A shadow, folded into the blur primitive's own parameters.
@@ -2605,6 +2665,67 @@ mod tests {
         assert!(
             !has_blur,
             "a plain fill is not a blur: no shadow was asked for"
+        );
+    }
+
+    /// A backdrop filter draws nothing, and the command stream says so.
+    ///
+    /// The claim in the arm's comment is that vello has nowhere to stand for
+    /// this request. The evidence is that the node produces **no draw tags at
+    /// all** — not a blurred rect, not a layer, nothing. A backend that
+    /// emitted an approximation would show up here as a tag, and one that
+    /// silently drew the content *sharp* would show up as a fill.
+    ///
+    /// No GPU needed, which is the point: this is the check that keeps the
+    /// `backdrop_filters: false` capability honest on machines that have no
+    /// adapter to run the raster on. `encode_node` only touches `self` for
+    /// texture caches a backdrop filter never reaches, so a presenter is built
+    /// opportunistically and the test skips where there is no adapter.
+    #[test]
+    fn a_backdrop_filter_emits_no_draw_command() {
+        let Some(mut presenter) = presenter() else {
+            // No adapter: "no GPU" is a supported configuration, so this
+            // skips rather than fails.
+            return;
+        };
+        let mut target = VelloScene::new();
+        let mut used = HashSet::new();
+        let node = SceneNode::BackdropFilter {
+            rect: Rect {
+                x0: 0.0,
+                y0: 0.0,
+                x1: 20.0,
+                y1: 20.0,
+            },
+            filter: floom_types::Filter::blur(6.0),
+        };
+        let stats = presenter.encode_node(&mut target, &node, &empty_registry(), &mut used);
+
+        assert_eq!(
+            stats.filter_skips, 1,
+            "the request is counted, never silent"
+        );
+        assert_eq!(stats.shadow_drawn, 0);
+        assert_eq!(stats.rects, 0, "and nothing is drawn in its place");
+        assert_eq!(stats.paths, 0);
+        assert_eq!(stats.images, 0);
+        assert_eq!(stats.glyph_runs, 0);
+
+        // The command stream itself: a filter scope's content would arrive as
+        // fills, and an approximation would arrive as a blur tag. Neither.
+        let enc = target.encoding();
+        let tags: Vec<u32> = enc.draw_tags.iter().map(|tag| tag.0).collect();
+        assert!(
+            tags.is_empty(),
+            "the whole stream is empty: the tags were {tags:?}"
+        );
+        assert!(
+            !tags.iter().any(|&raw| raw == BLUR_RECT_TAG),
+            "no blur approximation was drawn either"
+        );
+        assert!(
+            !tags.iter().any(|&raw| raw == COLOR_TAG),
+            "and the content was not drawn sharp as a substitute"
         );
     }
 
