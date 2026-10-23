@@ -158,10 +158,12 @@ that vocabulary.
 
 ## The gaps that remain
 
-- **vello's blur.** The GPU path has no shadow, no filter scope and no
-  backdrop filter. Counting is not rendering; a card with a shadow looks
-  flat on the desktop and on Android until vello grows a blur primitive or
-  the software path is used as a fallback.
+- **vello's filters.** The GPU path draws no filter scope and no backdrop
+  filter — both need to operate on pixels that have already been rasterised,
+  which vello has no way to reach into. A drop shadow on a **rect** is drawn;
+  a shadow on a path is not, because the primitive blurs a rounded rectangle.
+  Counting is not rendering, so a card with a shadow on a rounded rect now
+  has one, and the rest is a visible number.
 - **Pixel-level tests for the GPU path.** The web, the terminal and the
   software backend have pixel evidence now — the web compares itself against
   the reference buffer pixel for pixel, the terminal's golden is its
