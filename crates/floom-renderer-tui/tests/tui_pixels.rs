@@ -23,9 +23,9 @@
 //! cells it should and the cells it should not, and the golden pins the
 //! whole picture.
 
+use floom_renderer::{assert_snapshot, snapshots_dir};
 use floom_renderer_tui::{Cell, TuiGrid, paint_scene};
 use floom_scene::{Rect, Scene, SceneNode};
-use floom_snapshot::{assert_snapshot, snapshots_dir};
 use floom_types::{Brush, Color, Point, Size};
 
 /// A scene with a filled block and a smaller block beside it.

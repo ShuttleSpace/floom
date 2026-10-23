@@ -10,9 +10,9 @@
 //! against the measurements directly, because a floor is a ">= " claim, not an
 //! exact value.
 
-use floom_types::contrast_ratio;
-use floom_snapshot::PixelSnapshot;
+use floom_snapshot::{PixelProbe, PixelSnapshot, ReferencePixels};
 use floom_testkit::{Selector, TestApp};
+use floom_types::contrast_ratio;
 use floom_types::{Point, Rect};
 use floom_ui_ir::{
     ColorRole, ContractDiff, ContractVersion, DesignContract, Dimensions, Radius, Spacing,
@@ -146,9 +146,12 @@ fn measure(screen: Screen, app: &TestApp) -> EvaluationReport {
                 fill,
                 radius,
                 ..
-            } if !covers_window(bounds) && bounds.width() > 1.0 && bounds.height() > 1.0 => {
-                Some((bounds.width() * bounds.height(), *bounds, fill.solid(), *radius))
-            }
+            } if !covers_window(bounds) && bounds.width() > 1.0 && bounds.height() > 1.0 => Some((
+                bounds.width() * bounds.height(),
+                *bounds,
+                fill.solid(),
+                *radius,
+            )),
             _ => None,
         })
         .max_by(|a, b| a.0.total_cmp(&b.0))

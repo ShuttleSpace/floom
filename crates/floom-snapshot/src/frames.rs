@@ -405,7 +405,7 @@ pub fn parse_sequence(text: &str) -> Option<Vec<(String, FrameDigest)>> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{PixelSnapshot, single_rect_scene};
+    use crate::{PixelProbe, PixelSnapshot, ReferencePixels, single_rect_scene};
     use floom_types::{Color, Size};
 
     fn solid(w: u32, h: u32, color: Color) -> PixelSnapshot {

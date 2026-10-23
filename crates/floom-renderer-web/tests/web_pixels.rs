@@ -16,10 +16,10 @@
 //! above cannot see.
 
 use floom_renderer::{AttachedSurface, Presenter};
+use floom_renderer::{PixelSnapshot, snapshots_dir};
 use floom_renderer_software::SoftwarePresenter;
 use floom_renderer_web::WebPresenter;
 use floom_scene::{Rect, Scene, SceneNode};
-use floom_snapshot::{PixelSnapshot, snapshots_dir};
 use floom_types::{Brush, Color, Point, Size};
 use floom_types::{SurfaceId, WindowId};
 

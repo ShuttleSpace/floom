@@ -14,7 +14,7 @@
 
 use floom_core::{SemanticsHint, SemanticsState};
 use floom_inspector::SceneLines;
-use floom_snapshot::PixelSnapshot;
+use floom_snapshot::{PixelProbe, PixelSnapshot, ReferencePixels};
 use floom_testkit::TestApp;
 use floom_types::Point;
 

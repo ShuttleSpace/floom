@@ -37,7 +37,9 @@ use floom_animation::{AnimKind, CompositorProp, Tween};
 use floom_app::{NodeId, WidgetHost};
 use floom_core::{Child, ChildKey, LayoutRequest, Length};
 use floom_layout::LayoutStyle;
-use floom_snapshot::{FrameDigest, GoldenFrames, PixelSnapshot, snapshots_dir};
+use floom_snapshot::{
+    FrameDigest, GoldenFrames, PixelProbe, PixelSnapshot, ReferencePixels, snapshots_dir,
+};
 use floom_types::{Brush, Color, PresenceTransition, Size};
 use floom_widgets::{Conditional, Container, Crossfade, SharedTransitionLayout, WidgetAny};
 

@@ -6,8 +6,8 @@
 
 use floom_accessibility::{SemanticsRole, SemanticsTree};
 use floom_snapshot::{
-    PixelSnapshot, SceneSnapshot, SemanticsSnapshot, assert_snapshot, semantics_node,
-    single_rect_scene, snapshots_dir,
+    PixelProbe, PixelSnapshot, ReferencePixels, SceneSnapshot, SemanticsSnapshot, assert_snapshot,
+    semantics_node, single_rect_scene, snapshots_dir,
 };
 use floom_types::{Color, ElementId, Size};
 

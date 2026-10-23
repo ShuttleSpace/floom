@@ -19,26 +19,23 @@
 //! tree is sorted by `(id.index(), id.generation())` because `ElementId` has no
 //! `Ord` by design.
 
-use std::path::PathBuf;
-
 use floom_accessibility::{SemanticsNode, SemanticsTree};
 use floom_renderer::{AttachedSurface, Presenter};
 use floom_renderer_software::SoftwarePresenter;
-use floom_scene::{ResourceRegistry, Scene};
+use floom_scene::{ResourceRegistry, Scene, SceneNode};
 use floom_types::{Color, Point, Rect, Size, SurfaceId, WindowId};
 
 pub mod frames;
 pub use frames::{FrameDiff, FrameDigest, GoldenFrames, parse_sequence};
 
-/// Stable, dependency-free 64-bit hash (FNV-1a, 64-bit offset basis).
-pub fn fnv1a(bytes: &[u8]) -> u64 {
-    let mut hash: u64 = 0xcbf2_9ce4_8422_2325;
-    for &b in bytes {
-        hash ^= b as u64;
-        hash = hash.wrapping_mul(0x0000_0100_0000_01b3);
-    }
-    hash
-}
+// The golden-file machinery and the pixel snapshot type itself live in
+// `floom_renderer`: a backend can reach a golden through a dependency it
+// already has, instead of reaching up into this tooling-layer crate. These
+// re-exports keep every existing caller unchanged, and the impls below add the
+// reference half — which needs the software presenter, and so cannot live
+// there.
+pub use floom_renderer::{PixelSnapshot, assert_snapshot, fnv1a, snapshot_path, snapshots_dir};
+pub use floom_types::{ElementId, SceneNodeId};
 
 fn hash_str(s: &str) -> String {
     format!("{:016x}", fnv1a(s.as_bytes()))
@@ -111,22 +108,27 @@ impl SemanticsSnapshot {
     }
 }
 
-/// A deterministic RGBA + hash fingerprint of a rendered [`Scene`].
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct PixelSnapshot {
-    pub width: u32,
-    pub height: u32,
-    /// FNV-1a of the raw RGBA8 buffer (length = width*height*4).
-    pub hash: String,
-    /// Raw RGBA8 pixels, kept so a test can assert on individual pixels too.
-    pub rgba: Vec<u8>,
+/// The **reference** pixel snapshot: `scene` rendered through the software
+/// presenter, which is the picture every other backend is measured against.
+///
+/// A trait rather than an inherent constructor because it needs the software
+/// presenter, and Rust does not allow an inherent `impl` for a type defined in
+/// another crate. That constraint is the honest one: the *type* is
+/// backend-neutral and lives in `floom_renderer` so any backend can snapshot
+/// its own buffer, but *this* half is specifically the reference, and only a
+/// crate that already depends on the software renderer can produce it.
+///
+/// The hashing is `PixelSnapshot::of_buffer`'s, so a golden written through
+/// one constructor is comparable with one written through the other.
+pub trait ReferencePixels {
+    /// Render `scene` into an offscreen RGBA buffer via the software
+    /// presenter. `scale` controls the physical buffer size; `1.0` keeps
+    /// logical == physical.
+    fn of(scene: &Scene, resources: Option<&ResourceRegistry>, size: Size, scale: f64) -> Self;
 }
 
-impl PixelSnapshot {
-    /// Render `scene` (with optional `resources`) into an offscreen RGBA buffer
-    /// via the software presenter and hash the result. `scale` controls the
-    /// physical buffer size; `1.0` keeps logical == physical.
-    pub fn of(scene: &Scene, resources: Option<&ResourceRegistry>, size: Size, scale: f64) -> Self {
+impl ReferencePixels for PixelSnapshot {
+    fn of(scene: &Scene, resources: Option<&ResourceRegistry>, size: Size, scale: f64) -> Self {
         let mut presenter = SoftwarePresenter::new();
         let surface =
             AttachedSurface::new(WindowId::new(0, 1), SurfaceId::new(0, 1), size, scale, None);
@@ -137,125 +139,32 @@ impl PixelSnapshot {
         let width = presenter.width();
         let height = presenter.height();
         let rgba = presenter.pixels().to_vec();
-        // The same hashing as `of_buffer`, so a golden written through one
-        // constructor is comparable with one written through the other.
-        let snapshot = Self::of_buffer(&rgba, width, height);
-        snapshot
+        PixelSnapshot::of_buffer(&rgba, width, height)
     }
+}
 
-    /// A snapshot of a buffer a backend produced.
-    ///
-    /// The other half of the type: [`PixelSnapshot::of`] renders through the
-    /// software presenter, which is the *reference* — but a reference is not a
-    /// coverage. A backend that renders its own pixels needs a golden too,
-    /// and this is how it gets one: the backend hands over its buffer, and the
-    /// same hashing and the same golden file apply.
-    ///
-    /// The width and height are the **physical** ones, so a buffer that is
-    /// the wrong size is a different snapshot rather than a re-hash of a
-    /// different picture.
-    pub fn of_buffer(rgba: &[u8], width: u32, height: u32) -> Self {
-        // The dimensions go into the hash, not just the buffer.
-        //
-        // The same bytes in a different shape are a different picture — a
-        // 1×1 buffer and a 2×1 buffer of the same pixel are not the same
-        // image, and a hash that could not tell them apart would let a
-        // backend change the shape of its output without the golden
-        // noticing.
-        let mut hashed = Vec::with_capacity(rgba.len() + 8);
-        hashed.extend_from_slice(&width.to_le_bytes());
-        hashed.extend_from_slice(&height.to_le_bytes());
-        hashed.extend_from_slice(rgba);
-        let hash = format!("{:016x}", fnv1a(&hashed));
-        Self {
-            width,
-            height,
-            hash,
-            rgba: rgba.to_vec(),
-        }
-    }
+/// Read one RGBA pixel, or `None` if out of bounds.
+///
+/// A trait method for the same reason as [`ReferencePixels::of`]: the type is
+/// defined in `floom_renderer`, so it cannot grow an inherent impl here.
+pub trait PixelProbe {
+    fn rgba_pixel(&self, x: u32, y: u32) -> Option<[u8; 4]>;
+}
 
-    /// The alpha of one pixel, or `None` outside the buffer.
-    ///
-    /// A convenience for the probe style the software backend's tests use:
-    /// "this pixel is inked" only means something next to "the same picture
-    /// without it is clear", and a probe reads better than an index
-    /// calculation.
-    pub fn alpha(&self, x: u32, y: u32) -> Option<u8> {
+impl PixelProbe for PixelSnapshot {
+    fn rgba_pixel(&self, x: u32, y: u32) -> Option<[u8; 4]> {
         if x >= self.width || y >= self.height {
             return None;
         }
-        let index = ((y as usize) * self.width as usize + x as usize) * 4;
-        self.rgba.get(index + 3).copied()
-    }
-
-    /// Golden-file compare / update. The golden stores `WxH <hash>` so a resize
-    /// shows up as a mismatch, not a silent re-hash of a different buffer.
-    pub fn assert(&self, manifest_dir: &str, name: &str) {
-        let content = format!("{}x{} {}", self.width, self.height, self.hash);
-        assert_snapshot(manifest_dir, name, &content);
+        let i = ((y * self.width + x) as usize) * 4;
+        Some([
+            self.rgba[i],
+            self.rgba[i + 1],
+            self.rgba[i + 2],
+            self.rgba[i + 3],
+        ])
     }
 }
-
-/// The manifest directory of the crate that *calls* this macro.
-///
-/// A golden file belongs to the crate whose test asserts it, and the caller is
-/// the only one that knows where that is: `env!` inside this crate expands to
-/// *this* crate's manifest, so a `snapshot_path` that used it would drop every
-/// downstream crate's goldens into `crates/floom-snapshot/snapshots/` — which
-/// is exactly what happened before this macro existed, and why two crates could
-/// collide on a snapshot name. A macro expands at the call site, so it resolves
-/// to the right directory.
-#[macro_export]
-macro_rules! snapshots_dir {
-    () => {
-        env!("CARGO_MANIFEST_DIR")
-    };
-}
-
-/// Compare `content` against `<manifest_dir>/snapshots/<name>.snap`.
-///
-/// With `UPDATE_SNAPSHOTS=1` the file is (re)written and the test passes.
-/// Otherwise a missing or differing file fails the test with a short diff.
-pub fn assert_snapshot(manifest_dir: &str, name: &str, content: &str) {
-    let path = snapshot_path(manifest_dir, name);
-    if std::env::var("UPDATE_SNAPSHOTS")
-        .map(|v| v == "1")
-        .unwrap_or(false)
-    {
-        if let Some(parent) = path.parent() {
-            std::fs::create_dir_all(parent).expect("create snapshots dir");
-        }
-        std::fs::write(&path, content).expect("write snapshot");
-        return;
-    }
-    match std::fs::read_to_string(&path) {
-        Ok(prev) if prev == content => {}
-        Ok(prev) => panic!(
-            "snapshot `{name}` changed ({}):\n--- previous ---\n{prev}\n--- current ---\n{content}",
-            path.display()
-        ),
-        Err(_) => panic!(
-            "snapshot `{name}` missing at {}; run with UPDATE_SNAPSHOTS=1 to create it",
-            path.display()
-        ),
-    }
-}
-
-/// Path of the golden file for `name`, inside `manifest_dir`.
-///
-/// `manifest_dir` is the asserting crate's own manifest directory — normally
-/// [`snapshots_dir!`], which resolves it at the call site.
-pub fn snapshot_path(manifest_dir: &str, name: &str) -> PathBuf {
-    PathBuf::from(manifest_dir)
-        .join("snapshots")
-        .join(format!("{name}.snap"))
-}
-
-// Re-export the few builders a snapshot test wants, so callers depend on this
-// crate alone rather than reaching into the scene/semantics crates.
-pub use floom_scene::SceneNode;
-pub use floom_types::{ElementId, SceneNodeId};
 
 /// Convenience: a filled axis-aligned rect node (radius 0 → crisp edges).
 pub fn rect(bounds: Rect, fill: impl Into<floom_types::Brush>) -> SceneNode {
@@ -361,21 +270,5 @@ mod tests {
             p1.hash,
             PixelSnapshot::of(&other, None, Size::new(8.0, 8.0), 1.0).hash
         );
-    }
-}
-
-impl PixelSnapshot {
-    /// Read one RGBA pixel, or `None` if out of bounds.
-    pub fn rgba_pixel(&self, x: u32, y: u32) -> Option<[u8; 4]> {
-        if x >= self.width || y >= self.height {
-            return None;
-        }
-        let i = ((y * self.width + x) as usize) * 4;
-        Some([
-            self.rgba[i],
-            self.rgba[i + 1],
-            self.rgba[i + 2],
-            self.rgba[i + 3],
-        ])
     }
 }

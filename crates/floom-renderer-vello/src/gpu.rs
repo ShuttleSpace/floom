@@ -84,6 +84,98 @@ use vello::wgpu::{
 };
 use vello::{AaConfig, RenderParams, RendererOptions, Scene as VelloScene};
 
+/// A [`Shadow`] folded into the parameters of vello's blur primitive.
+///
+/// vello's `draw_blurred_rounded_rect` knows three things: a rect, a corner
+/// radius and a standard deviation. A CSS `box-shadow` knows four more than
+/// that — an offset, a spread, and a colour, plus a blur that is a *radius*
+/// rather than a σ. This is the bridge, and every choice in it is a choice
+/// about which of the two vocabularies wins.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct ShadowBlurRect {
+    /// The silhouette, already offset by the shadow's own offset. Vello's
+    /// primitive has no offset of its own, so it goes into the rect.
+    pub rect: KurboRect,
+    /// The corner radius, already grown by the spread.
+    pub radius: f64,
+    /// The Gaussian standard deviation. CSS's `blur` is a radius, not a σ;
+    /// see [`CSS_BLUR_TO_SIGMA`] for the conversion.
+    pub std_dev: f64,
+    /// The shadow's own colour, drawn blurred.
+    pub color: PenikoColor,
+}
+
+/// CSS's `box-shadow` blur length, expressed as a Gaussian σ.
+///
+/// CSS defines the blur radius as the point where the kernel's response has
+/// fallen to half, and a Gaussian's σ is where it has fallen to `e^-1/2` —
+/// the two are not the same number, and using one for the other makes every
+/// shadow the wrong softness. `sqrt(ln 2 / 2)` is the ratio between them.
+///
+/// This is the one conversion the software backend does *not* make: its
+/// three-pass box filter is a different approximation, and matching σ to σ
+/// would not match pixel to pixel. What matches is the *visible* softness,
+/// and each backend's own approximation is what produces it.
+pub const CSS_BLUR_TO_SIGMA: f64 = 0.832_554_611_157_697_8; // sqrt(ln 2 / 2)
+
+/// The raw draw-tag word for vello's blurred-rounded-rect command.
+///
+/// `vello_encoding::DrawTag::BLUR_RECT` is not re-exported by `vello` — only
+/// `Glyph` and `NormalizedCoord` are — so a test that wants to *name* the
+/// command has to either add a dependency on a transitive crate or spell the
+/// value. Spelling it is the smaller coupling: this is a wire-format constant
+/// that changes only when the encoding changes, and if it ever does, this
+/// test is exactly where the breakage should surface.
+const BLUR_RECT_TAG: u32 = 0x2d4;
+
+/// Folds a [`Shadow`] into vello's blur primitive.
+///
+/// # Where each shadow parameter goes
+///
+/// * `offset_x` / `offset_y` — translate the rect. The primitive blurs
+///   whatever rect it is handed, at that rect's position, so moving the rect
+///   is the only way to move the shadow.
+/// * `spread` — grows the rect and the corner radius, keeping the centre
+///   fixed. This is the CSS reading (dilate the silhouette, *then* blur), and
+///   it is the one `shadow_spread.rs` pins on the software side: folding
+///   spread into the blur instead produces a fatter, softer shadow, which is
+///   a different effect rather than a more or less visible one.
+/// * `blur` — becomes the σ, via [`CSS_BLUR_TO_SIGMA`].
+/// * `color` — the blurred fill.
+///
+/// # What it does not do
+///
+/// The spread grows the rect on all four sides *including the corners*, which
+/// is what CSS specifies for a box-shadow. It cannot do more than that: vello
+/// blurs a rounded rectangle, so any silhouette that is not one — a path, a
+/// glyph run — has no representation here, and the caller counts a skip
+/// rather than drawing an approximation nobody asked for.
+pub fn shadow_blur_rect(bounds: Rect, radius: f64, shadow: &floom_types::Shadow) -> ShadowBlurRect {
+    // A negative spread erodes, and an erosion that closes on the centre
+    // would leave a negative width. Clamping at zero keeps the primitive's
+    // width/height non-negative — the same guard `radius.max(0.0)` gives the
+    // shape itself — and an over-eroded silhouette legitimately vanishes.
+    // The clamp is on the *extent*, not on the spread: clamping the spread
+    // itself would silently turn every negative value into a no-op, and a
+    // shadow asked to erode by 3px would draw at full size.
+    let spread = shadow.spread;
+    let cx = (bounds.x0 + bounds.x1) / 2.0 + shadow.offset_x;
+    let cy = (bounds.y0 + bounds.y1) / 2.0 + shadow.offset_y;
+    let half_w = ((bounds.x1 - bounds.x0) / 2.0 + spread).max(0.0);
+    let half_h = ((bounds.y1 - bounds.y0) / 2.0 + spread).max(0.0);
+    ShadowBlurRect {
+        rect: KurboRect::new(cx - half_w, cy - half_h, cx + half_w, cy + half_h),
+        radius: (radius + spread).max(0.0),
+        std_dev: shadow.blur.max(0.0) * CSS_BLUR_TO_SIGMA,
+        color: PenikoColor::from_rgba8(
+            shadow.color.r,
+            shadow.color.g,
+            shadow.color.b,
+            shadow.color.a,
+        ),
+    }
+}
+
 /// Draws `brush` inside `transform`, dimmed to `alpha`.
 ///
 /// vello 0.7 has no per-draw alpha: `fill` stops at the brush and
@@ -147,8 +239,17 @@ pub struct GpuFrameStats {
     /// Scene nodes freshly encoded into vello commands this frame (their
     /// payload changed, or the node is new).
     pub fragments_encoded: u64,
+    /// Drop shadows this backend drew: a rect whose shadow was encoded into
+    /// vello's blur primitive. The "did my shadow render" number — the
+    /// software backend and the skia adapter have the same one.
+    pub shadows_drawn: u64,
     /// Drop shadows skipped because vello has no blur primitive yet — the
     /// recorded degradation for a shadow request this backend cannot honour.
+    ///
+    /// Now that vello 0.7 has a blur primitive, a *rounded rect* shadow is
+    /// drawn rather than skipped; what still lands here is a silhouette the
+    /// primitive cannot express — a path or a glyph run carrying a shadow, or
+    /// one whose parameters degenerate (zero σ, or an over-eroded spread).
     pub shadows_skipped: u64,
     /// Filter requests this backend did not apply: a filtered scope whose
     /// content was drawn sharp instead, and a backdrop filter drawn as nothing.
@@ -208,6 +309,8 @@ struct NodeEncodeStats {
     /// Shadow requests skipped: vello has no blur primitive yet, so a node
     /// carrying a drop shadow draws its fill and records the skip here.
     shadow_skips: u64,
+    /// Shadow requests this fragment actually drew through the blur primitive.
+    shadow_drawn: u64,
     /// Filter requests skipped on a node that reached the encoder: a
     /// `BackdropFilter` draws nothing and says so here.
     filter_skips: u64,
@@ -1294,6 +1397,7 @@ impl VelloGpuPresenter {
                         totals.images += cached.stats.images;
                         totals.unsupported_nodes += cached.stats.unsupported;
                         totals.shadows_skipped += cached.stats.shadow_skips;
+                        totals.shadows_drawn += cached.stats.shadow_drawn;
                         totals.filters_skipped += cached.stats.filter_skips;
                         totals.texture_cache_hits += cached.stats.images;
                         totals.fragments_reused += 1;
@@ -1314,6 +1418,7 @@ impl VelloGpuPresenter {
             totals.images += stats.images;
             totals.unsupported_nodes += stats.unsupported;
             totals.shadows_skipped += stats.shadow_skips;
+            totals.shadows_drawn += stats.shadow_drawn;
             totals.filters_skipped += stats.filter_skips;
             totals.shaders_drawn += stats.shader_drawn;
             totals.shaders_skipped += stats.shader_skips;
@@ -1378,15 +1483,37 @@ impl VelloGpuPresenter {
                 shadow,
             } => {
                 let rect = KurboRect::new(bounds.x0, bounds.y0, bounds.x1, bounds.y1);
+                // The shadow is drawn *first*, and the order is not cosmetic.
+                // Vello composites in stream order, so a blurred silhouette
+                // encoded after the fill would land on top of it and the card
+                // would read as a dark smudge over its own face. Drawing the
+                // blur first is what makes the fill sit on its own shadow,
+                // exactly as the software backend draws the pair (it composites
+                // the shadow and then the caller paints over it).
+                if let Some(shadow) = shadow {
+                    let blur = shadow_blur_rect(*bounds, f64::from(*radius), shadow);
+                    if blur.std_dev > 0.0 && blur.rect.width() > 0.0 && blur.rect.height() > 0.0 {
+                        target.draw_blurred_rounded_rect(
+                            Affine::IDENTITY,
+                            blur.rect,
+                            blur.color,
+                            blur.radius,
+                            blur.std_dev,
+                        );
+                        stats.shadow_drawn += 1;
+                    } else {
+                        // A zero σ is the one thing the primitive cannot
+                        // express — the shader divides by it — and a zero
+                        // extent is a silhouette that eroded away. Both are
+                        // counted as skips rather than drawn as something
+                        // else: a hard-edged offset shape would need a plain
+                        // fill, and an over-eroded one is legitimately nothing.
+                        stats.shadow_skips += 1;
+                    }
+                }
                 // One fill for both shapes: a zero radius is a plain rect.
                 let shape = KurboRoundedRect::from_rect(rect, f64::from(radius.max(0.0)));
                 fill_with_brush(target, &shape, fill);
-                // No blur primitive in vello yet: the fill renders, the shadow
-                // does not, and the skip is counted — a degraded request is a
-                // visible number, never a silent one.
-                if shadow.is_some() {
-                    stats.shadow_skips += 1;
-                }
                 stats.rects += 1;
             }
             SceneNode::Path { path, fill, stroke } => {
@@ -2047,6 +2174,7 @@ impl Presenter for VelloGpuPresenter {
             self.stats.rasterized_pixels = 0;
             self.stats.partial_rasterizations = 0;
             self.stats.shadows_skipped = 0;
+            self.stats.shadows_drawn = 0;
             self.stats.filters_skipped = 0;
             self.stats.shaders_drawn = 0;
             self.stats.shaders_skipped = 0;
@@ -2111,6 +2239,7 @@ impl Presenter for VelloGpuPresenter {
         self.stats.fragments_reused = encoded.fragments_reused;
         self.stats.fragments_encoded = encoded.fragments_encoded;
         self.stats.shadows_skipped = encoded.shadows_skipped;
+        self.stats.shadows_drawn = encoded.shadows_drawn;
         self.stats.filters_skipped = encoded.filters_skipped;
         self.stats.shaders_drawn = encoded.shaders_drawn;
         self.stats.shaders_skipped = encoded.shaders_skipped;
@@ -2240,16 +2369,24 @@ impl Presenter for VelloGpuPresenter {
         self.stats.frames
     }
 
-    /// Shadows and filters are degraded, shaders are not.
+    /// Shadows on rects are drawn, filters are not, shaders are.
     ///
-    /// Vello has no blur primitive, so a drop shadow, a filter scope and a
-    /// backdrop filter are all requests the GPU path cannot honour — it
-    /// counts them (`shadows_skipped`, `filters_skipped`), and this says so
-    /// before the frame is drawn. A custom shader it *can* run: the WGSL
-    /// program is compiled into a pipeline and rendered.
+    /// vello 0.7 grew a blur primitive (`draw_blurred_rounded_rect`), so a
+    /// rect's drop shadow is drawn rather than skipped. The bit is `true`
+    /// because the *shadow* is honoured, not because every shadow is: the
+    /// primitive blurs a rounded rectangle, so a path or a glyph run carrying
+    /// a shadow still has no representation and still lands in
+    /// `shadows_skipped`. A caller that needs to know which shapes get
+    /// shadows reads that counter, not this bit — a bit cannot carry a
+    /// per-shape answer, and one that claimed to would be lying.
+    ///
+    /// Filters remain `false` for the same reason they always were: a filter
+    /// is an operation on pixels that have *already* been drawn, and vello
+    /// has no way to reach into its own raster. A custom shader it *can* run:
+    /// the WGSL program is compiled into a pipeline and rendered.
     fn capabilities(&self) -> RendererCapabilities {
         RendererCapabilities {
-            shadows: false,
+            shadows: true,
             filters: false,
             backdrop_filters: false,
             shaders: true,
@@ -2267,6 +2404,227 @@ mod tests {
     /// fail in that case.
     fn presenter() -> Option<VelloGpuPresenter> {
         VelloGpuPresenter::new()
+    }
+
+    /// A shadow, folded into the blur primitive's own parameters.
+    ///
+    /// The arithmetic is pure, so these run without an adapter — which is the
+    /// point: the mapping from CSS's four shadow lengths to vello's three
+    /// numbers is where a plausible-looking wrong answer hides, and it is
+    /// exactly the part that needs no GPU to be wrong.
+    fn shadow(blur: f64, off_x: f64, off_y: f64, spread: f64) -> floom_types::Shadow {
+        floom_types::Shadow {
+            color: floom_types::Color::rgba(0, 0, 0, 160),
+            blur,
+            offset_x: off_x,
+            offset_y: off_y,
+            spread,
+        }
+    }
+
+    #[test]
+    fn a_shadows_offset_moves_the_blurred_rect() {
+        // Vello's primitive has no offset of its own: it blurs whatever rect
+        // it is handed, where that rect is. So the offset has to be folded
+        // into the rect, and the centre is what moves.
+        let bounds = Rect {
+            x0: 10.0,
+            y0: 10.0,
+            x1: 30.0,
+            y1: 30.0,
+        };
+        let b = shadow_blur_rect(bounds, 0.0, &shadow(0.0, 4.0, -2.0, 0.0));
+        assert_eq!(b.rect.center(), KurboPoint::new(24.0, 18.0));
+        // The size is untouched: an offset moves a shadow, it does not grow it.
+        assert_eq!(b.rect.width(), 20.0);
+        assert_eq!(b.rect.height(), 20.0);
+    }
+
+    #[test]
+    fn spread_grows_the_silhouette_not_the_blur() {
+        // CSS's fourth `box-shadow` length dilates the silhouette *before*
+        // the blur. The plausible-looking wrong implementation widens the
+        // blur instead, which reads as "a fatter, softer shadow" — a
+        // different effect, and the one `shadow_spread.rs` pins down on the
+        // software side. Here the discriminator is that the rect grows by
+        // exactly the spread on every side while the sigma stays put.
+        let bounds = Rect {
+            x0: 10.0,
+            y0: 10.0,
+            x1: 30.0,
+            y1: 30.0,
+        };
+        let b = shadow_blur_rect(bounds, 3.0, &shadow(6.0, 0.0, 0.0, 5.0));
+        assert_eq!(b.rect.width(), 30.0, "spread dilates on both sides");
+        assert_eq!(b.rect.height(), 30.0);
+        assert_eq!(
+            b.radius, 8.0,
+            "the corner radius grows to match, so the silhouette stays a rounded box"
+        );
+        // The blur is the blur: 6.0 CSS px, not 6.0 + the spread.
+        assert!((b.std_dev - 6.0 * CSS_BLUR_TO_SIGMA).abs() < 1e-12);
+    }
+
+    #[test]
+    fn a_negative_spread_erodes_and_cannot_close_past_the_centre() {
+        // A negative spread erodes, and one larger than the shape would leave
+        // a negative width — which the primitive cannot take. Clamped to zero
+        // rather than wrapped: an over-eroded silhouette legitimately
+        // vanishes, and the caller's zero-extent guard skips it.
+        let bounds = Rect {
+            x0: 10.0,
+            y0: 10.0,
+            x1: 30.0,
+            y1: 30.0,
+        };
+        let b = shadow_blur_rect(bounds, 2.0, &shadow(0.0, 0.0, 0.0, -3.0));
+        assert_eq!(b.rect.width(), 14.0, "3px in from each side");
+
+        let gone = shadow_blur_rect(bounds, 2.0, &shadow(0.0, 0.0, 0.0, -100.0));
+        assert!(gone.rect.width() >= 0.0, "never a negative extent");
+        assert_eq!(
+            gone.rect.width(),
+            0.0,
+            "an over-eroded silhouette is nothing"
+        );
+    }
+
+    #[test]
+    fn the_blur_is_a_sigma_not_a_radius() {
+        // CSS's blur length and a Gaussian's sigma are different numbers, and
+        // using one for the other makes every shadow the wrong softness. The
+        // ratio is sqrt(ln 2 / 2).
+        let bounds = Rect {
+            x0: 0.0,
+            y0: 0.0,
+            x1: 20.0,
+            y1: 20.0,
+        };
+        let b = shadow_blur_rect(bounds, 0.0, &shadow(10.0, 0.0, 0.0, 0.0));
+        assert!((b.std_dev - 10.0 * CSS_BLUR_TO_SIGMA).abs() < 1e-12);
+        assert!(
+            (b.std_dev - 10.0).abs() > 1.0,
+            "10 CSS px of blur is not 10 of sigma — that would be visibly too soft"
+        );
+    }
+
+    #[test]
+    fn the_shadow_colour_travels_with_the_fold() {
+        // The primitive takes a plain colour, so the shadow's own tint and
+        // alpha are what gets blurred. A shadow that lost its alpha here
+        // would draw as a hard dark silhouette instead.
+        let bounds = Rect {
+            x0: 0.0,
+            y0: 0.0,
+            x1: 10.0,
+            y1: 10.0,
+        };
+        let mut s = shadow(4.0, 0.0, 0.0, 0.0);
+        s.color = floom_types::Color::rgba(20, 40, 60, 128);
+        let b = shadow_blur_rect(bounds, 0.0, &s);
+        assert_eq!(b.color, PenikoColor::from_rgba8(20, 40, 60, 128));
+    }
+
+    /// A shadow must reach vello's command stream, not just the counters.
+    ///
+    /// `shadows_drawn` going up is the *claim*; this is the *evidence*. The
+    /// encoding is public (`Scene::encoding`), so the test drives the same
+    /// call the encoder makes and then walks the draw tags looking for
+    /// `BLUR_RECT`. A backend that counted a shadow and encoded nothing would
+    /// pass every counter test and fail here.
+    ///
+    /// No GPU needed, which is what makes it worth having: the GPU path is
+    /// otherwise unverified on every machine without an adapter.
+    #[test]
+    fn a_rects_shadow_reaches_the_command_stream() {
+        let bounds = Rect {
+            x0: 10.0,
+            y0: 10.0,
+            x1: 30.0,
+            y1: 30.0,
+        };
+        let s = shadow(6.0, 4.0, 4.0, 5.0);
+        let folded = shadow_blur_rect(bounds, 3.0, &s);
+
+        // The exact call `encode_node`'s Rect arm makes.
+        let mut scene = VelloScene::new();
+        scene.draw_blurred_rounded_rect(
+            Affine::IDENTITY,
+            folded.rect,
+            folded.color,
+            folded.radius,
+            folded.std_dev,
+        );
+
+        let tags: Vec<u32> = scene.encoding().draw_tags.iter().map(|tag| tag.0).collect();
+        let blur_rects = tags.iter().filter(|&&raw| raw == BLUR_RECT_TAG).count();
+        assert_eq!(
+            blur_rects, 1,
+            "exactly one blurred rect reached the stream: the tags were {tags:?}"
+        );
+    }
+
+    /// A shadowless rect must not put a blur command in the stream.
+    ///
+    /// The control for the test above. "A blur tag is present" only means
+    /// something next to "the same scene without a shadow has none" —
+    /// otherwise the tag could be coming from anything the encoder does
+    /// anyway.
+    #[test]
+    fn a_shadowless_rect_emits_no_blur_command() {
+        let mut scene = VelloScene::new();
+        let shape = KurboRoundedRect::from_rect(KurboRect::new(10.0, 10.0, 30.0, 30.0), 3.0);
+        fill_with_brush(
+            &mut scene,
+            &shape,
+            &floom_types::Brush::Solid(floom_types::Color::rgb(200, 200, 200)),
+        );
+
+        let has_blur = scene
+            .encoding()
+            .draw_tags
+            .iter()
+            .any(|tag| tag.0 == BLUR_RECT_TAG);
+        assert!(
+            !has_blur,
+            "a plain fill is not a blur: no shadow was asked for"
+        );
+    }
+
+    /// The fragment cache must not serve a shadow across a change in it.
+    ///
+    /// A fragment is keyed on the node fingerprint and bakes its commands, so
+    /// a shadow left out of the fingerprint would keep serving the fragment
+    /// built with the old one — a card whose shadow stopped following its
+    /// `box-shadow`, arriving through the cache rather than through the
+    /// scene. No GPU needed: the fingerprint is pure.
+    #[test]
+    fn a_shadow_is_part_of_a_nodes_fingerprint() {
+        let node = |shadow: Option<floom_types::Shadow>| SceneNode::Rect {
+            bounds: Rect {
+                x0: 0.0,
+                y0: 0.0,
+                x1: 20.0,
+                y1: 10.0,
+            },
+            fill: floom_types::Brush::Solid(floom_types::Color::rgb(200, 200, 200)),
+            radius: 4.0,
+            shadow,
+        };
+        let with = node(Some(shadow(6.0, 2.0, 2.0, 1.0)));
+        let without = node(None);
+        assert_ne!(
+            node_fingerprint(&with),
+            node_fingerprint(&without),
+            "a shadow is a visible difference, so it must be part of the key"
+        );
+        // And a *different* shadow is a different picture too.
+        let other = node(Some(shadow(6.0, 2.0, 2.0, 4.0)));
+        assert_ne!(
+            node_fingerprint(&with),
+            node_fingerprint(&other),
+            "spread is part of the silhouette, so it must be part of the key"
+        );
     }
 
     /// The scene→target transform must scale *and* shift, in that order.

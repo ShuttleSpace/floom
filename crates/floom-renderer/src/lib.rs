@@ -4,12 +4,14 @@
 
 mod external;
 mod frame_queue;
+mod golden;
 mod present;
 
 pub use external::{ExternalFrame, ExternalTextureCache, ExternalTextureStats, ImportDecision};
 pub use floom_scene::{DamageRegion, ResourceRegistry, Scene, SceneNode};
 pub use floom_types::{Color, Point, Rect, ResourceId, SceneNodeId, Size};
 pub use frame_queue::{FrameHandoffStats, SceneFrameQueue, SceneSnapshot};
+pub use golden::{PixelSnapshot, assert_snapshot, fnv1a, snapshot_path};
 pub use present::{AttachedSurface, Presenter, SurfaceHandles};
 
 use floom_scene::Scene as SceneGraph;

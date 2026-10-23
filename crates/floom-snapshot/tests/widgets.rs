@@ -29,7 +29,9 @@
 use floom_app::WidgetHost;
 use floom_core::Axis;
 use floom_layout::LayoutStyle;
-use floom_snapshot::{PixelSnapshot, SceneSnapshot, SemanticsSnapshot, snapshots_dir};
+use floom_snapshot::{
+    PixelProbe, PixelSnapshot, ReferencePixels, SceneSnapshot, SemanticsSnapshot, snapshots_dir,
+};
 use floom_types::{Color, Size};
 use floom_widgets::{Button, Container, Stack, Switch, Text, WidgetAny};
 
