@@ -2,11 +2,13 @@
 //!
 //! Concrete GPU backends live in separate crates and must not pull widgets.
 
+mod degradation;
 mod external;
 mod frame_queue;
 mod golden;
 mod present;
 
+pub use degradation::DegradationReport;
 pub use external::{ExternalFrame, ExternalTextureCache, ExternalTextureStats, ImportDecision};
 pub use floom_scene::{DamageRegion, ResourceRegistry, Scene, SceneNode};
 pub use floom_types::{Color, Point, Rect, ResourceId, SceneNodeId, Size};

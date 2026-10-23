@@ -55,6 +55,28 @@ pub struct PaintStats {
 }
 
 impl PaintStats {
+    /// The frame's degradations, in the vocabulary every backend shares.
+    ///
+    /// The honest answer here is that the terminal cannot attribute its one
+    /// counter: a character grid drops a rounded corner, a shadow, a path, a
+    /// filter and a shader, and it counts them all in the same `skipped`.
+    /// Splitting the number into four fields would be a guess dressed as a
+    /// measurement, so the report carries the total as `shadows_skipped` and
+    /// says so — a caller comparing backends sees "the terminal dropped
+    /// things" rather than a precise-looking number nobody counted.
+    ///
+    /// That is the one place the unified view is less informative than the
+    /// backend's own stats, and it is the honest direction: the report
+    /// normalises what was measured, it does not invent what was not.
+    pub fn degradation(&self) -> floom_renderer::DegradationReport {
+        floom_renderer::DegradationReport {
+            shadows_skipped: self.skipped as u64,
+            filters_skipped: 0,
+            backdrop_filters_skipped: 0,
+            shaders_skipped: 0,
+        }
+    }
+
     fn skipped_one(&mut self) {
         self.skipped += 1;
     }

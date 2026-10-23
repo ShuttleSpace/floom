@@ -54,8 +54,8 @@
 //! fragment never has its texture evicted from under it.
 
 use floom_renderer::{
-    AttachedSurface, ExternalFrame, ExternalTextureCache, ExternalTextureStats, ImportDecision,
-    Presenter, RendererCapabilities, SurfaceHandles,
+    AttachedSurface, DegradationReport, ExternalFrame, ExternalTextureCache, ExternalTextureStats,
+    ImportDecision, Presenter, RendererCapabilities, SurfaceHandles,
 };
 use floom_scene::{ResourceKind, ResourceRegistry, Scene, SceneNode};
 use floom_types::{ClipRegion, PathSeg, Rect, Shader, Size, SurfaceId, WindowId};
@@ -117,16 +117,6 @@ pub struct ShadowBlurRect {
 /// would not match pixel to pixel. What matches is the *visible* softness,
 /// and each backend's own approximation is what produces it.
 pub const CSS_BLUR_TO_SIGMA: f64 = 0.832_554_611_157_697_8; // sqrt(ln 2 / 2)
-
-/// The raw draw-tag word for vello's blurred-rounded-rect command.
-///
-/// `vello_encoding::DrawTag::BLUR_RECT` is not re-exported by `vello` — only
-/// `Glyph` and `NormalizedCoord` are — so a test that wants to *name* the
-/// command has to either add a dependency on a transitive crate or spell the
-/// value. Spelling it is the smaller coupling: this is a wire-format constant
-/// that changes only when the encoding changes, and if it ever does, this
-/// test is exactly where the breakage should surface.
-const BLUR_RECT_TAG: u32 = 0x2d4;
 
 /// Folds a [`Shadow`] into vello's blur primitive.
 ///
@@ -285,6 +275,22 @@ pub struct GpuFrameStats {
     /// Bytes copied across for external textures. Zero when a producer keeps
     /// its pixels on the GPU — that is the fast path, not a missing count.
     pub external_bytes: u64,
+}
+
+impl GpuFrameStats {
+    /// The frame's degradations, in the vocabulary every backend shares.
+    ///
+    /// Vello already spells all four the same way the report does, so this is
+    /// a field-for-field copy — which is the point: the report exists so a
+    /// host does not have to know that vello happened to agree.
+    pub fn degradation(&self) -> DegradationReport {
+        DegradationReport {
+            shadows_skipped: self.shadows_skipped,
+            filters_skipped: self.filters_skipped,
+            backdrop_filters_skipped: 0,
+            shaders_skipped: self.shaders_skipped,
+        }
+    }
 }
 
 /// Scratch texture for partial rasterisation: vello has no scissor, so a
@@ -2397,6 +2403,17 @@ impl Presenter for VelloGpuPresenter {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// The raw draw-tag word for vello's blurred-rounded-rect command.
+    ///
+    /// `vello_encoding::DrawTag::BLUR_RECT` is not re-exported by `vello` —
+    /// only `Glyph` and `NormalizedCoord` are — so a test that wants to
+    /// *name* the command has to either add a dependency on a transitive
+    /// crate or spell the value. Spelling it is the smaller coupling: this is
+    /// a wire-format constant that changes only when the encoding changes,
+    /// and if it ever does, these tests are exactly where the breakage
+    /// should surface.
+    const BLUR_RECT_TAG: u32 = 0x2d4;
 
     /// GPU tests are opportunistic: CI machines and containers frequently have
     /// no usable adapter, and "no GPU" is a supported configuration (the app

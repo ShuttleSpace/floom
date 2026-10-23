@@ -23,3 +23,9 @@ raw-window-handle = { workspace = true }
 # differently: the software rasteriser and the character grid.
 floom-renderer-software = { path = "../floom-renderer-software", version = "0.2.0" }
 floom-renderer-tui = { path = "../floom-renderer-tui", version = "0.2.0" }
+# The unified degradation report is checked against the backends whose
+# conversions are non-trivial: vello's (a field-for-field copy) and the skia
+# recorder's (its own counters, nothing invented).
+floom-renderer-vello = { path = "../floom-renderer-vello", version = "0.2.0", features = ["gpu"] }
+floom-renderer-skia-abi = { path = "../floom-renderer-skia-abi", version = "0.2.0" }
+floom-types = { path = "../floom-types", version = "0.2.0" }

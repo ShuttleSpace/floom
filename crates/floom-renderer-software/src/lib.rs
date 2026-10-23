@@ -178,6 +178,25 @@ pub struct SoftwareRenderer {
     pub backdrops_drawn: u64,
 }
 
+impl SoftwareRenderer {
+    /// The frame's degradations, in the vocabulary every backend shares.
+    ///
+    /// The software rasteriser is the *reference*: it draws shadows, filter
+    /// scopes and backdrop filters, so the only thing it drops is a custom
+    /// shader. That makes this report's zeros meaningful rather than
+    /// uninteresting — a non-zero `shadows_skipped` here would mean the
+    /// reference itself stopped honouring a shadow, which is exactly the
+    /// change a pixel test should have caught.
+    pub fn degradation(&self) -> floom_renderer::DegradationReport {
+        floom_renderer::DegradationReport {
+            shadows_skipped: 0,
+            filters_skipped: 0,
+            backdrop_filters_skipped: 0,
+            shaders_skipped: self.shaders_skipped,
+        }
+    }
+}
+
 /// One open filter scope in the software renderer.
 struct FilterLayer {
     /// The buffer the scope was opened over, parked until the pop.

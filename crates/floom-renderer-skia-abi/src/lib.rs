@@ -153,6 +153,24 @@ pub struct SkiaRecording {
     pub shadows_skipped: u64,
 }
 
+impl SkiaRecording {
+    /// The recording's degradations, in the vocabulary every backend shares.
+    ///
+    /// This crate records; it does not draw. So the honest report is the one
+    /// its own counters carry — a shader or a filter a *submit path* could not
+    /// run — and not an invented one. A recorder that reported zero while its
+    /// counters moved would be the capability lie this whole exercise exists
+    /// to prevent.
+    pub fn degradation(&self) -> floom_renderer::DegradationReport {
+        floom_renderer::DegradationReport {
+            shadows_skipped: self.shadows_skipped,
+            filters_skipped: self.filters_skipped,
+            backdrop_filters_skipped: 0,
+            shaders_skipped: self.shaders_skipped,
+        }
+    }
+}
+
 /// The name this crate had before it said what it was.
 ///
 /// Kept as an alias so a caller that used the old spelling keeps compiling,
