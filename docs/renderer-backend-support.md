@@ -158,12 +158,34 @@ that vocabulary.
 
 ## The gaps that remain
 
-- **vello's filters.** The GPU path draws no filter scope and no backdrop
-  filter — both need to operate on pixels that have already been rasterised,
-  which vello has no way to reach into. A drop shadow on a **rect** is drawn;
-  a shadow on a path is not, because the primitive blurs a rounded rectangle.
-  Counting is not rendering, so a card with a shadow on a rounded rect now
-  has one, and the rest is a visible number.
+- **vello's filters.** Verified rather than assumed, because the shadow next
+  door looked blocked and was not. Three findings, in the code:
+
+  1. **No command reads back rasterised pixels.** Vello's vocabulary is 13
+     commands (`CMD_FILL` … `CMD_BLUR_RECT`, `shader/shared/ptcl.wgsl`). Not
+     one takes the frame buffer as an input.
+  2. **Layers composite, they do not process.** `push_layer`/`pop_layer`
+     carry a blend mode and an alpha; the fine shader's `CMD_END_CLIP` does
+     `blend_mix_compose` and nothing else. There is no hook between "the
+     layer finished drawing" and "the layer lands on the frame".
+  3. **The raster happens once, at the end** — the structural one. A
+     `BackdropFilter` node sits mid-stream, and by the time anything is
+     rasterised the whole scene has already been encoded. Honouring it would
+     need the prefix rasterised, read back, blurred, drawn as an image, then
+     the suffix rasterised into the same target, and the API renders one
+     scene per call.
+
+  So this is not a missing blur, it is a missing *place to stand*. The
+  software backend can do it only because it owns the pixel buffer and can
+  read and write it mid-walk; the readback path vello already has
+  (`run_shader_to_image`) cannot be reused, because a shader generates its
+  pixels from a program while a backdrop filter needs pixels that already
+  exist.
+
+  A drop shadow on a **rect** is drawn; a shadow on a path is not, because
+  the primitive blurs a rounded rectangle. Counting is not rendering, so a
+  card with a shadow on a rounded rect now has one, and the rest is a visible
+  number (`filters_skipped`).
 - **Pixel-level tests for the GPU path.** The web, the terminal and the
   software backend have pixel evidence now — the web compares itself against
   the reference buffer pixel for pixel, the terminal's golden is its
