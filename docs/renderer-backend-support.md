@@ -39,7 +39,7 @@ The 2.0 scene vocabulary is `floom-scene`'s `SceneNode` — twelve variants:
 | Backend | Renders pixels? | Rounded corners | Drop shadow | Filter scope | Backdrop filter | Custom shader | Pixel-level tests |
 |---|---|---|---|---|---|---|---|
 | `floom-renderer-software` | **yes** | **yes** | **yes**, honouring `spread` | **yes** | **yes** | ⏭️ counted | **yes** |
-| `floom-renderer-vello` | **yes** (GPU) | **yes** | ⏭️ counted | ⏭️ counted | ⏭️ counted | **yes** | no |
+| `floom-renderer-vello` | **yes** (GPU) | **yes** | **yes** on rects; ⏭️ counted on paths | ⏭️ counted | ⏭️ counted | **yes** | **yes** (command-stream, no GPU needed) |
 | `floom-renderer-web` | **yes** (CPU, blitted to a `<canvas>`) | **yes** | **yes** | **yes** | **yes** | ⏭️ counted | no |
 | `floom-renderer-tui` | **yes** (character cells) | ⏭️ counted | ⏭️ counted | ⏭️ counted | ⏭️ counted | ⏭️ counted | no |
 | `floom-renderer-skia-abi` | **no** — it records | ⏭️ counted | ⏭️ counted | ⏭️ counted | ⏭️ counted | ⏭️ counted | n/a |
@@ -62,22 +62,42 @@ rasteriser is not one.
 Its pixel-level tests (`crates/floom-renderer-software/tests/`) are the
 discipline the other backends copy.
 
-### `floom-renderer-vello` — the GPU path, and its one real gap
+### `floom-renderer-vello` — the GPU path, and its two remaining gaps
 
 The default desktop and Android backend. It renders shapes, paths, images,
 text and custom shaders.
 
-It has **no blur primitive**, so three requests are degraded:
+It has **no way to filter pixels that are already drawn**, so two requests are
+degraded:
 
-- a drop shadow is not drawn (`shadows_skipped`);
 - a filter scope draws its content sharp rather than filtered
   (`filters_skipped`);
 - a backdrop filter draws nothing (`filters_skipped`).
 
-All three are counted, so the degradation is a number rather than an absence.
-The fix is upstream: when vello grows a blur primitive, the shadow must
-**dilate the silhouette by `spread` first** and then blur it, and the
-render-cache key must include `spread` (it does).
+Both are counted, so the degradation is a number rather than an absence.
+
+**Drop shadows are drawn.** vello 0.7 grew `draw_blurred_rounded_rect` — a
+superellipse-plus-erf approximation of a Gaussian-convolved rounded rect — and
+a `Rect` carrying a `Shadow` is folded into it. The fold is where the two
+vocabularies are reconciled:
+
+| `Shadow` | vello |
+|---|---|
+| `offset_x` / `offset_y` | the rect moves (the primitive has no offset of its own) |
+| `spread` | the rect grows on all four sides **and** the corner radius grows with it, centre fixed |
+| `blur` | the sigma, via `CSS_BLUR_TO_SIGMA` — CSS's blur radius is the half-response point, a Gaussian's sigma is the `e^-1/2` point, and they are not the same number |
+
+The spread dilates the silhouette rather than widening the blur, which is the
+CSS reading and the one the software backend already pins. The shadow is drawn
+*before* the fill: vello composites in stream order, so the other order paints
+the silhouette over the card's own face.
+
+The remaining limit is shape, not softness: the primitive blurs a **rounded
+rectangle**, so a path or a glyph run carrying a shadow still has no
+representation and still lands in `shadows_skipped`. `capabilities()` reports
+`shadows: true` because the *shadow* is honoured — a bit cannot carry a
+per-shape answer, and one that claimed to would be lying. A caller that needs
+to know which shapes get shadows reads that counter, not the bit.
 
 ### `floom-renderer-web` — the software path, blitted
 
@@ -146,9 +166,10 @@ that vocabulary.
   software backend have pixel evidence now — the web compares itself against
   the reference buffer pixel for pixel, the terminal's golden is its
   character grid as text, and the software backend has text evidence that
-  the ink is a glyph *shape* rather than a filled box. The vello GPU path
-  has none, because producing a comparable buffer from it needs a GPU
-  context, and CI has none.
+  the ink is a glyph *shape* rather than a filled box. The vello GPU path has
+  no framebuffer test, because producing a comparable buffer from it needs a
+  GPU context and CI has none — but it does have command-stream tests, which
+  assert on the encoding rather than the raster and so run without an adapter.
 - **The CJK case is only covered where the font is.** `floom-text` asserts
   that CJK does not shape to `.notdef`, and that test is macOS-gated
   because it needs a font that is installed — an environment property
