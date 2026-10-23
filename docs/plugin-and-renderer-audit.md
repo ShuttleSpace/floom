@@ -257,7 +257,7 @@ macOS 门禁记录过一次真实教训（`docs/gates/macos.md:126-128`）：
 | **B3** | tui 补齐静默忽略的计数 | — | 🟡 | ✅ **完成** — `radius` 与 `shadow` 不再被 `..` 吞掉，各计一次；补 2 项测试（21 → 23） |
 | **B4** | vello 的 blur primitive | — | 🟠 | ✅ **完成（Rect）** — 上游 vello 0.7 **已有** `draw_blurred_rounded_rect`（之前『依赖上游』的判断是错的，从没人去查过）。offset 折进 rect、spread 同时增大 rect 与圆角（中心不动）、blur 按 `CSS_BLUR_TO_SIGMA` 折成 σ；阴影先于填充画。**Path / GlyphRun 的阴影仍跳过**——原语只能糊圆角矩形 |
 | **B5** | 统一后端能力查询 | — | 🟠 | ✅ **完成** — `Renderer::capabilities` 与 `Presenter::capabilities` 返回 `RendererCapabilities{shadows,filters,backdrop_filters,shaders}`；默认**悲观**；五个后端各自诚实回答；`AppRunner::renderer_capabilities()` 透给宿主；5 项测试 |
-| **B6** | 统一降级计数的暴露方式 | B5 | 🟡 | ⬜ **未开始** — 能力查询已统一，但**计数器**的名字仍各后端不同（`shadows_drawn` / `shadows_skipped` / `skipped`）；需要一个统一的 `DegradationReport` |
+| **B6** | 统一降级计数的暴露方式 | B5 | 🟡 | ✅ **完成** — `DegradationReport`（`floom-renderer/src/degradation.rs`）是**视图**而非替换：各后端保留自己的 stats，新增 `degradation()` 转换。四个 kind 分开（不合并成一个数——『丢了六件事』和『丢了六个阴影』是不同事实）。`unexpected(caps)` 减去 capabilities 已声明会发生的事，剩下的就是**意外**——把『capability bit 没有实现比没有更糟』变成运行时事实。tui 的单一 `skipped` 无法归因，报告如实承载总数并写明不能归因 |
 | **B7** | 为 vello / tui / web 补像素级回归 | — | 🟠 | ✅ **完成（web / tui / software）** — `PixelSnapshot::of_buffer` 让**任何**后端都能有 golden（尺寸进哈希）；web 与 software 参考逐像素比对 + 自己的 golden；tui 的 golden 是**字符网格文本**（人能在 diff 里读懂）；software 补**文本渲染层**证据（墨迹是字形形状而非填充块）。**vello 的 GPU 路径仍无**——需要 GPU 上下文 |
 | **B8** | shader 在非 GPU 后端的行为明确化 | — | 🟡 | ✅ **完成** — 文档明确"自定义着色器仅 GPU 后端可用"；software / web / tui / skia-abi 均计数 |
 
@@ -284,7 +284,7 @@ macOS 门禁记录过一次真实教训（`docs/gates/macos.md:126-128`）：
 
 第二梯队
   A7 → A8 → A9            精简 SDK 结构 + ABI 版本  ✅ 2026-10-22
-  B1, B5, B6              文档重写 + 能力查询 + 统计归一 ⬜（B1/B5 ✅，B6 ⬜）
+  B1, B5, B6              文档重写 + 能力查询 + 统计归一 ✅ 2026-10-23
   B3, B7                  tui 计数 + 像素回归      ✅ 2026-10-22（vello GPU 路径除外）
   C4, C5, C6              平台后端补齐 + 门禁      ⬜
 
