@@ -295,6 +295,17 @@ macOS 门禁记录过一次真实教训（`docs/gates/macos.md:126-128`）：
   B3, B7                  tui 计数 + 像素回归      ✅ 2026-10-22（vello GPU 路径除外）
   C4, C5, C6              平台后端补齐 + 门禁      ⬜
 
+## 交接时新发现的两项（2026-10-23，见 docs/handoff-remaining-work.md）
+
+1. **8 个能力插件是 TODO stub**（只有 `vibration` 是真实现）。
+   A7 的**结构**成立，**功能**是空壳。`floom-capabilities` 在 host 上全显示 `—`，
+   而它有一个测试专门断言"host 上不得报告值"——所以 stub 永远不会被 CI 发现。
+2. **`floom-probe` 编译不过**：引用 `ecosystem/floom-ui`（另一个 workspace）的
+   widget。`required-features = ["real"]` 且 `real` 非默认，`cargo test --workspace`
+   静默跳过它，所以一直没红。
+
+两项同一个模式：**验证的边界没覆盖到出问题的地方**。
+
 第三梯队
   B4, B8                  vello blur / shader 行为文档 ✅ 2026-10-23（B8 早已 ✅；B4 = vello 真画阴影）
 ```
