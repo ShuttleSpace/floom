@@ -255,7 +255,7 @@ macOS 门禁记录过一次真实教训（`docs/gates/macos.md:126-128`）：
 | **B1** | 重写 `docs/renderer-backend-support.md` 为 2.0 场景节点矩阵 | — | 🟠 | ✅ **完成** — 12 变体 × 5 后端矩阵；修正"web 无阴影计数"的过时结论（2.0 的 web 内部就是 software 渲染器）；新增"留下的缺口"一节 |
 | **B2** | skia 要么补提交路径 + 计数器 + 测试，要么明确降级为"意图记录器" | — | 🔴 | ✅ **完成** — 改名 `floom-renderer-skia-abi`（**它本来就不是渲染器**：零外部依赖、只被自己的测试用、facade 不导出）；补 `shaders_skipped`/`filters_skipped`/`shadows_skipped`；补 3 项测试（5 → 8） |
 | **B3** | tui 补齐静默忽略的计数 | — | 🟡 | ✅ **完成** — `radius` 与 `shadow` 不再被 `..` 吞掉，各计一次；补 2 项测试（21 → 23） |
-| **B4** | vello 的 blur primitive | — | 🟠 | 依赖上游 vello 能力；若短期不可得，提供 CPU 回退（把阴影/滤镜交给 software 光栅化后上屏），保证桌面与 Android 视觉一致 |
+| **B4** | vello 的 blur primitive | — | 🟠 | ✅ **完成（Rect）** — 上游 vello 0.7 **已有** `draw_blurred_rounded_rect`（之前『依赖上游』的判断是错的，从没人去查过）。offset 折进 rect、spread 同时增大 rect 与圆角（中心不动）、blur 按 `CSS_BLUR_TO_SIGMA` 折成 σ；阴影先于填充画。**Path / GlyphRun 的阴影仍跳过**——原语只能糊圆角矩形 |
 | **B5** | 统一后端能力查询 | — | 🟠 | ✅ **完成** — `Renderer::capabilities` 与 `Presenter::capabilities` 返回 `RendererCapabilities{shadows,filters,backdrop_filters,shaders}`；默认**悲观**；五个后端各自诚实回答；`AppRunner::renderer_capabilities()` 透给宿主；5 项测试 |
 | **B6** | 统一降级计数的暴露方式 | B5 | 🟡 | ⬜ **未开始** — 能力查询已统一，但**计数器**的名字仍各后端不同（`shadows_drawn` / `shadows_skipped` / `skipped`）；需要一个统一的 `DegradationReport` |
 | **B7** | 为 vello / tui / web 补像素级回归 | — | 🟠 | ✅ **完成（web / tui / software）** — `PixelSnapshot::of_buffer` 让**任何**后端都能有 golden（尺寸进哈希）；web 与 software 参考逐像素比对 + 自己的 golden；tui 的 golden 是**字符网格文本**（人能在 diff 里读懂）；software 补**文本渲染层**证据（墨迹是字形形状而非填充块）。**vello 的 GPU 路径仍无**——需要 GPU 上下文 |
@@ -289,7 +289,7 @@ macOS 门禁记录过一次真实教训（`docs/gates/macos.md:126-128`）：
   C4, C5, C6              平台后端补齐 + 门禁      ⬜
 
 第三梯队
-  B4, B8                  vello blur / shader 行为文档 ⬜（B8 ✅，B4 ⬜）
+  B4, B8                  vello blur / shader 行为文档 ✅ 2026-10-23（B8 早已 ✅；B4 = vello 真画阴影）
 ```
 
 ### 批次 1 的实际结果（2026-10-22）
@@ -334,4 +334,4 @@ iOS 分支只是检测已存在的 xcframework 并链接，没有驱动 `xcodebu
   补上 A1–A6 即可成立，A7–A9 负责把"SDK 精简"从口号变成结构约束。
 - **需求 2**：software 是参考实现，vello/web/tui 基本对齐（降级都有计数），
   **skia 根本不是渲染器**，tui 有 3 处静默忽略，`Renderer` trait 缺能力查询，
-  支撑文档基于 v1 API 已过时。B1–B3 是低成本高回报，B4 依赖上游。
+  支撑文档基于 v1 API 已过时。B1–B3 是低成本高回报。B4 曾被判定『依赖上游』——**判定错了**，vello 0.7 的 blur 原语一直在，只是从没人去读过上游的 API 清单。教训：写『被 X 阻塞』之前先确认 X 真的不存在。
