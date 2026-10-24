@@ -133,6 +133,13 @@ jobs:
   # invokes `cc` for its `game-activity` backend, which nothing here enables —
   # and nothing is linked or run.
   #
+  # The capability plugins are named here too, and that is the point of this
+  # comment: their `android.rs` halves reach the JNI bridge and are invisible to
+  # the host build above, so a plugin whose Android arm does not compile would
+  # otherwise pass every check in this file. `floom-plugin-vibration`'s iOS arm
+  # spent months with two hard edition-2024 errors for exactly this reason,
+  # found only when someone cross-compiled it by hand.
+  #
   # Deliberately NOT covered: `examples/floom2-android`. Its Android module is
   # gated on `--features real` as well as the target, and `real` drags wgpu +
   # vello through a cross build for no extra coverage of the platform seams this
@@ -168,6 +175,67 @@ jobs:
           --package=floom-platform-mobile
           --package=floom-platform-android
           --target aarch64-linux-android
+
+      - name: Check the Android arms of the capability plugins
+        run: >
+          cargo check
+          --package=floom-plugin-battery
+          --package=floom-plugin-connectivity
+          --package=floom-plugin-device-info
+          --package=floom-plugin-local-auth
+          --package=floom-plugin-location
+          --package=floom-plugin-notifications
+          --package=floom-plugin-sensors
+          --package=floom-plugin-share
+          --package=floom-plugin-vibration
+          --target aarch64-linux-android
+
+  # The same gap, on the other mobile target. Every plugin's `ios.rs` sits behind
+  # `#[cfg(target_os = "ios")]`, so a host build on macOS compiles none of it —
+  # which is how `floom-plugin-vibration`'s iOS arm kept two edition-2024
+  # `extern blocks must be unsafe` errors while its host tests stayed green.
+  #
+  # A `cargo check` is enough for the type-level half, and deliberately no
+  # further: it does **not** link, so a missing
+  # `#[link(name = "...", kind = "framework")]` is invisible here. That
+  # distinction is real — `class!(Foo)` resolves at runtime, not at link time —
+  # so this job catches signature and ownership errors and the device workflow
+  # catches the rest.
+  ios-check:
+    name: Floom 2.0 for aarch64-apple-ios
+    if: github.event.pull_request.draft == false
+    runs-on: macos-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Update toolchain & add the iOS target
+        run: |
+          rustup update --no-self-update
+          rustup target add aarch64-apple-ios
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: ios-check
+          save-if: ${{ github.event_name != 'merge_group' }}
+
+      - name: Fetch dependencies
+        run: cargo fetch --target aarch64-apple-ios
+
+      - name: Check the iOS arms of the capability plugins
+        run: >
+          cargo check
+          --package=floom-plugin-battery
+          --package=floom-plugin-connectivity
+          --package=floom-plugin-device-info
+          --package=floom-plugin-local-auth
+          --package=floom-plugin-location
+          --package=floom-plugin-notifications
+          --package=floom-plugin-sensors
+          --package=floom-plugin-share
+          --package=floom-plugin-vibration
+          --target aarch64-apple-ios
 
   build:
     name: Rust on ${{ matrix.os }}

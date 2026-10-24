@@ -6,16 +6,17 @@ use super::HapticFeedback;
 use objc2::runtime::AnyObject;
 use objc2::{class, msg_send};
 
+// Edition 2024 requires the block itself to be `unsafe extern`.
 #[link(name = "AudioToolbox", kind = "framework")]
-extern "C" {}
+unsafe extern "C" {
+    /// `AudioServicesPlaySystemSound`.
+    fn AudioServicesPlaySystemSound(sound_id: u32);
+}
 
 pub fn vibrate(_duration_ms: u32) -> Result<(), String> {
     // On iOS, custom duration vibration isn't supported via public API.
     // Use AudioServicesPlaySystemSound(kSystemSoundID_Vibrate) for a standard vibration.
     unsafe {
-        extern "C" {
-            fn AudioServicesPlaySystemSound(sound_id: u32);
-        }
         AudioServicesPlaySystemSound(4095); // kSystemSoundID_Vibrate
     }
     Ok(())

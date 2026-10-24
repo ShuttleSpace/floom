@@ -13,3 +13,23 @@ publish = false
 # no facade. An app that wants this capability adds this crate; an app that
 # does not, does not link it.
 [dependencies]
+
+# The JNI bridge — the JavaVM, the activity — is platform
+# plumbing, so it lives in the platform layer and a plugin reaches
+# for it. A plugin reaching *down* to the platform is the allowed
+# direction; the platform reaching up to a plugin is not.
+[target.'cfg(target_os = "android")'.dependencies]
+floom-platform-mobile = { path = "../floom-platform-mobile", version = "0.2.0" }
+jni = "0.22"
+
+# The iOS half reads `CLLocationManager` and `CLAuthorizationStatus` through the
+# generated CoreLocation bindings. `CLLocation` is not enabled: `coordinate`
+# returns a `CLLocationCoordinate2D` and `timestamp` an `NSDate`, and this arm
+# refuses `current_location` for the reason in `src/ios.rs`, so binding the value
+# type would be a dependency nothing reads.
+[target.'cfg(target_os = "ios")'.dependencies]
+objc2 = { version = "0.6", default-features = false, features = ["std"] }
+objc2-core-location = { version = "0.3", default-features = false, features = [
+    "std",
+    "CLLocationManager",
+] }

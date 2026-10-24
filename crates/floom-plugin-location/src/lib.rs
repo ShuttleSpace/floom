@@ -1,12 +1,14 @@
 //! Geolocation — authorization, availability and a one-shot position read.
 //!
 //! Adapted from `gpui-mobile` (Apache-2.0). The native arms read
-//! `CLLocationManager` (iOS) and `FusedLocationProviderClient` (Android). The
-//! host arm refuses every call that needs a real position.
+//! `CLLocationManager` (iOS) and `LocationManager` (Android). The host arm
+//! refuses every call that needs a real position.
 //!
 //! Note: continuous location streaming is a separate concern (a subscription
-//! with callbacks); this package only exposes the synchronous one-shot read
-//! plus the permission gates an app must check first.
+//! with callbacks); this package only exposes the synchronous reads plus the
+//! permission gates an app must check first. What "synchronous" costs is
+//! documented per call: `current_location` on Android is the OS's last-known
+//! cached fix, not a fresh one, and on iOS there is no synchronous route at all.
 //!
 //! A **capability plugin**: one capability, one crate, opt-in by
 //! dependency. The SDK does not carry it — an app that wants this
@@ -103,8 +105,13 @@ pub fn request_authorization() -> Result<(), String> {
     }
 }
 
-/// Best-effort one-shot position read. Returns `Err` if not authorized or no
-/// fix is available.
+/// Best-effort one-shot position read.
+///
+/// Android returns the OS's **last-known** fix, which can be hours old — the
+/// `timestamp` field is what lets a caller decide whether to trust it. iOS has
+/// no synchronous route to a fix at all (see `src/ios.rs`), so this returns
+/// `Err` there. Both arms return `Err` when not authorized or when no fix is
+/// available.
 pub fn current_location() -> Result<Location, String> {
     #[cfg(target_os = "android")]
     {

@@ -252,6 +252,7 @@ macOS 门禁记录过一次真实教训（`docs/gates/macos.md:126-128`）：
 | **A6** | 落地第一个真实插件 | A1–A5 | 🔴 | ✅ **完成（macOS）** | `crates/floom-plugin-nativeview`：原生半边是 Objective-C，真实 `NSView` 进真实 `NSWindow`，由框架控制器经 C ABI 驱动。**未覆盖 camera/webview 这类真能力**——需要设备 |
 | **A6b** | 插件的 provider 如何到达宿主 | A5 | 🟠 | 🟡 **部分** | 插件的 Rust 半边暴露 `provider(host_window)`，宿主在 `WidgetHost::set_native_provider` 处安装。**注册表**（按 kind 选 provider）未做 |
 | **A7** | 把 `floom-platform-mobile/packages/` 迁出为插件 | A5、A6 | 🟠 | ✅ **完成** | 13 个包 → 适配器留 4 个（clipboard/keyboard/safe_area/system_chrome）+ **9 个 `floom-plugin-<capability>/`**；适配器甩掉整棵 iOS 依赖树；架构门禁新增"平台适配器不得依赖插件"规则（已验证会拦） |
+| **A7b** | 八个 stub 插件补真实现 | A7 | 🔴 | ✅ **完成（2026-10-24）** | `device-info` / `battery` / `connectivity` / `sensors` / `share` / `notifications` / `local-auth` / `location` 全部接上真实平台 API（Android 走 JNI 框架类，iOS 走 objc2），三目标（host / `arm64-v8a` / `aarch64-apple-ios`）零错误。**同步 API 答不了的调用返回精确 `Err` 而非假值**：iOS 的 `current_location`（委托回调在主 run loop，同步等待会死锁）、两侧的 `authenticate`（`Ok` 会声称"已认证"）、Android 的延迟通知（`AlarmManager` 未接线）。`request_authorization` 则是真发起——`Ok` 明确表示"弹窗已请求"，结果由调用方轮询 |
 | **A8** | 补 SDK 精简的**结构性**约束 | A7 | 🟡 | ✅ **完成** | `Capability` 位集收缩到"每个位背后都有实现"：`OPEN_URL`/`FILE_DIALOG`/`DRM_KMS` 三个无实现的位**删除**（声称它们从此是编译错误）；stub 不再声称软键盘；web 不再声称 `NATIVE_VIEW`；桌面剪贴板跟随实现（只有 macOS 是真 `NSPasteboard`）；桌面 a11y 的 `NATIVE_BRIDGE` 改为随桥的存在派生 |
 | **A9** | 插件 ABI 版本协商落地 | A1 | 🟡 | ✅ **完成** | `floom_<name>_abi_version()` 参与 enable 校验，版本不符时拒绝并给出明确错误 |
 
@@ -300,6 +301,7 @@ macOS 门禁记录过一次真实教训（`docs/gates/macos.md:126-128`）：
 1. **8 个能力插件是 TODO stub**（只有 `vibration` 是真实现）。
    A7 的**结构**成立，**功能**是空壳。`floom-capabilities` 在 host 上全显示 `—`，
    而它有一个测试专门断言"host 上不得报告值"——所以 stub 永远不会被 CI 发现。
+   **→ 已修（2026-10-24）**：八个插件全部落地真实现，见下方"批次 2"。
 2. **`floom-probe` 编译不过**：引用 `ecosystem/floom-ui`（另一个 workspace）的
    widget。`required-features = ["real"]` 且 `real` 非默认，`cargo test --workspace`
    静默跳过它，所以一直没红。
@@ -310,7 +312,58 @@ macOS 门禁记录过一次真实教训（`docs/gates/macos.md:126-128`）：
   B4, B8                  vello blur / shader 行为文档 ✅ 2026-10-23（B8 早已 ✅；B4 = vello 真画阴影）
 ```
 
+### 批次 2 的实际结果（2026-10-24）：八个能力插件
+
+`floom-plugin-{device-info,battery,connectivity,sensors,share,notifications,local-auth,location}`
+从 `TODO` 桩变成真实现。验证矩阵（每格是该 crate 的 `cargo` 错误数）：
+
+| crate | host `cargo test` | `cargo ndk -t arm64-v8a check` | `cargo check --target aarch64-apple-ios` |
+|---|---|---|---|
+| device-info | 0 | 0 | 0 |
+| battery | 0 | 0 | 0 |
+| connectivity | 0 | 0 | 0 |
+| sensors | 0 | 0 | 0 |
+| share | 0 | 0 | 0 |
+| notifications | 0 | 0 | 0 |
+| local-auth | 0 | 0 | 0 |
+| location | 0 | 0 | 0 |
+
+**这不是"全部实现了"，而是"每一格都说明了它能不能答"**。三类落点：
+
+1. **真读**（同步 API 存在）：`battery_state`、`connectivity_status`、
+   `available_sensors`/`is_sensor_available`、`are_notifications_enabled`、
+   `available_biometric`、`authorization_status`、`is_location_enabled`、
+   Android 的 `current_location`（`getLastKnownLocation`，缓存定位 + 时间戳）。
+2. **真发起**（动作本身就是答案）：`request_authorization` 四处、
+   `share_text`（iOS）/ `share_files`（iOS）、`schedule`（即时通知）。
+   `Ok` 的含义已写进每个函数文档：**"OS 已被请求"**，不是"用户已同意"。
+3. **精确拒绝**（同步签名答不了）：iOS `current_location`、两侧 `authenticate`、
+   Android 延迟通知、Android `share_files`（缺 `FileProvider`）。
+   每个 `Err` 都指名缺的是哪一步，不是"暂不支持"。
+
+三个刻意的非对称，全部有平台事实支撑而不是遗漏：
+
+- **`current_location` 只在 Android 可用**。Android 有 `getLastKnownLocation`
+  这个同步缓存读；iOS 的 `CLLocationManager.location` 在委托被调用过之前是
+  `nil`，而委托回调排在主 run loop 上——用信号量等它会死锁，因为被阻塞的正是
+  必须派发回调的那个线程。
+- **`request_authorization` 返回 `Ok`，`authenticate` 返回 `Err`**。前者 `Ok`
+  只声称"弹窗发出去了"，后者 `Ok` 会声称"用户通过了认证"——后者是唯一无法从
+  同步签名诚实表达的断言。
+- **iOS 传感器里 `Proximity` / `AmbientLight` 恒为 `false`**。iOS 没有查询这两
+  个硬件的 API（只有 `proximityMonitoringEnabled` 这种开关，且读不到"有没有"）。
+
+同时清掉的**无实现声明**：
+
+- `floom-plugin-sensors` 的 `SensorReading` 结构体**删除**——没有任何函数能返回
+  它，模块文档却声称有"同步快照读取"。传感器采样是订阅式回调，同步 API 无处安放。
+- `Accelerometer` 的文档从"不含重力的线性加速度"改为"含重力"——两侧实现的都是
+  原始加速度计（Android `TYPE_ACCELEROMETER`、iOS `accelerometerAvailable`），
+  减重力的版本是复合传感器，是另一个问题。
+- `floom-capabilities` 里 `sensors()` 的注释不再说"原生半边仍是 TODO"。
+
 ### 批次 1 的实际结果（2026-10-22）
+
 
 A1 / A2 / A3 / A4 / A9 完成。**插件的 FFI 链路在仓库内打通并验证**：
 

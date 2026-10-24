@@ -194,13 +194,17 @@ pub fn connectivity() -> Row {
 
 /// Motion and environment sensors — availability only.
 ///
-/// This row used to claim a "live reading" by calling `sensors::reading(kind)`.
-/// That function does exist, in the `ios.rs`/`android.rs` arms, but it was never
-/// re-exported from `mod.rs` so it is not reachable from here, and both arms are
-/// `TODO` stubs that return `None` regardless. The reachable surface is
-/// `available_sensors` plus `is_sensor_available`, so the row asks what those can
-/// answer. Printing an x/y/z triple would have meant reporting a `SensorReading`
-/// that nothing in the crate constructs.
+/// The package answers which sensor kinds exist and deliberately has no
+/// `reading()`: samples arrive through `SensorEventListener` (Android) and
+/// `startAccelerometerUpdatesToQueue:` (iOS), both callbacks this synchronous
+/// API has nowhere to put. Printing an x/y/z triple here would mean reporting a
+/// value nothing in the package constructs.
+///
+/// On a device the arms call `SensorManager.getDefaultSensor(type)` and
+/// `CMMotionManager.accelerometerAvailable` for real, so the list is what the
+/// hardware reports. An empty list on a phone therefore means the device has no
+/// sensor of any of the six kinds — not, as this comment once said, that nothing
+/// was wired behind the bridge.
 pub fn sensors() -> Row {
     const QUESTION: &str = "which sensor kinds this device reports";
     if !native_capability_host() {
@@ -214,9 +218,6 @@ pub fn sensors() -> Row {
     Row::value(
         "sensors",
         QUESTION,
-        // Honest even on a phone: the native arms are still `TODO`, so an empty
-        // list here means "nothing wired behind the bridge yet", not "this
-        // device has no sensors".
         if present.is_empty() {
             State::Value(format!(
                 "none of the {} known kinds reported",

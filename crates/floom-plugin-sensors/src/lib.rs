@@ -1,12 +1,19 @@
 //! Motion and environment sensors — availability queries.
 //!
 //! Adapted from `gpui-mobile` (Apache-2.0). The native arms read
-//! `CMMotionManager` (iOS) and `SensorManager` (Android). Streaming readings
-//! is a subscription concern; this package only exposes which sensors exist
-//! and a single synchronous snapshot read where the OS provides one.
+//! `CMMotionManager` (iOS) and `SensorManager` (Android).
+//!
+//! This package answers **which sensors exist**, and nothing else. Reading a
+//! sensor is a subscription concern: Android delivers samples through a
+//! `SensorEventListener` and iOS through `startAccelerometerUpdatesToQueue:`,
+//! both of which are callbacks this synchronous API has nowhere to put. There is
+//! deliberately no `reading()` function rather than one that returns `None` —
+//! a `None` from a wired arm and a `None` from an unwired one look identical to
+//! the caller, which is the confusion this plugin family exists to remove.
 //!
 //! `available_sensors` returns the full set of kinds the package knows how to
-//! surface; `is_sensor_available` answers the same question for one kind.
+//! query, filtered to those the device actually has; `is_sensor_available`
+//! answers the same question for one kind.
 //!
 //! A **capability plugin**: one capability, one crate, opt-in by
 //! dependency. The SDK does not carry it — an app that wants this
@@ -24,7 +31,14 @@ mod ios;
 /// A physical sensor the package can surface.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum SensorKind {
-    /// Linear acceleration excluding gravity.
+    /// Acceleration in m/s², including gravity.
+    ///
+    /// Android `TYPE_ACCELEROMETER`, iOS `CMMotionManager.accelerometerAvailable`
+    /// — the raw accelerometer on both, so the reading includes gravity. The
+    /// derived "linear acceleration" sensor (Android `TYPE_LINEAR_ACCELERATION`,
+    /// iOS `deviceMotion`) subtracts it, but it is a composite that only exists
+    /// when the device also has a gyroscope, so it is a different question from
+    /// "does this device have an accelerometer".
     Accelerometer,
     /// Rotation rate around three axes.
     Gyroscope,
@@ -50,19 +64,6 @@ impl SensorKind {
             SensorKind::AmbientLight,
         ]
     }
-}
-
-/// A single three-axis reading plus the time it was taken.
-#[derive(Debug, Clone, Copy, PartialEq, Default)]
-pub struct SensorReading {
-    /// X-axis value (sensor-specific units).
-    pub x: f64,
-    /// Y-axis value.
-    pub y: f64,
-    /// Z-axis value.
-    pub z: f64,
-    /// Seconds since the Unix epoch when the sample was taken.
-    pub timestamp: i64,
 }
 
 /// The set of sensors present on the device.
