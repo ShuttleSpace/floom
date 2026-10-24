@@ -28,8 +28,8 @@
 #![forbid(unsafe_code)]
 
 use floom_core::{
-    Color, CreateContext, ElementId, LayoutRequest, PaintContext, PointerEvent, PointerPhase, Point,
-    Rect, UpdateContext, Widget,
+    Color, CreateContext, ElementId, LayoutRequest, PaintContext, Point, PointerEvent,
+    PointerPhase, Rect, UpdateContext, Widget,
 };
 use floom_types::Brush;
 

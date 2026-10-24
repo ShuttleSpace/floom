@@ -17,12 +17,10 @@ use floom_types::{Color, FontWeight, Rect};
 use floom_widgets::testkit::{AllocatingCreateContext, PaintOp, SceneRecorder};
 
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
-use floom_core_theme::global_theme::{DesignSystem, set_design_system};
+use floom_core_theme::global_theme::{set_design_system, DesignSystem};
 use floom_core_theme::theme::{MultiTheme, Theme};
 
-use floom_widget_cupertino_avatar::{
-    CupertinoAvatar, CupertinoAvatarStyle,
-};
+use floom_widget_cupertino_avatar::{CupertinoAvatar, CupertinoAvatarStyle};
 
 const BOX: Rect = Rect {
     x0: 0.0,
@@ -52,7 +50,13 @@ fn tokens() -> floom_core_theme::component_tokens::AvatarTokens {
 }
 
 /// The painted ops: the surface's fill and the text's ink.
-fn painted(b: CupertinoAvatar) -> (Option<Color>, Option<Color>, Option<floom_types::FontWeight>) {
+fn painted(
+    b: CupertinoAvatar,
+) -> (
+    Option<Color>,
+    Option<Color>,
+    Option<floom_types::FontWeight>,
+) {
     let mut surface = b.view();
     let mut create = AllocatingCreateContext::new();
     let id = surface.create(&mut create);
@@ -89,7 +93,9 @@ fn painted(b: CupertinoAvatar) -> (Option<Color>, Option<Color>, Option<floom_ty
 #[test]
 fn the_style_resolves_this_kits_own_palette() {
     let theme = theme();
-    let style: CupertinoAvatarStyle = CupertinoAvatar::new().with_theme(theme.clone()).resolved_style();
+    let style: CupertinoAvatarStyle = CupertinoAvatar::new()
+        .with_theme(theme.clone())
+        .resolved_style();
     assert_eq!(style.design_system, "cupertino");
     assert_eq!(style.background, theme.colors().surface_variant);
     assert_eq!(style.text_color, theme.colors().on_surface);
@@ -102,7 +108,10 @@ fn the_style_resolves_this_kits_own_palette() {
 /// The props' size wins over the token's, and zero defers to it.
 #[test]
 fn the_props_size_wins_over_the_tokens() {
-    let style = CupertinoAvatar::new().with_theme(theme()).size(64.0).resolved_style();
+    let style = CupertinoAvatar::new()
+        .with_theme(theme())
+        .size(64.0)
+        .resolved_style();
     assert_eq!(style.size, 64.0, "the props' size wins");
 
     // The *props'* default is 40, not zero, so v1's
@@ -141,5 +150,10 @@ fn the_shape_is_circle() {
 
 /// Design-system colour -> engine colour.
 fn to_engine(c: floom_core_theme::tokens::color::Color) -> Color {
-    Color { r: c.r, g: c.g, b: c.b, a: c.a }
+    Color {
+        r: c.r,
+        g: c.g,
+        b: c.b,
+        a: c.a,
+    }
 }

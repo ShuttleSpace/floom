@@ -690,8 +690,7 @@ fn the_focus_affordance_is_a_ring_around_the_whole_control() {
     assert_eq!(ring.color.g, colors.primary.g);
     assert_eq!(ring.color.b, colors.primary.b);
     assert_eq!(
-        ring.gap,
-        0.0,
+        ring.gap, 0.0,
         "flush against the control: Compose's `outline()` has no inset"
     );
     assert_eq!(
@@ -701,8 +700,7 @@ fn the_focus_affordance_is_a_ring_around_the_whole_control() {
     );
 
     assert_eq!(
-        style.halo.on_focus,
-        false,
+        style.halo.on_focus, false,
         "and the halo does not also answer focus, or a focused radio would \
          carry two focus affordances at once"
     );

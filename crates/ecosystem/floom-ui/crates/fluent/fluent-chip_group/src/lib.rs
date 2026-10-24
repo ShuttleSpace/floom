@@ -72,9 +72,8 @@ use floom_widgets::Text;
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::chip_group::ChipGroupProps;
 use floom_core_theme::theme::{MultiTheme, Theme};
-use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color::to_engine_color as to_paint;
-
+use floom_core_theme::tokens::color::Color;
 
 /// A callback in the shape 2.0's slots need.
 type Callback = Arc<dyn Fn(Vec<usize>) + Send + Sync + 'static>;
@@ -260,4 +259,3 @@ impl Default for FluentChipGroup {
         Self::new()
     }
 }
-

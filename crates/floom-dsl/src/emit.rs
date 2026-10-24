@@ -35,7 +35,6 @@ use std::fmt;
 
 use floom_ui_ir::{IrError, NativeKind, NodeKind, PropValue, Rgba, UiDocument, UiNode};
 
-
 /// Which widget set the emitted program calls into.
 ///
 /// The emitter's job is to turn a design-system-neutral document into Rust

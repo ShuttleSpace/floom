@@ -89,14 +89,14 @@ use std::sync::Arc;
 
 use floom_signal::{RwSignal, SignalGet};
 use floom_types::Color as PaintColor;
-use floom_ui_composites::BottomNavigationStyle;
 pub use floom_ui_composites::BottomNavigationBar;
+use floom_ui_composites::BottomNavigationStyle;
 
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::bottom_navigation::BottomNavigationProps;
 use floom_core_theme::theme::{MultiTheme, Theme};
-use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color::to_engine_color as to_paint;
+use floom_core_theme::tokens::color::Color;
 use floom_widget_runtime::theme_signal;
 
 /// A builder for one destination's icon.
@@ -219,7 +219,8 @@ impl MaterialBottomNavigation {
 
     pub fn resolved_style(&self) -> MaterialBottomNavigationStyle {
         let theme = self.theme.get();
-        let ComponentTokens::BottomNavigation(tokens) = theme.component(ComponentId::BottomNavigation)
+        let ComponentTokens::BottomNavigation(tokens) =
+            theme.component(ComponentId::BottomNavigation)
         else {
             unreachable!("ComponentId::BottomNavigation must resolve to BottomNavigationTokens")
         };

@@ -16,8 +16,8 @@
 
 use floom_core::{ElementId, Point, PointerEvent, Rect, Widget, WidgetAny};
 use floom_types::{Color, FontWeight};
-use floom_widgets::Pressable;
 use floom_widgets::testkit::{AllocatingCreateContext, PaintOp, SceneRecorder, TestEventContext};
+use floom_widgets::Pressable;
 
 use floom_core_theme::global_theme::DesignSystem;
 use floom_core_theme::theme::{MultiTheme, Theme};
@@ -122,21 +122,27 @@ fn tap(kit: MaterialBreadcrumbs, index: usize) {
 #[test]
 fn the_tokens_and_colours_reach_the_style() {
     let style: MaterialBreadcrumbsStyle = kit().resolved_style();
-    let tokens = match theme().component(floom_core_theme::component_tokens::ComponentId::Breadcrumbs)
-    {
-        floom_core_theme::component_tokens::ComponentTokens::Breadcrumbs(tokens) => tokens,
-        _ => unreachable!(),
-    };
+    let tokens =
+        match theme().component(floom_core_theme::component_tokens::ComponentId::Breadcrumbs) {
+            floom_core_theme::component_tokens::ComponentTokens::Breadcrumbs(tokens) => tokens,
+            _ => unreachable!(),
+        };
     assert_eq!(style.gap, tokens.gap, "the token's gap");
     assert_eq!(style.font_size, tokens.font_size, "the token's font size");
     assert_eq!(style.divider, tokens.divider, "the token's divider");
-    assert_eq!(style.on_surface, theme().colors().on_surface, "the current item's ink");
     assert_eq!(
-        style.on_surface_variant, theme().colors().on_surface_variant,
+        style.on_surface,
+        theme().colors().on_surface,
+        "the current item's ink"
+    );
+    assert_eq!(
+        style.on_surface_variant,
+        theme().colors().on_surface_variant,
         "the other items' ink"
     );
     assert_eq!(
-        style.outline_variant, theme().colors().outline_variant,
+        style.outline_variant,
+        theme().colors().outline_variant,
         "the divider's ink"
     );
 }
@@ -147,11 +153,13 @@ fn the_weights_the_paint_used_are_reported() {
     let style = kit().resolved_style();
     assert_eq!(style.current_font_weight, FontWeight::Medium, "v1's medium");
     assert_eq!(
-        style.item_font_weight, FontWeight::Normal,
+        style.item_font_weight,
+        FontWeight::Normal,
         "v1's regular, which the engine calls normal"
     );
     assert_eq!(
-        style.divider_font_weight, FontWeight::Normal,
+        style.divider_font_weight,
+        FontWeight::Normal,
         "v1 wrote no weight for the divider at all"
     );
 }
@@ -159,7 +167,11 @@ fn the_weights_the_paint_used_are_reported() {
 /// The padding v1 wrote as a literal.
 #[test]
 fn the_padding_v1_wrote_as_a_literal_is_a_literal_here() {
-    assert_eq!(kit().resolved_style().padding, 8.0, "v1's `padding_horiz(8.0)`");
+    assert_eq!(
+        kit().resolved_style().padding,
+        8.0,
+        "v1's `padding_horiz(8.0)`"
+    );
 }
 
 #[test]
@@ -188,7 +200,11 @@ fn the_current_item_is_painted_in_on_surface_and_the_others_are_not() {
     let (text, _, weight, ink) = slot_text(trail_of(&["Home", "Docs", "Guide"]), 2);
     assert_eq!(text, "Docs");
     assert_eq!(weight, style.item_font_weight, "v1's regular");
-    assert_eq!(ink, paint(style.on_surface_variant), "still not the current one");
+    assert_eq!(
+        ink,
+        paint(style.on_surface_variant),
+        "still not the current one"
+    );
 
     let (text, _, weight, ink) = slot_text(trail_of(&["Home", "Docs", "Guide"]), 4);
     assert_eq!(text, "Guide");
@@ -207,11 +223,7 @@ fn the_divider_is_painted_in_the_outline_variant() {
     let (text, size, _, ink) = slot_text(trail_of(&["Home", "Guide"]), 1);
     assert_eq!(text, style.divider, "the token's divider");
     assert_eq!(size, style.font_size, "the token's font size");
-    assert_eq!(
-        ink,
-        paint(style.outline_variant),
-        "v1's `outline_variant`"
-    );
+    assert_eq!(ink, paint(style.outline_variant), "v1's `outline_variant`");
 }
 
 /// The box keeps v1's padding on every side.

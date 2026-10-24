@@ -21,8 +21,8 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 
 use floom_core::{
-    Child, ChildKey, Color, CreateContext, ElementId, LayoutRequest, PaintContext,
-    UpdateContext, Widget,
+    Child, ChildKey, Color, CreateContext, ElementId, LayoutRequest, PaintContext, UpdateContext,
+    Widget,
 };
 use floom_types::FontWeight;
 use floom_widgets::primitives::Revision;
@@ -72,7 +72,6 @@ impl Default for TabsBarStyle {
         }
     }
 }
-
 
 impl TabsBar {
     pub fn new() -> Self {
@@ -244,10 +243,7 @@ fn tab(
         // v1 hid the indicator on an inactive tab rather than drawing it
         // empty, and 2.0 has no `hide()`: the tab that is built is the one
         // that carries the indicator.
-        body = body.child(indicator_box(
-            style.indicator_color,
-            style.indicator_height,
-        ));
+        body = body.child(indicator_box(style.indicator_color, style.indicator_height));
     }
 
     Pressable::new(Child::new(

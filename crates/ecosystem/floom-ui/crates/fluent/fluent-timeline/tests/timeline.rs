@@ -65,16 +65,25 @@ fn ops_of(widget: &dyn Widget) -> Vec<PaintOp> {
 #[test]
 fn the_tokens_and_colours_reach_the_style() {
     let style: FluentTimelineStyle = kit().resolved_style();
-    let tokens = match theme().component(floom_core_theme::component_tokens::ComponentId::Timeline) {
+    let tokens = match theme().component(floom_core_theme::component_tokens::ComponentId::Timeline)
+    {
         floom_core_theme::component_tokens::ComponentTokens::Timeline(tokens) => tokens,
         _ => unreachable!(),
     };
     assert_eq!(style.dot_size, tokens.dot_size, "the token's dot size");
-    assert_eq!(style.line_width, tokens.line_width, "the token's line width");
-    assert_eq!(style.padding, tokens.padding, "the token's padding");
-    assert_eq!(style.dot_color, theme().colors().primary, "the dot's colour");
     assert_eq!(
-        style.line_color, theme().colors().outline_variant,
+        style.line_width, tokens.line_width,
+        "the token's line width"
+    );
+    assert_eq!(style.padding, tokens.padding, "the token's padding");
+    assert_eq!(
+        style.dot_color,
+        theme().colors().primary,
+        "the dot's colour"
+    );
+    assert_eq!(
+        style.line_color,
+        theme().colors().outline_variant,
         "the line's colour"
     );
 }
@@ -110,7 +119,9 @@ fn the_dot_and_the_line_are_painted_in_v1_s_colours() {
         _ => None,
     });
     assert_eq!(dot_fill, Some(paint(resolved.dot_color)), "the dot's fill");
-    let dot_request = dot.layout_request().expect("the dot asks for its own space");
+    let dot_request = dot
+        .layout_request()
+        .expect("the dot asks for its own space");
     assert_eq!(
         dot_request.width,
         Some(floom_core::Length::Px(resolved.dot_size)),
@@ -123,8 +134,14 @@ fn the_dot_and_the_line_are_painted_in_v1_s_colours() {
         PaintOp::Rect { color, .. } => Some(*color),
         _ => None,
     });
-    assert_eq!(line_fill, Some(paint(resolved.line_color)), "the line's fill");
-    let line_request = line.layout_request().expect("the line asks for its own space");
+    assert_eq!(
+        line_fill,
+        Some(paint(resolved.line_color)),
+        "the line's fill"
+    );
+    let line_request = line
+        .layout_request()
+        .expect("the line asks for its own space");
     assert_eq!(
         line_request.width,
         Some(floom_core::Length::Px(resolved.line_width)),
@@ -147,7 +164,9 @@ fn the_title_and_the_description_are_painted_in_v1_s_ink() {
     let (title_text, title_size, title_ink) = title_ops
         .iter()
         .find_map(|op| match op {
-            PaintOp::Text { text, size, color, .. } => Some((text.clone(), *size, *color)),
+            PaintOp::Text {
+                text, size, color, ..
+            } => Some((text.clone(), *size, *color)),
             _ => None,
         })
         .expect("the title is painted");
@@ -164,7 +183,9 @@ fn the_title_and_the_description_are_painted_in_v1_s_ink() {
     let (text, size, ink) = description_ops
         .iter()
         .find_map(|op| match op {
-            PaintOp::Text { text, size, color, .. } => Some((text.clone(), *size, *color)),
+            PaintOp::Text {
+                text, size, color, ..
+            } => Some((text.clone(), *size, *color)),
             _ => None,
         })
         .expect("the description is painted");
@@ -186,7 +207,9 @@ fn the_last_entry_has_no_line() {
     let last = column.children().remove(1).build();
     let dot_column = last.children().remove(0).build();
     let line = dot_column.children().remove(1).build();
-    let request = line.layout_request().expect("the line asks for its own space");
+    let request = line
+        .layout_request()
+        .expect("the line asks for its own space");
     assert_eq!(
         request.width,
         Some(floom_core::Length::Px(0.0)),

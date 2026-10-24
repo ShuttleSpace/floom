@@ -5,12 +5,12 @@
 //! resolution left to the design-system kits. See
 //! `docs/porting-floem-ui-to-2.0.md`.
 
-use floom_core::{Rect, Widget, Length};
-use floom_widgets::testkit::{
-    AllocatingCreateContext, RecordingUpdateContext, SceneRecorder, paint_snapshot,
-    semantics_snapshot,
-};
+use floom_core::{Length, Rect, Widget};
 use floom_ui_composites::Badge;
+use floom_widgets::testkit::{
+    paint_snapshot, semantics_snapshot, AllocatingCreateContext, RecordingUpdateContext,
+    SceneRecorder,
+};
 
 const BOX: Rect = Rect {
     x0: 0.0,
@@ -91,18 +91,14 @@ fn intrinsic_size_of_a_pill_is_text_plus_padding_floored_at_min_size() {
         .height
         .and_then(|l| l.px())
         .expect("content implies a pixel height");
-    assert!(
-        got_h >= 16.0,
-        "height {got_h} should honour min_size"
-    );
+    assert!(got_h >= 16.0, "height {got_h} should honour min_size");
 }
 
 /// The measured width of a badge's content at its font size.
 fn floom_text_measure(badge: &Badge) -> f32 {
     // `layout_request` already folds in padding and min_size, so recover the raw
     // text extent the same way the widget does.
-    let measured =
-        floom_text::measure_text(&badge.content, badge.font_size, f64::INFINITY);
+    let measured = floom_text::measure_text(&badge.content, badge.font_size, f64::INFINITY);
     measured.width as f32
 }
 

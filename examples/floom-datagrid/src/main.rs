@@ -21,7 +21,7 @@ use floom_widgets::testkit::{
 };
 use floom_widgets_data::data_grid::{DataGrid, RowPool};
 use floom_widgets_data::model::{
-    CellValue, Column, ColumnId, ColumnKind, RowId,     SelectionMode, SortSpec, VecTable,
+    CellValue, Column, ColumnId, ColumnKind, RowId, SelectionMode, SortSpec, VecTable,
 };
 
 const HEADER: f64 = 24.0;
@@ -93,7 +93,11 @@ fn double_click(grid: &mut DataGrid, id: ElementId, x: f64) -> bool {
 }
 
 fn first_rows(grid: &DataGrid) -> Vec<u64> {
-    grid.visible_row_ids().iter().take(3).map(|row| row.0).collect()
+    grid.visible_row_ids()
+        .iter()
+        .take(3)
+        .map(|row| row.0)
+        .collect()
 }
 
 fn main() {
@@ -207,13 +211,19 @@ fn main() {
 
     assert!(grid.undo().is_some(), "the committed edit is undoable");
     grid.update(&mut update, id);
-    println!("after undo            : {:?}", grid.model().cell(row, score).display());
+    println!(
+        "after undo            : {:?}",
+        grid.model().cell(row, score).display()
+    );
     assert_eq!(grid.model().cell(row, score).display(), before);
 
     assert!(grid.redo().is_some(), "the committed edit is redoable");
     grid.update(&mut update, id);
     assert_eq!(grid.model().cell(row, score).display(), edited);
-    println!("after redo            : {:?}", grid.model().cell(row, score).display());
+    println!(
+        "after redo            : {:?}",
+        grid.model().cell(row, score).display()
+    );
 
     // The row identity never changes underneath the view.
     assert_eq!(grid.model().row_id(0), RowId(0));

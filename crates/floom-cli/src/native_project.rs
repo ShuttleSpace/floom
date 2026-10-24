@@ -260,8 +260,13 @@ pub fn detect_android_sdk() -> Option<String> {
     let mac = std::env::var("HOME")
         .ok()
         .map(|h| format!("{h}/Library/Android/sdk"));
-    let linux = std::env::var("HOME").ok().map(|h| format!("{h}/Android/Sdk"));
-    [mac, linux].into_iter().flatten().find(|p| std::path::Path::new(p).is_dir())
+    let linux = std::env::var("HOME")
+        .ok()
+        .map(|h| format!("{h}/Android/Sdk"));
+    [mac, linux]
+        .into_iter()
+        .flatten()
+        .find(|p| std::path::Path::new(p).is_dir())
 }
 
 /// `android/.gitignore`.
@@ -1439,11 +1444,9 @@ int WINAPI wWinMain(HINSTANCE hinst, HINSTANCE, PWSTR, int) {
              target_link_libraries({name} PRIVATE \"${{CMAKE_APPLICATION_FRAMEWORK_ACCELERATOR}}\")",
             name = name
         ),
-        "windows" => {
-            "# Win32 needs no extra libraries: `user32` and `gdi32` are linked by\n\
+        "windows" => "# Win32 needs no extra libraries: `user32` and `gdi32` are linked by\n\
              # default with the MSVC toolchain."
-                .to_string()
-        }
+            .to_string(),
         _ => unreachable!(),
     };
 
@@ -1599,10 +1602,7 @@ mod tests {
             "a library manifest that declares an application merges its attributes \
              into every consumer:\n{without_comments}"
         );
-        assert!(
-            without_comments.contains("<manifest"),
-            "{without_comments}"
-        );
+        assert!(without_comments.contains("<manifest"), "{without_comments}");
     }
 
     #[test]
@@ -1657,7 +1657,11 @@ mod tests {
         let declared = format!("class {class} : Activity()");
         assert!(activity.contains(&declared), "{activity}");
         assert!(
-            manifest.contains(&format!("android:name=\"{}.{}\"", id.replace('-', "_"), class)),
+            manifest.contains(&format!(
+                "android:name=\"{}.{}\"",
+                id.replace('-', "_"),
+                class
+            )),
             "{manifest}"
         );
     }
@@ -1688,8 +1692,14 @@ mod tests {
         // its own toolkit and not the other two.
         let linux = desktop_cmake("linux", "app", "floom_app");
         assert!(linux.contains("gtk"), "{linux}");
-        assert!(!linux.contains("Cocoa"), "linux CMake mentions Cocoa:\n{linux}");
-        assert!(!linux.contains("Win32"), "linux CMake mentions Win32:\n{linux}");
+        assert!(
+            !linux.contains("Cocoa"),
+            "linux CMake mentions Cocoa:\n{linux}"
+        );
+        assert!(
+            !linux.contains("Win32"),
+            "linux CMake mentions Win32:\n{linux}"
+        );
 
         let macos = desktop_cmake("macos", "app", "floom_app");
         assert!(macos.contains("Cocoa"), "{macos}");
@@ -1785,7 +1795,10 @@ mod tests {
         let use_ = cmake
             .find("pkg_check_modules(GTK3")
             .expect("GTK must be checked");
-        assert!(find < use_, "pkg_check_modules precedes find_package(PkgConfig)");
+        assert!(
+            find < use_,
+            "pkg_check_modules precedes find_package(PkgConfig)"
+        );
     }
 
     #[test]
@@ -1848,13 +1861,19 @@ mod tests {
     #[test]
     fn no_emitted_xml_contains_a_double_hyphen_inside_a_comment() {
         let docs: Vec<(&str, String)> = vec![
-            ("app manifest", android_app_manifest("com.example", "my_app")),
+            (
+                "app manifest",
+                android_app_manifest("com.example", "my_app"),
+            ),
             ("plugin manifest", android_plugin_manifest("camera")),
             ("strings", android_strings_xml("my_app")),
             ("styles", android_styles_xml("my_app")),
             ("colors", android_colors_xml()),
             ("launcher icon", android_launcher_icon_xml()),
-            ("launcher foreground", ANDROID_LAUNCHER_FOREGROUND_XML.to_string()),
+            (
+                "launcher foreground",
+                ANDROID_LAUNCHER_FOREGROUND_XML.to_string(),
+            ),
         ];
         for (name, xml) in &docs {
             assert_xml_comments_are_legal(name, xml);
@@ -1866,7 +1885,10 @@ mod tests {
         // Two declarations of one identity. They agree today because both are
         // derived here, and this test is what keeps them derived.
         let manifest = android_plugin_manifest("camera");
-        assert!(manifest.contains(r#"package="dev.floom.plugin.camera""#), "{manifest}");
+        assert!(
+            manifest.contains(r#"package="dev.floom.plugin.camera""#),
+            "{manifest}"
+        );
 
         let gradle = android_plugin_build_gradle("camera", "floom_camera");
         assert!(
@@ -1880,7 +1902,10 @@ mod tests {
         // `ManifestMerger2` rejects a manifest that begins at the root element
         // with "Error parsing", which does not mention the missing declaration.
         for (name, xml) in [
-            ("app manifest", android_app_manifest("com.example", "my_app")),
+            (
+                "app manifest",
+                android_app_manifest("com.example", "my_app"),
+            ),
             ("plugin manifest", android_plugin_manifest("camera")),
             ("strings", android_strings_xml("my_app")),
             ("styles", android_styles_xml("my_app")),

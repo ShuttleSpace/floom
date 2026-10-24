@@ -14,18 +14,18 @@
 //! `the_chosen_destination_has_a_rule_along_its_top_edge` would fail if this
 //! kit stopped being this kit.
 
-use floom_core::{Child, ChildKey, ElementId, LayoutRequest, Point, PointerEvent, Rect, Widget, WidgetAny};
-use floom_types::Color;
-use floom_widgets::Pressable;
-use floom_widgets::testkit::{
-    AllocatingCreateContext, PaintOp, SceneRecorder, TestEventContext,
+use floom_core::{
+    Child, ChildKey, ElementId, LayoutRequest, Point, PointerEvent, Rect, Widget, WidgetAny,
 };
+use floom_types::Color;
+use floom_widgets::testkit::{AllocatingCreateContext, PaintOp, SceneRecorder, TestEventContext};
+use floom_widgets::Pressable;
 
 use floom_core_theme::global_theme::DesignSystem;
 use floom_core_theme::theme::{MultiTheme, Theme};
 
 use floom_widget_fluent_bottom_navigation::{
-    FluentBottomNavigation, BottomNavigationBar, FluentBottomNavigationStyle, IconBuilder,
+    BottomNavigationBar, FluentBottomNavigation, FluentBottomNavigationStyle, IconBuilder,
 };
 
 const BOX: Rect = Rect {
@@ -97,7 +97,9 @@ fn label_painted(bar: &BottomNavigationBar, index: usize) -> (String, f32, Color
     ops_of(&*label)
         .iter()
         .find_map(|op| match op {
-            PaintOp::Text { text, size, color, .. } => Some((text.clone(), *size, *color)),
+            PaintOp::Text {
+                text, size, color, ..
+            } => Some((text.clone(), *size, *color)),
             _ => None,
         })
         .expect("a destination paints its label")
@@ -136,16 +138,25 @@ fn tap(bar: &BottomNavigationBar, index: usize) {
 #[test]
 fn the_tokens_and_colours_reach_the_style() {
     let style: FluentBottomNavigationStyle = kit().resolved_style();
-    let tokens = match theme().component(floom_core_theme::component_tokens::ComponentId::BottomNavigation) {
+    let tokens = match theme()
+        .component(floom_core_theme::component_tokens::ComponentId::BottomNavigation)
+    {
         floom_core_theme::component_tokens::ComponentTokens::BottomNavigation(tokens) => tokens,
         _ => unreachable!(),
     };
     assert_eq!(style.height, tokens.height, "the token's bar height");
     assert_eq!(style.icon_size, tokens.icon_size, "the token's icon size");
-    assert_eq!(style.label_font_size, tokens.label_font_size, "the token's label size");
+    assert_eq!(
+        style.label_font_size, tokens.label_font_size,
+        "the token's label size"
+    );
     assert_eq!(style.gap, tokens.gap, "the token's gap");
     assert_eq!(style.background, theme().colors().surface, "the bar's fill");
-    assert_eq!(style.selected_color, theme().colors().primary, "the chosen ink");
+    assert_eq!(
+        style.selected_color,
+        theme().colors().primary,
+        "the chosen ink"
+    );
     assert_eq!(
         style.unselected_color,
         theme().colors().on_surface_variant,
@@ -158,7 +169,10 @@ fn the_tokens_and_colours_reach_the_style() {
 #[test]
 fn the_rule_along_the_bar_is_the_one_v1_drew() {
     let style = kit().resolved_style();
-    assert_eq!(style.divider_color.a, 12, "v1's `with_alpha(on_surface, 12)`");
+    assert_eq!(
+        style.divider_color.a, 12,
+        "v1's `with_alpha(on_surface, 12)`"
+    );
     assert_eq!(style.divider_width, 1.0, "v1's `.border_top(1.0)`");
 }
 
@@ -173,7 +187,10 @@ fn the_design_system_is_named_in_the_style() {
 #[test]
 fn the_props_report_the_destinations_and_not_the_callback() {
     let kit = kit().labels(vec!["Home".into(), "Search".into()]);
-    assert_eq!(kit.props().labels, vec!["Home".to_string(), "Search".to_string()]);
+    assert_eq!(
+        kit.props().labels,
+        vec!["Home".to_string(), "Search".to_string()]
+    );
     assert_eq!(kit.props().selected, 0);
     assert!(kit.props().on_change.is_none());
 }
@@ -314,7 +331,10 @@ fn the_bar_is_a_row_of_the_tokens_height() {
     let bar = kit().labels(vec!["Home".into(), "Search".into()]).view();
     let request = bar.layout_request().expect("the bar declares its own box");
     assert_eq!(request.axis, Some(floom_core::Axis::Horizontal));
-    assert_eq!(request.height, Some(floom_core::Length::Px(resolved.height)));
+    assert_eq!(
+        request.height,
+        Some(floom_core::Length::Px(resolved.height))
+    );
     assert_eq!(request.width, Some(floom_core::Length::Pct(100.0)));
 }
 
@@ -348,10 +368,12 @@ fn the_destination_chosen_before_mount_is_the_chosen_one() {
 #[test]
 fn tapping_a_destination_chooses_it() {
     let resolved = kit().resolved_style();
-    let bar = kit()
-        .labels(vec!["Home".into(), "Search".into()])
-        .view();
-    assert_eq!(bar.selected(), 0, "v1's first destination is chosen to begin with");
+    let bar = kit().labels(vec!["Home".into(), "Search".into()]).view();
+    assert_eq!(
+        bar.selected(),
+        0,
+        "v1's first destination is chosen to begin with"
+    );
     tap(&bar, 1);
     assert_eq!(bar.selected(), 1);
 

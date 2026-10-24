@@ -64,8 +64,14 @@ fn the_joined_shape_has_no_gap_a_radius_and_no_padding() {
 
     let inner = surface.children()[0].build();
     let inner = inner.as_any().downcast_ref::<Stack>().unwrap().clone();
-    let request = inner.layout_request().expect("the buttons ask for their own space");
-    assert_eq!(request.gap, Some(0.0), "v1: no gap when joined, the token's gap otherwise");
+    let request = inner
+        .layout_request()
+        .expect("the buttons ask for their own space");
+    assert_eq!(
+        request.gap,
+        Some(0.0),
+        "v1: no gap when joined, the token's gap otherwise"
+    );
     assert_eq!(inner.child_count(), 2, "both buttons are in it");
 }
 
@@ -74,7 +80,11 @@ fn the_joined_shape_has_no_gap_a_radius_and_no_padding() {
 fn the_unjoined_shape_has_the_token_gap_no_radius_and_four_points_of_padding() {
     let surface = group(false).view();
     let decoration = surface.decoration();
-    assert_eq!(decoration.corner_radius(), 0.0, "v1: no radius when not joined");
+    assert_eq!(
+        decoration.corner_radius(),
+        0.0,
+        "v1: no radius when not joined"
+    );
     assert_eq!(
         surface.padding_insets(),
         Insets::uniform(4.0),
@@ -83,7 +93,9 @@ fn the_unjoined_shape_has_the_token_gap_no_radius_and_four_points_of_padding() {
 
     let inner = surface.children()[0].build();
     let inner = inner.as_any().downcast_ref::<Stack>().unwrap().clone();
-    let request = inner.layout_request().expect("the buttons ask for their own space");
+    let request = inner
+        .layout_request()
+        .expect("the buttons ask for their own space");
     assert_eq!(request.gap, Some(tokens().gap), "v1: the token's gap");
 }
 
@@ -91,7 +103,9 @@ fn the_unjoined_shape_has_the_token_gap_no_radius_and_four_points_of_padding() {
 #[test]
 fn the_group_is_filled_with_the_surface_variant() {
     let theme = theme();
-    let style = FluentButtonGroup::new().with_theme(theme.clone()).resolved_style();
+    let style = FluentButtonGroup::new()
+        .with_theme(theme.clone())
+        .resolved_style();
     let surface = group(false).view();
     assert_eq!(
         surface.decoration().background_color(),
@@ -111,11 +125,22 @@ fn a_vertical_group_stacks_its_buttons_down() {
         .view();
     let inner = surface.children()[0].build();
     let inner = inner.as_any().downcast_ref::<Stack>().unwrap().clone();
-    let request = inner.layout_request().expect("the buttons ask for their own space");
-    assert_eq!(request.axis, Some(Axis::Vertical), "v1: `list(kids)` for vertical");
+    let request = inner
+        .layout_request()
+        .expect("the buttons ask for their own space");
+    assert_eq!(
+        request.axis,
+        Some(Axis::Vertical),
+        "v1: `list(kids)` for vertical"
+    );
 }
 
 /// Design-system colour -> engine colour.
 fn to_paint(c: floom_core_theme::tokens::color::Color) -> Color {
-    Color { r: c.r, g: c.g, b: c.b, a: c.a }
+    Color {
+        r: c.r,
+        g: c.g,
+        b: c.b,
+        a: c.a,
+    }
 }

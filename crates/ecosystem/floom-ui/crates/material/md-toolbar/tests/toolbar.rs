@@ -8,7 +8,7 @@
 
 use floom_core::Widget;
 use floom_types::{Insets, Rect, Size};
-use floom_widgets::testkit::{AllocatingCreateContext, SceneRecorder, paint_snapshot};
+use floom_widgets::testkit::{paint_snapshot, AllocatingCreateContext, SceneRecorder};
 
 use floom_core_theme::theme::MultiTheme;
 use floom_widget_md_toolbar::MdToolbar;
@@ -89,8 +89,10 @@ fn the_token_weight_conversion_does_not_repeat_the_theme_bug() {
         floom_core_theme::tokens::typography::FontWeight::Black => W::Black,
         _ => W::Normal,
     };
-    assert_ne!(convert(floom_core_theme::tokens::typography::FontWeight::ExtraBold),
-               convert(floom_core_theme::tokens::typography::FontWeight::Black));
+    assert_ne!(
+        convert(floom_core_theme::tokens::typography::FontWeight::ExtraBold),
+        convert(floom_core_theme::tokens::typography::FontWeight::Black)
+    );
 }
 
 #[test]

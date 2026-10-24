@@ -100,8 +100,8 @@ use floom_widgets::{Align, Axis, Edges, Pressable, Stack, Surface, Text};
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::datatable::{ColumnAlign, DataTableColumn, DataTableProps};
 use floom_core_theme::theme::{MultiTheme, Theme};
-use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color::to_engine_color as to_paint;
+use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color_ext::with_alpha;
 use floom_widget_runtime::theme_signal;
 
@@ -386,10 +386,12 @@ fn cell(
     align: Align,
 ) -> (LayoutRequest, Stack) {
     let text = text.to_string();
-    let layout = LayoutRequest::new().grow(1.0).padding(padding).main_align(align);
-    let widget = Stack::new(Axis::Horizontal).push(move || {
-        Box::new(Text::new(text.clone()).size(size).weight(weight).color(ink))
-    });
+    let layout = LayoutRequest::new()
+        .grow(1.0)
+        .padding(padding)
+        .main_align(align);
+    let widget = Stack::new(Axis::Horizontal)
+        .push(move || Box::new(Text::new(text.clone()).size(size).weight(weight).color(ink)));
     (layout, widget)
 }
 
@@ -430,4 +432,3 @@ fn align_of(align: ColumnAlign) -> Align {
         ColumnAlign::End => Align::End,
     }
 }
-

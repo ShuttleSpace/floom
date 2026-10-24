@@ -19,11 +19,11 @@
 use std::sync::Arc;
 
 use floom_core::{
-    Child, ChildKey, Color, CreateContext, ElementId, LayoutRequest, PaintContext, SemanticsContext,
-    UpdateContext, Widget, WidgetAny,
+    Child, ChildKey, Color, CreateContext, ElementId, LayoutRequest, PaintContext,
+    SemanticsContext, UpdateContext, Widget, WidgetAny,
 };
-use floom_widgets::primitives::{SemanticsHint, emit_semantics};
-use floom_widgets::{SharedList, Text, read_list};
+use floom_widgets::primitives::{emit_semantics, SemanticsHint};
+use floom_widgets::{read_list, SharedList, Text};
 
 /// The list's appearance.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -120,11 +120,9 @@ impl Widget for ValidationMessagesList {
             .map(|(index, message)| {
                 let color = self.style.text_color;
                 let font_size = self.style.font_size;
-                Child::new(
-                    ChildKey::index(index),
-                    LayoutRequest::new(),
-                    move || Box::new(Text::new(message.clone()).size(font_size).color(color)),
-                )
+                Child::new(ChildKey::index(index), LayoutRequest::new(), move || {
+                    Box::new(Text::new(message.clone()).size(font_size).color(color))
+                })
             })
             .collect()
     }

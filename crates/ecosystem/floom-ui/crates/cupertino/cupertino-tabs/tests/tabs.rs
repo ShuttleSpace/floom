@@ -107,7 +107,9 @@ fn slots_of(widget: &mut dyn WidgetAny) -> Vec<(LayoutRequest, Box<dyn WidgetAny
 fn text_of(ops: &[PaintOp]) -> (String, f32, Color) {
     ops.iter()
         .find_map(|op| match op {
-            PaintOp::Text { text, size, color, .. } => Some((text.clone(), *size, *color)),
+            PaintOp::Text {
+                text, size, color, ..
+            } => Some((text.clone(), *size, *color)),
             _ => None,
         })
         .expect("the label is painted")
@@ -149,13 +151,19 @@ fn the_tokens_and_colours_reach_the_style() {
         "the token's indicator thickness"
     );
     assert_eq!(style.padding, tokens.padding, "the token's padding");
-    assert_eq!(style.active_color, theme().colors().primary, "the active label's ink");
     assert_eq!(
-        style.inactive_color, theme().colors().on_surface_variant,
+        style.active_color,
+        theme().colors().primary,
+        "the active label's ink"
+    );
+    assert_eq!(
+        style.inactive_color,
+        theme().colors().on_surface_variant,
         "the inactive label's ink"
     );
     assert_eq!(
-        style.indicator_color, theme().colors().primary,
+        style.indicator_color,
+        theme().colors().primary,
         "the indicator's colour"
     );
     assert_eq!(style.label_font_size, 14.0, "v1's label size");
@@ -202,7 +210,11 @@ fn the_labels_are_painted_in_v1_s_inks() {
     let (text, size, ink) = text_of(&inactive);
     assert_eq!(text, "Two");
     assert_eq!(size, resolved.label_font_size, "v1's label size");
-    assert_eq!(ink, paint(resolved.inactive_color), "the inactive label's ink");
+    assert_eq!(
+        ink,
+        paint(resolved.inactive_color),
+        "the inactive label's ink"
+    );
 }
 
 /// The indicator is under the active tab and nowhere else: v1 hid it on an
@@ -246,8 +258,16 @@ fn the_label_box_is_the_tabs_height_with_the_tokens_padding() {
         "v1's label was as tall as the bar"
     );
     let padding = request.padding.expect("v1's label had a padding");
-    assert_eq!(padding.left, f64::from(resolved.padding), "v1's left padding");
-    assert_eq!(padding.right, f64::from(resolved.padding), "v1's right padding");
+    assert_eq!(
+        padding.left,
+        f64::from(resolved.padding),
+        "v1's left padding"
+    );
+    assert_eq!(
+        padding.right,
+        f64::from(resolved.padding),
+        "v1's right padding"
+    );
     assert_eq!(padding.top, 0.0, "v1 padded the label sideways only");
     assert_eq!(padding.bottom, 0.0, "v1 padded the label sideways only");
 }

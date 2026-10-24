@@ -488,11 +488,7 @@ fn on_change_reports_typing_and_not_the_builders_value() {
     );
     dispatch(&mut field, id, ROW, KeyEvent::down(Key::Char('!')).into());
     let reported = seen.take();
-    assert_eq!(
-        field.text(),
-        "Ada!",
-        "appended, not prepended"
-    );
+    assert_eq!(field.text(), "Ada!", "appended, not prepended");
     assert_eq!(
         reported,
         field.text(),
@@ -635,10 +631,10 @@ fn the_focus_affordance_is_a_ring_outside_the_box() {
     let colors = binding.colors();
     let style = style();
 
-    let ring = style
-        .focus_ring
-        .expect("v1 drew `.focus(|s| s.outline(2.0).outline_color(primary))`, and \
-                 that ring IS this kit's focus affordance");
+    let ring = style.focus_ring.expect(
+        "v1 drew `.focus(|s| s.outline(2.0).outline_color(primary))`, and \
+                 that ring IS this kit's focus affordance",
+    );
     assert_eq!(ring.width, 2.0, "v1 wrote `outline(2.0)`");
     assert_eq!(
         ring.color,
@@ -646,8 +642,7 @@ fn the_focus_affordance_is_a_ring_outside_the_box() {
         "v1's ring was an undimmed `primary`"
     );
     assert_eq!(
-        ring.gap,
-        0.0,
+        ring.gap, 0.0,
         "flush against the field: Compose's `outline()` has no inset"
     );
     assert_eq!(

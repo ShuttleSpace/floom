@@ -1,7 +1,7 @@
 use floom_core::{CreateContext, ElementId, UpdateContext, Widget};
-use floom_signal::{RwSignal, SignalGet, SignalUpdate};
-use floom_runtime_core::{Event, Runtime};
 use floom_runtime_core::DirtyFlags;
+use floom_runtime_core::{Event, Runtime};
+use floom_signal::{RwSignal, SignalGet, SignalUpdate};
 use floom_types::Point;
 use std::time::Instant;
 

@@ -18,9 +18,7 @@ use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::global_theme::DesignSystem;
 use floom_core_theme::theme::{MultiTheme, Theme};
 
-use floom_widget_fluent_list_group::{
-    FluentListGroup, FluentListGroupStyle,
-};
+use floom_widget_fluent_list_group::{FluentListGroup, FluentListGroupStyle};
 
 /// The Fluent theme, with Fluent selected.
 ///
@@ -63,14 +61,21 @@ fn the_style_resolves_the_themes_tokens_and_ink() {
     assert_eq!(style.title_color, theme.colors().on_surface);
     assert_eq!(style.item_color, theme.colors().on_surface);
     assert_eq!(style.indicator_color, theme.colors().on_surface_variant);
-    assert_eq!(style.item_font_size, theme.typography().body.medium.font_size);
+    assert_eq!(
+        style.item_font_size,
+        theme.typography().body.medium.font_size
+    );
 }
 
 /// The group is one panel, with the group's title on it.
 #[test]
 fn the_group_is_one_panel_with_the_title() {
     let accordion = group().view();
-    assert_eq!(accordion.panel_count(), 1, "a list group is one accordion panel");
+    assert_eq!(
+        accordion.panel_count(),
+        1,
+        "a list group is one accordion panel"
+    );
     assert_eq!(accordion.titles(), vec!["Section"]);
 }
 
@@ -170,7 +175,6 @@ fn rows_of(accordion: &floom_ui_composites::Accordion) -> Box<dyn floom_core::Wi
     assert_eq!(leaf.children().len(), 2, "the header and the rows");
     leaf.children().remove(1).build()
 }
-
 
 /// The rows' stack carries v1's vertical padding.
 ///

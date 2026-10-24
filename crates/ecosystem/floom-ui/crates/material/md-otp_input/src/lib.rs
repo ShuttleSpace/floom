@@ -89,8 +89,8 @@ use floom_widgets::{Align, Axis, SharedBuffer, Stack, Surface, TextInput, TextIn
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::otp_input::OtpInputProps;
 use floom_core_theme::theme::{MultiTheme, Theme};
-use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color::to_engine_color as to_paint;
+use floom_core_theme::tokens::color::Color;
 use floom_widget_runtime::theme_signal;
 
 /// The glyph a masked box shows. A v1 literal.
@@ -121,10 +121,7 @@ fn write_text(buffer: &SharedBuffer, text: &str) {
 
 /// The characters behind the boxes.
 fn read_reals(reals: &Reals) -> Vec<String> {
-    reals
-        .lock()
-        .map(|guard| guard.clone())
-        .unwrap_or_default()
+    reals.lock().map(|guard| guard.clone()).unwrap_or_default()
 }
 
 /// The OTP input's appearance, in the terms v1 used.
@@ -178,7 +175,9 @@ impl MaterialOtpInput {
             // three kits whose OTP input follows a theme swap at runtime.
             theme: theme_signal(),
             code: Arc::new(Mutex::new(String::new())),
-            boxes: (0..length).map(|_| Arc::new(Mutex::new(String::new()))).collect(),
+            boxes: (0..length)
+                .map(|_| Arc::new(Mutex::new(String::new())))
+                .collect(),
             reals: Arc::new(Mutex::new(vec![String::new(); length])),
             on_change: None,
         }
@@ -188,7 +187,9 @@ impl MaterialOtpInput {
     pub fn length(mut self, length: usize) -> Self {
         self.props.length = length;
         let length = length.max(1);
-        self.boxes = (0..length).map(|_| Arc::new(Mutex::new(String::new()))).collect();
+        self.boxes = (0..length)
+            .map(|_| Arc::new(Mutex::new(String::new())))
+            .collect();
         self.reals = Arc::new(Mutex::new(vec![String::new(); length]));
         self
     }
@@ -334,111 +335,107 @@ impl MaterialOtpInput {
                 ((size - floom_widgets::text_width_at(shown, font_size)) / 2.0).max(0.0) as f64;
             let padding_vert = ((size - font_size) / 2.0).max(0.0) as f64;
 
-            row = row.push_layout(
-                LayoutRequest::new().width(size).height(size),
-                move || {
-                    let field = Child::new(
-                        ChildKey::index(0),
-                        // The character takes the whole box.
-                        LayoutRequest::new().grow(1.0),
-                        {
-                            let buffer = buffer.clone();
-                            let code = code.clone();
-                            let reals = reals.clone();
-                            let on_change = on_change.clone();
-                            move || {
-                                let mut input = TextInput::new(buffer.clone())
-                                    .placeholder("")
-                                    .style(TextInputStyle {
-                                        font_size,
-                                        color: text_color,
-                                        // The box carries the fill and the
-                                        // rim; the text input is the text.
-                                        background: None,
-                                        border_width: 0.0,
-                                        radius: 0.0,
-                                        padding_horiz,
-                                        padding_vert,
-                                        ..TextInputStyle::default()
-                                    });
-                                input = input.on_change({
-                                    let buffer = buffer.clone();
-                                    let code = code.clone();
-                                    let reals = reals.clone();
-                                    let on_change = on_change.clone();
-                                    move |text: String| {
-                                        // A disabled input does not move: v1's
-                                        // `TextInput` refused the keyboard, and
-                                        // the engine's has no such flag.
-                                        if disabled {
-                                            return;
-                                        }
-                                        // v1 took the box's first character
-                                        // and ignored the mask glyph itself.
-                                        let ch = text
-                                            .chars()
-                                            .next()
-                                            .map(|c| c.to_string())
-                                            .unwrap_or_default();
-                                        if ch == MASK {
-                                            return;
-                                        }
-                                        // The character behind the box.
-                                        {
-                                            let mut reals = reals
-                                                .lock()
-                                                .unwrap_or_else(|e| e.into_inner());
-                                            if let Some(slot) = reals.get_mut(index) {
-                                                if *slot != ch {
-                                                    *slot = ch.clone();
-                                                }
+            row = row.push_layout(LayoutRequest::new().width(size).height(size), move || {
+                let field = Child::new(
+                    ChildKey::index(0),
+                    // The character takes the whole box.
+                    LayoutRequest::new().grow(1.0),
+                    {
+                        let buffer = buffer.clone();
+                        let code = code.clone();
+                        let reals = reals.clone();
+                        let on_change = on_change.clone();
+                        move || {
+                            let mut input = TextInput::new(buffer.clone()).placeholder("").style(
+                                TextInputStyle {
+                                    font_size,
+                                    color: text_color,
+                                    // The box carries the fill and the
+                                    // rim; the text input is the text.
+                                    background: None,
+                                    border_width: 0.0,
+                                    radius: 0.0,
+                                    padding_horiz,
+                                    padding_vert,
+                                    ..TextInputStyle::default()
+                                },
+                            );
+                            input = input.on_change({
+                                let buffer = buffer.clone();
+                                let code = code.clone();
+                                let reals = reals.clone();
+                                let on_change = on_change.clone();
+                                move |text: String| {
+                                    // A disabled input does not move: v1's
+                                    // `TextInput` refused the keyboard, and
+                                    // the engine's has no such flag.
+                                    if disabled {
+                                        return;
+                                    }
+                                    // v1 took the box's first character
+                                    // and ignored the mask glyph itself.
+                                    let ch = text
+                                        .chars()
+                                        .next()
+                                        .map(|c| c.to_string())
+                                        .unwrap_or_default();
+                                    if ch == MASK {
+                                        return;
+                                    }
+                                    // The character behind the box.
+                                    {
+                                        let mut reals =
+                                            reals.lock().unwrap_or_else(|e| e.into_inner());
+                                        if let Some(slot) = reals.get_mut(index) {
+                                            if *slot != ch {
+                                                *slot = ch.clone();
                                             }
-                                        }
-                                        // The code is the boxes' characters,
-                                        // left to right, with the empty ones
-                                        // left out -- v1's rule.
-                                        let new_code: String = read_reals(&reals)
-                                            .into_iter()
-                                            .filter(|slot| !slot.is_empty())
-                                            .collect();
-                                        let changed = {
-                                            let mut code =
-                                                code.lock().unwrap_or_else(|e| e.into_inner());
-                                            if *code == new_code {
-                                                false
-                                            } else {
-                                                *code = new_code.clone();
-                                                true
-                                            }
-                                        };
-                                        if changed {
-                                            if let Some(callback) = &on_change {
-                                                callback(new_code);
-                                            }
-                                        }
-                                        // The mask goes back on. v1's code ->
-                                        // boxes effect did this a tick later;
-                                        // here it is immediate, because there
-                                        // is no second effect to do it.
-                                        if masked && !ch.is_empty() {
-                                            write_text(&buffer, MASK);
                                         }
                                     }
-                                });
-                                Box::new(input) as Box<dyn WidgetAny>
-                            }
-                        },
-                    );
-                    Box::new(
-                        Surface::new()
-                            .request(LayoutRequest::new().width(size).height(size))
-                            .border(border_width, border_color)
-                            .radius(radius)
-                            .background(background)
-                            .child(field),
-                    ) as Box<dyn WidgetAny>
-                },
-            );
+                                    // The code is the boxes' characters,
+                                    // left to right, with the empty ones
+                                    // left out -- v1's rule.
+                                    let new_code: String = read_reals(&reals)
+                                        .into_iter()
+                                        .filter(|slot| !slot.is_empty())
+                                        .collect();
+                                    let changed = {
+                                        let mut code =
+                                            code.lock().unwrap_or_else(|e| e.into_inner());
+                                        if *code == new_code {
+                                            false
+                                        } else {
+                                            *code = new_code.clone();
+                                            true
+                                        }
+                                    };
+                                    if changed {
+                                        if let Some(callback) = &on_change {
+                                            callback(new_code);
+                                        }
+                                    }
+                                    // The mask goes back on. v1's code ->
+                                    // boxes effect did this a tick later;
+                                    // here it is immediate, because there
+                                    // is no second effect to do it.
+                                    if masked && !ch.is_empty() {
+                                        write_text(&buffer, MASK);
+                                    }
+                                }
+                            });
+                            Box::new(input) as Box<dyn WidgetAny>
+                        }
+                    },
+                );
+                Box::new(
+                    Surface::new()
+                        .request(LayoutRequest::new().width(size).height(size))
+                        .border(border_width, border_color)
+                        .radius(radius)
+                        .background(background)
+                        .child(field),
+                ) as Box<dyn WidgetAny>
+            });
         }
 
         row
@@ -450,4 +447,3 @@ impl Default for MaterialOtpInput {
         Self::new()
     }
 }
-

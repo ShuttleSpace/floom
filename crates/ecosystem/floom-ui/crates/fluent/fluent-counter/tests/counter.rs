@@ -20,7 +20,7 @@ use std::sync::{Arc, Mutex};
 
 use floom_ui_composites::Counter;
 
-use floom_widget_fluent_counter::{READOUT_FONT_SIZE, FluentCounter};
+use floom_widget_fluent_counter::{FluentCounter, READOUT_FONT_SIZE};
 
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens, CounterTokens};
 use floom_core_theme::global_theme::DesignSystem;

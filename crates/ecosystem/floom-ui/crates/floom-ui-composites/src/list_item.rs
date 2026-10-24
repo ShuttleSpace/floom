@@ -145,13 +145,19 @@ impl ListItemRow {
     }
 
     /// The slot before the text column — an icon or an avatar in v1's terms.
-    pub fn leading(mut self, build: impl Fn() -> Box<dyn WidgetAny> + Send + Sync + 'static) -> Self {
+    pub fn leading(
+        mut self,
+        build: impl Fn() -> Box<dyn WidgetAny> + Send + Sync + 'static,
+    ) -> Self {
         self.leading = Some(Arc::new(build));
         self
     }
 
     /// The slot after the text column — a switch or a chevron.
-    pub fn trailing(mut self, build: impl Fn() -> Box<dyn WidgetAny> + Send + Sync + 'static) -> Self {
+    pub fn trailing(
+        mut self,
+        build: impl Fn() -> Box<dyn WidgetAny> + Send + Sync + 'static,
+    ) -> Self {
         self.trailing = Some(Arc::new(build));
         self
     }
@@ -217,18 +223,16 @@ impl ListItemRow {
                             .cross_align(Align::Center),
                     )
                     .background(style.background)
-                    .push_layout(
-                        LayoutRequest::new().grow(1.0),
-                        {
-                            // Cloned here, in the outer `Fn`'s body. The closure
-                            // below is *also* an `Fn`, so anything it captured by
-                            // value would be gone on a replay — and `title`,
-                            // `subtitle` and `leading` are all read inside it.
-                            let title = title.clone();
-                            let subtitle = subtitle.clone();
-                            let leading = leading.clone();
-                            let trailing = trailing.clone();
-                            move || {
+                    .push_layout(LayoutRequest::new().grow(1.0), {
+                        // Cloned here, in the outer `Fn`'s body. The closure
+                        // below is *also* an `Fn`, so anything it captured by
+                        // value would be gone on a replay — and `title`,
+                        // `subtitle` and `leading` are all read inside it.
+                        let title = title.clone();
+                        let subtitle = subtitle.clone();
+                        let leading = leading.clone();
+                        let trailing = trailing.clone();
+                        move || {
                             let mut row = Stack::new(Axis::Horizontal)
                                 .gap(style.gap)
                                 .align(Align::Start, Align::Center);
@@ -243,49 +247,46 @@ impl ListItemRow {
                             // The text column, and the only part that grows: v1 gave
                             // it `flex_grow(1.0)`, which is what pushes the trailing
                             // slot to the far edge of a full-width row.
-                            row = row.push_layout(
-                                LayoutRequest::new().grow(1.0),
-                                {
-                                    // One more level of `Fn`, so the strings are
-                                    // cloned out of the capture before the innermost
-                                    // builders take them by value.
+                            row = row.push_layout(LayoutRequest::new().grow(1.0), {
+                                // One more level of `Fn`, so the strings are
+                                // cloned out of the capture before the innermost
+                                // builders take them by value.
+                                let title = title.clone();
+                                let subtitle = subtitle.clone();
+                                move || {
                                     let title = title.clone();
                                     let subtitle = subtitle.clone();
-                                    move || {
+                                    let mut column = Stack::new(Axis::Vertical)
+                                        .gap(style.text_gap)
+                                        .align(Align::Center, Align::Start);
+                                    column = column.push({
                                         let title = title.clone();
-                                        let subtitle = subtitle.clone();
-                                        let mut column = Stack::new(Axis::Vertical)
-                                            .gap(style.text_gap)
-                                            .align(Align::Center, Align::Start);
+                                        move || {
+                                            Box::new(
+                                                Text::new(title.clone())
+                                                    .size(style.title_size)
+                                                    .weight(style.title_weight)
+                                                    .color(style.title_color),
+                                            )
+                                        }
+                                    });
+                                    if let Some(subtitle) = &subtitle {
+                                        let size = style.subtitle_size.unwrap_or(style.title_size);
                                         column = column.push({
-                                            let title = title.clone();
+                                            let subtitle = subtitle.clone();
                                             move || {
                                                 Box::new(
-                                                    Text::new(title.clone())
-                                                        .size(style.title_size)
-                                                        .weight(style.title_weight)
-                                                        .color(style.title_color),
+                                                    Text::new(subtitle.clone())
+                                                        .size(size)
+                                                        .weight(FontWeight::Normal)
+                                                        .color(style.subtitle_color),
                                                 )
                                             }
                                         });
-                                        if let Some(subtitle) = &subtitle {
-                                            let size = style.subtitle_size.unwrap_or(style.title_size);
-                                            column = column.push({
-                                                let subtitle = subtitle.clone();
-                                                move || {
-                                                    Box::new(
-                                                        Text::new(subtitle.clone())
-                                                            .size(size)
-                                                            .weight(FontWeight::Normal)
-                                                            .color(style.subtitle_color),
-                                                    )
-                                                }
-                                            });
-                                        }
-                                        Box::new(column)
                                     }
-                                },
-                            );
+                                    Box::new(column)
+                                }
+                            });
 
                             if let Some(trailing) = &trailing {
                                 row = row.push({
@@ -295,39 +296,34 @@ impl ListItemRow {
                             }
 
                             Box::new(row)
-                            }
-                        },
-                    );
+                        }
+                    });
 
                 // `Pressable` is built inside the ripple's builder rather than
                 // captured into it: its `on_click` callback is deliberately not
                 // `Send + Sync`, and a slot builder is required to be.
                 Box::new(
                     Ripple::new()
-                        .child(
-                            LayoutRequest::new().fill(),
-                            {
-                                let band = band.clone();
-                                let on_click = on_click.clone();
-                                move || {
-                                    let mut pressable = Pressable::new(Child::new(
-                                        ChildKey::index(0),
-                                        LayoutRequest::new().fill(),
-                                        {
-                                            let band = band.clone();
-                                            move || Box::new(band.clone())
-                                        },
-                                    ))
-                                    .disabled(disabled);
-                                    if let Some(on_click) = on_click.as_ref() {
-                                        let on_click = on_click.clone();
-                                        pressable =
-                                            pressable.on_click(move || on_click());
-                                    }
-                                    Box::new(pressable)
+                        .child(LayoutRequest::new().fill(), {
+                            let band = band.clone();
+                            let on_click = on_click.clone();
+                            move || {
+                                let mut pressable = Pressable::new(Child::new(
+                                    ChildKey::index(0),
+                                    LayoutRequest::new().fill(),
+                                    {
+                                        let band = band.clone();
+                                        move || Box::new(band.clone())
+                                    },
+                                ))
+                                .disabled(disabled);
+                                if let Some(on_click) = on_click.as_ref() {
+                                    let on_click = on_click.clone();
+                                    pressable = pressable.on_click(move || on_click());
                                 }
-                            },
-                        )
+                                Box::new(pressable)
+                            }
+                        })
                         .disabled(disabled),
                 )
             },

@@ -72,7 +72,9 @@ fn type_text<W: Widget + ?Sized>(widget: &mut W, ch: char) {
 /// The text a box paints.
 fn painted_text<W: Widget + ?Sized>(widget: &W) -> Option<(String, f32, Color)> {
     ops_of(widget).into_iter().find_map(|op| match op {
-        PaintOp::Text { text, size, color, .. } => Some((text, size, color)),
+        PaintOp::Text {
+            text, size, color, ..
+        } => Some((text, size, color)),
         _ => None,
     })
 }
@@ -88,17 +90,25 @@ fn input_of(box_widget: &dyn WidgetAny) -> Box<dyn WidgetAny> {
 #[test]
 fn the_tokens_and_colours_reach_the_style() {
     let style: CupertinoOtpInputStyle = kit().resolved_style();
-    let tokens = match theme().component(floom_core_theme::component_tokens::ComponentId::OtpInput) {
+    let tokens = match theme().component(floom_core_theme::component_tokens::ComponentId::OtpInput)
+    {
         floom_core_theme::component_tokens::ComponentTokens::OtpInput(tokens) => tokens,
         _ => unreachable!(),
     };
     assert_eq!(style.box_size, tokens.box_size, "the token's box size");
-    assert_eq!(style.border_radius, tokens.border_radius, "the token's radius");
+    assert_eq!(
+        style.border_radius, tokens.border_radius,
+        "the token's radius"
+    );
     assert_eq!(style.gap, tokens.gap, "the token's gap");
     assert_eq!(style.font_size, tokens.font_size, "the token's font size");
     assert_eq!(style.text_color, theme().colors().on_surface, "the ink");
     assert_eq!(style.background, theme().colors().surface, "the box's fill");
-    assert_eq!(style.border_color, theme().colors().outline, "the box's rim");
+    assert_eq!(
+        style.border_color,
+        theme().colors().outline,
+        "the box's rim"
+    );
     assert_eq!(style.border_width, 1.0, "v1's rim width");
     assert_eq!(style.length, 6, "v1's default length");
 }
@@ -128,7 +138,10 @@ fn the_boxes_are_painted_in_v1_s_colours() {
     assert_eq!(fill, Some(paint(resolved.background)), "the box's fill");
 
     let rim = ops.iter().find_map(|op| match op {
-        PaintOp::Path { stroke: Some((_, color)), .. } => Some(*color),
+        PaintOp::Path {
+            stroke: Some((_, color)),
+            ..
+        } => Some(*color),
         _ => None,
     });
     assert_eq!(rim, Some(paint(resolved.border_color)), "the box's rim");
@@ -202,14 +215,12 @@ fn the_gap_between_the_boxes_is_the_token_s_gap() {
 fn typing_writes_the_code() {
     let seen: Arc<Mutex<Vec<String>>> = Arc::new(Mutex::new(Vec::new()));
     let recorder = seen.clone();
-    let kit = kit()
-        .length(3)
-        .on_change(move |code| {
-            recorder
-                .lock()
-                .expect("the recorder is not poisoned")
-                .push(code);
-        });
+    let kit = kit().length(3).on_change(move |code| {
+        recorder
+            .lock()
+            .expect("the recorder is not poisoned")
+            .push(code);
+    });
     let code = kit.code();
     let view = kit.view();
 
@@ -276,15 +287,12 @@ fn the_writer_pushes_the_code_into_the_boxes() {
 fn a_disabled_input_does_not_move_the_code() {
     let seen: Arc<Mutex<Vec<String>>> = Arc::new(Mutex::new(Vec::new()));
     let recorder = seen.clone();
-    let kit = kit()
-        .length(3)
-        .disabled(true)
-        .on_change(move |code| {
-            recorder
-                .lock()
-                .expect("the recorder is not poisoned")
-                .push(code);
-        });
+    let kit = kit().length(3).disabled(true).on_change(move |code| {
+        recorder
+            .lock()
+            .expect("the recorder is not poisoned")
+            .push(code);
+    });
     let code = kit.code();
     let view = kit.view();
 
@@ -299,7 +307,9 @@ fn a_disabled_input_does_not_move_the_code() {
         "a disabled input does not move the code"
     );
     assert!(
-        seen.lock().expect("the recorder is not poisoned").is_empty(),
+        seen.lock()
+            .expect("the recorder is not poisoned")
+            .is_empty(),
         "and does not answer"
     );
 }

@@ -28,7 +28,7 @@ use floom_widgets::testkit::RecordingUpdateContext;
 use floom_widgets::text_input::{read_flag, write_flag};
 
 use floom_core_theme::theme::Theme;
-use floom_widget_fluent_dialog::{FluentDialog, to_engine_weight};
+use floom_widget_fluent_dialog::{to_engine_weight, FluentDialog};
 
 /// A viewport, because a dialog covers the window rather than its own box.
 const VIEWPORT: Rect = Rect {
@@ -56,7 +56,10 @@ fn open_and_is_open_read_and_write_one_flag() {
     assert!(!dialog.is_open(), "a dialog starts shut");
     dialog = dialog.open(true);
     assert!(dialog.is_open(), "and `open(true)` opens it");
-    assert!(read_flag(&dialog.open_flag()), "and the flag a caller holds agrees");
+    assert!(
+        read_flag(&dialog.open_flag()),
+        "and the flag a caller holds agrees"
+    );
 }
 
 /// `close()` reports whether anything changed, so a caller can skip the frame.
@@ -133,7 +136,10 @@ fn the_viewed_dialog_asks_for_a_modal_dialog_over_the_viewport() {
                 *modal,
                 "modal — so an outside press does NOT dismiss it, unlike v1"
             );
-            assert_eq!(*bounds, VIEWPORT, "and it covers the window, not its own box");
+            assert_eq!(
+                *bounds, VIEWPORT,
+                "and it covers the window, not its own box"
+            );
         }
         _ => panic!("expected an open, got a close"),
     }
@@ -273,8 +279,7 @@ fn the_content_is_deliberately_lighter_than_the_title() {
         "v1's `with_alpha(on_surface, 222)` on the content"
     );
     assert_ne!(
-        style.content_alpha,
-        style.on_surface.a,
+        style.content_alpha, style.on_surface.a,
         "so it is not the same colour, and 222 is what makes it so"
     );
     assert_eq!(style.on_surface.a, 255, "the title is at full strength");
@@ -394,7 +399,10 @@ fn props_report_the_v1_shaped_callbacks() {
     let props = dialog.props();
     assert_eq!(props.title, "Delete file");
     assert_eq!(props.content, "This cannot be undone.");
-    assert!(props.on_close.is_some(), "and the close callback is stored v1-shaped");
+    assert!(
+        props.on_close.is_some(),
+        "and the close callback is stored v1-shaped"
+    );
     assert_eq!(
         props.actions.len(),
         2,

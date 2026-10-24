@@ -382,8 +382,16 @@ impl Scroll {
         let next = ::floom_core::clamp_offset(
             offset,
             (
-                if self.axes.horizontal { viewport.0 } else { f64::INFINITY },
-                if self.axes.vertical { viewport.1 } else { f64::INFINITY },
+                if self.axes.horizontal {
+                    viewport.0
+                } else {
+                    f64::INFINITY
+                },
+                if self.axes.vertical {
+                    viewport.1
+                } else {
+                    f64::INFINITY
+                },
             ),
             (
                 if self.axes.horizontal {
@@ -411,7 +419,8 @@ impl Scroll {
 
     /// Whether the content currently extends past the viewport on either axis.
     pub fn is_scrollable(&self) -> bool {
-        self.content.is_some_and(|(w, h)| (w > 0.0 && h > 0.0) && (w != h))
+        self.content
+            .is_some_and(|(w, h)| (w > 0.0 && h > 0.0) && (w != h))
     }
 
     /// The largest offset the content allows, given a viewport of
@@ -420,11 +429,23 @@ impl Scroll {
         let (w, h) = self.content?;
         Some(::floom_core::max_offset(
             (
-                if self.axes.horizontal { viewport.0 } else { f64::INFINITY },
-                if self.axes.vertical { viewport.1 } else { f64::INFINITY },
+                if self.axes.horizontal {
+                    viewport.0
+                } else {
+                    f64::INFINITY
+                },
+                if self.axes.vertical {
+                    viewport.1
+                } else {
+                    f64::INFINITY
+                },
             ),
             (
-                if self.axes.horizontal { w } else { f64::INFINITY },
+                if self.axes.horizontal {
+                    w
+                } else {
+                    f64::INFINITY
+                },
                 if self.axes.vertical { h } else { f64::INFINITY },
             ),
         ))
@@ -449,8 +470,16 @@ impl Scroll {
         floom_core::clamp_offset(
             ScrollOffset::new(here.x + delta.0, here.y + delta.1),
             (
-                if self.axes.horizontal { viewport.0 } else { f64::INFINITY },
-                if self.axes.vertical { viewport.1 } else { f64::INFINITY },
+                if self.axes.horizontal {
+                    viewport.0
+                } else {
+                    f64::INFINITY
+                },
+                if self.axes.vertical {
+                    viewport.1
+                } else {
+                    f64::INFINITY
+                },
             ),
             (
                 // Unmeasured content counts as *zero-sized*, not as infinitely

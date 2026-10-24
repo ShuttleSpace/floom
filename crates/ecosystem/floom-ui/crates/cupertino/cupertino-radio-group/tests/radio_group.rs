@@ -83,15 +83,23 @@ fn ring_of(row: &dyn Widget) -> Box<dyn Widget> {
 #[test]
 fn the_tokens_and_colours_reach_the_style() {
     let style: CupertinoRadioGroupStyle = kit().resolved_style();
-    let tokens = match theme().component(floom_core_theme::component_tokens::ComponentId::RadioGroup) {
-        floom_core_theme::component_tokens::ComponentTokens::RadioGroup(tokens) => tokens,
-        _ => unreachable!(),
-    };
+    let tokens =
+        match theme().component(floom_core_theme::component_tokens::ComponentId::RadioGroup) {
+            floom_core_theme::component_tokens::ComponentTokens::RadioGroup(tokens) => tokens,
+            _ => unreachable!(),
+        };
     assert_eq!(style.radio_size, tokens.radio_size, "the token's ring size");
-    assert_eq!(style.item_height, tokens.item_height, "the token's row height");
+    assert_eq!(
+        style.item_height, tokens.item_height,
+        "the token's row height"
+    );
     assert_eq!(style.gap, tokens.gap, "the token's gap between rows");
     assert_eq!(style.ring_color, theme().colors().outline, "the ring");
-    assert_eq!(style.radius, theme().radius().full, "the theme's full radius");
+    assert_eq!(
+        style.radius,
+        theme().radius().full,
+        "the theme's full radius"
+    );
 }
 
 #[test]
@@ -134,7 +142,9 @@ fn the_ring_and_the_dot_are_painted_in_v1_s_colours() {
         _ => None,
     });
     assert_eq!(fill, Some(paint(resolved.selected_color)), "the dot's fill");
-    let request = dot.layout_request().expect("the dot asks for its own space");
+    let request = dot
+        .layout_request()
+        .expect("the dot asks for its own space");
     assert_eq!(
         request.width,
         Some(floom_core::Length::Px(resolved.radio_size * 0.45)),
@@ -172,7 +182,9 @@ fn the_label_is_painted_in_v1_s_ink() {
     let (text, size, ink) = ops
         .iter()
         .find_map(|op| match op {
-            PaintOp::Text { text, size, color, .. } => Some((text.clone(), *size, *color)),
+            PaintOp::Text {
+                text, size, color, ..
+            } => Some((text.clone(), *size, *color)),
             _ => None,
         })
         .expect("the label is painted");
@@ -206,7 +218,10 @@ fn a_disabled_group_does_not_answer() {
 #[test]
 fn the_props_report_the_options() {
     let kit = kit().option("One").option("Two").selected(1);
-    assert_eq!(kit.props().options, vec!["One".to_string(), "Two".to_string()]);
+    assert_eq!(
+        kit.props().options,
+        vec!["One".to_string(), "Two".to_string()]
+    );
     assert_eq!(kit.props().selected, Some(1));
 }
 

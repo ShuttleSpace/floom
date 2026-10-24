@@ -13,15 +13,13 @@
 
 use floom_core::{ElementId, Point, PointerEvent, Rect, Widget};
 use floom_types::{Color, PointerPhase};
-use floom_widgets::testkit::{
-    AllocatingCreateContext, PaintOp, SceneRecorder, TestEventContext,
-};
+use floom_widgets::testkit::{AllocatingCreateContext, PaintOp, SceneRecorder, TestEventContext};
 
 use floom_core_theme::global_theme::DesignSystem;
 use floom_core_theme::theme::{MultiTheme, Theme};
 
-use floom_widget_md_hover::{MaterialHover, MaterialHoverStyle};
 use floom_ui_composites::HoverBox;
+use floom_widget_md_hover::{MaterialHover, MaterialHoverStyle};
 
 const BOX: Rect = Rect {
     x0: 0.0,
@@ -96,8 +94,14 @@ fn the_tokens_and_colours_reach_the_style() {
         floom_core_theme::component_tokens::ComponentTokens::Hover(tokens) => tokens,
         _ => unreachable!(),
     };
-    assert_eq!(style.highlight_alpha, tokens.highlight_alpha, "the token's alpha");
-    assert_eq!(style.transition_ms, tokens.transition_ms, "the token's transition");
+    assert_eq!(
+        style.highlight_alpha, tokens.highlight_alpha,
+        "the token's alpha"
+    );
+    assert_eq!(
+        style.transition_ms, tokens.transition_ms,
+        "the token's transition"
+    );
     assert_eq!(
         style.highlight_color,
         floom_core_theme::tokens::color_ext::with_alpha(
@@ -120,7 +124,9 @@ fn the_design_system_is_named_in_the_style() {
 #[test]
 fn the_fill_is_painted_in_v1_s_colour() {
     let resolved = kit().resolved_style();
-    let mut hover = kit().child(|| Box::new(floom_widgets::Text::new("hello"))).view();
+    let mut hover = kit()
+        .child(|| Box::new(floom_widgets::Text::new("hello")))
+        .view();
 
     assert_eq!(
         fill_painted(&hover),
@@ -146,7 +152,9 @@ fn the_fill_is_painted_in_v1_s_colour() {
 /// The fill covers the whole box, the way v1's container background did.
 #[test]
 fn the_fill_covers_the_whole_box() {
-    let mut hover = kit().child(|| Box::new(floom_widgets::Text::new("hello"))).view();
+    let mut hover = kit()
+        .child(|| Box::new(floom_widgets::Text::new("hello")))
+        .view();
     pointer_over(&mut hover, true);
     let bounds = ops_of(&hover)
         .into_iter()
@@ -163,12 +171,15 @@ fn the_fill_covers_the_whole_box() {
 /// The child is mounted inside the box.
 #[test]
 fn the_child_is_mounted_inside_the_box() {
-    let hover = kit().child(|| Box::new(floom_widgets::Text::new("hello"))).view();
+    let hover = kit()
+        .child(|| Box::new(floom_widgets::Text::new("hello")))
+        .view();
     assert_eq!(hover.children().len(), 1, "the child");
     let child = hover.children().remove(0).build();
     let ops = ops_of(&*child);
     assert!(
-        ops.iter().any(|op| matches!(op, PaintOp::Text { text, .. } if text == "hello")),
+        ops.iter()
+            .any(|op| matches!(op, PaintOp::Text { text, .. } if text == "hello")),
         "and it is the caller's own content"
     );
 }

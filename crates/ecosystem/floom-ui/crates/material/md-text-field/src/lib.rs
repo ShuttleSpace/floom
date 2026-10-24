@@ -109,8 +109,8 @@ use floom_types::Color as PaintColor;
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::text_field::TextFieldProps;
 use floom_core_theme::theme::{MultiTheme, Theme};
-use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color::to_engine_color as to_paint;
+use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color_ext::with_alpha;
 use floom_ui_composites::{TextField, TextFieldStyle};
 use floom_widget_runtime::theme_signal;
@@ -127,7 +127,6 @@ const DISABLED_ALPHA: u8 = 38;
 
 /// v1's disabled fill: `on_surface` at 4.
 const DISABLED_FILL_ALPHA: u8 = 4;
-
 
 /// The design-system colour at an explicit alpha, in the engine's type.
 ///
@@ -260,7 +259,6 @@ impl MdTextField {
             // rather than one it carries.
             border_color_hovered: None,
             border_color_disabled: tinted(colors.on_surface, DISABLED_ALPHA),
-
 
             // --- the fill ---
             background_color: to_paint(colors.surface),

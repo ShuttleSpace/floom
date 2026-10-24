@@ -87,21 +87,18 @@
 use std::sync::{Arc, Mutex};
 
 use floom_signal::{RwSignal, SignalGet};
+use floom_types::{Color as PaintColor, Shadow};
 use floom_ui_composites::TimePicker;
 pub use floom_ui_composites::{SharedTimeState, TimePickerState, TimePickerStyle, TimeValue};
-use floom_types::{
-    Color as PaintColor, Shadow,
-};
 
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::time_picker::{TimePickerProps, TimeValue as ThemeTimeValue};
 use floom_core_theme::theme::{MultiTheme, Theme};
-use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color::to_engine_color as to_paint;
+use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color_ext::with_alpha;
 
 const INCREASE: &str = "+";
-
 
 /// The theme's time value -> the engine's.
 fn to_engine_time(value: ThemeTimeValue) -> floom_ui_composites::TimeValue {
@@ -355,4 +352,3 @@ impl Default for FluentTimePicker {
         Self::new()
     }
 }
-

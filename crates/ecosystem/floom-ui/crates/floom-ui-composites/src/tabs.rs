@@ -12,14 +12,15 @@
 
 use std::any::Any;
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::{Arc};
+use std::sync::Arc;
 
 use floom_accessibility::SemanticsRole;
 use floom_core::{
-    Align, Axis, Child, ChildKey, CreateContext, ElementId, LayoutRequest,
-    PaintContext, SemanticsContext, UpdateContext, Widget, };
+    Align, Axis, Child, ChildKey, CreateContext, ElementId, LayoutRequest, PaintContext,
+    SemanticsContext, UpdateContext, Widget,
+};
 
-use floom_widgets::primitives::{SemanticsHint};
+use floom_widgets::primitives::SemanticsHint;
 use floom_widgets::{Button, Stack};
 
 // ---------------------------------------------------------------------------

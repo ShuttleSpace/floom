@@ -112,7 +112,11 @@ fn the_tokens_reach_the_engine_chip() {
     assert_eq!(engine.font_size, style.font_size, "the token's font size");
     assert_eq!(engine.label, "One");
     assert_eq!(engine.hover, None, "the hover fill");
-    assert_eq!(engine.font_weight, floom_types::FontWeight::Medium, "the label's weight");
+    assert_eq!(
+        engine.font_weight,
+        floom_types::FontWeight::Medium,
+        "the label's weight"
+    );
 }
 
 #[test]

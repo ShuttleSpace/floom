@@ -14,10 +14,13 @@
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 
-use floom_core::{Child, ChildKey, ElementId, Event, LayoutRequest, Point, PointerEvent, Rect, Widget};
+use floom_core::{
+    Child, ChildKey, ElementId, Event, LayoutRequest, Point, PointerEvent, Rect, Widget,
+};
 use floom_types::Color;
-use floom_widgets::testkit::{AllocatingCreateContext, PaintOp, RecordingUpdateContext, SceneRecorder,
-    TestEventContext};
+use floom_widgets::testkit::{
+    AllocatingCreateContext, PaintOp, RecordingUpdateContext, SceneRecorder, TestEventContext,
+};
 
 use floom_core_theme::global_theme::DesignSystem;
 use floom_core_theme::theme::{MultiTheme, Theme};
@@ -46,11 +49,9 @@ fn kit() -> CupertinoCarousel {
 /// A slide: a slot holding a piece of text.
 fn slide(text: &str) -> Child {
     let text = text.to_string();
-    Child::new(
-        ChildKey::index(0),
-        LayoutRequest::new(),
-        move || Box::new(floom_widgets::Text::new(text.clone())),
-    )
+    Child::new(ChildKey::index(0), LayoutRequest::new(), move || {
+        Box::new(floom_widgets::Text::new(text.clone()))
+    })
 }
 
 /// Theme colour -> engine colour.
@@ -101,7 +102,10 @@ fn the_tokens_and_colours_reach_the_style() {
         floom_core_theme::component_tokens::ComponentTokens::Carousel(tokens) => tokens,
         _ => unreachable!(),
     };
-    assert_eq!(style.border_radius, tokens.border_radius, "the token's radius");
+    assert_eq!(
+        style.border_radius, tokens.border_radius,
+        "the token's radius"
+    );
     assert_eq!(style.height, tokens.height, "the token's height");
     assert_eq!(style.dot_size, tokens.dot_size, "the token's dot size");
     assert_eq!(style.dot_gap, tokens.dot_gap, "the token's dot gap");
@@ -109,13 +113,32 @@ fn the_tokens_and_colours_reach_the_style() {
         style.dot_inactive_opacity, tokens.dot_inactive_opacity,
         "the token's inactive dot opacity"
     );
-    assert_eq!(style.arrow_size, tokens.arrow_size, "the token's arrow size");
+    assert_eq!(
+        style.arrow_size, tokens.arrow_size,
+        "the token's arrow size"
+    );
     assert_eq!(style.slide_gap, tokens.slide_gap, "the token's slide gap");
     assert_eq!(style.surface, theme().colors().surface, "the area's fill");
-    assert_eq!(style.on_surface, theme().colors().on_surface, "the arrows' ink");
-    assert_eq!(style.primary, theme().colors().primary, "the current dot's ink");
-    assert_eq!(style.outline, theme().colors().outline, "the outline's colour");
-    assert_eq!(style.arrow_font_size, tokens.arrow_size * 0.6, "v1's arrow size");
+    assert_eq!(
+        style.on_surface,
+        theme().colors().on_surface,
+        "the arrows' ink"
+    );
+    assert_eq!(
+        style.primary,
+        theme().colors().primary,
+        "the current dot's ink"
+    );
+    assert_eq!(
+        style.outline,
+        theme().colors().outline,
+        "the outline's colour"
+    );
+    assert_eq!(
+        style.arrow_font_size,
+        tokens.arrow_size * 0.6,
+        "v1's arrow size"
+    );
 }
 
 /// The height is the prop's when it is positive, and the token's otherwise.
@@ -123,7 +146,8 @@ fn the_tokens_and_colours_reach_the_style() {
 fn the_height_is_the_prop_s_when_it_is_positive() {
     // The token's height, read from the token: the three kits' tokens do not
     // agree on it.
-    let tokens = match theme().component(floom_core_theme::component_tokens::ComponentId::Carousel) {
+    let tokens = match theme().component(floom_core_theme::component_tokens::ComponentId::Carousel)
+    {
         floom_core_theme::component_tokens::ComponentTokens::Carousel(tokens) => tokens,
         _ => unreachable!(),
     };
@@ -159,11 +183,17 @@ fn the_area_is_painted_v1_s_colours() {
     });
     assert_eq!(fill, Some(paint(resolved.surface)), "the area's fill");
     let outline = ops.iter().find_map(|op| match op {
-        PaintOp::Path { stroke: Some((width, colour)), .. } => Some((*width, *colour)),
+        PaintOp::Path {
+            stroke: Some((width, colour)),
+            ..
+        } => Some((*width, *colour)),
         _ => None,
     });
     let expected = paint(resolved.outline);
-    let expected = Color { a: resolved.border_alpha, ..expected };
+    let expected = Color {
+        a: resolved.border_alpha,
+        ..expected
+    };
     assert_eq!(
         outline,
         Some((f64::from(resolved.border_width), expected)),
@@ -217,7 +247,9 @@ fn the_arrows_are_painted_with_v1_s_glyphs() {
     let (text, size, ink) = previous_ops
         .iter()
         .find_map(|op| match op {
-            PaintOp::Text { text, size, color, .. } => Some((text.clone(), *size, *color)),
+            PaintOp::Text {
+                text, size, color, ..
+            } => Some((text.clone(), *size, *color)),
             _ => None,
         })
         .expect("the previous arrow is painted");
@@ -298,7 +330,11 @@ fn the_next_arrow_moves_the_carousel_on_and_says_so() {
         Event::Pointer(PointerEvent::primary_up(Point::new(10.0, 10.0))),
     );
     next.event(&mut up, id);
-    assert_eq!(changed.load(Ordering::SeqCst), 1, "v1's callback fired once");
+    assert_eq!(
+        changed.load(Ordering::SeqCst),
+        1,
+        "v1's callback fired once"
+    );
 }
 
 /// The props report the switches.

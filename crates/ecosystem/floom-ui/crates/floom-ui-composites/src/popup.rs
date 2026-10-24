@@ -11,19 +11,18 @@
 //! vocabulary rather than the other way round.
 
 use std::any::Any;
-use std::sync::atomic::{Ordering};
-use std::sync::{Arc};
+use std::sync::atomic::Ordering;
+use std::sync::Arc;
 
 use floom_accessibility::SemanticsRole;
 use floom_core::{
-    Child, ChildKey, CreateContext, ElementId, LayoutRequest,
-    OverlayHandle, OverlayKind, OverlayRequest, PaintContext, Rect,
-    SemanticsContext, UpdateContext, Widget, WidgetAny,
+    Child, ChildKey, CreateContext, ElementId, LayoutRequest, OverlayHandle, OverlayKind,
+    OverlayRequest, PaintContext, Rect, SemanticsContext, UpdateContext, Widget, WidgetAny,
 };
 
-use floom_widgets::primitives::{SemanticsHint};
 use crate::overlay::Overlay;
-use floom_widgets::{Grid};
+use floom_widgets::primitives::SemanticsHint;
+use floom_widgets::Grid;
 
 use crate::overlay_bookkeeping::OverlayHost;
 
@@ -55,19 +54,13 @@ pub enum PopupPlacement {
     /// requested rect and clips rather than growing — so it is a real bound and not
     /// a hint. A caller with a token for it should pass it; a combobox has
     /// `ComboboxTokens::panel_max_height`, which v1 declared and never read.
-    Below {
-        gap: f64,
-        height: f64,
-    },
+    Below { gap: f64, height: f64 },
     /// Directly above the control, for one near the bottom of the window.
     ///
     /// Not chosen automatically: "does it fit below?" needs the viewport and a
     /// content height this widget does not have, and a control that silently flips
     /// sides between frames is worse than one that is consistently underneath.
-    Above {
-        gap: f64,
-        height: f64,
-    },
+    Above { gap: f64, height: f64 },
 }
 
 impl Default for PopupPlacement {

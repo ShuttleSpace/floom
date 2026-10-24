@@ -58,7 +58,6 @@ fn the_track_is_the_tokens_verbatim() {
     assert_eq!(track.height(), 32.0, "not 52 * 0.5 = 26");
 }
 
-
 /// **All three kits share one set of switch tokens.** Measured against the
 /// theme layer, not inferred from the adapters:
 ///
@@ -90,7 +89,11 @@ fn the_knob_is_24_square_and_centred_in_the_track() {
     let switch = material().switch();
     let (track, knob) = (switch.track_bounds(ROW), switch.knob_bounds(ROW));
     assert_eq!((knob.width(), knob.height()), (24.0, 24.0), "square");
-    assert_eq!(knob.height() + 8.0, track.height(), "4px of air above and below");
+    assert_eq!(
+        knob.height() + 8.0,
+        track.height(),
+        "4px of air above and below"
+    );
 }
 
 /// **The v1 reproduction, stated as a claim.** v1 wrote `padding(2.0)` on the
@@ -132,7 +135,11 @@ fn the_dead_thumb_offset_is_not_reproduced() {
 fn the_resting_colours_come_from_the_theme() {
     let theme = MultiTheme::new_for(DesignSystem::Material);
     let style = material().resolved_style();
-    assert_eq!(style.track_color, theme.colors().surface_variant, "unchecked track");
+    assert_eq!(
+        style.track_color,
+        theme.colors().surface_variant,
+        "unchecked track"
+    );
     assert_eq!(style.thumb_color, theme.colors().outline, "unchecked thumb");
 
     let checked = material().checked(true).resolved_style();
@@ -151,7 +158,10 @@ fn the_palette_reaches_the_painted_pixels() {
     );
     let id = ElementId::new(1, 1);
     let painted = floom_widgets::testkit::paint_snapshot(&material().switch(), id, ROW);
-    assert!(painted.contains(&expected), "expected {expected} in {painted}");
+    assert!(
+        painted.contains(&expected),
+        "expected {expected} in {painted}"
+    );
 }
 
 /// v1's disabled alphas are two different roles at two different strengths —
@@ -163,7 +173,10 @@ fn the_disabled_alphas_are_v1_s_own_two_values() {
     let style = material().disabled(true).resolved_style();
     assert_eq!(style.track_disabled.a, 12);
     assert_eq!(style.thumb_disabled.a, 38);
-    assert_ne!(style.track_disabled.a, style.thumb_disabled.a, "two roles, two strengths");
+    assert_ne!(
+        style.track_disabled.a, style.thumb_disabled.a,
+        "two roles, two strengths"
+    );
     assert_eq!(style.track_disabled.r, theme.colors().on_surface.r);
     assert_eq!(style.thumb_disabled.r, theme.colors().outline.r);
 }
@@ -189,11 +202,15 @@ fn hover_and_press_do_not_change_anything() {
 #[test]
 fn a_disabled_switch_paints_the_explicit_disabled_colours() {
     let id = ElementId::new(1, 1);
-    let painted = floom_widgets::testkit::paint_snapshot(&material().disabled(true).switch(), id, ROW);
+    let painted =
+        floom_widgets::testkit::paint_snapshot(&material().disabled(true).switch(), id, ROW);
     let style = material().disabled(true).resolved_style();
     let track = format!(
         "#{:02X}{:02X}{:02X}{:02X}",
-        style.track_disabled.r, style.track_disabled.g, style.track_disabled.b, style.track_disabled.a
+        style.track_disabled.r,
+        style.track_disabled.g,
+        style.track_disabled.b,
+        style.track_disabled.a
     );
     assert!(painted.contains(&track), "expected {track} in {painted}");
 }

@@ -25,8 +25,8 @@ use floom_core::{Point, Rect, Size};
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::select::SelectProps;
 use floom_core_theme::theme::{MultiTheme, Theme};
-use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color::to_engine_color as to_paint;
+use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color_ext::with_alpha;
 use floom_signal::{RwSignal, SignalGet};
 use floom_types::Color as PaintColor;
@@ -35,7 +35,6 @@ use floom_widget_fluent_icon_paths::fluent_icon_path;
 use floom_widgets::VectorIcon;
 
 const DESIGN_SYSTEM: &str = "fluent";
-
 
 /// Fluent's select (dropdown).
 pub struct FluentSelect {

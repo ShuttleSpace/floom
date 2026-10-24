@@ -53,13 +53,13 @@ use floom_core::{Child, ChildKey, LayoutRequest, WidgetAny};
 use floom_signal::{RwSignal, SignalGet};
 use floom_types::Color as PaintColor;
 use floom_ui_composites::HoverBox;
-use floom_widgets::{SharedFlag, read_flag, shared_flag};
+use floom_widgets::{read_flag, shared_flag, SharedFlag};
 
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::hover::HoverProps;
 use floom_core_theme::theme::{MultiTheme, Theme};
-use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color::to_engine_color as to_paint;
+use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color_ext::with_alpha;
 use floom_widget_runtime::theme_signal;
 
@@ -120,10 +120,7 @@ impl MaterialHover {
     }
 
     /// Fired whenever the hover state changes (true on enter, false on leave).
-    pub fn on_hover_change(
-        mut self,
-        callback: impl Fn(bool) + Send + Sync + 'static,
-    ) -> Self {
+    pub fn on_hover_change(mut self, callback: impl Fn(bool) + Send + Sync + 'static) -> Self {
         self.on_hover_change = Some(Arc::new(callback));
         self
     }

@@ -97,8 +97,8 @@ use floom_ui_composites::{TabsBar, TabsBarStyle};
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::tabs::TabsProps;
 use floom_core_theme::theme::{MultiTheme, Theme};
-use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color::to_engine_color as to_paint;
+use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::typography::FontWeight as ThemeFontWeight;
 
 /// The label's size. A v1 literal.
@@ -267,7 +267,6 @@ impl Default for CupertinoTabs {
         Self::new()
     }
 }
-
 
 fn to_engine_weight(w: ThemeFontWeight) -> FontWeight {
     match w {

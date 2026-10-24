@@ -32,8 +32,8 @@ use floom_widgets::{CircularProgress, CircularProgressStyle};
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::progress_circular::ProgressCircularProps;
 use floom_core_theme::theme::{MultiTheme, Theme};
-use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color::to_engine_color as to_paint;
+use floom_core_theme::tokens::color::Color;
 
 const DESIGN_SYSTEM: &str = "fluent";
 
@@ -99,7 +99,8 @@ impl FluentProgressCircular {
 
     pub fn resolved_style(&self) -> FluentProgressCircularStyle {
         let theme = self.theme.get();
-        let ComponentTokens::ProgressCircular(tokens) = theme.component(ComponentId::ProgressCircular)
+        let ComponentTokens::ProgressCircular(tokens) =
+            theme.component(ComponentId::ProgressCircular)
         else {
             unreachable!("ComponentId::ProgressCircular must resolve to ProgressCircularTokens")
         };
@@ -148,4 +149,3 @@ impl Default for FluentProgressCircular {
         Self::new()
     }
 }
-

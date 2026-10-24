@@ -103,10 +103,7 @@ fn committing_an_empty_field_clears_and_reports_none() {
     assert!(combo.commit());
     assert_eq!(
         seen.lock().unwrap().as_slice(),
-        [
-            Some("banana".to_string()),
-            None
-        ],
+        [Some("banana".to_string()), None],
         "the choice first (from `select`), then the clearing (from `commit`)"
     );
     assert_eq!(combo.pick().lock().unwrap().selected, None);
@@ -120,13 +117,17 @@ fn committing_an_empty_field_clears_and_reports_none() {
 fn committing_an_exact_match_is_silent_even_though_it_moved_the_selection() {
     let (combo, seen) = recording();
     *combo.query().lock().unwrap() = "banana".to_string();
-    assert_eq!(combo.pick().lock().unwrap().selected, None, "nothing chosen yet");
-
-    assert!(
-        !combo.commit(),
-        "so `commit` reports that it said nothing"
+    assert_eq!(
+        combo.pick().lock().unwrap().selected,
+        None,
+        "nothing chosen yet"
     );
-    assert!(seen.lock().unwrap().is_empty(), "and the caller was told nothing");
+
+    assert!(!combo.commit(), "so `commit` reports that it said nothing");
+    assert!(
+        seen.lock().unwrap().is_empty(),
+        "and the caller was told nothing"
+    );
     assert_eq!(
         combo.pick().lock().unwrap().selected,
         Some(1),
@@ -142,10 +143,7 @@ fn committing_an_exact_match_is_silent_even_though_it_moved_the_selection() {
 fn committing_a_substring_selects_nothing() {
     let (combo, seen) = recording();
     *combo.query().lock().unwrap() = "an".to_string();
-    assert!(
-        combo.commit(),
-        "reported as free text"
-    );
+    assert!(combo.commit(), "reported as free text");
     assert_eq!(seen.lock().unwrap().as_slice(), [Some("an".to_string())]);
     assert_eq!(combo.pick().lock().unwrap().selected, None);
 }
@@ -165,7 +163,10 @@ fn committing_matches_an_option_regardless_of_case() {
 fn committing_without_a_callback_is_fine() {
     let mut combo = CupertinoAutocomplete::new().options(options());
     *combo.query().lock().unwrap() = "kiwi".to_string();
-    assert!(combo.commit(), "it still reports that it had something to say");
+    assert!(
+        combo.commit(),
+        "it still reports that it had something to say"
+    );
     assert_eq!(combo.pick().lock().unwrap().selected, None);
 }
 

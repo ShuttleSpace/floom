@@ -95,19 +95,18 @@
 
 use std::sync::{Arc, Mutex};
 
-use floom_core::{Child};
+use floom_core::Child;
 use floom_signal::{RwSignal, SignalGet};
-use floom_ui_composites::{PullToRefresh, PullToRefreshStyle};
 use floom_types::Color as PaintColor;
-use floom_widgets::text_input::{SharedFlag, read_flag, shared_flag, write_flag};
-use floom_widgets::{Surface};
+use floom_ui_composites::{PullToRefresh, PullToRefreshStyle};
+use floom_widgets::text_input::{read_flag, shared_flag, write_flag, SharedFlag};
+use floom_widgets::Surface;
 
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::pull_to_refresh::PullToRefreshProps;
 use floom_core_theme::theme::{MultiTheme, Theme};
-use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color::to_engine_color as to_paint;
-
+use floom_core_theme::tokens::color::Color;
 
 /// The pull distance, shared between the kit and whoever drives the gesture.
 ///
@@ -247,7 +246,8 @@ impl FluentPullToRefresh {
 
     pub fn resolved_style(&self) -> FluentPullToRefreshStyle {
         let theme = self.theme.get();
-        let ComponentTokens::PullToRefresh(tokens) = theme.component(ComponentId::PullToRefresh) else {
+        let ComponentTokens::PullToRefresh(tokens) = theme.component(ComponentId::PullToRefresh)
+        else {
             unreachable!("ComponentId::PullToRefresh must resolve to PullToRefreshTokens")
         };
         FluentPullToRefreshStyle {

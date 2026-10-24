@@ -27,9 +27,9 @@ use std::sync::Arc;
 use floom_core::{Child, ChildKey, ElementId, LayoutRequest, Widget, WidgetAny};
 use floom_types::{OverlayKind, Rect};
 
-use floom_widgets::testkit::{AllocatingCreateContext, RecordingUpdateContext};
 use floom_ui_composites::Dialog;
-use floom_widgets::{SharedFlag, read_flag, shared_flag, write_flag};
+use floom_widgets::testkit::{AllocatingCreateContext, RecordingUpdateContext};
+use floom_widgets::{read_flag, shared_flag, write_flag, SharedFlag};
 
 /// A viewport, because a dialog covers the window rather than its own box.
 const VIEWPORT: Rect = Rect {
@@ -73,7 +73,10 @@ fn a_flag_set_to_true_opens_a_modal_dialog_over_the_viewport() {
     assert_eq!(opened.len(), 1, "one overlay asked for");
     match opened[0] {
         floom_widgets::testkit::OverlayCall::Open {
-            kind, modal, bounds, ..
+            kind,
+            modal,
+            bounds,
+            ..
         } => {
             assert_eq!(*kind, OverlayKind::Dialog);
             assert!(
@@ -195,7 +198,10 @@ fn a_dialog_with_no_flag_reports_none() {
 fn write_flag_reports_whether_it_changed_anything() {
     let flag = shared_flag(false);
     assert!(write_flag(&flag, true), "false to true");
-    assert!(!write_flag(&flag, true), "and then nothing, so a caller can skip a frame");
+    assert!(
+        !write_flag(&flag, true),
+        "and then nothing, so a caller can skip a frame"
+    );
     assert!(read_flag(&flag));
     assert!(write_flag(&flag, false), "and true to false");
 }
@@ -248,9 +254,7 @@ fn a_supplied_card_is_what_gets_mounted() {
     let flag = shared_flag(true);
     let mut dialog = dialog(Some(flag))
         .title("Engine title")
-        .card_with(|| {
-            Box::new(floom_widgets::Text::new("supplied card")) as Box<dyn WidgetAny>
-        });
+        .card_with(|| Box::new(floom_widgets::Text::new("supplied card")) as Box<dyn WidgetAny>);
     let mut cx = context();
     dialog.update(&mut cx, ID);
 

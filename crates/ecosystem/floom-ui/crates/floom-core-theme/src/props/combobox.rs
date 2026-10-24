@@ -30,7 +30,10 @@ impl std::fmt::Debug for ComboboxProps {
             .field("selected", &self.selected)
             .field("placeholder", &self.placeholder)
             .field("disabled", &self.disabled)
-            .field("on_change", &self.on_change.as_ref().map(|_| "Fn(Option<usize>)"))
+            .field(
+                "on_change",
+                &self.on_change.as_ref().map(|_| "Fn(Option<usize>)"),
+            )
             .finish()
     }
 }

@@ -28,16 +28,21 @@
 use std::sync::{Arc, Mutex};
 
 use floom_core::{
-    Color, CreateContext, ElementId, Event, EventContext, Insets, LayoutRequest,
-    PaintContext, Point, Rect, UpdateContext, Widget, WidgetAny,
+    Color, CreateContext, ElementId, Event, EventContext, Insets, LayoutRequest, PaintContext,
+    Point, Rect, UpdateContext, Widget, WidgetAny,
 };
-use floom_widgets::primitives::Revision;
 use floom_types::{Brush, CursorStyle, PointerButton, PointerPhase};
+use floom_widgets::primitives::Revision;
 use floom_widgets::{Align, Axis, Stack, Surface, TextInput, TextInputStyle};
 
 /// The theme's own alpha helper: a colour with its alpha replaced.
 pub fn with_alpha(color: Color, alpha: u8) -> Color {
-    Color { r: color.r, g: color.g, b: color.b, a: alpha }
+    Color {
+        r: color.r,
+        g: color.g,
+        b: color.b,
+        a: alpha,
+    }
 }
 
 /// The chosen colour, shared with the caller.
@@ -420,10 +425,7 @@ impl Widget for ColorArea {
                 );
                 cx.fill_rect_brush(bounds, &white);
                 let black = Brush::linear(
-                    &[
-                        (0.0, Color::rgba(0, 0, 0, 0)),
-                        (1.0, Color::rgb(0, 0, 0)),
-                    ],
+                    &[(0.0, Color::rgba(0, 0, 0, 0)), (1.0, Color::rgb(0, 0, 0))],
                     Point::new(bounds.x0, bounds.y0),
                     Point::new(bounds.x0, bounds.y1),
                 );
@@ -461,11 +463,7 @@ impl Widget for ColorArea {
         // The thumb: a white ring around the colour the area shows.
         let thumb = self.thumb_rect(bounds);
         let border = f64::from(style.thumb_border_width);
-        cx.fill_rounded_rect(
-            thumb,
-            style.thumb_size / 2.0,
-            style.thumb_border_color,
-        );
+        cx.fill_rounded_rect(thumb, style.thumb_size / 2.0, style.thumb_border_color);
         cx.fill_rounded_rect(
             Rect {
                 x0: thumb.x0 + border,
@@ -604,7 +602,6 @@ impl ColorPicker {
 
     /// The picker, ready to mount.
     pub fn build(self) -> Surface {
-
         let style = self.style;
         let color = self.color.clone();
         let hex = self.hex.clone();
@@ -787,6 +784,5 @@ impl ColorPicker {
                 with_alpha(style.outline, style.border_alpha),
             )
             .push(move || Box::new(stack.clone()) as Box<dyn WidgetAny>)
-    
     }
 }

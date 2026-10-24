@@ -106,7 +106,11 @@ fn the_design_system_is_named_in_the_style() {
 /// The props win over the tokens, and the tokens win by default.
 #[test]
 fn the_props_win_over_the_tokens() {
-    assert_eq!(kit().resolved_style().height, tokens().height, "the props defer");
+    assert_eq!(
+        kit().resolved_style().height,
+        tokens().height,
+        "the props defer"
+    );
     assert_eq!(kit().height(40.0).resolved_style().height, 40.0);
     assert_eq!(kit().pad(2.0).resolved_style().pad, 2.0);
     assert_eq!(
@@ -165,12 +169,10 @@ fn the_content_keeps_the_colour_it_was_given() {
     assert_eq!(bar.child_count(), 1, "the caller's content is inside");
 
     let painted = bar.children().remove(0).build();
-    let ink = ops_of(&*painted)
-        .iter()
-        .find_map(|op| match op {
-            PaintOp::Text { color, .. } => Some(*color),
-            _ => None,
-        });
+    let ink = ops_of(&*painted).iter().find_map(|op| match op {
+        PaintOp::Text { color, .. } => Some(*color),
+        _ => None,
+    });
     assert_eq!(ink, Some(Color::rgb(1, 2, 3)), "the colour it was given");
     assert_ne!(
         ink,

@@ -17,10 +17,10 @@ use std::sync::{Arc, Mutex};
 
 use floom_core::WidgetAny;
 use floom_signal::{RwSignal, SignalGet};
+use floom_widgets::text_input::{shared_flag, SharedBuffer, SharedFlag};
 use floom_widgets::{Stack, Text};
-use floom_widgets::text_input::{SharedBuffer, SharedFlag, shared_flag};
 
-use floom_core_theme::props::date_adapter_provider::{DateAdapterProviderProps};
+use floom_core_theme::props::date_adapter_provider::DateAdapterProviderProps;
 use floom_core_theme::theme::MultiTheme;
 use floom_widget_runtime::theme_signal;
 

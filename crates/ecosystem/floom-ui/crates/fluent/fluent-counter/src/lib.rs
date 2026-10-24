@@ -45,8 +45,8 @@ use floom_widget_runtime::theme_signal;
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens, CounterTokens};
 use floom_core_theme::props::counter::CounterProps;
 use floom_core_theme::theme::{MultiTheme, Theme};
-use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color::to_engine_color as to_paint;
+use floom_core_theme::tokens::color::Color;
 
 /// The design system this crate reads.
 const DESIGN_SYSTEM: &str = "fluent";
@@ -59,7 +59,6 @@ const DESIGN_SYSTEM: &str = "fluent";
 /// line. The kits' agreement on it is measured, not assumed; see
 /// `tests/counter.rs::the_three_kits_agree_on_the_readout_font_size`.
 pub const READOUT_FONT_SIZE: f32 = 16.0;
-
 
 fn counter_tokens(theme: &MultiTheme) -> CounterTokens {
     match theme.component(ComponentId::Counter) {

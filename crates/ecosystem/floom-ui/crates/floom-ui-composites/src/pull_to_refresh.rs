@@ -23,7 +23,7 @@ use floom_core::{
     Child, ChildKey, Color, CreateContext, ElementId, LayoutRequest, UpdateContext, Widget,
     WidgetAny,
 };
-use floom_widgets::{Align, Axis, SharedFlag, Surface, Text, read_flag, write_flag};
+use floom_widgets::{read_flag, write_flag, Align, Axis, SharedFlag, Surface, Text};
 
 use crate::shared::SharedNumber;
 
@@ -129,14 +129,10 @@ impl Widget for PullToRefreshColumn {
             move || Box::new(indicator.clone()),
         )];
         if let Some(child) = &self.child {
-            out.push(Child::new(
-                ChildKey::index(1),
-                LayoutRequest::new(),
-                {
-                    let child = child.clone();
-                    move || child.build()
-                },
-            ));
+            out.push(Child::new(ChildKey::index(1), LayoutRequest::new(), {
+                let child = child.clone();
+                move || child.build()
+            }));
         }
         out
     }
@@ -310,7 +306,6 @@ impl PullToRefresh {
 
     /// The refresh, ready to mount.
     pub fn build(self) -> Surface {
-
         let style = self.style;
         let background = style.background;
         let column = PullToRefreshColumn {
@@ -334,6 +329,5 @@ impl PullToRefresh {
             )
             .background(background)
             .push(move || Box::new(column.clone()))
-    
     }
 }

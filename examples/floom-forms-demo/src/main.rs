@@ -26,7 +26,11 @@ fn main() {
     // (1) An untouched empty form is dirty-free but still invalid.
     assert!(!form.any_dirty(), "a pristine form is not dirty");
     assert!(!form.validate(), "empty required fields cannot be valid");
-    println!("pristine : valid={} errors={:?}", form.is_valid(), form.errors());
+    println!(
+        "pristine : valid={} errors={:?}",
+        form.is_valid(),
+        form.errors()
+    );
 
     // (2) Typing into controls. The binding is the bridge: the app owns the
     // control, the form owns the value.
@@ -50,8 +54,14 @@ fn main() {
         valid,
         form.errors().iter().map(|(f, _)| *f).collect::<Vec<_>>()
     );
-    assert!(!valid, "alice@example has no interior dot; too-short password fails min_length(8)");
-    assert!(matches!(form.validation("email"), Some(Validation::Invalid(_))));
+    assert!(
+        !valid,
+        "alice@example has no interior dot; too-short password fails min_length(8)"
+    );
+    assert!(matches!(
+        form.validation("email"),
+        Some(Validation::Invalid(_))
+    ));
     println!("email says : {:?}", form.error("email"));
     println!("password says: {:?}", form.error("password"));
 
@@ -61,7 +71,10 @@ fn main() {
     form.set_value("email", binding.read(&email));
     form.set_value("password", binding.read(&password));
 
-    assert!(form.validate(), "a well-formed email and a long password validate");
+    assert!(
+        form.validate(),
+        "a well-formed email and a long password validate"
+    );
     assert!(form.is_valid());
     assert!(form.errors().is_empty());
     println!(
@@ -79,7 +92,11 @@ fn main() {
     second.validate();
     println!("\nbefore touch: touched={}", second.is_touched("nickname"));
     second.touch_all();
-    println!("after touch : touched={} error={:?}", second.is_touched("nickname"), second.error("nickname"));
+    println!(
+        "after touch : touched={} error={:?}",
+        second.is_touched("nickname"),
+        second.error("nickname")
+    );
     assert!(second.is_touched("nickname"));
 
     println!("\nforms golden example: OK");

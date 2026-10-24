@@ -19,22 +19,19 @@ use floom_signal::RwSignal;
 // `DesignSystem`, `MultiTheme` and the three theme mutators only exist when a
 // design-system feature is on, so their imports are gated to match.
 use floom_core_theme::global_theme::{
-    dark_signal as dark_signal_impl,
-    is_dark as is_dark_impl,
-    set_dark as set_dark_impl,
+    dark_signal as dark_signal_impl, is_dark as is_dark_impl, set_dark as set_dark_impl,
 };
 #[cfg(any(feature = "material", feature = "cupertino", feature = "fluent"))]
 use floom_core_theme::global_theme::{
-    design_system_signal as design_system_signal_impl,
-    set_design_system as set_design_system_impl,
-    set_theme as set_theme_impl,
-    theme_signal as theme_signal_impl,
-    DesignSystem,
+    design_system_signal as design_system_signal_impl, set_design_system as set_design_system_impl,
+    set_theme as set_theme_impl, theme_signal as theme_signal_impl, DesignSystem,
 };
 #[cfg(any(feature = "material", feature = "cupertino", feature = "fluent"))]
 use floom_core_theme::theme::MultiTheme;
 
-use floom_core_theme::layout::{layout_signal as layout_signal_impl, register_layout as register_layout_impl};
+use floom_core_theme::layout::{
+    layout_signal as layout_signal_impl, register_layout as register_layout_impl,
+};
 
 #[cfg(any(feature = "material", feature = "cupertino", feature = "fluent"))]
 type SelectedTheme = MultiTheme;
@@ -136,4 +133,4 @@ pub fn layout_provider() {
 //
 // Re-exported here rather than reimplemented, because 91 of the 99 crates that
 // depend on this one reach it through this path.
-pub use floom_widgets::{Phase as RipplePhase, Ripple, ripple};
+pub use floom_widgets::{ripple, Phase as RipplePhase, Ripple};

@@ -30,7 +30,10 @@ fn an_aspect_ratio_derives_the_other_dimension() {
 
     eng.compute(root, Size::new(320.0, 320.0));
     let rect = eng.layout(media).rect;
-    assert!((rect.width() - 320.0).abs() < 0.01, "the width is as stated");
+    assert!(
+        (rect.width() - 320.0).abs() < 0.01,
+        "the width is as stated"
+    );
     assert!(
         (rect.height() - 180.0).abs() < 0.01,
         "and the height follows from the ratio: {:?}",

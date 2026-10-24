@@ -12,9 +12,9 @@ use floom_harmony::{
     GALLERY_COLUMNS, HarmonyTheme, button_gallery, button_gallery_labels, button_metrics,
     button_style,
 };
+use floom_scene::SceneNode;
 use floom_snapshot::{PixelSnapshot, SceneSnapshot, assert_snapshot, snapshots_dir};
 use floom_theme::ColorScheme;
-use floom_scene::SceneNode;
 use floom_types::{Color, Size};
 
 fn light() -> HarmonyTheme {

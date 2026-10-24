@@ -13,7 +13,6 @@ mod semantics;
 mod widget;
 mod widget_any;
 
-
 /// One node of a host's tree, as plain data.
 ///
 /// The shape an inspector describes into its own: the host names the node, says

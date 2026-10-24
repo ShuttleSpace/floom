@@ -62,8 +62,8 @@ use floom_ui_composites::{ValidationMessagesList, ValidationMessagesStyle};
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::validation_messages::ValidationMessagesProps;
 use floom_core_theme::theme::{MultiTheme, Theme};
-use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color::to_engine_color as to_paint;
+use floom_core_theme::tokens::color::Color;
 
 /// The shared list of messages.
 ///

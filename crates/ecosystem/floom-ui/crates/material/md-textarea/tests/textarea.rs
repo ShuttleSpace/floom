@@ -76,7 +76,8 @@ fn type_text<W: Widget + ?Sized>(widget: &mut W, ch: char) {
 #[test]
 fn the_tokens_and_colours_reach_the_style() {
     let style: MaterialTextareaStyle = kit().resolved_style();
-    let tokens = match theme().component(floom_core_theme::component_tokens::ComponentId::Textarea) {
+    let tokens = match theme().component(floom_core_theme::component_tokens::ComponentId::Textarea)
+    {
         floom_core_theme::component_tokens::ComponentTokens::Textarea(tokens) => tokens,
         _ => unreachable!(),
     };
@@ -87,17 +88,21 @@ fn the_tokens_and_colours_reach_the_style() {
     );
     assert_eq!(style.min_height, tokens.min_height, "the token's height");
     assert_eq!(style.font_size, tokens.font_size, "the token's font size");
-    assert_eq!(style.max_width, tokens.max_width, "the token's maximum width");
+    assert_eq!(
+        style.max_width, tokens.max_width,
+        "the token's maximum width"
+    );
     assert_eq!(
         style.text_font_size,
         theme().typography().body.medium.font_size,
         "the size the text is painted at"
     );
+    assert_eq!(style.background, theme().colors().surface, "the box's fill");
     assert_eq!(
-        style.background, theme().colors().surface,
-        "the box's fill"
+        style.border_color,
+        theme().colors().outline,
+        "the box's rim"
     );
-    assert_eq!(style.border_color, theme().colors().outline, "the box's rim");
 }
 
 #[test]
@@ -121,7 +126,8 @@ fn the_dead_numbers_are_v1_s() {
         },
         "v1's style said 97 while its view painted 38"
     );
-    let tokens = match theme().component(floom_core_theme::component_tokens::ComponentId::Textarea) {
+    let tokens = match theme().component(floom_core_theme::component_tokens::ComponentId::Textarea)
+    {
         floom_core_theme::component_tokens::ComponentTokens::Textarea(tokens) => tokens,
         _ => unreachable!(),
     };
@@ -148,7 +154,10 @@ fn the_box_is_painted_in_v1_s_colours() {
     assert_eq!(fill, Some(paint(resolved.background)), "the box's fill");
 
     let rim = ops.iter().find_map(|op| match op {
-        PaintOp::Path { stroke: Some((_, color)), .. } => Some(*color),
+        PaintOp::Path {
+            stroke: Some((_, color)),
+            ..
+        } => Some(*color),
         _ => None,
     });
     assert_eq!(rim, Some(paint(resolved.border_color)), "the box's rim");
@@ -165,7 +174,9 @@ fn the_text_is_painted_in_v1_s_ink() {
     let (text, size, ink) = ops
         .iter()
         .find_map(|op| match op {
-            PaintOp::Text { text, size, color, .. } => Some((text.clone(), *size, *color)),
+            PaintOp::Text {
+                text, size, color, ..
+            } => Some((text.clone(), *size, *color)),
             _ => None,
         })
         .expect("the text is painted");
@@ -233,7 +244,9 @@ fn a_disabled_field_does_not_answer() {
     type_text(&mut *input, 'a');
 
     assert!(
-        seen.lock().expect("the recorder is not poisoned").is_empty(),
+        seen.lock()
+            .expect("the recorder is not poisoned")
+            .is_empty(),
         "a disabled field does not answer"
     );
 }

@@ -24,7 +24,9 @@ use floom_core_theme::global_theme::DesignSystem;
 use floom_core_theme::props::expansion_panels::ExpansionPanelsProps;
 use floom_core_theme::theme::{MultiTheme, Theme};
 use floom_core_theme::tokens::color::Color;
-use floom_widget_cupertino_expansion_panels::{CupertinoExpansionPanels, CupertinoExpansionPanelsStyle};
+use floom_widget_cupertino_expansion_panels::{
+    CupertinoExpansionPanels, CupertinoExpansionPanelsStyle,
+};
 
 /// The Cupertino theme, with Cupertino selected.
 ///
@@ -200,16 +202,16 @@ fn a_body_is_a_send_sync_builder() {
 #[test]
 fn the_body_inset_carries_both_tokens() {
     let tokens = tokens();
-    let margin = kit()
-        .content_layout()
-        .margin
-        .expect("the body's inset");
+    let margin = kit().content_layout().margin.expect("the body's inset");
     assert_eq!(
         margin.left,
         f64::from(tokens.content_padding + tokens.indent),
         "horizontal: padding plus indent, as v1 wrote it"
     );
-    assert_eq!(margin.right, f64::from(tokens.content_padding + tokens.indent));
+    assert_eq!(
+        margin.right,
+        f64::from(tokens.content_padding + tokens.indent)
+    );
 }
 
 // --- the indicator ---------------------------------------------------------
@@ -268,7 +270,11 @@ fn the_kit_hands_the_engine_a_builder_that_is_told_the_state() {
     let indicator = kit().indicator();
     let (collapsed, expanded) = (indicator.collapsed, indicator.expanded);
     let choose = move |open: bool| -> Box<dyn floom_core::WidgetAny> {
-        Box::new(if open { expanded.clone() } else { collapsed.clone() })
+        Box::new(if open {
+            expanded.clone()
+        } else {
+            collapsed.clone()
+        })
     };
     assert!(choose(false).as_any().is::<VectorIcon>());
     assert!(choose(true).as_any().is::<VectorIcon>());

@@ -164,7 +164,12 @@ pub fn disabled_tint(c: Color) -> Color {
 /// resolves two optional interaction variants through this rather than
 /// re-deriving the order, so that a style which names no variant falls back to
 /// exactly what an unstyled control in this crate paints.
-pub fn resolved_color(base: Color, pressed: Color, hovered: Color, state: InteractionState) -> Color {
+pub fn resolved_color(
+    base: Color,
+    pressed: Color,
+    hovered: Color,
+    state: InteractionState,
+) -> Color {
     if state.disabled {
         return disabled_tint(base);
     }
@@ -655,7 +660,7 @@ impl Widget for Button {
         crate::primitives::emit_semantics(self.semantics_hint(), cx);
     }
 
-        fn cursor(&self) -> floom_types::CursorStyle {
+    fn cursor(&self) -> floom_types::CursorStyle {
         // A disabled control gets the platform arrow: a pointer over a
         // thing that cannot be clicked is a promise the control cannot keep.
         if self.state.disabled {
@@ -1205,7 +1210,11 @@ impl Switch {
     /// disabled switch was the base colour at half alpha.
     fn track_fill(&self) -> Color {
         let (base, pressed, hovered) = if self.on {
-            (self.palette.track_on, Color::rgb(0x2A, 0x7D, 0x51), self.palette.track_on)
+            (
+                self.palette.track_on,
+                Color::rgb(0x2A, 0x7D, 0x51),
+                self.palette.track_on,
+            )
         } else {
             (
                 self.palette.track_off,
@@ -1214,7 +1223,10 @@ impl Switch {
             )
         };
         if self.state.disabled {
-            return self.palette.track_disabled.unwrap_or_else(|| disabled_tint(base));
+            return self
+                .palette
+                .track_disabled
+                .unwrap_or_else(|| disabled_tint(base));
         }
         if !self.tints {
             return base;
@@ -1231,7 +1243,10 @@ impl Switch {
             self.palette.track_knob_off
         };
         if self.state.disabled {
-            return self.palette.thumb_disabled.unwrap_or_else(|| disabled_tint(base));
+            return self
+                .palette
+                .thumb_disabled
+                .unwrap_or_else(|| disabled_tint(base));
         }
         base
     }
@@ -1313,11 +1328,7 @@ impl Widget for Switch {
         }
         let track = self.track_bounds(bounds);
         let knob = self.knob_bounds(bounds);
-        cx.fill_rounded_rect(
-            track,
-            track.height() as f32 / 2.0,
-            self.track_fill(),
-        );
+        cx.fill_rounded_rect(track, track.height() as f32 / 2.0, self.track_fill());
         cx.fill_rounded_rect(knob, knob.height() as f32 / 2.0, self.thumb_fill());
         let label_origin = Point::new(track.x1 + 6.0, bounds.y0);
         cx.fill_text(

@@ -6,8 +6,6 @@ pub struct ResponsiveProps {
 
 impl Default for ResponsiveProps {
     fn default() -> Self {
-        Self {
-            aspect_ratio: 1.0,
-        }
+        Self { aspect_ratio: 1.0 }
     }
 }

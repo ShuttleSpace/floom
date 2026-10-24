@@ -172,13 +172,16 @@ pub fn gallery_scene(
         // Elevation becomes a real drop shadow on the cell's own rect: the
         // offset pushes it down, the blur spreads it, and both scale with the
         // elevation level — no pseudo-shadow rect underneath any more.
-        let shadow = props.elevation.filter(|e| *e > 0.0).map(|elevation| Shadow {
-            color: Color::rgba(0, 0, 0, SHADOW_ALPHA),
-            blur: f64::from(elevation),
-            offset_x: 0.0,
-            offset_y: f64::from(elevation),
-            spread: 0.0,
-        });
+        let shadow = props
+            .elevation
+            .filter(|e| *e > 0.0)
+            .map(|elevation| Shadow {
+                color: Color::rgba(0, 0, 0, SHADOW_ALPHA),
+                blur: f64::from(elevation),
+                offset_x: 0.0,
+                offset_y: f64::from(elevation),
+                spread: 0.0,
+            });
 
         let fill = props.background.unwrap_or(Color::TRANSPARENT);
         let border_width = props.border_width.unwrap_or(0.0);
@@ -216,7 +219,6 @@ pub fn gallery_scene(
     scene
 }
 
-
 // --- shared gallery rendering --------------------------------------------
 //
 // Four design systems each shipped their own `gallery.rs`. The files were 95%
@@ -242,10 +244,7 @@ pub const FULL_GRID_COLUMNS: usize = ControlSize::ALL.len() * InteractionState::
 ///
 /// `style_of` is what differs between design systems; the grid, the page colour
 /// and the layout are not.
-pub fn button_gallery_scene(
-    page: Color,
-    style_of: impl Fn(GallerySample) -> CellPaint,
-) -> Scene {
+pub fn button_gallery_scene(page: Color, style_of: impl Fn(GallerySample) -> CellPaint) -> Scene {
     let samples = GallerySample::full_grid();
     gallery_scene(&samples, page, FULL_GRID_COLUMNS, style_of)
 }
@@ -323,9 +322,9 @@ pub fn button_gallery_labels(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use floom_types::color_math::lerp;
     use crate::style::Props;
     use floom_types::Brush;
+    use floom_types::color_math::lerp;
 
     /// A miniature design system: shape comes from the variant, shade from the
     /// state, radius and box height from the size.

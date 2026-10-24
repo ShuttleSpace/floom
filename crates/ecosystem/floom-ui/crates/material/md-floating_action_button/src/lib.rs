@@ -28,11 +28,13 @@ use floom_signal::{RwSignal, SignalGet};
 use floom_types::{Color as PaintColor, Shadow};
 use floom_widgets::{Align, Axis, Pressable, Stack, Surface, Text};
 
-use floom_core_theme::component_tokens::{ComponentId, ComponentTokens, FloatingActionButtonTokens};
+use floom_core_theme::component_tokens::{
+    ComponentId, ComponentTokens, FloatingActionButtonTokens,
+};
 use floom_core_theme::props::floating_action_button::FloatingActionButtonProps;
 use floom_core_theme::theme::{MultiTheme, Theme};
-use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color::to_engine_color as to_paint;
+use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color_ext::*;
 use floom_widget_runtime::theme_signal;
 
@@ -122,7 +124,9 @@ impl MaterialFloatingActionButton {
         let ComponentTokens::FloatingActionButton(tokens) =
             theme.component(ComponentId::FloatingActionButton)
         else {
-            unreachable!("ComponentId::FloatingActionButton must resolve to FloatingActionButtonTokens")
+            unreachable!(
+                "ComponentId::FloatingActionButton must resolve to FloatingActionButtonTokens"
+            )
         };
         let disabled = self.props.disabled;
         MaterialFloatingActionButtonStyle {
@@ -161,7 +165,11 @@ impl MaterialFloatingActionButton {
         // The content is built inside the surface's slot, because the slot is a
         // replayed `Fn` and the content is a fresh subtree every mount.
         let surface = Surface::new()
-            .request(LayoutRequest::new().main_align(Align::Center).cross_align(Align::Center))
+            .request(
+                LayoutRequest::new()
+                    .main_align(Align::Center)
+                    .cross_align(Align::Center),
+            )
             .background(to_paint(style.background))
             .radius(style.border_radius)
             .shadow(Shadow {
@@ -196,7 +204,9 @@ impl MaterialFloatingActionButton {
                                 }
                             })
                             .push(move || {
-                                Box::new(Text::new(label.clone()).size(size * 0.5).color(foreground))
+                                Box::new(
+                                    Text::new(label.clone()).size(size * 0.5).color(foreground),
+                                )
                             }),
                     )
                 } else {
@@ -221,9 +231,11 @@ impl MaterialFloatingActionButton {
                 }
             });
 
-        Pressable::new(Child::new(ChildKey::index(0), LayoutRequest::new(), move || {
-            Box::new(surface.clone())
-        }))
+        Pressable::new(Child::new(
+            ChildKey::index(0),
+            LayoutRequest::new(),
+            move || Box::new(surface.clone()),
+        ))
         .disabled(disabled)
         .on_click(move || {
             // v1 fired the callback only when the button was not disabled.
@@ -242,4 +254,3 @@ impl Default for MaterialFloatingActionButton {
         Self::new()
     }
 }
-

@@ -134,7 +134,11 @@ fn the_bubble_paints_its_fill_and_its_text() {
         PaintOp::Rect { color, .. } => Some(*color),
         _ => None,
     });
-    assert_eq!(fill, Some(floom_core::Color::rgb(0x11, 0x22, 0x33)), "the fill");
+    assert_eq!(
+        fill,
+        Some(floom_core::Color::rgb(0x11, 0x22, 0x33)),
+        "the fill"
+    );
 
     // The text is the bubble's child.
     let label = bubble.children().remove(0).build();

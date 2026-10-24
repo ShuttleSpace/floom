@@ -15,7 +15,7 @@ use floom_core::{ElementId, Key, NamedKey, Rect, Widget};
 use floom_types::Color as PaintColor;
 use floom_types::KeyEvent;
 use floom_ui_composites::{Slider, SliderStyle};
-use floom_widgets::testkit::{AllocatingCreateContext, PaintOp, SceneRecorder, dispatch};
+use floom_widgets::testkit::{dispatch, AllocatingCreateContext, PaintOp, SceneRecorder};
 
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::global_theme::DesignSystem;
@@ -139,7 +139,10 @@ fn the_thumb_shadows_black_at_sixty_blurred_three() {
 fn there_is_no_halo() {
     let style = style();
     assert!(style.halo_color.is_none());
-    assert_eq!(style.halo_size, 0.0, "no halo means no halo size to speak of");
+    assert_eq!(
+        style.halo_size, 0.0,
+        "no halo means no halo size to speak of"
+    );
     assert_eq!(style.halo_size_dragging, 0.0);
 }
 
@@ -179,7 +182,8 @@ fn a_disabled_slider_paints_the_enabled_palette() {
         .disabled(true)
         .resolved_style();
     assert_eq!(
-        disabled, style(),
+        disabled,
+        style(),
         "no disabled colour of this kit's own, so nothing changes but the flag"
     );
 }
@@ -244,11 +248,7 @@ fn the_mounted_slider_paints_the_shadow_under_the_white_thumb() {
         .collect();
     assert_eq!(
         fills,
-        vec![
-            style.track_color,
-            style.filled_color,
-            style.thumb_color,
-        ],
+        vec![style.track_color, style.filled_color, style.thumb_color,],
         "three filled shapes -- track, fill, thumb -- and no halo:\n{snapshot}"
     );
 

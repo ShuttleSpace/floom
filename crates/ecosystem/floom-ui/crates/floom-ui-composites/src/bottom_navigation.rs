@@ -532,9 +532,7 @@ impl Widget for Destination {
                         )
                     },
                 ),
-                None => Child::new(ChildKey::index(0), LayoutRequest::new(), move || {
-                    icon()
-                }),
+                None => Child::new(ChildKey::index(0), LayoutRequest::new(), move || icon()),
             };
             out.push(child);
         }
@@ -590,10 +588,7 @@ impl Widget for Destination {
             return;
         }
         cx.fill_rect(
-            Rect::from_origin_size(
-                bounds.origin(),
-                Size::new(bounds.width(), f64::from(width)),
-            ),
+            Rect::from_origin_size(bounds.origin(), Size::new(bounds.width(), f64::from(width))),
             color,
         );
     }

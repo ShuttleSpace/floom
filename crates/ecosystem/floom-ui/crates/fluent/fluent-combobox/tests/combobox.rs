@@ -11,9 +11,9 @@ use std::sync::Arc;
 use floom_core::Widget;
 use floom_types::{OverlayKind, Rect};
 
+use floom_ui_composites::ComboboxStyle;
+use floom_ui_composites::PopupPlacement;
 use floom_widgets::testkit::{AllocatingCreateContext, RecordingUpdateContext};
-use floom_ui_composites::{PopupPlacement};
-use floom_ui_composites::{ComboboxStyle};
 
 use floom_core_theme::theme::Theme;
 use floom_widget_fluent_combobox::FluentCombobox;
@@ -231,7 +231,10 @@ fn the_viewed_combobox_places_its_panel_flush_below_the_field() {
 
     match cx.opened_overlays()[0] {
         floom_widgets::testkit::OverlayCall::Open {
-            bounds, kind, modal, ..
+            bounds,
+            kind,
+            modal,
+            ..
         } => {
             assert_eq!(*kind, OverlayKind::Popup);
             assert!(!modal, "a dropdown is dismissed, not blocking");

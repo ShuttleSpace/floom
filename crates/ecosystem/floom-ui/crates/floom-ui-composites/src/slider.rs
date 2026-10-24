@@ -23,7 +23,7 @@ use floom_core::{
 };
 use floom_types::{PointerButton, PointerPhase, Shadow};
 
-use floom_widgets::{InteractionState, Revision, SemanticsHint, emit_semantics};
+use floom_widgets::{emit_semantics, InteractionState, Revision, SemanticsHint};
 
 /// Slider thumb diameter (and therefore the slider's intrinsic height -- the
 /// thumb is the tallest thing it paints).
@@ -339,12 +339,7 @@ impl Slider {
     /// nothing. The track passes `None` for `pressed` for exactly that reason --
     /// the old paint's pressed track *was* the base colour, so a press darkened
     /// the fill and left the track where it was.
-    fn resolved_color(
-        &self,
-        base: Color,
-        hovered: Option<Color>,
-        pressed: Option<Color>,
-    ) -> Color {
+    fn resolved_color(&self, base: Color, hovered: Option<Color>, pressed: Option<Color>) -> Color {
         if self.state.pressed {
             pressed.unwrap_or(base)
         } else if self.state.hovered {

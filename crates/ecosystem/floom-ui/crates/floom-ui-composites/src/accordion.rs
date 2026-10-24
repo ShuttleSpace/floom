@@ -11,13 +11,14 @@
 //! vocabulary rather than the other way round.
 
 use std::any::Any;
-use std::sync::atomic::{Ordering};
+use std::sync::atomic::Ordering;
 use std::sync::{Arc, Mutex};
 
 use floom_accessibility::SemanticsRole;
 use floom_core::{
-    Align, Axis, Child, ChildBuilder, ChildKey, Color, CreateContext, ElementId, Insets, LayoutRequest,
-    PaintContext, PresenceTransition, SemanticsContext, UpdateContext, Widget, WidgetAny,
+    Align, Axis, Child, ChildBuilder, ChildKey, Color, CreateContext, ElementId, Insets,
+    LayoutRequest, PaintContext, PresenceTransition, SemanticsContext, UpdateContext, Widget,
+    WidgetAny,
 };
 
 use floom_widgets::primitives::{SemanticsHint, Text};
@@ -395,9 +396,7 @@ fn header_child(
                 // the style from the start and nothing spent it, so a header
                 // sat flush against the panel's edge while the style said
                 // otherwise.
-                .request(
-                    LayoutRequest::new().padding_horiz(f64::from(style.header_padding)),
-                )
+                .request(LayoutRequest::new().padding_horiz(f64::from(style.header_padding)))
                 .push({
                     let title = title.clone();
                     move || {
@@ -1230,8 +1229,10 @@ mod select_group_tests {
     use floom_types::Rect;
 
     use super::*;
+    use floom_widgets::testkit::{
+        AllocatingCreateContext, RecordingUpdateContext, TestEventContext,
+    };
     use floom_widgets::Text;
-    use floom_widgets::testkit::{AllocatingCreateContext, RecordingUpdateContext, TestEventContext};
 
     const ROW: Rect = Rect {
         x0: 0.0,
@@ -1667,10 +1668,13 @@ mod select_group_tests {
         let mut group = SelectGroup::new()
             .row("One", || Box::new(Text::new("row")))
             .row("Two", || Box::new(Text::new("row")));
-        group = group.multiple(true).mandatory(true).style(SelectGroupStyle {
-            mandatory_in_multiple_mode: false,
-            ..SelectGroupStyle::default()
-        });
+        group = group
+            .multiple(true)
+            .mandatory(true)
+            .style(SelectGroupStyle {
+                mandatory_in_multiple_mode: false,
+                ..SelectGroupStyle::default()
+            });
         click_row(&group, 0);
         click_row(&group, 0);
         assert!(
@@ -1709,7 +1713,9 @@ mod select_group_tests {
             .as_any()
             .downcast_ref::<floom_widgets::Surface>()
             .expect("a surface");
-        let request = surface.layout_request().expect("a surface asks for its own space");
+        let request = surface
+            .layout_request()
+            .expect("a surface asks for its own space");
         assert_eq!(request.cross_align, Some(Align::Center));
     }
 
@@ -1724,7 +1730,9 @@ mod select_group_tests {
             axis: Axis::Horizontal,
             ..SelectGroupStyle::default()
         });
-        let request = group.layout_request().expect("a group asks for its own space");
+        let request = group
+            .layout_request()
+            .expect("a group asks for its own space");
         assert_eq!(request.axis, Some(Axis::Horizontal));
         assert_eq!(request.gap, Some(4.0), "and the style's gap between them");
     }
@@ -1845,8 +1853,10 @@ mod accordion_tests {
     use floom_types::Rect;
 
     use super::*;
+    use floom_widgets::testkit::{
+        AllocatingCreateContext, RecordingUpdateContext, TestEventContext,
+    };
     use floom_widgets::Text;
-    use floom_widgets::testkit::{AllocatingCreateContext, RecordingUpdateContext, TestEventContext};
 
     const ROW: Rect = Rect {
         x0: 0.0,
@@ -2189,12 +2199,10 @@ mod accordion_tests {
             .downcast_mut::<Pressable>()
             .expect("the header is a pressable");
 
-        assert!(
-            pressable
-                .semantics_hint()
-                .state
-                .contains(SemanticsState::COLLAPSED)
-        );
+        assert!(pressable
+            .semantics_hint()
+            .state
+            .contains(SemanticsState::COLLAPSED));
 
         accordion.set_open(0, true);
 

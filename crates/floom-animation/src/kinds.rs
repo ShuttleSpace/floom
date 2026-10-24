@@ -3,7 +3,7 @@
 // The vocabulary itself lives in `floom-types`, so that layers which cannot
 // depend on this crate (`floom-core`, where a widget declares what it wants)
 // can still name it. The crate root re-exports all of it.
-use floom_types::{damped_spring, CompositorChannel, CompositorProp, Easing, RepeatMode};
+use floom_types::{CompositorChannel, CompositorProp, Easing, RepeatMode, damped_spring};
 use smallvec::SmallVec;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

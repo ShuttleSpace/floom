@@ -18,10 +18,10 @@ use std::sync::Arc;
 
 use floom_core::WidgetAny;
 use floom_signal::{RwSignal, SignalGet};
+use floom_widgets::text_input::{shared_map, SharedMap};
 use floom_widgets::{Stack, Text};
-use floom_widgets::text_input::{SharedMap, shared_map};
 
-use floom_core_theme::props::defaults_provider::{DefaultsProviderProps};
+use floom_core_theme::props::defaults_provider::DefaultsProviderProps;
 use floom_core_theme::theme::MultiTheme;
 
 /// A builder for the subtree, replayed each time it is mounted.

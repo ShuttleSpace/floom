@@ -95,9 +95,7 @@ pub fn shared_list(list: Vec<String>) -> SharedList {
 /// panicking here would take down a paint pass over a list nobody was looking
 /// at.
 pub fn read_list(list: &SharedList) -> Vec<String> {
-    list.lock()
-        .map(|guard| guard.clone())
-        .unwrap_or_default()
+    list.lock().map(|guard| guard.clone()).unwrap_or_default()
 }
 
 /// Write a shared list. Reports whether it changed, so a caller can skip a
@@ -343,10 +341,7 @@ impl TextInput {
     /// has no separate label, so it publishes what it holds rather than nothing.
     /// Recorded here rather than left to be discovered.
     fn hint(&self) -> crate::primitives::SemanticsHint {
-        crate::primitives::SemanticsHint::labeled(
-            crate::primitives::Role::TextField,
-            self.text(),
-        )
+        crate::primitives::SemanticsHint::labeled(crate::primitives::Role::TextField, self.text())
     }
 
     pub fn resolved_style(&self) -> TextInputStyle {
@@ -404,8 +399,7 @@ impl TextInput {
     }
 
     fn intrinsic_height(&self) -> f32 {
-        crate::controls::text_height_at(self.style.font_size)
-            + self.style.padding_vert as f32 * 2.0
+        crate::controls::text_height_at(self.style.font_size) + self.style.padding_vert as f32 * 2.0
     }
 }
 
@@ -646,7 +640,8 @@ impl Widget for TextInput {
         }
 
         let (shown, color) = self.shown();
-        let baseline = bounds.y0 + style.padding_vert
+        let baseline = bounds.y0
+            + style.padding_vert
             + f64::from(crate::controls::text_ascent_at(self.style.font_size));
         cx.fill_text(
             floom_types::Point::new(bounds.x0 + style.padding_horiz, baseline),

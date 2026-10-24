@@ -38,7 +38,10 @@ pub fn button_gallery(theme: &FluentTheme) -> Scene {
 /// *something changed*, this says *the outlined hover lost its outline*.
 pub fn button_gallery_labels(theme: &FluentTheme) -> String {
     shared_labels(
-        &format!("scheme={:?} card_background={:?}", theme.scheme, theme.colors.card_background),
+        &format!(
+            "scheme={:?} card_background={:?}",
+            theme.scheme, theme.colors.card_background
+        ),
         DepthField::Elevation,
         |sample| button_style(theme, sample.variant, sample.size, sample.state),
     )
@@ -70,7 +73,8 @@ mod tests {
         assert_eq!(
             labels.lines().count(),
             expected + 1,
-            "header plus {} samples", expected
+            "header plus {} samples",
+            expected
         );
     }
 

@@ -12,16 +12,16 @@
 //! and another when it is *inset* from it -- v1's `inset` flag chose between
 //! `padding_horizontal` and `inset_padding`, and the port keeps both.
 
+use floom_core::LayoutRequest;
 use floom_signal::{RwSignal, SignalGet};
 use floom_types::Color as PaintColor;
-use floom_core::LayoutRequest;
 use floom_widgets::{Align, Surface, Text};
 
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens, ListSubheaderTokens};
 use floom_core_theme::props::list_subheader::ListSubheaderProps;
 use floom_core_theme::theme::{MultiTheme, Theme};
-use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color::to_engine_color as to_paint;
+use floom_core_theme::tokens::color::Color;
 use floom_widget_runtime::theme_signal;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -119,4 +119,3 @@ impl Default for MaterialListSubheader {
         Self::new(String::new())
     }
 }
-

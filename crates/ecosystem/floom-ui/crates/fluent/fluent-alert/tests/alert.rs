@@ -17,7 +17,7 @@ use floom_core_theme::theme::{MultiTheme, Theme};
 use floom_core_theme::tokens::color_ext::*;
 use floom_widgets::{Stack, Surface};
 
-use floom_widget_fluent_alert::{FluentAlert, alert_accent};
+use floom_widget_fluent_alert::{alert_accent, FluentAlert};
 
 /// Activate Fluent and hand back a theme that will read it.
 ///
@@ -32,7 +32,9 @@ fn theme() -> MultiTheme {
 
 fn alert() -> FluentAlert {
     let _ = theme();
-    FluentAlert::new().title("Sync failed").message("Try again in a moment")
+    FluentAlert::new()
+        .title("Sync failed")
+        .message("Try again in a moment")
 }
 
 fn to_paint(c: floom_core_theme::tokens::color::Color) -> floom_types::Color {
@@ -62,7 +64,9 @@ fn the_tokens_reach_the_engine_surface() {
     assert_eq!(style.design_system, "fluent");
 
     let surface = alert().view();
-    let request = surface.layout_request().expect("a padded surface has a request");
+    let request = surface
+        .layout_request()
+        .expect("a padded surface has a request");
     assert_eq!(
         request.padding,
         Some(floom_types::Insets::uniform(f64::from(tokens.padding))),
@@ -88,7 +92,11 @@ fn the_container_is_the_accent_at_26() {
         "v1's `with_alpha(accent, 26)`, on whatever variant this alert carries"
     );
     assert_eq!(
-        (style.container_color.r, style.container_color.g, style.container_color.b),
+        (
+            style.container_color.r,
+            style.container_color.g,
+            style.container_color.b
+        ),
         (style.accent.r, style.accent.g, style.accent.b),
         "CONTROL: the tint is the accent's colour at a lower alpha — so the \
          assertion above is about the alpha and not about a different hue"
@@ -146,10 +154,7 @@ fn three_accents_are_fixed_literals_and_one_is_the_themes_error() {
 fn the_variant_selects_the_accent_and_therefore_the_tint() {
     let error = alert().variant(AlertVariant::Error).resolved_style();
     let warning = alert().variant(AlertVariant::Warning).resolved_style();
-    assert_ne!(
-        error.accent, warning.accent,
-        "two variants, two accents"
-    );
+    assert_ne!(error.accent, warning.accent, "two variants, two accents");
     assert_ne!(
         error.container_color, warning.container_color,
         "and therefore two tints — so the variant is not read past the accent"
@@ -262,7 +267,11 @@ fn the_text_column_is_a_bold_title_over_a_message() {
 
     let title = column.children()[0].build();
     let title = title.as_any().downcast_ref::<Text_>().unwrap();
-    assert_eq!(title.font_weight(), floom_types::FontWeight::Bold, "v1's `FontWeight::Bold`");
+    assert_eq!(
+        title.font_weight(),
+        floom_types::FontWeight::Bold,
+        "v1's `FontWeight::Bold`"
+    );
     assert_eq!(title.font_size(), alert().resolved_style().title_font_size);
     assert_eq!(title.content(), "Sync failed");
 }

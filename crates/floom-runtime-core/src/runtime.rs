@@ -34,15 +34,15 @@ use std::rc::Rc;
 use std::time::Instant;
 
 use floom_core::{CreateContext, ElementKind, Widget};
-use floom_signal::RwSignal;
 use floom_scheduler::{Priority, Scheduler, TaskFn, TaskId};
+use floom_signal::RwSignal;
 use floom_types::{ElementId, Point};
 
-use crate::reactive_bridge::{BindingRegistry, ReactiveBinding, ReactiveBindingId};
 use crate::DirtyFlags;
 use crate::DirtySet;
 use crate::ElementArena;
 use crate::ElementTree;
+use crate::reactive_bridge::{BindingRegistry, ReactiveBinding, ReactiveBindingId};
 
 /// Minimal input events for the new runtime path.
 #[derive(Debug, Clone)]

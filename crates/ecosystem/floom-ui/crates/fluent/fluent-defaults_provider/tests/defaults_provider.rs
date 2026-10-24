@@ -59,7 +59,10 @@ fn the_subtree_is_mounted() {
         .view();
     assert_eq!(stack.child_count(), 1, "the caller's subtree is inside");
     assert!(
-        stack.children()[0].build().as_any().is::<floom_widgets::Text>(),
+        stack.children()[0]
+            .build()
+            .as_any()
+            .is::<floom_widgets::Text>(),
         "and it is the caller's own content"
     );
 }

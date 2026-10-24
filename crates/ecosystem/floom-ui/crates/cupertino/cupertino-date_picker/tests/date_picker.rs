@@ -16,15 +16,17 @@ use std::sync::{Arc, Mutex};
 use floom_core::{ElementId, Event, OverlayKind, Point, Rect, Widget};
 use floom_types::{Color, PointerEvent};
 use floom_widgets::testkit::{
-    dispatch, AllocatingCreateContext, OverlayCall, PaintOp, RecordingUpdateContext,
-    SceneRecorder, TestEventContext,
+    dispatch, AllocatingCreateContext, OverlayCall, PaintOp, RecordingUpdateContext, SceneRecorder,
+    TestEventContext,
 };
 
 use floom_core_theme::global_theme::DesignSystem;
 use floom_core_theme::props::date_picker::DateValue as ThemeDateValue;
 use floom_core_theme::theme::{MultiTheme, Theme};
 
-use floom_widget_cupertino_date_picker::{CupertinoDatePicker, CupertinoDatePickerStyle, DateValue};
+use floom_widget_cupertino_date_picker::{
+    CupertinoDatePicker, CupertinoDatePickerStyle, DateValue,
+};
 
 /// The field's box, in the tests' coordinate space.
 const FIELD: Rect = Rect {
@@ -330,7 +332,10 @@ fn the_calendar_draws_the_month_and_its_days() {
     // The vector is held in a local: a borrow of a temporary would not
     // outlive the statement.
     let opened = cx.opened_overlays();
-    let OverlayCall::Open { bounds, content, .. } = opened[0] else {
+    let OverlayCall::Open {
+        bounds, content, ..
+    } = opened[0]
+    else {
         panic!("the calendar is asked of the host");
     };
 
@@ -369,7 +374,10 @@ fn the_calendar_draws_its_weekday_row_and_its_arrows() {
     // The vector is held in a local: a borrow of a temporary would not
     // outlive the statement.
     let opened = cx.opened_overlays();
-    let OverlayCall::Open { bounds, content, .. } = opened[0] else {
+    let OverlayCall::Open {
+        bounds, content, ..
+    } = opened[0]
+    else {
         panic!("the calendar is asked of the host");
     };
 

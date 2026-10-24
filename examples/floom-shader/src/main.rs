@@ -20,10 +20,10 @@
 //!
 //! Run with `cargo run -p floom-shader`.
 
-use floom_renderer::{FrameInfo, render_once};
 use floom::floom_layout::{AbsoluteInset, Position};
 use floom::floom_scene::SceneNode;
 use floom::prelude::*;
+use floom_renderer::{FrameInfo, render_once};
 
 const SURFACE_W: u32 = 240;
 const SURFACE_H: u32 = 120;

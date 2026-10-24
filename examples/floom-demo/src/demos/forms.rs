@@ -34,7 +34,11 @@ pub(super) fn demos() -> Vec<Demo> {
 /// A message and the colour its verdict reads in: an unmet rule is an error,
 /// not a note.
 fn status(message: String, valid: bool) -> (String, Color) {
-    if valid { (message, OK) } else { (message, ERROR) }
+    if valid {
+        (message, OK)
+    } else {
+        (message, ERROR)
+    }
 }
 
 fn build_validation() -> Box<dyn WidgetAny> {
@@ -154,7 +158,11 @@ fn build_touched() -> Box<dyn WidgetAny> {
             })
             .push_layout(LayoutRequest::new().height(18.0), move || {
                 let color = if rule_ok { OK } else { ERROR };
-                Box::new(Text::new(format!("nickname: {error}")).size(12.0).color(color))
+                Box::new(
+                    Text::new(format!("nickname: {error}"))
+                        .size(12.0)
+                        .color(color),
+                )
             }),
     )
 }

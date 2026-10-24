@@ -36,15 +36,14 @@ use floom_types::Color as PaintColor;
 
 use floom_core::{Child, ChildKey, LayoutRequest};
 use floom_ui_composites::Dialog;
-use floom_widgets::text_input::{SharedFlag, read_flag, shared_flag, write_flag};
+use floom_widgets::text_input::{read_flag, shared_flag, write_flag, SharedFlag};
 use floom_widgets::{Align, Axis, Pressable, Stack, Surface};
 
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::overlay::OverlayProps;
 use floom_core_theme::theme::{MultiTheme, Theme};
-use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color::to_engine_color as to_paint;
-
+use floom_core_theme::tokens::color::Color;
 
 /// A v1-shaped dismiss callback, kept so `props()` still reports one.
 type Callback = Arc<dyn Fn() + Send + Sync + 'static>;
@@ -63,7 +62,9 @@ pub struct CupertinoOverlay {
     show: SharedFlag,
     theme: RwSignal<MultiTheme>,
     /// The caller's content, as a rebuildable + shareable factory (see `child`).
-    child: Option<Arc<dyn Fn() -> Box<dyn floom_widgets::WidgetAny + Send + Sync> + Send + Sync + 'static>>,
+    child: Option<
+        Arc<dyn Fn() -> Box<dyn floom_widgets::WidgetAny + Send + Sync> + Send + Sync + 'static>,
+    >,
     /// The v1 `on_click` dismiss callback, in `Send + Sync` form.
     on_dismiss: Option<Callback>,
 }
@@ -169,7 +170,9 @@ impl CupertinoOverlay {
 
         Dialog::new()
             .with_shared_presence(show.clone())
-            .card_with(move || build_card(alpha, pad, child.clone(), on_dismiss.clone(), show.clone()))
+            .card_with(move || {
+                build_card(alpha, pad, child.clone(), on_dismiss.clone(), show.clone())
+            })
     }
 }
 
@@ -185,7 +188,9 @@ impl Default for CupertinoOverlay {
 fn build_card(
     alpha: u8,
     pad: f32,
-    child: Option<Arc<dyn Fn() -> Box<dyn floom_widgets::WidgetAny + Send + Sync> + Send + Sync + 'static>>,
+    child: Option<
+        Arc<dyn Fn() -> Box<dyn floom_widgets::WidgetAny + Send + Sync> + Send + Sync + 'static>,
+    >,
     on_dismiss: Option<Callback>,
     show: SharedFlag,
 ) -> Box<dyn floom_widgets::WidgetAny> {
@@ -199,7 +204,12 @@ fn build_card(
             .colors()
             .scrim,
     );
-    let scrim_color = PaintColor { r: scrim.r, g: scrim.g, b: scrim.b, a: alpha };
+    let scrim_color = PaintColor {
+        r: scrim.r,
+        g: scrim.g,
+        b: scrim.b,
+        a: alpha,
+    };
 
     // The content card: padded `Surface` with `surface` fill + `12.0` radius.
     let content_build: Arc<dyn Fn() -> Surface + Send + Sync> = {
@@ -215,12 +225,14 @@ fn build_card(
                 }))
                 .background(surface_color)
                 .radius(12.0)
-                .child(Child::new(ChildKey::index(0), LayoutRequest::new(), move || {
-                    match child.as_ref() {
+                .child(Child::new(
+                    ChildKey::index(0),
+                    LayoutRequest::new(),
+                    move || match child.as_ref() {
                         Some(b) => b(),
                         None => Box::new(floom_widgets::Text::new(String::new())),
-                    }
-                }))
+                    },
+                ))
         })
     };
 

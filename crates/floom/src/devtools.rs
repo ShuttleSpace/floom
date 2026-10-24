@@ -31,15 +31,15 @@ use std::sync::{Arc, Mutex};
 use floom_app::WidgetHost;
 use floom_types::{OverlayKind, Rect};
 
+pub use floom_devtools::Inspector;
 pub use floom_devtools::panel::{
     DevtoolsPanel, DevtoolsShortcut, DevtoolsState, DevtoolsTab, ReadoutRow, default_shortcut,
     elements_readout,
 };
-pub use floom_devtools::Inspector;
-pub use floom_hot_reload::describe;
 pub use floom_devtools::pick::{
     HighlightBox, PickPhase, PickState, highlight_is_live, highlight_rect, pick_pointer,
 };
+pub use floom_hot_reload::describe;
 
 /// A mounted devtools panel, and the state that opens and closes it.
 ///
@@ -208,7 +208,12 @@ pub fn attach_picker(host: &mut WidgetHost, panel_state: &Arc<Mutex<DevtoolsStat
     let bounds = Rect::from_origin_size(floom_types::Point::new(0.0, 0.0), viewport);
     // The highlight is an overlay of its own, above the panel, so the box is
     // visible over everything including the devtools.
-    let overlay = host.open_overlay(OverlayKind::Popup, false, bounds, HighlightBox::new(None, false));
+    let overlay = host.open_overlay(
+        OverlayKind::Popup,
+        false,
+        bounds,
+        HighlightBox::new(None, false),
+    );
     PickHandle {
         pick,
         overlay,
@@ -255,7 +260,10 @@ impl PickHandle {
 
     /// The element a click committed to, if any.
     pub fn picked(&self) -> Option<String> {
-        self.pick.lock().ok().and_then(|p| p.picked().map(String::from))
+        self.pick
+            .lock()
+            .ok()
+            .and_then(|p| p.picked().map(String::from))
     }
 
     /// Whether the highlight is following a hover rather than sitting on a pick.
@@ -273,11 +281,12 @@ impl PickHandle {
     where
         F: FnOnce(&str) -> Option<Rect>,
     {
-        let Some(key) = self.pick.lock().ok().and_then(|p| {
-            p.picked()
-                .or_else(|| p.hovered())
-                .map(str::to_string)
-        }) else {
+        let Some(key) = self
+            .pick
+            .lock()
+            .ok()
+            .and_then(|p| p.picked().or_else(|| p.hovered()).map(str::to_string))
+        else {
             return;
         };
         let Some(rect) = bounds_of(&key) else {

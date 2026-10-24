@@ -70,8 +70,8 @@ use floom_widgets::{Axis, Stack, Surface};
 
 use floom_core_theme::layout::layout_signal;
 use floom_core_theme::theme::{MultiTheme, Theme};
-use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color::to_engine_color as to_paint;
+use floom_core_theme::tokens::color::Color;
 use floom_widget_runtime::theme_signal;
 
 /// The main region's appearance, in the terms v1 used.
@@ -143,26 +143,12 @@ impl MaterialMain {
 
         // v1's spacers were `Empty` views: a box with a size and nothing in
         // it. A `Surface` with no fill is that in 2.0.
-        let top = Surface::new().request(
-            LayoutRequest::new()
-                .width_pct(100.0)
-                .height(style.top),
-        );
-        let bottom = Surface::new().request(
-            LayoutRequest::new()
-                .width_pct(100.0)
-                .height(style.bottom),
-        );
-        let left = Surface::new().request(
-            LayoutRequest::new()
-                .height_pct(100.0)
-                .width(style.left),
-        );
-        let right = Surface::new().request(
-            LayoutRequest::new()
-                .height_pct(100.0)
-                .width(style.right),
-        );
+        let top = Surface::new().request(LayoutRequest::new().width_pct(100.0).height(style.top));
+        let bottom =
+            Surface::new().request(LayoutRequest::new().width_pct(100.0).height(style.bottom));
+        let left = Surface::new().request(LayoutRequest::new().height_pct(100.0).width(style.left));
+        let right =
+            Surface::new().request(LayoutRequest::new().height_pct(100.0).width(style.right));
 
         // v1's content: a container that grew and carried the background.
         let mut content = Surface::new().background(to_paint(style.background));
@@ -185,11 +171,7 @@ impl MaterialMain {
         // v1's outer stack: the top spacer, the middle row and the bottom
         // spacer.
         Stack::new(Axis::Vertical)
-            .request(
-                LayoutRequest::new()
-                    .width_pct(100.0)
-                    .height_pct(100.0),
-            )
+            .request(LayoutRequest::new().width_pct(100.0).height_pct(100.0))
             .push(move || Box::new(top.clone()))
             .push_layout(LayoutRequest::new().grow(1.0), move || {
                 Box::new(middle.clone())
@@ -203,4 +185,3 @@ impl Default for MaterialMain {
         Self::new()
     }
 }
-

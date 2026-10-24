@@ -37,17 +37,15 @@
 use floom_core::Axis;
 use floom_signal::{RwSignal, SignalGet};
 use floom_types::{Color as PaintColor, Insets};
-use floom_ui_composites::{
-    ContentPlacement, SelectGroup, SelectGroupStyle, SelectionMode,
-};
+use floom_ui_composites::{ContentPlacement, SelectGroup, SelectGroupStyle, SelectionMode};
 
 use floom_widget_runtime::theme_signal;
 
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens, ItemGroupTokens};
 use floom_core_theme::props::item_group::ItemGroupProps;
 use floom_core_theme::theme::{MultiTheme, Theme};
-use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color::to_engine_color as to_paint;
+use floom_core_theme::tokens::color::Color;
 
 /// A builder for one row's content.
 ///
@@ -55,7 +53,6 @@ use floom_core_theme::tokens::color::to_engine_color as to_paint;
 /// needs its own copy to move into it.
 pub type RowBuilder =
     std::sync::Arc<dyn Fn() -> Box<dyn floom_core::WidgetAny> + Send + Sync + 'static>;
-
 
 fn item_group_tokens(theme: &MultiTheme) -> ItemGroupTokens {
     match theme.component(ComponentId::ItemGroup) {

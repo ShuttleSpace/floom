@@ -45,7 +45,10 @@ fn the_builder_chain_is_neutral() {
     let props = dialog.props();
     assert_eq!(props.title, "Confirm");
     assert_eq!(props.content, "Continue?");
-    assert!(props.open, "and `.open(true)` writes the flag `props()` reports");
+    assert!(
+        props.open,
+        "and `.open(true)` writes the flag `props()` reports"
+    );
 }
 
 /// The style resolves from the kit's theme.
@@ -60,12 +63,16 @@ fn the_style_resolves_from_a_theme() {
     );
     let style = dialog().with_theme(theme.clone()).resolved_style();
 
-    assert_eq!(style.surface, floom_types::Color {
-        r: theme.colors().surface.r,
-        g: theme.colors().surface.g,
-        b: theme.colors().surface.b,
-        a: theme.colors().surface.a,
-    }, "`container_color` renamed to `surface`");
+    assert_eq!(
+        style.surface,
+        floom_types::Color {
+            r: theme.colors().surface.r,
+            g: theme.colors().surface.g,
+            b: theme.colors().surface.b,
+            a: theme.colors().surface.a,
+        },
+        "`container_color` renamed to `surface`"
+    );
     assert_eq!(
         style.content_alpha, 222,
         "and `content_color`'s alpha is now a field of its own, so the body can be \
@@ -75,8 +82,8 @@ fn the_style_resolves_from_a_theme() {
     // matches the token**, which is 560. So that assertion was stale in v1: the token
     // moved and the test did not. Reading the token here means this test goes stale the
     // same way a design system does rather than the other way round.
-    let floom_core_theme::component_tokens::ComponentTokens::Dialog(tokens) = theme
-        .component(floom_core_theme::component_tokens::ComponentId::Dialog)
+    let floom_core_theme::component_tokens::ComponentTokens::Dialog(tokens) =
+        theme.component(floom_core_theme::component_tokens::ComponentId::Dialog)
     else {
         panic!("expected DialogTokens");
     };

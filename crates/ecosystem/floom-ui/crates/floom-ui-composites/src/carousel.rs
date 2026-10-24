@@ -20,12 +20,12 @@
 use std::sync::Arc;
 
 use floom_core::{
-    Child, ChildKey, Color, CreateContext, ElementId, Inset, LayoutRequest, PaintContext,
-    Insets, Position, UpdateContext, Widget, WidgetAny,
+    Child, ChildKey, Color, CreateContext, ElementId, Inset, Insets, LayoutRequest, PaintContext,
+    Position, UpdateContext, Widget, WidgetAny,
 };
 use floom_types::CursorStyle;
 use floom_widgets::{
-    Align, Axis, Conditional, Pressable, SharedFlag, Stack, Surface, Text, read_flag, write_flag,
+    read_flag, write_flag, Align, Axis, Conditional, Pressable, SharedFlag, Stack, Surface, Text,
 };
 
 use crate::color_picker::with_alpha;
@@ -258,7 +258,6 @@ impl Carousel {
 
     /// The carousel, ready to mount.
     pub fn build(self) -> Surface {
-
         let style = self.style;
         let count = self.slides.len();
         let flags = self.flags.clone();
@@ -319,9 +318,7 @@ impl Carousel {
                                 // centred on the cross axis.
                                 LayoutRequest::new().cross_align(Align::Center),
                                 move || {
-                                    Box::new(
-                                        Text::new("‹").size(arrow_font_size).color(on_surface),
-                                    )
+                                    Box::new(Text::new("‹").size(arrow_font_size).color(on_surface))
                                 },
                             ))
                             .on_click(move || {
@@ -352,9 +349,7 @@ impl Carousel {
                                 ChildKey::index(0),
                                 LayoutRequest::new().cross_align(Align::Center),
                                 move || {
-                                    Box::new(
-                                        Text::new("›").size(arrow_font_size).color(on_surface),
-                                    )
+                                    Box::new(Text::new("›").size(arrow_font_size).color(on_surface))
                                 },
                             ))
                             .on_click(move || {
@@ -379,25 +374,21 @@ impl Carousel {
                 .align(Align::Center, Align::Center)
                 .gap(0.0);
             for index in 0..count {
-                let dot = Child::new(
-                    ChildKey::index(0),
-                    LayoutRequest::new(),
-                    {
-                        let dot = CarouselDot {
-                            flag: flags[index].clone(),
-                            size: style.dot_size,
-                            // v1's `border_radius(dot_size / 2.0)`: a circle.
-                            radius: style.dot_size / 2.0,
-                            active: primary,
-                            inactive: with_alpha(
-                                style.on_surface,
-                                (style.dot_inactive_opacity * 255.0) as u8,
-                            ),
-                            reported: false,
-                        };
-                        move || Box::new(dot.clone())
-                    },
-                );
+                let dot = Child::new(ChildKey::index(0), LayoutRequest::new(), {
+                    let dot = CarouselDot {
+                        flag: flags[index].clone(),
+                        size: style.dot_size,
+                        // v1's `border_radius(dot_size / 2.0)`: a circle.
+                        radius: style.dot_size / 2.0,
+                        active: primary,
+                        inactive: with_alpha(
+                            style.on_surface,
+                            (style.dot_inactive_opacity * 255.0) as u8,
+                        ),
+                        reported: false,
+                    };
+                    move || Box::new(dot.clone())
+                });
                 dots = dots.child(Child::new(
                     ChildKey::index(index),
                     LayoutRequest::new()
@@ -411,14 +402,12 @@ impl Carousel {
                         move || {
                             let flags_dot = flags_dot.clone();
                             let on_change_dot = on_change_dot.clone();
-                            Box::new(
-                                Pressable::new(dot.clone()).on_click(move || {
-                                    set_index(&flags_dot, index);
-                                    if let Some(on_change) = &on_change_dot {
-                                        on_change(index);
-                                    }
-                                }),
-                            ) as Box<dyn WidgetAny>
+                            Box::new(Pressable::new(dot.clone()).on_click(move || {
+                                set_index(&flags_dot, index);
+                                if let Some(on_change) = &on_change_dot {
+                                    on_change(index);
+                                }
+                            })) as Box<dyn WidgetAny>
                         }
                     },
                 ));
@@ -448,6 +437,5 @@ impl Carousel {
                 LayoutRequest::new().fill(),
                 move || Box::new(area.clone()),
             ))
-    
     }
 }

@@ -13,7 +13,7 @@ use floom_types::{PresenceChannel, PresenceTransition};
 use floom_widgets::testkit::{AllocatingCreateContext, RecordingUpdateContext};
 
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
-use floom_core_theme::global_theme::{DesignSystem, set_design_system};
+use floom_core_theme::global_theme::{set_design_system, DesignSystem};
 use floom_core_theme::theme::{MultiTheme, Theme};
 
 use floom_widget_cupertino_scale_transition::{
@@ -44,7 +44,9 @@ fn tokens() -> floom_core_theme::component_tokens::ScaleTransitionTokens {
 #[test]
 fn the_style_resolves_the_tokens() {
     let theme = theme();
-    let style: CupertinoScaleTransitionStyle = CupertinoScaleTransition::new().with_theme(theme.clone()).resolved_style();
+    let style: CupertinoScaleTransitionStyle = CupertinoScaleTransition::new()
+        .with_theme(theme.clone())
+        .resolved_style();
     assert_eq!(style.design_system, "cupertino");
     assert_eq!(style.duration_ms, tokens().duration_ms);
     assert_eq!(style.min_scale, tokens().min_scale);
@@ -58,11 +60,14 @@ fn the_transition_is_the_one_this_kit_plays() {
     let transition = kit.transition().expect("this kit plays a transition");
     assert_eq!(
         transition.channel,
-        PresenceChannel::Grow { from: tokens().min_scale },
+        PresenceChannel::Grow {
+            from: tokens().min_scale
+        },
         "v1's scale grew from `min_scale` to natural size"
     );
     assert_eq!(
-        transition.duration_secs, f64::from(tokens().duration_ms) / 1000.0,
+        transition.duration_secs,
+        f64::from(tokens().duration_ms) / 1000.0,
         "the token's duration, in seconds"
     );
 }

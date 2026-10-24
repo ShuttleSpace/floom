@@ -93,14 +93,14 @@ use std::sync::Arc;
 use floom_core::{Child, ChildKey, LayoutRequest};
 use floom_signal::{RwSignal, SignalGet};
 use floom_types::{Color as PaintColor, FontWeight};
-use floom_widgets::text_input::{SharedFlag, SharedMap, read_flag, shared_flag, write_flag};
+use floom_widgets::text_input::{read_flag, shared_flag, write_flag, SharedFlag, SharedMap};
 use floom_widgets::{Align, Axis, Conditional, Pressable, Stack, Surface, Text};
 
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::form::FormProps;
 use floom_core_theme::theme::{MultiTheme, Theme};
-use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color::to_engine_color as to_paint;
+use floom_core_theme::tokens::color::Color;
 use floom_widget_runtime::theme_signal;
 
 /// A callback in the shape 2.0's slots need.
@@ -262,7 +262,9 @@ impl MaterialForm {
         let mut indexed: Vec<(u64, String)> = guard
             .iter()
             .filter_map(|(key, message)| {
-                key.parse::<u64>().ok().map(|index| (index, message.clone()))
+                key.parse::<u64>()
+                    .ok()
+                    .map(|index| (index, message.clone()))
             })
             .collect();
         indexed.sort_by_key(|(index, _)| *index);
@@ -418,11 +420,11 @@ fn build_submit(show_submit: bool, ctx: SubmitContext) -> Box<dyn floom_widgets:
 
 /// The conditional that shows the submit button in one of its two appearances.
 fn appearance(flag: SharedFlag, ctx: SubmitContext, valid: bool) -> Conditional {
-    Conditional::new(false)
-        .when_flag(flag)
-        .show(Child::new(ChildKey::index(0), LayoutRequest::new(), move || {
-            build_button(&ctx, valid)
-        }))
+    Conditional::new(false).when_flag(flag).show(Child::new(
+        ChildKey::index(0),
+        LayoutRequest::new(),
+        move || build_button(&ctx, valid),
+    ))
 }
 
 /// The submit button itself.
@@ -476,4 +478,3 @@ fn build_button(ctx: &SubmitContext, valid: bool) -> Box<dyn floom_widgets::Widg
         }),
     )
 }
-

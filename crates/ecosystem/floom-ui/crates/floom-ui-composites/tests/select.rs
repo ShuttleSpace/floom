@@ -45,8 +45,8 @@ fn select_sizes_from_the_widest_label() {
     let bounds = node_bounds(&host, select);
     let widest =
         floom_text::measure_text("Beta Gamma Delta Epsilon", style.text_size, f64::INFINITY);
-    let expected = (widest.width + f64::from(style.padding_horizontal) * 2.0)
-        .max(f64::from(style.min_width));
+    let expected =
+        (widest.width + f64::from(style.padding_horizontal) * 2.0).max(f64::from(style.min_width));
     assert!(
         (bounds.width() - expected).abs() < 1.5,
         "select width = widest option + 2x{} padding (floored at the style's min_width), \

@@ -11,7 +11,7 @@ use floom_signal::SignalGet;
 use floom_types::{Color, Rect};
 use floom_widgets::testkit::{AllocatingCreateContext, PaintOp, SceneRecorder};
 
-use floom_core_theme::global_theme::{DesignSystem, set_design_system};
+use floom_core_theme::global_theme::{set_design_system, DesignSystem};
 use floom_core_theme::theme::{MultiTheme, Theme};
 
 use floom_widget_fluent_app::FluentApp;
@@ -44,7 +44,9 @@ fn the_root_is_a_full_viewport_box_in_the_background_colour() {
     surface.paint(&mut recorder, id);
     recorder.finish();
 
-    let request = surface.layout_request().expect("the root asks for its own space");
+    let request = surface
+        .layout_request()
+        .expect("the root asks for its own space");
     assert_eq!(
         request.flex_grow,
         Some(1.0),
@@ -71,7 +73,10 @@ fn the_content_goes_inside_the_root() {
     let surface = app.view();
     assert_eq!(surface.child_count(), 1, "the shell's content is inside");
     assert!(
-        surface.children()[0].build().as_any().is::<floom_widgets::Text>(),
+        surface.children()[0]
+            .build()
+            .as_any()
+            .is::<floom_widgets::Text>(),
         "and it is the caller's own content"
     );
 }
@@ -90,5 +95,10 @@ fn building_the_root_initialises_the_layout_signal() {
 
 /// Design-system colour -> engine colour.
 fn to_engine(c: floom_core_theme::tokens::color::Color) -> Color {
-    Color { r: c.r, g: c.g, b: c.b, a: c.a }
+    Color {
+        r: c.r,
+        g: c.g,
+        b: c.b,
+        a: c.a,
+    }
 }

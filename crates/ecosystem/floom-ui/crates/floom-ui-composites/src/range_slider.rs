@@ -24,8 +24,8 @@ use floom_core::{
     Point, Rect, SemanticsContext, UpdateContext, Widget, WidgetAny,
 };
 use floom_types::{CursorStyle, PointerButton, PointerPhase};
-use floom_widgets::primitives::{Revision, SemanticsHint, emit_semantics};
-use floom_widgets::{SharedMap, shared_map};
+use floom_widgets::primitives::{emit_semantics, Revision, SemanticsHint};
+use floom_widgets::{shared_map, SharedMap};
 
 /// The two values, in the shared map, under these keys.
 const LOW_KEY: &str = "low";
@@ -33,8 +33,13 @@ const HIGH_KEY: &str = "high";
 
 /// Reads the two ends of the range.
 fn read_range(range: &SharedMap) -> (f32, f32) {
-    let guard = range.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
-    let low = guard.get(LOW_KEY).and_then(|v| v.parse().ok()).unwrap_or(0.0);
+    let guard = range
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
+    let low = guard
+        .get(LOW_KEY)
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(0.0);
     let high = guard
         .get(HIGH_KEY)
         .and_then(|v| v.parse().ok())
@@ -44,7 +49,9 @@ fn read_range(range: &SharedMap) -> (f32, f32) {
 
 /// Writes the two ends of the range.
 fn write_range(range: &SharedMap, low: f32, high: f32) {
-    let mut guard = range.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+    let mut guard = range
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
     guard.insert(LOW_KEY.to_string(), low.to_string());
     guard.insert(HIGH_KEY.to_string(), high.to_string());
 }
@@ -141,7 +148,6 @@ impl RangeSlider {
         self.on_change = Some(Arc::new(callback));
         self
     }
-
 }
 
 pub struct RangeSlider {
@@ -319,11 +325,7 @@ impl Widget for RangeSlider {
             x1: bounds.x1,
             y1: bounds.y0 + (bounds.height() + height) / 2.0,
         };
-        cx.fill_rounded_rect(
-            track,
-            (height / 2.0) as f32,
-            self.style.track_color,
-        );
+        cx.fill_rounded_rect(track, (height / 2.0) as f32, self.style.track_color);
 
         // The band between the two thumbs. v1's band was a plain rectangle
         // with no radius, drawn over the rounded track.

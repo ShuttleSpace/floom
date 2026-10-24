@@ -75,9 +75,14 @@ fn the_tokens_and_colours_reach_the_style() {
         "the token's title size"
     );
     assert_eq!(style.bar_color, theme().colors().surface, "the bar's fill");
-    assert_eq!(style.title_color, theme().colors().on_surface, "the title's ink");
     assert_eq!(
-        style.action_color, theme().colors().on_surface_variant,
+        style.title_color,
+        theme().colors().on_surface,
+        "the title's ink"
+    );
+    assert_eq!(
+        style.action_color,
+        theme().colors().on_surface_variant,
         "the actions' ink"
     );
 }
@@ -89,7 +94,11 @@ fn the_callers_height_wins_over_the_token() {
         floom_core_theme::component_tokens::ComponentTokens::AppBar(tokens) => tokens,
         _ => unreachable!(),
     };
-    assert_eq!(kit().resolved_style().height, tokens.height, "the token's by default");
+    assert_eq!(
+        kit().resolved_style().height,
+        tokens.height,
+        "the token's by default"
+    );
     assert_eq!(
         kit().height(48.0).resolved_style().height,
         48.0,
@@ -134,7 +143,9 @@ fn the_bar_is_painted_in_v1_s_colour() {
         .ops()
         .iter()
         .find_map(|op| match op {
-            PaintOp::Text { text, size, color, .. } => Some((text.clone(), *size, *color)),
+            PaintOp::Text {
+                text, size, color, ..
+            } => Some((text.clone(), *size, *color)),
             _ => None,
         })
         .expect("the title is painted");
@@ -166,13 +177,10 @@ fn an_elevation_draws_the_shadow() {
     let mut recorder = SceneRecorder::new(BOX);
     raised.paint(&mut recorder, id);
     recorder.finish();
-    let shadow = recorder
-        .ops()
-        .iter()
-        .find_map(|op| match op {
-            PaintOp::Shadow { blur, spread, .. } => Some((*blur, *spread)),
-            _ => None,
-        });
+    let shadow = recorder.ops().iter().find_map(|op| match op {
+        PaintOp::Shadow { blur, spread, .. } => Some((*blur, *spread)),
+        _ => None,
+    });
     assert_eq!(
         shadow,
         Some((2.0 + 2.0 * 2.0, 1.0)),
@@ -192,7 +200,11 @@ fn the_callers_slots_are_mounted() {
         .view();
     let row = bar.children().remove(0).build();
     // The leading, the title, the spacer, the actions.
-    assert_eq!(row.children().len(), 4, "the leading, the title, the room and the actions");
+    assert_eq!(
+        row.children().len(),
+        4,
+        "the leading, the title, the room and the actions"
+    );
     let leading = row.children().remove(0).build();
     let mut create = AllocatingCreateContext::new();
     let id: ElementId = leading.create(&mut create);

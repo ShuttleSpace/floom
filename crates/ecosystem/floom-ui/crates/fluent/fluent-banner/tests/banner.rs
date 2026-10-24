@@ -19,7 +19,7 @@ use floom_widgets::testkit::{AllocatingCreateContext, PaintOp, SceneRecorder, Te
 use floom_core_theme::global_theme::DesignSystem;
 use floom_core_theme::theme::{MultiTheme, Theme};
 
-use floom_widget_fluent_banner::{FluentBanner, FluentBannerStyle, banner_accent};
+use floom_widget_fluent_banner::{banner_accent, FluentBanner, FluentBannerStyle};
 
 const BOX: Rect = Rect {
     x0: 0.0,
@@ -81,7 +81,9 @@ fn text_of(kit: FluentBanner, index: usize) -> (String, f32, Color) {
     let ops = ops_of(&*text);
     ops.iter()
         .find_map(|op| match op {
-            PaintOp::Text { text, size, color, .. } => Some((text.clone(), *size, *color)),
+            PaintOp::Text {
+                text, size, color, ..
+            } => Some((text.clone(), *size, *color)),
             _ => None,
         })
         .expect("a banner paints its texts")
@@ -116,9 +118,14 @@ fn the_tokens_and_colours_reach_the_style() {
     );
     assert_eq!(style.gap, tokens.gap, "the token's gap");
     assert_eq!(style.icon_size, tokens.icon_size, "the icon's size");
-    assert_eq!(style.text_color, theme().colors().on_surface, "the message's ink");
     assert_eq!(
-        style.action_color, theme().colors().primary,
+        style.text_color,
+        theme().colors().on_surface,
+        "the message's ink"
+    );
+    assert_eq!(
+        style.action_color,
+        theme().colors().primary,
         "the action's ink"
     );
 }
@@ -136,7 +143,10 @@ fn three_accents_are_fixed_literals_and_one_is_the_themes_error() {
     let theme = theme();
 
     assert_eq!(
-        banner_accent(&theme, floom_core_theme::props::banner::BannerVariant::Error),
+        banner_accent(
+            &theme,
+            floom_core_theme::props::banner::BannerVariant::Error
+        ),
         theme.colors().error,
         "error reuses the theme's error role"
     );
@@ -176,7 +186,11 @@ fn the_strip_is_the_accent_at_26() {
         "v1's `with_alpha(accent, 26)`"
     );
     assert_eq!(
-        (style.container_color.r, style.container_color.g, style.container_color.b),
+        (
+            style.container_color.r,
+            style.container_color.g,
+            style.container_color.b
+        ),
         (style.accent.r, style.accent.g, style.accent.b),
         "CONTROL: the tint is the accent's colour at a lower alpha -- so the \
          assertion above is about the alpha and not about a different hue"
@@ -244,7 +258,9 @@ fn the_action_is_painted_in_primary() {
     let (label, size, ink) = ops
         .iter()
         .find_map(|op| match op {
-            PaintOp::Text { text, size, color, .. } => Some((text.clone(), *size, *color)),
+            PaintOp::Text {
+                text, size, color, ..
+            } => Some((text.clone(), *size, *color)),
             _ => None,
         })
         .expect("the action paints its label");
@@ -311,8 +327,7 @@ fn the_strip_has_no_gap() {
         .layout_request()
         .expect("the strip asks for its own space");
     assert_eq!(
-        request.gap,
-        None,
+        request.gap, None,
         "the gap v1 wrote never had two children to separate"
     );
 }
@@ -342,7 +357,11 @@ fn the_strip_is_padded_and_has_a_minimum_height() {
 /// The props report the text, and the callback is stored in the v1 shape too.
 #[test]
 fn the_props_report_the_message_and_the_callback() {
-    let kit = kit().icon("!").message("Sync failed").action("Retry").on_action(|| {});
+    let kit = kit()
+        .icon("!")
+        .message("Sync failed")
+        .action("Retry")
+        .on_action(|| {});
     assert_eq!(kit.props().message, "Sync failed");
     assert_eq!(kit.props().icon.as_deref(), Some("!"));
     assert_eq!(kit.props().action_label.as_deref(), Some("Retry"));

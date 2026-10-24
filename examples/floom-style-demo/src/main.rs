@@ -31,11 +31,11 @@
 //!
 //! Run with `cargo run -p floom-style-demo`.
 
-use floom_material::{MotionDuration, MotionEasing, MotionTransition};
-use floom_renderer::{FrameInfo, render_once};
 use floom::floom_layout::{AbsoluteInset, Position};
 use floom::floom_scene::SceneNode;
 use floom::prelude::*;
+use floom_material::{MotionDuration, MotionEasing, MotionTransition};
+use floom_renderer::{FrameInfo, render_once};
 
 // --- act 1 & 2: one card on a surface ---------------------------------------
 

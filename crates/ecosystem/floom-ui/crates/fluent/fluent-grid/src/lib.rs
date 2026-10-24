@@ -108,7 +108,9 @@ impl FluentGrid {
         // v1 padded the last row with empty cells, so that every row held the
         // same number of cells and each cell grew by a share of the row.
         while !children.is_empty() && children.len() % cols != 0 {
-            children.push(Arc::new(|| Box::new(floom_widgets::Text::new(String::new()))));
+            children.push(Arc::new(|| {
+                Box::new(floom_widgets::Text::new(String::new()))
+            }));
         }
 
         // The index is the cell's key, so a row remounts only when its

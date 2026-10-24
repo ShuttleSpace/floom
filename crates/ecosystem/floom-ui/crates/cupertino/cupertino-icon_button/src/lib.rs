@@ -43,13 +43,17 @@ use floom_widget_cupertino_icon::CupertinoIconStyle;
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::icon_button::{IconButtonProps, IconButtonVariant as PropsVariant};
 use floom_core_theme::theme::{MultiTheme, Theme};
-use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color::to_engine_color as to_paint;
+use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color_ext::*;
 
-
 /// Fully transparent, which is what the text variant's fill and outline both are.
-const CLEAR: Color = Color { r: 0, g: 0, b: 0, a: 0 };
+const CLEAR: Color = Color {
+    r: 0,
+    g: 0,
+    b: 0,
+    a: 0,
+};
 
 /// Cupertino's icon button, resolved to plain data.
 ///

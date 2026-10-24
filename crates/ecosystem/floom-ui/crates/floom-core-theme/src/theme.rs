@@ -1,6 +1,6 @@
 use crate::component_tokens::material::MaterialComponentTokens;
 use crate::component_tokens::{ComponentId, ComponentTokens};
-use crate::global_theme::{DesignSystem, current_design_system, is_dark};
+use crate::global_theme::{current_design_system, is_dark, DesignSystem};
 use crate::tokens::color::{Color, ColorTokens};
 use crate::tokens::motion::MotionTokens;
 use crate::tokens::radius::RadiusTokens;
@@ -196,7 +196,11 @@ impl MaterialTheme {
 
 impl Theme for MaterialTheme {
     fn colors(&self) -> &ColorTokens {
-        if is_dark() { &self.colors_dark } else { &self.colors }
+        if is_dark() {
+            &self.colors_dark
+        } else {
+            &self.colors
+        }
     }
     fn spacing(&self) -> &SpacingTokens {
         &self.spacing
@@ -303,7 +307,11 @@ impl CupertinoTheme {
 
 impl Theme for CupertinoTheme {
     fn colors(&self) -> &ColorTokens {
-        if is_dark() { &self.colors_dark } else { &self.colors }
+        if is_dark() {
+            &self.colors_dark
+        } else {
+            &self.colors
+        }
     }
     fn spacing(&self) -> &SpacingTokens {
         &self.spacing
@@ -410,7 +418,11 @@ impl FluentTheme {
 
 impl Theme for FluentTheme {
     fn colors(&self) -> &ColorTokens {
-        if is_dark() { &self.colors_dark } else { &self.colors }
+        if is_dark() {
+            &self.colors_dark
+        } else {
+            &self.colors
+        }
     }
     fn spacing(&self) -> &SpacingTokens {
         &self.spacing

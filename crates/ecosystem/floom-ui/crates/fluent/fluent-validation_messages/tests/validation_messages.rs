@@ -69,7 +69,9 @@ fn message_painted(list: &ValidationMessagesList, index: usize) -> (String, f32,
     ops_of(&*message)
         .iter()
         .find_map(|op| match op {
-            PaintOp::Text { text, size, color, .. } => Some((text.clone(), *size, *color)),
+            PaintOp::Text {
+                text, size, color, ..
+            } => Some((text.clone(), *size, *color)),
             _ => None,
         })
         .expect("a message is painted")
@@ -81,13 +83,19 @@ fn message_painted(list: &ValidationMessagesList, index: usize) -> (String, f32,
 #[test]
 fn the_tokens_and_colours_reach_the_style() {
     let style: FluentValidationMessagesStyle = kit().resolved_style();
-    let tokens = match theme().component(floom_core_theme::component_tokens::ComponentId::ValidationMessages) {
+    let tokens = match theme()
+        .component(floom_core_theme::component_tokens::ComponentId::ValidationMessages)
+    {
         floom_core_theme::component_tokens::ComponentTokens::ValidationMessages(tokens) => tokens,
         _ => unreachable!(),
     };
     assert_eq!(style.font_size, tokens.font_size, "the token's size");
     assert_eq!(style.gap, tokens.gap, "the token's gap");
-    assert_eq!(style.error_color, theme().colors().error, "the theme's error");
+    assert_eq!(
+        style.error_color,
+        theme().colors().error,
+        "the theme's error"
+    );
     // The props default to the tokens, so the two readings agree until a
     // caller overrides one of them.
     assert_eq!(style.painted_font_size, tokens.font_size);
@@ -164,10 +172,7 @@ fn the_caller_can_push_into_the_list() {
 
     assert!(list.children().is_empty(), "nothing to begin with");
 
-    handle
-        .lock()
-        .unwrap()
-        .push("Name is required".to_string());
+    handle.lock().unwrap().push("Name is required".to_string());
     assert_eq!(list.children().len(), 1, "the message is there");
     assert_eq!(
         list.current_messages(),
@@ -176,10 +181,7 @@ fn the_caller_can_push_into_the_list() {
     );
 
     // The handle the caller holds is the same list the widget draws.
-    handle
-        .lock()
-        .unwrap()
-        .push("Name is too short".to_string());
+    handle.lock().unwrap().push("Name is too short".to_string());
     assert_eq!(list.children().len(), 2, "two messages");
 }
 

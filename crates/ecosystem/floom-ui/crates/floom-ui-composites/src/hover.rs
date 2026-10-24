@@ -25,8 +25,8 @@ use floom_core::{
 };
 use floom_types::PointerPhase;
 
-use floom_widgets::primitives::{SemanticsHint, emit_semantics};
-use floom_widgets::{SharedFlag, read_flag, write_flag};
+use floom_widgets::primitives::{emit_semantics, SemanticsHint};
+use floom_widgets::{read_flag, write_flag, SharedFlag};
 
 /// A callback in the shape 2.0's slots need.
 type Callback = Arc<dyn Fn(bool) + Send + Sync + 'static>;
@@ -62,11 +62,9 @@ impl Default for HoverBox {
 impl HoverBox {
     pub fn new() -> Self {
         Self {
-            child: Child::new(
-                floom_core::ChildKey::index(0),
-                LayoutRequest::new(),
-                || Box::new(floom_widgets::Text::new("")),
-            ),
+            child: Child::new(floom_core::ChildKey::index(0), LayoutRequest::new(), || {
+                Box::new(floom_widgets::Text::new(""))
+            }),
             hovered: floom_widgets::shared_flag(false),
             highlight: Color::rgba(0, 0, 0, 0),
             on_hover_change: None,

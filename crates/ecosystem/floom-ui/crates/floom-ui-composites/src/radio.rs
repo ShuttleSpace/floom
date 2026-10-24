@@ -40,7 +40,7 @@ use floom_core::{
 };
 use floom_types::{FontWeight, Path, PointerButton, PointerPhase, Stroke};
 
-use floom_widgets::{InteractionState, Revision, SemanticsHint, emit_semantics, resolved_color};
+use floom_widgets::{emit_semantics, resolved_color, InteractionState, Revision, SemanticsHint};
 
 /// Gap between the ring's right edge and the start of the label.
 const INDICATOR_LABEL_GAP: f32 = 6.0;

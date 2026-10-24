@@ -82,14 +82,14 @@ use std::sync::Arc;
 use floom_core::{Child, ChildKey, LayoutRequest, WidgetAny};
 use floom_signal::{RwSignal, SignalGet};
 use floom_types::Color as PaintColor;
-use floom_widgets::text_input::{SharedFlag, read_flag, shared_flag, write_flag};
+use floom_widgets::text_input::{read_flag, shared_flag, write_flag, SharedFlag};
 use floom_widgets::{Align, Axis, Conditional, Pressable, Stack, Surface, VectorIcon};
 
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::speed_dial::{SpeedDialDirection, SpeedDialProps};
 use floom_core_theme::theme::{MultiTheme, Theme};
-use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color::to_engine_color as to_paint;
+use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color_ext::with_alpha;
 use floom_widget_md_icon::{MdIcon, MD_ICON_VIEW_BOX};
 use floom_widget_runtime::theme_signal;
@@ -287,9 +287,12 @@ impl MaterialSpeedDial {
         } else {
             self.props.fab_icon.clone()
         };
-        let fab_glyph = VectorIcon::from_path_data(MdIcon::new(fab_icon.as_str()).path_data(), MD_ICON_VIEW_BOX)
-            .size(ICON_SIZE)
-            .color(to_paint(style.fab_foreground));
+        let fab_glyph = VectorIcon::from_path_data(
+            MdIcon::new(fab_icon.as_str()).path_data(),
+            MD_ICON_VIEW_BOX,
+        )
+        .size(ICON_SIZE)
+        .color(to_paint(style.fab_foreground));
         let fab_surface = Surface::new()
             .request(
                 LayoutRequest::new()
@@ -338,9 +341,7 @@ impl MaterialSpeedDial {
 
         // The fan: one filled circle per action.
         let mut buttons = match direction {
-            SpeedDialDirection::Left | SpeedDialDirection::Right => {
-                Stack::new(Axis::Horizontal)
-            }
+            SpeedDialDirection::Left | SpeedDialDirection::Right => Stack::new(Axis::Horizontal),
             SpeedDialDirection::Up | SpeedDialDirection::Down => Stack::new(Axis::Vertical),
         }
         .gap(style.gap)
@@ -467,4 +468,3 @@ fn fab_first(direction: SpeedDialDirection) -> bool {
         SpeedDialDirection::Down | SpeedDialDirection::Right
     )
 }
-

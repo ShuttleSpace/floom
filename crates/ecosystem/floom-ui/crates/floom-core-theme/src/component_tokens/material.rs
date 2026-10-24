@@ -532,10 +532,16 @@ impl MaterialComponentTokens {
             expand_transition: ExpandTransitionTokens::default(),
             slide_transition: SlideTransitionTokens::default(),
             icon_button: IconButtonTokens::default(),
-            expansion_panels: ExpansionPanelsTokens { icon_size: 16.0, ..Default::default() },
+            expansion_panels: ExpansionPanelsTokens {
+                icon_size: 16.0,
+                ..Default::default()
+            },
             speed_dial: SpeedDialTokens::default(),
             chip_group: ChipGroupTokens::default(),
-            list_group: ListGroupTokens { icon_size: 16.0, ..Default::default() },
+            list_group: ListGroupTokens {
+                icon_size: 16.0,
+                ..Default::default()
+            },
             counter: CounterTokens::default(),
             responsive: ResponsiveTokens::default(),
             checkbox_btn: CheckboxBtnTokens::default(),
@@ -888,10 +894,16 @@ impl MaterialComponentTokens {
             expand_transition: ExpandTransitionTokens::default(),
             slide_transition: SlideTransitionTokens::default(),
             icon_button: IconButtonTokens::default(),
-            expansion_panels: ExpansionPanelsTokens { icon_size: 16.0, ..Default::default() },
+            expansion_panels: ExpansionPanelsTokens {
+                icon_size: 16.0,
+                ..Default::default()
+            },
             speed_dial: SpeedDialTokens::default(),
             chip_group: ChipGroupTokens::default(),
-            list_group: ListGroupTokens { icon_size: 16.0, ..Default::default() },
+            list_group: ListGroupTokens {
+                icon_size: 16.0,
+                ..Default::default()
+            },
             counter: CounterTokens::default(),
             responsive: ResponsiveTokens::default(),
             checkbox_btn: CheckboxBtnTokens::default(),
@@ -947,9 +959,7 @@ impl MaterialComponentTokens {
             ComponentId::Avatar => ComponentTokens::Avatar(self.avatar.clone()),
             ComponentId::Alert => ComponentTokens::Alert(self.alert.clone()),
             ComponentId::Rating => ComponentTokens::Rating(self.rating.clone()),
-            ComponentId::Pagination => {
-                ComponentTokens::Pagination(self.pagination.clone())
-            }
+            ComponentId::Pagination => ComponentTokens::Pagination(self.pagination.clone()),
             ComponentId::Timeline => ComponentTokens::Timeline(self.timeline.clone()),
             ComponentId::Image => ComponentTokens::Image(self.image.clone()),
             ComponentId::Banner => ComponentTokens::Banner(self.banner.clone()),
@@ -964,9 +974,7 @@ impl MaterialComponentTokens {
             ComponentId::Spacer => ComponentTokens::Spacer(self.spacer.clone()),
             ComponentId::SystemBar => ComponentTokens::SystemBar(self.system_bar.clone()),
             ComponentId::Combobox => ComponentTokens::Combobox(self.combobox.clone()),
-            ComponentId::Autocomplete => {
-                ComponentTokens::Autocomplete(self.autocomplete.clone())
-            }
+            ComponentId::Autocomplete => ComponentTokens::Autocomplete(self.autocomplete.clone()),
             ComponentId::DatePicker => ComponentTokens::DatePicker(self.date_picker.clone()),
             ComponentId::TimePicker => ComponentTokens::TimePicker(self.time_picker.clone()),
             ComponentId::EmptyState => ComponentTokens::EmptyState(self.empty_state.clone()),
@@ -982,33 +990,21 @@ impl MaterialComponentTokens {
                 ComponentTokens::ValidationMessages(self.validation_messages.clone())
             }
             ComponentId::Stepper => ComponentTokens::Stepper(self.stepper.clone()),
-            ComponentId::Breadcrumbs => {
-                ComponentTokens::Breadcrumbs(self.breadcrumbs.clone())
-            }
+            ComponentId::Breadcrumbs => ComponentTokens::Breadcrumbs(self.breadcrumbs.clone()),
             ComponentId::Window => ComponentTokens::Window(self.window.clone()),
-            ComponentId::SlideGroup => {
-                ComponentTokens::SlideGroup(self.slide_group.clone())
-            }
+            ComponentId::SlideGroup => ComponentTokens::SlideGroup(self.slide_group.clone()),
             ComponentId::ItemGroup => ComponentTokens::ItemGroup(self.item_group.clone()),
-            ComponentId::ColorPicker => {
-                ComponentTokens::ColorPicker(self.color_picker.clone())
-            }
-            ComponentId::ButtonGroup => {
-                ComponentTokens::ButtonGroup(self.button_group.clone())
-            }
+            ComponentId::ColorPicker => ComponentTokens::ColorPicker(self.color_picker.clone()),
+            ComponentId::ButtonGroup => ComponentTokens::ButtonGroup(self.button_group.clone()),
             ComponentId::FloatingActionButton => {
                 ComponentTokens::FloatingActionButton(self.floating_action_button.clone())
             }
-            ComponentId::RangeSlider => {
-                ComponentTokens::RangeSlider(self.range_slider.clone())
-            }
+            ComponentId::RangeSlider => ComponentTokens::RangeSlider(self.range_slider.clone()),
             ComponentId::FileInput => ComponentTokens::FileInput(self.file_input.clone()),
             ComponentId::OtpInput => ComponentTokens::OtpInput(self.otp_input.clone()),
             ComponentId::ListItem => ComponentTokens::ListItem(self.list_item.clone()),
             ComponentId::Table => ComponentTokens::Table(self.table.clone()),
-            ComponentId::DataIterator => {
-                ComponentTokens::DataIterator(self.data_iterator.clone())
-            }
+            ComponentId::DataIterator => ComponentTokens::DataIterator(self.data_iterator.clone()),
             ComponentId::Sparkline => ComponentTokens::Sparkline(self.sparkline.clone()),
             ComponentId::Kbd => ComponentTokens::Kbd(self.kbd.clone()),
             ComponentId::Code => ComponentTokens::Code(self.code.clone()),
@@ -1032,16 +1028,22 @@ impl MaterialComponentTokens {
                 ComponentTokens::SlideTransition(self.slide_transition.clone())
             }
             ComponentId::IconButton => ComponentTokens::IconButton(self.icon_button.clone()),
-            ComponentId::ExpansionPanels => ComponentTokens::ExpansionPanels(self.expansion_panels.clone()),
+            ComponentId::ExpansionPanels => {
+                ComponentTokens::ExpansionPanels(self.expansion_panels.clone())
+            }
             ComponentId::SpeedDial => ComponentTokens::SpeedDial(self.speed_dial.clone()),
             ComponentId::ChipGroup => ComponentTokens::ChipGroup(self.chip_group.clone()),
             ComponentId::ListGroup => ComponentTokens::ListGroup(self.list_group.clone()),
             ComponentId::Counter => ComponentTokens::Counter(self.counter.clone()),
             ComponentId::Responsive => ComponentTokens::Responsive(self.responsive.clone()),
             ComponentId::CheckboxBtn => ComponentTokens::CheckboxBtn(self.checkbox_btn.clone()),
-            ComponentId::ListSubheader => ComponentTokens::ListSubheader(self.list_subheader.clone()),
+            ComponentId::ListSubheader => {
+                ComponentTokens::ListSubheader(self.list_subheader.clone())
+            }
             ComponentId::NumberInput => ComponentTokens::NumberInput(self.number_input.clone()),
-            ComponentId::PullToRefresh => ComponentTokens::PullToRefresh(self.pull_to_refresh.clone()),
+            ComponentId::PullToRefresh => {
+                ComponentTokens::PullToRefresh(self.pull_to_refresh.clone())
+            }
             ComponentId::ConfirmEdit => ComponentTokens::ConfirmEdit(self.confirm_edit.clone()),
         }
     }

@@ -12,7 +12,7 @@ use floom_types::Rect;
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::global_theme::DesignSystem;
 use floom_core_theme::theme::{MultiTheme, Theme};
-use floom_widgets::testkit::{AllocatingCreateContext, paint_snapshot};
+use floom_widgets::testkit::{paint_snapshot, AllocatingCreateContext};
 
 use floom_widget_cupertino_card::CupertinoCard;
 
@@ -306,10 +306,7 @@ fn the_padding_and_the_shadow_survive_the_ripple() {
     let surface = surface_inside(&ripple);
     let declared = surface.layout_request().expect("a request");
     assert!(declared.padding.is_some(), "padding");
-    assert!(
-        surface.decoration().drop_shadow().is_some(),
-        "elevation"
-    );
+    assert!(surface.decoration().drop_shadow().is_some(), "elevation");
 }
 
 // --- elevation ------------------------------------------------------------

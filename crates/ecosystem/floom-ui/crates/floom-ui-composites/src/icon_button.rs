@@ -40,14 +40,13 @@ use std::sync::Arc;
 
 use floom_accessibility::SemanticsRole;
 use floom_core::{
-    Align, Child, ChildKey, Color, CreateContext, LayoutRequest, UpdateContext, Widget,
-    WidgetAny,
+    Align, Child, ChildKey, Color, CreateContext, LayoutRequest, UpdateContext, Widget, WidgetAny,
 };
 
 use floom_widgets::controls::Pressable;
-use floom_widgets::vector_icon::VectorIcon;
 use floom_widgets::ripple::Ripple;
 use floom_widgets::surface::Surface;
+use floom_widgets::vector_icon::VectorIcon;
 
 /// Which of the three appearances an icon button takes.
 ///
@@ -416,37 +415,33 @@ impl Widget for IconButton {
                 // no `Send` bound at all.
                 Box::new(
                     Ripple::new()
-                        .child(
-                            LayoutRequest::new().fill(),
-                            {
-                                // Both clones happen *here*, in the outer `Fn`'s body,
-                                // so the closure below owns them outright. Cloning
-                                // inside it instead would leave every inner closure
-                                // borrowing the outer capture, which an `Fn` cannot
-                                // hand out and `'static` cannot outlive.
-                                let on_click = on_click.clone();
-                                let surface = surface.clone();
-                                move || {
-                                    let mut pressable = Pressable::new(Child::new(
-                                        ChildKey::index(0),
-                                        LayoutRequest::new().fill(),
-                                        {
-                                            let surface = surface.clone();
-                                            move || Box::new(surface.clone())
-                                        },
-                                    ))
-                                    .role(SemanticsRole::Button)
-                                    .disabled(disabled);
+                        .child(LayoutRequest::new().fill(), {
+                            // Both clones happen *here*, in the outer `Fn`'s body,
+                            // so the closure below owns them outright. Cloning
+                            // inside it instead would leave every inner closure
+                            // borrowing the outer capture, which an `Fn` cannot
+                            // hand out and `'static` cannot outlive.
+                            let on_click = on_click.clone();
+                            let surface = surface.clone();
+                            move || {
+                                let mut pressable = Pressable::new(Child::new(
+                                    ChildKey::index(0),
+                                    LayoutRequest::new().fill(),
+                                    {
+                                        let surface = surface.clone();
+                                        move || Box::new(surface.clone())
+                                    },
+                                ))
+                                .role(SemanticsRole::Button)
+                                .disabled(disabled);
 
-                                    if let Some(on_click) = on_click.clone() {
-                                        pressable =
-                                            pressable.on_click(move || on_click());
-                                    }
-
-                                    Box::new(pressable)
+                                if let Some(on_click) = on_click.clone() {
+                                    pressable = pressable.on_click(move || on_click());
                                 }
-                            },
-                        )
+
+                                Box::new(pressable)
+                            }
+                        })
                         .radius(f64::from(style.radius))
                         .ink(paint.ripple_ink)
                         .disabled(disabled),

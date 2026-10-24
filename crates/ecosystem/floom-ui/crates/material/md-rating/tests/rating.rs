@@ -164,7 +164,9 @@ fn the_star_is_the_size_the_token_says() {
     let mut cx = RecordingUpdateContext::new();
     conditional.update(&mut cx, id);
     let glyph = conditional.children().remove(0).build();
-    let request = glyph.layout_request().expect("the glyph asks for its own space");
+    let request = glyph
+        .layout_request()
+        .expect("the glyph asks for its own space");
     assert_eq!(
         request.width,
         Some(floom_core::Length::Px(resolved.star_size)),
@@ -199,7 +201,11 @@ fn a_value_above_the_maximum_is_clamped() {
     let inks = star_inks(&row);
     assert_eq!(inks.len(), 5);
     for ink in inks {
-        assert_eq!(ink, Some(paint(resolved.active_color)), "every star is filled");
+        assert_eq!(
+            ink,
+            Some(paint(resolved.active_color)),
+            "every star is filled"
+        );
     }
 }
 
@@ -218,7 +224,11 @@ fn a_tap_fills_the_stars_below_it() {
 
     tap(&row, 2);
 
-    assert_eq!(seen.lock().unwrap().as_slice(), &[3.0], "v1's value is one more");
+    assert_eq!(
+        seen.lock().unwrap().as_slice(),
+        &[3.0],
+        "v1's value is one more"
+    );
     let inks = star_inks(&row);
     assert_eq!(inks[0], Some(paint(resolved.active_color)), "star 0");
     assert_eq!(inks[1], Some(paint(resolved.active_color)), "star 1");

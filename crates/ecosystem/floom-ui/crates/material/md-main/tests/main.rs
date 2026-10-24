@@ -18,7 +18,7 @@ use floom_types::Color;
 use floom_widgets::testkit::{AllocatingCreateContext, PaintOp, SceneRecorder};
 
 use floom_core_theme::global_theme::DesignSystem;
-use floom_core_theme::layout::{LayoutSlot, register_layout};
+use floom_core_theme::layout::{register_layout, LayoutSlot};
 use floom_core_theme::theme::{MultiTheme, Theme};
 
 use floom_widget_md_main::{MaterialMain, MaterialMainStyle};
@@ -133,7 +133,9 @@ fn the_spacers_are_sized_from_the_registered_insets() {
 
     let region = kit().view();
     let top = region.children().remove(0).build();
-    let request = top.layout_request().expect("the top spacer asks for its own space");
+    let request = top
+        .layout_request()
+        .expect("the top spacer asks for its own space");
     assert_eq!(
         request.height,
         Some(Length::Px(64.0)),
@@ -169,7 +171,11 @@ fn the_spacers_are_sized_from_the_registered_insets() {
 #[test]
 fn the_region_is_a_column_of_three() {
     let region = kit().view();
-    assert_eq!(region.children().len(), 3, "the top, the middle and the bottom");
+    assert_eq!(
+        region.children().len(),
+        3,
+        "the top, the middle and the bottom"
+    );
     let request = region
         .layout_request()
         .expect("the region asks for its own space");
@@ -190,7 +196,11 @@ fn the_region_is_a_column_of_three() {
 #[test]
 fn the_middle_row_is_a_row_of_three() {
     let middle = middle_of(kit());
-    assert_eq!(middle.children().len(), 3, "the left, the content and the right");
+    assert_eq!(
+        middle.children().len(),
+        3,
+        "the left, the content and the right"
+    );
 }
 
 /// The content takes the room the spacers leave.

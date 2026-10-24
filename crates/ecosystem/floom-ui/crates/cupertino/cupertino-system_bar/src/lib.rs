@@ -70,8 +70,8 @@ use floom_widgets::{Align, Surface};
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::system_bar::SystemBarProps;
 use floom_core_theme::theme::{MultiTheme, Theme};
-use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color::to_engine_color as to_paint;
+use floom_core_theme::tokens::color::Color;
 
 /// The system bar's appearance, in the terms v1 used.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -246,4 +246,3 @@ impl Default for CupertinoSystemBar {
         Self::new()
     }
 }
-

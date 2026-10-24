@@ -78,12 +78,7 @@ fn ops_of(widget: &dyn Widget) -> Vec<PaintOp> {
 /// The testkit's own `dispatch` takes a `&mut dyn Widget`, and the stepper's
 /// steps are held as `Box<dyn WidgetAny>`; this is the same thing without the
 /// upcast.
-fn dispatch_any(
-    widget: &mut dyn WidgetAny,
-    id: ElementId,
-    bounds: Rect,
-    event: Event,
-) -> bool {
+fn dispatch_any(widget: &mut dyn WidgetAny, id: ElementId, bounds: Rect, event: Event) -> bool {
     let mut cx = TestEventContext::new(id, bounds, event);
     widget.event(&mut cx, id)
 }
@@ -125,7 +120,9 @@ fn label_of(step: &dyn Widget) -> (String, f32, Color) {
     ops_of(&*label)
         .into_iter()
         .find_map(|op| match op {
-            PaintOp::Text { text, size, color, .. } => Some((text, size, color)),
+            PaintOp::Text {
+                text, size, color, ..
+            } => Some((text, size, color)),
             _ => None,
         })
         .expect("the label is painted")
@@ -185,10 +182,16 @@ fn the_literals_are_in_the_style() {
     assert_eq!(style.marker_font_size, 14.0, "the number in a marker");
     assert_eq!(style.marker_radius, 9999.0, "the marker's radius");
     assert_eq!(style.marker_border, 1.0, "the marker's outline");
-    assert_eq!(style.item_gap, 8.0, "the gap between a marker and its label");
+    assert_eq!(
+        style.item_gap, 8.0,
+        "the gap between a marker and its label"
+    );
     assert_eq!(style.padding_horiz, 8.0, "the padding around the row");
     assert_eq!(style.padding_vert, 12.0, "the padding around the row");
-    assert_eq!(style.connector_min_width, 16.0, "the connector's smallest width");
+    assert_eq!(
+        style.connector_min_width, 16.0,
+        "the connector's smallest width"
+    );
     assert_eq!(style.check_scale, 0.55, "the tick's size");
 }
 
@@ -284,15 +287,24 @@ fn the_labels_follow_the_selection() {
 
     let (text, size, ink) = label_of(&*step_at(&*row, 0));
     assert_eq!(text, "One");
-    assert_eq!(size, kit().resolved_style().label_font_size, "the label's size");
+    assert_eq!(
+        size,
+        kit().resolved_style().label_font_size,
+        "the label's size"
+    );
     assert_eq!(ink, paint(colors.primary), "a step behind is `primary`");
 
     let (_, _, ink) = label_of(&*step_at(&*row, 2));
-    assert_eq!(ink, paint(colors.on_surface), "the current step is `on_surface`");
+    assert_eq!(
+        ink,
+        paint(colors.on_surface),
+        "the current step is `on_surface`"
+    );
 
     let (_, _, ink) = label_of(&*step_at(&*row, 4));
     assert_eq!(
-        ink, paint(colors.on_surface_variant),
+        ink,
+        paint(colors.on_surface_variant),
         "a step ahead is `on_surface_variant`"
     );
 }
@@ -300,10 +312,7 @@ fn the_labels_follow_the_selection() {
 /// A step behind the current one shows a tick; a step ahead shows its number.
 #[test]
 fn a_step_behind_shows_a_tick_and_a_step_ahead_shows_its_number() {
-    let widget = kit()
-        .items(steps(&["One", "Two"]))
-        .selected(1)
-        .view();
+    let widget = kit().items(steps(&["One", "Two"])).selected(1).view();
     let row = row_of(&widget);
 
     let behind = marker_content(&*step_at(&*row, 0));
@@ -354,10 +363,7 @@ fn the_connectors_follow_the_selection() {
 /// once, so the row's colours cannot follow the selection otherwise.
 #[test]
 fn a_change_of_selection_asks_for_a_new_row() {
-    let mut widget = kit()
-        .items(steps(&["One", "Two"]))
-        .selected(0)
-        .view();
+    let mut widget = kit().items(steps(&["One", "Two"])).selected(0).view();
     let id = allocate(&widget);
 
     let mut update = RecordingUpdateContext::new();
@@ -418,7 +424,11 @@ fn a_click_on_an_editable_step_moves_the_selection() {
     );
 
     assert_eq!(widget.selected(), 0, "the selection moved");
-    assert_eq!(*seen.lock().expect("the lock is not poisoned"), 0, "and the callback fired");
+    assert_eq!(
+        *seen.lock().expect("the lock is not poisoned"),
+        0,
+        "and the callback fired"
+    );
 }
 
 /// A step that is not clickable is not a pressable at all: v1's rule was that
@@ -426,10 +436,7 @@ fn a_click_on_an_editable_step_moves_the_selection() {
 /// non-linear.
 #[test]
 fn a_step_that_may_not_be_clicked_is_not_a_pressable() {
-    let widget = kit()
-        .items(steps(&["One", "Two"]))
-        .selected(1)
-        .view();
+    let widget = kit().items(steps(&["One", "Two"])).selected(1).view();
     let row = row_of(&widget);
 
     let step = row.children().remove(0).build();

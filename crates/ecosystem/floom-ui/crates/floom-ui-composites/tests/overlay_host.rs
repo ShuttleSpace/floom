@@ -13,11 +13,13 @@
 //! So these tests are about the transitions, and each one names what it would take for
 //! a panel to get stuck or to disappear.
 
-use floom_core::{Child, ChildKey, ElementId, LayoutRequest, OverlayRequest, UpdateContext, Widget, WidgetAny};
+use floom_core::{
+    Child, ChildKey, ElementId, LayoutRequest, OverlayRequest, UpdateContext, Widget, WidgetAny,
+};
 use floom_types::{OverlayHandle, OverlayKind, Rect};
 
-use floom_widgets::testkit::{AllocatingCreateContext, RecordingUpdateContext};
 use floom_ui_composites::{OverlayHost, Popup};
+use floom_widgets::testkit::{AllocatingCreateContext, RecordingUpdateContext};
 use floom_widgets::Text;
 
 /// A control in the middle of nowhere, so a test that "looks right" has to mean it.
@@ -166,7 +168,10 @@ fn a_host_dismissal_clears_present_so_it_does_not_come_straight_back() {
 
     cx.clear();
     host.closed(granted);
-    assert!(!host.is_shown(), "the host took it down, so the widget agrees");
+    assert!(
+        !host.is_shown(),
+        "the host took it down, so the widget agrees"
+    );
 
     cx.clear();
     host.reconcile(&mut cx, ID, offer(ANCHOR));
@@ -192,10 +197,7 @@ fn a_hand_back_for_another_overlay_is_ignored() {
         !host.closed(theirs),
         "a handle we never opened closes nothing"
     );
-    assert!(
-        host.is_shown(),
-        "so the panel this host owns is still up"
-    );
+    assert!(host.is_shown(), "so the panel this host owns is still up");
 }
 
 // --- the refusal, which is the branch that rots ----------------------------
@@ -219,7 +221,9 @@ fn a_refused_request_falls_back_in_tree_rather_than_showing_nothing() {
         "so the surface is mounted in-tree instead"
     );
     assert!(
-        !host.fallback_children(Some(content()), ChildKey::index(0)).is_empty(),
+        !host
+            .fallback_children(Some(content()), ChildKey::index(0))
+            .is_empty(),
         "and there is a layer for it to live in"
     );
 }
@@ -232,7 +236,8 @@ fn a_granted_overlay_mounts_nothing_in_tree() {
     let mut cx = RecordingUpdateContext::with_bounds(ANCHOR);
     host.reconcile(&mut cx, ID, offer(ANCHOR));
     assert!(
-        host.fallback_children(Some(content()), ChildKey::index(0)).is_empty(),
+        host.fallback_children(Some(content()), ChildKey::index(0))
+            .is_empty(),
         "the host stack owns it now"
     );
 }
@@ -243,7 +248,8 @@ fn a_granted_overlay_mounts_nothing_in_tree() {
 fn a_closed_surface_mounts_nothing_in_tree() {
     let mut host = OverlayHost::new(false);
     assert!(
-        host.fallback_children(Some(content()), ChildKey::index(0)).is_empty(),
+        host.fallback_children(Some(content()), ChildKey::index(0))
+            .is_empty(),
         "not shown, so not mounted"
     );
 }
@@ -274,7 +280,8 @@ fn nothing_to_show_mounts_nothing_anywhere() {
         "there was no content to begin with, so there is nothing to mount"
     );
     assert_eq!(
-        host.fallback_children(Some(content()), ChildKey::index(0)).len(),
+        host.fallback_children(Some(content()), ChildKey::index(0))
+            .len(),
         1,
         "and a panel that *did* have content would have fallen back in-tree"
     );

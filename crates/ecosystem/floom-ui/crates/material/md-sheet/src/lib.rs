@@ -66,14 +66,14 @@ use floom_types::Color as PaintColor;
 use floom_types::{Insets, Shadow};
 
 use floom_ui_composites::Dialog;
-use floom_widgets::text_input::{SharedFlag, read_flag, shared_flag, write_flag};
+use floom_widgets::text_input::{read_flag, shared_flag, write_flag, SharedFlag};
 use floom_widgets::{Align, Axis, Stack, Surface};
 
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::sheet::{SheetProps, SheetSide};
 use floom_core_theme::theme::{MultiTheme, Theme};
-use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color::to_engine_color as to_paint;
+use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color_ext::*;
 use floom_widget_runtime::theme_signal;
 
@@ -347,4 +347,3 @@ fn build_panel(style: MaterialSheetStyle, side: SheetSide, child: Option<Child>)
 
     panel
 }
-

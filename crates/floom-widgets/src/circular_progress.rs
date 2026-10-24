@@ -213,12 +213,24 @@ impl CircularProgress {
 
     /// The track: the whole ring, behind the arc.
     pub fn track_path(&self, center: Point) -> Path {
-        Path::ellipse_arc(center, self.radius(), self.radius(), 0.0, std::f64::consts::TAU)
+        Path::ellipse_arc(
+            center,
+            self.radius(),
+            self.radius(),
+            0.0,
+            std::f64::consts::TAU,
+        )
     }
 
     /// The arc: the part of the ring that shows the progress.
     pub fn arc_path(&self, center: Point) -> Path {
-        Path::ellipse_arc(center, self.radius(), self.radius(), self.start_rad(), self.sweep_rad())
+        Path::ellipse_arc(
+            center,
+            self.radius(),
+            self.radius(),
+            self.start_rad(),
+            self.sweep_rad(),
+        )
     }
 
     pub fn semantics_hint(&self) -> SemanticsHint {

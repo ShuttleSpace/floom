@@ -88,7 +88,10 @@ fn build_divider() -> Box<dyn WidgetAny> {
         Stack::new(Axis::Vertical)
             .gap(8.0)
             .push_layout(LayoutRequest::new(), || Box::new(Text::new("above")))
-            .push_layout(LayoutRequest::new().height(1.0), || Box::new(Divider::new()))
+            .push_layout(
+                LayoutRequest::new().height(1.0),
+                || Box::new(Divider::new()),
+            )
             .push_layout(LayoutRequest::new().width(120.0).height(16.0), || {
                 Box::new(Spacer::new(16.0))
             })
@@ -108,17 +111,14 @@ fn build_container() -> Box<dyn WidgetAny> {
     Box::new(
         Stack::new(Axis::Horizontal)
             .gap(14.0)
-            .child(leaf!(
-                LayoutRequest::new().width(56.0).height(40.0),
-                || Box::new(swatch(Color::rgb(70, 120, 220), 4.0))
-            ))
-            .child(leaf!(
-                LayoutRequest::new().width(56.0).height(40.0),
-                || Box::new(swatch(Color::rgb(70, 120, 220), 20.0))
-            ))
-            .child(leaf!(
-                LayoutRequest::new().width(56.0).height(40.0),
-                || Box::new(
+            .child(leaf!(LayoutRequest::new().width(56.0).height(40.0), || {
+                Box::new(swatch(Color::rgb(70, 120, 220), 4.0))
+            }))
+            .child(leaf!(LayoutRequest::new().width(56.0).height(40.0), || {
+                Box::new(swatch(Color::rgb(70, 120, 220), 20.0))
+            }))
+            .child(leaf!(LayoutRequest::new().width(56.0).height(40.0), || {
+                Box::new(
                     Container::new()
                         .background(Color::WHITE)
                         .radius(8.0)
@@ -128,12 +128,11 @@ fn build_container() -> Box<dyn WidgetAny> {
                             offset_x: 0.0,
                             offset_y: 5.0,
                             spread: 0.0,
-                        })
+                        }),
                 )
-            ))
-            .child(leaf!(
-                LayoutRequest::new().width(56.0).height(40.0),
-                || Box::new(
+            }))
+            .child(leaf!(LayoutRequest::new().width(56.0).height(40.0), || {
+                Box::new(
                     Container::new()
                         .background(Brush::linear(
                             &[
@@ -143,47 +142,41 @@ fn build_container() -> Box<dyn WidgetAny> {
                             Point::new(0.0, 0.0),
                             Point::new(56.0, 0.0),
                         ))
-                        .radius(8.0)
+                        .radius(8.0),
                 )
-            )),
+            })),
     )
 }
 
 fn build_canvas() -> Box<dyn WidgetAny> {
-    Box::new(
-        Stack::new(Axis::Horizontal).gap(14.0).child(leaf!(
-            LayoutRequest::new().width(140.0).height(80.0),
-            || {
-                Box::new(
-                    Canvas::new(|cx: &mut dyn PaintContext| {
-                        let b = cx.bounds();
-                        let bars = [0.35, 0.7, 0.5, 0.9, 0.25];
-                        let gap = 4.0;
-                        let w =
-                            (b.width() - gap * (bars.len() as f64 - 1.0)) / bars.len() as f64;
-                        for (i, value) in bars.iter().enumerate() {
-                            let x = b.x0 + i as f64 * (w + gap);
-                            let top = b.y1 - b.height() * value;
-                            let mut bar = Path::new();
-                            bar.move_to(Point::new(x, b.y1));
-                            bar.line_to(Point::new(x, top));
-                            bar.line_to(Point::new(x + w, top));
-                            bar.line_to(Point::new(x + w, b.y1));
-                            bar.close();
-                            cx.fill_path(&bar, Color::rgb(70, 120, 220));
-                        }
-                        let mut axis = Path::new();
-                        axis.move_to(Point::new(b.x0, b.y1));
-                        axis.line_to(Point::new(b.x1, b.y1));
-                        cx.stroke_path(
-                            &axis,
-                            &Stroke::new(1.0, Color::rgb(140, 140, 140)),
-                        );
-                    })
-                    .size(140.0, 80.0)
-                    .label("a five-bar chart"),
-                )
-            }
-        )),
-    )
+    Box::new(Stack::new(Axis::Horizontal).gap(14.0).child(leaf!(
+        LayoutRequest::new().width(140.0).height(80.0),
+        || {
+            Box::new(
+                Canvas::new(|cx: &mut dyn PaintContext| {
+                    let b = cx.bounds();
+                    let bars = [0.35, 0.7, 0.5, 0.9, 0.25];
+                    let gap = 4.0;
+                    let w = (b.width() - gap * (bars.len() as f64 - 1.0)) / bars.len() as f64;
+                    for (i, value) in bars.iter().enumerate() {
+                        let x = b.x0 + i as f64 * (w + gap);
+                        let top = b.y1 - b.height() * value;
+                        let mut bar = Path::new();
+                        bar.move_to(Point::new(x, b.y1));
+                        bar.line_to(Point::new(x, top));
+                        bar.line_to(Point::new(x + w, top));
+                        bar.line_to(Point::new(x + w, b.y1));
+                        bar.close();
+                        cx.fill_path(&bar, Color::rgb(70, 120, 220));
+                    }
+                    let mut axis = Path::new();
+                    axis.move_to(Point::new(b.x0, b.y1));
+                    axis.line_to(Point::new(b.x1, b.y1));
+                    cx.stroke_path(&axis, &Stroke::new(1.0, Color::rgb(140, 140, 140)));
+                })
+                .size(140.0, 80.0)
+                .label("a five-bar chart"),
+            )
+        }
+    )))
 }

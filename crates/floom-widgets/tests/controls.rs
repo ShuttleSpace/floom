@@ -10,9 +10,9 @@ use floom_core::{
 };
 use floom_scene::SceneNode;
 use floom_types::{Brush, Color, KeyEvent, Length, Modifiers, PointerEvent, PointerPhase};
+use floom_widgets::Stack;
 use floom_widgets::controls::{Button, Pressable, Progress, Switch, SwitchPalette};
 use floom_widgets::primitives::Text;
-use floom_widgets::Stack;
 use floom_widgets::testkit::{
     AllocatingCreateContext, OverlayCall, RecordingUpdateContext, SceneRecorder, TestEventContext,
     dispatch, paint_snapshot, semantics_snapshot,
@@ -160,7 +160,11 @@ fn a_switch_derives_its_geometry_by_default() {
     let track = switch.track_bounds(ROW);
     assert_eq!(track.width(), 40.0, "the default track width");
     assert_eq!(track.height(), 20.0, "half the width, derived");
-    assert_eq!(switch.knob_bounds(ROW).height(), 20.0, "knob fills the track");
+    assert_eq!(
+        switch.knob_bounds(ROW).height(),
+        20.0,
+        "knob fills the track"
+    );
 }
 
 /// An explicit track size is honoured as given, not rounded toward the
@@ -171,7 +175,11 @@ fn a_switch_derives_its_geometry_by_default() {
 fn an_explicit_track_size_is_used_verbatim() {
     let track = Switch::new("x").track_size(52.0, 32.0).track_bounds(ROW);
     assert_eq!((track.width(), track.height()), (52.0, 32.0));
-    assert_eq!(track.height(), track.width() * 0.5 + 6.0, "and not re-derived");
+    assert_eq!(
+        track.height(),
+        track.width() * 0.5 + 6.0,
+        "and not re-derived"
+    );
 }
 
 /// **The v1 reproduction, stated as a claim.** Track 52 × 32, knob 24, inset 2 —
@@ -192,7 +200,11 @@ fn v1_tokens_are_reproducible_exactly() {
         .knob_bounds(ROW);
 
     assert_eq!((off.width(), off.height()), (24.0, 24.0), "square knob");
-    assert_eq!(off.x0, ROW.x0 + 2.0, "2px from the start, as padding(2.0) gave");
+    assert_eq!(
+        off.x0,
+        ROW.x0 + 2.0,
+        "2px from the start, as padding(2.0) gave"
+    );
     assert_eq!(on.x1, ROW.x0 + 52.0 - 2.0, "2px from the far end");
     assert_eq!(off.x1, ROW.x0 + 26.0);
     assert_eq!(on.x0, ROW.x0 + 26.0);
@@ -223,10 +235,18 @@ fn the_knob_travels_inside_the_track() {
 #[test]
 fn each_override_is_independent_of_the_others() {
     let only_track = Switch::new("x").track_size(52.0, 32.0).knob_bounds(ROW);
-    assert_eq!(only_track.height(), 32.0, "knob still derives from the new height");
+    assert_eq!(
+        only_track.height(),
+        32.0,
+        "knob still derives from the new height"
+    );
 
     let sized_knob = Switch::new("x").knob_size(12.0);
-    assert_eq!(sized_knob.knob_bounds(ROW).width(), 12.0, "the knob takes its own size");
+    assert_eq!(
+        sized_knob.knob_bounds(ROW).width(),
+        12.0,
+        "the knob takes its own size"
+    );
     assert_eq!(
         sized_knob.track_bounds(ROW).height(),
         20.0,
@@ -235,7 +255,11 @@ fn each_override_is_independent_of_the_others() {
 
     let only_inset = Switch::new("x").knob_inset(4.0).knob_bounds(ROW);
     assert_eq!(only_inset.x0, ROW.x0 + 4.0);
-    assert_eq!(only_inset.width(), 20.0, "inset moves it, does not resize it");
+    assert_eq!(
+        only_inset.width(),
+        20.0,
+        "inset moves it, does not resize it"
+    );
 }
 
 /// An explicit track height survives `layout_request`, which is where a caller
@@ -248,7 +272,10 @@ fn an_explicit_track_height_reaches_the_layout_request() {
         other => panic!("expected a pixel height, got {other:?}"),
     };
     let derived = px(Switch::new("Wi-Fi").layout_request().unwrap());
-    let explicit = px(Switch::new("Wi-Fi").track_size(52.0, 32.0).layout_request().unwrap());
+    let explicit = px(Switch::new("Wi-Fi")
+        .track_size(52.0, 32.0)
+        .layout_request()
+        .unwrap());
 
     assert!(explicit >= 32.0, "must fit a 32-tall track, got {explicit}");
     assert!(
@@ -262,9 +289,17 @@ fn an_explicit_track_height_reaches_the_layout_request() {
 /// outside its own widget.
 #[test]
 fn a_knob_larger_than_the_track_is_capped() {
-    let knob = Switch::new("x").track_size(52.0, 32.0).knob_size(999.0).knob_bounds(ROW);
+    let knob = Switch::new("x")
+        .track_size(52.0, 32.0)
+        .knob_size(999.0)
+        .knob_bounds(ROW);
     let track = Switch::new("x").track_size(52.0, 32.0).track_bounds(ROW);
-    assert!(knob.height() <= track.height(), "knob {} vs track {}", knob.height(), track.height());
+    assert!(
+        knob.height() <= track.height(),
+        "knob {} vs track {}",
+        knob.height(),
+        track.height()
+    );
 }
 
 //// **The control for the palette tests.** A default switch paints exactly the
@@ -330,8 +365,14 @@ fn an_explicit_disabled_colour_wins_over_everything() {
     let id = ElementId::new(1, 1);
     switch.set_focused(false);
     let painted = paint_snapshot(&switch, id, ROW);
-    assert!(painted.contains("#DEAD00"), "explicit disabled track; got {painted}");
-    assert!(painted.contains("#BEEF00"), "explicit disabled knob; got {painted}");
+    assert!(
+        painted.contains("#DEAD00"),
+        "explicit disabled track; got {painted}"
+    );
+    assert!(
+        painted.contains("#BEEF00"),
+        "explicit disabled knob; got {painted}"
+    );
 }
 
 /// `tints(false)` removes hover and press feedback while leaving the base
@@ -383,7 +424,11 @@ fn turning_tints_off_removes_interaction_feedback() {
         "pressing must be visible with tints on and invisible with them off"
     );
 
-    assert_eq!(flat.switch_palette().track_off, palette.track_off, "base colours survive");
+    assert_eq!(
+        flat.switch_palette().track_off,
+        palette.track_off,
+        "base colours survive"
+    );
 }
 
 /// The disabled path with no explicit colour is still "halve the alpha", which
@@ -413,7 +458,10 @@ fn a_disabled_switch_without_a_palette_still_halves_alpha() {
 /// colour tests while silently changing layout.
 #[test]
 fn a_palette_does_not_move_anything() {
-    let plain = Switch::new("x").track_size(52.0, 32.0).knob_size(24.0).knob_inset(2.0);
+    let plain = Switch::new("x")
+        .track_size(52.0, 32.0)
+        .knob_size(24.0)
+        .knob_inset(2.0);
     let painted = Switch::new("x")
         .track_size(52.0, 32.0)
         .knob_size(24.0)
@@ -452,7 +500,6 @@ fn progress_clamps_and_describes_itself() {
         Some("busy")
     );
 }
-
 
 // --- shared behaviour ------------------------------------------------------
 
@@ -618,8 +665,7 @@ fn a_gradientless_progress_paints_the_same_flat_fill_as_before() {
 // --- Pressable -------------------------------------------------------------
 
 fn pressable(child: impl Fn() -> Box<dyn WidgetAny> + Send + Sync + 'static) -> Pressable {
-    Pressable::new(Child::new(ChildKey::index(0), LayoutRequest::new(), child))
-        .label("header")
+    Pressable::new(Child::new(ChildKey::index(0), LayoutRequest::new(), child)).label("header")
 }
 
 /// A click is a press *and* a release over the same spot. Sending one half is
@@ -663,7 +709,12 @@ fn a_pressable_consumes_the_press() {
     let mut widget = pressable(|| Box::new(Text::new("row")));
     let id = allocate(&widget);
     assert!(
-        dispatch(&mut widget, id, ROW, PointerEvent::primary_down(Point::new(4.0, 4.0)).into()),
+        dispatch(
+            &mut widget,
+            id,
+            ROW,
+            PointerEvent::primary_down(Point::new(4.0, 4.0)).into()
+        ),
         "the press belongs to the pressable"
     );
 }
@@ -680,7 +731,12 @@ fn a_release_without_a_press_does_not_fire() {
     });
     let id = allocate(&widget);
 
-    dispatch(&mut widget, id, ROW, PointerEvent::primary_up(Point::new(4.0, 4.0)).into());
+    dispatch(
+        &mut widget,
+        id,
+        ROW,
+        PointerEvent::primary_up(Point::new(4.0, 4.0)).into(),
+    );
 
     assert_eq!(hits.get(), 0, "a release alone is not a click");
 }
@@ -730,8 +786,8 @@ fn a_focused_pressable_activates_from_the_keyboard() {
 /// the state it was built with — the opposite of what the user sees.
 #[test]
 fn the_reported_expanded_state_follows_a_shared_flag() {
-    use std::sync::atomic::{AtomicBool, Ordering};
     use std::sync::Arc;
+    use std::sync::atomic::{AtomicBool, Ordering};
 
     let open = Arc::new(AtomicBool::new(false));
     let reader = open.clone();
@@ -742,7 +798,10 @@ fn the_reported_expanded_state_follows_a_shared_flag() {
     let mut cx = RecordingUpdateContext::new();
     widget.update(&mut cx, id);
     assert!(
-        widget.semantics_hint().state.contains(SemanticsState::COLLAPSED),
+        widget
+            .semantics_hint()
+            .state
+            .contains(SemanticsState::COLLAPSED),
         "closed panels report collapsed"
     );
 
@@ -750,7 +809,10 @@ fn the_reported_expanded_state_follows_a_shared_flag() {
     let mut cx = RecordingUpdateContext::new();
     widget.update(&mut cx, id);
     assert!(
-        widget.semantics_hint().state.contains(SemanticsState::EXPANDED),
+        widget
+            .semantics_hint()
+            .state
+            .contains(SemanticsState::EXPANDED),
         "a flag that moved since the last update has to invalidate the node, \
          or the semantics tree keeps reporting last frame's answer"
     );

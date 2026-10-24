@@ -13,7 +13,7 @@ use floom_types::{OverlayHandle, Rect};
 
 use floom_ui_composites::combobox::{ComboPick, Combobox, SharedPick};
 use floom_widgets::testkit::{
-    AllocatingCreateContext, RecordingUpdateContext, TestEventContext, paint_snapshot,
+    paint_snapshot, AllocatingCreateContext, RecordingUpdateContext, TestEventContext,
 };
 
 /// The field's box, so the panel's placement can be asserted against a real anchor.
@@ -25,7 +25,10 @@ const FIELD: Rect = Rect {
 };
 
 fn options() -> Vec<String> {
-    ["apple", "banana", "Cherry"].iter().map(|s| s.to_string()).collect()
+    ["apple", "banana", "Cherry"]
+        .iter()
+        .map(|s| s.to_string())
+        .collect()
 }
 
 fn combo() -> Combobox {
@@ -61,7 +64,7 @@ fn the_trigger_declares_its_height_and_floor() {
     let request = combo().layout_request().expect("a trigger has a size");
     assert_eq!(request.height, Some(floom_types::Length::Px(56.0)));
     assert_eq!(
-request.min_width,
+        request.min_width,
         Some(floom_types::Length::Px(240.0)),
         "and the token's floor, so a narrow combobox still reads as a combobox"
     );
@@ -86,7 +89,12 @@ fn opening_asks_for_a_panel_below_the_field() {
     let opened = cx.opened_overlays();
     assert_eq!(opened.len(), 1, "one panel asked for");
     match opened[0] {
-        floom_widgets::testkit::OverlayCall::Open { bounds, kind, modal, .. } => {
+        floom_widgets::testkit::OverlayCall::Open {
+            bounds,
+            kind,
+            modal,
+            ..
+        } => {
             assert_eq!(*kind, floom_types::OverlayKind::Popup);
             assert!(!modal);
             assert_eq!(bounds.x0, FIELD.x0, "aligned with the field's left edge");
@@ -154,7 +162,12 @@ fn an_outside_press_does_not_come_straight_back() {
     let granted = cx.opened_overlays()[0].handle();
     combo.overlay_opened(&mut cx, id, granted);
 
-    combo.overlay_closed(&mut cx, id, granted, Box::new(floom_widgets::Text::new("probe")));
+    combo.overlay_closed(
+        &mut cx,
+        id,
+        granted,
+        Box::new(floom_widgets::Text::new("probe")),
+    );
     assert!(!combo.is_open(), "the widget agrees with the screen");
 
     cx.clear();
@@ -173,7 +186,12 @@ fn a_hand_back_for_another_overlay_does_not_shut_it() {
     let granted = cx.opened_overlays()[0].handle();
     combo.overlay_opened(&mut cx, id, granted);
 
-    combo.overlay_closed(&mut cx, id, OverlayHandle::new(4242), Box::new(floom_widgets::Text::new("probe")));
+    combo.overlay_closed(
+        &mut cx,
+        id,
+        OverlayHandle::new(4242),
+        Box::new(floom_widgets::Text::new("probe")),
+    );
     assert!(combo.is_open(), "a stale hand-back closes nothing of ours");
 }
 
@@ -212,7 +230,11 @@ fn the_selection_is_visible_through_the_shared_handle() {
 #[test]
 fn typing_into_the_shared_buffer_filters_what_is_visible() {
     let combo = combo();
-    assert_eq!(combo.visible(), options(), "an empty query shows everything");
+    assert_eq!(
+        combo.visible(),
+        options(),
+        "an empty query shows everything"
+    );
 
     *combo.query().lock().unwrap() = "an".to_string();
     assert_eq!(

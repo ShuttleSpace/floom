@@ -15,9 +15,7 @@ use std::sync::{Arc, Mutex};
 
 use floom_core::{Child, ChildKey, ElementId, LayoutRequest, Point, Rect, Widget, WidgetAny};
 use floom_types::{Color, PointerEvent};
-use floom_widgets::testkit::{
-    AllocatingCreateContext, PaintOp, SceneRecorder, TestEventContext,
-};
+use floom_widgets::testkit::{AllocatingCreateContext, PaintOp, SceneRecorder, TestEventContext};
 
 use floom_core_theme::global_theme::DesignSystem;
 use floom_core_theme::theme::{MultiTheme, Theme};
@@ -84,7 +82,9 @@ fn stroke_of(ops: &[PaintOp]) -> Option<(f64, Color)> {
 fn text_of(ops: &[PaintOp]) -> (String, f32, Color) {
     ops.iter()
         .find_map(|op| match op {
-            PaintOp::Text { text, size, color, .. } => Some((text.clone(), *size, *color)),
+            PaintOp::Text {
+                text, size, color, ..
+            } => Some((text.clone(), *size, *color)),
             _ => None,
         })
         .expect("something was painted")
@@ -92,11 +92,9 @@ fn text_of(ops: &[PaintOp]) -> (String, f32, Color) {
 
 /// A page: a slot that builds a text.
 fn page(index: usize, text: &'static str) -> Child {
-    Child::new(
-        ChildKey::index(index),
-        LayoutRequest::new(),
-        move || Box::new(floom_widgets::Text::new(text)),
-    )
+    Child::new(ChildKey::index(index), LayoutRequest::new(), move || {
+        Box::new(floom_widgets::Text::new(text))
+    })
 }
 
 /// Clicks a widget: a press and a release over the same spot.
@@ -121,18 +119,36 @@ fn the_tokens_and_colours_reach_the_style() {
         _ => unreachable!(),
     };
     assert_eq!(style.height, tokens.height, "the token's height");
-    assert_eq!(style.border_radius, tokens.border_radius, "the token's radius");
+    assert_eq!(
+        style.border_radius, tokens.border_radius,
+        "the token's radius"
+    );
     assert_eq!(style.dot_size, tokens.dot_size, "the token's dot size");
-    assert_eq!(style.arrow_size, tokens.arrow_size, "the token's arrow size");
+    assert_eq!(
+        style.arrow_size, tokens.arrow_size,
+        "the token's arrow size"
+    );
     assert_eq!(style.surface, theme().colors().surface, "the box's fill");
-    assert_eq!(style.on_surface, theme().colors().on_surface, "the arrows' ink");
-    assert_eq!(style.primary, theme().colors().primary, "the active dot's fill");
+    assert_eq!(
+        style.on_surface,
+        theme().colors().on_surface,
+        "the arrows' ink"
+    );
+    assert_eq!(
+        style.primary,
+        theme().colors().primary,
+        "the active dot's fill"
+    );
     assert_eq!(
         style.dot_inactive_color,
         floom_core_theme::tokens::color_ext::with_alpha(theme().colors().on_surface, 102),
         "v1's inactive dot was `on_surface` at 0.4 of 255"
     );
-    assert_eq!(style.arrow_font_size, tokens.arrow_size * 0.6, "v1's arrow glyph size");
+    assert_eq!(
+        style.arrow_font_size,
+        tokens.arrow_size * 0.6,
+        "v1's arrow glyph size"
+    );
     assert_eq!(style.arrow_width, 40.0, "v1's arrow box width");
     assert_eq!(style.dot_gap, 6.0, "v1's gap between the dots");
     assert_eq!(style.border_width, 1.0, "v1's outline thickness");
@@ -163,7 +179,11 @@ fn the_box_is_painted_the_surface_and_the_outline() {
         "the box's fill"
     );
     let (width, colour) = stroke_of(&ops).expect("v1 drew an outline around the box");
-    assert_eq!(width, f64::from(resolved.border_width), "v1's outline thickness");
+    assert_eq!(
+        width,
+        f64::from(resolved.border_width),
+        "v1's outline thickness"
+    );
     assert_eq!(colour, paint(resolved.border_color), "v1's outline colour");
 }
 
@@ -246,9 +266,7 @@ fn clicking_the_next_arrow_moves_the_page_on() {
 /// window was continuous by default.
 #[test]
 fn clicking_the_previous_arrow_wraps_around() {
-    let viewer = kit()
-        .items(vec![page(0, "One"), page(1, "Two")])
-        .view();
+    let viewer = kit().items(vec![page(0, "One"), page(1, "Two")]).view();
     let mut children = viewer.children();
     let mut previous = children.remove(1).build();
     click(&mut *previous);

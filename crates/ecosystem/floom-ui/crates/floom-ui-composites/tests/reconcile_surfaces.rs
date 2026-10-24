@@ -4,8 +4,8 @@
 //! exercise. A test of a widget's behaviour belongs with the widget, and this
 //! file is what has to be deleted with it.
 
-use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::Arc;
 
 use floom_app::WidgetHost;
 use floom_core::{Axis, Child, ChildKey, LayoutRequest, Point, Rect, Size, WidgetAny};
@@ -271,4 +271,3 @@ fn bottom_sheet_mounts_a_bottom_layer_when_shown() {
     assert_eq!(app.overlay_count(), 0, "closing takes it off the stack");
     assert_eq!(app.frame().painted, 1, "sheet layer fully unmounted");
 }
-

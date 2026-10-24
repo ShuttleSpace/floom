@@ -78,8 +78,8 @@ use floom_widgets::{Align, Axis, Stack, Surface};
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::skeleton_loader::{SkeletonLoaderProps, SkeletonType};
 use floom_core_theme::theme::{MultiTheme, Theme};
-use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color::to_engine_color as to_paint;
+use floom_core_theme::tokens::color::Color;
 
 /// A circle's radius: 9999 is a circle whatever the size. A v1 literal.
 const CIRCLE_RADIUS: f32 = 9999.0;
@@ -274,11 +274,7 @@ fn content_of(props: &SkeletonLoaderProps, style: &FluentSkeletonStyle) -> Box<d
                     move || {
                         Box::new(
                             Surface::new()
-                                .request(
-                                    LayoutRequest::new()
-                                        .width_pct(100.0)
-                                        .height(text_height),
-                                )
+                                .request(LayoutRequest::new().width_pct(100.0).height(text_height))
                                 .background(fill)
                                 .radius(corner_radius),
                         )
@@ -307,11 +303,7 @@ fn content_of(props: &SkeletonLoaderProps, style: &FluentSkeletonStyle) -> Box<d
                     move || {
                         Box::new(
                             Surface::new()
-                                .request(
-                                    LayoutRequest::new()
-                                        .width_pct(100.0)
-                                        .height(text_height),
-                                )
+                                .request(LayoutRequest::new().width_pct(100.0).height(text_height))
                                 .background(fill)
                                 .radius(corner_radius),
                         )
@@ -336,4 +328,3 @@ fn content_of(props: &SkeletonLoaderProps, style: &FluentSkeletonStyle) -> Box<d
         }
     }
 }
-

@@ -26,8 +26,8 @@ use floom_widgets::{Align, Axis, Stack, Surface};
 
 use floom_core_theme::props::container::ContainerProps;
 use floom_core_theme::theme::{MultiTheme, Theme};
-use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color::to_engine_color as to_paint;
+use floom_core_theme::tokens::color::Color;
 
 /// A builder for the container's content, replayed each time the box is built.
 pub type ChildBuilder = Arc<dyn Fn() -> Box<dyn WidgetAny> + Send + Sync + 'static>;
@@ -118,7 +118,11 @@ impl CupertinoContainer {
 
         Stack::new(Axis::Horizontal)
             // v1's outer box: `width_pct(100.0).justify_center()`.
-            .request(LayoutRequest::new().width_pct(100.0).main_align(Align::Center))
+            .request(
+                LayoutRequest::new()
+                    .width_pct(100.0)
+                    .main_align(Align::Center),
+            )
             .push(move || {
                 // v1's inner box: `width_pct(100.0).padding(pad).background(surface)`,
                 // and the max-width cap unless the container is fluid.
@@ -143,4 +147,3 @@ impl Default for CupertinoContainer {
         Self::new()
     }
 }
-

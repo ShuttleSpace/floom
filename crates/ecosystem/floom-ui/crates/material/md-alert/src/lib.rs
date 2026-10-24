@@ -40,12 +40,11 @@ use floom_widgets::{Align, Axis, Pressable, Stack, Surface, Text};
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::alert::{AlertProps, AlertVariant};
 use floom_core_theme::theme::{MultiTheme, Theme};
-use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color::to_engine_color as to_paint;
+use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color_ext::*;
 use floom_core_theme::tokens::typography::FontWeight as ThemeFontWeight;
 use floom_widget_md_icon::MdIcon;
-
 
 /// The theme's weight enum -> the engine's.
 ///
@@ -236,9 +235,7 @@ impl MdAlert {
                                 Box::new(
                                     Surface::new()
                                         .request(
-                                            LayoutRequest::new()
-                                                .width(DOT_SIZE)
-                                                .height(DOT_SIZE),
+                                            LayoutRequest::new().width(DOT_SIZE).height(DOT_SIZE),
                                         )
                                         .background(accent)
                                         // v1's `9999.0`: a circle from a rounded box.
@@ -294,9 +291,7 @@ impl MdAlert {
                         row = row.push({
                             let on_dismiss = on_dismiss.clone();
                             move || {
-                                let icon = MdIcon::new("close")
-                                    .size(DISMISS_SIZE)
-                                    .resolve();
+                                let icon = MdIcon::new("close").size(DISMISS_SIZE).resolve();
                                 Box::new(
                                     Pressable::new(Child::new(
                                         ChildKey::index(0),

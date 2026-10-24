@@ -19,7 +19,10 @@ impl std::fmt::Debug for ExpansionPanelsProps {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("ExpansionPanelsProps")
             .field("multiple", &self.multiple)
-            .field("on_change", &self.on_change.as_ref().map(|_| "Fn(usize, bool)"))
+            .field(
+                "on_change",
+                &self.on_change.as_ref().map(|_| "Fn(usize, bool)"),
+            )
             .finish()
     }
 }

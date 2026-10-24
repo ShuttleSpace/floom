@@ -113,7 +113,10 @@ fn the_rule_spans_its_axis_fully() {
 fn the_inset_shrinks_both_ends_and_leaves_the_start_edge_alone() {
     let plain = fluent().divider().resolve_bounds(TALL);
     let inset = fluent().inset(16.0).divider().resolve_bounds(TALL);
-    assert_eq!(inset.y0, plain.y0, "the start edge is not affected by the inset");
+    assert_eq!(
+        inset.y0, plain.y0,
+        "the start edge is not affected by the inset"
+    );
     assert_eq!(inset.x0, TALL.x0 + 16.0);
     assert_eq!(inset.x1, TALL.x1 - 16.0);
 }
@@ -148,8 +151,13 @@ fn the_rule_is_painted_in_the_resolved_colour() {
 
     assert_eq!(
         painted.split_whitespace().last(),
-        Some(format!("#{:02X}{:02X}{:02X}{:02X}", resolved.color.r, resolved.color.g,
-                                    resolved.color.b, resolved.color.a).as_str()),
+        Some(
+            format!(
+                "#{:02X}{:02X}{:02X}{:02X}",
+                resolved.color.r, resolved.color.g, resolved.color.b, resolved.color.a
+            )
+            .as_str()
+        ),
         "painted: {painted}"
     );
 }
@@ -197,8 +205,7 @@ fn the_theme_is_a_snapshot_taken_at_construction() {
     let before = built.resolved_style().color;
 
     // Switch the process-global design system to another palette.
-    floom_core_theme::global_theme::design_system_signal()
-        .set(DesignSystem::Material);
+    floom_core_theme::global_theme::design_system_signal().set(DesignSystem::Material);
 
     let after = built.resolved_style().color;
     assert_eq!(

@@ -43,16 +43,16 @@
 
 use std::rc::Rc;
 
+use floom_core::Axis as _AxisUnused;
 use floom_signal::{RwSignal, SignalGet, SignalUpdate};
 use floom_types::Color as PaintColor;
 use floom_widgets::{Switch, SwitchPalette};
-use floom_core::Axis as _AxisUnused;
 
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens, SwitchTokens};
 use floom_core_theme::props::switch::SwitchProps;
 use floom_core_theme::theme::{MultiTheme, Theme};
-use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color::to_engine_color as to_paint;
+use floom_core_theme::tokens::color::Color;
 
 /// The design system this crate reads.
 const DESIGN_SYSTEM: &str = "cupertino";
@@ -227,7 +227,6 @@ fn theme_color(theme: MultiTheme, checked: bool, track: bool) -> Color {
         (false, false) => theme.colors().outline,
     }
 }
-
 
 impl Default for CupertinoSwitch {
     fn default() -> Self {

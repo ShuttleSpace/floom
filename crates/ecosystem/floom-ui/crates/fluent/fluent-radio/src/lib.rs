@@ -48,11 +48,11 @@ use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::global_theme::DesignSystem;
 use floom_core_theme::props::radio::RadioProps;
 use floom_core_theme::theme::{MultiTheme, Theme};
-use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color::to_engine_color as to_paint;
+use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color_ext::with_alpha;
-use floom_ui_composites::{FocusRing, Radio, RadioStyle};
 use floom_ui_composites::state::{LayerShape, StateLayer};
+use floom_ui_composites::{FocusRing, Radio, RadioStyle};
 
 /// v1's `let pad = 4.0`, applied to each side of the halo -- which is also the
 /// halo's diameter and, in v1, the control's hit area. Material's halo is a flat
@@ -76,7 +76,6 @@ const HALO_ALPHA: u8 = 8;
 const DISABLED_ALPHA: u8 = 38;
 /// v1 wrote `outline(2.0)`; `FocusRing` carries the number as a field.
 const FOCUS_RING_WIDTH: f32 = 2.0;
-
 
 /// Fluent's radio. One option; grouping is the host's job, in this version and in
 /// v1's.
@@ -254,7 +253,7 @@ impl FluentRadio {
                 on_focus: false,
                 suppressed_when_disabled: true,
             },
-        
+
             // v1 ended this closure with
             // `.focus(|s| s.outline(2.0).outline_color(colors().primary))`, so a
             // focused Fluent radio drew a 2px `primary` ring
@@ -266,7 +265,8 @@ impl FluentRadio {
                 color: to_paint(colors.primary),
                 gap: 0.0,
                 radius: None,
-            }),}
+            }),
+        }
     }
 
     /// The radio, ready to mount.

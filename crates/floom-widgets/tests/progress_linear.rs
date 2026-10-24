@@ -138,11 +138,7 @@ fn the_clamp_runs_before_the_truncation() {
 fn an_indeterminate_bar_is_forty_percent_whatever_the_value() {
     for value in [-10.0_f32, 0.0, 55.0, 200.0] {
         assert_eq!(
-            fill_percent(
-                value,
-                Indeterminate::StaticSegment,
-                PercentRounding::Exact
-            ),
+            fill_percent(value, Indeterminate::StaticSegment, PercentRounding::Exact),
             INDETERMINATE_WIDTH_PCT,
             "at value {value}"
         );
@@ -253,7 +249,11 @@ fn a_centred_fill_is_inset_by_the_leftover_space() {
         })
         .fill_rect(TRACK);
     assert_eq!(quarter.width(), 50.0);
-    assert_eq!(quarter.x0, TRACK.x0 + 75.0, "centred in 200 with a 50-wide bar");
+    assert_eq!(
+        quarter.x0,
+        TRACK.x0 + 75.0,
+        "centred in 200 with a 50-wide bar"
+    );
 
     let full = LinearProgress::new(100.0)
         .style(LinearProgressStyle {
@@ -297,7 +297,11 @@ fn a_centred_fill_is_centred_vertically_too() {
             ..style()
         })
         .fill_rect(tall);
-    assert_eq!(rect.height(), tall.height(), "the fill is still track-height tall");
+    assert_eq!(
+        rect.height(),
+        tall.height(),
+        "the fill is still track-height tall"
+    );
     assert_eq!(rect.y0, tall.y0);
 }
 
@@ -312,7 +316,10 @@ fn a_sliding_segment_starts_at_the_left_edge() {
         .style(style())
         .fill_rect(TRACK);
     assert_eq!(rect.x0, TRACK.x0);
-    assert_eq!(rect.width(), TRACK.width() * INDETERMINATE_WIDTH_PCT / 100.0);
+    assert_eq!(
+        rect.width(),
+        TRACK.width() * INDETERMINATE_WIDTH_PCT / 100.0
+    );
 }
 
 /// Moving the offset moves the fill, and nothing else does. This is the whole of
@@ -396,8 +403,14 @@ fn the_engine_default_rounds_the_fill_and_says_so() {
     assert_eq!(default.fill_radius, Some(default.track_radius));
     assert_eq!(default.fill_placement, FillPlacement::Absolute);
     assert_eq!(default.percent_rounding, PercentRounding::Exact);
-    assert_eq!(default.track_height, 4.0, "`ProgressLinearTokens::default()`");
-    assert_eq!(default.track_radius, 2.0, "`ProgressLinearTokens::default()`");
+    assert_eq!(
+        default.track_height, 4.0,
+        "`ProgressLinearTokens::default()`"
+    );
+    assert_eq!(
+        default.track_radius, 2.0,
+        "`ProgressLinearTokens::default()`"
+    );
 }
 
 // --- mounting ------------------------------------------------------------
@@ -410,7 +423,10 @@ fn the_widget_declares_a_height_and_no_width() {
         .layout_request()
         .expect("a track declares its height");
     assert_eq!(request.height.unwrap().px(), Some(10.0));
-    assert_eq!(request.width, None, "width_full / width_pct(100) is the parent's");
+    assert_eq!(
+        request.width, None,
+        "width_full / width_pct(100) is the parent's"
+    );
 }
 
 /// Painting draws two things: the track, then the bar over it.
@@ -422,17 +438,17 @@ fn the_widget_declares_a_height_and_no_width() {
 fn painting_draws_the_track_then_the_bar() {
     let snapshot = paint_snapshot(&progress(50.0), ID, TRACK);
     let lines: Vec<&str> = snapshot.lines().collect();
-    assert_eq!(
-        lines.len(),
-        2,
-        "a track and a bar, got:\n{snapshot}"
-    );
+    assert_eq!(lines.len(), 2, "a track and a bar, got:\n{snapshot}");
     assert!(
         lines[0].contains("r=4.0"),
         "the track is the rounded one, and it is drawn first: {}",
         lines[0]
     );
-    assert!(lines[1].contains("r=4.0"), "and so is the bar: {}", lines[1]);
+    assert!(
+        lines[1].contains("r=4.0"),
+        "and so is the bar: {}",
+        lines[1]
+    );
 }
 
 /// An empty bar paints the track and nothing else — the fill rect has zero width
@@ -460,11 +476,10 @@ fn a_full_bar_reaches_the_right_edge() {
 /// differ in the snapshot and not only in a field.
 #[test]
 fn a_square_bar_is_painted_as_a_plain_rect() {
-    let square = LinearProgress::new(50.0)
-        .style(LinearProgressStyle {
-            fill_radius: None,
-            ..style()
-        });
+    let square = LinearProgress::new(50.0).style(LinearProgressStyle {
+        fill_radius: None,
+        ..style()
+    });
     let snapshot = paint_snapshot(&square, ID, TRACK);
     let bar = snapshot.lines().nth(1).expect("a bar");
     assert!(

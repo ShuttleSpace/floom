@@ -30,7 +30,10 @@ impl std::fmt::Debug for FileInputProps {
             .field("accept", &self.accept)
             .field("multiple", &self.multiple)
             .field("disabled", &self.disabled)
-            .field("on_change", &self.on_change.as_ref().map(|_| "Fn(Option<String>)"))
+            .field(
+                "on_change",
+                &self.on_change.as_ref().map(|_| "Fn(Option<String>)"),
+            )
             .finish()
     }
 }

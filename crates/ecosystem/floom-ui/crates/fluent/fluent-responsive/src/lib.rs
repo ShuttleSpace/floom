@@ -33,8 +33,8 @@ use floom_widgets::{Align, Surface, Text};
 
 use floom_core_theme::props::responsive::ResponsiveProps;
 use floom_core_theme::theme::{MultiTheme, Theme};
-use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color::to_engine_color as to_paint;
+use floom_core_theme::tokens::color::Color;
 
 /// A builder for the box's content, replayed each time it is mounted.
 pub type ChildBuilder = Arc<dyn Fn() -> Box<dyn WidgetAny> + Send + Sync + 'static>;
@@ -105,4 +105,3 @@ impl Default for FluentResponsive {
         Self::new(1.0)
     }
 }
-

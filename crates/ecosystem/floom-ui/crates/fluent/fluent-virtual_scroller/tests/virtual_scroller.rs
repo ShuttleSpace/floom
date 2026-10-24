@@ -106,10 +106,11 @@ fn wheel(delta: f64) -> Event {
 #[test]
 fn the_tokens_and_colours_reach_the_style() {
     let style: FluentVirtualScrollerStyle = kit().resolved_style();
-    let tokens = match theme().component(floom_core_theme::component_tokens::ComponentId::VirtualScroller) {
-        floom_core_theme::component_tokens::ComponentTokens::VirtualScroller(tokens) => tokens,
-        _ => unreachable!(),
-    };
+    let tokens =
+        match theme().component(floom_core_theme::component_tokens::ComponentId::VirtualScroller) {
+            floom_core_theme::component_tokens::ComponentTokens::VirtualScroller(tokens) => tokens,
+            _ => unreachable!(),
+        };
     // v1's rule: the prop's row height when it is positive and the token's
     // when it is not. The props' default is 44, so the token's is the
     // fallback rather than the number in play.
@@ -125,9 +126,21 @@ fn the_tokens_and_colours_reach_the_style() {
     );
     assert_eq!(style.row_gap, tokens.row_gap, "the token's row gap");
     assert_eq!(style.font_size, tokens.font_size, "the token's font size");
-    assert_eq!(style.surface, theme().colors().surface, "the viewport's fill");
-    assert_eq!(style.on_surface, theme().colors().on_surface, "the row's ink");
-    assert_eq!(style.outline, theme().colors().outline, "the viewport's outline");
+    assert_eq!(
+        style.surface,
+        theme().colors().surface,
+        "the viewport's fill"
+    );
+    assert_eq!(
+        style.on_surface,
+        theme().colors().on_surface,
+        "the row's ink"
+    );
+    assert_eq!(
+        style.outline,
+        theme().colors().outline,
+        "the viewport's outline"
+    );
 }
 
 #[test]
@@ -139,7 +152,11 @@ fn the_design_system_is_named_in_the_style() {
 /// row gap override the tokens.
 #[test]
 fn the_style_reports_the_numbers_the_paint_uses() {
-    let style = kit().item_height(30.0).row_gap(6.0).height(200.0).resolved_style();
+    let style = kit()
+        .item_height(30.0)
+        .row_gap(6.0)
+        .height(200.0)
+        .resolved_style();
     assert_eq!(style.item_height, 30.0, "the caller's row height");
     assert_eq!(style.row_gap, 6.0, "the caller's row gap");
     assert_eq!(style.viewport_height, 200.0, "the caller's viewport height");
@@ -185,7 +202,11 @@ fn only_the_windows_rows_are_mounted() {
     let scroller = surface.children().remove(0).build();
     let content = scroller.children().remove(0).build();
     // The content is the space above, the rows, and the space below.
-    assert_eq!(content.children().len(), 3, "the spacer, the rows, the spacer");
+    assert_eq!(
+        content.children().len(),
+        3,
+        "the spacer, the rows, the spacer"
+    );
     let list = content.children().remove(1).build();
 
     assert_eq!(
@@ -229,10 +250,9 @@ fn scrolling_mounts_a_different_window() {
 fn the_scroller_asks_for_more_at_the_end() {
     let calls = Arc::new(AtomicUsize::new(0));
     let counter = calls.clone();
-    let kit = kit_with_rows(100)
-        .on_reach_end(move || {
-            counter.fetch_add(1, Ordering::SeqCst);
-        });
+    let kit = kit_with_rows(100).on_reach_end(move || {
+        counter.fetch_add(1, Ordering::SeqCst);
+    });
 
     let surface = kit.view();
     let mut scroller = surface.children().remove(0).build();

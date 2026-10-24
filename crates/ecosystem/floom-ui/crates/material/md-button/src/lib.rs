@@ -74,8 +74,8 @@ use floom_widgets::{Button, Ripple, Text};
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::button::{ButtonProps, ButtonSize, ButtonVariant};
 use floom_core_theme::theme::{MultiTheme, Theme};
-use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color::to_engine_color as to_paint;
+use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color_ext::*;
 use floom_widget_runtime::theme_signal;
 
@@ -187,7 +187,10 @@ impl MdButton {
         let (hover_background, press_background) = if self.props.disabled {
             (background, background)
         } else {
-            (state_layer(&theme, self.props.variant, true), state_layer(&theme, self.props.variant, false))
+            (
+                state_layer(&theme, self.props.variant, true),
+                state_layer(&theme, self.props.variant, false),
+            )
         };
         MdButtonStyle {
             design_system: DESIGN_SYSTEM,
@@ -213,7 +216,10 @@ impl MdButton {
     /// engine halves the alpha of a disabled control's fill and its label.
     fn paint_pair(&self, style: &MdButtonStyle) -> (PaintColor, PaintColor) {
         if self.props.disabled {
-            (undim(to_paint(style.background)), undim(to_paint(style.foreground)))
+            (
+                undim(to_paint(style.background)),
+                undim(to_paint(style.foreground)),
+            )
         } else {
             (to_paint(style.background), to_paint(style.foreground))
         }
@@ -352,7 +358,9 @@ fn base_colors(theme: &MultiTheme, variant: ButtonVariant, disabled: bool) -> (C
             theme.colors().on_secondary_container,
         ),
         ButtonVariant::Danger => (theme.colors().error, theme.colors().on_error),
-        ButtonVariant::Ghost | ButtonVariant::Text => (Color::rgba(0, 0, 0, 0), theme.colors().primary),
+        ButtonVariant::Ghost | ButtonVariant::Text => {
+            (Color::rgba(0, 0, 0, 0), theme.colors().primary)
+        }
     }
 }
 
@@ -368,9 +376,11 @@ fn disabled_colors(theme: &MultiTheme) -> (Color, Color) {
 /// Doubles a colour's alpha, so the engine's `a / 2` dimming of a disabled
 /// control lands back on the value the kit meant.
 fn undim(c: PaintColor) -> PaintColor {
-    PaintColor { a: c.a.saturating_mul(2), ..c }
+    PaintColor {
+        a: c.a.saturating_mul(2),
+        ..c
+    }
 }
-
 
 /// The M3 state layer: an 8% (hover) / 12% (press) overlay of the variant's own
 /// foreground colour, mixed over the base fill.

@@ -59,8 +59,8 @@ use floom_core::{
 use floom_types::{FontWeight, PointerButton, PointerPhase};
 
 use floom_widgets::{
-    InteractionState, Revision, SemanticsHint, VectorIcon, emit_semantics, paint_icon,
-    stroke_rounded_outline,
+    emit_semantics, paint_icon, stroke_rounded_outline, InteractionState, Revision, SemanticsHint,
+    VectorIcon,
 };
 
 /// How a checkbox looks.
@@ -493,11 +493,13 @@ impl Widget for Checkbox {
                 // the box, which is the same as growing the box and adding
                 // `padding` to the radius: both give `size + 2 * padding` across
                 // with four points of corner.
-                LayerShape::Box { padding } => {
-                    f64::from(style.border_radius + padding) as f32
-                }
+                LayerShape::Box { padding } => f64::from(style.border_radius + padding) as f32,
             };
-            cx.fill_rounded_rect(Self::centred(centre, side), radius, layer.ink(self.state.pressed));
+            cx.fill_rounded_rect(
+                Self::centred(centre, side),
+                radius,
+                layer.ink(self.state.pressed),
+            );
         }
 
         cx.fill_rounded_rect(box_rect, style.border_radius, self.container_color());
@@ -585,11 +587,7 @@ enum Press {
 }
 
 /// Applies a pointer event to `state`, reporting how far it got.
-fn track_pointer(
-    state: &mut InteractionState,
-    cx: &mut dyn EventContext,
-    id: ElementId,
-) -> Press {
+fn track_pointer(state: &mut InteractionState, cx: &mut dyn EventContext, id: ElementId) -> Press {
     let Event::Pointer(pointer) = cx.event() else {
         return Press::Ignored;
     };

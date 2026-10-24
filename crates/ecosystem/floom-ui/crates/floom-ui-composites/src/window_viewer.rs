@@ -240,7 +240,11 @@ impl WindowViewer {
         });
 
         Child::new(
-            ChildKey::keyed(if next { NEXT_ARROW_KEY } else { PREVIOUS_ARROW_KEY }),
+            ChildKey::keyed(if next {
+                NEXT_ARROW_KEY
+            } else {
+                PREVIOUS_ARROW_KEY
+            }),
             request,
             move || {
                 // The slot is a replayed `Fn`, so the handles it hands to the
@@ -257,7 +261,11 @@ impl WindowViewer {
                         let current = shared.load(Ordering::SeqCst);
                         let target = if next {
                             if current + 1 >= count {
-                                if continuous { 0 } else { count - 1 }
+                                if continuous {
+                                    0
+                                } else {
+                                    count - 1
+                                }
                             } else {
                                 current + 1
                             }

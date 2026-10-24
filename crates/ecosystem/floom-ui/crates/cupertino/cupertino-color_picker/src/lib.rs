@@ -70,17 +70,16 @@
 use std::sync::{Arc, Mutex};
 
 use floom_signal::{RwSignal, SignalGet};
-use floom_ui_composites::{ColorPicker, ColorPickerStyle};
 use floom_types::Color as PaintColor;
+use floom_ui_composites::{ColorPicker, ColorPickerStyle};
 use floom_widgets::Surface;
 
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::color_picker::ColorPickerProps;
 use floom_core_theme::theme::{MultiTheme, Theme};
-use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color::to_engine_color as to_paint;
+use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color_ext::WHITE;
-
 
 /// The chosen colour, shared between the kit and the tree it built.
 ///
@@ -290,6 +289,10 @@ impl Default for CupertinoColorPicker {
 
 /// Engine colour -> theme colour.
 fn from_paint(c: PaintColor) -> Color {
-    Color { r: c.r, g: c.g, b: c.b, a: c.a }
+    Color {
+        r: c.r,
+        g: c.g,
+        b: c.b,
+        a: c.a,
+    }
 }
-

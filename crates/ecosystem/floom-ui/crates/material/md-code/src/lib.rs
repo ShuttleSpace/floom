@@ -19,11 +19,11 @@ use floom_signal::{RwSignal, SignalGet};
 use floom_types::Color as PaintColor;
 use floom_widgets::{Align, Surface, Text};
 
-use floom_core_theme::component_tokens::{ComponentId, ComponentTokens, CodeTokens};
-use floom_core_theme::props::code::{CodeProps};
+use floom_core_theme::component_tokens::{CodeTokens, ComponentId, ComponentTokens};
+use floom_core_theme::props::code::CodeProps;
 use floom_core_theme::theme::{MultiTheme, Theme};
-use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color::to_engine_color as to_paint;
+use floom_core_theme::tokens::color::Color;
 use floom_widget_runtime::theme_signal;
 
 /// A builder for the an inline code chip's content, replayed each time it is mounted.
@@ -150,4 +150,3 @@ impl Default for MaterialCode {
         Self::new()
     }
 }
-

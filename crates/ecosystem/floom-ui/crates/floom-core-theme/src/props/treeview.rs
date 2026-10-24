@@ -43,7 +43,10 @@ impl std::fmt::Debug for TreeviewProps {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("TreeviewProps")
             .field("nodes", &self.nodes)
-            .field("on_node_click", &self.on_node_click.as_ref().map(|_| "Fn(String)"))
+            .field(
+                "on_node_click",
+                &self.on_node_click.as_ref().map(|_| "Fn(String)"),
+            )
             .finish()
     }
 }

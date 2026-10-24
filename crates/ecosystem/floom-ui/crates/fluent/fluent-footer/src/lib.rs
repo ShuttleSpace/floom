@@ -44,16 +44,16 @@
 //! which was already true in v1 and is recorded in
 //! [`FluentFooter::publish_layout`] rather than quietly improved.
 
+use floom_core::{LayoutRequest, WidgetAny};
 use floom_signal::{RwSignal, SignalGet};
 use floom_types::{Color as PaintColor, Insets, Shadow};
 use floom_widgets::{Align, Edges, Surface};
-use floom_core::{LayoutRequest, WidgetAny};
 
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens, FooterTokens};
 use floom_core_theme::props::footer::FooterProps;
 use floom_core_theme::theme::{MultiTheme, Theme};
-use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color::to_engine_color as to_paint;
+use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color_ext::*;
 
 /// Opaque black, the base the elevation shadow tints.
@@ -76,9 +76,7 @@ const ELEVATION_ALPHA: u8 = 30;
 ///
 /// An [`std::sync::Arc`] for the reason `md-toolbar`'s is: a 2.0 slot is a
 /// replayed `Fn`, so every rebuild needs its own copy to move into it.
-pub type ChildBuilder =
-    std::sync::Arc<dyn Fn() -> Box<dyn WidgetAny> + Send + Sync + 'static>;
-
+pub type ChildBuilder = std::sync::Arc<dyn Fn() -> Box<dyn WidgetAny> + Send + Sync + 'static>;
 
 fn footer_tokens(theme: &MultiTheme) -> FooterTokens {
     match theme.component(ComponentId::Footer) {
@@ -154,10 +152,7 @@ impl FluentFooter {
     ///
     /// v1 took `impl IntoView`; 2.0 takes a replayed builder. Callers holding a
     /// widget already write `move || Box::new(..)`.
-    pub fn child(
-        mut self,
-        build: impl Fn() -> Box<dyn WidgetAny> + Send + Sync + 'static,
-    ) -> Self {
+    pub fn child(mut self, build: impl Fn() -> Box<dyn WidgetAny> + Send + Sync + 'static) -> Self {
         self.child = Some(std::sync::Arc::new(build));
         self
     }

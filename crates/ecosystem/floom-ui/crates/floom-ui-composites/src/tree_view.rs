@@ -309,7 +309,10 @@ impl TreeView {
     /// Required rather than optional-with-a-default: a tree with no icon resolver
     /// silently drops every icon, and the three kits resolve the same names to
     /// different paths.
-    pub fn icons(mut self, resolve: impl Fn(&str) -> Option<VectorIcon> + Send + Sync + 'static) -> Self {
+    pub fn icons(
+        mut self,
+        resolve: impl Fn(&str) -> Option<VectorIcon> + Send + Sync + 'static,
+    ) -> Self {
         self.icons = Arc::new(resolve);
         self
     }
@@ -502,38 +505,35 @@ impl TreeView {
                         });
 
                         // The label, which is the other click target and grows.
-                        row_stack = row_stack.push_layout(
-                            LayoutRequest::new().grow(1.0),
-                            {
-                                let label = node.label.clone();
-                                let on_node_click = on_node_click.clone();
-                                let font_size = style.font_size;
-                                let color = style.label_color;
-                                move || {
-                                    let text = Text::new(label.clone())
-                                        .size(font_size)
-                                        .weight(FontWeight::Normal)
-                                        .color(color);
-                                    Box::new(
-                                        Pressable::new(Child::new(
-                                            ChildKey::index(0),
-                                            LayoutRequest::new().grow(1.0),
-                                            move || Box::new(text.clone()),
-                                        ))
-                                        .label(label.clone())
-                                        .on_click({
-                                            let on_node_click = on_node_click.clone();
-                                            let label = label.clone();
-                                            move || {
-                                                if let Some(cb) = &on_node_click {
-                                                    cb(label.clone());
-                                                }
+                        row_stack = row_stack.push_layout(LayoutRequest::new().grow(1.0), {
+                            let label = node.label.clone();
+                            let on_node_click = on_node_click.clone();
+                            let font_size = style.font_size;
+                            let color = style.label_color;
+                            move || {
+                                let text = Text::new(label.clone())
+                                    .size(font_size)
+                                    .weight(FontWeight::Normal)
+                                    .color(color);
+                                Box::new(
+                                    Pressable::new(Child::new(
+                                        ChildKey::index(0),
+                                        LayoutRequest::new().grow(1.0),
+                                        move || Box::new(text.clone()),
+                                    ))
+                                    .label(label.clone())
+                                    .on_click({
+                                        let on_node_click = on_node_click.clone();
+                                        let label = label.clone();
+                                        move || {
+                                            if let Some(cb) = &on_node_click {
+                                                cb(label.clone());
                                             }
-                                        }),
-                                    )
-                                }
-                            },
-                        );
+                                        }
+                                    }),
+                                )
+                            }
+                        });
 
                         // `tree` and `on_toggle` have already been handed to the
                         // expander's closures, which is where they are used: a row's

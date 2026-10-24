@@ -18,10 +18,10 @@
 
 use floom_core::{ElementId, Point, PointerEvent, Rect, Widget, WidgetAny};
 use floom_types::Color;
-use floom_widgets::Stack;
 use floom_widgets::testkit::{
     AllocatingCreateContext, PaintOp, RecordingUpdateContext, SceneRecorder, TestEventContext,
 };
+use floom_widgets::Stack;
 
 use floom_core_theme::global_theme::DesignSystem;
 use floom_core_theme::theme::{MultiTheme, Theme};
@@ -122,7 +122,10 @@ fn pill_painted(widget: &Stack) -> (Option<Color>, Option<(f64, Color)>) {
         _ => None,
     });
     let rim = ops.iter().find_map(|op| match op {
-        PaintOp::Path { stroke: Some((width, color)), .. } => Some((*width, *color)),
+        PaintOp::Path {
+            stroke: Some((width, color)),
+            ..
+        } => Some((*width, *color)),
         _ => None,
     });
     (fill, rim)
@@ -144,7 +147,9 @@ fn label_painted(widget: &Stack) -> (String, f32, Color) {
     let ops = ops_of(&*label);
     ops.iter()
         .find_map(|op| match op {
-            PaintOp::Text { text, size, color, .. } => Some((text.clone(), *size, *color)),
+            PaintOp::Text {
+                text, size, color, ..
+            } => Some((text.clone(), *size, *color)),
             _ => None,
         })
         .expect("a checkbox button paints its label")
@@ -177,11 +182,31 @@ fn the_tokens_and_colours_reach_the_style() {
     assert_eq!(style.radius, tokens.radius, "the token's radius");
     assert_eq!(style.gap, tokens.gap, "the token's gap");
     assert_eq!(style.font_size, tokens.font_size, "the token's font size");
-    assert_eq!(style.background, theme().colors().surface_variant, "the pill's fill");
-    assert_eq!(style.border_color, theme().colors().outline, "the pill's rim");
-    assert_eq!(style.checked_background, theme().colors().primary, "the checked fill");
-    assert_eq!(style.checked_border_color, theme().colors().primary, "the checked rim");
-    assert_eq!(style.mark_color, theme().colors().on_primary, "the mark's ink");
+    assert_eq!(
+        style.background,
+        theme().colors().surface_variant,
+        "the pill's fill"
+    );
+    assert_eq!(
+        style.border_color,
+        theme().colors().outline,
+        "the pill's rim"
+    );
+    assert_eq!(
+        style.checked_background,
+        theme().colors().primary,
+        "the checked fill"
+    );
+    assert_eq!(
+        style.checked_border_color,
+        theme().colors().primary,
+        "the checked rim"
+    );
+    assert_eq!(
+        style.mark_color,
+        theme().colors().on_primary,
+        "the mark's ink"
+    );
 }
 
 /// The numbers v1 wrote as literals, rather than as tokens.
@@ -223,7 +248,11 @@ fn the_checked_pill_paints_v1_s_fill_and_rim() {
     let style = kit().resolved_style();
     let widget = kit().checked(true).label("Notify").view();
     let (fill, rim) = pill_painted(&widget);
-    assert_eq!(fill, Some(paint(style.checked_background)), "the pill's fill");
+    assert_eq!(
+        fill,
+        Some(paint(style.checked_background)),
+        "the pill's fill"
+    );
     assert_eq!(
         rim,
         Some((
@@ -241,7 +270,11 @@ fn the_disabled_pill_paints_v1_s_disabled_fill_and_rim() {
     let style = kit().resolved_style();
     let widget = kit().checked(true).disabled(true).label("Notify").view();
     let (fill, rim) = pill_painted(&widget);
-    assert_eq!(fill, Some(paint(style.disabled_background)), "the pill's fill");
+    assert_eq!(
+        fill,
+        Some(paint(style.disabled_background)),
+        "the pill's fill"
+    );
     assert_eq!(
         rim,
         Some((
@@ -324,7 +357,9 @@ fn the_disabled_label_is_painted_with_v1_s_disabled_ink() {
 fn clicking_the_pill_switches_it_on() {
     let seen = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
     let s = seen.clone();
-    let kit = kit().label("Notify").on_change(move |checked| s.lock().unwrap().push(checked));
+    let kit = kit()
+        .label("Notify")
+        .on_change(move |checked| s.lock().unwrap().push(checked));
     let watcher = kit.clone();
     let widget = kit.view();
 
@@ -360,7 +395,11 @@ fn the_pill_s_appearance_follows_the_state() {
     let widget = kit.view();
 
     let (fill, _) = pill_painted(&widget);
-    assert_eq!(fill, Some(paint(style.background)), "unchecked to begin with");
+    assert_eq!(
+        fill,
+        Some(paint(style.background)),
+        "unchecked to begin with"
+    );
 
     tap(&widget);
     let (fill, _) = pill_painted(&widget);
@@ -384,7 +423,10 @@ fn a_disabled_pill_does_not_answer() {
     let widget = kit.view();
 
     tap(&widget);
-    assert!(!watcher.is_checked(), "v1's toggle was guarded by `if !disabled`");
+    assert!(
+        !watcher.is_checked(),
+        "v1's toggle was guarded by `if !disabled`"
+    );
     assert!(seen.lock().unwrap().is_empty());
 }
 

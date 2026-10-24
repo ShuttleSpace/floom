@@ -69,7 +69,11 @@ fn fan_buttons(dial: &Stack, fan_index: usize) -> Vec<Box<dyn WidgetAny>> {
         return Vec::new();
     }
     let buttons = children.remove(0).build();
-    buttons.children().into_iter().map(|child| child.build()).collect()
+    buttons
+        .children()
+        .into_iter()
+        .map(|child| child.build())
+        .collect()
 }
 
 /// The button's fill: the circle the `Pressable` wraps.
@@ -123,7 +127,8 @@ fn tap(dial: &Stack, index: usize) {
 #[test]
 fn the_tokens_and_colours_reach_the_style() {
     let style: CupertinoSpeedDialStyle = kit().resolved_style();
-    let tokens = match theme().component(floom_core_theme::component_tokens::ComponentId::SpeedDial) {
+    let tokens = match theme().component(floom_core_theme::component_tokens::ComponentId::SpeedDial)
+    {
         floom_core_theme::component_tokens::ComponentTokens::SpeedDial(tokens) => tokens,
         _ => unreachable!(),
     };
@@ -138,7 +143,11 @@ fn the_tokens_and_colours_reach_the_style() {
         style.animation_ms, tokens.animation_ms,
         "the token's animation -- a number v1 never used"
     );
-    assert_eq!(style.fab_background, theme().colors().primary, "the button's fill");
+    assert_eq!(
+        style.fab_background,
+        theme().colors().primary,
+        "the button's fill"
+    );
     assert_eq!(
         style.fab_foreground,
         theme().colors().on_primary,

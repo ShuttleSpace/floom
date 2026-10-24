@@ -13,13 +13,11 @@ use floom_types::{PresenceChannel, PresenceTransition, SlideAxis};
 use floom_widgets::testkit::{AllocatingCreateContext, RecordingUpdateContext};
 
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
-use floom_core_theme::global_theme::{DesignSystem, set_design_system};
+use floom_core_theme::global_theme::{set_design_system, DesignSystem};
 use floom_core_theme::props::slide_transition::SlideDirection;
 use floom_core_theme::theme::{MultiTheme, Theme};
 
-use floom_widget_fluent_slide_transition::{
-    FluentSlideTransition, FluentSlideTransitionStyle,
-};
+use floom_widget_fluent_slide_transition::{FluentSlideTransition, FluentSlideTransitionStyle};
 
 /// The Fluent theme, with Fluent selected.
 ///
@@ -45,7 +43,9 @@ fn tokens() -> floom_core_theme::component_tokens::SlideTransitionTokens {
 #[test]
 fn the_style_resolves_the_tokens() {
     let theme = theme();
-    let style: FluentSlideTransitionStyle = FluentSlideTransition::new().with_theme(theme.clone()).resolved_style();
+    let style: FluentSlideTransitionStyle = FluentSlideTransition::new()
+        .with_theme(theme.clone())
+        .resolved_style();
     assert_eq!(style.design_system, "fluent");
     assert_eq!(style.duration_ms, tokens().duration_ms);
     assert_eq!(style.offset, tokens().offset);
@@ -67,7 +67,8 @@ fn the_transition_is_the_one_this_kit_plays() {
         "v1's slide travelled along x by the token's offset"
     );
     assert_eq!(
-        transition.duration_secs, f64::from(tokens().duration_ms) / 1000.0,
+        transition.duration_secs,
+        f64::from(tokens().duration_ms) / 1000.0,
         "the token's duration, in seconds"
     );
 }

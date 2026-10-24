@@ -12,13 +12,13 @@
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
-use floom_core::{Axis, ScrollOffset, Size};
-use floom_ui_composites::{Accordion, Tabs};
-use floom_widgets::{Scroll, ScrollAxes, Stack};
-use floom_core as Core;
-use floom_layout as LY;
-use floom_widgets as W;
 use floom_app as Host;
+use floom_core as Core;
+use floom_core::{Axis, ScrollOffset, Size};
+use floom_layout as LY;
+use floom_ui_composites::{Accordion, Tabs};
+use floom_widgets as W;
+use floom_widgets::{Scroll, ScrollAxes, Stack};
 
 /// A zero-cost child that fills its box, so a scroll can be given content with a
 /// known extent.
@@ -93,7 +93,6 @@ fn the_offset_survives_frames_and_reconciles() {
          offset outlived the frames between them"
     );
 }
-
 
 /// A named leaf, so a caller can tell which child it mounted.
 fn filler_child(key: &'static str) -> Core::Child {
@@ -221,12 +220,16 @@ fn an_accordion_panel_stays_open_across_frames() {
     let mut host = Host::WidgetHost::new();
     host.set_size(Size::new(400.0, 300.0));
     let accordion = Accordion::new()
-        .panel("First", |_open| Box::new(Filler) as Box<dyn Core::WidgetAny>, || {
-            Box::new(Filler) as Box<dyn Core::WidgetAny>
-        })
-        .panel("Second", |_open| Box::new(Filler) as Box<dyn Core::WidgetAny>, || {
-            Box::new(Filler) as Box<dyn Core::WidgetAny>
-        });
+        .panel(
+            "First",
+            |_open| Box::new(Filler) as Box<dyn Core::WidgetAny>,
+            || Box::new(Filler) as Box<dyn Core::WidgetAny>,
+        )
+        .panel(
+            "Second",
+            |_open| Box::new(Filler) as Box<dyn Core::WidgetAny>,
+            || Box::new(Filler) as Box<dyn Core::WidgetAny>,
+        );
     host.mount_root(LY::LayoutStyle::default(), accordion);
     host.frame();
     for _ in 0..8 {

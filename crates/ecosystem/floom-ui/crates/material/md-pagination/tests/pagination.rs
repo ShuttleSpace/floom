@@ -112,10 +112,17 @@ fn the_tokens_and_colours_reach_the_style() {
         ComponentTokens::Pagination(tokens) => tokens,
         _ => unreachable!(),
     };
-    assert_eq!(style.button_size, tokens.button_size, "the token's button size");
+    assert_eq!(
+        style.button_size, tokens.button_size,
+        "the token's button size"
+    );
     assert_eq!(style.gap, tokens.gap, "the token's gap");
     assert_eq!(style.radius, theme().radius().md, "the theme's md radius");
-    assert_eq!(style.selected_bg, theme().colors().primary, "the selected fill");
+    assert_eq!(
+        style.selected_bg,
+        theme().colors().primary,
+        "the selected fill"
+    );
     assert_eq!(
         style.selected_fg,
         theme().colors().on_primary,
@@ -131,7 +138,11 @@ fn the_tokens_and_colours_reach_the_style() {
         floom_core_theme::tokens::color::Color::rgba(0, 0, 0, 0),
         "the unselected fill: nothing at all"
     );
-    assert_eq!(style.arrow_fg, theme().colors().on_surface, "the arrow's ink");
+    assert_eq!(
+        style.arrow_fg,
+        theme().colors().on_surface,
+        "the arrow's ink"
+    );
     assert_eq!(
         style.disabled_arrow_fg,
         floom_core_theme::tokens::color_ext::with_alpha(theme().colors().on_surface, 38),
@@ -200,7 +211,11 @@ fn the_other_pages_are_filled_with_nothing() {
         PaintOp::Text { color, .. } => Some(*color),
         _ => None,
     });
-    assert_eq!(ink, Some(paint(style.unselected_fg)), "and the unselected ink");
+    assert_eq!(
+        ink,
+        Some(paint(style.unselected_fg)),
+        "and the unselected ink"
+    );
 }
 
 /// The arrows are inked in `on_surface`, and their box is transparent.
@@ -302,7 +317,11 @@ fn the_container_keeps_the_tokens_gap() {
     let request = outer
         .layout_request()
         .expect("the container asks for its own space");
-    assert_eq!(request.gap, Some(style.gap), "v1 wrote the token's gap here");
+    assert_eq!(
+        request.gap,
+        Some(style.gap),
+        "v1 wrote the token's gap here"
+    );
 }
 
 // --- the behaviour --------------------------------------------------------

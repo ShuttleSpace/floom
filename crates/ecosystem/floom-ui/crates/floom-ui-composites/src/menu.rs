@@ -32,14 +32,14 @@ use std::sync::Arc;
 
 use floom_accessibility::SemanticsRole;
 use floom_core::{
-    Child, ChildKey, Color, CreateContext, ElementId, Event, EventContext, FontWeight, LayoutRequest,
-    OverlayKind, OverlayRequest, PaintContext, Point, Rect, SemanticsContext, UpdateContext, Widget,
-    WidgetAny,
+    Child, ChildKey, Color, CreateContext, ElementId, Event, EventContext, FontWeight,
+    LayoutRequest, OverlayKind, OverlayRequest, PaintContext, Point, Rect, SemanticsContext,
+    UpdateContext, Widget, WidgetAny,
 };
 use floom_types::{Insets, PointerButton, PointerPhase, Shadow};
 
-use floom_widgets::primitives::{Revision, SemanticsHint, emit_semantics};
-use floom_widgets::{SharedFlag, read_flag, shared_flag, write_flag};
+use floom_widgets::primitives::{emit_semantics, Revision, SemanticsHint};
+use floom_widgets::{read_flag, shared_flag, write_flag, SharedFlag};
 
 use crate::overlay_bookkeeping::OverlayHost;
 
@@ -61,10 +61,7 @@ impl std::fmt::Debug for MenuItem {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("MenuItem")
             .field("label", &self.label)
-            .field(
-                "on_select",
-                &self.on_select.as_ref().map(|_| "Fn()"),
-            )
+            .field("on_select", &self.on_select.as_ref().map(|_| "Fn()"))
             .finish()
     }
 }
@@ -223,11 +220,8 @@ impl Menu {
             .items
             .iter()
             .map(|item| {
-                let measured = floom_text::measure_text(
-                    &item.label,
-                    style.item_font_size,
-                    f64::INFINITY,
-                );
+                let measured =
+                    floom_text::measure_text(&item.label, style.item_font_size, f64::INFINITY);
                 measured.width as f64 + style.item_padding_horizontal * 2.0
             })
             .fold(0.0_f64, f64::max);
@@ -436,11 +430,8 @@ impl Widget for Menu {
             let width = items
                 .iter()
                 .map(|item| {
-                    let measured = floom_text::measure_text(
-                        &item.label,
-                        style.item_font_size,
-                        f64::INFINITY,
-                    );
+                    let measured =
+                        floom_text::measure_text(&item.label, style.item_font_size, f64::INFINITY);
                     measured.width as f64 + style.item_padding_horizontal * 2.0
                 })
                 .fold(0.0_f64, f64::max)

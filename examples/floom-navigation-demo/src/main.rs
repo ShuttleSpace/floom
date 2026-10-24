@@ -44,7 +44,10 @@ impl Route for AppRoute {
             "/settings" => Some(AppRoute::Settings),
             other => {
                 let id_part = other.strip_prefix("/profile/")?;
-                id_part.parse::<u32>().ok().map(|id| AppRoute::Profile { id })
+                id_part
+                    .parse::<u32>()
+                    .ok()
+                    .map(|id| AppRoute::Profile { id })
             }
         }
     }
@@ -105,7 +108,10 @@ fn main() {
     let settings_key = nav.push("/settings");
     println!(
         "\npages={:?} (profile page key={profile_key}, settings key={settings_key})",
-        nav.pages().iter().map(|p| (p.key, p.path.as_str())).collect::<Vec<_>>()
+        nav.pages()
+            .iter()
+            .map(|p| (p.key, p.path.as_str()))
+            .collect::<Vec<_>>()
     );
     assert_eq!(nav.top().path, "/settings");
 
@@ -131,7 +137,11 @@ fn main() {
         nav.pages().len(),
         nav.pop_to_root()
     );
-    assert_eq!(nav.pages().len(), 1, "only the root page survives pop_to_root");
+    assert_eq!(
+        nav.pages().len(),
+        1,
+        "only the root page survives pop_to_root"
+    );
 
     // (4) Containers: adaptive two-pane, tabs, and a clamped splitter.
     let mut stack = StackNav::default();
@@ -142,8 +152,14 @@ fn main() {
     );
     assert!(!stack.shows_secondary());
     stack.open_secondary();
-    assert!(stack.shows_secondary(), "opening the detail pane reveals it");
-    println!("stack detail opened -> shows_secondary={}", stack.shows_secondary());
+    assert!(
+        stack.shows_secondary(),
+        "opening the detail pane reveals it"
+    );
+    println!(
+        "stack detail opened -> shows_secondary={}",
+        stack.shows_secondary()
+    );
 
     let mut tabs = TabNav::new(3, 0);
     tabs.select(2);
@@ -152,7 +168,10 @@ fn main() {
 
     let mut split = SplitNav::default();
     split.set_ratio(0.02, 0.2);
-    println!("split clamped to min -> ratio={:.2}", split.effective_ratio());
+    println!(
+        "split clamped to min -> ratio={:.2}",
+        split.effective_ratio()
+    );
     assert!(
         (split.effective_ratio() - 0.2).abs() < 1e-6,
         "a divider drag that would squeeze a pane below its minimum is clamped"
@@ -163,7 +182,11 @@ fn main() {
     // The stringly-typed edge: deep links decode through the typed contract.
     let deep = url::parse("app://example.com/profile/42?tab=posts").expect("parses");
     let route = AppRoute::decode(&deep.path).expect("known path");
-    println!("\ndeep link -> path={} route={route:?} tab={:?}", deep.path, deep.query("tab"));
+    println!(
+        "\ndeep link -> path={} route={route:?} tab={:?}",
+        deep.path,
+        deep.query("tab")
+    );
     assert_eq!(route, AppRoute::Profile { id: 42 });
     assert_eq!(deep.query("tab"), Some("posts"));
 

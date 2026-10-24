@@ -89,4 +89,3 @@ fn a_select_popup_escapes_its_header_and_takes_clicks() {
 
     app.settle();
 }
-

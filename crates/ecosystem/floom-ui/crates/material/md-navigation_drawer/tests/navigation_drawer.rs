@@ -15,8 +15,9 @@
 
 use floom_core::{ElementId, Event, Point, PointerEvent, Rect, Widget};
 use floom_types::Color;
-use floom_widgets::testkit::{AllocatingCreateContext, PaintOp, RecordingUpdateContext, SceneRecorder,
-    TestEventContext};
+use floom_widgets::testkit::{
+    AllocatingCreateContext, PaintOp, RecordingUpdateContext, SceneRecorder, TestEventContext,
+};
 
 use floom_core_theme::global_theme::DesignSystem;
 use floom_core_theme::props::navigation_drawer::NavigationDrawerSide;
@@ -108,8 +109,16 @@ fn the_tokens_and_colours_reach_the_style() {
         _ => unreachable!(),
     };
     assert_eq!(style.padding, tokens.padding, "the token's padding");
-    assert_eq!(style.panel_color, theme().colors().surface, "the panel's fill");
-    assert_eq!(style.scrim_color, theme().colors().scrim, "the scrim's colour");
+    assert_eq!(
+        style.panel_color,
+        theme().colors().surface,
+        "the panel's fill"
+    );
+    assert_eq!(
+        style.scrim_color,
+        theme().colors().scrim,
+        "the scrim's colour"
+    );
     assert_eq!(style.scrim_alpha, 150, "v1's scrim alpha");
     assert_eq!(style.elevation, 4, "v1's default elevation");
     assert_eq!(style.shadow_blur, 2.0 + 3.0 * 4.0, "v1's shadow blur");
@@ -163,7 +172,10 @@ fn the_scrim_is_painted_v1_s_colour() {
     let pressable = presence.children().remove(0).build();
     let scrim = pressable.children().remove(0).build();
     let expected = paint(resolved.scrim_color);
-    let expected = Color { a: resolved.scrim_alpha, ..expected };
+    let expected = Color {
+        a: resolved.scrim_alpha,
+        ..expected
+    };
     assert_eq!(fill_of(&*scrim), Some(expected), "the scrim's fill");
 }
 

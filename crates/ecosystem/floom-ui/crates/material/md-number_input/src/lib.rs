@@ -76,8 +76,8 @@ use floom_widgets::{
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::number_input::NumberInputProps;
 use floom_core_theme::theme::{MultiTheme, Theme};
-use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color::to_engine_color as to_paint;
+use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color_ext::with_alpha;
 use floom_widget_runtime::theme_signal;
 
@@ -375,14 +375,9 @@ impl MaterialNumberInput {
                         let radius = radius;
                         let ink = ink;
                         move || {
-                            Box::new(
-                                Surface::new()
-                                    .background(background)
-                                    .radius(radius)
-                                    .push(move || {
-                                        Box::new(Text::new("-").color(ink)) as Box<dyn WidgetAny>
-                                    }),
-                            ) as Box<dyn WidgetAny>
+                            Box::new(Surface::new().background(background).radius(radius).push(
+                                move || Box::new(Text::new("-").color(ink)) as Box<dyn WidgetAny>,
+                            )) as Box<dyn WidgetAny>
                         }
                     },
                 );
@@ -426,14 +421,9 @@ impl MaterialNumberInput {
                         let radius = radius;
                         let ink = ink;
                         move || {
-                            Box::new(
-                                Surface::new()
-                                    .background(background)
-                                    .radius(radius)
-                                    .push(move || {
-                                        Box::new(Text::new("+").color(ink)) as Box<dyn WidgetAny>
-                                    }),
-                            ) as Box<dyn WidgetAny>
+                            Box::new(Surface::new().background(background).radius(radius).push(
+                                move || Box::new(Text::new("+").color(ink)) as Box<dyn WidgetAny>,
+                            )) as Box<dyn WidgetAny>
                         }
                     },
                 );
@@ -575,11 +565,8 @@ impl MaterialNumberInput {
         if let Some(label) = label {
             let ink = to_paint(style.label_color);
             column = column.push(move || {
-                Box::new(
-                    Text::new(label.clone())
-                        .size(LABEL_FONT_SIZE)
-                        .color(ink),
-                ) as Box<dyn WidgetAny>
+                Box::new(Text::new(label.clone()).size(LABEL_FONT_SIZE).color(ink))
+                    as Box<dyn WidgetAny>
             });
         }
         column = column.push(move || Box::new(field.clone()) as Box<dyn WidgetAny>);
@@ -592,4 +579,3 @@ impl Default for MaterialNumberInput {
         Self::new()
     }
 }
-

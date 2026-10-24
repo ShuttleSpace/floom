@@ -342,10 +342,7 @@ impl LinearProgress {
                 format!("{}%", self.fill_percent() as i64),
             )
         } else {
-            SemanticsHint::labeled(
-                SemanticsRole::ProgressBar,
-                "Indeterminate",
-            )
+            SemanticsHint::labeled(SemanticsRole::ProgressBar, "Indeterminate")
         }
     }
 }

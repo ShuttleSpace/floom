@@ -13,7 +13,7 @@ use floom_types::{PresenceChannel, PresenceTransition};
 use floom_widgets::testkit::{AllocatingCreateContext, RecordingUpdateContext};
 
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
-use floom_core_theme::global_theme::{DesignSystem, set_design_system};
+use floom_core_theme::global_theme::{set_design_system, DesignSystem};
 use floom_core_theme::theme::{MultiTheme, Theme};
 
 use floom_widget_cupertino_expand_transition::{
@@ -44,7 +44,9 @@ fn tokens() -> floom_core_theme::component_tokens::ExpandTransitionTokens {
 #[test]
 fn the_style_resolves_the_tokens() {
     let theme = theme();
-    let style: CupertinoExpandTransitionStyle = CupertinoExpandTransition::new().with_theme(theme.clone()).resolved_style();
+    let style: CupertinoExpandTransitionStyle = CupertinoExpandTransition::new()
+        .with_theme(theme.clone())
+        .resolved_style();
     assert_eq!(style.design_system, "cupertino");
     assert_eq!(style.duration_ms, tokens().duration_ms);
     let _ = theme;

@@ -59,15 +59,14 @@
 use floom_signal::{RwSignal, SignalGet};
 use floom_types::Color as PaintColor;
 
-use floom_ui_composites::{SharedPick};
+use floom_ui_composites::SharedPick;
 use floom_ui_composites::{Combobox, ComboboxStyle};
 
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::combobox::ComboboxProps;
 use floom_core_theme::theme::{MultiTheme, Theme};
-use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color::to_engine_color as to_paint;
-
+use floom_core_theme::tokens::color::Color;
 
 /// Icon names are resolved by the kit, from **this kit's own table**.
 ///
@@ -135,10 +134,7 @@ impl FluentCombobox {
         self
     }
 
-    pub fn on_change(
-        mut self,
-        callback: impl Fn(Option<usize>) + Send + Sync + 'static,
-    ) -> Self {
+    pub fn on_change(mut self, callback: impl Fn(Option<usize>) + Send + Sync + 'static) -> Self {
         self.props.on_change = Some(Box::new({
             // Held so `props()` keeps reporting what v1 reported; the engine gets the
             // `Send + Sync` handle, because a slot closure has to be one.

@@ -11,7 +11,9 @@
 //! `the_display_row_shows_the_value` and `the_tick_saves_and_the_cross_cancels`
 //! would fail if this kit stopped being this kit.
 
-use floom_core::{Child, ChildKey, ElementId, Event, Key, KeyEvent, LayoutRequest, Rect, Widget, WidgetAny};
+use floom_core::{
+    Child, ChildKey, ElementId, Event, Key, KeyEvent, LayoutRequest, Rect, Widget, WidgetAny,
+};
 use floom_types::{Color, PointerEvent};
 use floom_widgets::testkit::{
     AllocatingCreateContext, PaintOp, RecordingUpdateContext, SceneRecorder, TestEventContext,
@@ -69,12 +71,7 @@ fn ops_of(widget: &dyn Widget) -> Vec<PaintOp> {
 }
 
 /// Dispatch an event to a widget held behind a trait object.
-fn dispatch_any(
-    widget: &mut dyn WidgetAny,
-    id: ElementId,
-    bounds: Rect,
-    event: Event,
-) -> bool {
+fn dispatch_any(widget: &mut dyn WidgetAny, id: ElementId, bounds: Rect, event: Event) -> bool {
     let mut cx = TestEventContext::new(id, bounds, event);
     widget.event(&mut cx, id)
 }
@@ -212,7 +209,9 @@ fn the_display_row_shows_the_value() {
     let (text, size, _) = ops
         .iter()
         .find_map(|op| match op {
-            PaintOp::Text { text, size, color, .. } => Some((text.clone(), *size, *color)),
+            PaintOp::Text {
+                text, size, color, ..
+            } => Some((text.clone(), *size, *color)),
             _ => None,
         })
         .expect("the value is painted");
@@ -236,7 +235,9 @@ fn the_edit_affordance_is_a_glyph_in_on_surface_variant() {
     let fill = ops
         .iter()
         .find_map(|op| match op {
-            PaintOp::Path { fill: Some(color), .. } => Some(*color),
+            PaintOp::Path {
+                fill: Some(color), ..
+            } => Some(*color),
             _ => None,
         })
         .expect("the glyph is painted");

@@ -7,12 +7,17 @@
 
 use floom_types::{ElementId, Rect};
 
-use floom_widgets::testkit::{AllocatingCreateContext, paint_snapshot};
+use floom_widgets::testkit::{paint_snapshot, AllocatingCreateContext};
 use floom_widgets::VectorIcon;
 
-use floom_widget_fluent_icon::{VIEW_BOX, fluent_icon, fluent_icon_path, fluent_icon_svg};
+use floom_widget_fluent_icon::{fluent_icon, fluent_icon_path, fluent_icon_svg, VIEW_BOX};
 
-const BOX: Rect = Rect { x0: 0.0, y0: 0.0, x1: 24.0, y1: 24.0 };
+const BOX: Rect = Rect {
+    x0: 0.0,
+    y0: 0.0,
+    x1: 24.0,
+    y1: 24.0,
+};
 
 /// A named icon resolves to real path data. The control for everything below: if this
 /// failed, every other assertion here would pass vacuously.
@@ -46,7 +51,11 @@ fn names_are_normalised_before_the_lookup() {
     let canonical = fluent_icon_path("expand_more");
     assert_eq!(fluent_icon_path("expandmore"), canonical, "no underscore");
     assert_eq!(fluent_icon_path("expand-more"), canonical, "a hyphen");
-    assert_eq!(fluent_icon_path("Expand More"), canonical, "case and a space");
+    assert_eq!(
+        fluent_icon_path("Expand More"),
+        canonical,
+        "case and a space"
+    );
     assert_eq!(fluent_icon_path("EXPAND_MORE"), canonical, "all caps");
 }
 
@@ -56,7 +65,10 @@ fn names_are_normalised_before_the_lookup() {
 #[test]
 fn an_unknown_name_falls_back_to_a_drawn_shape() {
     let fallback = fluent_icon_path("definitely_not_an_icon");
-    assert!(!fallback.is_empty(), "the fallback is a path, not emptiness");
+    assert!(
+        !fallback.is_empty(),
+        "the fallback is a path, not emptiness"
+    );
     assert_ne!(
         fallback,
         fluent_icon_path("close"),
@@ -69,7 +81,10 @@ fn an_unknown_name_falls_back_to_a_drawn_shape() {
 #[test]
 fn the_svg_wrapper_contains_the_same_path() {
     let svg = fluent_icon_svg("close");
-    assert!(svg.contains("viewBox=\"0 0 24 24\""), "the set's own view box");
+    assert!(
+        svg.contains("viewBox=\"0 0 24 24\""),
+        "the set's own view box"
+    );
     assert!(
         svg.contains(fluent_icon_path("close")),
         "and the path the table holds"

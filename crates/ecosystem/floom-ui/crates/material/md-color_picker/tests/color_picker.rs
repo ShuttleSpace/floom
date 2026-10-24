@@ -183,7 +183,10 @@ fn the_picker_is_painted_in_v1_s_colours() {
     );
     assert_eq!(
         colour,
-        paint(floom_core_theme::tokens::color_ext::with_alpha(style.outline, style.border_alpha)),
+        paint(floom_core_theme::tokens::color_ext::with_alpha(
+            style.outline,
+            style.border_alpha
+        )),
         "in v1's border colour"
     );
 }

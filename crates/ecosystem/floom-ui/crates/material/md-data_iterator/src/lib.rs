@@ -20,8 +20,8 @@ use floom_widgets::{Axis, Divider, RuleAlignment, Stack, Surface};
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens, DataIteratorTokens};
 use floom_core_theme::props::data_iterator::DataIteratorProps;
 use floom_core_theme::theme::{MultiTheme, Theme};
-use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color::to_engine_color as to_paint;
+use floom_core_theme::tokens::color::Color;
 use floom_widget_runtime::theme_signal;
 
 /// A builder for one item, replayed each time it is mounted.
@@ -64,13 +64,19 @@ impl MaterialDataIterator {
     }
 
     /// The band above the items.
-    pub fn header(mut self, build: impl Fn() -> Box<dyn WidgetAny> + Send + Sync + 'static) -> Self {
+    pub fn header(
+        mut self,
+        build: impl Fn() -> Box<dyn WidgetAny> + Send + Sync + 'static,
+    ) -> Self {
         self.header = Some(Arc::new(build));
         self
     }
 
     /// The band below the items.
-    pub fn footer(mut self, build: impl Fn() -> Box<dyn WidgetAny> + Send + Sync + 'static) -> Self {
+    pub fn footer(
+        mut self,
+        build: impl Fn() -> Box<dyn WidgetAny> + Send + Sync + 'static,
+    ) -> Self {
         self.footer = Some(Arc::new(build));
         self
     }
@@ -96,7 +102,8 @@ impl MaterialDataIterator {
 
     pub fn resolved_style(&self) -> MaterialDataIteratorStyle {
         let theme = self.theme.get();
-        let ComponentTokens::DataIterator(tokens) = theme.component(ComponentId::DataIterator) else {
+        let ComponentTokens::DataIterator(tokens) = theme.component(ComponentId::DataIterator)
+        else {
             unreachable!("ComponentId::DataIterator must resolve to DataIteratorTokens")
         };
         MaterialDataIteratorStyle {
@@ -165,4 +172,3 @@ impl Default for MaterialDataIterator {
         Self::new()
     }
 }
-

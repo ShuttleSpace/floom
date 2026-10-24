@@ -42,49 +42,45 @@ fn columns() -> Vec<Column> {
 }
 
 fn build_data_grid() -> Box<dyn WidgetAny> {
-    Box::new(
-        Stack::new(Axis::Vertical).push_layout(
-            LayoutRequest::new().width(300.0).height(220.0),
-            || {
-                let rows: Vec<Vec<CellValue>> = (0..ROWS)
-                    .map(|i| {
-                        vec![
-                            CellValue::Text(format!("row {i}")),
-                            CellValue::Number(i as f64),
-                            CellValue::Bool(i % 2 == 0),
-                        ]
-                    })
-                    .collect();
-                Box::new(
-                    DataGrid::new(columns(), VecTable::from_rows(rows))
-                        .row_height(20.0)
-                        .header_height(24.0)
-                        .selection_mode(SelectionMode::Multiple),
-                )
-            },
-        ),
-    )
+    Box::new(Stack::new(Axis::Vertical).push_layout(
+        LayoutRequest::new().width(300.0).height(220.0),
+        || {
+            let rows: Vec<Vec<CellValue>> = (0..ROWS)
+                .map(|i| {
+                    vec![
+                        CellValue::Text(format!("row {i}")),
+                        CellValue::Number(i as f64),
+                        CellValue::Bool(i % 2 == 0),
+                    ]
+                })
+                .collect();
+            Box::new(
+                DataGrid::new(columns(), VecTable::from_rows(rows))
+                    .row_height(20.0)
+                    .header_height(24.0)
+                    .selection_mode(SelectionMode::Multiple),
+            )
+        },
+    ))
 }
 
 fn build_chart() -> Box<dyn WidgetAny> {
-    Box::new(
-        Stack::new(Axis::Vertical).push_layout(
-            LayoutRequest::new().width(280.0).height(180.0),
-            || {
-                Box::new(
-                    Chart::new()
-                        .x_axis(AxisSpec::new("quarter"))
-                        .y_axis(AxisSpec::new("units").limits(0.0, 8.0))
-                        .series(ChartSeries::bars(
-                            "units",
-                            [(0.0, 3.0), (1.0, 5.0), (2.0, 2.0), (3.0, 6.0)],
-                        ))
-                        .series(ChartSeries::line(
-                            "trend",
-                            [(0.0, 1.0), (1.0, 3.5), (2.0, 4.0), (3.0, 7.0)],
-                        )),
-                )
-            },
-        ),
-    )
+    Box::new(Stack::new(Axis::Vertical).push_layout(
+        LayoutRequest::new().width(280.0).height(180.0),
+        || {
+            Box::new(
+                Chart::new()
+                    .x_axis(AxisSpec::new("quarter"))
+                    .y_axis(AxisSpec::new("units").limits(0.0, 8.0))
+                    .series(ChartSeries::bars(
+                        "units",
+                        [(0.0, 3.0), (1.0, 5.0), (2.0, 2.0), (3.0, 6.0)],
+                    ))
+                    .series(ChartSeries::line(
+                        "trend",
+                        [(0.0, 1.0), (1.0, 3.5), (2.0, 4.0), (3.0, 7.0)],
+                    )),
+            )
+        },
+    ))
 }

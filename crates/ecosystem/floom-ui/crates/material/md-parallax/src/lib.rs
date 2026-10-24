@@ -71,11 +71,10 @@
 //!   and cannot cross a `Send + Sync` slot boundary. The port's is the shared
 //!   value described above.
 
-
-use floom_core::{Child};
+use floom_core::Child;
 use floom_signal::{RwSignal, SignalGet};
 pub use floom_ui_composites::{
-    ParallaxLayer, SharedScroll, read_scroll, shared_scroll, write_scroll,
+    read_scroll, shared_scroll, write_scroll, ParallaxLayer, SharedScroll,
 };
 
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};

@@ -24,8 +24,8 @@
 use std::sync::{Arc, Mutex};
 
 use floom_core::{
-    Child, ChildKey, CreateContext, ElementId, Event, EventContext, LayoutRequest,
-    PaintContext, ScrollOffset, UpdateContext, Widget, WidgetAny,
+    Child, ChildKey, CreateContext, ElementId, Event, EventContext, LayoutRequest, PaintContext,
+    ScrollOffset, UpdateContext, Widget, WidgetAny,
 };
 use floom_types::ClipShape;
 use floom_widgets::{Align, Axis, List, Spacer, Stack};
@@ -259,7 +259,11 @@ impl Widget for VirtualScroller {
     }
 
     fn layout_request(&self) -> Option<LayoutRequest> {
-        Some(LayoutRequest::new().width_pct(100.0).stack(Axis::Vertical, 0.0))
+        Some(
+            LayoutRequest::new()
+                .width_pct(100.0)
+                .stack(Axis::Vertical, 0.0),
+        )
     }
 
     fn event(&mut self, cx: &mut dyn EventContext, _id: ElementId) -> bool {

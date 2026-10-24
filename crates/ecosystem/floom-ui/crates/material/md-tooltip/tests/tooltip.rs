@@ -120,7 +120,10 @@ fn the_tokens_and_colours_reach_the_engine_style() {
     };
 
     assert_eq!(style.padding, tokens.padding, "the token's padding");
-    assert_eq!(style.border_radius, tokens.border_radius, "the token's radius");
+    assert_eq!(
+        style.border_radius, tokens.border_radius,
+        "the token's radius"
+    );
     assert_eq!(style.font_size, tokens.font_size, "the token's text size");
     assert_eq!(style.text_color, theme().colors().surface, "the text's ink");
 }
@@ -133,7 +136,11 @@ fn the_design_system_is_named_in_the_style() {
 /// The gap below the control is v1's: v1 wrote `translate_y(4.0)` on the bubble
 #[test]
 fn the_gap_is_v1_s() {
-    assert_eq!(kit().resolved_style().gap, 4.0, "v1's `translate_y(4.0)`, a literal and not a token");
+    assert_eq!(
+        kit().resolved_style().gap,
+        4.0,
+        "v1's `translate_y(4.0)`, a literal and not a token"
+    );
 }
 
 // --- the pixels -----------------------------------------------------------
@@ -147,7 +154,11 @@ fn the_bubble_paints_v1_s_appearance() {
     arrive(&mut tooltip);
 
     let (fill, ink) = bubble_painted(&tooltip);
-    assert_eq!(fill, Some(paint(resolved.bubble_color)), "the bubble's fill");
+    assert_eq!(
+        fill,
+        Some(paint(resolved.bubble_color)),
+        "the bubble's fill"
+    );
     assert_eq!(ink, Some(paint(resolved.text_color)), "and the text's ink");
 }
 
@@ -155,7 +166,10 @@ fn the_bubble_paints_v1_s_appearance() {
 #[test]
 fn the_bubble_is_up_only_while_the_pointer_rests_on_the_control() {
     let mut tooltip = kit().child(trigger()).text("Hello").view();
-    assert!(!tooltip.is_present(), "no bubble before the pointer arrives");
+    assert!(
+        !tooltip.is_present(),
+        "no bubble before the pointer arrives"
+    );
     arrive(&mut tooltip);
     assert!(tooltip.is_hovered(), "the pointer arrived");
     assert!(tooltip.is_present(), "so the bubble is up");
@@ -182,7 +196,11 @@ fn the_bubble_paints_the_tooltips_own_text() {
         })
         .expect("the bubble paints its text");
     assert_eq!(text, "Hello");
-    assert_eq!(size, kit().resolved_style().font_size, "at the token's size");
+    assert_eq!(
+        size,
+        kit().resolved_style().font_size,
+        "at the token's size"
+    );
 }
 
 /// The props report the text.

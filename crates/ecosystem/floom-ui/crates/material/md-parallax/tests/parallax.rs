@@ -21,7 +21,7 @@ use floom_core_theme::global_theme::DesignSystem;
 use floom_core_theme::theme::{MultiTheme, Theme};
 
 use floom_widget_md_parallax::{
-    MaterialParallax, MaterialParallaxStyle, read_scroll, shared_scroll, write_scroll,
+    read_scroll, shared_scroll, write_scroll, MaterialParallax, MaterialParallaxStyle,
 };
 
 const ID: ElementId = ElementId::new(1, 1);
@@ -40,11 +40,11 @@ fn kit() -> MaterialParallax {
 
 /// The parallax token's factor.
 fn token_factor() -> f32 {
-    let tokens =
-        match theme().component(floom_core_theme::component_tokens::ComponentId::Parallax) {
-            floom_core_theme::component_tokens::ComponentTokens::Parallax(tokens) => tokens,
-            _ => unreachable!(),
-        };
+    let tokens = match theme().component(floom_core_theme::component_tokens::ComponentId::Parallax)
+    {
+        floom_core_theme::component_tokens::ComponentTokens::Parallax(tokens) => tokens,
+        _ => unreachable!(),
+    };
     tokens.factor
 }
 
@@ -100,10 +100,7 @@ fn the_design_system_is_named_in_the_style() {
 #[test]
 fn the_layer_moves_the_content_by_the_scroll_times_the_factor() {
     let scroll = shared_scroll(100.0);
-    let mut layer = kit()
-        .factor(0.5)
-        .scroll_signal(scroll.clone())
-        .view();
+    let mut layer = kit().factor(0.5).scroll_signal(scroll.clone()).view();
 
     let mut cx = RecordingUpdateContext::new();
     layer.update(&mut cx, ID);
@@ -127,10 +124,7 @@ fn the_layer_moves_the_content_by_the_scroll_times_the_factor() {
 #[test]
 fn a_moved_offset_re_declares_the_motion() {
     let scroll = shared_scroll(100.0);
-    let mut layer = kit()
-        .factor(0.5)
-        .scroll_signal(scroll.clone())
-        .view();
+    let mut layer = kit().factor(0.5).scroll_signal(scroll.clone()).view();
 
     let mut cx = RecordingUpdateContext::new();
     layer.update(&mut cx, ID);

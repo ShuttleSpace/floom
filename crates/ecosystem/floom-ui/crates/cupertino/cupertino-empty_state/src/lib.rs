@@ -47,9 +47,8 @@ use floom_widgets::{Align, Axis, Stack, Surface, Text};
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::empty_state::EmptyStateProps;
 use floom_core_theme::theme::{MultiTheme, Theme};
-use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color::to_engine_color as to_paint;
-
+use floom_core_theme::tokens::color::Color;
 
 /// The padding around the column, at every side. A v1 literal.
 const PADDING: f64 = 24.0;
@@ -161,9 +160,7 @@ impl CupertinoEmptyState {
             let icon = self.props.icon.clone();
             let size = style.icon_size;
             let color = to_paint(style.on_surface_variant);
-            column = column.push(move || {
-                Box::new(Text::new(icon.clone()).size(size).color(color))
-            });
+            column = column.push(move || Box::new(Text::new(icon.clone()).size(size).color(color)));
         }
 
         let title = self.props.title.clone();
@@ -183,9 +180,8 @@ impl CupertinoEmptyState {
             let description = self.props.description.clone();
             let size = style.description_font_size;
             let color = to_paint(style.on_surface_variant);
-            column = column.push(move || {
-                Box::new(Text::new(description.clone()).size(size).color(color))
-            });
+            column = column
+                .push(move || Box::new(Text::new(description.clone()).size(size).color(color)));
         }
 
         if let Some(child) = self.child {
@@ -216,4 +212,3 @@ impl Default for CupertinoEmptyState {
         Self::new()
     }
 }
-

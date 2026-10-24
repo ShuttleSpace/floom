@@ -25,12 +25,12 @@
 //!
 //! Everything below is `floom::prelude`. Run with `cargo run -p floom-chart`.
 
-use floom_signal::{RwSignal, SignalGet, SignalUpdate, SyncRwSignal};
 use floom::advanced::PaintContext;
 use floom::floom_layout::AbsoluteInset;
 use floom::floom_scene::SceneNode;
 use floom::floom_types::{ClipShape, PathSeg};
 use floom::prelude::*;
+use floom_signal::{RwSignal, SignalGet, SignalUpdate, SyncRwSignal};
 
 /// The rendered surface. The canvas is 320×200, placed 24px down it, so
 /// overshoot above the canvas's top edge lands in surface territory where

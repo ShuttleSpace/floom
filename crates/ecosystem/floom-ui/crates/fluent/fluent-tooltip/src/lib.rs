@@ -45,8 +45,8 @@ use floom_ui_composites::{Tooltip, TooltipStyle};
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::tooltip::TooltipProps;
 use floom_core_theme::theme::{MultiTheme, Theme};
-use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color::to_engine_color as to_paint;
+use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color_ext::with_alpha;
 
 const DESIGN_SYSTEM: &str = "fluent";
@@ -153,4 +153,3 @@ impl Default for FluentTooltip {
         Self::new()
     }
 }
-

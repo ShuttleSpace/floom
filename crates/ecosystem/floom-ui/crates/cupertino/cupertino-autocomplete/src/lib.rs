@@ -46,15 +46,14 @@
 use floom_signal::{RwSignal, SignalGet};
 use floom_types::Color as PaintColor;
 
-use floom_ui_composites::{SharedPick, commit, select};
+use floom_ui_composites::{commit, select, SharedPick};
 use floom_ui_composites::{Combobox, ComboboxStyle, Commit};
 
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::autocomplete::AutocompleteProps;
 use floom_core_theme::theme::{MultiTheme, Theme};
-use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color::to_engine_color as to_paint;
-
+use floom_core_theme::tokens::color::Color;
 
 /// Icon names are resolved by the kit, because three kits' icon sets differ and the
 /// engine has no business choosing between them.
@@ -116,10 +115,7 @@ impl CupertinoAutocomplete {
     /// That is the whole difference from a combobox's callback, and it is why the
     /// engine's index-based `on_change` is adapted rather than handed through: "kiwi" is
     /// a legitimate answer from this field and has no index.
-    pub fn on_change(
-        mut self,
-        callback: impl Fn(Option<String>) + Send + Sync + 'static,
-    ) -> Self {
+    pub fn on_change(mut self, callback: impl Fn(Option<String>) + Send + Sync + 'static) -> Self {
         self.props.on_change = Some(Box::new({
             let shared = std::sync::Arc::new(callback);
             self.on_change = Some(shared.clone());

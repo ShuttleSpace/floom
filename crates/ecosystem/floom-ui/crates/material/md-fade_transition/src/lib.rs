@@ -19,11 +19,11 @@ use std::sync::Arc;
 use floom_core::{ChildKey, LayoutRequest, WidgetAny};
 use floom_signal::{RwSignal, SignalGet};
 use floom_types::PresenceTransition;
+use floom_widgets::text_input::{shared_flag, write_flag, SharedFlag};
 use floom_widgets::{Conditional, Text};
-use floom_widgets::text_input::{SharedFlag, shared_flag, write_flag};
 
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens, FadeTransitionTokens};
-use floom_core_theme::props::fade_transition::{FadeTransitionProps, };
+use floom_core_theme::props::fade_transition::FadeTransitionProps;
 use floom_core_theme::theme::{MultiTheme, Theme};
 use floom_widget_runtime::theme_signal;
 
@@ -38,7 +38,8 @@ pub type ChildBuilder = Arc<dyn Fn() -> Box<dyn WidgetAny> + Send + Sync + 'stat
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct MaterialFadeTransitionStyle {
     pub design_system: &'static str,
-    pub duration_ms: f32,}
+    pub duration_ms: f32,
+}
 
 /// Material's fade transition.
 pub struct MaterialFadeTransition {
@@ -98,7 +99,8 @@ impl MaterialFadeTransition {
 
     pub fn resolved_style(&self) -> MaterialFadeTransitionStyle {
         let theme = self.theme.get();
-        let ComponentTokens::FadeTransition(tokens) = theme.component(ComponentId::FadeTransition) else {
+        let ComponentTokens::FadeTransition(tokens) = theme.component(ComponentId::FadeTransition)
+        else {
             unreachable!("ComponentId::FadeTransition must resolve to FadeTransitionTokens")
         };
         MaterialFadeTransitionStyle {
@@ -119,7 +121,9 @@ impl MaterialFadeTransition {
     /// The transition for a resolved style. Split out so `transition` and
     /// `view` cannot disagree about which one they mean.
     fn transition_for(&self, style: &MaterialFadeTransitionStyle) -> Option<PresenceTransition> {
-        Some(PresenceTransition::fade(f64::from(style.duration_ms) / 1000.0))
+        Some(PresenceTransition::fade(
+            f64::from(style.duration_ms) / 1000.0,
+        ))
     }
 
     /// The content, mounted only while the flag says so.
@@ -127,15 +131,18 @@ impl MaterialFadeTransition {
         let style = self.resolved_style();
         // v1's fade: opacity 0 -> 1 over the token's duration, played on
         // create and on remove.
-        let transition = self.transition_for(&style);        let child = self.child.clone();
+        let transition = self.transition_for(&style);
+        let child = self.child.clone();
         let show = self.show.clone();
 
-        let mut conditional = Conditional::new(false)
-            .when_flag(show)
-            .show_with(ChildKey::index(0), LayoutRequest::new(), move || match child.clone() {
+        let mut conditional = Conditional::new(false).when_flag(show).show_with(
+            ChildKey::index(0),
+            LayoutRequest::new(),
+            move || match child.clone() {
                 Some(build) => build(),
                 None => Box::new(Text::new(String::new())),
-            });
+            },
+        );
         if let Some(transition) = transition {
             conditional = conditional.enter(transition).exit(transition);
         }

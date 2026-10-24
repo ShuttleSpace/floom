@@ -37,9 +37,7 @@ use floom_core::{
 };
 use floom_types::Color;
 
-use floom_widgets::{
-    Pressable, Revision, SemanticsHint, Stack, Surface, Text, emit_semantics,
-};
+use floom_widgets::{emit_semantics, Pressable, Revision, SemanticsHint, Stack, Surface, Text};
 
 /// The counter's mutable state, shared between the widget and its callers.
 ///

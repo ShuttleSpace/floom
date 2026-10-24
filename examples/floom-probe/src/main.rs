@@ -43,15 +43,15 @@
 
 #![cfg(feature = "real")]
 
-use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 use floom_animation::{AnimKind, CompositorProp, Easing, Tween};
 use floom_app::{AppRunner, NodeId, WidgetHost};
 use floom_core::{Axis, Child, ChildKey, LayoutRequest};
 use floom_layout::LayoutStyle;
 use floom_platform::{Capability, Platform, WindowConfig};
-use floom_platform_desktop::winit_backend::{run, WinitApp, WinitPlatform};
+use floom_platform_desktop::winit_backend::{WinitApp, WinitPlatform, run};
 use floom_renderer_vello::VelloGpuPresenter;
 use floom_types::{NativeViewKind, Size, WindowId};
 use floom_ui_composites::{BottomSheet, Dialog, NavDestination, NavigationDrawer, Popup, Select};

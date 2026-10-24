@@ -46,7 +46,9 @@ fn inner(container: CupertinoContainer) -> Box<dyn floom_core::WidgetAny> {
 #[test]
 fn the_outer_box_is_full_width_and_centres_its_content() {
     let stack = CupertinoContainer::new().with_theme(theme()).view();
-    let request = stack.layout_request().expect("a container asks for its own space");
+    let request = stack
+        .layout_request()
+        .expect("a container asks for its own space");
     assert_eq!(
         request.width,
         Some(Length::Pct(100.0)),
@@ -67,15 +69,19 @@ fn the_inner_box_carries_the_padding_the_fill_and_the_cap() {
         .max_width(640.0)
         .padding(24.0)
         .resolved_style();
-    let inner = inner(CupertinoContainer::new()
-        .with_theme(theme())
-        .max_width(640.0)
-        .padding(24.0));
+    let inner = inner(
+        CupertinoContainer::new()
+            .with_theme(theme())
+            .max_width(640.0)
+            .padding(24.0),
+    );
     let surface = inner
         .as_any()
         .downcast_ref::<Surface>()
         .expect("the inner box is a surface");
-    let request = surface.layout_request().expect("a box asks for its own space");
+    let request = surface
+        .layout_request()
+        .expect("a box asks for its own space");
     assert_eq!(
         request.padding,
         Some(floom_types::Insets::uniform(24.0)),
@@ -92,16 +98,20 @@ fn the_inner_box_carries_the_padding_the_fill_and_the_cap() {
 /// A fluid container drops the cap and keeps everything else.
 #[test]
 fn a_fluid_container_drops_the_cap() {
-    let inner = inner(CupertinoContainer::new()
-        .with_theme(theme())
-        .max_width(640.0)
-        .padding(24.0)
-        .fluid(true));
+    let inner = inner(
+        CupertinoContainer::new()
+            .with_theme(theme())
+            .max_width(640.0)
+            .padding(24.0)
+            .fluid(true),
+    );
     let surface = inner
         .as_any()
         .downcast_ref::<Surface>()
         .expect("the inner box is a surface");
-    let request = surface.layout_request().expect("a box asks for its own space");
+    let request = surface
+        .layout_request()
+        .expect("a box asks for its own space");
     assert_eq!(
         request.max_width, None,
         "v1: the cap is applied only when the container is not fluid"
@@ -116,9 +126,11 @@ fn a_fluid_container_drops_the_cap() {
 /// The content goes inside the inner box.
 #[test]
 fn the_content_is_inside_the_inner_box() {
-    let inner = inner(CupertinoContainer::new()
-        .with_theme(theme())
-        .child(|| Box::new(floom_widgets::Text::new("body"))));
+    let inner = inner(
+        CupertinoContainer::new()
+            .with_theme(theme())
+            .child(|| Box::new(floom_widgets::Text::new("body"))),
+    );
     let surface = inner
         .as_any()
         .downcast_ref::<Surface>()
@@ -130,12 +142,19 @@ fn the_content_is_inside_the_inner_box() {
 #[test]
 fn the_style_resolves_the_themes_surface_and_ink() {
     let theme = theme();
-    let style = CupertinoContainer::new().with_theme(theme.clone()).resolved_style();
+    let style = CupertinoContainer::new()
+        .with_theme(theme.clone())
+        .resolved_style();
     assert_eq!(style.surface, theme.colors().surface);
     assert_eq!(style.content, theme.colors().on_surface);
 }
 
 /// Design-system colour -> engine colour.
 fn to_paint(c: floom_core_theme::tokens::color::Color) -> Color {
-    Color { r: c.r, g: c.g, b: c.b, a: c.a }
+    Color {
+        r: c.r,
+        g: c.g,
+        b: c.b,
+        a: c.a,
+    }
 }

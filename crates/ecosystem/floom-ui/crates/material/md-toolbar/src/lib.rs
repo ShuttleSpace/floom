@@ -38,17 +38,17 @@
 //!   would be a behaviour change, so the token stays unread and says so in
 //!   [`ToolbarTokensHeightNote`] below rather than being silently preferred.
 
-use floom_signal::{RwSignal, SignalGet};
-use floom_types::{Color as PaintColor, Insets, Shadow};
-use floom_widgets::{Align, Axis, Icon, Stack, Surface, Text};
 use floom_core::{FontWeight as EngineFontWeight, LayoutRequest, WidgetAny};
-use floom_widget_runtime::theme_signal;
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::toolbar::ToolbarProps;
 use floom_core_theme::theme::{MultiTheme, Theme};
-use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color::to_engine_color as to_paint;
+use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color_ext::*;
+use floom_signal::{RwSignal, SignalGet};
+use floom_types::{Color as PaintColor, Insets, Shadow};
+use floom_widget_runtime::theme_signal;
+use floom_widgets::{Align, Axis, Icon, Stack, Surface, Text};
 
 /// Opaque black, the base the toolbar's elevation shadow tints.
 const BLACK: Color = Color {
@@ -101,9 +101,7 @@ impl ToolbarTokensHeightNote {
 /// slot is itself a replayed `Fn`, so every rebuild needs its own copy of the
 /// actions closure to move into the inner slot. A `Box` cannot be cloned and a
 /// borrowed one would not be `'static`.
-pub type ActionsBuilder =
-    std::sync::Arc<dyn Fn() -> Box<dyn WidgetAny> + Send + Sync + 'static>;
-
+pub type ActionsBuilder = std::sync::Arc<dyn Fn() -> Box<dyn WidgetAny> + Send + Sync + 'static>;
 
 /// The theme's weight -> the engine's.
 ///
@@ -388,7 +386,8 @@ fn leading_group_of(
         .gap(LEADING_GAP)
         .align(Align::Start, Align::Center);
     if let Some(glyph) = leading {
-        group = group.push(move || Box::new(Icon::new(glyph).size(LEADING_ICON_SIZE).color(content)));
+        group =
+            group.push(move || Box::new(Icon::new(glyph).size(LEADING_ICON_SIZE).color(content)));
     }
     let title = title.to_string();
     group.push(move || {

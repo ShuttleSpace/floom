@@ -40,9 +40,7 @@ fn the_host_describes_its_own_tree_as_data() {
     // A widget with children is a host; a leaf is a primitive.
     assert_eq!(roots[0].kind, HostedKind::Host);
     assert!(
-        nodes
-            .iter()
-            .any(|n| n.kind == HostedKind::Primitive),
+        nodes.iter().any(|n| n.kind == HostedKind::Primitive),
         "the leaves are primitives: {:?}",
         nodes
     );

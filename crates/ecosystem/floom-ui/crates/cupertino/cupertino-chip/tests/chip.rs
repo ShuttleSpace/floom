@@ -117,7 +117,11 @@ fn the_tokens_reach_the_engine_chip() {
         Some(paint(with_alpha(theme().colors().on_surface, 16))),
         "the hover fill"
     );
-    assert_eq!(engine.font_weight, floom_types::FontWeight::Normal, "the label's weight");
+    assert_eq!(
+        engine.font_weight,
+        floom_types::FontWeight::Normal,
+        "the label's weight"
+    );
 }
 
 #[test]
@@ -158,12 +162,20 @@ fn the_outline_is_the_one_v1_drew() {
     let style = chip().resolved_style();
     let (width, color) = outline.expect("v1's Cupertino chip always had an outline");
     assert_eq!(width, 1.0, "v1 wrote `.border(1.0)` unconditionally");
-    assert_eq!(color, paint(style.border_color), "in the style's border colour");
+    assert_eq!(
+        color,
+        paint(style.border_color),
+        "in the style's border colour"
+    );
     // And the chosen chip's outline is `primary`, not `outline`.
     let chosen = chip().selected(true).resolved_style();
     let (_, _, outline) = painted(&chip().selected(true).label("One").view());
     let (_, color) = outline.expect("an outline");
-    assert_eq!(color, paint(chosen.border_color), "in `primary` when chosen");
+    assert_eq!(
+        color,
+        paint(chosen.border_color),
+        "in `primary` when chosen"
+    );
     assert_ne!(
         chosen.border_color, style.border_color,
         "and the unchosen chip's outline is `outline` instead"

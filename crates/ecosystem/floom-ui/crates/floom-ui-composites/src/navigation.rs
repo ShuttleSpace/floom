@@ -11,8 +11,8 @@
 //! host remounts it, and the highlight updates — no in-place mutation of a
 //! mounted button is needed.
 
-use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::Arc;
 
 use floom_accessibility::{SemanticsRole, SemanticsState};
 use floom_core::{
@@ -21,9 +21,9 @@ use floom_core::{
 };
 
 use crate::{Overlay, OverlayHost};
-use floom_widgets::{Stack};
 use floom_widgets::controls::Button;
 use floom_widgets::primitives::{SemanticsHint, Text};
+use floom_widgets::Stack;
 
 /// One selectable navigation destination.
 #[derive(Clone, Debug, PartialEq, Eq)]

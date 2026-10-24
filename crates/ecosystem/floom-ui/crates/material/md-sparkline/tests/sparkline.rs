@@ -57,17 +57,18 @@ fn paint(c: floom_core_theme::tokens::color::Color) -> Color {
 
 /// The bars of a sparkline, as the widgets they are.
 fn bars(sparkline: &impl Widget) -> Vec<Box<dyn WidgetAny>> {
-    sparkline.children().into_iter().map(|child| child.build()).collect()
+    sparkline
+        .children()
+        .into_iter()
+        .map(|child| child.build())
+        .collect()
 }
 
 /// The size a bar asked for.
 fn bar_size(bar: &dyn WidgetAny) -> (Option<f32>, Option<f32>) {
-    bar.layout_request().map(|r: LayoutRequest| {
-        (
-            r.width.and_then(|w| w.px()),
-            r.height.and_then(|h| h.px()),
-        )
-    }).unwrap_or((None, None))
+    bar.layout_request()
+        .map(|r: LayoutRequest| (r.width.and_then(|w| w.px()), r.height.and_then(|h| h.px())))
+        .unwrap_or((None, None))
 }
 
 /// The fill a bar painted.
@@ -92,7 +93,11 @@ fn the_tokens_and_colours_reach_the_style() {
     let style: MaterialSparklineStyle = kit().resolved_style();
     assert_eq!(style.width, tokens().width, "the token's width");
     assert_eq!(style.height, tokens().height, "the token's height");
-    assert_eq!(style.fill_opacity, tokens().fill_opacity, "the token's alpha");
+    assert_eq!(
+        style.fill_opacity,
+        tokens().fill_opacity,
+        "the token's alpha"
+    );
     assert_eq!(
         style.bar_color,
         floom_core_theme::tokens::color_ext::with_alpha(
@@ -101,7 +106,10 @@ fn the_tokens_and_colours_reach_the_style() {
         ),
         "v1's default is a translucent primary"
     );
-    assert!(style.fill, "v1's `SparklineProps::default()` has fill: true");
+    assert!(
+        style.fill,
+        "v1's `SparklineProps::default()` has fill: true"
+    );
 }
 
 #[test]
@@ -112,7 +120,11 @@ fn the_design_system_is_named_in_the_style() {
 /// The props win over the tokens.
 #[test]
 fn the_props_win_over_the_tokens() {
-    assert_eq!(kit().resolved_style().width, tokens().width, "the props defer");
+    assert_eq!(
+        kit().resolved_style().width,
+        tokens().width,
+        "the props defer"
+    );
     assert_eq!(kit().width(120.0).resolved_style().width, 120.0);
     assert_eq!(kit().height(30.0).resolved_style().height, 30.0);
 }
@@ -124,7 +136,8 @@ fn the_gap_is_the_props_line_width_and_not_the_tokens() {
     let style = kit().line_width(6.0).resolved_style();
     assert_eq!(style.gap, 6.0, "v1's gap is the props' `line_width`");
     assert_eq!(
-        style.token_line_width, tokens().line_width,
+        style.token_line_width,
+        tokens().line_width,
         "and the token's own bar width is reported but never used"
     );
     assert_eq!(
@@ -153,7 +166,10 @@ fn the_bar_width_is_computed_from_the_width_and_the_gap() {
 /// A series whose values are all equal is drawn against a range of one.
 #[test]
 fn a_flat_series_is_drawn_against_a_range_of_one() {
-    let style = kit().values(vec![5.0, 5.0, 5.0]).height(50.0).resolved_style();
+    let style = kit()
+        .values(vec![5.0, 5.0, 5.0])
+        .height(50.0)
+        .resolved_style();
     assert_eq!(style.min, 5.0);
     assert_eq!(style.max, 5.0);
     assert_eq!(style.range, 1.0, "v1's rule for an empty range");
@@ -198,12 +214,10 @@ fn the_bars_are_painted_in_v1_s_colour() {
     for bar in &bar_widgets {
         assert_eq!(
             bar_fill(&**bar),
-            Some(paint(
-                floom_core_theme::tokens::color_ext::with_alpha(
-                    theme().colors().primary,
-                    tokens().fill_opacity
-                )
-            )),
+            Some(paint(floom_core_theme::tokens::color_ext::with_alpha(
+                theme().colors().primary,
+                tokens().fill_opacity
+            ))),
             "v1's default fill is a translucent primary"
         );
     }
@@ -231,8 +245,16 @@ fn the_bars_have_v1_s_heights() {
     assert_eq!(bars.len(), 3);
     let heights: Vec<Option<f32>> = bars.iter().map(|b| bar_size(&**b).1).collect();
     assert_eq!(heights[0], Some(2.0), "the smallest value is floored at 2");
-    assert_eq!(heights[1], Some(25.0), "the middle value is half the height");
-    assert_eq!(heights[2], Some(50.0), "the largest value is the full height");
+    assert_eq!(
+        heights[1],
+        Some(25.0),
+        "the middle value is half the height"
+    );
+    assert_eq!(
+        heights[2],
+        Some(50.0),
+        "the largest value is the full height"
+    );
 }
 
 /// The bars have the width v1 computed.

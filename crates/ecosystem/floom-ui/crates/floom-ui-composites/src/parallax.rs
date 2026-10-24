@@ -28,8 +28,8 @@
 //! it. That gap is the engine's, and this keeps v1's contract -- the host
 //! owns the scroll source -- while the shared number makes it writable.
 
-use std::any::Any;
 use crate::shared::SharedNumber;
+use std::any::Any;
 
 use floom_core::{
     AnimationSpec, Child, CompositorProp, CreateContext, ElementId, PaintContext, UpdateContext,
@@ -39,10 +39,10 @@ use floom_core::{
 /// The shared number, under the name the parallax knows it by.
 pub type SharedScroll = SharedNumber;
 
-/// A fresh shared scroll offset.
-pub use crate::shared::shared_number as shared_scroll;
 /// Read the shared offset, treating a poisoned mutex as "no scroll".
 pub use crate::shared::read_number as read_scroll;
+/// A fresh shared scroll offset.
+pub use crate::shared::shared_number as shared_scroll;
 /// Write the shared offset. Reports whether it changed, so a caller can skip a
 /// frame.
 pub use crate::shared::write_number as write_scroll;
@@ -65,7 +65,7 @@ pub struct ParallaxLayer {
     ///
     /// The host reconciles a widget's declaration against the one it is
     /// already running, and an unchanged declaration is left alone. The offset
-   /// is part of the declaration, so a moved offset is a new declaration --
+    /// is part of the declaration, so a moved offset is a new declaration --
     /// and the key is what makes the host see it as one.
     rev: u64,
 }

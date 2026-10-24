@@ -76,8 +76,8 @@ use floom_widgets::{Button, Text};
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::button::{ButtonProps, ButtonSize, ButtonVariant};
 use floom_core_theme::theme::{MultiTheme, Theme};
-use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color::to_engine_color as to_paint;
+use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color_ext::*;
 
 const DESIGN_SYSTEM: &str = "cupertino";
@@ -218,7 +218,10 @@ impl CupertinoButton {
     /// engine halves the alpha of a disabled control's fill and its label.
     fn paint_pair(&self, style: &CupertinoButtonStyle) -> (PaintColor, PaintColor) {
         if self.props.disabled {
-            (undim(to_paint(style.background)), undim(to_paint(style.foreground)))
+            (
+                undim(to_paint(style.background)),
+                undim(to_paint(style.foreground)),
+            )
         } else {
             (to_paint(style.background), to_paint(style.foreground))
         }
@@ -299,7 +302,9 @@ fn base_colors(theme: &MultiTheme, variant: ButtonVariant, disabled: bool) -> (C
             theme.colors().on_secondary_container,
         ),
         ButtonVariant::Danger => (theme.colors().error, theme.colors().on_error),
-        ButtonVariant::Ghost | ButtonVariant::Text => (Color::rgba(0, 0, 0, 0), theme.colors().primary),
+        ButtonVariant::Ghost | ButtonVariant::Text => {
+            (Color::rgba(0, 0, 0, 0), theme.colors().primary)
+        }
     }
 }
 
@@ -315,9 +320,11 @@ fn disabled_colors(theme: &MultiTheme) -> (Color, Color) {
 /// Doubles a colour's alpha, so the engine's `a / 2` dimming of a disabled
 /// control lands back on the value the kit meant.
 fn undim(c: PaintColor) -> PaintColor {
-    PaintColor { a: c.a.saturating_mul(2), ..c }
+    PaintColor {
+        a: c.a.saturating_mul(2),
+        ..c
+    }
 }
-
 
 /// The label as its own widget, for callers that want to compose by hand.
 pub fn label_widget(text: &str) -> Text {

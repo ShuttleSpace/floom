@@ -63,14 +63,14 @@ use floom_signal::{RwSignal, SignalGet};
 use floom_types::Color as PaintColor;
 use floom_types::{Edges, Insets, Shadow};
 use floom_ui_composites::Overlay;
-use floom_widgets::text_input::{SharedFlag, read_flag, shared_flag, write_flag};
+use floom_widgets::text_input::{read_flag, shared_flag, write_flag, SharedFlag};
 use floom_widgets::{Align, Axis, Conditional, Pressable, Stack, Surface};
 
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::navigation_drawer::{NavigationDrawerProps, NavigationDrawerSide};
 use floom_core_theme::theme::{MultiTheme, Theme};
-use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color::to_engine_color as to_paint;
+use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color_ext::with_alpha;
 
 /// The scrim's alpha. A v1 literal.
@@ -240,12 +240,8 @@ impl FluentNavigationDrawer {
         // which no effect can track, so the width is published once, here.
         floom_core_theme::layout::register_layout(
             match side {
-                NavigationDrawerSide::Left => {
-                    floom_core_theme::layout::LayoutSlot::NavDrawerLeft
-                }
-                NavigationDrawerSide::Right => {
-                    floom_core_theme::layout::LayoutSlot::NavDrawerRight
-                }
+                NavigationDrawerSide::Left => floom_core_theme::layout::LayoutSlot::NavDrawerLeft,
+                NavigationDrawerSide::Right => floom_core_theme::layout::LayoutSlot::NavDrawerRight,
             },
             if read_flag(&open) { style.width } else { 0.0 },
         );
@@ -255,26 +251,22 @@ impl FluentNavigationDrawer {
         //
         // `Pressable` is a builder rather than a `Clone` value, so the scrim
         // is built inside the closure that mounts it.
-        let scrim_slot = Child::new(
-            ChildKey::index(1),
-            LayoutRequest::new().grow(1.0),
-            {
-                let dismiss = open.clone();
-                move || {
-                    let dismiss = dismiss.clone();
-                    Box::new(
-                        Pressable::new(Child::new(
-                            ChildKey::index(0),
-                            LayoutRequest::new().absolute_fill(),
-                            || Box::new(Surface::new()),
-                        ))
-                        .on_click(move || {
-                            write_flag(&dismiss, false);
-                        }),
-                    ) as Box<dyn WidgetAny>
-                }
-            },
-        );
+        let scrim_slot = Child::new(ChildKey::index(1), LayoutRequest::new().grow(1.0), {
+            let dismiss = open.clone();
+            move || {
+                let dismiss = dismiss.clone();
+                Box::new(
+                    Pressable::new(Child::new(
+                        ChildKey::index(0),
+                        LayoutRequest::new().absolute_fill(),
+                        || Box::new(Surface::new()),
+                    ))
+                    .on_click(move || {
+                        write_flag(&dismiss, false);
+                    }),
+                ) as Box<dyn WidgetAny>
+            }
+        });
 
         // The panel: the header over the content, on the panel's own fill.
         let panel_color = to_paint(style.background);
@@ -322,21 +314,17 @@ impl FluentNavigationDrawer {
             column = column.child(Child::new(
                 ChildKey::index(0),
                 LayoutRequest::new().width_pct(100.0).height_pct(100.0),
-                move || {
-                    match &header {
-                        Some(header) => header.build(),
-                        None => Box::new(Surface::new()) as Box<dyn WidgetAny>,
-                    }
+                move || match &header {
+                    Some(header) => header.build(),
+                    None => Box::new(Surface::new()) as Box<dyn WidgetAny>,
                 },
             ));
             column = column.child(Child::new(
                 ChildKey::index(1),
                 LayoutRequest::new(),
-                move || {
-                    match &content {
-                        Some(content) => content.build(),
-                        None => Box::new(Surface::new()) as Box<dyn WidgetAny>,
-                    }
+                move || match &content {
+                    Some(content) => content.build(),
+                    None => Box::new(Surface::new()) as Box<dyn WidgetAny>,
                 },
             ));
             Box::new(column)
@@ -414,4 +402,3 @@ fn presence(open: &SharedFlag, transition: PresenceTransition, child: Child) -> 
     }
     conditional.presence(transition).show(child)
 }
-

@@ -155,10 +155,14 @@ fn the_ring_is_the_size_it_asks_for() {
 /// The radius leaves room for the stroke, and never goes negative.
 #[test]
 fn the_radius_leaves_room_for_the_stroke() {
-    let p = CircularProgress::determinate(0.5).size(48.0).stroke_width(4.0);
+    let p = CircularProgress::determinate(0.5)
+        .size(48.0)
+        .stroke_width(4.0);
     assert_eq!(p.radius(), 22.0, "half the size, less half the stroke");
 
-    let tiny = CircularProgress::determinate(0.5).size(2.0).stroke_width(4.0);
+    let tiny = CircularProgress::determinate(0.5)
+        .size(2.0)
+        .stroke_width(4.0);
     assert_eq!(tiny.radius(), 0.5, "and never thinner than a hairline");
 }
 

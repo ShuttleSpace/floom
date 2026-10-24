@@ -17,7 +17,9 @@ use std::sync::Arc;
 
 use floom_core::{ElementId, Length, Rect, Widget};
 use floom_types::Color;
-use floom_widgets::testkit::{AllocatingCreateContext, PaintOp, RecordingUpdateContext, SceneRecorder};
+use floom_widgets::testkit::{
+    AllocatingCreateContext, PaintOp, RecordingUpdateContext, SceneRecorder,
+};
 
 use floom_core_theme::global_theme::DesignSystem;
 use floom_core_theme::theme::{MultiTheme, Theme};
@@ -71,20 +73,24 @@ fn indicator(kit: MaterialPullToRefresh) -> Box<dyn floom_core::WidgetAny> {
 #[test]
 fn the_tokens_and_colours_reach_the_style() {
     let style: MaterialPullToRefreshStyle = kit().resolved_style();
-    let tokens = match theme()
-        .component(floom_core_theme::component_tokens::ComponentId::PullToRefresh)
-    {
-        floom_core_theme::component_tokens::ComponentTokens::PullToRefresh(tokens) => tokens,
-        _ => unreachable!(),
-    };
+    let tokens =
+        match theme().component(floom_core_theme::component_tokens::ComponentId::PullToRefresh) {
+            floom_core_theme::component_tokens::ComponentTokens::PullToRefresh(tokens) => tokens,
+            _ => unreachable!(),
+        };
     assert_eq!(style.max_pull, tokens.max_pull, "the token's max pull");
     assert_eq!(
         style.indicator_size, tokens.indicator_size,
         "the token's indicator size"
     );
-    assert_eq!(style.background, theme().colors().background, "the box's fill");
     assert_eq!(
-        style.on_surface_variant, theme().colors().on_surface_variant,
+        style.background,
+        theme().colors().background,
+        "the box's fill"
+    );
+    assert_eq!(
+        style.on_surface_variant,
+        theme().colors().on_surface_variant,
         "the label's ink"
     );
     assert_eq!(
@@ -101,9 +107,17 @@ fn the_tokens_and_colours_reach_the_style() {
 #[test]
 fn the_threshold_is_the_props_not_the_token() {
     let style = kit().resolved_style();
-    assert_eq!(style.threshold, kit().props().threshold, "the prop's threshold");
+    assert_eq!(
+        style.threshold,
+        kit().props().threshold,
+        "the prop's threshold"
+    );
     let kit = kit().threshold(120.0);
-    assert_eq!(kit.resolved_style().threshold, 120.0, "and it follows the prop");
+    assert_eq!(
+        kit.resolved_style().threshold,
+        120.0,
+        "and it follows the prop"
+    );
 }
 
 #[test]
@@ -150,7 +164,9 @@ fn the_indicator_is_painted_in_v1_s_ink_at_v1_s_size() {
         .ops()
         .iter()
         .find_map(|op| match op {
-            PaintOp::Text { text, size, color, .. } => Some((text.clone(), *size, *color)),
+            PaintOp::Text {
+                text, size, color, ..
+            } => Some((text.clone(), *size, *color)),
             _ => None,
         })
         .expect("the label is painted");
@@ -261,7 +277,11 @@ fn a_pull_short_of_the_threshold_fires_nothing() {
     let id: ElementId = column.create(&mut create);
     let mut cx = RecordingUpdateContext::new();
     column.update(&mut cx, id);
-    assert_eq!(fired.load(Ordering::SeqCst), 0, "the threshold was not passed");
+    assert_eq!(
+        fired.load(Ordering::SeqCst),
+        0,
+        "the threshold was not passed"
+    );
 }
 
 /// The props report the threshold.

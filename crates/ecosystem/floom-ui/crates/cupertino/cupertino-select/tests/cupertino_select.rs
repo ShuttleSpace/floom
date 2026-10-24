@@ -10,8 +10,8 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 
 use floom_core::{Rect, Widget};
-use floom_widgets::testkit::{AllocatingCreateContext, SceneRecorder};
 use floom_ui_composites::{Select, SelectStyle};
+use floom_widgets::testkit::{AllocatingCreateContext, SceneRecorder};
 
 use floom_core_theme::global_theme::DesignSystem;
 use floom_core_theme::theme::{MultiTheme, Theme};
@@ -60,7 +60,8 @@ fn the_hover_row_is_primary_at_twelve() {
     // would give this kit the wrong band.
     let default = SelectStyle::default();
     assert_ne!(
-        default.hover_row, style().hover_row,
+        default.hover_row,
+        style().hover_row,
         "the default is Material's `on_surface`@8"
     );
 }
@@ -107,7 +108,8 @@ fn a_disabled_trigger_is_filled_with_on_surface_at_four() {
     assert_eq!(alpha_of(style().disabled_background), 4);
     assert_eq!(style().disabled_background.r, colors.on_surface.r);
     assert_ne!(
-        style().disabled_background, style().surface,
+        style().disabled_background,
+        style().surface,
         "a disabled trigger looks filled, not empty"
     );
 }

@@ -29,7 +29,6 @@ use floom_animation::{AnimId, AnimKind, AnimSample, AnimationScheduler};
 // The host's own tree, as plain data, lives in `floom-core`: the host hands it
 // over and the L8 tooling describes it, and neither side should have to know the
 // other. Re-exported here so `floom_app::HostedNode` keeps working.
-pub use floom_core::{HostedKind, HostedNode};
 use floom_core::{
     Align, AnimationSpec, Axis, Child, ChildKey, CreateContext, ElementId, Event, EventContext,
     FontWeight, Key, KeyEvent, KeyPhase, LayoutRequest, Length, Modifiers, NamedKey, NativeGrant,
@@ -37,6 +36,7 @@ use floom_core::{
     PointerPhase, Position, Rect, ResourceId, ScrollOffset, SemanticsHint, SemanticsRole, Size,
     UpdateContext,
 };
+pub use floom_core::{HostedKind, HostedNode};
 use floom_focus::{FocusDirection, FocusManager, FocusScopeId};
 use floom_layout::{
     AlignItems as LAlign, FlexDirection, JustifyContent, LayoutEngine, LayoutNode, LayoutStyle,

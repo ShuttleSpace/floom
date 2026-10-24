@@ -67,8 +67,8 @@ use floom_widgets::{Align, Axis, Pressable, Stack, Surface, Text};
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::banner::{BannerProps, BannerVariant};
 use floom_core_theme::theme::{MultiTheme, Theme};
-use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color::to_engine_color as to_paint;
+use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color_ext::*;
 use floom_widget_runtime::theme_signal;
 
@@ -270,7 +270,11 @@ impl MaterialBanner {
                 }
                 let message = message.clone();
                 left = left.push(move || {
-                    Box::new(Text::new(message.clone()).size(message_size).color(message_color))
+                    Box::new(
+                        Text::new(message.clone())
+                            .size(message_size)
+                            .color(message_color),
+                    )
                 });
 
                 // The row: the group on the left, the action on the right.
@@ -336,4 +340,3 @@ impl Default for MaterialBanner {
         Self::new()
     }
 }
-

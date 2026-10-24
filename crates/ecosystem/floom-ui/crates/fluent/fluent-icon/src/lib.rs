@@ -30,7 +30,9 @@ impl FluentIcon {
                 name: name.into(),
                 ..Default::default()
             },
-            theme: RwSignal::new(MultiTheme::new_for(floom_core_theme::global_theme::DesignSystem::Fluent)),
+            theme: RwSignal::new(MultiTheme::new_for(
+                floom_core_theme::global_theme::DesignSystem::Fluent,
+            )),
         }
     }
 

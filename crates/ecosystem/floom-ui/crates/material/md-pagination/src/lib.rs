@@ -91,8 +91,8 @@ use floom_widgets::{Align, Axis, Pressable, Stack, Surface, Text};
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::pagination::PaginationProps;
 use floom_core_theme::theme::{MultiTheme, Theme};
-use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color::to_engine_color as to_paint;
+use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color_ext::with_alpha;
 use floom_widget_runtime::theme_signal;
 
@@ -380,4 +380,3 @@ fn control_box(
     }
     box_.push(move || Box::new(Text::new(label.clone()).color(ink)))
 }
-

@@ -1,4 +1,3 @@
-
 #[derive(Debug, Clone, PartialEq)]
 pub struct BannerTokens {
     /// Minimum height of the banner bar.

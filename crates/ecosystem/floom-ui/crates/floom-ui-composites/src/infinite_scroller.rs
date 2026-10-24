@@ -30,11 +30,11 @@ use floom_core::{
     Child, ChildKey, Color, CreateContext, ElementId, Event, EventContext, LayoutRequest,
     PaintContext, ScrollOffset, UpdateContext, Widget, WidgetAny,
 };
-use floom_widgets::{Align, Axis, SharedFlag, Spacer, Stack, Text, read_flag, shared_flag};
+use floom_widgets::{read_flag, shared_flag, Align, Axis, SharedFlag, Spacer, Stack, Text};
 
 use floom_types::ClipShape;
 
-use crate::shared::{SharedNumber, read_number};
+use crate::shared::{read_number, SharedNumber};
 
 /// The shared number, under the name the scroller knows it by.
 pub type SharedHeight = SharedNumber;
@@ -110,7 +110,9 @@ impl Widget for InfiniteScrollerContent {
                                     .main_align(Align::Center)
                                     .cross_align(Align::Center),
                             )
-                            .push(move || Box::new(Text::new("Loading…").size(font_size).color(ink))),
+                            .push(move || {
+                                Box::new(Text::new("Loading…").size(font_size).color(ink))
+                            }),
                     )
                 },
             ));
@@ -283,15 +285,18 @@ impl Widget for InfiniteScrollerView {
     }
 
     fn layout_request(&self) -> Option<LayoutRequest> {
-        Some(LayoutRequest::new().width_pct(100.0).stack(Axis::Vertical, 0.0))
+        Some(
+            LayoutRequest::new()
+                .width_pct(100.0)
+                .stack(Axis::Vertical, 0.0),
+        )
     }
 
     fn event(&mut self, cx: &mut dyn EventContext, _id: ElementId) -> bool {
         let Event::Scroll(delta) = cx.event() else {
             return false;
         };
-        let max =
-            (f64::from(read_number(&self.height)) - f64::from(self.viewport)).max(0.0);
+        let max = (f64::from(read_number(&self.height)) - f64::from(self.viewport)).max(0.0);
         let current = read_offset(&self.offset);
         let next = (current + delta.delta_y).clamp(0.0, f64::from(max));
         if next != current {

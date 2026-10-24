@@ -132,18 +132,16 @@ fn cell_text(cell: &dyn WidgetAny) -> Option<(String, f32, Color, FontWeight)> {
     let mut children = cell.children();
     assert_eq!(children.len(), 1, "a cell holds one text");
     let text = children.remove(0).build();
-    ops_of(&*text)
-        .iter()
-        .find_map(|op| match op {
-            PaintOp::Text {
-                text,
-                size,
-                color,
-                weight,
-                ..
-            } => Some((text.clone(), *size, *color, *weight)),
-            _ => None,
-        })
+    ops_of(&*text).iter().find_map(|op| match op {
+        PaintOp::Text {
+            text,
+            size,
+            color,
+            weight,
+            ..
+        } => Some((text.clone(), *size, *color, *weight)),
+        _ => None,
+    })
 }
 
 /// A full press-and-release, which is how the engine sees an activation.
@@ -176,8 +174,16 @@ fn the_tokens_and_colours_reach_the_style() {
     assert_eq!(style.font_size, tokens().font_size);
     assert_eq!(style.header_font_size, tokens().header_font_size);
     assert_eq!(style.surface, theme().colors().surface, "the frame's fill");
-    assert_eq!(style.on_surface, theme().colors().on_surface, "the cells' ink");
-    assert_eq!(style.outline, theme().colors().outline, "the frame's outline");
+    assert_eq!(
+        style.on_surface,
+        theme().colors().on_surface,
+        "the cells' ink"
+    );
+    assert_eq!(
+        style.outline,
+        theme().colors().outline,
+        "the frame's outline"
+    );
 }
 
 #[test]
@@ -269,7 +275,11 @@ fn the_header_row_is_filled_and_ruled_in_v1_s_colours() {
     let header = rows[0].build();
     let fills = fills(&*header);
     assert_eq!(fills.len(), 2, "the fill and the rule under it");
-    assert_eq!(fills[0], paint(theme().colors().surface_variant), "v1's fill");
+    assert_eq!(
+        fills[0],
+        paint(theme().colors().surface_variant),
+        "v1's fill"
+    );
     assert_eq!(fills[1], paint(style.header_divider), "v1's header rule");
 }
 

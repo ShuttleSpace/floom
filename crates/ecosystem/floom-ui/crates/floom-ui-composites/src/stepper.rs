@@ -35,7 +35,7 @@ use floom_core::{
 };
 use floom_types::FontWeight;
 use floom_widgets::{
-    Align, Axis, Pressable, SharedMap, Stack, Surface, Text, VectorIcon, shared_map,
+    shared_map, Align, Axis, Pressable, SharedMap, Stack, Surface, Text, VectorIcon,
 };
 
 /// The key the selected step lives under in the shared map.
@@ -158,7 +158,6 @@ pub struct Stepper {
     tick: StepperTick,
 }
 
-
 impl Stepper {
     pub fn new() -> Self {
         Self {
@@ -221,7 +220,6 @@ impl Stepper {
         self.tick = tick;
         self
     }
-
 }
 
 impl Stepper {
@@ -299,16 +297,12 @@ impl Widget for Stepper {
 
     /// v1's outer container: the full width, padded 8 across and 12 down.
     fn layout_request(&self) -> Option<LayoutRequest> {
-        Some(
-            LayoutRequest::new()
-                .width_pct(100.0)
-                .padding(Insets {
-                    left: f64::from(self.style.padding_horiz),
-                    right: f64::from(self.style.padding_horiz),
-                    top: f64::from(self.style.padding_vert),
-                    bottom: f64::from(self.style.padding_vert),
-                }),
-        )
+        Some(LayoutRequest::new().width_pct(100.0).padding(Insets {
+            left: f64::from(self.style.padding_horiz),
+            right: f64::from(self.style.padding_horiz),
+            top: f64::from(self.style.padding_vert),
+            bottom: f64::from(self.style.padding_vert),
+        }))
     }
 }
 
@@ -403,11 +397,7 @@ fn build_step(
     let (background, foreground, border) = if done {
         (style.primary, style.on_primary, style.primary)
     } else {
-        (
-            style.surface,
-            style.on_surface_variant,
-            style.outline,
-        )
+        (style.surface, style.on_surface_variant, style.outline)
     };
 
     // The label's colours.
@@ -528,11 +518,7 @@ fn build_step(
 }
 
 /// The connector between two steps.
-fn build_connector(
-    style: StepperStyle,
-    index: usize,
-    selected: SharedMap,
-) -> Box<dyn WidgetAny> {
+fn build_connector(style: StepperStyle, index: usize, selected: SharedMap) -> Box<dyn WidgetAny> {
     let current = read_selected(&selected);
     // v1: the connector behind the current step is `primary`, the one ahead of
     // it is `outline_variant`.

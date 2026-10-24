@@ -27,7 +27,7 @@ use floom_core_theme::tokens::color::Color;
 
 use floom_widgets::text_input::{read_flag, write_flag};
 
-use floom_widget_fluent_overlay::{ FluentOverlay, FluentOverlayStyle };
+use floom_widget_fluent_overlay::{FluentOverlay, FluentOverlayStyle};
 
 fn theme() -> MultiTheme {
     MultiTheme::new_for(DesignSystem::Fluent)
@@ -69,7 +69,9 @@ fn show_writes_the_shared_flag() {
 #[test]
 fn with_show_signal_reads_back_the_external_flag() {
     let external = floom_widgets::text_input::shared_flag(true);
-    let o = FluentOverlay::new().with_theme(theme()).with_show_signal(external.clone());
+    let o = FluentOverlay::new()
+        .with_theme(theme())
+        .with_show_signal(external.clone());
     assert!(read_flag(&o.open_flag()));
     write_flag(&external, false);
     // The kit copied the flag's value at construction; the held flag is the same

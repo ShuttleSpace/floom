@@ -7,9 +7,9 @@ use std::sync::Arc;
 use floom_core::Widget;
 use floom_types::{OverlayKind, Rect};
 
+use floom_ui_composites::ComboboxStyle;
+use floom_ui_composites::PopupPlacement;
 use floom_widgets::testkit::{AllocatingCreateContext, RecordingUpdateContext};
-use floom_ui_composites::{PopupPlacement};
-use floom_ui_composites::{ComboboxStyle};
 
 use floom_core_theme::theme::Theme;
 use floom_widget_md_combobox::MdCombobox;
@@ -88,7 +88,10 @@ fn the_panel_bound_is_read_where_v1_never_read_it() {
 fn the_call_site_constants_are_material_s() {
     let style = style();
     assert_eq!(style.trigger_gap, 8.0, "v1's `.gap(8.0)`");
-    assert_eq!(style.row_padding_horizontal, 12.0, "v1's `.padding_horiz(12.0)`");
+    assert_eq!(
+        style.row_padding_horizontal, 12.0,
+        "v1's `.padding_horiz(12.0)`"
+    );
     assert_eq!(style.chevron_size, 14.0, "v1's `.size(14.0)`");
     assert_eq!(style.border_width, 1.0, "v1's `.border(1.0)`");
 }
@@ -99,7 +102,8 @@ fn the_call_site_constants_are_material_s() {
 #[test]
 fn the_panel_gap_is_materials_four_and_nobody_elses() {
     assert_eq!(
-        style().panel_gap, 4.0,
+        style().panel_gap,
+        4.0,
         "v1's inline `.margin_top(4.0)`, which Material was the only one of the three \
          to write — so the default here is Material's and not a fourth opinion"
     );
@@ -217,7 +221,10 @@ fn the_viewed_combobox_places_its_panel_below_the_field_with_material_s_gap() {
     assert_eq!(opened.len(), 1, "one panel asked for");
     match opened[0] {
         floom_widgets::testkit::OverlayCall::Open {
-            bounds, kind, modal, ..
+            bounds,
+            kind,
+            modal,
+            ..
         } => {
             assert_eq!(*kind, OverlayKind::Popup);
             assert!(!modal, "a dropdown is dismissed, not blocking");
@@ -269,10 +276,7 @@ fn the_callback_fires_when_an_option_is_chosen() {
 #[test]
 fn disabled_reaches_the_widget_and_changes_how_it_paints() {
     let live = MdCombobox::new().options(options()).view();
-    let dead = MdCombobox::new()
-        .options(options())
-        .disabled(true)
-        .view();
+    let dead = MdCombobox::new().options(options()).disabled(true).view();
     let live_trigger = live.children().remove(0).build();
     let dead_trigger = dead.children().remove(0).build();
     let live_scene = floom_widgets::testkit::paint_snapshot(

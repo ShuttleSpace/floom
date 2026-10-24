@@ -154,7 +154,10 @@ fn two_fields_over_one_buffer_see_each_other() {
     b.update(&mut RecordingUpdateContext::new(), b_id);
 
     assert_eq!(b.text(), "xy", "b adopted what a typed");
-    assert!(Arc::ptr_eq(&shared, &b.buffer()), "and it is one allocation");
+    assert!(
+        Arc::ptr_eq(&shared, &b.buffer()),
+        "and it is one allocation"
+    );
 }
 
 // --- editing --------------------------------------------------------------
@@ -166,7 +169,11 @@ fn typing_inserts_at_the_caret() {
     let id = mounted(&mut field);
     key(&mut field, Key::Char('b'), id);
     assert_eq!(field.text(), "abc", "inserted between a and c");
-    assert_eq!(field.caret(), 2, "and the caret moved past the new character");
+    assert_eq!(
+        field.caret(),
+        2,
+        "and the caret moved past the new character"
+    );
 }
 
 #[test]
@@ -261,7 +268,11 @@ fn the_caret_lands_on_character_boundaries_for_multibyte_text() {
     // Backspace over the two-byte `é` removes the whole character, not half of it.
     field.set_caret(3);
     key(&mut field, Key::Named(NamedKey::Backspace), id);
-    assert_eq!(field.text(), "hllo", "the whole é went, not one of its bytes");
+    assert_eq!(
+        field.text(),
+        "hllo",
+        "the whole é went, not one of its bytes"
+    );
     assert_eq!(field.caret(), 1);
 
     // And an arrow over a *multibyte* character moves by the character, not by one
@@ -297,7 +308,11 @@ fn clamp_to_a_character_boundary_never_splits_a_character() {
     // 2 is inside `é`, which is two bytes at 1..3.
     assert_eq!(clamp_to_char_boundary("héllo", 2), 1, "inside é: back to 1");
     assert_eq!(clamp_to_char_boundary("héllo", 3), 3, "after é");
-    assert_eq!(clamp_to_char_boundary("héllo", 99), 6, "past the end: the end");
+    assert_eq!(
+        clamp_to_char_boundary("héllo", 99),
+        6,
+        "past the end: the end"
+    );
 }
 
 /// An emoji outside the BMP is four bytes and two UTF-16 units, which is where a
@@ -351,7 +366,11 @@ fn closing_the_composition_commits_it() {
         }),
     );
     field.event(&mut cx, id);
-    let mut cx = TestEventContext::new(id, BOX, Event::Ime(floom_core::ImeUpdate::OpenChanged(false)));
+    let mut cx = TestEventContext::new(
+        id,
+        BOX,
+        Event::Ime(floom_core::ImeUpdate::OpenChanged(false)),
+    );
     field.event(&mut cx, id);
 
     assert_eq!(field.text(), "abni", "committed at the caret");
@@ -395,7 +414,11 @@ fn a_click_focuses_and_puts_the_caret_at_the_end() {
     field.event(&mut cx, id);
 
     assert!(field.is_focused(), "the field is focused");
-    assert_eq!(field.caret(), 3, "and the caret went to the end, not to the click");
+    assert_eq!(
+        field.caret(),
+        3,
+        "and the caret went to the end, not to the click"
+    );
 }
 
 #[test]
@@ -451,7 +474,11 @@ fn escape_reports_and_does_not_clear() {
 #[test]
 fn the_field_paints_its_text() {
     let field = input("hello");
-    let painted = paint_snapshot(&field, field.create(&mut AllocatingCreateContext::new()), BOX);
+    let painted = paint_snapshot(
+        &field,
+        field.create(&mut AllocatingCreateContext::new()),
+        BOX,
+    );
     assert!(
         painted.to_lowercase().contains("hello"),
         "the text is in the scene: {painted}"
@@ -461,7 +488,11 @@ fn the_field_paints_its_text() {
 #[test]
 fn the_placeholder_is_painted_while_the_field_is_empty() {
     let field = input("").placeholder("Search");
-    let painted = paint_snapshot(&field, field.create(&mut AllocatingCreateContext::new()), BOX);
+    let painted = paint_snapshot(
+        &field,
+        field.create(&mut AllocatingCreateContext::new()),
+        BOX,
+    );
     assert!(
         painted.contains("Search"),
         "and it says what the field is for: {painted}"
@@ -471,7 +502,11 @@ fn the_placeholder_is_painted_while_the_field_is_empty() {
 #[test]
 fn the_placeholder_gives_way_to_the_text() {
     let field = input("query").placeholder("Search");
-    let painted = paint_snapshot(&field, field.create(&mut AllocatingCreateContext::new()), BOX);
+    let painted = paint_snapshot(
+        &field,
+        field.create(&mut AllocatingCreateContext::new()),
+        BOX,
+    );
     assert!(painted.contains("query"), "the text is shown");
     assert!(
         !painted.contains("Search"),
@@ -484,9 +519,17 @@ fn the_placeholder_gives_way_to_the_text() {
 #[test]
 fn the_caret_is_painted_only_while_focused() {
     let mut field = input("ab");
-    let unfocused = paint_snapshot(&field, field.create(&mut AllocatingCreateContext::new()), BOX);
+    let unfocused = paint_snapshot(
+        &field,
+        field.create(&mut AllocatingCreateContext::new()),
+        BOX,
+    );
     field.set_focused(true);
-    let focused = paint_snapshot(&field, field.create(&mut AllocatingCreateContext::new()), BOX);
+    let focused = paint_snapshot(
+        &field,
+        field.create(&mut AllocatingCreateContext::new()),
+        BOX,
+    );
 
     assert_ne!(
         focused, unfocused,

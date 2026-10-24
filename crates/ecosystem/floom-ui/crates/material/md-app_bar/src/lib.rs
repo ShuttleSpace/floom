@@ -38,11 +38,10 @@ use floom_widgets::{Align, Axis, Spacer, Stack, Surface, Text};
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::app_bar::AppBarProps;
 use floom_core_theme::theme::{MultiTheme, Theme};
-use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color::to_engine_color as to_paint;
+use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color_ext::with_alpha;
 use floom_widget_runtime::theme_signal;
-
 
 /// The gap between the trailing actions. A v1 literal.
 const ACTION_GAP: f32 = 8.0;
@@ -162,9 +161,7 @@ impl MaterialAppBar {
             .align(Align::Center, Align::Center)
             // v1's row gap was the padding.
             .gap(padding)
-            .request(
-                LayoutRequest::new().padding_horiz(f64::from(padding)),
-            );
+            .request(LayoutRequest::new().padding_horiz(f64::from(padding)));
 
         if let Some(leading) = self.leading {
             row = row.child(leading);
@@ -173,9 +170,7 @@ impl MaterialAppBar {
         row = row.push({
             let title = title.clone();
             let title_color = title_color;
-            move || {
-                Box::new(Text::new(title.clone()).size(title_size).color(title_color))
-            }
+            move || Box::new(Text::new(title.clone()).size(title_size).color(title_color))
         });
 
         if !self.actions.is_empty() {
@@ -225,4 +220,3 @@ impl Default for MaterialAppBar {
         Self::new()
     }
 }
-

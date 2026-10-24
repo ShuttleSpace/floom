@@ -14,8 +14,6 @@ pub struct TimelineProps {
 
 impl Default for TimelineProps {
     fn default() -> Self {
-        Self {
-            items: Vec::new(),
-        }
+        Self { items: Vec::new() }
     }
 }

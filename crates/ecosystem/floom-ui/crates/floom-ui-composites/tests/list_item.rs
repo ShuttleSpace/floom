@@ -12,9 +12,9 @@ use std::sync::Arc;
 use floom_core::{Align, Axis, Length, Widget, WidgetAny};
 use floom_types::{FontWeight, Point, PointerEvent, Rect};
 
-use floom_widgets::testkit::{AllocatingCreateContext, TestEventContext, paint_snapshot};
-use floom_widgets::{Pressable, Ripple, Stack, Surface, Text};
 use floom_ui_composites::{ListItemRow, ListItemStyle};
+use floom_widgets::testkit::{paint_snapshot, AllocatingCreateContext, TestEventContext};
+use floom_widgets::{Pressable, Ripple, Stack, Surface, Text};
 
 const BOX: Rect = Rect {
     x0: 0.0,
@@ -82,10 +82,7 @@ fn band_of(row: &ListItemRow) -> Box<dyn WidgetAny> {
 fn the_subtree_is_ripple_pressable_surface() {
     let row = row();
     let ripple = root(&row);
-    assert!(
-        ripple.as_any().is::<Ripple>(),
-        "the ripple is outermost"
-    );
+    assert!(ripple.as_any().is::<Ripple>(), "the ripple is outermost");
     let pressable = child_of::<Pressable>(ripple.as_ref());
     assert!(
         pressable.as_any().is::<Pressable>(),
@@ -178,18 +175,17 @@ fn the_slots_are_optional_and_the_child_count_follows() {
 
     let leading = ListItemRow::new("T").style(style()).leading(|| marker());
     let stack = leading.children()[0].build();
-    let stack = stack
-        .as_any()
-        .downcast_ref::<Ripple>()
-        .unwrap()
-        .children()[0]
-        .build();
+    let stack = stack.as_any().downcast_ref::<Ripple>().unwrap().children()[0].build();
     let stack = stack.as_any().downcast_ref::<Pressable>().unwrap();
     let stack = stack.children()[0].build();
     let band = stack.as_any().downcast_ref::<Surface>().unwrap();
     let stack = band.children()[0].build();
     assert_eq!(
-        stack.as_any().downcast_ref::<Stack>().unwrap().child_count(),
+        stack
+            .as_any()
+            .downcast_ref::<Stack>()
+            .unwrap()
+            .child_count(),
         2,
         "a leading slot adds exactly one child"
     );
@@ -281,7 +277,10 @@ fn the_title_carries_the_weight_it_was_given() {
 #[test]
 fn no_subtitle_is_not_a_zero_height_subtitle() {
     assert!(!row().has_subtitle());
-    assert!(ListItemRow::new("T").style(style()).subtitle("S").has_subtitle());
+    assert!(ListItemRow::new("T")
+        .style(style())
+        .subtitle("S")
+        .has_subtitle());
     assert_eq!(
         style().subtitle_size,
         Some(14.0),
@@ -394,7 +393,11 @@ fn a_disabled_row_is_inert() {
 
     let id = pressable.create(&mut AllocatingCreateContext::new());
     let consumed = click(pressable, id);
-    assert_eq!(hits.load(Ordering::SeqCst), 0, "a disabled row does not fire");
+    assert_eq!(
+        hits.load(Ordering::SeqCst),
+        0,
+        "a disabled row does not fire"
+    );
     assert!(!consumed, "and does not consume the press");
 }
 

@@ -104,14 +104,17 @@ fn row_of(field: &dyn floom_core::WidgetAny) -> Box<dyn floom_core::WidgetAny> {
 #[test]
 fn the_tokens_and_colours_reach_the_style() {
     let style: FluentNumberInputStyle = kit().resolved_style();
-    let tokens = match theme().component(floom_core_theme::component_tokens::ComponentId::NumberInput)
-    {
-        floom_core_theme::component_tokens::ComponentTokens::NumberInput(tokens) => tokens,
-        _ => unreachable!(),
-    };
+    let tokens =
+        match theme().component(floom_core_theme::component_tokens::ComponentId::NumberInput) {
+            floom_core_theme::component_tokens::ComponentTokens::NumberInput(tokens) => tokens,
+            _ => unreachable!(),
+        };
     assert_eq!(style.field_height, tokens.height, "the token's height");
     assert_eq!(style.field_width, tokens.width, "the token's width");
-    assert_eq!(style.button_size, tokens.button_size, "the token's button size");
+    assert_eq!(
+        style.button_size, tokens.button_size,
+        "the token's button size"
+    );
     assert_eq!(
         style.padding_horizontal, tokens.padding_horizontal,
         "the token's horizontal padding"
@@ -119,19 +122,34 @@ fn the_tokens_and_colours_reach_the_style() {
     assert_eq!(style.border_width, tokens.border, "the token's rim");
     assert_eq!(style.border_radius, tokens.radius, "the token's radius");
     assert_eq!(style.font_size, tokens.font_size, "the token's font size");
-    assert_eq!(style.text_color, theme().colors().on_surface, "the text's ink");
-    assert_eq!(style.background, theme().colors().surface, "the field's fill");
-    assert_eq!(style.border_color, theme().colors().outline, "the field's rim");
     assert_eq!(
-        style.button_background, theme().colors().surface_variant,
+        style.text_color,
+        theme().colors().on_surface,
+        "the text's ink"
+    );
+    assert_eq!(
+        style.background,
+        theme().colors().surface,
+        "the field's fill"
+    );
+    assert_eq!(
+        style.border_color,
+        theme().colors().outline,
+        "the field's rim"
+    );
+    assert_eq!(
+        style.button_background,
+        theme().colors().surface_variant,
         "the buttons' fill"
     );
     assert_eq!(
-        style.button_color, theme().colors().on_surface,
+        style.button_color,
+        theme().colors().on_surface,
         "the buttons' ink"
     );
     assert_eq!(
-        style.label_color, theme().colors().on_surface_variant,
+        style.label_color,
+        theme().colors().on_surface_variant,
         "the label's ink"
     );
 }
@@ -159,7 +177,10 @@ fn the_field_is_painted_in_v1_s_colours() {
     assert_eq!(fill, Some(paint(resolved.background)), "the field's fill");
 
     let rim = ops.iter().find_map(|op| match op {
-        PaintOp::Path { stroke: Some((_, color)), .. } => Some(*color),
+        PaintOp::Path {
+            stroke: Some((_, color)),
+            ..
+        } => Some(*color),
         _ => None,
     });
     assert_eq!(rim, Some(paint(resolved.border_color)), "the field's rim");
@@ -193,7 +214,9 @@ fn the_text_is_painted_in_v1_s_ink() {
     let (text, size, ink) = ops
         .iter()
         .find_map(|op| match op {
-            PaintOp::Text { text, size, color, .. } => Some((text.clone(), *size, *color)),
+            PaintOp::Text {
+                text, size, color, ..
+            } => Some((text.clone(), *size, *color)),
             _ => None,
         })
         .expect("the text is painted");
@@ -210,7 +233,11 @@ fn the_two_steppers_are_tiles_of_the_token_s_size() {
     let field = field_of(&view);
     let row = row_of(&*field);
     let mut children = row.children();
-    assert_eq!(children.len(), 3, "the two steppers and the text between them");
+    assert_eq!(
+        children.len(),
+        3,
+        "the two steppers and the text between them"
+    );
     let dec = children.remove(0).build();
     let inc = children.remove(1).build();
 
@@ -254,7 +281,9 @@ fn the_label_sits_above_the_field() {
     let (text, size, ink) = ops
         .iter()
         .find_map(|op| match op {
-            PaintOp::Text { text, size, color, .. } => Some((text.clone(), *size, *color)),
+            PaintOp::Text {
+                text, size, color, ..
+            } => Some((text.clone(), *size, *color)),
             _ => None,
         })
         .expect("the label is painted");
@@ -279,12 +308,12 @@ fn no_label_leaves_only_the_field() {
 fn the_stepper_moves_the_number() {
     let seen: Arc<Mutex<Vec<i64>>> = Arc::new(Mutex::new(Vec::new()));
     let recorder = seen.clone();
-    let kit = kit()
-        .value(4)
-        .step(2)
-        .on_change(move |value| {
-            recorder.lock().expect("the recorder is not poisoned").push(value);
-        });
+    let kit = kit().value(4).step(2).on_change(move |value| {
+        recorder
+            .lock()
+            .expect("the recorder is not poisoned")
+            .push(value);
+    });
     let number = kit.number();
     let view = kit.view();
 
@@ -351,7 +380,10 @@ fn typing_a_number_moves_the_value() {
     let seen: Arc<Mutex<Vec<i64>>> = Arc::new(Mutex::new(Vec::new()));
     let recorder = seen.clone();
     let kit = kit().on_change(move |value| {
-        recorder.lock().expect("the recorder is not poisoned").push(value);
+        recorder
+            .lock()
+            .expect("the recorder is not poisoned")
+            .push(value);
     });
     let number = kit.number();
     let view = kit.view();
@@ -379,11 +411,12 @@ fn typing_a_number_moves_the_value() {
 fn a_disabled_field_does_not_answer() {
     let seen: Arc<Mutex<Vec<i64>>> = Arc::new(Mutex::new(Vec::new()));
     let recorder = seen.clone();
-    let kit = kit()
-        .disabled(true)
-        .on_change(move |value| {
-            recorder.lock().expect("the recorder is not poisoned").push(value);
-        });
+    let kit = kit().disabled(true).on_change(move |value| {
+        recorder
+            .lock()
+            .expect("the recorder is not poisoned")
+            .push(value);
+    });
     let number = kit.number();
     let view = kit.view();
 
@@ -399,7 +432,9 @@ fn a_disabled_field_does_not_answer() {
         "a disabled field does not move"
     );
     assert!(
-        seen.lock().expect("the recorder is not poisoned").is_empty(),
+        seen.lock()
+            .expect("the recorder is not poisoned")
+            .is_empty(),
         "and does not answer"
     );
 }

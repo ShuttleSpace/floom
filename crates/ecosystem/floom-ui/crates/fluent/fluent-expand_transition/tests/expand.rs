@@ -13,12 +13,10 @@ use floom_types::{PresenceChannel, PresenceTransition};
 use floom_widgets::testkit::{AllocatingCreateContext, RecordingUpdateContext};
 
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
-use floom_core_theme::global_theme::{DesignSystem, set_design_system};
+use floom_core_theme::global_theme::{set_design_system, DesignSystem};
 use floom_core_theme::theme::{MultiTheme, Theme};
 
-use floom_widget_fluent_expand_transition::{
-    FluentExpandTransition, FluentExpandTransitionStyle,
-};
+use floom_widget_fluent_expand_transition::{FluentExpandTransition, FluentExpandTransitionStyle};
 
 /// The Fluent theme, with Fluent selected.
 ///
@@ -44,7 +42,9 @@ fn tokens() -> floom_core_theme::component_tokens::ExpandTransitionTokens {
 #[test]
 fn the_style_resolves_the_tokens() {
     let theme = theme();
-    let style: FluentExpandTransitionStyle = FluentExpandTransition::new().with_theme(theme.clone()).resolved_style();
+    let style: FluentExpandTransitionStyle = FluentExpandTransition::new()
+        .with_theme(theme.clone())
+        .resolved_style();
     assert_eq!(style.design_system, "fluent");
     assert_eq!(style.duration_ms, tokens().duration_ms);
     let _ = theme;

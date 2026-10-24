@@ -63,15 +63,15 @@ use std::sync::{Arc, Mutex};
 
 use floom_core::{Child, LayoutRequest};
 use floom_signal::{RwSignal, SignalGet};
-use floom_ui_composites::InfiniteScrollerView;
 use floom_types::Color as PaintColor;
+use floom_ui_composites::InfiniteScrollerView;
 use floom_widgets::{shared_flag, write_flag, SharedFlag, Surface};
 
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::infinite_scroller::InfiniteScrollerProps;
 use floom_core_theme::theme::{MultiTheme, Theme};
-use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color::to_engine_color as to_paint;
+use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color_ext::with_alpha;
 
 /// How tall the scrollable content is, shared between the kit and the host.
@@ -208,7 +208,8 @@ impl FluentInfiniteScroller {
 
     pub fn resolved_style(&self) -> FluentInfiniteScrollerStyle {
         let theme = self.theme.get();
-        let ComponentTokens::InfiniteScroller(tokens) = theme.component(ComponentId::InfiniteScroller)
+        let ComponentTokens::InfiniteScroller(tokens) =
+            theme.component(ComponentId::InfiniteScroller)
         else {
             unreachable!("ComponentId::InfiniteScroller must resolve to InfiniteScrollerTokens")
         };
@@ -268,4 +269,3 @@ impl Default for FluentInfiniteScroller {
         Self::new()
     }
 }
-

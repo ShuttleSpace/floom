@@ -37,7 +37,9 @@ fn global() -> RwSignal<SelectedTheme> {
     // (e.g. a `dyn_view` child scope) and get removed from the runtime when that
     // scope re-runs — after which every `.get()` panics in floom's
     // `reactive/src/read.rs`.
-    GLOBAL.with(|c| *c.get_or_init(|| create_global_rw_signal(SelectedTheme::new_for(DesignSystem::default()))))
+    GLOBAL.with(|c| {
+        *c.get_or_init(|| create_global_rw_signal(SelectedTheme::new_for(DesignSystem::default())))
+    })
 }
 
 /// Returns a copy of the process-wide theme signal.

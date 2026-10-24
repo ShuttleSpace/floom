@@ -30,11 +30,11 @@ use std::sync::Arc;
 use floom_core::{ChildKey, LayoutRequest, WidgetAny};
 use floom_signal::{RwSignal, SignalGet};
 use floom_types::PresenceTransition;
+use floom_widgets::text_input::{shared_flag, write_flag, SharedFlag};
 use floom_widgets::{Conditional, Text};
-use floom_widgets::text_input::{SharedFlag, shared_flag, write_flag};
 
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens, ExpandTransitionTokens};
-use floom_core_theme::props::expand_transition::{ExpandTransitionProps, };
+use floom_core_theme::props::expand_transition::ExpandTransitionProps;
 use floom_core_theme::theme::{MultiTheme, Theme};
 use floom_widget_runtime::theme_signal;
 
@@ -49,7 +49,8 @@ pub type ChildBuilder = Arc<dyn Fn() -> Box<dyn WidgetAny> + Send + Sync + 'stat
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct MaterialExpandTransitionStyle {
     pub design_system: &'static str,
-    pub duration_ms: f32,}
+    pub duration_ms: f32,
+}
 
 /// Material's expand transition.
 pub struct MaterialExpandTransition {
@@ -109,7 +110,9 @@ impl MaterialExpandTransition {
 
     pub fn resolved_style(&self) -> MaterialExpandTransitionStyle {
         let theme = self.theme.get();
-        let ComponentTokens::ExpandTransition(tokens) = theme.component(ComponentId::ExpandTransition) else {
+        let ComponentTokens::ExpandTransition(tokens) =
+            theme.component(ComponentId::ExpandTransition)
+        else {
             unreachable!("ComponentId::ExpandTransition must resolve to ExpandTransitionTokens")
         };
         MaterialExpandTransitionStyle {
@@ -139,15 +142,18 @@ impl MaterialExpandTransition {
     /// The content, mounted only while the flag says so.
     pub fn view(self) -> Conditional {
         let style = self.resolved_style();
-        let transition = self.transition_for(&style);        let child = self.child.clone();
+        let transition = self.transition_for(&style);
+        let child = self.child.clone();
         let show = self.show.clone();
 
-        let mut conditional = Conditional::new(false)
-            .when_flag(show)
-            .show_with(ChildKey::index(0), LayoutRequest::new(), move || match child.clone() {
+        let mut conditional = Conditional::new(false).when_flag(show).show_with(
+            ChildKey::index(0),
+            LayoutRequest::new(),
+            move || match child.clone() {
                 Some(build) => build(),
                 None => Box::new(Text::new(String::new())),
-            });
+            },
+        );
         if let Some(transition) = transition {
             conditional = conditional.enter(transition).exit(transition);
         }

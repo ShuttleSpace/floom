@@ -38,7 +38,10 @@ impl std::fmt::Debug for RangeSliderProps {
             .field("max", &self.max)
             .field("step", &self.step)
             .field("disabled", &self.disabled)
-            .field("on_change", &self.on_change.as_ref().map(|_| "Fn((f32, f32))"))
+            .field(
+                "on_change",
+                &self.on_change.as_ref().map(|_| "Fn((f32, f32))"),
+            )
             .finish()
     }
 }

@@ -107,18 +107,16 @@ fn cell_text(cell: &Box<dyn WidgetAny>) -> Option<(String, f32, Color, FontWeigh
     let mut children = cell.children();
     assert_eq!(children.len(), 1, "a cell holds one text");
     let text = children.remove(0).build();
-    ops_of(&*text)
-        .iter()
-        .find_map(|op| match op {
-            PaintOp::Text {
-                text,
-                size,
-                color,
-                weight,
-                ..
-            } => Some((text.clone(), *size, *color, *weight)),
-            _ => None,
-        })
+    ops_of(&*text).iter().find_map(|op| match op {
+        PaintOp::Text {
+            text,
+            size,
+            color,
+            weight,
+            ..
+        } => Some((text.clone(), *size, *color, *weight)),
+        _ => None,
+    })
 }
 
 // --- the translation ------------------------------------------------------
@@ -135,19 +133,31 @@ fn the_tokens_and_colours_reach_the_style() {
     assert_eq!(style.font_size, tokens().font_size);
     assert_eq!(style.header_font_size, tokens().header_font_size);
     assert_eq!(style.min_width, tokens().min_width);
-    assert_eq!(style.surface, theme().colors().surface, "the plain rows' fill");
+    assert_eq!(
+        style.surface,
+        theme().colors().surface,
+        "the plain rows' fill"
+    );
     assert_eq!(
         style.surface_variant,
         theme().colors().surface_variant,
         "the header's fill"
     );
-    assert_eq!(style.on_surface, theme().colors().on_surface, "the header's ink");
+    assert_eq!(
+        style.on_surface,
+        theme().colors().on_surface,
+        "the header's ink"
+    );
     assert_eq!(
         style.on_surface_variant,
         theme().colors().on_surface_variant,
         "the body cells' ink"
     );
-    assert_eq!(style.outline, theme().colors().outline, "the frame and the rules");
+    assert_eq!(
+        style.outline,
+        theme().colors().outline,
+        "the frame and the rules"
+    );
     assert_eq!(
         style.header_weight,
         to_engine_weight(theme().typography().label.large.font_weight),
@@ -207,15 +217,16 @@ fn the_frame_is_outlined_in_v1_s_colour() {
     assert!(
         ops.iter().any(|op| matches!(
             op,
-            PaintOp::Path { stroke: Some(_), .. }
+            PaintOp::Path {
+                stroke: Some(_),
+                ..
+            }
         )),
         "the frame is stroked: {ops:?}"
     );
     assert!(
-        !ops.iter().any(|op| matches!(
-            op,
-            PaintOp::Rect { .. } | PaintOp::RoundedRect { .. }
-        )),
+        !ops.iter()
+            .any(|op| matches!(op, PaintOp::Rect { .. } | PaintOp::RoundedRect { .. })),
         "and v1's frame had no fill of its own: {ops:?}"
     );
 }
@@ -238,8 +249,16 @@ fn the_header_row_is_filled_in_v1_s_colour() {
 fn the_rows_are_filled_in_v1_s_colours() {
     let style = table().resolved_style();
     let table_rows = rows(&table().view());
-    assert_eq!(fills(&table_rows[1])[0], paint(style.surface), "the first row");
-    assert_eq!(fills(&table_rows[2])[0], paint(style.surface), "the second row");
+    assert_eq!(
+        fills(&table_rows[1])[0],
+        paint(style.surface),
+        "the first row"
+    );
+    assert_eq!(
+        fills(&table_rows[2])[0],
+        paint(style.surface),
+        "the second row"
+    );
 
     let striped = rows(&table().striped(true).view());
     assert_eq!(

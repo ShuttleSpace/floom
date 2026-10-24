@@ -24,8 +24,8 @@
 use floom_core::{Child, ChildKey, LayoutRequest, Point, PointerEvent, Rect, Widget, WidgetAny};
 use floom_types::Color;
 use floom_ui_composites::{ContentPlacement, SelectGroup};
-use floom_widgets::Pressable;
 use floom_widgets::testkit::{AllocatingCreateContext, PaintOp, SceneRecorder, TestEventContext};
+use floom_widgets::Pressable;
 
 use floom_core_theme::global_theme::DesignSystem;
 use floom_core_theme::theme::{MultiTheme, Theme};
@@ -170,8 +170,16 @@ fn the_tokens_and_colours_reach_the_engine_style() {
         ContentPlacement::Centred,
         "v1 centred the label in the chip"
     );
-    assert_eq!(style.background, paint(resolved.background), "the unchosen fill");
-    assert_eq!(style.foreground, paint(resolved.foreground), "the unchosen ink");
+    assert_eq!(
+        style.background,
+        paint(resolved.background),
+        "the unchosen fill"
+    );
+    assert_eq!(
+        style.foreground,
+        paint(resolved.foreground),
+        "the unchosen ink"
+    );
     assert_eq!(
         style.selected_background,
         paint(resolved.selected_background),
@@ -190,8 +198,7 @@ fn the_numbers_v1_wrote_as_literals_are_literals_here() {
     let resolved = group().resolved_style();
     assert_eq!(resolved.height, 32.0, "v1's `.height(32.0)`");
     assert_eq!(
-        resolved.padding_horizontal,
-        12.0,
+        resolved.padding_horizontal, 12.0,
         "v1's `.padding_horiz(12.0)`"
     );
     assert_eq!(resolved.border_radius, 16.0, "v1's `.border_radius(16.0)`");
@@ -210,8 +217,8 @@ fn the_resolved_style_is_enough_to_build_the_widget() {
     let resolved: CupertinoChipGroupStyle = group().resolved_style();
     assert!(resolved.gap > 0.0);
 
-    let by_hand = floom_ui_composites::SelectGroup::new()
-        .style(floom_ui_composites::SelectGroupStyle {
+    let by_hand =
+        floom_ui_composites::SelectGroup::new().style(floom_ui_composites::SelectGroupStyle {
             gap: resolved.gap,
             axis: floom_core::Axis::Horizontal,
             height: Some(resolved.height),

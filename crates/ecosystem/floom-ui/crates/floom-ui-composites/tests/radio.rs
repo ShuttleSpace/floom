@@ -17,7 +17,7 @@ use floom_core::{ElementId, Key, NamedKey, Point, Rect, Widget};
 use floom_types::{Color, KeyEvent, PointerEvent};
 use floom_ui_composites::state::{LayerShape, StateLayer};
 use floom_ui_composites::{Radio, RadioStyle};
-use floom_widgets::testkit::{AllocatingCreateContext, dispatch, paint_snapshot};
+use floom_widgets::testkit::{dispatch, paint_snapshot, AllocatingCreateContext};
 
 /// The box the control is laid out in for every test here: wide enough for the
 /// ring and its label, tall enough for the ring to be centred in it.

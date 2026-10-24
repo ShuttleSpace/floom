@@ -20,5 +20,8 @@ fn main() {
     host.mount_root(LayoutStyle::default(), root);
 
     let stats = host.frame();
-    println!("hello floom 2.0: mounted and painted {} widgets", stats.painted);
+    println!(
+        "hello floom 2.0: mounted and painted {} widgets",
+        stats.painted
+    );
 }

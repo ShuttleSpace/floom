@@ -9,9 +9,9 @@
 
 use floom_core::Widget;
 
+use floom_ui_composites::{node_at, toggle_path, visible_rows, TreeNode, TreeView, TreeViewStyle};
 use floom_widgets::testkit::AllocatingCreateContext;
 use floom_widgets::{Pressable, Stack, Surface, Text, VectorIcon};
-use floom_ui_composites::{TreeNode, TreeView, TreeViewStyle, node_at, toggle_path, visible_rows};
 
 /// Material-ish numbers, distinguishable so a wrong field is visible.
 fn style() -> TreeViewStyle {
@@ -45,7 +45,9 @@ fn style() -> TreeViewStyle {
 /// tests failed by correctly reporting one row.
 fn forest() -> Vec<TreeNode> {
     vec![TreeNode::new("root").expanded(true).children(vec![
-        TreeNode::new("child").expanded(true).children(vec![TreeNode::new("grandchild")]),
+        TreeNode::new("child")
+            .expanded(true)
+            .children(vec![TreeNode::new("grandchild")]),
         TreeNode::new("sibling"),
     ])]
 }
@@ -107,12 +109,7 @@ fn a_collapsed_node_hides_its_whole_subtree() {
 fn empty_and_flat_forests() {
     assert!(visible_rows(&[]).is_empty());
     assert_eq!(
-        visible_rows(&[
-            TreeNode::new("a"),
-            TreeNode::new("b"),
-            TreeNode::new("c")
-        ])
-        .len(),
+        visible_rows(&[TreeNode::new("a"), TreeNode::new("b"), TreeNode::new("c")]).len(),
         3,
         "three siblings, no nesting"
     );
@@ -144,7 +141,10 @@ fn node_at_resolves_a_path_to_that_node() {
 #[test]
 fn node_at_rejects_a_path_that_does_not_resolve() {
     let forest = forest();
-    assert!(node_at(&forest, &[]).is_none(), "an empty path names nothing");
+    assert!(
+        node_at(&forest, &[]).is_none(),
+        "an empty path names nothing"
+    );
     assert!(node_at(&forest, &[9]).is_none(), "out of range at the root");
     assert!(
         node_at(&forest, &[0, 9]).is_none(),
@@ -171,7 +171,10 @@ fn toggle_flips_one_node_and_reports_it() {
     );
     let forest = tree.lock().unwrap();
     let _ = &forest;
-    assert!(!node_at(&forest, &[0, 0]).unwrap().expanded, "now collapsed");
+    assert!(
+        !node_at(&forest, &[0, 0]).unwrap().expanded,
+        "now collapsed"
+    );
     assert!(
         node_at(&forest, &[0]).unwrap().expanded,
         "and the parent is still expanded, which is how this fixture started — \
@@ -187,10 +190,7 @@ fn toggle_rejects_a_path_that_does_not_resolve() {
         !toggle_path(&tree, &[9]),
         "out of range changes nothing, and says so"
     );
-    assert!(
-        !toggle_path(&tree, &[0, 9]),
-        "one level down, likewise"
-    );
+    assert!(!toggle_path(&tree, &[0, 9]), "one level down, likewise");
 }
 
 /// The reason the state is shared at all, as an observable: toggling a node changes
@@ -285,18 +285,14 @@ fn the_row_declares_its_own_height_and_padding() {
     assert_eq!(
         request.padding,
         Some(floom_types::Insets {
-                left: 8.0,
-                right: 8.0,
-                top: 0.0,
-                bottom: 0.0,
-            }),
+            left: 8.0,
+            right: 8.0,
+            top: 0.0,
+            bottom: 0.0,
+        }),
         "and v1's `.padding_horiz(8.0)`"
     );
-    assert_eq!(
-        request.gap,
-        Some(4.0),
-        "and its `.gap(4.0)`"
-    );
+    assert_eq!(request.gap, Some(4.0), "and its `.gap(4.0)`");
     assert_eq!(
         request.cross_align,
         Some(floom_core::Align::Center),
@@ -380,10 +376,7 @@ fn a_childless_nodes_expander_box_is_empty_but_the_same_size() {
     let expander = expander.as_any().downcast_ref::<Surface>().unwrap().clone();
     assert_eq!(expander.child_count(), 0, "no chevron for a leaf");
     assert_eq!(
-        expander
-            .layout_request()
-            .expect("still sized")
-            .width,
+        expander.layout_request().expect("still sized").width,
         Some(floom_types::Length::Px(24.0)),
         "but the box is still `expander_size` wide, so the labels line up"
     );
@@ -401,10 +394,7 @@ fn the_indent_is_depth_minus_one_indents() {
     let spacer = root.children()[0].build();
     let spacer = spacer.as_any().downcast_ref::<Surface>().unwrap().clone();
     assert_eq!(
-        spacer
-            .layout_request()
-            .expect("the spacer is sized")
-            .width,
+        spacer.layout_request().expect("the spacer is sized").width,
         Some(floom_types::Length::Px(0.0)),
         "depth 1: (1 - 1) * 16"
     );
@@ -415,10 +405,7 @@ fn the_indent_is_depth_minus_one_indents() {
     let spacer = deeper.children()[0].build();
     let spacer = spacer.as_any().downcast_ref::<Surface>().unwrap().clone();
     assert_eq!(
-        spacer
-            .layout_request()
-            .expect("the spacer is sized")
-            .width,
+        spacer.layout_request().expect("the spacer is sized").width,
         Some(floom_types::Length::Px(16.0)),
         "depth 2: (2 - 1) * 16"
     );
@@ -540,7 +527,12 @@ fn a_resolved_icon_is_drawn_at_seventy_percent_of_its_box() {
         Some(
             VectorIcon::from_path_data(
                 "M 0 0 L 4 4 Z",
-                floom_types::Rect { x0: 0.0, y0: 0.0, x1: 4.0, y1: 4.0 },
+                floom_types::Rect {
+                    x0: 0.0,
+                    y0: 0.0,
+                    x1: 4.0,
+                    y1: 4.0,
+                },
             )
             .size(1.0),
         )
@@ -560,11 +552,7 @@ fn a_resolved_icon_is_drawn_at_seventy_percent_of_its_box() {
         .as_any()
         .downcast_ref::<VectorIcon>()
         .expect("the resolved icon");
-    assert_eq!(
-        drawn.edge(),
-        24.0 * 0.7,
-        "v1's `icon_size * 0.7`"
-    );
+    assert_eq!(drawn.edge(), 24.0 * 0.7, "v1's `icon_size * 0.7`");
 }
 
 /// A node with **no** icon leaves its box empty, which is v1's
@@ -580,10 +568,7 @@ fn a_node_with_no_icon_leaves_an_empty_box() {
 
     assert_eq!(icon_box.child_count(), 0);
     assert_eq!(
-        icon_box
-            .layout_request()
-            .expect("still sized")
-            .width,
+        icon_box.layout_request().expect("still sized").width,
         Some(floom_types::Length::Px(24.0)),
         "and the box keeps its width, so the labels still line up"
     );
@@ -618,7 +603,11 @@ fn the_label_is_text_at_the_styles_size() {
     let built = row.build();
     let stack = built.as_any().downcast_ref::<Stack>().unwrap().clone();
     let pressable = stack.children()[3].build();
-    let pressable = pressable.as_any().downcast_ref::<Pressable>().unwrap().clone();
+    let pressable = pressable
+        .as_any()
+        .downcast_ref::<Pressable>()
+        .unwrap()
+        .clone();
     let inner = pressable.children()[0].build();
     let text = inner.as_any().downcast_ref::<Text>().expect("a `Text`");
 

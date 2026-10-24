@@ -11,7 +11,7 @@ use floom_core_theme::theme::{MultiTheme, Theme};
 use floom_types::FontWeight;
 use floom_widgets::{Pressable, Ripple, Surface};
 
-use floom_widget_md_list_item::{MdListItem, to_engine_weight};
+use floom_widget_md_list_item::{to_engine_weight, MdListItem};
 
 /// Activate Material and hand back a theme that will read it.
 ///
@@ -70,7 +70,11 @@ fn material_reads_its_own_token_table() {
         to_paint(theme.colors().on_surface_variant),
         "and the subtitle's is `on_surface_variant`"
     );
-    assert_eq!(style.background, to_paint(theme.colors().surface), "the band");
+    assert_eq!(
+        style.background,
+        to_paint(theme.colors().surface),
+        "the band"
+    );
 
     assert_ne!(
         tokens.min_height, style.text_gap,
@@ -115,7 +119,10 @@ fn the_title_weight_comes_from_the_typography_scale() {
 /// A subtitle is an `Option`, and the props' own `Option<String>` is what decides.
 #[test]
 fn no_subtitle_leaves_the_engine_field_empty() {
-    assert_eq!(item().resolved_style().subtitle_size, Some(list_tokens(&material()).subtitle_font_size));
+    assert_eq!(
+        item().resolved_style().subtitle_size,
+        Some(list_tokens(&material()).subtitle_font_size)
+    );
     assert!(!item().view().has_subtitle(), "and the row has one line");
 
     let with = item().subtitle("Home network").view();
@@ -133,12 +140,7 @@ fn the_kit_hands_over_a_pressable_band() {
 
     let ripple = children[0].build();
     assert!(ripple.as_any().is::<Ripple>(), "the ripple is outermost");
-    let pressable = ripple
-        .as_any()
-        .downcast_ref::<Ripple>()
-        .unwrap()
-        .children()[0]
-        .build();
+    let pressable = ripple.as_any().downcast_ref::<Ripple>().unwrap().children()[0].build();
     assert!(
         pressable.as_any().is::<Pressable>(),
         "the pressable is the click target"
@@ -149,7 +151,10 @@ fn the_kit_hands_over_a_pressable_band() {
         .unwrap()
         .children()[0]
         .build();
-    assert!(surface.as_any().is::<Surface>(), "and the surface is the band");
+    assert!(
+        surface.as_any().is::<Surface>(),
+        "and the surface is the band"
+    );
 }
 
 /// The title travels into the row, and the subtitle is optional.
@@ -168,7 +173,10 @@ fn disabled_reaches_the_row_and_its_ripple() {
 
     let ripple = view.children()[0].build();
     let ripple = ripple.as_any().downcast_ref::<Ripple>().unwrap();
-    assert!(ripple.is_disabled(), "and v1's `.disabled(disabled)` reached the ink");
+    assert!(
+        ripple.is_disabled(),
+        "and v1's `.disabled(disabled)` reached the ink"
+    );
 }
 
 // --- the props -----------------------------------------------------------
@@ -244,7 +252,11 @@ fn the_slots_default_to_absent() {
     assert_eq!(item().view().children().len(), 1);
 
     let with_leading = item().leading(|| Box::new(floom_widgets::Text::new("L")));
-    assert_eq!(with_leading.view().children().len(), 1, "and still assembles");
+    assert_eq!(
+        with_leading.view().children().len(),
+        1,
+        "and still assembles"
+    );
 }
 
 /// Design-system colour -> engine colour, the widening the crate does.

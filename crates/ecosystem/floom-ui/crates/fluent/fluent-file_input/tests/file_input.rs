@@ -84,7 +84,9 @@ fn text_of(kit: FluentFileInput, index: usize) -> (String, f32, Color) {
     let ops = ops_of(&*text);
     ops.iter()
         .find_map(|op| match op {
-            PaintOp::Text { text, size, color, .. } => Some((text.clone(), *size, *color)),
+            PaintOp::Text {
+                text, size, color, ..
+            } => Some((text.clone(), *size, *color)),
             _ => None,
         })
         .expect("a file input paints its texts")
@@ -100,7 +102,10 @@ fn box_painted(kit: FluentFileInput) -> (Option<Color>, Option<(f64, Color)>) {
         _ => None,
     });
     let rim = ops.iter().find_map(|op| match op {
-        PaintOp::Path { stroke: Some((width, color)), .. } => Some((*width, *color)),
+        PaintOp::Path {
+            stroke: Some((width, color)),
+            ..
+        } => Some((*width, *color)),
         _ => None,
     });
     (fill, rim)
@@ -122,7 +127,8 @@ fn tap(pressable: &mut floom_widgets::Pressable) {
 #[test]
 fn the_tokens_and_colours_reach_the_style() {
     let style: FluentFileInputStyle = kit().resolved_style();
-    let tokens = match theme().component(floom_core_theme::component_tokens::ComponentId::FileInput) {
+    let tokens = match theme().component(floom_core_theme::component_tokens::ComponentId::FileInput)
+    {
         floom_core_theme::component_tokens::ComponentTokens::FileInput(tokens) => tokens,
         _ => unreachable!(),
     };
@@ -131,15 +137,31 @@ fn the_tokens_and_colours_reach_the_style() {
         style.padding_horizontal, tokens.padding_horizontal,
         "the token's padding"
     );
-    assert_eq!(style.border_radius, tokens.border_radius, "the token's radius");
-    assert_eq!(style.font_size, tokens.font_size, "the token's font size");
-    assert_eq!(style.trigger_color, theme().colors().primary, "the label's ink");
-    assert_eq!(style.path_color, theme().colors().on_surface, "the readout's ink");
     assert_eq!(
-        style.empty_path_color, theme().colors().on_surface_variant,
+        style.border_radius, tokens.border_radius,
+        "the token's radius"
+    );
+    assert_eq!(style.font_size, tokens.font_size, "the token's font size");
+    assert_eq!(
+        style.trigger_color,
+        theme().colors().primary,
+        "the label's ink"
+    );
+    assert_eq!(
+        style.path_color,
+        theme().colors().on_surface,
+        "the readout's ink"
+    );
+    assert_eq!(
+        style.empty_path_color,
+        theme().colors().on_surface_variant,
         "the empty readout's ink"
     );
-    assert_eq!(style.border_color, theme().colors().outline, "the box's rim");
+    assert_eq!(
+        style.border_color,
+        theme().colors().outline,
+        "the box's rim"
+    );
     assert_eq!(style.background, theme().colors().surface, "the box's fill");
 }
 
@@ -200,7 +222,10 @@ fn the_disabled_box_is_painted_with_v1_s_disabled_fill_and_rim() {
     );
     assert_eq!(
         rim,
-        Some((f64::from(style.border_width), paint(style.disabled_border_color))),
+        Some((
+            f64::from(style.border_width),
+            paint(style.disabled_border_color)
+        )),
         "the disabled rim"
     );
     assert_eq!(
@@ -300,7 +325,9 @@ fn without_the_slot_the_row_is_v1_s() {
 fn the_trigger_reports_the_current_path_when_it_is_clicked() {
     let seen = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
     let s = seen.clone();
-    let mut pressable = kit().on_change(move |path| s.lock().unwrap().push(path)).view();
+    let mut pressable = kit()
+        .on_change(move |path| s.lock().unwrap().push(path))
+        .view();
 
     tap(&mut pressable);
     assert_eq!(
@@ -317,7 +344,9 @@ fn the_trigger_reports_the_path_the_host_wrote() {
     let s = seen.clone();
     let mut kit = kit();
     kit.set_path("/tmp/report.pdf");
-    let mut pressable = kit.on_change(move |path| s.lock().unwrap().push(path)).view();
+    let mut pressable = kit
+        .on_change(move |path| s.lock().unwrap().push(path))
+        .view();
     tap(&mut pressable);
     assert_eq!(
         seen.lock().unwrap().as_slice(),

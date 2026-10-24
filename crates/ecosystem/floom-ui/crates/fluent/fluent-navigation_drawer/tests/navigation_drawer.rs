@@ -15,8 +15,9 @@
 
 use floom_core::{ElementId, Event, Point, PointerEvent, Rect, Widget};
 use floom_types::Color;
-use floom_widgets::testkit::{AllocatingCreateContext, PaintOp, RecordingUpdateContext, SceneRecorder,
-    TestEventContext};
+use floom_widgets::testkit::{
+    AllocatingCreateContext, PaintOp, RecordingUpdateContext, SceneRecorder, TestEventContext,
+};
 
 use floom_core_theme::global_theme::DesignSystem;
 use floom_core_theme::props::navigation_drawer::NavigationDrawerSide;
@@ -99,7 +100,11 @@ fn the_tokens_and_colours_reach_the_style() {
         _ => unreachable!(),
     };
     assert_eq!(style.padding, tokens.padding, "the token's padding");
-    assert_eq!(style.background, theme().colors().surface, "the panel's fill");
+    assert_eq!(
+        style.background,
+        theme().colors().surface,
+        "the panel's fill"
+    );
     assert_eq!(style.scrim, theme().colors().scrim, "the scrim's colour");
     assert_eq!(style.scrim_alpha, 160, "v1's scrim alpha");
     assert_eq!(style.accent_width, 3.0, "v1's accent width");
@@ -141,7 +146,10 @@ fn the_layer_is_painted_the_scrim_colour() {
         _ => None,
     });
     let expected = paint(resolved.scrim);
-    let expected = Color { a: resolved.scrim_alpha, ..expected };
+    let expected = Color {
+        a: resolved.scrim_alpha,
+        ..expected
+    };
     assert_eq!(fill, Some(expected), "the scrim's fill");
 }
 

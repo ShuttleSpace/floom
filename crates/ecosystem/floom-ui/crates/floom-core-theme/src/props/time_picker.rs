@@ -7,10 +7,7 @@ pub struct TimeValue {
 
 impl Default for TimeValue {
     fn default() -> Self {
-        Self {
-            hour: 0,
-            minute: 0,
-        }
+        Self { hour: 0, minute: 0 }
     }
 }
 
@@ -42,7 +39,10 @@ impl std::fmt::Debug for TimePickerProps {
             .field("value", &self.value)
             .field("placeholder", &self.placeholder)
             .field("disabled", &self.disabled)
-            .field("on_change", &self.on_change.as_ref().map(|_| "Fn(TimeValue)"))
+            .field(
+                "on_change",
+                &self.on_change.as_ref().map(|_| "Fn(TimeValue)"),
+            )
             .finish()
     }
 }

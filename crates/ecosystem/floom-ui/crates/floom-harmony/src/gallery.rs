@@ -38,7 +38,10 @@ pub fn button_gallery(theme: &HarmonyTheme) -> Scene {
 /// *something changed*, this says *the outlined hover lost its outline*.
 pub fn button_gallery_labels(theme: &HarmonyTheme) -> String {
     shared_labels(
-        &format!("scheme={:?} background={:?}", theme.scheme, theme.colors.background),
+        &format!(
+            "scheme={:?} background={:?}",
+            theme.scheme, theme.colors.background
+        ),
         DepthField::Elevation,
         |sample| button_style(theme, sample.variant, sample.size, sample.state),
     )
@@ -70,7 +73,8 @@ mod tests {
         assert_eq!(
             labels.lines().count(),
             expected + 1,
-            "header plus {} samples", expected
+            "header plus {} samples",
+            expected
         );
     }
 

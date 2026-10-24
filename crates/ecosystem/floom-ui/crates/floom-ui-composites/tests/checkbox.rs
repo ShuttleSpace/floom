@@ -21,8 +21,8 @@ use floom_core::{ElementId, Point, Rect, Widget};
 use floom_types::{Color, Rect as TypesRect};
 use floom_ui_composites::state::{LayerShape, StateLayer};
 use floom_ui_composites::{Checkbox, CheckboxStyle, FocusRing};
+use floom_widgets::testkit::{dispatch, paint_snapshot, AllocatingCreateContext};
 use floom_widgets::VectorIcon;
-use floom_widgets::testkit::{AllocatingCreateContext, dispatch, paint_snapshot};
 
 /// The box the control is laid out in for every test here: wide enough for the
 /// indicator and its label, tall enough for the indicator to be centred in it.
@@ -79,12 +79,10 @@ fn checkbox_toggles_and_publishes_checked_state() {
 
     fire_down_up(&mut box_widget, id, Point::new(4.0, 4.0));
     assert!(box_widget.is_checked());
-    assert!(
-        box_widget
-            .semantics_hint()
-            .state
-            .contains(SemanticsState::CHECKED)
-    );
+    assert!(box_widget
+        .semantics_hint()
+        .state
+        .contains(SemanticsState::CHECKED));
 
     fire_down_up(&mut box_widget, id, Point::new(4.0, 4.0));
     assert!(!box_widget.is_checked());

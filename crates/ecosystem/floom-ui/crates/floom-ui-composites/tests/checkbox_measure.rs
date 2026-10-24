@@ -15,8 +15,8 @@
 //! and `Radio` ports fixed, and the assertions below are what hold the fix in
 //! place.
 
-use floom_core::Widget;
 use floom_app::{NodeId, WidgetHost};
+use floom_core::Widget;
 use floom_layout::LayoutStyle;
 use floom_types::Size;
 use floom_ui_composites::{Checkbox, CheckboxStyle};
@@ -86,7 +86,11 @@ fn a_styled_checkbox_is_measured_from_its_style() {
         label_font_size: 20.0,
         ..CheckboxStyle::default()
     };
-    let styled = host.mount(root, LayoutStyle::default(), Checkbox::new(label).style(style));
+    let styled = host.mount(
+        root,
+        LayoutStyle::default(),
+        Checkbox::new(label).style(style),
+    );
     host.frame();
 
     let bounds = node_bounds(&host, styled);

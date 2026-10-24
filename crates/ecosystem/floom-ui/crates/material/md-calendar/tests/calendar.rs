@@ -23,7 +23,7 @@ use floom_core_theme::props::calendar::CalendarDate as ThemeDate;
 use floom_core_theme::theme::{MultiTheme, Theme};
 use floom_core_theme::tokens::color_ext::with_alpha;
 
-use floom_widget_md_calendar::{MaterialCalendar, MaterialCalendarStyle, CalendarDate};
+use floom_widget_md_calendar::{CalendarDate, MaterialCalendar, MaterialCalendarStyle};
 
 const BOX: Rect = Rect {
     x0: 0.0,
@@ -67,7 +67,9 @@ fn ops_of(widget: &dyn Widget) -> Vec<PaintOp> {
 /// The text a widget paints, if it paints one.
 fn text_of(widget: &dyn Widget) -> Option<(String, f32, Color)> {
     ops_of(widget).into_iter().find_map(|op| match op {
-        PaintOp::Text { text, size, color, .. } => Some((text, size, color)),
+        PaintOp::Text {
+            text, size, color, ..
+        } => Some((text, size, color)),
         _ => None,
     })
 }
@@ -124,17 +126,24 @@ fn cell_paint(cell: &dyn WidgetAny) -> (Option<Color>, Option<(String, f32, Colo
 #[test]
 fn the_tokens_and_colours_reach_the_style() {
     let style: MaterialCalendarStyle = kit().resolved_style();
-    let tokens = match theme().component(floom_core_theme::component_tokens::ComponentId::Calendar) {
+    let tokens = match theme().component(floom_core_theme::component_tokens::ComponentId::Calendar)
+    {
         floom_core_theme::component_tokens::ComponentTokens::Calendar(tokens) => tokens,
         _ => unreachable!(),
     };
     assert_eq!(style.cell_size, tokens.cell_size, "the token's cell size");
-    assert_eq!(style.panel_width, tokens.panel_width, "the token's panel width");
+    assert_eq!(
+        style.panel_width, tokens.panel_width,
+        "the token's panel width"
+    );
     assert_eq!(
         style.header_font_size, tokens.header_font_size,
         "the token's header size"
     );
-    assert_eq!(style.day_font_size, tokens.day_font_size, "the token's day size");
+    assert_eq!(
+        style.day_font_size, tokens.day_font_size,
+        "the token's day size"
+    );
     assert_eq!(
         style.weekday_font_size, tokens.weekday_font_size,
         "the token's weekday size"
@@ -143,12 +152,24 @@ fn the_tokens_and_colours_reach_the_style() {
         style.weeknumber_width, tokens.weeknumber_width,
         "the token's week-number width"
     );
-    assert_eq!(style.border_radius, tokens.border_radius, "the token's radius");
-    assert_eq!(style.surface, theme().colors().surface, "the panel's fill");
-    assert_eq!(style.on_surface, theme().colors().on_surface, "the day numbers' ink");
-    assert_eq!(style.primary, theme().colors().primary, "the selected day's fill");
     assert_eq!(
-        style.on_primary, theme().colors().on_primary,
+        style.border_radius, tokens.border_radius,
+        "the token's radius"
+    );
+    assert_eq!(style.surface, theme().colors().surface, "the panel's fill");
+    assert_eq!(
+        style.on_surface,
+        theme().colors().on_surface,
+        "the day numbers' ink"
+    );
+    assert_eq!(
+        style.primary,
+        theme().colors().primary,
+        "the selected day's fill"
+    );
+    assert_eq!(
+        style.on_primary,
+        theme().colors().on_primary,
         "the selected day's number"
     );
 }
@@ -219,7 +240,9 @@ fn the_selected_day_is_filled_and_the_others_are_not() {
     let (fill, painted) = cell_paint(&*cell_widget(kit(), "2"));
     assert_eq!(
         fill,
-        Some(paint(floom_core_theme::tokens::color::Color::rgba(0, 0, 0, 0))),
+        Some(paint(floom_core_theme::tokens::color::Color::rgba(
+            0, 0, 0, 0
+        ))),
         "an unselected day is not filled"
     );
     let (_, _, ink) = painted.expect("the day is painted");
@@ -247,7 +270,9 @@ fn clicking_a_day_picks_it() {
     let mut down = TestEventContext::new(
         id,
         BOX,
-        Event::Pointer(floom_types::PointerEvent::primary_down(Point::new(5.0, 5.0))),
+        Event::Pointer(floom_types::PointerEvent::primary_down(Point::new(
+            5.0, 5.0,
+        ))),
     );
     cell.event(&mut down, id);
     let mut up = TestEventContext::new(
@@ -278,7 +303,11 @@ fn the_week_numbers_are_drawn_only_when_asked_for() {
     let body = body_of(kit());
     let grid = body.children().remove(2).build();
     let row = grid.children().remove(1).build();
-    assert_eq!(row.children().len(), 7, "seven days, and no week-number column");
+    assert_eq!(
+        row.children().len(),
+        7,
+        "seven days, and no week-number column"
+    );
 
     let body = body_of(kit().show_week_numbers(true));
     let grid = body.children().remove(2).build();

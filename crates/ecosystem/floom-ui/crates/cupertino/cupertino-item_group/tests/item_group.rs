@@ -171,8 +171,14 @@ fn the_initial_selection_is_readable_through_both_accessors() {
     let widget = three_rows()
         .selected(2)
         .view(None::<fn(usize)>, None::<fn(Vec<usize>)>);
-    assert_eq!(floom_widget_cupertino_item_group::selected(&widget), Some(2));
-    assert_eq!(floom_widget_cupertino_item_group::selected_multi(&widget), vec![2]);
+    assert_eq!(
+        floom_widget_cupertino_item_group::selected(&widget),
+        Some(2)
+    );
+    assert_eq!(
+        floom_widget_cupertino_item_group::selected_multi(&widget),
+        vec![2]
+    );
 }
 
 // --- the structure --------------------------------------------------------
@@ -247,23 +253,24 @@ fn the_resolved_style_is_enough_to_build_the_widget() {
 
     // And a hand-built widget with those exact numbers is indistinguishable from
     // the port's own.
-    let by_hand = floom_ui_composites::SelectGroup::new().style(floom_ui_composites::SelectGroupStyle {
-        gap: resolved.gap,
-        axis: floom_core::Axis::Vertical,
-        height: None,
-        pad: resolved.pad,
-        content_placement: floom_ui_composites::ContentPlacement::Top,
-        toggles_off_in_single_mode: false,
-        mandatory_in_multiple_mode: true,
-        radius: resolved.radius,
-        border_width: 1.0,
-        background: paint(resolved.surface_variant),
-        foreground: paint(resolved.on_surface),
-        border_color: paint(resolved.outline),
-        selected_background: paint(resolved.primary_container),
-        selected_foreground: paint(resolved.on_primary_container),
-        selected_border_color: paint(resolved.primary),
-    });
+    let by_hand =
+        floom_ui_composites::SelectGroup::new().style(floom_ui_composites::SelectGroupStyle {
+            gap: resolved.gap,
+            axis: floom_core::Axis::Vertical,
+            height: None,
+            pad: resolved.pad,
+            content_placement: floom_ui_composites::ContentPlacement::Top,
+            toggles_off_in_single_mode: false,
+            mandatory_in_multiple_mode: true,
+            radius: resolved.radius,
+            border_width: 1.0,
+            background: paint(resolved.surface_variant),
+            foreground: paint(resolved.on_surface),
+            border_color: paint(resolved.outline),
+            selected_background: paint(resolved.primary_container),
+            selected_foreground: paint(resolved.on_primary_container),
+            selected_border_color: paint(resolved.primary),
+        });
     let by_port = group().select_group_style();
     assert_eq!(by_hand.declared_style(), by_port);
     let _ = AREA;
@@ -278,14 +285,16 @@ fn the_resolved_style_is_enough_to_build_the_widget() {
 /// pass for any of the three. So the palette is pinned here: Cupertino's
 /// `primary` is a literal, and it is not Material's.
 #[test]
-fn the_colours_are_this_design_system_s_own() {{
-    let theme = theme();
-    let style = group().resolved_style();
-    assert_eq!(style.design_system, "cupertino");
-    assert_eq!(style.primary, theme.colors().primary);
-    assert_eq!(
-        style.primary,
-        floom_core_theme::tokens::color::Color::rgb(0, 122, 255),
-        "Cupertino's own primary"
-    );
-}}
+fn the_colours_are_this_design_system_s_own() {
+    {
+        let theme = theme();
+        let style = group().resolved_style();
+        assert_eq!(style.design_system, "cupertino");
+        assert_eq!(style.primary, theme.colors().primary);
+        assert_eq!(
+            style.primary,
+            floom_core_theme::tokens::color::Color::rgb(0, 122, 255),
+            "Cupertino's own primary"
+        );
+    }
+}

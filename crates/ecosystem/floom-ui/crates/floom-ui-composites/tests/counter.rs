@@ -32,7 +32,9 @@ use floom_accessibility::SemanticsRole;
 use floom_core::{ElementId, Widget};
 use floom_types::{Color, Length};
 
-use floom_ui_composites::{Counter, CounterState, CounterStyle, SharedCounter, Step, clamp_value, step_value};
+use floom_ui_composites::{
+    clamp_value, step_value, Counter, CounterState, CounterStyle, SharedCounter, Step,
+};
 use floom_widgets::testkit::RecordingUpdateContext;
 
 const ID: ElementId = ElementId::new(1, 1);
@@ -270,7 +272,11 @@ fn both_ends_of_the_range_are_reported() {
     counter.step_down();
     counter.step_up();
     counter.step_up();
-    assert_eq!(read(&log), vec![0, 1, 1], "the last press repeats the ceiling");
+    assert_eq!(
+        read(&log),
+        vec![0, 1, 1],
+        "the last press repeats the ceiling"
+    );
 }
 
 /// A counter with no callback does not need one to work.

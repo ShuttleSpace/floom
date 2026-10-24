@@ -84,9 +84,15 @@ fn the_tokens_reach_the_style() {
     let style: FluentSkeletonStyle = kit().resolved_style();
     let tokens = tokens();
     assert_eq!(style.color, tokens.color, "the placeholder's fill");
-    assert_eq!(style.corner_radius, tokens.corner_radius, "the corner radius");
+    assert_eq!(
+        style.corner_radius, tokens.corner_radius,
+        "the corner radius"
+    );
     assert_eq!(style.text_height, tokens.text_height, "the line height");
-    assert_eq!(style.avatar_size, tokens.avatar_size, "the avatar's diameter");
+    assert_eq!(
+        style.avatar_size, tokens.avatar_size,
+        "the avatar's diameter"
+    );
     assert_eq!(style.gap, tokens.gap, "the gap");
     assert_eq!(style.card_radius, tokens.card_radius, "the card's radius");
 }
@@ -108,14 +114,20 @@ fn the_outer_width_is_the_types_own() {
         (SkeletonType::Avatar, 240.0),
     ] {
         let style = kit().skeleton_type(skeleton_type).resolved_style();
-        assert_eq!(style.outer_width, width, "v1's default for {skeleton_type:?}");
+        assert_eq!(
+            style.outer_width, width,
+            "v1's default for {skeleton_type:?}"
+        );
     }
 }
 
 /// An explicit width wins over the type's default.
 #[test]
 fn an_explicit_width_wins() {
-    let style = kit().skeleton_type(SkeletonType::Card).width(300.0).resolved_style();
+    let style = kit()
+        .skeleton_type(SkeletonType::Card)
+        .width(300.0)
+        .resolved_style();
     assert_eq!(style.outer_width, 300.0);
 }
 
@@ -155,7 +167,9 @@ fn the_rectangle_is_two_lines_tall() {
     let style = kit().skeleton_type(SkeletonType::Rect).resolved_style();
     let rect = content_of(kit().skeleton_type(SkeletonType::Rect));
 
-    let request = rect.layout_request().expect("the rectangle asks for its own space");
+    let request = rect
+        .layout_request()
+        .expect("the rectangle asks for its own space");
     assert_eq!(request.width, Some(Length::Px(160.0)), "v1's width");
     assert_eq!(
         request.height,
@@ -180,7 +194,9 @@ fn the_card_is_the_card_size() {
     let style = kit().skeleton_type(SkeletonType::Card).resolved_style();
     let card = content_of(kit().skeleton_type(SkeletonType::Card));
 
-    let request = card.layout_request().expect("the card asks for its own space");
+    let request = card
+        .layout_request()
+        .expect("the card asks for its own space");
     assert_eq!(request.width, Some(Length::Px(200.0)), "v1's width");
     assert_eq!(request.height, Some(Length::Px(120.0)), "v1's height");
 
@@ -200,12 +216,21 @@ fn the_card_is_the_card_size() {
 /// The text placeholder is a column of lines.
 #[test]
 fn the_text_is_a_column_of_lines() {
-    let style = kit().skeleton_type(SkeletonType::Text).lines(3).resolved_style();
+    let style = kit()
+        .skeleton_type(SkeletonType::Text)
+        .lines(3)
+        .resolved_style();
     let column = content_of(kit().skeleton_type(SkeletonType::Text).lines(3));
-    assert_eq!(column.children().len(), 3, "v1 drew one line per line asked for");
+    assert_eq!(
+        column.children().len(),
+        3,
+        "v1 drew one line per line asked for"
+    );
 
     let line = column.children().remove(0).build();
-    let request = line.layout_request().expect("a line asks for its own space");
+    let request = line
+        .layout_request()
+        .expect("a line asks for its own space");
     assert_eq!(
         request.height,
         Some(Length::Px(style.text_height)),
@@ -235,8 +260,12 @@ fn the_avatar_is_a_circle_and_at_most_three_lines() {
 /// `animated` changes nothing: nothing shimmers.
 #[test]
 fn the_animated_prop_changes_nothing() {
-    let still = ops_of(&*content_of(kit().skeleton_type(SkeletonType::Text).animated(false)));
-    let moving = ops_of(&*content_of(kit().skeleton_type(SkeletonType::Text).animated(true)));
+    let still = ops_of(&*content_of(
+        kit().skeleton_type(SkeletonType::Text).animated(false),
+    ));
+    let moving = ops_of(&*content_of(
+        kit().skeleton_type(SkeletonType::Text).animated(true),
+    ));
     assert_eq!(
         still, moving,
         "v1's build had no animation frame hook, so nothing shimmered"

@@ -112,7 +112,11 @@ fn the_tokens_reach_the_engine_chip() {
     assert_eq!(engine.font_size, style.font_size, "the token's font size");
     assert_eq!(engine.label, "One");
     assert_eq!(engine.hover, None, "the hover fill");
-    assert_eq!(engine.font_weight, floom_types::FontWeight::Normal, "the label's weight");
+    assert_eq!(
+        engine.font_weight,
+        floom_types::FontWeight::Normal,
+        "the label's weight"
+    );
 }
 
 #[test]
@@ -130,7 +134,11 @@ fn the_design_system_is_named_in_the_style() {
 fn the_three_appearances_are_the_ones_v1_drew() {
     let plain = chip().resolved_style();
     let (fill, ink, _) = painted(&chip().label("One").view());
-    assert_eq!(fill, Some(paint(plain.container_color)), "the unchosen fill");
+    assert_eq!(
+        fill,
+        Some(paint(plain.container_color)),
+        "the unchosen fill"
+    );
     assert_eq!(ink, Some(paint(plain.label_color)), "and the unchosen ink");
 
     let chosen = chip().selected(true).resolved_style();

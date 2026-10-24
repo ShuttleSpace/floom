@@ -26,7 +26,9 @@ pub struct HostedTree {
 
 impl HostedTree {
     pub fn new() -> Self {
-        Self { live: LiveTree::new() }
+        Self {
+            live: LiveTree::new(),
+        }
     }
 
     /// Adds one node, returning the id it was registered under.
@@ -47,7 +49,9 @@ impl HostedTree {
             .arena
             .insert(Element::new(ElementId::INVALID, kind));
         if let Some(parent) = parent {
-            self.live.tree.append_child(&mut self.live.arena, parent, id);
+            self.live
+                .tree
+                .append_child(&mut self.live.arena, parent, id);
         }
         self.live.register(key, node_kind, id);
         // A hosted node carries no props: the host's own layout is the truth,
@@ -122,7 +126,10 @@ pub fn describe(nodes: &[HostedNode]) -> LiveTree {
         // host's own id -> key table first and only then to the live id.
         let parent = match node.parent {
             None => None,
-            Some(p) => match host_ids.get(&p.raw()).and_then(|k| ids.get(k.as_str()).copied()) {
+            Some(p) => match host_ids
+                .get(&p.raw())
+                .and_then(|k| ids.get(k.as_str()).copied())
+            {
                 Some(id) => Some(id),
                 None => continue,
             },

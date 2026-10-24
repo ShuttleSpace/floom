@@ -77,8 +77,8 @@ use floom_widgets::{Align, SharedBuffer, Surface, TextInput, TextInputStyle};
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::textarea::TextareaProps;
 use floom_core_theme::theme::{MultiTheme, Theme};
-use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color::to_engine_color as to_paint;
+use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color_ext::with_alpha;
 use floom_widget_runtime::theme_signal;
 
@@ -283,8 +283,8 @@ impl MaterialTextarea {
         });
         // The field is as tall as the rows ask for, and the box grows around
         // it -- which is where v1 put the height.
-        let field_height = style.min_height
-            + (self.props.rows.saturating_sub(1) as f32) * style.line_height;
+        let field_height =
+            style.min_height + (self.props.rows.saturating_sub(1) as f32) * style.line_height;
         let caret = buffer.lock().map(|text| text.len()).unwrap_or(0);
 
         let field = Child::new(
@@ -358,4 +358,3 @@ impl Default for MaterialTextarea {
         Self::new()
     }
 }
-

@@ -23,7 +23,7 @@
 //! `set_design_system` is the way to do it. It writes a thread-local, so the
 //! selection is this test's alone.
 
-use floom_core_theme::global_theme::{DesignSystem, set_design_system};
+use floom_core_theme::global_theme::{set_design_system, DesignSystem};
 use floom_core_theme::props::button::{ButtonSize, ButtonVariant};
 use floom_core_theme::theme::{MultiTheme, Theme};
 
@@ -55,7 +55,10 @@ fn button_exposes_neutral_contract_api() {
 #[test]
 fn button_style_resolves_from_fluent_theme() {
     let theme = theme();
-    let style = FluentButton::new().label("Save").with_theme(theme.clone()).resolved_style();
+    let style = FluentButton::new()
+        .label("Save")
+        .with_theme(theme.clone())
+        .resolved_style();
 
     assert_eq!(style.background, theme.colors().primary);
     assert_eq!(style.foreground, theme.colors().on_primary);

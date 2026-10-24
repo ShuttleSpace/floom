@@ -442,11 +442,7 @@ pub fn console_rows(reports: &[floom_error::Report]) -> Vec<ReadoutRow> {
     }
     for report in reports.iter().rev().take(12) {
         rows.push(
-            ReadoutRow::new(
-                format!("{:?}", report.severity),
-                report.message.clone(),
-            )
-            .nested(1),
+            ReadoutRow::new(format!("{:?}", report.severity), report.message.clone()).nested(1),
         );
         if !report.context.is_empty() {
             rows.push(ReadoutRow::new("context", report.context.clone()).nested(2));
@@ -480,7 +476,10 @@ fn panel_background() -> floom_core::Brush {
 /// entries — which is enough to tell a working integration from a silent one.
 pub fn default_readout(inspector: &Inspector<'_>) -> Vec<ReadoutRow> {
     vec![
-        ReadoutRow::new("elements", inspector.tree_snapshot().nodes.len().to_string()),
+        ReadoutRow::new(
+            "elements",
+            inspector.tree_snapshot().nodes.len().to_string(),
+        ),
         ReadoutRow::new("semantics", inspector.semantics().len().to_string()),
     ]
 }
@@ -498,11 +497,7 @@ pub fn default_readout(inspector: &Inspector<'_>) -> Vec<ReadoutRow> {
 /// selected, and the indent comes from `ReadoutRow::depth` alone. A marker that
 /// carried its own indent would double it.
 fn marker(selected: Option<&str>, key: &str) -> char {
-    if selected == Some(key) {
-        '▸'
-    } else {
-        ' '
-    }
+    if selected == Some(key) { '▸' } else { ' ' }
 }
 
 /// The element tree as rows, nested by depth.
@@ -511,14 +506,13 @@ fn marker(selected: Option<&str>, key: &str) -> char {
 /// show which element the style and layout readouts are about.
 pub fn tree_rows(inspector: &Inspector<'_>, selected: Option<&str>) -> Vec<ReadoutRow> {
     let snapshot = inspector.tree_snapshot();
-    let by_parent: std::collections::HashMap<Option<u64>, Vec<&TreeNodeInfo>> =
-        snapshot.nodes.iter().fold(
-            std::collections::HashMap::new(),
-            |mut acc, node| {
-                acc.entry(node.parent).or_default().push(node);
-                acc
-            },
-        );
+    let by_parent: std::collections::HashMap<Option<u64>, Vec<&TreeNodeInfo>> = snapshot
+        .nodes
+        .iter()
+        .fold(std::collections::HashMap::new(), |mut acc, node| {
+            acc.entry(node.parent).or_default().push(node);
+            acc
+        });
 
     let mut rows = Vec::new();
     // The root's own row first: a tree that starts at the root's children hides
@@ -565,7 +559,10 @@ pub fn breadcrumb_rows(inspector: &Inspector<'_>, key: &str) -> Vec<ReadoutRow> 
         .iter()
         .find(|n| n.key.as_deref() == Some(key))
     else {
-        return vec![ReadoutRow::heading("Breadcrumb"), ReadoutRow::new("(nothing selected)", "")];
+        return vec![
+            ReadoutRow::heading("Breadcrumb"),
+            ReadoutRow::new("(nothing selected)", ""),
+        ];
     };
     // `path_to_root` walks *up* — selected first, root last. A breadcrumb reads
     // the other way, the way a browser's does, so the path is reversed.
@@ -603,7 +600,10 @@ pub fn style_rows(inspector: &Inspector<'_>, key: &str) -> Vec<ReadoutRow> {
         }
     });
     let Some(id) = node_key else {
-        return vec![ReadoutRow::heading("Styles"), ReadoutRow::new("(nothing selected)", "")];
+        return vec![
+            ReadoutRow::heading("Styles"),
+            ReadoutRow::new("(nothing selected)", ""),
+        ];
     };
 
     let mut rows = vec![ReadoutRow::heading("Styles")];
@@ -671,7 +671,10 @@ pub fn layout_rows(inspector: &Inspector<'_>, key: &str) -> Vec<ReadoutRow> {
         }
     });
     let Some(id) = id else {
-        return vec![ReadoutRow::heading("Layout"), ReadoutRow::new("(nothing selected)", "")];
+        return vec![
+            ReadoutRow::heading("Layout"),
+            ReadoutRow::new("(nothing selected)", ""),
+        ];
     };
     let mut rows = vec![ReadoutRow::heading("Layout")];
     if let Some(entry) = snapshot.entries.iter().find(|e| e.id == id) {

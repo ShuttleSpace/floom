@@ -23,7 +23,10 @@ impl std::fmt::Debug for ChipGroupProps {
         f.debug_struct("ChipGroupProps")
             .field("multiple", &self.multiple)
             .field("mandatory", &self.mandatory)
-            .field("on_change", &self.on_change.as_ref().map(|_| "Fn(Vec<usize>)"))
+            .field(
+                "on_change",
+                &self.on_change.as_ref().map(|_| "Fn(Vec<usize>)"),
+            )
             .finish()
     }
 }

@@ -48,11 +48,9 @@ fn theme() -> MultiTheme {
 
 /// The kit, with three items in the strip.
 fn kit() -> FluentSlideGroup {
-    FluentSlideGroup::new().with_theme(theme()).items(vec![
-        item("one"),
-        item("two"),
-        item("three"),
-    ])
+    FluentSlideGroup::new()
+        .with_theme(theme())
+        .items(vec![item("one"), item("two"), item("three")])
 }
 
 /// One item of the strip: the caller's own content.
@@ -161,18 +159,28 @@ fn the_tokens_and_colours_reach_the_style() {
     assert_eq!(style.height, tokens.height, "the token's height");
     assert_eq!(style.gap, tokens.gap, "the token's gap");
     assert_eq!(
-        style.active_indicator_height,
-        tokens.active_indicator_height,
+        style.active_indicator_height, tokens.active_indicator_height,
         "the token's indicator"
     );
-    assert_eq!(style.arrow_size, tokens.arrow_size, "the token's arrow size");
+    assert_eq!(
+        style.arrow_size, tokens.arrow_size,
+        "the token's arrow size"
+    );
     assert_eq!(
         style.on_surface_variant,
         theme().colors().on_surface_variant,
         "the arrows' ink"
     );
-    assert_eq!(style.primary, theme().colors().primary, "the indicator's fill");
-    assert_eq!(style.outline, theme().colors().outline, "the unchosen indicator");
+    assert_eq!(
+        style.primary,
+        theme().colors().primary,
+        "the indicator's fill"
+    );
+    assert_eq!(
+        style.outline,
+        theme().colors().outline,
+        "the unchosen indicator"
+    );
     assert_eq!(style.item_width, 120.0, "v1's literal");
     assert_eq!(style.arrow_width, 32.0, "v1's literal");
     assert_eq!(
@@ -306,7 +314,9 @@ fn the_arrows_are_filled_and_inked() {
     let (text, size, ink) = ops
         .iter()
         .find_map(|op| match op {
-            PaintOp::Text { text, size, color, .. } => Some((text.clone(), *size, *color)),
+            PaintOp::Text {
+                text, size, color, ..
+            } => Some((text.clone(), *size, *color)),
             _ => None,
         })
         .expect("the arrow is painted");
@@ -384,7 +394,11 @@ fn tapping_an_item_moves_the_indicator() {
     let mut chosen_indicator = conditional_of(&*band_of(&*item_box_of(&*chosen)));
     let mut tapped_indicator = conditional_of(&*band_of(&*item_box_of(&*tapped)));
 
-    assert_eq!(settle(&mut *chosen_indicator), 1, "the chosen item's indicator");
+    assert_eq!(
+        settle(&mut *chosen_indicator),
+        1,
+        "the chosen item's indicator"
+    );
     assert_eq!(settle(&mut *tapped_indicator), 0, "and the other has none");
 
     let mut item = item_at(&area, 1);

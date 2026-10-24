@@ -88,17 +88,15 @@
 use std::sync::{Arc, Mutex};
 
 use floom_signal::{RwSignal, SignalGet};
+use floom_types::{Color as PaintColor, Shadow};
 use floom_ui_composites::DatePicker;
 pub use floom_ui_composites::{DatePickerState, DatePickerStyle, DateValue, SharedDateState};
-use floom_types::{
-    Color as PaintColor, Shadow,
-};
 
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::date_picker::{DatePickerProps, DateValue as ThemeDateValue};
 use floom_core_theme::theme::{MultiTheme, Theme};
-use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color::to_engine_color as to_paint;
+use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color_ext::with_alpha;
 
 /// The month the calendar shows when nothing is chosen: August 2026.
@@ -362,4 +360,3 @@ impl Default for CupertinoDatePicker {
         Self::new()
     }
 }
-

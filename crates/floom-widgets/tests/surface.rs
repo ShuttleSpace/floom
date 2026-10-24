@@ -7,7 +7,7 @@
 //! accident: the padding has to be *inside* the box (the `md-card` bug), and the
 //! decoration has to be drawn by the same code a bare `Container` uses.
 
-use floom_core::{ChildKey, LayoutRequest, Widget, WidgetAny, Length};
+use floom_core::{ChildKey, LayoutRequest, Length, Widget, WidgetAny};
 use floom_types::{Color, Insets, Shadow};
 use floom_widgets::primitives::Text;
 use floom_widgets::testkit::{
@@ -69,10 +69,9 @@ fn an_empty_surface_is_a_bare_decoration() {
 
 #[test]
 fn a_child_can_carry_its_own_layout() {
-    let surface = Surface::new().push_layout(
-        LayoutRequest::new().width(120.0),
-        || Box::new(Text::new("wide")),
-    );
+    let surface = Surface::new().push_layout(LayoutRequest::new().width(120.0), || {
+        Box::new(Text::new("wide"))
+    });
     let children = surface.children();
     assert_eq!(children[0].layout.width, Some(Length::Px(120.0)));
 }
@@ -127,7 +126,10 @@ fn padding_can_be_sided() {
 #[test]
 fn an_unpadded_surface_wants_no_layout() {
     assert!(
-        Surface::new().background(Color::WHITE).layout_request().is_none(),
+        Surface::new()
+            .background(Color::WHITE)
+            .layout_request()
+            .is_none(),
         "no padding, no request"
     );
 }
@@ -178,7 +180,9 @@ fn the_decoration_is_a_container_verbatim() {
 /// the child count has no business reaching the decoration.
 #[test]
 fn the_children_do_not_change_what_is_drawn() {
-    let bare = Surface::new().background(Color::WHITE).border(1.0, Color::BLACK);
+    let bare = Surface::new()
+        .background(Color::WHITE)
+        .border(1.0, Color::BLACK);
     let with_child = Surface::new()
         .background(Color::WHITE)
         .border(1.0, Color::BLACK)
@@ -198,7 +202,10 @@ fn the_children_do_not_change_what_is_drawn() {
 fn a_content_filter_is_declared_not_painted() {
     let surface = Surface::new().background(Color::WHITE).blur(4.0);
     assert_eq!(surface.filter(), Some(floom_core::Filter::blur(4.0)));
-    assert_eq!(surface.decoration().content_filter(), Some(floom_core::Filter::blur(4.0)));
+    assert_eq!(
+        surface.decoration().content_filter(),
+        Some(floom_core::Filter::blur(4.0))
+    );
     assert_eq!(
         scene_kinds(&surface, allocate(&surface)),
         vec!["Rect"],
@@ -212,7 +219,9 @@ fn a_content_filter_is_declared_not_painted() {
 /// must not invent a second one and mark dirty on frames where nothing changed.
 #[test]
 fn a_settled_surface_marks_nothing_dirty() {
-    let mut surface = Surface::new().background(Color::WHITE).push(|| Box::new(Text::new("x")));
+    let mut surface = Surface::new()
+        .background(Color::WHITE)
+        .push(|| Box::new(Text::new("x")));
     let id = allocate(&surface);
 
     let mut first = RecordingUpdateContext::new();
@@ -258,7 +267,9 @@ fn changing_the_decoration_after_mount_reaches_the_node() {
 /// always bumped would repaint the whole tree on every one of them.
 #[test]
 fn setting_the_same_value_again_dirties_nothing() {
-    let mut surface = Surface::new().background(Color::WHITE).padding(Insets::uniform(8.0));
+    let mut surface = Surface::new()
+        .background(Color::WHITE)
+        .padding(Insets::uniform(8.0));
     let id = allocate(&surface);
     let mut cx = RecordingUpdateContext::new();
     surface.update(&mut cx, id);
@@ -330,7 +341,9 @@ fn a_moved_padding_asks_for_a_layout_pass() {
 /// layout pass for all of them. Only a *layout* change may use it.
 #[test]
 fn a_moved_colour_does_not_ask_for_a_layout_pass() {
-    let mut surface = Surface::new().background(Color::WHITE).padding(Insets::uniform(8.0));
+    let mut surface = Surface::new()
+        .background(Color::WHITE)
+        .padding(Insets::uniform(8.0));
     let id = allocate(&surface);
     let mut cx = RecordingUpdateContext::new();
     surface.update(&mut cx, id);
@@ -342,11 +355,7 @@ fn a_moved_colour_does_not_ask_for_a_layout_pass() {
     let mut cx = RecordingUpdateContext::new();
     surface.update(&mut cx, id);
 
-    assert_eq!(
-        cx.dirty_count(),
-        1,
-        "the node is repainted"
-    );
+    assert_eq!(cx.dirty_count(), 1, "the node is repainted");
     assert!(
         !cx.laid_out_again(),
         "but its geometry did not move, so layout must not re-run — this is the \

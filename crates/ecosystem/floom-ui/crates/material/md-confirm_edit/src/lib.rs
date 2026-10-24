@@ -88,16 +88,14 @@ use floom_signal::{RwSignal, SignalGet};
 use floom_types::Color as PaintColor;
 pub use floom_ui_composites::ConfirmEdit;
 use floom_ui_composites::{ConfirmEditGlyphs, ConfirmEditStyle};
-use floom_widgets::{
-    SharedBuffer, SharedFlag, read_flag, shared_flag,
-};
+use floom_widgets::{read_flag, shared_flag, SharedBuffer, SharedFlag};
 
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::confirm_edit::ConfirmEditProps;
 use floom_core_theme::theme::{MultiTheme, Theme};
-use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color::to_engine_color as to_paint;
-use floom_widget_md_icon::{MD_ICON_VIEW_BOX, MdIcon};
+use floom_core_theme::tokens::color::Color;
+use floom_widget_md_icon::{MdIcon, MD_ICON_VIEW_BOX};
 use floom_widget_runtime::theme_signal;
 
 /// The glyphs' size. A v1 literal -- the token's `icon_size` (20) never showed.
@@ -112,7 +110,6 @@ const INPUT_FONT_SIZE: f32 = 14.0;
 const INPUT_PADDING_HORIZ: f32 = 8.0;
 /// The field's outline width. A v1 literal.
 const INPUT_BORDER: f32 = 1.0;
-
 
 /// Write a shared buffer.
 fn write_buffer(buffer: &SharedBuffer, text: impl Into<String>) {

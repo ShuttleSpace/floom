@@ -52,12 +52,8 @@ fn menu(chosen: Arc<Mutex<Vec<usize>>>) -> Menu {
     let second = chosen.clone();
     Menu::new()
         .style(style())
-        .item(
-            MenuItem::new("One").on_select(move || first.lock().unwrap().push(0)),
-        )
-        .item(
-            MenuItem::new("Two").on_select(move || second.lock().unwrap().push(1)),
-        )
+        .item(MenuItem::new("One").on_select(move || first.lock().unwrap().push(0)))
+        .item(MenuItem::new("Two").on_select(move || second.lock().unwrap().push(1)))
 }
 
 /// The update pass, which is where the flag reaches the menu.
@@ -120,7 +116,11 @@ fn the_menu_asks_the_host_for_a_panel_of_its_own_size() {
         style().min_width,
         "and at least the minimum width"
     );
-    assert_eq!(bounds.height(), 2.0 * 48.0 + 8.0 * 2.0, "and as tall as the rows");
+    assert_eq!(
+        bounds.height(),
+        2.0 * 48.0 + 8.0 * 2.0,
+        "and as tall as the rows"
+    );
 }
 
 /// The panel is as wide as the widest row, and as tall as the rows stacked.
@@ -164,7 +164,10 @@ fn a_wide_row_widens_the_panel() {
     let panel = menu.children().remove(0);
     let text = floom_text::measure_text("A very long menu item indeed", 14.0, f64::INFINITY);
     let widest = text.width as f64 + 12.0 * 2.0;
-    assert!(widest > style().min_width, "the label is wider than the minimum");
+    assert!(
+        widest > style().min_width,
+        "the label is wider than the minimum"
+    );
     assert!(
         widest < style().max_width,
         "and narrower than the maximum, so the clamp leaves it alone"
@@ -208,7 +211,11 @@ fn the_panel_paints_its_fill_and_its_rows() {
             _ => None,
         })
         .collect();
-    assert_eq!(labels, vec!["One".to_string(), "Two".to_string()], "the rows");
+    assert_eq!(
+        labels,
+        vec!["One".to_string(), "Two".to_string()],
+        "the rows"
+    );
 }
 
 /// The row the pointer is over is filled, and the others are not.
@@ -258,7 +265,11 @@ fn choosing_a_row_runs_its_callback_and_closes_the_menu() {
     let mut cx = TestEventContext::new(id, BOX, up.into());
     panel.event(&mut cx, id);
 
-    assert_eq!(chosen.lock().unwrap().as_slice(), &[0], "the row's callback ran");
+    assert_eq!(
+        chosen.lock().unwrap().as_slice(),
+        &[0],
+        "the row's callback ran"
+    );
     assert!(
         !floom_widgets::read_flag(&flag),
         "and the menu closed itself"

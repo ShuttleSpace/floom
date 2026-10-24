@@ -11,20 +11,20 @@
 //! vocabulary rather than the other way round.
 
 use std::any::Any;
-use std::sync::atomic::{Ordering};
-use std::sync::{Arc};
+use std::sync::atomic::Ordering;
+use std::sync::Arc;
 
 use floom_accessibility::SemanticsRole;
 use floom_core::{
-    Align, Axis, Child, ChildKey, CreateContext, ElementId, LayoutRequest,
-    OverlayHandle, OverlayKind, OverlayRequest, PaintContext, SemanticsContext, UpdateContext, Widget, WidgetAny,
+    Align, Axis, Child, ChildKey, CreateContext, ElementId, LayoutRequest, OverlayHandle,
+    OverlayKind, OverlayRequest, PaintContext, SemanticsContext, UpdateContext, Widget, WidgetAny,
 };
 
 use floom_widgets::primitives::{SemanticsHint, Text};
-use floom_widgets::{Stack};
+use floom_widgets::Stack;
 
 use crate::overlay::Overlay;
-use crate::overlay_bookkeeping::{OverlayHost, empty_body};
+use crate::overlay_bookkeeping::{empty_body, OverlayHost};
 
 // ---------------------------------------------------------------------------
 // BottomSheet

@@ -20,8 +20,8 @@ use floom_core::{
 use floom_types::{FontWeight, PointerButton, PointerPhase, Shadow};
 
 use floom_widgets::{
-    InteractionState, Revision, SemanticsHint, VectorIcon, emit_semantics, paint_icon,
-    text_width_at,
+    emit_semantics, paint_icon, text_width_at, InteractionState, Revision, SemanticsHint,
+    VectorIcon,
 };
 
 pub type IndexCallback = Box<dyn Fn(usize)>;

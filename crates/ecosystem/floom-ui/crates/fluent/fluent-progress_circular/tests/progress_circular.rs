@@ -13,13 +13,11 @@ use floom_types::{Color, Length, Rect};
 use floom_widgets::testkit::{AllocatingCreateContext, PaintOp, SceneRecorder};
 
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
-use floom_core_theme::props::progress_circular::ProgressCircularProps;
 use floom_core_theme::global_theme::DesignSystem;
+use floom_core_theme::props::progress_circular::ProgressCircularProps;
 use floom_core_theme::theme::{MultiTheme, Theme};
 
-use floom_widget_fluent_progress_circular::{
-    FluentProgressCircular, FluentProgressCircularStyle,
-};
+use floom_widget_fluent_progress_circular::{FluentProgressCircular, FluentProgressCircularStyle};
 
 const BOX: Rect = Rect {
     x0: 0.0,
@@ -88,7 +86,9 @@ fn the_props_size_wins_over_the_tokens() {
     // The default is the *props'* 36.0, not zero -- so v1's
     // `if props.size > 0.0 { props.size } else { tokens.size }` never reached
     // the token, and `ProgressCircularTokens::size` was dead in all three kits.
-    let style = FluentProgressCircular::new().with_theme(theme()).resolved_style();
+    let style = FluentProgressCircular::new()
+        .with_theme(theme())
+        .resolved_style();
     assert_eq!(
         style.size, 36.0,
         "the props' own default, which is why the token's size is never read"
@@ -134,7 +134,11 @@ fn the_determinate_arc_starts_at_twelve_oclock() {
         .with_theme(theme())
         .value(50.0)
         .view();
-    assert_eq!(ring.value(), Some(0.5), "v1's percentage is the engine's fraction");
+    assert_eq!(
+        ring.value(),
+        Some(0.5),
+        "v1's percentage is the engine's fraction"
+    );
     assert!(
         (ring.start_rad() - -std::f64::consts::FRAC_PI_2).abs() < 1e-9,
         "and it starts at twelve o'clock: {}",
@@ -145,9 +149,11 @@ fn the_determinate_arc_starts_at_twelve_oclock() {
 /// The ring is painted as a track and an arc, in the kit's own colours.
 #[test]
 fn the_ring_is_a_track_and_an_arc() {
-    let ops = ring(FluentProgressCircular::new()
-        .with_theme(theme())
-        .value(50.0));
+    let ops = ring(
+        FluentProgressCircular::new()
+            .with_theme(theme())
+            .value(50.0),
+    );
     let strokes: Vec<(f64, Color, usize)> = ops
         .iter()
         .filter_map(|op| match op {
@@ -161,7 +167,11 @@ fn the_ring_is_a_track_and_an_arc() {
         .collect();
     assert_eq!(strokes.len(), 2, "the track and the arc");
     let theme = theme();
-    assert_eq!(strokes[0].1, to_paint(theme.colors().surface_variant), "the track");
+    assert_eq!(
+        strokes[0].1,
+        to_paint(theme.colors().surface_variant),
+        "the track"
+    );
     assert_eq!(strokes[1].1, to_paint(theme.colors().primary), "the arc");
 }
 
@@ -169,12 +179,19 @@ fn the_ring_is_a_track_and_an_arc() {
 #[test]
 fn the_ring_is_the_props_size() {
     let ring = FluentProgressCircular::new().with_theme(theme()).view();
-    let request = ring.layout_request().expect("a ring asks for its own space");
+    let request = ring
+        .layout_request()
+        .expect("a ring asks for its own space");
     assert_eq!(request.width, Some(Length::Px(36.0)));
     assert_eq!(request.height, Some(Length::Px(36.0)));
 }
 
 /// Design-system colour -> engine colour.
 fn to_paint(c: floom_core_theme::tokens::color::Color) -> Color {
-    Color { r: c.r, g: c.g, b: c.b, a: c.a }
+    Color {
+        r: c.r,
+        g: c.g,
+        b: c.b,
+        a: c.a,
+    }
 }

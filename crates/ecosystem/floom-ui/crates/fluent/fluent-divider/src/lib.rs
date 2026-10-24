@@ -40,12 +40,11 @@ use floom_widgets::{Divider, RuleAlignment};
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens, DividerTokens};
 use floom_core_theme::props::divider::{DividerOrientation, DividerProps};
 use floom_core_theme::theme::{MultiTheme, Theme};
-use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color::to_engine_color as to_paint;
+use floom_core_theme::tokens::color::Color;
 
 /// The design system this crate reads.
 const DESIGN_SYSTEM: &str = "fluent";
-
 
 fn divider_tokens(theme: &MultiTheme) -> DividerTokens {
     match theme.component(ComponentId::Divider) {

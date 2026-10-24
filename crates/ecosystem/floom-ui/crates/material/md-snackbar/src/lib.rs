@@ -78,14 +78,14 @@ use floom_signal::{RwSignal, SignalGet};
 use floom_types::Color as PaintColor;
 use floom_types::{FontWeight, Insets, Shadow};
 use floom_ui_composites::Overlay;
-use floom_widgets::text_input::{SharedFlag, read_flag, shared_flag, write_flag};
+use floom_widgets::text_input::{read_flag, shared_flag, write_flag, SharedFlag};
 use floom_widgets::{Align, Axis, Conditional, Pressable, Stack, Surface, Text};
 
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::snackbar::SnackbarProps;
 use floom_core_theme::theme::{MultiTheme, Theme};
-use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color::to_engine_color as to_paint;
+use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color_ext::with_alpha;
 use floom_core_theme::tokens::typography::FontWeight as ThemeFontWeight;
 use floom_widget_runtime::theme_signal;
@@ -315,10 +315,7 @@ impl MaterialSnackbar {
                             Box::new(
                                 Stack::new(Axis::Horizontal)
                                     // v1's `padding_horiz(8.0)` on the action.
-                                    .request(
-                                        LayoutRequest::new()
-                                            .padding_horiz(f64::from(pad)),
-                                    )
+                                    .request(LayoutRequest::new().padding_horiz(f64::from(pad)))
                                     .push(move || {
                                         Box::new(
                                             Text::new(label.clone())
@@ -426,4 +423,3 @@ fn to_engine_weight(weight: ThemeFontWeight) -> FontWeight {
         ThemeFontWeight::Black => FontWeight::Black,
     }
 }
-

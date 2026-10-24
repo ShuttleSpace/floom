@@ -56,7 +56,7 @@ fn glyph_run_resource_carries_shaped_runs() {
         max_width: f64::INFINITY,
         font_size: 16.0,
         align: floom_text::TextAlign::Start,
-    weight: floom_text::FontWeight::Normal,
+        weight: floom_text::FontWeight::Normal,
     };
     let laid = shaper.shape("Hello", &options);
     assert!(!laid.runs.is_empty(), "shaping produces at least one run");

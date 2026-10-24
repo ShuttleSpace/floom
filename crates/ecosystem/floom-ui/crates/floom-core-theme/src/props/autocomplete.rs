@@ -30,7 +30,10 @@ impl std::fmt::Debug for AutocompleteProps {
             .field("selected", &self.selected)
             .field("placeholder", &self.placeholder)
             .field("disabled", &self.disabled)
-            .field("on_change", &self.on_change.as_ref().map(|_| "Fn(Option<String>)"))
+            .field(
+                "on_change",
+                &self.on_change.as_ref().map(|_| "Fn(Option<String>)"),
+            )
             .finish()
     }
 }

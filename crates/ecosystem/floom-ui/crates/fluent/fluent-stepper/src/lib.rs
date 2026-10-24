@@ -88,15 +88,15 @@ use std::sync::Arc;
 
 use floom_signal::{RwSignal, SignalGet};
 use floom_ui_composites::{Stepper, StepperStyle, StepperTick};
-use floom_widgets::{SharedMap, shared_map};
+use floom_widgets::{shared_map, SharedMap};
 
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::stepper::StepperProps;
 use floom_core_theme::theme::{MultiTheme, Theme};
-use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color::to_engine_color as to_paint;
+use floom_core_theme::tokens::color::Color;
 use floom_types::Color as PaintColor;
-use floom_widget_fluent_icon::{VIEW_BOX, FluentIcon};
+use floom_widget_fluent_icon::{FluentIcon, VIEW_BOX};
 
 /// The key the selected step lives under in the shared map.
 const SELECTED_KEY: &str = "selected";
@@ -117,7 +117,6 @@ const PADDING_VERT: f32 = 12.0;
 const CONNECTOR_MIN_WIDTH: f32 = 16.0;
 /// The tick's size, as a fraction of the marker's. A v1 literal.
 const CHECK_SCALE: f32 = 0.55;
-
 
 /// Read the selected step out of the shared map.
 fn read_selected(selected: &SharedMap) -> usize {

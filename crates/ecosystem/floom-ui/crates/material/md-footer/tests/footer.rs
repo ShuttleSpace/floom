@@ -9,12 +9,12 @@
 
 use floom_core::{Edges, Widget};
 use floom_types::{Insets, Rect};
-use floom_widgets::testkit::{AllocatingCreateContext, SceneRecorder, paint_snapshot};
+use floom_widgets::testkit::{paint_snapshot, AllocatingCreateContext, SceneRecorder};
 
 use floom_core_theme::global_theme::DesignSystem;
-use floom_core_theme::layout::{LayoutSlot, layout_signal};
-use floom_signal::SignalGet;
+use floom_core_theme::layout::{layout_signal, LayoutSlot};
 use floom_core_theme::theme::{MultiTheme, Theme};
+use floom_signal::SignalGet;
 use floom_widget_md_footer::MdFooter;
 
 const BAR: Rect = Rect {
@@ -165,7 +165,12 @@ fn only_an_elevated_footer_casts_a_shadow() {
     assert_eq!(shadow.offset_x, 0.0, "v1 set no offset");
     assert_eq!(shadow.offset_y, 0.0, "v1 set no offset");
     assert_eq!(shadow.color.a, 30, "v1: with_alpha(BLACK, 30)");
-    assert!(footer().elevation(2).view().decoration().drop_shadow().is_some());
+    assert!(footer()
+        .elevation(2)
+        .view()
+        .decoration()
+        .drop_shadow()
+        .is_some());
 }
 
 // --- content --------------------------------------------------------------

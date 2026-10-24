@@ -12,10 +12,8 @@ use floom_core::{Color, OverlayHandle, WidgetAny};
 use floom_types::{OverlayKind, Rect};
 
 use floom_ui_composites::combobox::{
-    ComboPick, ComboboxStyle, SharedPick, matching, panel_placement, panel_rect,
-    panel_request, select, sync_query_to_selection, visible_options,
-    Commit,
-    commit,
+    commit, matching, panel_placement, panel_rect, panel_request, select, sync_query_to_selection,
+    visible_options, ComboPick, ComboboxStyle, Commit, SharedPick,
 };
 use floom_ui_composites::PopupPlacement;
 use floom_widgets::TextInput;
@@ -57,8 +55,14 @@ fn an_empty_query_matches_everything() {
 /// Case-insensitive, in both directions.
 #[test]
 fn matching_ignores_case_in_both_directions() {
-    assert!(matching("Cherry", "cher"), "a lowercased query finds a capital");
-    assert!(matching("cherry", "CHERR"), "and an uppercased one finds a lower");
+    assert!(
+        matching("Cherry", "cher"),
+        "a lowercased query finds a capital"
+    );
+    assert!(
+        matching("cherry", "CHERR"),
+        "and an uppercased one finds a lower"
+    );
 }
 
 /// Substring, not prefix — the part that is easy to "improve" into a behaviour change.
@@ -218,7 +222,10 @@ fn the_selection_state_is_shared() {
     };
     // A second handle onto the same state, the way a kit's row would hold one.
     let _ = other;
-    assert!(Arc::ptr_eq(&pick, &pick.clone()), "one allocation, two handles");
+    assert!(
+        Arc::ptr_eq(&pick, &pick.clone()),
+        "one allocation, two handles"
+    );
 }
 
 // --- placement ------------------------------------------------------------
@@ -227,7 +234,13 @@ fn the_selection_state_is_shared() {
 #[test]
 fn the_panel_hangs_below_the_field() {
     let placement = panel_placement(4.0, 320.0);
-    assert_eq!(placement, PopupPlacement::Below { gap: 4.0, height: 320.0 });
+    assert_eq!(
+        placement,
+        PopupPlacement::Below {
+            gap: 4.0,
+            height: 320.0
+        }
+    );
     let rect = panel_rect(placement, ANCHOR);
     assert_eq!(rect.y0, 160.0, "the field's bottom (156) plus the gap (4)");
     assert_eq!(rect.x0, ANCHOR.x0, "and aligned with the field's left edge");
@@ -243,7 +256,11 @@ fn the_panel_hangs_below_the_field() {
 fn the_gap_is_the_kits_to_choose_and_both_values_really_place_differently() {
     let with_gap = panel_rect(panel_placement(4.0, 320.0), ANCHOR);
     let without = panel_rect(panel_placement(0.0, 320.0), ANCHOR);
-    assert_eq!(with_gap.y0 - without.y0, 4.0, "four pixels, and four pixels matter");
+    assert_eq!(
+        with_gap.y0 - without.y0,
+        4.0,
+        "four pixels, and four pixels matter"
+    );
     assert_eq!(without.y0, ANCHOR.y1, "Cupertino and Fluent sit flush");
 }
 
@@ -274,9 +291,13 @@ fn the_request_is_a_non_modal_popup_at_the_placed_rect() {
 /// close itself when a row is chosen.
 #[test]
 fn the_content_is_built_with_the_handle_it_will_need_to_close_itself() {
-    let request = panel_request(panel_placement(0.0, 100.0), ANCHOR, |handle: OverlayHandle| {
-        Box::new(TextInput::with_text(format!("handle {}", handle.raw()))) as Box<dyn WidgetAny>
-    });
+    let request = panel_request(
+        panel_placement(0.0, 100.0),
+        ANCHOR,
+        |handle: OverlayHandle| {
+            Box::new(TextInput::with_text(format!("handle {}", handle.raw()))) as Box<dyn WidgetAny>
+        },
+    );
     // The factory has not run: `OverlayRequest` only calls it when the host agrees.
     assert_eq!(request.kind, OverlayKind::Popup);
 }
@@ -300,8 +321,7 @@ fn disabled_wins_over_open() {
     let disabled = style.border_color(true, false);
     assert_eq!(disabled, style.border_color(true, true));
     assert_ne!(
-        disabled,
-        style.primary,
+        disabled, style.primary,
         "a disabled combobox must not draw the open border, even with its list up"
     );
 }
@@ -312,7 +332,10 @@ fn the_text_colour_fades_only_when_disabled() {
     assert_eq!(style.text_color(false), style.on_surface);
     let faded = style.text_color(true);
     assert_eq!(faded.a, style.disabled_text_alpha);
-    assert_eq!((faded.r, faded.g, faded.b), (style.on_surface.r, style.on_surface.g, style.on_surface.b));
+    assert_eq!(
+        (faded.r, faded.g, faded.b),
+        (style.on_surface.r, style.on_surface.g, style.on_surface.b)
+    );
 }
 
 /// The chevron's disabled colour comes from `on_surface`, **not** from a faded
@@ -326,7 +349,10 @@ fn the_disabled_chevron_is_a_faded_on_surface_not_a_faded_on_surface_variant() {
     let style = ComboboxStyle::default();
     let normal = style.chevron_color(false);
     let disabled = style.chevron_color(true);
-    assert_eq!(normal, style.on_surface_variant, "live: plain on_surface_variant");
+    assert_eq!(
+        normal, style.on_surface_variant,
+        "live: plain on_surface_variant"
+    );
     assert_ne!(
         (normal.r, normal.g, normal.b),
         (disabled.r, disabled.g, disabled.b),
@@ -344,11 +370,7 @@ fn the_row_fills_use_v1s_alphas() {
     let hover = style.hover_row_color();
     assert_eq!(
         (hover.r, hover.g, hover.b),
-        (
-            style.on_surface.r,
-            style.on_surface.g,
-            style.on_surface.b
-        ),
+        (style.on_surface.r, style.on_surface.g, style.on_surface.b),
         "the hover fill is on_surface at 8, not the primary"
     );
 }
@@ -363,7 +385,11 @@ fn the_row_fills_use_v1s_alphas() {
 fn the_panel_shadow_is_black_at_v1s_alpha() {
     let style = ComboboxStyle::default();
     let shadow = style.panel_shadow_color();
-    assert_eq!((shadow.r, shadow.g, shadow.b), (0, 0, 0), "neutral, not tinted");
+    assert_eq!(
+        (shadow.r, shadow.g, shadow.b),
+        (0, 0, 0),
+        "neutral, not tinted"
+    );
     assert_eq!(shadow.a, style.panel_shadow_alpha);
     assert_eq!(shadow.a, 20);
     assert_ne!(
@@ -383,14 +409,22 @@ fn an_empty_query_clears_the_selection_and_reports_none() {
     let pick = pick();
     let query = query("banana");
     select(&pick, &query, &options(), 1);
-    assert_eq!(pick.lock().unwrap().selected, Some(1), "chosen to begin with");
+    assert_eq!(
+        pick.lock().unwrap().selected,
+        Some(1),
+        "chosen to begin with"
+    );
     // Then the user empties it. (I first ran this with the query still holding
     // "banana", which *is* an exact match — so `commit` correctly reported
     // `Unchanged` and the code was right and my premise was wrong.)
     query.lock().unwrap().clear();
 
     assert_eq!(commit(&pick, &query, &options()), Commit::Report(None));
-    assert_eq!(pick.lock().unwrap().selected, None, "and the choice is gone");
+    assert_eq!(
+        pick.lock().unwrap().selected,
+        None,
+        "and the choice is gone"
+    );
 }
 
 /// **Free text is the whole point of an autocomplete**, so a query that matches nothing
@@ -434,10 +468,7 @@ fn an_exact_match_points_the_selection_at_the_option() {
 fn committing_a_substring_does_not_select_the_row_the_filter_showed() {
     let pick = pick();
     let query = query("an");
-    assert!(
-        matching("banana", "an"),
-        "the filter shows this row"
-    );
+    assert!(matching("banana", "an"), "the filter shows this row");
     assert_eq!(
         commit(&pick, &query, &options()),
         Commit::Report(Some("an".to_string())),

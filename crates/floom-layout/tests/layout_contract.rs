@@ -1,4 +1,6 @@
-use floom_layout::{AlignItems, FlexDirection, JustifyContent, LayoutEngine, LayoutStyle, MeasureFn};
+use floom_layout::{
+    AlignItems, FlexDirection, JustifyContent, LayoutEngine, LayoutStyle, MeasureFn,
+};
 use floom_types::{Insets, Length, Point, Size};
 
 #[test]
@@ -383,7 +385,10 @@ fn a_margin_does_not_shrink_the_childs_box() {
 
     eng.compute(root, Size::new(200.0, 100.0));
     let rect = eng.layout(child).rect;
-    assert!((rect.width() - 40.0).abs() < 0.01, "the box keeps its width");
+    assert!(
+        (rect.width() - 40.0).abs() < 0.01,
+        "the box keeps its width"
+    );
     assert!((rect.x0 - 16.0).abs() < 0.01);
 }
 
@@ -483,19 +488,29 @@ fn a_margin_is_per_child_and_a_padding_is_around_the_group() {
             &[a, b],
         );
         eng.compute(root, Size::new(200.0, 100.0));
-        (eng.layout(root).rect, eng.layout(a).rect, eng.layout(b).rect)
+        (
+            eng.layout(root).rect,
+            eng.layout(a).rect,
+            eng.layout(b).rect,
+        )
     };
 
     let inset = 8.0;
     let (padded_box, padded_a, padded_b) = two(Insets::ZERO, Insets::uniform(inset));
     let (margin_box, margin_a, margin_b) = two(Insets::uniform(inset), Insets::ZERO);
 
-    assert!((padded_a.x0 - inset).abs() < 0.01, "the group is inset once");
+    assert!(
+        (padded_a.x0 - inset).abs() < 0.01,
+        "the group is inset once"
+    );
     assert!(
         (padded_b.x0 - padded_a.x1).abs() < 0.01,
         "and its members stay flush with each other"
     );
-    assert!((margin_a.x0 - inset).abs() < 0.01, "each margin insets its own child");
+    assert!(
+        (margin_a.x0 - inset).abs() < 0.01,
+        "each margin insets its own child"
+    );
     assert!(
         (margin_b.x0 - margin_a.x1 - inset * 2.0).abs() < 0.01,
         "and the second margin also lands *between* them — a hole a padded \
@@ -538,7 +553,6 @@ fn padding_is_per_side() {
     assert!((rect.x0 - 4.0).abs() < 0.01);
     assert!((rect.y0 - 8.0).abs() < 0.01);
 }
-
 
 // --- percentage sizing -----------------------------------------------------
 
@@ -602,7 +616,10 @@ fn a_percentage_is_hundred_not_one() {
 fn a_fixed_length_and_a_percentage_diverge_as_the_parent_grows() {
     let sized = |parent: f32, w: Option<Length>| {
         let mut eng = LayoutEngine::new();
-        let child = eng.new_leaf(LayoutStyle { width: w, ..Default::default() });
+        let child = eng.new_leaf(LayoutStyle {
+            width: w,
+            ..Default::default()
+        });
         let root = eng.new_with_children(
             LayoutStyle {
                 width: Some(Length::Px(parent)),
@@ -616,7 +633,9 @@ fn a_fixed_length_and_a_percentage_diverge_as_the_parent_grows() {
     };
 
     // 50px and 25% coincide at a 200px parent...
-    assert!((sized(200.0, Some(Length::Px(50.0))) - sized(200.0, Some(Length::Pct(25.0)))).abs() < 0.01);
+    assert!(
+        (sized(200.0, Some(Length::Px(50.0))) - sized(200.0, Some(Length::Pct(25.0)))).abs() < 0.01
+    );
     // ...and part company at 400, which is the difference in one line.
     assert!((sized(400.0, Some(Length::Px(50.0))) - 50.0).abs() < 0.01);
     assert!((sized(400.0, Some(Length::Pct(25.0))) - 100.0).abs() < 0.01);

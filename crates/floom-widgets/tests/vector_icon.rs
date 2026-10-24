@@ -6,13 +6,13 @@
 //! and undistorted. A regression there is invisible in a type signature and
 //! obvious on screen.
 
-use floom_core::{Rect, Widget, Length};
+use floom_core::{Length, Rect, Widget};
 use floom_types::{PathSeg, Point};
-use floom_widgets::testkit::{
-    paint_snapshot, semantics_snapshot, AllocatingCreateContext, RecordingUpdateContext,
-    SceneRecorder,
-};
 use floom_widgets::VectorIcon;
+use floom_widgets::testkit::{
+    AllocatingCreateContext, RecordingUpdateContext, SceneRecorder, paint_snapshot,
+    semantics_snapshot,
+};
 
 const VIEW_BOX: Rect = Rect {
     x0: 0.0,

@@ -36,8 +36,8 @@ use floom_core::{
     WidgetAny,
 };
 use floom_widgets::{
-    Align, Axis, Pressable, SharedBuffer, SharedFlag, Stack, Surface, Text, TextInput,
-    TextInputStyle, VectorIcon, read_flag, shared_flag, write_flag,
+    read_flag, shared_flag, write_flag, Align, Axis, Pressable, SharedBuffer, SharedFlag, Stack,
+    Surface, Text, TextInput, TextInputStyle, VectorIcon,
 };
 
 /// Read a shared buffer.
@@ -263,51 +263,43 @@ impl Widget for ConfirmEdit {
     /// rather than reusing the slot that is there.
     fn children(&self) -> Vec<Child> {
         if read_flag(&self.editing) {
-            vec![Child::new(
-                ChildKey::keyed(1),
-                LayoutRequest::new(),
-                {
-                    let style = self.style;
-                    let value = self.value.clone();
-                    let draft = self.draft.clone();
-                    let editing = self.editing.clone();
-                    let on_save = self.on_save.clone();
-                    let glyphs = self.glyphs;
-                    move || {
-                        build_edit_row(
-                            style,
-                            value.clone(),
-                            draft.clone(),
-                            editing.clone(),
-                            on_save.clone(),
-                            glyphs,
-                        )
-                    }
-                },
-            )]
+            vec![Child::new(ChildKey::keyed(1), LayoutRequest::new(), {
+                let style = self.style;
+                let value = self.value.clone();
+                let draft = self.draft.clone();
+                let editing = self.editing.clone();
+                let on_save = self.on_save.clone();
+                let glyphs = self.glyphs;
+                move || {
+                    build_edit_row(
+                        style,
+                        value.clone(),
+                        draft.clone(),
+                        editing.clone(),
+                        on_save.clone(),
+                        glyphs,
+                    )
+                }
+            })]
         } else {
-            vec![Child::new(
-                ChildKey::keyed(0),
-                LayoutRequest::new(),
-                {
-                    let style = self.style;
-                    let value = self.value.clone();
-                    let draft = self.draft.clone();
-                    let editing = self.editing.clone();
-                    let child = self.child.clone();
-                    let glyphs = self.glyphs;
-                    move || {
-                        build_display_row(
-                            style,
-                            value.clone(),
-                            draft.clone(),
-                            editing.clone(),
-                            child.clone(),
-                            glyphs,
-                        )
-                    }
-                },
-            )]
+            vec![Child::new(ChildKey::keyed(0), LayoutRequest::new(), {
+                let style = self.style;
+                let value = self.value.clone();
+                let draft = self.draft.clone();
+                let editing = self.editing.clone();
+                let child = self.child.clone();
+                let glyphs = self.glyphs;
+                move || {
+                    build_display_row(
+                        style,
+                        value.clone(),
+                        draft.clone(),
+                        editing.clone(),
+                        child.clone(),
+                        glyphs,
+                    )
+                }
+            })]
         }
     }
 
@@ -375,9 +367,10 @@ fn build_display_row(
                     move || {
                         Box::new(
                             Surface::new()
-                                .request(LayoutRequest::new().padding_horiz(f64::from(
-                                    style.button_padding,
-                                )))
+                                .request(
+                                    LayoutRequest::new()
+                                        .padding_horiz(f64::from(style.button_padding)),
+                                )
                                 .push({
                                     let style = style;
                                     move || {
@@ -388,7 +381,8 @@ fn build_display_row(
                                             )
                                             .size(style.glyph_size)
                                             .color(style.on_surface_variant),
-                                        ) as Box<dyn WidgetAny>
+                                        )
+                                            as Box<dyn WidgetAny>
                                     }
                                 }),
                         ) as Box<dyn WidgetAny>
@@ -427,28 +421,25 @@ fn build_edit_row(
         .align(Align::Start, Align::Center);
 
     // The field.
-    row = row.push_layout(
-        LayoutRequest::new().width(style.input_width),
-        {
-            let style = style;
-            let draft = draft.clone();
-            move || {
-                // The engine's `TextInput::new` leaves the caret at the start;
-                // a field opened with a value puts it at the end.
-                let mut input = TextInput::new(draft.clone());
-                input.set_caret(read_buffer(&draft).len());
-                Box::new(input.style(TextInputStyle {
-                    font_size: style.input_font_size,
-                    color: style.on_surface,
-                    padding_horiz: f64::from(style.input_padding_horiz),
-                    radius: style.radius,
-                    border_color: style.outline,
-                    border_width: style.input_border,
-                    ..TextInputStyle::default()
-                })) as Box<dyn WidgetAny>
-            }
-        },
-    );
+    row = row.push_layout(LayoutRequest::new().width(style.input_width), {
+        let style = style;
+        let draft = draft.clone();
+        move || {
+            // The engine's `TextInput::new` leaves the caret at the start;
+            // a field opened with a value puts it at the end.
+            let mut input = TextInput::new(draft.clone());
+            input.set_caret(read_buffer(&draft).len());
+            Box::new(input.style(TextInputStyle {
+                font_size: style.input_font_size,
+                color: style.on_surface,
+                padding_horiz: f64::from(style.input_padding_horiz),
+                radius: style.radius,
+                border_color: style.outline,
+                border_width: style.input_border,
+                ..TextInputStyle::default()
+            })) as Box<dyn WidgetAny>
+        }
+    });
 
     // The tick: save.
     row = row.push({
@@ -465,9 +456,10 @@ fn build_edit_row(
                     move || {
                         Box::new(
                             Surface::new()
-                                .request(LayoutRequest::new().padding_horiz(f64::from(
-                                    style.button_padding,
-                                )))
+                                .request(
+                                    LayoutRequest::new()
+                                        .padding_horiz(f64::from(style.button_padding)),
+                                )
                                 .push({
                                     let style = style;
                                     move || {
@@ -478,7 +470,8 @@ fn build_edit_row(
                                             )
                                             .size(style.glyph_size)
                                             .color(style.primary),
-                                        ) as Box<dyn WidgetAny>
+                                        )
+                                            as Box<dyn WidgetAny>
                                     }
                                 }),
                         ) as Box<dyn WidgetAny>
@@ -519,9 +512,10 @@ fn build_edit_row(
                     move || {
                         Box::new(
                             Surface::new()
-                                .request(LayoutRequest::new().padding_horiz(f64::from(
-                                    style.button_padding,
-                                )))
+                                .request(
+                                    LayoutRequest::new()
+                                        .padding_horiz(f64::from(style.button_padding)),
+                                )
                                 .push({
                                     let style = style;
                                     move || {
@@ -532,7 +526,8 @@ fn build_edit_row(
                                             )
                                             .size(style.glyph_size)
                                             .color(style.on_surface_variant),
-                                        ) as Box<dyn WidgetAny>
+                                        )
+                                            as Box<dyn WidgetAny>
                                     }
                                 }),
                         ) as Box<dyn WidgetAny>

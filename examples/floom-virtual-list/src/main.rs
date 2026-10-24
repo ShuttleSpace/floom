@@ -16,8 +16,10 @@ const COUNT: usize = 100_000;
 
 fn main() {
     // ~33 rows fit in an 800px viewport, +2 rows of overscan each side.
-    let mut viewport =
-        VirtualViewport::<u64, ElementId>::new(ItemSizes::uniform(ITEM_HEIGHT, COUNT), VIEWPORT_HEIGHT);
+    let mut viewport = VirtualViewport::<u64, ElementId>::new(
+        ItemSizes::uniform(ITEM_HEIGHT, COUNT),
+        VIEWPORT_HEIGHT,
+    );
     viewport.set_overscan(Overscan::Items(2));
 
     println!("items        : {COUNT}");

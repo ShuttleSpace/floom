@@ -30,7 +30,9 @@ impl CupertinoIcon {
                 name: name.into(),
                 ..Default::default()
             },
-            theme: RwSignal::new(MultiTheme::new_for(floom_core_theme::global_theme::DesignSystem::Cupertino)),
+            theme: RwSignal::new(MultiTheme::new_for(
+                floom_core_theme::global_theme::DesignSystem::Cupertino,
+            )),
         }
     }
 

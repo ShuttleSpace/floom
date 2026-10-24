@@ -138,7 +138,8 @@ fn press_action(surface: &Box<dyn WidgetAny>) {
 #[test]
 fn the_tokens_and_colours_reach_the_style() {
     let style: MaterialSnackbarStyle = kit().resolved_style();
-    let tokens = match theme().component(floom_core_theme::component_tokens::ComponentId::Snackbar) {
+    let tokens = match theme().component(floom_core_theme::component_tokens::ComponentId::Snackbar)
+    {
         floom_core_theme::component_tokens::ComponentTokens::Snackbar(tokens) => tokens,
         _ => unreachable!(),
     };
@@ -151,11 +152,7 @@ fn the_tokens_and_colours_reach_the_style() {
     assert_eq!(style.font_size, tokens.font_size, "the token's font size");
     assert_eq!(style.max_width, tokens.max_width, "the token's width");
     assert_eq!(style.action_gap, tokens.action_gap, "the token's gap");
-    assert_eq!(
-        style.surface,
-        theme().colors().on_surface,
-        "the bar's fill"
-    );
+    assert_eq!(style.surface, theme().colors().on_surface, "the bar's fill");
     assert_eq!(
         style.on_surface,
         theme().colors().surface,

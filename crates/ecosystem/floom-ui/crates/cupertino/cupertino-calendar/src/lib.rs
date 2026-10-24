@@ -84,17 +84,15 @@
 use std::sync::{Arc, Mutex};
 
 use floom_signal::{RwSignal, SignalGet};
-use floom_ui_composites::{Calendar, CalendarStyle};
 use floom_types::Color as PaintColor;
+use floom_ui_composites::{Calendar, CalendarStyle};
 use floom_widgets::Surface;
 
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::calendar::{CalendarDate as ThemeDate, CalendarProps};
 use floom_core_theme::theme::{MultiTheme, Theme};
-use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color::to_engine_color as to_paint;
-
-
+use floom_core_theme::tokens::color::Color;
 
 /// The selected date, shared between the kit and the cells that draw it.
 /// The cell the chosen date lives in.

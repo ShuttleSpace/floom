@@ -85,14 +85,14 @@ use std::sync::Arc;
 use floom_core::{Child, ChildKey, Inset, LayoutRequest, Position};
 use floom_signal::{RwSignal, SignalGet};
 use floom_types::Color as PaintColor;
-use floom_widgets::text_input::{SharedFlag, read_flag, shared_flag, write_flag};
+use floom_widgets::text_input::{read_flag, shared_flag, write_flag, SharedFlag};
 use floom_widgets::{Align, Axis, Conditional, Pressable, Stack, Surface, Text};
 
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::slide_group::SlideGroupProps;
 use floom_core_theme::theme::{MultiTheme, Theme};
-use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color::to_engine_color as to_paint;
+use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color_ext::with_alpha;
 
 /// An item's width. A v1 literal.
@@ -235,7 +235,9 @@ impl FluentSlideGroup {
         // One flag per item: the flag says whether that item is the chosen
         // one. See the module's note on the choice after mount.
         let flags: Arc<Vec<SharedFlag>> = Arc::new(
-            (0..count).map(|index| shared_flag(index == initial)).collect(),
+            (0..count)
+                .map(|index| shared_flag(index == initial))
+                .collect(),
         );
 
         let height = style.height;
@@ -336,11 +338,7 @@ impl FluentSlideGroup {
 
         // v1's area: the strip, and the arrows over its ends.
         let mut area = Stack::new(Axis::Horizontal)
-            .request(
-                LayoutRequest::new()
-                    .width_pct(100.0)
-                    .height(height),
-            );
+            .request(LayoutRequest::new().width_pct(100.0).height(height));
         area = area.push(move || Box::new(row.clone()));
 
         if self.props.show_arrows && count > 1 {
@@ -423,29 +421,20 @@ fn choose(flags: &[SharedFlag], index: usize) {
 /// disappears with the choice. The conditional is seeded with the choice as it
 /// was when the tree was built, so the item that starts chosen shows its
 /// indicator on the first frame rather than the second.
-fn indicator_of(
-    flag: SharedFlag,
-    chosen: bool,
-    fill: PaintColor,
-    height: f32,
-) -> Conditional {
+fn indicator_of(flag: SharedFlag, chosen: bool, fill: PaintColor, height: f32) -> Conditional {
     let mut conditional = if chosen {
         Conditional::new(true)
     } else {
         Conditional::new(false)
     };
     conditional = conditional.when_flag(flag);
-    conditional.show_with(
-        ChildKey::index(0),
-        LayoutRequest::new(),
-        move || {
-            Box::new(
-                Surface::new()
-                    .request(LayoutRequest::new().height(height))
-                    .background(fill),
-            )
-        },
-    )
+    conditional.show_with(ChildKey::index(0), LayoutRequest::new(), move || {
+        Box::new(
+            Surface::new()
+                .request(LayoutRequest::new().height(height))
+                .background(fill),
+        )
+    })
 }
 
 /// The slot an arrow occupies: absolutely positioned, at one end of the strip.
@@ -494,8 +483,9 @@ fn arrow_widget(
         )
         .background(background)
         .push(move || Box::new(Text::new(glyph.clone()).size(font_size).color(ink)));
-    Pressable::new(Child::new(ChildKey::index(0), LayoutRequest::new(), move || {
-        Box::new(box_.clone())
-    }))
+    Pressable::new(Child::new(
+        ChildKey::index(0),
+        LayoutRequest::new(),
+        move || Box::new(box_.clone()),
+    ))
 }
-

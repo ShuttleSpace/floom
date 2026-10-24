@@ -11,17 +11,17 @@
 //! vocabulary rather than the other way round.
 
 use std::any::Any;
-use std::sync::atomic::{Ordering};
-use std::sync::{Arc};
+use std::sync::atomic::Ordering;
+use std::sync::Arc;
 
 use floom_accessibility::SemanticsRole;
 use floom_core::{
-    Child, ChildKey, CreateContext, ElementId, LayoutRequest,
-    PaintContext, SemanticsContext, UpdateContext, Widget, WidgetAny,
+    Child, ChildKey, CreateContext, ElementId, LayoutRequest, PaintContext, SemanticsContext,
+    UpdateContext, Widget, WidgetAny,
 };
 
-use floom_widgets::primitives::{SemanticsHint};
-use floom_widgets::{Grid};
+use floom_widgets::primitives::SemanticsHint;
+use floom_widgets::Grid;
 
 use crate::overlay_bookkeeping::OverlayHost;
 

@@ -115,8 +115,8 @@ fn a_program_emitted_against_the_primitives_alone_still_compiles() {
     // placeholder — and says so, rather than emitting a call to a type that
     // does not exist.
     let compiled = floom_dsl::compile(SAMPLE).expect("the sample is valid");
-    let emitted = floom_dsl::emit(&compiled.document, &floom_dsl::EmitOptions::default())
-        .expect("emits");
+    let emitted =
+        floom_dsl::emit(&compiled.document, &floom_dsl::EmitOptions::default()).expect("emits");
 
     assert!(
         !emitted.code.contains("Checkbox::new("),
@@ -133,9 +133,8 @@ fn a_program_emitted_against_the_primitives_alone_still_compiles() {
     );
 
     let crate_dir = scratch_crate("primitives-only", &emitted.code);
-    cargo_check(&crate_dir).unwrap_or_else(|stderr| {
-        panic!("the generated program does not compile:\n{stderr}")
-    });
+    cargo_check(&crate_dir)
+        .unwrap_or_else(|stderr| panic!("the generated program does not compile:\n{stderr}"));
 }
 
 #[test]

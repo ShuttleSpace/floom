@@ -93,8 +93,8 @@ use floom_ui_composites::{TabsBar, TabsBarStyle};
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::tabs::TabsProps;
 use floom_core_theme::theme::{MultiTheme, Theme};
-use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color::to_engine_color as to_paint;
+use floom_core_theme::tokens::color::Color;
 use floom_widget_runtime::theme_signal;
 
 /// The label's size. A v1 literal.
@@ -260,4 +260,3 @@ impl Default for MaterialTabs {
         Self::new()
     }
 }
-

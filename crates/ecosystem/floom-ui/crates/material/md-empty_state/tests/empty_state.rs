@@ -78,7 +78,10 @@ fn lines(kit: MaterialEmptyState) -> Vec<(String, f32, Color)> {
         widget.paint(&mut recorder, id);
         recorder.finish();
         for op in recorder.ops() {
-            if let PaintOp::Text { text, size, color, .. } = op {
+            if let PaintOp::Text {
+                text, size, color, ..
+            } = op
+            {
                 out.push((text.clone(), *size, *color));
             }
         }
@@ -92,24 +95,40 @@ fn lines(kit: MaterialEmptyState) -> Vec<(String, f32, Color)> {
 #[test]
 fn the_tokens_and_colours_reach_the_style() {
     let style: MaterialEmptyStateStyle = kit().resolved_style();
-    let tokens = match theme().component(floom_core_theme::component_tokens::ComponentId::EmptyState) {
-        floom_core_theme::component_tokens::ComponentTokens::EmptyState(tokens) => tokens,
-        _ => unreachable!(),
-    };
+    let tokens =
+        match theme().component(floom_core_theme::component_tokens::ComponentId::EmptyState) {
+            floom_core_theme::component_tokens::ComponentTokens::EmptyState(tokens) => tokens,
+            _ => unreachable!(),
+        };
     assert_eq!(style.icon_size, tokens.icon_size, "the token's icon size");
-    assert_eq!(style.title_font_size, tokens.title_font_size, "the title's size");
+    assert_eq!(
+        style.title_font_size, tokens.title_font_size,
+        "the title's size"
+    );
     assert_eq!(
         style.description_font_size, tokens.description_font_size,
         "the description's size"
     );
     assert_eq!(style.gap, tokens.gap, "the token's gap");
-    assert_eq!(style.max_width, tokens.max_width, "the column's maximum width");
-    assert_eq!(style.on_surface, theme().colors().on_surface, "the title's ink");
     assert_eq!(
-        style.on_surface_variant, theme().colors().on_surface_variant,
+        style.max_width, tokens.max_width,
+        "the column's maximum width"
+    );
+    assert_eq!(
+        style.on_surface,
+        theme().colors().on_surface,
+        "the title's ink"
+    );
+    assert_eq!(
+        style.on_surface_variant,
+        theme().colors().on_surface_variant,
         "the icon's and the description's ink"
     );
-    assert_eq!(style.surface, theme().colors().surface, "the surface it sits on");
+    assert_eq!(
+        style.surface,
+        theme().colors().surface,
+        "the surface it sits on"
+    );
 }
 
 #[test]
@@ -180,13 +199,20 @@ fn the_callers_child_is_mounted_under_the_text() {
     });
     let surface = kit().title("Nothing here").child(child).view();
     let column = surface.children().remove(0).build();
-    assert_eq!(column.children().len(), 2, "the title and the caller's child");
+    assert_eq!(
+        column.children().len(),
+        2,
+        "the title and the caller's child"
+    );
 }
 
 /// The props report the text.
 #[test]
 fn the_props_report_the_text() {
-    let kit = kit().icon("!").title("Nothing here").description("Try something else");
+    let kit = kit()
+        .icon("!")
+        .title("Nothing here")
+        .description("Try something else");
     assert_eq!(kit.props().icon, "!");
     assert_eq!(kit.props().title, "Nothing here");
     assert_eq!(kit.props().description, "Try something else");

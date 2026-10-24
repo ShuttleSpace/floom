@@ -31,7 +31,7 @@ use floom_core::{
 use floom_types::{FontWeight, PointerButton, PointerPhase};
 
 use floom_widgets::primitives::stroke_rounded_outline;
-use floom_widgets::{InteractionState, Revision, SemanticsHint, emit_semantics};
+use floom_widgets::{emit_semantics, InteractionState, Revision, SemanticsHint};
 
 /// A pill with a label in the middle.
 pub struct Chip {

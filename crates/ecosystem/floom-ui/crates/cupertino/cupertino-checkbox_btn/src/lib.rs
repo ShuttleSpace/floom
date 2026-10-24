@@ -79,14 +79,14 @@ use std::sync::Arc;
 use floom_core::{Child, ChildKey, LayoutRequest};
 use floom_signal::{RwSignal, SignalGet};
 use floom_types::Color as PaintColor;
-use floom_widgets::text_input::{SharedFlag, read_flag, shared_flag, write_flag};
+use floom_widgets::text_input::{read_flag, shared_flag, write_flag, SharedFlag};
 use floom_widgets::{Align, Axis, Conditional, Pressable, Stack, Surface, Text};
 
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::checkbox_btn::CheckboxBtnProps;
 use floom_core_theme::theme::{MultiTheme, Theme};
-use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color::to_engine_color as to_paint;
+use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color_ext::with_alpha;
 use floom_widget_cupertino_icon::CupertinoIcon;
 
@@ -326,11 +326,11 @@ struct PillContext {
 /// The flag is the engine's own: the `Conditional` reads it in `update`, so
 /// whoever writes it mounts the other pill.
 fn appearance(flag: SharedFlag, ctx: PillContext, checked: bool) -> Conditional {
-    Conditional::new(false)
-        .when_flag(flag)
-        .show(Child::new(ChildKey::index(0), LayoutRequest::new(), move || {
-            build_pill(&ctx, checked)
-        }))
+    Conditional::new(false).when_flag(flag).show(Child::new(
+        ChildKey::index(0),
+        LayoutRequest::new(),
+        move || build_pill(&ctx, checked),
+    ))
 }
 
 /// The pill itself: the box, the mark, the label, and the click that toggles.
@@ -435,4 +435,3 @@ fn build_pill(ctx: &PillContext, checked: bool) -> Box<dyn floom_widgets::Widget
 
     Box::new(pressable)
 }
-

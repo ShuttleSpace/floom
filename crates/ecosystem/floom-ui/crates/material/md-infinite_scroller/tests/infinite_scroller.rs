@@ -71,7 +71,9 @@ fn ops_of(widget: &dyn Widget) -> Vec<PaintOp> {
 /// The text a widget paints, if it paints one.
 fn text_of(widget: &dyn Widget) -> Option<(String, f32, Color)> {
     ops_of(widget).into_iter().find_map(|op| match op {
-        PaintOp::Text { text, size, color, .. } => Some((text, size, color)),
+        PaintOp::Text {
+            text, size, color, ..
+        } => Some((text, size, color)),
         _ => None,
     })
 }
@@ -92,7 +94,9 @@ fn wheel(delta: f64) -> Event {
 #[test]
 fn the_tokens_and_colours_reach_the_style() {
     let style: MaterialInfiniteScrollerStyle = kit().resolved_style();
-    let tokens = match theme().component(floom_core_theme::component_tokens::ComponentId::InfiniteScroller) {
+    let tokens = match theme()
+        .component(floom_core_theme::component_tokens::ComponentId::InfiniteScroller)
+    {
         floom_core_theme::component_tokens::ComponentTokens::InfiniteScroller(tokens) => tokens,
         _ => unreachable!(),
     };
@@ -104,12 +108,21 @@ fn the_tokens_and_colours_reach_the_style() {
         style.footer_padding, tokens.footer_padding,
         "the token's footer padding"
     );
-    assert_eq!(style.surface, theme().colors().surface, "the viewport's fill");
     assert_eq!(
-        style.on_surface_variant, theme().colors().on_surface_variant,
+        style.surface,
+        theme().colors().surface,
+        "the viewport's fill"
+    );
+    assert_eq!(
+        style.on_surface_variant,
+        theme().colors().on_surface_variant,
         "the loading label's ink"
     );
-    assert_eq!(style.outline, theme().colors().outline, "the viewport's outline");
+    assert_eq!(
+        style.outline,
+        theme().colors().outline,
+        "the viewport's outline"
+    );
 }
 
 #[test]
@@ -160,11 +173,7 @@ fn the_loading_footer_shows_v1_s_label() {
     let (text, size, ink) = text_of(&*label).expect("the loading label is painted");
     assert_eq!(text, "Loading…");
     assert_eq!(size, 13.0, "v1's label size");
-    assert_eq!(
-        ink,
-        paint(resolved.on_surface_variant),
-        "v1's label ink"
-    );
+    assert_eq!(ink, paint(resolved.on_surface_variant), "v1's label ink");
 }
 
 /// The idle footer is an empty box the height of the footer's padding, and it
@@ -178,7 +187,10 @@ fn the_idle_footer_is_an_empty_box() {
     let content = scroller.children().remove(0).build();
     let footer = content.children().remove(0).build();
 
-    assert!(ops_of(&*footer).is_empty(), "the idle footer paints nothing");
+    assert!(
+        ops_of(&*footer).is_empty(),
+        "the idle footer paints nothing"
+    );
     let request = footer
         .layout_request()
         .expect("the footer asks for its own space");
@@ -287,7 +299,10 @@ fn the_loading_flag_is_the_hosts_to_write() {
     let flag = kit.loading_flag();
     assert!(!floom_widgets::read_flag(&flag), "the scroller starts idle");
     floom_widgets::write_flag(&flag, true);
-    assert!(floom_widgets::read_flag(&flag), "and the host can start a fetch");
+    assert!(
+        floom_widgets::read_flag(&flag),
+        "and the host can start a fetch"
+    );
 }
 
 // --- the theme source -----------------------------------------------------

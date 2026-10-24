@@ -56,14 +56,14 @@ use std::sync::Arc;
 use floom_core::{Child, ChildKey, LayoutRequest};
 use floom_signal::{RwSignal, SignalGet};
 use floom_types::Color as PaintColor;
-use floom_widgets::text_input::{SharedFlag, shared_flag, write_flag};
+use floom_widgets::text_input::{shared_flag, write_flag, SharedFlag};
 use floom_widgets::{Align, Axis, Conditional, Pressable, Stack, VectorIcon};
 
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::rating::RatingProps;
 use floom_core_theme::theme::{MultiTheme, Theme};
-use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color::to_engine_color as to_paint;
+use floom_core_theme::tokens::color::Color;
 use floom_widget_md_icon::{MdIcon, MD_ICON_VIEW_BOX};
 use floom_widget_runtime::theme_signal;
 
@@ -259,36 +259,24 @@ impl MaterialRating {
                         let filled_glyph = filled_glyph.clone();
                         let flag = state.filled.clone();
                         move || {
-                            Box::new(
-                                Conditional::new(false)
-                                    .when_flag(flag.clone())
-                                    .show(Child::new(
-                                        ChildKey::index(0),
-                                        LayoutRequest::new(),
-                                        {
-                                            let filled_glyph = filled_glyph.clone();
-                                            move || Box::new(filled_glyph.clone())
-                                        },
-                                    )),
-                            )
+                            Box::new(Conditional::new(false).when_flag(flag.clone()).show(
+                                Child::new(ChildKey::index(0), LayoutRequest::new(), {
+                                    let filled_glyph = filled_glyph.clone();
+                                    move || Box::new(filled_glyph.clone())
+                                }),
+                            ))
                         }
                     })
                     .push({
                         let empty_glyph = empty_glyph.clone();
                         let flag = state.empty.clone();
                         move || {
-                            Box::new(
-                                Conditional::new(false)
-                                    .when_flag(flag.clone())
-                                    .show(Child::new(
-                                        ChildKey::index(0),
-                                        LayoutRequest::new(),
-                                        {
-                                            let empty_glyph = empty_glyph.clone();
-                                            move || Box::new(empty_glyph.clone())
-                                        },
-                                    )),
-                            )
+                            Box::new(Conditional::new(false).when_flag(flag.clone()).show(
+                                Child::new(ChildKey::index(0), LayoutRequest::new(), {
+                                    let empty_glyph = empty_glyph.clone();
+                                    move || Box::new(empty_glyph.clone())
+                                }),
+                            ))
                         }
                     });
 
@@ -327,4 +315,3 @@ impl Default for MaterialRating {
         Self::new()
     }
 }
-

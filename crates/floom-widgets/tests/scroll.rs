@@ -15,12 +15,12 @@
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
-use floom_core::{Axis as CoreAxis, ScrollOffset, Size};
-use floom_widgets::{Scroll, ScrollAxes, Stack};
+use floom_app as Host;
 use floom_core as Core;
+use floom_core::{Axis as CoreAxis, ScrollOffset, Size};
 use floom_layout as LY;
 use floom_widgets as W;
-use floom_app as Host;
+use floom_widgets::{Scroll, ScrollAxes, Stack};
 /// The viewport every scroll test measures into.
 const VIEWPORT: (f64, f64) = (200.0, 200.0);
 
@@ -33,7 +33,10 @@ fn scroll_with_content(content: (f64, f64)) -> Scroll {
 fn an_unmeasured_scroll_does_not_move() {
     let s = Scroll::new();
     assert_eq!(s.content_extent(), None, "nothing measured yet");
-    assert_eq!(s.offset_after_wheel((0.0, 100.0), VIEWPORT), ScrollOffset::ZERO);
+    assert_eq!(
+        s.offset_after_wheel((0.0, 100.0), VIEWPORT),
+        ScrollOffset::ZERO
+    );
 }
 
 /// A wheel delta moves the viewport by that much, when there is room.
@@ -65,7 +68,10 @@ fn successive_deltas_accumulate() {
 #[test]
 fn scrolling_back_past_the_top_stops_at_zero() {
     let s = scroll_with_content((200.0, 800.0));
-    assert_eq!(s.offset_after_wheel((0.0, -50.0), VIEWPORT), ScrollOffset::ZERO);
+    assert_eq!(
+        s.offset_after_wheel((0.0, -50.0), VIEWPORT),
+        ScrollOffset::ZERO
+    );
 }
 
 // --- the clamp -------------------------------------------------------------
@@ -106,9 +112,15 @@ fn a_wheel_past_the_end_lands_exactly_on_it() {
 #[test]
 fn content_that_fits_does_not_scroll() {
     let s = scroll_with_content((200.0, 200.0));
-    assert_eq!(s.offset_after_wheel((0.0, 500.0), VIEWPORT), ScrollOffset::ZERO);
+    assert_eq!(
+        s.offset_after_wheel((0.0, 500.0), VIEWPORT),
+        ScrollOffset::ZERO
+    );
     let shorter = scroll_with_content((200.0, 100.0));
-    assert_eq!(shorter.offset_after_wheel((0.0, 500.0), VIEWPORT), ScrollOffset::ZERO);
+    assert_eq!(
+        shorter.offset_after_wheel((0.0, 500.0), VIEWPORT),
+        ScrollOffset::ZERO
+    );
 }
 
 // --- axes ------------------------------------------------------------------
@@ -122,7 +134,10 @@ fn a_vertical_wheel_does_not_move_a_horizontal_strip() {
     let s = Scroll::horizontal().with_content_extent(Size::new(800.0_f64, 200.0_f64));
     let after = s.offset_after_wheel((0.0, 500.0), VIEWPORT);
     assert_eq!(after.y, 0.0, "the strip does not scroll vertically");
-    assert_eq!(after.x, 0.0, "and a purely vertical wheel does not scroll it sideways either");
+    assert_eq!(
+        after.x, 0.0,
+        "and a purely vertical wheel does not scroll it sideways either"
+    );
 }
 
 /// The same strip scrolls sideways when the wheel does.
@@ -137,7 +152,10 @@ fn a_horizontal_strip_scrolls_on_the_horizontal_axis() {
 #[test]
 fn a_vertical_container_ignores_horizontal_deltas() {
     let s = scroll_with_content((200.0, 800.0));
-    assert_eq!(s.offset_after_wheel((500.0, 0.0), VIEWPORT), ScrollOffset::ZERO);
+    assert_eq!(
+        s.offset_after_wheel((500.0, 0.0), VIEWPORT),
+        ScrollOffset::ZERO
+    );
 }
 
 /// A two-axis container scrolls both, and each axis clamps against its own
@@ -146,8 +164,14 @@ fn a_vertical_container_ignores_horizontal_deltas() {
 fn a_two_axis_container_clamps_each_axis_independently() {
     let s = Scroll::both_axes().with_content_extent(Size::new(200.0_f64, 800.0_f64));
     let after = s.offset_after_wheel((500.0, 500.0), VIEWPORT);
-    assert_eq!(after.x, 0.0, "no horizontal overflow, so no horizontal travel");
-    assert_eq!(after.y, 500.0, "a 500 wheel in a 600 of travel lands at 500");
+    assert_eq!(
+        after.x, 0.0,
+        "no horizontal overflow, so no horizontal travel"
+    );
+    assert_eq!(
+        after.y, 500.0,
+        "a 500 wheel in a 600 of travel lands at 500"
+    );
 }
 
 // --- reporting -------------------------------------------------------------
@@ -172,7 +196,11 @@ fn the_max_offset_follows_the_viewport() {
         Some(ScrollOffset::new(0.0, 400.0)),
         "a taller viewport leaves less to travel"
     );
-    assert_eq!(s.max_offset(VIEWPORT), Some(ScrollOffset::new(0.0, 600.0)), "and it is unchanged by asking");
+    assert_eq!(
+        s.max_offset(VIEWPORT),
+        Some(ScrollOffset::new(0.0, 600.0)),
+        "and it is unchanged by asking"
+    );
 }
 
 /// A container is scrollable only when its content actually exceeds it on some
@@ -180,10 +208,22 @@ fn the_max_offset_follows_the_viewport() {
 /// one whose content fits is not.
 #[test]
 fn scrollability_follows_the_content() {
-    assert!(!Scroll::new().is_scrollable(), "unmeasured is not scrollable");
-    assert!(!scroll_with_content((200.0, 200.0)).is_scrollable(), "fitting content");
-    assert!(scroll_with_content((200.0, 800.0)).is_scrollable(), "taller content");
-    assert!(scroll_with_content((800.0, 200.0)).is_scrollable(), "wider content");
+    assert!(
+        !Scroll::new().is_scrollable(),
+        "unmeasured is not scrollable"
+    );
+    assert!(
+        !scroll_with_content((200.0, 200.0)).is_scrollable(),
+        "fitting content"
+    );
+    assert!(
+        scroll_with_content((200.0, 800.0)).is_scrollable(),
+        "taller content"
+    );
+    assert!(
+        scroll_with_content((800.0, 200.0)).is_scrollable(),
+        "wider content"
+    );
 }
 
 /// The axes a container answers to are part of what it is, and survive being
@@ -194,8 +234,18 @@ fn the_axes_are_preserved() {
         horizontal: true,
         vertical: true,
     });
-    assert_eq!(s.scroll_axes(), ScrollAxes { horizontal: true, vertical: true });
-    assert_eq!(Scroll::new().scroll_axes(), ScrollAxes::default(), "vertical only by default");
+    assert_eq!(
+        s.scroll_axes(),
+        ScrollAxes {
+            horizontal: true,
+            vertical: true
+        }
+    );
+    assert_eq!(
+        Scroll::new().scroll_axes(),
+        ScrollAxes::default(),
+        "vertical only by default"
+    );
 }
 
 // --- in a host -------------------------------------------------------------
@@ -243,11 +293,7 @@ impl floom_core::Widget for ScrollProbe {
         Some(floom_types::ClipShape::Box)
     }
 
-    fn event(
-        &mut self,
-        cx: &mut dyn floom_core::EventContext,
-        id: floom_core::ElementId,
-    ) -> bool {
+    fn event(&mut self, cx: &mut dyn floom_core::EventContext, id: floom_core::ElementId) -> bool {
         let floom_core::Event::Scroll(delta) = cx.event() else {
             return false;
         };
@@ -484,7 +530,11 @@ fn the_real_scroll_widget_stops_at_the_end() {
     host.dispatch(wheel(99_999.0));
     host.frame();
     // 900 of content in a 200 viewport.
-    assert_eq!(host.bounds(child).y0, 700.0, "exactly at the end, not past it");
+    assert_eq!(
+        host.bounds(child).y0,
+        700.0,
+        "exactly at the end, not past it"
+    );
 
     host.dispatch(wheel(120.0));
     host.frame();
@@ -519,9 +569,15 @@ struct Downstream {
 }
 
 impl floom_core::WidgetAny for Downstream {
-    fn as_any(&self) -> &dyn std::any::Any { self }
-    fn as_any_mut(&mut self) -> &mut dyn std::any::Any { self }
-    fn semantics_hint(&self) -> Option<floom_core::SemanticsHint> { None }
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
+        self
+    }
+    fn semantics_hint(&self) -> Option<floom_core::SemanticsHint> {
+        None
+    }
 }
 
 impl floom_core::Widget for Downstream {
@@ -551,13 +607,10 @@ impl floom_core::Widget for Downstream {
 
     /// Counts the wheels that reached it, which is only possible if the scroll
     /// area below declined them.
-    fn event(
-        &mut self,
-        cx: &mut dyn floom_core::EventContext,
-        _id: floom_core::ElementId,
-    ) -> bool {
+    fn event(&mut self, cx: &mut dyn floom_core::EventContext, _id: floom_core::ElementId) -> bool {
         if matches!(cx.event(), floom_core::Event::Scroll(_)) {
-            self.wheels.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+            self.wheels
+                .fetch_add(1, std::sync::atomic::Ordering::SeqCst);
             return true;
         }
         false

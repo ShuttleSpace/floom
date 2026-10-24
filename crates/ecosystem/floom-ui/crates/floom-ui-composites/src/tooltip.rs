@@ -36,7 +36,7 @@ use floom_core::{
 };
 use floom_types::{Insets, PointerPhase};
 
-use floom_widgets::primitives::{Revision, SemanticsHint, emit_semantics};
+use floom_widgets::primitives::{emit_semantics, Revision, SemanticsHint};
 use floom_widgets::{Surface, Text};
 
 use crate::overlay_bookkeeping::OverlayHost;

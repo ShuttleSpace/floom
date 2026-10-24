@@ -7,9 +7,7 @@
 //! flips. `floom-app/tests/event_animation.rs` is the end-to-end control on the
 //! host side; this file is the widget side.
 
-use floom_core::{
-    Color, LayoutRequest, PointerPhase, Rect, Size, Widget,
-};
+use floom_core::{Color, LayoutRequest, PointerPhase, Rect, Size, Widget};
 use floom_types::{ClipShape, PointerEvent};
 use floom_widgets::testkit::{
     AllocatingCreateContext, SceneRecorder, TestEventContext, paint_snapshot,

@@ -239,23 +239,24 @@ fn the_resolved_style_is_enough_to_build_the_widget() {
 
     // And a hand-built widget with those exact numbers is indistinguishable from
     // the port's own.
-    let by_hand = floom_ui_composites::SelectGroup::new().style(floom_ui_composites::SelectGroupStyle {
-        gap: resolved.gap,
-        axis: floom_core::Axis::Vertical,
-        height: None,
-        pad: resolved.pad,
-        content_placement: floom_ui_composites::ContentPlacement::Top,
-        toggles_off_in_single_mode: false,
-        mandatory_in_multiple_mode: true,
-        radius: resolved.radius,
-        border_width: 1.0,
-        background: paint(resolved.surface_variant),
-        foreground: paint(resolved.on_surface),
-        border_color: paint(resolved.outline),
-        selected_background: paint(resolved.primary_container),
-        selected_foreground: paint(resolved.on_primary_container),
-        selected_border_color: paint(resolved.primary),
-    });
+    let by_hand =
+        floom_ui_composites::SelectGroup::new().style(floom_ui_composites::SelectGroupStyle {
+            gap: resolved.gap,
+            axis: floom_core::Axis::Vertical,
+            height: None,
+            pad: resolved.pad,
+            content_placement: floom_ui_composites::ContentPlacement::Top,
+            toggles_off_in_single_mode: false,
+            mandatory_in_multiple_mode: true,
+            radius: resolved.radius,
+            border_width: 1.0,
+            background: paint(resolved.surface_variant),
+            foreground: paint(resolved.on_surface),
+            border_color: paint(resolved.outline),
+            selected_background: paint(resolved.primary_container),
+            selected_foreground: paint(resolved.on_primary_container),
+            selected_border_color: paint(resolved.primary),
+        });
     let by_port = group().select_group_style();
     assert_eq!(by_hand.declared_style(), by_port);
     let _ = AREA;

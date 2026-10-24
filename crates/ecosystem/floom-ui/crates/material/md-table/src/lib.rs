@@ -77,8 +77,8 @@ use floom_widgets::{Align, Axis, Edges, Stack, Surface, Text};
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::table::TableProps;
 use floom_core_theme::theme::{MultiTheme, Theme};
-use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color::to_engine_color as to_paint;
+use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::typography::FontWeight as ThemeFontWeight;
 use floom_widget_runtime::theme_signal;
 
@@ -310,9 +310,8 @@ fn cell(
 ) -> (LayoutRequest, Stack) {
     let text = text.to_string();
     let layout = LayoutRequest::new().grow(1.0).padding(padding);
-    let widget = Stack::new(Axis::Horizontal).push(move || {
-        Box::new(Text::new(text.clone()).size(size).weight(weight).color(ink))
-    });
+    let widget = Stack::new(Axis::Horizontal)
+        .push(move || Box::new(Text::new(text.clone()).size(size).weight(weight).color(ink)));
     (layout, widget)
 }
 
@@ -366,4 +365,3 @@ pub fn to_engine_weight(w: ThemeFontWeight) -> FontWeight {
         ThemeFontWeight::Black => FontWeight::Black,
     }
 }
-

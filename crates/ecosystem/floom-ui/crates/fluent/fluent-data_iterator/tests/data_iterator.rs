@@ -14,12 +14,10 @@ use floom_widgets::testkit::{AllocatingCreateContext, PaintOp, SceneRecorder};
 use floom_widgets::{Divider, Stack};
 
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
-use floom_core_theme::global_theme::{DesignSystem, set_design_system};
+use floom_core_theme::global_theme::{set_design_system, DesignSystem};
 use floom_core_theme::theme::{MultiTheme, Theme};
 
-use floom_widget_fluent_data_iterator::{
-    FluentDataIterator, FluentDataIteratorStyle,
-};
+use floom_widget_fluent_data_iterator::{FluentDataIterator, FluentDataIteratorStyle};
 
 const BOX: Rect = Rect {
     x0: 0.0,
@@ -52,7 +50,9 @@ fn three_items(kit: FluentDataIterator) -> FluentDataIterator {
 #[test]
 fn the_style_resolves_the_theme_and_the_tokens() {
     let theme = theme();
-    let style: FluentDataIteratorStyle = FluentDataIterator::new().with_theme(theme.clone()).resolved_style();
+    let style: FluentDataIteratorStyle = FluentDataIterator::new()
+        .with_theme(theme.clone())
+        .resolved_style();
     assert_eq!(style.design_system, "fluent");
     assert_eq!(style.surface, theme.colors().surface);
     assert_eq!(style.outline, theme.colors().outline);
@@ -67,13 +67,19 @@ fn the_container_is_padded_rounded_and_filled() {
     let kit = three_items(FluentDataIterator::new().with_theme(theme()).divided(true));
     let style = kit.resolved_style();
     let surface = kit.view();
-    let request = surface.layout_request().expect("the container asks for its own space");
+    let request = surface
+        .layout_request()
+        .expect("the container asks for its own space");
     assert_eq!(
         request.padding,
         Some(floom_types::Insets::uniform(f64::from(style.padding))),
         "the token's padding"
     );
-    assert_eq!(surface.decoration().corner_radius(), 8.0, "v1's literal 8.0");
+    assert_eq!(
+        surface.decoration().corner_radius(),
+        8.0,
+        "v1's literal 8.0"
+    );
     assert_eq!(
         surface.decoration().background_color(),
         Some(to_engine(style.surface)),
@@ -131,10 +137,18 @@ fn the_header_comes_first_and_the_footer_last() {
         first.as_any().is::<floom_widgets::Text>(),
         "the header is first"
     );
-    assert!(last.as_any().is::<floom_widgets::Text>(), "and the footer is last");
+    assert!(
+        last.as_any().is::<floom_widgets::Text>(),
+        "and the footer is last"
+    );
 }
 
 /// Design-system colour -> engine colour.
 fn to_engine(c: floom_core_theme::tokens::color::Color) -> Color {
-    Color { r: c.r, g: c.g, b: c.b, a: c.a }
+    Color {
+        r: c.r,
+        g: c.g,
+        b: c.b,
+        a: c.a,
+    }
 }

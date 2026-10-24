@@ -122,7 +122,9 @@ pub fn demos() -> &'static [Demo] {
 
 /// The demos in one section, in declaration order.
 pub fn section_demos(section: Section) -> impl Iterator<Item = &'static Demo> {
-    registry().iter().filter(move |demo| demo.section == section)
+    registry()
+        .iter()
+        .filter(move |demo| demo.section == section)
 }
 
 /// A heading row for a section, keyed by `key`.
@@ -160,10 +162,12 @@ pub fn gallery_root() -> Stack {
 /// boxed trait object is not one).
 pub fn demo_root(demo: &'static Demo) -> Stack {
     Stack::new(Axis::Vertical)
-        .child(Child::new(ChildKey::index(0), LayoutRequest::new(), demo.build))
         .child(Child::new(
-            ChildKey::index(1),
+            ChildKey::index(0),
             LayoutRequest::new(),
-            || Box::new(Spacer::new(0.0)),
+            demo.build,
         ))
+        .child(Child::new(ChildKey::index(1), LayoutRequest::new(), || {
+            Box::new(Spacer::new(0.0))
+        }))
 }

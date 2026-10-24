@@ -24,7 +24,7 @@ use floom_core::{ElementId, Key, NamedKey, Rect, Widget};
 use floom_types::Color as PaintColor;
 use floom_types::KeyEvent;
 use floom_ui_composites::{Slider, SliderStyle};
-use floom_widgets::testkit::{AllocatingCreateContext, PaintOp, SceneRecorder, dispatch};
+use floom_widgets::testkit::{dispatch, AllocatingCreateContext, PaintOp, SceneRecorder};
 
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::global_theme::DesignSystem;
@@ -160,7 +160,10 @@ fn a_disabled_slider_dims_to_the_tokens() {
     assert_eq!(alpha_of(off.filled_color), 120);
     assert_ne!(off.filled_color, on.filled_color, "the fill dims");
 
-    assert_eq!(off.thumb_color, off.filled_color, "fill and thumb dim alike");
+    assert_eq!(
+        off.thumb_color, off.filled_color,
+        "fill and thumb dim alike"
+    );
     assert_ne!(off.thumb_color, on.thumb_color, "the thumb dims");
 
     // The branch changes colour only. Geometry is the tokens' in both states,

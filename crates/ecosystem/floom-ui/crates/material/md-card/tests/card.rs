@@ -6,11 +6,11 @@
 //! `docs/porting-floem-ui-to-2.0.md`.
 
 use floom_core::Widget;
-use floom_types::{Insets};
+use floom_types::Insets;
 use floom_types::{Color as PaintColor, Shadow};
 
 use floom_core_theme::theme::MultiTheme;
-use floom_widgets::testkit::{AllocatingCreateContext, paint_snapshot};
+use floom_widgets::testkit::{paint_snapshot, AllocatingCreateContext};
 
 use floom_widget_md_card::MdCard;
 
@@ -37,7 +37,9 @@ fn the_surface_is_a_real_2p0_container_painting_shadow_behind_fill() {
     let snap = paint_snapshot(&surface, id, AREA);
 
     let shadow_at = snap.find("Shadow ").expect("a card asks for a shadow");
-    let fill_at = snap.find("RoundedRect").expect("a card paints a rounded fill");
+    let fill_at = snap
+        .find("RoundedRect")
+        .expect("a card paints a rounded fill");
     assert!(
         shadow_at < fill_at,
         "the shadow must be asked for before the fill, got:\n{snap}"
@@ -148,8 +150,9 @@ fn theme_tokens_come_from_the_shared_theme_signal() {
     assert_eq!(a, b, "cards must read one shared theme");
 
     // And an explicitly-supplied theme is honoured over the signal.
-    let custom = MdCard::new()
-        .with_theme(MultiTheme::new_for(floom_core_theme::global_theme::DesignSystem::default()));
+    let custom = MdCard::new().with_theme(MultiTheme::new_for(
+        floom_core_theme::global_theme::DesignSystem::default(),
+    ));
     assert!(custom.resolved_style().padding > 0.0);
 }
 

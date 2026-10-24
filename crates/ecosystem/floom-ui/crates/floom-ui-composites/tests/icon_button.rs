@@ -20,12 +20,14 @@ use floom_accessibility::{SemanticsRole, SemanticsState};
 use floom_core::{Align, Color, Length, Widget, WidgetAny};
 use floom_types::{Point, PointerEvent, Rect};
 
+use floom_ui_composites::{
+    IconButton, IconButtonIcon, IconButtonPaint, IconButtonStyle, IconButtonVariant,
+};
 use floom_widgets::testkit::{
-    AllocatingCreateContext, RecordingUpdateContext, TestEventContext, paint_snapshot,
-    semantics_snapshot,
+    paint_snapshot, semantics_snapshot, AllocatingCreateContext, RecordingUpdateContext,
+    TestEventContext,
 };
 use floom_widgets::{Pressable, Ripple, Surface, VectorIcon};
-use floom_ui_composites::{IconButton, IconButtonIcon, IconButtonPaint, IconButtonStyle, IconButtonVariant};
 
 const BOX: Rect = Rect {
     x0: 0.0,
@@ -197,11 +199,17 @@ fn the_box_is_square_and_centres_its_icon() {
         .downcast_ref::<Surface>()
         .expect("the surface")
         .clone();
-    let request = surface.layout_request().expect("a pinned box has a request");
+    let request = surface
+        .layout_request()
+        .expect("a pinned box has a request");
 
     assert_eq!(request.width, Some(Length::Px(40.0)), "40 wide");
     assert_eq!(request.height, Some(Length::Px(40.0)), "and 40 tall");
-    assert_eq!(request.main_align, Some(Align::Center), "v1's `justify_center`");
+    assert_eq!(
+        request.main_align,
+        Some(Align::Center),
+        "v1's `justify_center`"
+    );
     assert_eq!(
         request.cross_align,
         Some(Align::Center),
@@ -341,7 +349,11 @@ fn the_icon_is_a_node_so_a_disabled_toggle_can_restyle_it() {
     let disabled = icon_node(&button().disabled(true));
 
     assert_eq!(
-        enabled.as_any().downcast_ref::<IconButtonIcon>().unwrap().pending_color(),
+        enabled
+            .as_any()
+            .downcast_ref::<IconButtonIcon>()
+            .unwrap()
+            .pending_color(),
         Some(style().foreground),
         "an enabled button asks its icon for the foreground"
     );
@@ -374,11 +386,13 @@ fn the_icon_is_a_node_so_a_disabled_toggle_can_restyle_it() {
 fn the_icon_the_kit_built_is_neither_resolved_colour() {
     let as_built = icon().fill();
     assert_ne!(
-        as_built, style().foreground,
+        as_built,
+        style().foreground,
         "the kit's icon colour is not the style's foreground"
     );
     assert_ne!(
-        as_built, style().disabled_foreground,
+        as_built,
+        style().disabled_foreground,
         "nor its disabled foreground — so a build-time icon would keep painting \
          a colour the style never resolved, on both paths"
     );
@@ -477,7 +491,10 @@ fn a_disabled_button_reports_itself_as_disabled() {
     let pressable = child_of::<Pressable>(ripple);
     let pressable = pressable.as_any().downcast_ref::<Pressable>().unwrap();
     assert!(
-        pressable.semantics_hint().state.contains(SemanticsState::DISABLED),
+        pressable
+            .semantics_hint()
+            .state
+            .contains(SemanticsState::DISABLED),
         "a screen reader is told the button is disabled"
     );
 }
@@ -551,7 +568,11 @@ fn a_disabled_button_is_inert() {
 
     let id = pressable_mut.create(&mut AllocatingCreateContext::new());
     let consumed = click(pressable_mut, id);
-    assert_eq!(hits.load(Ordering::SeqCst), 0, "a disabled button does not fire");
+    assert_eq!(
+        hits.load(Ordering::SeqCst),
+        0,
+        "a disabled button does not fire"
+    );
     assert!(
         !consumed,
         "and does not consume the press, so a parent still sees it"

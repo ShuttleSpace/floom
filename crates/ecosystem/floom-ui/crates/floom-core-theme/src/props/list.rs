@@ -23,8 +23,6 @@ impl std::fmt::Debug for ListProps {
 
 impl Default for ListProps {
     fn default() -> Self {
-        Self {
-            items: Vec::new(),
-        }
+        Self { items: Vec::new() }
     }
 }

@@ -92,7 +92,11 @@ pub fn max_offset(viewport: (f64, f64), content: (f64, f64)) -> ScrollOffset {
 /// list and the offset stays where it was, so the content ends up scrolled
 /// *past* its own start and the first rows become unreachable. The same applies
 /// when content shrinks under a scrolled viewport for any other reason.
-pub fn clamp_offset(offset: ScrollOffset, viewport: (f64, f64), content: (f64, f64)) -> ScrollOffset {
+pub fn clamp_offset(
+    offset: ScrollOffset,
+    viewport: (f64, f64),
+    content: (f64, f64),
+) -> ScrollOffset {
     let limit = max_offset(viewport, content);
     ScrollOffset {
         x: offset.x.clamp(0.0, limit.x),

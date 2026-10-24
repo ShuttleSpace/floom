@@ -11,7 +11,7 @@ use floom_core::{Length, Point, PointerEvent, Rect, Widget};
 use floom_types::PointerPhase;
 use floom_ui_composites::Chip;
 use floom_widgets::testkit::{
-    AllocatingCreateContext, SceneRecorder, TestEventContext, paint_snapshot,
+    paint_snapshot, AllocatingCreateContext, SceneRecorder, TestEventContext,
 };
 
 const BOX: Rect = Rect {
@@ -37,14 +37,21 @@ fn text_width(label: &str, size: f32) -> f64 {
 /// The chip: the label plus the padding at each side, and the chip's height.
 #[test]
 fn the_intrinsic_size_is_the_label_plus_the_padding() {
-    let widget = Chip::new().label("Hi").font_size(14.0).padding_horizontal(12.0);
+    let widget = Chip::new()
+        .label("Hi")
+        .font_size(14.0)
+        .padding_horizontal(12.0);
     let request = widget.layout_request().expect("a chip wants a size");
     assert_eq!(
         request.width,
         Some(Length::Px(text_width("Hi", 14.0) as f32 + 24.0)),
         "the label plus the padding at each side"
     );
-    assert_eq!(request.height, Some(Length::Px(32.0)), "and the chip's height");
+    assert_eq!(
+        request.height,
+        Some(Length::Px(32.0)),
+        "and the chip's height"
+    );
 }
 
 /// The pill is filled, and the label is drawn in the middle of it.
@@ -127,7 +134,10 @@ fn the_hover_fill_replaces_the_resting_one() {
         .hover(Some(floom_core::Color::rgb(0x77, 0x88, 0x99)));
     let (id, _create) = allocate(&widget);
     let resting = paint_snapshot(&widget, id, BOX);
-    assert!(resting.contains("#112233FF"), "the resting fill, got {resting:?}");
+    assert!(
+        resting.contains("#112233FF"),
+        "the resting fill, got {resting:?}"
+    );
 
     let mut enter = PointerEvent::primary_down(AT);
     enter.phase = PointerPhase::Enter;
@@ -146,7 +156,9 @@ fn the_hover_fill_replaces_the_resting_one() {
 fn a_click_calls_the_callback() {
     let seen = Arc::new(Mutex::new(0));
     let s = seen.clone();
-    let mut widget = Chip::new().label("Hi").on_click(move || *s.lock().unwrap() += 1);
+    let mut widget = Chip::new()
+        .label("Hi")
+        .on_click(move || *s.lock().unwrap() += 1);
     let (id, _create) = allocate(&widget);
     for phase in [PointerEvent::primary_down(AT), PointerEvent::primary_up(AT)] {
         let mut cx = TestEventContext::new(id, BOX, phase.into());

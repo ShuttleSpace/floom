@@ -1,5 +1,5 @@
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
-use floom_core_theme::global_theme::{DesignSystem, design_system_signal};
+use floom_core_theme::global_theme::{design_system_signal, DesignSystem};
 use floom_core_theme::theme::{CupertinoTheme, FluentTheme, MultiTheme, Theme};
 use floom_core_theme::tokens::color::Color;
 use floom_signal::SignalUpdate;

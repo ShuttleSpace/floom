@@ -7,7 +7,7 @@
 use std::sync::{Arc, Mutex};
 
 use floom_core::{
-    KeyEvent, KeyPhase, Key, Modifiers, NamedKey, PointerButton, PointerEvent, PointerKind,
+    Key, KeyEvent, KeyPhase, Modifiers, NamedKey, PointerButton, PointerEvent, PointerKind,
     PointerPhase, Rect,
 };
 use floom_devtools::pick::{
@@ -75,8 +75,16 @@ fn state() -> Arc<Mutex<PickState>> {
 fn a_disarmed_picker_consumes_nothing() {
     let state = state();
     // The app keeps every pointer event until the picker is armed.
-    assert!(!pick_pointer(&state, &move_to(20.0, 20.0), key_of(&[BUTTON, LABEL])));
-    assert!(!pick_pointer(&state, &press_at(20.0, 20.0), key_of(&[BUTTON, LABEL])));
+    assert!(!pick_pointer(
+        &state,
+        &move_to(20.0, 20.0),
+        key_of(&[BUTTON, LABEL])
+    ));
+    assert!(!pick_pointer(
+        &state,
+        &press_at(20.0, 20.0),
+        key_of(&[BUTTON, LABEL])
+    ));
     assert_eq!(state.lock().unwrap().phase(), PickPhase::Idle);
 }
 
@@ -86,7 +94,11 @@ fn arming_makes_the_picker_own_the_pointer() {
     state.lock().unwrap().arm();
     assert!(state.lock().unwrap().armed());
     // A move is consumed and records what is under the pointer.
-    assert!(pick_pointer(&state, &move_to(20.0, 20.0), key_of(&[BUTTON, LABEL])));
+    assert!(pick_pointer(
+        &state,
+        &move_to(20.0, 20.0),
+        key_of(&[BUTTON, LABEL])
+    ));
     assert_eq!(state.lock().unwrap().hovered(), Some("ok_button"));
     assert_eq!(state.lock().unwrap().phase(), PickPhase::Hovering);
 }
@@ -107,14 +119,22 @@ fn a_click_commits_the_selection_and_stops_picking() {
     state.lock().unwrap().arm();
     pick_pointer(&state, &move_to(20.0, 20.0), key_of(&[BUTTON, LABEL]));
     // The click is consumed — the button is inspected, not pressed.
-    assert!(pick_pointer(&state, &press_at(20.0, 20.0), key_of(&[BUTTON, LABEL])));
+    assert!(pick_pointer(
+        &state,
+        &press_at(20.0, 20.0),
+        key_of(&[BUTTON, LABEL])
+    ));
     let guard = state.lock().unwrap();
     assert_eq!(guard.picked(), Some("ok_button"));
     assert_eq!(guard.phase(), PickPhase::Idle);
     assert_eq!(guard.hovered(), None);
     drop(guard);
     // And the picker is disarmed, so the next click belongs to the app again.
-    assert!(!pick_pointer(&state, &press_at(20.0, 20.0), key_of(&[BUTTON, LABEL])));
+    assert!(!pick_pointer(
+        &state,
+        &press_at(20.0, 20.0),
+        key_of(&[BUTTON, LABEL])
+    ));
 }
 
 #[test]
@@ -123,9 +143,17 @@ fn a_click_on_empty_space_picks_nothing() {
     state.lock().unwrap().arm();
     pick_pointer(&state, &move_to(20.0, 20.0), key_of(&[BUTTON, LABEL]));
     // Over empty space: the hover clears, and a click commits nothing.
-    assert!(pick_pointer(&state, &move_to(400.0, 400.0), key_of(&[BUTTON, LABEL])));
+    assert!(pick_pointer(
+        &state,
+        &move_to(400.0, 400.0),
+        key_of(&[BUTTON, LABEL])
+    ));
     assert_eq!(state.lock().unwrap().hovered(), None);
-    assert!(pick_pointer(&state, &press_at(400.0, 400.0), key_of(&[BUTTON, LABEL])));
+    assert!(pick_pointer(
+        &state,
+        &press_at(400.0, 400.0),
+        key_of(&[BUTTON, LABEL])
+    ));
     assert_eq!(state.lock().unwrap().picked(), None);
 }
 
@@ -139,7 +167,11 @@ fn disarming_keeps_the_selection_and_drops_the_hover() {
     pick_pointer(&state, &move_to(100.0, 60.0), key_of(&[BUTTON, LABEL]));
     state.lock().unwrap().disarm();
     let guard = state.lock().unwrap();
-    assert_eq!(guard.picked(), Some("ok_button"), "a pick survives a cancel");
+    assert_eq!(
+        guard.picked(),
+        Some("ok_button"),
+        "a pick survives a cancel"
+    );
     assert_eq!(guard.hovered(), None);
 }
 
@@ -253,7 +285,10 @@ fn the_picker_owns_only_the_three_pointer_phases_it_acts_on() {
 fn the_highlight_covers_the_viewport_so_it_can_draw_anywhere() {
     use floom_core::Widget;
     let highlight = HighlightBox::new(
-        Some(Rect::from_origin_size(Point::new(0.0, 0.0), Size::new(100.0, 50.0))),
+        Some(Rect::from_origin_size(
+            Point::new(0.0, 0.0),
+            Size::new(100.0, 50.0),
+        )),
         false,
     );
     let request = highlight.layout_request().expect("a covering request");

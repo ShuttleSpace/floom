@@ -42,7 +42,11 @@ fn build_buttons() -> Box<dyn WidgetAny> {
                 Box::new(Button::new("Primary").on_click(|| {}))
             })
             .push_layout(LayoutRequest::new().width(160.0).height(40.0), || {
-                Box::new(Button::new("Accented").color(Color::rgb(70, 120, 220)).on_click(|| {}))
+                Box::new(
+                    Button::new("Accented")
+                        .color(Color::rgb(70, 120, 220))
+                        .on_click(|| {}),
+                )
             })
             .push_layout(LayoutRequest::new().width(160.0).height(40.0), || {
                 Box::new(Button::new("Disabled").disabled(true).on_click(|| {}))

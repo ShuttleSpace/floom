@@ -19,11 +19,11 @@ use std::sync::Arc;
 use floom_core::{ChildKey, LayoutRequest, WidgetAny};
 use floom_signal::{RwSignal, SignalGet};
 use floom_types::PresenceTransition;
+use floom_widgets::text_input::{shared_flag, write_flag, SharedFlag};
 use floom_widgets::{Conditional, Text};
-use floom_widgets::text_input::{SharedFlag, shared_flag, write_flag};
 
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens, SlideTransitionTokens};
-use floom_core_theme::props::slide_transition::{SlideTransitionProps, SlideDirection};
+use floom_core_theme::props::slide_transition::{SlideDirection, SlideTransitionProps};
 use floom_core_theme::theme::{MultiTheme, Theme};
 
 const DESIGN_SYSTEM: &str = "fluent";
@@ -40,7 +40,8 @@ pub struct FluentSlideTransitionStyle {
     pub duration_ms: f32,
     /// How far the content travels, in pixels.
     pub offset: f32,
-    pub direction: SlideDirection,}
+    pub direction: SlideDirection,
+}
 
 /// Fluent's slide transition.
 pub struct FluentSlideTransition {
@@ -102,7 +103,9 @@ impl FluentSlideTransition {
 
     pub fn resolved_style(&self) -> FluentSlideTransitionStyle {
         let theme = self.theme.get();
-        let ComponentTokens::SlideTransition(tokens) = theme.component(ComponentId::SlideTransition) else {
+        let ComponentTokens::SlideTransition(tokens) =
+            theme.component(ComponentId::SlideTransition)
+        else {
             unreachable!("ComponentId::SlideTransition must resolve to SlideTransitionTokens")
         };
         FluentSlideTransitionStyle {
@@ -141,15 +144,18 @@ impl FluentSlideTransition {
         // v1's slide: a translation of `offset` pixels along the chosen axis,
         // settling at zero. The engine's slide channel names its axis, so a
         // horizontal slide is a horizontal slide.
-        let transition = self.transition_for(&style);        let child = self.child.clone();
+        let transition = self.transition_for(&style);
+        let child = self.child.clone();
         let show = self.show.clone();
 
-        let mut conditional = Conditional::new(false)
-            .when_flag(show)
-            .show_with(ChildKey::index(0), LayoutRequest::new(), move || match child.clone() {
+        let mut conditional = Conditional::new(false).when_flag(show).show_with(
+            ChildKey::index(0),
+            LayoutRequest::new(),
+            move || match child.clone() {
                 Some(build) => build(),
                 None => Box::new(Text::new(String::new())),
-            });
+            },
+        );
         if let Some(transition) = transition {
             conditional = conditional.enter(transition).exit(transition);
         }

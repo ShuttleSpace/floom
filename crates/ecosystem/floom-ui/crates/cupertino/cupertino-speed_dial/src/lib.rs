@@ -81,16 +81,16 @@ use std::sync::Arc;
 use floom_core::{Child, ChildKey, LayoutRequest, WidgetAny};
 use floom_signal::{RwSignal, SignalGet};
 use floom_types::Color as PaintColor;
-use floom_widgets::text_input::{SharedFlag, read_flag, shared_flag, write_flag};
+use floom_widgets::text_input::{read_flag, shared_flag, write_flag, SharedFlag};
 use floom_widgets::{Align, Axis, Conditional, Pressable, Stack, Surface, VectorIcon};
 
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::speed_dial::{SpeedDialDirection, SpeedDialProps};
 use floom_core_theme::theme::{MultiTheme, Theme};
-use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color::to_engine_color as to_paint;
+use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color_ext::with_alpha;
-use floom_widget_cupertino_icon::{VIEW_BOX, cupertino_icon_path};
+use floom_widget_cupertino_icon::{cupertino_icon_path, VIEW_BOX};
 
 /// The button's icon when the caller names none. v1's plus, which is the
 /// table's `add` glyph -- the same path.
@@ -338,9 +338,7 @@ impl CupertinoSpeedDial {
 
         // The fan: one filled circle per action.
         let mut buttons = match direction {
-            SpeedDialDirection::Left | SpeedDialDirection::Right => {
-                Stack::new(Axis::Horizontal)
-            }
+            SpeedDialDirection::Left | SpeedDialDirection::Right => Stack::new(Axis::Horizontal),
             SpeedDialDirection::Up | SpeedDialDirection::Down => Stack::new(Axis::Vertical),
         }
         .gap(style.gap)
@@ -348,8 +346,8 @@ impl CupertinoSpeedDial {
 
         for (index, action) in self.actions.iter().enumerate() {
             let glyph = VectorIcon::from_path_data(cupertino_icon_path(&action.icon), VIEW_BOX)
-            .size(ICON_SIZE)
-            .color(to_paint(style.action_foreground));
+                .size(ICON_SIZE)
+                .color(to_paint(style.action_foreground));
             let surface = Surface::new()
                 .request(
                     LayoutRequest::new()
@@ -464,4 +462,3 @@ fn fab_first(direction: SpeedDialDirection) -> bool {
         SpeedDialDirection::Down | SpeedDialDirection::Right
     )
 }
-

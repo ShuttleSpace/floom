@@ -5,7 +5,7 @@
 //! here with its widget, and the `TextField` binding came up with this move.
 //! Same test, same rules, one control each side of the layering.
 
-use floom_forms::{FieldBinding, FormController, rules};
+use floom_forms::{rules, FieldBinding, FormController};
 use floom_ui_composites::{Select, TextField};
 use floom_widgets::Switch;
 

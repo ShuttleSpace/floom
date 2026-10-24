@@ -59,8 +59,8 @@ use floom_widgets::SharedFlag;
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::menu::{MenuItem as MenuItemProps, MenuProps};
 use floom_core_theme::theme::{MultiTheme, Theme};
-use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color::to_engine_color as to_paint;
+use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color_ext::with_alpha;
 use floom_widget_runtime::theme_signal;
 
@@ -103,7 +103,11 @@ impl MaterialMenu {
     }
 
     /// Append a row.
-    pub fn item(mut self, label: impl Into<String>, callback: impl Fn() + Send + Sync + 'static) -> Self {
+    pub fn item(
+        mut self,
+        label: impl Into<String>,
+        callback: impl Fn() + Send + Sync + 'static,
+    ) -> Self {
         self.props.items.push(MenuItemProps {
             label: label.into(),
             on_select: Some(Box::new(callback)),
@@ -229,4 +233,3 @@ impl Default for MaterialMenu {
         Self::new()
     }
 }
-

@@ -11,16 +11,16 @@
 //! * **the palette**: `primary_container` for the shape and `on_primary_container` for the text;
 //! * **the type**: the text at the token's size, at **SemiBold**.
 
+use floom_core::LayoutRequest;
 use floom_signal::{RwSignal, SignalGet};
 use floom_types::{Color as PaintColor, FontWeight};
-use floom_core::LayoutRequest;
 use floom_widgets::{Align, Surface, Text};
 
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::avatar::AvatarProps;
 use floom_core_theme::theme::{MultiTheme, Theme};
-use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color::to_engine_color as to_paint;
+use floom_core_theme::tokens::color::Color;
 
 const DESIGN_SYSTEM: &str = "fluent";
 
@@ -123,7 +123,12 @@ impl FluentAvatar {
             .radius(radius)
             .push(move || {
                 // The slot is a replayed `Fn`, so the text is cloned per mount.
-                Box::new(Text::new(content.clone()).size(font_size).weight(FontWeight::SemiBold).color(text_color))
+                Box::new(
+                    Text::new(content.clone())
+                        .size(font_size)
+                        .weight(FontWeight::SemiBold)
+                        .color(text_color),
+                )
             })
     }
 }
@@ -133,4 +138,3 @@ impl Default for FluentAvatar {
         Self::new()
     }
 }
-

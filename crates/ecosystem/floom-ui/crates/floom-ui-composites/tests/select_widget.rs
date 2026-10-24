@@ -13,13 +13,13 @@ use floom_core::{
     Widget, WidgetAny,
 };
 use floom_types::{KeyEvent, Modifiers, PointerEvent, PointerPhase};
-use floom_ui_composites::{Select, SelectPopup, SelectStyle, popup_height};
+use floom_ui_composites::{popup_height, Select, SelectPopup, SelectStyle};
 use floom_widgets::primitives::Text;
-use floom_widgets::Stack;
 use floom_widgets::testkit::{
-    AllocatingCreateContext, OverlayCall, RecordingUpdateContext, SceneRecorder, TestEventContext,
-    dispatch, paint_snapshot, paint_snapshot_any,
+    dispatch, paint_snapshot, paint_snapshot_any, AllocatingCreateContext, OverlayCall,
+    RecordingUpdateContext, SceneRecorder, TestEventContext,
 };
+use floom_widgets::Stack;
 
 /// The box the control is laid out in for every test here: wide enough that the
 /// widest option never wraps, tall enough that the header and the row height
@@ -82,7 +82,9 @@ fn row_center(bounds: Rect, index: usize) -> Point {
     let style = default_style();
     Point::new(
         bounds.x0 + 10.0,
-        bounds.y0 + f64::from(style.panel_padding) + (index as f64 + 0.5) * f64::from(style.item_height),
+        bounds.y0
+            + f64::from(style.panel_padding)
+            + (index as f64 + 0.5) * f64::from(style.item_height),
     )
 }
 

@@ -111,14 +111,13 @@ impl Default for CalendarStyle {
     }
 }
 
-
-
 /// The month on display, shared between the kit and the cells that draw it.
-
 
 /// Read the selected date, treating a poisoned cell as the default.
 pub fn read_value(value: &SharedDate) -> CalendarDate {
-    *value.lock().unwrap_or_else(|poisoned| poisoned.into_inner())
+    *value
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
 }
 
 /// Write the selected date, ignoring a poisoned cell.
@@ -130,7 +129,9 @@ pub fn write_value(value: &SharedDate, date: CalendarDate) {
 
 /// Read the month on display, treating a poisoned cell as January 1970.
 pub fn read_month(month: &SharedMonth) -> (i32, u32) {
-    *month.lock().unwrap_or_else(|poisoned| poisoned.into_inner())
+    *month
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
 }
 
 /// Write the month on display, ignoring a poisoned cell.
@@ -218,12 +219,7 @@ impl WidgetAny for CalendarBody {
 /// The key carries the month, so a month that moves remounts the header and
 /// the title with it -- the title's text is a month and a year, and a `Text`
 /// that is not rebuilt keeps the month it was built with.
-fn month_header(
-    year: i32,
-    month: u32,
-    view_month: SharedMonth,
-    style: CalendarStyle,
-) -> Child {
+fn month_header(year: i32, month: u32, view_month: SharedMonth, style: CalendarStyle) -> Child {
     let ink = style.on_surface;
     let title = format!("{} {}", MONTHS[(month as usize) - 1], year);
     let title_size = style.header_font_size;
@@ -299,12 +295,9 @@ fn weekday_row(show_week_numbers: bool, style: CalendarStyle) -> Child {
                 .align(Align::SpaceBetween, Align::Center)
                 .request(LayoutRequest::new().width_pct(100.0));
             if show_week_numbers {
-                row = row.push_layout(
-                    LayoutRequest::new().width(weeknumber_width),
-                    move || {
-                        Box::new(Spacer::new(f64::from(weeknumber_width)).axis(Axis::Horizontal))
-                    },
-                );
+                row = row.push_layout(LayoutRequest::new().width(weeknumber_width), move || {
+                    Box::new(Spacer::new(f64::from(weeknumber_width)).axis(Axis::Horizontal))
+                });
             }
             for letter in ["S", "M", "T", "W", "T", "F", "S"] {
                 let letter = letter.to_string();
@@ -318,12 +311,10 @@ fn weekday_row(show_week_numbers: bool, style: CalendarStyle) -> Child {
                             Stack::new(Axis::Horizontal)
                                 // v1's `.items_center().justify_center()`.
                                 .align(Align::Center, Align::Center)
-                                .request(
-                                    LayoutRequest::new()
-                                        .width(cell_size)
-                                        .height(cell_size),
-                                )
-                                .push(move || Box::new(Text::new(letter.clone()).size(size).color(ink))),
+                                .request(LayoutRequest::new().width(cell_size).height(cell_size))
+                                .push(move || {
+                                    Box::new(Text::new(letter.clone()).size(size).color(ink))
+                                }),
                         )
                     },
                 );
@@ -388,14 +379,7 @@ fn month_grid(
                     if day_at(k, year, month).is_none() {
                         continue;
                     }
-                    let cell = day_cell(
-                        k,
-                        year,
-                        month,
-                        value.clone(),
-                        on_change.clone(),
-                        style,
-                    );
+                    let cell = day_cell(k, year, month, value.clone(), on_change.clone(), style);
                     row = row.child(cell);
                 }
                 grid = grid.push(move || Box::new(row.clone()));
@@ -416,10 +400,21 @@ fn day_cell(
 ) -> Child {
     let day = day_at(k, year, month);
     let selected = match day {
-        Some(n) => read_value(&value) == CalendarDate { year, month, day: n },
+        Some(n) => {
+            read_value(&value)
+                == CalendarDate {
+                    year,
+                    month,
+                    day: n,
+                }
+        }
         None => false,
     };
-    let ink = if selected { style.on_primary } else { style.on_surface };
+    let ink = if selected {
+        style.on_primary
+    } else {
+        style.on_surface
+    };
     let fill = if selected {
         style.primary
     } else {
@@ -452,9 +447,11 @@ fn day_cell(
             let value = value.clone();
             let on_change = on_change.clone();
             Box::new(
-                Pressable::new(Child::new(ChildKey::index(0), LayoutRequest::new(), move || {
-                    Box::new(cell.clone())
-                }))
+                Pressable::new(Child::new(
+                    ChildKey::index(0),
+                    LayoutRequest::new(),
+                    move || Box::new(cell.clone()),
+                ))
                 .on_click(move || {
                     if let Some(day) = day {
                         let date = CalendarDate { year, month, day };
@@ -648,7 +645,6 @@ impl Calendar {
 
     /// The calendar, ready to mount.
     pub fn build(self) -> Surface {
-
         let style = self.style;
         let fill = style.surface;
         let outline = with_alpha(style.outline, 120);
@@ -670,6 +666,5 @@ impl Calendar {
             // v1's `.border(1.0)` and `.border_color(outline at 120)`.
             .border(1.0, outline)
             .push(move || Box::new(body.clone()))
-    
     }
 }

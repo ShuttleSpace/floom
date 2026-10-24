@@ -106,13 +106,10 @@ impl Template {
         match kind {
             "app" => Ok(Template::App),
             "plugin" => Ok(Template::Plugin),
-            other => Err(format!(
-                "unknown template `{other}`; known: app, plugin"
-            )),
+            other => Err(format!("unknown template `{other}`; known: app, plugin")),
         }
     }
-
-    }
+}
 
 struct CreateOpts {
     name: String,
@@ -187,7 +184,7 @@ fn parse_create(args: &[String]) -> Result<CreateOpts, String> {
             "--platform-path" => platform_path = Some(take_value("--platform-path")?),
             "--force" => force = true,
             other if other.starts_with('-') => {
-                return Err(format!("unknown option `{other}`\n\n{USAGE}"))
+                return Err(format!("unknown option `{other}`\n\n{USAGE}"));
             }
             other => {
                 if name.is_some() {
@@ -204,9 +201,8 @@ fn parse_create(args: &[String]) -> Result<CreateOpts, String> {
     Ok(CreateOpts {
         name,
         template,
-        platforms: platforms.unwrap_or_else(|| {
-            templates::PLATFORMS.iter().map(|s| s.to_string()).collect()
-        }),
+        platforms: platforms
+            .unwrap_or_else(|| templates::PLATFORMS.iter().map(|s| s.to_string()).collect()),
         org,
         floom_crate,
         floom_path,
@@ -246,7 +242,6 @@ fn create(args: &[String]) -> Result<(), String> {
 
 /// Scaffold an app: a widget tree, plus one directory per platform.
 fn create_app(opts: &CreateOpts, root: &Path) -> Result<(), String> {
-
     // --- Rust core -------------------------------------------------
     write(
         &root.join("Cargo.toml"),
@@ -272,7 +267,10 @@ fn create_app(opts: &CreateOpts, root: &Path) -> Result<(), String> {
         emit_app_platform(opts, root, p)?;
     }
 
-    write(&root.join("README.md"), &templates::root_readme(&opts.name, &opts.platforms))?;
+    write(
+        &root.join("README.md"),
+        &templates::root_readme(&opts.name, &opts.platforms),
+    )?;
 
     println!("Created Floom app `{}` in ./{}", opts.name, opts.name);
     println!("  organisation: {}", opts.org);
@@ -380,7 +378,11 @@ fn create_plugin(opts: &CreateOpts, root: &Path) -> Result<(), String> {
         &templates::plugin_root_readme(&opts.name, &opts.platforms),
     )?;
 
-    println!("Created Floom plugin `{}` in ./{}", opts.name, root.display());
+    println!(
+        "Created Floom plugin `{}` in ./{}",
+        opts.name,
+        root.display()
+    );
     println!("  crate:        floom-plugin-{}", opts.name);
     println!("  platforms:    {}", opts.platforms.join(", "));
     println!("  organisation: {}", opts.org);
@@ -417,15 +419,27 @@ fn emit_app_platform(opts: &CreateOpts, root: &Path, platform: &str) -> Result<(
 
     match platform {
         "android" => {
-            write(&dir.join("settings.gradle.kts"), &native_project::android_app_settings_gradle(&opts.org, &opts.name))?;
-            write(&dir.join("build.gradle.kts"), &native_project::android_root_build_gradle())?;
-            write(&dir.join("gradle.properties"), &native_project::android_gradle_properties())?;
+            write(
+                &dir.join("settings.gradle.kts"),
+                &native_project::android_app_settings_gradle(&opts.org, &opts.name),
+            )?;
+            write(
+                &dir.join("build.gradle.kts"),
+                &native_project::android_root_build_gradle(),
+            )?;
+            write(
+                &dir.join("gradle.properties"),
+                &native_project::android_gradle_properties(),
+            )?;
             write(
                 &dir.join("gradle/wrapper/gradle-wrapper.properties"),
                 &native_project::android_gradle_wrapper_properties(),
             )?;
             write(&dir.join(".gitignore"), native_project::ANDROID_GITIGNORE)?;
-            write(&dir.join("app/proguard-rules.pro"), native_project::ANDROID_PROGUARD_RULES)?;
+            write(
+                &dir.join("app/proguard-rules.pro"),
+                native_project::ANDROID_PROGUARD_RULES,
+            )?;
             write(
                 &dir.join("app/build.gradle.kts"),
                 &native_project::android_app_build_gradle(&opts.org, &opts.name, &lib),
@@ -441,7 +455,9 @@ fn emit_app_platform(opts: &CreateOpts, root: &Path, platform: &str) -> Result<(
                 // build error far from the file that caused it.
                 &dir.join(format!(
                     "app/src/main/kotlin/{}/{}Activity.kt",
-                    native_project::kotlin_package_path(&native_project::android_app_id(&opts.org, &opts.name)),
+                    native_project::kotlin_package_path(&native_project::android_app_id(
+                        &opts.org, &opts.name
+                    )),
                     native_project::kotlin_class_name(&opts.name),
                 )),
                 &native_project::android_main_activity(&opts.org, &opts.name, &lib),
@@ -470,7 +486,10 @@ fn emit_app_platform(opts: &CreateOpts, root: &Path, platform: &str) -> Result<(
             // written only when an SDK was actually found — and its absence is
             // explained by the README rather than left to be discovered.
             match native_project::detect_android_sdk() {
-                Some(sdk) => write(&dir.join("local.properties"), &native_project::android_local_properties(&sdk))?,
+                Some(sdk) => write(
+                    &dir.join("local.properties"),
+                    &native_project::android_local_properties(&sdk),
+                )?,
                 None => write(
                     &dir.join("local.properties.example"),
                     "# Copy to local.properties and point sdk.dir at your SDK.\n\
@@ -499,7 +518,10 @@ fn emit_app_platform(opts: &CreateOpts, root: &Path, platform: &str) -> Result<(
                 &templates::ios_info_plist(&opts.org, &opts.name),
             )?;
             write(&dir.join("include/floom.h"), native_project::DESKTOP_HOST_H)?;
-            write(&dir.join("src/AppDelegate.swift"), &templates::ios_app_delegate_swift(&opts.name))?;
+            write(
+                &dir.join("src/AppDelegate.swift"),
+                &templates::ios_app_delegate_swift(&opts.name),
+            )?;
             write(
                 &dir.join("src/ViewController.swift"),
                 &templates::ios_view_controller_swift(&opts.name),
@@ -511,7 +533,10 @@ fn emit_app_platform(opts: &CreateOpts, root: &Path, platform: &str) -> Result<(
                 &dir.join("src/main.c"),
                 &templates::desktop_main_c(p, &opts.name),
             )?;
-            write(&dir.join("CMakeLists.txt"), &native_project::desktop_cmake(p, &opts.name, &lib))?;
+            write(
+                &dir.join("CMakeLists.txt"),
+                &native_project::desktop_cmake(p, &opts.name, &lib),
+            )?;
         }
         "web" => {
             write(
@@ -520,7 +545,10 @@ fn emit_app_platform(opts: &CreateOpts, root: &Path, platform: &str) -> Result<(
             )?;
         }
         "ohos" => {
-            write(&dir.join("build-profile.json5"), &templates::ohos_build_profile(&opts.name))?;
+            write(
+                &dir.join("build-profile.json5"),
+                &templates::ohos_build_profile(&opts.name),
+            )?;
             write(
                 &dir.join("entry/src/main/module.json5"),
                 &templates::ohos_module_json(&opts.name),
@@ -529,14 +557,20 @@ fn emit_app_platform(opts: &CreateOpts, root: &Path, platform: &str) -> Result<(
                 &dir.join("entry/src/main/ets/entryability/EntryAbility.ets"),
                 &templates::ohos_entry_ability(&opts.name),
             )?;
-            write(&dir.join("oh-package.json5"), &templates::ohos_package_json(&opts.name))?;
+            write(
+                &dir.join("oh-package.json5"),
+                &templates::ohos_package_json(&opts.name),
+            )?;
         }
         _ => {}
     }
 
     // Every platform gets a README, but after its project files rather than
     // instead of them: it now explains how to build a thing that exists.
-    write(&dir.join("README.md"), &templates::platform_readme(label, opener))
+    write(
+        &dir.join("README.md"),
+        &templates::platform_readme(label, opener),
+    )
 }
 
 /// Writes the native half of one platform of a **plugin**.
@@ -566,7 +600,10 @@ fn emit_plugin_platform(opts: &CreateOpts, root: &Path, platform: &str) -> Resul
 
     match platform {
         "android" => {
-            write(&dir.join("settings.gradle.kts"), &native_project::android_plugin_settings_gradle(&opts.name))?;
+            write(
+                &dir.join("settings.gradle.kts"),
+                &native_project::android_plugin_settings_gradle(&opts.name),
+            )?;
             // A plugin project is a single Gradle module: `build.gradle.kts` is
             // both the root and the library, so it is written once, and it
             // carries the `repositories` block itself.
@@ -581,13 +618,19 @@ fn emit_plugin_platform(opts: &CreateOpts, root: &Path, platform: &str) -> Resul
                 &dir.join("build.gradle.kts"),
                 &native_project::android_plugin_build_gradle(&opts.name, &lib),
             )?;
-            write(&dir.join("gradle.properties"), &native_project::android_gradle_properties())?;
+            write(
+                &dir.join("gradle.properties"),
+                &native_project::android_gradle_properties(),
+            )?;
             write(
                 &dir.join("gradle/wrapper/gradle-wrapper.properties"),
                 &native_project::android_gradle_wrapper_properties(),
             )?;
             write(&dir.join(".gitignore"), native_project::ANDROID_GITIGNORE)?;
-            write(&dir.join("src/main/AndroidManifest.xml"), &native_project::android_plugin_manifest(&opts.name))?;
+            write(
+                &dir.join("src/main/AndroidManifest.xml"),
+                &native_project::android_plugin_manifest(&opts.name),
+            )?;
             write(
                 &dir.join(format!(
                     "src/main/kotlin/dev/floom/plugin/{}Plugin.kt",
@@ -781,10 +824,7 @@ mod tests {
 
         for sym in ABI_SYMBOLS {
             let symbol = format!("floom_symbols_{sym}");
-            assert!(
-                header.contains(&symbol),
-                "the header must declare {symbol}"
-            );
+            assert!(header.contains(&symbol), "the header must declare {symbol}");
             assert!(
                 desktop.contains(&symbol),
                 "the desktop half must define {symbol}"
@@ -862,7 +902,8 @@ mod tests {
              `@JvmStatic` or `GetStaticMethodID` fails"
         );
         assert!(
-            dir.join("native/android/src/main/cpp/floom_kotlin_android.c").is_file(),
+            dir.join("native/android/src/main/cpp/floom_kotlin_android.c")
+                .is_file(),
             "the C shim is where the C ABI is implemented on Android"
         );
     }
@@ -927,10 +968,7 @@ mod tests {
 
         for sym in ABI_SYMBOLS {
             let symbol = format!("floom_ohos_{sym}");
-            assert!(
-                shim.contains(&symbol),
-                "the C shim must implement {symbol}"
-            );
+            assert!(shim.contains(&symbol), "the C shim must implement {symbol}");
         }
         assert!(
             shim.contains("floom_ohos_arkts_call"),
@@ -1017,10 +1055,7 @@ mod tests {
             "native/android/src/main/cpp/floom_layout_android.c",
             "native/ios/Classes/LayoutPlugin.swift",
         ] {
-            assert!(
-                dir.join(rel).is_file(),
-                "{rel} must exist under native/"
-            );
+            assert!(dir.join(rel).is_file(), "{rel} must exist under native/");
         }
         assert!(
             !dir.join("android").exists(),

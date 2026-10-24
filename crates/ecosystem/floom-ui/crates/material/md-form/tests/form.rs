@@ -15,7 +15,9 @@
 //! `the_error_messages_are_painted_in_the_error_ink` would fail if this kit
 //! stopped being this kit.
 
-use floom_core::{Child, ChildKey, ElementId, LayoutRequest, Point, PointerEvent, Rect, Widget, WidgetAny};
+use floom_core::{
+    Child, ChildKey, ElementId, LayoutRequest, Point, PointerEvent, Rect, Widget, WidgetAny,
+};
 use floom_types::Color;
 use floom_widgets::testkit::{
     AllocatingCreateContext, PaintOp, RecordingUpdateContext, SceneRecorder, TestEventContext,
@@ -129,7 +131,9 @@ fn submit_label_painted(slot: &Box<dyn WidgetAny>) -> (String, f32, Color) {
     let ops = ops_of(&*text);
     ops.iter()
         .find_map(|op| match op {
-            PaintOp::Text { text, size, color, .. } => Some((text.clone(), *size, *color)),
+            PaintOp::Text {
+                text, size, color, ..
+            } => Some((text.clone(), *size, *color)),
             _ => None,
         })
         .expect("the submit button paints its label")
@@ -143,7 +147,9 @@ fn error_messages_painted(kit: MaterialForm) -> Vec<(String, f32, Color)> {
         let text = child.build();
         let ops = ops_of(&*text);
         if let Some((text, size, color)) = ops.iter().find_map(|op| match op {
-            PaintOp::Text { text, size, color, .. } => Some((text.clone(), *size, *color)),
+            PaintOp::Text {
+                text, size, color, ..
+            } => Some((text.clone(), *size, *color)),
             _ => None,
         }) {
             out.push((text, size, color));
@@ -173,10 +179,24 @@ fn the_tokens_and_the_props_reach_the_style() {
         floom_core_theme::component_tokens::ComponentTokens::Form(tokens) => tokens,
         _ => unreachable!(),
     };
-    assert_eq!(style.submit_height, tokens.submit_height, "the token's height");
-    assert_eq!(style.submit_radius, tokens.submit_radius, "the token's radius");
-    assert_eq!(style.surface, theme().colors().surface, "the surface's fill");
-    assert_eq!(style.radius, theme().radius().md, "the theme's radius scale");
+    assert_eq!(
+        style.submit_height, tokens.submit_height,
+        "the token's height"
+    );
+    assert_eq!(
+        style.submit_radius, tokens.submit_radius,
+        "the token's radius"
+    );
+    assert_eq!(
+        style.surface,
+        theme().colors().surface,
+        "the surface's fill"
+    );
+    assert_eq!(
+        style.radius,
+        theme().radius().md,
+        "the theme's radius scale"
+    );
 }
 
 /// v1's style read the *props*' padding and gap, not the form token's. The
@@ -195,11 +215,12 @@ fn the_padding_and_the_gap_come_from_the_props_as_v1_read_them() {
 #[test]
 fn the_validation_messages_token_reaches_the_style() {
     let style = kit().resolved_style();
-    let vmt =
-        match theme().component(floom_core_theme::component_tokens::ComponentId::ValidationMessages) {
-            floom_core_theme::component_tokens::ComponentTokens::ValidationMessages(vmt) => vmt,
-            _ => unreachable!(),
-        };
+    let vmt = match theme()
+        .component(floom_core_theme::component_tokens::ComponentId::ValidationMessages)
+    {
+        floom_core_theme::component_tokens::ComponentTokens::ValidationMessages(vmt) => vmt,
+        _ => unreachable!(),
+    };
     assert_eq!(style.error_font_size, vmt.font_size, "the token's size");
     assert_eq!(style.error_gap, vmt.gap, "the token's gap");
     assert_eq!(style.error_color, theme().colors().error, "the error ink");
@@ -300,11 +321,7 @@ fn the_error_messages_are_painted_in_the_error_ink() {
     assert_eq!(messages.len(), 2, "v1's summary listed both");
     assert_eq!(messages[0].0, "Name is required");
     assert_eq!(messages[0].1, style.error_font_size, "the token's size");
-    assert_eq!(
-        messages[0].2,
-        paint(style.error_color),
-        "v1's `error` ink"
-    );
+    assert_eq!(messages[0].2, paint(style.error_color), "v1's `error` ink");
 }
 
 /// With no errors, the summary is empty -- but the slot is still there, so the

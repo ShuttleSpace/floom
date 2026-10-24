@@ -35,7 +35,11 @@ fn theme() -> MultiTheme {
 }
 
 fn grid(cells: usize, cols: usize) -> CupertinoGrid {
-    let mut g = CupertinoGrid::new().with_theme(theme()).cols(cols).gap(8.0).row_gap(12.0);
+    let mut g = CupertinoGrid::new()
+        .with_theme(theme())
+        .cols(cols)
+        .gap(8.0)
+        .row_gap(12.0);
     for i in 0..cells {
         g = g.child(move || Box::new(floom_widgets::Text::new(format!("cell {i}"))));
     }
@@ -63,7 +67,11 @@ fn the_gaps_reach_the_engine_grid() {
     let row = row.as_any().downcast_ref::<Stack>().unwrap().clone();
     let row_request = row.layout_request().expect("a row asks for its own space");
     assert_eq!(row_request.axis, Some(Axis::Horizontal), "cells run across");
-    assert_eq!(row_request.gap, Some(8.0), "with the column gap between them");
+    assert_eq!(
+        row_request.gap,
+        Some(8.0),
+        "with the column gap between them"
+    );
 }
 
 /// Every cell grows, which is what makes them equal width.
@@ -95,11 +103,7 @@ fn the_last_row_is_padded() {
     for row in &rows {
         let row = row.build();
         let row = row.as_any().downcast_ref::<Stack>().unwrap().clone();
-        assert_eq!(
-            row.child_count(),
-            2,
-            "every row holds a full set of cells"
-        );
+        assert_eq!(row.child_count(), 2, "every row holds a full set of cells");
     }
 }
 

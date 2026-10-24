@@ -23,16 +23,16 @@
 use std::sync::{Arc, Mutex};
 
 use floom_core::{
-    Child, ChildKey, Color, CreateContext, ElementId, Event, EventContext, LayoutRequest, OverlayHandle,
-    OverlayKind, OverlayRequest, PaintContext, Point, Rect, SemanticsContext, UpdateContext, Widget,
-    SemanticsRole, WidgetAny,
+    Child, ChildKey, Color, CreateContext, ElementId, Event, EventContext, LayoutRequest,
+    OverlayHandle, OverlayKind, OverlayRequest, PaintContext, Point, Rect, SemanticsContext,
+    SemanticsRole, UpdateContext, Widget, WidgetAny,
 };
 use floom_types::{CursorStyle, FontWeight, PointerButton, PointerPhase, Shadow};
 use floom_widgets::primitives::Revision;
 use floom_widgets::text_width_at;
 
-use crate::OverlayHost;
 use crate::color_picker::with_alpha;
+use crate::OverlayHost;
 
 /// A calendar date.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -289,7 +289,6 @@ pub struct DatePicker {
     painted: Option<DateValue>,
     revision: Revision,
 }
-
 
 impl DatePicker {
     pub fn new() -> Self {
@@ -870,12 +869,7 @@ fn calendar_layout(style: &DatePickerStyle, bounds: Rect) -> CalendarLayout {
 }
 
 /// One cell of the grid.
-fn cell_rect(
-    layout: &CalendarLayout,
-    style: &DatePickerStyle,
-    row: usize,
-    column: usize,
-) -> Rect {
+fn cell_rect(layout: &CalendarLayout, style: &DatePickerStyle, row: usize, column: usize) -> Rect {
     let cell = f64::from(style.cell_size);
     let x0 = layout.grid.x0 + column as f64 * (cell + layout.cell_gap);
     let y0 = layout.grid.y0 + row as f64 * (cell + layout.row_gap);
@@ -951,4 +945,3 @@ fn shrink(bounds: Rect, inset: f64) -> Rect {
         y1: (bounds.y1 - inset).max(bounds.y0 + inset),
     }
 }
-

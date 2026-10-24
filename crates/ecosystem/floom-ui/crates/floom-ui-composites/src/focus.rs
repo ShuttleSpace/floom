@@ -64,10 +64,9 @@ impl FocusRing {
             x1: bounds.x1 + gap + width,
             y1: bounds.y1 + gap + width,
         };
-        let radius = self.radius.map_or_else(
-            || f64::from(corner_radius) + gap + width,
-            |r| f64::from(r),
-        );
+        let radius = self
+            .radius
+            .map_or_else(|| f64::from(corner_radius) + gap + width, |r| f64::from(r));
         stroke_rounded_outline(cx, outside, radius, width, self.color);
     }
 }

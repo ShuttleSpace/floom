@@ -38,7 +38,10 @@ pub fn button_gallery(theme: &CupertinoTheme) -> Scene {
 /// *something changed*, this says *the outlined hover lost its outline*.
 pub fn button_gallery_labels(theme: &CupertinoTheme) -> String {
     shared_labels(
-        &format!("scheme={:?} grouped_background={:?}", theme.scheme, theme.colors.grouped_background),
+        &format!(
+            "scheme={:?} grouped_background={:?}",
+            theme.scheme, theme.colors.grouped_background
+        ),
         // **Cupertino alone.** The other three print `elevation`; this
         // system has always printed `opacity`. Preserved, not corrected — see
         // `floom_design::DepthField`.
@@ -73,7 +76,8 @@ mod tests {
         assert_eq!(
             labels.lines().count(),
             expected + 1,
-            "header plus {} samples", expected
+            "header plus {} samples",
+            expected
         );
     }
 

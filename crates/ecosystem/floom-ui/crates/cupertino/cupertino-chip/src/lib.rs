@@ -49,8 +49,8 @@ use floom_ui_composites::Chip;
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::chip::ChipProps;
 use floom_core_theme::theme::{MultiTheme, Theme};
-use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color::to_engine_color as to_paint;
+use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color_ext::with_alpha;
 
 const DESIGN_SYSTEM: &str = "cupertino";
@@ -202,4 +202,3 @@ impl Default for CupertinoChip {
         Self::new()
     }
 }
-

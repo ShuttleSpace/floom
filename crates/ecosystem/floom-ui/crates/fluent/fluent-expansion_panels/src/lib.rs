@@ -61,21 +61,21 @@
 
 use std::sync::Arc;
 
-use floom_core::{LayoutRequest, WidgetAny};
 use floom_core::PresenceTransition;
+use floom_core::{LayoutRequest, WidgetAny};
 use floom_signal::{RwSignal, SignalGet};
 use floom_types::Color as PaintColor;
 use floom_ui_composites::{Accordion, AccordionStyle};
-use floom_widgets::{VectorIcon};
+use floom_widgets::VectorIcon;
 
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::expansion_panels::ExpansionPanelsProps;
 use floom_core_theme::theme::{MultiTheme, Theme};
-use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color::to_engine_color as to_paint;
+use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color_ext::*;
 
-use floom_widget_fluent_icon::{VIEW_BOX, FluentIcon};
+use floom_widget_fluent_icon::{FluentIcon, VIEW_BOX};
 
 /// The two glyphs a panel's indicator shows, resolved from the theme.
 ///
@@ -166,10 +166,7 @@ impl FluentExpansionPanels {
     /// `Send + Sync` is required, not incidental: 2.0 rebuilds a widget inside a
     /// `Child` closure the host may hand between threads, so the callback is
     /// shared as an `Arc`.
-    pub fn on_change(
-        mut self,
-        callback: impl Fn(usize, bool) + Send + Sync + 'static,
-    ) -> Self {
+    pub fn on_change(mut self, callback: impl Fn(usize, bool) + Send + Sync + 'static) -> Self {
         self.on_change = Some(Arc::new(callback));
         self
     }
@@ -209,7 +206,8 @@ impl FluentExpansionPanels {
     /// needs the same numbers, and restating them is how two components drift.
     pub fn resolved_style(&self) -> FluentExpansionPanelsStyle {
         let theme = self.theme.get();
-        let ComponentTokens::ExpansionPanels(tokens) = theme.component(ComponentId::ExpansionPanels)
+        let ComponentTokens::ExpansionPanels(tokens) =
+            theme.component(ComponentId::ExpansionPanels)
         else {
             unreachable!("ComponentId::ExpansionPanels must resolve to ExpansionPanelsTokens")
         };
@@ -248,7 +246,8 @@ impl FluentExpansionPanels {
     /// The expand/collapse indicator's edge length, from the tokens.
     pub fn icon_size(&self) -> f32 {
         let theme = self.theme.get();
-        let ComponentTokens::ExpansionPanels(tokens) = theme.component(ComponentId::ExpansionPanels)
+        let ComponentTokens::ExpansionPanels(tokens) =
+            theme.component(ComponentId::ExpansionPanels)
         else {
             unreachable!("ComponentId::ExpansionPanels must resolve to ExpansionPanelsTokens")
         };
@@ -311,7 +310,11 @@ impl FluentExpansionPanels {
             accordion = accordion.panel(
                 panel.title.clone(),
                 move |open| {
-                    Box::new(if open { expanded.clone() } else { collapsed.clone() })
+                    Box::new(if open {
+                        expanded.clone()
+                    } else {
+                        collapsed.clone()
+                    })
                 },
                 {
                     let content = panel.content.clone();

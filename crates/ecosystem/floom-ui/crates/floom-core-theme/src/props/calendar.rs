@@ -41,7 +41,10 @@ impl std::fmt::Debug for CalendarProps {
         f.debug_struct("CalendarProps")
             .field("value", &self.value)
             .field("show_week_numbers", &self.show_week_numbers)
-            .field("on_change", &self.on_change.as_ref().map(|_| "Fn(CalendarDate)"))
+            .field(
+                "on_change",
+                &self.on_change.as_ref().map(|_| "Fn(CalendarDate)"),
+            )
             .finish()
     }
 }

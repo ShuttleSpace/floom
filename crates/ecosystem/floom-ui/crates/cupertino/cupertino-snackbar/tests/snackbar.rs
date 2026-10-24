@@ -138,7 +138,8 @@ fn press_action(surface: &Box<dyn WidgetAny>) {
 #[test]
 fn the_tokens_and_colours_reach_the_style() {
     let style: CupertinoSnackbarStyle = kit().resolved_style();
-    let tokens = match theme().component(floom_core_theme::component_tokens::ComponentId::Snackbar) {
+    let tokens = match theme().component(floom_core_theme::component_tokens::ComponentId::Snackbar)
+    {
         floom_core_theme::component_tokens::ComponentTokens::Snackbar(tokens) => tokens,
         _ => unreachable!(),
     };

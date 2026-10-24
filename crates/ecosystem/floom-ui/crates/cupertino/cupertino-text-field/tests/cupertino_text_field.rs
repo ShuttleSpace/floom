@@ -488,11 +488,7 @@ fn on_change_reports_typing_and_not_the_builders_value() {
     );
     dispatch(&mut field, id, ROW, KeyEvent::down(Key::Char('!')).into());
     let reported = seen.take();
-    assert_eq!(
-        field.text(),
-        "Ada!",
-        "appended, not prepended"
-    );
+    assert_eq!(field.text(), "Ada!", "appended, not prepended");
     assert_eq!(
         reported,
         field.text(),
@@ -664,7 +660,8 @@ fn the_focus_affordance_is_a_hovered_rim_of_primary_at_120() {
         "control: Material thickens its rim on focus"
     );
     assert_ne!(
-        style.focus_ring.as_ref().map(|r| r.width), Some(2.0),
+        style.focus_ring.as_ref().map(|r| r.width),
+        Some(2.0),
         "control: Fluent rings the box"
     );
 }

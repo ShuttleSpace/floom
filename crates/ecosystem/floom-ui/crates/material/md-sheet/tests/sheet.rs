@@ -128,7 +128,10 @@ fn the_tokens_and_colours_reach_the_style() {
         _ => unreachable!(),
     };
     assert_eq!(style.padding, tokens.padding, "the token's padding");
-    assert_eq!(style.side_width, tokens.side_width, "the token's side width");
+    assert_eq!(
+        style.side_width, tokens.side_width,
+        "the token's side width"
+    );
     assert_eq!(style.shadow_blur, tokens.shadow_blur, "the shadow's blur");
     assert_eq!(
         style.shadow_spread, tokens.shadow_spread,
@@ -143,9 +146,14 @@ fn the_tokens_and_colours_reach_the_style() {
         style.token_corner_radius, tokens.corner_radius,
         "and the token v1's style reported -- which for Material agree"
     );
-    assert_eq!(style.panel_color, theme().colors().surface, "the panel's fill");
     assert_eq!(
-        style.content_color, theme().colors().on_surface,
+        style.panel_color,
+        theme().colors().surface,
+        "the panel's fill"
+    );
+    assert_eq!(
+        style.content_color,
+        theme().colors().on_surface,
         "the content's ink"
     );
 }
@@ -167,7 +175,12 @@ fn the_scrim_is_black_at_160() {
     });
     assert_eq!(
         fill,
-        Some(Color { r: 0, g: 0, b: 0, a: 160 }),
+        Some(Color {
+            r: 0,
+            g: 0,
+            b: 0,
+            a: 160
+        }),
         "the scrim is black at 160, whatever the scrim token's own alpha was"
     );
     assert_ne!(
@@ -270,7 +283,11 @@ fn an_elevated_sheet_casts_the_shadow() {
             _ => None,
         })
         .expect("an elevated sheet casts a shadow");
-    assert_eq!(shadow.0, f64::from(resolved.shadow_blur), "the shadow's blur");
+    assert_eq!(
+        shadow.0,
+        f64::from(resolved.shadow_blur),
+        "the shadow's blur"
+    );
     assert_eq!(
         shadow.1,
         f64::from(resolved.shadow_spread),
@@ -325,10 +342,7 @@ fn the_flag_is_one_allocation() {
 /// The props report the side, the elevation and the open state.
 #[test]
 fn the_props_report_the_side_and_the_elevation() {
-    let kit = kit()
-        .side(SheetSide::Start)
-        .elevated(false)
-        .open(true);
+    let kit = kit().side(SheetSide::Start).elevated(false).open(true);
     assert_eq!(kit.props().side, SheetSide::Start);
     assert!(!kit.props().elevated);
     assert!(kit.props().open);

@@ -10,8 +10,8 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 
 use floom_core::{Rect, Widget};
-use floom_widgets::testkit::{AllocatingCreateContext, SceneRecorder};
 use floom_ui_composites::{Select, SelectStyle};
+use floom_widgets::testkit::{AllocatingCreateContext, SceneRecorder};
 
 use floom_core_theme::global_theme::DesignSystem;
 use floom_core_theme::theme::{MultiTheme, Theme};
@@ -47,7 +47,8 @@ fn the_hover_row_is_on_surface_at_eight() {
     assert_eq!(style().hover_row.r, colors.on_surface.r);
     assert_eq!(alpha_of(style().hover_row), 8);
     assert_ne!(
-        style().hover_row.r, colors.primary.r,
+        style().hover_row.r,
+        colors.primary.r,
         "control: Cupertino's band is `primary`, so this is not that"
     );
 }

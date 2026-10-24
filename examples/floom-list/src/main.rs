@@ -34,12 +34,9 @@ fn main() {
     host.set_size(Size::new(240.0, 400.0));
 
     let items = rows(1_000);
-    let list = List::new(
-        Axis::Vertical,
-        items,
-        key_of,
-        |row: Row| Box::new(Text::new(row.label)),
-    )
+    let list = List::new(Axis::Vertical, items, key_of, |row: Row| {
+        Box::new(Text::new(row.label))
+    })
     .gap(2.0);
 
     // The list is the root itself: a keyed list is a widget, mounted directly.
@@ -97,7 +94,10 @@ fn main() {
         .expect("list is mounted")
         .set_items(grown);
     let after_reorder = host.frame();
-    println!("reorder : {} widgets (same set, new order)", after_reorder.painted);
+    println!(
+        "reorder : {} widgets (same set, new order)",
+        after_reorder.painted
+    );
     assert_eq!(
         after_reorder.painted, after_remove.painted,
         "reordering must reuse every existing row widget"

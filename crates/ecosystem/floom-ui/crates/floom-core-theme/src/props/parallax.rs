@@ -4,7 +4,9 @@ pub struct ParallaxProps {
 
 impl Clone for ParallaxProps {
     fn clone(&self) -> Self {
-        Self { factor: self.factor }
+        Self {
+            factor: self.factor,
+        }
     }
 }
 

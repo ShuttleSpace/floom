@@ -9,12 +9,12 @@
 
 use floom_core::{ElementId, Point, Rect, Widget};
 use floom_types::Color;
-use floom_ui_composites::{Select, SelectStyle, popup_height};
+use floom_types::PointerEvent;
+use floom_ui_composites::{popup_height, Select, SelectStyle};
 use floom_widgets::controls::Button;
 use floom_widgets::testkit::{
-    AllocatingCreateContext, SceneRecorder, TestEventContext, paint_snapshot_any,
+    paint_snapshot_any, AllocatingCreateContext, SceneRecorder, TestEventContext,
 };
-use floom_types::PointerEvent;
 
 const ROW: Rect = Rect {
     x0: 0.0,
@@ -29,7 +29,11 @@ fn allocate(widget: &dyn Widget) -> ElementId {
 }
 
 /// Paints `widget` and hands back the ops it produced.
-fn ops_of(widget: &dyn Widget, id: ElementId, bounds: Rect) -> Vec<floom_widgets::testkit::PaintOp> {
+fn ops_of(
+    widget: &dyn Widget,
+    id: ElementId,
+    bounds: Rect,
+) -> Vec<floom_widgets::testkit::PaintOp> {
     let mut recorder = SceneRecorder::new(bounds);
     widget.paint(&mut recorder, id);
     recorder.finish();
@@ -60,7 +64,8 @@ fn request_of(select: &Select) -> (f32, f32) {
 
 /// Opens `select` and returns the popup it built plus the rect it asked for.
 fn popup_of(select: &mut Select, id: ElementId) -> (Box<dyn floom_core::WidgetAny>, Rect) {
-    let mut cx = TestEventContext::pointer(id, ROW, PointerEvent::primary_up(Point::new(10.0, 5.0)));
+    let mut cx =
+        TestEventContext::pointer(id, ROW, PointerEvent::primary_up(Point::new(10.0, 5.0)));
     assert!(select.event(&mut cx, id), "the header click opens the list");
     let bounds = match cx.last_open() {
         Some(floom_widgets::testkit::OverlayCall::Open { bounds, .. }) => *bounds,
@@ -207,7 +212,9 @@ fn the_label_takes_the_placeholder_colour_until_something_is_chosen() {
         on_surface: Color::rgb(0xF1, 0xF2, 0xF3),
         ..SelectStyle::default()
     };
-    let unchosen = Select::new(["Red", "Green"]).placeholder("Pick one").style(style);
+    let unchosen = Select::new(["Red", "Green"])
+        .placeholder("Pick one")
+        .style(style);
     let chosen = Select::new(["Red", "Green"])
         .placeholder("Pick one")
         .selected(0)
@@ -228,7 +235,9 @@ fn the_label_takes_the_placeholder_colour_until_something_is_chosen() {
     let chosen_op = ops_of(&chosen, chosen_id, ROW)
         .into_iter()
         .find_map(|op| match op {
-            floom_widgets::testkit::PaintOp::Text { text, color, .. } if text == "Red" => Some(color),
+            floom_widgets::testkit::PaintOp::Text { text, color, .. } if text == "Red" => {
+                Some(color)
+            }
             _ => None,
         })
         .expect("the chosen option is painted");
@@ -301,7 +310,10 @@ fn the_chevron_is_tinted_from_the_style_and_disabled_from_its_own() {
         ..SelectStyle::default()
     };
 
-    let enabled = Select::new(["Red"]).selected(0).chevron(icon.clone()).style(style);
+    let enabled = Select::new(["Red"])
+        .selected(0)
+        .chevron(icon.clone())
+        .style(style);
     let disabled = Select::new(["Red"])
         .selected(0)
         .disabled(true)

@@ -122,8 +122,8 @@ use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::global_theme::DesignSystem;
 use floom_core_theme::props::text_field::TextFieldProps;
 use floom_core_theme::theme::{MultiTheme, Theme};
-use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color::to_engine_color as to_paint;
+use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color_ext::with_alpha;
 use floom_ui_composites::{FocusRing, TextField, TextFieldStyle};
 
@@ -146,7 +146,6 @@ const DISABLED_FILL_ALPHA: u8 = 4;
 /// of the three kits, stroked outside the layout box so it is visible at all.
 /// v1 wrote `outline(2.0)`; `FocusRing` carries the number as a field.
 const FOCUS_RING_WIDTH: f32 = 2.0;
-
 
 /// The design-system colour at an explicit alpha, in the engine's type.
 ///
@@ -282,7 +281,6 @@ impl FluentTextField {
             // rather than one it carries.
             border_color_hovered: None,
             border_color_disabled: tinted(colors.on_surface, DISABLED_ALPHA),
-
 
             // --- the fill ---
             background_color: to_paint(colors.surface),

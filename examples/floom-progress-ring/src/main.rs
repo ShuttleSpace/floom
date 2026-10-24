@@ -17,9 +17,9 @@
 //! `cargo run -p floom-progress-ring`.
 
 use floom::advanced::PaintContext;
-use floom::reactive::{RwSignal, SignalUpdate};
 use floom::floom_scene::SceneNode;
 use floom::prelude::*;
+use floom::reactive::{RwSignal, SignalUpdate};
 
 const RING_SIZE: f32 = 96.0;
 

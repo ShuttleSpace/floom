@@ -9,10 +9,10 @@ use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::global_theme::DesignSystem;
 use floom_core_theme::props::treeview::TreeviewNode;
 use floom_core_theme::theme::{MultiTheme, Theme};
-use floom_ui_composites::{visible_rows};
+use floom_ui_composites::visible_rows;
 use floom_ui_composites::{TreeNode, TreeView};
 
-use floom_widget_cupertino_treeview::{CupertinoTreeview, to_engine_nodes};
+use floom_widget_cupertino_treeview::{to_engine_nodes, CupertinoTreeview};
 
 /// Activate Cupertino and hand back a theme that will read it.
 ///
@@ -70,7 +70,10 @@ fn the_tokens_reach_the_engine_style() {
 
     assert_eq!(style.indent, tokens.indent, "the per-level indent");
     assert_eq!(style.row_height, tokens.row_height, "the row's height");
-    assert_eq!(style.expander_size, tokens.expander_size, "the chevron's box");
+    assert_eq!(
+        style.expander_size, tokens.expander_size,
+        "the chevron's box"
+    );
     assert_eq!(style.icon_size, tokens.icon_size, "the icon's box");
     assert_eq!(style.font_size, tokens.font_size, "the label's size");
     assert_eq!(
@@ -123,12 +126,19 @@ fn the_props_nodes_become_engine_nodes() {
     let nodes = to_engine_nodes(&props_nodes());
     assert_eq!(nodes.len(), 1);
     assert_eq!(nodes[0].label, "root");
-    assert!(nodes[0].expanded, "the props' `expanded` is the initial state");
+    assert!(
+        nodes[0].expanded,
+        "the props' `expanded` is the initial state"
+    );
     assert!(nodes[0].icon.is_none(), "and a node with no icon says so");
 
     let child = &nodes[0].children[0];
     assert_eq!(child.label, "child");
-    assert_eq!(child.icon.as_deref(), Some("folder"), "the icon name is carried");
+    assert_eq!(
+        child.icon.as_deref(),
+        Some("folder"),
+        "the icon name is carried"
+    );
     assert_eq!(
         child.children[0].label, "grandchild",
         "and the nesting survives to the third level"
@@ -235,7 +245,10 @@ fn the_props_report_the_nodes_and_the_callback() {
 #[test]
 fn the_kit_hands_back_a_tree_view() {
     let view = tree().view();
-    assert_eq!(view.resolved_style().row_height, tree().resolved_style().row_height);
+    assert_eq!(
+        view.resolved_style().row_height,
+        tree().resolved_style().row_height
+    );
     assert!(
         view.children().len() >= 1,
         "and it assembles into rows without any further help"

@@ -49,8 +49,12 @@ fn tokens() -> floom_core_theme::component_tokens::ListSubheaderTokens {
 /// The row declares the token's height and padding, and centres its text.
 #[test]
 fn the_row_declares_the_tokens_height_and_padding() {
-    let surface = CupertinoListSubheader::new("Section").with_theme(theme()).view();
-    let request = surface.layout_request().expect("a row asks for its own space");
+    let surface = CupertinoListSubheader::new("Section")
+        .with_theme(theme())
+        .view();
+    let request = surface
+        .layout_request()
+        .expect("a row asks for its own space");
     assert_eq!(
         request.height,
         Some(floom_types::Length::Px(tokens().height)),
@@ -80,7 +84,9 @@ fn the_inset_flag_chooses_the_other_padding() {
         .with_theme(theme())
         .inset(true)
         .view();
-    let request = surface.layout_request().expect("a row asks for its own space");
+    let request = surface
+        .layout_request()
+        .expect("a row asks for its own space");
     assert_eq!(
         request.padding,
         Some(floom_types::Insets {
@@ -117,7 +123,9 @@ fn the_text_is_the_muted_ink_at_the_token_size() {
     recorder.finish();
 
     let painted = recorder.ops().iter().find_map(|op| match op {
-        PaintOp::Text { color, size, text, .. } => Some((*color, *size, text.clone())),
+        PaintOp::Text {
+            color, size, text, ..
+        } => Some((*color, *size, text.clone())),
         _ => None,
     });
     let (color, size, content) = painted.expect("the subheader draws its text");
@@ -136,7 +144,12 @@ fn the_text_is_the_muted_ink_at_the_token_size() {
 /// The surface holds the text -- a `Container` would have held nothing.
 #[test]
 fn the_surface_holds_the_text() {
-    let surface = CupertinoListSubheader::new("Section").with_theme(theme()).view();
+    let surface = CupertinoListSubheader::new("Section")
+        .with_theme(theme())
+        .view();
     assert_eq!(surface.child_count(), 1, "the row holds the text");
-    assert!(surface.children()[0].build().as_any().is::<floom_widgets::Text>());
+    assert!(surface.children()[0]
+        .build()
+        .as_any()
+        .is::<floom_widgets::Text>());
 }

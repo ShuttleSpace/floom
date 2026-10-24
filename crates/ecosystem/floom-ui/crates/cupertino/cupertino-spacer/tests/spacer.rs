@@ -31,7 +31,9 @@ fn the_grow_factor_reaches_the_engine_widget() {
     assert_eq!(spacer.resolved_style().grow, 1.0, "v1's default");
 
     let widget = spacer.view();
-    let request = widget.layout_request().expect("a spacer asks for its own space");
+    let request = widget
+        .layout_request()
+        .expect("a spacer asks for its own space");
     assert_eq!(
         request.flex_grow,
         Some(1.0),
@@ -45,7 +47,9 @@ fn the_grow_factor_reaches_the_engine_widget() {
 #[test]
 fn a_fractional_factor_survives() {
     let widget = spacer().grow(0.5).view();
-    let request = widget.layout_request().expect("a spacer asks for its own space");
+    let request = widget
+        .layout_request()
+        .expect("a spacer asks for its own space");
     assert_eq!(request.flex_grow, Some(0.5));
     assert_eq!(widget.grow_factor(), Some(0.5));
     assert!(
@@ -66,6 +70,8 @@ fn a_fixed_extent_spacer_is_not_a_growing_one() {
     let fixed = Spacer::new(20.0);
     assert!(!fixed.is_flexible());
     assert_eq!(fixed.grow_factor(), None);
-    let request = fixed.layout_request().expect("a spacer asks for its own space");
+    let request = fixed
+        .layout_request()
+        .expect("a spacer asks for its own space");
     assert_eq!(request.flex_grow, None);
 }

@@ -104,8 +104,8 @@ use floom_widgets::{Align, Axis, Pressable, Stack, Surface, Text};
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::file_input::FileInputProps;
 use floom_core_theme::theme::{MultiTheme, Theme};
-use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color::to_engine_color as to_paint;
+use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color_ext::with_alpha;
 use floom_core_theme::tokens::typography::FontWeight as ThemeFontWeight;
 
@@ -266,7 +266,10 @@ impl FluentFileInput {
 
     /// The path as it is right now. Empty means "no file chosen".
     pub fn path(&self) -> String {
-        self.path.lock().map(|guard| guard.clone()).unwrap_or_default()
+        self.path
+            .lock()
+            .map(|guard| guard.clone())
+            .unwrap_or_default()
     }
 
     /// Write the path, as the host would after a picker returns.
@@ -311,10 +314,18 @@ impl FluentFileInput {
         // The readout is read once, here: 2.0's tree is mounted once.
         let path = self.path();
         let chosen = !path.is_empty();
-        let readout_text = if chosen { path } else { style.empty_path_label.to_string() };
+        let readout_text = if chosen {
+            path
+        } else {
+            style.empty_path_label.to_string()
+        };
 
         let trigger_color = to_paint(style.trigger_color);
-        let readout_color = to_paint(if chosen { style.path_color } else { style.empty_path_color });
+        let readout_color = to_paint(if chosen {
+            style.path_color
+        } else {
+            style.empty_path_color
+        });
         let font_size = style.font_size;
         let trigger_weight = style.trigger_font_weight;
 
@@ -337,7 +348,13 @@ impl FluentFileInput {
             })
             .push({
                 let readout_text = readout_text.clone();
-                move || Box::new(Text::new(readout_text.clone()).size(font_size).color(readout_color))
+                move || {
+                    Box::new(
+                        Text::new(readout_text.clone())
+                            .size(font_size)
+                            .color(readout_color),
+                    )
+                }
             });
 
         // The caller's own content, if any. It goes after the readout, so the
@@ -377,9 +394,11 @@ impl FluentFileInput {
         let on_change = self.on_change.clone();
         let path = self.path.clone();
 
-        Pressable::new(Child::new(ChildKey::index(0), LayoutRequest::new(), move || {
-            Box::new(surface.clone())
-        }))
+        Pressable::new(Child::new(
+            ChildKey::index(0),
+            LayoutRequest::new(),
+            move || Box::new(surface.clone()),
+        ))
         // v1's `set_disabled(disabled.get())`.
         .disabled(disabled)
         .label(label_text)
@@ -391,7 +410,11 @@ impl FluentFileInput {
             }
             if let Some(cb) = &on_change {
                 let current = path.lock().map(|guard| guard.clone()).unwrap_or_default();
-                cb(if current.is_empty() { None } else { Some(current) });
+                cb(if current.is_empty() {
+                    None
+                } else {
+                    Some(current)
+                });
             }
         })
     }
@@ -402,7 +425,6 @@ impl Default for FluentFileInput {
         Self::new()
     }
 }
-
 
 /// The theme's weight, in the engine's vocabulary.
 ///

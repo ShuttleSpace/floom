@@ -46,14 +46,14 @@ use std::sync::Arc;
 use floom_signal::{RwSignal, SignalGet};
 use floom_types::{Color as PaintColor, FontWeight};
 
-use floom_ui_composites::{SlotBuilder};
+use floom_ui_composites::SlotBuilder;
 use floom_ui_composites::{ListItemRow, ListItemStyle};
 
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::list_item::ListItemProps;
 use floom_core_theme::theme::{MultiTheme, Theme};
-use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color::to_engine_color as to_paint;
+use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::typography::FontWeight as ThemeFontWeight;
 
 /// The theme's weight enum -> the engine's.
@@ -91,7 +91,6 @@ pub fn to_engine_weight(w: ThemeFontWeight) -> FontWeight {
         ThemeFontWeight::Black => FontWeight::Black,
     }
 }
-
 
 /// Material's list item: a band with an optional leading slot, a title/subtitle
 /// column, and an optional trailing slot.
@@ -140,13 +139,19 @@ impl CupertinoListItem {
     ///
     /// v1 took `impl IntoView`; 2.0 takes a replayed builder, so a caller with a
     /// widget in hand writes `move || Box::new(w)`.
-    pub fn leading(mut self, leading: impl Fn() -> Box<dyn floom_core::WidgetAny> + Send + Sync + 'static) -> Self {
+    pub fn leading(
+        mut self,
+        leading: impl Fn() -> Box<dyn floom_core::WidgetAny> + Send + Sync + 'static,
+    ) -> Self {
         self.leading = Some(Arc::new(leading));
         self
     }
 
     /// The slot after the text column.
-    pub fn trailing(mut self, trailing: impl Fn() -> Box<dyn floom_core::WidgetAny> + Send + Sync + 'static) -> Self {
+    pub fn trailing(
+        mut self,
+        trailing: impl Fn() -> Box<dyn floom_core::WidgetAny> + Send + Sync + 'static,
+    ) -> Self {
         self.trailing = Some(Arc::new(trailing));
         self
     }

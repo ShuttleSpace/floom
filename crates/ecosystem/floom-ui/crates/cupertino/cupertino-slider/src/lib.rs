@@ -40,8 +40,8 @@ use floom_types::Color as PaintColor;
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::slider::SliderProps;
 use floom_core_theme::theme::{MultiTheme, Theme};
-use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color::to_engine_color as to_paint;
+use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color_ext::with_alpha;
 use floom_ui_composites::{Slider, SliderStyle};
 
@@ -50,7 +50,6 @@ use floom_ui_composites::{Slider, SliderStyle};
 const THUMB_SHADOW_BLUR: f32 = 3.0;
 const THUMB_SHADOW_SPREAD: f32 = 0.0;
 const THUMB_SHADOW_ALPHA: u8 = 60;
-
 
 /// Cupertino's slider.
 pub struct CupertinoSlider {
@@ -156,10 +155,7 @@ impl CupertinoSlider {
 
             shadow_blur: THUMB_SHADOW_BLUR,
             shadow_spread: THUMB_SHADOW_SPREAD,
-            shadow_color: to_paint(with_alpha(
-                Color::rgba(0, 0, 0, 255),
-                THUMB_SHADOW_ALPHA,
-            )),
+            shadow_color: to_paint(with_alpha(Color::rgba(0, 0, 0, 255), THUMB_SHADOW_ALPHA)),
         }
     }
 

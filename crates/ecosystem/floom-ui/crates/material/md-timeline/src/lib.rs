@@ -44,10 +44,9 @@ use floom_widgets::{Align, Axis, Stack, Surface, Text};
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::timeline::{TimelineItem, TimelineProps};
 use floom_core_theme::theme::{MultiTheme, Theme};
-use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color::to_engine_color as to_paint;
+use floom_core_theme::tokens::color::Color;
 use floom_widget_runtime::theme_signal;
-
 
 /// The title's size. A v1 literal.
 const TITLE_FONT_SIZE: f32 = 15.0;
@@ -239,4 +238,3 @@ impl Default for MaterialTimeline {
         Self::new()
     }
 }
-

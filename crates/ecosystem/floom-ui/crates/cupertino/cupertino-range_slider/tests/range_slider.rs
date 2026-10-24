@@ -15,7 +15,7 @@
 
 use floom_core::{ElementId, Event, Point, Rect, Widget};
 use floom_types::{Color, PointerEvent};
-use floom_widgets::testkit::{AllocatingCreateContext, PaintOp, SceneRecorder, dispatch};
+use floom_widgets::testkit::{dispatch, AllocatingCreateContext, PaintOp, SceneRecorder};
 
 use floom_core_theme::global_theme::DesignSystem;
 use floom_core_theme::theme::{MultiTheme, Theme};
@@ -75,14 +75,20 @@ fn ops_of(widget: &dyn Widget) -> Vec<PaintOp> {
 #[test]
 fn the_tokens_reach_the_style() {
     let style: CupertinoRangeSliderStyle = kit().resolved_style();
-    let tokens = match theme().component(floom_core_theme::component_tokens::ComponentId::RangeSlider)
-    {
-        floom_core_theme::component_tokens::ComponentTokens::RangeSlider(tokens) => tokens,
-        _ => unreachable!(),
-    };
-    assert_eq!(style.track_height, tokens.track_height, "the track's thickness");
+    let tokens =
+        match theme().component(floom_core_theme::component_tokens::ComponentId::RangeSlider) {
+            floom_core_theme::component_tokens::ComponentTokens::RangeSlider(tokens) => tokens,
+            _ => unreachable!(),
+        };
+    assert_eq!(
+        style.track_height, tokens.track_height,
+        "the track's thickness"
+    );
     assert_eq!(style.thumb_size, tokens.thumb_size, "the thumb's size");
-    assert_eq!(style.thumb_radius, tokens.thumb_radius, "the thumb's radius");
+    assert_eq!(
+        style.thumb_radius, tokens.thumb_radius,
+        "the thumb's radius"
+    );
 }
 
 /// The colours reach the style: the track is `surface_variant`, the band and

@@ -11,7 +11,7 @@ use floom_core::{
     SemanticsContext, UpdateContext, Widget,
 };
 
-use floom_widgets::primitives::{Revision, SemanticsHint, emit_semantics};
+use floom_widgets::primitives::{emit_semantics, Revision, SemanticsHint};
 
 /// A status indicator rendered as a dot or a text pill.
 #[derive(Debug, Clone, PartialEq)]

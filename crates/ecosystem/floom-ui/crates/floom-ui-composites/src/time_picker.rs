@@ -30,8 +30,8 @@ use floom_types::{CursorStyle, FontWeight, PointerButton, PointerPhase, Shadow};
 use floom_widgets::primitives::Revision;
 use floom_widgets::text_width_at;
 
-use crate::OverlayHost;
 use crate::color_picker::with_alpha;
+use crate::OverlayHost;
 
 /// The glyph the decrease stepper shows.
 const DECREASE: &str = "\u{2212}";
@@ -194,7 +194,6 @@ pub struct TimePicker {
     painted: Option<TimeValue>,
     revision: Revision,
 }
-
 
 impl TimePicker {
     pub fn new() -> Self {
@@ -860,4 +859,3 @@ fn shrink(bounds: Rect, inset: f64) -> Rect {
         y1: (bounds.y1 - inset).max(bounds.y0 + inset),
     }
 }
-

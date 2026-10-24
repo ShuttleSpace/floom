@@ -22,16 +22,16 @@ pub use brush::{Brush, Filter, Shadow};
 // Colour arithmetic. Re-exported at the crate root because WCAG contrast and
 // alpha compositing are asked for by name constantly and reaching into a
 // submodule for them is noise.
-pub use color_math::{
-    TonalPalette, WCAG_AA_LARGE, WCAG_AA_NORMAL, WCAG_AAA_NORMAL, composite_over,
-    contrast_ratio, lerp, meets_contrast, most_contrasting, readable_on,
-    relative_luminance, tonal_ramp, with_alpha,
-};
 pub use color::Color;
+pub use color_math::{
+    TonalPalette, WCAG_AA_LARGE, WCAG_AA_NORMAL, WCAG_AAA_NORMAL, composite_over, contrast_ratio,
+    lerp, meets_contrast, most_contrasting, readable_on, relative_luminance, tonal_ramp,
+    with_alpha,
+};
 pub use display::{DisplayInfo, ScaleFactor};
 pub use event::{
-    Event, ImeUpdate, Key, KeyEvent, KeyPhase, Modifiers, NamedKey, PointerButton, PointerEvent,
-    PointerKind, PointerPhase, CursorStyle, ScrollEvent,
+    CursorStyle, Event, ImeUpdate, Key, KeyEvent, KeyPhase, Modifiers, NamedKey, PointerButton,
+    PointerEvent, PointerKind, PointerPhase, ScrollEvent,
 };
 pub use geometry::{Constraints, Edges, Insets, Length, Point, Rect, Size, Transform};
 pub use ids::{ElementId, NativeViewId, PlatformId, ResourceId, SceneNodeId, SurfaceId, WindowId};

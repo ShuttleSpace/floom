@@ -11,20 +11,20 @@
 //! vocabulary rather than the other way round.
 
 use std::any::Any;
-use std::sync::atomic::{Ordering};
-use std::sync::{Arc};
+use std::sync::atomic::Ordering;
+use std::sync::Arc;
 
 use floom_accessibility::SemanticsRole;
 use floom_core::{
-    Align, Axis, Child, ChildKey, CreateContext, ElementId, LayoutRequest,
-    OverlayHandle, OverlayKind, OverlayRequest, PaintContext, SemanticsContext, UpdateContext, Widget, WidgetAny,
+    Align, Axis, Child, ChildKey, CreateContext, ElementId, LayoutRequest, OverlayHandle,
+    OverlayKind, OverlayRequest, PaintContext, SemanticsContext, UpdateContext, Widget, WidgetAny,
 };
 
 use floom_widgets::primitives::{SemanticsHint, Text};
-use floom_widgets::{Stack};
+use floom_widgets::Stack;
 
 use crate::overlay::Overlay;
-use crate::overlay_bookkeeping::{OverlayHost, empty_body};
+use crate::overlay_bookkeeping::{empty_body, OverlayHost};
 
 // ---------------------------------------------------------------------------
 // Dialog
@@ -55,9 +55,7 @@ pub struct Dialog {
     /// Set by [`Self::card_with`]. `Box<dyn WidgetAny>` rather than a `Child` because the
     /// kit builds the whole thing, including a close affordance the engine's layout has
     /// no slot for.
-    card_override: Option<
-        std::sync::Arc<dyn Fn() -> Box<dyn WidgetAny> + Send + Sync + 'static>,
-    >,
+    card_override: Option<std::sync::Arc<dyn Fn() -> Box<dyn WidgetAny> + Send + Sync + 'static>>,
 }
 
 impl std::fmt::Debug for Dialog {
@@ -239,11 +237,10 @@ impl Widget for Dialog {
         // `Box<dyn WidgetAny>` is not `Clone`, and a card is a widget instance, so the
         // only way to get a second one is to build a second one.
         let build_card = self.card_builder();
-        let surface = Overlay::new().content_with(
-            ChildKey::index(0),
-            LayoutRequest::new(),
-            move || build_card(),
-        );
+        let surface =
+            Overlay::new().content_with(ChildKey::index(0), LayoutRequest::new(), move || {
+                build_card()
+            });
         vec![Child::new(
             ChildKey::index(0),
             LayoutRequest::new().absolute_fill(),

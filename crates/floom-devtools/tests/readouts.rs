@@ -83,10 +83,7 @@ fn the_selected_node_is_marked() {
     let marked = printed(&tree_rows(&inspector, Some("ok")));
 
     // The marker is on the selected row and nowhere else.
-    let marked_count = marked
-        .iter()
-        .filter(|line| line.contains('▸'))
-        .count();
+    let marked_count = marked.iter().filter(|line| line.contains('▸')).count();
     assert_eq!(marked_count, 1, "exactly one row is marked: {marked:?}");
     assert!(marked.iter().any(|l| l.contains("ok") && l.contains('▸')));
     assert_ne!(plain, marked);
@@ -126,7 +123,9 @@ fn the_style_readout_shows_every_inspected_state() {
         "normal is a state: {lines:?}"
     );
     assert!(
-        lines.iter().any(|l| l.contains("background") && l.contains("#112233")),
+        lines
+            .iter()
+            .any(|l| l.contains("background") && l.contains("#112233")),
         "the document's background is what the readout prints: {lines:?}"
     );
 }
@@ -263,9 +262,7 @@ fn the_performance_panel_lists_newest_frame_first_with_the_verdict() {
     assert!(lines.iter().any(|l| l == "live  6"), "10 - 4 live");
     assert!(lines.iter().any(|l| l == "bytes  2048"));
     assert!(
-        lines
-            .iter()
-            .any(|l| l == "cache text  3 entries, 90% hits"),
+        lines.iter().any(|l| l == "cache text  3 entries, 90% hits"),
         "the hit rate is computed, not stored: {lines:?}"
     );
 }
@@ -313,9 +310,7 @@ fn the_console_panel_lists_what_the_boundary_caught() {
 
     assert_eq!(lines[0], "[Console]");
     assert!(
-        lines
-            .iter()
-            .any(|l| l.contains("the disk is full")),
+        lines.iter().any(|l| l.contains("the disk is full")),
         "the panic's message is the row's value: {lines:?}"
     );
     assert!(

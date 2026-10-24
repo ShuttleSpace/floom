@@ -63,7 +63,10 @@ impl std::fmt::Debug for DataTableProps {
             .field("rows", &self.rows)
             .field("striped", &self.striped)
             .field("dense", &self.dense)
-            .field("on_row_click", &self.on_row_click.as_ref().map(|_| "Fn(usize)"))
+            .field(
+                "on_row_click",
+                &self.on_row_click.as_ref().map(|_| "Fn(usize)"),
+            )
             .finish()
     }
 }

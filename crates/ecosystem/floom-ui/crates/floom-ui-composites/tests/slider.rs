@@ -12,7 +12,7 @@ use std::rc::Rc;
 use floom_core::{ElementId, Key, NamedKey, Point, Rect, Widget};
 use floom_types::{KeyEvent, PointerEvent, PointerPhase};
 use floom_ui_composites::Slider;
-use floom_widgets::testkit::{AllocatingCreateContext, dispatch};
+use floom_widgets::testkit::{dispatch, AllocatingCreateContext};
 
 /// The box the control is laid out in for every test here: wide enough for the
 /// track to be dragged across, tall enough for the thumb to sit on it.

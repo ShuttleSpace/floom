@@ -8,13 +8,16 @@
 
 use floom_signal::{RwSignal, SignalGet};
 use floom_types::Color as PaintColor;
-use floom_widgets::{FillPlacement, INDETERMINATE_WIDTH_PCT, Indeterminate, LinearProgress, LinearProgressStyle, PercentRounding};
+use floom_widgets::{
+    FillPlacement, Indeterminate, LinearProgress, LinearProgressStyle, PercentRounding,
+    INDETERMINATE_WIDTH_PCT,
+};
 
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens, ProgressLinearTokens};
 use floom_core_theme::props::progress_linear::ProgressLinearProps;
 use floom_core_theme::theme::{MultiTheme, Theme};
-use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color::to_engine_color as to_paint;
+use floom_core_theme::tokens::color::Color;
 use floom_widget_runtime::theme_signal;
 
 fn progress_linear_tokens(theme: &MultiTheme) -> ProgressLinearTokens {
@@ -23,7 +26,6 @@ fn progress_linear_tokens(theme: &MultiTheme) -> ProgressLinearTokens {
         _ => unreachable!("ComponentId::ProgressLinear must resolve to ProgressLinearTokens"),
     }
 }
-
 
 /// Cupertino's resolved appearance.
 #[derive(Debug, Clone, Copy, PartialEq)]

@@ -60,8 +60,8 @@ use floom_widgets::{Align, Axis, Stack, Text, VectorIcon};
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens, ListGroupTokens};
 use floom_core_theme::props::list_group::ListGroupProps;
 use floom_core_theme::theme::{MultiTheme, Theme};
-use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color::to_engine_color as to_paint;
+use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color_ext::*;
 use floom_widget_md_icon::MdIcon;
 use floom_widget_runtime::theme_signal;
@@ -220,7 +220,11 @@ impl MaterialListGroup {
         let item_height = style.header_height;
         let row_gap = style.gap;
         let vertical_padding = style.content_padding;
-        let row_padding = if inset { style.indent } else { style.content_padding };
+        let row_padding = if inset {
+            style.indent
+        } else {
+            style.content_padding
+        };
 
         let mut accordion = Accordion::new()
             .style(AccordionStyle {
@@ -238,47 +242,57 @@ impl MaterialListGroup {
                 border_color: to_paint(with_alpha(style.outline, 30)),
                 radius: 0.0,
             })
-            .panel(title, move |open| {
-                let icon = if open { expanded_icon.clone() } else { collapsed.clone() };
-                Box::new(icon)
-            }, move || {
-                // v1's items: a vertical stack, each row padded, with the stack
-                // itself padded vertically.
-                let mut stack = Stack::new(Axis::Vertical)
-                    .gap(row_gap)
-                    // v1: `padding_vert(content_padding)` on the stack that
-                    // holds the items. The accordion's own `content_padding`
-                    // would inset the body box on *all four* sides, and v1 had
-                    // no horizontal inset there -- the rows carried their own --
-                    // so the vertical inset belongs here.
-                    .request(
-                        LayoutRequest::new().padding_vert(f64::from(vertical_padding)),
-                    );
-                for label in items.iter() {
-                    let label = label.clone();
-                    let color = item_color;
-                    stack = stack.push(move || {
-                        // The slot is a replayed `Fn`, so the label is cloned
-                        // again for the inner slot that draws it.
+            .panel(
+                title,
+                move |open| {
+                    let icon = if open {
+                        expanded_icon.clone()
+                    } else {
+                        collapsed.clone()
+                    };
+                    Box::new(icon)
+                },
+                move || {
+                    // v1's items: a vertical stack, each row padded, with the stack
+                    // itself padded vertically.
+                    let mut stack = Stack::new(Axis::Vertical)
+                        .gap(row_gap)
+                        // v1: `padding_vert(content_padding)` on the stack that
+                        // holds the items. The accordion's own `content_padding`
+                        // would inset the body box on *all four* sides, and v1 had
+                        // no horizontal inset there -- the rows carried their own --
+                        // so the vertical inset belongs here.
+                        .request(LayoutRequest::new().padding_vert(f64::from(vertical_padding)));
+                    for label in items.iter() {
                         let label = label.clone();
-                        Box::new(
-                            Stack::new(Axis::Horizontal)
-                                .request(
-                                    LayoutRequest::new()
-                                        .height(item_height)
-                                        .padding_horiz(f64::from(row_padding))
-                                        .cross_align(Align::Center),
-                                )
-                                .push(move || {
-                                    // The slot is a replayed `Fn`, so it borrows
-                                    // the label rather than moving it out.
-                                    Box::new(Text::new(label.clone()).size(item_font_size).color(color))
-                                }),
-                        )
-                    });
-                }
-                Box::new(stack)
-            });
+                        let color = item_color;
+                        stack = stack.push(move || {
+                            // The slot is a replayed `Fn`, so the label is cloned
+                            // again for the inner slot that draws it.
+                            let label = label.clone();
+                            Box::new(
+                                Stack::new(Axis::Horizontal)
+                                    .request(
+                                        LayoutRequest::new()
+                                            .height(item_height)
+                                            .padding_horiz(f64::from(row_padding))
+                                            .cross_align(Align::Center),
+                                    )
+                                    .push(move || {
+                                        // The slot is a replayed `Fn`, so it borrows
+                                        // the label rather than moving it out.
+                                        Box::new(
+                                            Text::new(label.clone())
+                                                .size(item_font_size)
+                                                .color(color),
+                                        )
+                                    }),
+                            )
+                        });
+                    }
+                    Box::new(stack)
+                },
+            );
 
         // v1 seeded the expanded flag from the props, and the engine's
         // accordion starts closed.
@@ -297,4 +311,3 @@ impl Default for MaterialListGroup {
         Self::new()
     }
 }
-

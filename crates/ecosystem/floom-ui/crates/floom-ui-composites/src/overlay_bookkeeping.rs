@@ -11,18 +11,17 @@
 //! vocabulary rather than the other way round.
 
 use std::any::Any;
-use std::sync::atomic::{Ordering};
-use std::sync::{Arc};
+use std::sync::atomic::Ordering;
+use std::sync::Arc;
 
 use floom_accessibility::SemanticsRole;
 use floom_core::{
-    Child, ChildKey, ElementId, LayoutRequest,
-    OverlayHandle, OverlayRequest, Rect,
-    UpdateContext, };
+    Child, ChildKey, ElementId, LayoutRequest, OverlayHandle, OverlayRequest, Rect, UpdateContext,
+};
 
-use floom_widgets::primitives::{Text};
 use crate::overlay::Overlay;
-use floom_widgets::{Grid};
+use floom_widgets::primitives::Text;
+use floom_widgets::Grid;
 
 // ---------------------------------------------------------------------------
 // Overlay-backed surface plumbing
@@ -168,12 +167,13 @@ impl OverlayHost {
         let Some(content) = content else {
             return Vec::new();
         };
-        let surface = Overlay::new().content_with(key, LayoutRequest::new().fill(), move || {
-            content.build()
-        });
-        vec![Child::new(key, LayoutRequest::new().absolute_fill(), move || {
-            Box::new(surface.clone())
-        })]
+        let surface =
+            Overlay::new().content_with(key, LayoutRequest::new().fill(), move || content.build());
+        vec![Child::new(
+            key,
+            LayoutRequest::new().absolute_fill(),
+            move || Box::new(surface.clone()),
+        )]
     }
 
     /// Records the handle the host issued for this surface's overlay.

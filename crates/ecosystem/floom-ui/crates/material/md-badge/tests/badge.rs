@@ -104,10 +104,7 @@ fn the_design_system_tag_is_material() {
 
 #[test]
 fn the_view_builds_a_badge() {
-    let badge = MdBadge::new()
-        .with_theme(theme())
-        .content("3")
-        .dot(false);
+    let badge = MdBadge::new().with_theme(theme()).content("3").dot(false);
     let _b = badge.view();
 }
 

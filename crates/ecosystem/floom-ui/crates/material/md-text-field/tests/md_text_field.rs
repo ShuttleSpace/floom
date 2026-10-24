@@ -480,11 +480,7 @@ fn on_change_reports_typing_and_not_the_builders_value() {
     );
     dispatch(&mut field, id, ROW, KeyEvent::down(Key::Char('!')).into());
     let reported = seen.take();
-    assert_eq!(
-        field.text(),
-        "Ada!",
-        "appended, not prepended"
-    );
+    assert_eq!(field.text(), "Ada!", "appended, not prepended");
     assert_eq!(
         reported,
         field.text(),
@@ -647,7 +643,11 @@ fn the_focus_affordance_is_a_thicker_rim() {
         style.border_width_focused, 1.0,
         "control: Cupertino's and Fluent's rims never thicken"
     );
-    assert_ne!(style.focus_ring.as_ref().map(|r| r.width), Some(2.0), "control: Fluent's ring");
+    assert_ne!(
+        style.focus_ring.as_ref().map(|r| r.width),
+        Some(2.0),
+        "control: Fluent's ring"
+    );
     assert_ne!(
         style.border_color_hovered,
         Some(tint(colors.primary, 120)),

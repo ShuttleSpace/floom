@@ -26,8 +26,8 @@ use floom_widgets::{Align, Axis, Stack, Surface};
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::button_group::ButtonGroupProps;
 use floom_core_theme::theme::{MultiTheme, Theme};
-use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color::to_engine_color as to_paint;
+use floom_core_theme::tokens::color::Color;
 
 /// A builder for one button in the group, replayed each time it is built.
 pub type ChildBuilder = Arc<dyn Fn() -> Box<dyn WidgetAny> + Send + Sync + 'static>;
@@ -108,7 +108,11 @@ impl CupertinoButtonGroup {
     /// The group: a filled surface with the buttons inside it.
     pub fn view(self) -> Surface {
         let style = self.resolved_style();
-        let axis = if style.vertical { Axis::Vertical } else { Axis::Horizontal };
+        let axis = if style.vertical {
+            Axis::Vertical
+        } else {
+            Axis::Horizontal
+        };
         let surface_variant = to_paint(style.surface_variant);
         let gap = style.gap;
         let radius = style.border_radius;
@@ -126,7 +130,11 @@ impl CupertinoButtonGroup {
             // v1: `border_radius(if joined { radius } else { 0.0 })`.
             .radius(if joined { radius } else { 0.0 })
             // v1: `padding(if joined { 0.0 } else { 4.0 })`.
-            .padding(if joined { Insets::ZERO } else { Insets::uniform(4.0) })
+            .padding(if joined {
+                Insets::ZERO
+            } else {
+                Insets::uniform(4.0)
+            })
             .push(move || Box::new(inner.clone()))
     }
 }
@@ -136,4 +144,3 @@ impl Default for CupertinoButtonGroup {
         Self::new()
     }
 }
-

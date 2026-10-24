@@ -39,7 +39,7 @@ pub const DEFAULT_FEATURES: &[&str] = &["desktop", "renderer-gpu"];
 fn features_literal() -> String {
     DEFAULT_FEATURES
         .iter()
-        .map(|f| format!("\"{f}\"") )
+        .map(|f| format!("\"{f}\""))
         .collect::<Vec<_>>()
         .join(", ")
 }

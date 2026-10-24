@@ -26,17 +26,17 @@ use std::sync::Arc;
 
 use floom_core::{ElementId, Widget};
 use floom_types::Color;
-use floom_widgets::testkit::AllocatingCreateContext;
 use floom_types::Rect;
+use floom_widgets::testkit::AllocatingCreateContext;
 use floom_widgets::testkit::{PaintOp, SceneRecorder, TestEventContext};
 
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
-use floom_core_theme::global_theme::{DesignSystem, set_design_system};
+use floom_core_theme::global_theme::{set_design_system, DesignSystem};
 use floom_core_theme::props::button::{ButtonSize, ButtonVariant};
 use floom_core_theme::theme::{MultiTheme, Theme};
 use floom_core_theme::tokens::color_ext::*;
 
-use floom_widget_fluent_button::{ FluentButton, FluentButtonStyle };
+use floom_widget_fluent_button::{FluentButton, FluentButtonStyle};
 
 const BOX: Rect = Rect {
     x0: 0.0,
@@ -62,7 +62,12 @@ fn style_of(b: &FluentButton) -> FluentButtonStyle {
 /// Theme colour -> engine colour. The style speaks the theme's colour type and
 /// the paint records the engine's; they are distinct types with the same shape.
 fn to_engine(c: floom_core_theme::tokens::color::Color) -> Color {
-    Color { r: c.r, g: c.g, b: c.b, a: c.a }
+    Color {
+        r: c.r,
+        g: c.g,
+        b: c.b,
+        a: c.a,
+    }
 }
 
 /// The fill and the label the engine actually painted.
@@ -216,7 +221,10 @@ fn the_ghost_variant_has_no_fill() {
         .with_theme(theme())
         .variant(ButtonVariant::Ghost)
         .resolved_style();
-    assert_eq!(ghost.background.a, 0, "a ghost button has a transparent fill");
+    assert_eq!(
+        ghost.background.a, 0,
+        "a ghost button has a transparent fill"
+    );
     assert_eq!(ghost.foreground, theme().colors().primary);
 }
 
@@ -227,8 +235,14 @@ fn the_disabled_palette_is_on_surface_at_twelve_and_thirty_eight() {
         .with_theme(theme())
         .disabled(true)
         .resolved_style();
-    assert_eq!(disabled.background, with_alpha(theme().colors().on_surface, 12));
-    assert_eq!(disabled.foreground, with_alpha(theme().colors().on_surface, 38));
+    assert_eq!(
+        disabled.background,
+        with_alpha(theme().colors().on_surface, 12)
+    );
+    assert_eq!(
+        disabled.foreground,
+        with_alpha(theme().colors().on_surface, 38)
+    );
 }
 
 /// The hover fill is the foreground at 12/255 -- a flat tint, not a mix over
@@ -279,12 +293,17 @@ fn the_click_callback_fires() {
     let id = b.create(&mut create);
 
     let at = floom_types::Point::new(60.0, 20.0);
-    let mut down = TestEventContext::new(id, BOX, floom_types::PointerEvent::primary_down(at).into());
+    let mut down =
+        TestEventContext::new(id, BOX, floom_types::PointerEvent::primary_down(at).into());
     b.event(&mut down, id);
     let mut up = TestEventContext::new(id, BOX, floom_types::PointerEvent::primary_up(at).into());
     b.event(&mut up, id);
 
-    assert_eq!(hits.load(Ordering::SeqCst), 1, "the callback must run on a click");
+    assert_eq!(
+        hits.load(Ordering::SeqCst),
+        1,
+        "the callback must run on a click"
+    );
 }
 
 /// A disabled button does not fire.
@@ -305,7 +324,8 @@ fn a_disabled_button_does_not_fire() {
     let id = b.create(&mut create);
 
     let at = floom_types::Point::new(60.0, 20.0);
-    let mut down = TestEventContext::new(id, BOX, floom_types::PointerEvent::primary_down(at).into());
+    let mut down =
+        TestEventContext::new(id, BOX, floom_types::PointerEvent::primary_down(at).into());
     b.event(&mut down, id);
     let mut up = TestEventContext::new(id, BOX, floom_types::PointerEvent::primary_up(at).into());
     b.event(&mut up, id);

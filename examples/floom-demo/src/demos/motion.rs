@@ -136,15 +136,15 @@ fn build_implicit_transition() -> Box<dyn WidgetAny> {
 /// At rest a shared-element layout shows its source; arming the flight is the
 /// host's job, so the gallery shows the resting half.
 fn build_shared_transition() -> Box<dyn WidgetAny> {
-    Box::new(
-        Stack::new(Axis::Vertical)
-            .push_layout(LayoutRequest::new().width(200.0).height(90.0), || {
-                Box::new(
-                    SharedTransitionLayout::new(7, 40.0)
-                        .duration(0.4)
-                        .source(label(0, "source"))
-                        .dest(label(1, "destination")),
-                )
-            }),
-    )
+    Box::new(Stack::new(Axis::Vertical).push_layout(
+        LayoutRequest::new().width(200.0).height(90.0),
+        || {
+            Box::new(
+                SharedTransitionLayout::new(7, 40.0)
+                    .duration(0.4)
+                    .source(label(0, "source"))
+                    .dest(label(1, "destination")),
+            )
+        },
+    ))
 }

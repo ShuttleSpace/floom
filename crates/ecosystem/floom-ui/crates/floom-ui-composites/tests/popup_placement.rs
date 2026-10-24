@@ -14,9 +14,9 @@
 use floom_core::{ChildKey, LayoutRequest, Widget, WidgetAny};
 use floom_types::{OverlayKind, Rect};
 
-use floom_ui_composites::{PopupPlacement, popup_placement_rect};
-use floom_widgets::testkit::{AllocatingCreateContext, RecordingUpdateContext};
 use floom_ui_composites::Popup;
+use floom_ui_composites::{popup_placement_rect, PopupPlacement};
+use floom_widgets::testkit::{AllocatingCreateContext, RecordingUpdateContext};
 use floom_widgets::Text;
 
 /// A control in the middle of nowhere, so a test that "looks right" has to mean it.
@@ -64,14 +64,23 @@ fn below_hangs_off_the_bottom_edge() {
 #[test]
 fn below_keeps_the_controls_width_and_horizontal_position() {
     let rect = popup_placement_rect(below(4.0, 100.0), ANCHOR);
-    assert_eq!(rect.x0, ANCHOR.x0, "the panel starts where the field starts");
+    assert_eq!(
+        rect.x0, ANCHOR.x0,
+        "the panel starts where the field starts"
+    );
     assert_eq!(rect.x1, ANCHOR.x1, "and is exactly as wide as it");
 }
 
 /// The opposite edge, for a control near the bottom of the window.
 #[test]
 fn above_hangs_off_the_top_edge() {
-    let rect = popup_placement_rect(PopupPlacement::Above { gap: 4.0, height: 100.0 }, ANCHOR);
+    let rect = popup_placement_rect(
+        PopupPlacement::Above {
+            gap: 4.0,
+            height: 100.0,
+        },
+        ANCHOR,
+    );
     assert_eq!(rect.y1, 96.0, "the anchor's top (100) less the gap (4)");
     assert_eq!(rect.y0, -4.0, "and the panel grows upwards from there");
     assert_eq!(rect.height(), 100.0);
@@ -129,7 +138,11 @@ fn placement_uses_the_edges_and_not_the_size() {
     };
     let rect = popup_placement_rect(below(0.0, 50.0), tall);
     assert_eq!(rect.y0, 600.0, "the bottom edge, not the top and not zero");
-    assert_eq!(rect.height(), 50.0, "and the requested height, not the anchor's");
+    assert_eq!(
+        rect.height(),
+        50.0,
+        "and the requested height, not the anchor's"
+    );
 }
 
 // --- through the widget, to the host ---------------------------------------
@@ -140,11 +153,11 @@ fn placement_uses_the_edges_and_not_the_size() {
 /// be right while the widget ignored it, and the widget is what a combobox uses.
 #[test]
 fn an_opening_popup_asks_for_the_placed_rect() {
-    let mut popup = Popup::new()
-        .placement(below(4.0, 100.0))
-        .content_with(ChildKey::index(0), LayoutRequest::new(), || {
-            Box::new(Text::new("row")) as Box<dyn WidgetAny>
-        });
+    let mut popup = Popup::new().placement(below(4.0, 100.0)).content_with(
+        ChildKey::index(0),
+        LayoutRequest::new(),
+        || Box::new(Text::new("row")) as Box<dyn WidgetAny>,
+    );
     popup.set_present(true);
 
     let id = popup.create(&mut AllocatingCreateContext::new());
@@ -161,7 +174,10 @@ fn an_opening_popup_asks_for_the_placed_rect() {
             ..
         } => {
             assert_eq!(*kind, OverlayKind::Popup, "a popup, not a dialog");
-            assert!(!modal, "and never modal — a dropdown is dismissed, not blocking");
+            assert!(
+                !modal,
+                "and never modal — a dropdown is dismissed, not blocking"
+            );
             assert_eq!(
                 *bounds,
                 popup_placement_rect(below(4.0, 100.0), ANCHOR),
@@ -207,11 +223,11 @@ fn a_popup_reports_the_placement_it_was_given() {
 /// A popup that was never asked to present asks the host for nothing.
 #[test]
 fn a_closed_popup_asks_for_nothing() {
-    let mut popup = Popup::new()
-        .placement(below(4.0, 100.0))
-        .content_with(ChildKey::index(0), LayoutRequest::new(), || {
-            Box::new(Text::new("row")) as Box<dyn WidgetAny>
-        });
+    let mut popup = Popup::new().placement(below(4.0, 100.0)).content_with(
+        ChildKey::index(0),
+        LayoutRequest::new(),
+        || Box::new(Text::new("row")) as Box<dyn WidgetAny>,
+    );
     let id = popup.create(&mut AllocatingCreateContext::new());
     let mut cx = RecordingUpdateContext::with_bounds(ANCHOR);
     popup.update(&mut cx, id);

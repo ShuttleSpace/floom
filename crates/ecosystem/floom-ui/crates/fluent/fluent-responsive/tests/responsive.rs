@@ -10,7 +10,7 @@ use floom_core::Widget;
 use floom_types::{Color, Length, Rect};
 use floom_widgets::testkit::{AllocatingCreateContext, PaintOp, SceneRecorder};
 
-use floom_core_theme::global_theme::{DesignSystem, set_design_system};
+use floom_core_theme::global_theme::{set_design_system, DesignSystem};
 use floom_core_theme::theme::{MultiTheme, Theme};
 
 use floom_widget_fluent_responsive::FluentResponsive;
@@ -33,7 +33,9 @@ fn theme() -> MultiTheme {
 #[test]
 fn the_ratio_reaches_the_layout_request() {
     let surface = FluentResponsive::new(16.0 / 9.0).with_theme(theme()).view();
-    let request = surface.layout_request().expect("the box asks for its own space");
+    let request = surface
+        .layout_request()
+        .expect("the box asks for its own space");
     assert_eq!(
         request.aspect_ratio,
         Some(16.0 / 9.0),
@@ -84,12 +86,20 @@ fn the_content_goes_inside_the_box() {
         .view();
     assert_eq!(surface.child_count(), 1, "the caller's content is inside");
     assert!(
-        surface.children()[0].build().as_any().is::<floom_widgets::Text>(),
+        surface.children()[0]
+            .build()
+            .as_any()
+            .is::<floom_widgets::Text>(),
         "and it is the caller's own content"
     );
 }
 
 /// Design-system colour -> engine colour.
 fn to_engine(c: floom_core_theme::tokens::color::Color) -> Color {
-    Color { r: c.r, g: c.g, b: c.b, a: c.a }
+    Color {
+        r: c.r,
+        g: c.g,
+        b: c.b,
+        a: c.a,
+    }
 }

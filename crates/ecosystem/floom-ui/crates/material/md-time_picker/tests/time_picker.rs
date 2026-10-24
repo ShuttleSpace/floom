@@ -14,8 +14,8 @@
 use floom_core::{ElementId, Event, OverlayKind, Point, Rect, Widget};
 use floom_types::{Color, PointerEvent};
 use floom_widgets::testkit::{
-    dispatch, AllocatingCreateContext, OverlayCall, PaintOp, RecordingUpdateContext,
-    SceneRecorder, TestEventContext,
+    dispatch, AllocatingCreateContext, OverlayCall, PaintOp, RecordingUpdateContext, SceneRecorder,
+    TestEventContext,
 };
 
 use floom_core_theme::global_theme::DesignSystem;
@@ -285,7 +285,10 @@ fn the_panel_draws_the_hour_the_minute_and_done() {
     // The vector is held in a local: a borrow of a temporary would not
     // outlive the statement.
     let opened = cx.opened_overlays();
-    let OverlayCall::Open { bounds, content, .. } = opened[0] else {
+    let OverlayCall::Open {
+        bounds, content, ..
+    } = opened[0]
+    else {
         panic!("the panel is asked of the host");
     };
 

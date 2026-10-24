@@ -59,16 +59,15 @@ use floom_types::Color as PaintColor;
 use floom_types::FontWeight;
 
 use floom_core::{Child, ChildKey, LayoutRequest};
-use floom_ui_composites::{Dialog};
-use floom_widgets::text_input::{SharedFlag, read_flag, shared_flag, write_flag};
+use floom_ui_composites::Dialog;
+use floom_widgets::text_input::{read_flag, shared_flag, write_flag, SharedFlag};
 
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::dialog::DialogProps;
 use floom_core_theme::theme::{MultiTheme, Theme};
-use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color::to_engine_color as to_paint;
+use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::typography::FontWeight as ThemeFontWeight;
-
 
 /// The theme's weight enum -> the engine's.
 ///
@@ -192,15 +191,20 @@ impl MdDialog {
     }
 
     /// Add an action button, as v1's `action(label, callback)` did.
-    pub fn action(mut self, label: impl Into<String>, callback: impl Fn() + Send + Sync + 'static) -> Self {
+    pub fn action(
+        mut self,
+        label: impl Into<String>,
+        callback: impl Fn() + Send + Sync + 'static,
+    ) -> Self {
         let label = label.into();
         let shared: Callback = std::sync::Arc::new(callback);
-        self.props
-            .actions
-            .push((label.clone(), Box::new({
+        self.props.actions.push((
+            label.clone(),
+            Box::new({
                 let shared = shared.clone();
                 move || shared()
-            })));
+            }),
+        ));
         self.actions.push((label, shared));
         self
     }
@@ -270,7 +274,17 @@ impl MdDialog {
             // engine's title as well would render two.
             .title(title.clone())
             .with_shared_presence(open.clone())
-            .card_with(move || build_card(style, title.clone(), content.clone(), actions.clone(), on_close.clone(), close_icon.clone(), open.clone()))
+            .card_with(move || {
+                build_card(
+                    style,
+                    title.clone(),
+                    content.clone(),
+                    actions.clone(),
+                    on_close.clone(),
+                    close_icon.clone(),
+                    open.clone(),
+                )
+            })
     }
 }
 
@@ -355,25 +369,24 @@ fn build_card(
                                 Surface::new()
                                     .request(
                                         LayoutRequest::new()
-                                            .padding_horiz(f64::from(style.action_padding_horizontal))
+                                            .padding_horiz(f64::from(
+                                                style.action_padding_horizontal,
+                                            ))
                                             .padding_vert(f64::from(style.action_padding_vertical)),
                                     )
                                     .radius(style.action_radius)
-                                    .child(Child::new(
-                                        ChildKey::index(0),
-                                        LayoutRequest::new(),
-                                        {
-                                            let label = label.clone();
-                                            move || {
-                                                Box::new(
-                                                    Text::new(label.clone())
-                                                        .size(style.action_size)
-                                                        .weight(style.action_weight)
-                                                        .color(style.primary),
-                                                ) as Box<dyn floom_widgets::WidgetAny>
-                                            }
-                                        },
-                                    )),
+                                    .child(Child::new(ChildKey::index(0), LayoutRequest::new(), {
+                                        let label = label.clone();
+                                        move || {
+                                            Box::new(
+                                                Text::new(label.clone())
+                                                    .size(style.action_size)
+                                                    .weight(style.action_weight)
+                                                    .color(style.primary),
+                                            )
+                                                as Box<dyn floom_widgets::WidgetAny>
+                                        }
+                                    })),
                             ) as Box<dyn floom_widgets::WidgetAny>
                         },
                     ))
@@ -391,13 +404,20 @@ fn build_card(
     let title_row = Stack::new(Axis::Horizontal)
         .align(floom_widgets::Align::Start, floom_widgets::Align::Center)
         .request(LayoutRequest::new().fill())
-        .child(Child::new(ChildKey::index(0), LayoutRequest::new().fill(), {
-            let title = title.clone();
-            move || {
-                Box::new(Text::new(title.clone()).size(style.title_size).color(style.on_surface))
-                    as Box<dyn floom_widgets::WidgetAny>
-            }
-        }))
+        .child(Child::new(
+            ChildKey::index(0),
+            LayoutRequest::new().fill(),
+            {
+                let title = title.clone();
+                move || {
+                    Box::new(
+                        Text::new(title.clone())
+                            .size(style.title_size)
+                            .color(style.on_surface),
+                    ) as Box<dyn floom_widgets::WidgetAny>
+                }
+            },
+        ))
         .child(Child::new(ChildKey::index(1), LayoutRequest::new(), {
             let on_close = on_close.clone();
             let open = open.clone();
@@ -417,22 +437,28 @@ fn build_card(
         let content = content.clone();
         move || {
             Box::new(
-                Text::new(content.clone()).size(style.body_size).color(PaintColor {
-                    a: style.content_alpha,
-                    ..style.on_surface
-                }),
+                Text::new(content.clone())
+                    .size(style.body_size)
+                    .color(PaintColor {
+                        a: style.content_alpha,
+                        ..style.on_surface
+                    }),
             ) as Box<dyn floom_widgets::WidgetAny>
         }
     });
 
     let inner = Stack::new(Axis::Vertical)
-        .child(Child::new(ChildKey::index(0), LayoutRequest::new(), move || {
-            Box::new(title_row.clone()) as Box<dyn floom_widgets::WidgetAny>
-        }))
+        .child(Child::new(
+            ChildKey::index(0),
+            LayoutRequest::new(),
+            move || Box::new(title_row.clone()) as Box<dyn floom_widgets::WidgetAny>,
+        ))
         .child(content_child)
-        .child(Child::new(ChildKey::index(0), LayoutRequest::new(), move || {
-            Box::new(action_row.clone()) as Box<dyn floom_widgets::WidgetAny>
-        }));
+        .child(Child::new(
+            ChildKey::index(0),
+            LayoutRequest::new(),
+            move || Box::new(action_row.clone()) as Box<dyn floom_widgets::WidgetAny>,
+        ));
 
     Box::new(
         Surface::new()
@@ -451,9 +477,11 @@ fn build_card(
                 offset_x: 0.0,
                 offset_y: 0.0,
             })
-            .child(Child::new(ChildKey::index(0), LayoutRequest::new(), move || {
-                Box::new(inner.clone()) as Box<dyn floom_widgets::WidgetAny>
-            })),
+            .child(Child::new(
+                ChildKey::index(0),
+                LayoutRequest::new(),
+                move || Box::new(inner.clone()) as Box<dyn floom_widgets::WidgetAny>,
+            )),
     )
 }
 
@@ -471,20 +499,24 @@ fn close_button(
 ) -> impl floom_widgets::WidgetAny {
     use floom_widgets::{Pressable, Surface};
 
-    Pressable::new(Child::new(ChildKey::index(0), LayoutRequest::new(), move || {
-        match icon.clone() {
+    Pressable::new(Child::new(
+        ChildKey::index(0),
+        LayoutRequest::new(),
+        move || match icon.clone() {
             Some(mut icon) => {
                 icon.set_size(style.close_icon_size);
                 icon.set_color(style.on_surface);
                 Box::new(icon) as Box<dyn floom_widgets::WidgetAny>
             }
-            None => Box::new(Surface::new().request(
-                LayoutRequest::new()
-                    .width(style.close_icon_size)
-                    .height(style.close_icon_size),
-            )),
-        }
-    }))
+            None => Box::new(
+                Surface::new().request(
+                    LayoutRequest::new()
+                        .width(style.close_icon_size)
+                        .height(style.close_icon_size),
+                ),
+            ),
+        },
+    ))
     .on_click(move || {
         // v1 fired `on_close` and *then* set `open = false`. Both, in that order: a
         // callback that reads the flag sees it still true, exactly as v1's did.

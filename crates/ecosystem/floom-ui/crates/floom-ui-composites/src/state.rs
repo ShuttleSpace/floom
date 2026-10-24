@@ -66,9 +66,8 @@ impl StateLayer {
     /// is four independent choices, which is the part most likely to be
     /// re-implemented slightly differently.
     pub fn shows(&self, hovered: bool, pressed: bool, focused: bool, disabled: bool) -> bool {
-        let gated = (hovered && self.on_hover)
-            || (pressed && self.on_press)
-            || (focused && self.on_focus);
+        let gated =
+            (hovered && self.on_hover) || (pressed && self.on_press) || (focused && self.on_focus);
         gated && !(self.suppressed_when_disabled && disabled)
     }
 

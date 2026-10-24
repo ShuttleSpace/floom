@@ -73,7 +73,9 @@ fn fill_of(ops: &[PaintOp]) -> Option<Color> {
 fn text_of(ops: &[PaintOp]) -> (String, f32, Color) {
     ops.iter()
         .find_map(|op| match op {
-            PaintOp::Text { text, size, color, .. } => Some((text.clone(), *size, *color)),
+            PaintOp::Text {
+                text, size, color, ..
+            } => Some((text.clone(), *size, *color)),
             _ => None,
         })
         .expect("the placeholder is painted")
@@ -89,7 +91,10 @@ fn the_tokens_and_colours_reach_the_style() {
         floom_core_theme::component_tokens::ComponentTokens::Image(tokens) => tokens,
         _ => unreachable!(),
     };
-    assert_eq!(style.corner_radius, tokens.corner_radius, "the token's radius");
+    assert_eq!(
+        style.corner_radius, tokens.corner_radius,
+        "the token's radius"
+    );
     assert_eq!(
         style.placeholder_color, tokens.placeholder_color,
         "the token's placeholder fill"
@@ -152,7 +157,11 @@ fn the_picture_is_drawn_from_the_resource() {
         PaintOp::Image { resource, .. } => Some(*resource),
         _ => None,
     });
-    assert_eq!(drawn, Some(resource), "the picture is the registered resource");
+    assert_eq!(
+        drawn,
+        Some(resource),
+        "the picture is the registered resource"
+    );
     assert!(
         ops.iter().all(|op| !matches!(op, PaintOp::Text { .. })),
         "a picture is not the placeholder"
@@ -199,7 +208,9 @@ fn the_box_is_the_size_the_caller_asked_for() {
     );
     assert_eq!(
         request.height,
-        Some(Length::Px(resolved.height.expect("the caller gave a height"))),
+        Some(Length::Px(
+            resolved.height.expect("the caller gave a height")
+        )),
         "the caller's height"
     );
 }

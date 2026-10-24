@@ -33,7 +33,10 @@ fn swatch(color: Color, radius: f32) -> Container {
 
 fn build_containers() -> Box<dyn WidgetAny> {
     let ramp = Brush::linear(
-        &[(0.0, Color::rgb(30, 60, 220)), (1.0, Color::rgb(220, 60, 30))],
+        &[
+            (0.0, Color::rgb(30, 60, 220)),
+            (1.0, Color::rgb(220, 60, 30)),
+        ],
         Point::new(0.0, 0.0),
         Point::new(64.0, 0.0),
     );
@@ -122,10 +125,9 @@ fn build_themes() -> Box<dyn WidgetAny> {
             Box::new(Text::new(name).size(12.0))
         });
         for color in colors {
-            row = row.push_layout(
-                LayoutRequest::new().width(48.0).height(24.0),
-                move || Box::new(swatch(color, 4.0)),
-            );
+            row = row.push_layout(LayoutRequest::new().width(48.0).height(24.0), move || {
+                Box::new(swatch(color, 4.0))
+            });
         }
         column = column.push_layout(LayoutRequest::new().height(24.0), move || {
             Box::new(row.clone())

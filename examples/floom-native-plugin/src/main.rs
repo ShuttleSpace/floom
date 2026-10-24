@@ -22,8 +22,8 @@ use std::collections::HashMap;
 
 use floom_native::{
     ClipSupport, InputMode, InputModes, NativeCapabilities, NativeCompositionMode, NativeError,
-    NativeSnapshot, NativeSlot, NativeState, NativeViewController, NativeViewKind,
-    NativeViewPool, NativeViewProvider, Rect,
+    NativeSlot, NativeSnapshot, NativeState, NativeViewController, NativeViewKind, NativeViewPool,
+    NativeViewProvider, Rect,
 };
 
 /// A plugin: a provider that can composite text inputs as overlays, and nothing
@@ -169,7 +169,10 @@ fn main() {
     );
     assert_eq!(bridge.created, 1);
     assert_eq!(bridge.destroyed, 1);
-    assert!(bridge.live.is_empty(), "destroying a participant releases it");
+    assert!(
+        bridge.live.is_empty(),
+        "destroying a participant releases it"
+    );
     assert_eq!(bridge.applies.len(), 1);
 
     // --- 3. pooling: many participants, bounded live slots ------------------
@@ -202,9 +205,7 @@ fn main() {
     let reused = pool.acquire(0);
     println!(
         "recycled slot : id={:?} generation={} (was {})",
-        reused.id,
-        reused.generation,
-        generations[0]
+        reused.id, reused.generation, generations[0]
     );
     assert!(
         reused.generation > generations[0],

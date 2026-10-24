@@ -61,7 +61,7 @@ use floom_core::{
 };
 use floom_types::OverlayKind;
 
-use crate::{PopupPlacement, popup_placement_rect};
+use crate::{popup_placement_rect, PopupPlacement};
 use floom_widgets::text_input::SharedBuffer;
 
 /// The selection state: which option is chosen, and whether the list is up.
@@ -114,12 +114,7 @@ pub fn visible_options<'a>(options: &'a [String], query: &str) -> Vec<&'a str> {
 /// `options` is taken so the query can be set to the chosen option's text, which is the
 /// whole point of a combobox over a plain text field: after choosing, the field shows
 /// what you chose rather than what you last typed.
-pub fn select(
-    pick: &SharedPick,
-    query: &SharedBuffer,
-    options: &[String],
-    index: usize,
-) -> bool {
+pub fn select(pick: &SharedPick, query: &SharedBuffer, options: &[String], index: usize) -> bool {
     let Some(option) = options.get(index) else {
         // A row that has gone — the option list shrank under a list that was open.
         // Nothing to choose, and nothing to report.
@@ -197,11 +192,7 @@ pub enum Commit {
 /// caller written against v1 may depend on not being told. It is also the kind of thing
 /// that should be fixed as a decision rather than by accident, which is why it is a
 /// named variant rather than an absence of code. See the test that pins it.
-pub fn commit(
-    pick: &SharedPick,
-    query: &SharedBuffer,
-    options: &[String],
-) -> Commit {
+pub fn commit(pick: &SharedPick, query: &SharedBuffer, options: &[String]) -> Commit {
     let text = query.lock().map(|guard| guard.clone()).unwrap_or_default();
     if text.is_empty() {
         set_selected(pick, None);
@@ -251,7 +242,10 @@ fn set_selected(pick: &SharedPick, index: Option<usize>) {
 /// v1 crates write no gap at all, which puts their panel flush against the field, and
 /// that difference is a design disagreement this port records rather than resolves.
 pub fn panel_placement(gap: f64, max_height: f64) -> PopupPlacement {
-    PopupPlacement::Below { gap, height: max_height }
+    PopupPlacement::Below {
+        gap,
+        height: max_height,
+    }
 }
 
 /// The rect a combobox's panel asks the host for.
@@ -465,13 +459,13 @@ fn alpha(color: Color, alpha: u8) -> Color {
 
 use floom_types::Shadow;
 
-use crate::{OverlayHost};
-use floom_widgets::{Stack};
-use floom_widgets::surface::Surface;
+use crate::OverlayHost;
+use floom_widgets::controls::Pressable;
 use floom_widgets::primitives::{Role, SemanticsHint, StateBits as SemanticsState, Text};
+use floom_widgets::surface::Surface;
 use floom_widgets::text_input::{TextInput, TextInputStyle};
 use floom_widgets::vector_icon::VectorIcon;
-use floom_widgets::controls::Pressable;
+use floom_widgets::Stack;
 
 /// A text field, a chevron, and a filtered list under them.
 pub struct Combobox {
@@ -521,11 +515,7 @@ impl Combobox {
 
     /// Adopt existing shared state, so a caller that already has one — or that wants
     /// to watch the selection — does not have to hand over ownership.
-    pub fn with_shared(
-        options: Vec<String>,
-        query: SharedBuffer,
-        pick: SharedPick,
-    ) -> Self {
+    pub fn with_shared(options: Vec<String>, query: SharedBuffer, pick: SharedPick) -> Self {
         Combobox {
             options: Arc::new(Mutex::new(options)),
             query,
@@ -555,7 +545,10 @@ impl Combobox {
     }
 
     /// Icon lookup, because three kits' icon sets differ.
-    pub fn icons(mut self, icons: impl Fn(&str) -> Option<VectorIcon> + Send + Sync + 'static) -> Self {
+    pub fn icons(
+        mut self,
+        icons: impl Fn(&str) -> Option<VectorIcon> + Send + Sync + 'static,
+    ) -> Self {
         self.icons = Arc::new(icons);
         self
     }
@@ -671,13 +664,20 @@ impl Combobox {
     }
 
     pub fn options(&self) -> Vec<String> {
-        self.options.lock().map(|guard| guard.clone()).unwrap_or_default()
+        self.options
+            .lock()
+            .map(|guard| guard.clone())
+            .unwrap_or_default()
     }
 
     /// The options that survive the current query.
     pub fn visible(&self) -> Vec<String> {
         let options = self.options();
-        let query = self.query.lock().map(|guard| guard.clone()).unwrap_or_default();
+        let query = self
+            .query
+            .lock()
+            .map(|guard| guard.clone())
+            .unwrap_or_default();
         visible_options(&options, &query)
             .into_iter()
             .map(str::to_string)
@@ -783,79 +783,74 @@ impl Combobox {
         let placeholder = self.placeholder.clone();
         let open = self.is_open();
 
-        Child::new(
-            ChildKey::index(0),
-            self.trigger_layout(),
-            move || {
-                let row = Stack::new(Axis::Horizontal)
-                    .gap(style.trigger_gap)
-                    .align(Align::Center, Align::Center)
-                    .request(LayoutRequest::new().fill())
-                    .child(Child::new(ChildKey::index(0), LayoutRequest::new(), {
-                        // Built here rather than outside and copied in: `TextInput`
-                        // and `Pressable` are builders, so there is nothing to clone.
-                        let query = query.clone();
-                        let pick = pick.clone();
-                        let placeholder = placeholder.clone();
-                        move || {
-                            let mut field = TextInput::new(query.clone()).style(TextInputStyle {
-                                font_size: style.text_size,
-                                color: style.text_color(disabled),
-                                // The field's own border is the trigger surface's
-                                // border; two outlines around one control is a widget
-                                // that looks like a nest of dolls, and v1 had one.
-                                border_width: 0.0,
-                                background: None,
-                                ..TextInputStyle::default()
-                            });
-                            if let Some(placeholder) = &placeholder {
-                                field = field.placeholder(placeholder.clone());
-                            }
-                            field = field
-                                .on_change({
-                                    // v1 opened the list on `FocusGained`. 2.0 has no
-                                    // way for a parent to observe a child's focus, so
-                                    // the list opens on the first keystroke instead —
-                                    // the same moment minus the "tap the field, see
-                                    // nothing happen" one. Recorded, not worked around.
-                                    let pick = pick.clone();
-                                    move |_text| {
-                                        if let Ok(mut guard) = pick.lock() {
-                                            guard.open = true;
-                                        }
-                                    }
-                                });
-                            Box::new(field) as Box<dyn WidgetAny>
+        Child::new(ChildKey::index(0), self.trigger_layout(), move || {
+            let row = Stack::new(Axis::Horizontal)
+                .gap(style.trigger_gap)
+                .align(Align::Center, Align::Center)
+                .request(LayoutRequest::new().fill())
+                .child(Child::new(ChildKey::index(0), LayoutRequest::new(), {
+                    // Built here rather than outside and copied in: `TextInput`
+                    // and `Pressable` are builders, so there is nothing to clone.
+                    let query = query.clone();
+                    let pick = pick.clone();
+                    let placeholder = placeholder.clone();
+                    move || {
+                        let mut field = TextInput::new(query.clone()).style(TextInputStyle {
+                            font_size: style.text_size,
+                            color: style.text_color(disabled),
+                            // The field's own border is the trigger surface's
+                            // border; two outlines around one control is a widget
+                            // that looks like a nest of dolls, and v1 had one.
+                            border_width: 0.0,
+                            background: None,
+                            ..TextInputStyle::default()
+                        });
+                        if let Some(placeholder) = &placeholder {
+                            field = field.placeholder(placeholder.clone());
                         }
-                    }))
-                    .child(Child::new(ChildKey::index(1), LayoutRequest::new(), {
-                        let pick = pick.clone();
-                        let icons = icons.clone();
-                        move || {
-                            let chevron = Pressable::new(Child::new(
-                                ChildKey::index(0),
-                                LayoutRequest::new(),
-                                {
-                                    let icons = icons.clone();
-                                    move || match icons("expand_more") {
-                                        Some(mut icon) => {
-                                            icon.set_size(style.chevron_size);
-                                            icon.set_color(style.chevron_color(disabled));
-                                            Box::new(icon) as Box<dyn WidgetAny>
-                                        }
-                                        // v1's `MdIcon::new("expand_more")` always
-                                        // resolved, so an unresolved name is a kit's
-                                        // missing icon rather than a blank on purpose.
-                                        // The box keeps its size either way, so the
-                                        // layout does not depend on the icon set.
-                                        None => Box::new(Surface::new().request(
+                        field = field.on_change({
+                            // v1 opened the list on `FocusGained`. 2.0 has no
+                            // way for a parent to observe a child's focus, so
+                            // the list opens on the first keystroke instead —
+                            // the same moment minus the "tap the field, see
+                            // nothing happen" one. Recorded, not worked around.
+                            let pick = pick.clone();
+                            move |_text| {
+                                if let Ok(mut guard) = pick.lock() {
+                                    guard.open = true;
+                                }
+                            }
+                        });
+                        Box::new(field) as Box<dyn WidgetAny>
+                    }
+                }))
+                .child(Child::new(ChildKey::index(1), LayoutRequest::new(), {
+                    let pick = pick.clone();
+                    let icons = icons.clone();
+                    move || {
+                        let chevron =
+                            Pressable::new(Child::new(ChildKey::index(0), LayoutRequest::new(), {
+                                let icons = icons.clone();
+                                move || match icons("expand_more") {
+                                    Some(mut icon) => {
+                                        icon.set_size(style.chevron_size);
+                                        icon.set_color(style.chevron_color(disabled));
+                                        Box::new(icon) as Box<dyn WidgetAny>
+                                    }
+                                    // v1's `MdIcon::new("expand_more")` always
+                                    // resolved, so an unresolved name is a kit's
+                                    // missing icon rather than a blank on purpose.
+                                    // The box keeps its size either way, so the
+                                    // layout does not depend on the icon set.
+                                    None => Box::new(
+                                        Surface::new().request(
                                             LayoutRequest::new()
                                                 .width(style.chevron_size)
                                                 .height(style.chevron_size),
-                                        )),
-                                    }
-                                },
-                            ))
+                                        ),
+                                    ),
+                                }
+                            }))
                             .on_click({
                                 let pick = pick.clone();
                                 move || {
@@ -865,27 +860,28 @@ impl Combobox {
                                 }
                             })
                             .label("Show options");
-                            Box::new(chevron) as Box<dyn WidgetAny>
-                        }
-                    }));
+                        Box::new(chevron) as Box<dyn WidgetAny>
+                    }
+                }));
 
-                Box::new(
-                    Surface::new()
-                        .request(
-                            LayoutRequest::new()
-                                .height(style.height)
-                                .min_width(style.min_width)
-                                .padding_horiz(f64::from(style.padding_horizontal)),
-                        )
-                        .background(style.surface)
-                        .radius(style.border_radius)
-                        .border(style.border_width, style.border_color(disabled, open))
-                        .child(Child::new(ChildKey::index(0), LayoutRequest::new(), move || {
-                            Box::new(row.clone()) as Box<dyn WidgetAny>
-                        })),
-                ) as Box<dyn WidgetAny>
-            },
-        )
+            Box::new(
+                Surface::new()
+                    .request(
+                        LayoutRequest::new()
+                            .height(style.height)
+                            .min_width(style.min_width)
+                            .padding_horiz(f64::from(style.padding_horizontal)),
+                    )
+                    .background(style.surface)
+                    .radius(style.border_radius)
+                    .border(style.border_width, style.border_color(disabled, open))
+                    .child(Child::new(
+                        ChildKey::index(0),
+                        LayoutRequest::new(),
+                        move || Box::new(row.clone()) as Box<dyn WidgetAny>,
+                    )),
+            ) as Box<dyn WidgetAny>
+        })
     }
 
     fn trigger_layout(&self) -> LayoutRequest {
@@ -913,7 +909,9 @@ impl Widget for Combobox {
         let placement = self.style.placement();
         self.host.reconcile(cx, id, move |bounds, _viewport| {
             let content = content.clone()?;
-            Some(panel_request(placement, bounds, move |_handle| content.build()))
+            Some(panel_request(placement, bounds, move |_handle| {
+                content.build()
+            }))
         });
     }
 
@@ -931,7 +929,12 @@ impl Widget for Combobox {
     }
 
     /// Forwarded, and the forwarding is the point — see `OverlayHost`'s note.
-    fn overlay_opened(&mut self, cx: &mut dyn UpdateContext, id: ElementId, handle: floom_types::OverlayHandle) {
+    fn overlay_opened(
+        &mut self,
+        cx: &mut dyn UpdateContext,
+        id: ElementId,
+        handle: floom_types::OverlayHandle,
+    ) {
         self.host.opened(handle);
         cx.mark_children_dirty(id);
     }
@@ -1033,7 +1036,10 @@ fn row_widget(
     let background = if chosen {
         style.selected_row_color()
     } else {
-        Color { a: 0, ..style.surface }
+        Color {
+            a: 0,
+            ..style.surface
+        }
     };
     let accessible = label.clone();
 
@@ -1043,13 +1049,17 @@ fn row_widget(
             Surface::new()
                 .request(row_layout)
                 .background(background)
-                .child(Child::new(ChildKey::index(0), LayoutRequest::new(), move || {
-                    Box::new(
-                        Text::new(label.clone())
-                            .size(style.text_size)
-                            .color(style.on_surface),
-                    ) as Box<dyn WidgetAny>
-                })),
+                .child(Child::new(
+                    ChildKey::index(0),
+                    LayoutRequest::new(),
+                    move || {
+                        Box::new(
+                            Text::new(label.clone())
+                                .size(style.text_size)
+                                .color(style.on_surface),
+                        ) as Box<dyn WidgetAny>
+                    },
+                )),
         ) as Box<dyn WidgetAny>
     }))
     .on_click({
@@ -1057,7 +1067,10 @@ fn row_widget(
         // below needs one too — a reader written afterwards would find `pick` moved.
         let pick = pick.clone();
         move || {
-            let options = options.lock().map(|guard| guard.clone()).unwrap_or_default();
+            let options = options
+                .lock()
+                .map(|guard| guard.clone())
+                .unwrap_or_default();
             if select(&pick, &query, &options, index) {
                 if let Some(on_change) = &on_change {
                     on_change(Some(index));

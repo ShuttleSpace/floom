@@ -14,12 +14,10 @@ use floom_widgets::testkit::{AllocatingCreateContext, PaintOp, SceneRecorder};
 use floom_widgets::{Divider, Stack};
 
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
-use floom_core_theme::global_theme::{DesignSystem, set_design_system};
+use floom_core_theme::global_theme::{set_design_system, DesignSystem};
 use floom_core_theme::theme::{MultiTheme, Theme};
 
-use floom_widget_md_data_iterator::{
-    MaterialDataIterator, MaterialDataIteratorStyle,
-};
+use floom_widget_md_data_iterator::{MaterialDataIterator, MaterialDataIteratorStyle};
 
 const BOX: Rect = Rect {
     x0: 0.0,
@@ -52,7 +50,9 @@ fn three_items(kit: MaterialDataIterator) -> MaterialDataIterator {
 #[test]
 fn the_style_resolves_the_theme_and_the_tokens() {
     let theme = theme();
-    let style: MaterialDataIteratorStyle = MaterialDataIterator::new().with_theme(theme.clone()).resolved_style();
+    let style: MaterialDataIteratorStyle = MaterialDataIterator::new()
+        .with_theme(theme.clone())
+        .resolved_style();
     assert_eq!(style.design_system, "material");
     assert_eq!(style.surface, theme.colors().surface);
     assert_eq!(style.outline, theme.colors().outline);
@@ -64,16 +64,26 @@ fn the_style_resolves_the_theme_and_the_tokens() {
 /// The container is padded, rounded and filled with the theme's surface.
 #[test]
 fn the_container_is_padded_rounded_and_filled() {
-    let kit = three_items(MaterialDataIterator::new().with_theme(theme()).divided(true));
+    let kit = three_items(
+        MaterialDataIterator::new()
+            .with_theme(theme())
+            .divided(true),
+    );
     let style = kit.resolved_style();
     let surface = kit.view();
-    let request = surface.layout_request().expect("the container asks for its own space");
+    let request = surface
+        .layout_request()
+        .expect("the container asks for its own space");
     assert_eq!(
         request.padding,
         Some(floom_types::Insets::uniform(f64::from(style.padding))),
         "the token's padding"
     );
-    assert_eq!(surface.decoration().corner_radius(), 8.0, "v1's literal 8.0");
+    assert_eq!(
+        surface.decoration().corner_radius(),
+        8.0,
+        "v1's literal 8.0"
+    );
     assert_eq!(
         surface.decoration().background_color(),
         Some(to_engine(style.surface)),
@@ -84,7 +94,11 @@ fn the_container_is_padded_rounded_and_filled() {
 /// The items are in the container, in order, and the rule is between them.
 #[test]
 fn the_items_are_in_order_with_a_rule_between_them() {
-    let kit = three_items(MaterialDataIterator::new().with_theme(theme()).divided(true));
+    let kit = three_items(
+        MaterialDataIterator::new()
+            .with_theme(theme())
+            .divided(true),
+    );
     let surface = kit.view();
     let column = surface.children()[0].build();
     let column = column.as_any().downcast_ref::<Stack>().unwrap().clone();
@@ -104,7 +118,11 @@ fn the_items_are_in_order_with_a_rule_between_them() {
 /// Without `divided` there is no rule at all.
 #[test]
 fn an_undivided_iterator_has_no_rules() {
-    let kit = three_items(MaterialDataIterator::new().with_theme(theme()).divided(false));
+    let kit = three_items(
+        MaterialDataIterator::new()
+            .with_theme(theme())
+            .divided(false),
+    );
     let surface = kit.view();
     let column = surface.children()[0].build();
     let column = column.as_any().downcast_ref::<Stack>().unwrap().clone();
@@ -131,10 +149,18 @@ fn the_header_comes_first_and_the_footer_last() {
         first.as_any().is::<floom_widgets::Text>(),
         "the header is first"
     );
-    assert!(last.as_any().is::<floom_widgets::Text>(), "and the footer is last");
+    assert!(
+        last.as_any().is::<floom_widgets::Text>(),
+        "and the footer is last"
+    );
 }
 
 /// Design-system colour -> engine colour.
 fn to_engine(c: floom_core_theme::tokens::color::Color) -> Color {
-    Color { r: c.r, g: c.g, b: c.b, a: c.a }
+    Color {
+        r: c.r,
+        g: c.g,
+        b: c.b,
+        a: c.a,
+    }
 }

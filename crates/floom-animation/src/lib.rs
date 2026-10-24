@@ -8,7 +8,7 @@ pub use floom_types::{
     AnimationSpec, CompositorChannel, CompositorProp, Easing, PresenceChannel, PresenceTransition,
     RepeatMode, RepeatSpec, Transition,
 };
-pub use kinds::{AnimId, AnimKind, Tween, SPRING_SETTLE_SECS};
+pub use kinds::{AnimId, AnimKind, SPRING_SETTLE_SECS, Tween};
 use smallvec::SmallVec;
 
 /// Stiffness a retarget hands the spring it converts the animation into.

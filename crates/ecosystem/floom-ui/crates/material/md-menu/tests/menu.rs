@@ -85,12 +85,29 @@ fn the_tokens_and_colours_reach_the_engine_style() {
         _ => unreachable!(),
     };
 
-    assert_eq!(style.min_width, tokens.min_width, "the token's minimum width");
-    assert_eq!(style.max_width, tokens.max_width, "the token's maximum width");
-    assert_eq!(style.item_height, tokens.item_height, "the token's row height");
+    assert_eq!(
+        style.min_width, tokens.min_width,
+        "the token's minimum width"
+    );
+    assert_eq!(
+        style.max_width, tokens.max_width,
+        "the token's maximum width"
+    );
+    assert_eq!(
+        style.item_height, tokens.item_height,
+        "the token's row height"
+    );
     assert_eq!(style.padding, tokens.padding, "the token's padding");
-    assert_eq!(style.container_color, theme().colors().surface, "the panel's fill");
-    assert_eq!(style.text_color, theme().colors().on_surface, "the rows' ink");
+    assert_eq!(
+        style.container_color,
+        theme().colors().surface,
+        "the panel's fill"
+    );
+    assert_eq!(
+        style.text_color,
+        theme().colors().on_surface,
+        "the rows' ink"
+    );
     assert_eq!(
         style.item_padding_horizontal, 12.0,
         "v1's row: `padding_horiz(12.0)`"
@@ -119,7 +136,11 @@ fn the_hovered_row_is_v1_s_fill() {
 /// The panel's radius is this kit's own: v1 wrote a literal 4
 #[test]
 fn the_panel_radius_is_v1_s() {
-    assert_eq!(kit().resolved_style().radius, 4.0, "v1's panel: `border_radius(4.0)`, a literal");
+    assert_eq!(
+        kit().resolved_style().radius,
+        4.0,
+        "v1's panel: `border_radius(4.0)`, a literal"
+    );
 }
 
 // --- the pixels -----------------------------------------------------------
@@ -141,7 +162,11 @@ fn the_menu_paints_v1_s_appearance() {
         PaintOp::RoundedRect { color, .. } => Some(*color),
         _ => None,
     });
-    assert_eq!(fill, Some(paint(resolved.container_color)), "the panel's fill");
+    assert_eq!(
+        fill,
+        Some(paint(resolved.container_color)),
+        "the panel's fill"
+    );
     let ink = recorder.ops().iter().find_map(|op| match op {
         PaintOp::Text { color, .. } => Some(*color),
         _ => None,

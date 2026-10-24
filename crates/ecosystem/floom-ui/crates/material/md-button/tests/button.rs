@@ -30,13 +30,13 @@ fn button() -> MdButton {
     MdButton::new().label("Save")
 }
 
-
 /// A real click is a press followed by a release over the same spot; the
 /// engine's `Button` only activates on a matched pair, so sending one half is
 /// not a weaker click, it is not a click at all.
 fn click(b: &mut Button, id: floom_core::ElementId) {
     let at = floom_types::Point::new(60.0, 20.0);
-    let mut down = TestEventContext::new(id, BOX, floom_types::PointerEvent::primary_down(at).into());
+    let mut down =
+        TestEventContext::new(id, BOX, floom_types::PointerEvent::primary_down(at).into());
     b.event(&mut down, id);
     let mut up = TestEventContext::new(id, BOX, floom_types::PointerEvent::primary_up(at).into());
     b.event(&mut up, id);
@@ -64,7 +64,9 @@ fn variants_resolve_to_different_colours() {
 
 #[test]
 fn a_disabled_button_resolves_to_the_disabled_palette() {
-    let enabled = MdButton::new().variant(ButtonVariant::Primary).resolved_style();
+    let enabled = MdButton::new()
+        .variant(ButtonVariant::Primary)
+        .resolved_style();
     let disabled = MdButton::new()
         .variant(ButtonVariant::Primary)
         .disabled(true)
@@ -150,7 +152,11 @@ fn follow_theme_replaces_v1s_radius_and_color_closures() {
     let before = ripple.clip();
 
     button().follow_theme(&mut ripple);
-    assert_eq!(ripple.clip(), before, "re-applying the same theme is a no-op");
+    assert_eq!(
+        ripple.clip(),
+        before,
+        "re-applying the same theme is a no-op"
+    );
 
     let mut create = floom_widgets::testkit::RecordingUpdateContext::default();
     let _ = &mut create;
@@ -185,7 +191,12 @@ fn the_button_sits_inside_token_padding() {
 /// Theme colour -> engine colour. The style speaks the theme's colour type and
 /// the paint records the engine's; they are distinct types with the same shape.
 fn to_engine(c: floom_core_theme::tokens::color::Color) -> Color {
-    Color { r: c.r, g: c.g, b: c.b, a: c.a }
+    Color {
+        r: c.r,
+        g: c.g,
+        b: c.b,
+        a: c.a,
+    }
 }
 
 /// The fill and the label the engine actually painted.
@@ -297,10 +308,7 @@ fn the_fill_is_drawn_with_the_full_radius() {
 #[test]
 fn the_hover_fill_is_the_eight_percent_state_layer() {
     let style = button().resolved_style();
-    let expected = floom_core_theme::tokens::color_ext::mix(
-        style.background,
-        style.foreground,
-        0.08,
-    );
+    let expected =
+        floom_core_theme::tokens::color_ext::mix(style.background, style.foreground, 0.08);
     assert_eq!(style.hover_background, expected);
 }

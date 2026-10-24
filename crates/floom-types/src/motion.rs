@@ -891,10 +891,12 @@ mod tests {
     fn a_fade_rides_the_opacity_channel() {
         let fade = PresenceTransition::fade(0.15);
         match fade.enter_spec().channels.as_slice() {
-            [CompositorChannel {
-                prop: CompositorProp::Opacity(_),
-                ..
-            }] => {}
+            [
+                CompositorChannel {
+                    prop: CompositorProp::Opacity(_),
+                    ..
+                },
+            ] => {}
             other => panic!("a fade must drive opacity, got {other:?}"),
         }
     }

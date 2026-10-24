@@ -19,11 +19,11 @@ use std::sync::Arc;
 use floom_core::{ChildKey, LayoutRequest, WidgetAny};
 use floom_signal::{RwSignal, SignalGet};
 use floom_types::PresenceTransition;
+use floom_widgets::text_input::{shared_flag, write_flag, SharedFlag};
 use floom_widgets::{Conditional, Text};
-use floom_widgets::text_input::{SharedFlag, shared_flag, write_flag};
 
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens, ScaleTransitionTokens};
-use floom_core_theme::props::scale_transition::{ScaleTransitionProps, };
+use floom_core_theme::props::scale_transition::ScaleTransitionProps;
 use floom_core_theme::theme::{MultiTheme, Theme};
 
 const DESIGN_SYSTEM: &str = "fluent";
@@ -39,7 +39,8 @@ pub struct FluentScaleTransitionStyle {
     pub design_system: &'static str,
     pub duration_ms: f32,
     /// The scale the enter animation starts at.
-    pub min_scale: f32,}
+    pub min_scale: f32,
+}
 
 /// Fluent's scale transition.
 pub struct FluentScaleTransition {
@@ -101,7 +102,9 @@ impl FluentScaleTransition {
 
     pub fn resolved_style(&self) -> FluentScaleTransitionStyle {
         let theme = self.theme.get();
-        let ComponentTokens::ScaleTransition(tokens) = theme.component(ComponentId::ScaleTransition) else {
+        let ComponentTokens::ScaleTransition(tokens) =
+            theme.component(ComponentId::ScaleTransition)
+        else {
             unreachable!("ComponentId::ScaleTransition must resolve to ScaleTransitionTokens")
         };
         FluentScaleTransitionStyle {
@@ -133,15 +136,18 @@ impl FluentScaleTransition {
     pub fn view(self) -> Conditional {
         let style = self.resolved_style();
         // v1's scale: a uniform scale from `min_scale` to natural size.
-        let transition = self.transition_for(&style);        let child = self.child.clone();
+        let transition = self.transition_for(&style);
+        let child = self.child.clone();
         let show = self.show.clone();
 
-        let mut conditional = Conditional::new(false)
-            .when_flag(show)
-            .show_with(ChildKey::index(0), LayoutRequest::new(), move || match child.clone() {
+        let mut conditional = Conditional::new(false).when_flag(show).show_with(
+            ChildKey::index(0),
+            LayoutRequest::new(),
+            move || match child.clone() {
                 Some(build) => build(),
                 None => Box::new(Text::new(String::new())),
-            });
+            },
+        );
         if let Some(transition) = transition {
             conditional = conditional.enter(transition).exit(transition);
         }

@@ -25,8 +25,8 @@ use floom_widgets::Surface;
 
 use floom_core_theme::layout::layout_signal;
 use floom_core_theme::theme::{MultiTheme, Theme};
-use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color::to_engine_color as to_paint;
+use floom_core_theme::tokens::color::Color;
 use floom_widget_runtime::theme_signal;
 
 /// A builder for the application's content, replayed each time it is mounted.
@@ -85,4 +85,3 @@ impl Default for MaterialApp {
         Self::new()
     }
 }
-

@@ -128,10 +128,7 @@ fn the_variant_table_matches_v1s_three_pairs() {
         "text: v1's `Color::rgba(0, 0, 0, 0)` for both"
     );
     assert_eq!(
-        (
-            style.contained.background,
-            style.contained.border
-        ),
+        (style.contained.background, style.contained.border),
         (
             to_paint(theme.colors().primary),
             to_paint(theme.colors().primary)
@@ -140,10 +137,7 @@ fn the_variant_table_matches_v1s_three_pairs() {
     );
     assert_eq!(
         (style.outlined.background, style.outlined.border),
-        (
-            transparent,
-            to_paint(theme.colors().outline)
-        ),
+        (transparent, to_paint(theme.colors().outline)),
         "outlined: no fill, outlined in the outline colour"
     );
 }
@@ -185,14 +179,20 @@ fn the_disabled_colours_are_two_alphas_of_on_surface() {
     let style = button().resolved_style();
     let on_surface = theme.colors().on_surface;
 
-    assert_eq!(style.disabled_foreground, to_paint(with_alpha(on_surface, 38)));
+    assert_eq!(
+        style.disabled_foreground,
+        to_paint(with_alpha(on_surface, 38))
+    );
     assert_eq!(style.disabled_border, to_paint(with_alpha(on_surface, 38)));
     assert_eq!(
         style.disabled_background,
         to_paint(with_alpha(on_surface, 12)),
         "the fill is fainter than the outline, which is why they are two fields"
     );
-    assert_eq!(style.foreground, to_paint(theme.colors().on_surface_variant));
+    assert_eq!(
+        style.foreground,
+        to_paint(theme.colors().on_surface_variant)
+    );
 
     assert_ne!(
         style.disabled_background, style.disabled_border,
@@ -208,7 +208,10 @@ fn the_disabled_colours_are_two_alphas_of_on_surface() {
 #[test]
 fn every_props_variant_maps_to_an_engine_variant() {
     for (props, expected) in [
-        (PropsVariant::Text, floom_ui_composites::IconButtonVariant::Text),
+        (
+            PropsVariant::Text,
+            floom_ui_composites::IconButtonVariant::Text,
+        ),
         (
             PropsVariant::Contained,
             floom_ui_composites::IconButtonVariant::Contained,
@@ -368,7 +371,12 @@ fn the_props_report_the_click_callback() {
         .expect("the pressable");
 
     use floom_types::{Point, PointerEvent, Rect};
-    let bounds = Rect { x0: 0.0, y0: 0.0, x1: 40.0, y1: 40.0 };
+    let bounds = Rect {
+        x0: 0.0,
+        y0: 0.0,
+        x1: 40.0,
+        y1: 40.0,
+    };
     let id = pressable.create(&mut floom_widgets::testkit::AllocatingCreateContext::new());
     let at = Point::new(20.0, 20.0);
     let mut down = floom_widgets::testkit::TestEventContext::new(
@@ -401,6 +409,10 @@ fn a_button_with_no_callback_is_fine() {
 
 /// Design-system colour -> engine colour, the same widening the crate does.
 fn to_paint(c: floom_core_theme::tokens::color::Color) -> floom_types::Color {
-    floom_types::Color { r: c.r, g: c.g, b: c.b, a: c.a }
+    floom_types::Color {
+        r: c.r,
+        g: c.g,
+        b: c.b,
+        a: c.a,
+    }
 }
-

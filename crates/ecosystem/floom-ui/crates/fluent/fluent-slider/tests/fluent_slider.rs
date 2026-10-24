@@ -16,7 +16,7 @@ use floom_core::{ElementId, Key, NamedKey, Rect, Widget};
 use floom_types::Color as PaintColor;
 use floom_types::KeyEvent;
 use floom_ui_composites::{Slider, SliderStyle};
-use floom_widgets::testkit::{AllocatingCreateContext, PaintOp, SceneRecorder, dispatch};
+use floom_widgets::testkit::{dispatch, AllocatingCreateContext, PaintOp, SceneRecorder};
 
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::global_theme::DesignSystem;
@@ -163,7 +163,8 @@ fn a_disabled_slider_paints_the_enabled_palette() {
         .disabled(true)
         .resolved_style();
     assert_eq!(
-        disabled, style(),
+        disabled,
+        style(),
         "no disabled colour of this kit's own, so nothing changes but the flag"
     );
 }
