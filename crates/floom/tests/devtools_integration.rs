@@ -33,10 +33,10 @@ fn one_line_mounts_the_panel_as_an_overlay() {
 
     // The one line.
     let devtools = floom::devtools::attach(&mut host, |state| {
-        vec![floom::devtools::ReadoutRow {
-            label: "visible".into(),
-            value: state.visible().to_string(),
-        }]
+        vec![floom::devtools::ReadoutRow::new(
+            "visible",
+            state.visible().to_string(),
+        )]
     });
 
     // The panel is above the app's tree, not part of it.
@@ -104,10 +104,10 @@ fn an_unrelated_key_falls_through_to_the_app() {
 fn a_shown_panel_actually_mounts_its_rows() {
     let mut host = host();
     let mut devtools = floom::devtools::attach(&mut host, |state| {
-        vec![floom::devtools::ReadoutRow {
-            label: "tab".into(),
-            value: format!("{:?}", state.tab()),
-        }]
+        vec![floom::devtools::ReadoutRow::new(
+            "tab",
+            format!("{:?}", state.tab()),
+        )]
     });
     devtools.show();
     // The panel is a widget: shown, it has children; hidden, it has none.

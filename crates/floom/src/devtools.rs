@@ -151,6 +151,30 @@ pub fn attach_elements(host: &mut WidgetHost) -> Devtools {
     devtools.with_tree_cell(shared)
 }
 
+/// [`attach_elements`], with the caller's own rows on top.
+///
+/// The composition `run_desktop_with_devtools` uses: the caller's rows first —
+/// what the app knows about itself — then the engine's tree, breadcrumb and
+/// whichever readout the tab asks for. It exists as its own entry because the
+/// two halves have different owners: the app owns the first, the engine owns the
+/// second, and neither should have to know about the other.
+pub fn attach_with_rows<F>(host: &mut WidgetHost, extra: F) -> Devtools
+where
+    F: Fn(&DevtoolsState) -> Vec<ReadoutRow> + Send + Sync + 'static,
+{
+    let shared = std::sync::Arc::new(std::sync::Mutex::new(host.tree_nodes()));
+    let readout_shared = shared.clone();
+    let devtools = attach_with(host, move |state| {
+        let mut rows = extra(state);
+        let nodes = readout_shared.lock().map(|n| n.clone()).unwrap_or_default();
+        let live = describe(&nodes);
+        let inspector = floom_devtools::Inspector::new(&live);
+        rows.extend(elements_readout(&inspector, state));
+        rows
+    });
+    devtools.with_tree_cell(shared)
+}
+
 fn attach_with<F>(host: &mut WidgetHost, readout: F) -> Devtools
 where
     F: Fn(&DevtoolsState) -> Vec<ReadoutRow> + Send + Sync + 'static,

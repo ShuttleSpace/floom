@@ -17,6 +17,7 @@ something stale.
 | `floom-chart` | self-drawn content: a line chart on a `Canvas`, clipped to its own box, redrawn from data | all | headless |
 | `floom-hello` | the smallest app: everything from `floom::prelude` | all | headless |
 | `floom-run-desktop` | the same tree in a real OS window through the facade's one-call `floom::run_desktop` — no `WinitApp` impl, no `AppRunner` wiring in the example | macOS / desktop | **display-gated** — `--features desktop,renderer-gpu`; see the known text-ink defect in [`vello-gpu-text-ink-defect.md`](./vello-gpu-text-ink-defect.md) |
+| `floom-devtools-demo` | the devtools panel in a real window: **one line** to mount it, **F12** to open it, **Ctrl+Shift+C** to pick an element and inspect it without pressing it. The panel shows the element tree, the breadcrumb, the selected element's styles across every interaction state, its layout box, the frame timeline and the console. The demo itself is two lines — `run_desktop_with_devtools` plus the readout closure — and `crates/floom-app/tests/devtools_demo.rs` checks the same chain headlessly | macOS / desktop | **display-gated** — `--features desktop,renderer-gpu,devtools`; see [`devtools.md`](../devtools.md) |
 | `floom-counter` | composites (`Stack`/`List`/`Grid`/`Tabs`/`Dialog`/`NavBar`) + reconciliation | all | headless |
 | `floom-list` | a keyed list: append / remove / reorder without rebuilding rows | all | headless |
 | `floom-virtual-list` | virtual scrolling: bounded element pool over 100 000 items | all | headless |

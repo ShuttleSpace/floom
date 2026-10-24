@@ -267,7 +267,12 @@ where
             };
             let mut host = WidgetHost::new();
             build(&mut host);
-            self.devtools = Some(devtools::attach(&mut host, readout));
+            // `attach_with_rows` mounts the Chrome panels *and* the caller's own
+            // rows, and it wires the tree cell this loop refreshes below. The
+            // alternative — a bare `attach` — would leave the panel showing the
+            // tree as it was at startup, which is a stale answer.
+            let devtools = devtools::attach_with_rows(&mut host, readout);
+            self.devtools = Some(devtools);
             let Some(presenter) = VelloGpuPresenter::new() else {
                 eprintln!(
                     "floom::run_desktop_with_devtools: no usable GPU adapter; a desktop window needs one to paint"
@@ -278,6 +283,11 @@ where
         }
 
         fn events(&mut self, platform: &mut WinitPlatform) {
+            // Refresh the panel's tree before the frame, so what it shows is the
+            // app as it is now rather than as it was when the window opened.
+            if let (Some(devtools), Some(runner)) = (self.devtools.as_ref(), self.runner.as_ref()) {
+                devtools.refresh_tree(runner.host());
+            }
             if let Some(runner) = self.runner.as_mut() {
                 runner.pump(platform);
             }

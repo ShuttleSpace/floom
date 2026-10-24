@@ -4,7 +4,9 @@ use floom_design::{GallerySample, contrast_ratio, gallery_size};
 use floom_fluent::{
     FluentColors, FluentTheme, GALLERY_COLUMNS, button_gallery, button_gallery_labels,
 };
-use floom_snapshot::{PixelSnapshot, SceneSnapshot, assert_snapshot, snapshots_dir};
+use floom_snapshot::{
+    PixelSnapshot, ReferencePixels, SceneSnapshot, assert_snapshot, snapshots_dir,
+};
 use floom_theme::ColorScheme;
 use floom_types::Color;
 

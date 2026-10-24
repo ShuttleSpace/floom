@@ -78,6 +78,25 @@ crate, a real widget built from engine primitives rather than a second window.
 
 The facade re-exports it under `floom::devtools`, behind the `devtools` feature.
 
+## Try it
+
+```sh
+cargo run -p floom-devtools-demo
+```
+
+A window with a heading, a row of three buttons and a counter. Press **F12** and
+the panel docks over the trailing edge; **Ctrl+Shift+C** arms the pick, and
+clicking a button selects it without pressing it. The demo is two lines —
+`run_desktop_with_devtools` plus the readout closure — and the whole point of it
+is that there is nothing else to write.
+
+The demo needs a GPU window, so CI cannot run it. What CI *does* run is
+`crates/floom-app/tests/devtools_demo.rs`, which mounts the same app into a real
+host and checks the whole chain headlessly: the tree is describable, the panel
+composes the app's rows over the engine's, refreshing the cell picks up new
+nodes, and a picking click selects without pressing. If that passes, the demo's
+two lines are doing what they claim.
+
 ## The Chrome layout
 
 `attach_elements` composes the panels Chrome made standard:

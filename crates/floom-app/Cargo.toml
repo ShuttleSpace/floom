@@ -48,3 +48,5 @@ floom-testkit = { path = "../floom-testkit", version = "0.2.0" }
 # The hosted-tree suite checks the host's data against the live tree it
 # describes into. Dev-only: the app itself never depends on the tooling.
 floom-hot-reload = { path = "../floom-hot-reload", version = "0.2.0" }
+# The devtools-demo suite checks the panel wiring against a real host.
+floom-devtools = { path = "../floom-devtools", version = "0.2.0" }

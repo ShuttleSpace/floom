@@ -2,7 +2,7 @@ use std::hint::black_box;
 use std::time::Duration;
 
 use criterion::{Criterion, criterion_group, criterion_main};
-use floom_legacy_reactive::SignalGet;
+use floom_signal::SignalGet;
 use floom_store::store;
 
 #[derive(Clone)]

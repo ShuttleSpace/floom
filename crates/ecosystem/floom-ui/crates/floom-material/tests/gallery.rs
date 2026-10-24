@@ -11,7 +11,9 @@ use floom_material::{
     button_style,
 };
 use floom_scene::SceneNode;
-use floom_snapshot::{PixelSnapshot, SceneSnapshot, assert_snapshot, snapshots_dir};
+use floom_snapshot::{
+    PixelSnapshot, ReferencePixels, SceneSnapshot, assert_snapshot, snapshots_dir,
+};
 use floom_types::Color;
 
 fn light() -> MaterialTheme {

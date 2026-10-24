@@ -13,7 +13,9 @@ use floom_harmony::{
     button_style,
 };
 use floom_scene::SceneNode;
-use floom_snapshot::{PixelSnapshot, SceneSnapshot, assert_snapshot, snapshots_dir};
+use floom_snapshot::{
+    PixelProbe, PixelSnapshot, ReferencePixels, SceneSnapshot, assert_snapshot, snapshots_dir,
+};
 use floom_theme::ColorScheme;
 use floom_types::{Color, Size};
 
