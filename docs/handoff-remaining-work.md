@@ -117,7 +117,7 @@ scripts/build.sh floom-capabilities android \
 
 | 能力 | stub 的表现 | 现在应该看到 |
 |---|---|---|
-| battery | `100%` / `charging: false`，永不变化 | 真实电量，插充电器后 `charging` 变 `true` |
+| battery | `100%` / `charging: false`，永不变化 | 真实电量，插充电器后 `charging` 变 `true`；若系统不给读数则显示 `no reading`（`level: None`），不再伪装成 100% |
 | connectivity | 永远同一类型 | 飞行模式切换时类型跟着变 |
 | device-info | 固定型号/版本 | 与「设置 → 关于手机」一致 |
 | sensors | 空列表 | 列出这颗设备真有的传感器种类 |

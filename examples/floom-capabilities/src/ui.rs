@@ -16,9 +16,9 @@
 //! right, with the absent ones greyed out. That is what this does — and the
 //! greying is the whole design. There is no code path here that formats a
 //! missing answer as a plausible one, because [`crate::probe`] has already
-//! refused to produce one: `battery_state()` on a Mac returns `level: 1.0`, and
-//! a gallery that printed "100%" on a laptop would be indistinguishable from one
-//! that works on a phone.
+//! refused to produce one: the plugins' host arms carry no measurement
+//! (`battery_state()` gives `level: None`), and a gallery that printed "100%" on
+//! a laptop would be indistinguishable from one that works on a phone.
 //!
 //! # Two API shapes worth knowing before reading on
 //!

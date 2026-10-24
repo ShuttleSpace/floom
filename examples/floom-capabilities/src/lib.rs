@@ -30,10 +30,11 @@
 //! has no battery API, no `Vibrator`, no `UIDevice`. The gallery prints that rather
 //! than a plausible default, because a capability demo that reported "battery
 //! 100%" everywhere would be indistinguishable from one that works.
-//! `battery_state()` really does return `level: 1.0` on a host, and the one test
-//! that keeps this example honest (`a_host_build_never_reports_a_value_it_cannot
-//! _have_measured`) is the assertion that no row ever shows it. Run the same
-//! build on a phone and the table fills in.
+//! The plugins' inert host arms return values that carry no claim —
+//! `battery_state()` gives `level: None`, not a number — and the one test that
+//! keeps this example honest (`a_host_build_never_reports_a_value_it_cannot
+//! _have_measured`) asserts that no row ever shows one. Run the same build on a
+//! phone and the table fills in.
 //!
 //! The three states a row can be in, and why all three exist:
 //!

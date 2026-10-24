@@ -361,6 +361,11 @@ macOS 门禁记录过一次真实教训（`docs/gates/macos.md:126-128`）：
   原始加速度计（Android `TYPE_ACCELEROMETER`、iOS `accelerometerAvailable`），
   减重力的版本是复合传感器，是另一个问题。
 - `floom-capabilities` 里 `sensors()` 的注释不再说"原生半边仍是 TODO"。
+- `BatteryState::level` 从 `f32` 改为 `Option<f32>`。原先"读失败"和"电量满"都
+  落到 `BatteryState::default()`，也就是 `level: 1.0`——一个任何分支都没测出来的
+  数字，调用方无法分辨。iOS 自己就用 `-1.0` 表示"无读数"，说明平台也认为这是
+  两种答案；`Option` 就是把这件事写进类型。host 分支现在返回 `level: None`，
+  gallery 打印 `no reading` 而不是 `100%`。
 
 ### 批次 1 的实际结果（2026-10-22）
 

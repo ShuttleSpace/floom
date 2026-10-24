@@ -111,9 +111,12 @@ pub const fn native_capability_host() -> bool {
 
 /// Mark a value as absent when we are not on a native target.
 ///
-/// Without this, `battery_state()` on a Mac returns `BatteryState::default()`
-/// — `level: 1.0` — which the gallery would happily print as "100%". A desktop
-/// that cannot read a battery has no battery reading, and the row should say so.
+/// Without this, a host build would print whatever the plugin's inert arm
+/// returned as though it were measured. `battery_state()` used to return
+/// `level: 1.0` there, so the gallery printed "100%" on a laptop. It now returns
+/// `level: None` — the default is no reading — and this function is the second
+/// half of the same rule: a desktop has no battery reading, and the row says so
+/// rather than showing a number.
 fn native_or_absent(value: String) -> State {
     if native_capability_host() {
         State::Value(value)
@@ -163,8 +166,13 @@ pub fn battery() -> Row {
         "battery",
         "charge level, charging, low-power mode",
         State::Value(format!(
-            "{:.0}% · {} · low-power {}",
-            b.level * 100.0,
+            "{} · {} · low-power {}",
+            match b.level {
+                Some(level) => format!("{:.0}%", level * 100.0),
+                // The OS gave no reading. Printing "100%" here would be the
+                // exact kind of fabricated value this gallery exists to catch.
+                None => "no reading".into(),
+            },
             if b.is_charging { "charging" } else { "idle" },
             if low { "on" } else { "off" }
         )),
@@ -507,10 +515,14 @@ mod tests {
     /// are legitimate: `vibration::can_vibrate()` is `cfg`-dispatched, so a host
     /// never even asks the OS (`Absent`), whereas `clipboard::get_text()` is a
     /// real call whose host arm returns `Err` (`Error`, with the reason). What
-    /// must never happen on a host is a `Value` — because a value here can only
-    /// have come from a `Default` the OS never set. `battery_state()` is the
-    /// case that matters: it answers `level: 1.0`, which the gallery would
-    /// happily print as "100%" on a laptop.
+    /// must never happen on a host is a `Value` — because a value here could
+    /// only have come from a default the OS never set.
+    ///
+    /// That default is no longer a plausible number: `BatteryState::default()`
+    /// used to be `level: 1.0`, which this gallery printed as "100%" on a
+    /// laptop, and it is now `level: None`. Both layers were fixed — the crate
+    /// stopped inventing a reading, and this assertion stopped the row from
+    /// showing one — because either alone would have left the other reachable.
     #[test]
     fn a_host_build_never_reports_a_value_it_cannot_have_measured() {
         if native_capability_host() {

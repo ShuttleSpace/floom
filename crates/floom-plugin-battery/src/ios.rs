@@ -43,14 +43,14 @@ pub fn battery_state() -> BatteryState {
         let state: i64 = msg_send![device, batteryState];
 
         // `-1.0` is UIKit's "no reading", not a charge level; reporting it as a
-        // fraction would put the UI below empty and is the one value that must
-        // not be passed through.
+        // fraction would put the UI below empty, and turning it into `None` is
+        // exactly the distinction `Option` exists for here.
         if level < 0.0 {
             return BatteryState::default();
         }
 
         BatteryState {
-            level: level.clamp(0.0, 1.0),
+            level: Some(level.clamp(0.0, 1.0)),
             is_charging: state == BATTERY_STATE_CHARGING,
             // `Full` is UIKit's "plugged in and topped up"; `Unknown` is not
             // full, and neither is `Unplugged`.

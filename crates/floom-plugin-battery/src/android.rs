@@ -34,9 +34,8 @@ const BATTERY_STATUS_FULL: i32 = 5;
 
 pub fn battery_state() -> BatteryState {
     let measured = jni_helpers::with_env(read_state);
-    // A device whose battery cannot be read is reported as full and
-    // non-charging, which is the crate's documented default: UI gated on "low
-    // battery" must not fire because a read failed.
+    // A failed read is reported as `level: None`, not as a full battery. The
+    // crate's whole point is that an unmeasured value must not look measured.
     measured.unwrap_or_default()
 }
 
@@ -105,7 +104,7 @@ fn read_state(env: &mut jni::Env) -> Result<BatteryState, String> {
     };
 
     Ok(BatteryState {
-        level,
+        level: Some(level),
         // `plugged` is a bitmask (AC / USB / wireless), so any non-zero value
         // means power is flowing.
         is_charging: plugged.unwrap_or(0) != 0,
