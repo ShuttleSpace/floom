@@ -220,7 +220,10 @@ mod tests {
 
     #[test]
     fn function_keys_map_to_named_function_keys() {
-        assert_eq!(KeyCode::F1.to_key(), Some(Key::Named(NamedKey::Function(1))));
+        assert_eq!(
+            KeyCode::F1.to_key(),
+            Some(Key::Named(NamedKey::Function(1)))
+        );
         assert_eq!(
             KeyCode::function(12).to_key(),
             Some(Key::Named(NamedKey::Function(12)))

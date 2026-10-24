@@ -6,10 +6,10 @@
 //! mean the diff matched nothing), and a failed patch must leave no trace
 //! (otherwise "transactional" would be a word, not a behaviour).
 
+use floom_core::Length;
 use floom_hot_reload::{LiveTree, NodeKey, PatchOp, UiPatch};
 use floom_runtime_core::{DirtyFlags, DirtySet};
 use floom_style::StyleState;
-use floom_core::Length;
 use floom_types::Color;
 
 const BEFORE: &str = r#"
@@ -87,7 +87,10 @@ fn ids_and_stashed_state_survive_a_compatible_patch() {
         "the recolour landed: {:?}",
         heading
     );
-    assert_eq!(tree.layout_of(&key("body")).unwrap().width, Some(Length::Px(200.0)));
+    assert_eq!(
+        tree.layout_of(&key("body")).unwrap().width,
+        Some(Length::Px(200.0))
+    );
     assert_eq!(tree.events_of(&key("ok")).len(), 1, "click wired");
 
     // The insert is real.

@@ -45,3 +45,6 @@ floom-text = { path = "../floom-text", version = "0.2.0" }
 # The integration suites drive the app through the shared harness rather than
 # each growing their own copy of it.
 floom-testkit = { path = "../floom-testkit", version = "0.2.0" }
+# The hosted-tree suite checks the host's data against the live tree it
+# describes into. Dev-only: the app itself never depends on the tooling.
+floom-hot-reload = { path = "../floom-hot-reload", version = "0.2.0" }

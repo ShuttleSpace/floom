@@ -15,6 +15,7 @@
 #![forbid(unsafe_code)]
 
 pub mod panel;
+pub mod pick;
 
 use std::collections::HashMap;
 

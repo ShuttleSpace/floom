@@ -20,10 +20,20 @@
 #![forbid(unsafe_code)]
 
 mod diff;
+pub mod hosted;
 mod live;
 mod patch;
 
 pub use diff::diff;
+pub use hosted::{HostedTree, describe};
+
+/// The inspector tier an IR kind mounts as.
+///
+/// Public so a host-side test can assert the mapping without reimplementing
+/// it: the mapping is the inspector's, and a second copy is how the two drift.
+pub fn tier_of(kind: floom_ui_ir::NodeKind) -> floom_core::ElementKind {
+    live::element_kind(kind)
+}
 pub use live::{ElementRef, LiveTree, Snapshot};
 pub use patch::{ApplyReport, PatchOp, RolledBack, UiPatch};
 

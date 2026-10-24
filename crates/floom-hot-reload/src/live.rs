@@ -3,7 +3,7 @@
 
 use std::collections::HashMap;
 
-use floom_core::{Align, Axis, Element, ElementKind, LayoutRequest, Position, Length};
+use floom_core::{Align, Axis, Element, ElementKind, LayoutRequest, Length, Position};
 use floom_runtime_core::{ElementArena, ElementTree};
 use floom_style::{StyleMap, StyleProps, StyleSet, StyleState};
 use floom_types::ElementId;

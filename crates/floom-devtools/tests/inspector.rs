@@ -13,8 +13,8 @@ use floom_core::Length;
 use floom_devtools::Inspector;
 use floom_hot_reload::{LiveTree, NodeKey};
 use floom_inspector::JsonSnapshot;
-use floom_signal::{RwSignal, SignalUpdate};
 use floom_runtime_core::{BindingRegistry, DirtyFlags, DirtySet, ReactiveBinding, SignalSource};
+use floom_signal::{RwSignal, SignalUpdate};
 use floom_style::StyleState;
 use floom_types::ElementId;
 

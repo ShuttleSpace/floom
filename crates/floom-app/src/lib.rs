@@ -26,6 +26,10 @@ use std::sync::{Arc, Mutex};
 
 use floom_accessibility::{SemanticsNode, SemanticsTree};
 use floom_animation::{AnimId, AnimKind, AnimSample, AnimationScheduler};
+// The host's own tree, as plain data, lives in `floom-core`: the host hands it
+// over and the L8 tooling describes it, and neither side should have to know the
+// other. Re-exported here so `floom_app::HostedNode` keeps working.
+pub use floom_core::{HostedKind, HostedNode};
 use floom_core::{
     Align, AnimationSpec, Axis, Child, ChildKey, CreateContext, ElementId, Event, EventContext,
     FontWeight, Key, KeyEvent, KeyPhase, LayoutRequest, Length, Modifiers, NamedKey, NativeGrant,
@@ -1109,6 +1113,20 @@ impl WidgetHost {
         self.nodes.get(slot.node).map(|n| n.widget.as_ref())
     }
 
+    /// The tree node an open overlay's content is mounted at, by handle.
+    ///
+    /// The door for retargeting a mounted overlay in place: a highlight box that
+    /// has to follow the pointer cannot be rebuilt every frame — it is the same
+    /// widget with a different rect — and [`Self::widget_mut`] needs a node.
+    /// `None` for a handle that names no open overlay.
+    ///
+    /// Named `overlay_node_id` rather than `overlay_node` because a private
+    /// helper of that name already exists and returns the raw index.
+    pub fn overlay_node_id(&self, id: OverlayHandle) -> Option<NodeId> {
+        let slot = self.overlays.iter().find(|o| o.id == id)?;
+        self.nodes.get(slot.node).map(|_| NodeId(slot.node))
+    }
+
     fn overlay_node(&self, id: OverlayHandle) -> Option<usize> {
         self.overlays.iter().find(|o| o.id == id).map(|o| o.node)
     }
@@ -2120,6 +2138,50 @@ impl WidgetHost {
             self.size = size;
             self.layout_dirty = true;
         }
+    }
+
+    /// This host's tree, as plain data an inspector can describe into its own
+    /// shape.
+    ///
+    /// The host's node table and a live tree are different data structures built
+    /// for different jobs — one is laid out and painted, the other is queried —
+    /// so a host that wants to be inspectable has to hand its nodes over as
+    /// data. It hands over *data* rather than a live tree because the host sits
+    /// at L7 and the inspector at L8: a host that built a live tree itself would
+    /// depend upward, which `scripts/check-architecture-deps.sh` rejects and
+    /// rightly so.
+    ///
+    /// The element kind is inferred rather than recorded, because the host does
+    /// not store one: a widget with children is a host, a widget with none is a
+    /// primitive. That is the same three-tier split the inspector reports, and
+    /// it is the only thing the host honestly knows.
+    ///
+    /// Taken fresh on every call rather than cached: a panel that inspects a
+    /// stale tree is worse than no panel, because it looks like an answer.
+    pub fn tree_nodes(&self) -> Vec<HostedNode> {
+        let mut out = Vec::new();
+        // Depth-first in document order, so the tree reads the way it mounts.
+        let mut stack = vec![self.root];
+        while let Some(Some(index)) = stack.pop() {
+            let Some(node) = self.nodes.get(index) else {
+                continue;
+            };
+            out.push(HostedNode {
+                key: format!("node-{}", node.id.raw()),
+                kind: if node.children.is_empty() {
+                    HostedKind::Primitive
+                } else {
+                    HostedKind::Host
+                },
+                element: node.id,
+                parent: node.parent.map(|p| self.nodes[p].id),
+            });
+            // Reverse, so the first child is described first.
+            for child in node.children.iter().rev() {
+                stack.push(Some(*child));
+            }
+        }
+        out
     }
 
     /// The viewport's logical size — what [`Self::set_size`] last set.
@@ -3281,6 +3343,28 @@ impl WidgetHost {
         }
         self.close_overlay(id);
         true
+    }
+
+    /// The element under a point, overlays first — the pick a devtools panel
+    /// makes when the user clicks the app to inspect it.
+    ///
+    /// The same resolution [`Self::resolve_pointer`] does, because a pick that
+    /// answered differently from a click would select the wrong node: hovering
+    /// an open dialog must pick the dialog's row, not the tree behind it.
+    ///
+    /// Returns `None` over empty space.
+    pub fn element_at(&self, point: Point) -> Option<ElementId> {
+        self.resolve_pointer(point).map(|hit| hit.target)
+    }
+
+    /// The node under a point, overlays first — [`Self::element_at`] with the
+    /// tree position attached.
+    ///
+    /// A panel needs the node, not just the id: it walks to the parent for the
+    /// breadcrumb and reads the bounds for the highlight box.
+    pub fn node_at_point(&self, point: Point) -> Option<NodeId> {
+        let id = self.element_at(point)?;
+        self.index_of(id).map(NodeId)
     }
 
     /// Resolves a pointer target, letting an open overlay take priority over the

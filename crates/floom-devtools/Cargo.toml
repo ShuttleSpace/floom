@@ -13,6 +13,8 @@ description = "Headless inspector for Floom 2.0: element-tree navigation, style/
 floom-hot-reload = { path = "../floom-hot-reload", version = "0.2.0" }
 floom-ui-ir = { path = "../floom-ui-ir", version = "0.2.0" }
 floom-inspector = { path = "../floom-inspector", version = "0.2.0" }
+# The console readout lists what the error boundary caught.
+floom-error = { path = "../floom-error", version = "0.2.0" }
 floom-runtime-core = { path = "../floom-runtime-core", version = "0.2.0" }
 floom-core = { path = "../floom-core", version = "0.2.0" }
 floom-style = { path = "../floom-style", version = "0.2.0" }

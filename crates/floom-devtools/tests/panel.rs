@@ -33,20 +33,11 @@ fn panel() -> DevtoolsPanel {
     let state = Arc::new(Mutex::new(DevtoolsState::new()));
     DevtoolsPanel::new(state, |state| {
         if state.selected() == Some("one") {
-            vec![ReadoutRow {
-                label: "elements".into(),
-                value: "1".into(),
-            }]
+            vec![ReadoutRow::new("elements", "1")]
         } else {
             vec![
-                ReadoutRow {
-                    label: "elements".into(),
-                    value: "2".into(),
-                },
-                ReadoutRow {
-                    label: "semantics".into(),
-                    value: "3".into(),
-                },
+                ReadoutRow::new("elements", "2"),
+                ReadoutRow::new("semantics", "3"),
             ]
         }
     })
@@ -184,10 +175,10 @@ fn the_readout_sees_the_selected_element() {
     }
     let panel = DevtoolsPanel::new(state, |state| {
         // The closure is the app's own: it decides what a row says.
-        vec![ReadoutRow {
-            label: "selected".into(),
-            value: state.selected().unwrap_or("none").into(),
-        }]
+        vec![ReadoutRow::new(
+            "selected",
+            state.selected().unwrap_or("none"),
+        )]
     });
     // Rows are read through the same path the widget uses, so the panel and the
     // app agree on what is selected.

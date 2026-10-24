@@ -78,6 +78,41 @@ crate, a real widget built from engine primitives rather than a second window.
 
 The facade re-exports it under `floom::devtools`, behind the `devtools` feature.
 
+## The Chrome layout
+
+`attach_elements` composes the panels Chrome made standard:
+
+```rust
+let devtools = floom::devtools::attach_elements(&mut host);
+// ... then, once per frame:
+devtools.refresh_tree(&host);
+```
+
+| Panel | What it shows |
+| --- | --- |
+| **Elements** | the element tree, nested by depth, with the selected node marked |
+| **Breadcrumb** | `root > body > ok` — the path to the selection |
+| **Styles** | the selection's resolved style in every inspected state |
+| **Layout** | the selection's box: size, flex, axis, gap, align, inset |
+| **Performance** | frame stage breakdown with the budget verdict, allocations, cache hit rates |
+| **Console** | what the error boundary caught, newest first |
+
+The tab drives which half is composed in: `devtools.set_tab(DevtoolsTab::Style)`.
+
+## Picking an element
+
+Chrome's signature interaction — press inspect, click the page, see what you
+clicked:
+
+```rust
+let picker = floom::devtools::attach_picker(&mut host, &panel_state);
+// Ctrl+Shift+C arms it; the next click selects, and a box is drawn around it.
+```
+
+A click while picking **selects without pressing**: the picker consumes the
+event before the tree sees it. The highlight is its own overlay, above the panel,
+so the box is visible over everything including the devtools.
+
 ## What the panel is *not*
 
 It is not a general-purpose debug overlay. It draws rows of text: whatever your

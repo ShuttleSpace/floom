@@ -249,8 +249,10 @@ where
         devtools: Option<devtools::Devtools>,
     }
 
-    impl<F: FnOnce(&mut WidgetHost), R: Fn(&devtools::DevtoolsState) -> Vec<devtools::ReadoutRow> + Send + Sync + 'static>
-        WinitApp for DevtoolsApp<F, R>
+    impl<
+        F: FnOnce(&mut WidgetHost),
+        R: Fn(&devtools::DevtoolsState) -> Vec<devtools::ReadoutRow> + Send + Sync + 'static,
+    > WinitApp for DevtoolsApp<F, R>
     {
         fn window_created(
             &mut self,

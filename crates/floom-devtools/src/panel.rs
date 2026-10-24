@@ -43,6 +43,7 @@ use floom_core::{
 use floom_widgets::{Stack, Surface, Text};
 
 use crate::{Inspector, SemanticsEntry, UpdatePath};
+use floom_inspector::TreeNodeInfo;
 
 /// The shortcut that toggles the panel, as a predicate over a key event.
 ///
@@ -75,6 +76,11 @@ pub fn default_shortcut() -> DevtoolsShortcut {
 /// because the toggle comes from *outside* the widget tree — from the event
 /// loop, before any widget is consulted — and the engine's signals are
 /// `Rc`-based and cannot cross that boundary.
+///
+/// It is `Clone` so a readout can take one by value: the panel reads the shared
+/// cell, and a caller composing rows from the same state wants the same answer
+/// without holding the lock across the read.
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DevtoolsState {
     visible: bool,
     /// Which inspector readout the panel is showing.
@@ -186,6 +192,43 @@ pub struct ReadoutRow {
     pub label: String,
     /// The row's value, drawn after the label.
     pub value: String,
+    /// How deep the row sits in the tree it is part of. `0` is a top-level row;
+    /// each level indents by one step, the way Chrome's element tree nests.
+    pub depth: usize,
+    /// Whether the row is a heading rather than a value.
+    ///
+    /// A heading is drawn bold and takes no value: it separates the panel's
+    /// sections — "Tree", "Styles", "Layout" — so a reader can find the part
+    /// they want without reading the whole panel.
+    pub heading: bool,
+}
+
+impl ReadoutRow {
+    /// A plain label/value row at the top level.
+    pub fn new(label: impl Into<String>, value: impl Into<String>) -> Self {
+        Self {
+            label: label.into(),
+            value: value.into(),
+            depth: 0,
+            heading: false,
+        }
+    }
+
+    /// A row nested `depth` levels deep.
+    pub fn nested(mut self, depth: usize) -> Self {
+        self.depth = depth;
+        self
+    }
+
+    /// A section heading, which takes no value.
+    pub fn heading(label: impl Into<String>) -> Self {
+        Self {
+            label: label.into(),
+            value: String::new(),
+            depth: 0,
+            heading: true,
+        }
+    }
 }
 
 impl DevtoolsPanel {
@@ -274,9 +317,20 @@ impl Widget for DevtoolsPanel {
         let rows = self.rows();
         let mut stack = Stack::new(Axis::Vertical);
         for (index, row) in rows.iter().enumerate() {
-            let text = format!("{}: {}", row.label, row.value);
+            // One indent step per level of depth. A heading carries no value and
+            // is drawn heavier; a row's label and value are separated, and the
+            // value is dimmed so the eye lands on the label first.
+            let indent = "  ".repeat(row.depth);
+            let text = if row.heading {
+                row.label.clone()
+            } else if row.value.is_empty() {
+                format!("{indent}{}", row.label)
+            } else {
+                format!("{indent}{}  {}", row.label, row.value)
+            };
+            let size = if row.heading { 12.0 } else { 11.0 };
             stack = stack.push_keyed(index as u64, move || {
-                Box::new(Text::new(text.clone()).size(12.0))
+                Box::new(Text::new(text.clone()).size(size))
             });
         }
         // The child builder is an `Fn`, so it is called more than once and every
@@ -313,6 +367,107 @@ impl Widget for DevtoolsPanel {
     }
 }
 
+/// The Elements panel, whole: the tree, the breadcrumb, and the selected
+/// element's style and layout.
+///
+/// This is the composition a caller hands to [`DevtoolsPanel::new`] when they
+/// want the Chrome layout rather than a custom one. It reads the tab out of
+/// `state`, so the panel's own tab switching drives which half is shown.
+pub fn elements_readout(inspector: &Inspector<'_>, state: &DevtoolsState) -> Vec<ReadoutRow> {
+    let selected = state.selected();
+    let mut rows = vec![ReadoutRow::heading("Elements")];
+    rows.extend(tree_rows(inspector, selected));
+    if let Some(key) = selected {
+        rows.extend(breadcrumb_rows(inspector, key));
+        match state.tab() {
+            DevtoolsTab::Style => rows.extend(style_rows(inspector, key)),
+            DevtoolsTab::Layout => rows.extend(layout_rows(inspector, key)),
+            _ => {}
+        }
+    }
+    rows
+}
+
+/// The Performance panel: the frames the profiler recorded, with the budget
+/// verdict, then the allocation and cache summaries.
+///
+/// The rows are newest frame first, the way Chrome's timeline reads: the frame
+/// that just happened is the one you are asking about.
+pub fn performance_rows(snapshot: &floom_inspector::PerformanceSnapshot) -> Vec<ReadoutRow> {
+    let mut rows = vec![ReadoutRow::heading("Performance")];
+    for frame in snapshot.frames.iter().rev().take(8) {
+        let total: u64 = frame.stages.iter().map(|s| s.duration_ns).sum();
+        let ms = total as f64 / 1_000_000.0;
+        let verdict = if frame.budget_exceeded { "OVER" } else { "ok" };
+        rows.push(ReadoutRow::new(
+            format!("frame {}", frame.index),
+            format!("{ms:.2} ms  {verdict}"),
+        ));
+        // One row per stage, indented under its frame, so a slow stage is the
+        // thing that stands out rather than a number in a sum.
+        for stage in &frame.stages {
+            let stage_ms = stage.duration_ns as f64 / 1_000_000.0;
+            rows.push(ReadoutRow::new(&stage.stage, format!("{stage_ms:.2} ms")).nested(1));
+        }
+    }
+    if snapshot.frames.is_empty() {
+        rows.push(ReadoutRow::new("(no frames recorded)", ""));
+    }
+    let alloc = &snapshot.allocations;
+    rows.push(ReadoutRow::heading("Allocations"));
+    rows.push(ReadoutRow::new("live", alloc.live().to_string()));
+    rows.push(ReadoutRow::new("bytes", alloc.bytes_allocated.to_string()));
+    for cache in &snapshot.caches {
+        let rate = cache
+            .hit_rate()
+            .map(|r| format!("{:.0}%", r * 100.0))
+            .unwrap_or_else(|| "idle".into());
+        rows.push(ReadoutRow::new(
+            format!("cache {}", cache.name),
+            format!("{} entries, {rate} hits", cache.entries),
+        ));
+    }
+    rows
+}
+
+/// The Console panel: what the error boundary caught, newest first.
+///
+/// The boundary is the framework's own record of "something failed and the app
+/// kept running", which is exactly what a console is for — and it is the one
+/// diagnostic source that has no other surface.
+pub fn console_rows(reports: &[floom_error::Report]) -> Vec<ReadoutRow> {
+    let mut rows = vec![ReadoutRow::heading("Console")];
+    if reports.is_empty() {
+        rows.push(ReadoutRow::new("(no errors caught)", ""));
+    }
+    for report in reports.iter().rev().take(12) {
+        rows.push(
+            ReadoutRow::new(
+                format!("{:?}", report.severity),
+                report.message.clone(),
+            )
+            .nested(1),
+        );
+        if !report.context.is_empty() {
+            rows.push(ReadoutRow::new("context", report.context.clone()).nested(2));
+        }
+        if !report.location.is_empty() {
+            rows.push(ReadoutRow::new("at", report.location.clone()).nested(2));
+        }
+    }
+    rows
+}
+
+/// A float the way a devtools panel prints one: no trailing zeros, and no
+/// `.0` on a whole number, so `12` stays `12`.
+fn fmt_f32(value: f32) -> String {
+    if value.fract() == 0.0 {
+        format!("{}", value as i64)
+    } else {
+        format!("{value}")
+    }
+}
+
 /// The panel's own fill: a dark, near-opaque slab that reads as "tooling" over
 /// whatever the app drew.
 fn panel_background() -> floom_core::Brush {
@@ -325,28 +480,254 @@ fn panel_background() -> floom_core::Brush {
 /// entries — which is enough to tell a working integration from a silent one.
 pub fn default_readout(inspector: &Inspector<'_>) -> Vec<ReadoutRow> {
     vec![
-        ReadoutRow {
-            label: "elements".into(),
-            value: inspector.tree_snapshot().nodes.len().to_string(),
-        },
-        ReadoutRow {
-            label: "semantics".into(),
-            value: inspector.semantics().len().to_string(),
-        },
+        ReadoutRow::new("elements", inspector.tree_snapshot().nodes.len().to_string()),
+        ReadoutRow::new("semantics", inspector.semantics().len().to_string()),
     ]
+}
+
+// --- the tree readout -------------------------------------------------------
+//
+// Chrome's element panel is a tree you expand; this is the same shape as rows,
+// with the nesting carried in `ReadoutRow::depth`. A row is selected by its
+// key, and the selected one is marked, so a reader can see where they are.
+
+/// The selection marker for a tree row.
+///
+/// A filled triangle when the row is the selected one, a space of the same
+/// width when it is not: the column has to line up whether or not anything is
+/// selected, and the indent comes from `ReadoutRow::depth` alone. A marker that
+/// carried its own indent would double it.
+fn marker(selected: Option<&str>, key: &str) -> char {
+    if selected == Some(key) {
+        '▸'
+    } else {
+        ' '
+    }
+}
+
+/// The element tree as rows, nested by depth.
+///
+/// `selected` marks one node the way Chrome's selection does, so the panel can
+/// show which element the style and layout readouts are about.
+pub fn tree_rows(inspector: &Inspector<'_>, selected: Option<&str>) -> Vec<ReadoutRow> {
+    let snapshot = inspector.tree_snapshot();
+    let by_parent: std::collections::HashMap<Option<u64>, Vec<&TreeNodeInfo>> =
+        snapshot.nodes.iter().fold(
+            std::collections::HashMap::new(),
+            |mut acc, node| {
+                acc.entry(node.parent).or_default().push(node);
+                acc
+            },
+        );
+
+    let mut rows = Vec::new();
+    // The root's own row first: a tree that starts at the root's children hides
+    // the one node every other node hangs from.
+    if let Some(root) = snapshot.nodes.iter().find(|n| n.id == snapshot.root) {
+        rows.push(tree_row(root, selected, 0));
+    }
+    // Depth-first from the root's children, so the order a browser's inspector
+    // shows.
+    let mut stack: Vec<(Option<u64>, usize)> = vec![(Some(snapshot.root), 1)];
+    while let Some((parent, depth)) = stack.pop() {
+        let Some(children) = by_parent.get(&parent) else {
+            continue;
+        };
+        // Push in reverse so the first child is visited first.
+        for node in children.iter().rev() {
+            rows.push(tree_row(node, selected, depth));
+            stack.push((Some(node.id), depth + 1));
+        }
+    }
+    rows
+}
+
+/// One tree row: the marker column, the node's key, and the node's kind.
+///
+/// `depth` is the row's only indent — the marker is one character wide and adds
+/// none, so a marked row and an unmarked one line up.
+fn tree_row(node: &TreeNodeInfo, selected: Option<&str>, depth: usize) -> ReadoutRow {
+    let key = node.key.as_deref().unwrap_or("?");
+    ReadoutRow {
+        label: format!("{}{key}", marker(selected, key)),
+        value: node.kind.clone(),
+        depth,
+        heading: false,
+    }
+}
+
+/// The breadcrumb from the root to the selected node — Chrome's
+/// `html > body > div.button` line, one row.
+pub fn breadcrumb_rows(inspector: &Inspector<'_>, key: &str) -> Vec<ReadoutRow> {
+    let snapshot = inspector.tree_snapshot();
+    let Some(node) = snapshot
+        .nodes
+        .iter()
+        .find(|n| n.key.as_deref() == Some(key))
+    else {
+        return vec![ReadoutRow::heading("Breadcrumb"), ReadoutRow::new("(nothing selected)", "")];
+    };
+    // `path_to_root` walks *up* — selected first, root last. A breadcrumb reads
+    // the other way, the way a browser's does, so the path is reversed.
+    let mut path = snapshot.path_to_root(node.id).unwrap_or_default();
+    path.reverse();
+    let names: Vec<String> = path
+        .iter()
+        .filter_map(|id| {
+            snapshot
+                .nodes
+                .iter()
+                .find(|n| n.id == *id)
+                .and_then(|n| n.key.clone())
+        })
+        .collect();
+    vec![
+        ReadoutRow::heading("Breadcrumb"),
+        ReadoutRow::new("path", names.join(" > ")),
+    ]
+}
+
+// --- the style readout ------------------------------------------------------
+
+/// The resolved style of one element, across the inspected states.
+///
+/// This is Chrome's "Computed" pane: every property that resolves, in every
+/// state the element can be in, so a hover style is visible without hovering.
+pub fn style_rows(inspector: &Inspector<'_>, key: &str) -> Vec<ReadoutRow> {
+    let snapshot = inspector.style_snapshot();
+    let node_key = inspector.tree_snapshot().nodes.iter().find_map(|n| {
+        if n.key.as_deref() == Some(key) {
+            Some(n.id)
+        } else {
+            None
+        }
+    });
+    let Some(id) = node_key else {
+        return vec![ReadoutRow::heading("Styles"), ReadoutRow::new("(nothing selected)", "")];
+    };
+
+    let mut rows = vec![ReadoutRow::heading("Styles")];
+    for entry in snapshot.entries.iter().filter(|e| e.id == id) {
+        let style = &entry.style;
+        rows.push(ReadoutRow::heading(&entry.state).nested(1));
+        let mut props: Vec<ReadoutRow> = Vec::new();
+        if let Some(c) = &style.background {
+            props.push(ReadoutRow::new(
+                "background",
+                format!("#{:02X}{:02X}{:02X}@{}", c.r, c.g, c.b, c.a),
+            ));
+        }
+        if let Some(c) = &style.foreground {
+            props.push(ReadoutRow::new(
+                "color",
+                format!("#{:02X}{:02X}{:02X}@{}", c.r, c.g, c.b, c.a),
+            ));
+        }
+        if let Some(v) = style.opacity {
+            props.push(ReadoutRow::new("opacity", fmt_f32(v)));
+        }
+        if let Some(v) = style.font_size {
+            props.push(ReadoutRow::new("font-size", fmt_f32(v)));
+        }
+        if let Some(v) = style.padding {
+            props.push(ReadoutRow::new("padding", fmt_f32(v)));
+        }
+        if let Some(v) = style.radius {
+            props.push(ReadoutRow::new("radius", fmt_f32(v)));
+        }
+        if let Some(v) = style.border_width {
+            props.push(ReadoutRow::new("border-width", fmt_f32(v)));
+        }
+        if let Some(c) = &style.border_color {
+            props.push(ReadoutRow::new(
+                "border-color",
+                format!("#{:02X}{:02X}{:02X}@{}", c.r, c.g, c.b, c.a),
+            ));
+        }
+        if let Some(v) = style.elevation {
+            props.push(ReadoutRow::new("elevation", fmt_f32(v)));
+        }
+        if props.is_empty() {
+            props.push(ReadoutRow::new("(no resolved properties)", ""));
+        }
+        rows.extend(props.into_iter().map(|r| r.nested(2)));
+    }
+    rows
+}
+
+// --- the layout readout -----------------------------------------------------
+
+/// The layout box of one element — Chrome's box-model overlay, as rows.
+///
+/// The element's own request rather than its measured box: a request is what
+/// the widget *asked* for, which is the thing a layout bug is usually about.
+pub fn layout_rows(inspector: &Inspector<'_>, key: &str) -> Vec<ReadoutRow> {
+    let snapshot = inspector.layout_snapshot();
+    let id = inspector.tree_snapshot().nodes.iter().find_map(|n| {
+        if n.key.as_deref() == Some(key) {
+            Some(n.id)
+        } else {
+            None
+        }
+    });
+    let Some(id) = id else {
+        return vec![ReadoutRow::heading("Layout"), ReadoutRow::new("(nothing selected)", "")];
+    };
+    let mut rows = vec![ReadoutRow::heading("Layout")];
+    if let Some(entry) = snapshot.entries.iter().find(|e| e.id == id) {
+        let layout = &entry.layout;
+        rows.push(ReadoutRow::new(
+            "size",
+            format!(
+                "{} x {}",
+                layout.width.map(fmt_f32).unwrap_or_else(|| "auto".into()),
+                layout.height.map(fmt_f32).unwrap_or_else(|| "auto".into()),
+            ),
+        ));
+        if let Some(v) = layout.flex_grow {
+            rows.push(ReadoutRow::new("flex-grow", fmt_f32(v)));
+        }
+        if let Some(v) = &layout.axis {
+            rows.push(ReadoutRow::new("axis", v.clone()));
+        }
+        if let Some(v) = layout.gap {
+            rows.push(ReadoutRow::new("gap", fmt_f32(v)));
+        }
+        if let Some(v) = &layout.main_align {
+            rows.push(ReadoutRow::new("main-align", v.clone()));
+        }
+        if let Some(v) = &layout.cross_align {
+            rows.push(ReadoutRow::new("cross-align", v.clone()));
+        }
+        if let Some(v) = &layout.position {
+            rows.push(ReadoutRow::new("position", v.clone()));
+        }
+        if let Some(inset) = &layout.inset {
+            let parts: Vec<String> = inset
+                .iter()
+                .map(|v| v.map(fmt_f32).unwrap_or_else(|| "auto".into()))
+                .collect();
+            rows.push(ReadoutRow::new("inset", format!("[{}]", parts.join(", "))));
+        }
+    } else {
+        rows.push(ReadoutRow::new("(no layout request)", ""));
+    }
+    rows
 }
 
 /// The semantics rows a panel can list.
 pub fn semantics_rows(entries: &[SemanticsEntry]) -> Vec<ReadoutRow> {
     entries
         .iter()
-        .map(|e| ReadoutRow {
-            label: format!("{:?}", e.role),
-            value: if e.label.is_empty() {
-                format!("#{}", e.element.raw())
-            } else {
-                e.label.clone()
-            },
+        .map(|e| {
+            ReadoutRow::new(
+                format!("{:?}", e.role),
+                if e.label.is_empty() {
+                    format!("#{}", e.element.raw())
+                } else {
+                    e.label.clone()
+                },
+            )
         })
         .collect()
 }
@@ -357,21 +738,20 @@ pub fn update_rows(path: &UpdatePath) -> Vec<ReadoutRow> {
     let mut rows: Vec<ReadoutRow> = path
         .bindings
         .iter()
-        .map(|b| ReadoutRow {
-            label: "binding".into(),
-            value: match &b.source {
-                Some(source) => {
-                    format!("{} -> {} ({} runs)", source.label, source.property, b.runs)
-                }
-                None => format!("{:?} ({} runs)", b.id, b.runs),
-            },
+        .map(|b| {
+            ReadoutRow::new(
+                "binding",
+                match &b.source {
+                    Some(source) => {
+                        format!("{} -> {} ({} runs)", source.label, source.property, b.runs)
+                    }
+                    None => format!("{:?} ({} runs)", b.id, b.runs),
+                },
+            )
         })
         .collect();
     for ancestor in &path.ancestors {
-        rows.push(ReadoutRow {
-            label: "ancestor".into(),
-            value: ancestor.as_str().to_string(),
-        });
+        rows.push(ReadoutRow::new("ancestor", ancestor.as_str().to_string()));
     }
     rows
 }

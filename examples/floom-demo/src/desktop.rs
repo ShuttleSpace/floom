@@ -25,6 +25,10 @@ struct DemoApp {
 
 impl WinitApp for DemoApp {
     fn events(&mut self, platform: &mut WinitPlatform) {
+        // The panel reads the tree through a cell; refresh it before the frame so
+        // what it shows is the gallery as it is now.
+        #[cfg(feature = "devtools")]
+        self.devtools.refresh_tree(self.runner.host());
         // Input updates the tree and requests redraws; `RedrawRequested` runs a
         // frame and presents it through the GPU presenter.
         self.runner.pump(platform);
@@ -50,23 +54,11 @@ pub fn launch() {
     host.set_size(WINDOW);
     host.mount_root(LayoutStyle::default(), demos::gallery_root());
 
-    // One line, and F12 opens the devtools panel over the gallery. See
-    // `crates/floom/src/devtools.rs` for the door this is.
+    // One line, and F12 opens the devtools panel over the gallery: the element
+    // tree, the breadcrumb to the selected node, and that node's style or
+    // layout. See `crates/floom/src/devtools.rs` for the door this is.
     #[cfg(feature = "devtools")]
-    let mut devtools = Some(floom::devtools::attach(&mut host, |state| {
-        // The panel's readout: what the app itself wants to show there. This
-        // demo answers "how big is the gallery?" and "which tab is up?".
-        vec![
-            floom::devtools::ReadoutRow {
-                label: "window".into(),
-                value: format!("{}x{}", WINDOW.width, WINDOW.height),
-            },
-            floom::devtools::ReadoutRow {
-                label: "tab".into(),
-                value: format!("{:?}", state.tab()),
-            },
-        ]
-    }));
+    let mut devtools = Some(floom::devtools::attach_elements(&mut host));
     // The shortcut cannot be hooked from inside the tree -- the key event
     // arrives at the platform loop first -- so the loop hands it over here.
     #[cfg(not(feature = "devtools"))]

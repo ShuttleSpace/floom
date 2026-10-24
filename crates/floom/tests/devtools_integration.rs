@@ -5,6 +5,13 @@
 //! actually see, and the shortcut reaching that panel before the tree does.
 //! Both are checkable without a window — the host mounts overlays headlessly,
 //! and a key event is a value.
+//!
+//! Gated on the feature because `floom::devtools` is: without it this file
+//! names a module that does not exist, so a plain `cargo test --workspace`
+//! fails to compile instead of skipping. The feature is off by default, so
+//! `cargo test -p floom --features devtools` is what runs these.
+
+#![cfg(feature = "devtools")]
 
 use floom_app::WidgetHost;
 use floom_core::Widget;
