@@ -862,6 +862,7 @@ dependencies = [
  "floom-app",
  "floom-core",
  "floom-devtools",
+ "floom-hot-reload",
  "floom-layout",
  "floom-platform",
  "floom-platform-android",
@@ -958,6 +959,7 @@ dependencies = [
  "floom-error",
  "floom-focus",
  "floom-forms",
+ "floom-hot-reload",
  "floom-layout",
  "floom-native",
  "floom-overlay",
@@ -1073,6 +1075,7 @@ name = "floom-demo"
 version = "0.2.0"
 dependencies = [
  "floem-winit",
+ "floom",
  "floom-app",
  "floom-core",
  "floom-cupertino",
@@ -1111,6 +1114,7 @@ dependencies = [
  "floom-accessibility",
  "floom-core",
  "floom-dsl",
+ "floom-error",
  "floom-hot-reload",
  "floom-inspector",
  "floom-runtime-core",
@@ -1118,6 +1122,7 @@ dependencies = [
  "floom-style",
  "floom-types",
  "floom-ui-ir",
+ "floom-widgets",
 ]
 
 [[package]]
