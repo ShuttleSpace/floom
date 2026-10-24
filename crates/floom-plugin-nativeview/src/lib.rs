@@ -109,7 +109,14 @@ pub fn register() {
 /// `host_window` is the platform's opaque window handle: an `NSWindow *` on
 /// macOS. It is the same handle the host would give its own provider, so
 /// the plugin's view lands in the same window as the framework's surface.
-pub fn provider(host_window: *const c_void) -> Result<CProvider, CProviderError> {
+///
+/// # Safety
+///
+/// `host_window` must be a live window handle of the kind the native half
+/// expects — an `NSWindow *` on macOS — and must stay valid for as long as the
+/// returned provider is driven. Nothing here can check either claim: the handle
+/// arrives as a bare pointer from the host, and the type is opaque by design.
+pub unsafe fn provider(host_window: *const c_void) -> Result<CProvider, CProviderError> {
     // Stored as a `usize` rather than a pointer: a raw pointer is neither
     // `Send` nor `Sync`, and a `static` needs both. The pointer came from the
     // native half and stays valid for the life of the process, so the round
@@ -189,8 +196,14 @@ pub mod diagnostics {
 }
 
 /// The provider, boxed, for a host that wants the trait object.
-pub fn boxed_provider(
+///
+/// # Safety
+///
+/// Same contract as [`provider`]: `host_window` must be a live handle of the
+/// kind the native half expects, and must outlive the returned provider.
+pub unsafe fn boxed_provider(
     host_window: *const c_void,
 ) -> Result<Box<dyn NativeViewProvider>, CProviderError> {
-    Ok(Box::new(provider(host_window)?))
+    // SAFETY: forwarded to `provider`, whose contract this function repeats.
+    Ok(Box::new(unsafe { provider(host_window) }?))
 }

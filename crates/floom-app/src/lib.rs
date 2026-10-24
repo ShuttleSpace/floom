@@ -679,15 +679,17 @@ fn align_to_align_items(align: Align) -> LAlign {
 /// layout type, so the lowering happens here, where both vocabularies are in
 /// scope.
 fn request_to_style(req: &LayoutRequest) -> LayoutStyle {
-    let mut style = LayoutStyle::default();
-    style.width = req.width;
-    style.height = req.height;
-    style.min_width = req.min_width;
-    style.min_height = req.min_height;
-    style.max_width = req.max_width;
-    style.max_height = req.max_height;
-    style.flex_grow = req.flex_grow.unwrap_or(0.0);
-    style.aspect_ratio = req.aspect_ratio;
+    let mut style = LayoutStyle {
+        width: req.width,
+        height: req.height,
+        min_width: req.min_width,
+        min_height: req.min_height,
+        max_width: req.max_width,
+        max_height: req.max_height,
+        flex_grow: req.flex_grow.unwrap_or(0.0),
+        aspect_ratio: req.aspect_ratio,
+        ..LayoutStyle::default()
+    };
     if let Some(axis) = req.axis {
         style.flex_direction = match axis {
             Axis::Horizontal => FlexDirection::Row,
@@ -1000,27 +1002,27 @@ impl WidgetHost {
         });
         // Tell the opener which handle it got. It is the only chance: the
         // request went into a queue and `open_overlay` could only answer "yes".
-        if let Some(owner) = owner {
-            if let Some(owner_index) = self.index_of(owner) {
-                let owner_id = self.nodes[owner_index].id;
-                let mut cx = HostUpdateContext::callback(
-                    self.nodes[owner_index].bounds,
-                    Rect::from_origin_size(Point::ZERO, self.size),
-                );
-                self.nodes[owner_index]
-                    .widget
-                    .overlay_opened(&mut cx, owner_id, handle);
-                let HostUpdateContext {
-                    dirty,
-                    children_dirty,
-                    ..
-                } = cx;
-                if children_dirty {
-                    self.nodes[owner_index].children_dirty = true;
-                }
-                if dirty {
-                    self.nodes[owner_index].dirty = true;
-                }
+        if let Some(owner) = owner
+            && let Some(owner_index) = self.index_of(owner)
+        {
+            let owner_id = self.nodes[owner_index].id;
+            let mut cx = HostUpdateContext::callback(
+                self.nodes[owner_index].bounds,
+                Rect::from_origin_size(Point::ZERO, self.size),
+            );
+            self.nodes[owner_index]
+                .widget
+                .overlay_opened(&mut cx, owner_id, handle);
+            let HostUpdateContext {
+                dirty,
+                children_dirty,
+                ..
+            } = cx;
+            if children_dirty {
+                self.nodes[owner_index].children_dirty = true;
+            }
+            if dirty {
+                self.nodes[owner_index].dirty = true;
             }
         }
         self.content_dirty = true;
@@ -1050,32 +1052,32 @@ impl WidgetHost {
         self.unmount_subtree(slot.node);
         self.overlay.remove(id);
 
-        if let Some(owner) = slot.owner {
-            if let Some(index) = self.index_of(owner) {
-                let owner_id = self.nodes[index].id;
-                let mut cx = HostUpdateContext::callback(
-                    self.nodes[index].bounds,
-                    Rect::from_origin_size(Point::ZERO, self.size),
-                );
-                self.nodes[index]
-                    .widget
-                    .overlay_closed(&mut cx, owner_id, id, content);
-                let HostUpdateContext {
-                    dirty,
-                    children_dirty,
-                    ..
-                } = cx;
-                if children_dirty {
-                    self.nodes[index].children_dirty = true;
-                    self.reconcile_subtree(index);
-                }
-                if dirty {
-                    self.nodes[index].dirty = true;
-                }
-                self.content_dirty = true;
-                // An overlay closed: its subtree leaves the semantics tree.
-                self.semantics_dirty = true;
+        if let Some(owner) = slot.owner
+            && let Some(index) = self.index_of(owner)
+        {
+            let owner_id = self.nodes[index].id;
+            let mut cx = HostUpdateContext::callback(
+                self.nodes[index].bounds,
+                Rect::from_origin_size(Point::ZERO, self.size),
+            );
+            self.nodes[index]
+                .widget
+                .overlay_closed(&mut cx, owner_id, id, content);
+            let HostUpdateContext {
+                dirty,
+                children_dirty,
+                ..
+            } = cx;
+            if children_dirty {
+                self.nodes[index].children_dirty = true;
+                self.reconcile_subtree(index);
             }
+            if dirty {
+                self.nodes[index].dirty = true;
+            }
+            self.content_dirty = true;
+            // An overlay closed: its subtree leaves the semantics tree.
+            self.semantics_dirty = true;
         }
     }
 
@@ -1535,7 +1537,7 @@ impl WidgetHost {
             // Scene nodes die at the next paint (their removal needs the
             // paint transaction); park them so nothing renders after now.
             self.pending_scene_removals
-                .extend(self.nodes[i].scene_nodes.drain(..));
+                .append(&mut self.nodes[i].scene_nodes);
             // An animation belongs to the node it runs on: a retired node keeps
             // none, or the scheduler would go on advancing a value nothing
             // reads and the frame loop would never park.
@@ -2026,9 +2028,7 @@ impl WidgetHost {
         // the answer depend on where the widget sits on screen, so two identical
         // scroll containers at different points in a window would clamp
         // differently. The caller has its own bounds and can subtract them.
-        let Some(union) = union else {
-            return None;
-        };
+        let union = union?;
         Some(Size::new(
             (union.x1 - own.x0).max(0.0),
             (union.y1 - own.y0).max(0.0),
@@ -2243,9 +2243,9 @@ impl WidgetHost {
         // off the settled-frame path `tests/allocation.rs` budgets.
         let mut content_sizes: Vec<Option<Size>> = Vec::new();
         content_sizes.resize(self.nodes.len(), None);
-        for i in 0..self.nodes.len() {
+        for (i, slot) in content_sizes.iter_mut().enumerate() {
             if !self.nodes[i].dead && self.nodes[i].widget.needs_content_size() {
-                content_sizes[i] = self.content_size(i);
+                *slot = self.content_size(i);
             }
         }
         for index in 0..self.nodes.len() {
@@ -3050,9 +3050,9 @@ impl WidgetHost {
     fn build_semantics_node(&self, index: usize) -> Option<SemanticsNode> {
         let node = &self.nodes[index];
         let hint = node.widget.semantics_hint();
-        let publishes_itself = hint.as_ref().map_or(false, |hint| {
-            hint.role != SemanticsRole::None || hint.label.is_some()
-        });
+        let publishes_itself = hint
+            .as_ref()
+            .is_some_and(|hint| hint.role != SemanticsRole::None || hint.label.is_some());
         let has_children = node.children.iter().any(|&child| !self.nodes[child].dead);
         if !publishes_itself && !has_children {
             return None;
@@ -3224,9 +3224,11 @@ impl WidgetHost {
                 index,
                 stop,
                 event.clone(),
-                &mut focus_requests,
-                &mut scroll_requests,
-                &mut overlay_commands,
+                &mut DispatchQueues {
+                    focus_requests: &mut focus_requests,
+                    scroll_requests: &mut scroll_requests,
+                    overlay_commands: &mut overlay_commands,
+                },
                 &content_sizes,
             ) {
                 handled = true;
@@ -3238,11 +3240,11 @@ impl WidgetHost {
             self.set_focus(id);
         }
         for (id, offset) in scroll_requests {
-            if let Some(index) = self.index_of(id) {
-                if !self.nodes[index].dead {
-                    self.nodes[index].scroll_offset = offset;
-                    self.layout_dirty = true;
-                }
+            if let Some(index) = self.index_of(id)
+                && !self.nodes[index].dead
+            {
+                self.nodes[index].scroll_offset = offset;
+                self.layout_dirty = true;
             }
         }
         // Overlay work happens after the event, never inside it: opening one
@@ -3290,9 +3292,7 @@ impl WidgetHost {
         index: usize,
         stop: RouteStop,
         event: Event,
-        focus_requests: &mut Vec<ElementId>,
-        scroll_requests: &mut Vec<(ElementId, ScrollOffset)>,
-        overlay_commands: &mut Vec<OverlayCommand>,
+        queues: &mut DispatchQueues<'_>,
         content_sizes: &[Option<Size>],
     ) -> bool {
         let node = &mut self.nodes[index];
@@ -3301,11 +3301,11 @@ impl WidgetHost {
             bounds: node.bounds,
             event,
             content_size: content_sizes.get(index).copied().flatten(),
-            focus_requests,
-            scroll_requests,
+            focus_requests: &mut *queues.focus_requests,
+            scroll_requests: &mut *queues.scroll_requests,
             ime_caret: &mut self.ime_caret,
             overlays: OverlayDispatch {
-                commands: overlay_commands,
+                commands: &mut *queues.overlay_commands,
                 next_handle: &mut self.next_overlay_handle,
                 owner: stop.id,
             },
@@ -3372,16 +3372,16 @@ impl WidgetHost {
     /// content (the scrim), and a hit there falls through to the overlay root
     /// so the overlay can absorb or act on the dismissal.
     fn resolve_pointer(&self, point: Point) -> Option<Hit> {
-        if let Some(overlay_id) = self.overlay.hit_test(point) {
-            if let Some(node) = self.overlay_node(overlay_id) {
-                let target = self
-                    .hit_test_overlay_subtree(node, point)
-                    .unwrap_or(self.nodes[node].id);
-                return Some(Hit {
-                    target,
-                    native: None,
-                });
-            }
+        if let Some(overlay_id) = self.overlay.hit_test(point)
+            && let Some(node) = self.overlay_node(overlay_id)
+        {
+            let target = self
+                .hit_test_overlay_subtree(node, point)
+                .unwrap_or(self.nodes[node].id);
+            return Some(Hit {
+                target,
+                native: None,
+            });
         }
         self.router.resolve_target(point)
     }
@@ -3679,7 +3679,7 @@ impl WidgetHost {
             if let Some(previous) = self.native_focus_return.take() {
                 let alive = self
                     .index_of(previous)
-                    .map_or(false, |index| !self.nodes[index].dead);
+                    .is_some_and(|index| !self.nodes[index].dead);
                 if alive && self.focus.focused().is_none() {
                     self.set_focus(previous);
                 }
@@ -3700,7 +3700,7 @@ impl WidgetHost {
         let dead: Vec<usize> = self
             .participants
             .iter()
-            .filter(|p| self.nodes.get(p.node).map_or(true, |node| node.dead))
+            .filter(|p| self.nodes.get(p.node).is_none_or(|node| node.dead))
             .map(|p| p.node)
             .collect();
         for index in dead {
@@ -3724,7 +3724,7 @@ impl WidgetHost {
         // A modal overlay owns the screen. The participant stays bound and is
         // hidden instead of being destroyed: it will be straight back when the
         // modal closes, and recreating an OS view is the expensive part.
-        let modal_up = self.overlay.top().map_or(false, |top| top.modal);
+        let modal_up = self.overlay.top().is_some_and(|top| top.modal);
         let scale = self.scale;
 
         self.reconcile_clipping(viewport, stats);
@@ -3828,7 +3828,7 @@ impl WidgetHost {
             let participant = self.participants[position];
             let bounds = self.nodes[participant.node].bounds;
             let clip = self.clip(participant.node, bounds, viewport);
-            let needs_crop = clip.map_or(false, |clip| !clip.contains_rect(bounds));
+            let needs_crop = clip.is_some_and(|clip| !clip.contains_rect(bounds));
             if !needs_crop {
                 // Whole again: whatever was decided while it was clipped no
                 // longer applies, and the next clip gets a fresh decision.
@@ -4503,10 +4503,10 @@ impl NodePaintContext<'_> {
         styled: &StyledText,
     ) -> (Vec<(floom_types::Color, ResourceId)>, floom_types::Size) {
         let key = styled_glyph_hash(styled);
-        if let Some(entry) = self.styled_glyphs.get(&key) {
-            if entry.styled == *styled {
-                return (entry.nodes.clone(), entry.size);
-            }
+        if let Some(entry) = self.styled_glyphs.get(&key)
+            && entry.styled == *styled
+        {
+            return (entry.nodes.clone(), entry.size);
         }
         // Shape the description exactly as the caller laid it out: the same
         // description, shaped by the same shaper, so the glyphs the caller
@@ -4784,10 +4784,7 @@ impl PaintContext for NodePaintContext<'_> {
     }
 
     fn stroke_path(&mut self, path: &floom_types::Path, stroke: &floom_types::Stroke) {
-        self.push(floom_scene::SceneNode::stroked_path(
-            path.clone(),
-            stroke.clone(),
-        ));
+        self.push(floom_scene::SceneNode::stroked_path(path.clone(), *stroke));
     }
 }
 
@@ -4932,6 +4929,17 @@ impl OverlayDispatch<'_> {
         *self.next_handle += 1;
         handle
     }
+}
+
+struct DispatchQueues<'a> {
+    /// Elements that asked for focus during this dispatch, applied by the host
+    /// once the widget's `event` has returned and released the node borrow.
+    focus_requests: &'a mut Vec<ElementId>,
+    /// Scroll offsets a widget asked for, in the same deferred shape.
+    scroll_requests: &'a mut Vec<(ElementId, ScrollOffset)>,
+    /// Overlay work queued by the event — opening mounts a subtree, which needs
+    /// the whole host mutably, so it cannot happen inside the dispatch.
+    overlay_commands: &'a mut Vec<OverlayCommand>,
 }
 
 struct NodeEventContext<'a> {

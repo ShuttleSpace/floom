@@ -198,7 +198,7 @@ impl Widget for Stack {
     /// which is what makes `Stack::new(..).request(height(..))` mean "a stack, that
     /// tall" rather than replacing one with the other.
     fn layout_request(&self) -> Option<LayoutRequest> {
-        let mut req = self.request.unwrap_or_else(LayoutRequest::new);
+        let mut req = self.request.unwrap_or_default();
         req = req.stack(self.axis, self.gap);
         if let Some(a) = self.main_align {
             req = req.main_align(a);
@@ -369,7 +369,7 @@ impl Scroll {
     /// needs the same door: the wheel cannot clamp against an extent nobody
     /// told it.
     pub fn with_content_extent(mut self, extent: Size) -> Self {
-        self.content = Some((extent.width as f64, extent.height as f64));
+        self.content = Some((extent.width, extent.height));
         self
     }
 
@@ -466,7 +466,6 @@ impl Scroll {
     /// when nothing scrolled it.
     pub fn offset_after_wheel(&self, delta: (f64, f64), viewport: (f64, f64)) -> ScrollOffset {
         let here = self.offset();
-        let limit = self.max_offset(viewport).unwrap_or(ScrollOffset::ZERO);
         floom_core::clamp_offset(
             ScrollOffset::new(here.x + delta.0, here.y + delta.1),
             (
@@ -546,9 +545,7 @@ impl Widget for Scroll {
     /// only widgets that opted in are measured — a subtree walk per node would
     /// put an allocation-free but O(subtree) cost on every frame of every tree.
     fn update(&mut self, cx: &mut dyn UpdateContext, id: ElementId) {
-        self.content = cx
-            .content_size(id)
-            .map(|s| (s.width as f64, s.height as f64));
+        self.content = cx.content_size(id).map(|s| (s.width, s.height));
     }
 
     /// Clipped to its own box.
@@ -583,7 +580,7 @@ impl Widget for Scroll {
             // refusing it — a page behind this container may well scroll.
             return false;
         };
-        self.content = Some((content.width as f64, content.height as f64));
+        self.content = Some((content.width, content.height));
 
         let viewport = (bounds.width(), bounds.height());
         let next = self.offset_after_wheel((delta.delta_x, delta.delta_y), viewport);
@@ -1388,11 +1385,18 @@ fn absolute_layout(top: f32) -> LayoutRequest {
 /// [`AnimatedContent::content_with`]. Two simultaneously-live keys (the leaving
 /// and the arriving) are therefore two distinct subtrees, each animating on its
 /// own.
+/// Builds the content for one animated-content key.
+///
+/// Named because the type is the same in the struct field, the setter's
+/// argument and the stored `Option`; written out three times it is a place for
+/// a bound to go missing from one of them.
+type ContentBuilder<T> = Arc<dyn Fn(&T) -> Child + Send + Sync>;
+
 #[derive(Clone)]
 pub struct AnimatedContent<T: Clone + Eq + Send + Sync + 'static> {
     value: T,
     last_value: T,
-    build: Option<Arc<dyn Fn(&T) -> Child + Send + Sync>>,
+    build: Option<ContentBuilder<T>>,
     transition: PresenceTransition,
     /// One live subtree per currently-mounted-or-exiting value. Each gets a
     /// unique, ever-increasing id used as its [`ChildKey`], so two different
@@ -1606,10 +1610,10 @@ impl<T: Clone + Eq + Send + Sync + 'static> Widget for AnimatedContent<T> {
         // A value change: flip the resting entry to exit and spawn the new one.
         if self.value != self.last_value {
             self.last_value = self.value.clone();
-            if let Some(active_id) = self.active_id {
-                if let Some(slot) = self.entries.iter_mut().find(|s| s.id == active_id) {
-                    slot.leaf.inner.when_signal.store(false, Ordering::Relaxed);
-                }
+            if let Some(active_id) = self.active_id
+                && let Some(slot) = self.entries.iter_mut().find(|s| s.id == active_id)
+            {
+                slot.leaf.inner.when_signal.store(false, Ordering::Relaxed);
             }
             if let Some(new_id) = self.spawn_entry() {
                 self.active_id = Some(new_id);

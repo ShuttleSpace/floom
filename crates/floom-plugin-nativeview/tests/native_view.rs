@@ -16,8 +16,6 @@
 //! views at the same time would each see the other's. One test owns the
 //! numbers; the others never create anything.
 
-use std::ffi::c_void;
-
 use floom_native_ffi::floom_native::{
     NativeCompositionMode, NativeError, NativeState, NativeViewController, NativeViewId,
     NativeViewKind, NativeViewProvider, Rect,
@@ -50,7 +48,10 @@ fn the_provider_is_registered_by_the_native_half() {
     // The Objective-C half's constructor hands its vtable to the Rust half.
     // Without it there is no provider, and the error would say so rather than
     // handing back a null pointer.
-    provider(std::ptr::null()).expect("the native half registered a provider");
+    //
+    // SAFETY: no window is passed on purpose. The provider is only asked to
+    // exist here; nothing drives it, so nothing dereferences the handle.
+    unsafe { provider(std::ptr::null()) }.expect("the native half registered a provider");
 }
 
 #[test]
@@ -60,7 +61,11 @@ fn a_native_view_is_created_placed_and_destroyed() {
 
     // The provider, with no window: the native half still makes a real
     // AppKit view, which is what "a native half did real work" means.
-    let mut controller = NativeViewController::boxed(provider(std::ptr::null()).expect("provider"));
+    //
+    // SAFETY: the view is created and placed against no host window, which is
+    // what this test is about; the controller is dropped at the end of it.
+    let mut controller =
+        NativeViewController::boxed(unsafe { provider(std::ptr::null()) }.expect("provider"));
 
     let caps = controller.capabilities();
     assert_eq!(
@@ -131,7 +136,10 @@ fn a_native_view_is_created_placed_and_destroyed() {
 
 #[test]
 fn the_controller_refuses_a_mode_the_provider_does_not_offer() {
-    let mut controller = NativeViewController::boxed(provider(std::ptr::null()).expect("provider"));
+    // SAFETY: as above — no host window, and the provider is only asked to
+    // refuse a mode, which never touches one.
+    let mut controller =
+        NativeViewController::boxed(unsafe { provider(std::ptr::null()) }.expect("provider"));
     let bound = slot(3, 0);
     // The native half offers overlay only.
     let error = controller
@@ -150,8 +158,11 @@ fn the_controller_refuses_a_mode_the_provider_does_not_offer() {
 /// The provider is a `NativeViewProvider`, so a host can hold it as one.
 #[test]
 fn the_provider_is_an_ordinary_native_view_provider() {
+    // SAFETY: a null handle is accepted here on purpose. This test only asks
+    // the provider for its capabilities, which never touch the host window;
+    // the native half is stubbed out in the host build, so there is no window
+    // to pass and nothing that would dereference one.
     let provider: Box<dyn NativeViewProvider> =
-        floom_plugin_nativeview::boxed_provider(std::ptr::null() as *const c_void)
-            .expect("provider");
-    assert!(provider.capabilities().focusable == false);
+        unsafe { floom_plugin_nativeview::boxed_provider(std::ptr::null()) }.expect("provider");
+    assert!(!provider.capabilities().focusable);
 }

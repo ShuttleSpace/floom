@@ -42,8 +42,8 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
 use floom_core::{
-    Color, CreateContext, ElementId, Event, Insets, Key, KeyPhase, LayoutRequest, NamedKey,
-    PaintContext, UpdateContext, Widget, WidgetAny,
+    Color, CreateContext, ElementId, Event, Key, KeyPhase, LayoutRequest, NamedKey, PaintContext,
+    UpdateContext, Widget, WidgetAny,
 };
 use floom_types::{FontWeight, Rect};
 
@@ -175,17 +175,6 @@ impl Default for TextInputStyle {
             radius: 4.0,
             border_color: Color::rgba(0x1D, 0x1B, 0x20, 31),
             border_width: 1.0,
-        }
-    }
-}
-
-impl TextInputStyle {
-    fn padding(&self) -> Insets {
-        Insets {
-            left: self.padding_horiz,
-            right: self.padding_horiz,
-            top: self.padding_vert,
-            bottom: self.padding_vert,
         }
     }
 }
@@ -351,10 +340,10 @@ impl TextInput {
     /// What the field paints: the committed text, or the composition, or the
     /// placeholder — in that order of precedence.
     fn shown(&self) -> (String, Color) {
-        if let Some(preedit) = &self.preedit {
-            if !preedit.is_empty() {
-                return (preedit.clone(), self.style.preedit_color);
-            }
+        if let Some(preedit) = &self.preedit
+            && !preedit.is_empty()
+        {
+            return (preedit.clone(), self.style.preedit_color);
         }
         let text = self.text();
         if text.is_empty() {
@@ -501,13 +490,13 @@ impl Widget for TextInput {
                 floom_core::ImeUpdate::OpenChanged(open) => {
                     if !open {
                         // Closing the panel commits: the composition becomes text.
-                        if let Some(preedit) = self.preedit.take() {
-                            if !preedit.is_empty() {
-                                self.edit(|text, caret| {
-                                    text.insert_str(*caret, &preedit);
-                                    *caret += preedit.len();
-                                });
-                            }
+                        if let Some(preedit) = self.preedit.take()
+                            && !preedit.is_empty()
+                        {
+                            self.edit(|text, caret| {
+                                text.insert_str(*caret, &preedit);
+                                *caret += preedit.len();
+                            });
                         }
                     }
                     self.revision.bump();

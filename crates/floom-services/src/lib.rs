@@ -35,20 +35,14 @@ pub struct Services {
     inner: Rc<RefCell<Registry>>,
 }
 
+/// The registry's empty state is also its default one: no entries, not
+/// disposing.
+#[derive(Default)]
 struct Registry {
     entries: Vec<(TypeId, Entry)>,
     /// Set while a disposal callback is running, so a service trying to
     /// resolve from a dying scope fails loudly instead of resurrecting state.
     disposing: bool,
-}
-
-impl Default for Registry {
-    fn default() -> Self {
-        Self {
-            entries: Vec::new(),
-            disposing: false,
-        }
-    }
 }
 
 impl Registry {

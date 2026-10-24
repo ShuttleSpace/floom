@@ -285,12 +285,8 @@ impl Widget for Ripple {
             }
             // Only a release that follows a press starts the fade; a release
             // with no press in flight must not conjure ink.
-            PointerPhase::Up => {
-                if self.phase == Phase::Expanding {
-                    self.phase = Phase::Fading;
-                } else {
-                    return false;
-                }
+            PointerPhase::Up if self.phase == Phase::Expanding => {
+                self.phase = Phase::Fading;
             }
             _ => return false,
         }

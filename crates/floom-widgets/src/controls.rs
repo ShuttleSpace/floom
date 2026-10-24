@@ -551,14 +551,14 @@ impl Widget for Button {
             }
             Press::Consumed => true,
             Press::Ignored => {
-                if let Event::Key(key) = cx.event() {
-                    if is_activation_key(&key, self.state) {
-                        if let Some(callback) = &self.on_click {
-                            callback();
-                        }
-                        self.revision.bump();
-                        return true;
+                if let Event::Key(key) = cx.event()
+                    && is_activation_key(&key, self.state)
+                {
+                    if let Some(callback) = &self.on_click {
+                        callback();
                     }
+                    self.revision.bump();
+                    return true;
                 }
                 false
             }
@@ -884,18 +884,18 @@ impl Widget for Pressable {
         // paints nothing: what a moved flag has to invalidate is the *semantics*
         // tree, and that is reached through the dirty flag.
         let read_now = self.expanded_reader.as_ref().map(|read| read());
-        if let Some(now) = read_now {
-            if self.reported != Some(now) {
-                self.reported = Some(now);
-                self.revision.bump();
-            }
+        if let Some(now) = read_now
+            && self.reported != Some(now)
+        {
+            self.reported = Some(now);
+            self.revision.bump();
         }
         let selected_now = self.selected_reader.as_ref().map(|read| read());
-        if let Some(now) = selected_now {
-            if self.reported_selected != Some(now) {
-                self.reported_selected = Some(now);
-                self.revision.bump();
-            }
+        if let Some(now) = selected_now
+            && self.reported_selected != Some(now)
+        {
+            self.reported_selected = Some(now);
+            self.revision.bump();
         }
         self.revision.sync(cx, id);
     }
@@ -1310,11 +1310,11 @@ impl Widget for Switch {
             }
             Press::Consumed => true,
             Press::Ignored => {
-                if let Event::Key(key) = cx.event() {
-                    if is_activation_key(&key, self.state) {
-                        self.toggle();
-                        return true;
-                    }
+                if let Event::Key(key) = cx.event()
+                    && is_activation_key(&key, self.state)
+                {
+                    self.toggle();
+                    return true;
                 }
                 false
             }

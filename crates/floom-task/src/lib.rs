@@ -9,19 +9,18 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use floom_signal::{RwSignal, Scope, SignalGet, SignalUpdate};
 
 /// Lifecycle of a fetched resource.
-#[derive(Debug, Clone, PartialEq, Eq)]
+///
+/// `Initial` is the default state and the only one that carries no value, so
+/// `Default` is derived: the derive puts the bound on the enum's own parameters
+/// only where a variant needs them, which `Initial` does not.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub enum ResourceState<T, E> {
+    #[default]
     Initial,
     Loading,
     Ready(T),
     Refreshing(T),
     Error(E),
-}
-
-impl<T, E> Default for ResourceState<T, E> {
-    fn default() -> Self {
-        Self::Initial
-    }
 }
 
 /// Abstraction over how work is scheduled.

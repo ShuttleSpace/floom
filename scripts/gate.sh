@@ -57,6 +57,23 @@ FLOOM2_PACKAGES=(
   --package=floom-text --package=floom-editor --package=floom-ime
   --package=floom-layout --package=floom-style --package=floom-virtual
   --package=floom-native --package=floom-native-ffi
+  # The plugins are part of the 2.0 track, not an extra: each one is a crate
+  # this branch added, and their `cfg` arms are where the platform work lives.
+  # Leaving them out of the scoped clippy run is how `provider()` kept a raw
+  # pointer parameter without an `unsafe` signature while the gate stayed green.
+  --package=floom-plugin-nativeview
+  --package=floom-plugin-battery --package=floom-plugin-connectivity
+  --package=floom-plugin-device-info --package=floom-plugin-local-auth
+  --package=floom-plugin-location --package=floom-plugin-notifications
+  --package=floom-plugin-sensors --package=floom-plugin-share
+  --package=floom-plugin-vibration
+  # The framework tail of the track. It was missing here while CI listed it, so
+  # the gate could go green with `floom-app` and `floom-widgets` unclipped.
+  --package=floom-accessibility --package=floom-focus --package=floom-gesture
+  --package=floom-animation --package=floom-overlay --package=floom-store
+  --package=floom-task --package=floom-forms --package=floom-navigation
+  --package=floom-persistence --package=floom-services --package=floom-error
+  --package=floom-widgets --package=floom-app --package=floom-testkit
 )
 
 # The capability plugins, one crate each. `android-check` and `ios-check` compile

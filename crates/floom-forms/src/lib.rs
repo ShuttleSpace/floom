@@ -412,10 +412,15 @@ impl FormController {
 ///
 /// Held as two closures so the binding can live in the widgets/app layer where
 /// the concrete control type is known — `floom-forms` itself never names a
-/// widget.
+/// widget. Both are named because the field type, the constructor's argument
+/// type and the two `Box::new` calls all spell them out, and a trait object
+/// with three bounds written four times is a place for them to drift apart.
+type Getter<C> = Box<dyn Fn(&C) -> String + Send + Sync>;
+type Setter<C> = Box<dyn Fn(&mut C, &str) + Send + Sync>;
+
 pub struct FieldBinding<C> {
-    get: Box<dyn Fn(&C) -> String + Send + Sync>,
-    set: Box<dyn Fn(&mut C, &str) + Send + Sync>,
+    get: Getter<C>,
+    set: Setter<C>,
 }
 
 impl<C> FieldBinding<C> {

@@ -56,7 +56,9 @@ fn main() {
 
     // The plugin's provider, with the window as its host.
     let host = Retained::as_ptr(&window) as *const c_void;
-    let provider = provider(host).expect("the plugin registered a provider");
+    // SAFETY: `window` is a live `NSWindow` for the rest of `main`, and the
+    // provider built from it is driven only while it is still alive.
+    let provider = unsafe { provider(host) }.expect("the plugin registered a provider");
 
     let mut controller = NativeViewController::boxed(provider);
     let caps = controller.capabilities();

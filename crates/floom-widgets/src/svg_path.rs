@@ -28,7 +28,7 @@
 //! path is a bug in the data, not a runtime condition to recover from — but
 //! drawing half a glyph beats panicking inside `paint`.
 
-use floom_types::{Path, PathSeg, Point};
+use floom_types::{Path, Point};
 
 /// Parse SVG path data into a [`Path`].
 ///
@@ -245,11 +245,13 @@ impl<'a> Parser<'a> {
                 arc_to_cubics(
                     &mut self.path,
                     self.current,
-                    rx,
-                    ry,
-                    rotation,
-                    large_arc,
-                    sweep,
+                    EllipticalArc {
+                        rx,
+                        ry,
+                        rotation_deg: rotation,
+                        large_arc,
+                        sweep,
+                    },
                     to,
                 );
                 self.current = to;
@@ -390,6 +392,22 @@ fn base_of(cmd: char) -> char {
     cmd.to_ascii_uppercase()
 }
 
+/// One arc in SVG's endpoint parameterisation, minus its endpoints.
+///
+/// The five parameters are what the `A` command carries between its start and
+/// end points, and they only mean anything together: a radius pair with no
+/// rotation, or a rotation with no flags, is not a shorter arc, it is an
+/// unreadable argument list. Grouping them is what keeps [`arc_to_cubics`]'s
+/// signature to the two endpoints and this.
+#[derive(Clone, Copy)]
+struct EllipticalArc {
+    rx: f64,
+    ry: f64,
+    rotation_deg: f64,
+    large_arc: bool,
+    sweep: bool,
+}
+
 /// Appends the cubics for one elliptical arc, in SVG's endpoint parameterisation
 /// (`rx ry rotation large-arc sweep x y`).
 ///
@@ -399,16 +417,14 @@ fn base_of(cmd: char) -> char {
 /// back out. Degenerate cases (zero radii, identical endpoints, an ellipse too
 /// small to span the chord) collapse to a line, which is what every renderer
 /// does and what the specification requires.
-fn arc_to_cubics(
-    path: &mut Path,
-    from: Point,
-    rx: f64,
-    ry: f64,
-    rotation_deg: f64,
-    large_arc: bool,
-    sweep: bool,
-    to: Point,
-) {
+fn arc_to_cubics(path: &mut Path, from: Point, arc: EllipticalArc, to: Point) {
+    let EllipticalArc {
+        rx,
+        ry,
+        rotation_deg,
+        large_arc,
+        sweep,
+    } = arc;
     let (dx, dy) = (to.x - from.x, to.y - from.y);
     if dx == 0.0 && dy == 0.0 {
         // Same endpoint: the arc is empty, and emitting a zero-length line would
@@ -522,6 +538,7 @@ fn arc_to_cubics(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use floom_types::PathSeg;
 
     fn segs(data: &str) -> Vec<PathSeg> {
         parse_path_data(data).segments().to_vec()

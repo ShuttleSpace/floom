@@ -35,7 +35,7 @@ pub fn decode_image(bytes: &[u8]) -> Option<DecodedImage> {
 
 /// In-place straight-alpha → premultiplied-alpha conversion, with rounding.
 fn premultiply_rgba8(pixels: &mut [u8]) {
-    for px in pixels.chunks_exact_mut(4) {
+    for px in pixels.as_chunks_mut::<4>().0 {
         let a = u32::from(px[3]);
         for channel in &mut px[..3] {
             *channel = ((u32::from(*channel) * a + 127) / 255) as u8;

@@ -87,10 +87,17 @@ pub struct ErrorBoundary {
     inner: Rc<Inner>,
 }
 
+/// How a boundary decides a report's severity.
+///
+/// Named rather than written out at the field: the trait object appears in the
+/// field type, the setter's signature and the default, and three copies of
+/// `Box<dyn Fn(&Report) -> Severity>` is where they would start to disagree.
+type Classifier = Box<dyn Fn(&Report) -> Severity>;
+
 struct Inner {
     reports: RefCell<Vec<Report>>,
     counter: Cell<u64>,
-    classify: RefCell<Box<dyn Fn(&Report) -> Severity>>,
+    classify: RefCell<Classifier>,
     /// Context label for the next capture, set with [`ErrorBoundary::in_`].
     pending_context: RefCell<String>,
 }
