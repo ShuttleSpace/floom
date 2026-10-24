@@ -245,8 +245,9 @@ adb devices                 # 当前输出空列表
 ```bash
 cd /Users/humphrey/Project/Rust/floem
 
-# 全量测试（不含 `floom-probe`——它默认被 feature 门跳过，见下方"已知破损"）
+# 全量测试（`floom-probe` 需要显式 --features real，见下方）
 cargo test --workspace
+cargo check -p floom-probe --features real   # CI 的 probe-check job 跑这条
 
 # 八个能力插件的三目标编译矩阵（CI 已自动跑前两条）
 cargo test \
@@ -292,17 +293,14 @@ UPDATE_SNAPSHOTS=1 cargo test -p floom-renderer-web --test web_pixels
 graphify update .
 ```
 
-### ⚠️ 已知破损：`floom-probe` 编译不过（新发现）
+### ✅ 已修：`floom-probe` 编译不过（选 C 落地，同时修掉根因）
 
 ```bash
-cargo run -p floom-probe --features real
-# error[E0432]: unresolved imports floom_widgets::BottomSheet, Dialog,
-#   NavDestination, NavigationDrawer, Popup, Select
+cargo check -p floom-probe --features real   # Finished，通过
 ```
 
-**原因**：这些 widget 在 `ecosystem/floom-ui`（**另一个 workspace**）的
-`floom-ui-composites` 里，主 workspace 的 `floom-widgets` 没有它们。
-`floom-probe` 在主 workspace，引用不到。
+**原来的症状**：`error[E0432]: unresolved imports floom_widgets::BottomSheet,
+Dialog, NavDestination, NavigationDrawer, Popup, Select`。
 
 **为什么一直没被发现**：它的 `[[bin]]` 有 `required-features = ["real"]`，
 而 `real` 不在 default features 里——所以 `cargo test --workspace`
@@ -311,16 +309,56 @@ cargo run -p floom-probe --features real
 **这是第 2 个"测试全绿但东西是坏的"案例**。第 1 个（8 个 stub 插件）已修，
 但**两个是同一个模式**：**验证的边界没覆盖到出问题的地方**。
 stub 插件靠"host 测试 + `cfg(target_os)` 分支从不编译"藏住，probe 靠
-`required-features` 藏住。修第 1 个时顺手把 CI 的跨目标缺口补上了
-（`ios-check` + 扩展的 `android-check`），probe 这个还在。
+`required-features` 藏住。
 
-**修法**（二选一，需要你拍板）：
-- (a) 把 probe 依赖改成 ecosystem workspace 的对应 crate——但那是跨 workspace 依赖，
-      可能不现实；
-- (b) 把 probe 移进 ecosystem workspace，或删掉它，在文档里注明设备探针已由
-      其他方式覆盖；
-- (c) 给 CI 加一条 `cargo check -p floom-probe --features real`，
-      先让它**红着**暴露出来，再决定修法。
+**实际有两层问题，都不是"组件缺失"**：
+
+1. **import 指错了 crate**。那六个组件在 `ecosystem/floom-ui` 的
+   `floom-ui-composites` 里，不在 `floom-widgets`。`floom-widgets` 也不能
+   再导出它们——设计系统 crate 依赖 `floom-widgets`，反过来导出会闭合依赖环。
+   这是**跨 workspace 的 path 依赖**，`examples/floom-demo` 早就这么依赖
+   `floom-material` 等了，有先例，不是新架构。
+
+2. **`NavigationBar` / `NavigationRail` / `NavigationDrawer` 漏了 `WidgetAny`
+   注册**。这才是真正的缺陷：三个都有 `semantics_hint`，但都没写进
+   `floom-ui-composites/src/any.rs` 的 `impl_widget_any_labelled!` 列表。
+   `any.rs` 的模块注释自己就写着这条规则——"加了 widget 却忘了这个文件，
+   会在挂载点变成编译错误"。改 import 之后报错就变成了
+   `NavigationDrawer is not a Floom 2.0 Widget`，正是这条规则在起作用。
+
+**修法**（已提交）：
+- `examples/floom-probe/Cargo.toml` 加 `floom-ui-composites` path 依赖；
+- `main.rs` 改成从 `floom_ui_composites` import 那六个；
+- `any.rs` 补上三个导航组件的 `WidgetAny`；
+- CI 加独立 job `probe-check`（macOS），跑
+  `cargo check -p floom-probe --features real`。
+
+**两个决定值得记住**：
+
+- **检查放在 macOS，不放 Ubuntu**。probe 的大部分内容——native view provider
+  安装、`NSView::frame` 读回——都在 `#[cfg(target_os = "macos")]` 里。
+  Linux 检查会跳过正好最会腐坏的那几条分支，绿着看它烂掉。
+- **`probe-check` 不挂 `needs`**。`build` 有 `needs: [fmt, clippy]`，而这两个
+  job 在本分支上本来就是红的（见下方"预先存在的红灯"），任何挂在它们后面的
+  检查都永远不会执行——那正好又是这个 job 要消灭的同一个毛病。
+
+---
+
+### ⚠️ 预先存在的红灯（不是本次工作引入，但会让 `build` 永不执行）
+
+```bash
+cargo fmt --all --check      # 2831 处差异
+cargo clippy --workspace     # 多处 error（path.rs map_or、native-ffi 裸指针等）
+```
+
+`build` 的 `needs: [fmt, clippy]` 因此**从未跑过**。这意味着：
+- `probe-check` 特意独立出来，就是为了绕开这一点；
+- 但**其余测试门禁实际上也是停摆的**，`cargo test --workspace` 那一步同样没跑。
+  这不是本次改动造成的，但它是"CI 绿"这个结论目前不成立的原因。
+
+修这两处是机械工作（`cargo fmt --all`、逐条 clippy 建议），但会动到大量
+与本主题无关的文件，需要单独一次提交。
+
 
 ---
 

@@ -81,6 +81,14 @@ impl_widget_any_labelled!(
     crate::bottom_sheet::BottomSheet,
     crate::checkbox::Checkbox,
     crate::dialog::Dialog,
+    // The three navigation surfaces each publish their own role: a bar and a
+    // rail are `Navigation`, a drawer is a `Dialog` once it is open and
+    // decorative when it is not. Leaving them out of this list is what the
+    // module doc above warns about — the omission only surfaces as a compile
+    // error at the mount site, which is where `examples/floom-probe` hit it.
+    crate::navigation::NavigationBar,
+    crate::navigation::NavigationDrawer,
+    crate::navigation::NavigationRail,
     crate::overlay::Overlay,
     crate::popup::Popup,
     crate::radio::Radio,

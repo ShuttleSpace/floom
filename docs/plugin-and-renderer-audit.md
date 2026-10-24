@@ -305,8 +305,14 @@ macOS 门禁记录过一次真实教训（`docs/gates/macos.md:126-128`）：
 2. **`floom-probe` 编译不过**：引用 `ecosystem/floom-ui`（另一个 workspace）的
    widget。`required-features = ["real"]` 且 `real` 非默认，`cargo test --workspace`
    静默跳过它，所以一直没红。
+   **→ 已修（2026-10-24）**：import 改指 `floom-ui-composites`（跨 workspace path
+   依赖，`examples/floom-demo` 有先例）；真正的缺陷是
+   `NavigationBar`/`NavigationRail`/`NavigationDrawer` 漏了 `WidgetAny` 注册，
+   已补进 `floom-ui-composites/src/any.rs`。CI 加独立 job `probe-check`（macOS，
+   不挂 `needs`），跑 `cargo check -p floom-probe --features real`。
 
 两项同一个模式：**验证的边界没覆盖到出问题的地方**。
+
 
 第三梯队
   B4, B8                  vello blur / shader 行为文档 ✅ 2026-10-23（B8 早已 ✅；B4 = vello 真画阴影）

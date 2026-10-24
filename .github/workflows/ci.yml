@@ -237,6 +237,45 @@ jobs:
           --package=floom-plugin-vibration
           --target aarch64-apple-ios
 
+  # `examples/floom-probe` is the one crate whose only binary sits behind
+  # `required-features = ["real"]`, so a plain `cargo build` / `cargo nextest`
+  # never compiles it. That is how it came to import six composite widgets from
+  # `floom-widgets`, which does not and cannot export them, while every gate
+  # stayed green — the breakage was invisible rather than tolerated.
+  #
+  # macOS, not Ubuntu: most of this probe is `#[cfg(target_os = "macos")]` — the
+  # native-view provider install and the `NSView` frame readback that its device
+  # assertions rest on. A Linux check would skip exactly those arms and pass
+  # while the code that matters rotted.
+  #
+  # This job is deliberately not behind `needs: [fmt, clippy]` like `build` is.
+  # Those two jobs are red on this branch for reasons unrelated to the probe, and
+  # anything gated on them would never run — which is the same "check that never
+  # executes" problem this job exists to fix.
+  #
+  # `cargo check` is the right depth. The failures this catches are type-level —
+  # a widget missing `WidgetAny`, a module that does not exist — and none of them
+  # need a link step.
+  probe-check:
+    name: Device probe compiles with the real backend
+    if: github.event.pull_request.draft == false
+    runs-on: macos-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Update toolchain
+        run: rustup update --no-self-update
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: probe-check
+          save-if: ${{ github.event_name != 'merge_group' }}
+
+      - name: Check the device probe against the real backend
+        run: cargo check -p floom-probe --features real
+
   build:
     name: Rust on ${{ matrix.os }}
     if: github.event.pull_request.draft == false

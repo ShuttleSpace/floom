@@ -54,10 +54,8 @@ use floom_platform::{Capability, Platform, WindowConfig};
 use floom_platform_desktop::winit_backend::{run, WinitApp, WinitPlatform};
 use floom_renderer_vello::VelloGpuPresenter;
 use floom_types::{NativeViewKind, Size, WindowId};
-use floom_widgets::{
-    BottomSheet, Button, Dialog, NativeSurface, NavDestination, NavigationDrawer, Popup, Select,
-    Stack, Text, TextInput,
-};
+use floom_ui_composites::{BottomSheet, Dialog, NavDestination, NavigationDrawer, Popup, Select};
+use floom_widgets::{Button, NativeSurface, Stack, Text, TextInput};
 
 /// Which surface the last click asked for. Buttons write, the frame hook reads.
 const NONE: usize = 0;

@@ -26,6 +26,16 @@ floom-layout = { path = "../../crates/floom-layout", version = "0.2.0" }
 floom-platform = { path = "../../crates/floom-platform", version = "0.2.0" }
 floom-types = { path = "../../crates/floom-types", version = "0.2.0" }
 floom-widgets = { path = "../../crates/floom-widgets", version = "0.2.0" }
+# The composite controls the on-screen cases drive — `Dialog`, `Popup`,
+# `Select`, `BottomSheet`, `NavigationDrawer`, `NavDestination` — are not
+# engine primitives. They live one layer above `floom-widgets`, in the
+# `floom-ui` workspace, because a primitive has no way to take a design
+# system's answer and these each hard-code one. `floom-widgets` cannot re-export
+# them: the kits depend on `floom-widgets`, so the edge would close the loop.
+#
+# This is a path dependency across the two workspaces, the same shape
+# `examples/floom-demo` uses for the design systems themselves.
+floom-ui-composites = { path = "../../crates/ecosystem/floom-ui/crates/floom-ui-composites" }
 floom-platform-desktop = { path = "../../crates/floom-platform-desktop", version = "0.2.0", optional = true }
 floom-renderer-vello = { path = "../../crates/floom-renderer-vello", version = "0.2.0", optional = true }
 
