@@ -1,0 +1,273 @@
+#!/usr/bin/env bash
+# The gate, run where the code actually lives.
+#
+# Why this exists: the checks in `.github/workflows/ci.yml` never ran. `origin`
+# is Gitee, and GitHub Actions does not execute there, so every job in that file
+# — `fmt`, `clippy`, `build`, `android-check`, `ios-check`, `probe-check` — was
+# a claim with no execution behind it. A check that cannot fail is worse than no
+# check, because it reads like evidence.
+#
+# This script is the same checks, runnable on the machine that holds the code.
+# It is deliberately *not* shaped like the CI graph: there, `build` sits behind
+# `needs: [fmt, clippy]`, so one red formatting diff silently skipped every test.
+# Here each check runs and reports on its own, and the exit status is the number
+# of failures — a skip is printed as a skip, never folded into a pass.
+#
+# Usage:
+#   scripts/gate.sh              # everything that can run on this host
+#   scripts/gate.sh fmt test     # only the named checks
+#   scripts/gate.sh --list       # what the names are
+#
+# Every check prints one line: PASS, FAIL, or SKIP with the reason. `--verbose`
+# passes the underlying command's output through instead of summarising it.
+
+set -uo pipefail
+
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+cd "$ROOT"
+
+VERBOSE=0
+CHECKS=()
+for arg in "$@"; do
+  case "$arg" in
+    --verbose|-v) VERBOSE=1 ;;
+    --list|-l) CHECKS=(--list) ;;
+    --help|-h)
+      sed -n '2,30p' "$0" | sed 's/^# \{0,1\}//'
+      exit 0
+      ;;
+    *) CHECKS+=("$arg") ;;
+  esac
+done
+
+# The 2.0 track, as the CI job spells it. A v1 regression must not red the
+# signal for work that never touches it, and vice versa.
+FLOOM2_PACKAGES=(
+  --package=floom-types --package=floom-core
+  --package=floom-runtime-core --package=floom-scheduler
+  --package=floom-scene
+  --package=floom-renderer --package=floom-renderer-vello
+  --package=floom-renderer-software --package=floom-renderer-skia-abi
+  --package=floom-renderer-tui --package=floom-renderer-web
+  --package=floom-platform --package=floom-platform-desktop
+  --package=floom-platform-android
+  --package=floom-platform-ios --package=floom-platform-harmony
+  --package=floom-platform-web
+  --package=floom-platform-embedded --package=floom-platform-mobile
+  --package=floom-text --package=floom-editor --package=floom-ime
+  --package=floom-layout --package=floom-style --package=floom-virtual
+  --package=floom-native --package=floom-native-ffi
+)
+
+# The capability plugins, one crate each. `android-check` and `ios-check` compile
+# them for a device target because that is the only place their `cfg` arms exist;
+# a host build skips exactly the code most likely to rot.
+#
+# `floom-plugin-nativeview` is deliberately absent from the mobile lists: it is
+# a macOS/Objective-C plugin whose whole body is AppKit, so there is no Android
+# or iOS arm for a device check to reach. Listing it there would fail on a
+# missing package rather than on missing code.
+CAPABILITY_PLUGINS=(
+  floom-plugin-battery
+  floom-plugin-connectivity
+  floom-plugin-device-info
+  floom-plugin-local-auth
+  floom-plugin-location
+  floom-plugin-nativeview
+  floom-plugin-notifications
+  floom-plugin-sensors
+  floom-plugin-share
+  floom-plugin-vibration
+)
+
+MOBILE_CAPABILITY_PLUGINS=(
+  floom-plugin-battery
+  floom-plugin-connectivity
+  floom-plugin-device-info
+  floom-plugin-local-auth
+  floom-plugin-location
+  floom-plugin-notifications
+  floom-plugin-sensors
+  floom-plugin-share
+  floom-plugin-vibration
+)
+
+PASS=0
+FAIL=0
+SKIP=0
+FAILED_NAMES=()
+
+# run_check <name> <skip-reason-or-empty> <command...>
+#
+# An empty skip reason means "run it". A non-empty one is printed verbatim, so a
+# skipped check always says why — the whole point is that nobody mistakes a skip
+# for a pass.
+run_check() {
+  local name="$1" skip="$2"
+  shift 2
+
+  if [ -n "$skip" ]; then
+    printf 'SKIP  %-22s %s\n' "$name" "$skip"
+    SKIP=$((SKIP + 1))
+    return 0
+  fi
+
+  local output status
+  output="$("$@" 2>&1)"
+  status=$?
+
+  if [ "$status" -eq 0 ]; then
+    printf 'PASS  %-22s\n' "$name"
+    PASS=$((PASS + 1))
+  else
+    printf 'FAIL  %-22s\n' "$name"
+    FAIL=$((FAIL + 1))
+    FAILED_NAMES+=("$name")
+    if [ "$VERBOSE" -eq 1 ]; then
+      printf '%s\n' "$output" | tail -60
+    else
+      # The last few lines are usually the actual error; the middle is cargo
+      # telling us what it is doing.
+      printf '%s\n' "$output" | grep -E '^(error|Error|FAILED|Diff in|assertion|thread)' | head -12
+    fi
+  fi
+}
+
+has_check() {
+  [ "${#CHECKS[@]}" -eq 0 ] && return 0
+  local wanted="$1" c
+  for c in "${CHECKS[@]}"; do
+    [ "$c" = "$wanted" ] && return 0
+  done
+  return 1
+}
+
+if [ "${CHECKS[0]:-}" = "--list" ]; then
+  cat <<'EOF'
+fmt        cargo fmt --all --check, both workspaces
+clippy     cargo clippy on the 2.0 track, warnings denied
+test       cargo test --workspace
+doc        cargo test --doc
+arch       scripts/check-architecture-deps.sh
+probe      the device probe compiles with `--features real`
+plugins    the capability plugins compile on the host
+android    the plugins compile for aarch64-linux-android
+ios        the plugins compile for aarch64-apple-ios
+golden     the pixel-golden examples
+EOF
+  exit 0
+fi
+
+echo "gate: $(uname -s) $(uname -m), $(date '+%Y-%m-%d %H:%M')"
+echo
+
+# --- formatting -------------------------------------------------------------
+#
+# Both workspaces, because they are separate: `crates/ecosystem/floom-ui` has its
+# own Cargo.toml and `cargo fmt --all` at the root does not reach it.
+fmt_check() {
+  cargo fmt --all --check || return 1
+  (cd crates/ecosystem/floom-ui && cargo fmt --all --check)
+}
+has_check fmt && run_check fmt "" fmt_check
+
+# --- clippy -----------------------------------------------------------------
+#
+# Scoped to the 2.0 track on purpose. The v1 crates carry pre-existing warnings
+# that predate this work; denying them here would report a red gate that says
+# nothing about the code being changed.
+#
+# `--all-features` because the default feature set is not the shipped one:
+# `floom-platform-desktop` keeps its whole winit backend behind a feature, and
+# a default-feature clippy run checks the headless placeholder instead. The
+# first run with `--all-features` found seven errors in code no earlier check
+# had ever compiled.
+clippy_check() {
+  cargo clippy "${FLOOM2_PACKAGES[@]}" --all-features -- --deny warnings
+}
+has_check clippy && run_check clippy "" clippy_check
+
+# --- tests ------------------------------------------------------------------
+#
+# `--exclude floom-platform` because that crate's tests need a live display and
+# a window; everything else runs headless.
+test_check() {
+  cargo test --workspace --exclude floom-platform
+}
+has_check test && run_check test "" test_check
+
+doc_check() {
+  cargo test --doc --no-fail-fast
+}
+has_check doc && run_check doc "" doc_check
+
+# --- architecture -----------------------------------------------------------
+has_check arch && run_check arch "" ./scripts/check-architecture-deps.sh
+
+# --- the probe --------------------------------------------------------------
+#
+# macOS only: most of the probe is `#[cfg(target_os = "macos")]`, and a Linux
+# check would skip exactly the arms most likely to rot.
+if [ "$(uname -s)" = "Darwin" ]; then
+  probe_check() {
+    cargo check -p floom-probe --features real
+  }
+  has_check probe && run_check probe "" probe_check
+else
+  has_check probe && run_check probe "needs macOS (the probe is a macOS native-view readback)" true
+fi
+
+# --- capability plugins -----------------------------------------------------
+plugins_check() {
+  local p
+  for p in "${CAPABILITY_PLUGINS[@]}"; do
+    cargo check -p "$p" || return 1
+  done
+}
+has_check plugins && run_check plugins "" plugins_check
+
+# Android: `cargo check --target`, exactly what the CI job runs. No NDK and no
+# `cargo ndk` — `check` does not link, so the target's std is the only thing
+# needed, and requiring the NDK here would turn a real check into a skip on any
+# machine that has the target but not the toolchain bundle.
+#
+# The platform crates are checked too, because their `android.rs` arms are the
+# other half of the same story: a plugin calls into the platform's JNI bridge.
+android_check() {
+  local p
+  cargo check --target aarch64-linux-android \
+    -p floom-platform-mobile -p floom-platform-android || return 1
+  for p in "${MOBILE_CAPABILITY_PLUGINS[@]}"; do
+    cargo check --target aarch64-linux-android -p "$p" || return 1
+  done
+}
+if [ -d "$(rustc --print target-libdir --target aarch64-linux-android 2>/dev/null)" ]; then
+  has_check android && run_check android "" android_check
+else
+  has_check android && run_check android "no aarch64-linux-android std in this toolchain (rustup target add aarch64-linux-android)" true
+fi
+
+# iOS: the std for aarch64-apple-ios lives only in the pinned toolchain here, so
+# the probe below is a real capability test rather than a formality.
+ios_check() {
+  local p
+  for p in "${MOBILE_CAPABILITY_PLUGINS[@]}"; do
+    cargo check --target aarch64-apple-ios -p "$p" || return 1
+  done
+}
+if [ -d "$(rustc --print target-libdir --target aarch64-apple-ios 2>/dev/null)" ]; then
+  has_check ios && run_check ios "" ios_check
+else
+  has_check ios && run_check ios "no aarch64-apple-ios std in this toolchain (rustup target add aarch64-apple-ios)" true
+fi
+
+# --- goldens ----------------------------------------------------------------
+has_check golden && run_check golden "" ./scripts/run-golden-examples.sh
+
+echo
+if [ "$FAIL" -eq 0 ]; then
+  echo "gate: $PASS passed, $SKIP skipped, 0 failed"
+  exit 0
+fi
+echo "gate: $PASS passed, $SKIP skipped, $FAIL failed: ${FAILED_NAMES[*]}"
+exit "$FAIL"

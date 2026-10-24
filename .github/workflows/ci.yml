@@ -46,9 +46,9 @@ jobs:
       # pass the entire list as a single package argument.
       FLOOM2_PACKAGES: >-
         --package=floom-types --package=floom-core
-        --package=floom-runtime-core --package=floom-scheduler --package=floom-runtime
+        --package=floom-runtime-core --package=floom-scheduler
         --package=floom-scene
-        --package=floom-renderer --package=floom-renderer-vello --package=floom-renderer-software --package=floom-renderer-skia
+        --package=floom-renderer --package=floom-renderer-vello --package=floom-renderer-software --package=floom-renderer-skia-abi --package=floom-renderer-tui --package=floom-renderer-web
         --package=floom-platform --package=floom-platform-desktop --package=floom-platform-android
         --package=floom-platform-ios --package=floom-platform-harmony --package=floom-platform-web
         --package=floom-platform-embedded --package=floom-platform-mobile
