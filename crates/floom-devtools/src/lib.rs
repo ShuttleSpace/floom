@@ -14,6 +14,8 @@
 
 #![forbid(unsafe_code)]
 
+pub mod panel;
+
 use std::collections::HashMap;
 
 use floom_accessibility::{SemanticsRole, SemanticsTree};

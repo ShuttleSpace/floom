@@ -204,6 +204,12 @@ pub enum NamedKey {
     Control,
     Alt,
     Meta,
+    /// A function key, `F1`..=`F24`.
+    ///
+    /// The number is the key's index rather than a variant per key: 24 variants
+    /// would be 24 arms in every match that cares about function keys, and a
+    /// devtools panel's shortcut is a number anyway.
+    Function(u8),
 }
 
 /// A key identity: either a printable character or a named key.

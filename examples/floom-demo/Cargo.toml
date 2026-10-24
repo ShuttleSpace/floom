@@ -30,6 +30,9 @@ default = ["headless"]
 # windowing, no GPU — this is the mode `scripts/run-golden-examples.sh` runs.
 headless = []
 
+# The devtools panel: one line in `desktop::launch`, F12 to open it.
+devtools = ["dep:floom", "floom/devtools"]
+
 # Real window + GPU (winit + vello over wgpu). Verified on macOS.
 macos = [
     "dep:floom-platform-desktop",
@@ -54,6 +57,7 @@ ohos = ["dep:floom-platform-harmony"]
 web = ["dep:floom-platform-web"]
 
 [dependencies]
+floom = { path = "../../crates/floom", version = "0.2.0", optional = true }
 floom-app = { path = "../../crates/floom-app", version = "0.2.0" }
 floom-core = { path = "../../crates/floom-core", version = "0.2.0" }
 floom-layout = { path = "../../crates/floom-layout", version = "0.2.0" }

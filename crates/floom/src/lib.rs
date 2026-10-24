@@ -83,6 +83,8 @@ pub use floom_widgets;
 
 // Feature bundles (Phase 29.3): each adds exactly its own backend.
 #[cfg(feature = "devtools")]
+pub mod devtools;
+#[cfg(feature = "devtools")]
 pub use floom_devtools;
 #[cfg(feature = "mobile")]
 pub use floom_platform_android;
@@ -193,6 +195,118 @@ where
         ClosureApp {
             build: Some(build),
             runner: None,
+        },
+        windows,
+    )
+}
+
+/// Run a Floom app in a window with the devtools panel already wired — the
+/// one-call entry for the desktop backend *plus* the devtools door.
+///
+/// Exactly [`run_desktop`], with one difference: `attach(&mut host)` is called
+/// before the runner starts, so F12 opens the panel from the first frame. The
+/// `readout` closure is the panel's content — see
+/// [`devtools::attach`](crate::devtools::attach).
+///
+/// This exists because the shortcut cannot be hooked from inside the tree: a
+/// key event arrives at the platform loop first, and only the loop can offer it
+/// to the panel before the focused control also sees it. So the one-line
+/// integration has two halves — `attach`, which any embedder can call on its
+/// own host, and a `WinitApp::key` implementation that forwards the shortcut.
+/// `run_desktop_with_devtools` is the spelling that does both.
+///
+/// Requires `--features desktop,renderer-gpu,devtools`.
+///
+/// ```
+/// use floom::prelude::*;
+/// # #[cfg(all(feature = "desktop", feature = "renderer-gpu", feature = "devtools"))]
+/// # fn doc() -> Result<(), String> {
+/// // floom::run_desktop_with_devtools("my app", Size::new(480.0, 320.0), |host| {
+/// //     host.mount_root(LayoutStyle::default(), Text::new("hello window"));
+/// // }, |state| Vec::new());
+/// # Ok(())
+/// # }
+/// ```
+#[cfg(all(feature = "desktop", feature = "renderer-gpu", feature = "devtools"))]
+pub fn run_desktop_with_devtools<F, R>(
+    title: &str,
+    size: floom_types::Size,
+    build: F,
+    readout: R,
+) -> Result<(), String>
+where
+    F: FnOnce(&mut floom_app::WidgetHost) + 'static,
+    R: Fn(&devtools::DevtoolsState) -> Vec<devtools::ReadoutRow> + Send + Sync + 'static,
+{
+    use floom_app::{AppRunner, WidgetHost};
+    use floom_platform_desktop::winit_backend::{WinitApp, WinitPlatform, run};
+    use floom_renderer_vello::VelloGpuPresenter;
+
+    struct DevtoolsApp<F, R> {
+        build: Option<F>,
+        readout: Option<R>,
+        runner: Option<AppRunner<VelloGpuPresenter>>,
+        devtools: Option<devtools::Devtools>,
+    }
+
+    impl<F: FnOnce(&mut WidgetHost), R: Fn(&devtools::DevtoolsState) -> Vec<devtools::ReadoutRow> + Send + Sync + 'static>
+        WinitApp for DevtoolsApp<F, R>
+    {
+        fn window_created(
+            &mut self,
+            _platform: &mut WinitPlatform,
+            _window: floom_types::WindowId,
+        ) {
+            let Some(build) = self.build.take() else {
+                return;
+            };
+            let Some(readout) = self.readout.take() else {
+                return;
+            };
+            let mut host = WidgetHost::new();
+            build(&mut host);
+            self.devtools = Some(devtools::attach(&mut host, readout));
+            let Some(presenter) = VelloGpuPresenter::new() else {
+                eprintln!(
+                    "floom::run_desktop_with_devtools: no usable GPU adapter; a desktop window needs one to paint"
+                );
+                return;
+            };
+            self.runner = Some(AppRunner::new(host, presenter));
+        }
+
+        fn events(&mut self, platform: &mut WinitPlatform) {
+            if let Some(runner) = self.runner.as_mut() {
+                runner.pump(platform);
+            }
+        }
+
+        // The shortcut, before the tree: a keystroke that opens the panel should
+        // not also type into whatever had focus.
+        fn key(&mut self, event: &floom_types::KeyEvent) -> bool {
+            self.devtools
+                .as_mut()
+                .is_some_and(|devtools| devtools.handle_key(event))
+        }
+
+        fn about_to_wait(&mut self, platform: &mut WinitPlatform) {
+            if let Some(runner) = self.runner.as_mut() {
+                runner.pump(platform);
+            }
+        }
+    }
+
+    let windows = vec![floom_platform::WindowConfig {
+        title: title.to_string(),
+        size,
+        resizable: true,
+    }];
+    run(
+        DevtoolsApp {
+            build: Some(build),
+            readout: Some(readout),
+            runner: None,
+            devtools: None,
         },
         windows,
     )

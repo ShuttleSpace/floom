@@ -30,6 +30,14 @@ impl WinitApp for DemoApp {
         self.runner.pump(platform);
     }
 
+    // The devtools shortcut is asked *before* the tree sees the key: a keystroke
+    // that opens a panel should not also type into the control that had focus.
+    // Returning true here drops the key, so the gallery never receives it.
+    #[cfg(feature = "devtools")]
+    fn key(&mut self, event: &floom_types::KeyEvent) -> bool {
+        self.devtools.handle_key(event)
+    }
+
     fn about_to_wait(&mut self, platform: &mut WinitPlatform) {
         // Drain once more so redraw requests queued during `events` are honoured
         // before the loop blocks.
@@ -41,6 +49,29 @@ pub fn launch() {
     let mut host = WidgetHost::new();
     host.set_size(WINDOW);
     host.mount_root(LayoutStyle::default(), demos::gallery_root());
+
+    // One line, and F12 opens the devtools panel over the gallery. See
+    // `crates/floom/src/devtools.rs` for the door this is.
+    #[cfg(feature = "devtools")]
+    let mut devtools = Some(floom::devtools::attach(&mut host, |state| {
+        // The panel's readout: what the app itself wants to show there. This
+        // demo answers "how big is the gallery?" and "which tab is up?".
+        vec![
+            floom::devtools::ReadoutRow {
+                label: "window".into(),
+                value: format!("{}x{}", WINDOW.width, WINDOW.height),
+            },
+            floom::devtools::ReadoutRow {
+                label: "tab".into(),
+                value: format!("{:?}", state.tab()),
+            },
+        ]
+    }));
+    // The shortcut cannot be hooked from inside the tree -- the key event
+    // arrives at the platform loop first -- so the loop hands it over here.
+    #[cfg(not(feature = "devtools"))]
+    let mut devtools: Option<()> = None;
+    let _ = &mut devtools;
 
     let presenter = VelloGpuPresenter::new().unwrap_or_else(|| {
         eprintln!("no usable GPU adapter; floom-demo needs a GPU presenter");

@@ -1085,6 +1085,30 @@ impl WidgetHost {
         self.overlays.iter().any(|o| o.id == id)
     }
 
+    /// The viewport-relative bounds an open overlay is laid out against.
+    ///
+    /// `None` for a handle that names no open overlay. A getter rather than a
+    /// public field because the overlay stack is z-ordered and renumbered as
+    /// overlays open and close, so a caller should ask by handle rather than
+    /// index into it.
+    pub fn overlay_bounds(&self, id: OverlayHandle) -> Rect {
+        self.overlays
+            .iter()
+            .find(|o| o.id == id)
+            .map(|o| o.bounds)
+            .unwrap_or_default()
+    }
+
+    /// The widget an open overlay mounted, by handle.
+    ///
+    /// The counterpart of [`Self::overlay_bounds`]: the two together are what a
+    /// caller needs to say anything about an overlay it opened — where it is,
+    /// and what it is. `None` for a handle that names no open overlay.
+    pub fn overlay_widget(&self, id: OverlayHandle) -> Option<&dyn WidgetAny> {
+        let slot = self.overlays.iter().find(|o| o.id == id)?;
+        self.nodes.get(slot.node).map(|n| n.widget.as_ref())
+    }
+
     fn overlay_node(&self, id: OverlayHandle) -> Option<usize> {
         self.overlays.iter().find(|o| o.id == id).map(|o| o.node)
     }
@@ -2096,6 +2120,16 @@ impl WidgetHost {
             self.size = size;
             self.layout_dirty = true;
         }
+    }
+
+    /// The viewport's logical size — what [`Self::set_size`] last set.
+    ///
+    /// A getter rather than a public field because the host's size is not just
+    /// a number: the first thing a devtools panel needs to know is where the
+    /// window's edge is, and an embedder asking for it should not have to reach
+    /// into the tree to find out.
+    pub fn size(&self) -> Size {
+        self.size
     }
 
     /// Requests a re-layout on the next frame.

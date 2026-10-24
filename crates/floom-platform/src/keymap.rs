@@ -121,9 +121,9 @@ impl KeyCode {
     /// Translate into a text/command key the widget layer understands.
     ///
     /// Letters are normalised to lower case (case lives in the modifier set),
-    /// matching [`Key::Char`]'s documented invariant. Function keys, lock keys
-    /// and other keys with no `Key` representation return `None` — they still
-    /// have a stable `KeyCode`, so nothing is lost at the platform boundary;
+    /// matching [`Key::Char`]'s documented invariant. Lock keys and other keys
+    /// with no `Key` representation return `None` — they still have a stable
+    /// `KeyCode`, so nothing is lost at the platform boundary;
     /// [`NamedKey`] simply does not model them yet.
     pub fn to_key(self) -> Option<Key> {
         let named = match self {
@@ -151,6 +151,10 @@ impl KeyCode {
         }
 
         match self.0 {
+            // Function keys carry their index, so `F12` is `Function(12)`.
+            0xE000..=0xE017 => Some(Key::Named(NamedKey::Function(
+                (self.0 - Self::F1.0) as u8 + 1,
+            ))),
             0x20 => Some(Key::Char(' ')),
             0x21..=0x7E => {
                 let c = char::from_u32(self.0)?;
@@ -215,14 +219,16 @@ mod tests {
     }
 
     #[test]
-    fn function_keys_are_stable_but_not_text() {
-        assert_eq!(KeyCode::F1.function_index(), Some(1));
-        assert_eq!(KeyCode::F24.function_index(), Some(24));
-        assert_eq!(KeyCode::function(5).function_index(), Some(5));
-        assert_eq!(KeyCode::function(0), KeyCode::NONE);
-        assert_eq!(KeyCode::function(25), KeyCode::NONE);
-        // Modelled at the platform boundary, but `NamedKey` has no variant.
-        assert_eq!(KeyCode::F1.to_key(), None);
+    fn function_keys_map_to_named_function_keys() {
+        assert_eq!(KeyCode::F1.to_key(), Some(Key::Named(NamedKey::Function(1))));
+        assert_eq!(
+            KeyCode::function(12).to_key(),
+            Some(Key::Named(NamedKey::Function(12)))
+        );
+        assert_eq!(
+            KeyCode::F24.to_key(),
+            Some(Key::Named(NamedKey::Function(24)))
+        );
     }
 
     #[test]

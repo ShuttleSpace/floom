@@ -51,7 +51,8 @@ use floom_platform::{
     SurfaceConfig, SurfaceTarget, Window, WindowConfig, WindowState,
 };
 use floom_types::{
-    CursorStyle, DisplayInfo, PlatformId, Point, ScaleFactor, Size, SurfaceId, WindowId,
+    CursorStyle, DisplayInfo, KeyEvent, KeyPhase, PlatformId, Point, ScaleFactor, Size, SurfaceId,
+    WindowId,
 };
 
 use winit::application::ApplicationHandler;
@@ -760,6 +761,21 @@ pub trait WinitApp {
         let _ = platform;
     }
 
+    /// A key event, before the tree sees it.
+    ///
+    /// The counterpart of [`Self::events`] for one key: the platform has already
+    /// mapped the OS key into the canonical [`KeyCode`], and this is the last
+    /// moment the app can consume it without the tree also receiving it.
+    ///
+    /// Returns whether the event was consumed. A consumed event is *not* pushed
+    /// as a [`PlatformEvent::Key`], so a global shortcut — a devtools panel, a
+    /// command palette — can answer a keystroke without the focused control
+    /// also typing it. Returning `false` (the default) forwards the key, which
+    /// is what every app that has no global shortcut wants.
+    fn key(&mut self, _event: &floom_types::KeyEvent) -> bool {
+        false
+    }
+
     /// The event loop is about to block.
     fn about_to_wait(&mut self, platform: &mut WinitPlatform) {
         let _ = platform;
@@ -806,6 +822,32 @@ impl<A: WinitApp> ApplicationHandler for WinitDriver<A> {
         window_id: WinitWindowId,
         event: WindowEvent,
     ) {
+        // A key event is offered to the app *before* it becomes a platform
+        // event, so a global shortcut can consume it. `translate` pushes at most
+        // one `Key` per call, and it pushes it last, so the hook runs first and
+        // a consumed event is popped back off the tail.
+        let mut consumed = false;
+        if let WindowEvent::KeyboardInput { event, .. } = &event {
+            let code = winit_input::map_key(&event.logical_key, event.physical_key);
+            if code != KeyCode::NONE {
+                if let Some(key) = code.to_key() {
+                    let phase = match (winit_input::is_pressed(event.state), event.repeat) {
+                        (true, true) => KeyPhase::Repeat,
+                        (true, false) => KeyPhase::Down,
+                        (false, _) => KeyPhase::Up,
+                    };
+                    let Self {
+                        platform, app, modifiers, ..
+                    } = self;
+                    consumed = app.key(&KeyEvent {
+                        phase,
+                        key,
+                        modifiers: *modifiers,
+                    });
+                }
+            }
+        }
+
         let Self {
             platform,
             app,
@@ -813,6 +855,11 @@ impl<A: WinitApp> ApplicationHandler for WinitDriver<A> {
             ..
         } = self;
         platform.translate(event_loop, window_id, event, modifiers);
+        if consumed {
+            if let Some(PlatformEvent::Key { .. }) = platform.events.last() {
+                platform.events.pop();
+            }
+        }
         app.events(platform);
     }
 
