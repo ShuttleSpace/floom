@@ -635,7 +635,7 @@ impl Stroke {
 fn dedup(points: Vec<Point>) -> Vec<Point> {
     let mut out: Vec<Point> = Vec::with_capacity(points.len());
     for p in points {
-        if out.last().map_or(true, |last| *last != p) {
+        if out.last().is_none_or(|last| *last != p) {
             out.push(p);
         }
     }

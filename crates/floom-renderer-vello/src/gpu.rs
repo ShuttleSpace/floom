@@ -184,7 +184,7 @@ fn draw_image_at(
     height: u32,
     alpha: u8,
 ) {
-    if alpha >= u8::MAX {
+    if alpha == u8::MAX {
         target.draw_image(brush, transform);
         return;
     }
@@ -691,12 +691,14 @@ fn fill_with_brush(
             shape,
         ),
         floom_types::Brush::Linear { stops, from, to } => {
-            let mut gradient = Gradient::default();
-            gradient.kind = GradientKind::Linear(LinearGradientPosition {
-                start: KurboPoint::new(from.x, from.y),
-                end: KurboPoint::new(to.x, to.y),
-            });
-            gradient.extend = Extend::Pad;
+            let gradient = Gradient {
+                kind: GradientKind::Linear(LinearGradientPosition {
+                    start: KurboPoint::new(from.x, from.y),
+                    end: KurboPoint::new(to.x, to.y),
+                }),
+                extend: Extend::Pad,
+                ..Gradient::default()
+            };
             let ramp = to_peniko(stops);
             target.fill(
                 Fill::NonZero,
@@ -711,14 +713,16 @@ fn fill_with_brush(
             center,
             radius,
         } => {
-            let mut gradient = Gradient::default();
-            gradient.kind = GradientKind::Radial(RadialGradientPosition {
-                start_center: KurboPoint::new(center.x, center.y),
-                start_radius: 0.0,
-                end_center: KurboPoint::new(center.x, center.y),
-                end_radius: *radius as f32,
-            });
-            gradient.extend = Extend::Pad;
+            let gradient = Gradient {
+                kind: GradientKind::Radial(RadialGradientPosition {
+                    start_center: KurboPoint::new(center.x, center.y),
+                    start_radius: 0.0,
+                    end_center: KurboPoint::new(center.x, center.y),
+                    end_radius: *radius as f32,
+                }),
+                extend: Extend::Pad,
+                ..Gradient::default()
+            };
             let ramp = to_peniko(stops);
             target.fill(
                 Fill::NonZero,
@@ -1342,15 +1346,14 @@ impl VelloGpuPresenter {
                 }
                 SceneNode::GroupPush { transform } => {
                     group_stack.push(group_affine);
-                    group_affine = group_affine
-                        * Affine::new([
-                            transform.a,
-                            transform.b,
-                            transform.c,
-                            transform.d,
-                            transform.e,
-                            transform.f,
-                        ]);
+                    group_affine *= Affine::new([
+                        transform.a,
+                        transform.b,
+                        transform.c,
+                        transform.d,
+                        transform.e,
+                        transform.f,
+                    ]);
                     continue;
                 }
                 SceneNode::GroupPop => {
@@ -1381,38 +1384,38 @@ impl VelloGpuPresenter {
             // that used to be a different kind) would draw the wrong thing. So
             // shaders never enter the cache and always re-encode. (They are
             // still fingerprinted, for exhaustiveness.)
-            if !matches!(node, SceneNode::Shader { .. }) {
-                if let Some(cached) = self.fragments.get_mut(&key) {
-                    // A reused fragment must not outlive the textures its commands
-                    // were built from: a brush that lost residency (a resource
-                    // budget refusal, an external prune) means the cached commands
-                    // would draw nothing, so the node re-encodes instead — which
-                    // is also what rebuilds the missing brush.
-                    let textures_resident = cached.stats.image_keys.iter().all(|&k| {
-                        self.image_cache.contains_key(&k) || self.external_brushes.contains_key(&k)
-                    });
-                    if cached.fingerprint == fingerprint && textures_resident {
-                        // Unchanged node: append its cached commands and report
-                        // its draws (a reused image is a texture-cache hit — the
-                        // pixels are already resident).
-                        self.vello_scene
-                            .append(&cached.scene, Some(shift * group_affine));
-                        totals.rects += cached.stats.rects;
-                        totals.paths += cached.stats.paths;
-                        totals.glyph_runs += cached.stats.glyph_runs;
-                        totals.images += cached.stats.images;
-                        totals.unsupported_nodes += cached.stats.unsupported;
-                        totals.shadows_skipped += cached.stats.shadow_skips;
-                        totals.shadows_drawn += cached.stats.shadow_drawn;
-                        totals.filters_skipped += cached.stats.filter_skips;
-                        totals.texture_cache_hits += cached.stats.images;
-                        totals.fragments_reused += 1;
-                        for key in cached.stats.image_keys.iter().copied() {
-                            used_images.insert(key);
-                        }
-                        used_fragments.insert(key);
-                        continue;
+            if !matches!(node, SceneNode::Shader { .. })
+                && let Some(cached) = self.fragments.get_mut(&key)
+            {
+                // A reused fragment must not outlive the textures its commands
+                // were built from: a brush that lost residency (a resource
+                // budget refusal, an external prune) means the cached commands
+                // would draw nothing, so the node re-encodes instead — which
+                // is also what rebuilds the missing brush.
+                let textures_resident = cached.stats.image_keys.iter().all(|&k| {
+                    self.image_cache.contains_key(&k) || self.external_brushes.contains_key(&k)
+                });
+                if cached.fingerprint == fingerprint && textures_resident {
+                    // Unchanged node: append its cached commands and report
+                    // its draws (a reused image is a texture-cache hit — the
+                    // pixels are already resident).
+                    self.vello_scene
+                        .append(&cached.scene, Some(shift * group_affine));
+                    totals.rects += cached.stats.rects;
+                    totals.paths += cached.stats.paths;
+                    totals.glyph_runs += cached.stats.glyph_runs;
+                    totals.images += cached.stats.images;
+                    totals.unsupported_nodes += cached.stats.unsupported;
+                    totals.shadows_skipped += cached.stats.shadow_skips;
+                    totals.shadows_drawn += cached.stats.shadow_drawn;
+                    totals.filters_skipped += cached.stats.filter_skips;
+                    totals.texture_cache_hits += cached.stats.images;
+                    totals.fragments_reused += 1;
+                    for key in cached.stats.image_keys.iter().copied() {
+                        used_images.insert(key);
                     }
+                    used_fragments.insert(key);
+                    continue;
                 }
             }
             let mut fragment_scene = VelloScene::new();
@@ -1710,8 +1713,8 @@ impl VelloGpuPresenter {
                 // transform and damage behaviour identical to a rect's — the
                 // alternative (a separate pass over the finished raster) would
                 // paint over occlusion and break the scene contract.
-                let pw = (f64::from(self.scale) * bounds.width()).ceil().max(1.0) as u32;
-                let ph = (f64::from(self.scale) * bounds.height()).ceil().max(1.0) as u32;
+                let pw = (self.scale * bounds.width()).ceil().max(1.0) as u32;
+                let ph = (self.scale * bounds.height()).ceil().max(1.0) as u32;
                 let prog_key = hash_shader_wgsl(&shader.wgsl);
                 if !self.shader_programs.contains_key(&prog_key) {
                     let module = self
@@ -1887,10 +1890,8 @@ impl VelloGpuPresenter {
         uniforms[0] = pw as f32;
         uniforms[1] = ph as f32;
         uniforms[2] = self.shader_clock;
-        let mut i = 4;
-        for v in shader.params.iter().copied().take(8) {
+        for (i, v) in (4..).zip(shader.params.iter().copied().take(8)) {
             uniforms[i] = v;
-            i += 1;
         }
         let uniform = self.device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("floom-shader-uniforms"),
@@ -1954,9 +1955,10 @@ impl VelloGpuPresenter {
             usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::MAP_READ,
             mapped_at_creation: false,
         });
+        let texture = self.shader_textures.last()?;
         encoder.copy_texture_to_buffer(
             wgpu::TexelCopyTextureInfo {
-                texture: &self.shader_textures.last().expect("pushed above"),
+                texture,
                 mip_level: 0,
                 origin: wgpu::Origin3d::ZERO,
                 aspect: wgpu::TextureAspect::All,
@@ -1984,12 +1986,15 @@ impl VelloGpuPresenter {
         });
         // Block until the readback lands so the mapping below is valid; a
         // timeout/error means the map callback never fired happy.
-        match self.device.poll(wgpu::PollType::Wait {
-            submission_index: None,
-            timeout: None,
-        }) {
-            Err(_) => return None,
-            Ok(_) => {}
+        if self
+            .device
+            .poll(wgpu::PollType::Wait {
+                submission_index: None,
+                timeout: None,
+            })
+            .is_err()
+        {
+            return None;
         }
         if !rx.recv().unwrap_or(false) {
             return None;
@@ -2062,7 +2067,7 @@ impl VelloGpuPresenter {
             x1 = x1.max(rect.x1);
             y1 = y1.max(rect.y1);
         }
-        if !(x1 > x0) || !(y1 > y0) {
+        if x1 <= x0 || y1 <= y0 {
             return None;
         }
         let px0 = (x0 * scale).floor() - 1.0;
@@ -2255,12 +2260,11 @@ impl Presenter for VelloGpuPresenter {
         // enough for the region; if the budget refused (or trimmed) the
         // scratch, fall back to a full-frame pass rather than dropping the
         // frame.
-        if self.surface.is_some() {
-            if let Some((_, _, w, h)) = region {
-                if self.scratch_for(w, h).is_none() {
-                    region = None;
-                }
-            }
+        if self.surface.is_some()
+            && let Some((_, _, w, h)) = region
+            && self.scratch_for(w, h).is_none()
+        {
+            region = None;
         }
         let offset = region.map_or((0.0, 0.0), |(x, y, _, _)| (f64::from(x), f64::from(y)));
         let encoded = self.encode(scene, resources, offset);

@@ -271,10 +271,10 @@ impl NativeState {
         if self.rect.width() < 0.0 || self.rect.height() < 0.0 {
             return Err(NativeError::InvalidRect(self.rect));
         }
-        if let Some(clip) = self.clip {
-            if clip.width() < 0.0 || clip.height() < 0.0 {
-                return Err(NativeError::InvalidRect(clip));
-            }
+        if let Some(clip) = self.clip
+            && (clip.width() < 0.0 || clip.height() < 0.0)
+        {
+            return Err(NativeError::InvalidRect(clip));
         }
         if !self.scale.is_finite() || self.scale <= 0.0 {
             return Err(NativeError::InvalidScale(self.scale));

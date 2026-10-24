@@ -131,7 +131,7 @@ impl NativeCommandLog {
             .lock()
             .expect("command log poisoned")
             .iter()
-            .any(|c| predicate(c))
+            .any(predicate)
     }
 
     pub fn clear(&self) {

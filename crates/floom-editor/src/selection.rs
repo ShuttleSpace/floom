@@ -55,6 +55,11 @@ impl Selection {
         self.end() - self.start()
     }
 
+    /// A zero-length selection is a caret, so the two predicates agree.
+    pub fn is_empty(self) -> bool {
+        self.is_caret()
+    }
+
     pub fn clamp(self, len: usize) -> Self {
         Self {
             anchor: self.anchor.min(len),

@@ -39,7 +39,7 @@ pub enum SemanticsRole {
 ///
 /// A plain `u32` newtype (not `bitflags`) so core stays dependency-free; the
 /// flags mirror `floom-accessibility::SemanticsState` one-for-one.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub struct SemanticsState(u32);
 
 impl SemanticsState {
@@ -66,12 +66,6 @@ impl SemanticsState {
 
     pub const fn union(self, other: SemanticsState) -> SemanticsState {
         SemanticsState(self.0 | other.0)
-    }
-}
-
-impl Default for SemanticsState {
-    fn default() -> Self {
-        Self(0)
     }
 }
 

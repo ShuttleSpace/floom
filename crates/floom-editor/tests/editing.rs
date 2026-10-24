@@ -15,7 +15,7 @@ fn insert_and_selection() {
 
 #[test]
 fn undo_redo_roundtrip() {
-    let mut doc = TextDocument::from_str("ab");
+    let mut doc = TextDocument::from_text("ab");
     doc.set_selection(Selection::caret(2));
     doc.insert_text("c");
     assert_eq!(doc.text(), "abc");
@@ -27,7 +27,7 @@ fn undo_redo_roundtrip() {
 
 #[test]
 fn delete_backward_utf8() {
-    let mut doc = TextDocument::from_str("a你");
+    let mut doc = TextDocument::from_text("a你");
     doc.set_selection(Selection::caret(doc.len()));
     doc.delete_selection_or_backward();
     assert_eq!(doc.text(), "a");
@@ -35,7 +35,7 @@ fn delete_backward_utf8() {
 
 #[test]
 fn transaction_replace() {
-    let mut doc = TextDocument::from_str("abcdef");
+    let mut doc = TextDocument::from_text("abcdef");
     doc.commit(Transaction::replace(2, 4, "XY"));
     assert_eq!(doc.text(), "abXYef");
     assert!(doc.undo());

@@ -524,18 +524,19 @@ impl WinitPlatform {
                     modifiers: *modifiers,
                 });
             }
-            WindowEvent::PointerLeft { position, .. } => {
-                if let Some(position) = position {
-                    let position = logical_point(position, scale);
-                    if let Some(w) = self.windows.get_mut(&window.index()) {
-                        w.last_pointer = Some(position);
-                    }
-                    self.events.push(PlatformEvent::PointerMoved {
-                        window,
-                        position,
-                        modifiers: *modifiers,
-                    });
+            WindowEvent::PointerLeft {
+                position: Some(position),
+                ..
+            } => {
+                let position = logical_point(position, scale);
+                if let Some(w) = self.windows.get_mut(&window.index()) {
+                    w.last_pointer = Some(position);
                 }
+                self.events.push(PlatformEvent::PointerMoved {
+                    window,
+                    position,
+                    modifiers: *modifiers,
+                });
             }
             WindowEvent::PointerButton {
                 state,
@@ -667,10 +668,10 @@ impl Platform for WinitPlatform {
     /// asynchronously through the normal event path, so nothing is queued here
     /// — the redraw callback stays the single source of "a frame is due".
     fn request_frame(&mut self, window: WindowId) {
-        if let Some(w) = self.windows.get_mut(&window.index()) {
-            if w.id == window {
-                w.native.request_redraw();
-            }
+        if let Some(w) = self.windows.get_mut(&window.index())
+            && w.id == window
+        {
+            w.native.request_redraw();
         }
     }
 
@@ -829,22 +830,25 @@ impl<A: WinitApp> ApplicationHandler for WinitDriver<A> {
         let mut consumed = false;
         if let WindowEvent::KeyboardInput { event, .. } = &event {
             let code = winit_input::map_key(&event.logical_key, event.physical_key);
-            if code != KeyCode::NONE {
-                if let Some(key) = code.to_key() {
-                    let phase = match (winit_input::is_pressed(event.state), event.repeat) {
-                        (true, true) => KeyPhase::Repeat,
-                        (true, false) => KeyPhase::Down,
-                        (false, _) => KeyPhase::Up,
-                    };
-                    let Self {
-                        platform, app, modifiers, ..
-                    } = self;
-                    consumed = app.key(&KeyEvent {
-                        phase,
-                        key,
-                        modifiers: *modifiers,
-                    });
-                }
+            if code != KeyCode::NONE
+                && let Some(key) = code.to_key()
+            {
+                let phase = match (winit_input::is_pressed(event.state), event.repeat) {
+                    (true, true) => KeyPhase::Repeat,
+                    (true, false) => KeyPhase::Down,
+                    (false, _) => KeyPhase::Up,
+                };
+                let Self {
+                    platform: _,
+                    app,
+                    modifiers,
+                    ..
+                } = self;
+                consumed = app.key(&KeyEvent {
+                    phase,
+                    key,
+                    modifiers: *modifiers,
+                });
             }
         }
 
@@ -855,10 +859,8 @@ impl<A: WinitApp> ApplicationHandler for WinitDriver<A> {
             ..
         } = self;
         platform.translate(event_loop, window_id, event, modifiers);
-        if consumed {
-            if let Some(PlatformEvent::Key { .. }) = platform.events.last() {
-                platform.events.pop();
-            }
+        if consumed && let Some(PlatformEvent::Key { .. }) = platform.events.last() {
+            platform.events.pop();
         }
         app.events(platform);
     }

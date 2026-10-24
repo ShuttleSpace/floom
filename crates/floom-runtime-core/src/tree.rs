@@ -90,10 +90,10 @@ impl ElementTree {
         };
 
         let pindex = parent.index() as usize;
-        if let Some(kids) = self.children.get_mut(pindex) {
-            if let Some(pos) = kids.iter().position(|&c| c == id) {
-                kids.remove(pos);
-            }
+        if let Some(kids) = self.children.get_mut(pindex)
+            && let Some(pos) = kids.iter().position(|&c| c == id)
+        {
+            kids.remove(pos);
         }
         if let Some(el) = arena.get_mut(id) {
             el.parent = None;

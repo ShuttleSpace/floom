@@ -446,7 +446,11 @@ impl TextLayout {
         let cursor = Cursor::from_byte_index(&self.layout, display, affinity.to_shaper());
         let bbox = cursor.geometry(&self.layout, 0.0);
         let line = self.line_index_for_y(bbox.y0 as f32);
-        let baseline = self.lines.get(line).map(|l| l.baseline as f64).unwrap_or(0.0);
+        let baseline = self
+            .lines
+            .get(line)
+            .map(|l| l.baseline as f64)
+            .unwrap_or(0.0);
         Point::new(bbox.x0, baseline)
     }
 
@@ -461,7 +465,7 @@ impl TextLayout {
         }
         let display = self.orig_to_display(offset);
         let cursor = Cursor::from_byte_index(&self.layout, display, affinity.to_shaper());
-        let bbox = cursor.geometry(&self.layout, width as f32);
+        let bbox = cursor.geometry(&self.layout, width);
         let line = self.line_index_for_y(bbox.y0 as f32);
         let metrics = self.lines.get(line)?;
         Some(Rect {
@@ -636,8 +640,10 @@ impl TextLayout {
                             run.synthesis().skew(),
                             glyph.id,
                         ) {
-                            min_x = min_x.min(cluster_offset + glyph.x as f64 + bounds.min.x as f64);
-                            max_x = max_x.max(cluster_offset + glyph.x as f64 + bounds.max.x as f64);
+                            min_x =
+                                min_x.min(cluster_offset + glyph.x as f64 + bounds.min.x as f64);
+                            max_x =
+                                max_x.max(cluster_offset + glyph.x as f64 + bounds.max.x as f64);
                         }
                     }
                 }
@@ -656,7 +662,7 @@ impl TextLayout {
                 LAYOUT_CONTEXT.with(|layout_cx| {
                     let mut font_cx = font_cx.borrow_mut();
                     let mut layout_cx = layout_cx.borrow_mut();
-                    Self::build(&mut *layout_cx, &mut *font_cx, &display, self)
+                    Self::build(&mut layout_cx, &mut font_cx, &display, self)
                 })
             })
         };
@@ -706,7 +712,9 @@ impl TextLayout {
         // the previous one's, which is what makes "the third line" a position
         // a caller can compute rather than measure.
         if let Some(height) = styled.line_height {
-            builder.push_default(StyleProperty::LineHeight(ParleyLineHeight::Absolute(height)));
+            builder.push_default(StyleProperty::LineHeight(ParleyLineHeight::Absolute(
+                height,
+            )));
         }
 
         let mut layout = builder.build(display);
@@ -804,6 +812,12 @@ struct OutlineKey {
     skew_bits: u32,
 }
 
+/// The ink bounds of one glyph, as `(x0, y0, x1, y1)` in layout units.
+///
+/// Named so the cache's value type says what the four floats mean; the tuple
+/// itself is only ever unpacked in one place.
+type OutlineBounds = (f32, f32, f32, f32);
+
 thread_local! {
     /// The scaled outline bounds, cached by the font and glyph they came from.
     ///
@@ -813,7 +827,7 @@ thread_local! {
     /// outline — the blob, the face within it, the glyph, the size, the
     /// variation coordinates and the synthetic skew — so a hit is the same
     /// outline the key describes.
-    static OUTLINE_BOUNDS: std::cell::RefCell<HashMap<OutlineKey, Option<(f32, f32, f32, f32)>>> =
+    static OUTLINE_BOUNDS: std::cell::RefCell<HashMap<OutlineKey, Option<OutlineBounds>>> =
         std::cell::RefCell::new(HashMap::new());
     /// The scaler the outline bounds are measured with.
     static OUTLINE_SCALE_CONTEXT: std::cell::RefCell<ScaleContext> =
@@ -840,10 +854,12 @@ fn glyph_outline_bounds(
         skew_bits: skew.map(f32::to_bits).unwrap_or(0),
     };
     if let Some(cached) = OUTLINE_BOUNDS.with(|cache| cache.borrow().get(&key).copied()) {
-        return cached.map(|(x0, y0, x1, y1)| swash::zeno::Bounds::new(
-            swash::zeno::Point::new(x0, y0),
-            swash::zeno::Point::new(x1, y1),
-        ));
+        return cached.map(|(x0, y0, x1, y1)| {
+            swash::zeno::Bounds::new(
+                swash::zeno::Point::new(x0, y0),
+                swash::zeno::Point::new(x1, y1),
+            )
+        });
     }
 
     let computed = compute_outline_bounds(font, font_size, normalized_coords, skew, glyph_id);
@@ -865,7 +881,7 @@ fn compute_outline_bounds(
     normalized_coords: &[i16],
     skew: Option<f32>,
     glyph_id: u32,
-) -> Option<(f32, f32, f32, f32)> {
+) -> Option<OutlineBounds> {
     let font_ref = swash::FontRef::from_index(font.data.data(), font.index as usize)?;
     let mut outline = OUTLINE_SCALE_CONTEXT.with(|context| {
         let mut context = context.borrow_mut();
@@ -887,12 +903,7 @@ fn compute_outline_bounds(
     if bounds.is_empty() {
         return None;
     }
-    Some((
-        bounds.min.x,
-        bounds.min.y,
-        bounds.max.x,
-        bounds.max.y,
-    ))
+    Some((bounds.min.x, bounds.min.y, bounds.max.x, bounds.max.y))
 }
 
 #[cfg(test)]
@@ -984,7 +995,10 @@ mod tests {
         let layout = TextLayout::new(&styled);
         // The first run is the span's, and it is red; the rest is the base ink.
         assert!(
-            layout.runs().iter().any(|r| r.color == Color::rgb(255, 0, 0)),
+            layout
+                .runs()
+                .iter()
+                .any(|r| r.color == Color::rgb(255, 0, 0)),
             "the span's ink is on a run: {:?}",
             layout.runs()
         );
@@ -1029,7 +1043,11 @@ mod tests {
         let rect = layout
             .cursor_rect(0, CaretAffinity::Downstream, 2.0)
             .expect("an empty line still has a caret rectangle");
-        assert_eq!(rect.width(), 2.0, "the caret is as wide as it was asked to be");
+        assert_eq!(
+            rect.width(),
+            2.0,
+            "the caret is as wide as it was asked to be"
+        );
         assert!(rect.height() > 0.0, "and as tall as the line");
     }
 
@@ -1088,7 +1106,11 @@ mod tests {
         styled.line_height = Some(20.0);
         let layout = TextLayout::new(&styled);
         assert!(layout.visual_line_count() > 1, "the text wrapped");
-        assert_eq!(layout.row_of_offset(0), Some(0), "the start is the first row");
+        assert_eq!(
+            layout.row_of_offset(0),
+            Some(0),
+            "the start is the first row"
+        );
         // The last byte is on the last row.
         let last = layout.row_of_offset(styled.text.len() - 1);
         assert_eq!(

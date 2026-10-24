@@ -177,7 +177,14 @@ impl std::error::Error for CProviderError {}
 /// The version and the entry points are checked **before** the provider is
 /// driven, so a mismatch is a refusal at registration rather than a crash
 /// on the first call.
-pub fn check(vtable: *const FloomNativeProviderV1) -> Result<(), CProviderError> {
+///
+/// # Safety
+///
+/// `vtable` must either be null or point to a `FloomNativeProviderV1` that
+/// stays valid and readable for the duration of this call. The provider
+/// publishes the table, so only its own loader can promise this; nothing here
+/// can tell a stale pointer from a live one.
+pub unsafe fn check(vtable: *const FloomNativeProviderV1) -> Result<(), CProviderError> {
     if vtable.is_null() {
         return Err(CProviderError::MissingEntry("the vtable itself"));
     }

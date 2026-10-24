@@ -499,13 +499,10 @@ impl NativeViewHost for MacNativeViewHost {
 
         let width = rep.pixelsWide() as u32;
         let height = rep.pixelsHigh() as u32;
-        let Some(src) = NonNull::new(rep.bitmapData()) else {
-            return None;
-        };
+        let src = NonNull::new(rep.bitmapData())?;
         if width == 0 || height == 0 {
             return None;
         }
-
         // AppKit hands back `ARGB` premultiplied by default; vello uploads
         // `RGBA8` premultiplied verbatim. Reorder the channels, and if the
         // platform gave back *non*-premultiplied bytes, premultiply on the way
@@ -529,7 +526,7 @@ impl NativeViewHost for MacNativeViewHost {
             };
             pixels.extend_from_slice(&[r, g, b, a]);
         };
-        for chunk in src_bytes.chunks_exact(4) {
+        for chunk in src_bytes.as_chunks::<4>().0 {
             if alpha_first {
                 push(chunk[0], chunk[1], chunk[2], chunk[3]);
             } else {

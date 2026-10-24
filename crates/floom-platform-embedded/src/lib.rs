@@ -9,7 +9,7 @@
 pub mod accessibility;
 
 use floom_platform::{
-    Capability, HostPlatform, Platform, PlatformCapabilities, PlatformEvent, Window, WindowConfig,
+    HostPlatform, Platform, PlatformCapabilities, PlatformEvent, Window, WindowConfig,
 };
 use floom_types::{PlatformId, Size};
 
@@ -36,7 +36,7 @@ impl Framebuffer {
     }
 
     pub fn fill_rgba(&mut self, r: u8, g: u8, b: u8, a: u8) {
-        for chunk in self.pixels.chunks_exact_mut(4) {
+        for chunk in self.pixels.as_chunks_mut::<4>().0 {
             chunk[0] = r;
             chunk[1] = g;
             chunk[2] = b;
@@ -119,7 +119,7 @@ impl Platform for EmbeddedPlatform {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use floom_platform::WindowConfig;
+    use floom_platform::{Capability, WindowConfig};
 
     #[test]
     fn framebuffer_software_path() {

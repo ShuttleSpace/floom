@@ -37,10 +37,10 @@ impl StyleSet {
             out.merge_over(base);
         }
         for &flag in ORDER {
-            if active.contains(flag) {
-                if let Some(p) = self.by_state.get(&flag) {
-                    out.merge_over(p);
-                }
+            if active.contains(flag)
+                && let Some(p) = self.by_state.get(&flag)
+            {
+                out.merge_over(p);
             }
         }
         out

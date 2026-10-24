@@ -21,7 +21,7 @@ use floom_editor::{Selection, TextDocument, Transaction, UndoManager};
 
 fn main() {
     // --- 1. transactions and their inverse ---------------------------------
-    let mut doc = TextDocument::from_str("hello world");
+    let mut doc = TextDocument::from_text("hello world");
     println!("start            : {:?}", doc.text());
 
     // `apply` changes the text and hands back the exact inverse. No history.
@@ -88,7 +88,11 @@ fn main() {
     doc.set_ime_preedit("にほん");
     println!("\nime preedit      : {:?}", doc.composition());
     assert_eq!(doc.composition(), Some("にほん"));
-    assert_eq!(doc.text(), before, "a pre-edit is not part of the document yet");
+    assert_eq!(
+        doc.text(),
+        before,
+        "a pre-edit is not part of the document yet"
+    );
 
     doc.ime_commit(Some("にほん"));
     println!("ime committed    : {:?}", doc.text());

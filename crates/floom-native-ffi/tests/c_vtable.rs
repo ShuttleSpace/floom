@@ -169,7 +169,8 @@ fn a_provider_behind_the_c_abi_is_driven_through_the_controller() {
     };
     let table = vtable(&mut provider);
 
-    check(&table as *const FloomNativeProviderV1).expect("the vtable is usable");
+    // SAFETY: `table` is a live local and `check` only reads it.
+    unsafe { check(&table as *const FloomNativeProviderV1) }.expect("the vtable is usable");
     // SAFETY: the table and the provider both outlive the controller below.
     let c_provider = unsafe { CProvider::from_raw(&table as *const FloomNativeProviderV1) };
     let mut controller = NativeViewController::boxed(c_provider);
@@ -320,8 +321,9 @@ fn a_provider_with_the_wrong_abi_version_is_refused() {
     let mut table = vtable(&mut provider);
     table.abi_version = ABI_VERSION + 1;
 
-    let error =
-        check(&table as *const FloomNativeProviderV1).expect_err("a mismatched ABI is refused");
+    // SAFETY: `table` is a live local and `check` only reads it.
+    let error = unsafe { check(&table as *const FloomNativeProviderV1) }
+        .expect_err("a mismatched ABI is refused");
     assert!(
         error.to_string().contains("ABI version"),
         "the refusal says what is wrong: {error}"
@@ -337,7 +339,8 @@ fn a_provider_with_a_missing_entry_is_refused() {
     let mut table = vtable(&mut provider);
     table.apply = None;
 
-    let error = check(&table as *const FloomNativeProviderV1)
+    // SAFETY: `table` is a live local and `check` only reads it.
+    let error = unsafe { check(&table as *const FloomNativeProviderV1) }
         .expect_err("a missing entry point is refused");
     assert!(
         error.to_string().contains("apply"),

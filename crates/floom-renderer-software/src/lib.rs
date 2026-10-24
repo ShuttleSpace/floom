@@ -431,25 +431,26 @@ impl SoftwareRenderer {
     fn fill_rect(&mut self, x0: i32, y0: i32, x1: i32, y1: i32, paint: &Brush, clip: Clip) {
         // A solid, fully opaque fill under a straight-edge clip is a direct
         // byte store — the fast path every plain UI surface takes.
-        if let Some(color) = paint.solid() {
-            if color.a == u8::MAX && self.clips.is_rect_only() {
-                let (cx0, cy0, cx1, cy1) = clip;
-                let x0 = (x0.clamp(0, self.width as i32) as u32).max(cx0);
-                let y0 = (y0.clamp(0, self.height as i32) as u32).max(cy0);
-                let x1 = (x1.clamp(0, self.width as i32) as u32).min(cx1);
-                let y1 = (y1.clamp(0, self.height as i32) as u32).min(cy1);
-                for y in y0..y1 {
-                    for x in x0..x1 {
-                        let i = ((y * self.width + x) as usize) * 4;
-                        self.pixels[i] = color.r;
-                        self.pixels[i + 1] = color.g;
-                        self.pixels[i + 2] = color.b;
-                        self.pixels[i + 3] = color.a;
-                    }
+        if let Some(color) = paint.solid()
+            && color.a == u8::MAX
+            && self.clips.is_rect_only()
+        {
+            let (cx0, cy0, cx1, cy1) = clip;
+            let x0 = (x0.clamp(0, self.width as i32) as u32).max(cx0);
+            let y0 = (y0.clamp(0, self.height as i32) as u32).max(cy0);
+            let x1 = (x1.clamp(0, self.width as i32) as u32).min(cx1);
+            let y1 = (y1.clamp(0, self.height as i32) as u32).min(cy1);
+            for y in y0..y1 {
+                for x in x0..x1 {
+                    let i = ((y * self.width + x) as usize) * 4;
+                    self.pixels[i] = color.r;
+                    self.pixels[i + 1] = color.g;
+                    self.pixels[i + 2] = color.b;
+                    self.pixels[i + 3] = color.a;
                 }
-                self.rects_drawn += 1;
-                return;
             }
+            self.rects_drawn += 1;
+            return;
         }
         let (cx0, cy0, cx1, cy1) = clip;
         let x0 = (x0.clamp(0, self.width as i32) as u32).max(cx0);
@@ -595,10 +596,8 @@ impl SoftwareRenderer {
                 // image-top→baseline (y-down), so the image's top-left lands
                 // at (baseline_x + left, baseline_y - top). Same convention
                 // tiny-skia's adapter uses (`new_y.floor() - cached.top`).
-                let px = (bx + glyph.x as f32 * font_scale).floor() as i32
-                    + i32::from(mask.placement.left);
-                let py = (by + glyph.y as f32 * font_scale).floor() as i32
-                    - i32::from(mask.placement.top);
+                let px = (bx + glyph.x * font_scale).floor() as i32 + mask.placement.left;
+                let py = (by + glyph.y * font_scale).floor() as i32 - mask.placement.top;
                 let (cx0, cy0, cx1, cy1) = clip;
                 for row in 0..mask.placement.height as i32 {
                     let dy = py + row;
@@ -1345,13 +1344,6 @@ impl SoftwareRenderer {
     }
 }
 
-/// True when `bounds` (logical space) overlaps `clip` (pixel space) at all.
-
-///
-/// Node bounds are inclusive-exclusive rects that may start negative or run
-/// past the buffer, so both sides are compared in floating point before any
-/// clamping: `ceil` on the upper edge keeps a node that merely grazes the
-/// region, which matters for the anti-aliased boundary pixel.
 /// Logical scene rect → device-pixel rect. The identity when `scale` is 1,
 /// which is why a 1× display has never needed it.
 fn scale_rect(bounds: Rect, scale: f64) -> Rect {
@@ -1366,6 +1358,12 @@ fn scale_rect(bounds: Rect, scale: f64) -> Rect {
     }
 }
 
+/// True when `bounds` (logical space) overlaps `clip` (pixel space) at all.
+///
+/// Node bounds are inclusive-exclusive rects that may start negative or run
+/// past the buffer, so both sides are compared in floating point before any
+/// clamping: `ceil` on the upper edge keeps a node that merely grazes the
+/// region, which matters for the anti-aliased boundary pixel.
 fn hits_clip(bounds: Rect, clip: Clip) -> bool {
     let (cx0, cy0, cx1, cy1) = clip;
     bounds.x1.ceil() > f64::from(cx0)
@@ -1421,7 +1419,7 @@ fn blur_window(bytes: &mut [u8], w: usize, h: usize, filter: &Filter, scale: f64
     // A radius too small to survive the three-way split still gets a one-pixel
     // kernel: rounding it to zero would make a 1px blur silently do nothing.
     let kernel = |radius: f64| -> usize {
-        if !(radius > 0.0) || !radius.is_finite() {
+        if !(radius.is_finite() && radius > 0.0) {
             return 0;
         }
         ((radius * scale) / f64::from(BLUR_PASSES as u32))
@@ -1580,15 +1578,15 @@ fn rasterize_glyph(font: swash::FontRef<'_>, font_size: f32, glyph_id: u32) -> O
 
 impl Renderer for SoftwareRenderer {
     fn begin_frame(&mut self, info: &FrameInfo) {
-        if let RenderTarget::Software { width, height } = info.target {
-            if width != self.width || height != self.height {
-                self.width = width;
-                self.height = height;
-                self.pixels
-                    .resize((width as usize) * (height as usize) * 4, 0);
-                // A resized buffer cannot be patched incrementally.
-                self.needs_full_clear = true;
-            }
+        if let RenderTarget::Software { width, height } = info.target
+            && (width != self.width || height != self.height)
+        {
+            self.width = width;
+            self.height = height;
+            self.pixels
+                .resize((width as usize) * (height as usize) * 4, 0);
+            // A resized buffer cannot be patched incrementally.
+            self.needs_full_clear = true;
         }
         // A density change moves every logical coordinate on screen without
         // touching a single node, so the scene is stale even though the damage

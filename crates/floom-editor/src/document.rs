@@ -69,7 +69,12 @@ impl TextDocument {
         }
     }
 
-    pub fn from_str(s: &str) -> Self {
+    /// Builds a document holding `text`, caret at the end.
+    ///
+    /// Named `from_text` rather than `from_str` on purpose: this cannot fail, so
+    /// it must not look like `std::str::FromStr::from_str`, which returns a
+    /// `Result`.
+    pub fn from_text(s: &str) -> Self {
         let mut doc = Self::new();
         doc.rope = Rope::from(s);
         doc.selection = Selection::caret(s.len());

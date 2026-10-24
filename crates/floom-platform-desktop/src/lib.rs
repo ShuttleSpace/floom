@@ -15,7 +15,12 @@ pub mod native_appkit;
 /// The real macOS clipboard (`NSPasteboard`). Split out because it is the one
 /// part of this adapter that must reach AppKit directly: the pasteboard belongs
 /// to the session, not to a window.
-#[cfg(target_os = "macos")]
+///
+/// Gated on `winit` because [`crate::winit_backend`] is its only caller: the
+/// headless [`crate::DesktopPlatform`] keeps the in-process placeholder, so
+/// compiling this module without `winit` would produce dead code that no build
+/// could reach.
+#[cfg(all(target_os = "macos", feature = "winit"))]
 pub mod clipboard;
 
 #[cfg(feature = "winit")]
@@ -232,12 +237,12 @@ impl DesktopPlatform {
             DesktopInput::ImeCommit { text } => PlatformEvent::ImeCommit { window, text },
             DesktopInput::Focused(focused) => PlatformEvent::WindowFocused { window, focused },
             DesktopInput::Resized(size) => {
-                if let Some(w) = self.windows.get_mut(&window.index()) {
-                    if w.id == window {
-                        w.size = size;
-                        if let Some(s) = w.surface.as_mut() {
-                            s.size = size;
-                        }
+                if let Some(w) = self.windows.get_mut(&window.index())
+                    && w.id == window
+                {
+                    w.size = size;
+                    if let Some(s) = w.surface.as_mut() {
+                        s.size = size;
                     }
                 }
                 PlatformEvent::WindowResized { window, size }
