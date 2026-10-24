@@ -42,30 +42,47 @@ const POST_NOTIFICATIONS: &str = "android.permission.POST_NOTIFICATIONS";
 const API_TIRAMISU: i32 = 33;
 
 pub fn are_notifications_enabled() -> bool {
-    jni_helpers::with_env(|env| {
-        let manager = notification_manager(env)?;
-        let enabled = env
-            .call_method(
-                &manager,
-                jni::jni_str!("areNotificationsEnabled"),
-                jni::jni_sig!("()Z"),
-                &[],
-            )
-            .e()?
-            .z()
-            .e()?;
-        Ok(enabled)
-    })
-    .unwrap_or(false)
+    jni_helpers::with_env(read_enabled).unwrap_or(false)
+}
+
+/// `NotificationManager.areNotificationsEnabled()` on an env the caller owns.
+///
+/// Split out from [`are_notifications_enabled`] so [`request_authorization`]
+/// can ask the same question without nesting a second `with_env`: the bridge
+/// hands out `&mut Env` from a thread-local, and a nested call would alias it.
+fn read_enabled(env: &mut jni::Env) -> Result<bool, String> {
+    let manager = notification_manager(env)?;
+    env.call_method(
+        &manager,
+        jni::jni_str!("areNotificationsEnabled"),
+        jni::jni_sig!("()Z"),
+        &[],
+    )
+    .e()?
+    .z()
+    .e()
 }
 
 pub fn request_authorization() -> Result<(), String> {
     jni_helpers::with_env(|env| {
-        // On API 33+ a grant is required before anything appears, so a request
-        // that was already answered "yes" needs no prompt.
         if sdk_int(env)? < API_TIRAMISU {
-            return Ok(());
+            // Before API 33 there is no runtime permission and therefore no
+            // prompt: an app may post as soon as it is installed, unless the
+            // user has switched its notifications off in Settings. That switch
+            // is not a prompt and cannot be asked again, so reporting `Ok` here
+            // would promise a dialog that does not exist.
+            if read_enabled(env)? {
+                return Ok(());
+            }
+            return Err(
+                "notifications: this device is below API 33, so there is no \
+                 permission prompt — but notifications are switched off for this \
+                 app. The user has to turn them back on in Settings → Apps → \
+                 Notifications."
+                    .into(),
+            );
         }
+
         let activity = jni_helpers::activity(env)?;
         let permission = env.new_string(POST_NOTIFICATIONS).e()?;
         let granted = env
