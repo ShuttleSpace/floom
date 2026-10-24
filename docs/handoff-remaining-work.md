@@ -344,20 +344,71 @@ stub 插件靠"host 测试 + `cfg(target_os)` 分支从不编译"藏住，probe 
 
 ---
 
-### ⚠️ 预先存在的红灯（不是本次工作引入，但会让 `build` 永不执行）
+### ✅ 已修：预先存在的红灯（曾让 `build` 永不执行）
+
+当时的状态：
 
 ```bash
 cargo fmt --all --check      # 2831 处差异
 cargo clippy --workspace     # 多处 error（path.rs map_or、native-ffi 裸指针等）
 ```
 
-`build` 的 `needs: [fmt, clippy]` 因此**从未跑过**。这意味着：
-- `probe-check` 特意独立出来，就是为了绕开这一点；
-- 但**其余测试门禁实际上也是停摆的**，`cargo test --workspace` 那一步同样没跑。
-  这不是本次改动造成的，但它是"CI 绿"这个结论目前不成立的原因。
+`build` 的 `needs: [fmt, clippy]` 因此**从未跑过**，`cargo test --workspace`
+那一步同样没跑。两处都已清掉，分成两次提交（`f8093273` 纯格式化 732 个文件，
+`997914ec` clippy 修复），所以后者可以当作它实际的改动来读。
 
-修这两处是机械工作（`cargo fmt --all`、逐条 clippy 建议），但会动到大量
-与本主题无关的文件，需要单独一次提交。
+**但根因不在 fmt 和 clippy，而在这里：CI 根本没有执行过。** 详见下一节。
+
+---
+
+### ⚠️ CI 从未执行过：origin 是 Gitee，CI 全在 `.github/workflows/`
+
+这是一个必须先知道的事实，否则上面所有"CI 会跑"的句子都会被误读：
+
+- `origin` 是 `https://gitee.com/floem/floem.git`；
+- 全部 CI 定义在 `.github/workflows/ci.yml`；
+- 仓库里没有 Gitee Go / 任何 Gitee 侧的流水线配置。
+
+也就是说，`.github/workflows/` 里的每一个 job —— 包括 `fmt`、`clippy`、
+`build`、`probe-check` —— **在这个仓库的托管方式下不会被执行**。这是为什么
+上面那些红灯能存在很久而没人发现，也是为什么"CI 绿"这个结论此前无从谈起。
+
+**缓解措施：本地门禁 `scripts/gate.sh`（`just gate`）。** 它按 job 独立执行、
+每条都单独报告、失败数即退出码：
+
+```bash
+just gate            # 全部
+just gate --list     # 列出有哪些检查
+just gate fmt        # 只跑一条
+```
+
+设计要点（都是踩出来的）：
+
+- **每条检查独立运行、独立报告**。跳过必须打印理由，不能静默变绿。
+- **clippy 用 `--all-features`**。默认 feature 只编译占位实现，
+  `floom-platform-desktop` 的整个 winit 后端在 feature 后面。第一次
+  `--all-features` 就找出 7 个此前从未被编译过的错误。
+- **clippy 范围必须等于 CI 的 52 个包**。门禁此前截断在 `floom-native-ffi`，
+  漏掉全部 9 个插件、`floom-app`、`floom-widgets` 和另外 20 个 crate ——
+  于是门禁能报 `PASS clippy`，而三分之一的 track 从未被 lint 过。
+- **`android`/`ios` 用 `cargo check --target`**，与 CI 一致；`check` 不链接，
+  所以不需要 NDK，也不该用 `cargo ndk` 把真检查降级成跳过。
+- **`fmt` 要跑两个 workspace**。`crates/ecosystem/floom-ui` 是独立 workspace，
+  根目录的 `cargo fmt --all` 到不了它；`crates/vendor` 永不格式化。
+
+**四类包名错误**（同一种病：`--package=` 里写了根 workspace 解析不出来的名字，
+一跑就 `did not match any packages`）：
+
+| 名字 | 问题 |
+|---|---|
+| `floom-renderer-skia` | 已重命名为 `floom-renderer-skia-abi` |
+| `floom-runtime` | 不存在 |
+| `floom-theme` | 只在 ecosystem workspace 里（`crates/ecosystem/floom-ui/crates/floom-theme`），根 workspace 永远解析不到 |
+| 漏掉 `floom-renderer-tui`、`floom-renderer-web` | CI 与门禁都漏了 |
+
+现在门禁与 CI 的包列表用脚本做过差集比对，两侧都是 52 个，不再靠眼睛核对。
+
+**当前状态：`just gate` 10 项全绿（10 passed, 0 skipped, 0 failed）。**
 
 
 ---

@@ -409,6 +409,41 @@ iOS 分支只是检测已存在的 xcframework 并链接，没有驱动 `xcodebu
 2. **`floom-text` / `floom-types` 的 `line_height`** — 工作树里有未提交的
    在制品（给 `StyledText` 加 `line_height`），是并行的编辑器工作，未纳入本次提交。
 
+### 批次 3 的实际结果（2026-10-24/25）：让"绿"这个结论成立
+
+这一批没有新增能力，只做一件事：**把"检查通过"从一句声明变成可复现的事实**。
+起因是发现 CI 从未执行过，以及本地门禁的覆盖面比它自己声称的窄。
+
+- **CI 从未执行过。** origin 是 Gitee，全部 CI 定义在 `.github/workflows/`，
+  仓库里没有 Gitee 侧流水线配置。所以 `fmt`、`clippy`、`build`、`probe-check`
+  这些 job 一个都没跑过 —— 这正是 `cargo fmt --check` 能攒下 2831 处差异、
+  clippy 能攒下一堆 error 而没人知道的原因。
+  缓解措施是 `scripts/gate.sh`（`just gate`）：每条检查独立执行独立报告、
+  跳过必须打印理由、退出码即失败数。
+- **门禁 clippy 范围截断在 `floom-native-ffi`。** 漏掉全部 9 个能力插件、
+  `floom-app`、`floom-widgets` 和另外 20 个 crate。截断期间门禁报 `PASS clippy`，
+  而三分之一的 track 从未被 lint 过。补齐到 CI 的 52 个包后，仅 `floom-app`
+  一处就暴露了 17 个此前从未被编译到的错误。
+- **`--all-features` 是必须的。** 默认 feature 只编译占位实现，
+  `floom-platform-desktop` 的整个 winit 后端在 feature 后面。第一次
+  `--all-features` 就在 `winit_backend` 里找出 7 个从未被编译过的错误。
+  和上面那条是同一个毛病：检查通过，是因为它看的东西更少。
+- **四个包名是错的**（`--package=` 写了根 workspace 解析不出来的名字）：
+  `floom-renderer-skia`（已改名 `-skia-abi`）、`floom-runtime`（不存在）、
+  `floom-theme`（只在 ecosystem workspace 里）、以及 CI 与门禁都漏了
+  `floom-renderer-tui`/`floom-renderer-web`。现在两侧的 52 个名字用脚本比对过。
+- **两个 `unsafe` 签名是补契约，不是压 lint。**
+  `floom-plugin-nativeview::provider` 和 `boxed_provider` 解引用调用方拥有的
+  裸 vtable 指针，之前没有说明。现在都是 `unsafe fn` 并带 `# Safety`，
+  三个调用点写明各自承诺什么。
+- **`TextInputStyle::padding` 删掉而不是接上。** 它用 paint 路径直接读的两个
+  数字拼出一个 `Insets`，没有任何调用者；布局和绘制都已各自算过 padding，
+  接上它会变成第三份真相。
+
+当前 `just gate`：10 passed, 0 skipped, 0 failed。
+
+---
+
 ## 一句话总结
 
 - **需求 1**：机制（注册表 + ABI + 脚手架）**齐备**，但跨语言 FFI 那一段是空的——
