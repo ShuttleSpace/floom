@@ -31,3 +31,30 @@ and in the crate's own module note.
 The *model* — the rope buffer, the cursor, the selection, the word motions —
 is `floom-editor-core`, which now lives in the root workspace at
 `crates/floom-editor-core` and is framework-free.
+
+## The examples
+
+Three real windows, all run from this workspace's own directory (the satellite
+is excluded from the root workspace, so `cargo run -p ...` has to be started
+here):
+
+```sh
+cd crates/ecosystem/floom-editor
+
+cargo run -p editor           # the editor filling a window, plus a button
+                              # that clears the document from outside it
+cargo run -p syntax-editor    # the same editor with a hand-written Rust
+                              # scanner behind the `Styling` trait
+cargo run -p ide              # an IDE: explorer, tabs, status bar
+```
+
+`ide` is the one that shows the editor the way an application uses it. A tab is
+not a widget — the editor is mounted once and a click swaps the *document*
+behind it, so every file keeps its own undo history, caret, selection and scroll
+position. The chrome around it (explorer, tabs, status bar) is three leaf
+widgets that read the shared model while they paint, which is what lets the
+status bar follow the caret in the same frame.
+
+`cargo run -p ide -- --render out.ppm` writes one frame as a PPM through the
+software renderer instead of opening a window — the same scene, rasterised with
+no display, which is how the demo's pixels are checked on a headless machine.

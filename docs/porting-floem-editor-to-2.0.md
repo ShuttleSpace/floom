@@ -260,7 +260,7 @@ checked by reverting the fix and watching the two tests go red.
 
 ## Examples
 
-Two, both on `floom::run_desktop`:
+Three, all on `floom::run_desktop`:
 
 * `examples/editor` — the editor filling a window, with a "clear" button
   underneath that reaches into the state from outside the widget.
@@ -268,6 +268,67 @@ Two, both on `floom::run_desktop`:
   highlighter implementing the port's `Styling` trait. The v1 example used
   `syntect`; this one uses a small scanner, because what the example is here
   to show is the *trait*, and a real highlighter would implement the same one.
+* `examples/ide` — an IDE around the editor: a file explorer, a tab strip
+  and a status bar, over a demo workspace of five files in three languages.
+  It exists to answer the question the other two examples do not: what does
+  the editor look like when an *application* uses it? See
+  ["The IDE demo, and what building it found"](#the-ide-demo-and-what-building-it-found).
+
+## The IDE demo, and what building it found
+
+`examples/ide` keeps **one** editor widget for the whole session and swaps the
+document behind it when a tab is clicked. That choice is not a shortcut — a
+2.0 child slot is reconciled by `ChildKey`, and an existing key keeps its
+widget, so replacing the widget under a slot means a new key, a new element,
+and a lost focus. The document swap is what keeps each file's undo history,
+caret, selection and scroll, and it is also what found two real defects.
+
+### The line cache was keyed on the revision alone
+
+`EditorState::doc` is public and swappable, so the demo swaps it. Every fresh
+`TextDocument` reports revision `0` — the counter starts at zero in each
+buffer — so switching from one just-opened file to another compares equal on
+the revision alone and the editor hands back the *previous* file's laid-out
+lines. The scene then shows the wrong text.
+
+The cache now compares the document's identity as well (`Arc::ptr_eq`), and
+`swapping_the_document_paints_the_new_document` is the test that says so. It
+was written first and watched red: the new document's line was not painted and
+the old one still was.
+
+### `mount_root` does not build the tree
+
+The demo wants the editor focused when the window opens, which means finding
+the editor's element id — and the id does not exist until the children are
+reconciled. `mount_root` pushes only the root; the child slots' builder
+closures run during the first `reconcile`, which the host does on its first
+`frame`. So a lookup right after mounting finds one node, and the editor is
+never focused.
+
+`mount_ide` therefore calls `host.reconcile_all()` before it looks, and the
+third demo test (type a key, assert it reached the document) is what fails
+without it — checked by removing the call and watching it go red.
+
+### A widget-level clip is not usable yet
+
+The obvious way to keep an over-long label inside its panel is
+`Widget::clip() -> Some(ClipShape::Box)`. On the GPU presenter that paints the
+whole window black — measured, by building the same demo with and without it
+and screenshotting both windows. The panels therefore do not clip: they *fit*,
+measuring every label and cutting it to the room it has. Same guarantee, kept
+where the text is.
+
+This is a host/presenter gap rather than an editor one, and it is named here
+because the demo's code is where a reader would look for the clip that is not
+there.
+
+### The GPU presenter ghosts its text
+
+With the clip removed the demo's window draws, but the text is ghosted — each
+glyph appears several times at slightly different offsets. The *same scene*
+rasterised by the software renderer (`--render out.ppm`) is clean, so the
+scene the demo produces is right and the presenter is where it goes wrong. It
+is also not new: `examples/editor` ghosts the same way in the same window.
 
 ## Tests
 

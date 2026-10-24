@@ -1,0 +1,38 @@
+[package]
+name = "ide"
+edition.workspace = true
+license.workspace = true
+version.workspace = true
+description = "A miniature IDE around the ported floom-editor widget"
+
+[lib]
+name = "ide_demo"
+path = "src/lib.rs"
+
+[[bin]]
+name = "ide"
+path = "src/main.rs"
+
+[dependencies]
+# The public facade, for `run_desktop`.
+floom.workspace = true
+floom-core.workspace = true
+floom-editor = { path = "../../floom-editor" }
+# The editor's model, for the `Selection` a file remembers between tabs.
+floom-editor-core = { path = "../../../../floom-editor-core" }
+floom-text.workspace = true
+floom-types.workspace = true
+# The software renderer, for `--render`: one frame rasterised with no window
+# and no display, so the demo's pixels can be looked at on a headless machine.
+floom-renderer-software.workspace = true
+# `FrameInfo` and the `Renderer` trait come from the renderer ABI crate, which
+# the facade does not re-export — `floom-renderer-software` implements that ABI
+# but does not re-export it either, so naming the trait means naming the crate.
+floom-renderer = { path = "../../../../floom-renderer" }
+
+[dev-dependencies]
+# The tests mount the demo in a headless host and read the scene, which is what
+# makes them assertions about pixels rather than about the demo's own state.
+floom-app.workspace = true
+floom-layout.workspace = true
+floom-scene.workspace = true

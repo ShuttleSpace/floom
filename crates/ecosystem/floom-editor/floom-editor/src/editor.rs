@@ -267,12 +267,23 @@ impl LineLayout {
 
 /// The laid-out lines, by source line.
 ///
-/// The cache is keyed on the document's revision and on the width the lines
-/// were laid out at, because a line laid out at one revision and asked for at
-/// another is a line whose glyphs do not match its text, and a line laid out
-/// at one width and asked for at another is a line that wraps differently.
+/// The cache is keyed on *which* document the lines came from, that document's
+/// revision, and the width the lines were laid out at. All three are needed:
+/// a line laid out at one revision and asked for at another is a line whose
+/// glyphs do not match its text, a line laid out at one width and asked for at
+/// another is a line that wraps differently, and a line laid out from a
+/// *different* document is a line that is simply the wrong text. The last one
+/// is not hypothetical — every new `TextDocument` starts at revision `0`, so
+/// swapping the document behind the editor for a freshly opened file compares
+/// equal on the number alone. The IDE demo switches tabs exactly that way.
 #[derive(Default, Clone)]
 struct LineCache {
+    /// The document the entries were laid out from.
+    ///
+    /// Held rather than reduced to a pointer so the comparison is `Arc::ptr_eq`
+    /// on two live handles; at most one previous document is kept alive, and
+    /// only until the next one is laid out.
+    document: Option<Arc<dyn Document>>,
     revision: u64,
     width: f64,
     entries: HashMap<usize, Arc<LineLayout>>,
@@ -281,6 +292,28 @@ struct LineCache {
     /// It is worked out by laying out every line, so it is cached: the
     /// editor only needs it to know where the end of the document is.
     total_height: Option<f64>,
+}
+
+impl LineCache {
+    /// Whether the entries describe `document` at `revision`, laid out at
+    /// `width`.
+    fn matches(&self, document: &Arc<dyn Document>, revision: u64, width: f64) -> bool {
+        self.revision == revision
+            && self.width == width
+            && self
+                .document
+                .as_ref()
+                .is_some_and(|cached| Arc::ptr_eq(cached, document))
+    }
+
+    /// Adopts a new key, dropping everything laid out under the old one.
+    fn adopt(&mut self, document: &Arc<dyn Document>, revision: u64, width: f64) {
+        self.entries.clear();
+        self.total_height = None;
+        self.document = Some(document.clone());
+        self.revision = revision;
+        self.width = width;
+    }
 }
 
 /// The editor: a document, a caret, and the ink between them.
@@ -407,11 +440,8 @@ impl Editor {
         let revision = doc.revision();
         drop(state);
         let mut cache = self.lines.lock().unwrap_or_else(|e| e.into_inner());
-        if cache.revision != revision || cache.width != width {
-            cache.entries.clear();
-            cache.total_height = None;
-            cache.revision = revision;
-            cache.width = width;
+        if !cache.matches(&doc, revision, width) {
+            cache.adopt(&doc, revision, width);
         }
         if let Some(entry) = cache.entries.get(&line) {
             return entry.clone();
@@ -762,7 +792,7 @@ impl Editor {
         let revision = doc.revision();
         {
             let cache = self.lines.lock().unwrap_or_else(|e| e.into_inner());
-            if cache.revision == revision && cache.width == width {
+            if cache.matches(&doc, revision, width) {
                 if let Some(height) = cache.total_height {
                     return height;
                 }
@@ -774,6 +804,11 @@ impl Editor {
             height += self.line_height_px(line, width);
         }
         let mut cache = self.lines.lock().unwrap_or_else(|e| e.into_inner());
+        // The heights above were laid out at this key; record the total under
+        // the same one, or a later lookup would find it under a stale key.
+        if !cache.matches(&doc, revision, width) {
+            cache.adopt(&doc, revision, width);
+        }
         cache.total_height = Some(height);
         height
     }

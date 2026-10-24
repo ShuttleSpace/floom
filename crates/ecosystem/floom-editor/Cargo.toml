@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["floom-editor", "examples/editor", "examples/syntax-editor"]
+members = ["floom-editor", "examples/editor", "examples/ide", "examples/syntax-editor"]
 
 [workspace.package]
 edition = "2024"

@@ -14,7 +14,7 @@ use std::sync::Arc;
 
 use floom_app::WidgetHost;
 use floom_core::{Key, KeyEvent, KeyPhase, NamedKey, PointerEvent};
-use floom_editor::{EditorStyle, Styling, TextEditor, text_editor};
+use floom_editor::{Document, EditorStyle, Styling, TextEditor, TextDocument, text_editor};
 use floom_layout::LayoutStyle;
 use floom_scene::{ResourceKind, SceneNode};
 use floom_types::{
@@ -685,4 +685,49 @@ impl Styling for KeywordStyling {
             },
         }]
     }
+}
+
+/// Swapping in another document paints *that* document.
+///
+/// The IDE demo switches tabs by replacing `EditorState::doc`, and every fresh
+/// `TextDocument` reports revision `0` because the counter starts at zero in
+/// each buffer. A line cache keyed on the revision alone therefore cannot tell
+/// one new document from another: it hands back the previous file's lines, and
+/// the scene shows the wrong text. The cache has to compare the document's
+/// identity too, and this is the test that says so.
+#[test]
+fn swapping_the_document_paints_the_new_document() {
+    let editor = text_editor("first document");
+    let mut host = mount(editor.clone());
+    assert_eq!(
+        nodes_with_text(&host, "first document").len(),
+        1,
+        "the first document is on screen"
+    );
+    assert_eq!(nodes_with_text(&host, "second document").len(), 0);
+
+    let second: Arc<dyn Document> = Arc::new(TextDocument::new("second document"));
+    assert_eq!(
+        second.revision(),
+        0,
+        "a fresh document starts at revision 0, exactly like the first one did"
+    );
+    {
+        let state = editor.state();
+        let mut state = state.lock().unwrap();
+        state.doc = second;
+        state.generation += 1;
+    }
+    host.frame();
+
+    assert_eq!(
+        nodes_with_text(&host, "second document").len(),
+        1,
+        "the new document's line is painted"
+    );
+    assert_eq!(
+        nodes_with_text(&host, "first document").len(),
+        0,
+        "and the old document's line is not"
+    );
 }
