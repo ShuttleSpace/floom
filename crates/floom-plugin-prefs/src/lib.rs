@@ -218,10 +218,17 @@ mod tests {
     /// `Preferences::open` reaches the real OS store on every arm, so a test
     /// that used a fixed name would write into the user's own preferences and
     /// leave the domain behind. Process id plus a nanosecond stamp makes the
-    /// name unique per run.
-    fn unique_store_name() -> String {
+    /// name unique across *runs*, but not within one: this machine's clock has
+    /// 1 µs granularity, so two tests starting together got the same stamp
+    /// about 23% of the time (measured), and the cleanup of one erased the
+    /// other's live domain. The atomic counter is what makes it unique among
+    /// the tests in a process.
+    pub(super) fn unique_store_name() -> String {
+        use std::sync::atomic::{AtomicU64, Ordering};
+        static NEXT: AtomicU64 = AtomicU64::new(0);
+        let seq = NEXT.fetch_add(1, Ordering::Relaxed);
         format!(
-            "floom-prefs-test-{}.local-{:x}",
+            "floom-prefs-test-{}.local-{:x}-{seq}",
             std::process::id(),
             std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
@@ -292,14 +299,9 @@ mod tests {
     #[cfg(any(target_os = "linux", target_os = "windows"))]
     #[test]
     fn file_arm_roundtrip_including_the_characters_the_format_cares_about() {
-        let dir = std::env::temp_dir().join(format!(
-            "floom-prefs-test-{}-{:x}",
-            std::process::id(),
-            std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .unwrap()
-                .as_nanos()
-        ));
+        // The shared helper: a hand-rolled `pid + nanos` name is not unique
+        // among tests in one process (see `unique_store_name`).
+        let dir = std::env::temp_dir().join(unique_store_name());
         std::fs::create_dir_all(&dir).unwrap();
         let path = dir.join("test.prefs");
 

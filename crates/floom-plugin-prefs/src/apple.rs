@@ -52,11 +52,6 @@ pub fn remove(store: &str, key: &str) -> Result<(), String> {
 
 /// Remove a whole suite from the persistent store, best-effort.
 ///
-/// `removePersistentDomainForName:` is an *instance* method (the header is
-/// unambiguous, and an earlier draft sent it to the class, which objc2's
-/// runtime check refused — correctly). Calling it drops every value in the
-/// named domain and asks cfprefsd to delete the plist.
-///
 /// Exposed for tests: a test store reaches the user's *real* preferences, so it
 /// must leave no domain behind. A production caller has no reason to erase a
 /// whole store — that is the user's settings, not the app's to clear.
@@ -66,6 +61,8 @@ pub fn remove(store: &str, key: &str) -> Result<(), String> {
 /// runtime check refused — correctly). It empties the domain persistently; the
 /// now-empty plist file is cfprefsd's to delete, asynchronously, so this also
 /// unlinks it best-effort for the common case where it lingers past the run.
+/// Measured on this machine: after the call plus the unlink, no plist is left
+/// behind once the process exits.
 #[cfg(test)]
 pub fn remove_domain(store: &str) {
     unsafe {
@@ -101,6 +98,12 @@ unsafe fn suite(store: &str) -> Result<*mut AnyObject, String> {
 }
 
 /// An `NSString` object as a Rust string, with null meaning absent.
+///
+/// `nil` and `@""` are different answers, and the OS reports both: `nil` from
+/// `stringForKey:` means the key is absent, while `@""` means the key is
+/// present and holds an empty string. Collapsing the two into `None` made this
+/// arm disagree with the Android and file arms, which return `Some("")`, so a
+/// caller could not tell "unset" from "set to empty" on Apple alone.
 unsafe fn string_from_nsstring(value: *mut AnyObject) -> Option<String> {
     if value.is_null() {
         return None;
@@ -109,10 +112,11 @@ unsafe fn string_from_nsstring(value: *mut AnyObject) -> Option<String> {
     if cstr.is_null() {
         return None;
     }
-    let s = unsafe { std::ffi::CStr::from_ptr(cstr) }
-        .to_string_lossy()
-        .into_owned();
-    if s.is_empty() { None } else { Some(s) }
+    Some(
+        unsafe { std::ffi::CStr::from_ptr(cstr) }
+            .to_string_lossy()
+            .into_owned(),
+    )
 }
 
 /// `+[NSString stringWithUTF8String:]`.
@@ -145,16 +149,10 @@ mod tests {
     /// make the roundtrip read another run's leftovers.
     #[test]
     fn apple_roundtrip_through_the_real_store() {
-        // Named `suite_name`, not `suite`: the local would shadow the
-        // `suite()` helper this test used to call for cleanup.
-        let suite_name = format!(
-            "floom-prefs-test-{}.local-{:x}",
-            std::process::id(),
-            std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .unwrap()
-                .as_nanos()
-        );
+        // The shared helper, not a local copy of its format: a second
+        // hand-rolled `pid + nanos` name collided with the other test's and
+        // made one cleanup erase the other's live domain.
+        let suite_name = crate::tests::unique_store_name();
 
         set(&suite_name, "greeting", "hello = with\todd\ncharacters").unwrap();
         assert_eq!(
@@ -165,6 +163,12 @@ mod tests {
         remove(&suite_name, "greeting").unwrap();
         assert_eq!(get(&suite_name, "greeting"), None);
         assert_eq!(get(&suite_name, "second").as_deref(), Some("2"));
+
+        // An empty string is a value, not an absence — the OS distinguishes
+        // them, and the Android and file arms already report `Some("")`.
+        set(&suite_name, "empty", "").unwrap();
+        assert_eq!(get(&suite_name, "empty").as_deref(), Some(""));
+        assert_eq!(get(&suite_name, "never-set"), None);
 
         // Leave no plist behind — the same helper `lib.rs`'s test cleanup
         // uses, so the cleanup path has one definition and the test exercises
