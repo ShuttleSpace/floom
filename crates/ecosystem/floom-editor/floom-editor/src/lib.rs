@@ -60,4 +60,4 @@ pub use document::{Document, TextDocument};
 pub use editor::{Editor, EditorState};
 pub use style::EditorStyle;
 pub use styling::{SimpleStyling, Styling};
-pub use text_editor::{text_editor, TextEditor};
+pub use text_editor::{TextEditor, text_editor};

@@ -75,11 +75,7 @@ impl TextEditor {
 /// with an undo history behind it.
 pub fn text_editor(text: impl Into<Rope>) -> TextEditor {
     let doc: Arc<dyn Document> = Arc::new(TextDocument::new(text));
-    let editor = Editor::new(
-        doc,
-        EditorStyle::default(),
-        Arc::new(SimpleStyling::new()),
-    );
+    let editor = Editor::new(doc, EditorStyle::default(), Arc::new(SimpleStyling::new()));
     let state = editor.state();
     TextEditor { editor, state }
 }
@@ -127,4 +123,3 @@ impl WidgetAny for TextEditor {
         None
     }
 }
-

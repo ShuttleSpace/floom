@@ -153,7 +153,12 @@ impl EditorState {
     /// Extends the selection to `offset`, keeping the anchor where it is.
     pub fn extend_to(&mut self, offset: usize) {
         let anchor = self.anchor();
-        self.replace_primary(SelRegion::new(anchor, offset, CursorAffinity::Forward, None));
+        self.replace_primary(SelRegion::new(
+            anchor,
+            offset,
+            CursorAffinity::Forward,
+            None,
+        ));
         self.generation += 1;
     }
 
@@ -193,7 +198,8 @@ impl EditorState {
     /// A caret that lands on another one is merged into it: two carets in the
     /// same place are one caret with two names.
     pub fn add_cursor(&mut self, offset: usize) {
-        self.sel.add_region(SelRegion::caret(offset, CursorAffinity::Forward));
+        self.sel
+            .add_region(SelRegion::caret(offset, CursorAffinity::Forward));
         self.generation += 1;
     }
 
@@ -392,7 +398,11 @@ impl Editor {
 
     /// The document being edited.
     pub fn document(&self) -> Arc<dyn Document> {
-        self.state.lock().unwrap_or_else(|e| e.into_inner()).doc.clone()
+        self.state
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .doc
+            .clone()
     }
 
     /// Replaces the editor's style.
@@ -492,11 +502,7 @@ impl Editor {
                 TextWrap::None
             },
             tab_width: Some(self.styling.tab_width()),
-            max_width: if soft_wrap {
-                Some(width as f32)
-            } else {
-                None
-            },
+            max_width: if soft_wrap { Some(width as f32) } else { None },
             // The engine is told the height, so its rows are exactly this far
             // apart and the scroll position — which counts rows — means
             // something.
@@ -532,7 +538,10 @@ impl Editor {
             if ch != ' ' && ch != '\t' {
                 continue;
             }
-            let start = entry.layout.cursor_point(index, CaretAffinity::Downstream).x;
+            let start = entry
+                .layout
+                .cursor_point(index, CaretAffinity::Downstream)
+                .x;
             let end = entry
                 .layout
                 .cursor_point(index + ch.len_utf8(), CaretAffinity::Downstream)
@@ -616,7 +625,11 @@ impl Editor {
         }
         let height = entry.rows as f64 * line_height;
         for offset in stops {
-            let x = entry.layout.cursor_point(offset, CaretAffinity::Downstream).x + text_x;
+            let x = entry
+                .layout
+                .cursor_point(offset, CaretAffinity::Downstream)
+                .x
+                + text_x;
             cx.fill_rect(
                 Rect {
                     x0: x - 0.5,
@@ -1044,7 +1057,9 @@ impl Widget for Editor {
         let generation = state.generation;
         let revision = state.doc.revision();
         drop(state);
-        if !self.painted || generation != self.painted_generation || revision != self.painted_revision
+        if !self.painted
+            || generation != self.painted_generation
+            || revision != self.painted_revision
         {
             self.painted_generation = generation;
             self.painted_revision = revision;
@@ -1160,9 +1175,10 @@ impl Widget for Editor {
                     // The layout knows only its own line, so the range is
                     // translated into the line's own coordinates before it is
                     // asked about.
-                    for rect in entry.layout.selection_rects(
-                        (start - entry.range.start)..(end - entry.range.start),
-                    ) {
+                    for rect in entry
+                        .layout
+                        .selection_rects((start - entry.range.start)..(end - entry.range.start))
+                    {
                         let y = top + (rect.y0 - entry.min_coord());
                         cx.fill_rect(
                             Rect {
@@ -1497,7 +1513,12 @@ impl Editor {
     fn move_cursors(&self, motion: &dyn Fn(usize) -> usize, extend: bool) {
         let ends: Vec<usize> = {
             let state = self.state.lock().unwrap_or_else(|e| e.into_inner());
-            state.sel.regions().iter().map(|region| region.end).collect()
+            state
+                .sel
+                .regions()
+                .iter()
+                .map(|region| region.end)
+                .collect()
         };
         let targets: Vec<usize> = ends.iter().map(|end| motion(*end)).collect();
         let mut state = self.state.lock().unwrap_or_else(|e| e.into_inner());
@@ -1519,7 +1540,10 @@ impl Editor {
 
     /// The caret's offset.
     fn cursor_offset(&self) -> usize {
-        self.state.lock().unwrap_or_else(|e| e.into_inner()).cursor()
+        self.state
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .cursor()
     }
 
     /// The start of the line `offset` is on.

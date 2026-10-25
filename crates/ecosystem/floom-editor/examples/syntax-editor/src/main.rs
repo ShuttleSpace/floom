@@ -20,8 +20,8 @@ use floom_types::{Color, FontFamily, FontWeight, TextSpan, TextStyle};
 /// The keywords the scanner highlights.
 const KEYWORDS: &[&str] = &[
     "fn", "let", "mut", "if", "else", "match", "for", "while", "loop", "struct", "enum", "impl",
-    "trait", "use", "mod", "pub", "return", "break", "continue", "const", "static", "type", "where",
-    "in", "as", "ref", "self", "Some", "None", "Ok", "Err",
+    "trait", "use", "mod", "pub", "return", "break", "continue", "const", "static", "type",
+    "where", "in", "as", "ref", "self", "Some", "None", "Ok", "Err",
 ];
 
 /// A styling that colours the keywords and the string literals.
@@ -148,16 +148,14 @@ fn main() {
     let result = floom::run_desktop("floom — syntax editor", Size::new(720.0, 480.0), {
         let editor = editor.clone();
         move |host: &mut WidgetHost| {
-            let root = Stack::new(Axis::Vertical)
-                .gap(8.0)
-                .child(Child::new(
-                    ChildKey::index(0),
-                    LayoutRequest::new().fill(),
-                    {
-                        let editor = editor.clone();
-                        move || Box::new(editor.clone())
-                    },
-                ));
+            let root = Stack::new(Axis::Vertical).gap(8.0).child(Child::new(
+                ChildKey::index(0),
+                LayoutRequest::new().fill(),
+                {
+                    let editor = editor.clone();
+                    move || Box::new(editor.clone())
+                },
+            ));
             host.mount_root(LayoutStyle::default(), root);
         }
     });

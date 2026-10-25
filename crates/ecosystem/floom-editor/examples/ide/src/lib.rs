@@ -29,9 +29,9 @@ use std::sync::Arc;
 use floom::floom_app::WidgetHost;
 use floom::floom_layout::LayoutStyle;
 use floom::floom_types::ElementId;
+use floom::floom_widgets::Stack;
 use floom_core::{Axis, Child, ChildKey, LayoutRequest};
 use floom_editor::{TextEditor, text_editor};
-use floom::floom_widgets::Stack;
 
 use crate::chrome::{EditorPane, Explorer, StatusBar, TabBar};
 use crate::lang::{Lang, Syntax};
@@ -63,7 +63,9 @@ impl Ide {
             .styling(syntax.clone());
         let editor_state = editor.state();
         if let Some(doc) = initial {
-            let mut state = editor_state.lock().unwrap_or_else(|error| error.into_inner());
+            let mut state = editor_state
+                .lock()
+                .unwrap_or_else(|error| error.into_inner());
             state.doc = doc;
             state.generation += 1;
         }
@@ -149,10 +151,7 @@ mod tests {
 
     use super::*;
     use floom::floom_scene::ResourceKind;
-    use floom::floom_types::{
-        Event, Key, KeyEvent, Point, PointerEvent, Size,
-    };
-
+    use floom::floom_types::{Event, Key, KeyEvent, Point, PointerEvent, Size};
 
     /// The workspace shipped beside the demo.
     fn workspace() -> PathBuf {
@@ -276,5 +275,4 @@ mod tests {
         );
         assert!(has(&host, "● unsaved"), "the status bar noticed the edit");
     }
-
 }

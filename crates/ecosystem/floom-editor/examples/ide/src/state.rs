@@ -164,9 +164,11 @@ impl App {
         entries.sort_by(|left, right| {
             let left_dir = left.is_dir();
             let right_dir = right.is_dir();
-            right_dir
-                .cmp(&left_dir)
-                .then_with(|| name_of(left).to_lowercase().cmp(&name_of(right).to_lowercase()))
+            right_dir.cmp(&left_dir).then_with(|| {
+                name_of(left)
+                    .to_lowercase()
+                    .cmp(&name_of(right).to_lowercase())
+            })
         });
 
         for path in entries {
@@ -324,7 +326,9 @@ impl Shared {
     }
 
     pub fn editor(&self) -> MutexGuard<'_, EditorState> {
-        self.editor.lock().unwrap_or_else(|error| error.into_inner())
+        self.editor
+            .lock()
+            .unwrap_or_else(|error| error.into_inner())
     }
 
     pub fn set_editor_element(&self, id: ElementId) {
@@ -533,8 +537,5 @@ pub struct Caret {
 /// The tests click with it; the widget hit-tests with the same arithmetic, so a
 /// test that clicks "the fourth row" clicks what the user would.
 pub fn row_center(index: usize) -> Point {
-    Point::new(
-        60.0,
-        EXPLORER_HEADER + (index as f64 + 0.5) * ROW_HEIGHT,
-    )
+    Point::new(60.0, EXPLORER_HEADER + (index as f64 + 0.5) * ROW_HEIGHT)
 }

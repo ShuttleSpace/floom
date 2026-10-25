@@ -14,7 +14,7 @@ use std::sync::Arc;
 
 use floom_app::WidgetHost;
 use floom_core::{Key, KeyEvent, KeyPhase, NamedKey, PointerEvent};
-use floom_editor::{Document, EditorStyle, Styling, TextEditor, TextDocument, text_editor};
+use floom_editor::{Document, EditorStyle, Styling, TextDocument, TextEditor, text_editor};
 use floom_layout::LayoutStyle;
 use floom_scene::{ResourceKind, SceneNode};
 use floom_types::{
@@ -62,7 +62,12 @@ fn text_of(host: &WidgetHost, node: &SceneNode) -> String {
     let SceneNode::Text { glyphs, .. } = node else {
         panic!("not a text node: {node:?}");
     };
-    match &host.resources().get(*glyphs).expect("the glyph resource").kind {
+    match &host
+        .resources()
+        .get(*glyphs)
+        .expect("the glyph resource")
+        .kind
+    {
         ResourceKind::GlyphRun { text, .. } => text.to_string(),
         other => panic!("the text node's resource is not a glyph run: {other:?}"),
     }
@@ -181,7 +186,11 @@ fn typing_inserts_text_and_the_scene_shows_it() {
 
     assert_eq!(document_text(&editor), "abc");
     let nodes = nodes_with_text(&host, "abc");
-    assert_eq!(nodes.len(), 1, "the line is painted once, with the new text");
+    assert_eq!(
+        nodes.len(),
+        1,
+        "the line is painted once, with the new text"
+    );
 }
 
 /// A click places the caret where the pointer is.
@@ -200,9 +209,7 @@ fn a_click_places_the_caret_where_the_pointer_is() {
     // start of the line lands inside the text.
     let x = 56.0 + 30.0;
     let y = 6.0;
-    host.dispatch(Event::Pointer(PointerEvent::primary_down(Point::new(
-        x, y,
-    ))));
+    host.dispatch(Event::Pointer(PointerEvent::primary_down(Point::new(x, y))));
     host.frame();
 
     let cursor = state.lock().unwrap().cursor();
@@ -651,7 +658,6 @@ fn two_carets(first: usize, second: usize) -> floom_editor_core::selection::Sele
 }
 
 impl Styling for KeywordStyling {
-
     fn id(&self) -> u64 {
         7
     }

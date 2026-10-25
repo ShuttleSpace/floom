@@ -165,7 +165,11 @@ fn span(
 }
 
 fn char_len(text: &str, index: usize) -> usize {
-    text[index..].chars().next().map(char::len_utf8).unwrap_or(1)
+    text[index..]
+        .chars()
+        .next()
+        .map(char::len_utf8)
+        .unwrap_or(1)
 }
 
 // --- Rust -------------------------------------------------------------------
@@ -173,8 +177,8 @@ fn char_len(text: &str, index: usize) -> usize {
 const RUST_KEYWORDS: &[&str] = &[
     "as", "async", "await", "break", "const", "continue", "crate", "dyn", "else", "enum", "extern",
     "false", "fn", "for", "if", "impl", "in", "let", "loop", "match", "mod", "move", "mut", "pub",
-    "ref", "return", "self", "Self", "static", "struct", "super", "trait", "true", "type", "unsafe",
-    "use", "where", "while",
+    "ref", "return", "self", "Self", "static", "struct", "super", "trait", "true", "type",
+    "unsafe", "use", "where", "while",
 ];
 
 fn rust(text: &str, base: TextStyle, out: &mut Vec<TextSpan>) {
@@ -314,13 +318,7 @@ fn markdown(text: &str, base: TextStyle, out: &mut Vec<TextSpan>) {
     if trimmed.starts_with('#') {
         let level = trimmed.chars().take_while(|c| *c == '#').count();
         if level <= 6 && trimmed.as_bytes().get(level) == Some(&b' ') {
-            span(
-                out,
-                base,
-                0..text.len(),
-                theme::BRIGHT,
-                FontWeight::Bold,
-            );
+            span(out, base, 0..text.len(), theme::BRIGHT, FontWeight::Bold);
             return;
         }
     }
@@ -376,13 +374,7 @@ fn markdown(text: &str, base: TextStyle, out: &mut Vec<TextSpan>) {
                     if let Some(paren) = text[label_end..].find(')') {
                         let end = label_end + paren + 1;
                         span(out, base, i..label_end, theme::ACCENT, base.weight);
-                        span(
-                            out,
-                            base,
-                            label_end..end,
-                            theme::DIMMER,
-                            base.weight,
-                        );
+                        span(out, base, label_end..end, theme::DIMMER, base.weight);
                         i = end;
                         continue;
                     }
@@ -425,21 +417,9 @@ fn toml(text: &str, base: TextStyle, out: &mut Vec<TextSpan>) {
     let key_start = text.len() - text.trim_start().len();
     let _ = key_start;
     if !key.trim().is_empty() {
-        span(
-            out,
-            base,
-            0..key.len(),
-            theme::FUNCTION,
-            base.weight,
-        );
+        span(out, base, 0..key.len(), theme::FUNCTION, base.weight);
     }
-    span(
-        out,
-        base,
-        equals..equals + 1,
-        theme::DIMMER,
-        base.weight,
-    );
+    span(out, base, equals..equals + 1, theme::DIMMER, base.weight);
 
     let value = &text[equals + 1..];
     let value_lead = value.len() - value.trim_start().len();

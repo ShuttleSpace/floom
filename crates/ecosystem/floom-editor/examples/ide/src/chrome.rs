@@ -26,11 +26,9 @@ use floom_core::{
     UpdateContext, Widget, WidgetAny,
 };
 use floom_editor::TextEditor;
-use floom_types::{
-    Color, Event, FontWeight, Key, KeyPhase, Modifiers, Path, Point, Rect, Stroke,
-};
+use floom_types::{Color, Event, FontWeight, Key, KeyPhase, Modifiers, Path, Point, Rect, Stroke};
 
-use crate::state::{EXPLORER_HEADER, ROW_HEIGHT, Shared, STATUS_BAR_HEIGHT, TAB_BAR_HEIGHT};
+use crate::state::{EXPLORER_HEADER, ROW_HEIGHT, STATUS_BAR_HEIGHT, Shared, TAB_BAR_HEIGHT};
 use crate::theme;
 
 /// `text` drawn at `(x, y)` as its top-left corner.
@@ -307,7 +305,11 @@ impl Widget for Explorer {
                 &fit(&entry.name, theme::UI_SIZE, room),
                 theme::UI_SIZE,
                 FontWeight::Normal,
-                if is_active { theme::BRIGHT } else { theme::TEXT },
+                if is_active {
+                    theme::BRIGHT
+                } else {
+                    theme::TEXT
+                },
             );
         }
     }
@@ -394,7 +396,9 @@ impl Widget for TabBar {
     fn update(&mut self, cx: &mut dyn UpdateContext, id: ElementId) {
         let app = self.shared.generation();
         let editor = self.shared.editor_generation();
-        if app != self.painted_app || editor != self.painted_editor || self.hover != self.painted_hover
+        if app != self.painted_app
+            || editor != self.painted_editor
+            || self.hover != self.painted_hover
         {
             self.painted_app = app;
             self.painted_editor = editor;
@@ -650,7 +654,9 @@ impl Widget for StatusBar {
         let caret = self.shared.caret();
         let app = self.shared.app();
         let active = app.active.and_then(|active| app.open.get(active));
-        let lang = active.map(|file| file.lang).unwrap_or(crate::lang::Lang::Text);
+        let lang = active
+            .map(|file| file.lang)
+            .unwrap_or(crate::lang::Lang::Text);
         let dirty = active.map(|file| file.dirty()).unwrap_or(false);
 
         let y = bounds.y0 + baseline(theme::SMALL, STATUS_BAR_HEIGHT) + 1.0;
@@ -724,15 +730,7 @@ impl Widget for StatusBar {
         }
         let mut right = (bounds.x1 - 12.0 - total).max(x + 8.0);
         for (index, (text, color)) in items.iter().enumerate() {
-            label(
-                cx,
-                right,
-                y,
-                text,
-                theme::SMALL,
-                FontWeight::Normal,
-                *color,
-            );
+            label(cx, right, y, text, theme::SMALL, FontWeight::Normal, *color);
             right += text_width(text, theme::SMALL);
             if index + 1 < items.len() {
                 right += 7.0;
