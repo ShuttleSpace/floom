@@ -225,6 +225,17 @@ Flutter 侧这两个也是不同包（`shared_preferences` vs 应用自管的 JS
   下一次运行读回「7 launches recorded」。
 - **NUL 是唯一全局拒绝字符**（三条传输都载不动它），其余字符各臂自处；
   文件臂用编码兜住 `=`、tab、换行。
+- **`""` 是值，不是缺失**（2026-10-25 修正）。Apple 臂曾把 `""` 折成 `None`，
+  于是 `set(k, "")` 之后 `get(k)` 在 Apple 上说「没设过」，而 Android 和文件臂
+  说 `Some("")`。平台本身分得清：`stringForKey:` 的 `nil` 是缺失、`@""` 是存在
+  且为空，所以折掉它是在丢 OS 给出的答案。现在三臂一致返回 `Some("")`，
+  并有测试盯着（把折叠改回去就红）。
+- **测试名用进程内计数器保证唯一**（同日修正）。原来用 `pid + now().as_nanos()`，
+  本机时钟粒度 1 µs，三个并发 `now()` 有 23% 概率撞（20000 轮实测），
+  于是两个测试共用同一个 domain，先结束的那个 `remove_domain` 把另一个
+  正在用的抹掉——表现成「值消失且磁盘上没有 plist」。20 进程并发复现 3/8 轮，
+  加计数器后 0/15。arm 本身没错，第一版怀疑（fresh-instance-per-call、
+  未调 `synchronize`）都被证伪了。
 
 ### A6. `floom-plugin-wakelock` ← `wakelock_plus` ✅ 已实现（2026-10-25，批次 2）
 
