@@ -956,6 +956,7 @@ dependencies = [
  "floom-accessibility",
  "floom-animation",
  "floom-core",
+ "floom-devtools",
  "floom-error",
  "floom-focus",
  "floom-forms",
@@ -1123,6 +1124,13 @@ dependencies = [
  "floom-types",
  "floom-ui-ir",
  "floom-widgets",
+]
+
+[[package]]
+name = "floom-devtools-demo"
+version = "0.2.0"
+dependencies = [
+ "floom",
 ]
 
 [[package]]
