@@ -265,16 +265,34 @@ Flutter 侧这两个也是不同包（`shared_preferences` vs 应用自管的 JS
   文档写的保证（「应用可见时保持显示」），wake lock 是有权限、
   有生命周期的资源——语义就错了。
 
-### A7. `floom-plugin-network-info` ← `network_info_plus`
+### A7. `floom-plugin-network-info` ← `network_info_plus` ✅ 已实现（2026-10-25，批次 3）
 
-Wi-Fi 的 SSID / BSSID / IP / 网关。
+Wi-Fi 的 SSID / BSSID / 本机 IP（子网/网关刻意不做，crate 文档写明原因）。
 
 - Android `WifiManager.getConnectionInfo`（**API 27+ 读 SSID 需要定位权限**，
-  且只能拿到本 app 的——文档要写清这个限制）
-- iOS `CNCopyCurrentNetworkInfo`（**iOS 12+ 需要 entitlement，且系统已弃用**——
-  这一条很可能让 iOS 臂变成精确 `Err`，那本身就是有价值的结论）
-- 桌面：枚举接口在三个平台各不相同且都繁琐，**建议 host 臂直接精确 `Err`**
-  而不是给一个空列表
+  `<unknown ssid>` → `None`，是平台在答「不愿说」不是失败）
+- iOS/macOS `CNCopyCurrentNetworkInfo`（SystemConfiguration **C 函数**，
+  纯 FFI 无 objc2）
+- Linux/Windows：精确 `Err` 点名各自的门（NetworkManager D-Bus /
+  `WlanQueryInterface`）
+
+**as-built 记录**（与原方案的出入）：
+
+- **拆成两个函数不是一个 struct**。`network_info_plus` 把「我的地址」（不涉
+  隐私，到处可答）和「网络的名字」（SSID 是位置信息，两平台都设了门）混在
+  一起；拆开后只想打印 IP 的调用方不必拖进定位权限的故事。
+- **`local_ip()` 全平台一份实现**——std 的 UDP-connect 路由查询就是平台抽象
+  （connect 只查路由表、不发包，所以目标被墙与否无关紧要；注释里写明这一点
+  是给中文环境用户的）。v4 失败回落 v6。
+- **预言命中且更硬**：目录写「iOS 臂很可能是精确 Err」——实测这台 macOS
+  上就如此，而且**比预期更彻底**：Wi-Fi 可验证地关联着（802.11ac、信道
+  149、默认路由走 en0），`CNCopyCurrentNetworkInfo` 仍返回 NULL，连
+  `ipconfig`/`networksetup` 的 CLI 输出里 SSID 都标 `<redacted>`。
+  无签名进程拿不到自己网络的名字，句号。arm 的 `Err` 是**正确答案**，
+  观察记录写进 apple.rs 模块文档。
+- **Windows 的 wlanapi 门是「点名而非实现」**：WlanOpenHandle→
+  WlanEnumInterfaces→WlanQueryInterface 的结构体行走没有运行环境可验，
+  本着「桌面精确 Err」的原目录指引留作命名后续，Err 里写了门在哪。
 
 ### A8. `floom-plugin-background-work` ← `android_alarm_manager_plus` + `workmanager`
 
@@ -556,7 +574,8 @@ C4 选项 (a) 的落地。但要先确认：位加回来时，是加在 `floom-p
   A6 wakelock    → 桌面臂非空（Windows/macOS 真有 API）
 
 批次 3（无需设备，但依赖批次 1）
-  A7 network-info → iOS 臂很可能是精确 Err，那本身就是结论
+  A7 network-info ✅ 已完成（2026-10-25）：预言命中且更硬——关联着的 macOS
+                   也拒绝，Err 即正确答案；local_ip 全平台一份实现
   A8 background-work → 顺带解掉 notifications 的延迟 Err
 
 批次 4（需要 A6b 决策 + 真机）

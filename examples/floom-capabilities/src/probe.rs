@@ -53,6 +53,7 @@ use floom_plugin_connectivity as connectivity;
 use floom_plugin_device_info as device_info;
 use floom_plugin_local_auth as local_auth;
 use floom_plugin_location as location;
+use floom_plugin_network_info as network_info;
 use floom_plugin_notifications as notifications;
 use floom_plugin_package_info as package_info;
 use floom_plugin_paths as paths;
@@ -428,6 +429,35 @@ pub fn connectivity() -> Row {
     )
 }
 
+/// This device's address, and the Wi-Fi network's name if the platform will
+/// say.
+///
+/// The row deliberately shows both halves of the crate's split, because the
+/// split is the point: the address is a measurement any host makes (std's
+/// route lookup — see [`Row::desktop_real`]), while the network's name is
+/// gated — on this Mac, observed 2026-10-25, the OS refuses an unsigned
+/// process its own SSID even while associated, redacting it from
+/// `ipconfig` too. The row prints the refusal's first clause, so a reader
+/// sees "refused" rather than "no Wi-Fi", which would be a different fact.
+pub fn network_info() -> Row {
+    let ip = network_info::local_ip();
+    let wifi = network_info::wifi_info();
+    let wifi_text = match &wifi {
+        Ok(info) => match (&info.ssid, &info.bssid) {
+            (Some(ssid), Some(bssid)) => format!("ssid {ssid} · {bssid}"),
+            _ => "network not named — the platform withheld it \
+                  (Android: location permission; see the crate's table)"
+                .to_string(),
+        },
+        Err(reason) => format!("ssid refused — {}", truncate(reason, 52)),
+    };
+    let state = match ip {
+        Some(ip) => State::Value(format!("ip {ip} · {wifi_text}")),
+        None => State::Error("no route to anywhere — no local address".into()),
+    };
+    Row::measured_value("network_info", "my address, and the Wi-Fi's name", state)
+}
+
 // --- input and sensors -----------------------------------------------------
 
 /// Motion and environment sensors — availability only.
@@ -715,6 +745,7 @@ pub fn all() -> Vec<Row> {
         // power and network
         battery(),
         connectivity(),
+        network_info(),
         // input and sensors
         sensors(),
         // privacy

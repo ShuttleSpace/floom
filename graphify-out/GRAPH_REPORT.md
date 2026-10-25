@@ -1,16 +1,16 @@
 # Graph Report - floem  (2026-10-25)
 
 ## Corpus Check
-- 2272 files · ~2,119,411 words
+- 2276 files · ~2,122,772 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 37903 nodes · 85190 edges · 1434 communities (1274 shown, 68 thin omitted)
-- Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 1268 edges (avg confidence: 0.85)
+- 37932 nodes · 85240 edges · 1433 communities (1273 shown, 67 thin omitted)
+- Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 1269 edges (avg confidence: 0.85)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `4132475f`
+- Built from commit: `a1d9d851`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -22,7 +22,7 @@
 - Scope
 - Inner
 - floom-widgets/tests/scroll.rs
-- ParallaxLayer
+- winit-x11/src/event_loop.rs
 - TextInput
 - Buffer
 - Editor
@@ -32,21 +32,21 @@
 - HarmonyTheme
 - DatePicker
 - WindowAttributes
-- P
-- floom-widgets
+- PhysicalSize
+- floom-types
 - Rect
 - Window
-- RequestError
+- Window
 - Stack
 - VelloGpuPresenter
-- MaterialSheet
+- CupertinoSheet
 - T
-- c_vtable.rs
+- CProvider
 - .shared
 - Window
 - WindowState
 - TimePicker
-- Shadow
+- Widget
 - Selection
 - CupertinoSnackbar
 - SoftwareRenderer
@@ -57,7 +57,7 @@
 - Window
 - WinitPlatform
 - Point
-- FluentOverlay
+- SharedFlag
 - WindowDelegate
 - tests/text_input.rs
 - Popup
@@ -67,19 +67,19 @@
 - .new
 - Combobox
 - FormController
-- CupertinoNavigationDrawer
+- MacNativeViewHost
 - src/calendar.rs
 - BottomNavigationBar
-- FakeNativeProvider
+- NativeSlot
 - WindowState
-- web_sys/canvas.rs
+- IntersectionObserverHandle
 - tests/controls.rs
 - ApplicationHandler
 - floom
-- MdList
-- NativeSlot
+- ListProps
+- NativeError
 - with_alpha
-- ActiveEventLoop
+- EventLoop
 - fluent-slide_group/tests/slide_group.rs
 - MaterialColorPicker
 - Surface
@@ -93,9 +93,9 @@
 - accordion.rs
 - fluent-autocomplete/tests/autocomplete.rs
 - native_project.rs
-- SharedFlag
-- Window
-- LinearProgress
+- CupertinoOverlay
+- RequestError
+- MdSwitch
 - fluent-form/tests/form.rs
 - winit-web/src/cursor.rs
 - CupertinoItemGroup
@@ -103,13 +103,13 @@
 - CupertinoCard
 - FluentInfiniteScroller
 - ColorArea
-- PlatformEvent
+- WindowId
 - CupertinoRangeSlider
 - paint.rs
 - Cursor
 - FluentWindow
 - emit.rs
-- PaintContext
+- MaterialAppBar
 - SelectionModel<K>
 - EventLoop
 - Tree
@@ -123,13 +123,13 @@
 - TestApp
 - winit-win32/src/event_loop.rs
 - CupertinoSkeletonLoader
-- cupertino-slide_group/tests/slide_group.rs
+- src/protocol.rs
 - MainThreadMarker
 - LayoutStyle
 - touch.rs
 - write_flag
 - CupertinoCheckboxBtn
-- CupertinoChip
+- ChipProps
 - CupertinoOtpInput
 - cupertino-form/tests/form.rs
 - CupertinoSlideTransition
@@ -139,7 +139,7 @@
 - Window
 - PullToRefreshColumn
 - HostPlatform
-- CupertinoRadioGroup
+- RadioGroupProps
 - motion_host.rs
 - StyleProps
 - FluentForm
@@ -153,7 +153,7 @@
 - CupertinoContainer
 - RangeSlider
 - CupertinoExpandTransition
-- CupertinoGrid
+- FluentGrid
 - EventLoopError
 - cupertino-stepper/tests/stepper.rs
 - CupertinoValidationMessages
@@ -166,9 +166,9 @@
 - surface_padding.rs
 - BottomSheet
 - ViewState
-- cupertino-checkbox_btn/tests/checkbox_btn.rs
+- SyncRuntime
 - EventLoop
-- ComboboxStyle
+- cupertino-combobox/tests/combobox.rs
 - CupertinoIconButton
 - floom-core/tests/contracts.rs
 - cupertino_select.rs
@@ -183,11 +183,11 @@
 - MonitorHandle
 - ActiveEventLoop
 - SceneFrameQueue
-- CupertinoProgressLinear
+- LinearProgress
 - WindowEvent
 - WinitState
 - CupertinoCode
-- Carousel
+- Ime
 - WindowViewer
 - OverlayHandle
 - Span
@@ -211,7 +211,7 @@
 - CupertinoButtonGroup
 - tests/native.rs
 - O
-- MaterialCheckboxBtn
+- md-slide_group/tests/slide_group.rs
 - Badge
 - CupertinoSpeedDial
 - FileDropHandler
@@ -222,36 +222,36 @@
 - tests/text_field.rs
 - src/effect.rs
 - fluent-stepper/tests/stepper.rs
-- winit-core/src/cursor.rs
+- CustomCursorSource
 - SKILL.md
 - CupertinoEmptyState
 - Services
-- PaintOp
-- Widget
+- cupertino-checkbox/tests/api.rs
+- md-stepper/tests/stepper.rs
 - MonitorHandle
 - Memo<T>
 - src/panel.rs
 - TextDocument
 - read_info
 - Router<R>
-- WindowId
-- FluentSpeedDial
+- DesktopPlatform
+- MaterialSpeedDial
 - VectorIcon
 - button_style
 - AppState
 - TreeRow
 - XError
-- DeviceEvents
+- ControlFlow
 - CupertinoVirtualScroller
-- render_once
+- CupertinoParallax
 - CupertinoConfirmEdit
 - ActiveEventLoop
 - CursorStyle
 - RwSignal
 - CupertinoRating
-- LogicalSize
-- CupertinoDisplayProvider
+- Document
 - MultiTheme
+- CupertinoThemeProvider
 - FluentSlideGroup
 - CupertinoDivider
 - Inspector<'a>
@@ -273,10 +273,10 @@
 - ControlSize
 - MaterialComponentTokens
 - Shared
-- winit-wayland/src/lib.rs
+- PlatformWindowAttributes
 - floom-snapshot/src/lib.rs
 - HoverBox
-- md-chip/tests/chip.rs
+- FluentSpeedDial
 - FluentButtonGroup
 - 2026-08-11 (later) — Batch 12: Window / SlideGroup / ItemGroup / ColorPicker + Batch 13: Providers
 - AppRunner
@@ -290,14 +290,14 @@
 - Cell
 - fluent_select.rs
 - ActiveEventLoop
-- AtomicWaker
+- abortable.rs
 - .get_frame_extents_heuristic
 - evaluate_screen
-- .tokens
+- CupertinoGrid
 - 2026-08-10
 - fluent_radio.rs
 - probe.rs
-- with_alpha
+- FloatingActionButtonProps
 - color_math.rs
 - runloop.rs
 - external.rs
@@ -306,7 +306,7 @@
 - ResizeScaleInternal
 - winit-win32/src/util.rs
 - plugins.rs
-- CupertinoParallax
+- FluentParallax
 - UiDocument
 - T
 - CupertinoListSubheader
@@ -314,8 +314,8 @@
 - floom-elements 架构与实施计划
 - Id
 - Overlay
-- DslError
-- PartialKeyEventInfo
+- lex
+- winit-win32/src/keyboard.rs
 - MdIconButton
 - Resource
 - design_contract.rs
@@ -334,17 +334,17 @@
 - floom-ui-composites/tests/combobox.rs
 - floom-widgets/tests/progress_linear.rs
 - floom-design/src/gallery.rs
-- FluentDataIterator
+- RgbaIcon
 - floom-ui-composites/tests/counter.rs
 - cupertino-code/tests/code.rs
 - FluentCheckboxBtn
-- Receiver
-- fluent-checkbox/tests/api.rs
+- AtomicWaker
+- PaintOp
 - web_sys/event.rs
 - Runtime
 - md_checkbox.rs
 - svg_path.rs
-- MaterialSlideGroup
+- CupertinoBadge
 - TextEditor
 - tests/tree_view.rs
 - FluentIconButton
@@ -357,22 +357,22 @@
 - EventLoop
 - Self
 - MaterialBottomNavigation
-- floom-app/tests/scroll.rs
+- FluentFloatingActionButton
 - android_table.rs
 - .lookup_utf8_inner
 - XdgToplevelIconManagerState
-- MaterialGrid
+- .new
 - LineEnding
 - Layout
 - VirtualScroller
 - Chip
-- CupertinoSheet
+- tests/pick.rs
 - raster.rs
 - Scheduler
 - 2.3 缺口清单
 - MdAlert
 - Parser
-- host_with
+- WifiInfo
 - Vuetify 0 alignment notes
 - fluent-dialog/tests/dialog.rs
 - FluentItemGroup
@@ -381,13 +381,13 @@
 - Completed Work
 - ValidationMessagesList
 - Floom Industrial 1.0 Design
-- cupertino-counter/tests/counter.rs
+- DesignSystem
 - FluentListGroup
 - FluentVirtualScroller
 - MdItemGroup
 - LayoutCache
 - soft_input/mod.rs
-- rect
+- floom-renderer-tui/src/presenter.rs
 - BindingRegistry
 - floom-ui-composites/tests/icon_button.rs
 - ElementId
@@ -407,7 +407,7 @@
 - 绘制与动画能力缺口（Canvas & Motion Gap）
 - FluentCarousel
 - MaterialListGroup
-- FluentBadge
+- CompositorProp
 - Chart
 - FluentSystemBar
 - combobox_widget.rs
@@ -424,7 +424,7 @@
 - wp_tablet_input_v2.rs
 - ResourceRegistry
 - md_slider.rs
-- ActiveEventLoop
+- WinitViewState
 - MaterialNumberInput
 - RwSignal<T, S>
 - tests/primitives.rs
@@ -444,7 +444,7 @@
 - MaterialValidationMessages
 - FluentFooter
 - select_style.rs
-- EmbeddedPlatform
+- PlatformCapabilities
 - tests/surface.rs
 - RegisterData
 - cupertino-window/tests/window.rs
@@ -455,12 +455,12 @@
 - floom-plugin-location/src/android.rs
 - floom-codegen/src/schema.rs
 - docs_parity.rs
-- src/protocol.rs
+- .dispatch
 - tests/media.rs
 - MdCard
-- CupertinoDataIterator
+- FluentDataIterator
 - MotifHints
-- FluentTextField
+- CupertinoDataIterator
 - CupertinoCounter
 - ExpandTransitionTokens
 - FluentHover
@@ -470,7 +470,7 @@
 - tests/ripple.rs
 - Host Embedding — 把 Floom 作为 Native 组件的一部分（add-to-app）
 - winit_input.rs
-- FadeTransitionTokens
+- cupertino-dialog/tests/dialog.rs
 - src/importer.rs
 - tests/tree.rs
 - XkbComposeState
@@ -489,19 +489,19 @@
 - app_delegate.rs
 - FluentSheet
 - FluentCounter
-- read_flag
+- with_alpha
 - MaterialRating
 - winit - Cross-platform window creation and management in Rust
 - FluentPagination
-- notifier.rs
+- Notified
 - ModifierKeyState
 - cupertino_text_field.rs
 - fluent_text_field.rs
 - MaterialPagination
 - CupertinoDefaultsProvider
 - PatchOp
-- MdOverlay
-- WinitView
+- cupertino-speed_dial/tests/speed_dial.rs
+- FluentSnackbar
 - md_text_field.rs
 - fluent_slider.rs
 - floom-inspector/tests/protocol.rs
@@ -519,21 +519,21 @@
 - Batch 20 — 余量组件（3 组件 × 3 DS = 9 crate，总 98×3=294）
 - CupertinoTextarea
 - CupertinoKbd
-- FluentAppBar
-- MdTextField
+- CupertinoAppBar
+- md-speed_dial/tests/speed_dial.rs
 - cupertino-card/tests/card.rs
 - MaterialTimePicker
 - MaterialButtonGroup
 - frames.rs
 - WebPresenter
 - CupertinoButton
-- Notification
+- floom-plugin-notifications/src/ios.rs
 - fluent-item_group/tests/item_group.rs
 - XdgActivationState
-- cupertino-button/tests/button.rs
+- winit-win32/src/window.rs
 - MonitorHandle
-- Result
-- md-window/tests/window.rs
+- xsettings.rs
+- MaterialContainer
 - cupertino-kbd/tests/kbd.rs
 - cupertino-confirm_edit/tests/confirm_edit.rs
 - ide/src/lib.rs
@@ -585,14 +585,14 @@
 - src/scale.rs
 - md-datatable/tests/datatable.rs
 - PressExpand
-- LocalReadRef
+- signal.rs
 - FluentCode
 - ScreenTokens
 - reconcile.rs
 - tests/footer.rs
 - CircularProgress
 - cupertino-bottom_navigation/tests/bottom_navigation.rs
-- FluentDefaultsProvider
+- SelectProps
 - floom-renderer-software/tests/filters.rs
 - tests/item_group.rs
 - winit-appkit/src/cursor.rs
@@ -603,7 +603,7 @@
 - FluentDataTable
 - CupertinoDataTable
 - FileInputProps
-- CupertinoAppBar
+- floom-style-demo/src/main.rs
 - CupertinoForm
 - CupertinoNumberInput
 - fluent-pull_to_refresh/tests/pull_to_refresh.rs
@@ -616,7 +616,7 @@
 - MaterialPullToRefresh
 - cupertino-file_input/tests/file_input.rs
 - FluentDialog
-- PhysicalSize
+- BadIcon
 - ansi.rs
 - CupertinoChipGroup
 - CupertinoText
@@ -624,18 +624,18 @@
 - MdButton
 - MenuProps
 - MaterialChipGroup
-- IconButtonProps
-- xsettings.rs
+- WindowApp
+- fluent-switch/tests/switch.rs
 - CapabilityLimitedAccessibilityAdapter
 - MaterialCode
-- winit-win32/src/keyboard.rs
+- Vec
 - TimePickerProps
 - fluent-file_input/tests/file_input.rs
 - FluentTextarea
 - reconcile_surfaces.rs
 - MaterialDataTable
-- MaterialDefaultsProvider
-- CupertinoBadge
+- .new
+- FluentBadge
 - MaterialKbd
 - IndentStyle
 - tests/testkit.rs
@@ -663,30 +663,30 @@
 - CupertinoTooltip
 - SemanticsState
 - compile_fixtures.rs
-- floom-widget-cupertino-icon
+- floom-widget-cupertino-checkbox
 - read_capabilities
 - DesktopAccessibilityAdapter
 - jni.rs
 - obj
 - keyguard_manager
-- TreeviewNode
+- AutocompleteProps
 - SystemChromeStyle
 - md-switch/tests/switch.rs
 - IdAllocator
-- fluent_icon_path
+- IconProps
 - cupertino-banner/tests/banner.rs
 - url.rs
 - WindowAttributesMacOS
 - Slider
-- dyn Window + '_
+- cupertino-image/tests/image.rs
 - CupertinoMenu
 - RelativePointerState
 - KWinBlurManager
 - FractionalScalingManager
-- fluent-treeview/tests/treeview.rs
+- ActiveEventLoop
 - RangeSliderProps
 - log.rs
-- AlertProps
+- EventHandler
 - fluent-banner/tests/banner.rs
 - TrackedRefMut<'a, T>
 - select_widget.rs
@@ -706,11 +706,11 @@
 - component_snapshot
 - fluent-breadcrumbs/tests/breadcrumbs.rs
 - floom-animation/tests/motion.rs
-- SelectProps
+- CupertinoSelect
 - md-breadcrumbs/tests/breadcrumbs.rs
 - survey-excluded-kits.py
 - cupertino-rating/tests/rating.rs
-- dpi/src/lib.rs
+- SnackbarProps
 - CupertinoTable
 - FluentBanner
 - MdIcon
@@ -755,14 +755,14 @@
 - RatingProps
 - ListSubheaderTokens
 - DirtySet
-- cupertino-floating_action_button/tests/floating_action_button.rs
+- fluent-floating_action_button/tests/floating_action_button.rs
 - cupertino-icon_button/tests/icon_button.rs
-- FluentNavigationDrawer
+- read_flag
 - md-infinite_scroller/tests/infinite_scroller.rs
 - CupertinoCalendar
 - md-chip_group/tests/chip_group.rs
 - CarouselProps
-- tests/brush.rs
+- Shadow
 - paths.rs
 - cupertino-date_picker/tests/date_picker.rs
 - fluent-icon_button/tests/icon_button.rs
@@ -800,8 +800,8 @@
 - FluentTimeline
 - NativeViewPool<K>
 - floom-platform-desktop/src/clipboard.rs
+- cupertino-otp_input/tests/otp_input.rs
 - W
-- fluent-otp_input/tests/otp_input.rs
 - fluent-tabs/tests/tabs.rs
 - md-otp_input/tests/otp_input.rs
 - cupertino-timeline/tests/timeline.rs
@@ -814,11 +814,11 @@
 - Plan: Phase 16 — native composition (R4)
 - cupertino-calendar/tests/calendar.rs
 - dpi
-- ListProps
+- CupertinoList
 - cupertino-range_slider/tests/range_slider.rs
-- ToolbarProps
+- SpeedDialProps
 - CupertinoApp
-- MenuTokens
+- OverlayHost
 - fluent-calendar/tests/calendar.rs
 - cupertino-empty_state/tests/empty_state.rs
 - cupertino-radio-group/tests/radio_group.rs
@@ -832,9 +832,9 @@
 - cupertino_icon_path
 - CheckboxProps
 - md-calendar/tests/calendar.rs
-- md-icon_button/tests/icon_button.rs
+- tests/checkbox.rs
 - CupertinoFloatingActionButton
-- ChipProps
+- fluent-list_item/tests/list_item.rs
 - scripts_icon_fix.py
 - tests/semantics.rs
 - md-range_slider/tests/range_slider.rs
@@ -863,11 +863,11 @@
 - fluent-system_bar/tests/system_bar.rs
 - md-carousel/tests/carousel.rs
 - md-color_picker/tests/color_picker.rs
-- Labeled
+- md-list_item/tests/list_item.rs
 - md-system_bar/tests/system_bar.rs
 - BannerProps
 - Option
-- cupertino-treeview/tests/treeview.rs
+- HoverProps
 - cupertino-time_picker/tests/time_picker.rs
 - cupertino-virtual_scroller/tests/virtual_scroller.rs
 - fluent-empty_state/tests/empty_state.rs
@@ -878,38 +878,38 @@
 - fluent-virtual_scroller/tests/virtual_scroller.rs
 - Scene
 - shared_flag
-- md-snackbar/tests/snackbar.rs
+- ButtonGroupTokens
 - md-virtual_scroller/tests/virtual_scroller.rs
-- RustStyling
-- cupertino-chip/tests/chip.rs
+- SurfaceTarget
+- modifiers_of
 - Navigator
 - cupertino-list_group/tests/list_group.rs
 - paragraph.rs
 - cupertino-skeleton_loader/tests/skeleton_loader.rs
 - .process_key_event
-- floom-types
+- floom-widgets
 - compilerOptions
 - Notes per example
 - CupertinoSparkline
 - Devtools
 - DevtoolsState
 - dpi.rs
-- md-parallax/tests/parallax.rs
+- fluent-progress_circular/tests/progress_circular.rs
 - floom-ui · Demo Show Gallery 方案（审批稿）
 - tests/panel.rs
-- FluentRadio
+- ScrollOffset
 - cupertino-menu/tests/menu.rs
 - CupertinoSlider
 - PaginationProps
 - overlay_host.rs
 - floom-ui-composites/tests/chip.rs
-- MdRadio
+- ControlFlowDemo
 - md-rating/tests/rating.rs
 - 3. Architectural Principles
 - DatePickerProps
 - cupertino-expansion_panels/tests/expansion_panels.rs
-- Evaluator
-- md-treeview/tests/treeview.rs
+- cupertino-floating_action_button/tests/floating_action_button.rs
+- cupertino-text/tests/text.rs
 - cupertino-textarea/tests/textarea.rs
 - cupertino-validation_messages/tests/validation_messages.rs
 - fluent-menu/tests/menu.rs
@@ -918,7 +918,7 @@
 - min_size.rs
 - cupertino-tooltip/tests/tooltip.rs
 - fluent-main/tests/main.rs
-- CacheTracker
+- cupertino-container/tests/container.rs
 - md-main/tests/main.rs
 - 书面审计 — Data display / Feedback·overlays / Media·motion 组件
 - 2026-08-09
@@ -937,7 +937,7 @@
 - ModifierKeymap
 - 4.2 Step 2 — 桌面后端桥 (2026-08-11)
 - md-image/tests/image.rs
-- Result
+- ActiveEventLoop
 - md-radio-group/tests/radio_group.rs
 - fluent-tooltip/tests/tooltip.rs
 - md-textarea/tests/textarea.rs
@@ -992,15 +992,15 @@
 - fluent-divider/tests/divider.rs
 - md-alert/tests/alert.rs
 - ns_string
-- md-text/tests/text.rs
+- fluent-container/tests/container.rs
 - md-list_group/tests/list_group.rs
 - floom-plugin-notifications/src/android.rs
 - ExpansionPanelsProps
-- floom-widget-fluent-icon
+- floom-widget-fluent-checkbox
 - button_gallery
 - floom-fluent/src/tokens.rs
 - TextareaProps
-- Length
+- md-container/tests/container.rs
 - v0.20.md
 - .new
 - Release policy (Floom 2.0)
@@ -1019,7 +1019,7 @@
 - FluentApp
 - templates.rs
 - eid
-- workspace/src/main.rs
+- md-list/tests/list.rs
 - cupertino-button_group/tests/button_group.rs
 - fluent-toolbar/tests/toolbar.rs
 - harmony_accessibility
@@ -1045,10 +1045,10 @@
 - floom-ui-composites/tests/menu.rs
 - floom-datagrid/src/main.rs
 - md-button_group/tests/button_group.rs
-- PerformanceSnapshot
-- winit-appkit/src/lib.rs
+- winit-wayland/src/event_loop/mod.rs
+- .window_handle
 - floom-plugin-file-dialog/src/lib.rs
-- tests/circular_progress.rs
+- ComboboxStyle
 - BreadcrumbsProps
 - MainThreadSafe<T>
 - extract_literals
@@ -1063,7 +1063,7 @@
 - 交接清单 — 剩余工作与怎么测
 - get_text
 - Store<T>
-- md-floating_action_button/tests/floating_action_button.rs
+- Trigger
 - FluentSlider
 - floom-renderer-software/tests/transforms.rs
 - .new
@@ -1092,15 +1092,15 @@
 - floom-ui-composites/tests/tooltip.rs
 - WindowProps
 - color_ext.rs
-- ControlFlow
+- Result
 - md-responsive/tests/responsive.rs
-- EditorStyle
+- md-card/tests/card.rs
 - InfiniteScrollerProps
 - EventLoopProxy
 - call
 - c_layout.rs
-- DamageRegion
-- RadioGroupProps
+- render_once
+- ContainerProps
 - TimelineProps
 - floom-plugin-device-info/src/lib.rs
 - floom-plugin-file-dialog/src/macos.rs
@@ -1110,37 +1110,37 @@
 - .request_activation_token
 - cupertino-data_iterator/tests/data_iterator.rs
 - TextLayout
-- fluent-avatar/tests/avatar.rs
+- shader_box.rs
 - examples/window.rs
-- rects
-- ProtocolError
+- startup_notify.rs
+- cupertino-snackbar/src/lib.rs
 - AnimationFrameHandler
-- text_pixels.rs
+- .semantics
 - fluent-data_iterator/tests/data_iterator.rs
 - DividerProps
 - FooterProps
 - FormProps
-- negotiation.rs
+- floom-native/src/abi.rs
 - Decision: The DSL emitter's widget set is a caller-supplied parameter
-- md-avatar/tests/avatar.rs
-- web_pixels.rs
+- fluent-snackbar/src/lib.rs
+- node_bounds
 - floom-shader/src/main.rs
 - Modifiers
 - DividerTokens
-- StepperProps
+- tui_backend.rs
 - fluent-responsive/tests/responsive.rs
 - md-progress_circular/tests/progress_circular.rs
 - XkbContext
 - ImageProps
-- ColorPickerProps
-- shadow.rs
-- assert_snapshot
-- shadow_spread.rs
+- ImageTokens
+- ShadowData
+- SheetTokens
+- SkeletonTokens
 - floom-chart/src/main.rs
 - Element
 - ValidationMessagesProps
 - EmptyStateProps
-- md-data_iterator/tests/data_iterator.rs
+- node_bounds
 - floom-navigation-demo/src/main.rs
 - SlideTransitionTokens
 - to_core_role
@@ -1156,17 +1156,17 @@
 - StateLayer
 - Clock
 - fix_footer_systembar_tokens.py
-- event_animation.rs
+- web_accessibility
 - compile_fixture.rs
 - feature_graph.rs
-- .new
+- BottomNavigationTokens
 - .new
 - fluent-text/tests/text.rs
 - scroll_surfaces.rs
 - devtools_integration.rs
-- request_fullscreen
+- ChipGroupTokens
 - EventLoopProxy
-- Rgba
+- ConfirmEditTokens
 - try_from_winit_button
 - floom-plugin-open-url/src/lib.rs
 - ModifiersState
@@ -1187,10 +1187,10 @@
 - 8. UI Model
 - notices
 - ios-bundle.sh
-- SafeAreaHandle
-- .fmt
+- EmptyStateTokens
+- IconTokens
 - The devtools panel
-- DataTableTokens
+- IconButtonTokens
 - checkbox_measure.rs
 - floom-app/tests/transforms.rs
 - MonitorHandle
@@ -1200,14 +1200,14 @@
 - find_balanced
 - safe_area/mod.rs
 - hosted_tree.rs
-- .create_window
+- ListTokens
 - selector.rs
 - tests/selectors.rs
 - benches/shaping.rs
 - benches/scroll.rs
 - SystemBarProps
 - libm.rs
-- reachability
+- OtpInputTokens
 - devtools_demo.rs
 - Image Attribution
 - v0.16.md
@@ -1248,15 +1248,15 @@
 - ModifiersState
 - open_url
 - open_url
-- CalendarTokens
+- ProgressCircularTokens
 - tui_platform.rs
 - floom-plugin-wakelock/src/macos.rs
 - state
 - CarouselTokens
-- ColorPickerTokens
-- FileInputTokens
+- PullToRefreshTokens
+- RatingTokens
 - FluentCard
-- ListGroupTokens
+- SlideGroupTokens
 - src/icons.rs
 - get_window
 - fluent-image/src/lib.rs
@@ -1313,14 +1313,13 @@
 - .fmt
 - android_accessibility
 - playground
-- storage.rs
-- AutocompleteTokens
-- SelectTokens
+- popup_placement.rs
+- SnackbarTokens
+- SpacerTokens
 - md-icon/tests/api.rs
-- BreadcrumbsTokens
-- StepperTokens
-- SystemBarTokens
-- TextFieldTokens
+- SparklineTokens
+- SpeedDialTokens
+- TooltipTokens
 - CODE_OF_CONDUCT.md
 - HALL_OF_CHAMPIONS.md
 - v0.12.md
@@ -1333,20 +1332,19 @@
 - vendor/MIGRATION.md
 - gates/README.md
 - floom-2-p0-calibration.md
-- NavigationDrawerTokens
-- TextareaTokens
+- scancode_to_physicalkey
+- node_bounds
 - TimelineTokens
-- WindowTokens
-- ToolbarTokens
+- main
+- cupertino-list_group/src/lib.rs
 - Access
-- .fmt
+- main
 - .first_keysym_by_level
 - .fmt
-- images.rs
-- fixed
+- .to_js
+- .default
 - cupertino-code/src/lib.rs
 - cupertino-kbd/src/lib.rs
-- .fmt
 - check-architecture-deps.sh
 - check-perf-budgets.sh
 - build-drv.sh
@@ -1395,44 +1393,44 @@
 - 2-file cycle: `crates/floom-ui-ir/src/error.rs -> crates/floom-ui-ir/src/version.rs -> crates/floom-ui-ir/src/error.rs`
 - 2-file cycle: `crates/floom-platform-tui/src/lib.rs -> crates/floom-platform-tui/src/run.rs -> crates/floom-platform-tui/src/lib.rs`
 - 2-file cycle: `crates/vendor/floem-winit/winit-web/src/event_loop/runner.rs -> crates/vendor/floem-winit/winit-web/src/monitor.rs -> crates/vendor/floem-winit/winit-web/src/event_loop/runner.rs`
-- 3-file cycle: `crates/floom-dsl/src/lexer.rs -> crates/floom-dsl/src/lib.rs -> crates/floom-dsl/src/lower.rs -> crates/floom-dsl/src/lexer.rs`
 - 3-file cycle: `crates/floom-dsl/src/ast.rs -> crates/floom-dsl/src/lexer.rs -> crates/floom-dsl/src/lib.rs -> crates/floom-dsl/src/ast.rs`
+- 3-file cycle: `crates/floom-dsl/src/lexer.rs -> crates/floom-dsl/src/lib.rs -> crates/floom-dsl/src/lower.rs -> crates/floom-dsl/src/lexer.rs`
 - 3-file cycle: `crates/floom-ui-ir/src/document.rs -> crates/floom-ui-ir/src/error.rs -> crates/floom-ui-ir/src/version.rs -> crates/floom-ui-ir/src/document.rs`
 - 4-file cycle: `crates/floom-dsl/src/ast.rs -> crates/floom-dsl/src/lexer.rs -> crates/floom-dsl/src/lib.rs -> crates/floom-dsl/src/lower.rs -> crates/floom-dsl/src/ast.rs`
 
-## Communities (1434 total, 68 thin omitted)
+## Communities (1433 total, 67 thin omitted)
 
 ### Community 0 - "Counter"
-Cohesion: 0.07
-Nodes (26): ChangeCallback, clamp_value(), Counter, CounterState, CounterStyle, Box, Color, Debug (+18 more)
+Cohesion: 0.09
+Nodes (23): ChangeCallback, clamp_value(), Counter, CounterState, CounterStyle, Box, Color, Debug (+15 more)
 
 ### Community 1 - "EventContext"
 Cohesion: 0.06
 Nodes (24): popup_height(), Box, Color, Debug, Default, ElementId, Fn, InteractionState (+16 more)
 
 ### Community 2 - "UnownedWindow"
-Cohesion: 0.02
-Nodes (64): c_ulong, ConnectionError, CoreImeRequest, Fullscreen, ImeRequestError, Display, ConnectError, ReplyError (+56 more)
+Cohesion: 0.03
+Nodes (55): c_ulong, CoreImeRequest, Fullscreen, X11Error, cast_dimension_to_hint(), cast_physical_size_to_hint(), cast_size_to_hint(), ActivationItem (+47 more)
 
 ### Community 3 - "NavigationDrawer"
 Cohesion: 0.06
 Nodes (27): bar_lays_out_horizontally_and_keys_by_selection(), destinations_convert_from_strings(), drawer_is_empty_until_shown(), nav_buttons(), NavDestination, NavigationBar, NavigationDrawer, NavigationRail (+19 more)
 
 ### Community 4 - "Scope"
-Cohesion: 0.07
-Nodes (45): Memo, as_child_of_current_scope(), create_global_effect(), create_global_local_rw_signal(), create_global_local_signal(), create_global_memo(), create_global_rw_signal(), create_global_signal() (+37 more)
+Cohesion: 0.10
+Nodes (33): as_child_of_current_scope(), create_global_effect(), create_global_local_rw_signal(), create_global_local_signal(), create_global_memo(), create_global_rw_signal(), create_global_signal(), create_global_sync_rw_signal() (+25 more)
 
 ### Community 5 - "Inner"
 Cohesion: 0.03
-Nodes (37): Inner, ActiveEventLoop, Box, CGRect, CoreWindow, Cursor, DisplayHandle, FnOnce (+29 more)
+Nodes (40): NotSupportedError, ImeRequestError, Display, Inner, ActiveEventLoop, Box, CGRect, CoreWindow (+32 more)
 
 ### Community 6 - "floom-widgets/tests/scroll.rs"
-Cohesion: 0.12
-Nodes (24): a_vertical_container_ignores_horizontal_deltas(), a_wheel_at_the_end_is_not_consumed(), a_wheel_at_the_end_is_passed_on_not_swallowed(), a_wheel_past_the_end_lands_exactly_on_it(), a_wheel_scrolls_the_content_in_a_host(), content_that_fits_does_not_scroll(), content_that_fits_passes_every_wheel_on(), probe_host() (+16 more)
+Cohesion: 0.05
+Nodes (33): a_vertical_container_ignores_horizontal_deltas(), a_wheel_at_the_end_is_not_consumed(), a_wheel_at_the_end_is_passed_on_not_swallowed(), a_wheel_past_the_end_lands_exactly_on_it(), a_wheel_scrolls_the_content_in_a_host(), content_that_fits_does_not_scroll(), content_that_fits_passes_every_wheel_on(), Downstream (+25 more)
 
-### Community 7 - "ParallaxLayer"
-Cohesion: 0.16
-Nodes (7): ParallaxLayer, ElementId, Option, Self, SemanticsHint, SharedScroll, Vec
+### Community 7 - "winit-x11/src/event_loop.rs"
+Cohesion: 0.06
+Nodes (36): ConnectionError, CoreEventLoopProxy, Device, DeviceInfo, DeviceType, EventLoopProxy, EventLoopState, PeekableReceiver (+28 more)
 
 ### Community 8 - "TextInput"
 Cohesion: 0.07
@@ -1444,11 +1442,11 @@ Nodes (29): Buffer, Contents, DeltaValueRegion, InsertsValueIter, InsertsValueIt
 
 ### Community 10 - "Editor"
 Cohesion: 0.06
-Nodes (24): Document, Send, Sync, caret_positions(), Editor, EditorState, engine_affinity(), LineCache (+16 more)
+Nodes (21): caret_positions(), Editor, EditorState, engine_affinity(), LineCache, LineLayout, Arc, Clone (+13 more)
 
 ### Community 11 - "Child"
 Cohesion: 0.03
-Nodes (48): presence(), presence(), Child, ChildBuilder, Debug, Formatter, Result, PresenceTransition (+40 more)
+Nodes (47): item(), Child, ChildBuilder, Debug, Formatter, Result, PresenceTransition, absolute_layout() (+39 more)
 
 ### Community 12 - "平台插件迁移目录（Flutter → Floom）"
 Cohesion: 0.05
@@ -1460,59 +1458,59 @@ Nodes (19): ColorTokens, is_dark(), CupertinoTheme, FluentTheme, MaterialTheme, 
 
 ### Community 14 - "HarmonyTheme"
 Cohesion: 0.08
-Nodes (47): button_metrics(), button_style(), ButtonMetrics, DisabledStyle, every_control_is_a_capsule_at_every_size(), every_state_of_every_variant_resolves_differently(), hover_is_a_five_percent_layer_and_press_is_ten(), one_set_of_state_numbers_works_in_both_schemes() (+39 more)
+Nodes (49): button_metrics(), button_style(), button_styles(), ButtonMetrics, DisabledStyle, every_control_is_a_capsule_at_every_size(), every_state_of_every_variant_resolves_differently(), hover_is_a_five_percent_layer_and_press_is_ten() (+41 more)
 
 ### Community 15 - "DatePicker"
-Cohesion: 0.07
+Cohesion: 0.08
 Nodes (40): Arrow, calendar_height(), calendar_layout(), calendar_rect(), CalendarLayout, cell_rect(), DatePicker, DatePickerCalendar (+32 more)
 
 ### Community 16 - "WindowAttributes"
-Cohesion: 0.03
-Nodes (47): Box, ActivationToken, ime_initial_request_caps_match(), ImeCapabilities, ImeEnableRequest, ImePurpose, ImeRequest, ImeRequestData (+39 more)
-
-### Community 17 - "P"
-Cohesion: 0.06
-Nodes (40): f32, f64, i16, i32, i8, Insets, LogicalInsets, LogicalInsets<P> (+32 more)
-
-### Community 18 - "floom-widgets"
 Cohesion: 0.05
-Nodes (192): floom-core, floom-core-theme, floom-signal, floom-store, floom-task, floom-widget-cupertino-app, floom-widget-cupertino-app_bar, floom-widget-cupertino-avatar (+184 more)
+Nodes (30): ActivationToken, ime_initial_request_caps_match(), ImeCapabilities, ImeEnableRequest, ImePurpose, ImeRequest, ImeRequestData, ImeSurroundingText (+22 more)
+
+### Community 17 - "PhysicalSize"
+Cohesion: 0.05
+Nodes (52): ensure_attrs_do_not_panic(), f32, f64, i16, i32, i8, Insets, LogicalInsets (+44 more)
+
+### Community 18 - "floom-types"
+Cohesion: 0.04
+Nodes (205): floom-codegen, floom-core, floom-core-theme, floom-gesture, floom-ime, floom-signal, floom-store, floom-task (+197 more)
 
 ### Community 19 - "Rect"
-Cohesion: 0.03
-Nodes (56): contains(), a_radio_reports_its_ring_gap_and_label(), a_styled_radio_is_measured_from_its_style(), host_with_root(), node_bounds(), the_ring_wins_when_the_touch_target_is_smaller(), a_slider_reports_its_painted_geometry(), node_bounds() (+48 more)
+Cohesion: 0.04
+Nodes (28): contains(), contains(), contains(), Rect, AllocatingCreateContext, fmt_color(), fmt_rect(), OverlayCall (+20 more)
 
 ### Community 20 - "Window"
-Cohesion: 0.04
-Nodes (44): IconType, com_initialized(), ComInitialized, force_window_active(), init(), InitData, register_window_class(), ActiveEventLoop (+36 more)
+Cohesion: 0.07
+Nodes (19): IconType, Arc, Color, CoreWindow, Cursor, HasDisplayHandle, HasWindowHandle, Icon (+11 more)
 
-### Community 21 - "RequestError"
+### Community 21 - "Window"
 Cohesion: 0.03
-Nodes (38): RequestError, CursorGrabMode, ResizeDirection, UserAttentionType, GrabState, Inner, ActiveEventLoop, Box (+30 more)
+Nodes (34): UserAttentionType, Inner, ActiveEventLoop, Box, Canvas, CoremMonitorHandle, Cursor, Debug (+26 more)
 
 ### Community 22 - "Stack"
 Cohesion: 0.04
-Nodes (109): a_disabled_dial_does_not_open(), a_disabled_dial_is_v1_s_dimmed_pair(), an_action_reports_its_index(), fab_fill(), fab_icon_ink(), fan_buttons(), kit(), paint() (+101 more)
+Nodes (100): a_disabled_pill_does_not_answer(), clicking_the_pill_again_switches_it_off(), clicking_the_pill_switches_it_on(), kit(), label_painted(), mark_ink(), mounted_pill(), ops_of() (+92 more)
 
 ### Community 23 - "VelloGpuPresenter"
 Cohesion: 0.04
 Nodes (101): Adapter, Affine, BezPath, BindGroupLayout, CacheTrimTelemetry, a_backdrop_filter_emits_no_draw_command(), a_filters_radii_are_part_of_its_fingerprint(), a_fragment_budget_limits_retention_but_not_drawing() (+93 more)
 
-### Community 24 - "MaterialSheet"
-Cohesion: 0.07
-Nodes (33): Default, Self, SheetProps, SheetSide, build_card(), build_panel(), MaterialSheet, MaterialSheetStyle (+25 more)
+### Community 24 - "CupertinoSheet"
+Cohesion: 0.04
+Nodes (62): build_card(), build_panel(), CupertinoSheet, CupertinoSheetStyle, Box, Color, Default, Option (+54 more)
 
 ### Community 25 - "T"
-Cohesion: 0.06
-Nodes (37): Location, ReadRef, SignalRead, create_rw_signal(), ReadSignal<T, SyncStorage>, ReadSignal<T, UnsyncStorage>, Arc, FnOnce (+29 more)
+Cohesion: 0.08
+Nodes (29): ReadRef, SignalGet, SignalRead, SignalWith, create_rw_signal(), create_signal(), ReadSignal, ReadSignal<T, SyncStorage> (+21 more)
 
-### Community 27 - "c_vtable.rs"
-Cohesion: 0.06
-Nodes (49): device_rect(), FloomNativeCapabilities, FloomNativeDeviceRect, FloomNativeProviderV1, FloomNativeSlot, FloomNativeState, input_from_number(), input_modes() (+41 more)
+### Community 27 - "CProvider"
+Cohesion: 0.05
+Nodes (58): device_rect(), FloomNativeCapabilities, FloomNativeDeviceRect, FloomNativeProviderV1, FloomNativeSlot, FloomNativeState, input_from_number(), input_modes() (+50 more)
 
 ### Community 28 - ".shared"
-Cohesion: 0.06
-Nodes (42): build_card(), close_button(), CupertinoDialog, CupertinoDialogStyle, Box, Callback, Default, Fn (+34 more)
+Cohesion: 0.10
+Nodes (22): build_card(), close_button(), CupertinoDialog, CupertinoDialogStyle, Box, Callback, Default, Fn (+14 more)
 
 ### Community 29 - "Window"
 Cohesion: 0.03
@@ -1520,23 +1518,23 @@ Nodes (40): ActiveEventLoop, Arc, AtomicBool, Box, c_void, CompositorState, Core
 
 ### Community 30 - "WindowState"
 Cohesion: 0.04
-Nodes (48): logical_to_physical_rounded(), create_sctk_adwaita_config(), FrameCallbackState, resize_direction_to_xdg(), Arc, CompositorState, CoreCustomCursor, CustomCursor (+40 more)
+Nodes (48): create_sctk_adwaita_config(), FrameCallbackState, GrabState, resize_direction_to_xdg(), Arc, CompositorState, CoreCustomCursor, CustomCursor (+40 more)
 
 ### Community 31 - "TimePicker"
 Cohesion: 0.07
 Nodes (33): panel_height(), panel_layout(), panel_rect(), PanelHit, PanelLayout, read_state(), Arc, Box (+25 more)
 
-### Community 32 - "Shadow"
-Cohesion: 0.04
-Nodes (32): BitOr, BitOrAssign, Color, Option, SkiaCommand, Filter, Shadow, Edges (+24 more)
+### Community 32 - "Widget"
+Cohesion: 0.03
+Nodes (42): IconButtonIcon, ElementId, Option, SemanticsContext, SemanticsHint, CreateContext, SemanticsContext, UpdateContext (+34 more)
 
 ### Community 33 - "Selection"
 Cohesion: 0.07
 Nodes (29): InsertDrift, is_caret_should_return_false(), is_caret_should_return_true(), remove_n_at(), AsRef, Default, Option, RopeDelta (+21 more)
 
 ### Community 34 - "CupertinoSnackbar"
-Cohesion: 0.04
-Nodes (43): CupertinoSnackbar, CupertinoSnackbarStyle, Callback, Color, Default, Fn, FontWeight, Insets (+35 more)
+Cohesion: 0.14
+Nodes (10): CupertinoSnackbar, Callback, Default, Fn, Into, Option, Self, Send (+2 more)
 
 ### Community 35 - "SoftwareRenderer"
 Cohesion: 0.07
@@ -1544,35 +1542,35 @@ Nodes (41): Blob, Clip, a_node_alpha_dims_the_image_it_draws(), blur_window(), b
 
 ### Community 36 - "SelectGroup"
 Cohesion: 0.05
-Nodes (44): AccordionIndicator, Accordion, AccordionIndicatorSlot, AccordionPanel, AccordionPanelLeaf, AccordionStyle, apply_choose(), content_insets() (+36 more)
+Nodes (45): AccordionIndicator, Accordion, AccordionIndicatorSlot, AccordionPanel, AccordionPanelLeaf, AccordionStyle, apply_choose(), content_insets() (+37 more)
 
 ### Community 37 - "DataGrid"
 Cohesion: 0.05
-Nodes (23): a_row_pool_reuses_released_ids(), DataGrid, emit_semantics(), RowPool, Box, Debug, ElementId, Formatter (+15 more)
+Nodes (22): a_row_pool_reuses_released_ids(), DataGrid, emit_semantics(), RowPool, Box, Debug, ElementId, Formatter (+14 more)
 
 ### Community 38 - "Window"
-Cohesion: 0.04
-Nodes (30): PlatformSpecificWindowAttributes, ActiveEventLoop, Arc, Box, CoreWindow, Cursor, DisplayHandle, Drop (+22 more)
+Cohesion: 0.03
+Nodes (31): WindowLevel, PlatformSpecificWindowAttributes, ActiveEventLoop, Arc, Box, CoreWindow, Cursor, DisplayHandle (+23 more)
 
 ### Community 39 - "NodeKey"
 Cohesion: 0.05
-Nodes (43): native_variant(), align_from(), Checkpoint, element_kind(), ElementRef, LiveTree, ElementId, HashMap (+35 more)
+Nodes (47): native_variant(), tier_of(), align_from(), Checkpoint, element_kind(), ElementRef, LiveTree, ElementId (+39 more)
 
 ### Community 40 - "Window"
 Cohesion: 0.04
 Nodes (31): ActiveEventLoop, Box, CoreWindow, Cursor, DisplayHandle, Drop, FnOnce, HandleError (+23 more)
 
 ### Community 41 - "WinitPlatform"
-Cohesion: 0.03
-Nodes (62): NativeViewUnavailable, Display, a_consumed_pointer_event_never_reaches_the_tree(), a_forwarded_pointer_event_stays_in_the_queue(), a_non_pointer_event_is_never_offered_to_the_hook(), an_empty_queue_is_harmless(), logical_point(), logical_size() (+54 more)
+Cohesion: 0.04
+Nodes (59): NativeViewUnavailable, Display, a_consumed_pointer_event_never_reaches_the_tree(), a_forwarded_pointer_event_stays_in_the_queue(), a_non_pointer_event_is_never_offered_to_the_hook(), an_empty_queue_is_harmless(), logical_point(), logical_size() (+51 more)
 
 ### Community 42 - "Point"
-Cohesion: 0.07
-Nodes (69): fill(), Color, Arc, Color, Into, Option, ResourceId, Self (+61 more)
-
-### Community 43 - "FluentOverlay"
 Cohesion: 0.08
-Nodes (31): OverlayProps, Box, Clone, Debug, Default, Fn, Formatter, Option (+23 more)
+Nodes (59): Point, a_box_clip_resolves_to_the_elements_own_bounds(), a_butt_cap_covers_up_to_the_endpoint_and_no_further(), a_circle_is_bounded_by_its_radius(), a_circle_points_lie_on_the_circle(), a_closed_subpath_gets_joints_instead_of_caps(), a_collinear_cubic_flattens_to_its_endpoint(), a_miter_past_the_limit_falls_back_to_a_bevel() (+51 more)
+
+### Community 43 - "SharedFlag"
+Cohesion: 0.05
+Nodes (53): OverlayProps, Box, Clone, Debug, Default, Fn, Formatter, Option (+45 more)
 
 ### Community 44 - "WindowDelegate"
 Cohesion: 0.04
@@ -1583,8 +1581,8 @@ Cohesion: 0.15
 Nodes (36): a_caller_can_write_and_the_widget_notices_on_its_next_update(), a_caller_reads_what_was_typed_through_its_own_handle(), a_click_focuses_and_puts_the_caret_at_the_end(), a_click_on_an_empty_field_still_places_a_caret(), a_composition_is_not_in_the_buffer(), a_four_byte_character_survives_backspace(), a_key_release_does_not_insert(), an_empty_composition_is_not_held() (+28 more)
 
 ### Community 46 - "Popup"
-Cohesion: 0.07
-Nodes (30): panel_rect(), Popup, popup_placement_rect(), PopupPlacement, Box, Debug, Default, ElementId (+22 more)
+Cohesion: 0.09
+Nodes (17): Popup, PopupPlacement, Box, Debug, Default, ElementId, Fn, Formatter (+9 more)
 
 ### Community 47 - "MaterialDatePicker"
 Cohesion: 0.14
@@ -1595,24 +1593,24 @@ Cohesion: 0.13
 Nodes (41): menu_bounds(), a_leaf_has_no_chevron_so_that_column_selects(), a_menu_near_the_bottom_edge_flips_up(), a_menu_near_the_right_edge_flips_to_the_left(), a_menu_opens_at_the_pointer_when_there_is_room(), a_menu_that_cannot_fit_anywhere_still_stays_inside_the_window(), a_menu_that_does_not_know_the_viewport_opens_at_the_pointer(), a_middle_press_is_left_for_somebody_else() (+33 more)
 
 ### Community 49 - "AndroidPlatform"
-Cohesion: 0.03
-Nodes (68): AndroidDriver, AndroidDriver<A>, AndroidPlatform, AndroidRunner, AndroidSurface, AndroidWindow, get_android_app(), hand_over_jni_bridge() (+60 more)
+Cohesion: 0.04
+Nodes (61): AndroidDriver, AndroidDriver<A>, AndroidPlatform, AndroidRunner, AndroidSurface, AndroidWindow, get_android_app(), hand_over_jni_bridge() (+53 more)
 
 ### Community 50 - ".new"
-Cohesion: 0.14
-Nodes (27): build_event_loop(), default_builder_injects_an_ohos_app(), EventLoopBuilder, EventLoopBuilderExtOhos, host_scale_updates_stay_in_sync_with_cached_window_metrics(), input_events_are_mapped_to_window_events(), lifecycle_updates_surface_and_callbacks(), LifecycleState (+19 more)
+Cohesion: 0.11
+Nodes (32): build_event_loop(), default_builder_injects_an_ohos_app(), EventLoopBuilder, EventLoopBuilderExtOhos, host_scale_updates_stay_in_sync_with_cached_window_metrics(), input_events_are_mapped_to_window_events(), lifecycle_updates_surface_and_callbacks(), LifecycleState (+24 more)
 
 ### Community 51 - "Combobox"
 Cohesion: 0.09
-Nodes (29): Combobox, ComboPick, Commit, matching(), row_widget(), Arc, Box, Debug (+21 more)
+Nodes (32): Combobox, ComboPick, Commit, matching(), panel_rect(), panel_request(), row_widget(), Arc (+24 more)
 
 ### Community 52 - "FormController"
 Cohesion: 0.06
 Nodes (48): a_form_binds_a_select(), a_form_binds_a_text_field_and_a_switch(), name_binding(), plan_binding(), terms_binding(), async_validation_goes_pending_then_resolves(), email(), equals() (+40 more)
 
-### Community 53 - "CupertinoNavigationDrawer"
-Cohesion: 0.09
-Nodes (27): CupertinoNavigationDrawer, CupertinoNavigationDrawerStyle, panel_request(), Color, Default, Option, Self, a_closed_drawer_mounts_nothing() (+19 more)
+### Community 53 - "MacNativeViewHost"
+Cohesion: 0.08
+Nodes (19): Container, ContainerIvars, is_one_of(), MacNativeViewHost, NativeParent, Participant, Debug, Formatter (+11 more)
 
 ### Community 54 - "src/calendar.rs"
 Cohesion: 0.10
@@ -1622,45 +1620,45 @@ Nodes (39): abs_date_of_cell(), Calendar, CalendarBody, CalendarDate, CalendarSt
 Cohesion: 0.08
 Nodes (21): BottomNavigationBar, BottomNavigationStyle, Destination, HoverHost, pressable_for(), Arc, AtomicUsize, Callback (+13 more)
 
-### Community 56 - "FakeNativeProvider"
-Cohesion: 0.08
-Nodes (12): last_applied(), FakeNativeProvider, NativeCommand, NativeCommandLog, Arc, Default, Fn, Mutex (+4 more)
+### Community 56 - "NativeSlot"
+Cohesion: 0.06
+Nodes (25): last_applied(), NativeState, FakeNativeProvider, NativeCommand, NativeCommandLog, Arc, Default, Fn (+17 more)
 
 ### Community 57 - "WindowState"
 Cohesion: 0.06
-Nodes (43): Action, CustomCursorSource, String, Action, Application, Binding, Binding<T>, decode_cursor() (+35 more)
+Nodes (40): Action, Action, Application, Binding, Binding<T>, decode_cursor(), load_icon(), main() (+32 more)
 
-### Community 58 - "web_sys/canvas.rs"
-Cohesion: 0.08
-Nodes (28): mkdid(), DeviceId, Option, Common, Handlers, Event, FnMut, Option (+20 more)
+### Community 58 - "IntersectionObserverHandle"
+Cohesion: 0.22
+Nodes (7): IntersectionObserverHandle, Array, Drop, F, FnMut, Self, IntersectionObserver
 
 ### Community 59 - "tests/controls.rs"
-Cohesion: 0.07
-Nodes (35): dispatch(), Event, a_disabled_pressable_is_inert(), a_disabled_switch_without_a_palette_still_halves_alpha(), a_focusable_button_takes_the_keyboard_and_a_chrome_button_does_not(), a_focused_pressable_activates_from_the_keyboard(), a_gradientless_progress_paints_the_same_flat_fill_as_before(), a_pressable_consumes_the_press() (+27 more)
+Cohesion: 0.08
+Nodes (30): dispatch(), a_disabled_pressable_is_inert(), a_focusable_button_takes_the_keyboard_and_a_chrome_button_does_not(), a_focused_pressable_activates_from_the_keyboard(), a_gradientless_progress_paints_the_same_flat_fill_as_before(), a_pressable_consumes_the_press(), a_pressable_fires_on_a_matched_press_and_release(), a_pressable_paints_nothing() (+22 more)
 
 ### Community 60 - "ApplicationHandler"
-Cohesion: 0.05
-Nodes (52): EventHandler, Box, Debug, FnOnce, Formatter, Option, R, RefCell (+44 more)
+Cohesion: 0.06
+Nodes (42): ApplicationHandler, ElementState, mkdid(), mkwid(), DeviceId, EventProcessor, is_first_touch(), ActiveEventLoop (+34 more)
 
 ### Community 61 - "floom"
 Cohesion: 0.05
-Nodes (95): floom-editor, editor, floom, floom-accessibility, floom-accuracy, floom-agent, floom-android-example, floom-animation (+87 more)
+Nodes (96): floom-editor, editor, floom, floom-accessibility, floom-accuracy, floom-agent, floom-android-example, floom-animation (+88 more)
 
-### Community 62 - "MdList"
-Cohesion: 0.11
-Nodes (22): MdList, MdListStyle, MdRowGeometry, Color, Fn, Into, MenuItem, Self (+14 more)
+### Community 62 - "ListProps"
+Cohesion: 0.08
+Nodes (21): ListProps, Clone, Debug, Default, Formatter, MenuItem, Result, Self (+13 more)
 
-### Community 63 - "NativeSlot"
-Cohesion: 0.03
-Nodes (69): CProvider, c_void, Cow, Debug, Formatter, OnceCell, Option, Result (+61 more)
+### Community 63 - "NativeError"
+Cohesion: 0.05
+Nodes (28): Result, Option, NativeError, Cow, Display, Formatter, Result, Box<P> (+20 more)
 
 ### Community 64 - "with_alpha"
-Cohesion: 0.06
-Nodes (36): CupertinoSwitch, CupertinoSwitchStyle, Box, Color, Default, Fn, Option, Rc (+28 more)
+Cohesion: 0.08
+Nodes (27): CupertinoSwitch, CupertinoSwitchStyle, Box, Color, Default, Fn, Option, Rc (+19 more)
 
-### Community 65 - "ActiveEventLoop"
-Cohesion: 0.05
-Nodes (46): ActiveEventLoop, EventLoop, min_timeout(), OwnedDisplayHandle, PumpEventNotifier, PumpEventNotifierAction, A, ActiveEventLoop (+38 more)
+### Community 65 - "EventLoop"
+Cohesion: 0.10
+Nodes (16): EventLoop, min_timeout(), A, ActiveEventLoop, AsFd, AsRawFd, Duration, F (+8 more)
 
 ### Community 66 - "fluent-slide_group/tests/slide_group.rs"
 Cohesion: 0.16
@@ -1684,7 +1682,7 @@ Nodes (13): CupertinoInfiniteScroller, CupertinoInfiniteScrollerStyle, Arc, Colo
 
 ### Community 71 - "ColumnId"
 Cohesion: 0.05
-Nodes (34): a_cursor_walks_a_selection_model_by_key_not_index(), CellEdit, CellValue, Column, ColumnId, ColumnKind, edit_sessions_handle_multibyte_text_on_character_boundaries(), EditHistory (+26 more)
+Nodes (35): a_cursor_walks_a_selection_model_by_key_not_index(), CellEdit, CellValue, Column, ColumnId, ColumnKind, edit_sessions_handle_multibyte_text_on_character_boundaries(), EditHistory (+27 more)
 
 ### Community 72 - "word.rs"
 Cohesion: 0.10
@@ -1692,7 +1690,7 @@ Nodes (34): CharClassification, classify_boundary(), find_pair_should_return_nex
 
 ### Community 73 - "Pressable"
 Cohesion: 0.04
-Nodes (37): BoolCallback, Button, disabled_tint(), draw_centered_text(), emphasis(), InteractionState, is_activation_key(), label_height() (+29 more)
+Nodes (39): BoolCallback, Button, disabled_tint(), draw_centered_text(), emphasis(), InteractionState, is_activation_key(), label_height() (+31 more)
 
 ### Community 74 - "cupertino-autocomplete/tests/autocomplete.rs"
 Cohesion: 0.12
@@ -1704,7 +1702,7 @@ Nodes (47): validate_scale_factor(), mode_refresh_rate_millihertz(), MonitorHand
 
 ### Community 76 - "accordion.rs"
 Cohesion: 0.09
-Nodes (58): a_change_reports_the_new_selection(), a_click_does_not_dirty_the_accordion_itself(), a_collapsed_panel_mounts_only_its_header(), a_content_transition_is_declared_on_the_panel_node(), a_disabled_group_does_not_answer(), a_header_built_before_the_toggle_still_reports_the_new_state(), a_refused_change_reports_nothing(), a_row_can_centre_its_content() (+50 more)
+Nodes (57): a_change_reports_the_new_selection(), a_click_does_not_dirty_the_accordion_itself(), a_collapsed_panel_mounts_only_its_header(), a_content_transition_is_declared_on_the_panel_node(), a_disabled_group_does_not_answer(), a_header_built_before_the_toggle_still_reports_the_new_state(), a_refused_change_reports_nothing(), a_row_can_centre_its_content() (+49 more)
 
 ### Community 77 - "fluent-autocomplete/tests/autocomplete.rs"
 Cohesion: 0.12
@@ -1714,17 +1712,17 @@ Nodes (21): an_empty_query_lists_every_option(), choosing_an_option_reports_its_
 Cohesion: 0.09
 Nodes (49): a_desktop_cmake_declares_the_archive_as_imported(), a_desktop_cmake_defaults_the_build_type(), a_desktop_cmake_sets_properties_only_after_the_target_exists(), a_linux_cmake_finds_pkgconfig_before_using_it(), a_plugin_manifest_declares_the_package_the_build_file_names(), a_plugin_manifest_has_no_application_element(), a_plugin_settings_file_has_no_app_module(), an_app_manifest_has_an_application_element() (+41 more)
 
-### Community 79 - "SharedFlag"
-Cohesion: 0.05
-Nodes (43): build_card(), CupertinoOverlay, CupertinoOverlayStyle, Arc, Box, Callback, Color, Default (+35 more)
+### Community 79 - "CupertinoOverlay"
+Cohesion: 0.12
+Nodes (21): build_card(), CupertinoOverlay, CupertinoOverlayStyle, Arc, Box, Callback, Color, Default (+13 more)
 
-### Community 80 - "Window"
-Cohesion: 0.03
-Nodes (55): AndroidAppWaker, ActiveEventLoop, EventLoop, EventLoopProxy, min_timeout(), OwnedDisplayHandle, PlatformSpecificEventLoopAttributes, PlatformSpecificWindowAttributes (+47 more)
+### Community 80 - "RequestError"
+Cohesion: 0.02
+Nodes (59): AndroidAppWaker, ActiveEventLoop, EventLoop, EventLoopProxy, min_timeout(), OwnedDisplayHandle, PlatformSpecificEventLoopAttributes, PlatformSpecificWindowAttributes (+51 more)
 
-### Community 81 - "LinearProgress"
+### Community 81 - "MdSwitch"
 Cohesion: 0.09
-Nodes (17): fill_percent(), FillPlacement, Indeterminate, LinearProgress, LinearProgressStyle, PercentRounding, Color, Debug (+9 more)
+Nodes (21): Box, Clone, Debug, Default, Fn, Formatter, Option, Result (+13 more)
 
 ### Community 82 - "fluent-form/tests/form.rs"
 Cohesion: 0.14
@@ -1732,11 +1730,11 @@ Nodes (34): error_messages_painted(), error_summary(), form_content(), kit(), mo
 
 ### Community 83 - "winit-web/src/cursor.rs"
 Cohesion: 0.06
-Nodes (59): Animation, CursorIcon, From, Animation, AnimationDropper, CursorHandler, CustomCursor, CustomCursorFuture (+51 more)
+Nodes (57): Animation, Animation, AnimationDropper, CursorHandler, CustomCursor, CustomCursorFuture, from_animation(), from_rgba() (+49 more)
 
 ### Community 84 - "CupertinoItemGroup"
 Cohesion: 0.09
-Nodes (22): CupertinoItemGroup, CupertinoItemGroupStyle, ItemRow, Box, Color, Default, Fn, Insets (+14 more)
+Nodes (23): CupertinoItemGroup, CupertinoItemGroupStyle, item_group_tokens(), ItemRow, Box, Color, Default, Fn (+15 more)
 
 ### Community 85 - "md-autocomplete/tests/autocomplete.rs"
 Cohesion: 0.12
@@ -1754,9 +1752,9 @@ Nodes (13): FluentInfiniteScroller, FluentInfiniteScrollerStyle, Arc, Color, Def
 Cohesion: 0.12
 Nodes (27): AreaKind, color_to_hex(), ColorArea, ColorPicker, ColorPickerStyle, ColorSwatch, commit_color(), hex_to_color() (+19 more)
 
-### Community 89 - "PlatformEvent"
-Cohesion: 0.10
-Nodes (34): PlatformEvent, PointerButton, KeyCode, Modifiers, Size, String, SurfaceId, alt_plus_char_is_a_key_with_alt_modifier() (+26 more)
+### Community 89 - "WindowId"
+Cohesion: 0.05
+Nodes (51): pointer_event(), PlatformEvent, PointerButton, KeyCode, Modifiers, Size, String, SurfaceId (+43 more)
 
 ### Community 90 - "CupertinoRangeSlider"
 Cohesion: 0.13
@@ -1778,9 +1776,9 @@ Nodes (11): FluentWindow, FluentWindowStyle, Arc, Color, Default, Fn, Option, Se
 Cohesion: 0.08
 Nodes (50): a_composite_kind_needs_the_composite_widget_source(), a_kind_with_no_builder_equivalent_is_a_reported_placeholder(), a_native_participant_keeps_its_composition_words(), a_property_with_no_seat_is_named(), a_repeated_subtree_becomes_one_function(), a_simple_document_emits_the_widgets_it_names(), an_axis_and_a_gap_reach_the_stack(), an_event_is_wired_and_its_named_handler_is_reported() (+42 more)
 
-### Community 95 - "PaintContext"
-Cohesion: 0.06
-Nodes (26): baseline(), chevron(), EditorPane, Explorer, fit(), item(), label(), Color (+18 more)
+### Community 95 - "MaterialAppBar"
+Cohesion: 0.10
+Nodes (21): MaterialAppBar, MaterialAppBarStyle, Color, Default, Into, Option, Self, String (+13 more)
 
 ### Community 96 - "SelectionModel<K>"
 Cohesion: 0.22
@@ -1799,8 +1797,8 @@ Cohesion: 0.09
 Nodes (20): InfiniteScrollerContent, InfiniteScrollerView, read_offset(), Arc, Color, ElementId, Fn, Mutex (+12 more)
 
 ### Community 100 - "Transform"
-Cohesion: 0.12
-Nodes (14): Constraints, constraints_clamp(), Insets, rect_from_origin_size_and_contains(), Default, Self, Size, Transform (+6 more)
+Cohesion: 0.08
+Nodes (19): BitOr, BitOrAssign, Constraints, constraints_clamp(), Edges, Insets, Length, rect_from_origin_size_and_contains() (+11 more)
 
 ### Community 101 - "Radio"
 Cohesion: 0.08
@@ -1811,40 +1809,40 @@ Cohesion: 0.06
 Nodes (34): a_fade_enters_from_invisible_and_exits_to_it(), a_fade_rides_the_opacity_channel(), a_grow_enters_at_the_start_scale_and_returns_to_it(), a_slide_enters_from_the_offset_and_returns_to_it(), a_spec_matches_only_an_identical_spec(), a_spring_with_velocity_carries_it(), a_symmetric_curve_is_antisymmetric_about_its_middle(), an_underdamped_spring_easing_overshoots_and_a_stiff_one_does_not() (+26 more)
 
 ### Community 103 - "floom-platform-desktop/src/native.rs"
-Cohesion: 0.04
-Nodes (66): clip_from_number(), ClipSupport, DeviceRect, NativeState, a_clip_that_contains_the_participant_is_not_sent_as_a_crop(), a_crop_becomes_a_container_and_an_offset_not_a_smaller_view(), a_crop_is_carried_with_the_frame_and_stays_inside_it(), a_hidden_participant_is_hidden_where_it_stands_not_moved() (+58 more)
+Cohesion: 0.08
+Nodes (45): DeviceRect, a_clip_that_contains_the_participant_is_not_sent_as_a_crop(), a_crop_becomes_a_container_and_an_offset_not_a_smaller_view(), a_crop_is_carried_with_the_frame_and_stays_inside_it(), a_hidden_participant_is_hidden_where_it_stands_not_moved(), a_re_bound_slot_is_placed_again(), a_resize_re_places_a_participant_whose_rect_did_not_change(), a_top_left_host_gets_the_framework_box_unchanged() (+37 more)
 
 ### Community 104 - "TreeView"
 Cohesion: 0.10
-Nodes (24): node_at(), RowRef, Arc, Color, Debug, Default, ElementId, Fn (+16 more)
+Nodes (26): node_at(), RowRef, Arc, Color, Debug, Default, ElementId, Fn (+18 more)
 
 ### Community 105 - "FluentDatePicker"
 Cohesion: 0.14
-Nodes (16): FluentDatePicker, Arc, Color, DateValue, Default, Fn, Into, Option (+8 more)
+Nodes (17): FluentDatePicker, FluentDatePickerStyle, Arc, Color, DateValue, Default, Fn, Into (+9 more)
 
 ### Community 106 - "TestApp"
 Cohesion: 0.08
 Nodes (16): FakePlatform, FrameStats, From, Into, KeyCode, Modifiers, Option, SceneNodeId (+8 more)
 
 ### Community 107 - "winit-win32/src/event_loop.rs"
-Cohesion: 0.08
-Nodes (44): Force, apply_win10_dpi_adjustment(), capture_mouse(), create_event_target_window(), EventLoopProxy, EventLoopThreadExecutor, force_for_touch(), gain_active_focus() (+36 more)
+Cohesion: 0.09
+Nodes (40): apply_win10_dpi_adjustment(), capture_mouse(), create_event_target_window(), EventLoopProxy, EventLoopThreadExecutor, gain_active_focus(), get_pointer_move_kind(), handle_raw_input() (+32 more)
 
 ### Community 108 - "CupertinoSkeletonLoader"
 Cohesion: 0.19
 Nodes (9): content_of(), CupertinoSkeletonLoader, CupertinoSkeletonStyle, outer_width(), Box, Color, Default, Self (+1 more)
 
-### Community 109 - "cupertino-slide_group/tests/slide_group.rs"
-Cohesion: 0.16
-Nodes (31): a_mandatory_group_ignores_a_tap_on_the_chosen_item(), an_item_is_the_tokens_tall_and_the_literals_wide(), an_unchosen_item_has_no_indicator(), band_of(), conditional_of(), indicator_of(), item(), item_at() (+23 more)
+### Community 109 - "src/protocol.rs"
+Cohesion: 0.10
+Nodes (27): AgentRequest, AgentResponse, check_version(), Command, Payload, PerformanceSummary, PointDto, ComponentSchema (+19 more)
 
 ### Community 110 - "MainThreadMarker"
 Cohesion: 0.08
 Nodes (47): AppState, AppStateImpl, did_finish_launching(), EventLoopWaker, EventWrapper, get_handler(), get_view_and_screen_frame(), handle_events_cleared() (+39 more)
 
 ### Community 111 - "LayoutStyle"
-Cohesion: 0.10
-Nodes (22): AbsoluteInset, AlignItems, auto_or_length(), dimension(), FlexDirection, JustifyContent, LayoutEngine, LayoutNode (+14 more)
+Cohesion: 0.07
+Nodes (36): fixed(), image_widget_paints_a_node_referencing_its_resource(), container_radius_reaches_the_scene_rect(), fixed(), plain_container_keeps_zero_radius(), a_canvas_painter_can_fill_with_a_brush(), a_flat_background_still_costs_one_flat_node(), a_gradient_background_reaches_the_scene_intact() (+28 more)
 
 ### Community 112 - "touch.rs"
 Cohesion: 0.07
@@ -1855,12 +1853,12 @@ Cohesion: 0.13
 Nodes (22): build_display_row(), build_edit_row(), ConfirmEdit, ConfirmEditGlyphs, ConfirmEditStyle, read_buffer(), Arc, Box (+14 more)
 
 ### Community 114 - "CupertinoCheckboxBtn"
-Cohesion: 0.13
-Nodes (16): appearance(), build_pill(), CupertinoCheckboxBtn, CupertinoCheckboxBtnStyle, PillContext, Box, Callback, Color (+8 more)
+Cohesion: 0.05
+Nodes (43): appearance(), build_pill(), CupertinoCheckboxBtn, CupertinoCheckboxBtnStyle, PillContext, Box, Callback, Color (+35 more)
 
-### Community 115 - "CupertinoChip"
-Cohesion: 0.18
-Nodes (8): CupertinoChip, CupertinoChipStyle, Color, Default, Fn, Into, Self, String
+### Community 115 - "ChipProps"
+Cohesion: 0.07
+Nodes (33): CupertinoChip, CupertinoChipStyle, Color, Default, Fn, Into, Self, String (+25 more)
 
 ### Community 116 - "CupertinoOtpInput"
 Cohesion: 0.15
@@ -1875,8 +1873,8 @@ Cohesion: 0.04
 Nodes (38): CupertinoSlideTransition, CupertinoSlideTransitionStyle, Box, ChildBuilder, Default, Fn, Option, Self (+30 more)
 
 ### Community 119 - "FluentColorPicker"
-Cohesion: 0.15
-Nodes (15): FluentColorPicker, FluentColorPickerStyle, from_paint(), Arc, Color, Default, Fn, Option (+7 more)
+Cohesion: 0.11
+Nodes (18): ColorPickerProps, Default, Self, FluentColorPicker, FluentColorPickerStyle, from_paint(), Arc, Color (+10 more)
 
 ### Community 120 - "FluentChip"
 Cohesion: 0.11
@@ -1884,7 +1882,7 @@ Nodes (22): FluentChip, FluentChipStyle, Color, Default, Fn, Into, Self, String 
 
 ### Community 121 - "ActiveEventLoop"
 Cohesion: 0.06
-Nodes (37): ActiveEventLoop, create_high_resolution_timer(), dur2timeout(), EventLoop, min_timeout(), OwnedDisplayHandle, PlatformSpecificEventLoopAttributes, A (+29 more)
+Nodes (38): ActiveEventLoop, create_high_resolution_timer(), dur2timeout(), EventLoop, min_timeout(), OwnedDisplayHandle, PlatformSpecificEventLoopAttributes, A (+30 more)
 
 ### Community 122 - "Window"
 Cohesion: 0.05
@@ -1895,20 +1893,20 @@ Cohesion: 0.10
 Nodes (18): PullToRefresh, PullToRefreshColumn, PullToRefreshIndicator, PullToRefreshStyle, read_pull(), Arc, Color, Default (+10 more)
 
 ### Community 124 - "HostPlatform"
-Cohesion: 0.04
-Nodes (28): Capability, android_platform(), lifecycle_and_capabilities(), desktop_capabilities(), harmony_platform(), independent_from_android_profile(), focus_and_ime_bridge_hooks(), ios_platform() (+20 more)
+Cohesion: 0.05
+Nodes (24): android_platform(), lifecycle_and_capabilities(), harmony_platform(), independent_from_android_profile(), focus_and_ime_bridge_hooks(), ios_platform(), FakeSurface, FakeWindow (+16 more)
 
-### Community 125 - "CupertinoRadioGroup"
-Cohesion: 0.13
-Nodes (13): CupertinoRadioGroup, CupertinoRadioGroupStyle, Callback, Color, Default, Fn, Into, Option (+5 more)
+### Community 125 - "RadioGroupProps"
+Cohesion: 0.07
+Nodes (25): CupertinoRadioGroup, CupertinoRadioGroupStyle, Callback, Color, Default, Fn, Into, Option (+17 more)
 
 ### Community 126 - "motion_host.rs"
 Cohesion: 0.07
 Nodes (56): a_crossfade_keeps_both_children_mounted_while_it_swaps(), a_declaration_takes_over_from_an_imperative_animation(), a_determinate_bar_declares_no_motion(), a_finished_animation_parks_its_endpoint(), a_multichannel_animation_drives_opacity_and_translation_together(), a_node_animation_changes_what_the_host_paints(), a_presence_child_exits_without_vanishing_instantly(), a_presence_child_fades_in_on_first_appearance() (+48 more)
 
 ### Community 127 - "StyleProps"
-Cohesion: 0.16
-Nodes (10): Color, Option, Self, StyleProps, HashMap, Option, Self, StyleState (+2 more)
+Cohesion: 0.10
+Nodes (19): describe(), hosted_kind(), HostedTree, ElementId, Into, LiveTree, Option, Self (+11 more)
 
 ### Community 128 - "FluentForm"
 Cohesion: 0.09
@@ -1932,19 +1930,19 @@ Nodes (18): CupertinoProgressCircular, CupertinoProgressCircularStyle, Color, De
 
 ### Community 133 - "WidgetAny"
 Cohesion: 0.03
-Nodes (120): a_mandatory_group_ignores_a_tap_on_the_chosen_item(), an_item_is_the_tokens_tall_and_the_literals_wide(), an_unchosen_item_has_no_indicator(), band_of(), conditional_of(), indicator_of(), item(), item_at() (+112 more)
+Nodes (119): a_mandatory_group_ignores_a_tap_on_the_chosen_item(), an_item_is_the_tokens_tall_and_the_literals_wide(), an_unchosen_item_has_no_indicator(), band_of(), conditional_of(), indicator_of(), item_at(), item_box_of() (+111 more)
 
 ### Community 134 - "AnimKind"
-Cohesion: 0.16
-Nodes (16): a_declared_spec_becomes_the_kind_it_describes(), a_repeat_of_a_kind_with_no_span_plays_it_once(), a_spring_with_initial_velocity_moves_against_its_offset(), a_tweens_sampled_velocity_is_its_actual_slope(), AnimKind, map_one(), Box, Easing (+8 more)
+Cohesion: 0.07
+Nodes (38): a_declared_spec_becomes_the_kind_it_describes(), a_repeat_of_a_kind_with_no_span_plays_it_once(), a_spring_with_initial_velocity_moves_against_its_offset(), a_tweens_sampled_velocity_is_its_actual_slope(), AnimId, AnimKind, map_one(), Box (+30 more)
 
 ### Community 135 - "FluentPullToRefresh"
 Cohesion: 0.14
 Nodes (12): FluentPullToRefresh, FluentPullToRefreshStyle, Arc, Color, Default, Fn, Option, PullDistance (+4 more)
 
 ### Community 136 - "CupertinoContainer"
-Cohesion: 0.05
-Nodes (45): CupertinoContainer, CupertinoContainerStyle, Box, ChildBuilder, Color, Default, Fn, Option (+37 more)
+Cohesion: 0.16
+Nodes (11): CupertinoContainer, CupertinoContainerStyle, Box, ChildBuilder, Color, Default, Fn, Option (+3 more)
 
 ### Community 137 - "RangeSlider"
 Cohesion: 0.10
@@ -1954,13 +1952,13 @@ Nodes (18): fraction(), RangeSlider, RangeSliderStyle, ratio_at(), read_range(),
 Cohesion: 0.04
 Nodes (37): CupertinoExpandTransition, CupertinoExpandTransitionStyle, Box, ChildBuilder, Default, Fn, Option, Self (+29 more)
 
-### Community 139 - "CupertinoGrid"
+### Community 139 - "FluentGrid"
 Cohesion: 0.05
-Nodes (37): CupertinoGrid, CupertinoGridStyle, Box, CellBuilder, Default, Fn, Self, Send (+29 more)
+Nodes (37): GridProps, Default, Self, FluentGrid, FluentGridStyle, Box, CellBuilder, Default (+29 more)
 
 ### Community 140 - "EventLoopError"
 Cohesion: 0.07
-Nodes (27): EventLoopError, NotSupportedError, OsError, Box, Display, Formatter, From, Into (+19 more)
+Nodes (27): EventLoopError, OsError, Box, Display, Formatter, From, Into, Option (+19 more)
 
 ### Community 141 - "cupertino-stepper/tests/stepper.rs"
 Cohesion: 0.14
@@ -1975,8 +1973,8 @@ Cohesion: 0.05
 Nodes (24): CupertinoSpacer, CupertinoSpacerStyle, Default, Self, a_fractional_factor_survives(), spacer(), the_grow_factor_reaches_the_engine_widget(), Default (+16 more)
 
 ### Community 144 - "Canvas"
-Cohesion: 0.08
-Nodes (17): Canvas, B, C, E, F, FnOnce, HtmlCanvasElement, R (+9 more)
+Cohesion: 0.05
+Nodes (38): mkdid(), DeviceId, Option, Canvas, Common, Handlers, B, C (+30 more)
 
 ### Community 145 - "WinitPointerData"
 Cohesion: 0.07
@@ -1999,28 +1997,28 @@ Cohesion: 0.23
 Nodes (9): a_padded_surface_insets_its_content_inside_the_box(), an_unpadded_surface_leaves_the_content_flush(), changing_the_padding_after_mount_moves_the_content(), laid_out(), padding_grows_the_box_rather_than_moving_it(), painted_rects(), shrink_wrapped(), text_rect() (+1 more)
 
 ### Community 150 - "BottomSheet"
-Cohesion: 0.06
-Nodes (35): bottom_sheet_mounts_a_bottom_aligned_surface(), BottomSheet, conditional_shows_only_when_true(), dialog_is_empty_when_hidden_and_present_when_shown(), grid_chunks_items_into_rows(), grid_rows_remount_only_when_membership_changes(), list_mirrors_items_into_keyed_rows(), overlay_is_absolute_and_toggles() (+27 more)
+Cohesion: 0.09
+Nodes (28): bottom_sheet_mounts_a_bottom_aligned_surface(), BottomSheet, conditional_shows_only_when_true(), dialog_is_empty_when_hidden_and_present_when_shown(), grid_chunks_items_into_rows(), grid_rows_remount_only_when_membership_changes(), list_mirrors_items_into_keyed_rows(), overlay_is_absolute_and_toggles() (+20 more)
 
 ### Community 151 - "ViewState"
-Cohesion: 0.11
-Nodes (19): CursorState, ImeState, ModLocationMask, AppState, Default, HashMap, KeyLocation, Modifiers (+11 more)
+Cohesion: 0.07
+Nodes (30): OptionAsAlt, CursorState, get_left_modifier_code(), get_right_modifier_code(), ImeState, key_to_modifier(), mouse_button(), AppState (+22 more)
 
-### Community 152 - "cupertino-checkbox_btn/tests/checkbox_btn.rs"
-Cohesion: 0.13
-Nodes (33): a_disabled_pill_does_not_answer(), clicking_the_pill_again_switches_it_off(), clicking_the_pill_switches_it_on(), kit(), label_painted(), mark_ink(), mounted_pill(), ops_of() (+25 more)
+### Community 152 - "SyncRuntime"
+Cohesion: 0.10
+Nodes (20): crate::signal::SignalState, Arc, Fn, From, HashMap, HashSet, IntoIterator, Item (+12 more)
 
 ### Community 153 - "EventLoop"
 Cohesion: 0.05
 Nodes (15): EventLoop, PlatformSpecificEventLoopAttributes, A, ActiveEventLoop, HasMonitorPermissionFuture, MonitorPermissionFuture, Result, RootActiveEventLoop (+7 more)
 
-### Community 154 - "ComboboxStyle"
-Cohesion: 0.12
-Nodes (19): disabled_reaches_the_widget_and_changes_how_it_paints(), options(), props_report_what_the_builder_set(), String, Vec, style(), the_border_follows_v1s_order(), the_call_site_constants_match_v1s() (+11 more)
+### Community 154 - "cupertino-combobox/tests/combobox.rs"
+Cohesion: 0.16
+Nodes (15): disabled_reaches_the_widget_and_changes_how_it_paints(), options(), props_report_what_the_builder_set(), String, Vec, style(), the_border_follows_v1s_order(), the_call_site_constants_match_v1s() (+7 more)
 
 ### Community 155 - "CupertinoIconButton"
-Cohesion: 0.18
-Nodes (11): CupertinoIconButton, Arc, Fn, IconButtonVariant, Into, Option, PropsVariant, Self (+3 more)
+Cohesion: 0.15
+Nodes (13): CupertinoIconButton, Arc, Fn, IconButtonVariant, Into, Option, PropsVariant, Self (+5 more)
 
 ### Community 156 - "floom-core/tests/contracts.rs"
 Cohesion: 0.07
@@ -2039,7 +2037,7 @@ Cohesion: 0.07
 Nodes (19): a_live_stream_has_no_total_and_no_remaining(), a_tick_of_zero_or_less_is_ignored(), format_time(), MediaControls, MediaKind, MediaLayout, MediaPart, MediaState (+11 more)
 
 ### Community 160 - "Stepper"
-Cohesion: 0.13
+Cohesion: 0.12
 Nodes (22): build_connector(), build_row(), build_step(), read_selected(), Arc, Box, Color, Default (+14 more)
 
 ### Community 161 - "FluentEmptyState"
@@ -2059,8 +2057,8 @@ Cohesion: 0.06
 Nodes (28): CupertinoAvatar, CupertinoAvatarStyle, Color, Default, Into, Self, String, Surface (+20 more)
 
 ### Community 165 - "PickState"
-Cohesion: 0.06
-Nodes (37): default_pick_shortcut(), highlight_is_live(), highlight_rect(), HighlightBox, is_pick_phase(), pick_pointer(), PickPhase, PickState (+29 more)
+Cohesion: 0.08
+Nodes (19): default_pick_shortcut(), highlight_is_live(), highlight_rect(), HighlightBox, is_pick_phase(), PickEvent, PickPhase, PickState (+11 more)
 
 ### Community 166 - "MonitorHandle"
 Cohesion: 0.08
@@ -2074,13 +2072,13 @@ Nodes (28): ActiveEventLoop, ModifiersShared, OwnedDisplayHandle, Arc, Box, Canv
 Cohesion: 0.12
 Nodes (15): FrameHandoffStats, Inner, Arc, Condvar, Duration, Inner, Instant, Mutex (+7 more)
 
-### Community 169 - "CupertinoProgressLinear"
-Cohesion: 0.06
-Nodes (21): CupertinoProgressLinear, CupertinoProgressLinearStyle, progress_linear_tokens(), Color, Default, Self, ProgressLinearProps, Default (+13 more)
+### Community 169 - "LinearProgress"
+Cohesion: 0.04
+Nodes (38): CupertinoProgressLinear, CupertinoProgressLinearStyle, progress_linear_tokens(), Color, Default, Self, ProgressLinearProps, Default (+30 more)
 
 ### Community 170 - "WindowEvent"
 Cohesion: 0.06
-Nodes (46): ButtonId, map_scroll_delta(), ButtonSource, DeviceEvent, ensure_attrs_do_not_panic(), FingerId, Ime, KeyEvent (+38 more)
+Nodes (44): ButtonId, map_scroll_delta(), ButtonSource, DeviceEvent, ensure_attrs_do_not_panic(), FingerId, Force, Ime (+36 more)
 
 ### Community 171 - "WinitState"
 Cohesion: 0.09
@@ -2090,37 +2088,37 @@ Nodes (35): CompositorHandler, AHashMap, Arc, CompositorState, Connection, Globa
 Cohesion: 0.15
 Nodes (12): CupertinoCode, Box, ChildBuilder, Default, Fn, Into, Option, Self (+4 more)
 
-### Community 173 - "Carousel"
-Cohesion: 0.12
-Nodes (16): arrow_request(), Carousel, CarouselStyle, current_index(), dots_request(), Arc, Default, Fn (+8 more)
+### Community 173 - "Ime"
+Cohesion: 0.11
+Nodes (20): ImeContextCreationError, Display, Formatter, Ime, ImeCreationError, ImeEvent, ImeRequest, Arc (+12 more)
 
 ### Community 174 - "WindowViewer"
 Cohesion: 0.10
 Nodes (16): Arc, AtomicUsize, Color, Container, Default, ElementId, Fn, Option (+8 more)
 
 ### Community 175 - "OverlayHandle"
-Cohesion: 0.05
-Nodes (28): AnimId, AnimationScheduler, AnimSample, Self, SmallVec, Vec, Running, NodeAnimation (+20 more)
+Cohesion: 0.07
+Nodes (20): OverlaySlot, open(), OverlayRequest, Box, Debug, FnOnce, Formatter, Result (+12 more)
 
 ### Community 176 - "Span"
-Cohesion: 0.09
-Nodes (36): Ast, AstAttr, AstAttrName, AstBinding, AstNode, AstValue, FnMut, Rgba (+28 more)
+Cohesion: 0.08
+Nodes (42): Ast, AstAttr, AstAttrName, AstBinding, AstNode, AstValue, FnMut, Rgba (+34 more)
 
 ### Community 177 - "containers.rs"
 Cohesion: 0.13
 Nodes (10): Default, Self, split_nav_clamps_and_restores(), SplitNav, stack_nav_swaps_panes_only_when_collapsed(), StackNav, StackPane, tab_nav_rejects_zero_tabs() (+2 more)
 
 ### Community 178 - "Error"
-Cohesion: 0.08
-Nodes (40): collect_keys(), file_store_path_validation(), file_store_persists_and_survives_reopening(), FileError, FileStore, get(), get_string(), KeyValueStore (+32 more)
+Cohesion: 0.10
+Nodes (34): collect_keys(), file_store_path_validation(), file_store_persists_and_survives_reopening(), FileError, FileStore, get(), get_string(), KeyValueStore (+26 more)
 
 ### Community 179 - "Menu"
 Cohesion: 0.09
 Nodes (15): Menu, menu_row_insets(), MenuPanel, MenuStyle, Arc, Color, Default, ElementId (+7 more)
 
 ### Community 180 - "with_alpha"
-Cohesion: 0.09
-Nodes (26): FluentSwitch, FluentSwitchStyle, Box, Color, Default, Fn, Option, Rc (+18 more)
+Cohesion: 0.17
+Nodes (12): FluentSwitch, FluentSwitchStyle, Box, Color, Default, Fn, Option, Rc (+4 more)
 
 ### Community 181 - "Rope"
 Cohesion: 0.11
@@ -2131,12 +2129,12 @@ Cohesion: 0.16
 Nodes (11): CupertinoWindow, CupertinoWindowStyle, Arc, Color, Default, Fn, Option, Self (+3 more)
 
 ### Community 183 - "Dialog"
-Cohesion: 0.11
+Cohesion: 0.10
 Nodes (18): Dialog, Arc, Box, Debug, Default, ElementId, Fn, Formatter (+10 more)
 
 ### Community 184 - "winit-web/src/lib.rs"
-Cohesion: 0.06
-Nodes (37): CustomCursorFuture, dyn MonitorHandleProvider + '_, dyn Window + '_, EventLoopExtWeb, HasMonitorPermissionFuture, MonitorHandleExtWeb, MonitorPermissionFuture, Orientation (+29 more)
+Cohesion: 0.07
+Nodes (31): CustomCursorFuture, dyn MonitorHandleProvider + '_, dyn Window + '_, HasMonitorPermissionFuture, MonitorHandleExtWeb, MonitorPermissionFuture, Orientation, OrientationData (+23 more)
 
 ### Community 185 - "Closure"
 Cohesion: 0.10
@@ -2144,15 +2142,15 @@ Nodes (26): Closure, Dispatcher, Dispatcher<T>, DispatchRunner, DispatchRunner<T
 
 ### Community 186 - "OhosApp"
 Cohesion: 0.07
-Nodes (25): KeyEvent, OhosApp, OhosAppInner, OhosKeyAction, OhosMouseButton, OhosPointerSource, OhosTouchAction, Arc (+17 more)
+Nodes (26): KeyEvent, OhosApp, OhosAppInner, OhosKeyAction, OhosMouseAction, OhosMouseButton, OhosPointerSource, OhosTouchAction (+18 more)
 
 ### Community 187 - "ItemSizes"
-Cohesion: 0.07
+Cohesion: 0.06
 Nodes (20): ItemSizes, KeyMap, KeyMap<K, E>, Kind, Overscan, Default, E, Fn (+12 more)
 
 ### Community 188 - "ActiveEventLoop"
-Cohesion: 0.06
-Nodes (30): ActiveEventLoop, EventLoop, OwnedDisplayHandle, PlatformSpecificEventLoopAttributes, A, AppState, Box, CoreCustomCursor (+22 more)
+Cohesion: 0.07
+Nodes (28): ActiveEventLoop, EventLoop, OwnedDisplayHandle, PlatformSpecificEventLoopAttributes, A, AppState, Box, CoreCustomCursor (+20 more)
 
 ### Community 189 - "CupertinoDateAdapterProvider"
 Cohesion: 0.04
@@ -2183,12 +2181,12 @@ Cohesion: 0.15
 Nodes (43): a_capturing_participant_swallows_the_click(), a_display_change_doubles_the_device_rect_and_leaves_the_rect_alone(), a_frozen_participant_is_animated_then_goes_live(), a_frozen_participant_is_painted_as_an_image_in_its_own_box(), a_grant_binds_the_participant_and_applies_its_geometry(), a_modal_hides_the_participant_without_destroying_it(), a_partial_clip_is_carried_as_a_crop_not_folded_into_the_placement(), a_participant_clipped_away_stops_claiming_the_pointer() (+35 more)
 
 ### Community 196 - "O"
-Cohesion: 0.19
-Nodes (12): DerivedRwSignal<T, O, GF, UF>, Clone, Copy, FnOnce, O, Option, Self, SyncDerivedRwSignal<T, O, GF, UF> (+4 more)
+Cohesion: 0.21
+Nodes (10): DerivedRwSignal<T, O, GF, UF>, Clone, Copy, FnOnce, O, Option, Self, SyncDerivedRwSignal<T, O, GF, UF> (+2 more)
 
-### Community 197 - "MaterialCheckboxBtn"
-Cohesion: 0.13
-Nodes (16): appearance(), build_pill(), MaterialCheckboxBtn, MaterialCheckboxBtnStyle, PillContext, Box, Callback, Color (+8 more)
+### Community 197 - "md-slide_group/tests/slide_group.rs"
+Cohesion: 0.16
+Nodes (31): a_mandatory_group_ignores_a_tap_on_the_chosen_item(), an_item_is_the_tokens_tall_and_the_literals_wide(), an_unchosen_item_has_no_indicator(), band_of(), conditional_of(), indicator_of(), item(), item_at() (+23 more)
 
 ### Community 198 - "Badge"
 Cohesion: 0.12
@@ -2207,8 +2205,8 @@ Cohesion: 0.10
 Nodes (17): EffectTrait, Default, Fn, FnOnce, HashMap, HashSet, Option, Rc (+9 more)
 
 ### Community 202 - "FluentContainer"
-Cohesion: 0.11
-Nodes (21): FluentContainer, FluentContainerStyle, Box, ChildBuilder, Color, Default, Fn, Option (+13 more)
+Cohesion: 0.16
+Nodes (11): FluentContainer, FluentContainerStyle, Box, ChildBuilder, Color, Default, Fn, Option (+3 more)
 
 ### Community 203 - "CupertinoIconsProvider"
 Cohesion: 0.04
@@ -2219,20 +2217,20 @@ Cohesion: 0.17
 Nodes (9): CupertinoSystemBar, CupertinoSystemBarStyle, Color, Default, Insets, Option, PaintColor, Self (+1 more)
 
 ### Community 205 - "tests/text_field.rs"
-Cohesion: 0.16
-Nodes (19): a_disabled_field_paints_the_halved_white_the_old_fill_resolved_to(), a_style_with_a_rim_strokes_one_inside_the_bounds_and_insets_the_text(), a_swallowed_keystroke_does_not_notify(), allocate(), an_unstyled_text_field_paints_the_engine_colours(), hover(), hovering_repaints_the_field_because_the_hover_fill_is_load_bearing(), max_length_clamps_typing_and_not_only_the_builder() (+11 more)
+Cohesion: 0.14
+Nodes (21): a_disabled_field_paints_the_halved_white_the_old_fill_resolved_to(), a_style_with_a_rim_strokes_one_inside_the_bounds_and_insets_the_text(), a_swallowed_keystroke_does_not_notify(), allocate(), an_unstyled_text_field_paints_the_engine_colours(), hover(), hovering_repaints_the_field_because_the_hover_fill_is_load_bearing(), max_length_clamps_typing_and_not_only_the_builder() (+13 more)
 
 ### Community 206 - "src/effect.rs"
-Cohesion: 0.12
-Nodes (28): batch(), create_effect(), create_stateful_updater(), create_tracker(), create_updater(), Effect, Effect<(), fn(Option<()>) -> ()>, EffectPriority (+20 more)
+Cohesion: 0.11
+Nodes (29): batch(), create_effect(), create_stateful_updater(), create_tracker(), create_updater(), Effect, Effect<(), fn(Option<()>) -> ()>, EffectPriority (+21 more)
 
 ### Community 207 - "fluent-stepper/tests/stepper.rs"
 Cohesion: 0.14
 Nodes (35): a_change_of_selection_asks_for_a_new_row(), a_click_on_an_editable_step_moves_the_selection(), a_non_linear_stepper_makes_every_step_clickable(), a_step_behind_shows_a_tick_and_a_step_ahead_shows_its_number(), a_step_that_may_not_be_clicked_is_not_a_pressable(), allocate(), connector_fill(), dispatch_any() (+27 more)
 
-### Community 208 - "winit-core/src/cursor.rs"
-Cohesion: 0.08
-Nodes (26): BadAnimation, BadImage, Cursor, CursorAnimation, CursorImage, CustomCursor, CustomCursorProvider, Arc (+18 more)
+### Community 208 - "CustomCursorSource"
+Cohesion: 0.07
+Nodes (30): BadAnimation, BadImage, Cursor, CursorAnimation, CursorImage, CustomCursor, CustomCursorProvider, CustomCursorSource (+22 more)
 
 ### Community 209 - "SKILL.md"
 Cohesion: 0.04
@@ -2243,16 +2241,16 @@ Cohesion: 0.18
 Nodes (9): CupertinoEmptyState, CupertinoEmptyStateStyle, Color, Default, Into, Option, Self, String (+1 more)
 
 ### Community 211 - "Services"
-Cohesion: 0.11
-Nodes (25): disposal_sees_the_instance_handle(), Entry, log_disposal(), Registry, remove_runs_disposal_exactly_once(), replacing_a_service_disposes_the_old_instance(), require_panics_with_type_name_when_missing(), Debug (+17 more)
+Cohesion: 0.10
+Nodes (26): disposal_sees_the_instance_handle(), Entry, Registry, remove_runs_disposal_exactly_once(), replacing_a_service_disposes_the_old_instance(), require_panics_with_type_name_when_missing(), Debug, Drop (+18 more)
 
-### Community 212 - "PaintOp"
-Cohesion: 0.07
-Nodes (65): allocate(), alpha_of(), an_enabled_box_carries_no_disabled_alpha(), an_unchecked_box_draws_no_mark(), box_fills(), centred(), check_path(), checkbox_tokens() (+57 more)
-
-### Community 213 - "Widget"
+### Community 212 - "cupertino-checkbox/tests/api.rs"
 Cohesion: 0.11
-Nodes (41): a_change_of_selection_asks_for_a_new_row(), a_click_on_an_editable_step_moves_the_selection(), a_non_linear_stepper_makes_every_step_clickable(), a_step_behind_shows_a_tick_and_a_step_ahead_shows_its_number(), a_step_that_may_not_be_clicked_is_not_a_pressable(), allocate(), connector_fill(), dispatch_any() (+33 more)
+Nodes (47): allocate(), alpha_of(), an_enabled_box_carries_no_disabled_alpha(), an_unchecked_box_draws_no_mark(), box_fills(), centred(), check_path(), checkbox_tokens() (+39 more)
+
+### Community 213 - "md-stepper/tests/stepper.rs"
+Cohesion: 0.14
+Nodes (35): a_change_of_selection_asks_for_a_new_row(), a_click_on_an_editable_step_moves_the_selection(), a_non_linear_stepper_makes_every_step_clickable(), a_step_behind_shows_a_tick_and_a_step_ahead_shows_its_number(), a_step_that_may_not_be_clicked_is_not_a_pressable(), allocate(), connector_fill(), dispatch_any() (+27 more)
 
 ### Community 214 - "MonitorHandle"
 Cohesion: 0.07
@@ -2260,11 +2258,11 @@ Nodes (35): available_monitors(), current_monitor(), get_monitor_info(), monitor
 
 ### Community 215 - "Memo<T>"
 Cohesion: 0.12
-Nodes (17): ComputeFn, create_memo(), Memo<T>, MemoState, MemoState<T>, Clone, Copy, Drop (+9 more)
+Nodes (18): ComputeFn, create_memo(), Memo, Memo<T>, MemoState, MemoState<T>, Clone, Copy (+10 more)
 
 ### Community 216 - "src/panel.rs"
-Cohesion: 0.10
-Nodes (48): Inspector, breadcrumb_rows(), console_rows(), default_readout(), elements_readout(), fmt_f32(), layout_rows(), performance_rows() (+40 more)
+Cohesion: 0.13
+Nodes (41): Inspector, breadcrumb_rows(), console_rows(), default_readout(), elements_readout(), fmt_f32(), layout_rows(), performance_rows() (+33 more)
 
 ### Community 217 - "TextDocument"
 Cohesion: 0.08
@@ -2278,13 +2276,13 @@ Nodes (23): app_info(), app_label(), field_string(), non_empty(), object_to_stri
 Cohesion: 0.10
 Nodes (19): deep_link_round_trip_through_typed_route(), navigator_keys_pages_and_exit_window(), Route, Router, router_limit_drops_oldest_entries(), router_pushes_pops_and_replaces(), Router<R>, router_reset_and_pop_to_root() (+11 more)
 
-### Community 220 - "WindowId"
-Cohesion: 0.04
-Nodes (37): DesktopInput, DesktopPlatform, DesktopSurface, DesktopWindow, Clipboard, Default, HashMap, Ime (+29 more)
+### Community 220 - "DesktopPlatform"
+Cohesion: 0.07
+Nodes (21): DesktopInput, DesktopPlatform, DesktopSurface, DesktopWindow, Clipboard, Default, HashMap, Ime (+13 more)
 
-### Community 221 - "FluentSpeedDial"
-Cohesion: 0.04
-Nodes (46): Box, Clone, Debug, Default, Fn, Formatter, Option, Result (+38 more)
+### Community 221 - "MaterialSpeedDial"
+Cohesion: 0.12
+Nodes (18): SpeedDialDirection, cross_alignment(), dial_axis(), fab_first(), MaterialSpeedDial, MaterialSpeedDialStyle, Callback, Color (+10 more)
 
 ### Community 222 - "VectorIcon"
 Cohesion: 0.11
@@ -2299,32 +2297,32 @@ Cohesion: 0.11
 Nodes (19): AppState, min_timeout(), ActiveEventLoop, Arc, EventLoopProxy, EventLoopWaker, FnOnce, Instant (+11 more)
 
 ### Community 225 - "TreeRow"
-Cohesion: 0.09
-Nodes (16): ContextMenu, MenuAction, MenuItem, row_child(), Arc, ElementId, Into, MenuItem (+8 more)
+Cohesion: 0.11
+Nodes (17): ContextMenu, MenuAction, MenuItem, row_child(), RowNode, Arc, ElementId, Into (+9 more)
 
 ### Community 226 - "XError"
-Cohesion: 0.06
-Nodes (53): replace_im(), ReplaceImError, Arc, Box, c_char, Display, Result, XConnection (+45 more)
+Cohesion: 0.10
+Nodes (36): replace_im(), ReplaceImError, Arc, Box, c_char, Display, Result, XConnection (+28 more)
 
-### Community 227 - "DeviceEvents"
-Cohesion: 0.05
+### Community 227 - "ControlFlow"
+Cohesion: 0.06
 Nodes (28): CFRunLoopSource, EventLoopProxy, CFRetained, CFRunLoop, F, Self, Send, Sync (+20 more)
 
 ### Community 228 - "CupertinoVirtualScroller"
 Cohesion: 0.16
 Nodes (14): CupertinoVirtualScroller, CupertinoVirtualScrollerStyle, Arc, Box, Color, Default, Fn, Option (+6 more)
 
-### Community 229 - "render_once"
-Cohesion: 0.13
-Nodes (26): a_degradation_is_counted_rather_than_silent(), a_plain_frame_reports_no_degradation(), records_a_filter_scope_bracketing_its_draws(), skia_and_software_see_same_rect_scene(), skia_records_a_shader_request_instead_of_dropping_it(), skia_records_a_transform_scope_bracketing_its_draws(), skia_records_the_same_clip_brackets_and_paths_the_scene_carries(), the_recorder_produces_no_pixels() (+18 more)
+### Community 229 - "CupertinoParallax"
+Cohesion: 0.10
+Nodes (16): CupertinoParallax, CupertinoParallaxStyle, Default, Option, Self, SharedScroll, a_moved_offset_re_declares_the_motion(), an_offset_that_did_not_move_is_not_a_change() (+8 more)
 
 ### Community 230 - "CupertinoConfirmEdit"
 Cohesion: 0.13
 Nodes (14): CupertinoConfirmEdit, CupertinoConfirmEditStyle, Arc, Color, Default, Fn, Into, Option (+6 more)
 
 ### Community 231 - "ActiveEventLoop"
-Cohesion: 0.03
-Nodes (71): ActiveEventLoop, CookieResultExt, CoreEventLoopProxy, Device, DeviceInfo, DeviceInfo<'a>, DeviceType, EventLoop (+63 more)
+Cohesion: 0.04
+Nodes (41): DeviceEvents, ActiveEventLoop, CookieResultExt, DeviceInfo<'a>, EventLoop, min_timeout(), PeekableReceiver<T>, Result<VoidCookie<'_>, E> (+33 more)
 
 ### Community 232 - "CursorStyle"
 Cohesion: 0.11
@@ -2338,37 +2336,37 @@ Nodes (27): layout_global(), layout_signal(), LayoutSlot, LayoutState, register_
 Cohesion: 0.13
 Nodes (12): CupertinoRating, CupertinoRatingStyle, Callback, Color, Default, Fn, Option, Self (+4 more)
 
-### Community 235 - "LogicalSize"
-Cohesion: 0.18
-Nodes (22): LogicalSize, chrome_linux(), Engine, fix_canvas_size(), is_dark_mode(), is_visible(), on_page_transition(), PageTransitionEventHandle (+14 more)
+### Community 235 - "Document"
+Cohesion: 0.13
+Nodes (30): Document, Send, Sync, exit_fullscreen(), has_fullscreen_api_support(), is_fullscreen(), request_fullscreen(), HtmlCanvasElement (+22 more)
 
-### Community 236 - "CupertinoDisplayProvider"
-Cohesion: 0.05
-Nodes (30): CupertinoDisplayProvider, Box, ChildBuilder, Default, Fn, Option, Self, Send (+22 more)
-
-### Community 237 - "MultiTheme"
+### Community 236 - "MultiTheme"
 Cohesion: 0.04
-Nodes (37): switch_tokens(), CupertinoThemeProvider, Box, ChildBuilder, Default, Fn, Option, Self (+29 more)
+Nodes (35): CupertinoDisplayProvider, Box, ChildBuilder, Default, Fn, Option, Self, Send (+27 more)
+
+### Community 237 - "CupertinoThemeProvider"
+Cohesion: 0.05
+Nodes (30): CupertinoThemeProvider, Box, ChildBuilder, Default, Fn, Option, Self, Send (+22 more)
 
 ### Community 238 - "FluentSlideGroup"
-Cohesion: 0.12
-Nodes (18): arrow_slot(), arrow_widget(), choose(), chosen_of(), FluentSlideGroup, FluentSlideGroupStyle, indicator_of(), Callback (+10 more)
+Cohesion: 0.05
+Nodes (39): Default, Self, SlideGroupProps, arrow_slot(), arrow_widget(), choose(), chosen_of(), FluentSlideGroup (+31 more)
 
 ### Community 239 - "CupertinoDivider"
 Cohesion: 0.20
 Nodes (6): CupertinoDivider, CupertinoDividerStyle, divider_tokens(), Color, Default, Self
 
 ### Community 240 - "Inspector<'a>"
-Cohesion: 0.06
-Nodes (35): ElementKind, align_name(), axis_name(), element_kind_of(), Inspector<'a>, kind_name(), position_name(), ElementId (+27 more)
+Cohesion: 0.08
+Nodes (24): align_name(), axis_name(), element_kind_of(), Inspector<'a>, kind_name(), position_name(), ElementId, HashMap (+16 more)
 
 ### Community 241 - "md_select.rs"
 Cohesion: 0.16
 Nodes (12): a_disabled_trigger_keeps_the_surface_and_dims_the_border(), alpha_of(), mounting_uses_this_kits_height(), Color, style(), the_call_site_constants_survived(), the_geometry_is_the_select_tokens(), the_hover_row_is_on_surface_at_eight() (+4 more)
 
 ### Community 242 - "TuiPlatform"
-Cohesion: 0.06
-Nodes (33): Clipboard, Ime, Platform, base64_encode(), creating_a_window_sizes_it_to_the_grid(), injected_text_becomes_ime_commits(), override_size_is_used(), Clipboard (+25 more)
+Cohesion: 0.05
+Nodes (37): Clipboard, Ime, Platform, HelloApp, Option, base64_encode(), creating_a_window_sizes_it_to_the_grid(), injected_text_becomes_ime_commits() (+29 more)
 
 ### Community 243 - "fluent-window/tests/window.rs"
 Cohesion: 0.17
@@ -2391,15 +2389,15 @@ Cohesion: 0.11
 Nodes (32): Classifier, boundary_with_severity(), classifier_sees_the_report_before_it_is_stored(), clear_resets_history_but_not_the_sequence(), debug_builds_capture_a_backtrace(), display_is_human_readable(), err_result_becomes_a_report_and_falls_back(), ErrorBoundary (+24 more)
 
 ### Community 248 - "FluentSelect"
-Cohesion: 0.16
+Cohesion: 0.19
 Nodes (10): FluentSelect, Default, Fn, Into, Option, Self, Send, String (+2 more)
 
 ### Community 249 - "tests/fixtures.rs"
 Cohesion: 0.11
-Nodes (37): a_binding_of_the_wrong_type_is_refused(), a_child_with_two_parents_is_refused(), a_cycle_between_nodes_is_refused(), a_duplicate_binding_name_is_refused(), a_duplicate_node_key_is_refused(), a_duplicate_slot_name_is_refused(), a_handler_used_as_a_value_is_refused(), a_missing_child_is_refused() (+29 more)
+Nodes (38): a_binding_of_the_wrong_type_is_refused(), a_child_with_two_parents_is_refused(), a_cycle_between_nodes_is_refused(), a_duplicate_binding_name_is_refused(), a_duplicate_node_key_is_refused(), a_duplicate_slot_name_is_refused(), a_handler_used_as_a_value_is_refused(), a_missing_child_is_refused() (+30 more)
 
 ### Community 250 - "EventLoopRunner"
-Cohesion: 0.10
+Cohesion: 0.11
 Nodes (20): Event, EventLoopRunner, Debug, DeviceId, Drop, Event, FnOnce, Formatter (+12 more)
 
 ### Community 251 - "ListItemRow"
@@ -2407,8 +2405,8 @@ Cohesion: 0.09
 Nodes (21): ListItemRow, ListItemStyle, Arc, Box, Color, Debug, Default, ElementId (+13 more)
 
 ### Community 252 - "CupertinoAlert"
-Cohesion: 0.12
-Nodes (17): alert_accent(), CupertinoAlert, CupertinoAlertStyle, Arc, Color, Default, Fn, FontWeight (+9 more)
+Cohesion: 0.06
+Nodes (29): alert_accent(), CupertinoAlert, CupertinoAlertStyle, Arc, Color, Default, Fn, FontWeight (+21 more)
 
 ### Community 253 - "parse"
 Cohesion: 0.16
@@ -2428,15 +2426,15 @@ Nodes (27): a_filled_control_is_a_pill_and_a_bordered_one_is_not(), button_metri
 
 ### Community 257 - "MaterialComponentTokens"
 Cohesion: 0.01
-Nodes (166): AlertTokens, Default, Self, AppBarTokens, Default, Self, AvatarTokens, Default (+158 more)
+Nodes (137): AlertTokens, Default, Self, AppBarTokens, Default, Self, AutocompleteTokens, Default (+129 more)
 
 ### Community 258 - "Shared"
 Cohesion: 0.06
 Nodes (32): Event, Execution, ActiveEventLoop, Arc, Box, Canvas, Clone, Debug (+24 more)
 
-### Community 259 - "winit-wayland/src/lib.rs"
-Cohesion: 0.11
-Nodes (17): ActiveEventLoopExtWayland, ApplicationName, dyn CoreActiveEventLoop + '_, dyn CoreWindow + '_, EventLoopBuilderExtWayland, EventLoopExtWayland, make_wid(), Box (+9 more)
+### Community 259 - "PlatformWindowAttributes"
+Cohesion: 0.06
+Nodes (29): Box, PlatformWindowAttributes, Debug, Send, Sync, SendSyncRawWindowHandle, Window, window_attributes_wayland() (+21 more)
 
 ### Community 260 - "floom-snapshot/src/lib.rs"
 Cohesion: 0.09
@@ -2446,9 +2444,9 @@ Nodes (25): group_pop(), group_push(), hash_str(), pixel_snapshot_renders_and_is
 Cohesion: 0.08
 Nodes (16): HoverBox, Callback, Color, Debug, Default, ElementId, Fn, Formatter (+8 more)
 
-### Community 262 - "md-chip/tests/chip.rs"
-Cohesion: 0.28
-Nodes (14): a_click_calls_the_callback(), a_disabled_chip_does_not_call_the_callback(), chip(), paint(), painted(), Color, Option, tap() (+6 more)
+### Community 262 - "FluentSpeedDial"
+Cohesion: 0.11
+Nodes (17): cross_alignment(), dial_axis(), fab_first(), FluentSpeedDial, FluentSpeedDialStyle, Callback, Color, Default (+9 more)
 
 ### Community 263 - "FluentButtonGroup"
 Cohesion: 0.13
@@ -2459,12 +2457,12 @@ Cohesion: 0.05
 Nodes (40): 2026-08-11 — App / Main + layout provider, 2026-08-11 (final+1) — Batch 17: Media and motion — Parallax + InfiniteScroller + Hover (Task #138–#145), 2026-08-11 (final) — Batch 16: Radio + Overlay (Task #130–#137), 2026-08-11 (later) — Batch 10: Form + ValidationMessages (校验提示), 2026-08-11 (later) — Batch 12: Window / SlideGroup / ItemGroup / ColorPicker + Batch 13: Providers, Animation implementation, API design, API design (+32 more)
 
 ### Community 265 - "AppRunner"
-Cohesion: 0.05
-Nodes (45): AppRunner, AppRunner<R>, map_button(), Event, FrameStats, HashMap, Modifiers, Option (+37 more)
+Cohesion: 0.06
+Nodes (31): AppRunner, AppRunner<R>, map_button(), Event, FrameStats, HashMap, Modifiers, Option (+23 more)
 
 ### Community 266 - "global_theme.rs"
-Cohesion: 0.08
-Nodes (35): current_design_system(), dark_global(), dark_signal(), design_system_signal(), DesignSystem, ds_global(), global(), SelectedTheme (+27 more)
+Cohesion: 0.07
+Nodes (31): the_content_follows_the_flag(), the_style_resolves_the_tokens(), the_transition_is_the_one_this_kit_plays(), theme(), tokens(), FadeTransitionTokens, Default, Self (+23 more)
 
 ### Community 267 - "ElementArena"
 Cohesion: 0.18
@@ -2475,8 +2473,8 @@ Cohesion: 0.05
 Nodes (40): 0.30.0, 0.30.1, 0.30.10, 0.30.11, 0.30.12, 0.30.2, 0.30.3, 0.30.4 (+32 more)
 
 ### Community 269 - "WindowAttributesWindows"
-Cohesion: 0.05
-Nodes (35): AnyThread<W>, BackdropType, Color, CornerPreference, DeviceId, DeviceIdExtWindows, dyn CoreWindow + '_, Icon (+27 more)
+Cohesion: 0.06
+Nodes (30): AnyThread, BackdropType, Color, CornerPreference, DeviceId, DeviceIdExtWindows, dyn CoreWindow + '_, EventLoopBuilderExtWindows (+22 more)
 
 ### Community 270 - "WindowState"
 Cohesion: 0.08
@@ -2491,8 +2489,8 @@ Cohesion: 0.13
 Nodes (37): a_disabled_radio_is_on_surface_at_38(), allocate(), alpha_of(), click(), cupertino_opens_only_the_hover_gate_and_suppresses_while_disabled(), disabled_style(), fills(), hover() (+29 more)
 
 ### Community 273 - "Cell"
-Cohesion: 0.13
-Nodes (26): a_plain_rect_is_not_a_degradation(), a_rect_fills_only_the_cells_it_covers(), a_rounded_corner_and_a_shadow_are_counted_as_dropped(), a_transparent_rect_composites_over_what_is_underneath(), an_empty_grid_is_spaces_not_nuls(), apply_clips(), background_paint_keeps_existing_characters(), Cell (+18 more)
+Cohesion: 0.12
+Nodes (29): busiest_row(), String, a_plain_rect_is_not_a_degradation(), a_rect_fills_only_the_cells_it_covers(), a_rounded_corner_and_a_shadow_are_counted_as_dropped(), a_transparent_rect_composites_over_what_is_underneath(), an_empty_grid_is_spaces_not_nuls(), apply_clips() (+21 more)
 
 ### Community 274 - "fluent_select.rs"
 Cohesion: 0.15
@@ -2500,23 +2498,23 @@ Nodes (9): alpha_of(), mounting_uses_this_kits_height(), Color, style(), the_che
 
 ### Community 275 - "ActiveEventLoop"
 Cohesion: 0.08
-Nodes (24): ActiveEventLoop, EventLoop, OwnedDisplayHandle, PlatformSpecificEventLoopAttributes, A, Box, CoreEventLoopProxy, CoreOwnedDisplayHandle (+16 more)
+Nodes (23): ActiveEventLoop, EventLoop, OwnedDisplayHandle, PlatformSpecificEventLoopAttributes, Box, CoreEventLoopProxy, CoreOwnedDisplayHandle, CoreWindow (+15 more)
 
-### Community 276 - "AtomicWaker"
-Cohesion: 0.07
-Nodes (29): Abortable, Abortable<F>, Aborted, AbortHandle, DropAbortHandle, Arc, AtomicBool, Context (+21 more)
+### Community 276 - "abortable.rs"
+Cohesion: 0.10
+Nodes (20): Abortable, Abortable<F>, Aborted, AbortHandle, DropAbortHandle, Arc, AtomicBool, Context (+12 more)
 
 ### Community 277 - ".get_frame_extents_heuristic"
-Cohesion: 0.10
+Cohesion: 0.09
 Nodes (18): AaRect, FrameExtents, FrameExtentsHeuristic, FrameExtentsHeuristicPath, Option, Result, Self, Window (+10 more)
 
 ### Community 278 - "evaluate_screen"
 Cohesion: 0.18
 Nodes (14): evaluate_screen(), Size, screen_size(), a_colour_drift_is_visible_in_the_pixels(), a_drifted_implementation_disagrees_at_named_paths(), rendering_is_deterministic(), the_contrast_floor_catches_an_unreadable_theme(), the_reference_implementation_matches_its_contract() (+6 more)
 
-### Community 279 - ".tokens"
-Cohesion: 0.17
-Nodes (13): Keyword, Kind, Lexer, Lexer<'source>, Display, Formatter, Kind, Option (+5 more)
+### Community 279 - "CupertinoGrid"
+Cohesion: 0.12
+Nodes (17): CupertinoGrid, CupertinoGridStyle, Box, CellBuilder, Default, Fn, Self, Send (+9 more)
 
 ### Community 280 - "2026-08-10"
 Cohesion: 0.05
@@ -2528,19 +2526,19 @@ Nodes (37): a_disabled_radio_is_on_surface_at_38(), allocate(), alpha_of(), clic
 
 ### Community 282 - "probe.rs"
 Cohesion: 0.11
-Nodes (33): print_report(), Result, String, run(), a_host_build_never_reports_a_value_it_cannot_have_measured(), actions(), all(), battery() (+25 more)
+Nodes (34): print_report(), Result, String, run(), a_host_build_never_reports_a_value_it_cannot_have_measured(), actions(), all(), battery() (+26 more)
 
-### Community 283 - "with_alpha"
+### Community 283 - "FloatingActionButtonProps"
 Cohesion: 0.08
-Nodes (25): MaterialFloatingActionButton, MaterialFloatingActionButtonStyle, Box, Callback, ChildBuilder, Color, Default, Fn (+17 more)
+Nodes (25): FloatingActionButtonProps, Box, Clone, Debug, Default, Fn, Formatter, Option (+17 more)
 
 ### Community 284 - "color_math.rs"
-Cohesion: 0.12
-Nodes (31): every_declared_pair_clears_its_own_threshold(), the_light_schemes_accent_content_only_just_clears_aa(), the_stroke_is_held_to_visibility_and_not_to_accessibility(), button_styles(), StyleSet, every_declared_pair_clears_its_own_threshold(), a_ramp_keeps_the_seeds_hue(), a_tonal_ramp_is_deterministic_and_monotone_in_luminance() (+23 more)
+Cohesion: 0.14
+Nodes (26): every_declared_pair_clears_its_own_threshold(), a_ramp_keeps_the_seeds_hue(), a_tonal_ramp_is_deterministic_and_monotone_in_luminance(), an_achromatic_seed_yields_a_grey_ramp(), composite_over(), compositing_accumulates_alpha(), compositing_over_a_clear_base_keeps_the_layers_hue(), compositing_over_an_opaque_base_keeps_it_opaque() (+18 more)
 
 ### Community 285 - "runloop.rs"
-Cohesion: 0.11
-Nodes (31): add_listener(), code_to_keycode(), DomPointerEvent, handle_key(), HasModifiers, initial_window_size(), install_listeners(), LoopState (+23 more)
+Cohesion: 0.20
+Nodes (25): add_listener(), code_to_keycode(), handle_key(), initial_window_size(), install_listeners(), LoopState, parse_fkey(), pointer_button() (+17 more)
 
 ### Community 286 - "external.rs"
 Cohesion: 0.13
@@ -2551,8 +2549,8 @@ Cohesion: 0.13
 Nodes (36): a_disabled_radio_is_on_surface_at_38(), allocate(), alpha_of(), click(), disabled_style(), fills(), hover(), hovering_and_pressing_open_the_halo() (+28 more)
 
 ### Community 288 - "raw_input.rs"
-Cohesion: 0.10
-Nodes (27): button_flags_to_element_state(), get_keyboard_physical_key(), get_raw_input_data(), get_raw_input_device_info(), get_raw_input_device_list(), get_raw_input_device_name(), get_raw_mouse_button_state(), RawDeviceInfo (+19 more)
+Cohesion: 0.11
+Nodes (24): button_flags_to_element_state(), get_raw_input_data(), get_raw_input_device_info(), get_raw_input_device_list(), get_raw_input_device_name(), get_raw_mouse_button_state(), RawDeviceInfo, register_all_mice_and_keyboards_for_raw_input() (+16 more)
 
 ### Community 289 - "ResizeScaleInternal"
 Cohesion: 0.09
@@ -2566,13 +2564,13 @@ Nodes (31): get_cursor_clip(), get_cursor_position(), get_desktop_rect(), get_fu
 Cohesion: 0.13
 Nodes (31): a_failed_plugin_is_not_retried(), a_failing_plugin_reports_its_own_detail(), a_registered_plugin_enables(), an_unregistered_plugin_reports_not_registered(), counting(), enabling_twice_calls_the_function_once(), Entry, locked() (+23 more)
 
-### Community 292 - "CupertinoParallax"
-Cohesion: 0.03
-Nodes (45): CupertinoParallax, CupertinoParallaxStyle, Default, Option, Self, SharedScroll, a_moved_offset_re_declares_the_motion(), an_offset_that_did_not_move_is_not_a_change() (+37 more)
+### Community 292 - "FluentParallax"
+Cohesion: 0.04
+Nodes (39): ParallaxProps, Clone, Debug, Default, Formatter, Result, Self, FluentParallax (+31 more)
 
 ### Community 293 - "UiDocument"
 Cohesion: 0.11
-Nodes (24): Binding, LoadOutcome, HashMap, Option, Result, String, Vec, UiDocument (+16 more)
+Nodes (23): Binding, LoadOutcome, HashMap, Option, Result, String, Vec, UiDocument (+15 more)
 
 ### Community 294 - "T"
 Cohesion: 0.12
@@ -2591,24 +2589,24 @@ Cohesion: 0.05
 Nodes (37): 10.1 组件 API 规则, 10.2 Accessibility, 10.3 Testing 要求, 10.4 Code Style, 10. 约束与规范, 11. 技术参考, 1. 项目使命, 2.1 架构图 (+29 more)
 
 ### Community 298 - "Id"
-Cohesion: 0.04
-Nodes (31): Effect<T, F>, Drop, HashSet, TrackingEffect, UpdaterEffect<T, I, C, U>, disposing_scope_drops_signals_and_effects(), effect_disposed_when_dependency_signal_disposed(), Id (+23 more)
+Cohesion: 0.06
+Nodes (17): Effect<T, F>, Drop, HashSet, UpdaterEffect<T, I, C, U>, disposing_scope_drops_signals_and_effects(), effect_disposed_when_dependency_signal_disposed(), Id, Option (+9 more)
 
 ### Community 299 - "Overlay"
-Cohesion: 0.05
-Nodes (32): Overlay, Box, Debug, Default, ElementId, Fn, Formatter, Into (+24 more)
+Cohesion: 0.04
+Nodes (51): Overlay, Box, Debug, Default, ElementId, Fn, Formatter, Into (+43 more)
 
-### Community 300 - "DslError"
-Cohesion: 0.11
-Nodes (21): a_bad_escape_names_itself(), an_unterminated_construct_points_at_where_it_started(), comments_are_skipped_and_positions_survive_them(), lex(), Lexer, Lexer<'a>, Formatter, Option (+13 more)
+### Community 300 - "lex"
+Cohesion: 0.14
+Nodes (15): a_bad_escape_names_itself(), an_unterminated_construct_points_at_where_it_started(), comments_are_skipped_and_positions_survive_them(), lex(), Lexer, Lexer<'a>, Formatter, Option (+7 more)
 
-### Community 301 - "PartialKeyEventInfo"
+### Community 301 - "winit-win32/src/keyboard.rs"
 Cohesion: 0.12
-Nodes (21): destructure_key_lparam(), ex_scancode_from_lparam(), get_kbd_state(), get_location(), KeyLParam, new_ex_scancode(), PartialKeyEventInfo, PartialLogicalKey (+13 more)
+Nodes (31): destructure_key_lparam(), ex_scancode_from_lparam(), get_async_kbd_state(), get_kbd_state(), get_location(), is_current_fake(), KeyEventBuilder, KeyLParam (+23 more)
 
 ### Community 302 - "MdIconButton"
-Cohesion: 0.18
-Nodes (11): MdIconButton, Arc, Fn, IconButtonVariant, Into, Option, PropsVariant, Self (+3 more)
+Cohesion: 0.10
+Nodes (27): MdIconButton, Arc, Fn, IconButtonVariant, Into, Option, PropsVariant, Self (+19 more)
 
 ### Community 303 - "Resource"
 Cohesion: 0.10
@@ -2623,12 +2621,12 @@ Cohesion: 0.16
 Nodes (36): a_grid_is_type_erasable_like_every_other_widget(), a_non_modifier_key_only_moves_the_cursor_without_scrolling_the_page(), allocate(), an_unparseable_value_is_refused_and_the_editor_stays_open(), arrow_keys_move_the_cursor_and_keep_it_scrolled_into_view(), clicking_selects_the_row_under_the_pointer(), columns(), double_click_opens_an_editor_only_on_an_editable_cell() (+28 more)
 
 ### Community 306 - ".new"
-Cohesion: 0.13
-Nodes (26): calc_byte_position(), create_xim_callback(), ImeContext, ImeContextClientData, preedit_caret_callback(), preedit_done_callback(), preedit_draw_callback(), preedit_start_callback() (+18 more)
+Cohesion: 0.15
+Nodes (25): calc_byte_position(), create_xim_callback(), ImeContext, ImeContextClientData, preedit_caret_callback(), preedit_done_callback(), preedit_draw_callback(), preedit_start_callback() (+17 more)
 
 ### Community 307 - "transport.rs"
 Cohesion: 0.15
-Nodes (21): AgentSession, AgentClient, bind(), is_loopback_peer(), read_message(), F, Option, Result (+13 more)
+Nodes (20): AgentClient, bind(), is_loopback_peer(), read_message(), F, Option, Result, Self (+12 more)
 
 ### Community 308 - "floom-fluent/src/button.rs"
 Cohesion: 0.22
@@ -2651,8 +2649,8 @@ Cohesion: 0.15
 Nodes (17): MaterialOtpInput, MaterialOtpInputStyle, read_reals(), read_text(), Arc, Color, Default, Fn (+9 more)
 
 ### Community 313 - "PointerEvent"
-Cohesion: 0.09
-Nodes (18): PickEvent, From, Event, ImeUpdate, Key, KeyEvent, KeyPhase, Modifiers (+10 more)
+Cohesion: 0.12
+Nodes (15): Event, ImeUpdate, Key, KeyEvent, KeyPhase, Modifiers, modifiers_are_a_bitset(), PointerButton (+7 more)
 
 ### Community 314 - "Ripple"
 Cohesion: 0.08
@@ -2667,8 +2665,8 @@ Cohesion: 0.07
 Nodes (22): Checkbox, CheckboxStyle, Press, Box, Color, Debug, Default, ElementId (+14 more)
 
 ### Community 317 - "floom-ui-composites/tests/combobox.rs"
-Cohesion: 0.09
-Nodes (28): panel_placement(), panel_request(), FnOnce, a_preselected_index_fills_the_field(), an_empty_query_clears_the_selection_and_reports_none(), an_exact_match_points_the_selection_at_the_option(), an_exact_match_reports_nothing_even_when_it_moved_the_selection(), an_unresolvable_selection_leaves_the_field_alone() (+20 more)
+Cohesion: 0.10
+Nodes (26): panel_placement(), a_preselected_index_fills_the_field(), an_empty_query_clears_the_selection_and_reports_none(), an_exact_match_points_the_selection_at_the_option(), an_exact_match_reports_nothing_even_when_it_moved_the_selection(), an_unresolvable_selection_leaves_the_field_alone(), choosing_an_index_that_does_not_exist_does_nothing(), choosing_fills_the_field_with_the_option_and_closes_the_list() (+18 more)
 
 ### Community 318 - "floom-widgets/tests/progress_linear.rs"
 Cohesion: 0.10
@@ -2678,9 +2676,9 @@ Nodes (23): a_centred_fill_is_centred_vertically_too(), a_centred_fill_is_inset_
 Cohesion: 0.16
 Nodes (27): a_bigger_elevation_offsets_the_shadow_further(), a_bordered_cell_adds_exactly_one_rect_over_a_plain_one(), a_gallery_paints_a_page_node_plus_each_samples_rects(), a_samples_radius_and_fill_reach_the_painted_rect(), button_gallery_labels(), button_gallery_scene(), CellPaint, depth_value() (+19 more)
 
-### Community 320 - "FluentDataIterator"
-Cohesion: 0.18
-Nodes (13): FluentDataIterator, FluentDataIteratorStyle, Box, Color, Default, Fn, ItemBuilder, Option (+5 more)
+### Community 320 - "RgbaIcon"
+Cohesion: 0.10
+Nodes (18): Cardinal, Icon, IconProvider, RgbaIcon, Arc, Debug, Deref, Formatter (+10 more)
 
 ### Community 321 - "floom-ui-composites/tests/counter.rs"
 Cohesion: 0.08
@@ -2691,20 +2689,20 @@ Cohesion: 0.09
 Nodes (27): Color, the_mono_flag_is_carried_and_reported(), the_style_resolves_the_theme_and_the_tokens(), the_surface_carries_the_fill_and_the_padding(), the_text_is_the_themes_ink_at_the_tokens_size(), theme(), to_engine(), tokens() (+19 more)
 
 ### Community 323 - "FluentCheckboxBtn"
-Cohesion: 0.07
-Nodes (27): CheckboxBtnProps, Box, Clone, Debug, Default, Fn, Formatter, Option (+19 more)
+Cohesion: 0.13
+Nodes (16): appearance(), build_pill(), FluentCheckboxBtn, FluentCheckboxBtnStyle, PillContext, Box, Callback, Color (+8 more)
 
-### Community 324 - "Receiver"
-Cohesion: 0.12
-Nodes (18): AgentResponse, local_channel(), LocalClient, LocalServer, AtomicU64, channel(), Receiver, Receiver<T> (+10 more)
+### Community 324 - "AtomicWaker"
+Cohesion: 0.09
+Nodes (22): AtomicWaker, Option, RefCell, Self, Send, Sync, Waker, channel() (+14 more)
 
-### Community 325 - "fluent-checkbox/tests/api.rs"
-Cohesion: 0.10
-Nodes (48): allocate(), alpha_of(), an_enabled_box_carries_no_disabled_alpha(), an_unchecked_box_draws_no_mark(), box_fills(), centred(), check_path(), checkbox_tokens() (+40 more)
+### Community 325 - "PaintOp"
+Cohesion: 0.06
+Nodes (71): allocate(), alpha_of(), an_enabled_box_carries_no_disabled_alpha(), an_unchecked_box_draws_no_mark(), box_fills(), centred(), check_path(), checkbox_tokens() (+63 more)
 
 ### Community 326 - "web_sys/event.rs"
-Cohesion: 0.09
-Nodes (29): KeyboardEvent, has_coalesced_events_support(), key(), key_code(), key_location(), key_text(), keyboard_modifiers(), mouse_modifiers() (+21 more)
+Cohesion: 0.08
+Nodes (33): KeyboardEvent, ButtonsState, has_coalesced_events_support(), key(), key_code(), key_location(), key_text(), keyboard_modifiers() (+25 more)
 
 ### Community 327 - "Runtime"
 Cohesion: 0.10
@@ -2712,31 +2710,31 @@ Nodes (18): CreateCx, Event, FrameStats, RootHandle, Box, Default, DirtyFlags, E
 
 ### Community 328 - "md_checkbox.rs"
 Cohesion: 0.11
-Nodes (49): allocate(), alpha_of(), an_enabled_box_carries_no_disabled_alpha(), an_unchecked_box_draws_no_mark(), box_fills(), centred(), check_path(), checkbox_tokens() (+41 more)
+Nodes (48): allocate(), alpha_of(), an_enabled_box_carries_no_disabled_alpha(), an_unchecked_box_draws_no_mark(), box_fills(), centred(), check_path(), checkbox_tokens() (+40 more)
 
 ### Community 329 - "svg_path.rs"
 Cohesion: 0.09
 Nodes (16): a_real_material_icon_path_parses_to_segments(), an_arc_becomes_cubics_that_end_on_the_endpoint(), an_arc_sweep_flag_flips_the_side_of_the_chord(), arc_to_cubics(), base_of(), EllipticalArc, is_command(), p() (+8 more)
 
-### Community 330 - "MaterialSlideGroup"
-Cohesion: 0.12
-Nodes (18): arrow_slot(), arrow_widget(), choose(), chosen_of(), indicator_of(), MaterialSlideGroup, MaterialSlideGroupStyle, Callback (+10 more)
+### Community 330 - "CupertinoBadge"
+Cohesion: 0.15
+Nodes (18): CupertinoBadge, CupertinoBadgeStyle, Color, Default, Into, Self, String, a_dot_builds_without_content() (+10 more)
 
 ### Community 331 - "TextEditor"
-Cohesion: 0.12
-Nodes (10): Arc, ElementId, Into, Mutex, Option, Self, SemanticsContext, SemanticsHint (+2 more)
+Cohesion: 0.07
+Nodes (18): editor_style(), language_color(), Color, EditorStyle, Color, Default, FontWeight, Self (+10 more)
 
 ### Community 332 - "tests/tree_view.rs"
 Cohesion: 0.10
 Nodes (33): a_childless_nodes_expander_box_is_empty_but_the_same_size(), a_collapsed_node_hides_its_whole_subtree(), a_node_with_no_icon_leaves_an_empty_box(), a_resolved_icon_is_drawn_at_seventy_percent_of_its_box(), a_row_has_an_indent_an_expander_an_icon_and_a_label(), a_tree_with_no_icon_resolver_still_builds(), an_expanded_leaf_reveals_nothing(), an_expanded_node_reveals_its_children() (+25 more)
 
 ### Community 333 - "FluentIconButton"
-Cohesion: 0.15
-Nodes (13): FluentIconButton, Arc, Fn, IconButtonVariant, Into, Option, PropsVariant, Self (+5 more)
+Cohesion: 0.08
+Nodes (23): IconButtonProps, IconButtonVariant, Box, Clone, Debug, Default, Fn, Formatter (+15 more)
 
 ### Community 334 - "drv.swift"
-Cohesion: 0.06
-Nodes (49): AppKit, AXUIElement, Carbon, CGEvent, CGPoint, CoreGraphics, CGFloat, CGRect (+41 more)
+Cohesion: 0.11
+Nodes (34): AppKit, AXUIElement, Carbon, CGEvent, CGPoint, CoreGraphics, Double, Int (+26 more)
 
 ### Community 335 - ".new"
 Cohesion: 0.14
@@ -2755,24 +2753,24 @@ Cohesion: 0.11
 Nodes (13): Default, ElementId, HashMap, HashSet, Item, Iterator, Option, Vec (+5 more)
 
 ### Community 339 - "IconButton"
-Cohesion: 0.07
-Nodes (20): IconButton, IconButtonIcon, IconButtonPaint, IconButtonStyle, IconButtonVariant, Arc, Color, Debug (+12 more)
+Cohesion: 0.11
+Nodes (15): IconButton, IconButtonPaint, IconButtonStyle, IconButtonVariant, Arc, Color, Debug, Default (+7 more)
 
 ### Community 340 - "EventLoop"
 Cohesion: 0.15
 Nodes (13): EventLoopExtRunOnDemand, HostEvent, KeyEvent, SurfaceEvent, EventLoop, RecordingApp, A, ActiveEventLoop (+5 more)
 
 ### Community 341 - "Self"
-Cohesion: 0.33
-Nodes (4): Into, Self, String, SemanticsContext<'a>
+Cohesion: 0.24
+Nodes (5): Into, Self, String, SemanticsAction, SemanticsContext<'a>
 
 ### Community 342 - "MaterialBottomNavigation"
 Cohesion: 0.13
 Nodes (15): MaterialBottomNavigation, MaterialBottomNavigationStyle, Arc, AtomicUsize, Callback, Color, Default, Fn (+7 more)
 
-### Community 343 - "floom-app/tests/scroll.rs"
-Cohesion: 0.17
-Nodes (20): a_container_sitting_low_reports_the_same_extent(), a_negative_offset_scrolls_the_other_way(), a_scroll_offset_moves_the_subtree_exactly(), a_wheel_event_scrolls_the_subtree_end_to_end(), a_widget_that_did_not_opt_in_is_told_nothing(), a_widget_that_opts_in_is_told_its_content_extent(), an_unscrolled_child_sits_where_layout_put_it(), clearing_the_offset_restores_the_original_position() (+12 more)
+### Community 343 - "FluentFloatingActionButton"
+Cohesion: 0.13
+Nodes (14): FluentFloatingActionButton, FluentFloatingActionButtonStyle, Box, Callback, ChildBuilder, Color, Default, Fn (+6 more)
 
 ### Community 344 - "android_table.rs"
 Cohesion: 0.08
@@ -2786,9 +2784,9 @@ Nodes (14): c_int, Result, String, VoidCookie, Window, XIC, XKeyEvent, XConnecti
 Cohesion: 0.07
 Nodes (31): image_to_buffer(), Result, SlotPool, CustomCursor, CustomCursor, Default, Self, SlotPool (+23 more)
 
-### Community 347 - "MaterialGrid"
-Cohesion: 0.12
-Nodes (17): MaterialGrid, MaterialGridStyle, Box, CellBuilder, Default, Fn, Self, Send (+9 more)
+### Community 347 - ".new"
+Cohesion: 0.11
+Nodes (11): ActiveEventLoop, Box, DisplayHandle, HandleError, Item, Iterator, RawDisplayHandle, RawWindowHandle (+3 more)
 
 ### Community 348 - "LineEnding"
 Cohesion: 0.10
@@ -2806,9 +2804,9 @@ Nodes (15): read_offset(), Arc, ElementId, Fn, Mutex, Option, Self, SemanticsHin
 Cohesion: 0.08
 Nodes (19): Chip, Box, Color, Debug, Default, ElementId, Fn, FontWeight (+11 more)
 
-### Community 352 - "CupertinoSheet"
-Cohesion: 0.09
-Nodes (29): build_card(), build_panel(), CupertinoSheet, CupertinoSheetStyle, Box, Color, Default, Option (+21 more)
+### Community 352 - "tests/pick.rs"
+Cohesion: 0.18
+Nodes (20): pick_pointer(), a_click_commits_the_selection_and_stops_picking(), a_click_on_empty_space_picks_nothing(), a_disarmed_picker_consumes_nothing(), a_pick_is_committed_once_and_then_holds(), arming_makes_the_picker_own_the_pointer(), disarming_keeps_the_selection_and_drops_the_hover(), hovering_follows_the_pointer() (+12 more)
 
 ### Community 353 - "raster.rs"
 Cohesion: 0.14
@@ -2823,16 +2821,16 @@ Cohesion: 0.06
 Nodes (32): 1.1 目标与现状的差距, 1.2 已经具备的机制（有代码证据）, 1.3 缺口清单（按严重度）, 1.4 结论, 2.1 审计基准, 2.2 覆盖矩阵, 2.3 缺口清单, 2.4 结论 (+24 more)
 
 ### Community 356 - "MdAlert"
-Cohesion: 0.12
+Cohesion: 0.13
 Nodes (17): alert_accent(), MdAlert, MdAlertStyle, Arc, Color, Default, Fn, FontWeight (+9 more)
 
 ### Community 357 - "Parser"
-Cohesion: 0.26
-Nodes (11): Expr, Op, Parser, Box, Kind, Option, Result, Self (+3 more)
+Cohesion: 0.07
+Nodes (33): Evaluator, HashMap, Result, String, Keyword, Kind, Lexer, Lexer<'source> (+25 more)
 
-### Community 358 - "host_with"
-Cohesion: 0.52
-Nodes (6): find_text(), host_with(), page_widget_is_reused_not_remounted_across_a_push(), pop_keeps_the_page_mounted_until_finish_exit(), pop_to_root_then_finish_leaves_only_the_root(), push_mounts_exactly_one_new_page()
+### Community 358 - "WifiInfo"
+Cohesion: 0.12
+Nodes (23): Env, JObject, Option, Result, String, string_call(), wifi_info(), dict_string() (+15 more)
 
 ### Community 359 - "Vuetify 0 alignment notes"
 Cohesion: 0.06
@@ -2844,11 +2842,11 @@ Nodes (20): a_flag_from_outside_is_shared_not_copied(), a_host_dismissal_clears_
 
 ### Community 361 - "FluentItemGroup"
 Cohesion: 0.12
-Nodes (19): FluentItemGroup, FluentItemGroupStyle, ItemRow, Box, Color, Default, Fn, Insets (+11 more)
+Nodes (20): FluentItemGroup, FluentItemGroupStyle, item_group_tokens(), ItemRow, Box, Color, Default, Fn (+12 more)
 
 ### Community 362 - "TextField"
-Cohesion: 0.07
-Nodes (22): Color, Debug, Default, ElementId, Fn, Formatter, ImeState, InteractionState (+14 more)
+Cohesion: 0.06
+Nodes (25): FocusRing, Color, Option, Color, Debug, Default, ElementId, Fn (+17 more)
 
 ### Community 363 - "FluentBottomNavigation"
 Cohesion: 0.13
@@ -2866,12 +2864,12 @@ Nodes (15): Color, Debug, Default, ElementId, Formatter, Option, Result, Self (+
 Cohesion: 0.06
 Nodes (32): Architecture, Cargo patches (in-repo), CHANGELOG policy, Decisions (locked), Dependency direction, Explicitly out of scope now, flome-ui (not committed in floom 1.0), floom (committed) (+24 more)
 
-### Community 367 - "cupertino-counter/tests/counter.rs"
-Cohesion: 0.13
-Nodes (24): a_bound_set_before_mount_clamps_immediately(), a_press_at_the_ceiling_still_reports_the_unchanged_value(), contrast(), counter(), counter_under(), cupertino_tokens(), own(), the_band_is_outlined_with_the_outline_token() (+16 more)
+### Community 367 - "DesignSystem"
+Cohesion: 0.08
+Nodes (46): a_bound_set_before_mount_clamps_immediately(), a_press_at_the_ceiling_still_reports_the_unchanged_value(), contrast(), counter(), counter_under(), cupertino_tokens(), own(), the_band_is_outlined_with_the_outline_token() (+38 more)
 
 ### Community 368 - "FluentListGroup"
-Cohesion: 0.13
+Cohesion: 0.14
 Nodes (13): FluentListGroup, FluentListGroupStyle, Callback, Color, Default, Fn, Into, Option (+5 more)
 
 ### Community 369 - "FluentVirtualScroller"
@@ -2884,15 +2882,15 @@ Nodes (20): item_group_tokens(), ItemRow, MdItemGroup, MdItemGroupStyle, Box, Co
 
 ### Community 371 - "LayoutCache"
 Cohesion: 0.07
-Nodes (28): Alignment, cache_key_hash(), CacheEntry, CacheKey, LayoutCache, Default, FnOnce, Self (+20 more)
+Nodes (30): Alignment, cache_key_hash(), CacheEntry, CacheKey, LayoutCache, Default, FnOnce, Self (+22 more)
 
 ### Community 372 - "soft_input/mod.rs"
 Cohesion: 0.09
 Nodes (26): soft_keyboard_state(), a_composition_in_the_middle_is_removed_from_the_committed_text(), a_trailing_composition_is_split_off(), an_offset_inside_a_surrogate_pair_degrades_to_all_committed(), filter_commits_hide(), filter_commits_visibility_transition(), filter_ignores_sub_threshold_within_visible(), ImeInput (+18 more)
 
-### Community 373 - "rect"
-Cohesion: 0.13
-Nodes (23): HelloApp, Option, TuiApp, DiffStats, rect(), a_frame_reaches_the_writer(), a_resize_rebuilds_the_grid_at_the_new_terminal_size(), a_text_resource_without_a_string_is_not_fatal() (+15 more)
+### Community 373 - "floom-renderer-tui/src/presenter.rs"
+Cohesion: 0.18
+Nodes (18): DiffStats, a_frame_reaches_the_writer(), a_resize_rebuilds_the_grid_at_the_new_terminal_size(), a_text_resource_without_a_string_is_not_fatal(), an_unchanged_second_frame_patches_nothing(), attached(), detach_stops_nothing_but_is_recorded(), first_diff_frame_is_a_full_repaint() (+10 more)
 
 ### Community 374 - "BindingRegistry"
 Cohesion: 0.17
@@ -2911,12 +2909,12 @@ Cohesion: 0.14
 Nodes (18): NamedKey, Key, Key<SmolStr>, Key<Str>, KeyCode, NativeKey, NativeKeyCode, PhysicalKey (+10 more)
 
 ### Community 378 - "LayoutRequest"
-Cohesion: 0.05
-Nodes (35): a_labeled_box_declares_its_child_and_request(), Labeled, Box, Debug, ElementId, Fn, Formatter, Into (+27 more)
+Cohesion: 0.03
+Nodes (54): a_labeled_box_declares_its_child_and_request(), Labeled, Box, Debug, ElementId, Fn, Formatter, Into (+46 more)
 
 ### Community 379 - "ActiveEventLoop"
-Cohesion: 0.08
-Nodes (16): ApplicationHandlerExtMacOS, Box<A>, &mut A, ActiveEventLoop, DeviceId, Option, Instant, StartCause (+8 more)
+Cohesion: 0.14
+Nodes (8): ApplicationHandlerExtMacOS, Box<A>, &mut A, ActiveEventLoop, DeviceId, Option, Instant, StartCause
 
 ### Community 380 - "Wrapper<V, S, E>"
 Cohesion: 0.10
@@ -2956,7 +2954,7 @@ Nodes (21): ActiveEventLoopExtX11, ApplicationName, dyn CoreActiveEventLoop + '_
 
 ### Community 389 - "Any"
 Cohesion: 0.02
-Nodes (41): CarouselDot, Color, Filler, ElementId, Option, SemanticsHint, ClickProbe, Filler (+33 more)
+Nodes (77): baseline(), chevron(), EditorPane, Explorer, fit(), item(), label(), Color (+69 more)
 
 ### Community 390 - "绘制与动画能力缺口（Canvas & Motion Gap）"
 Cohesion: 0.06
@@ -2967,16 +2965,16 @@ Cohesion: 0.15
 Nodes (12): FluentCarousel, FluentCarouselStyle, Arc, Color, Default, Fn, Option, Self (+4 more)
 
 ### Community 392 - "MaterialListGroup"
-Cohesion: 0.14
-Nodes (13): MaterialListGroup, MaterialListGroupStyle, Callback, Color, Default, Fn, Into, Option (+5 more)
+Cohesion: 0.16
+Nodes (11): MaterialListGroup, Callback, Default, Fn, Into, Option, Self, Send (+3 more)
 
-### Community 393 - "FluentBadge"
-Cohesion: 0.15
-Nodes (18): FluentBadge, FluentBadgeStyle, Color, Default, Into, Self, String, a_dot_builds_without_content() (+10 more)
+### Community 393 - "CompositorProp"
+Cohesion: 0.17
+Nodes (5): apply_composite(), FrameStats, MotionSample, SmallVec, CompositorProp
 
 ### Community 394 - "Chart"
 Cohesion: 0.18
-Nodes (6): Chart, ElementId, SemanticsContext, Vec, sample(), StrokeColumn
+Nodes (7): Chart, ChartSeries, ElementId, SemanticsContext, Vec, sample(), StrokeColumn
 
 ### Community 395 - "FluentSystemBar"
 Cohesion: 0.17
@@ -2987,8 +2985,8 @@ Cohesion: 0.16
 Nodes (27): a_combobox_contributes_its_trigger(), a_disabled_combobox_paints_differently_from_a_live_one(), a_hand_back_for_another_overlay_does_not_shut_it(), a_key_event_reaches_the_child_rather_than_being_swallowed(), a_shut_combobox_asks_for_nothing(), an_outside_press_does_not_come_straight_back(), clearing_the_query_restores_every_option(), closing_closes_the_handle_the_host_issued() (+19 more)
 
 ### Community 397 - "FluentMenu"
-Cohesion: 0.12
-Nodes (12): FluentMenu, FluentMenuStyle, Color, Default, Fn, Into, Self, Send (+4 more)
+Cohesion: 0.14
+Nodes (10): FluentMenu, Default, Fn, Into, Self, Send, String, Sync (+2 more)
 
 ### Community 398 - "FluentRangeSlider"
 Cohesion: 0.13
@@ -2996,7 +2994,7 @@ Nodes (14): FluentRangeSlider, FluentRangeSliderStyle, ratio_at(), read_range(),
 
 ### Community 399 - "Syntax"
 Cohesion: 0.13
-Nodes (18): AtomicU8, char_len(), char_literal_end(), Lang, markdown(), Color, FontWeight, Option (+10 more)
+Nodes (16): AtomicU8, char_len(), char_literal_end(), Lang, markdown(), Color, FontWeight, Option (+8 more)
 
 ### Community 400 - "floom-ui-composites/tests/list_item.rs"
 Cohesion: 0.17
@@ -3015,8 +3013,8 @@ Cohesion: 0.12
 Nodes (18): clamp_value(), FluentNumberInput, FluentNumberInputStyle, read_number(), Arc, Color, Default, Fn (+10 more)
 
 ### Community 404 - "Brush"
-Cohesion: 0.07
-Nodes (37): panel_background(), a_diagonal_axis_weights_both_coordinates(), a_linear_gradient_samples_its_axis_by_projection(), a_radial_gradient_samples_by_distance_from_its_center(), alpha_scaling_touches_every_stop_and_no_channel_else(), an_empty_stop_list_is_transparent_not_a_panic(), Brush, degenerate_geometry_samples_the_first_stop_instead_of_dividing_by_zero() (+29 more)
+Cohesion: 0.09
+Nodes (22): panel_background(), Color, Option, SkiaCommand, a_diagonal_axis_weights_both_coordinates(), a_linear_gradient_samples_its_axis_by_projection(), a_radial_gradient_samples_by_distance_from_its_center(), alpha_scaling_touches_every_stop_and_no_channel_else() (+14 more)
 
 ### Community 405 - "Props"
 Cohesion: 0.18
@@ -3038,16 +3036,16 @@ Nodes (12): Entry, Resource, resource_cost(), ResourceKind, ResourceRegistry, Ar
 Cohesion: 0.17
 Nodes (24): a_disabled_slider_dims_to_the_tokens(), a_disabled_slider_is_disabled_in_both_places(), allocate(), alpha_of(), disabled_style(), fills_of(), mounting_carries_the_props_as_f64(), mounting_reports_a_height_of_this_kits_thumb() (+16 more)
 
-### Community 410 - "ActiveEventLoop"
+### Community 410 - "WinitViewState"
 Cohesion: 0.11
-Nodes (10): ActiveEventLoop, Arc, CoreEventLoopProxy, CoreOwnedDisplayHandle, CustomCursor, HasDisplayHandle, Modifiers, Mutex (+2 more)
+Nodes (15): CGFloat, CGRect, NSString, Option, RefCell, Retained, Self, WinitView (+7 more)
 
 ### Community 411 - "MaterialNumberInput"
 Cohesion: 0.12
 Nodes (18): clamp_value(), MaterialNumberInput, MaterialNumberInputStyle, read_number(), Arc, Color, Default, Fn (+10 more)
 
 ### Community 412 - "RwSignal<T, S>"
-Cohesion: 0.12
+Cohesion: 0.13
 Nodes (13): ReadSignal<T, S>, Clone, Copy, Debug, Default, Eq, Formatter, PartialEq (+5 more)
 
 ### Community 413 - "tests/primitives.rs"
@@ -3059,7 +3057,7 @@ Cohesion: 0.12
 Nodes (14): Drop, ModifiersState, NonNull, Option, Self, SmolStr, Vec, xcb_connection_t (+6 more)
 
 ### Community 415 - "WinitState"
-Cohesion: 0.33
+Cohesion: 0.37
 Nodes (7): Connection, QueueHandle, Self, WlSeat, WinitState, SeatCapability, SeatHandler
 
 ### Community 416 - "Floom 2.0 Architecture Specification"
@@ -3075,7 +3073,7 @@ Cohesion: 0.15
 Nodes (18): c_long, c_uchar, Dnd, DndDataParseError, DndState, Arc, Atom, From (+10 more)
 
 ### Community 419 - "MdCounter"
-Cohesion: 0.14
+Cohesion: 0.15
 Nodes (10): counter_tokens(), MdCounter, MdCounterStyle, Color, Counter, Default, Fn, Self (+2 more)
 
 ### Community 420 - "backends/mod.rs"
@@ -3091,8 +3089,8 @@ Cohesion: 0.16
 Nodes (25): a_change_of_mode_asks_for_the_other_row(), allocate(), click(), dispatch_any(), kit(), ops_of(), paint(), row_of() (+17 more)
 
 ### Community 423 - "paint_snapshot"
-Cohesion: 0.13
-Nodes (31): a_focus_ring_goes_around_the_whole_control_and_only_while_focused(), a_rim_is_stroked_inside_the_indicators_own_edge(), a_supplied_mark_is_painted_as_a_vector_icon(), allocate(), an_unstyled_checkbox_paints_the_engine_colours(), checkbox_toggles_and_publishes_checked_state(), fire_down_up(), hover() (+23 more)
+Cohesion: 0.19
+Nodes (22): a_disabled_radio_keeps_its_label_undimmed_by_default(), a_disabled_selected_radio_stays_at_full_strength(), a_disabled_unselected_radio_is_halved_in_alpha(), a_full_width_rim_leaves_no_interior_to_see_through(), a_halo_draws_only_for_the_states_its_gates_open(), a_named_disabled_colour_covers_the_rim_dot_and_label(), allocate(), an_unstyled_radio_paints_the_engine_colours() (+14 more)
 
 ### Community 424 - "tests/model.rs"
 Cohesion: 0.11
@@ -3118,9 +3116,9 @@ Nodes (15): FluentFooter, FluentFooterStyle, footer_tokens(), Box, ChildBuilder,
 Cohesion: 0.17
 Nodes (24): a_chevron_widens_the_trigger_by_the_gap_and_the_icon(), a_disabled_trigger_paints_the_disabled_triple(), a_row_is_found_below_the_panel_padding_not_at_the_popup_edge(), a_short_option_list_still_asks_for_the_style_min_width(), a_zero_border_width_paints_no_border(), allocate(), another_control_painting_the_same_colour_is_not_the_style_being_read(), no_min_width() (+16 more)
 
-### Community 430 - "EmbeddedPlatform"
-Cohesion: 0.13
-Nodes (8): EmbeddedPlatform, Framebuffer, framebuffer_software_path(), Option, PlatformId, Self, Vec, Window
+### Community 430 - "PlatformCapabilities"
+Cohesion: 0.07
+Nodes (12): Capability, desktop_capabilities(), EmbeddedPlatform, Framebuffer, framebuffer_software_path(), Option, PlatformId, Self (+4 more)
 
 ### Community 431 - "tests/surface.rs"
 Cohesion: 0.12
@@ -3162,29 +3160,29 @@ Nodes (17): AbiVersion, CommandSchema, ComponentSchema, EventSchema, Ident, Lite
 Cohesion: 0.21
 Nodes (24): documented_examples(), documented_layers(), every_documented_example_either_exists_or_is_marked_gated(), every_floom2_example_is_documented(), example_directories(), first_token(), gate_layers(), read() (+16 more)
 
-### Community 441 - "src/protocol.rs"
-Cohesion: 0.08
-Nodes (34): AgentError, AgentRequest, Command, Payload, PerformanceSummary, PointDto, ComponentSchema, Display (+26 more)
+### Community 441 - ".dispatch"
+Cohesion: 0.12
+Nodes (16): AgentError, AgentSession<'a>, PointDto, role_name(), Into, Option, Result, Selector (+8 more)
 
 ### Community 442 - "tests/media.rs"
 Cohesion: 0.16
 Nodes (23): a_media_control_is_type_erasable_like_every_other_widget(), a_paused_track_does_not_tick(), allocate(), an_unseekable_track_disables_the_seek_slider(), an_unseekable_track_refuses_seeks_without_changing_state(), clicking_an_unseekable_bar_does_nothing(), clicking_the_play_button_toggles_transport(), clicking_the_seek_bar_seeks_proportionally() (+15 more)
 
 ### Community 443 - "MdCard"
-Cohesion: 0.08
-Nodes (18): CupertinoCardStyle, Color, shadow_from(), CardProps, Default, Self, ShadowData, MdCard (+10 more)
+Cohesion: 0.13
+Nodes (11): CardProps, Default, Self, MdCard, MdCardStyle, Color, Default, Insets (+3 more)
 
-### Community 444 - "CupertinoDataIterator"
+### Community 444 - "FluentDataIterator"
 Cohesion: 0.06
-Nodes (33): CupertinoDataIterator, CupertinoDataIteratorStyle, Box, Color, Default, Fn, ItemBuilder, Option (+25 more)
+Nodes (33): DataIteratorProps, Clone, Debug, Default, Formatter, Result, Self, FluentDataIterator (+25 more)
 
 ### Community 445 - "MotifHints"
 Cohesion: 0.10
 Nodes (15): MotifHints, MwmHints, Arc, Atom, Default, From, Result, Self (+7 more)
 
-### Community 446 - "FluentTextField"
+### Community 446 - "CupertinoDataIterator"
 Cohesion: 0.18
-Nodes (9): FluentTextField, Color, Default, Fn, Into, PaintColor, Self, String (+1 more)
+Nodes (13): CupertinoDataIterator, CupertinoDataIteratorStyle, Box, Color, Default, Fn, ItemBuilder, Option (+5 more)
 
 ### Community 447 - "CupertinoCounter"
 Cohesion: 0.15
@@ -3195,8 +3193,8 @@ Cohesion: 0.13
 Nodes (18): the_content_follows_the_flag(), the_style_resolves_the_tokens(), the_transition_is_the_one_this_kit_plays(), theme(), tokens(), ExpandTransitionTokens, Default, Self (+10 more)
 
 ### Community 449 - "FluentHover"
-Cohesion: 0.08
-Nodes (22): HoverProps, Box, Clone, Debug, Default, Fn, Formatter, Option (+14 more)
+Cohesion: 0.15
+Nodes (12): FluentHover, FluentHoverStyle, Box, Callback, ChildBuilder, Color, Default, Fn (+4 more)
 
 ### Community 450 - "swift.rs"
 Cohesion: 0.22
@@ -3222,9 +3220,9 @@ Nodes (22): Contributing, Repository layout, Compatibility matrix, Floom ecosyst
 Cohesion: 0.11
 Nodes (17): is_pressed(), map_button_source(), map_key(), map_modifiers(), map_mouse_button(), map_named(), map_physical(), map_scroll_delta() (+9 more)
 
-### Community 456 - "FadeTransitionTokens"
-Cohesion: 0.13
-Nodes (18): the_content_follows_the_flag(), the_style_resolves_the_tokens(), the_transition_is_the_one_this_kit_plays(), theme(), tokens(), FadeTransitionTokens, Default, Self (+10 more)
+### Community 456 - "cupertino-dialog/tests/dialog.rs"
+Cohesion: 0.15
+Nodes (20): a_flag_from_outside_is_shared_not_copied(), a_host_dismissal_clears_the_caller_s_flag(), a_shut_dialog_asks_for_nothing(), actions_accumulate(), close_reports_whether_it_changed_anything(), dialog(), open_and_is_open_read_and_write_one_flag(), props_report_the_v1_shaped_callbacks() (+12 more)
 
 ### Community 457 - "src/importer.rs"
 Cohesion: 0.19
@@ -3239,7 +3237,7 @@ Cohesion: 0.12
 Nodes (15): ComposeStatus, Deref, Drop, NonNull, Option, Self, SmolStr, Target (+7 more)
 
 ### Community 460 - "MaterialHover"
-Cohesion: 0.16
+Cohesion: 0.15
 Nodes (12): MaterialHover, MaterialHoverStyle, Box, Callback, ChildBuilder, Color, Default, Fn (+4 more)
 
 ### Community 461 - "KeyboardState"
@@ -3271,8 +3269,8 @@ Cohesion: 0.12
 Nodes (15): footer_tokens(), MdFooter, MdFooterStyle, Box, ChildBuilder, Color, Default, Fn (+7 more)
 
 ### Community 468 - "TextFieldProps"
-Cohesion: 0.09
-Nodes (20): CupertinoTextField, Color, Default, Fn, Into, PaintColor, Self, String (+12 more)
+Cohesion: 0.05
+Nodes (38): CupertinoTextField, Color, Default, Fn, Into, PaintColor, Self, String (+30 more)
 
 ### Community 469 - "floom-elements Phase 1 Implementation Plan"
 Cohesion: 0.08
@@ -3287,8 +3285,8 @@ Cohesion: 0.15
 Nodes (16): BenchmarkRun, comparable_paths(), DiffDrivenPolicy, RepairPolicy, Screen, Self, String, Vec (+8 more)
 
 ### Community 472 - "app_delegate.rs"
-Cohesion: 0.29
-Nodes (9): current_window_scene(), delegate_class(), register_early_window(), NSString, Option, Retained, set_on_open_url(), OnOpenUrl (+1 more)
+Cohesion: 0.23
+Nodes (10): current_window_scene(), delegate_class(), register_early_window(), NSString, Option, Retained, set_on_open_url(), A (+2 more)
 
 ### Community 473 - "FluentSheet"
 Cohesion: 0.09
@@ -3298,9 +3296,9 @@ Nodes (30): build_card(), build_panel(), FluentSheet, FluentSheetStyle, Box, Col
 Cohesion: 0.15
 Nodes (10): counter_tokens(), FluentCounter, FluentCounterStyle, Color, Counter, Default, Fn, Self (+2 more)
 
-### Community 475 - "read_flag"
-Cohesion: 0.05
-Nodes (33): NavigationDrawerProps, NavigationDrawerSide, Default, Self, ElementId, Vec, MaterialNavigationDrawer, MaterialNavigationDrawerStyle (+25 more)
+### Community 475 - "with_alpha"
+Cohesion: 0.04
+Nodes (59): CupertinoNavigationDrawer, CupertinoNavigationDrawerStyle, panel_request(), presence(), Color, Default, Option, Self (+51 more)
 
 ### Community 476 - "MaterialRating"
 Cohesion: 0.13
@@ -3314,53 +3312,53 @@ Nodes (21): Administrative Actions, Contributing, Contributing, Contribution Gui
 Cohesion: 0.15
 Nodes (13): control_box(), FluentPagination, FluentPaginationStyle, Callback, Color, Default, Fn, Option (+5 more)
 
-### Community 479 - "notifier.rs"
-Cohesion: 0.12
-Nodes (13): Inner, Notified<T>, Notifier<T>, Context, Drop, Future, OnceLock, Output (+5 more)
+### Community 479 - "Notified"
+Cohesion: 0.11
+Nodes (18): Inner, Notified, Notified<T>, Notifier, Notifier<T>, Arc, Context, Drop (+10 more)
 
 ### Community 480 - "ModifierKeyState"
 Cohesion: 0.20
 Nodes (11): get_modifier(), Modifier, ModifierKeymap, ModifierKeyState, HashMap, KeyCode, ModifiersState, Option (+3 more)
 
 ### Community 481 - "cupertino_text_field.rs"
-Cohesion: 0.14
-Nodes (33): a_disabled_field_does_not_accept_typing(), a_disabled_field_is_not_the_enabled_one(), allocate(), field_tokens(), fills(), focusing_recolours_the_rim_without_thickening_or_ringing_it(), hover(), hovering_tints_the_rim_and_leaving_puts_outline_back() (+25 more)
+Cohesion: 0.13
+Nodes (35): a_disabled_field_does_not_accept_typing(), a_disabled_field_is_not_the_enabled_one(), allocate(), field_tokens(), fills(), focusing_recolours_the_rim_without_thickening_or_ringing_it(), hover(), hovering_tints_the_rim_and_leaving_puts_outline_back() (+27 more)
 
 ### Community 482 - "fluent_text_field.rs"
-Cohesion: 0.14
-Nodes (33): a_disabled_field_does_not_accept_typing(), a_disabled_field_is_not_the_enabled_one(), allocate(), field_tokens(), fills(), focusing_strokes_the_ring_and_the_rim_and_at_rest_only_the_rim(), hover(), hovering_leaves_this_kits_rim_alone() (+25 more)
+Cohesion: 0.13
+Nodes (35): a_disabled_field_does_not_accept_typing(), a_disabled_field_is_not_the_enabled_one(), allocate(), field_tokens(), fills(), focusing_strokes_the_ring_and_the_rim_and_at_rest_only_the_rim(), hover(), hovering_leaves_this_kits_rim_alone() (+27 more)
 
 ### Community 483 - "MaterialPagination"
 Cohesion: 0.15
 Nodes (13): control_box(), MaterialPagination, MaterialPaginationStyle, Callback, Color, Default, Fn, Option (+5 more)
 
 ### Community 484 - "CupertinoDefaultsProvider"
-Cohesion: 0.11
-Nodes (15): CupertinoDefaultsProvider, Box, ChildBuilder, Default, Fn, HashMap, Option, Self (+7 more)
+Cohesion: 0.04
+Nodes (39): CupertinoDefaultsProvider, Box, ChildBuilder, Default, Fn, HashMap, Option, Self (+31 more)
 
 ### Community 485 - "PatchOp"
 Cohesion: 0.17
 Nodes (16): diff(), NodeState, HashMap, Option, Vec, structure(), ApplyReport, LiveTree (+8 more)
 
-### Community 486 - "MdOverlay"
-Cohesion: 0.12
-Nodes (21): build_card(), MdOverlay, MdOverlayStyle, Arc, Box, Callback, Color, Default (+13 more)
-
-### Community 487 - "WinitView"
+### Community 486 - "cupertino-speed_dial/tests/speed_dial.rs"
 Cohesion: 0.16
-Nodes (12): get_left_modifier_code(), get_right_modifier_code(), key_to_modifier(), mouse_button(), Key, KeyCode, ModifiersState, MouseButton (+4 more)
+Nodes (21): a_disabled_dial_does_not_open(), a_disabled_dial_is_v1_s_dimmed_pair(), an_action_reports_its_index(), fab_fill(), fab_icon_ink(), fan_buttons(), kit(), paint() (+13 more)
+
+### Community 487 - "FluentSnackbar"
+Cohesion: 0.13
+Nodes (10): FluentSnackbar, Callback, Default, Fn, Into, Option, Self, Send (+2 more)
 
 ### Community 488 - "md_text_field.rs"
-Cohesion: 0.14
-Nodes (33): a_disabled_field_does_not_accept_typing(), a_disabled_field_is_not_the_enabled_one(), allocate(), field_tokens(), fills(), focusing_strokes_a_thicker_rim_and_no_ring(), hover(), hovering_leaves_this_kits_rim_alone() (+25 more)
+Cohesion: 0.13
+Nodes (35): a_disabled_field_does_not_accept_typing(), a_disabled_field_is_not_the_enabled_one(), allocate(), field_tokens(), fills(), focusing_strokes_a_thicker_rim_and_no_ring(), hover(), hovering_leaves_this_kits_rim_alone() (+27 more)
 
 ### Community 489 - "fluent_slider.rs"
 Cohesion: 0.18
 Nodes (22): a_disabled_slider_paints_the_enabled_palette(), a_disabled_slider_reaches_the_engine_as_disabled(), allocate(), alpha_of(), mounting_carries_the_props_as_f64(), mounting_reports_a_height_of_this_kits_thumb(), neither_a_halo_nor_a_drop_shadow(), none_of_the_interaction_variants_are_this_kits_own() (+14 more)
 
 ### Community 490 - "floom-inspector/tests/protocol.rs"
-Cohesion: 0.17
-Nodes (13): Option, String, Vec, TreeNodeInfo, TreeSnapshot, a_child_that_points_outside_the_node_set_is_rejected(), a_tree_snapshot_refuses_a_foreign_version(), a_tree_snapshot_round_trips_through_json() (+5 more)
+Cohesion: 0.08
+Nodes (24): ProtocolError, Display, Formatter, Result, String, floom_types::Color, Rgba, Color (+16 more)
 
 ### Community 491 - "FluentImage"
 Cohesion: 0.20
@@ -3371,8 +3369,8 @@ Cohesion: 0.15
 Nodes (17): a_flat_line_strokes_at_a_constant_height(), a_line_series_yields_one_segment_per_gap(), a_mixed_chart_says_so_rather_than_picking_one_kind(), a_single_point_series_has_no_segments_but_does_have_a_marker(), a_zero_baseline_is_added_to_a_range_that_would_hide_the_bars(), allocate(), bar_heights_are_proportional_to_their_values(), bars() (+9 more)
 
 ### Community 493 - "winit-appkit/src/event.rs"
-Cohesion: 0.17
-Nodes (22): code_to_key(), code_to_location(), create_key_event(), dummy_event(), event_mods(), extra_function_key_to_code(), get_logical_key_char(), get_modifierless_char() (+14 more)
+Cohesion: 0.14
+Nodes (24): code_to_key(), code_to_location(), create_key_event(), dummy_event(), event_mods(), extra_function_key_to_code(), get_logical_key_char(), get_modifierless_char() (+16 more)
 
 ### Community 494 - "RedoxSocket"
 Cohesion: 0.17
@@ -3383,11 +3381,11 @@ Cohesion: 0.24
 Nodes (21): a_crossfade_swap_is_golden_frame_by_frame(), a_fading_blurred_card_is_golden_frame_by_frame(), a_fading_card_is_golden_frame_by_frame(), a_fading_gradient_card_is_golden_frame_by_frame(), a_presence_child_entering_is_golden_frame_by_frame(), a_presence_child_leaving_is_golden_frame_by_frame(), a_shared_element_flight_is_golden_frame_by_frame(), card_alpha() (+13 more)
 
 ### Community 496 - "RadioProps"
-Cohesion: 0.09
-Nodes (17): CupertinoRadio, Default, Fn, Into, Self, String, RadioProps, Box (+9 more)
+Cohesion: 0.05
+Nodes (29): CupertinoRadio, Default, Fn, Into, Self, String, RadioProps, Box (+21 more)
 
 ### Community 497 - "CupertinoHover"
-Cohesion: 0.15
+Cohesion: 0.16
 Nodes (12): CupertinoHover, CupertinoHoverStyle, Box, Callback, ChildBuilder, Color, Default, Fn (+4 more)
 
 ### Community 498 - "CupertinoBottomNavigation"
@@ -3395,15 +3393,15 @@ Cohesion: 0.13
 Nodes (15): CupertinoBottomNavigation, CupertinoBottomNavigationStyle, Arc, AtomicUsize, Callback, Color, Default, Fn (+7 more)
 
 ### Community 499 - "MaterialSystemBar"
-Cohesion: 0.21
-Nodes (6): MaterialSystemBar, Default, Option, PaintColor, Self, Surface
+Cohesion: 0.17
+Nodes (9): MaterialSystemBar, MaterialSystemBarStyle, Color, Default, Insets, Option, PaintColor, Self (+1 more)
 
 ### Community 500 - "MdExpansionPanels"
 Cohesion: 0.13
 Nodes (17): MdExpansionPanels, MdExpansionPanelsStyle, MdPanelIndicator, PanelItem, Arc, Box, Default, Fn (+9 more)
 
 ### Community 501 - "util/mod.rs"
-Cohesion: 0.13
+Cohesion: 0.15
 Nodes (10): has_flag(), maybe_change(), Option, T, Delta, Delta<T>, Default, Self (+2 more)
 
 ### Community 502 - "Batch 20 — 余量组件（3 组件 × 3 DS = 9 crate，总 98×3=294）"
@@ -3418,13 +3416,13 @@ Nodes (16): CupertinoTextarea, CupertinoTextareaStyle, read_text(), Arc, Color, 
 Cohesion: 0.15
 Nodes (12): CupertinoKbd, Box, ChildBuilder, Default, Fn, Into, Option, Self (+4 more)
 
-### Community 505 - "FluentAppBar"
+### Community 505 - "CupertinoAppBar"
 Cohesion: 0.04
-Nodes (46): AppBarProps, Default, Self, String, FluentAppBar, FluentAppBarStyle, Color, Default (+38 more)
+Nodes (46): CupertinoAppBar, CupertinoAppBarStyle, Color, Default, Into, Option, Self, String (+38 more)
 
-### Community 506 - "MdTextField"
-Cohesion: 0.19
-Nodes (9): MdTextField, Color, Default, Fn, Into, PaintColor, Self, String (+1 more)
+### Community 506 - "md-speed_dial/tests/speed_dial.rs"
+Cohesion: 0.16
+Nodes (21): a_disabled_dial_does_not_open(), a_disabled_dial_is_v1_s_dimmed_pair(), an_action_reports_its_index(), fab_fill(), fab_icon_ink(), fan_buttons(), kit(), paint() (+13 more)
 
 ### Community 507 - "cupertino-card/tests/card.rs"
 Cohesion: 0.17
@@ -3443,16 +3441,16 @@ Cohesion: 0.16
 Nodes (21): a_digest_is_reproducible(), a_digest_round_trips_through_its_text_form(), a_one_lsb_shift_everywhere_stays_inside_the_tolerance(), a_sequence_that_moves_is_not_frozen(), a_sequence_that_never_moves_is_frozen(), a_shift_far_outside_the_tolerance_is_caught(), a_stored_sequence_parses_back_with_its_labels(), a_transparent_block_reports_no_colour() (+13 more)
 
 ### Community 511 - "WebPresenter"
-Cohesion: 0.08
-Nodes (29): Presenter, blit(), canvas_element(), resize_canvas(), Default, HtmlCanvasElement, Option, Self (+21 more)
+Cohesion: 0.06
+Nodes (38): Presenter, blit(), canvas_element(), resize_canvas(), Default, HtmlCanvasElement, Option, Self (+30 more)
 
 ### Community 512 - "CupertinoButton"
-Cohesion: 0.10
-Nodes (21): base_colors(), build_button(), CupertinoButton, CupertinoButtonStyle, disabled_colors(), label_widget(), Arc, Color (+13 more)
+Cohesion: 0.07
+Nodes (41): base_colors(), build_button(), CupertinoButton, CupertinoButtonStyle, disabled_colors(), label_widget(), Arc, Color (+33 more)
 
-### Community 513 - "Notification"
-Cohesion: 0.20
-Nodes (15): default_sound(), notification_content(), notification_request(), ns_string(), request_authorization(), AnyObject, Result, String (+7 more)
+### Community 513 - "floom-plugin-notifications/src/ios.rs"
+Cohesion: 0.47
+Nodes (9): default_sound(), notification_content(), notification_request(), ns_string(), request_authorization(), AnyObject, Result, String (+1 more)
 
 ### Community 514 - "fluent-item_group/tests/item_group.rs"
 Cohesion: 0.22
@@ -3462,21 +3460,21 @@ Nodes (16): an_empty_group_still_builds(), both_callbacks_are_reported_and_agree
 Cohesion: 0.13
 Nodes (21): AsyncRequestSerial, dyn Window + '_, Result, WindowExtStartupNotify, AtomicBool, BindError, Connection, Dispatch (+13 more)
 
-### Community 516 - "cupertino-button/tests/button.rs"
-Cohesion: 0.19
-Nodes (20): a_disabled_button_does_not_fire(), a_disabled_button_has_no_hover_of_its_own(), button(), painted(), painted_radius(), Color, Option, style_of() (+12 more)
+### Community 516 - "winit-win32/src/window.rs"
+Cohesion: 0.15
+Nodes (14): com_initialized(), ComInitialized, force_window_active(), init(), InitData, register_window_class(), Drop, HWND (+6 more)
 
 ### Community 517 - "MonitorHandle"
 Cohesion: 0.13
 Nodes (13): MonitorHandle, Box, Cow, Eq, Item, Iterator, Mode, Option (+5 more)
 
-### Community 518 - "Result"
-Cohesion: 0.24
-Nodes (8): Parser<'a>, ParserError, Result, Self, Setting<'a>, SettingType, NonZeroUsize, TryFrom
+### Community 518 - "xsettings.rs"
+Cohesion: 0.12
+Nodes (22): assert_int(), assert_string(), empty(), Endianness, parse_xsettings(), Parser, Parser<'a>, ParserError (+14 more)
 
-### Community 519 - "md-window/tests/window.rs"
-Cohesion: 0.17
-Nodes (21): click(), clicking_the_next_arrow_moves_the_page_on(), clicking_the_previous_arrow_wraps_around(), fill_of(), kit(), ops_of(), page(), paint() (+13 more)
+### Community 519 - "MaterialContainer"
+Cohesion: 0.16
+Nodes (11): MaterialContainer, MaterialContainerStyle, Box, ChildBuilder, Color, Default, Fn, Option (+3 more)
 
 ### Community 520 - "cupertino-kbd/tests/kbd.rs"
 Cohesion: 0.09
@@ -3488,7 +3486,7 @@ Nodes (25): a_change_of_mode_asks_for_the_other_row(), allocate(), click(), disp
 
 ### Community 522 - "ide/src/lib.rs"
 Cohesion: 0.16
-Nodes (23): click(), click_row(), clicking_a_file_opens_it_and_the_old_document_leaves_the_scene(), clicking_a_tab_switches_back_and_typing_marks_the_file_dirty(), editor_element(), has(), Ide, main_column() (+15 more)
+Nodes (24): click(), click_row(), clicking_a_file_opens_it_and_the_old_document_leaves_the_scene(), clicking_a_tab_switches_back_and_typing_marks_the_file_dirty(), editor_element(), has(), Ide, main_column() (+16 more)
 
 ### Community 523 - "CupertinoListItem"
 Cohesion: 0.16
@@ -3499,16 +3497,16 @@ Cohesion: 0.13
 Nodes (18): the_content_follows_the_flag(), the_style_resolves_the_tokens(), the_transition_is_the_one_this_kit_plays(), theme(), tokens(), Default, Self, ScaleTransitionTokens (+10 more)
 
 ### Community 525 - "CupertinoTimePicker"
-Cohesion: 0.13
-Nodes (19): CupertinoTimePicker, CupertinoTimePickerStyle, Arc, Color, Default, Fn, Into, Option (+11 more)
+Cohesion: 0.14
+Nodes (16): CupertinoTimePicker, Arc, Color, Default, Fn, Into, Option, Self (+8 more)
 
 ### Community 526 - "CupertinoToolbar"
-Cohesion: 0.10
-Nodes (23): bar_of(), CupertinoToolbar, CupertinoToolbarStyle, leading_group_of(), ActionsBuilder, Box, Color, Default (+15 more)
+Cohesion: 0.07
+Nodes (28): bar_of(), CupertinoToolbar, CupertinoToolbarStyle, leading_group_of(), ActionsBuilder, Box, Color, Default (+20 more)
 
 ### Community 527 - "CupertinoTreeview"
-Cohesion: 0.15
-Nodes (14): CupertinoTreeview, resolve_icon(), Arc, Default, Fn, Option, Self, Send (+6 more)
+Cohesion: 0.06
+Nodes (42): CupertinoTreeview, resolve_icon(), Arc, Default, Fn, Option, Self, Send (+34 more)
 
 ### Community 528 - "GestureArena"
 Cohesion: 0.19
@@ -3539,8 +3537,8 @@ Cohesion: 0.10
 Nodes (23): bar_of(), FluentToolbar, FluentToolbarStyle, leading_group_of(), ActionsBuilder, Box, Color, Default (+15 more)
 
 ### Community 535 - "FluentTreeview"
-Cohesion: 0.17
-Nodes (11): FluentTreeview, resolve_icon(), Arc, Default, Fn, Option, Self, Send (+3 more)
+Cohesion: 0.09
+Nodes (29): FluentTreeview, resolve_icon(), Arc, Default, Fn, Option, Self, Send (+21 more)
 
 ### Community 536 - "FluentOtpInput"
 Cohesion: 0.15
@@ -3559,16 +3557,16 @@ Cohesion: 0.10
 Nodes (23): bar_of(), leading_group_of(), MdToolbar, MdToolbarStyle, ActionsBuilder, Box, Color, Default (+15 more)
 
 ### Community 540 - "MdTreeview"
-Cohesion: 0.15
-Nodes (14): MdTreeview, resolve_icon(), Arc, Default, Fn, Option, Self, Send (+6 more)
+Cohesion: 0.09
+Nodes (29): MdTreeview, resolve_icon(), Arc, Default, Fn, Option, Self, Send (+21 more)
 
 ### Community 541 - "FocusManager"
 Cohesion: 0.13
 Nodes (17): FocusDirection, FocusManager, FocusScopeId, ElementId, Option, Self, Vec, Scope (+9 more)
 
 ### Community 542 - "tests/runner.rs"
-Cohesion: 0.21
-Nodes (20): a_click_reaches_a_button(), a_panicking_button_callback_becomes_a_report_not_a_crash(), a_window_born_at_two_x_hands_the_host_two_x(), app_services_resolve_and_outlive_windows(), child_scopes_compose_for_route_level_state(), closing_the_window_detaches_the_surface(), content_edited_outside_the_frame_loop_drives_frames_until_it_settles(), DisposalLog (+12 more)
+Cohesion: 0.20
+Nodes (21): a_click_reaches_a_button(), a_panicking_button_callback_becomes_a_report_not_a_crash(), a_window_born_at_two_x_hands_the_host_two_x(), app_services_resolve_and_outlive_windows(), child_scopes_compose_for_route_level_state(), closing_the_window_detaches_the_surface(), content_edited_outside_the_frame_loop_drives_frames_until_it_settles(), DisposalLog (+13 more)
 
 ### Community 543 - "ImeState"
 Cohesion: 0.17
@@ -3583,8 +3581,8 @@ Cohesion: 0.14
 Nodes (12): CupertinoPullToRefresh, CupertinoPullToRefreshStyle, Arc, Color, Default, Fn, Option, PullDistance (+4 more)
 
 ### Community 546 - "Profiler"
-Cohesion: 0.17
-Nodes (8): Profiler, Clone, Default, Drop, Result, String, Vec, StageGuard
+Cohesion: 0.08
+Nodes (26): AllocSummary, CacheStats, FrameSummary, PerformanceSnapshot, Option, String, Vec, StageSpan (+18 more)
 
 ### Community 547 - "cupertino-pagination/tests/pagination.rs"
 Cohesion: 0.21
@@ -3631,8 +3629,8 @@ Cohesion: 0.15
 Nodes (12): MaterialCarousel, MaterialCarouselStyle, Arc, Color, Default, Fn, Option, Self (+4 more)
 
 ### Community 558 - "CupertinoCombobox"
-Cohesion: 0.14
-Nodes (13): CupertinoCombobox, resolve_icon(), Arc, Default, Fn, Into, Option, Self (+5 more)
+Cohesion: 0.07
+Nodes (25): CupertinoCombobox, resolve_icon(), Arc, Default, Fn, Into, Option, Self (+17 more)
 
 ### Community 559 - "CupertinoFooter"
 Cohesion: 0.12
@@ -3655,36 +3653,36 @@ Cohesion: 0.24
 Nodes (17): clicking_a_button_updates_the_label(), clicks_outside_any_widget_are_dropped(), column(), Counter, fixed(), focus_follows_the_pointer_and_enables_the_keyboard(), layout_assigns_real_bounds_to_every_node(), new_counter() (+9 more)
 
 ### Community 564 - "SimpleStyling"
-Cohesion: 0.08
-Nodes (13): Default, FontWeight, Option, Self, Send, Sync, SimpleStyling, Styling (+5 more)
+Cohesion: 0.04
+Nodes (31): main(), Color, Default, FontWeight, Self, TextStyle, Vec, RustStyling (+23 more)
 
 ### Community 565 - "OtpInputProps"
 Cohesion: 0.12
 Nodes (11): OtpInputProps, Box, Clone, Debug, Default, Fn, Formatter, Option (+3 more)
 
 ### Community 566 - "FluentCombobox"
-Cohesion: 0.07
-Nodes (25): ComboboxProps, Box, Clone, Debug, Default, Fn, Formatter, Option (+17 more)
+Cohesion: 0.15
+Nodes (13): FluentCombobox, resolve_icon(), Arc, Default, Fn, Into, Option, Self (+5 more)
 
 ### Community 567 - "PropValue"
-Cohesion: 0.11
-Nodes (17): Row, row_in(), Binding, BindingKind, Color, PropValue, Rgba, Display (+9 more)
+Cohesion: 0.16
+Nodes (11): Binding, BindingKind, Color, PropValue, Rgba, From, Into, Option (+3 more)
 
 ### Community 568 - "src/scale.rs"
 Cohesion: 0.12
 Nodes (11): ElevationLevel, hex_color(), motion_tokens_build_the_engine_transition_they_name(), MotionDuration, MotionEasing, MotionTransition, Color, Easing (+3 more)
 
 ### Community 569 - "md-datatable/tests/datatable.rs"
-Cohesion: 0.14
-Nodes (30): a_clicked_row_answers_with_its_index(), a_table_with_no_callback_still_consumes_the_click(), cell_text(), click(), fills(), kit(), ops_of(), paint() (+22 more)
+Cohesion: 0.13
+Nodes (31): a_clicked_row_answers_with_its_index(), a_table_with_no_callback_still_consumes_the_click(), cell_text(), click(), fills(), kit(), ops_of(), paint() (+23 more)
 
 ### Community 570 - "PressExpand"
-Cohesion: 0.17
-Nodes (7): Phase, PressExpand, ElementId, Option, Self, SemanticsHint, the_two_phases_declare_different_specs()
+Cohesion: 0.14
+Nodes (12): a_resting_widget_declares_an_inert_animation(), app(), Phase, press(), PressExpand, ElementId, Option, Self (+4 more)
 
-### Community 571 - "LocalReadRef"
-Cohesion: 0.16
-Nodes (13): LocalReadRef, LocalReadRef<'a, T>, ReadRef<'a, T>, Arc, Deref, Mutex, MutexGuard, Rc (+5 more)
+### Community 571 - "signal.rs"
+Cohesion: 0.09
+Nodes (23): Location, LocalReadRef, LocalReadRef<'a, T>, ReadRef<'a, T>, Arc, Deref, Mutex, MutexGuard (+15 more)
 
 ### Community 572 - "FluentCode"
 Cohesion: 0.15
@@ -3703,16 +3701,16 @@ Cohesion: 0.23
 Nodes (13): a_bordered_elevated_bar_with_content_still_declares_all_three(), an_unbordered_bar_paints_no_band(), an_unbordered_footer_has_no_separator_at_all(), building_the_footer_publishes_its_height(), footer(), only_an_elevated_footer_casts_a_shadow(), the_bar_declares_its_own_height_and_full_width(), the_content_goes_inside_the_box() (+5 more)
 
 ### Community 576 - "CircularProgress"
-Cohesion: 0.10
-Nodes (10): CircularProgress, CircularProgressStyle, Color, Default, ElementId, Option, Revision, Self (+2 more)
+Cohesion: 0.07
+Nodes (19): CircularProgress, CircularProgressStyle, Color, Default, ElementId, Option, Revision, Self (+11 more)
 
 ### Community 577 - "cupertino-bottom_navigation/tests/bottom_navigation.rs"
 Cohesion: 0.12
 Nodes (29): icon(), kit(), label_of(), label_painted(), ops_of(), paint(), pointer_over(), Box (+21 more)
 
-### Community 578 - "FluentDefaultsProvider"
-Cohesion: 0.14
-Nodes (12): FluentDefaultsProvider, Box, ChildBuilder, Default, Fn, HashMap, Option, Self (+4 more)
+### Community 578 - "SelectProps"
+Cohesion: 0.10
+Nodes (14): Box, Clone, Debug, Default, Fn, Formatter, Option, Result (+6 more)
 
 ### Community 579 - "floom-renderer-software/tests/filters.rs"
 Cohesion: 0.23
@@ -3754,9 +3752,9 @@ Nodes (19): align_of(), cell(), CupertinoDataTable, CupertinoDataTableStyle, row
 Cohesion: 0.12
 Nodes (11): FileInputProps, Box, Clone, Debug, Default, Fn, Formatter, Option (+3 more)
 
-### Community 589 - "CupertinoAppBar"
-Cohesion: 0.10
-Nodes (21): CupertinoAppBar, CupertinoAppBarStyle, Color, Default, Into, Option, Self, String (+13 more)
+### Community 589 - "floom-style-demo/src/main.rs"
+Cohesion: 0.23
+Nodes (19): act_1_a_gradient_is_not_one_colour(), act_2_elevation_is_a_shadow_not_a_second_rect(), act_3_the_hover_fade_is_implicit(), act_4_the_token_is_the_transition(), act_5_a_filter_is_not_a_shadow(), act_6_frost_reads_what_is_behind_it(), button_fill(), elevation() (+11 more)
 
 ### Community 590 - "CupertinoForm"
 Cohesion: 0.09
@@ -3783,16 +3781,16 @@ Cohesion: 0.12
 Nodes (12): Box, Clone, Debug, Default, Fn, Formatter, Option, Result (+4 more)
 
 ### Community 596 - "CupertinoListGroup"
-Cohesion: 0.14
-Nodes (13): CupertinoListGroup, CupertinoListGroupStyle, Callback, Color, Default, Fn, Into, Option (+5 more)
+Cohesion: 0.15
+Nodes (11): CupertinoListGroup, Callback, Default, Fn, Into, Option, Self, Send (+3 more)
 
 ### Community 597 - "floom-cupertino/src/tokens.rs"
 Cohesion: 0.27
 Nodes (10): a_translucent_role_keeps_its_alpha(), cupertino_nests_corners_instead_of_casting_shadows(), CupertinoColors, CupertinoTheme, Color, Self, Theme, the_spacing_scale_sits_on_the_eight_point_grid() (+2 more)
 
 ### Community 598 - "floom-ui-ir/src/schema.rs"
-Cohesion: 0.10
-Nodes (32): class_name(), component_schema(), ComponentSchema, example_for(), PropertyInfo, String, Vec, token_rels() (+24 more)
+Cohesion: 0.09
+Nodes (35): class_name(), component_schema(), ComponentSchema, example_for(), PropertyInfo, String, Vec, token_rels() (+27 more)
 
 ### Community 599 - "MaterialPullToRefresh"
 Cohesion: 0.14
@@ -3806,9 +3804,9 @@ Nodes (29): a_disabled_trigger_does_not_answer(), box_of(), box_painted(), kit()
 Cohesion: 0.11
 Nodes (22): build_card(), close_button(), FluentDialog, FluentDialogStyle, Box, Callback, Default, Fn (+14 more)
 
-### Community 602 - "PhysicalSize"
-Cohesion: 0.03
-Nodes (69): Cardinal, PhysicalSize, AsAny, Foo, FooTrait, Eq, Mutex, PartialEq (+61 more)
+### Community 602 - "BadIcon"
+Cohesion: 0.11
+Nodes (22): BadIcon, Display, Pixel, RaiiCursor, RaiiIcon, Arc, Debug, Default (+14 more)
 
 ### Community 603 - "ansi.rs"
 Cohesion: 0.24
@@ -3823,7 +3821,7 @@ Cohesion: 0.03
 Nodes (54): CupertinoText, CupertinoTextStyle, Color, Default, FontWeight, Into, Self, String (+46 more)
 
 ### Community 606 - "FluentTabs"
-Cohesion: 0.13
+Cohesion: 0.14
 Nodes (15): FluentTabs, FluentTabsStyle, Arc, AtomicUsize, Color, Default, Fn, FontWeight (+7 more)
 
 ### Community 607 - "MdButton"
@@ -3838,25 +3836,25 @@ Nodes (15): MenuItem, MenuProps, Box, Clone, Debug, Default, Fn, Formatter (+7 m
 Cohesion: 0.14
 Nodes (13): MaterialChipGroup, MaterialChipGroupStyle, Callback, Color, Default, Fn, Into, Option (+5 more)
 
-### Community 610 - "IconButtonProps"
-Cohesion: 0.12
-Nodes (12): IconButtonProps, IconButtonVariant, Box, Clone, Debug, Default, Fn, Formatter (+4 more)
+### Community 610 - "WindowApp"
+Cohesion: 0.18
+Nodes (14): find_label(), idle_probe_from_env(), IdleProbe, IdleSnapshot, main(), process_cpu_seconds(), Arc, AtomicI32 (+6 more)
 
-### Community 611 - "xsettings.rs"
-Cohesion: 0.20
-Nodes (14): assert_int(), assert_string(), empty(), Endianness, parse_xsettings(), Parser, read_settings(), Atom (+6 more)
+### Community 611 - "fluent-switch/tests/switch.rs"
+Cohesion: 0.17
+Nodes (15): a_disabled_switch_paints_the_explicit_disabled_colours(), a_knob_inside_the_track_with_2px_gaps(), checking_does_not_resize_anything(), fluent(), hover_and_press_do_not_change_anything(), the_dead_thumb_offset_is_not_reproduced(), the_disabled_alphas_are_v1_s_own_two_values(), the_engine_label_is_empty() (+7 more)
 
 ### Community 612 - "CapabilityLimitedAccessibilityAdapter"
-Cohesion: 0.13
-Nodes (13): AccessibilityAdapter, AccessibilityFrame, CapabilityLimitedAccessibilityAdapter, AccessibilityCapabilities, ElementId, HashMap, Option, Self (+5 more)
+Cohesion: 0.18
+Nodes (8): AccessibilityAdapter, AccessibilityFrame, CapabilityLimitedAccessibilityAdapter, AccessibilityCapabilities, ElementId, HashMap, Option, Self
 
 ### Community 613 - "MaterialCode"
 Cohesion: 0.15
 Nodes (12): MaterialCode, Box, ChildBuilder, Default, Fn, Into, Option, Self (+4 more)
 
-### Community 614 - "winit-win32/src/keyboard.rs"
-Cohesion: 0.18
-Nodes (20): get_async_kbd_state(), IdentifiedPendingMessage, is_current_fake(), KeyEventBuilder, MessageAsKeyEvent, next_kbd_msg(), PartialText, PendingEventQueue (+12 more)
+### Community 614 - "Vec"
+Cohesion: 0.38
+Nodes (7): IdentifiedPendingMessage, PendingEventQueue, PendingEventQueue<T>, PendingMessage, PendingMessageToken, T, Vec
 
 ### Community 615 - "TimePickerProps"
 Cohesion: 0.12
@@ -3867,7 +3865,7 @@ Cohesion: 0.14
 Nodes (29): a_disabled_trigger_does_not_answer(), box_of(), box_painted(), kit(), ops_of(), paint(), row_of(), Box (+21 more)
 
 ### Community 617 - "FluentTextarea"
-Cohesion: 0.14
+Cohesion: 0.13
 Nodes (16): FluentTextarea, FluentTextareaStyle, read_text(), Arc, Color, Default, Fn, Into (+8 more)
 
 ### Community 618 - "reconcile_surfaces.rs"
@@ -3878,13 +3876,13 @@ Nodes (9): an_outside_press_dismisses_a_popup_and_clears_its_present(), dialog_e
 Cohesion: 0.12
 Nodes (19): align_of(), cell(), MaterialDataTable, MaterialDataTableStyle, row_surface(), Color, Default, Fn (+11 more)
 
-### Community 620 - "MaterialDefaultsProvider"
-Cohesion: 0.14
-Nodes (12): MaterialDefaultsProvider, Box, ChildBuilder, Default, Fn, HashMap, Option, Self (+4 more)
+### Community 620 - ".new"
+Cohesion: 0.16
+Nodes (10): OwnedDisplayHandle, BorrowedFd, Connection, CoreCustomCursor, CoreOwnedDisplayHandle, DisplayHandle, HandleError, Ping (+2 more)
 
-### Community 621 - "CupertinoBadge"
+### Community 621 - "FluentBadge"
 Cohesion: 0.07
-Nodes (37): CupertinoBadge, CupertinoBadgeStyle, Color, Default, Into, Self, String, a_dot_builds_without_content() (+29 more)
+Nodes (37): BadgeProps, String, FluentBadge, FluentBadgeStyle, Color, Default, Into, Self (+29 more)
 
 ### Community 622 - "MaterialKbd"
 Cohesion: 0.15
@@ -3911,11 +3909,11 @@ Cohesion: 0.22
 Nodes (18): a_pull_short_of_the_threshold_fires_nothing(), column(), indicator(), kit(), paint(), Box, Color, the_box_is_painted_v1_s_colour() (+10 more)
 
 ### Community 628 - "definitions.rs"
-Cohesion: 0.15
+Cohesion: 0.16
 Nodes (20): IDataObjectVtbl, IDropTargetVtbl, ITaskbarList, ITaskbarList2, ITaskbarList2Vtbl, ITaskbarListVtbl, IUnknownVtbl, BOOL (+12 more)
 
 ### Community 629 - "MaterialTextarea"
-Cohesion: 0.13
+Cohesion: 0.14
 Nodes (16): MaterialTextarea, MaterialTextareaStyle, read_text(), Arc, Color, Default, Fn, Into (+8 more)
 
 ### Community 630 - "MaterialEmptyState"
@@ -3931,7 +3929,7 @@ Cohesion: 0.15
 Nodes (15): CupertinoColorPicker, CupertinoColorPickerStyle, from_paint(), Arc, Color, Default, Fn, Option (+7 more)
 
 ### Community 633 - "FluentAlert"
-Cohesion: 0.13
+Cohesion: 0.12
 Nodes (17): alert_accent(), FluentAlert, FluentAlertStyle, Arc, Color, Default, Fn, FontWeight (+9 more)
 
 ### Community 634 - "MaterialImage"
@@ -3964,7 +3962,7 @@ Nodes (27): a_dense_table_is_shorter_by_v1_s_factors(), cell_text(), cells(), fi
 
 ### Community 641 - "FluentButton"
 Cohesion: 0.10
-Nodes (22): base_colors(), build_button(), disabled_colors(), FluentButton, FluentButtonStyle, label_widget(), Arc, Color (+14 more)
+Nodes (21): base_colors(), build_button(), disabled_colors(), FluentButton, FluentButtonStyle, label_widget(), Arc, Color (+13 more)
 
 ### Community 642 - "ImeContext"
 Cohesion: 0.17
@@ -3988,23 +3986,23 @@ Nodes (28): CupertinoTooltip, CupertinoTooltipStyle, Color, Default, Into, Optio
 
 ### Community 647 - "SemanticsState"
 Cohesion: 0.20
-Nodes (7): Into, Option, Self, String, SemanticsHint, SemanticsRole, SemanticsState
+Nodes (8): to_a11y_state(), Into, Option, Self, String, SemanticsHint, SemanticsRole, SemanticsState
 
 ### Community 648 - "compile_fixtures.rs"
 Cohesion: 0.29
 Nodes (17): demo_video_player(), id(), ComponentSchema, wide_type_coverage(), assert_success(), c_demo_header_compiles(), c_wide_header_compiles(), cpp_demo_facade_compiles() (+9 more)
 
-### Community 649 - "floom-widget-cupertino-icon"
-Cohesion: 0.12
-Nodes (17): floom-widget-cupertino-alert, floom-widget-cupertino-autocomplete, floom-widget-cupertino-checkbox, floom-widget-cupertino-checkbox_btn, floom-widget-cupertino-combobox, floom-widget-cupertino-confirm_edit, floom-widget-cupertino-dialog, floom-widget-cupertino-expansion_panels (+9 more)
+### Community 649 - "floom-widget-cupertino-checkbox"
+Cohesion: 0.67
+Nodes (3): floom-widget-cupertino-checkbox, floom-widget-cupertino-icon-paths, floom-widget-cupertino-select
 
 ### Community 650 - "read_capabilities"
-Cohesion: 0.18
-Nodes (20): active_network(), Capabilities, connection_type(), connectivity_manager(), connectivity_status(), from_transports(), has_capability(), is_connected() (+12 more)
+Cohesion: 0.13
+Nodes (28): active_network(), Capabilities, connection_type(), connectivity_manager(), connectivity_status(), from_transports(), has_capability(), is_connected() (+20 more)
 
 ### Community 651 - "DesktopAccessibilityAdapter"
-Cohesion: 0.16
-Nodes (9): SemanticsAction, DesktopAccessibilityAdapter, AccessibilityCapabilities, Box, Default, ElementId, Fn, HashMap (+1 more)
+Cohesion: 0.19
+Nodes (8): DesktopAccessibilityAdapter, AccessibilityCapabilities, Box, Default, ElementId, Fn, HashMap, Self
 
 ### Community 652 - "jni.rs"
 Cohesion: 0.14
@@ -4018,9 +4016,9 @@ Nodes (21): obj(), anchor(), create_anchor(), display_density(), input_method_ma
 Cohesion: 0.14
 Nodes (17): authenticate(), available_biometric(), has_fingerprint(), keyguard_manager(), Env, JObject, Result, String (+9 more)
 
-### Community 655 - "TreeviewNode"
-Cohesion: 0.13
-Nodes (13): Box, Clone, Debug, Default, Fn, Formatter, Option, Result (+5 more)
+### Community 655 - "AutocompleteProps"
+Cohesion: 0.11
+Nodes (12): AutocompleteProps, Box, Clone, Debug, Default, Fn, Formatter, Option (+4 more)
 
 ### Community 656 - "SystemChromeStyle"
 Cohesion: 0.14
@@ -4034,9 +4032,9 @@ Nodes (14): a_disabled_switch_paints_the_explicit_disabled_colours(), a_knob_ins
 Cohesion: 0.19
 Nodes (8): IdAllocator, IdSlot, IdSlotState, Default, ElementId, Option, Self, Vec
 
-### Community 659 - "fluent_icon_path"
-Cohesion: 0.14
-Nodes (13): fluent_icon_path(), fluent_icon_svg(), String, fluent_icon(), a_name_in_an_engine_widget_out(), the_icon_can_be_handed_out_twice(), a_named_icon_resolves_to_real_path_data(), an_unknown_name_falls_back_to_a_drawn_shape() (+5 more)
+### Community 659 - "IconProps"
+Cohesion: 0.07
+Nodes (24): IconProps, Default, Option, Self, String, fluent_icon_path(), fluent_icon_svg(), String (+16 more)
 
 ### Community 660 - "cupertino-banner/tests/banner.rs"
 Cohesion: 0.16
@@ -4047,16 +4045,16 @@ Cohesion: 0.14
 Nodes (15): decode_component(), parse(), parses_full_and_bare_urls(), percent_escapes_and_plus_decode(), query_helpers_cover_repeats_and_missing(), Display, Formatter, Item (+7 more)
 
 ### Community 662 - "WindowAttributesMacOS"
-Cohesion: 0.20
-Nodes (3): Default, Self, WindowAttributesMacOS
+Cohesion: 0.05
+Nodes (14): ActivationPolicy, ActiveEventLoopExtMacOS, dyn ActiveEventLoop + '_, dyn Window + '_, EventLoopBuilderExtMacOS, MonitorHandle, MonitorHandleExtMacOS, c_void (+6 more)
 
 ### Community 663 - "Slider"
 Cohesion: 0.08
 Nodes (17): Color, Debug, Default, ElementId, Fn, Formatter, InteractionState, KeyEvent (+9 more)
 
-### Community 664 - "dyn Window + '_"
-Cohesion: 0.09
-Nodes (3): dyn Window + '_, OptionAsAlt, String
+### Community 664 - "cupertino-image/tests/image.rs"
+Cohesion: 0.20
+Nodes (16): fill_of(), kit(), ops_of(), paint(), Color, Option, String, Vec (+8 more)
 
 ### Community 665 - "CupertinoMenu"
 Cohesion: 0.12
@@ -4074,9 +4072,9 @@ Nodes (14): KWinBlurManager, BindError, Connection, Dispatch, Event, GlobalData,
 Cohesion: 0.20
 Nodes (15): FractionalScaling, FractionalScalingManager, BindError, Connection, Dispatch, Event, GlobalData, GlobalList (+7 more)
 
-### Community 669 - "fluent-treeview/tests/treeview.rs"
-Cohesion: 0.17
-Nodes (18): TreeNode, Vec, to_engine_nodes(), a_toggle_through_the_shared_forest_is_visible(), fluent(), props_nodes(), Color, Vec (+10 more)
+### Community 669 - "ActiveEventLoop"
+Cohesion: 0.12
+Nodes (11): ActiveEventLoop, Box, CoreEventLoopProxy, HasDisplayHandle, Item, Iterator, QueueHandle, RefCell (+3 more)
 
 ### Community 670 - "RangeSliderProps"
 Cohesion: 0.12
@@ -4086,9 +4084,9 @@ Nodes (10): RangeSliderProps, Box, Clone, Debug, Default, Fn, Formatter, Option 
 Cohesion: 0.18
 Nodes (12): deveco_log(), deveco_log_from_c(), deveco_log_with(), deveco_log_with_level(), format_message(), normalize_log_domain(), OhosLogLevel, AsRef (+4 more)
 
-### Community 672 - "AlertProps"
-Cohesion: 0.11
-Nodes (12): AlertProps, AlertVariant, Box, Clone, Debug, Default, Fn, Formatter (+4 more)
+### Community 672 - "EventHandler"
+Cohesion: 0.13
+Nodes (10): EventHandler, Box, Debug, FnOnce, Formatter, Option, R, RefCell (+2 more)
 
 ### Community 673 - "fluent-banner/tests/banner.rs"
 Cohesion: 0.16
@@ -4107,16 +4105,16 @@ Cohesion: 0.07
 Nodes (36): CupertinoBreadcrumbs, CupertinoBreadcrumbsStyle, Callback, Color, Default, Fn, FontWeight, Option (+28 more)
 
 ### Community 677 - "fluent-button/tests/button.rs"
-Cohesion: 0.20
-Nodes (19): a_disabled_button_does_not_fire(), a_disabled_button_has_no_hover_of_its_own(), button(), painted(), Color, Option, style_of(), the_click_callback_fires() (+11 more)
+Cohesion: 0.19
+Nodes (20): a_disabled_button_does_not_fire(), a_disabled_button_has_no_hover_of_its_own(), button(), painted(), painted_radius(), Color, Option, style_of() (+12 more)
 
 ### Community 679 - "CounterProps"
-Cohesion: 0.12
+Cohesion: 0.11
 Nodes (12): CounterProps, Box, Clone, Debug, Default, Fn, Formatter, Option (+4 more)
 
 ### Community 680 - "MaterialStepper"
-Cohesion: 0.13
-Nodes (16): MaterialStepper, MaterialStepperStyle, read_selected(), Arc, Color, Default, Fn, Option (+8 more)
+Cohesion: 0.09
+Nodes (19): Default, Self, StepperProps, MaterialStepper, MaterialStepperStyle, read_selected(), Arc, Color (+11 more)
 
 ### Community 681 - "CupertinoResponsive"
 Cohesion: 0.05
@@ -4166,9 +4164,9 @@ Nodes (36): FluentBreadcrumbs, FluentBreadcrumbsStyle, Callback, Color, Default,
 Cohesion: 0.21
 Nodes (18): a_bounded_repeat_ends_on_its_last_cycles_endpoint(), a_curved_tween_publishes_a_changing_velocity(), a_finite_repeat_is_retired_when_it_is_done(), a_repeat_of_a_spring_plays_it_once(), a_repeating_tween_wraps_instead_of_ending(), a_retargeted_animation_settles_on_its_new_target(), a_reversing_repeat_comes_back_the_way_it_went(), a_tween_takes_the_shape_of_its_curve() (+10 more)
 
-### Community 695 - "SelectProps"
-Cohesion: 0.07
-Nodes (24): CupertinoSelect, Default, Fn, Into, Option, Self, Send, String (+16 more)
+### Community 695 - "CupertinoSelect"
+Cohesion: 0.16
+Nodes (10): CupertinoSelect, Default, Fn, Into, Option, Self, Send, String (+2 more)
 
 ### Community 696 - "md-breadcrumbs/tests/breadcrumbs.rs"
 Cohesion: 0.07
@@ -4182,9 +4180,9 @@ Nodes (8): composites(), engine_widgets(), excluded(), is_v1(), main(), norm(), 
 Cohesion: 0.24
 Nodes (15): a_fractional_value_fills_the_stars_below_it(), a_read_only_rating_does_not_answer(), a_tap_fills_the_stars_below_it(), kit(), paint(), Color, Option, Vec (+7 more)
 
-### Community 699 - "dpi/src/lib.rs"
-Cohesion: 0.14
-Nodes (9): ensure_attrs_do_not_panic(), S, test_logical_position(), test_logical_size(), test_logical_unity(), test_physical_position(), test_physical_size(), test_physical_unit() (+1 more)
+### Community 699 - "SnackbarProps"
+Cohesion: 0.12
+Nodes (11): Box, Clone, Debug, Default, Fn, Formatter, Option, Result (+3 more)
 
 ### Community 700 - "CupertinoTable"
 Cohesion: 0.14
@@ -4195,8 +4193,8 @@ Cohesion: 0.14
 Nodes (14): banner_accent(), FluentBanner, FluentBannerStyle, Arc, Color, Default, Fn, Into (+6 more)
 
 ### Community 702 - "MdIcon"
-Cohesion: 0.06
-Nodes (22): CupertinoIcon, CupertinoIconStyle, Color, Into, Self, String, IconProps, Default (+14 more)
+Cohesion: 0.19
+Nodes (7): MdIcon, MdIconStyle, Color, Default, Into, Self, String
 
 ### Community 703 - "allocate"
 Cohesion: 0.46
@@ -4247,8 +4245,8 @@ Cohesion: 0.20
 Nodes (13): a_nested_span_is_included_in_its_parent(), allocation_counters_do_their_own_arithmetic(), cache_trackers_report_hit_rate_and_only_that(), Fn, Rc, RefCell, Self, Vec (+5 more)
 
 ### Community 715 - "CupertinoAutocomplete"
-Cohesion: 0.07
-Nodes (26): CupertinoAutocomplete, resolve_icon(), Arc, Default, Fn, Into, Option, Self (+18 more)
+Cohesion: 0.13
+Nodes (14): CupertinoAutocomplete, resolve_icon(), Arc, Default, Fn, Into, Option, Self (+6 more)
 
 ### Community 716 - "CupertinoImage"
 Cohesion: 0.19
@@ -4323,11 +4321,11 @@ Cohesion: 0.16
 Nodes (12): MdSelect, resolve_icon(), Color, Default, Fn, Into, Option, Self (+4 more)
 
 ### Community 734 - "MaterialChip"
-Cohesion: 0.20
-Nodes (8): MaterialChip, MaterialChipStyle, Color, Default, Fn, Into, Self, String
+Cohesion: 0.11
+Nodes (22): MaterialChip, MaterialChipStyle, Color, Default, Fn, Into, Self, String (+14 more)
 
 ### Community 735 - "MaterialTabs"
-Cohesion: 0.14
+Cohesion: 0.13
 Nodes (15): MaterialTabs, MaterialTabsStyle, Arc, AtomicUsize, Color, Default, Fn, FontWeight (+7 more)
 
 ### Community 736 - "Floom 2.0 Android Example"
@@ -4362,17 +4360,17 @@ Nodes (21): the_inset_flag_chooses_the_other_padding(), the_row_declares_the_tok
 Cohesion: 0.18
 Nodes (7): DirtySet, invalidate(), propagate_layout(), DirtyFlags, ElementId, Self, Vec
 
-### Community 744 - "cupertino-floating_action_button/tests/floating_action_button.rs"
+### Community 744 - "fluent-floating_action_button/tests/floating_action_button.rs"
 Cohesion: 0.10
-Nodes (25): click(), Color, ElementId, the_button_is_a_circle_of_the_tokens_size(), the_click_fires_and_a_disabled_button_does_not(), the_elevation_is_the_shadow_v1_wrote(), the_fill_is_the_accent_and_the_disabled_one_is_muted(), the_style_resolves_the_tokens_and_the_palette() (+17 more)
+Nodes (25): FloatingActionButtonTokens, Default, Self, click(), Color, ElementId, the_button_is_a_circle_of_the_tokens_size(), the_click_fires_and_a_disabled_button_does_not() (+17 more)
 
 ### Community 745 - "cupertino-icon_button/tests/icon_button.rs"
 Cohesion: 0.22
 Nodes (17): a_button_with_no_callback_is_fine(), a_disabled_buttons_glyph_is_the_disabled_foreground(), an_explicit_size_replaces_the_token_and_leaves_the_glyph(), button(), cupertino(), Color, the_crate_really_reads_cupertino_tokens(), the_disabled_colours_are_two_alphas_of_on_surface() (+9 more)
 
-### Community 746 - "FluentNavigationDrawer"
-Cohesion: 0.10
-Nodes (25): FluentNavigationDrawer, FluentNavigationDrawerStyle, Color, Default, Option, Self, a_closed_drawer_mounts_nothing(), kit() (+17 more)
+### Community 746 - "read_flag"
+Cohesion: 0.04
+Nodes (47): arrow_request(), Carousel, CarouselDot, CarouselStyle, current_index(), dots_request(), Arc, Color (+39 more)
 
 ### Community 747 - "md-infinite_scroller/tests/infinite_scroller.rs"
 Cohesion: 0.17
@@ -4390,9 +4388,9 @@ Nodes (25): a_mandatory_chip_stays_chosen(), a_mandatory_chip_that_changes_nothi
 Cohesion: 0.12
 Nodes (10): CarouselProps, Box, Clone, Debug, Default, Fn, Formatter, Option (+2 more)
 
-### Community 751 - "tests/brush.rs"
-Cohesion: 0.24
-Nodes (15): a_brush_with_no_stops_draws_nothing_rather_than_panicking(), a_card_still_paints_its_own_fill_where_its_shadow_is(), a_linear_gradient_changes_colour_across_the_shape(), a_radial_gradient_falls_off_from_its_centre(), a_shadow_inks_the_pixels_past_the_shape_that_cast_it(), a_shadow_is_blurred_and_the_blur_is_what_reaches_sideways(), a_transparent_shadow_draws_nothing_and_says_so(), alpha() (+7 more)
+### Community 751 - "Shadow"
+Cohesion: 0.10
+Nodes (28): FluentMenuStyle, Color, a_brush_with_no_stops_draws_nothing_rather_than_panicking(), a_card_still_paints_its_own_fill_where_its_shadow_is(), a_linear_gradient_changes_colour_across_the_shape(), a_radial_gradient_falls_off_from_its_centre(), a_shadow_inks_the_pixels_past_the_shape_that_cast_it(), a_shadow_is_blurred_and_the_blur_is_what_reaches_sideways() (+20 more)
 
 ### Community 752 - "paths.rs"
 Cohesion: 0.19
@@ -4423,16 +4421,16 @@ Cohesion: 0.18
 Nodes (23): click(), clicking_a_tab_moves_the_highlight(), collect_ops(), fill_of(), kit(), only_the_active_tab_has_the_indicator(), ops_of_tree(), paint() (+15 more)
 
 ### Community 760 - "fluent-date_picker/tests/date_picker.rs"
-Cohesion: 0.17
-Nodes (24): FluentDatePickerStyle, a_disabled_picker_does_not_answer(), calendar_height(), cell_rect(), choosing_a_day_sets_the_value_and_closes_the_calendar(), fills(), kit(), ops_of() (+16 more)
+Cohesion: 0.18
+Nodes (23): a_disabled_picker_does_not_answer(), calendar_height(), cell_rect(), choosing_a_day_sets_the_value_and_closes_the_calendar(), fills(), kit(), ops_of(), paint() (+15 more)
 
 ### Community 762 - "MaterialCalendar"
 Cohesion: 0.15
 Nodes (17): MaterialCalendar, MaterialCalendarStyle, Arc, CalendarDate, Color, Default, Fn, Option (+9 more)
 
 ### Community 763 - "cupertino-avatar/tests/avatar.rs"
-Cohesion: 0.29
-Nodes (10): painted(), Color, FontWeight, Option, the_props_size_wins_over_the_tokens(), the_shape_is_circle(), the_style_resolves_this_kits_own_palette(), theme() (+2 more)
+Cohesion: 0.08
+Nodes (33): painted(), Color, FontWeight, Option, the_props_size_wins_over_the_tokens(), the_shape_is_circle(), the_style_resolves_this_kits_own_palette(), theme() (+25 more)
 
 ### Community 766 - "md-hover/tests/hover.rs"
 Cohesion: 0.20
@@ -4451,8 +4449,8 @@ Cohesion: 0.14
 Nodes (22): a_flat_series_is_drawn_against_a_range_of_one(), an_empty_series_draws_no_bars(), bar_fill(), bar_size(), bars(), kit(), paint(), Box (+14 more)
 
 ### Community 771 - "AttachedSurface"
-Cohesion: 0.13
-Nodes (25): to_handles(), attached(), Size, a_labels_characters_reach_the_terminal_grid(), a_wider_terminal_puts_the_same_glyph_in_a_different_column(), busiest_row(), host_with_label(), Size (+17 more)
+Cohesion: 0.21
+Nodes (17): to_handles(), attached(), Size, AttachedSurface, fractional_logical_size_rounds_up(), headless_surface_has_no_handles(), physical_size_follows_scale(), Option (+9 more)
 
 ### Community 772 - "TargetPlatform"
 Cohesion: 0.13
@@ -4534,13 +4532,13 @@ Nodes (5): NativeViewPool<K>, Default, K, Option, Self
 Cohesion: 0.27
 Nodes (13): an_empty_pasteboard_reads_as_no_text(), private_pasteboard(), read_text(), Option, Retained, String, string_type(), system_read_text() (+5 more)
 
-### Community 809 - "W"
-Cohesion: 0.17
-Nodes (24): a_disabled_input_does_not_move_the_code(), a_masked_box_shows_a_dot(), input_of(), kit(), ops_of(), paint(), painted_text(), Box (+16 more)
-
-### Community 810 - "fluent-otp_input/tests/otp_input.rs"
+### Community 809 - "cupertino-otp_input/tests/otp_input.rs"
 Cohesion: 0.18
 Nodes (22): a_disabled_input_does_not_move_the_code(), a_masked_box_shows_a_dot(), input_of(), kit(), ops_of(), paint(), painted_text(), Box (+14 more)
+
+### Community 810 - "W"
+Cohesion: 0.18
+Nodes (23): a_disabled_input_does_not_move_the_code(), a_masked_box_shows_a_dot(), input_of(), kit(), ops_of(), paint(), painted_text(), Box (+15 more)
 
 ### Community 811 - "fluent-tabs/tests/tabs.rs"
 Cohesion: 0.18
@@ -4590,25 +4588,25 @@ Nodes (21): body_of(), cell_paint(), cell_widget(), clicking_a_day_picks_it(), k
 Cohesion: 0.17
 Nodes (13): dpi, floem-winit, floem-winit-android, floem-winit-appkit, floem-winit-core, floem-winit-orbital, floem-winit-uikit, floem-winit-wayland (+5 more)
 
-### Community 823 - "ListProps"
-Cohesion: 0.08
-Nodes (22): CupertinoList, CupertinoListStyle, CupertinoRowGeometry, Color, Default, Fn, Into, MenuItem (+14 more)
+### Community 823 - "CupertinoList"
+Cohesion: 0.15
+Nodes (13): CupertinoList, CupertinoListStyle, CupertinoRowGeometry, Color, Default, Fn, Into, MenuItem (+5 more)
 
 ### Community 824 - "cupertino-range_slider/tests/range_slider.rs"
 Cohesion: 0.17
 Nodes (20): a_disabled_slider_dims_to_120_alpha(), a_disabled_slider_does_not_answer(), a_drag_moves_the_nearer_thumb(), allocate(), kit(), ops_of(), paint(), Color (+12 more)
 
-### Community 825 - "ToolbarProps"
-Cohesion: 0.20
-Nodes (5): Default, Option, Self, String, ToolbarProps
+### Community 825 - "SpeedDialProps"
+Cohesion: 0.12
+Nodes (11): Box, Clone, Debug, Default, Fn, Formatter, Option, Result (+3 more)
 
 ### Community 826 - "CupertinoApp"
 Cohesion: 0.18
 Nodes (10): CupertinoApp, Box, ChildBuilder, Default, Fn, Option, Self, Send (+2 more)
 
-### Community 827 - "MenuTokens"
-Cohesion: 0.50
-Nodes (3): MenuTokens, Self, SpacingTokens
+### Community 827 - "OverlayHost"
+Cohesion: 0.17
+Nodes (7): empty_body(), OverlayHost, ElementId, FnOnce, Option, Self, Vec
 
 ### Community 828 - "fluent-calendar/tests/calendar.rs"
 Cohesion: 0.20
@@ -4651,7 +4649,7 @@ Cohesion: 0.19
 Nodes (8): CupertinoTimeline, CupertinoTimelineStyle, Color, Default, Into, Self, String, Vec
 
 ### Community 838 - "cupertino_icon_path"
-Cohesion: 0.15
+Cohesion: 0.14
 Nodes (13): cupertino_icon_path(), cupertino_icon_svg(), String, cupertino_icon(), a_name_in_an_engine_widget_out(), the_icon_can_be_handed_out_twice(), a_named_icon_resolves_to_real_path_data(), an_unknown_name_falls_back_to_a_drawn_shape() (+5 more)
 
 ### Community 839 - "CheckboxProps"
@@ -4662,17 +4660,17 @@ Nodes (29): CupertinoCheckbox, Default, Fn, Into, Self, String, CheckboxProps, B
 Cohesion: 0.20
 Nodes (21): body_of(), cell_paint(), cell_widget(), clicking_a_day_picks_it(), kit(), ops_of(), paint(), Box (+13 more)
 
-### Community 841 - "md-icon_button/tests/icon_button.rs"
+### Community 841 - "tests/checkbox.rs"
 Cohesion: 0.23
-Nodes (16): a_button_with_no_callback_is_fine(), a_disabled_buttons_glyph_is_the_disabled_foreground(), an_explicit_size_replaces_the_token_and_leaves_the_glyph(), button(), material(), Color, the_disabled_colours_are_two_alphas_of_on_surface(), the_glyph_is_sized_from_the_icon_token() (+8 more)
+Nodes (13): a_focus_ring_goes_around_the_whole_control_and_only_while_focused(), a_rim_is_stroked_inside_the_indicators_own_edge(), a_supplied_mark_is_painted_as_a_vector_icon(), allocate(), an_unstyled_checkbox_paints_the_engine_colours(), checkbox_toggles_and_publishes_checked_state(), fire_down_up(), hover() (+5 more)
 
 ### Community 842 - "CupertinoFloatingActionButton"
-Cohesion: 0.05
-Nodes (39): CupertinoFloatingActionButton, CupertinoFloatingActionButtonStyle, Box, Callback, ChildBuilder, Color, Default, Fn (+31 more)
+Cohesion: 0.13
+Nodes (14): CupertinoFloatingActionButton, CupertinoFloatingActionButtonStyle, Box, Callback, ChildBuilder, Color, Default, Fn (+6 more)
 
-### Community 843 - "ChipProps"
-Cohesion: 0.12
-Nodes (11): ChipProps, Box, Clone, Debug, Default, Fn, Formatter, Option (+3 more)
+### Community 843 - "fluent-list_item/tests/list_item.rs"
+Cohesion: 0.23
+Nodes (13): disabled_reaches_the_row_and_its_ripple(), fluent(), item(), list_tokens(), nav_is_carried_but_unread(), no_subtitle_leaves_the_engine_field_empty(), Color, the_hard_coded_numbers_are_preserved_and_disagree_with_the_tokens() (+5 more)
 
 ### Community 844 - "scripts_icon_fix.py"
 Cohesion: 0.28
@@ -4699,8 +4697,8 @@ Cohesion: 0.16
 Nodes (33): check_name(), create(), create_app(), create_plugin(), CreateOpts, emit_app_platform(), emit_plugin_platform(), main() (+25 more)
 
 ### Community 851 - "cupertino-list_item/tests/list_item.rs"
-Cohesion: 0.06
-Nodes (42): cupertino(), disabled_reaches_the_row_and_its_ripple(), item(), list_tokens(), nav_is_carried_but_unread(), no_subtitle_leaves_the_engine_field_empty(), Color, the_hard_coded_numbers_are_preserved_and_disagree_with_the_tokens() (+34 more)
+Cohesion: 0.23
+Nodes (13): cupertino(), disabled_reaches_the_row_and_its_ripple(), item(), list_tokens(), nav_is_carried_but_unread(), no_subtitle_leaves_the_engine_field_empty(), Color, the_hard_coded_numbers_are_preserved_and_disagree_with_the_tokens() (+5 more)
 
 ### Community 852 - "Selection"
 Cohesion: 0.23
@@ -4751,7 +4749,7 @@ Cohesion: 0.19
 Nodes (20): a_drag_in_the_square_reports_the_colour_it_landed_on(), fills(), kit(), ops_of(), paint(), Box, Color, String (+12 more)
 
 ### Community 864 - "Self"
-Cohesion: 0.19
+Cohesion: 0.21
 Nodes (8): AxisSpec, OrderedF64, Default, Eq, Ord, Ordering, PartialOrd, Self
 
 ### Community 865 - "iOS Backend (Phase 2 — In Progress)"
@@ -4782,9 +4780,9 @@ Nodes (20): area(), kit(), only_the_current_slide_is_mounted(), ops_of(), paint(
 Cohesion: 0.19
 Nodes (20): a_drag_in_the_square_reports_the_colour_it_landed_on(), fills(), kit(), ops_of(), paint(), Box, Color, String (+12 more)
 
-### Community 872 - "Labeled"
-Cohesion: 0.10
-Nodes (19): a_labelled_box_declares_its_child_and_request(), Labeled, Box, Debug, ElementId, Fn, Formatter, Into (+11 more)
+### Community 872 - "md-list_item/tests/list_item.rs"
+Cohesion: 0.23
+Nodes (13): disabled_reaches_the_row_and_its_ripple(), item(), list_tokens(), material(), material_reads_its_own_token_table(), nav_is_carried_but_unread(), no_subtitle_leaves_the_engine_field_empty(), Color (+5 more)
 
 ### Community 873 - "md-system_bar/tests/system_bar.rs"
 Cohesion: 0.15
@@ -4795,16 +4793,16 @@ Cohesion: 0.10
 Nodes (12): BannerProps, BannerVariant, Box, Clone, Debug, Default, Fn, Formatter (+4 more)
 
 ### Community 875 - "Option"
-Cohesion: 0.21
-Nodes (6): ChartSummary, extent(), Option, SemanticsHint, SeriesKind, summarizing_an_empty_chart_is_not_a_panic()
+Cohesion: 0.42
+Nodes (3): extent(), Option, summarizing_an_empty_chart_is_not_a_panic()
 
-### Community 876 - "cupertino-treeview/tests/treeview.rs"
-Cohesion: 0.23
-Nodes (15): a_toggle_through_the_shared_forest_is_visible(), cupertino(), props_nodes(), Color, Vec, the_kit_hands_back_a_tree_view(), the_kit_shows_the_same_rows_v1_would_have(), the_kits_forest_and_the_widgets_are_one_allocation() (+7 more)
+### Community 876 - "HoverProps"
+Cohesion: 0.14
+Nodes (10): HoverProps, Box, Clone, Debug, Default, Fn, Formatter, Option (+2 more)
 
 ### Community 877 - "cupertino-time_picker/tests/time_picker.rs"
-Cohesion: 0.19
-Nodes (19): a_disabled_picker_does_not_answer(), fills(), hour_down(), kit(), ops_of(), paint(), Color, String (+11 more)
+Cohesion: 0.17
+Nodes (22): CupertinoTimePickerStyle, a_disabled_picker_does_not_answer(), fills(), hour_down(), kit(), ops_of(), paint(), panel_height() (+14 more)
 
 ### Community 878 - "cupertino-virtual_scroller/tests/virtual_scroller.rs"
 Cohesion: 0.16
@@ -4835,28 +4833,28 @@ Cohesion: 0.16
 Nodes (19): kit(), kit_with_rows(), only_the_windows_rows_are_mounted(), ops_of(), paint(), Color, Event, Option (+11 more)
 
 ### Community 886 - "Scene"
-Cohesion: 0.08
-Nodes (13): scene_with_a_shadow(), the_software_answer_matches_what_the_software_renderer_draws(), bench_scene_render(), build_scene(), Criterion, Item, Iterator, Option (+5 more)
+Cohesion: 0.04
+Nodes (30): scene_with_a_shadow(), the_software_answer_matches_what_the_software_renderer_draws(), bench_scene_render(), build_scene(), Criterion, DamageRegion, Self, SmallVec (+22 more)
 
 ### Community 887 - "shared_flag"
-Cohesion: 0.30
-Nodes (16): a_dialog_with_no_flag_is_still_driven_by_set_present(), a_flag_set_to_false_asks_for_nothing(), a_flag_set_to_true_opens_a_modal_dialog_over_the_viewport(), a_hand_back_for_another_overlay_does_not_clear_the_flag(), a_host_dismissal_clears_the_flag(), a_poisoned_flag_reads_as_false_rather_than_panicking(), a_supplied_card_is_built_afresh_each_mount(), a_supplied_card_is_what_gets_mounted() (+8 more)
+Cohesion: 0.09
+Nodes (34): arrow_slot(), arrow_widget(), choose(), chosen_of(), CupertinoSlideGroup, CupertinoSlideGroupStyle, indicator_of(), Callback (+26 more)
 
-### Community 888 - "md-snackbar/tests/snackbar.rs"
-Cohesion: 0.22
-Nodes (19): action_ink(), bar(), bar_fill(), kit(), message_ink(), paint(), press_action(), Box (+11 more)
+### Community 888 - "ButtonGroupTokens"
+Cohesion: 0.11
+Nodes (9): ButtonGroupTokens, Default, Self, FormTokens, Default, Self, GridTokens, Default (+1 more)
 
 ### Community 889 - "md-virtual_scroller/tests/virtual_scroller.rs"
 Cohesion: 0.16
 Nodes (19): kit(), kit_with_rows(), only_the_windows_rows_are_mounted(), ops_of(), paint(), Color, Event, Option (+11 more)
 
-### Community 890 - "RustStyling"
-Cohesion: 0.12
-Nodes (8): main(), Color, Default, FontWeight, Self, TextStyle, Vec, RustStyling
+### Community 890 - "SurfaceTarget"
+Cohesion: 0.22
+Nodes (9): Default, RawDisplayHandle, RawWindowHandle, Self, Size, SurfaceId, Surface, SurfaceConfig (+1 more)
 
-### Community 891 - "cupertino-chip/tests/chip.rs"
-Cohesion: 0.28
-Nodes (14): a_click_calls_the_callback(), a_disabled_chip_does_not_call_the_callback(), chip(), paint(), painted(), Color, Option, tap() (+6 more)
+### Community 891 - "modifiers_of"
+Cohesion: 0.18
+Nodes (6): DomPointerEvent, HasModifiers, modifiers_of(), E, Modifiers, WheelEvent
 
 ### Community 892 - "Navigator"
 Cohesion: 0.18
@@ -4878,9 +4876,9 @@ Nodes (19): an_explicit_width_wins(), content_of(), kit(), ops_of(), paint(), Bo
 Cohesion: 0.24
 Nodes (7): KeyEventResults<'a, 'b>, Key, KeyEvent, KeyLocation, Result, Self, xcb_connection_t
 
-### Community 897 - "floom-types"
-Cohesion: 0.05
-Nodes (81): floom-codegen, floom-gesture, floom-ime, floom-navigation, floom-navigation-demo, floom-types, floom-ui-composites, floom-widget-cupertino-badge (+73 more)
+### Community 897 - "floom-widgets"
+Cohesion: 0.04
+Nodes (96): floom-navigation, floom-navigation-demo, floom-widget-cupertino-card, floom-widget-cupertino-divider, floom-widget-cupertino-list_item, floom-widget-cupertino-overlay, floom-widget-cupertino-progress_linear, floom-widget-cupertino-switch (+88 more)
 
 ### Community 898 - "compilerOptions"
 Cohesion: 0.17
@@ -4895,32 +4893,32 @@ Cohesion: 0.05
 Nodes (27): CupertinoSparkline, CupertinoSparklineStyle, Color, Default, Self, Vec, Clone, Debug (+19 more)
 
 ### Community 901 - "Devtools"
-Cohesion: 0.08
+Cohesion: 0.09
 Nodes (21): attach(), attach_elements(), attach_picker(), attach_with(), attach_with_rows(), attach_with_tabs(), Devtools, PickHandle (+13 more)
 
 ### Community 902 - "DevtoolsState"
-Cohesion: 0.09
-Nodes (21): DevtoolsPanel, DevtoolsState, DevtoolsTab, Arc, Color, Default, DevtoolsShortcut, ElementId (+13 more)
+Cohesion: 0.07
+Nodes (28): DevtoolsPanel, DevtoolsState, DevtoolsTab, Arc, BTreeSet, Color, Default, DevtoolsShortcut (+20 more)
 
 ### Community 903 - "dpi.rs"
-Cohesion: 0.14
-Nodes (8): become_dpi_aware(), dpi_to_scale_factor(), enable_non_client_dpi_scaling(), get_monitor_dpi(), hwnd_dpi(), HMONITOR, HWND, Option
+Cohesion: 0.05
+Nodes (32): dyn MonitorHandleProvider + '_, MonitorHandle, MonitorHandleProvider, Arc, Debug, Deref, Display, Eq (+24 more)
 
-### Community 904 - "md-parallax/tests/parallax.rs"
-Cohesion: 0.22
-Nodes (10): a_moved_offset_re_declares_the_motion(), an_offset_that_did_not_move_is_not_a_change(), kit(), the_content_is_mounted_under_the_layer(), the_default_factor_never_reaches_the_token(), the_factor_is_the_callers_when_it_is_positive(), the_layer_moves_the_content_by_the_scroll_times_the_factor(), the_shared_offset_is_the_value_the_host_writes() (+2 more)
+### Community 904 - "fluent-progress_circular/tests/progress_circular.rs"
+Cohesion: 0.26
+Nodes (12): ring(), Color, Vec, the_determinate_arc_starts_at_twelve_oclock(), the_indeterminate_arc_is_the_shape_this_kit_asks_for(), the_props_size_wins_over_the_tokens(), the_ring_is_a_track_and_an_arc(), the_ring_is_the_props_size() (+4 more)
 
 ### Community 905 - "floom-ui · Demo Show Gallery 方案（审批稿）"
 Cohesion: 0.18
 Nodes (10): 1. 设计原则, 2. 现状基线（已确认）, 3. 目标页面结构（每个组件的统一模板）, 4. 需要新增的基础设施（不引新依赖）, 5. 数据 / 渲染分层, 6. 分阶段实施（每阶段可独立评审 / 验证）, 7. 验证方式, 8. 风险与注意 (+2 more)
 
 ### Community 906 - "tests/panel.rs"
-Cohesion: 0.09
-Nodes (40): default_shortcut(), panel_bounds(), a_click_on_a_tab_switches_the_readout(), a_click_on_the_active_tab_is_not_a_change(), a_custom_shortcut_replaces_the_default_one(), a_hidden_panel_mounts_neither_rows_nor_a_scroll(), a_hidden_panel_mounts_no_children(), a_key_event_without_the_modifiers_is_not_the_shortcut() (+32 more)
+Cohesion: 0.10
+Nodes (39): default_shortcut(), panel_bounds(), a_click_on_a_tab_switches_the_readout(), a_click_on_the_active_tab_is_not_a_change(), a_custom_shortcut_replaces_the_default_one(), a_hidden_panel_mounts_neither_rows_nor_a_scroll(), a_hidden_panel_mounts_no_children(), a_key_event_without_the_modifiers_is_not_the_shortcut() (+31 more)
 
-### Community 907 - "FluentRadio"
-Cohesion: 0.19
-Nodes (6): FluentRadio, Default, Fn, Into, Self, String
+### Community 907 - "ScrollOffset"
+Cohesion: 0.22
+Nodes (5): clamp_offset(), max_offset(), From, Self, ScrollOffset
 
 ### Community 908 - "cupertino-menu/tests/menu.rs"
 Cohesion: 0.22
@@ -4942,9 +4940,9 @@ Nodes (13): a_granted_overlay_mounts_nothing_in_tree(), a_hand_back_for_another_
 Cohesion: 0.26
 Nodes (10): a_chip_with_no_outline_draws_none(), a_click_calls_the_callback(), a_disabled_chip_does_not_call_the_callback(), allocate(), ElementId, text_width(), the_hover_fill_replaces_the_resting_one(), the_label_is_centred_in_the_pill() (+2 more)
 
-### Community 913 - "MdRadio"
-Cohesion: 0.19
-Nodes (6): MdRadio, Default, Fn, Into, Self, String
+### Community 913 - "ControlFlowDemo"
+Cohesion: 0.22
+Nodes (8): ControlFlowDemo, main(), Mode, ActiveEventLoop, Box, Option, Result, Window
 
 ### Community 914 - "md-rating/tests/rating.rs"
 Cohesion: 0.23
@@ -4962,13 +4960,13 @@ Nodes (12): DatePickerProps, DateValue, Box, Clone, Debug, Default, Fn, Formatte
 Cohesion: 0.22
 Nodes (18): a_body_is_a_send_sync_builder(), every_declared_panel_becomes_one_slot(), kit(), panels(), the_body_inset_carries_both_tokens(), the_change_callback_survives_being_shared_into_the_tree(), the_colours_are_this_design_system_s_own(), the_engine_widget_declares_the_token_axis_and_gap() (+10 more)
 
-### Community 918 - "Evaluator"
-Cohesion: 0.43
-Nodes (5): Evaluator, HashMap, Result, String, Parser
+### Community 918 - "cupertino-floating_action_button/tests/floating_action_button.rs"
+Cohesion: 0.27
+Nodes (11): click(), Color, ElementId, the_button_is_a_circle_of_the_tokens_size(), the_click_fires_and_a_disabled_button_does_not(), the_elevation_is_the_shadow_v1_wrote(), the_fill_is_the_accent_and_the_disabled_one_is_muted(), the_style_resolves_the_tokens_and_the_palette() (+3 more)
 
-### Community 919 - "md-treeview/tests/treeview.rs"
+### Community 919 - "cupertino-text/tests/text.rs"
 Cohesion: 0.23
-Nodes (15): a_toggle_through_the_shared_forest_is_visible(), material(), props_nodes(), Color, Vec, the_kit_hands_back_a_tree_view(), the_kit_shows_the_same_rows_v1_would_have(), the_kits_forest_and_the_widgets_are_one_allocation() (+7 more)
+Nodes (9): Color, FontWeight, Option, String, text_widget(), the_painted_text_carries_the_themes_ink_and_type(), the_style_resolves_from_the_themes_body_type(), theme() (+1 more)
 
 ### Community 920 - "cupertino-textarea/tests/textarea.rs"
 Cohesion: 0.20
@@ -5002,9 +5000,9 @@ Nodes (13): arrive(), bubble_painted(), kit(), paint(), Color, Option, the_bubbl
 Cohesion: 0.12
 Nodes (23): FluentMain, FluentMainStyle, Color, Default, Option, Self, content_of(), kit() (+15 more)
 
-### Community 928 - "CacheTracker"
-Cohesion: 0.20
-Nodes (7): CacheTracker, Inner, OpenSpan, Option, Rc, RefCell, Stage
+### Community 928 - "cupertino-container/tests/container.rs"
+Cohesion: 0.33
+Nodes (10): a_fluid_container_drops_the_cap(), inner(), Box, Color, the_content_is_inside_the_inner_box(), the_inner_box_carries_the_padding_the_fill_and_the_cap(), the_outer_box_is_full_width_and_centres_its_content(), the_style_resolves_the_themes_surface_and_ink() (+2 more)
 
 ### Community 929 - "md-main/tests/main.rs"
 Cohesion: 0.12
@@ -5055,8 +5053,8 @@ Cohesion: 0.20
 Nodes (8): [0.1.0][] - 2025-05-08, Changelog, [Unreleased], Community, Contribution, License, Minimum supported Rust Version (MSRV), UI Events for Winit - Forked for usage in Floom
 
 ### Community 941 - "ListGroupProps"
-Cohesion: 0.12
-Nodes (11): ListGroupProps, Box, Clone, Debug, Default, Fn, Formatter, Option (+3 more)
+Cohesion: 0.11
+Nodes (13): ListGroupProps, Box, Clone, Debug, Default, Fn, Formatter, Option (+5 more)
 
 ### Community 942 - "devDependencies"
 Cohesion: 0.20
@@ -5078,9 +5076,9 @@ Nodes (10): 4.2 Step 2 — 桌面后端桥 (2026-08-11), Capability, Linux `acce
 Cohesion: 0.20
 Nodes (16): fill_of(), kit(), ops_of(), paint(), Color, Option, String, Vec (+8 more)
 
-### Community 947 - "Result"
-Cohesion: 0.12
-Nodes (10): OwnedDisplayHandle, ProxyProvider, AtomicBool, Debug, DisplayHandle, Formatter, HandleError, ImeRequest (+2 more)
+### Community 947 - "ActiveEventLoop"
+Cohesion: 0.06
+Nodes (19): ActiveEventLoop, OwnedDisplayHandle, ProxyProvider, AtomicBool, Box, CoreEventLoopProxy, CoreOwnedDisplayHandle, CoreWindow (+11 more)
 
 ### Community 948 - "md-radio-group/tests/radio_group.rs"
 Cohesion: 0.22
@@ -5103,8 +5101,8 @@ Cohesion: 0.38
 Nodes (9): crate_has_feature(), crate_target_name(), die(), enable_ohos_path(), info(), resolve_crate(), build.sh script, usage() (+1 more)
 
 ### Community 953 - "fluent-list_group/tests/list_group.rs"
-Cohesion: 0.24
-Nodes (15): an_inset_group_indents_its_rows(), each_row_is_v1_s_height_and_padding(), group(), rows_of(), Box, the_group_is_one_panel_with_the_title(), the_group_starts_in_the_props_state(), the_header_is_padded_at_the_sides() (+7 more)
+Cohesion: 0.16
+Nodes (18): ListGroupTokens, Default, Self, an_inset_group_indents_its_rows(), each_row_is_v1_s_height_and_padding(), group(), rows_of(), Box (+10 more)
 
 ### Community 954 - "[0.2.0] - 2024-11-13"
 Cohesion: 0.22
@@ -5135,16 +5133,16 @@ Cohesion: 0.24
 Nodes (15): a_fractional_value_fills_the_stars_below_it(), a_read_only_rating_does_not_answer(), a_tap_fills_the_stars_below_it(), kit(), paint(), Color, Option, Vec (+7 more)
 
 ### Community 961 - "Canvas"
-Cohesion: 0.05
-Nodes (41): a_shader_carries_its_source_and_params(), Into, Self, String, Vec, Shader, a_canvas_defaults_to_the_image_role(), a_canvas_paints_through_its_closure() (+33 more)
+Cohesion: 0.06
+Nodes (35): a_canvas_defaults_to_the_image_role(), a_canvas_paints_through_its_closure(), a_decorative_canvas_publishes_nothing(), a_labelled_canvas_reports_both_role_and_label(), a_spinner_declares_an_endless_cycle(), a_spinner_strokes_an_arc_and_nothing_else(), a_spinner_with_a_track_draws_the_ring_behind_the_arc(), box_() (+27 more)
 
 ### Community 962 - "MaterialMenu"
 Cohesion: 0.14
 Nodes (10): MaterialMenu, MaterialMenuStyle, Color, Default, Fn, Into, Self, Send (+2 more)
 
 ### Community 963 - "src/chart.rs"
-Cohesion: 0.14
-Nodes (13): a_degenerate_range_still_maps_finitely(), a_scale_round_trips_through_its_inverse(), a_single_point_series_samples_its_only_value(), Bar, DataPoint, fmt_number(), Marker, Color (+5 more)
+Cohesion: 0.20
+Nodes (9): a_single_point_series_samples_its_only_value(), Bar, DataPoint, Marker, Color, sampling_holds_the_endpoints_outside_the_data(), Segment, series_ink() (+1 more)
 
 ### Community 964 - "buffer/diff.rs"
 Cohesion: 0.23
@@ -5163,8 +5161,8 @@ Cohesion: 0.39
 Nodes (8): clipboard_manager(), get_text(), Env, JObject, Option, Result, String, set_text()
 
 ### Community 968 - "cupertino-progress_circular/tests/progress_circular.rs"
-Cohesion: 0.10
-Nodes (27): ring(), Color, Vec, the_determinate_arc_starts_at_twelve_oclock(), the_indeterminate_arc_is_the_shape_this_kit_asks_for(), the_props_size_wins_over_the_tokens(), the_ring_is_a_track_and_an_arc(), the_ring_is_the_props_size() (+19 more)
+Cohesion: 0.26
+Nodes (12): ring(), Color, Vec, the_determinate_arc_starts_at_twelve_oclock(), the_indeterminate_arc_is_the_shape_this_kit_asks_for(), the_props_size_wins_over_the_tokens(), the_ring_is_a_track_and_an_arc(), the_ring_is_the_props_size() (+4 more)
 
 ### Community 969 - "CodeProps"
 Cohesion: 0.16
@@ -5298,29 +5296,29 @@ Nodes (16): a_callback_alone_does_not_mount_the_button(), alert(), material(), C
 Cohesion: 0.46
 Nodes (12): apple_roundtrip_through_the_real_store(), get(), ns_string(), remove(), remove_domain(), AnyObject, Option, Result (+4 more)
 
-### Community 1003 - "md-text/tests/text.rs"
-Cohesion: 0.23
-Nodes (9): Color, FontWeight, Option, String, text_widget(), the_painted_text_carries_the_themes_ink_and_type(), the_style_resolves_from_the_themes_body_type(), theme() (+1 more)
+### Community 1003 - "fluent-container/tests/container.rs"
+Cohesion: 0.33
+Nodes (10): a_fluid_container_drops_the_cap(), inner(), Box, Color, the_content_is_inside_the_inner_box(), the_inner_box_carries_the_padding_the_fill_and_the_cap(), the_outer_box_is_full_width_and_centres_its_content(), the_style_resolves_the_themes_surface_and_ink() (+2 more)
 
 ### Community 1004 - "md-list_group/tests/list_group.rs"
 Cohesion: 0.24
 Nodes (15): an_inset_group_indents_its_rows(), each_row_is_v1_s_height_and_padding(), group(), rows_of(), Box, the_group_is_one_panel_with_the_title(), the_group_starts_in_the_props_state(), the_header_is_padded_at_the_sides() (+7 more)
 
 ### Community 1005 - "floom-plugin-notifications/src/android.rs"
-Cohesion: 0.47
-Nodes (12): channel_id(), notification_builder(), notification_manager(), read_enabled(), request_authorization(), Env, JObject, Result (+4 more)
+Cohesion: 0.21
+Nodes (18): channel_id(), notification_builder(), notification_manager(), read_enabled(), request_authorization(), Env, JObject, Result (+10 more)
 
 ### Community 1006 - "ExpansionPanelsProps"
 Cohesion: 0.12
 Nodes (10): ExpansionPanelsProps, Box, Clone, Debug, Default, Fn, Formatter, Option (+2 more)
 
-### Community 1007 - "floom-widget-fluent-icon"
-Cohesion: 0.12
-Nodes (17): floom-widget-fluent-alert, floom-widget-fluent-autocomplete, floom-widget-fluent-checkbox, floom-widget-fluent-checkbox_btn, floom-widget-fluent-combobox, floom-widget-fluent-confirm_edit, floom-widget-fluent-dialog, floom-widget-fluent-expansion_panels (+9 more)
+### Community 1007 - "floom-widget-fluent-checkbox"
+Cohesion: 0.67
+Nodes (3): floom-widget-fluent-checkbox, floom-widget-fluent-icon-paths, floom-widget-fluent-select
 
 ### Community 1010 - "button_gallery"
-Cohesion: 0.17
-Nodes (14): button_gallery(), button_gallery_labels(), every_sample_is_labelled_exactly_once(), CupertinoTheme, String, the_gallery_scene_is_not_empty(), the_header_names_the_page_colour(), every_declared_pair_clears_its_own_threshold() (+6 more)
+Cohesion: 0.09
+Nodes (23): button_gallery(), button_gallery_labels(), every_sample_is_labelled_exactly_once(), CupertinoTheme, String, the_gallery_scene_is_not_empty(), the_header_names_the_page_colour(), every_declared_pair_clears_its_own_threshold() (+15 more)
 
 ### Community 1011 - "floom-fluent/src/tokens.rs"
 Cohesion: 0.26
@@ -5330,9 +5328,9 @@ Nodes (9): FluentColors, FluentTheme, Color, Self, Theme, the_control_ladder_is_
 Cohesion: 0.13
 Nodes (11): Box, Clone, Debug, Default, Fn, Formatter, Option, Result (+3 more)
 
-### Community 1016 - "Length"
-Cohesion: 0.15
-Nodes (10): px(), Option, px(), Option, px(), Option, px(), Option (+2 more)
+### Community 1016 - "md-container/tests/container.rs"
+Cohesion: 0.33
+Nodes (10): a_fluid_container_drops_the_cap(), inner(), Box, Color, the_content_is_inside_the_inner_box(), the_inner_box_carries_the_padding_the_fill_and_the_cap(), the_outer_box_is_full_width_and_centres_its_content(), the_style_resolves_the_themes_surface_and_ink() (+2 more)
 
 ### Community 1017 - "v0.20.md"
 Cohesion: 0.25
@@ -5359,8 +5357,8 @@ Cohesion: 0.25
 Nodes (8): 53. Architectural Risks, Risk: AI tools become unstable private APIs, Risk: DSL becomes a second framework, Risk: Memory growth, Risk: Native composition complexity, Risk: Platform abstraction leaks, Risk: Renderer fragmentation, Risk: Runtime over-engineering
 
 ### Community 1023 - "ProtocolVersion"
-Cohesion: 0.05
-Nodes (27): check_version(), Formatter, Result, the_version_gate_refuses_a_newer_minor_or_major(), JsonSnapshot, Sized, LayoutDto, LayoutEntry (+19 more)
+Cohesion: 0.07
+Nodes (23): JsonSnapshot, Sized, LayoutDto, LayoutEntry, LayoutSnapshot, Option, String, Vec (+15 more)
 
 ### Community 1024 - "md-expansion_panels/tests/expansion_panels.rs"
 Cohesion: 0.19
@@ -5406,9 +5404,9 @@ Nodes (31): cargo_toml(), desktop_main_c(), features_literal(), ios_app_delegate
 Cohesion: 0.48
 Nodes (6): drag_cancels_tap_on_move(), eid(), ElementId, scale_competes_then_native_scroll_cancels_app(), scroll_beats_drag_by_priority(), tap_wins_without_movement()
 
-### Community 1035 - "workspace/src/main.rs"
-Cohesion: 0.33
-Nodes (4): main(), Result, String, run()
+### Community 1035 - "md-list/tests/list.rs"
+Cohesion: 0.45
+Nodes (10): style_of(), the_container_radius_is_hardcoded_eight_not_radius_md(), the_design_system_tag_is_material(), the_hover_is_primary_at_eight_and_is_not_painted(), the_item_height_comes_from_list_tokens(), the_min_width_comes_from_list_tokens(), the_surface_is_the_theme_surface(), the_text_color_is_on_surface() (+2 more)
 
 ### Community 1036 - "cupertino-button_group/tests/button_group.rs"
 Cohesion: 0.36
@@ -5499,8 +5497,8 @@ Cohesion: 0.26
 Nodes (9): a_horizontal_rule_sits_on_the_top_edge(), a_vertical_rule_sits_on_the_left_edge(), material(), the_colour_is_outline_variant(), the_default_is_a_flush_horizontal_rule(), the_inset_shrinks_both_ends_and_leaves_the_start_edge_alone(), the_props_are_kept(), the_rule_is_painted_in_the_resolved_colour() (+1 more)
 
 ### Community 1062 - "floom-ui-composites/tests/menu.rs"
-Cohesion: 0.33
-Nodes (13): a_wide_row_widens_the_panel(), choosing_a_row_runs_its_callback_and_closes_the_menu(), menu(), Arc, Mutex, Vec, style(), the_hovered_row_is_filled() (+5 more)
+Cohesion: 0.22
+Nodes (14): a_wide_row_widens_the_panel(), choosing_a_row_runs_its_callback_and_closes_the_menu(), menu(), Arc, Mutex, Vec, style(), the_hovered_row_is_filled() (+6 more)
 
 ### Community 1063 - "floom-datagrid/src/main.rs"
 Cohesion: 0.36
@@ -5510,21 +5508,21 @@ Nodes (10): bounds(), columns(), create(), double_click(), first_rows(), grid_wi
 Cohesion: 0.36
 Nodes (9): a_vertical_group_stacks_its_buttons_down(), group(), Color, the_group_is_filled_with_the_surface_variant(), the_joined_shape_has_no_gap_a_radius_and_no_padding(), the_unjoined_shape_has_the_token_gap_no_radius_and_four_points_of_padding(), theme(), to_paint() (+1 more)
 
-### Community 1065 - "PerformanceSnapshot"
-Cohesion: 0.23
-Nodes (8): AllocSummary, CacheStats, FrameSummary, PerformanceSnapshot, Option, String, Vec, StageSpan
+### Community 1065 - "winit-wayland/src/event_loop/mod.rs"
+Cohesion: 0.24
+Nodes (9): PumpEventNotifier, PumpEventNotifierAction, Arc, Condvar, Drop, JoinHandle, Mutex, OwnedFd (+1 more)
 
-### Community 1066 - "winit-appkit/src/lib.rs"
-Cohesion: 0.15
-Nodes (8): ActiveEventLoopExtMacOS, dyn ActiveEventLoop + '_, EventLoopBuilderExtMacOS, MonitorHandle, MonitorHandleExtMacOS, c_void, Option, WindowExtMacOS
+### Community 1066 - ".window_handle"
+Cohesion: 0.24
+Nodes (7): AnyThread<W>, CoreWindow, Deref, HandleError, HasWindowHandle, Target, WindowHandle
 
 ### Community 1067 - "floom-plugin-file-dialog/src/lib.rs"
 Cohesion: 0.38
 Nodes (12): options_default_is_the_platforms_own(), pick_directory(), pick_file(), pick_save_file(), refused(), Option, PathBuf, Result (+4 more)
 
-### Community 1068 - "tests/circular_progress.rs"
-Cohesion: 0.25
-Nodes (9): paint(), Color, Vec, strokes(), the_arc_has_rounded_ends(), the_arc_sweeps_the_value_s_share(), the_indeterminate_arc_sweeps_the_styles_fraction(), the_ring_is_a_track_and_an_arc() (+1 more)
+### Community 1068 - "ComboboxStyle"
+Cohesion: 0.44
+Nodes (4): alpha(), ComboboxStyle, Color, Default
 
 ### Community 1069 - "BreadcrumbsProps"
 Cohesion: 0.33
@@ -5578,25 +5576,25 @@ Nodes (5): get_text(), Option, Result, String, set_text()
 Cohesion: 0.16
 Nodes (9): Clone, Copy, Fn, FnOnce, Self, T, U, Store (+1 more)
 
-### Community 1084 - "md-floating_action_button/tests/floating_action_button.rs"
+### Community 1084 - "Trigger"
 Cohesion: 0.27
-Nodes (11): click(), Color, ElementId, the_button_is_a_circle_of_the_tokens_size(), the_click_fires_and_a_disabled_button_does_not(), the_elevation_is_the_shadow_v1_wrote(), the_fill_is_the_accent_and_the_disabled_one_is_muted(), the_style_resolves_the_tokens_and_the_palette() (+3 more)
+Nodes (5): create_trigger(), Clone, Copy, Self, Trigger
 
 ### Community 1086 - "FluentSlider"
 Cohesion: 0.29
 Nodes (4): FluentSlider, Default, Fn, Self
 
 ### Community 1088 - "floom-renderer-software/tests/transforms.rs"
-Cohesion: 0.27
-Nodes (11): a_clip_inside_a_scope_travels_with_the_transform(), a_group_pop_ends_the_scope(), a_path_inside_a_scope_maps_its_points(), a_quarter_turn_moves_the_picture_to_where_rotation_says(), a_scale_doubles_the_picture_beyond_its_old_edge(), alpha(), an_identity_scope_is_pixel_equivalent_to_no_scope(), is_ink() (+3 more)
+Cohesion: 0.22
+Nodes (13): a_clip_inside_a_scope_travels_with_the_transform(), a_group_pop_ends_the_scope(), a_path_inside_a_scope_maps_its_points(), a_quarter_turn_moves_the_picture_to_where_rotation_says(), a_scale_doubles_the_picture_beyond_its_old_edge(), alpha(), an_identity_scope_is_pixel_equivalent_to_no_scope(), fill() (+5 more)
 
 ### Community 1089 - ".new"
-Cohesion: 0.56
-Nodes (5): ChartSeries, Into, IntoIterator, Item, String
+Cohesion: 0.19
+Nodes (10): a_degenerate_range_still_maps_finitely(), a_scale_round_trips_through_its_inverse(), ChartSummary, fmt_number(), Into, IntoIterator, Item, String (+2 more)
 
 ### Community 1090 - "WidgetHost"
 Cohesion: 0.02
-Nodes (99): node_bounds(), select_sizes_from_the_widest_label(), align_to_align_items(), align_to_justify(), apply_composite(), apply_self_layout(), compose_transform(), DispatchQueues (+91 more)
+Nodes (81): find_text(), host_with(), page_widget_is_reused_not_remounted_across_a_push(), pop_keeps_the_page_mounted_until_finish_exit(), pop_to_root_then_finish_leaves_only_the_root(), push_mounts_exactly_one_new_page(), node_bounds(), select_sizes_from_the_widest_label() (+73 more)
 
 ### Community 1092 - "NOTICE — `floom-ui-events-winit` is a fork of `ui-events-winit`"
 Cohesion: 0.33
@@ -5623,8 +5621,8 @@ Cohesion: 0.33
 Nodes (6): 4.4 Step 3 — iOS VoiceOver 桥 (2026-08-12), `IosAccessibilityBackend`, 为什么不用 accesskit / 不用 `NSAccessibility` 协议 trait, 关键坑（objc2 0.6.4 + objc2-ui-kit 0.3.2 实战）, 子类 `FloomA11yElement`（`define_class!`）, 接线（core ↔ iOS 桥）
 
 ### Community 1099 - "HostedNode"
-Cohesion: 0.13
-Nodes (17): HostedKind, HostedNode, ElementId, Option, String, PaintStyle, Color, Option (+9 more)
+Cohesion: 0.16
+Nodes (14): HostedKind, HostedNode, ElementId, Option, String, a_request_is_visible_until_drained_and_gone_after(), drained(), request_repaint() (+6 more)
 
 ### Community 1100 - "Gate: macOS"
 Cohesion: 0.33
@@ -5651,8 +5649,8 @@ Cohesion: 0.33
 Nodes (6): 51. P0–P4 Roadmap, P0 — Runtime and boundaries, P1 — Complete native UI framework, P2 — Cross-platform/native completion, P3 — Tooling and AI, P4 — Ecosystem maturity
 
 ### Community 1106 - "button_gallery"
-Cohesion: 0.20
-Nodes (12): button_gallery(), button_gallery_labels(), every_sample_is_labelled_exactly_once(), FluentTheme, String, the_gallery_scene_is_not_empty(), the_header_names_the_page_colour(), the_dark_scheme_gallery_matches_its_golden() (+4 more)
+Cohesion: 0.16
+Nodes (14): button_gallery(), button_gallery_labels(), every_sample_is_labelled_exactly_once(), FluentTheme, String, the_gallery_scene_is_not_empty(), the_header_names_the_page_colour(), every_declared_pair_clears_its_own_threshold() (+6 more)
 
 ### Community 1107 - "cupertino-responsive/tests/responsive.rs"
 Cohesion: 0.36
@@ -5671,8 +5669,8 @@ Cohesion: 0.18
 Nodes (3): main(), probe_provider(), ProviderState
 
 ### Community 1111 - "winit-appkit/src/app.rs"
-Cohesion: 0.15
-Nodes (17): assert_ui_thread_reports_caller_and_set_location(), panic_message(), Box, Send, String, maybe_dispatch_device_event(), override_send_event(), AppState (+9 more)
+Cohesion: 0.16
+Nodes (16): assert_ui_thread_reports_caller_and_set_location(), panic_message(), Box, Send, String, maybe_dispatch_device_event(), override_send_event(), AppState (+8 more)
 
 ### Community 1112 - ".send_client_msg"
 Cohesion: 0.20
@@ -5690,37 +5688,41 @@ Nodes (3): Default, Self, WindowProps
 Cohesion: 0.57
 Nodes (7): contrast(), darken(), lighten(), luminance(), mix(), Color, with_alpha()
 
+### Community 1116 - "Result"
+Cohesion: 0.24
+Nodes (5): OrientationLockError, Display, Formatter, OrientationLockError, Result
+
 ### Community 1117 - "md-responsive/tests/responsive.rs"
 Cohesion: 0.36
 Nodes (6): Color, the_box_is_filled_with_the_surface_variant(), the_content_goes_inside_the_box(), the_ratio_reaches_the_layout_request(), theme(), to_engine()
 
-### Community 1118 - "EditorStyle"
-Cohesion: 0.19
-Nodes (8): editor_style(), language_color(), Color, EditorStyle, Color, Default, FontWeight, Self
+### Community 1118 - "md-card/tests/card.rs"
+Cohesion: 0.25
+Nodes (3): card(), the_surface_is_a_real_2p0_container_painting_shadow_behind_fill(), the_surface_uses_the_resolved_padding_radius_and_palette()
 
 ### Community 1119 - "InfiniteScrollerProps"
 Cohesion: 0.13
 Nodes (10): InfiniteScrollerProps, Box, Clone, Debug, Default, Fn, Formatter, Option (+2 more)
 
 ### Community 1120 - "EventLoopProxy"
-Cohesion: 0.20
+Cohesion: 0.18
 Nodes (7): EventLoopProxy, Arc, AtomicBool, Drop, Self, State, State
 
 ### Community 1121 - "call"
-Cohesion: 0.36
-Nodes (11): a_missing_selector_is_refused_with_the_screen_contents(), a_wrong_or_missing_token_is_refused_and_the_right_one_passes(), call(), checked(), fixture(), performance_counters_add_up_over_the_session(), Option, Result (+3 more)
+Cohesion: 0.33
+Nodes (12): AgentSession, a_missing_selector_is_refused_with_the_screen_contents(), a_wrong_or_missing_token_is_refused_and_the_right_one_passes(), call(), checked(), fixture(), performance_counters_add_up_over_the_session(), Option (+4 more)
 
 ### Community 1122 - "c_layout.rs"
 Cohesion: 0.32
 Nodes (12): a_provider_can_be_written_and_driven_in_c(), find_compiler(), fixture(), header(), probe(), HashMap, Option, PathBuf (+4 more)
 
-### Community 1123 - "DamageRegion"
+### Community 1123 - "render_once"
 Cohesion: 0.05
-Nodes (21): Vec, SkiaRecording, FrameInfo, Renderer, RenderTarget, ResourceId, Self, Size (+13 more)
+Nodes (53): a_degradation_is_counted_rather_than_silent(), a_plain_frame_reports_no_degradation(), records_a_filter_scope_bracketing_its_draws(), Vec, skia_and_software_see_same_rect_scene(), skia_records_a_shader_request_instead_of_dropping_it(), skia_records_a_transform_scope_bracketing_its_draws(), skia_records_the_same_clip_brackets_and_paths_the_scene_carries() (+45 more)
 
-### Community 1124 - "RadioGroupProps"
-Cohesion: 0.13
-Nodes (12): RadioGroupProps, Box, Clone, Debug, Default, Fn, Formatter, Option (+4 more)
+### Community 1124 - "ContainerProps"
+Cohesion: 0.25
+Nodes (3): ContainerProps, Default, Self
 
 ### Community 1125 - "TimelineProps"
 Cohesion: 0.22
@@ -5751,36 +5753,36 @@ Cohesion: 0.23
 Nodes (10): properly_escapes_x11_messages(), push_display(), quote_string(), Display, Result, String, Vec, Window (+2 more)
 
 ### Community 1132 - "cupertino-data_iterator/tests/data_iterator.rs"
-Cohesion: 0.36
-Nodes (10): an_undivided_iterator_has_no_rules(), Color, the_container_is_padded_rounded_and_filled(), the_header_comes_first_and_the_footer_last(), the_items_are_in_order_with_a_rule_between_them(), the_style_resolves_the_theme_and_the_tokens(), theme(), three_items() (+2 more)
+Cohesion: 0.13
+Nodes (23): an_undivided_iterator_has_no_rules(), Color, the_container_is_padded_rounded_and_filled(), the_header_comes_first_and_the_footer_last(), the_items_are_in_order_with_a_rule_between_them(), the_style_resolves_the_theme_and_the_tokens(), theme(), three_items() (+15 more)
 
 ### Community 1133 - "TextLayout"
 Cohesion: 0.06
-Nodes (49): Bounds, a_layout_without_a_line_height_still_has_a_pitch(), a_selection_covers_the_selected_bytes(), a_selection_spanning_lines_covers_both(), a_span_changes_the_ink_of_its_range(), a_visual_line_reports_its_source_range(), an_empty_text_still_has_a_caret(), an_offset_in_a_wrapped_line_answers_its_row() (+41 more)
+Nodes (47): Bounds, a_layout_without_a_line_height_still_has_a_pitch(), a_selection_covers_the_selected_bytes(), a_selection_spanning_lines_covers_both(), a_span_changes_the_ink_of_its_range(), a_visual_line_reports_its_source_range(), an_empty_text_still_has_a_caret(), an_offset_in_a_wrapped_line_answers_its_row() (+39 more)
 
-### Community 1134 - "fluent-avatar/tests/avatar.rs"
-Cohesion: 0.29
-Nodes (10): painted(), Color, FontWeight, Option, the_props_size_wins_over_the_tokens(), the_shape_is_square(), the_style_resolves_this_kits_own_palette(), theme() (+2 more)
+### Community 1134 - "shader_box.rs"
+Cohesion: 0.61
+Nodes (7): a_shader_box_carries_its_program_over_its_own_box(), a_shader_the_software_backend_cannot_run_is_counted_not_silently_dropped(), changing_only_the_scalars_repaints_them(), host_with_shader_box(), replacing_the_program_on_the_mounted_box_repaints_the_new_source(), settle(), shader_of()
 
 ### Community 1135 - "examples/window.rs"
 Cohesion: 0.27
 Nodes (7): App, main(), ActiveEventLoop, Box, Option, Result, Window
 
-### Community 1136 - "rects"
-Cohesion: 0.38
-Nodes (9): a_canvas_painter_can_fill_with_a_brush(), a_flat_background_still_costs_one_flat_node(), a_gradient_background_reaches_the_scene_intact(), an_elevated_card_casts_its_shadow_before_its_own_fill(), box_style(), host_with(), rects(), Option (+1 more)
+### Community 1136 - "startup_notify.rs"
+Cohesion: 0.25
+Nodes (5): dyn ActiveEventLoop + '_, EventLoopExtStartupNotify, Option, set_activation_token_env(), WindowAttributesExtStartupNotify
 
-### Community 1137 - "ProtocolError"
-Cohesion: 0.20
-Nodes (6): ProtocolError, Display, Formatter, Result, String, Result
+### Community 1137 - "cupertino-snackbar/src/lib.rs"
+Cohesion: 0.38
+Nodes (6): CupertinoSnackbarStyle, Color, FontWeight, Insets, ThemeFontWeight, to_engine_weight()
 
 ### Community 1138 - "AnimationFrameHandler"
 Cohesion: 0.18
 Nodes (8): AnimationFrameHandler, Drop, F, FnMut, Option, Rc, Self, Window
 
-### Community 1139 - "text_pixels.rs"
-Cohesion: 0.42
-Nodes (9): a_longer_string_draws_more_ink(), a_rect_is_not_mistaken_for_text(), an_empty_scene_draws_nothing(), inked(), render(), text_reaches_the_surface_as_ink(), text_scene(), the_ink_is_a_glyph_shape_not_a_filled_box() (+1 more)
+### Community 1139 - ".semantics"
+Cohesion: 0.29
+Nodes (3): ElementId, SemanticsContext, SemanticsHint
 
 ### Community 1140 - "fluent-data_iterator/tests/data_iterator.rs"
 Cohesion: 0.36
@@ -5798,37 +5800,37 @@ Nodes (4): FooterProps, Default, Option, Self
 Cohesion: 0.22
 Nodes (4): FormProps, Default, Self, String
 
-### Community 1146 - "negotiation.rs"
-Cohesion: 0.31
-Nodes (4): a_mode_the_provider_stopped_supporting_is_refused_per_frame(), caps(), the_callers_order_decides_and_the_providers_order_is_its_own_business(), the_whole_mode_by_capability_matrix_agrees_with_itself()
+### Community 1146 - "floom-native/src/abi.rs"
+Cohesion: 0.07
+Nodes (28): clip_from_number(), the_device_conversion_is_the_frameworks_own(), a_clip_crops_in_place_rather_than_moving_the_view(), a_clip_that_contains_the_view_needs_no_cropping(), adjacent_participants_do_not_gap_or_overlap(), an_inverted_clip_is_rejected_too(), an_inverted_rect_is_rejected_by_the_state_not_silently_clamped(), both_edges_are_rounded_so_the_size_is_whole_pixels() (+20 more)
 
 ### Community 1147 - "Decision: The DSL emitter's widget set is a caller-supplied parameter"
 Cohesion: 0.29
 Nodes (6): Alternatives considered, Consequences, Context, Decision, Decision: The DSL emitter's widget set is a caller-supplied parameter, Verification
 
-### Community 1148 - "md-avatar/tests/avatar.rs"
-Cohesion: 0.29
-Nodes (10): painted(), Color, FontWeight, Option, the_props_size_wins_over_the_tokens(), the_shape_is_circle(), the_style_resolves_this_kits_own_palette(), theme() (+2 more)
+### Community 1148 - "fluent-snackbar/src/lib.rs"
+Cohesion: 0.38
+Nodes (6): FluentSnackbarStyle, Color, FontWeight, Insets, ThemeFontWeight, to_engine_weight()
 
-### Community 1149 - "web_pixels.rs"
-Cohesion: 0.32
-Nodes (9): a_point_is_in_the_scene(), reference_pixels(), Vec, scene(), size(), the_web_draws_the_shadow_the_reference_draws(), the_web_has_a_golden(), the_web_renders_the_same_picture_as_the_reference() (+1 more)
+### Community 1149 - "node_bounds"
+Cohesion: 0.52
+Nodes (6): button_shrink_wraps_its_label(), icon_image_divider_and_spacer_report_their_extents(), node_bounds(), pinned_style_beats_the_button_intrinsic_size(), progress_reports_its_painted_geometry(), switch_includes_indicator_and_label_extent()
 
 ### Community 1150 - "floom-shader/src/main.rs"
 Cohesion: 0.53
 Nodes (8): act_1_program_reaches_the_scene(), act_2_the_cpu_rasteriser_says_so(), act_3_scalars_repaint_without_relayout(), box_style(), main(), mount_box(), settle(), shader_of()
 
 ### Community 1151 - "Modifiers"
-Cohesion: 0.19
-Nodes (6): DeviceId, Modifiers, ModifiersKeys, ModifiersState, Self, ModifiersKeyState
+Cohesion: 0.12
+Nodes (12): DeviceId, Modifiers, Eq, ModifiersKeys, ModifiersState, Mutex, PartialEq, Result (+4 more)
 
 ### Community 1152 - "DividerTokens"
 Cohesion: 0.25
 Nodes (6): tokens(), DividerTokens, Default, Self, tokens(), tokens()
 
-### Community 1153 - "StepperProps"
-Cohesion: 0.25
-Nodes (3): Default, Self, StepperProps
+### Community 1153 - "tui_backend.rs"
+Cohesion: 0.57
+Nodes (6): a_labels_characters_reach_the_terminal_grid(), a_wider_terminal_puts_the_same_glyph_in_a_different_column(), host_with_label(), Size, surface(), the_same_host_frame_can_be_presented_twice()
 
 ### Community 1154 - "fluent-responsive/tests/responsive.rs"
 Cohesion: 0.36
@@ -5846,21 +5848,21 @@ Nodes (6): Deref, Drop, NonNull, Target, XkbContext, xkb_context
 Cohesion: 0.20
 Nodes (6): CupertinoImageStyle, Color, Option, ImageProps, Option, String
 
-### Community 1158 - "ColorPickerProps"
-Cohesion: 0.25
-Nodes (3): ColorPickerProps, Default, Self
+### Community 1158 - "ImageTokens"
+Cohesion: 0.40
+Nodes (4): ImageTokens, Color, Default, Self
 
-### Community 1159 - "shadow.rs"
-Cohesion: 0.12
-Nodes (9): RadiusTokens, Default, Self, ElevationTokens, Default, Self, Default, Self (+1 more)
+### Community 1159 - "ShadowData"
+Cohesion: 0.10
+Nodes (16): CupertinoCardStyle, Color, shadow_from(), RadiusTokens, Default, Self, ElevationTokens, Default (+8 more)
 
-### Community 1160 - "assert_snapshot"
-Cohesion: 0.19
-Nodes (8): assert_snapshot(), PixelSnapshot, Option, PathBuf, Self, String, Vec, snapshot_path()
+### Community 1160 - "SheetTokens"
+Cohesion: 0.40
+Nodes (4): Color, Default, Self, SheetTokens
 
-### Community 1161 - "shadow_spread.rs"
-Cohesion: 0.31
-Nodes (10): alpha(), card(), hard(), negative_spread_erodes_the_silhouette_inward(), reach_accounts_for_positive_spread_but_not_negative(), render(), Vec, spread_grows_the_silhouette_past_the_shape() (+2 more)
+### Community 1161 - "SkeletonTokens"
+Cohesion: 0.40
+Nodes (4): Color, Default, Self, SkeletonTokens
 
 ### Community 1162 - "floom-chart/src/main.rs"
 Cohesion: 0.27
@@ -5868,7 +5870,7 @@ Nodes (13): act_1_the_closure_reaches_the_scene(), act_2_the_host_brackets_and_t
 
 ### Community 1163 - "Element"
 Cohesion: 0.14
-Nodes (7): Element, ElementId, Option, Self, ElementId, Option, Self
+Nodes (8): Element, ElementKind, ElementId, Option, Self, ElementId, Option, Self
 
 ### Community 1164 - "ValidationMessagesProps"
 Cohesion: 0.25
@@ -5878,9 +5880,9 @@ Nodes (3): Default, Self, ValidationMessagesProps
 Cohesion: 0.18
 Nodes (8): EmptyStateProps, Clone, Debug, Default, Formatter, Result, Self, String
 
-### Community 1166 - "md-data_iterator/tests/data_iterator.rs"
-Cohesion: 0.36
-Nodes (10): an_undivided_iterator_has_no_rules(), Color, the_container_is_padded_rounded_and_filled(), the_header_comes_first_and_the_footer_last(), the_items_are_in_order_with_a_rule_between_them(), the_style_resolves_the_theme_and_the_tokens(), theme(), three_items() (+2 more)
+### Community 1166 - "node_bounds"
+Cohesion: 0.73
+Nodes (5): a_radio_reports_its_ring_gap_and_label(), a_styled_radio_is_measured_from_its_style(), host_with_root(), node_bounds(), the_ring_wins_when_the_touch_target_is_smaller()
 
 ### Community 1167 - "floom-navigation-demo/src/main.rs"
 Cohesion: 0.32
@@ -5891,8 +5893,8 @@ Cohesion: 0.13
 Nodes (18): the_content_follows_the_flag(), the_style_resolves_the_tokens(), the_transition_is_the_one_this_kit_plays(), theme(), tokens(), Default, Self, SlideTransitionTokens (+10 more)
 
 ### Community 1169 - "to_core_role"
-Cohesion: 0.21
-Nodes (10): A11yState, CoreRole, CoreState, CoreHint, From, Self, SemanticsHint, SemanticsRole (+2 more)
+Cohesion: 0.19
+Nodes (11): A11yState, CoreRole, CoreState, SemanticsHint, CoreHint, From, Self, SemanticsHint (+3 more)
 
 ### Community 1170 - "SkeletonLoaderProps"
 Cohesion: 0.22
@@ -5923,8 +5925,8 @@ Cohesion: 0.14
 Nodes (8): CARGO_INCREMENTAL, CARGO_PROFILE_DEV_DEBUG, CARGO_PROFILE_TEST_DEBUG, has_check(), run_check(), run_cross_check(), gate.sh script, target_toolchain_bin()
 
 ### Community 1180 - "ItemGroupTokens"
-Cohesion: 0.29
-Nodes (5): item_group_tokens(), ItemGroupTokens, Default, Self, item_group_tokens()
+Cohesion: 0.40
+Nodes (3): ItemGroupTokens, Default, Self
 
 ### Community 1181 - "fluent-app/tests/app.rs"
 Cohesion: 0.43
@@ -5942,9 +5944,9 @@ Nodes (3): Clock, FakeClock, Self
 Cohesion: 0.80
 Nodes (4): main(), must_replace(), patch_footer(), patch_sysbar()
 
-### Community 1185 - "event_animation.rs"
-Cohesion: 0.52
-Nodes (5): a_resting_widget_declares_an_inert_animation(), app(), press(), the_new_phase_starts_a_running_animation(), the_press_switches_phase_and_reports_dirty()
+### Community 1185 - "web_accessibility"
+Cohesion: 0.53
+Nodes (5): accessibility_capabilities(), reports_capability_profile(), retains_tree_but_cannot_invoke_without_bridge(), AccessibilityCapabilities, web_accessibility()
 
 ### Community 1186 - "compile_fixture.rs"
 Cohesion: 0.44
@@ -5954,9 +5956,9 @@ Nodes (9): a_mutated_emission_turns_the_check_red(), a_program_emitted_against_t
 Cohesion: 0.53
 Nodes (9): assert_absent(), assert_present(), cargo_tree(), default_features_are_headless_and_backend_free(), desktop_bundle_adds_only_the_desktop_windowing_stack(), devtools_bundle_adds_the_tooling_tier(), renderer_gpu_bundle_adds_vello_and_the_gpu_stack(), renderer_software_bundle_adds_only_the_software_renderer() (+1 more)
 
-### Community 1188 - ".new"
-Cohesion: 0.52
-Nodes (3): Fn, Self, wall_clock()
+### Community 1188 - "BottomNavigationTokens"
+Cohesion: 0.40
+Nodes (3): BottomNavigationTokens, Default, Self
 
 ### Community 1189 - ".new"
 Cohesion: 0.29
@@ -5974,17 +5976,17 @@ Nodes (6): a_selection_written_from_outside_reaches_the_widget(), a_tabs_selecti
 Cohesion: 0.11
 Nodes (31): a_committed_pick_selects_the_element_and_returns_to_the_tree(), a_disarmed_picker_gives_the_pointer_back(), a_hidden_panel_does_not_eat_the_column_it_docks_in(), a_press_outside_the_visible_panel_does_not_unmount_it(), a_shown_panel_actually_mounts_its_rows(), a_shown_panel_takes_its_column_back(), a_tree_row_gets_its_height_from_the_row_widget_not_the_slot(), an_unrelated_key_falls_through_to_the_app() (+23 more)
 
-### Community 1193 - "request_fullscreen"
-Cohesion: 0.62
-Nodes (6): exit_fullscreen(), has_fullscreen_api_support(), is_fullscreen(), request_fullscreen(), HtmlCanvasElement, Window
+### Community 1193 - "ChipGroupTokens"
+Cohesion: 0.40
+Nodes (3): ChipGroupTokens, Default, Self
 
 ### Community 1194 - "EventLoopProxy"
 Cohesion: 0.36
 Nodes (5): CoreEventLoopProxy, EventLoopProxy, From, Ping, Self
 
-### Community 1196 - "Rgba"
-Cohesion: 0.46
-Nodes (5): floom_types::Color, Rgba, Color, From, Self
+### Community 1196 - "ConfirmEditTokens"
+Cohesion: 0.40
+Nodes (3): ConfirmEditTokens, Default, Self
 
 ### Community 1197 - "try_from_winit_button"
 Cohesion: 0.60
@@ -6062,17 +6064,21 @@ Nodes (4): Files, Forked / vendored crates, Generating the notice, notices
 Cohesion: 0.70
 Nodes (4): die(), info(), ios-bundle.sh script, usage()
 
-### Community 1218 - "SafeAreaHandle"
-Cohesion: 0.29
-Nodes (5): Drop, Self, Style, Window, SafeAreaHandle
+### Community 1218 - "EmptyStateTokens"
+Cohesion: 0.40
+Nodes (3): EmptyStateTokens, Default, Self
+
+### Community 1219 - "IconTokens"
+Cohesion: 0.40
+Nodes (3): IconTokens, Default, Self
 
 ### Community 1220 - "The devtools panel"
 Cohesion: 0.17
 Nodes (12): Opening it, Picking an element, The Chrome layout, The devtools panel, The one line, The panel is chrome, not a dialog, The tab bar, The tree is a tree, not a list (+4 more)
 
-### Community 1221 - "DataTableTokens"
-Cohesion: 0.33
-Nodes (4): DataTableTokens, Default, Self, tokens()
+### Community 1221 - "IconButtonTokens"
+Cohesion: 0.40
+Nodes (3): IconButtonTokens, Default, Self
 
 ### Community 1222 - "checkbox_measure.rs"
 Cohesion: 0.60
@@ -6084,7 +6090,7 @@ Nodes (9): a_rotate_animation_turns_the_scope_with_the_value(), a_scale_animatio
 
 ### Community 1225 - "MonitorHandle"
 Cohesion: 0.04
-Nodes (72): Notified, Notifier, Arc, Inner, Option, WeakShared, MonitorPermissionError, Detailed (+64 more)
+Nodes (65): WeakShared, MonitorPermissionError, Detailed, has_previous_lock_support(), has_screen_details_support(), HasMonitorPermissionFuture, Inner, MonitorHandle (+57 more)
 
 ### Community 1227 - "encode_wide"
 Cohesion: 0.25
@@ -6106,9 +6112,9 @@ Nodes (3): host_returns_zero_insets(), Insets, safe_area_insets()
 Cohesion: 0.29
 Nodes (5): a_key_round_trips_back_to_the_node_it_names(), describing_the_hosts_data_answers_structural_questions(), host(), the_host_describes_its_own_tree_as_data(), the_keys_are_unique_so_a_lookup_is_unambiguous()
 
-### Community 1238 - ".create_window"
-Cohesion: 0.32
-Nodes (4): Box, CoreWindow, Item, Iterator
+### Community 1238 - "ListTokens"
+Cohesion: 0.40
+Nodes (3): ListTokens, Default, Self
 
 ### Community 1239 - "selector.rs"
 Cohesion: 0.67
@@ -6123,16 +6129,16 @@ Cohesion: 0.83
 Nodes (3): bench_update_reuse(), bench_visible_range(), Criterion
 
 ### Community 1243 - "SystemBarProps"
-Cohesion: 0.17
-Nodes (7): Default, Option, Self, SystemBarProps, MaterialSystemBarStyle, Color, Insets
+Cohesion: 0.22
+Nodes (4): Default, Option, Self, SystemBarProps
 
 ### Community 1244 - "libm.rs"
 Cohesion: 0.83
 Nodes (3): copysign(), round(), trunc()
 
-### Community 1245 - "reachability"
-Cohesion: 0.44
-Nodes (8): connection_type(), connectivity_status(), is_connected(), is_metered(), is_reachable(), reachability(), Option, ReachabilityFlags
+### Community 1245 - "OtpInputTokens"
+Cohesion: 0.40
+Nodes (3): OtpInputTokens, Default, Self
 
 ### Community 1246 - "devtools_demo.rs"
 Cohesion: 0.52
@@ -6290,9 +6296,9 @@ Nodes (3): open_url(), Result, String
 Cohesion: 0.50
 Nodes (3): open_url(), Result, String
 
-### Community 1287 - "CalendarTokens"
+### Community 1287 - "ProgressCircularTokens"
 Cohesion: 0.40
-Nodes (3): CalendarTokens, Default, Self
+Nodes (3): ProgressCircularTokens, Default, Self
 
 ### Community 1288 - "tui_platform.rs"
 Cohesion: 0.48
@@ -6310,21 +6316,21 @@ Nodes (8): is_keep_screen_on(), keep_screen_on(), Mutex, Option, Result, String,
 Cohesion: 0.40
 Nodes (3): CarouselTokens, Default, Self
 
-### Community 1292 - "ColorPickerTokens"
+### Community 1292 - "PullToRefreshTokens"
 Cohesion: 0.40
-Nodes (3): ColorPickerTokens, Default, Self
+Nodes (3): PullToRefreshTokens, Default, Self
 
-### Community 1293 - "FileInputTokens"
+### Community 1293 - "RatingTokens"
 Cohesion: 0.40
-Nodes (3): FileInputTokens, Default, Self
+Nodes (3): RatingTokens, Default, Self
 
 ### Community 1294 - "FluentCard"
-Cohesion: 0.12
-Nodes (16): FluentCard, FluentCardStyle, Box, Color, ContentBuilder, Default, Fn, Insets (+8 more)
+Cohesion: 0.14
+Nodes (13): FluentCard, Box, ContentBuilder, Default, Fn, Insets, Option, PaintColor (+5 more)
 
-### Community 1295 - "ListGroupTokens"
+### Community 1295 - "SlideGroupTokens"
 Cohesion: 0.40
-Nodes (3): ListGroupTokens, Default, Self
+Nodes (3): Default, Self, SlideGroupTokens
 
 ### Community 1296 - "src/icons.rs"
 Cohesion: 0.50
@@ -6351,8 +6357,8 @@ Cohesion: 0.40
 Nodes (3): ProgressLinearTokens, Default, Self
 
 ### Community 1313 - "FooterTokens"
-Cohesion: 0.33
-Nodes (4): FooterTokens, Default, Self, tokens()
+Cohesion: 0.11
+Nodes (10): FooterTokens, Default, Self, ListItemTokens, Default, Self, OverlayTokens, Default (+2 more)
 
 ### Community 1314 - "shared_application"
 Cohesion: 0.52
@@ -6434,57 +6440,49 @@ Nodes (3): ResponsiveTokens, Default, Self
 Cohesion: 0.53
 Nodes (5): accessibility_capabilities(), android_accessibility(), reports_capability_profile(), retains_tree_but_cannot_invoke_without_bridge(), AccessibilityCapabilities
 
-### Community 1356 - "storage.rs"
-Cohesion: 0.33
-Nodes (5): PhantomData, Rc, Storage, SyncStorage, UnsyncStorage
+### Community 1356 - "popup_placement.rs"
+Cohesion: 0.14
+Nodes (16): popup_placement_rect(), SemanticsHint, a_closed_popup_asks_for_nothing(), a_panel_never_overlaps_its_control(), a_popup_reports_the_placement_it_was_given(), above_hangs_off_the_top_edge(), an_opening_popup_asks_for_the_placed_rect(), below() (+8 more)
 
-### Community 1357 - "AutocompleteTokens"
+### Community 1357 - "SnackbarTokens"
 Cohesion: 0.40
-Nodes (3): AutocompleteTokens, Default, Self
+Nodes (3): Default, Self, SnackbarTokens
 
-### Community 1358 - "SelectTokens"
+### Community 1358 - "SpacerTokens"
 Cohesion: 0.40
-Nodes (3): Default, Self, SelectTokens
+Nodes (3): Default, Self, SpacerTokens
 
 ### Community 1359 - "md-icon/tests/api.rs"
 Cohesion: 0.13
 Nodes (14): a_labelled_resolved_icon_reports_its_name(), allocate(), an_unknown_name_falls_back_to_the_dot_and_still_paints(), an_unlabelled_resolved_icon_is_decorative(), design_system_colour_becomes_an_engine_colour(), floom_widgets::VectorIcon, icon_exposes_accessible_builder_api_and_theme_style(), material() (+6 more)
 
-### Community 1360 - "BreadcrumbsTokens"
-Cohesion: 0.33
-Nodes (4): BreadcrumbsTokens, Default, Self, String
-
-### Community 1362 - "StepperTokens"
+### Community 1360 - "SparklineTokens"
 Cohesion: 0.40
-Nodes (3): Default, Self, StepperTokens
+Nodes (3): Default, Self, SparklineTokens
 
-### Community 1363 - "SystemBarTokens"
+### Community 1362 - "SpeedDialTokens"
 Cohesion: 0.40
-Nodes (3): Default, Self, SystemBarTokens
+Nodes (3): Default, Self, SpeedDialTokens
 
-### Community 1364 - "TextFieldTokens"
-Cohesion: 0.50
-Nodes (3): Self, SpacingTokens, TextFieldTokens
-
-### Community 1379 - "NavigationDrawerTokens"
+### Community 1363 - "TooltipTokens"
 Cohesion: 0.40
-Nodes (3): NavigationDrawerTokens, Default, Self
+Nodes (3): Default, Self, TooltipTokens
 
-### Community 1380 - "TextareaTokens"
+### Community 1379 - "scancode_to_physicalkey"
 Cohesion: 0.40
-Nodes (3): Default, Self, TextareaTokens
+Nodes (5): PhysicalKey, scancode_to_physicalkey(), get_keyboard_physical_key(), PhysicalKey, RAWKEYBOARD
+
+### Community 1380 - "node_bounds"
+Cohesion: 0.83
+Nodes (3): a_styled_field_is_measured_from_its_style(), node_bounds(), textfield_keeps_a_minimum_width_and_measures_its_text()
 
 ### Community 1381 - "TimelineTokens"
 Cohesion: 0.40
 Nodes (3): Default, Self, TimelineTokens
 
-### Community 1382 - "WindowTokens"
-Cohesion: 0.40
-Nodes (3): Default, Self, WindowTokens
-
-### Community 1383 - "ToolbarTokens"
-Cohesion: 0.40
-Nodes (3): Default, Self, ToolbarTokens
+### Community 1382 - "main"
+Cohesion: 0.50
+Nodes (3): main(), Box, Result
 
 ### Community 1384 - "Access"
 Cohesion: 0.40
@@ -6494,29 +6492,25 @@ Nodes (5): access_str(), access_str(), access_str(), access_str(), Access
 Cohesion: 0.40
 Nodes (3): xkb_keycode_t, xkb_keysym_t, xkb_layout_index_t
 
-### Community 1389 - "fixed"
-Cohesion: 0.83
-Nodes (3): container_radius_reaches_the_scene_rect(), fixed(), plain_container_keeps_zero_radius()
-
 ## Knowledge Gaps
 - **1317 isolated node(s):** `editor`, `playground`, `Lexer`, `Easing`, `TypeScale` (+1312 more)
-  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 8787 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
-- **68 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 8794 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
+- **67 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `MultiTheme` connect `MultiTheme` to `CupertinoTheme`, `Stack`, `MaterialSheet`, `.shared`, `CupertinoSnackbar`, `FluentOverlay`, `MaterialDatePicker`, `CupertinoNavigationDrawer`, `MdList`, `with_alpha`, `fluent-slide_group/tests/slide_group.rs`, `MaterialColorPicker`, `CupertinoInfiniteScroller`, `SharedFlag`, `fluent-form/tests/form.rs`, `CupertinoItemGroup`, `CupertinoCard`, `FluentInfiniteScroller`, `CupertinoRangeSlider`, `FluentWindow`, `FluentDatePicker`, `CupertinoSkeletonLoader`, `cupertino-slide_group/tests/slide_group.rs`, `CupertinoCheckboxBtn`, `CupertinoChip`, `CupertinoOtpInput`, `cupertino-form/tests/form.rs`, `CupertinoSlideTransition`, `FluentColorPicker`, `FluentChip`, `CupertinoRadioGroup`, `FluentForm`, `MaterialForm`, `md-form/tests/form.rs`, `MaterialProgressCircular`, `WidgetAny`, `FluentPullToRefresh`, `CupertinoContainer`, `CupertinoExpandTransition`, `CupertinoGrid`, `cupertino-stepper/tests/stepper.rs`, `CupertinoValidationMessages`, `CupertinoSpacer`, `FluentTable`, `cupertino-checkbox_btn/tests/checkbox_btn.rs`, `CupertinoIconButton`, `cupertino_select.rs`, `FluentEmptyState`, `CupertinoAvatar`, `CupertinoProgressLinear`, `CupertinoCode`, `with_alpha`, `CupertinoWindow`, `CupertinoDateAdapterProvider`, `CupertinoLocaleProvider`, `CupertinoButtonGroup`, `MaterialCheckboxBtn`, `CupertinoSpeedDial`, `FluentContainer`, `CupertinoIconsProvider`, `CupertinoSystemBar`, `fluent-stepper/tests/stepper.rs`, `CupertinoEmptyState`, `PaintOp`, `Widget`, `FluentSpeedDial`, `CupertinoVirtualScroller`, `CupertinoConfirmEdit`, `CupertinoRating`, `CupertinoDisplayProvider`, `FluentSlideGroup`, `CupertinoDivider`, `md_select.rs`, `fluent-window/tests/window.rs`, `FluentSelect`, `CupertinoAlert`, `MaterialComponentTokens`, `md-chip/tests/chip.rs`, `FluentButtonGroup`, `cupertino_radio.rs`, `fluent_select.rs`, `fluent_radio.rs`, `with_alpha`, `md_radio.rs`, `CupertinoParallax`, `CupertinoListSubheader`, `FluentConfirmEdit`, `Overlay`, `MdIconButton`, `CupertinoScaleTransition`, `MaterialOtpInput`, `FluentDataIterator`, `cupertino-code/tests/code.rs`, `FluentCheckboxBtn`, `fluent-checkbox/tests/api.rs`, `md_checkbox.rs`, `MaterialSlideGroup`, `FluentIconButton`, `MaterialInfiniteScroller`, `MaterialConfirmEdit`, `MaterialBottomNavigation`, `MaterialGrid`, `CupertinoSheet`, `MdAlert`, `FluentItemGroup`, `FluentBottomNavigation`, `FluentListGroup`, `FluentVirtualScroller`, `MdItemGroup`, `CupertinoExpansionPanels`, `MaterialVirtualScroller`, `CupertinoCarousel`, `FluentCarousel`, `MaterialListGroup`, `FluentBadge`, `FluentSystemBar`, `FluentMenu`, `FluentRangeSlider`, `MaterialRangeSlider`, `MaterialRadioGroup`, `FluentNumberInput`, `md_slider.rs`, `MaterialNumberInput`, `MdCounter`, `FluentValidationMessages`, `md-confirm_edit/tests/confirm_edit.rs`, `MaterialValidationMessages`, `FluentFooter`, `cupertino-window/tests/window.rs`, `md-sparkline/tests/sparkline.rs`, `MdCard`, `CupertinoDataIterator`, `FluentTextField`, `CupertinoCounter`, `ExpandTransitionTokens`, `FluentHover`, `FadeTransitionTokens`, `MaterialHover`, `CupertinoPagination`, `FluentTimePicker`, `MdFooter`, `TextFieldProps`, `cupertino_slider.rs`, `FluentSheet`, `FluentCounter`, `read_flag`, `MaterialRating`, `FluentPagination`, `cupertino_text_field.rs`, `fluent_text_field.rs`, `MaterialPagination`, `CupertinoDefaultsProvider`, `MdOverlay`, `md_text_field.rs`, `fluent_slider.rs`, `FluentImage`, `RadioProps`, `CupertinoHover`, `CupertinoBottomNavigation`, `MaterialSystemBar`, `MdExpansionPanels`, `CupertinoTextarea`, `CupertinoKbd`, `FluentAppBar`, `MdTextField`, `cupertino-card/tests/card.rs`, `MaterialTimePicker`, `MaterialButtonGroup`, `CupertinoButton`, `fluent-item_group/tests/item_group.rs`, `cupertino-button/tests/button.rs`, `md-window/tests/window.rs`, `cupertino-kbd/tests/kbd.rs`, `cupertino-confirm_edit/tests/confirm_edit.rs`, `CupertinoListItem`, `ScaleTransitionTokens`, `CupertinoTimePicker`, `CupertinoToolbar`, `CupertinoTreeview`, `fluent-confirm_edit/tests/confirm_edit.rs`, `FluentExpansionPanels`, `FluentListItem`, `MaterialFileInput`, `CupertinoFadeTransition`, `FluentToolbar`, `FluentTreeview`, `FluentOtpInput`, `MdListItem`, `MdToolbar`, `MdTreeview`, `CupertinoPullToRefresh`, `cupertino-pagination/tests/pagination.rs`, `CupertinoStepper`, `cupertino-pull_to_refresh/tests/pull_to_refresh.rs`, `cupertino-datatable/tests/datatable.rs`, `CupertinoFileInput`, `cupertino-snackbar/tests/snackbar.rs`, `fluent-datatable/tests/datatable.rs`, `MdDialog`, `MaterialCarousel`, `CupertinoCombobox`, `CupertinoFooter`, `FluentFileInput`, `fluent-pagination/tests/pagination.rs`, `md-pagination/tests/pagination.rs`, `FluentCombobox`, `md-datatable/tests/datatable.rs`, `FluentCode`, `cupertino-bottom_navigation/tests/bottom_navigation.rs`, `FluentDefaultsProvider`, `tests/item_group.rs`, `fluent-snackbar/tests/snackbar.rs`, `FluentKbd`, `FluentDataTable`, `CupertinoDataTable`, `CupertinoAppBar`, `CupertinoForm`, `CupertinoNumberInput`, `fluent-pull_to_refresh/tests/pull_to_refresh.rs`, `fluent-card/tests/card.rs`, `CupertinoTabs`, `CupertinoListGroup`, `MaterialPullToRefresh`, `cupertino-file_input/tests/file_input.rs`, `FluentDialog`, `CupertinoChipGroup`, `CupertinoText`, `FluentTabs`, `MdButton`, `MaterialChipGroup`, `MaterialCode`, `fluent-file_input/tests/file_input.rs`, `FluentTextarea`, `MaterialDataTable`, `MaterialDefaultsProvider`, `CupertinoBadge`, `MaterialKbd`, `md-file_input/tests/file_input.rs`, `MaterialWindow`, `md-pull_to_refresh/tests/pull_to_refresh.rs`, `MaterialTextarea`, `MaterialEmptyState`, `CupertinoColorPicker`, `FluentAlert`, `MaterialImage`, `cupertino-table/tests/table.rs`, `CupertinoBanner`, `fluent-bottom_navigation/tests/bottom_navigation.rs`, `FluentRadioGroup`, `fluent-table/tests/table.rs`, `FluentButton`, `md-bottom_navigation/tests/bottom_navigation.rs`, `md-table/tests/table.rs`, `CupertinoTooltip`, `cupertino-banner/tests/banner.rs`, `CupertinoMenu`, `fluent-treeview/tests/treeview.rs`, `fluent-banner/tests/banner.rs`, `cupertino-breadcrumbs/tests/breadcrumbs.rs`, `fluent-button/tests/button.rs`, `MaterialStepper`, `CupertinoResponsive`, `CupertinoDatePicker`, `md-banner/tests/banner.rs`, `MaterialTable`, `cupertino-number_input/tests/number_input.rs`, `fluent-breadcrumbs/tests/breadcrumbs.rs`, `SelectProps`, `md-breadcrumbs/tests/breadcrumbs.rs`, `cupertino-rating/tests/rating.rs`, `CupertinoTable`, `FluentBanner`, `MdIcon`, `cupertino-hover/tests/hover.rs`, `cupertino-infinite_scroller/tests/infinite_scroller.rs`, `FluentChipGroup`, `FluentStepper`, `CupertinoAutocomplete`, `CupertinoImage`, `fluent-hover/tests/hover.rs`, `fluent-number_input/tests/number_input.rs`, `fluent-infinite_scroller/tests/infinite_scroller.rs`, `MaterialBanner`, `md-number_input/tests/number_input.rs`, `MaterialApp`, `cupertino-chip_group/tests/chip_group.rs`, `FluentAutocomplete`, `fluent-chip_group/tests/chip_group.rs`, `MdAutocomplete`, `MdSelect`, `MaterialChip`, `MaterialTabs`, `FluentSkeletonLoader`, `FluentRating`, `MaterialSkeletonLoader`, `ListSubheaderTokens`, `cupertino-floating_action_button/tests/floating_action_button.rs`, `cupertino-icon_button/tests/icon_button.rs`, `FluentNavigationDrawer`, `md-infinite_scroller/tests/infinite_scroller.rs`, `CupertinoCalendar`, `md-chip_group/tests/chip_group.rs`, `cupertino-date_picker/tests/date_picker.rs`, `fluent-icon_button/tests/icon_button.rs`, `cupertino-sparkline/tests/sparkline.rs`, `FluentCalendar`, `cupertino-tabs/tests/tabs.rs`, `fluent-date_picker/tests/date_picker.rs`, `MaterialCalendar`, `cupertino-avatar/tests/avatar.rs`, `md-hover/tests/hover.rs`, `fluent-sparkline/tests/sparkline.rs`, `MdCombobox`, `fluent-timeline/tests/timeline.rs`, `md-date_picker/tests/date_picker.rs`, `MdSlider`, `FluentTimeline`, `W`, `fluent-otp_input/tests/otp_input.rs`, `fluent-tabs/tests/tabs.rs`, `md-otp_input/tests/otp_input.rs`, `cupertino-timeline/tests/timeline.rs`, `md-tabs/tests/tabs.rs`, `cupertino-calendar/tests/calendar.rs`, `ListProps`, `cupertino-range_slider/tests/range_slider.rs`, `CupertinoApp`, `fluent-calendar/tests/calendar.rs`, `cupertino-empty_state/tests/empty_state.rs`, `cupertino-radio-group/tests/radio_group.rs`, `FluentList`, `fluent-range_slider/tests/range_slider.rs`, `fluent-speed_dial/tests/speed_dial.rs`, `fluent-time_picker/tests/time_picker.rs`, `CupertinoTimeline`, `CheckboxProps`, `md-calendar/tests/calendar.rs`, `md-icon_button/tests/icon_button.rs`, `CupertinoFloatingActionButton`, `md-range_slider/tests/range_slider.rs`, `FluentDivider`, `cupertino-list_item/tests/list_item.rs`, `md-time_picker/tests/time_picker.rs`, `cupertino-carousel/tests/carousel.rs`, `cupertino-color_picker/tests/color_picker.rs`, `MaterialTimeline`, `cupertino-system_bar/tests/system_bar.rs`, `fluent-carousel/tests/carousel.rs`, `fluent-color_picker/tests/color_picker.rs`, `fluent-system_bar/tests/system_bar.rs`, `md-carousel/tests/carousel.rs`, `md-color_picker/tests/color_picker.rs`, `md-system_bar/tests/system_bar.rs`, `cupertino-treeview/tests/treeview.rs`, `cupertino-time_picker/tests/time_picker.rs`, `cupertino-virtual_scroller/tests/virtual_scroller.rs`, `fluent-empty_state/tests/empty_state.rs`, `md-empty_state/tests/empty_state.rs`, `fluent-virtual_scroller/tests/virtual_scroller.rs`, `md-snackbar/tests/snackbar.rs`, `md-virtual_scroller/tests/virtual_scroller.rs`, `cupertino-chip/tests/chip.rs`, `cupertino-list_group/tests/list_group.rs`, `cupertino-skeleton_loader/tests/skeleton_loader.rs`, `CupertinoSparkline`, `md-parallax/tests/parallax.rs`, `FluentRadio`, `cupertino-menu/tests/menu.rs`, `CupertinoSlider`, `MdRadio`, `md-rating/tests/rating.rs`, `cupertino-expansion_panels/tests/expansion_panels.rs`, `md-treeview/tests/treeview.rs`, `cupertino-textarea/tests/textarea.rs`, `cupertino-validation_messages/tests/validation_messages.rs`, `fluent-menu/tests/menu.rs`, `cupertino-main/tests/main.rs`, `MdDivider`, `cupertino-tooltip/tests/tooltip.rs`, `fluent-main/tests/main.rs`, `md-main/tests/main.rs`, `fluent-expansion_panels/tests/expansion_panels.rs`, `fluent-image/tests/image.rs`, `fluent-radio-group/tests/radio_group.rs`, `fluent-textarea/tests/textarea.rs`, `fluent-validation_messages/tests/validation_messages.rs`, `md-image/tests/image.rs`, `md-radio-group/tests/radio_group.rs`, `fluent-tooltip/tests/tooltip.rs`, `md-textarea/tests/textarea.rs`, `md-validation_messages/tests/validation_messages.rs`, `fluent-list_group/tests/list_group.rs`, `cupertino-footer/tests/footer.rs`, `cupertino-item_group/tests/item_group.rs`, `fluent-rating/tests/rating.rs`, `MaterialMenu`, `fluent-footer/tests/footer.rs`, `cupertino-progress_circular/tests/progress_circular.rs`, `cupertino-alert/tests/alert.rs`, `fluent-skeleton_loader/tests/skeleton_loader.rs`, `md-menu/tests/menu.rs`, `md-tooltip/tests/tooltip.rs`, `fluent-alert/tests/alert.rs`, `md-alert/tests/alert.rs`, `md-text/tests/text.rs`, `md-list_group/tests/list_group.rs`, `md-skeleton_loader/tests/skeleton_loader.rs`, `FluentApp`, `cupertino-button_group/tests/button_group.rs`, `fluent-button_group/tests/button_group.rs`, `md-button_group/tests/button_group.rs`, `md-timeline/tests/timeline.rs`, `md-floating_action_button/tests/floating_action_button.rs`, `FluentSlider`, `cupertino-responsive/tests/responsive.rs`, `md-responsive/tests/responsive.rs`, `cupertino-list/tests/list.rs`, `md-app/tests/app.rs`, `fluent-list/tests/list.rs`, `cupertino-data_iterator/tests/data_iterator.rs`, `fluent-avatar/tests/avatar.rs`, `fluent-data_iterator/tests/data_iterator.rs`, `md-avatar/tests/avatar.rs`, `fluent-responsive/tests/responsive.rs`, `md-progress_circular/tests/progress_circular.rs`, `md-data_iterator/tests/data_iterator.rs`, `SlideTransitionTokens`, `cupertino-app/tests/app.rs`, `ItemGroupTokens`, `fluent-app/tests/app.rs`, `fluent-text/tests/text.rs`, `FluentCard`, `md-icon/tests/api.rs`?**
-  _High betweenness centrality (0.176) - this node is a cross-community bridge._
-- **Why does `RwSignal` connect `RwSignal` to `CupertinoButton`, `Scope`, `FluentApp`, `CupertinoListItem`, `CupertinoTimePicker`, `CupertinoToolbar`, `CupertinoTreeview`, `FluentExpansionPanels`, `FluentListItem`, `MaterialFileInput`, `CupertinoFadeTransition`, `FluentToolbar`, `FluentTreeview`, `FluentOtpInput`, `MdListItem`, `MaterialSheet`, `MdToolbar`, `.shared`, `MdTreeview`, `T`, `CupertinoPullToRefresh`, `CupertinoSnackbar`, `CupertinoStepper`, `CupertinoFileInput`, `FluentOverlay`, `MdDialog`, `MaterialCarousel`, `CupertinoCombobox`, `CupertinoFooter`, `FluentFileInput`, `MaterialDatePicker`, `CupertinoNavigationDrawer`, `FluentCombobox`, `Store<T>`, `FluentCode`, `FluentSlider`, `MdList`, `with_alpha`, `FluentDefaultsProvider`, `MaterialColorPicker`, `WidgetHost`, `CupertinoInfiniteScroller`, `FluentKbd`, `FluentDataTable`, `CupertinoDataTable`, `CupertinoAppBar`, `CupertinoForm`, `CupertinoNumberInput`, `SharedFlag`, `MaterialWindow`, `CupertinoTabs`, `CupertinoItemGroup`, `CupertinoListGroup`, `CupertinoCard`, `FluentInfiniteScroller`, `MaterialPullToRefresh`, `FluentDialog`, `CupertinoRangeSlider`, `CupertinoChipGroup`, `CupertinoText`, `FluentTabs`, `FluentWindow`, `MdButton`, `MaterialChipGroup`, `MaterialCode`, `FluentDatePicker`, `FluentTextarea`, `MaterialDataTable`, `CupertinoSkeletonLoader`, `CupertinoBadge`, `MaterialDefaultsProvider`, `MaterialKbd`, `CupertinoCheckboxBtn`, `CupertinoChip`, `CupertinoOtpInput`, `MaterialTextarea`, `CupertinoSlideTransition`, `FluentColorPicker`, `CupertinoColorPicker`, `FluentAlert`, `FluentChip`, `MaterialEmptyState`, `CupertinoBanner`, `CupertinoRadioGroup`, `FluentRadioGroup`, `MaterialImage`, `FluentForm`, `FluentButton`, `MaterialForm`, `MaterialProgressCircular`, `CupertinoTooltip`, `FluentPullToRefresh`, `CupertinoContainer`, `CupertinoExpandTransition`, `CupertinoGrid`, `floom-chart/src/main.rs`, `CupertinoValidationMessages`, `CupertinoSpacer`, `FluentTable`, `CupertinoMenu`, `CupertinoIconButton`, `FluentEmptyState`, `CupertinoAvatar`, `cupertino-breadcrumbs/tests/breadcrumbs.rs`, `MaterialStepper`, `CupertinoProgressLinear`, `CupertinoResponsive`, `CupertinoCode`, `CupertinoDatePicker`, `MaterialTable`, `with_alpha`, `fluent-breadcrumbs/tests/breadcrumbs.rs`, `CupertinoWindow`, `SelectProps`, `md-breadcrumbs/tests/breadcrumbs.rs`, `CupertinoTable`, `CupertinoDateAdapterProvider`, `MdIcon`, `CupertinoLocaleProvider`, `FluentBanner`, `CupertinoButtonGroup`, `FluentChipGroup`, `MaterialCheckboxBtn`, `CupertinoSpeedDial`, `FluentStepper`, `FluentContainer`, `CupertinoAutocomplete`, `CupertinoIconsProvider`, `CupertinoImage`, `CupertinoSystemBar`, `CupertinoEmptyState`, `MaterialBanner`, `MaterialApp`, `FluentAutocomplete`, `MdAutocomplete`, `FluentSpeedDial`, `MaterialChip`, `MdSelect`, `MaterialTabs`, `FluentSkeletonLoader`, `FluentRating`, `CupertinoVirtualScroller`, `MaterialSkeletonLoader`, `CupertinoConfirmEdit`, `CupertinoRating`, `FluentNavigationDrawer`, `CupertinoCalendar`, `CupertinoDisplayProvider`, `MultiTheme`, `CupertinoDivider`, `FluentSlideGroup`, `FluentCalendar`, `FluentSelect`, `MaterialCalendar`, `CupertinoAlert`, `MdCombobox`, `FluentButtonGroup`, `global_theme.rs`, `FluentCard`, `MdSlider`, `with_alpha`, `host_with_bar`, `CupertinoParallax`, `FluentTimeline`, `CupertinoListSubheader`, `FluentConfirmEdit`, `T`, `Id`, `Overlay`, `MdIconButton`, `Resource`, `ListProps`, `CupertinoScaleTransition`, `MaterialOtpInput`, `CupertinoApp`, `FluentDataIterator`, `FluentList`, `FluentCheckboxBtn`, `CupertinoTimeline`, `CheckboxProps`, `Runtime`, `CupertinoFloatingActionButton`, `MaterialSlideGroup`, `FluentIconButton`, `FluentDivider`, `MaterialConfirmEdit`, `MaterialInfiniteScroller`, `SliderProps`, `MaterialBottomNavigation`, `MaterialTimeline`, `MaterialGrid`, `CupertinoSheet`, `MdAlert`, `FluentItemGroup`, `FluentBottomNavigation`, `FluentListGroup`, `FluentVirtualScroller`, `MdItemGroup`, `BindingRegistry`, `CupertinoExpansionPanels`, `MaterialVirtualScroller`, `CupertinoCarousel`, `CupertinoSparkline`, `FluentCarousel`, `MaterialListGroup`, `FluentBadge`, `FluentRadio`, `FluentSystemBar`, `CupertinoSlider`, `FluentMenu`, `FluentRangeSlider`, `MdRadio`, `MaterialRadioGroup`, `FluentNumberInput`, `MaterialRangeSlider`, `cupertino-main/tests/main.rs`, `MdDivider`, `MaterialNumberInput`, `fluent-main/tests/main.rs`, `md-main/tests/main.rs`, `MdCounter`, `FluentValidationMessages`, `MaterialValidationMessages`, `FluentFooter`, `MdCard`, `CupertinoDataIterator`, `FluentTextField`, `CupertinoCounter`, `FluentHover`, `MaterialMenu`, `Canvas`, `MaterialHover`, `CupertinoPagination`, `FluentTimePicker`, `MdFooter`, `TextFieldProps`, `FluentSheet`, `FluentCounter`, `read_flag`, `MaterialRating`, `FluentPagination`, `MaterialPagination`, `CupertinoDefaultsProvider`, `MdOverlay`, `FluentImage`, `RadioProps`, `CupertinoHover`, `CupertinoBottomNavigation`, `MaterialSystemBar`, `MdExpansionPanels`, `CupertinoTextarea`, `CupertinoKbd`, `FluentAppBar`, `MdTextField`, `MaterialTimePicker`, `MaterialButtonGroup`?**
-  _High betweenness centrality (0.174) - this node is a cross-community bridge._
-- **Why does `WidgetAny` connect `WidgetAny` to `Counter`, `EventContext`, `NavigationDrawer`, `ParallaxLayer`, `FluentApp`, `cupertino-confirm_edit/tests/confirm_edit.rs`, `Editor`, `CupertinoListItem`, `md-skeleton_loader/tests/skeleton_loader.rs`, `md-window/tests/window.rs`, `CupertinoToolbar`, `DatePicker`, `Child`, `fluent-confirm_edit/tests/confirm_edit.rs`, `FluentExpansionPanels`, `FluentListItem`, `Rect`, `CupertinoFadeTransition`, `Stack`, `FluentToolbar`, `MaterialSheet`, `MdListItem`, `MdToolbar`, `.shared`, `TimePicker`, `cupertino-pagination/tests/pagination.rs`, `SelectGroup`, `cupertino-pull_to_refresh/tests/pull_to_refresh.rs`, `DataGrid`, `cupertino-datatable/tests/datatable.rs`, `cupertino-snackbar/tests/snackbar.rs`, `fluent-datatable/tests/datatable.rs`, `FluentOverlay`, `MdDialog`, `TextInput`, `Popup`, `CupertinoFooter`, `fluent-pagination/tests/pagination.rs`, `md-pagination/tests/pagination.rs`, `Combobox`, `CupertinoNavigationDrawer`, `src/calendar.rs`, `BottomNavigationBar`, `md-datatable/tests/datatable.rs`, `PressExpand`, `tests/controls.rs`, `FluentCode`, `reconcile.rs`, `cupertino-bottom_navigation/tests/bottom_navigation.rs`, `FluentDefaultsProvider`, `fluent-slide_group/tests/slide_group.rs`, `WidgetHost`, `Surface`, `fluent-snackbar/tests/snackbar.rs`, `FluentKbd`, `accordion.rs`, `CupertinoForm`, `SharedFlag`, `fluent-pull_to_refresh/tests/pull_to_refresh.rs`, `fluent-card/tests/card.rs`, `fluent-form/tests/form.rs`, `CupertinoItemGroup`, `CupertinoCard`, `cupertino-file_input/tests/file_input.rs`, `ColorArea`, `FluentDialog`, `PaintContext`, `Tree`, `InfiniteScrollerView`, `MaterialCode`, `TreeView`, `fluent-file_input/tests/file_input.rs`, `reconcile_surfaces.rs`, `TestApp`, `CupertinoSkeletonLoader`, `cupertino-slide_group/tests/slide_group.rs`, `MaterialDefaultsProvider`, `MaterialKbd`, `rects`, `write_flag`, `CupertinoCheckboxBtn`, `md-file_input/tests/file_input.rs`, `md-pull_to_refresh/tests/pull_to_refresh.rs`, `cupertino-form/tests/form.rs`, `CupertinoSlideTransition`, `tests/testkit.rs`, `cupertino-table/tests/table.rs`, `PullToRefreshColumn`, `fluent-bottom_navigation/tests/bottom_navigation.rs`, `FluentForm`, `fluent-table/tests/table.rs`, `MaterialForm`, `md-bottom_navigation/tests/bottom_navigation.rs`, `md-form/tests/form.rs`, `md-table/tests/table.rs`, `CupertinoContainer`, `RangeSlider`, `CupertinoExpandTransition`, `CupertinoGrid`, `cupertino-stepper/tests/stepper.rs`, `cupertino-banner/tests/banner.rs`, `BottomSheet`, `cupertino-checkbox_btn/tests/checkbox_btn.rs`, `floom-core/tests/contracts.rs`, `MediaControls`, `Stepper`, `fluent-banner/tests/banner.rs`, `select_widget.rs`, `cupertino-breadcrumbs/tests/breadcrumbs.rs`, `PickState`, `CupertinoResponsive`, `CupertinoCode`, `md-banner/tests/banner.rs`, `WindowViewer`, `OverlayHandle`, `cupertino-number_input/tests/number_input.rs`, `Menu`, `fluent-breadcrumbs/tests/breadcrumbs.rs`, `Dialog`, `md-breadcrumbs/tests/breadcrumbs.rs`, `CupertinoDateAdapterProvider`, `CupertinoLocaleProvider`, `CupertinoButtonGroup`, `tests/native.rs`, `MaterialCheckboxBtn`, `FluentContainer`, `CupertinoIconsProvider`, `fluent-number_input/tests/number_input.rs`, `fluent-stepper/tests/stepper.rs`, `md-number_input/tests/number_input.rs`, `MaterialApp`, `cupertino-chip_group/tests/chip_group.rs`, `Widget`, `fluent-chip_group/tests/chip_group.rs`, `FluentSkeletonLoader`, `TreeRow`, `CupertinoVirtualScroller`, `MaterialSkeletonLoader`, `FluentNavigationDrawer`, `CupertinoDisplayProvider`, `MultiTheme`, `md-chip_group/tests/chip_group.rs`, `fluent-window/tests/window.rs`, `cupertino-sparkline/tests/sparkline.rs`, `TabsBar`, `cupertino-tabs/tests/tabs.rs`, `ListItemRow`, `fluent-sparkline/tests/sparkline.rs`, `HoverBox`, `FluentButtonGroup`, `FluentCard`, `with_alpha`, `W`, `fluent-otp_input/tests/otp_input.rs`, `Overlay`, `fluent-tabs/tests/tabs.rs`, `md-otp_input/tests/otp_input.rs`, `md-tabs/tests/tabs.rs`, `cupertino-calendar/tests/calendar.rs`, `CupertinoScaleTransition`, `CupertinoApp`, `Ripple`, `fluent-calendar/tests/calendar.rs`, `floom-ui-composites/tests/combobox.rs`, `FluentDataIterator`, `fluent-speed_dial/tests/speed_dial.rs`, `FluentCheckboxBtn`, `md-calendar/tests/calendar.rs`, `CupertinoFloatingActionButton`, `TextEditor`, `.new`, `IconButton`, `cupertino-carousel/tests/carousel.rs`, `widgets.rs`, `cupertino-color_picker/tests/color_picker.rs`, `MaterialGrid`, `cupertino-system_bar/tests/system_bar.rs`, `VirtualScroller`, `fluent-carousel/tests/carousel.rs`, `CupertinoSheet`, `fluent-color_picker/tests/color_picker.rs`, `fluent-system_bar/tests/system_bar.rs`, `md-carousel/tests/carousel.rs`, `md-color_picker/tests/color_picker.rs`, `Labeled`, `FluentItemGroup`, `md-system_bar/tests/system_bar.rs`, `ValidationMessagesList`, `FluentVirtualScroller`, `MdItemGroup`, `floom-ui-composites/tests/icon_button.rs`, `md-snackbar/tests/snackbar.rs`, `LayoutRequest`, `cupertino-list_group/tests/list_group.rs`, `cupertino-skeleton_loader/tests/skeleton_loader.rs`, `CupertinoExpansionPanels`, `MaterialVirtualScroller`, `Any`, `DevtoolsState`, `tests/panel.rs`, `Chart`, `floom-ui-composites/tests/list_item.rs`, `cupertino-main/tests/main.rs`, `fluent-main/tests/main.rs`, `md-main/tests/main.rs`, `md-confirm_edit/tests/confirm_edit.rs`, `FluentFooter`, `select_style.rs`, `cupertino-window/tests/window.rs`, `md-sparkline/tests/sparkline.rs`, `Tooltip`, `fluent-list_group/tests/list_group.rs`, `CupertinoDataIterator`, `FluentHover`, `Canvas`, `MaterialHover`, `fluent-skeleton_loader/tests/skeleton_loader.rs`, `MdFooter`, `FluentSheet`, `read_flag`, `CupertinoDefaultsProvider`, `MdOverlay`, `md-list_group/tests/list_group.rs`, `golden_frames.rs`, `CupertinoHover`, `MdExpansionPanels`, `CupertinoKbd`, `cupertino-card/tests/card.rs`, `MaterialButtonGroup`?**
-  _High betweenness centrality (0.158) - this node is a cross-community bridge._
+- **Why does `RwSignal` connect `RwSignal` to `CupertinoButton`, `Scope`, `MaterialContainer`, `FluentApp`, `CupertinoListItem`, `CupertinoTimePicker`, `CupertinoToolbar`, `CupertinoTreeview`, `FluentExpansionPanels`, `FluentListItem`, `MaterialFileInput`, `CupertinoFadeTransition`, `FluentToolbar`, `FluentTreeview`, `CupertinoSheet`, `FluentOtpInput`, `MdListItem`, `MdToolbar`, `.shared`, `MdTreeview`, `T`, `CupertinoPullToRefresh`, `CupertinoSnackbar`, `CupertinoStepper`, `CupertinoFileInput`, `SharedFlag`, `MdDialog`, `MaterialCarousel`, `CupertinoCombobox`, `CupertinoFooter`, `FluentFileInput`, `MaterialDatePicker`, `FluentCombobox`, `signal.rs`, `FluentCode`, `Trigger`, `FluentSlider`, `ListProps`, `with_alpha`, `Store<T>`, `WidgetHost`, `MaterialColorPicker`, `CupertinoInfiniteScroller`, `FluentKbd`, `FluentDataTable`, `CupertinoDataTable`, `CupertinoForm`, `CupertinoNumberInput`, `CupertinoOverlay`, `MdSwitch`, `CupertinoTabs`, `MaterialWindow`, `CupertinoItemGroup`, `CupertinoListGroup`, `CupertinoCard`, `FluentInfiniteScroller`, `MaterialPullToRefresh`, `FluentDialog`, `CupertinoRangeSlider`, `CupertinoChipGroup`, `CupertinoText`, `FluentTabs`, `FluentWindow`, `MaterialAppBar`, `MdButton`, `MaterialChipGroup`, `MaterialCode`, `FluentDatePicker`, `FluentTextarea`, `MaterialDataTable`, `CupertinoSkeletonLoader`, `FluentBadge`, `MaterialKbd`, `CupertinoCheckboxBtn`, `ChipProps`, `CupertinoOtpInput`, `MaterialTextarea`, `CupertinoSlideTransition`, `FluentColorPicker`, `CupertinoColorPicker`, `FluentAlert`, `FluentChip`, `MaterialEmptyState`, `CupertinoBanner`, `RadioGroupProps`, `FluentRadioGroup`, `MaterialImage`, `FluentForm`, `FluentButton`, `MaterialForm`, `MaterialProgressCircular`, `CupertinoTooltip`, `FluentPullToRefresh`, `CupertinoContainer`, `CupertinoExpandTransition`, `FluentGrid`, `floom-chart/src/main.rs`, `CupertinoValidationMessages`, `CupertinoSpacer`, `IconProps`, `FluentTable`, `CupertinoMenu`, `CupertinoIconButton`, `FluentEmptyState`, `CupertinoAvatar`, `cupertino-breadcrumbs/tests/breadcrumbs.rs`, `MaterialStepper`, `LinearProgress`, `CupertinoResponsive`, `CupertinoCode`, `CupertinoDatePicker`, `MaterialTable`, `with_alpha`, `fluent-breadcrumbs/tests/breadcrumbs.rs`, `CupertinoWindow`, `CupertinoSelect`, `md-breadcrumbs/tests/breadcrumbs.rs`, `CupertinoTable`, `CupertinoDateAdapterProvider`, `CupertinoLocaleProvider`, `FluentBanner`, `MdIcon`, `CupertinoButtonGroup`, `FluentChipGroup`, `CupertinoSpeedDial`, `FluentStepper`, `FluentContainer`, `CupertinoAutocomplete`, `CupertinoIconsProvider`, `CupertinoImage`, `CupertinoSystemBar`, `CupertinoEmptyState`, `MaterialBanner`, `MaterialApp`, `FluentAutocomplete`, `MdAutocomplete`, `MdSelect`, `MaterialChip`, `MaterialSpeedDial`, `MaterialTabs`, `FluentSkeletonLoader`, `FluentRating`, `CupertinoVirtualScroller`, `CupertinoParallax`, `CupertinoConfirmEdit`, `MaterialSkeletonLoader`, `CupertinoRating`, `read_flag`, `CupertinoCalendar`, `MultiTheme`, `CupertinoThemeProvider`, `CupertinoDivider`, `FluentSlideGroup`, `FluentCalendar`, `FluentSelect`, `MaterialCalendar`, `CupertinoAlert`, `FluentSpeedDial`, `FluentButtonGroup`, `MdCombobox`, `global_theme.rs`, `FluentCard`, `MdSlider`, `CupertinoGrid`, `FloatingActionButtonProps`, `host_with_bar`, `FluentParallax`, `FluentTimeline`, `CupertinoListSubheader`, `FluentConfirmEdit`, `T`, `Id`, `Overlay`, `MdIconButton`, `Resource`, `CupertinoList`, `CupertinoScaleTransition`, `MaterialOtpInput`, `CupertinoApp`, `FluentList`, `FluentCheckboxBtn`, `CupertinoTimeline`, `CheckboxProps`, `Runtime`, `CupertinoBadge`, `CupertinoFloatingActionButton`, `FluentIconButton`, `FluentDivider`, `MaterialConfirmEdit`, `MaterialInfiniteScroller`, `SliderProps`, `FluentFloatingActionButton`, `MaterialBottomNavigation`, `MaterialTimeline`, `MdAlert`, `FluentItemGroup`, `FluentBottomNavigation`, `FluentListGroup`, `FluentVirtualScroller`, `MdItemGroup`, `BindingRegistry`, `shared_flag`, `CupertinoExpansionPanels`, `MaterialVirtualScroller`, `CupertinoCarousel`, `CupertinoSparkline`, `FluentCarousel`, `MaterialListGroup`, `FluentSystemBar`, `CupertinoSlider`, `FluentMenu`, `FluentRangeSlider`, `MaterialRangeSlider`, `MaterialRadioGroup`, `FluentNumberInput`, `cupertino-main/tests/main.rs`, `MdDivider`, `MaterialNumberInput`, `fluent-main/tests/main.rs`, `md-main/tests/main.rs`, `MdCounter`, `FluentValidationMessages`, `MaterialValidationMessages`, `FluentFooter`, `MdCard`, `FluentDataIterator`, `CupertinoDataIterator`, `CupertinoCounter`, `FluentHover`, `MaterialMenu`, `Canvas`, `MaterialHover`, `CupertinoPagination`, `FluentTimePicker`, `MdFooter`, `TextFieldProps`, `FluentSheet`, `FluentCounter`, `with_alpha`, `MaterialRating`, `FluentPagination`, `MaterialPagination`, `CupertinoDefaultsProvider`, `FluentSnackbar`, `FluentImage`, `RadioProps`, `CupertinoHover`, `CupertinoBottomNavigation`, `MaterialSystemBar`, `MdExpansionPanels`, `CupertinoTextarea`, `CupertinoKbd`, `CupertinoAppBar`, `MaterialTimePicker`, `MaterialButtonGroup`?**
+  _High betweenness centrality (0.178) - this node is a cross-community bridge._
+- **Why does `WidgetAny` connect `WidgetAny` to `Counter`, `EventContext`, `NavigationDrawer`, `floom-widgets/tests/scroll.rs`, `MaterialContainer`, `FluentApp`, `cupertino-confirm_edit/tests/confirm_edit.rs`, `Editor`, `CupertinoListItem`, `md-skeleton_loader/tests/skeleton_loader.rs`, `Child`, `CupertinoToolbar`, `DatePicker`, `TextInput`, `fluent-confirm_edit/tests/confirm_edit.rs`, `FluentExpansionPanels`, `FluentListItem`, `Rect`, `CupertinoFadeTransition`, `Stack`, `FluentToolbar`, `CupertinoSheet`, `MdListItem`, `MdToolbar`, `.shared`, `TimePicker`, `Widget`, `cupertino-pagination/tests/pagination.rs`, `SelectGroup`, `cupertino-pull_to_refresh/tests/pull_to_refresh.rs`, `DataGrid`, `cupertino-datatable/tests/datatable.rs`, `cupertino-snackbar/tests/snackbar.rs`, `fluent-datatable/tests/datatable.rs`, `SharedFlag`, `MdDialog`, `Popup`, `CupertinoFooter`, `fluent-pagination/tests/pagination.rs`, `md-pagination/tests/pagination.rs`, `Combobox`, `src/calendar.rs`, `BottomNavigationBar`, `md-datatable/tests/datatable.rs`, `PressExpand`, `tests/controls.rs`, `FluentCode`, `reconcile.rs`, `cupertino-bottom_navigation/tests/bottom_navigation.rs`, `fluent-slide_group/tests/slide_group.rs`, `WidgetHost`, `Surface`, `fluent-snackbar/tests/snackbar.rs`, `FluentKbd`, `accordion.rs`, `CupertinoForm`, `CupertinoOverlay`, `fluent-pull_to_refresh/tests/pull_to_refresh.rs`, `fluent-card/tests/card.rs`, `fluent-form/tests/form.rs`, `CupertinoItemGroup`, `CupertinoCard`, `cupertino-file_input/tests/file_input.rs`, `ColorArea`, `FluentDialog`, `Tree`, `InfiniteScrollerView`, `MaterialCode`, `TreeView`, `fluent-file_input/tests/file_input.rs`, `reconcile_surfaces.rs`, `TestApp`, `CupertinoSkeletonLoader`, `MaterialKbd`, `LayoutStyle`, `tests/testkit.rs`, `write_flag`, `CupertinoCheckboxBtn`, `md-file_input/tests/file_input.rs`, `md-pull_to_refresh/tests/pull_to_refresh.rs`, `cupertino-form/tests/form.rs`, `CupertinoSlideTransition`, `cupertino-table/tests/table.rs`, `PullToRefreshColumn`, `fluent-bottom_navigation/tests/bottom_navigation.rs`, `FluentForm`, `fluent-table/tests/table.rs`, `MaterialForm`, `md-bottom_navigation/tests/bottom_navigation.rs`, `md-form/tests/form.rs`, `md-table/tests/table.rs`, `CupertinoContainer`, `RangeSlider`, `CupertinoExpandTransition`, `FluentGrid`, `cupertino-stepper/tests/stepper.rs`, `cupertino-banner/tests/banner.rs`, `BottomSheet`, `floom-core/tests/contracts.rs`, `MediaControls`, `Stepper`, `fluent-banner/tests/banner.rs`, `select_widget.rs`, `cupertino-breadcrumbs/tests/breadcrumbs.rs`, `PickState`, `CupertinoResponsive`, `CupertinoCode`, `md-banner/tests/banner.rs`, `WindowViewer`, `OverlayHandle`, `cupertino-number_input/tests/number_input.rs`, `Menu`, `fluent-breadcrumbs/tests/breadcrumbs.rs`, `Dialog`, `md-breadcrumbs/tests/breadcrumbs.rs`, `CupertinoDateAdapterProvider`, `CupertinoLocaleProvider`, `CupertinoButtonGroup`, `tests/native.rs`, `md-slide_group/tests/slide_group.rs`, `FluentContainer`, `CupertinoIconsProvider`, `fluent-number_input/tests/number_input.rs`, `fluent-stepper/tests/stepper.rs`, `md-number_input/tests/number_input.rs`, `MaterialApp`, `cupertino-chip_group/tests/chip_group.rs`, `md-stepper/tests/stepper.rs`, `fluent-chip_group/tests/chip_group.rs`, `FluentSkeletonLoader`, `TreeRow`, `CupertinoVirtualScroller`, `MaterialSkeletonLoader`, `read_flag`, `MultiTheme`, `CupertinoThemeProvider`, `md-chip_group/tests/chip_group.rs`, `fluent-window/tests/window.rs`, `cupertino-sparkline/tests/sparkline.rs`, `TabsBar`, `cupertino-tabs/tests/tabs.rs`, `ListItemRow`, `fluent-sparkline/tests/sparkline.rs`, `HoverBox`, `FluentButtonGroup`, `FluentCard`, `CupertinoGrid`, `FloatingActionButtonProps`, `cupertino-otp_input/tests/otp_input.rs`, `W`, `Overlay`, `fluent-tabs/tests/tabs.rs`, `md-otp_input/tests/otp_input.rs`, `md-tabs/tests/tabs.rs`, `cupertino-calendar/tests/calendar.rs`, `CupertinoScaleTransition`, `CupertinoApp`, `Ripple`, `fluent-calendar/tests/calendar.rs`, `fluent-speed_dial/tests/speed_dial.rs`, `FluentCheckboxBtn`, `PaintOp`, `md-calendar/tests/calendar.rs`, `CupertinoFloatingActionButton`, `TextEditor`, `.new`, `cupertino-carousel/tests/carousel.rs`, `FluentFloatingActionButton`, `cupertino-color_picker/tests/color_picker.rs`, `widgets.rs`, `cupertino-system_bar/tests/system_bar.rs`, `VirtualScroller`, `fluent-carousel/tests/carousel.rs`, `fluent-color_picker/tests/color_picker.rs`, `fluent-system_bar/tests/system_bar.rs`, `md-carousel/tests/carousel.rs`, `md-color_picker/tests/color_picker.rs`, `FluentItemGroup`, `md-system_bar/tests/system_bar.rs`, `ValidationMessagesList`, `FluentVirtualScroller`, `MdItemGroup`, `floom-ui-composites/tests/icon_button.rs`, `LayoutRequest`, `cupertino-list_group/tests/list_group.rs`, `cupertino-skeleton_loader/tests/skeleton_loader.rs`, `CupertinoExpansionPanels`, `MaterialVirtualScroller`, `Any`, `DevtoolsState`, `tests/panel.rs`, `Chart`, `floom-ui-composites/tests/list_item.rs`, `cupertino-main/tests/main.rs`, `fluent-main/tests/main.rs`, `cupertino-container/tests/container.rs`, `md-main/tests/main.rs`, `md-confirm_edit/tests/confirm_edit.rs`, `FluentFooter`, `select_style.rs`, `cupertino-window/tests/window.rs`, `md-sparkline/tests/sparkline.rs`, `Tooltip`, `fluent-list_group/tests/list_group.rs`, `FluentDataIterator`, `CupertinoDataIterator`, `FluentHover`, `Canvas`, `MaterialHover`, `fluent-skeleton_loader/tests/skeleton_loader.rs`, `MdFooter`, `FluentSheet`, `md-container/tests/container.rs`, `with_alpha`, `CupertinoDefaultsProvider`, `cupertino-speed_dial/tests/speed_dial.rs`, `fluent-container/tests/container.rs`, `md-list_group/tests/list_group.rs`, `golden_frames.rs`, `CupertinoHover`, `MdExpansionPanels`, `CupertinoKbd`, `md-speed_dial/tests/speed_dial.rs`, `cupertino-card/tests/card.rs`, `MaterialButtonGroup`?**
+  _High betweenness centrality (0.171) - this node is a cross-community bridge._
+- **Why does `MultiTheme` connect `MultiTheme` to `CupertinoTheme`, `Stack`, `CupertinoSheet`, `.shared`, `CupertinoSnackbar`, `SharedFlag`, `MaterialDatePicker`, `ListProps`, `with_alpha`, `fluent-slide_group/tests/slide_group.rs`, `MaterialColorPicker`, `CupertinoInfiniteScroller`, `CupertinoOverlay`, `MdSwitch`, `fluent-form/tests/form.rs`, `CupertinoItemGroup`, `CupertinoCard`, `FluentInfiniteScroller`, `CupertinoRangeSlider`, `FluentWindow`, `MaterialAppBar`, `FluentDatePicker`, `CupertinoSkeletonLoader`, `CupertinoCheckboxBtn`, `ChipProps`, `CupertinoOtpInput`, `cupertino-form/tests/form.rs`, `CupertinoSlideTransition`, `FluentColorPicker`, `FluentChip`, `RadioGroupProps`, `FluentForm`, `MaterialForm`, `md-form/tests/form.rs`, `MaterialProgressCircular`, `WidgetAny`, `FluentPullToRefresh`, `CupertinoContainer`, `CupertinoExpandTransition`, `FluentGrid`, `cupertino-stepper/tests/stepper.rs`, `CupertinoValidationMessages`, `CupertinoSpacer`, `FluentTable`, `CupertinoIconButton`, `cupertino_select.rs`, `FluentEmptyState`, `CupertinoAvatar`, `LinearProgress`, `CupertinoCode`, `with_alpha`, `CupertinoWindow`, `CupertinoDateAdapterProvider`, `CupertinoLocaleProvider`, `CupertinoButtonGroup`, `md-slide_group/tests/slide_group.rs`, `CupertinoSpeedDial`, `FluentContainer`, `CupertinoIconsProvider`, `CupertinoSystemBar`, `fluent-stepper/tests/stepper.rs`, `CupertinoEmptyState`, `cupertino-checkbox/tests/api.rs`, `md-stepper/tests/stepper.rs`, `MaterialSpeedDial`, `CupertinoVirtualScroller`, `CupertinoParallax`, `CupertinoConfirmEdit`, `CupertinoRating`, `CupertinoThemeProvider`, `FluentSlideGroup`, `CupertinoDivider`, `md_select.rs`, `fluent-window/tests/window.rs`, `FluentSelect`, `CupertinoAlert`, `FluentSpeedDial`, `FluentButtonGroup`, `global_theme.rs`, `cupertino_radio.rs`, `fluent_select.rs`, `CupertinoGrid`, `fluent_radio.rs`, `FloatingActionButtonProps`, `md_radio.rs`, `FluentParallax`, `CupertinoListSubheader`, `FluentConfirmEdit`, `Overlay`, `MdIconButton`, `CupertinoScaleTransition`, `MaterialOtpInput`, `cupertino-code/tests/code.rs`, `FluentCheckboxBtn`, `PaintOp`, `md_checkbox.rs`, `CupertinoBadge`, `FluentIconButton`, `MaterialInfiniteScroller`, `MaterialConfirmEdit`, `MaterialBottomNavigation`, `FluentFloatingActionButton`, `MdAlert`, `FluentItemGroup`, `FluentBottomNavigation`, `FluentListGroup`, `FluentVirtualScroller`, `MdItemGroup`, `CupertinoExpansionPanels`, `MaterialVirtualScroller`, `CupertinoCarousel`, `FluentCarousel`, `MaterialListGroup`, `FluentSystemBar`, `FluentMenu`, `FluentRangeSlider`, `MaterialRangeSlider`, `MaterialRadioGroup`, `FluentNumberInput`, `md_slider.rs`, `MaterialNumberInput`, `MdCounter`, `FluentValidationMessages`, `md-confirm_edit/tests/confirm_edit.rs`, `MaterialValidationMessages`, `FluentFooter`, `cupertino-window/tests/window.rs`, `md-sparkline/tests/sparkline.rs`, `MdCard`, `FluentDataIterator`, `CupertinoDataIterator`, `CupertinoCounter`, `ExpandTransitionTokens`, `FluentHover`, `MaterialHover`, `CupertinoPagination`, `FluentTimePicker`, `MdFooter`, `TextFieldProps`, `cupertino_slider.rs`, `FluentSheet`, `FluentCounter`, `with_alpha`, `MaterialRating`, `FluentPagination`, `cupertino_text_field.rs`, `fluent_text_field.rs`, `MaterialPagination`, `CupertinoDefaultsProvider`, `cupertino-speed_dial/tests/speed_dial.rs`, `FluentSnackbar`, `md_text_field.rs`, `fluent_slider.rs`, `FluentImage`, `RadioProps`, `CupertinoHover`, `CupertinoBottomNavigation`, `MaterialSystemBar`, `MdExpansionPanels`, `CupertinoTextarea`, `CupertinoKbd`, `CupertinoAppBar`, `md-speed_dial/tests/speed_dial.rs`, `cupertino-card/tests/card.rs`, `MaterialTimePicker`, `MaterialButtonGroup`, `CupertinoButton`, `fluent-item_group/tests/item_group.rs`, `MaterialContainer`, `cupertino-kbd/tests/kbd.rs`, `cupertino-confirm_edit/tests/confirm_edit.rs`, `CupertinoListItem`, `ScaleTransitionTokens`, `CupertinoTimePicker`, `CupertinoToolbar`, `CupertinoTreeview`, `fluent-confirm_edit/tests/confirm_edit.rs`, `FluentExpansionPanels`, `FluentListItem`, `MaterialFileInput`, `CupertinoFadeTransition`, `FluentToolbar`, `FluentTreeview`, `FluentOtpInput`, `MdListItem`, `MdToolbar`, `MdTreeview`, `CupertinoPullToRefresh`, `cupertino-pagination/tests/pagination.rs`, `CupertinoStepper`, `cupertino-pull_to_refresh/tests/pull_to_refresh.rs`, `cupertino-datatable/tests/datatable.rs`, `CupertinoFileInput`, `cupertino-snackbar/tests/snackbar.rs`, `fluent-datatable/tests/datatable.rs`, `MdDialog`, `MaterialCarousel`, `CupertinoCombobox`, `CupertinoFooter`, `FluentFileInput`, `fluent-pagination/tests/pagination.rs`, `md-pagination/tests/pagination.rs`, `FluentCombobox`, `md-datatable/tests/datatable.rs`, `FluentCode`, `cupertino-bottom_navigation/tests/bottom_navigation.rs`, `tests/item_group.rs`, `fluent-snackbar/tests/snackbar.rs`, `FluentKbd`, `FluentDataTable`, `CupertinoDataTable`, `CupertinoForm`, `CupertinoNumberInput`, `fluent-pull_to_refresh/tests/pull_to_refresh.rs`, `fluent-card/tests/card.rs`, `CupertinoTabs`, `CupertinoListGroup`, `MaterialPullToRefresh`, `cupertino-file_input/tests/file_input.rs`, `FluentDialog`, `CupertinoChipGroup`, `CupertinoText`, `FluentTabs`, `MdButton`, `MaterialChipGroup`, `MaterialCode`, `fluent-file_input/tests/file_input.rs`, `FluentTextarea`, `MaterialDataTable`, `FluentBadge`, `MaterialKbd`, `md-file_input/tests/file_input.rs`, `MaterialWindow`, `md-pull_to_refresh/tests/pull_to_refresh.rs`, `MaterialTextarea`, `MaterialEmptyState`, `CupertinoColorPicker`, `FluentAlert`, `MaterialImage`, `cupertino-table/tests/table.rs`, `CupertinoBanner`, `fluent-bottom_navigation/tests/bottom_navigation.rs`, `FluentRadioGroup`, `fluent-table/tests/table.rs`, `FluentButton`, `md-bottom_navigation/tests/bottom_navigation.rs`, `md-table/tests/table.rs`, `CupertinoTooltip`, `IconProps`, `cupertino-banner/tests/banner.rs`, `cupertino-image/tests/image.rs`, `CupertinoMenu`, `fluent-banner/tests/banner.rs`, `cupertino-breadcrumbs/tests/breadcrumbs.rs`, `fluent-button/tests/button.rs`, `MaterialStepper`, `CupertinoResponsive`, `CupertinoDatePicker`, `md-banner/tests/banner.rs`, `MaterialTable`, `cupertino-number_input/tests/number_input.rs`, `fluent-breadcrumbs/tests/breadcrumbs.rs`, `CupertinoSelect`, `md-breadcrumbs/tests/breadcrumbs.rs`, `cupertino-rating/tests/rating.rs`, `CupertinoTable`, `FluentBanner`, `MdIcon`, `cupertino-hover/tests/hover.rs`, `cupertino-infinite_scroller/tests/infinite_scroller.rs`, `FluentChipGroup`, `FluentStepper`, `CupertinoAutocomplete`, `CupertinoImage`, `fluent-hover/tests/hover.rs`, `fluent-number_input/tests/number_input.rs`, `fluent-infinite_scroller/tests/infinite_scroller.rs`, `MaterialBanner`, `md-number_input/tests/number_input.rs`, `MaterialApp`, `cupertino-chip_group/tests/chip_group.rs`, `FluentAutocomplete`, `fluent-chip_group/tests/chip_group.rs`, `MdAutocomplete`, `MdSelect`, `MaterialChip`, `MaterialTabs`, `FluentSkeletonLoader`, `FluentRating`, `MaterialSkeletonLoader`, `ListSubheaderTokens`, `fluent-floating_action_button/tests/floating_action_button.rs`, `cupertino-icon_button/tests/icon_button.rs`, `read_flag`, `md-infinite_scroller/tests/infinite_scroller.rs`, `CupertinoCalendar`, `md-chip_group/tests/chip_group.rs`, `cupertino-date_picker/tests/date_picker.rs`, `fluent-icon_button/tests/icon_button.rs`, `cupertino-sparkline/tests/sparkline.rs`, `FluentCalendar`, `cupertino-tabs/tests/tabs.rs`, `fluent-date_picker/tests/date_picker.rs`, `MaterialCalendar`, `cupertino-avatar/tests/avatar.rs`, `md-hover/tests/hover.rs`, `fluent-sparkline/tests/sparkline.rs`, `MdCombobox`, `fluent-timeline/tests/timeline.rs`, `md-date_picker/tests/date_picker.rs`, `MdSlider`, `FluentTimeline`, `cupertino-otp_input/tests/otp_input.rs`, `W`, `fluent-tabs/tests/tabs.rs`, `md-otp_input/tests/otp_input.rs`, `cupertino-timeline/tests/timeline.rs`, `md-tabs/tests/tabs.rs`, `cupertino-calendar/tests/calendar.rs`, `CupertinoList`, `cupertino-range_slider/tests/range_slider.rs`, `CupertinoApp`, `fluent-calendar/tests/calendar.rs`, `cupertino-empty_state/tests/empty_state.rs`, `cupertino-radio-group/tests/radio_group.rs`, `FluentList`, `fluent-range_slider/tests/range_slider.rs`, `fluent-speed_dial/tests/speed_dial.rs`, `fluent-time_picker/tests/time_picker.rs`, `CupertinoTimeline`, `CheckboxProps`, `md-calendar/tests/calendar.rs`, `CupertinoFloatingActionButton`, `fluent-list_item/tests/list_item.rs`, `md-range_slider/tests/range_slider.rs`, `FluentDivider`, `cupertino-list_item/tests/list_item.rs`, `md-time_picker/tests/time_picker.rs`, `cupertino-carousel/tests/carousel.rs`, `cupertino-color_picker/tests/color_picker.rs`, `MaterialTimeline`, `cupertino-system_bar/tests/system_bar.rs`, `fluent-carousel/tests/carousel.rs`, `fluent-color_picker/tests/color_picker.rs`, `fluent-system_bar/tests/system_bar.rs`, `md-carousel/tests/carousel.rs`, `md-color_picker/tests/color_picker.rs`, `md-list_item/tests/list_item.rs`, `md-system_bar/tests/system_bar.rs`, `cupertino-time_picker/tests/time_picker.rs`, `cupertino-virtual_scroller/tests/virtual_scroller.rs`, `fluent-empty_state/tests/empty_state.rs`, `md-empty_state/tests/empty_state.rs`, `fluent-virtual_scroller/tests/virtual_scroller.rs`, `shared_flag`, `md-virtual_scroller/tests/virtual_scroller.rs`, `cupertino-list_group/tests/list_group.rs`, `cupertino-skeleton_loader/tests/skeleton_loader.rs`, `CupertinoSparkline`, `fluent-progress_circular/tests/progress_circular.rs`, `cupertino-menu/tests/menu.rs`, `CupertinoSlider`, `md-rating/tests/rating.rs`, `cupertino-expansion_panels/tests/expansion_panels.rs`, `cupertino-floating_action_button/tests/floating_action_button.rs`, `cupertino-text/tests/text.rs`, `cupertino-textarea/tests/textarea.rs`, `cupertino-validation_messages/tests/validation_messages.rs`, `fluent-menu/tests/menu.rs`, `cupertino-main/tests/main.rs`, `MdDivider`, `cupertino-tooltip/tests/tooltip.rs`, `fluent-main/tests/main.rs`, `cupertino-container/tests/container.rs`, `md-main/tests/main.rs`, `fluent-expansion_panels/tests/expansion_panels.rs`, `fluent-image/tests/image.rs`, `fluent-radio-group/tests/radio_group.rs`, `fluent-textarea/tests/textarea.rs`, `fluent-validation_messages/tests/validation_messages.rs`, `md-image/tests/image.rs`, `md-radio-group/tests/radio_group.rs`, `fluent-tooltip/tests/tooltip.rs`, `md-textarea/tests/textarea.rs`, `md-validation_messages/tests/validation_messages.rs`, `fluent-list_group/tests/list_group.rs`, `cupertino-footer/tests/footer.rs`, `cupertino-item_group/tests/item_group.rs`, `fluent-rating/tests/rating.rs`, `MaterialMenu`, `fluent-footer/tests/footer.rs`, `cupertino-progress_circular/tests/progress_circular.rs`, `cupertino-alert/tests/alert.rs`, `fluent-skeleton_loader/tests/skeleton_loader.rs`, `md-menu/tests/menu.rs`, `md-tooltip/tests/tooltip.rs`, `fluent-alert/tests/alert.rs`, `md-alert/tests/alert.rs`, `fluent-container/tests/container.rs`, `md-list_group/tests/list_group.rs`, `md-container/tests/container.rs`, `md-skeleton_loader/tests/skeleton_loader.rs`, `FluentApp`, `md-list/tests/list.rs`, `cupertino-button_group/tests/button_group.rs`, `fluent-button_group/tests/button_group.rs`, `md-button_group/tests/button_group.rs`, `md-timeline/tests/timeline.rs`, `FluentSlider`, `cupertino-responsive/tests/responsive.rs`, `md-responsive/tests/responsive.rs`, `cupertino-list/tests/list.rs`, `md-app/tests/app.rs`, `fluent-list/tests/list.rs`, `cupertino-data_iterator/tests/data_iterator.rs`, `fluent-data_iterator/tests/data_iterator.rs`, `fluent-responsive/tests/responsive.rs`, `md-progress_circular/tests/progress_circular.rs`, `SlideTransitionTokens`, `cupertino-app/tests/app.rs`, `fluent-app/tests/app.rs`, `fluent-text/tests/text.rs`, `FluentCard`, `md-icon/tests/api.rs`?**
+  _High betweenness centrality (0.167) - this node is a cross-community bridge._
 - **What connects `editor`, `playground`, `Lexer` to the rest of the system?**
   _1317 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Counter` be split into smaller, more focused modules?**
-  _Cohesion score 0.07402597402597402 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.08843537414965986 - nodes in this community are weakly interconnected._
 - **Should `EventContext` be split into smaller, more focused modules?**
   _Cohesion score 0.05997778600518327 - nodes in this community are weakly interconnected._
 - **Should `UnownedWindow` be split into smaller, more focused modules?**
-  _Cohesion score 0.024076380240763803 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.02565504670767829 - nodes in this community are weakly interconnected._

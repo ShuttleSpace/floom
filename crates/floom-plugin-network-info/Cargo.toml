@@ -1,0 +1,27 @@
+[package]
+name = "floom-plugin-network-info"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "A Floom plugin: the current Wi-Fi network's name, and this device's address on it"
+rust-version.workspace = true
+publish = false
+
+# A capability plugin: one capability, one crate, opt-in by dependency. It
+# depends on the platform layer and on nothing above it.
+#
+# `local_ip` needs no dependency at all: std's UDP-connect route lookup is the
+# platform abstraction, and it is honest on every target this crate compiles
+# for.
+
+# `WifiInfo`/`getConnectionInfo` are Java APIs, so the Android arm goes through
+# the JNI bridge the platform layer owns.
+[target.'cfg(target_os = "android")'.dependencies]
+floom-platform-mobile = { path = "../floom-platform-mobile", version = "0.2.0" }
+jni = "0.22"
+
+# iOS and macOS answer through the SystemConfiguration C API
+# (`CNCopySupportedInterfaces` / `CNCopyCurrentNetworkInfo`) — plain FFI, no
+# Objective-C messages, so no objc2 is involved.
+[target.'cfg(any(target_os = "ios", target_os = "macos"))'.dependencies]
