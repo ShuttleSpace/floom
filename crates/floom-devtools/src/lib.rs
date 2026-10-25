@@ -16,6 +16,7 @@
 
 pub mod panel;
 pub mod pick;
+pub mod tree;
 
 use std::collections::HashMap;
 

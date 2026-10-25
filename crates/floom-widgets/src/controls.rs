@@ -15,8 +15,8 @@ use std::sync::Arc;
 use floom_accessibility::{SemanticsRole, SemanticsState};
 use floom_core::{
     AnimationSpec, Brush, Child, Color, CreateContext, Easing, ElementId, Event, EventContext, Key,
-    KeyEvent, KeyPhase, NamedKey, PaintContext, Point, Rect, RepeatSpec, SemanticsContext,
-    Transition, UpdateContext, Widget,
+    KeyEvent, KeyPhase, NamedKey, PaintContext, PaintStyle, Point, Rect, RepeatSpec,
+    SemanticsContext, Transition, UpdateContext, Widget,
 };
 use floom_types::{FontWeight, PointerButton, PointerPhase};
 
@@ -700,6 +700,23 @@ impl Widget for Button {
 
     fn semantics(&self, cx: &mut dyn SemanticsContext, _id: ElementId) {
         crate::primitives::emit_semantics(self.semantics_hint(), cx);
+    }
+
+    /// The resting fill and the label — the two colours a button is.
+    ///
+    /// The fill reported is the *base* one, not whatever the interaction state
+    /// resolves to right now: a readout that changed every time the pointer
+    /// crossed the button would describe the frame rather than the widget. The
+    /// hover and press fills are not reported at all, because `PaintStyle` has
+    /// one background and choosing one of three would be picking.
+    fn paint_style(&self) -> Option<PaintStyle> {
+        Some(PaintStyle {
+            background: Some(self.base),
+            foreground: Some(self.text_color),
+            font_size: Some(LABEL_FONT_SIZE),
+            radius: (self.radius > 0.0).then_some(self.radius),
+            ..PaintStyle::default()
+        })
     }
 
     fn cursor(&self) -> floom_types::CursorStyle {

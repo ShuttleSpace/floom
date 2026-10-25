@@ -5,6 +5,7 @@
 //! mounted tree, because a readout that formats the wrong field is worse than no
 //! readout — it looks like an answer.
 
+use std::collections::BTreeSet;
 use std::sync::{Arc, Mutex};
 
 use floom_devtools::Inspector;
@@ -33,6 +34,11 @@ fn mounted() -> LiveTree {
 }
 
 /// Every row's `label: value`, the way the panel prints it.
+///
+/// A tree row prints as its key and its kind like any other row: the selection
+/// is no longer a marker in the label. The interactive row paints a filled
+/// background instead, which a string cannot carry, so a test that wants the
+/// selection reads [`ReadoutRow::node`] rather than grepping for a glyph.
 fn printed(rows: &[ReadoutRow]) -> Vec<String> {
     rows.iter()
         .map(|r| {
@@ -48,45 +54,109 @@ fn printed(rows: &[ReadoutRow]) -> Vec<String> {
         .collect()
 }
 
-/// The way the panel's own render path prints a row: the label carries its
-/// one-column marker, and `depth` is the indent in front of it.
-fn as_printed(rows: &[ReadoutRow]) -> Vec<String> {
-    printed(rows)
-}
-
 #[test]
 fn the_tree_is_nested_by_depth_in_document_order() {
     let live = mounted();
     let inspector = Inspector::new(&live);
-    let rows = tree_rows(&inspector, None);
+    let rows = tree_rows(&inspector, None, &BTreeSet::new());
     let lines = printed(&rows);
 
     // Root first, then its children in document order, then the deeper level.
     assert_eq!(
         lines,
         vec![
-            " root  host",
-            "   heading  primitive",
-            "   body  host",
-            "     ok  primitive",
+            "root  host",
+            "  heading  primitive",
+            "  body  host",
+            "    ok  primitive",
         ],
         "the tree reads the way a browser's element panel does: one indent step
-         per level of depth, plus the marker's own column in front of the name"
+         per level of depth"
     );
 }
 
 #[test]
-fn the_selected_node_is_marked() {
+fn the_selected_node_is_the_only_row_marked_selected() {
     let live = mounted();
     let inspector = Inspector::new(&live);
-    let plain = printed(&tree_rows(&inspector, None));
-    let marked = printed(&tree_rows(&inspector, Some("ok")));
+    let plain = tree_rows(&inspector, None, &BTreeSet::new());
+    let marked = tree_rows(&inspector, Some("ok"), &BTreeSet::new());
 
-    // The marker is on the selected row and nowhere else.
-    let marked_count = marked.iter().filter(|line| line.contains('▸')).count();
-    assert_eq!(marked_count, 1, "exactly one row is marked: {marked:?}");
-    assert!(marked.iter().any(|l| l.contains("ok") && l.contains('▸')));
-    assert_ne!(plain, marked);
+    let selected: Vec<&str> = marked
+        .iter()
+        .filter_map(|row| row.node.as_ref())
+        .filter(|node| node.selected)
+        .map(|node| node.key.as_str())
+        .collect();
+    assert_eq!(selected, vec!["ok"], "exactly one row is selected");
+
+    let plain_selected = plain
+        .iter()
+        .filter_map(|row| row.node.as_ref())
+        .filter(|node| node.selected)
+        .count();
+    assert_eq!(
+        plain_selected, 0,
+        "nothing is selected when `selected` is None"
+    );
+}
+
+#[test]
+fn every_tree_row_is_an_interactive_row() {
+    // The whole point of the tree tab: each row can be clicked. A row that came
+    // back as plain text would be a row the reader cannot select, which is the
+    // bug that made Style and Layout look dead.
+    let live = mounted();
+    let inspector = Inspector::new(&live);
+    let rows = tree_rows(&inspector, None, &BTreeSet::new());
+    assert!(!rows.is_empty());
+    for row in &rows {
+        assert!(
+            row.node.is_some(),
+            "tree row {:?} is not interactive",
+            row.label
+        );
+    }
+}
+
+#[test]
+fn a_collapsed_node_hides_its_subtree() {
+    let live = mounted();
+    let inspector = Inspector::new(&live);
+    let mut collapsed = BTreeSet::new();
+    collapsed.insert("body".to_string());
+
+    let lines = printed(&tree_rows(&inspector, None, &collapsed));
+    assert_eq!(
+        lines,
+        vec!["root  host", "  heading  primitive", "  body  host"]
+    );
+
+    // The row itself still says it has children, so the chevron can reopen it.
+    let rows = tree_rows(&inspector, None, &collapsed);
+    let body = rows
+        .iter()
+        .filter_map(|row| row.node.as_ref())
+        .find(|node| node.key == "body")
+        .expect("the body row is still shown");
+    assert!(body.has_children);
+    assert!(!body.expanded);
+}
+
+#[test]
+fn the_ancestors_of_the_selection_are_always_expanded() {
+    // Collapsing is a display choice; hiding the element the Style tab is about
+    // would make the selection invisible from the tab that selected it.
+    let live = mounted();
+    let inspector = Inspector::new(&live);
+    let mut collapsed = BTreeSet::new();
+    collapsed.insert("body".to_string());
+
+    let lines = printed(&tree_rows(&inspector, Some("ok"), &collapsed));
+    assert!(
+        lines.iter().any(|line| line.contains("ok")),
+        "the selected node's ancestor was collapsed and hid it: {lines:?}"
+    );
 }
 
 #[test]
@@ -183,10 +253,15 @@ fn the_elements_panel_composes_tree_breadcrumb_and_the_selection() {
     let lines = printed(&rows);
 
     assert_eq!(lines[0], "[Elements]");
-    assert!(lines.iter().any(|l| l.contains("▸") && l.contains("ok")));
     assert!(lines.iter().any(|l| l == "path  root > body > ok"));
-    // The tab drives which half is composed in.
+    // The tab drives which half is composed in — and only that half: a panel
+    // that drew the tree underneath the layout section is a panel whose Layout
+    // tab is below the fold.
     assert!(lines.iter().any(|l| l == "[Layout]"));
+    assert!(
+        !lines.iter().any(|l| l.contains("heading")),
+        "the tree is not composed under the Layout tab: {lines:?}"
+    );
 }
 
 fn guard(state: &Arc<Mutex<DevtoolsState>>) -> DevtoolsState {
@@ -294,7 +369,7 @@ fn an_idle_cache_is_not_a_hundred_percent_hit_rate() {
 
 #[test]
 fn the_console_panel_lists_what_the_boundary_caught() {
-    let mut boundary = ErrorBoundary::new();
+    let boundary = ErrorBoundary::new();
     let outcome = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
         boundary
             .in_("save draft".to_string())
@@ -368,7 +443,7 @@ fn a_live_tree_with_no_style_still_reads_out() {
     // rather than printing a header over zero rows.
     let tree = LiveTree::new();
     let inspector = Inspector::new(&tree);
-    assert!(tree_rows(&inspector, None).is_empty());
+    assert!(tree_rows(&inspector, None, &BTreeSet::new()).is_empty());
     let state = DevtoolsState::new();
     let rows = elements_readout(&inspector, &state);
     assert_eq!(printed(&rows), vec!["[Elements]"]);

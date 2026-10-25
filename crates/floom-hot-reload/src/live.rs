@@ -131,6 +131,16 @@ impl LiveTree {
         self.styles.insert(id.raw(), set);
     }
 
+    /// Records a hosted node's layout request, so the layout readout can answer
+    /// for a node that has no document behind it.
+    ///
+    /// The same table a document-mounted tree fills from IR props: the host's
+    /// own request is the truth about the box, and the inspector only needs to
+    /// read it.
+    pub(crate) fn set_layout(&mut self, id: ElementId, layout: LayoutRequest) {
+        self.layouts.insert(id.raw(), layout);
+    }
+
     // --- reads, for tests and for a host that wants to reconcile ----------
 
     /// The live id a stable key currently owns.

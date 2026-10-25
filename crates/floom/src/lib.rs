@@ -264,11 +264,13 @@ where
     /// The part of the devtools state a frame has to be requested for.
     ///
     /// Everything a reader of the panel would notice: whether it is up, which
-    /// tab, which element, and which element the highlight box is around.
+    /// tab, which element, which nodes are collapsed, and which element the
+    /// highlight box is around.
     type OutsideState = (
         bool,
         devtools::DevtoolsTab,
         Option<String>,
+        std::collections::BTreeSet<String>,
         Option<(Option<String>, bool)>,
     );
 
@@ -283,8 +285,15 @@ where
             devtools: Option<&devtools::Devtools>,
             picker: Option<&devtools::PickHandle>,
         ) -> OutsideState {
-            let (visible, tab, selected) = devtools.map_or_else(
-                || (false, devtools::DevtoolsTab::default(), None),
+            let (visible, tab, selected, collapsed) = devtools.map_or_else(
+                || {
+                    (
+                        false,
+                        devtools::DevtoolsTab::default(),
+                        None,
+                        std::collections::BTreeSet::new(),
+                    )
+                },
                 |devtools| {
                     let state = devtools.state();
                     let guard = state.lock().ok();
@@ -293,12 +302,22 @@ where
                     let selected = guard
                         .as_ref()
                         .and_then(|s| s.selected().map(str::to_string));
-                    (visible, tab, selected)
+                    // The collapsed set is in here because clicking a chevron
+                    // writes it from inside the tree: the row cannot mark the
+                    // host dirty, so it requests a repaint of itself, and the
+                    // *panel* is what has to rebuild. Comparing the set here
+                    // makes that rebuild a frame this loop asks for rather than
+                    // one it hopes the repaint channel will produce.
+                    let collapsed = guard
+                        .as_ref()
+                        .map(|s| s.collapsed().clone())
+                        .unwrap_or_default();
+                    (visible, tab, selected, collapsed)
                 },
             );
             let highlight =
                 picker.map(|picker| (picker.highlight_target(), picker.highlight_is_live()));
-            (visible, tab, selected, highlight)
+            (visible, tab, selected, collapsed, highlight)
         }
     }
 

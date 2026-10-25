@@ -155,6 +155,20 @@ pub trait EventContext {
     /// caching their own geometry.
     fn bounds(&self) -> Rect;
     fn cursor_position(&self) -> Option<Point>;
+    /// The rectangle the host's content is visible in — the window, for a
+    /// desktop host.
+    ///
+    /// Widgets that place something *outside* themselves need it. A context
+    /// menu opened near the right edge has to be nudged left, and it cannot
+    /// know where the edge is from [`Self::bounds`] alone: its own box is a
+    /// row deep inside a panel, not the window.
+    ///
+    /// Defaults to [`Rect::ZERO`], which means "this host cannot say". A
+    /// caller must therefore treat an empty rect as unknown rather than as a
+    /// zero-sized window, and fall back to placing at the cursor.
+    fn viewport(&self) -> Rect {
+        Rect::ZERO
+    }
     /// The event currently being dispatched.
     ///
     /// Required rather than optional: this context only exists *during*

@@ -109,12 +109,22 @@ fn a_node_whose_parent_was_not_described_is_dropped() {
             kind: HostedKind::Primitive,
             element: floom_types::ElementId::new(2, 0),
             parent: Some(floom_types::ElementId::new(9999, 0)),
+            // This fixture says nothing about paint or layout: the
+            // test is about edges and tiers, and `None` is the honest
+            // "no claim" the field documents.
+            style: None,
+            layout: None,
         },
         HostedNode {
             key: "root".into(),
             kind: HostedKind::Host,
             element: floom_types::ElementId::new(0, 0),
             parent: None,
+            // This fixture says nothing about paint or layout: the
+            // test is about edges and tiers, and `None` is the honest
+            // "no claim" the field documents.
+            style: None,
+            layout: None,
         },
     ];
     let live = describe(&nodes);
@@ -143,12 +153,22 @@ fn the_kinds_map_onto_the_inspectors_three_tiers() {
             kind: HostedKind::Host,
             element: floom_types::ElementId::new(0, 0),
             parent: None,
+            // This fixture says nothing about paint or layout: the
+            // test is about edges and tiers, and `None` is the honest
+            // "no claim" the field documents.
+            style: None,
+            layout: None,
         },
         HostedNode {
             key: "leaf".into(),
             kind: HostedKind::Primitive,
             element: floom_types::ElementId::new(1, 0),
             parent: Some(floom_types::ElementId::new(0, 0)),
+            // This fixture says nothing about paint or layout: the
+            // test is about edges and tiers, and `None` is the honest
+            // "no claim" the field documents.
+            style: None,
+            layout: None,
         },
     ];
     let live = describe(&nodes);

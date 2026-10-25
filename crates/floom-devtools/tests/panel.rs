@@ -9,7 +9,7 @@ use std::sync::{Arc, Mutex};
 
 use floom_core::{Key, KeyEvent, KeyPhase, Modifiers, NamedKey, Widget, WidgetAny};
 use floom_devtools::panel::{
-    DevtoolsPanel, DevtoolsState, DevtoolsTab, ReadoutRow, default_shortcut, panel_bounds,
+    DevtoolsPanel, DevtoolsState, DevtoolsTab, ReadoutRow, RowNode, default_shortcut, panel_bounds,
 };
 use floom_types::{ElementId, Event, Point, PointerEvent, Rect, Size};
 use floom_widgets::Button;
@@ -494,4 +494,120 @@ fn a_click_on_the_active_tab_is_not_a_change() {
     panel.handle_key(&f12(), &default_shortcut());
     assert!(click_button(&panel, "Elements"));
     assert_eq!(state.lock().unwrap().tab(), DevtoolsTab::Tree);
+}
+
+// --- The body ------------------------------------------------------------
+
+/// Walks a built widget tree and counts the widgets `matches` accepts.
+fn count_widgets(panel: &DevtoolsPanel, matches: fn(&mut dyn WidgetAny) -> bool) -> usize {
+    fn walk(
+        widget: &mut dyn WidgetAny,
+        matches: fn(&mut dyn WidgetAny) -> bool,
+        count: &mut usize,
+    ) {
+        if matches(widget) {
+            *count += 1;
+        }
+        for child in widget.children() {
+            let mut built = child.build();
+            walk(built.as_mut(), matches, count);
+        }
+    }
+    let mut count = 0;
+    for child in panel.children() {
+        let mut built = child.build();
+        walk(built.as_mut(), matches, &mut count);
+    }
+    count
+}
+
+fn tree_panel(state: Arc<Mutex<DevtoolsState>>) -> DevtoolsPanel {
+    DevtoolsPanel::new(state, |state| {
+        let mut rows = vec![ReadoutRow::heading("Elements")];
+        for (index, key) in ["root", "body", "ok"].iter().enumerate() {
+            let mut row = ReadoutRow::node(
+                *key,
+                "host",
+                RowNode {
+                    key: (*key).to_string(),
+                    has_children: index < 2,
+                    expanded: true,
+                    selected: state.selected() == Some(*key),
+                },
+            );
+            row.depth = index;
+            rows.push(row);
+        }
+        rows
+    })
+}
+
+#[test]
+fn every_tree_row_is_mounted_as_a_widget_that_can_be_clicked() {
+    // The bug this is named after: the tree used to be lines of `Text`, so a
+    // reader could see the elements and could not select one — which is why the
+    // Style and Layout tabs had nothing to show.
+    let state = Arc::new(Mutex::new(DevtoolsState::new()));
+    let mut panel = tree_panel(state);
+    panel.handle_key(&f12(), &default_shortcut());
+
+    assert_eq!(
+        count_widgets(&panel, |w| {
+            w.as_any_mut()
+                .downcast_mut::<floom_devtools::tree::TreeRow>()
+                .is_some()
+        }),
+        3,
+        "one interactive row per element"
+    );
+    assert_eq!(
+        count_widgets(&panel, |w| {
+            w.as_any_mut()
+                .downcast_mut::<floom_widgets::Text>()
+                .is_some()
+        }),
+        1,
+        "the heading is the only plain line"
+    );
+}
+
+#[test]
+fn the_panel_body_scrolls() {
+    // Without this the rows below the fold are unreachable, which is what made
+    // the Style and Layout tabs look empty: their rows were mounted, past the
+    // bottom of the panel.
+    let state = Arc::new(Mutex::new(DevtoolsState::new()));
+    let mut panel = tree_panel(state);
+    panel.handle_key(&f12(), &default_shortcut());
+    assert_eq!(
+        count_widgets(&panel, |w| {
+            w.as_any_mut()
+                .downcast_mut::<floom_widgets::Scroll>()
+                .is_some()
+        }),
+        1,
+        "the readout lives inside a scroll viewport"
+    );
+}
+
+#[test]
+fn a_hidden_panel_mounts_neither_rows_nor_a_scroll() {
+    let state = Arc::new(Mutex::new(DevtoolsState::new()));
+    let panel = tree_panel(state);
+    assert_eq!(
+        count_widgets(&panel, |w| {
+            w.as_any_mut()
+                .downcast_mut::<floom_devtools::tree::TreeRow>()
+                .is_some()
+        }),
+        0
+    );
+    assert_eq!(
+        count_widgets(&panel, |w| {
+            w.as_any_mut()
+                .downcast_mut::<floom_widgets::Scroll>()
+                .is_some()
+        }),
+        0
+    );
 }

@@ -856,6 +856,10 @@ pub fn dispatch(widget: &mut dyn Widget, id: ElementId, bounds: Rect, event: Eve
 pub struct TestEventContext {
     target: ElementId,
     bounds: Rect,
+    /// The host viewport, as a widget would see it. Zero means "a host that
+    /// cannot say where its content is visible", which is what the trait's
+    /// default means too.
+    viewport: Rect,
     event: Event,
     /// Every id passed to [`EventContext::request_focus`], in order.
     pub focus_requests: Vec<ElementId>,
@@ -893,11 +897,19 @@ impl TestEventContext {
         Self {
             target,
             bounds,
+            viewport: Rect::ZERO,
             event,
             focus_requests: Vec::new(),
             overlays: Vec::new(),
             next_handle: 0,
         }
+    }
+
+    /// Says where the host's content is visible, so a widget that clamps an
+    /// overlay into the window has a window to clamp into.
+    pub fn with_viewport(mut self, viewport: Rect) -> Self {
+        self.viewport = viewport;
+        self
     }
 
     pub fn pointer(target: ElementId, bounds: Rect, pointer: PointerEvent) -> Self {
@@ -981,6 +993,10 @@ impl EventContext for TestEventContext {
 
     fn bounds(&self) -> Rect {
         self.bounds
+    }
+
+    fn viewport(&self) -> Rect {
+        self.viewport
     }
 
     fn cursor_position(&self) -> Option<Point> {

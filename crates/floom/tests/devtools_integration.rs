@@ -547,3 +547,165 @@ fn the_tab_bar_switches_the_readout_in_a_live_host() {
     let buttons = overlay_buttons(&host, devtools.overlay());
     assert_eq!(buttons.len(), 3, "the bar survived the rebuild");
 }
+
+// --- The pick and the tree are one selection ------------------------------
+
+/// A committed pick writes into the panel the same way a click on a row does:
+/// it selects the element *and* brings the tree tab forward.
+///
+/// The second half is the part that is easy to leave out and hard to notice. A
+/// reader who picked an element while reading Style expects the panel to show
+/// that element's tree position; leaving the tab on Style would mean the pick
+/// changed something invisible, and the tree would still be pointing at the
+/// previous element.
+#[test]
+fn a_committed_pick_selects_the_element_and_returns_to_the_tree() {
+    let mut host = host_with_app(Arc::new(AtomicUsize::new(0)));
+    let mut devtools = floom::devtools::attach_with_tabs(
+        &mut host,
+        |_| Vec::new(),
+        floom::devtools::DevtoolsTab::ELEMENTS,
+    );
+    devtools.show();
+    devtools
+        .state()
+        .lock()
+        .unwrap()
+        .set_tab(floom::devtools::DevtoolsTab::Style);
+    devtools.sync(&mut host);
+    host.frame();
+    assert_eq!(devtools.tab(), floom::devtools::DevtoolsTab::Style);
+
+    let picker = floom::devtools::attach_picker(&mut host, devtools.state());
+    host.frame();
+
+    let root = host.root().expect("mounted");
+    let at = centre_of(&host, root);
+    // The key the pick will land on is whatever is under the pointer — the
+    // button, not the root — so it is read the way the picker reads it.
+    let picked_key = host
+        .element_at(at)
+        .map(WidgetHost::node_key)
+        .expect("something is under the centre");
+    let arm = KeyEvent {
+        phase: KeyPhase::Down,
+        key: Key::Char('c'),
+        modifiers: Modifiers::CONTROL.union(Modifiers::SHIFT),
+    };
+    assert!(picker.handle_key(&arm));
+    assert!(picker.pointer(&PointerEvent::hover(at), |point| {
+        host.element_at(point).map(floom_app::WidgetHost::node_key)
+    }));
+
+    let press = PointerEvent {
+        phase: floom_types::PointerPhase::Down,
+        kind: floom_types::PointerKind::Mouse,
+        button: Some(floom_types::PointerButton::Primary),
+        position: at,
+        modifiers: Modifiers::NONE,
+        click_count: 1,
+    };
+    assert!(picker.pointer(&press, |point| {
+        host.element_at(point).map(floom_app::WidgetHost::node_key)
+    }));
+    assert!(picker.commit_selection());
+
+    let state = devtools.state().lock().unwrap();
+    assert_eq!(state.selected(), Some(picked_key.as_str()));
+    assert_eq!(
+        state.tab(),
+        floom::devtools::DevtoolsTab::Tree,
+        "the pick brings the tree forward so the selection is visible"
+    );
+}
+
+/// The box follows the panel's selection, and it is only up while the panel is.
+///
+/// Clicking a row names a box on screen; without the box the tree is a list of
+/// names. With the panel closed the box has no explanation on screen, so it must
+/// go — a blue rectangle over an app with no panel is a bug report waiting to be
+/// filed.
+#[test]
+fn the_highlight_follows_the_panel_selection_and_goes_away_with_the_panel() {
+    let mut host = host_with_app(Arc::new(AtomicUsize::new(0)));
+    let devtools = floom::devtools::attach_elements(&mut host);
+    devtools.show();
+    let picker = floom::devtools::attach_picker(&mut host, devtools.state());
+    host.frame();
+
+    let root = host.root().expect("mounted");
+    let root_bounds = host.bounds(root);
+    let root_key = host
+        .tree_nodes()
+        .first()
+        .map(|node| node.key.clone())
+        .expect("the tree has a root");
+
+    // Selecting a row is what a click in the tree writes; the box reads it.
+    devtools.state().lock().unwrap().select(root_key);
+    picker.sync_highlight(&mut host);
+    let box_node = host
+        .overlay_node_id(picker.overlay())
+        .expect("the box is mounted");
+    let drawn = host
+        .widget_mut::<floom::devtools::HighlightBox>(box_node)
+        .and_then(|widget| widget.rect());
+    assert_eq!(
+        drawn,
+        Some(root_bounds),
+        "the row's element is outlined on the app"
+    );
+
+    // Close the panel: nothing on screen explains the box, so it clears.
+    devtools.hide();
+    picker.sync_highlight(&mut host);
+    let drawn = host
+        .widget_mut::<floom::devtools::HighlightBox>(box_node)
+        .and_then(|widget| widget.rect());
+    assert_eq!(drawn, None, "a hidden panel highlights nothing");
+}
+
+/// A row is as tall as the row widget says it is, in a real layout pass.
+///
+/// The row's slot is mounted with an empty `LayoutRequest`, and the height comes
+/// from the widget's own `layout_request`. Those two are merged by
+/// `apply_self_layout` only when the slot leaves the dimension unset — which it
+/// does — so this asserts the merge actually happens rather than trusting the
+/// reading of the merge code. A row that collapsed to zero height would still be
+/// *mounted*, still be found by a widget walk, and still be unclickable.
+#[test]
+fn a_tree_row_gets_its_height_from_the_row_widget_not_the_slot() {
+    let mut host = host_with_app(Arc::new(AtomicUsize::new(0)));
+    let mut devtools = floom::devtools::attach_elements(&mut host);
+    devtools.show();
+    devtools.sync(&mut host);
+    host.frame();
+
+    let root = host
+        .overlay_node_id(devtools.overlay())
+        .expect("the panel is mounted");
+    let mut queue = std::collections::VecDeque::from([root]);
+    let mut rows = Vec::new();
+    while let Some(node) = queue.pop_front() {
+        if host
+            .widget::<floom::devtools::tree::TreeRow>(node)
+            .is_some()
+        {
+            rows.push(node);
+        }
+        for index in 0..host.child_count(node) {
+            if let Some(child) = host.child_at(node, index) {
+                queue.push_back(child);
+            }
+        }
+    }
+    assert!(!rows.is_empty(), "the tree mounted rows");
+    for row in rows {
+        let bounds = host.bounds(row);
+        assert_eq!(
+            bounds.height(),
+            floom::devtools::tree::ROW_HEIGHT,
+            "a row is one row tall, not collapsed: {bounds:?}"
+        );
+    }
+}

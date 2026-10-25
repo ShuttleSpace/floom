@@ -129,14 +129,19 @@ that is visible but cannot be clicked, or hidden but still eats its column.
 cargo run -p floom-devtools-demo
 ```
 
-A window with a heading, a row of three buttons and a counter. Press **F12** (or
-**Cmd+Shift+I** on macOS, **Ctrl+Shift+I** elsewhere) and
+A window with a heading, a row of three buttons and a counter, on white. Press
+**F12** (or **Cmd+Shift+I** on macOS, **Ctrl+Shift+I** elsewhere) and
 the panel docks over the trailing edge; **Ctrl+Shift+C** arms the pick, and
 clicking a button selects it without pressing it. The bar at the top of the panel
 switches between **Elements**, **Style** and **Layout** — click a tab rather than
-typing a chord, the way Chrome does it. **Escape** closes the panel again. The
-demo is one call — `run_desktop_with_devtools` plus the readout closure — and the
-whole point of it is that there is nothing else to write.
+typing a chord, the way Chrome does it. In the tree, click a name to select and a
+triangle to fold; right-click for the row's menu. **Escape** closes the panel
+again. The demo is one call — `run_desktop_with_devtools` plus the readout
+closure — and the whole point of it is that there is nothing else to write.
+
+The demo paints the app's own side white on purpose. The panel is a dark card,
+so a demo that inherited a dark window would make every contrast bug in the app
+look like a devtools bug; white keeps the two separable at a glance.
 
 The demo needs a GPU window, so CI cannot run it. What CI *does* run is
 `crates/floom-app/tests/devtools_demo.rs`, which mounts the same app into a real
@@ -157,12 +162,73 @@ devtools.refresh_tree(&host);
 
 | Panel | What it shows | Where it comes from |
 | --- | --- | --- |
-| **Elements** | the element tree, nested by depth, with the selected node marked | `attach_elements` |
-| **Breadcrumb** | `root > body > ok` — the path to the selection | `attach_elements` |
-| **Styles** | the selection's resolved style in every inspected state | `attach_elements`, tab `Style` |
+| **Elements** | the element tree, nested by depth, one clickable row per node | `attach_elements`, tab `Tree` |
+| **Breadcrumb** | `root > body > ok` — the path to the selection | every tab but the two caller-fed ones |
+| **Styles** | the selection's declared style, one row per property | `attach_elements`, tab `Style` |
 | **Layout** | the selection's box: size, flex, axis, gap, align, inset | `attach_elements`, tab `Layout` |
 
 The tab drives which half is composed in: `devtools.set_tab(DevtoolsTab::Style)`.
+The three element tabs are **mutually exclusive**, and that is the fix for a
+real bug rather than a taste call. The first version appended the style rows
+under the whole tree, on the same tab: on a deep tree they were pushed past the
+visible area, so clicking a node looked like it did nothing. Now `Tree` is the
+tree and the breadcrumb, `Style` is the breadcrumb and the style rows, `Layout`
+is the breadcrumb and the layout rows — each one short enough to fit, and each
+one answering exactly the question its tab asks. A tab with no selection says
+`No element selected` instead of drawing a heading over nothing.
+
+### The tree is a tree, not a list
+
+Every row under `Tree` is a real widget (`floom-devtools/src/tree.rs`), so the
+tree is navigable the way Chrome's is:
+
+| input | what it does |
+| --- | --- |
+| click a row's **name** | select that element — `Style` and `Layout` then describe it, and the highlight box outlines it on the app |
+| click a row's **triangle** | fold or unfold its children |
+| **right-click** a row | that row's menu: expand/collapse, select, clear selection |
+
+Selecting and disclosing are deliberately different targets. Clicking a
+container's name to read its style must not fold away the children you were
+looking at, which is what a single "click anywhere toggles" row does.
+
+The row is built here rather than from `floom-ui-composites`' `TreeView` on
+purpose: that crate lives in the satellite `floom-ui` workspace, which the root
+workspace excludes and the architecture script forbids a shipping app crate from
+depending on. The devtools is an engine crate; it uses engine primitives.
+
+Three limits are worth stating rather than discovering:
+
+- **No hover highlight.** The host synthesises `PointerPhase::Move` and never
+  `Enter`/`Leave`, and `request_repaint` names one element at a time — so the row
+  that would need repainting to *clear* a hover cannot be reached. Only the
+  selection is drawn.
+- **A folded node is not folded for the selection's sake.** The ancestors of the
+  selected node are always treated as expanded, so a selection made while a
+  branch was folded still shows where it is.
+- **The menu offers only what it can do.** Per-row expand/collapse (only when the
+  node has children), select, clear selection. There is no "expand all" /
+  "collapse all", because the panel has no bulk operation to call — a menu entry
+  that quietly did nothing would be worse than a shorter menu.
+
+A row and the menu both write the shared `DevtoolsState` from `event`, where
+there is no `UpdateContext` to request a rebuild with. They call
+`floom_core::request_repaint` instead, which is the one channel from a widget to
+the frame loop: the panel's next `update` sees the state key it compares
+(`mounted_rows_key`, which includes the selection and the folded set) has moved
+and marks its children dirty. Without that call the state would change and the
+screen would not.
+
+The style rows are the **declared** style — what the widget says it paints
+(`Widget::paint_style` → `floom_core::PaintStyle`) — not what the scene measured.
+That distinction is honest rather than convenient: an inherited or animated value
+is not in the declaration, a gradient background reports `None` for its fill, a
+`Button` reports its base fill rather than the colour of the state it is
+currently in, and `elevation` is the shadow's blur with offset and spread
+dropped. Each of those is a real difference from Chrome's computed style, and the
+panel does not paper over them. The layout rows are the slot's
+`LayoutRequest` — the request the parent placed the child with, falling back to
+the widget's own for the root.
 
 ### The tab bar
 
@@ -266,7 +332,11 @@ fn pointer(&mut self, event: &PointerEvent) -> bool {
 
 A click while picking **selects without pressing**: the picker consumes the
 event before the tree sees it. `commit_selection` writes the pick into the panel
-state, which is what makes the Elements row and the breadcrumb follow the click.
+state, which is what makes the Elements row and the breadcrumb follow the click
+— and it switches the panel back to `Tree`, the way Chrome does, because the
+tree is where a reader goes next (to see the element's neighbours). A pick that
+left the panel on `Style` would show the styles of an element the reader had not
+been shown yet.
 
 It writes **once per pick**: the pick outlives the click, because it is what the
 highlight keeps sitting on, so it is not cleared on commit — and a caller that
@@ -284,6 +354,18 @@ unclickable for the pick it exists to serve. Retarget it once per frame:
 ```rust
 picker.sync_highlight(&mut host);   // the box follows the hover, then the pick
 ```
+
+**The box and the tree are one selection.** With no pick in flight the box
+follows the panel's `selected` — so clicking a row in Elements outlines that
+element on the app, which is the half of the link that makes the tree more than a
+list of names. That fallback is live only while the panel is up: a closed panel
+that kept a box on screen would leave a blue rectangle with nothing on screen to
+explain it, so `sync_highlight` clears the box when the panel goes away and
+nothing was picked.
+
+Retargeting is the caller's job because only the caller knows when to spend a
+frame on it. `highlight_target` is what makes that cheap: compare it with the
+last frame's value and call `sync_highlight` only when it moved.
 
 ## What the panel is *not*
 

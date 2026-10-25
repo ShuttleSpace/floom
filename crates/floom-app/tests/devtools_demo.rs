@@ -6,6 +6,7 @@
 //! element by clicking where it is. If this passes, the demo's two lines are
 //! doing what they claim.
 
+use std::collections::BTreeSet;
 use std::sync::{Arc, Mutex};
 
 use floom_app::{HostedNode, WidgetHost};
@@ -61,7 +62,7 @@ fn the_demos_app_mounts_and_is_describable() {
     // And describing them answers the questions the panel asks.
     let live = describe(&nodes);
     let inspector = floom_devtools::Inspector::new(&live);
-    let rows = floom_devtools::panel::tree_rows(&inspector, None);
+    let rows = floom_devtools::panel::tree_rows(&inspector, None, &BTreeSet::new());
     assert!(!rows.is_empty(), "the tree panel has rows");
 }
 

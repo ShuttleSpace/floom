@@ -34,16 +34,20 @@
 
 #![forbid(unsafe_code)]
 
+use std::collections::BTreeSet;
 use std::sync::{Arc, Mutex};
 
 use floom_core::{
-    Axis, Child, ChildKey, Color, ElementId, EventContext, Key, KeyEvent, KeyPhase, LayoutRequest,
-    Modifiers, Rect, Widget,
+    Axis, Child, ChildKey, Color, ElementId, EventContext, FontWeight, Key, KeyEvent, KeyPhase,
+    LayoutRequest, Modifiers, Rect, Widget,
 };
-use floom_widgets::{Button, Stack, Surface, Text};
+use floom_widgets::{Button, Scroll, Stack, Surface, Text};
 
+use crate::tree::row_child;
 use crate::{Inspector, SemanticsEntry, UpdatePath};
 use floom_inspector::TreeNodeInfo;
+
+pub use crate::tree::RowNode;
 
 /// The shortcut that toggles the panel, as a predicate over a key event.
 ///
@@ -93,6 +97,15 @@ pub struct DevtoolsState {
     tab: DevtoolsTab,
     /// The element the readout is about, as a live-tree key.
     selected: Option<String>,
+    /// The keys of the nodes whose children the reader has collapsed.
+    ///
+    /// Empty means everything is open, which is the right default for a tree
+    /// that is a few dozen rows deep: Chrome opens collapsed, but a panel whose
+    /// first frame hides everything but the root looks like it failed to read
+    /// the tree at all. A set rather than a per-node flag because the state is
+    /// the only thing that survives a rebuild — rows are rebuilt from the
+    /// inspector every frame, and a flag on a row would be thrown away with it.
+    collapsed: BTreeSet<String>,
 }
 
 /// The readouts the panel can show, in the order the tabs appear.
@@ -154,6 +167,7 @@ impl DevtoolsState {
             visible: false,
             tab: DevtoolsTab::default(),
             selected: None,
+            collapsed: BTreeSet::new(),
         }
     }
 
@@ -200,6 +214,29 @@ impl DevtoolsState {
     pub fn select(&mut self, key: impl Into<String>) {
         self.selected = Some(key.into());
     }
+
+    /// Forgets the selection, so Style and Layout have nothing to be about.
+    pub fn clear_selection(&mut self) {
+        self.selected = None;
+    }
+
+    /// The keys of the nodes whose children are collapsed.
+    pub fn collapsed(&self) -> &BTreeSet<String> {
+        &self.collapsed
+    }
+
+    /// Whether a node's children are currently hidden.
+    pub fn is_collapsed(&self, key: &str) -> bool {
+        self.collapsed.contains(key)
+    }
+
+    /// Flips one node between collapsed and expanded.
+    pub fn toggle_collapsed(&mut self, key: impl Into<String>) {
+        let key = key.into();
+        if !self.collapsed.remove(&key) {
+            self.collapsed.insert(key);
+        }
+    }
 }
 
 impl Default for DevtoolsState {
@@ -207,6 +244,13 @@ impl Default for DevtoolsState {
         Self::new()
     }
 }
+
+/// Everything a panel's rows are a function of, as one comparable value.
+///
+/// A type alias rather than a struct so a test can compare it to a tuple literal:
+/// the point of the value is that `update` can tell "same rows" from "different
+/// rows" with `==`, and a tuple does that without a second type to learn.
+type MountedRowsKey = (bool, DevtoolsTab, Option<String>, BTreeSet<String>);
 
 /// The visible panel, mounted as an overlay above the app's own tree.
 ///
@@ -235,15 +279,16 @@ pub struct DevtoolsPanel {
     /// It starts at `false` because that is what the host has actually mounted:
     /// a panel arrives with no rows under it, whatever its state cell says.
     mounted: bool,
-    /// The readout the host last mounted children for: visibility, tab and
-    /// selection.
+    /// The readout the host last mounted children for: visibility, tab,
+    /// selection and the collapsed set.
     ///
     /// Visibility alone is not enough. Switching tab changes every row below
-    /// the breadcrumb, and a pick changes which element the rows are about —
-    /// both arrive through the shared cell rather than through `update`'s
-    /// arguments, so a panel that only compared visibility would keep drawing
-    /// the previous tab's rows until something else happened to dirty it.
-    mounted_rows: Option<(bool, DevtoolsTab, Option<String>)>,
+    /// the breadcrumb, a pick changes which element the rows are about, and a
+    /// click on a chevron changes which rows exist at all — all three arrive
+    /// through the shared cell rather than through `update`'s arguments, so a
+    /// panel that only compared visibility would keep drawing the previous
+    /// tab's rows until something else happened to dirty it.
+    mounted_rows: Option<MountedRowsKey>,
     /// The tabs to put on the bar, in order. Empty means no bar at all.
     ///
     /// Empty is the right default for [`DevtoolsPanel::new`]: the caller's
@@ -270,6 +315,13 @@ pub struct ReadoutRow {
     /// sections — "Tree", "Styles", "Layout" — so a reader can find the part
     /// they want without reading the whole panel.
     pub heading: bool,
+    /// The tree node this row stands for, when it stands for one.
+    ///
+    /// `Some` makes the row an interactive [`crate::tree::TreeRow`] — chevron,
+    /// click to select, right click for the menu. `None` keeps it a line of text.
+    /// The node is carried as data rather than looked up at paint time so a
+    /// readout stays a pure function of the inspector and the state.
+    pub node: Option<RowNode>,
 }
 
 impl ReadoutRow {
@@ -280,6 +332,7 @@ impl ReadoutRow {
             value: value.into(),
             depth: 0,
             heading: false,
+            node: None,
         }
     }
 
@@ -289,6 +342,17 @@ impl ReadoutRow {
         self
     }
 
+    /// A row that stands for a tree node, and can therefore be clicked.
+    pub fn node(label: impl Into<String>, value: impl Into<String>, node: RowNode) -> Self {
+        Self {
+            label: label.into(),
+            value: value.into(),
+            depth: 0,
+            heading: false,
+            node: Some(node),
+        }
+    }
+
     /// A section heading, which takes no value.
     pub fn heading(label: impl Into<String>) -> Self {
         Self {
@@ -296,6 +360,7 @@ impl ReadoutRow {
             value: String::new(),
             depth: 0,
             heading: true,
+            node: None,
         }
     }
 }
@@ -316,10 +381,14 @@ impl DevtoolsPanel {
             let selected = guard
                 .as_ref()
                 .and_then(|s| s.selected().map(str::to_string));
+            let collapsed = guard
+                .as_ref()
+                .map(|s| s.collapsed().clone())
+                .unwrap_or_default();
             if visible {
-                Some((true, tab, selected))
+                Some((true, tab, selected, collapsed))
             } else {
-                Some((false, DevtoolsTab::default(), None))
+                Some((false, DevtoolsTab::default(), None, BTreeSet::new()))
             }
         };
         Self {
@@ -399,17 +468,23 @@ impl DevtoolsPanel {
 
     /// What the rows are a function of, as one comparable value.
     ///
-    /// Visibility, tab and selection: everything `rows()` reads from the shared
-    /// cell that the host cannot see from outside. A hidden panel has no rows at
-    /// all, so it collapses to `(false, ..)` rather than carrying a stale tab.
-    fn mounted_rows_key(&self, visible: bool) -> (bool, DevtoolsTab, Option<String>) {
+    /// Visibility, tab, selection and the collapsed set: everything `rows()`
+    /// reads from the shared cell that the host cannot see from outside. A
+    /// hidden panel has no rows at all, so it collapses to `(false, ..)` rather
+    /// than carrying a stale tab.
+    fn mounted_rows_key(&self, visible: bool) -> MountedRowsKey {
         if !visible {
-            return (false, DevtoolsTab::default(), None);
+            return (false, DevtoolsTab::default(), None, BTreeSet::new());
         }
         let Ok(state) = self.state.lock() else {
-            return (visible, DevtoolsTab::default(), None);
+            return (visible, DevtoolsTab::default(), None, BTreeSet::new());
         };
-        (visible, state.tab(), state.selected().map(str::to_string))
+        (
+            visible,
+            state.tab(),
+            state.selected().map(str::to_string),
+            state.collapsed().clone(),
+        )
     }
 }
 
@@ -500,9 +575,25 @@ impl Widget for DevtoolsPanel {
             next_key += 1;
         }
         for (index, row) in rows.iter().enumerate() {
-            // One indent step per level of depth. A heading carries no value and
-            // is drawn heavier; a row's label and value are separated, and the
-            // value is dimmed so the eye lands on the label first.
+            let key = next_key + index as u64;
+            // A tree row draws itself: the selected one needs a filled
+            // background behind its label, and this host paints a flat scene in
+            // node order, so no sibling box can be drawn behind another
+            // sibling's text.
+            if let Some(node) = &row.node {
+                stack = stack.child(row_child(
+                    key,
+                    self.state.clone(),
+                    node.clone(),
+                    row.value.clone(),
+                    row.depth,
+                ));
+                continue;
+            }
+            // Every other row is a line of text. The indent is part of the
+            // string rather than a margin so a row is one element, not two: a
+            // readout can be a hundred rows, and a wrapper per row would double
+            // the tree for a number.
             let indent = "  ".repeat(row.depth);
             let text = if row.heading {
                 row.label.clone()
@@ -512,8 +603,24 @@ impl Widget for DevtoolsPanel {
                 format!("{indent}{}  {}", row.label, row.value)
             };
             let size = if row.heading { 12.0 } else { 11.0 };
-            stack = stack.push_keyed(next_key + index as u64, move || {
-                Box::new(Text::new(text.clone()).size(size))
+            let heading = row.heading;
+            stack = stack.push_keyed(key, move || {
+                // The panel is dark and `Text` defaults to black: a row drawn in
+                // the default ink is a row nobody can read.
+                Box::new(
+                    Text::new(text.clone())
+                        .size(size)
+                        .weight(if heading {
+                            FontWeight::SemiBold
+                        } else {
+                            FontWeight::Normal
+                        })
+                        .color(if heading {
+                            Color::rgb(0xf2, 0xf4, 0xf8)
+                        } else {
+                            Color::rgb(0xd8, 0xdc, 0xe4)
+                        }),
+                )
             });
         }
         // The child builder is an `Fn`, so it is called more than once and every
@@ -529,7 +636,18 @@ impl Widget for DevtoolsPanel {
                     Surface::new()
                         .background(panel_background())
                         .padding(floom_core::Insets::uniform(6.0))
-                        .push(move || Box::new((*stack).clone())),
+                        .push_layout(LayoutRequest::new().fill(), move || {
+                            let stack = stack.clone();
+                            // Scrolled, because the readout is longer than the
+                            // panel: without this the Style and Layout sections
+                            // are appended *below* the visible area and the tab
+                            // looks like it did nothing at all.
+                            Box::new(Scroll::new().child(Child::new(
+                                ChildKey::index(0),
+                                LayoutRequest::new().fill(),
+                                move || Box::new((*stack).clone()),
+                            )))
+                        }),
                 )
             },
         )]
@@ -551,23 +669,46 @@ impl Widget for DevtoolsPanel {
     }
 }
 
-/// The Elements panel, whole: the tree, the breadcrumb, and the selected
-/// element's style and layout.
+/// The Elements panel, whole: one tab's worth of readout at a time.
 ///
-/// This is the composition a caller hands to [`DevtoolsPanel::new`] when they
-/// want the Chrome layout rather than a custom one. It reads the tab out of
-/// `state`, so the panel's own tab switching drives which half is shown.
+/// The tabs are exclusive rather than cumulative, which is the whole reason the
+/// panel has a tab bar: Chrome shows the tree *or* the styles of the selected
+/// element, not both, and a panel that appended everything below everything else
+/// was a panel whose Style and Layout tabs looked like they did nothing — the
+/// rows were there, past the bottom of the viewport, behind a tree long enough to
+/// fill it.
+///
+/// The breadcrumb leads every tab, so a reader who switched to Style still knows
+/// which element they are looking at.
 pub fn elements_readout(inspector: &Inspector<'_>, state: &DevtoolsState) -> Vec<ReadoutRow> {
     let selected = state.selected();
     let mut rows = vec![ReadoutRow::heading("Elements")];
-    rows.extend(tree_rows(inspector, selected));
-    if let Some(key) = selected {
-        rows.extend(breadcrumb_rows(inspector, key));
-        match state.tab() {
-            DevtoolsTab::Style => rows.extend(style_rows(inspector, key)),
-            DevtoolsTab::Layout => rows.extend(layout_rows(inspector, key)),
-            _ => {}
+    match state.tab() {
+        DevtoolsTab::Tree => {
+            rows.extend(tree_rows(inspector, selected, state.collapsed()));
+            if let Some(key) = selected {
+                rows.extend(breadcrumb_rows(inspector, key));
+            }
         }
+        DevtoolsTab::Style | DevtoolsTab::Layout => {
+            let Some(key) = selected else {
+                rows.push(ReadoutRow::new(
+                    "No element selected",
+                    "click a row in Elements, or press the pick shortcut",
+                ));
+                return rows;
+            };
+            rows.extend(breadcrumb_rows(inspector, key));
+            if state.tab() == DevtoolsTab::Style {
+                rows.extend(style_rows(inspector, key));
+            } else {
+                rows.extend(layout_rows(inspector, key));
+            }
+        }
+        // The two tabs a caller has to feed. Nothing here invents rows for them:
+        // a panel that drew an empty Semantics heading would be claiming a
+        // readout it does not have.
+        DevtoolsTab::Semantics | DevtoolsTab::Updates => {}
     }
     rows
 }
@@ -689,21 +830,23 @@ pub fn default_readout(inspector: &Inspector<'_>) -> Vec<ReadoutRow> {
 // with the nesting carried in `ReadoutRow::depth`. A row is selected by its
 // key, and the selected one is marked, so a reader can see where they are.
 
-/// The selection marker for a tree row.
-///
-/// A filled triangle when the row is the selected one, a space of the same
-/// width when it is not: the column has to line up whether or not anything is
-/// selected, and the indent comes from `ReadoutRow::depth` alone. A marker that
-/// carried its own indent would double it.
-fn marker(selected: Option<&str>, key: &str) -> char {
-    if selected == Some(key) { '▸' } else { ' ' }
-}
-
-/// The element tree as rows, nested by depth.
+/// The element tree as rows, nested by depth and cut where the reader collapsed
+/// it.
 ///
 /// `selected` marks one node the way Chrome's selection does, so the panel can
-/// show which element the style and layout readouts are about.
-pub fn tree_rows(inspector: &Inspector<'_>, selected: Option<&str>) -> Vec<ReadoutRow> {
+/// show which element the style and layout readouts are about; `collapsed` is the
+/// set of nodes whose children are hidden.
+///
+/// One rule outranks the set: the ancestors of the selected node are always
+/// treated as expanded. Selecting a node from the Style tab and then switching
+/// back to a tree where that node is inside a collapsed parent would show a
+/// selection with nothing selected, and collapsing is a display choice rather
+/// than a promise to hide the thing the panel is about.
+pub fn tree_rows(
+    inspector: &Inspector<'_>,
+    selected: Option<&str>,
+    collapsed: &BTreeSet<String>,
+) -> Vec<ReadoutRow> {
     let snapshot = inspector.tree_snapshot();
     let by_parent: std::collections::HashMap<Option<u64>, Vec<&TreeNodeInfo>> = snapshot
         .nodes
@@ -713,39 +856,84 @@ pub fn tree_rows(inspector: &Inspector<'_>, selected: Option<&str>) -> Vec<Reado
             acc
         });
 
+    // The ancestors of the selection, by id. Walked up from the selected node
+    // rather than down from the root: the tree can be deep and only one path
+    // matters.
+    let mut ancestors: std::collections::HashSet<u64> = std::collections::HashSet::new();
+    if let Some(key) = selected {
+        let mut cursor = snapshot
+            .nodes
+            .iter()
+            .find(|node| node.key.as_deref() == Some(key));
+        while let Some(node) = cursor {
+            ancestors.insert(node.id);
+            cursor = node
+                .parent
+                .and_then(|parent| snapshot.nodes.iter().find(|n| n.id == parent));
+        }
+    }
+
     let mut rows = Vec::new();
     // The root's own row first: a tree that starts at the root's children hides
     // the one node every other node hangs from.
-    if let Some(root) = snapshot.nodes.iter().find(|n| n.id == snapshot.root) {
-        rows.push(tree_row(root, selected, 0));
-    }
+    let Some(root) = snapshot.nodes.iter().find(|n| n.id == snapshot.root) else {
+        return rows;
+    };
+    rows.push(tree_row(
+        root, &by_parent, selected, collapsed, &ancestors, 0,
+    ));
     // Depth-first from the root's children, so the order a browser's inspector
-    // shows.
-    let mut stack: Vec<(Option<u64>, usize)> = vec![(Some(snapshot.root), 1)];
-    while let Some((parent, depth)) = stack.pop() {
-        let Some(children) = by_parent.get(&parent) else {
+    // shows. The stack carries a `show` flag instead of consulting the collapsed
+    // set when it pops: a collapsed ancestor has to hide its whole subtree, and a
+    // node deeper down has no way to know it was reached through one.
+    let mut stack: Vec<(&TreeNodeInfo, usize, bool)> = vec![(root, 1, true)];
+    while let Some((parent, depth, show)) = stack.pop() {
+        let Some(children) = by_parent.get(&Some(parent.id)) else {
             continue;
         };
-        // Push in reverse so the first child is visited first.
         for node in children.iter().rev() {
-            rows.push(tree_row(node, selected, depth));
-            stack.push((Some(node.id), depth + 1));
+            if show {
+                rows.push(tree_row(
+                    node, &by_parent, selected, collapsed, &ancestors, depth,
+                ));
+            }
+            let key = node.key.as_deref().unwrap_or("");
+            let open = show && (!collapsed.contains(key) || ancestors.contains(&node.id));
+            stack.push((node, depth + 1, open));
         }
     }
     rows
 }
 
-/// One tree row: the marker column, the node's key, and the node's kind.
+/// One tree row: the node's key, and the node's kind.
 ///
-/// `depth` is the row's only indent — the marker is one character wide and adds
-/// none, so a marked row and an unmarked one line up.
-fn tree_row(node: &TreeNodeInfo, selected: Option<&str>, depth: usize) -> ReadoutRow {
+/// `depth` is the row's only indent. A row that stands for a node carries a
+/// [`RowNode`], which is what makes the panel build it as a clickable
+/// [`crate::tree::TreeRow`] rather than a line of text.
+fn tree_row(
+    node: &TreeNodeInfo,
+    by_parent: &std::collections::HashMap<Option<u64>, Vec<&TreeNodeInfo>>,
+    selected: Option<&str>,
+    collapsed: &BTreeSet<String>,
+    ancestors: &std::collections::HashSet<u64>,
+    depth: usize,
+) -> ReadoutRow {
     let key = node.key.as_deref().unwrap_or("?");
+    let has_children = by_parent
+        .get(&Some(node.id))
+        .is_some_and(|children| !children.is_empty());
+    let expanded = !collapsed.contains(key) || ancestors.contains(&node.id);
     ReadoutRow {
-        label: format!("{}{key}", marker(selected, key)),
+        label: key.to_string(),
         value: node.kind.clone(),
         depth,
         heading: false,
+        node: Some(RowNode {
+            key: key.to_string(),
+            has_children,
+            expanded,
+            selected: selected == Some(key),
+        }),
     }
 }
 

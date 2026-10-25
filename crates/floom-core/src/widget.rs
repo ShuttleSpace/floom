@@ -40,6 +40,20 @@ pub trait Widget {
     fn layout_request(&self) -> Option<LayoutRequest> {
         None
     }
+    /// What this widget declares it paints, for an inspector's Style readout.
+    ///
+    /// Defaults to `None`, which means "this widget does not describe its own
+    /// paint" — a vector path, a custom leaf, a composite that draws from state.
+    /// The readout then shows nothing for the node rather than guessing from
+    /// the scene, because a draw op cannot say which of several rects was the
+    /// background.
+    ///
+    /// This is a *declaration*, computed with no renderer in the loop: what the
+    /// widget intends to draw, not what the framebuffer ended up with. See
+    /// [`PaintStyle`](crate::PaintStyle) for the subset it covers and why.
+    fn paint_style(&self) -> Option<crate::PaintStyle> {
+        None
+    }
     fn event(&mut self, cx: &mut dyn EventContext, id: ElementId) -> bool {
         let _ = (cx, id);
         false

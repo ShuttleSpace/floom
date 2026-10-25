@@ -28,17 +28,32 @@
 //!
 //! What to try:
 //!
-//! | key | what it does |
+//! | input | what it does |
 //! | --- | --- |
 //! | **F12** | show / hide the panel |
 //! | **Cmd+Shift+I** (macOS) / **Ctrl+Shift+I** | the same, where F12 belongs to the OS |
 //! | **Ctrl+Shift+C** | arm the pick, then click any element to inspect it |
 //! | **Escape** | close the panel — and only while it is open, so Escape stays the app's |
 //! | **click a tab** | switch between the tree, the selected element's style, and its layout |
+//! | **click a row's name** | select that element; Style and Layout then describe it |
+//! | **click a row's triangle** | fold or unfold its children |
+//! | **right-click a row** | the row's menu: expand/collapse, select, clear selection |
+//!
+//! The two clicks are deliberately different. The name selects — that is what a
+//! reader wants when opening Style — and the triangle discloses, so inspecting a
+//! container does not fold away the children being inspected. A leaf has no
+//! triangle, so a press in that column selects it like any other.
 //!
 //! The panel is chrome rather than a dialog: while it is hidden its column
 //! belongs to the app, clicking a tab does not take the keyboard, and a press
 //! outside the panel does not close it.
+//!
+//! ## Why the window is white
+//!
+//! The panel paints itself on a dark card, and the app under it paints its own
+//! background. A demo that inherited a dark window would have made every
+//! low-contrast bug in the app look like a devtools bug; white makes the
+//! app's ink and the panel's chrome separable at a glance.
 //!
 //! Run with `cargo run -p floom-devtools-demo`.
 
@@ -46,6 +61,10 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicI32, Ordering};
 
 use floom::prelude::*;
+// `Surface` is a decorated box that holds children; it is not in the prelude
+// (that tier is the beginner widget set), so the demo names it explicitly.
+use floom::floom_types::Insets;
+use floom::floom_widgets::Surface;
 
 /// The window's logical size, mirrored by the host's viewport.
 const WINDOW: Size = Size::new(720.0, 560.0);
@@ -119,7 +138,24 @@ fn main() {
                     },
                 ));
 
-                host.mount_root(LayoutStyle::default(), column);
+                // The root is a white surface with padding, so the demo's own
+                // ink sits on white and the panel's dark card is visibly a
+                // separate thing. `Stack` is `Clone` but a child builder is an
+                // `Fn`, so the column travels in an `Arc` the way the button row
+                // above does.
+                let column = std::sync::Arc::new(column);
+                let column_slot = column.clone();
+                host.mount_root(
+                    LayoutStyle::default(),
+                    Surface::new()
+                        .background(Color::WHITE)
+                        .padding(Insets::uniform(24.0))
+                        .child(Child::new(
+                            ChildKey::index(0),
+                            LayoutRequest::new().width_pct(100.0).fill(),
+                            move || Box::new((*column_slot).clone()),
+                        )),
+                );
             }
         },
         // The panel's readout. This closure is called every frame the panel is

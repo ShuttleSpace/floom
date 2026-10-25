@@ -18,7 +18,7 @@ pub use floom_accessibility::SemanticsRole as Role;
 pub use floom_accessibility::SemanticsState as StateBits;
 use floom_core::{
     Axis, Brush, Color, CreateContext, Edges, ElementId, Filter, LayoutRequest, PaintContext,
-    Point, Rect, ResourceId, SemanticsContext, Shadow, Size, UpdateContext, Widget,
+    PaintStyle, Point, Rect, ResourceId, SemanticsContext, Shadow, Size, UpdateContext, Widget,
 };
 use floom_types::{FontWeight, Path, Stroke};
 
@@ -356,6 +356,15 @@ impl Widget for Text {
 
     fn semantics(&self, cx: &mut dyn SemanticsContext, _id: ElementId) {
         emit_semantics(self.semantics_hint(), cx);
+    }
+
+    /// A run of text is its colour and its size — the whole of what it paints.
+    fn paint_style(&self) -> Option<PaintStyle> {
+        Some(PaintStyle {
+            foreground: Some(self.color),
+            font_size: Some(self.size),
+            ..PaintStyle::default()
+        })
     }
 }
 
@@ -872,6 +881,27 @@ impl Widget for Container {
     /// `paint` so the host can bracket the whole subtree with it.
     fn filter(&self) -> Option<Filter> {
         self.filter
+    }
+
+    /// What this card paints, for the inspector's Style readout.
+    ///
+    /// The narrowing is the same one [`Container::background_color`] already
+    /// makes for its own callers: a gradient fill reports no background rather
+    /// than its first stop, because one stop is not the fill.
+    fn paint_style(&self) -> Option<PaintStyle> {
+        let border = self.border_spec();
+        let style = PaintStyle {
+            background: self.background_color(),
+            radius: (self.radius > 0.0).then_some(self.radius),
+            border_width: border.map(|b| b.width()),
+            border_color: border.map(|b| b.color()),
+            // The blur is the one length the style vocabulary has a word for.
+            // Offset and spread are dropped rather than folded in; see
+            // `PaintStyle`'s module docs.
+            elevation: self.shadow.map(|s| s.blur as f32),
+            ..PaintStyle::default()
+        };
+        (!style.is_empty()).then_some(style)
     }
 
     fn paint(&self, cx: &mut dyn PaintContext, _id: ElementId) {

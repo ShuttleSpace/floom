@@ -41,6 +41,7 @@ pub use floom_devtools::pick::{
     HighlightBox, PickPhase, PickShortcut, PickState, default_pick_shortcut, highlight_is_live,
     highlight_rect, pick_pointer,
 };
+pub use floom_devtools::tree;
 pub use floom_hot_reload::describe;
 
 /// A mounted devtools panel, and the state that opens and closes it.
@@ -487,32 +488,61 @@ impl PickHandle {
     /// cheaper signal does) would re-select the last picked element on every
     /// later click, overwriting whatever the user selected since. The second
     /// call after a pick returns `false` and writes nothing.
+    ///
+    /// **The tab goes back to Elements.** Chrome does the same thing: inspecting
+    /// an element from the page switches the panel to the tree with that element
+    /// highlighted, because the tree is where you go next — to see its
+    /// neighbours. A pick that left the panel on Style would show the styles of
+    /// an element the reader has not been shown yet.
     pub fn commit_selection(&self) -> bool {
-        let Ok(mut pick) = self.pick.lock() else {
-            return false;
-        };
-        let Some(key) = pick.take_uncommitted() else {
-            return false;
+        let key = {
+            let Ok(mut pick) = self.pick.lock() else {
+                return false;
+            };
+            let Some(key) = pick.take_uncommitted() else {
+                return false;
+            };
+            key
         };
         let Ok(mut state) = self.panel_state.lock() else {
             return false;
         };
         state.select(key);
+        state.set_tab(DevtoolsTab::Tree);
         true
     }
 
     /// The element the highlight should be drawn around, if any.
     ///
     /// A hover wins while picking — the box follows the pointer — and the
-    /// committed pick is what it falls back to once picking stops. The caller
-    /// compares this across frames to know whether the box needs retargeting,
-    /// which is what lets a frame be requested only when it actually moved.
+    /// committed pick is what it falls back to once picking stops.
+    ///
+    /// With no pick at all the box follows the *panel's* selection, which is the
+    /// other half of the same link: clicking a row in the Elements tree has to
+    /// outline that element on the app, or the tree is a list of names with no
+    /// way to tell which box on screen a name refers to. That fallback is only
+    /// live while the panel is up — a closed panel selecting nothing visible
+    /// would leave a blue box on the app with no explanation.
+    ///
+    /// The caller compares this across frames to know whether the box needs
+    /// retargeting, which is what lets a frame be requested only when it
+    /// actually moved.
     pub fn highlight_target(&self) -> Option<String> {
-        let pick = self.pick.lock().ok()?;
-        match pick.phase() {
-            PickPhase::Hovering => pick.hovered().or_else(|| pick.picked()).map(String::from),
-            _ => pick.picked().map(String::from),
+        let picked = {
+            let pick = self.pick.lock().ok()?;
+            match pick.phase() {
+                PickPhase::Hovering => pick.hovered().or_else(|| pick.picked()).map(String::from),
+                _ => pick.picked().map(String::from),
+            }
+        };
+        if picked.is_some() {
+            return picked;
         }
+        let state = self.panel_state.lock().ok()?;
+        if !state.visible() {
+            return None;
+        }
+        state.selected().map(String::from)
     }
 
     /// Whether the highlight is following a hover rather than sitting on a pick.
@@ -533,10 +563,13 @@ impl PickHandle {
     /// mutably, which is why the earlier signature could not be used from the
     /// frame loop at all.
     pub fn sync_highlight(&self, host: &mut WidgetHost) {
-        let rect = self.highlight_rect(|key| {
-            let node = host.node_by_key(key)?;
-            Some(host.bounds(node))
-        });
+        // `highlight_target`, not `highlight_rect`: the latter only knows about
+        // the pick, and the box has to keep sitting on the panel's selection
+        // after a pick stops. Both halves of the link are one target here.
+        let rect = self
+            .highlight_target()
+            .and_then(|key| host.node_by_key(&key))
+            .map(|node| host.bounds(node));
         let live = self.highlight_is_live();
         let Some(node) = host.overlay_node_id(self.overlay) else {
             return;

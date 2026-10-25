@@ -1,4 +1,4 @@
-use floom_core::{Element, ElementId, ElementKind, HostedKind, HostedNode};
+use floom_core::{Element, ElementId, ElementKind, HostedKind, HostedNode, LayoutRequest};
 use floom_style::StyleProps;
 use floom_ui_ir::{NodeKey, NodeKind};
 
@@ -70,6 +70,19 @@ impl HostedTree {
         self.live.set_style(id, style);
     }
 
+    /// Attaches the layout request a hosted node occupies, so the layout readout
+    /// has something to say.
+    ///
+    /// The host's own request, not a re-derivation: a widget's
+    /// [`Widget::layout_request`] describes what it *wants*, while the request
+    /// the node actually got is what it *is*, and the two differ for every
+    /// child a parent sized.
+    ///
+    /// [`Widget::layout_request`]: floom_core::Widget::layout_request
+    pub fn set_layout(&mut self, id: ElementId, layout: LayoutRequest) {
+        self.live.set_layout(id, layout);
+    }
+
     /// The live tree, ready for an [`crate::Inspector`].
     pub fn finish(self) -> LiveTree {
         self.live
@@ -139,6 +152,37 @@ pub fn describe(nodes: &[HostedNode]) -> LiveTree {
         // Keyed by the *host's* element id, which is what a child's `parent`
         // field names — not by the live id this builder just minted.
         host_ids.insert(node.element.raw(), node.key.clone());
+        // The two readouts' data. Both are the host's own answer, carried
+        // across as plain data and written straight into the tables a
+        // document-mounted tree would have filled from IR props — no
+        // re-derivation here, because anything this layer invented would be a
+        // second opinion about a box only the host can see.
+        if let Some(style) = node.style {
+            builder.set_style(id, style_props(style));
+        }
+        if let Some(layout) = node.layout {
+            builder.set_layout(id, layout);
+        }
     }
     builder.finish()
+}
+
+/// [`PaintStyle`] as the style layer's property bag.
+///
+/// A field-for-field copy, and the copy is the point: `floom-core` cannot name
+/// [`StyleProps`] (it sits below the style layer), so the bridge is here. The
+/// one lossy word is `elevation`, which both sides already use for "how far the
+/// shadow reaches" — see [`PaintStyle`]'s module docs for what it drops.
+fn style_props(style: floom_core::PaintStyle) -> StyleProps {
+    StyleProps {
+        background: style.background,
+        foreground: style.foreground,
+        opacity: style.opacity,
+        font_size: style.font_size,
+        padding: style.padding,
+        radius: style.radius,
+        border_width: style.border_width,
+        border_color: style.border_color,
+        elevation: style.elevation,
+    }
 }

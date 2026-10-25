@@ -2374,6 +2374,14 @@ impl WidgetHost {
     ///
     /// Taken fresh on every call rather than cached: a panel that inspects a
     /// stale tree is worse than no panel, because it looks like an answer.
+    ///
+    /// The paint and layout fields are what make the Style and Layout readouts
+    /// answerable. A host that mounts engine widgets has no document and no IR
+    /// props, so the only description of a node is the node: its widget's
+    /// [`Widget::paint_style`] and a layout request. Both are asked of the
+    /// widget *now*, which is the same freshness rule the rest of this method
+    /// follows — and both are allowed to answer `None`, which the readout shows
+    /// as an empty section rather than filling in.
     pub fn tree_nodes(&self) -> Vec<HostedNode> {
         let mut out = Vec::new();
         // Depth-first in document order, so the tree reads the way it mounts.
@@ -2391,6 +2399,12 @@ impl WidgetHost {
                 },
                 element: node.id,
                 parent: node.parent.map(|p| self.nodes[p].id),
+                style: node.widget.paint_style(),
+                // The slot's request first: a child mounted by a composite was
+                // sized by whoever placed it, and that is the box it occupies.
+                // Only when there is no slot — the root, an imperatively
+                // mounted node — does the widget's own request describe it.
+                layout: node.parent_request.or_else(|| node.widget.layout_request()),
             });
             // Reverse, so the first child is described first.
             for child in node.children.iter().rev() {
@@ -3533,9 +3547,14 @@ impl WidgetHost {
         content_sizes: &[Option<Size>],
     ) -> bool {
         let node = &mut self.nodes[index];
+        // Read before the node borrow: the viewport is the host's whole content
+        // area, and a widget placing something outside itself (a context menu
+        // near an edge) needs it to stay on screen.
+        let viewport = Rect::from_origin_size(Point::ZERO, self.size);
         let mut cx = NodeEventContext {
             target: stop.id,
             bounds: node.bounds,
+            viewport,
             event,
             content_size: content_sizes.get(index).copied().flatten(),
             focus_requests: &mut *queues.focus_requests,
@@ -5191,6 +5210,8 @@ struct DispatchQueues<'a> {
 struct NodeEventContext<'a> {
     target: ElementId,
     bounds: Rect,
+    /// The host's whole content area — the window, for a desktop host.
+    viewport: Rect,
     event: Event,
     focus_requests: &'a mut Vec<ElementId>,
     /// This widget's measured content extent, for the widgets that asked to be
@@ -5220,6 +5241,10 @@ impl EventContext for NodeEventContext<'_> {
 
     fn bounds(&self) -> Rect {
         self.bounds
+    }
+
+    fn viewport(&self) -> Rect {
+        self.viewport
     }
 
     fn cursor_position(&self) -> Option<Point> {

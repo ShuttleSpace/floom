@@ -47,7 +47,7 @@
 
 use floom_core::{
     Brush, Child, ChildKey, CreateContext, Edges, ElementId, Filter, LayoutRequest, PaintContext,
-    SemanticsContext, UpdateContext, Widget, WidgetAny,
+    PaintStyle, SemanticsContext, UpdateContext, Widget, WidgetAny,
 };
 use floom_types::{Color, Insets, Shadow};
 
@@ -390,6 +390,23 @@ impl Widget for Surface {
     /// subtree, which a paint call cannot do.
     fn filter(&self) -> Option<Filter> {
         self.decoration.filter()
+    }
+
+    /// The box's decoration, plus its padding — which is this widget's own
+    /// property rather than the `Container`'s, so it has to be added here.
+    fn paint_style(&self) -> Option<PaintStyle> {
+        let uniform = [
+            self.padding.top,
+            self.padding.right,
+            self.padding.bottom,
+            self.padding.left,
+        ];
+        let mut style = self.decoration.paint_style().unwrap_or_default();
+        style.padding = uniform
+            .iter()
+            .all(|v| *v == uniform[0])
+            .then_some(uniform[0] as f32);
+        (!style.is_empty()).then_some(style)
     }
 
     fn paint(&self, cx: &mut dyn PaintContext, id: ElementId) {
