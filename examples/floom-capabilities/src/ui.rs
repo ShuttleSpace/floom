@@ -40,6 +40,7 @@ use floom_platform_mobile::packages::{keyboard::soft_input, system_chrome};
 use floom_plugin_local_auth as local_auth;
 use floom_plugin_location as location;
 use floom_plugin_notifications as notifications;
+use floom_plugin_open_url as open_url;
 use floom_plugin_share as share;
 use floom_plugin_vibration as vibration;
 use floom_widgets::{Button, Container, Spacer, Stack, Text};
@@ -340,6 +341,12 @@ fn run_action(id: &str) {
         "device::show_keyboard" => {
             soft_input::set_soft_keyboard_visible(true).map(|()| "show requested".to_string())
         }
+        // The only action that changes the world outside the app on a desktop:
+        // the default browser opens the repository page. `Ok` claims the OS
+        // accepted the request — that is the plugin's whole contract — so the
+        // report says "accepted", and the browser window is the human's proof.
+        "device::open_url" => open_url::open_url("https://github.com/lapce/floom")
+            .map(|()| "accepted — the default browser should be opening".to_string()),
         other => Err(format!("unknown action `{other}`")),
     };
     match outcome {

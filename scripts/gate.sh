@@ -68,6 +68,7 @@ FLOOM2_PACKAGES=(
   --package=floom-plugin-sensors --package=floom-plugin-share
   --package=floom-plugin-vibration --package=floom-plugin-package-info
   --package=floom-plugin-paths
+  --package=floom-plugin-open-url
   # The framework tail of the track. It was missing here while CI listed it, so
   # the gate could go green with `floom-app` and `floom-widgets` unclipped.
   --package=floom-accessibility --package=floom-focus --package=floom-gesture
@@ -98,6 +99,7 @@ CAPABILITY_PLUGINS=(
   floom-plugin-vibration
   floom-plugin-package-info
   floom-plugin-paths
+  floom-plugin-open-url
 )
 
 MOBILE_CAPABILITY_PLUGINS=(
@@ -112,6 +114,18 @@ MOBILE_CAPABILITY_PLUGINS=(
   floom-plugin-vibration
   floom-plugin-package-info
   floom-plugin-paths
+  floom-plugin-open-url
+)
+
+# The plugins with real Windows arms. Everything else in the capability list
+# compiles for a Windows target through its inert default arm, so checking it
+# there proves nothing about code that ships. These are different: the Windows
+# arm *is* the product (`ShellExecuteW`, the known folders through `dirs`), and
+# an arm no check ever compiles is how `floom-plugin-vibration`'s iOS half kept
+# two edition-2024 errors for as long as it did.
+WINDOWS_CAPABILITY_PLUGINS=(
+  floom-plugin-paths
+  floom-plugin-open-url
 )
 
 PASS=0
@@ -176,6 +190,7 @@ probe      the device probe compiles with `--features real`
 plugins    the capability plugins compile on the host
 android    the plugins compile for aarch64-linux-android
 ios        the plugins compile for aarch64-apple-ios
+windows    the plugins with real Windows arms compile for x86_64-pc-windows-msvc
 golden     the pixel-golden examples
 EOF
   exit 0
@@ -305,6 +320,22 @@ if [ -d "$(rustc --print target-libdir --target aarch64-apple-ios 2>/dev/null)" 
   has_check ios && run_check ios "" ios_check
 else
   has_check ios && run_check ios "no aarch64-apple-ios std in this toolchain (rustup target add aarch64-apple-ios)" true
+fi
+
+# Windows: the same gap, on the desktop nobody was looking at. There is no CI
+# job for it either, so this check is the only thing standing between a Windows
+# arm and the quiet rot the vibration iOS arm made famous. `check` does not
+# link, so the MSVC toolchain itself is not needed — only the target's std.
+windows_check() {
+  local p
+  for p in "${WINDOWS_CAPABILITY_PLUGINS[@]}"; do
+    cargo check --target x86_64-pc-windows-msvc -p "$p" || return 1
+  done
+}
+if [ -d "$(rustc --print target-libdir --target x86_64-pc-windows-msvc 2>/dev/null)" ]; then
+  has_check windows && run_check windows "" windows_check
+else
+  has_check windows && run_check windows "no x86_64-pc-windows-msvc std in this toolchain (rustup target add x86_64-pc-windows-msvc)" true
 fi
 
 # --- goldens ----------------------------------------------------------------

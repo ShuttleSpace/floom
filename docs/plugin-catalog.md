@@ -104,7 +104,7 @@ SDK 不携带任何能力插件。app 想要电池就连 `floom-plugin-battery`�
 `MemoryStore` 后端，它**不知道**目录在哪，要调用方给路径。`floom-plugin-paths`
 回答的正是「路径是什么」。两者是上下游，不是重复。
 
-### A2. `floom-plugin-open-url` ← `url_launcher`
+### A2. `floom-plugin-open-url` ← `url_launcher` ✅ 已实现（2026-10-25，批次 1）
 
 **这一项直接结掉 handoff 第 4 节的 C4 决策。** A8 删掉 `OPEN_URL` 位的理由是
 「没有实现的位不该存在」；有了这个插件就有了实现，位可以加回来。
@@ -117,6 +117,25 @@ SDK 不携带任何能力插件。app 想要电池就连 `floom-plugin-battery`�
 - web：`window.open`（wasm 目标）
 
 桌面臂的验收标准很硬：**真的打开一个 URL**。macOS 本机可验，这是它排第二的原因。
+
+**as-built 记录**（与原方案的出入）：
+
+- **五个臂全部真实现，无新依赖**（Windows 的 `windows-sys` 已因 `dirs-sys`
+  在 lock 里）。macOS 臂用裸 `msg_send!` + `#[link(AppKit)]`，没引
+  `objc2-app-kit`——和 9 个先例插件的形状一致。
+- **`Ok` 的语义收窄为「OS 已接受请求」**。这是目录 §7「真发起」类别的落实：
+  每条臂都返回平台路由自己的回答（`BOOL` / `HINSTANCE > 32` / exit status），
+  没有一条声称窗口已打开。
+- **无 chooser**。share 包 chooser 是「让用户挑」；open 的语义是默认处理器。
+  两个插件对同一个 `Intent` 机制的不同取舍，各自文档里点名对方。
+- **scheme 校验在分派前**（RFC 3986），五个平台对同一个笔误只报一个理由。
+  快乐路径无单测——成功就是打开真浏览器，测试不许有副作用；
+  验证走 gallery 的动作按钮，由人按下观察。
+- **gate 新增 `windows` 检查**。Windows 臂没有任何 CI 覆盖，正是
+  vibration iOS 臂烂掉的那类坑；`paths`/`open-url` 是第一批有真 Windows 臂
+  的插件，从此有东西编译它们。
+- **C4 的位还没加回来**。§8.3 的取舍（位集 vs 插件注册查询）仍未拍板，
+  本条目只提供实现那一半——和原计划一致。
 
 ### A3. `floom-plugin-file-dialog` ← `file_selector`
 
@@ -384,8 +403,12 @@ federated plugin 结构（一个能力按平台拆包）。Floom 的对应结构
 
 **再加 example 接线**（如果它要出现在 `floom-capabilities` 的画廊里）：
 `Cargo.toml` 加依赖、`probe.rs` 加 `use`、写一个 `pub fn <name>() -> Row`、
-插进 `all()` 的 `vec!`、按需改 `GROUPS`（定长数组，长度变了要改 `; 6]`）；
+插进 `all()` 的 `vec!`、按需改 `GROUPS`（定长数组，长度变了要改长度数字）；
 有副作用按钮的还要改 `actions()` 和 `ui.rs` 的 `run_action()` match。
+
+**如果插件有真 Windows 臂**（A2 起）：把它加进 `scripts/gate.sh` 的
+`WINDOWS_CAPABILITY_PLUGINS`。没有 CI job 编译 Windows 臂，这个检查是唯一
+防线——vibration 的 iOS 臂就是在没人编译的环境里烂掉的。
 
 ---
 
@@ -450,7 +473,7 @@ C4 选项 (a) 的落地。但要先确认：位加回来时，是加在 `floom-p
 ```
 批次 1（无需设备，全部本机可验）
   A1 paths      ✅ 已完成（2026-10-25）：gallery 首个 host 真值行，desktop_real 教义细化
-  A2 open-url   → 结掉 C4 的一半，桌面臂真能打开 URL
+  A2 open-url   ✅ 已完成（2026-10-25）：五臂真实现，gate 新增 windows 检查，C4 实现半落地
   A4 package-info ✅ 已完成（2026-10-25）：含 gallery 接线，8 处注册走通
   （A4 第一个做：它最短，用来把第 6 节的清单走通一遍）
 

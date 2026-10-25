@@ -578,6 +578,11 @@ pub fn actions() -> Vec<(&'static str, &'static str)> {
             "keyboard::set_soft_keyboard_visible",
             "device::show_keyboard",
         ),
+        // The one action with a visible side effect on every desktop: the OS's
+        // own URL routing opens the repository's page in whatever browser the
+        // user set as default. That is also why it is an action and not a row —
+        // a reading must not change the world, and this call, by design, does.
+        ("open_url::open_url", "device::open_url"),
     ]
 }
 

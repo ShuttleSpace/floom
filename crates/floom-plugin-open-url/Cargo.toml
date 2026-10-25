@@ -1,0 +1,41 @@
+[package]
+name = "floom-plugin-open-url"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "A Floom plugin: open a URL with the application the OS routes its scheme to"
+rust-version.workspace = true
+publish = false
+
+# A capability plugin: one capability, one crate, opt-in by dependency. It
+# depends on the platform layer and on nothing above it.
+[dependencies]
+
+# `Intent.ACTION_VIEW` + `startActivity` are Java APIs, so the Android arm goes
+# through the JNI bridge the platform layer owns.
+[target.'cfg(target_os = "android")'.dependencies]
+floom-platform-mobile = { path = "../floom-platform-mobile", version = "0.2.0" }
+jni = "0.22"
+
+# iOS answers through `UIApplication` (UIKit); macOS through `NSWorkspace`
+# (AppKit). Two different object graphs, so two files — unlike
+# `package-info`/`paths`, whose Apple arms share one Foundation call.
+[target.'cfg(target_os = "ios")'.dependencies]
+objc2 = { version = "0.6", default-features = false, features = ["std"] }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2 = { version = "0.6", default-features = false, features = ["std"] }
+
+# `ShellExecuteW`. windows-sys is already in the lock (dirs-sys pulls it), so
+# this adds no new package to the graph — only this crate's feature selection.
+#
+# There is no CI job and no gate check that compiles a Windows arm by default,
+# which is exactly how `floom-plugin-vibration`'s iOS arm kept two edition-2024
+# errors for as long as it did. The gate therefore gained a `windows` check
+# alongside `android` and `ios`; see scripts/gate.sh.
+[target.'cfg(target_os = "windows")'.dependencies]
+windows-sys = { version = "0.61", features = [
+  "Win32_UI_Shell",
+  "Win32_UI_WindowsAndMessaging",
+] }
