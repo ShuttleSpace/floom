@@ -57,6 +57,14 @@ pub fn keep_screen_on(on: bool) -> Result<(), String> {
         target_os = "windows"
     )))]
     {
+        // `false` is a no-op that is also *true* here: this crate never asked
+        // the platform for anything, so there is nothing to stop asking. Every
+        // other arm's idempotence table says the same thing — `(false, None)`
+        // is `Ok(())` — and an `Err` for "you are not holding anything" would
+        // be a failure reported where nothing failed.
+        if !on {
+            return Ok(());
+        }
         Err(format!(
             "keep_screen_on: {} has no keep-display-awake API — \
              Android, iOS, macOS and Windows do; Linux has no cross-desktop \
@@ -152,6 +160,10 @@ mod tests {
     fn a_platform_without_the_api_says_so_and_reads_false() {
         let err = keep_screen_on(true).unwrap_err();
         assert!(err.contains("no keep-display-awake API"), "{err}");
+        assert!(!is_keep_screen_on());
+        // Asking to stop asking is not a failure: nothing was ever asked, so
+        // there is nothing to release. Every other arm's table says this too.
+        assert!(keep_screen_on(false).is_ok());
         assert!(!is_keep_screen_on());
     }
 }

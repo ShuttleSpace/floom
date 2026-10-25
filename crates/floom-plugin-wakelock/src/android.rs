@@ -11,7 +11,7 @@
 //! `is_keep_screen_on` reports the window's actual state rather than a
 //! shadow of what this crate last said.
 
-use floom_platform_mobile::jni::{self as jni_helpers, JniExt, obj};
+use floom_platform_mobile::jni::{self as jni_helpers, JniExt};
 use jni::objects::{JObject, JValue};
 use jni::strings::JNIString;
 
