@@ -139,7 +139,9 @@ pub fn schedule(notification: &Notification) -> Result<(), String> {
     if notification.delay_seconds.is_some() {
         return Err("notifications: delayed delivery needs AlarmManager (and \
              SCHEDULE_EXACT_ALARM on API 31+), which this plugin does not wire. \
-             Pass delay_seconds: None to deliver immediately."
+             Pass delay_seconds: None to deliver immediately, or combine \
+             floom-plugin-background-work::schedule_app_launch with a startup \
+             check that posts immediately — the recipe is in that crate's docs"
             .into());
     }
     jni_helpers::with_env(|env| {

@@ -294,21 +294,40 @@ Wi-Fi 的 SSID / BSSID / 本机 IP（子网/网关刻意不做，crate 文档写
   WlanEnumInterfaces→WlanQueryInterface 的结构体行走没有运行环境可验，
   本着「桌面精确 Err」的原目录指引留作命名后续，Err 里写了门在哪。
 
-### A8. `floom-plugin-background-work` ← `android_alarm_manager_plus` + `workmanager`
+### A8. `floom-plugin-background-work` ← `android_alarm_manager_plus` + `workmanager` ✅ 已实现（2026-10-25，批次 3，收窄）
 
-定时/延迟的后台任务。
+**这一项解掉了 notifications 的延迟 `Err`**——见 as-built 最后一条。
 
-**这一项顺带解掉一个现存的精确 `Err`**：`floom-plugin-notifications` 的 Android
-延迟通知现在返回 `Err`，理由是「`AlarmManager` 未接线」。接线的地方就是这个插件——
-通知插件之后可以改为「延迟调度委托给 background-work」。
+- Android `AlarmManager.setAndAllowWhileIdle` + activity `PendingIntent`
+  （真实臂，唯一有实现的地方）
+- iOS：精确 `Err`——点名 BGTaskScheduler 是机会性的且不能拉起 UI，
+  指向 notifications 插件自己的 trigger 调度
+- 桌面：精确 `Err`——会话管理器管睡着/唤醒；闭源时段的工作是系统服务
+  （launchd / systemd timer / Task Scheduler）的事，是 app 的部署关注点
 
-- Android `AlarmManager.setExactAndAllowWhileIdle` / `WorkManager`
-- iOS `BGTaskScheduler`（后台刷新，系统决定何时跑——**`Ok` 只能声称「已提交」**）
-- 桌面：无等价物，精确 `Err`
+**as-built 记录**（与原方案的出入——这是全部条目里收窄最狠的一个）：
+
+- **「让代码稍后跑」在这个 app 形态里基本做不到，写臂的过程发现并如实收窄**。
+  `hasCode="false"` 意味着没有自己的 Java 类：alarm 回调要 `<receiver>`、
+  WorkManager 要 `Worker` 类、iOS BGTaskScheduler 要 ObjC handler——全是
+  §8.1 记录的 Shape-B 原生半边。唯一不需要任何 Java 件的原语是
+  「到点把 activity 拉起来」：系统替你持有 intent、进程死了也在。
+- **API 因此是 `schedule_app_launch(at)` 不是回调注册**。应用自己的生命周期
+  就是回调；代价是「回来」是可见的，crate 文档直说。
+- **用不精确的 `setAndAllowWhileIdle` 不用 exact 变体**：exact 在 API 31+
+  要 `SCHEDULE_EXACT_ALARM`，那是 app 的 manifest 该写的东西，插件不悄悄
+  要求它。过去的时刻立即触发——平台行为，如实报告。
+- **notifications 的延迟 `Err` 已改指向配方**：调度拉起 + 把「欠一条通知」
+  存进 prefs + 启动时立即投递。三行配方写在 crate 文档里。
+- **刻意不做**：机会性后台执行（workmanager 的问题——两个平台的门都是
+  原生半边）；进程内定时器（那是 `floom-scheduler` 的活，叫它「后台工作」
+  是这个 crate 的不诚实版本）。
 
 > **一个刻意的合并**：Flutter 侧 `android_alarm_manager_plus` 和 `workmanager` 是
 > 两个包，但它们在我们这里的形态是同一个能力（「让一段代码稍后跑」），
 > 分成两个 crate 会各拿到半个 API。合并为一个，文档里点名这两个来源。
+> as-built 的发现：合并后的能力在无 Java 件形态下只剩一个原语，于是
+> crate 也只暴露它。
 
 ---
 
@@ -573,10 +592,11 @@ C4 选项 (a) 的落地。但要先确认：位加回来时，是加在 `floom-p
   A5 prefs       → 要先写清与 floom-persistence 的分工
   A6 wakelock    → 桌面臂非空（Windows/macOS 真有 API）
 
-批次 3（无需设备，但依赖批次 1）
-  A7 network-info ✅ 已完成（2026-10-25）：预言命中且更硬——关联着的 macOS
-                   也拒绝，Err 即正确答案；local_ip 全平台一份实现
-  A8 background-work → 顺带解掉 notifications 的延迟 Err
+批次 3（无需设备，但依赖批次 1）✅ 全部完成（2026-10-25）——Tier A 十条全部落地
+  A7 network-info ✅ 预言命中且更硬——关联着的 macOS 也拒绝，Err 即正确答案；
+                   local_ip 全平台一份实现
+  A8 background-work ✅ 诚实收窄为 schedule_app_launch（无 Java 件的唯一原语），
+                   notifications 的延迟 Err 已改指向配方
 
 批次 4（需要 A6b 决策 + 真机）
   B1 webview → B2 camera → B3 video-player → B4 image-picker → B5 maps

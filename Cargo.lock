@@ -1016,6 +1016,7 @@ dependencies = [
  "floom-platform-ios",
  "floom-platform-mobile",
  "floom-platform-web",
+ "floom-plugin-background-work",
  "floom-plugin-battery",
  "floom-plugin-connectivity",
  "floom-plugin-device-info",
@@ -1473,6 +1474,14 @@ dependencies = [
  "js-sys",
  "wasm-bindgen",
  "web-sys",
+]
+
+[[package]]
+name = "floom-plugin-background-work"
+version = "0.2.0"
+dependencies = [
+ "floom-platform-mobile",
+ "jni 0.22.4",
 ]
 
 [[package]]

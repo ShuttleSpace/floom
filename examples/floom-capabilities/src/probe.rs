@@ -712,6 +712,14 @@ pub fn actions() -> Vec<(&'static str, &'static str)> {
         // reports, this flips it — with the report saying which way, because
         // "the screen is now being held awake" is a claim worth reading.
         ("wakelock::keep_screen_on", "device::toggle_wakelock"),
+        // The one action whose success is only observable thirty seconds
+        // later, on a phone: the system brings this very app back to the
+        // front. On a host the refusal prints instead — the desktop's honest
+        // "the session manager owns sleep and wake".
+        (
+            "background_work::schedule_app_launch",
+            "device::schedule_relaunch",
+        ),
     ]
 }
 

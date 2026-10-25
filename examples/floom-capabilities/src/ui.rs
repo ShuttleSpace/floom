@@ -37,6 +37,7 @@
 
 use floom_core::{Align, Axis, Child, ChildKey, Color, LayoutRequest, WidgetAny};
 use floom_platform_mobile::packages::{keyboard::soft_input, system_chrome};
+use floom_plugin_background_work as background_work;
 use floom_plugin_file_dialog as file_dialog;
 use floom_plugin_local_auth as local_auth;
 use floom_plugin_location as location;
@@ -391,6 +392,16 @@ fn run_action(id: &str) {
                 }
             })
         }
+        // Thirty seconds out: far enough that "the app came back by
+        // itself" is unmistakable, near enough that a person pressing the
+        // button will still be holding the phone. The report says "inexact"
+        // because the alarm does — `setAndAllowWhileIdle` batches.
+        "device::schedule_relaunch" => background_work::schedule_app_launch(
+            std::time::SystemTime::now() + std::time::Duration::from_secs(30),
+        )
+        .map(|()| {
+            "the system will bring this app up in ~30 s (inexact — the OS batches)".to_string()
+        }),
         other => Err(format!("unknown action `{other}`")),
     };
     match outcome {
