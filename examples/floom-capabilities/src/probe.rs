@@ -18,19 +18,24 @@
 //! ## What is deliberately not here
 //!
 //! This module once carried rows for `app_info`, `screen`, `accessibility_prefs`,
-//! `orientation` and `url_launcher`. None of those packages exists: the package
-//! list in the `floom-platform-mobile` crate root names thirteen, and
-//! they are not among them. The rows were dropped rather than redirected at the
-//! nearest approximate API, because each is a different question from the one it
-//! claimed to answer — `Capability::OPEN_URL` is a flag with no operation behind
-//! it, and a window's `scale_factor` is not a screen's pixel density.
+//! `orientation` and `url_launcher`. Four of the five are still dropped, and
+//! for the same reason as before: no crate behind them, and redirecting each at
+//! the nearest approximate API would answer a different question from the one
+//! it claimed to answer — `Capability::OPEN_URL` is a flag with no operation
+//! behind it, and a window's `scale_factor` is not a screen's pixel density.
+//!
+//! The fifth came back. `app_info` is now [`package_info`] in
+//! `crates/floom-plugin-package-info/`, so the reading is no longer a claim
+//! without an implementation behind it.
 //!
 //! That is not a gap being papered over. `docs/platform-and-plugins.md` puts this
 //! surface in the *platform layer*, which "provides only what a window cannot be
 //! built without", and sends every other device API to a plugin under
-//! `crates/floom-plugin-<capability>/` reached through a Kotlin/Swift
-//! host library. None of those crates exist yet, and a host-inert stub written
-//! here would put a capability in the wrong layer while claiming it works.
+//! `crates/floom-plugin-<capability>/`. The capability plugins this module
+//! imports are exactly that shape; `screen`, `accessibility_prefs`,
+//! `orientation` and `url_launcher` have no crates yet, and a host-inert stub
+//! written here would put a capability in the wrong layer while claiming it
+//! works.
 //!
 //! One real package is absent from the readings for a different reason:
 //! `system_chrome` is setter-only (`set_system_chrome_style`), with no getter, so
@@ -49,6 +54,7 @@ use floom_plugin_device_info as device_info;
 use floom_plugin_local_auth as local_auth;
 use floom_plugin_location as location;
 use floom_plugin_notifications as notifications;
+use floom_plugin_package_info as package_info;
 use floom_plugin_sensors as sensors;
 use floom_plugin_vibration as vibration;
 
@@ -148,6 +154,57 @@ pub fn device_info() -> Row {
                 .unwrap_or_else(|| "n/a".into())
         )),
     )
+}
+
+// --- this app's own identity ------------------------------------------------
+
+/// The running app's identity — name, bundle id, version, build.
+///
+/// The one reading in this gallery that is about *this app* rather than the
+/// device it is on, and the one row whose plugin has a real arm on macOS:
+/// `NSBundle` is the source of truth there the same way it is on iOS. A bare
+/// `cargo run` binary is not inside an `.app`, so the read honestly finds no
+/// `Info.plist` — reported as [`State::Error`], "the platform has it but this
+/// invocation cannot serve it", not as [`State::Absent`], which would claim
+/// macOS does not offer the capability at all.
+pub fn package_info() -> Row {
+    #[cfg(any(target_os = "android", target_os = "ios", target_os = "macos"))]
+    {
+        let info = package_info::app_info();
+        let any_field = info.name.is_some()
+            || info.package_name.is_some()
+            || info.version.is_some()
+            || info.build_number.is_some();
+        let state = if any_field {
+            State::Value(format!(
+                "{} · {} · {} (build {})",
+                info.name.as_deref().unwrap_or("n/a"),
+                info.package_name.as_deref().unwrap_or("n/a"),
+                info.version.as_deref().unwrap_or("n/a"),
+                info.build_number.as_deref().unwrap_or("n/a"),
+            ))
+        } else if cfg!(target_os = "macos") {
+            State::Error(
+                "macOS reads the app bundle's Info.plist; this bare binary is not inside one"
+                    .into(),
+            )
+        } else {
+            // The phone arms report at least the package name whenever the JNI
+            // bridge is up, so reaching here means it was not.
+            State::Error(
+                "the read produced no fields; the JNI bridge may not be initialised".into(),
+            )
+        };
+        Row::value("package_info", "this app's name, id, version, build", state)
+    }
+    #[cfg(not(any(target_os = "android", target_os = "ios", target_os = "macos")))]
+    {
+        Row::value(
+            "package_info",
+            "this app's name, id, version, build",
+            State::Absent,
+        )
+    }
 }
 
 // --- power and connectivity ------------------------------------------------
@@ -457,6 +514,7 @@ pub fn all() -> Vec<Row> {
     vec![
         // identity
         device_info(),
+        package_info(),
         // power and network
         battery(),
         connectivity(),

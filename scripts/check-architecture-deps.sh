@@ -293,6 +293,7 @@ for _names, _level in [
             "floom-plugin-sensors",
             "floom-plugin-share",
             "floom-plugin-vibration",
+            "floom-plugin-package-info",
             "floom-animation", "floom-focus", "floom-gesture", "floom-overlay", "floom-store", "floom-task", "floom-forms",
             "floom-navigation", "floom-persistence", "floom-services",
             "floom-error", "floom-ime", "floom-editor",

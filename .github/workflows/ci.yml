@@ -60,7 +60,7 @@ jobs:
         --package=floom-plugin-device-info --package=floom-plugin-local-auth
         --package=floom-plugin-location --package=floom-plugin-notifications
         --package=floom-plugin-sensors --package=floom-plugin-share
-        --package=floom-plugin-vibration
+        --package=floom-plugin-vibration --package=floom-plugin-package-info
         --package=floom-accessibility --package=floom-focus --package=floom-gesture
         --package=floom-animation --package=floom-overlay --package=floom-store --package=floom-task
         --package=floom-forms --package=floom-navigation --package=floom-persistence --package=floom-services
@@ -188,6 +188,7 @@ jobs:
           --package=floom-plugin-sensors
           --package=floom-plugin-share
           --package=floom-plugin-vibration
+          --package=floom-plugin-package-info
           --target aarch64-linux-android
 
   # The same gap, on the other mobile target. Every plugin's `ios.rs` sits behind
@@ -235,6 +236,7 @@ jobs:
           --package=floom-plugin-sensors
           --package=floom-plugin-share
           --package=floom-plugin-vibration
+          --package=floom-plugin-package-info
           --target aarch64-apple-ios
 
   # `examples/floom-probe` is the one crate whose only binary sits behind
@@ -275,6 +277,43 @@ jobs:
 
       - name: Check the device probe against the real backend
         run: cargo check -p floom-probe --features real
+
+  # `crates/ecosystem/floom-ui` is a separate workspace: the root manifest
+  # excludes it, and `members` is `crates/*` + `examples/*`, so no job above
+  # reaches it. Everything in `floom-2.0` could be green while the four
+  # design-system pixel goldens there did not compile.
+  #
+  # That is not hypothetical. `d131b5af` moved `PixelSnapshot::of` behind the
+  # `ReferencePixels` trait and separately taught vello to draw drop shadows;
+  # the galleries then failed both to compile *and* to hash the same, and
+  # neither showed up anywhere. This job is the only thing that runs them.
+  #
+  # The whole workspace rather than a package list: 306 members, every one a
+  # headless test that renders into a buffer. A hand-maintained `-p` list is how
+  # the `FLOOM2_PACKAGES` scope got truncated once already.
+  ecosystem-check:
+    name: Ecosystem workspace (design-system goldens)
+    if: github.event.pull_request.draft == false
+    runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: crates/ecosystem/floom-ui
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Update toolchain
+        run: rustup update --no-self-update
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: crates/ecosystem/floom-ui
+          key: ecosystem-check
+          save-if: ${{ github.event_name != 'merge_group' }}
+
+      - name: Run the ecosystem tests
+        run: cargo test --workspace --no-fail-fast
 
   build:
     name: Rust on ${{ matrix.os }}

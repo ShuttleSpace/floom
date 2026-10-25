@@ -66,7 +66,7 @@ FLOOM2_PACKAGES=(
   --package=floom-plugin-device-info --package=floom-plugin-local-auth
   --package=floom-plugin-location --package=floom-plugin-notifications
   --package=floom-plugin-sensors --package=floom-plugin-share
-  --package=floom-plugin-vibration
+  --package=floom-plugin-vibration --package=floom-plugin-package-info
   # The framework tail of the track. It was missing here while CI listed it, so
   # the gate could go green with `floom-app` and `floom-widgets` unclipped.
   --package=floom-accessibility --package=floom-focus --package=floom-gesture
@@ -95,6 +95,7 @@ CAPABILITY_PLUGINS=(
   floom-plugin-sensors
   floom-plugin-share
   floom-plugin-vibration
+  floom-plugin-package-info
 )
 
 MOBILE_CAPABILITY_PLUGINS=(
@@ -107,6 +108,7 @@ MOBILE_CAPABILITY_PLUGINS=(
   floom-plugin-sensors
   floom-plugin-share
   floom-plugin-vibration
+  floom-plugin-package-info
 )
 
 PASS=0
@@ -164,6 +166,7 @@ if [ "${CHECKS[0]:-}" = "--list" ]; then
 fmt        cargo fmt --all --check, both workspaces
 clippy     cargo clippy on the 2.0 track, warnings denied
 test       cargo test --workspace
+ecosystem  cargo test --workspace in crates/ecosystem/floom-ui
 doc        cargo test --doc
 arch       scripts/check-architecture-deps.sh
 probe      the device probe compiles with `--features real`
@@ -212,6 +215,29 @@ test_check() {
   cargo test --workspace --exclude floom-platform
 }
 has_check test && run_check test "" test_check
+
+# --- the ecosystem workspace ------------------------------------------------
+#
+# `crates/ecosystem/floom-ui` is a **separate workspace**, so the check above
+# never reaches it: root `members` is `crates/*` and `examples/*`, and the
+# ecosystem tree is explicitly excluded. That gap is not academic — the four
+# design-system pixel goldens live there, and they were stale for two commits
+# because nothing ran them. `d131b5af` moved `PixelSnapshot::of` behind a trait
+# and taught vello to draw drop shadows; the galleries then failed to compile
+# *and* hashed differently, and both facts were invisible to every check here.
+#
+# The whole workspace, not a `-p` list: the clippy scope was truncated once
+# already, and a hand-written package list is how a third of a track goes
+# unlinted while the gate prints PASS. 306 members is the real shape of the
+# tree, so that is what this runs.
+#
+# No `--exclude`: every member is a headless test. The galleries render through
+# the software renderer into a buffer, so no display and no window is involved —
+# unlike the root's `floom-platform`, which is why that one is excluded above.
+ecosystem_check() {
+  (cd crates/ecosystem/floom-ui && cargo test --workspace --no-fail-fast)
+}
+has_check ecosystem && run_check ecosystem "" ecosystem_check
 
 doc_check() {
   cargo test --doc --no-fail-fast

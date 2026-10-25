@@ -115,15 +115,25 @@ C4 的另一半。`file_selector` 在 Flutter 侧是 federated 包（6 个分包
 **与 `image_picker` 的分工要写进文档**：`file_selector` 是「任取文件」，
 `image_picker` 是「取图片/视频，含拍照」。后者依赖前者加相机。
 
-### A4. `floom-plugin-package-info` ← `package_info_plus`
+### A4. `floom-plugin-package-info` ← `package_info_plus` ✅ 已实现（2026-10-25，批次 1）
 
 版本号、build 号、包名/identifier。
 
 - Android `PackageManager getPackageInfo`（`versionName` / `versionCode`）
-- iOS `CFBundleShortVersionString` / `CFBundleVersion`（读 `Info.plist`）
-- 桌面：构建期由 `build.rs` 从 `CARGO_PKG_VERSION` 写进来，运行期读常量
-- **host 语义**：桌面返回的是 crate 版本而不是「安装包版本」，这个区别必须在文档里
-  写明，否则调用方会以为拿到的是安装器版本。
+- iOS **和 macOS** `CFBundleShortVersionString` / `CFBundleVersion`（读 `Info.plist`，
+  同一个 `NSBundle` 对象图，所以两目标共享一个 `apple.rs` 臂）
+- Linux / Windows：无答案，全 `None`
+
+**as-built 与本目录原方案的一个偏离**：原方案写「桌面由 `build.rs` 从
+`CARGO_PKG_VERSION` 写常量」——那是错的：插件的 `build.rs` 只能看到插件自己
+的版本（0.2.0），不是 app 的版本，读它会得到一个像被测过的假值。实际实现：
+
+- macOS 臂是**真实读**（`NSBundle.mainBundle`），不是 host-inert——这带来一个
+  额外好处：这条原生臂在普通 `cargo test`（host 构建里）就会被编译和执行，
+  是 10 个插件里唯一一个。裸二进制不在 `.app` 里，读到的就是全 `None`，
+  gallery 里如实显示为 `!`（平台有能力、本次调用给不出）而非 `-`（平台没有）。
+- 字段全部 `Option<String>`：与 battery 的 `level: Option<f32>` 同理，
+  `Some("")` 是一个没人测过的值。Apple 臂和 Android 臂都保证「非空才 `Some`」。
 
 ### A5. `floom-plugin-prefs` ← `shared_preferences`
 
@@ -426,7 +436,7 @@ C4 选项 (a) 的落地。但要先确认：位加回来时，是加在 `floom-p
 批次 1（无需设备，全部本机可验）
   A1 paths      → 最通用，且不撞任何现有 crate
   A2 open-url   → 结掉 C4 的一半，桌面臂真能打开 URL
-  A4 package-info → 最小，适合验证「新增 crate 的 8 个地方」流程本身
+  A4 package-info ✅ 已完成（2026-10-25）：含 gallery 接线，8 处注册走通
   （A4 第一个做：它最短，用来把第 6 节的清单走通一遍）
 
 批次 2（无需设备）
