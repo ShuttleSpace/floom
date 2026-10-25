@@ -367,7 +367,10 @@ fn a_tab_changed_while_hidden_still_rebuilds_on_open() {
     state.lock().unwrap().set_tab(DevtoolsTab::Layout);
     let mut cx = RecordingUpdateContext::new();
     panel.update(&mut cx, id);
-    assert!(!cx.reconciled(), "hidden: there are still no rows to rebuild");
+    assert!(
+        !cx.reconciled(),
+        "hidden: there are still no rows to rebuild"
+    );
 
     // Opening mounts the rows for the tab that is selected *now*, not the one
     // that was selected when it last had rows.
@@ -455,8 +458,7 @@ fn a_panel_without_tabs_mounts_no_bar() {
 #[test]
 fn the_tab_bar_offers_exactly_the_tabs_it_was_given() {
     let state = Arc::new(Mutex::new(DevtoolsState::new()));
-    let mut panel =
-        DevtoolsPanel::new(state, |_| Vec::new()).with_tabs(DevtoolsTab::ELEMENTS);
+    let mut panel = DevtoolsPanel::new(state, |_| Vec::new()).with_tabs(DevtoolsTab::ELEMENTS);
     panel.handle_key(&f12(), &default_shortcut());
     // `Tree` is spelled "Elements" on the bar — the word Chrome uses, and the
     // one that says what the readout is a list of.
@@ -466,8 +468,7 @@ fn the_tab_bar_offers_exactly_the_tabs_it_was_given() {
 #[test]
 fn a_click_on_a_tab_switches_the_readout() {
     let state = Arc::new(Mutex::new(DevtoolsState::new()));
-    let mut panel =
-        DevtoolsPanel::new(state.clone(), |_| Vec::new()).with_tabs(DevtoolsTab::ALL);
+    let mut panel = DevtoolsPanel::new(state.clone(), |_| Vec::new()).with_tabs(DevtoolsTab::ALL);
     panel.handle_key(&f12(), &default_shortcut());
     assert_eq!(state.lock().unwrap().tab(), DevtoolsTab::Tree);
 

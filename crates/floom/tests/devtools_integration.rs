@@ -16,7 +16,9 @@
 use floom_app::NodeId;
 use floom_app::WidgetHost;
 use floom_layout::LayoutStyle;
-use floom_types::{Event, Key, KeyEvent, KeyPhase, Modifiers, NamedKey, OverlayHandle, Point, PointerEvent, Size};
+use floom_types::{
+    Event, Key, KeyEvent, KeyPhase, Modifiers, NamedKey, OverlayHandle, Point, PointerEvent, Size,
+};
 
 /// A host with one widget mounted, the way an app's `build` closure leaves it.
 fn host() -> WidgetHost {
@@ -232,14 +234,17 @@ fn picking_an_element_retargets_the_box_and_selects_it_in_the_panel() {
     let target = picker.highlight_target().expect("something is hovered");
     assert_eq!(
         Some(target.clone()),
-        host.element_at(over_root).map(floom_app::WidgetHost::node_key),
+        host.element_at(over_root)
+            .map(floom_app::WidgetHost::node_key),
         "the box is around what the pointer is over"
     );
     assert!(picker.highlight_is_live(), "it is following the hover");
 
     // And the host can resolve that key back to a box for the highlight.
     picker.sync_highlight(&mut host);
-    let box_node = host.overlay_node_id(picker.overlay()).expect("the box is up");
+    let box_node = host
+        .overlay_node_id(picker.overlay())
+        .expect("the box is up");
     let drawn = host
         .widget_mut::<floom::devtools::HighlightBox>(box_node)
         .and_then(|box_widget| box_widget.rect());
@@ -277,11 +282,7 @@ fn picking_an_element_retargets_the_box_and_selects_it_in_the_panel() {
         !picker.commit_selection(),
         "the same pick is not written twice"
     );
-    devtools
-        .state()
-        .lock()
-        .unwrap()
-        .select("node-999999");
+    devtools.state().lock().unwrap().select("node-999999");
     assert!(!picker.commit_selection(), "still not re-written");
     assert_eq!(
         devtools.state().lock().unwrap().selected(),
@@ -322,9 +323,8 @@ fn a_disarmed_picker_gives_the_pointer_back() {
     let picker = floom::devtools::attach_picker(&mut host, devtools.state());
 
     let at = floom_types::Point::new(10.0, 10.0);
-    let map = |point: floom_types::Point| {
-        host.element_at(point).map(floom_app::WidgetHost::node_key)
-    };
+    let map =
+        |point: floom_types::Point| host.element_at(point).map(floom_app::WidgetHost::node_key);
     assert!(
         !picker.pointer(&floom_types::PointerEvent::hover(at), map),
         "idle: the app keeps its moves"
@@ -368,17 +368,12 @@ fn host_with_app(clicks: Arc<AtomicUsize>) -> WidgetHost {
     // layout would shrink-wrap the label at the top-left, and a press in the
     // panel's column would then miss the app for a reason that has nothing to do
     // with the panel.
-    stack = stack.push_layout(
-        LayoutRequest::new().width_pct(100.0).fill(),
-        move || {
+    stack = stack.push_layout(LayoutRequest::new().width_pct(100.0).fill(), move || {
         let clicks = clicks.clone();
-        Box::new(
-            floom_widgets::Button::new("app").on_click(move || {
-                clicks.fetch_add(1, Ordering::Relaxed);
-            }),
-        )
-    },
-    );
+        Box::new(floom_widgets::Button::new("app").on_click(move || {
+            clicks.fetch_add(1, Ordering::Relaxed);
+        }))
+    });
     host.mount_root(LayoutStyle::default(), stack);
     host.frame();
     host
@@ -454,7 +449,11 @@ fn a_shown_panel_takes_its_column_back() {
     let bounds = host.overlay_bounds(devtools.overlay());
     let at = Point::new(bounds.x0 + bounds.width() / 2.0, 300.0);
     click(&mut host, at);
-    assert_eq!(count(&clicks), 0, "the panel owns its column while it is up");
+    assert_eq!(
+        count(&clicks),
+        0,
+        "the panel owns its column while it is up"
+    );
 }
 
 #[test]
@@ -519,8 +518,11 @@ fn opening_the_panel_leaves_the_keyboard_with_the_app() {
 #[test]
 fn the_tab_bar_switches_the_readout_in_a_live_host() {
     let mut host = host_with_app(Arc::new(AtomicUsize::new(0)));
-    let mut devtools =
-        floom::devtools::attach_with_tabs(&mut host, |_| Vec::new(), floom::devtools::DevtoolsTab::ELEMENTS);
+    let mut devtools = floom::devtools::attach_with_tabs(
+        &mut host,
+        |_| Vec::new(),
+        floom::devtools::DevtoolsTab::ELEMENTS,
+    );
     devtools.show();
     devtools.sync(&mut host);
     host.frame();

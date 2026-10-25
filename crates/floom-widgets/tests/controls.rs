@@ -136,11 +136,8 @@ fn a_focusable_button_takes_the_keyboard_and_a_chrome_button_does_not() {
     // pointer just touched.
     let mut button = Button::new("Ok");
     let id = allocate(&button);
-    let mut cx = TestEventContext::pointer(
-        id,
-        ROW,
-        PointerEvent::primary_down(Point::new(10.0, 10.0)),
-    );
+    let mut cx =
+        TestEventContext::pointer(id, ROW, PointerEvent::primary_down(Point::new(10.0, 10.0)));
     button.event(&mut cx, id);
     assert_eq!(cx.focus_requests(), &[id]);
 

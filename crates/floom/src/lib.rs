@@ -296,9 +296,8 @@ where
                     (visible, tab, selected)
                 },
             );
-            let highlight = picker.map(|picker| {
-                (picker.highlight_target(), picker.highlight_is_live())
-            });
+            let highlight =
+                picker.map(|picker| (picker.highlight_target(), picker.highlight_is_live()));
             (visible, tab, selected, highlight)
         }
     }

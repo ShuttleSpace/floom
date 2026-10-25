@@ -17,11 +17,11 @@ use floom_widgets::{Button, Stack, Text};
 
 /// The demo's app: a heading, a row of three buttons, and a counter line.
 fn demo_app(host: &mut WidgetHost) {
-    let mut column = Stack::new(Axis::Vertical)
-        .gap(12.0)
-        .child(Child::new(ChildKey::index(0), LayoutRequest::new().height(28.0), || {
-            Box::new(Text::new("devtools demo — press F12"))
-        }));
+    let mut column = Stack::new(Axis::Vertical).gap(12.0).child(Child::new(
+        ChildKey::index(0),
+        LayoutRequest::new().height(28.0),
+        || Box::new(Text::new("devtools demo — press F12")),
+    ));
 
     let mut row = Stack::new(Axis::Horizontal).gap(8.0);
     for (index, label) in ["one", "two", "three"].iter().enumerate() {
@@ -146,12 +146,21 @@ fn clicking_a_button_picks_it_without_pressing_it() {
     // The same key the facade's pointer hook builds: `WidgetHost::node_key`,
     // not a private `node-{raw}` spelling, so the pick names the node the panel
     // can look back up with `node_by_key`.
-    let key_of = |p: Point| host.node_at_point(p).map(|n| WidgetHost::node_key(host.node_id(n)));
-    assert!(key_of(at).is_some(), "the point is over the button row: {at:?}");
+    let key_of = |p: Point| {
+        host.node_at_point(p)
+            .map(|n| WidgetHost::node_key(host.node_id(n)))
+    };
+    assert!(
+        key_of(at).is_some(),
+        "the point is over the button row: {at:?}"
+    );
 
     // And the picker consumes the event, so the button never sees it.
     let consumed = floom_devtools::pick::pick_pointer(&pick, &press(at), key_of);
-    assert!(consumed, "a picking click is the picker's, not the button's");
+    assert!(
+        consumed,
+        "a picking click is the picker's, not the button's"
+    );
     assert!(pick.lock().unwrap().picked().is_some(), "and it selected");
 }
 

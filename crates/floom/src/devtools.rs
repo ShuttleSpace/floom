@@ -231,12 +231,16 @@ pub fn attach_elements(host: &mut WidgetHost) -> Devtools {
     // than showing nothing.
     let shared = std::sync::Arc::new(std::sync::Mutex::new(host.tree_nodes()));
     let readout_shared = shared.clone();
-    let devtools = attach_with(host, move |state| {
-        let nodes = readout_shared.lock().map(|n| n.clone()).unwrap_or_default();
-        let live = describe(&nodes);
-        let inspector = floom_devtools::Inspector::new(&live);
-        elements_readout(&inspector, state)
-    }, &DevtoolsTab::ELEMENTS);
+    let devtools = attach_with(
+        host,
+        move |state| {
+            let nodes = readout_shared.lock().map(|n| n.clone()).unwrap_or_default();
+            let live = describe(&nodes);
+            let inspector = floom_devtools::Inspector::new(&live);
+            elements_readout(&inspector, state)
+        },
+        &DevtoolsTab::ELEMENTS,
+    );
     devtools.with_tree_cell(shared)
 }
 
@@ -253,14 +257,18 @@ where
 {
     let shared = std::sync::Arc::new(std::sync::Mutex::new(host.tree_nodes()));
     let readout_shared = shared.clone();
-    let devtools = attach_with(host, move |state| {
-        let mut rows = extra(state);
-        let nodes = readout_shared.lock().map(|n| n.clone()).unwrap_or_default();
-        let live = describe(&nodes);
-        let inspector = floom_devtools::Inspector::new(&live);
-        rows.extend(elements_readout(&inspector, state));
-        rows
-    }, &DevtoolsTab::ELEMENTS);
+    let devtools = attach_with(
+        host,
+        move |state| {
+            let mut rows = extra(state);
+            let nodes = readout_shared.lock().map(|n| n.clone()).unwrap_or_default();
+            let live = describe(&nodes);
+            let inspector = floom_devtools::Inspector::new(&live);
+            rows.extend(elements_readout(&inspector, state));
+            rows
+        },
+        &DevtoolsTab::ELEMENTS,
+    );
     devtools.with_tree_cell(shared)
 }
 
@@ -391,11 +399,8 @@ pub fn attach_picker(host: &mut WidgetHost, panel_state: &Arc<Mutex<DevtoolsStat
     // covers the window so it can outline anything in it, and a covering overlay
     // that also took clicks would make the app unclickable while the box was up
     // — including unclickable for the pick it exists to serve.
-    let overlay = host.open_overlay_passthrough(
-        OverlayKind::Popup,
-        bounds,
-        HighlightBox::new(None, false),
-    );
+    let overlay =
+        host.open_overlay_passthrough(OverlayKind::Popup, bounds, HighlightBox::new(None, false));
     PickHandle {
         pick,
         overlay,
@@ -505,10 +510,7 @@ impl PickHandle {
     pub fn highlight_target(&self) -> Option<String> {
         let pick = self.pick.lock().ok()?;
         match pick.phase() {
-            PickPhase::Hovering => pick
-                .hovered()
-                .or_else(|| pick.picked())
-                .map(String::from),
+            PickPhase::Hovering => pick.hovered().or_else(|| pick.picked()).map(String::from),
             _ => pick.picked().map(String::from),
         }
     }

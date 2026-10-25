@@ -144,11 +144,8 @@ impl DevtoolsTab {
     /// Semantics and Updates need data the inspector does not hold (a semantics
     /// entry list and an invalidation path), so offering them here would put two
     /// buttons on the bar that switch to nothing.
-    pub const ELEMENTS: [DevtoolsTab; 3] = [
-        DevtoolsTab::Tree,
-        DevtoolsTab::Style,
-        DevtoolsTab::Layout,
-    ];
+    pub const ELEMENTS: [DevtoolsTab; 3] =
+        [DevtoolsTab::Tree, DevtoolsTab::Style, DevtoolsTab::Layout];
 }
 
 impl DevtoolsState {
@@ -316,7 +313,9 @@ impl DevtoolsPanel {
             let guard = state.lock().ok();
             let visible = guard.as_ref().is_some_and(|s| s.visible());
             let tab = guard.as_ref().map(|s| s.tab()).unwrap_or_default();
-            let selected = guard.as_ref().and_then(|s| s.selected().map(str::to_string));
+            let selected = guard
+                .as_ref()
+                .and_then(|s| s.selected().map(str::to_string));
             if visible {
                 Some((true, tab, selected))
             } else {
@@ -478,7 +477,11 @@ impl Widget for DevtoolsPanel {
                         let mut button = Button::new(tab.label())
                             .focusable(false)
                             .radius(3.0)
-                            .color(if selected { tab_active_fill() } else { tab_idle_fill() })
+                            .color(if selected {
+                                tab_active_fill()
+                            } else {
+                                tab_idle_fill()
+                            })
                             .text_color(if selected {
                                 Color::WHITE
                             } else {

@@ -85,11 +85,9 @@ fn main() {
                         LayoutRequest::new().width(96.0).height(36.0),
                         move || {
                             let counter = counter.clone();
-                            Box::new(
-                                Button::new(*label).on_click(move || {
-                                    counter.fetch_add(1, Ordering::SeqCst);
-                                }),
-                            )
+                            Box::new(Button::new(*label).on_click(move || {
+                                counter.fetch_add(1, Ordering::SeqCst);
+                            }))
                         },
                     ));
                 }
@@ -114,7 +112,10 @@ fn main() {
                     LayoutRequest::new().height(24.0),
                     move || {
                         let shown = shown.clone();
-                        Box::new(Text::new(format!("clicks: {}", shown.load(Ordering::SeqCst))))
+                        Box::new(Text::new(format!(
+                            "clicks: {}",
+                            shown.load(Ordering::SeqCst)
+                        )))
                     },
                 ));
 

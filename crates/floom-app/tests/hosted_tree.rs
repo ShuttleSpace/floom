@@ -176,11 +176,14 @@ fn a_key_round_trips_back_to_the_node_it_names() {
     // key has to name the same node a frame later — and a stale one has to come
     // back as "gone" rather than as whatever now occupies the slot.
     for described in host.tree_nodes() {
-        let node = host
-            .node_by_key(&described.key)
-            .unwrap_or_else(|| panic!("a key the host just minted must resolve: {}", described.key));
+        let node = host.node_by_key(&described.key).unwrap_or_else(|| {
+            panic!("a key the host just minted must resolve: {}", described.key)
+        });
         assert_eq!(
-            host.tree_nodes().into_iter().find(|n| n.key == described.key).map(|n| n.element),
+            host.tree_nodes()
+                .into_iter()
+                .find(|n| n.key == described.key)
+                .map(|n| n.element),
             Some(described.element),
         );
         // The reverse direction names the same element the description did.

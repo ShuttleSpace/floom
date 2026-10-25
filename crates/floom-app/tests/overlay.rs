@@ -518,7 +518,11 @@ fn a_hidden_overlay_leaves_its_column_to_the_app_beneath() {
 
     // While it is up, its column is its own.
     app.click(Point::new(600.0, 300.0));
-    assert_eq!(main_clicked.get(), 0, "a press inside the drawer is the drawer's");
+    assert_eq!(
+        main_clicked.get(),
+        0,
+        "a press inside the drawer is the drawer's"
+    );
 
     // Hidden, not closed: the overlay is still mounted, still sized, still there.
     app.host_mut().set_overlay_hit(drawer, false);
