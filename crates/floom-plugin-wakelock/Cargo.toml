@@ -1,0 +1,38 @@
+[package]
+name = "floom-plugin-wakelock"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "A Floom plugin: keep the screen awake while the app is in the foreground"
+rust-version.workspace = true
+publish = false
+
+# A capability plugin: one capability, one crate, opt-in by dependency. It
+# depends on the platform layer and on nothing above it.
+[dependencies]
+
+# `FLAG_KEEP_SCREEN_ON` is a Java-side window flag, so the Android arm goes
+# through the JNI bridge the platform layer owns. No permission is involved —
+# the flag means "this app, while visible, asks that the display stay on".
+[target.'cfg(target_os = "android")'.dependencies]
+floom-platform-mobile = { path = "../floom-platform-mobile", version = "0.2.0" }
+jni = "0.22"
+
+# iOS: `UIApplication.idleTimerDisabled`, through UIKit.
+[target.'cfg(target_os = "ios")'.dependencies]
+objc2 = { version = "0.6", default-features = false, features = ["std"] }
+
+# macOS: `IOPMAssertionCreateWithName` (IOKit) with the assertion string built
+# through CoreFoundation — two frameworks, declared in the arm.
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2 = { version = "0.6", default-features = false, features = ["std"] }
+
+# Windows: `SetThreadExecutionState` — kernel32, in the lock via windows-sys
+# (already present for the other Windows arms). The gate's `windows` check
+# compiles this arm.
+[target.'cfg(target_os = "windows")'.dependencies]
+windows-sys = { version = "0.61", features = ["Win32_System_Power"] }
+
+# Linux has no cross-desktop keep-awake API — the arm is an honest Err, which
+# needs no dependency.

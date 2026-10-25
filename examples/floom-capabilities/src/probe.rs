@@ -59,6 +59,7 @@ use floom_plugin_paths as paths;
 use floom_plugin_prefs as prefs;
 use floom_plugin_sensors as sensors;
 use floom_plugin_vibration as vibration;
+use floom_plugin_wakelock as wakelock;
 
 /// What a capability reported.
 #[derive(Debug, Clone, PartialEq)]
@@ -345,6 +346,39 @@ pub fn prefs() -> Row {
 /// Shared by the row (read) and the action (write) so the pair reads and
 /// writes the same thing a reader would check by hand.
 pub const PREFS_STORE: &str = "floom-capabilities";
+
+/// Whether the display is currently being held awake.
+///
+/// The row reads the OS's own answer where there is one (the window flag on
+/// Android, `idleTimerDisabled` on iOS, the assertion on macOS; on Windows the
+/// crate's tracked ask, because querying the OS there would change it), so a
+/// host build reports a real fact about this machine — held or not — the same
+/// way a phone would.
+pub fn wakelock() -> Row {
+    #[cfg(any(
+        target_os = "android",
+        target_os = "ios",
+        target_os = "macos",
+        target_os = "windows"
+    ))]
+    {
+        let state = if wakelock::is_keep_screen_on() {
+            State::Value("the display is being held awake".into())
+        } else {
+            State::Value("the display may sleep normally".into())
+        };
+        Row::measured_value("wakelock", "is the display being held awake", state)
+    }
+    #[cfg(not(any(
+        target_os = "android",
+        target_os = "ios",
+        target_os = "macos",
+        target_os = "windows"
+    )))]
+    {
+        Row::value("wakelock", "is the display being held awake", State::Absent)
+    }
+}
 
 // --- power and connectivity ------------------------------------------------
 
@@ -644,6 +678,10 @@ pub fn actions() -> Vec<(&'static str, &'static str)> {
         // the persistence demonstration, split along the gallery's
         // readings-don't-change-the-world line.
         ("prefs::Preferences::set", "device::count_launch"),
+        // The toggle half of the `wakelock` row: the row reads what the OS
+        // reports, this flips it — with the report saying which way, because
+        // "the screen is now being held awake" is a claim worth reading.
+        ("wakelock::keep_screen_on", "device::toggle_wakelock"),
     ]
 }
 
@@ -672,6 +710,8 @@ pub fn all() -> Vec<Row> {
         // this app's storage
         paths(),
         prefs(),
+        // the display
+        wakelock(),
         // power and network
         battery(),
         connectivity(),

@@ -76,6 +76,7 @@ floom-plugin-paths = { path = "../../crates/floom-plugin-paths", version = "0.2.
 floom-plugin-open-url = { path = "../../crates/floom-plugin-open-url", version = "0.2.0" }
 floom-plugin-file-dialog = { path = "../../crates/floom-plugin-file-dialog", version = "0.2.0" }
 floom-plugin-prefs = { path = "../../crates/floom-plugin-prefs", version = "0.2.0" }
+floom-plugin-wakelock = { path = "../../crates/floom-plugin-wakelock", version = "0.2.0" }
 floom-plugin-sensors = { path = "../../crates/floom-plugin-sensors", version = "0.2.0" }
 floom-plugin-share = { path = "../../crates/floom-plugin-share", version = "0.2.0" }
 floom-plugin-vibration = { path = "../../crates/floom-plugin-vibration", version = "0.2.0" }

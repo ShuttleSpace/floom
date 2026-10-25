@@ -226,7 +226,7 @@ Flutter 侧这两个也是不同包（`shared_preferences` vs 应用自管的 JS
 - **NUL 是唯一全局拒绝字符**（三条传输都载不动它），其余字符各臂自处；
   文件臂用编码兜住 `=`、tab、换行。
 
-### A6. `floom-plugin-wakelock` ← `wakelock_plus`
+### A6. `floom-plugin-wakelock` ← `wakelock_plus` ✅ 已实现（2026-10-25，批次 2）
 
 保持屏幕常亮。
 
@@ -235,6 +235,24 @@ Flutter 侧这两个也是不同包（`shared_preferences` vs 应用自管的 JS
 - Windows `SetThreadExecutionState`；macOS `IOPMAssertionCreateWithName`
   （这两个让桌面臂**不是**空实现，值得做）
 - Linux：无通用 API，如实 `Err`
+
+**as-built 记录**（与原方案的出入）：
+
+- **API 是布尔不是句柄**。OS 自己会平衡生命周期（flag 随窗口、
+  assertion 随进程、execution state 随线程），句柄只会强迫调用方在
+  每条路径上手动配平一件 OS 本来就管的事。
+- **`is_keep_screen_on` 分两类真相**：OS 可读处读 OS（Android 的
+  window flags、iOS 的 timer 属性、macOS 持有的 assertion）；
+  Windows 不可查询——查询即改写——如实报告 crate 自己的记录值。
+- **Windows 的线程作用域是文档写明的坑**：`SetThreadExecutionState`
+  一个线程清不掉另一个线程设的状态，arm 用 Err 点名「去那个线程释放」，
+  不做静默 no-op。
+- **macOS 幂等是正确性要求**：第二个 enable 若再建 assertion 就是泄漏，
+  ID 进 mutex，重入直接 `Ok(())`。host 测试走真实 IOKit
+  acquire→幂等→release 全程，`pmset -g assertions` 能看到这个 ask。
+- **Android 选 window flag 不选 wake lock**：flag 的语义正是 crate
+  文档写的保证（「应用可见时保持显示」），wake lock 是有权限、
+  有生命周期的资源——语义就错了。
 
 ### A7. `floom-plugin-network-info` ← `network_info_plus`
 
@@ -521,6 +539,8 @@ C4 选项 (a) 的落地。但要先确认：位加回来时，是加在 `floom-p
   A3 file-dialog ✅ 已完成（2026-10-25）：三桌面真臂 + 手机精确拒绝，C4 另一半落地
   A5 prefs      ✅ 已完成（2026-10-25）：Apple 臂真原生往返测试；gallery 有了
                  证明持久性的行（launch 计数，跨进程验证过）
+  A6 wakelock   ✅ 已完成（2026-10-25）：四臂真实现 + host 上走真实 IOKit
+                 的往返测试；批次 2 完
   A5 prefs       → 要先写清与 floom-persistence 的分工
   A6 wakelock    → 桌面臂非空（Windows/macOS 真有 API）
 

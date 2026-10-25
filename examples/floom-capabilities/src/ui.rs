@@ -45,6 +45,7 @@ use floom_plugin_open_url as open_url;
 use floom_plugin_prefs as prefs;
 use floom_plugin_share as share;
 use floom_plugin_vibration as vibration;
+use floom_plugin_wakelock as wakelock;
 use floom_widgets::{Button, Container, Spacer, Stack, Text};
 
 use crate::probe::{self, Row, State};
@@ -377,6 +378,19 @@ fn run_action(id: &str) {
                      back on the next run"
                 )
             }),
+        // Flip the ask, then report the new state *as read back* — the
+        // row's answer and the action's report come from the same place, so
+        // they cannot disagree about which way it went.
+        "device::toggle_wakelock" => {
+            let target = !wakelock::is_keep_screen_on();
+            wakelock::keep_screen_on(target).map(|()| {
+                if wakelock::is_keep_screen_on() {
+                    "the display is now being held awake".to_string()
+                } else {
+                    "the display may sleep normally again".to_string()
+                }
+            })
+        }
         other => Err(format!("unknown action `{other}`")),
     };
     match outcome {

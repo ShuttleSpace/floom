@@ -65,6 +65,7 @@ jobs:
         --package=floom-plugin-open-url
         --package=floom-plugin-file-dialog
         --package=floom-plugin-prefs
+        --package=floom-plugin-wakelock
         --package=floom-accessibility --package=floom-focus --package=floom-gesture
         --package=floom-animation --package=floom-overlay --package=floom-store --package=floom-task
         --package=floom-forms --package=floom-navigation --package=floom-persistence --package=floom-services
@@ -197,6 +198,7 @@ jobs:
           --package=floom-plugin-open-url
           --package=floom-plugin-file-dialog
           --package=floom-plugin-prefs
+          --package=floom-plugin-wakelock
           --target aarch64-linux-android
 
   # The same gap, on the other mobile target. Every plugin's `ios.rs` sits behind
@@ -249,6 +251,7 @@ jobs:
           --package=floom-plugin-open-url
           --package=floom-plugin-file-dialog
           --package=floom-plugin-prefs
+          --package=floom-plugin-wakelock
           --target aarch64-apple-ios
 
   # `examples/floom-probe` is the one crate whose only binary sits behind

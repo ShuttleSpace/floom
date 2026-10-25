@@ -1030,6 +1030,7 @@ dependencies = [
  "floom-plugin-sensors",
  "floom-plugin-share",
  "floom-plugin-vibration",
+ "floom-plugin-wakelock",
  "floom-renderer-vello",
  "floom-types",
  "floom-widgets",
@@ -1614,6 +1615,16 @@ dependencies = [
  "floom-platform-mobile",
  "jni 0.22.4",
  "objc2",
+]
+
+[[package]]
+name = "floom-plugin-wakelock"
+version = "0.2.0"
+dependencies = [
+ "floom-platform-mobile",
+ "jni 0.22.4",
+ "objc2",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
