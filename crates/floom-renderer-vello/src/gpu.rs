@@ -779,21 +779,33 @@ fn kurbo_join(join: floom_types::LineJoin) -> KurboLineJoin {
 /// absolute logical coordinates, so a path region also carries the translate
 /// that places its own coordinates — `push_clip_layer` applies its `transform`
 /// to the clip shape alone and leaves the rest of the stream alone.
-fn push_clip_region(scene: &mut VelloScene, region: &ClipRegion) {
+///
+/// `transform` is the affine the clipped content is drawn under — the same
+/// `shift * group_affine` every fragment around the clip is appended with. The
+/// clip is a window into that same space, so it must be mapped through it too;
+/// pushing it at identity instead made the window sit where content only lands
+/// when the scale factor is 1 and the frame is full, which meant every clipped
+/// subtree (the devtools panel's scroll viewport was the first one in a real
+/// window) vanished on any HiDPI display: the content was scaled to device
+/// pixels while the clip stayed in logical ones.
+fn push_clip_region(scene: &mut VelloScene, region: &ClipRegion, transform: Affine) {
     match region {
         ClipRegion::Rect(bounds) => {
             let shape = kurbo_rect(*bounds);
-            scene.push_clip_layer(Fill::NonZero, Affine::IDENTITY, &shape);
+            scene.push_clip_layer(Fill::NonZero, transform, &shape);
         }
         ClipRegion::RoundedRect { bounds, radius } => {
             let radius = radius.clamp(0.0, bounds.width().min(bounds.height()) / 2.0);
             let shape = KurboRoundedRect::from_rect(kurbo_rect(*bounds), radius);
-            scene.push_clip_layer(Fill::NonZero, Affine::IDENTITY, &shape);
+            scene.push_clip_layer(Fill::NonZero, transform, &shape);
         }
         ClipRegion::Path { origin, path, .. } => {
             let shape = bez_path(path);
+            // The path's own placement composes *inside* the caller's affine:
+            // kurbo applies `a * b` as `b` first, so this moves the shape into
+            // scene coordinates and then maps both through the content's.
             let place = Affine::translate((origin.x, origin.y));
-            scene.push_clip_layer(Fill::NonZero, place, &shape);
+            scene.push_clip_layer(Fill::NonZero, transform * place, &shape);
         }
     }
 }
@@ -1331,7 +1343,13 @@ impl VelloGpuPresenter {
         for (id, node) in scene.iter() {
             match node {
                 SceneNode::ClipPush { region } => {
-                    push_clip_region(&mut self.vello_scene, region);
+                    // The same affine the content that follows is appended
+                    // under: `shift` carries the HiDPI scale (and the damage
+                    // offset on a partial rasterisation), `group_affine` any
+                    // transform scope the clip sits inside. A clip pushed at
+                    // identity while its content is scaled is a window into a
+                    // different picture than the one being drawn.
+                    push_clip_region(&mut self.vello_scene, region, shift * group_affine);
                     clip_depth += 1;
                     continue;
                 }
@@ -1575,8 +1593,26 @@ impl VelloGpuPresenter {
                     // wants pixel-space glyph coordinates, so fold both
                     // offsets into the transform and pass glyph positions
                     // through untouched.
+                    //
+                    // The display scale belongs in *this* transform, not in
+                    // the font size. `draw_glyphs` applies the transform to
+                    // the glyph's outline *and* its pen position together, so
+                    // a scaled transform gives glyphs that are drawn at the
+                    // right size at the right place. Scaling the font size
+                    // instead scales only the outline: the ink grows while
+                    // the pen stays where it was, and every line comes out
+                    // over-wide and overlapping — text that has been stretched.
+                    //
+                    // The fragment is appended under `shift * group_affine`,
+                    // which carries the same scale, so this would double it —
+                    // except that a glyph run is encoded into the *resource*
+                    // stream rather than as a transform-bearing node, and
+                    // `append` rewrites the run's own transform, not the glyph
+                    // coordinates it indexes. The scale therefore has to be
+                    // composed here, exactly once.
                     let transform =
-                        Affine::translate((origin.x + run.origin.x, origin.y + run.origin.y));
+                        Affine::translate((origin.x + run.origin.x, origin.y + run.origin.y))
+                            * Affine::scale(self.scale);
                     let glyphs = run.glyphs.iter().map(|g| vello::Glyph {
                         id: g.id,
                         x: g.x,
@@ -3679,5 +3715,118 @@ mod tests {
         assert_eq!(stats.shaders_drawn, 1, "an offscreen readback happened");
         assert_eq!(stats.shaders_skipped, 0, "nothing was degraded");
         assert_eq!(presenter.frames_presented(), 0, "nothing presented");
+    }
+
+    /// A clip layer must carry the affine its content is drawn under.
+    ///
+    /// The bug this is named after: the clip was pushed at identity while every
+    /// fragment around it was appended under `shift * group_affine`. The two
+    /// coincide only at scale 1 on a full frame, so nothing showed until a
+    /// clipped subtree reached a HiDPI display — where the content was scaled
+    /// to device pixels while the clip stayed in logical ones, and everything
+    /// inside it was clipped away. The devtools panel drew as a dark card with
+    /// no text in it: the card paints before the clip, so it survived, and
+    /// everything after it did not.
+    ///
+    /// Vello encodes the clip shape untransformed and records the affine in
+    /// the encoding's transform stream, which is what these assertions read.
+    /// Pure CPU work — no adapter needed, so this runs everywhere.
+    #[test]
+    fn a_clip_layer_carries_the_affine_its_content_is_drawn_under() {
+        let region = ClipRegion::Rect(Rect {
+            x0: 10.0,
+            y0: 20.0,
+            x1: 30.0,
+            y1: 40.0,
+        });
+
+        // A Retina scale factor: the clip is a window in device space, where
+        // the content around it is drawn.
+        let mut scene = VelloScene::new();
+        push_clip_region(&mut scene, &region, Affine::scale(2.0));
+        scene.pop_layer();
+        let transforms = &scene.encoding().transforms;
+        assert_eq!(transforms.len(), 1);
+        assert_eq!(transforms[0].matrix, [2.0, 0.0, 0.0, 2.0]);
+        assert_eq!(transforms[0].translation, [0.0, 0.0]);
+
+        // A damage offset composes the same way: a partial rasterisation draws
+        // the scene shifted, and a clip that does not shift with it cuts the
+        // content somewhere the content never was.
+        let mut shifted = VelloScene::new();
+        push_clip_region(
+            &mut shifted,
+            &region,
+            Affine::translate((-8.0, -4.0)) * Affine::scale(2.0),
+        );
+        shifted.pop_layer();
+        let transforms = &shifted.encoding().transforms;
+        assert_eq!(transforms[0].matrix, [2.0, 0.0, 0.0, 2.0]);
+        assert_eq!(transforms[0].translation, [-8.0, -4.0]);
+
+        // A rounded clip is the same window with corners.
+        let rounded = ClipRegion::RoundedRect {
+            bounds: Rect {
+                x0: 0.0,
+                y0: 0.0,
+                x1: 8.0,
+                y1: 8.0,
+            },
+            radius: 2.0,
+        };
+        let mut rounded_scene = VelloScene::new();
+        push_clip_region(&mut rounded_scene, &rounded, Affine::scale(2.0));
+        rounded_scene.pop_layer();
+        assert_eq!(
+            rounded_scene.encoding().transforms[0].matrix,
+            [2.0, 0.0, 0.0, 2.0]
+        );
+    }
+
+    /// The whole [`VelloGpuPresenter::encode`] walk at a Retina scale factor,
+    /// with a clipped rect in the scene. The clip layer's transform is encoded
+    /// first — the `ClipPush` precedes the content it clips in the stream — so
+    /// `transforms[0]` is the clip's, and it must be the scale the content is
+    /// appended with rather than identity.
+    ///
+    /// Adapter-gated like every other GPU test: machines without a usable
+    /// adapter skip, and the pure test above is what covers them.
+    #[test]
+    fn an_encoded_clip_is_mapped_through_the_content_scale() {
+        let Some(mut presenter) = presenter() else {
+            return;
+        };
+        presenter.scale = 2.0;
+        let clipped = Rect {
+            x0: 10.0,
+            y0: 20.0,
+            x1: 30.0,
+            y1: 40.0,
+        };
+        let mut scene = Scene::new();
+        scene.begin_update();
+        let _ = scene.insert(SceneNode::ClipPush {
+            region: ClipRegion::Rect(clipped),
+        });
+        let _ = scene.insert(SceneNode::Rect {
+            bounds: clipped,
+            fill: floom_types::Brush::Solid(floom_types::Color::WHITE),
+            radius: 0.0,
+            shadow: None,
+        });
+        let _ = scene.insert(SceneNode::ClipPop);
+        scene.finish_update();
+
+        let _ = presenter.encode(&scene, &empty_registry(), (0.0, 0.0));
+        let transforms = &presenter.vello_scene.encoding().transforms;
+        assert!(
+            !transforms.is_empty(),
+            "the clip layer encoded a transform"
+        );
+        assert_eq!(
+            transforms[0].matrix,
+            [2.0, 0.0, 0.0, 2.0],
+            "the clip sits where the scaled content sits, not at identity"
+        );
     }
 }
