@@ -296,6 +296,7 @@ for _names, _level in [
             "floom-plugin-package-info",
             "floom-plugin-paths",
             "floom-plugin-open-url",
+            "floom-plugin-file-dialog",
             "floom-animation", "floom-focus", "floom-gesture", "floom-overlay", "floom-store", "floom-task", "floom-forms",
             "floom-navigation", "floom-persistence", "floom-services",
             "floom-error", "floom-ime", "floom-editor",

@@ -54,6 +54,7 @@ use floom_plugin_device_info as device_info;
 use floom_plugin_local_auth as local_auth;
 use floom_plugin_location as location;
 use floom_plugin_notifications as notifications;
+use floom_plugin_file_dialog as file_dialog;
 use floom_plugin_package_info as package_info;
 use floom_plugin_paths as paths;
 use floom_plugin_sensors as sensors;
@@ -583,6 +584,11 @@ pub fn actions() -> Vec<(&'static str, &'static str)> {
         // user set as default. That is also why it is an action and not a row —
         // a reading must not change the world, and this call, by design, does.
         ("open_url::open_url", "device::open_url"),
+        // A modal dialog that waits for a human: an action, for the same reason
+        // as above. The report distinguishes the three outcomes the API
+        // promises — a chosen path, the user's cancellation, a refusal —
+        // which is the whole point of `Ok(None)` not being `Err`.
+        ("file_dialog::pick_file", "device::pick_file"),
     ]
 }
 

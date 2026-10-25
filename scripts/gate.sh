@@ -106,6 +106,7 @@ FLOOM2_PACKAGES=(
   --package=floom-plugin-vibration --package=floom-plugin-package-info
   --package=floom-plugin-paths
   --package=floom-plugin-open-url
+  --package=floom-plugin-file-dialog
   # The framework tail of the track. It was missing here while CI listed it, so
   # the gate could go green with `floom-app` and `floom-widgets` unclipped.
   --package=floom-accessibility --package=floom-focus --package=floom-gesture
@@ -137,6 +138,7 @@ CAPABILITY_PLUGINS=(
   floom-plugin-package-info
   floom-plugin-paths
   floom-plugin-open-url
+  floom-plugin-file-dialog
 )
 
 MOBILE_CAPABILITY_PLUGINS=(
@@ -152,6 +154,7 @@ MOBILE_CAPABILITY_PLUGINS=(
   floom-plugin-package-info
   floom-plugin-paths
   floom-plugin-open-url
+  floom-plugin-file-dialog
 )
 
 # The plugins with real Windows arms. Everything else in the capability list
@@ -163,6 +166,7 @@ MOBILE_CAPABILITY_PLUGINS=(
 WINDOWS_CAPABILITY_PLUGINS=(
   floom-plugin-paths
   floom-plugin-open-url
+  floom-plugin-file-dialog
 )
 
 PASS=0
@@ -213,6 +217,53 @@ has_check() {
     [ "$c" = "$wanted" ] && return 0
   done
   return 1
+}
+
+# Where to find a `rustc` that has `$1`'s std, or nothing when the ambient one
+# already does.
+#
+# The gate inherits whichever `rustc` is first on PATH, and on this machine that
+# is Homebrew's — whose `lib/rustlib` has no cross-target std at all. The device
+# targets live in the rustup toolchains, installed. Probing only the ambient
+# `rustc` therefore reported "the target may not be installed" for a target that
+# was installed, and recommended `rustup target add` for it; the check skipped
+# with a reason that was false. That is the failure mode this whole gate exists
+# to prevent, so the probe searches every toolchain before it gives up.
+#
+# Prints the toolchain's `bin` to prepend to PATH, empty when the ambient
+# `rustc` is fine, and returns 1 when no `rustc` here can target `$1`.
+target_toolchain_bin() {
+  local target="$1" dir
+  if [ -d "$(rustc --print target-libdir --target "$target" 2>/dev/null)" ]; then
+    return 0
+  fi
+  for dir in "$HOME"/.rustup/toolchains/*/lib/rustlib/"$target"/lib; do
+    [ -d "$dir" ] || continue
+    printf '%s\n' "${dir%%/lib/rustlib/*}/bin"
+    return 0
+  done
+  return 1
+}
+
+# run_cross_check <name> <target-triple> <command...>
+#
+# Runs a device-target check under a `rustc` that actually has the target, and
+# skips — naming the target and the toolchain — when none does. Prepending PATH
+# only for the duration keeps the host checks on the `rustc` the caller chose;
+# cross-target artifacts land in their own `target/<triple>/` directory, so
+# mixing compilers here cannot invalidate a host build.
+run_cross_check() {
+  local name="$1" target="$2" bin saved
+  shift 2
+  if ! bin="$(target_toolchain_bin "$target")"; then
+    has_check "$name" && run_check "$name" \
+      "no $target std in any rustc here (rustup target add --toolchain <toolchain> $target)" true
+    return 0
+  fi
+  saved="$PATH"
+  [ -n "$bin" ] && PATH="$bin:$PATH"
+  has_check "$name" && run_check "$name" "" "$@"
+  PATH="$saved"
 }
 
 if [ "${CHECKS[0]:-}" = "--list" ]; then
@@ -362,13 +413,9 @@ android_check() {
     cargo check --target aarch64-linux-android -p "$p" || return 1
   done
 }
-if [ -d "$(rustc --print target-libdir --target aarch64-linux-android 2>/dev/null)" ]; then
-  has_check android && run_check android "" android_check
-else
-  has_check android && run_check android "no aarch64-linux-android std in this toolchain (rustup target add aarch64-linux-android)" true
-fi
+run_cross_check android aarch64-linux-android android_check
 
-# iOS: the std for aarch64-apple-ios lives only in the pinned toolchain here, so
+# iOS: the std for aarch64-apple-ios lives only in the rustup toolchain here, so
 # the probe below is a real capability test rather than a formality.
 ios_check() {
   local p
@@ -376,11 +423,7 @@ ios_check() {
     cargo check --target aarch64-apple-ios -p "$p" || return 1
   done
 }
-if [ -d "$(rustc --print target-libdir --target aarch64-apple-ios 2>/dev/null)" ]; then
-  has_check ios && run_check ios "" ios_check
-else
-  has_check ios && run_check ios "no aarch64-apple-ios std in this toolchain (rustup target add aarch64-apple-ios)" true
-fi
+run_cross_check ios aarch64-apple-ios ios_check
 
 # Windows: the same gap, on the desktop nobody was looking at. There is no CI
 # job for it either, so this check is the only thing standing between a Windows
@@ -392,11 +435,7 @@ windows_check() {
     cargo check --target x86_64-pc-windows-msvc -p "$p" || return 1
   done
 }
-if [ -d "$(rustc --print target-libdir --target x86_64-pc-windows-msvc 2>/dev/null)" ]; then
-  has_check windows && run_check windows "" windows_check
-else
-  has_check windows && run_check windows "no x86_64-pc-windows-msvc std in this toolchain (rustup target add x86_64-pc-windows-msvc)" true
-fi
+run_cross_check windows x86_64-pc-windows-msvc windows_check
 
 # --- goldens ----------------------------------------------------------------
 has_check golden && run_check golden "" ./scripts/run-golden-examples.sh

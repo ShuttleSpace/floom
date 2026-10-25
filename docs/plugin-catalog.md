@@ -137,14 +137,37 @@ SDK 不携带任何能力插件。app 想要电池就连 `floom-plugin-battery`�
 - **C4 的位还没加回来**。§8.3 的取舍（位集 vs 插件注册查询）仍未拍板，
   本条目只提供实现那一半——和原计划一致。
 
-### A3. `floom-plugin-file-dialog` ← `file_selector`
+### A3. `floom-plugin-file-dialog` ← `file_selector` ✅ 已实现（2026-10-25，批次 2）
 
 C4 的另一半。`file_selector` 在 Flutter 侧是 federated 包（6 个分包），
 说明每个平台的选取器都真的不一样。
 
-- 桌面：`rfd` crate（异步文件对话框，跨三平台）
-- Android：`ACTION_OPEN_DOCUMENT` / `ACTION_CREATE_DOCUMENT`（SAF，不需要存储权限）
-- iOS：`UIDocumentPickerViewController`
+- macOS：`NSOpenPanel` / `NSSavePanel`（AppKit，裸 objc2）
+- Linux：`zenity`，缺则 `kdialog`（`open-url` 的 spawn 桌面工具形状）
+- Windows：经典对 `GetOpenFileNameW` / `GetSaveFileNameW` + `SHBrowseForFolderW`
+- Android / iOS：**精确拒绝**（见 as-built）
+
+**as-built 记录**（与原方案的出入）：
+
+- **没用 `rfd`**。三个桌面各写原生臂——零新增依赖（`windows-sys` 已在 lock），
+  且 `rfd` 在 Linux 上走 portal 会拖进一串异步依赖。zenity/kdialog 与
+  `xdg-open` 同构，和 open-url 的做法互为印证。
+- **`Ok(None)` 是用户取消，`Err` 是系统失败**——这个区分就是 API 本身，
+  gallery 报告把三种结局（选中/取消/拒绝）显示得各不相同。
+- **comdlg32 默认会改进程 cwd**（文档写明的副作用）。`OFN_NOCHANGEDIR` 恒置——
+  库不许静默动调用方的 cwd。这是写这个臂时真踩到的一个坑。
+- **Android/iOS 是 `share_files` 式精确拒绝**：SAF 的结果走 `onActivityResult`
+  （NativeActivity 桥没有这个通道），iOS 的 picker 走 delegate 回调
+  （需要 Objective-C delegate 类——正是 §8.1 记录的 Shape B「原生半边」）。
+  解锁是平台层的活，不是插件能补的。拒绝文本点名了缺什么。
+- **一个被否掉的测试方案及其发现**：本想「不跑 `runModal`、只建 panel +
+  发 setter」来验证 selector 真实存在——**`NSOpenPanel` 在没有
+  `NSApplication` 上下文的进程里连创建都会抛**，AppKit 抛 Objective-C
+  异常而 Rust 接不住 foreign exception，测试二进制当场 SIGABRT。
+  结论写进 macos.rs 模块文档：这条臂的诚实 host 覆盖 = 编译 + 真实 app
+  里的 gallery 按钮。
+- **无 filters、无多选**（v1）：每平台的过滤器词汇不同（UTI / MIME /
+  DOS pattern），先回答能力问题（「给我一条用户选的路径」）再谈词汇表。
 
 **与 `image_picker` 的分工要写进文档**：`file_selector` 是「任取文件」，
 `image_picker` 是「取图片/视频，含拍照」。后者依赖前者加相机。
@@ -478,7 +501,7 @@ C4 选项 (a) 的落地。但要先确认：位加回来时，是加在 `floom-p
   （A4 第一个做：它最短，用来把第 6 节的清单走通一遍）
 
 批次 2（无需设备）
-  A3 file-dialog → C4 另一半
+  A3 file-dialog ✅ 已完成（2026-10-25）：三桌面真臂 + 手机精确拒绝，C4 另一半落地
   A5 prefs       → 要先写清与 floom-persistence 的分工
   A6 wakelock    → 桌面臂非空（Windows/macOS 真有 API）
 

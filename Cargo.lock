@@ -1019,6 +1019,7 @@ dependencies = [
  "floom-plugin-battery",
  "floom-plugin-connectivity",
  "floom-plugin-device-info",
+ "floom-plugin-file-dialog",
  "floom-plugin-local-auth",
  "floom-plugin-location",
  "floom-plugin-notifications",
@@ -1496,6 +1497,14 @@ dependencies = [
  "floom-platform-mobile",
  "jni 0.22.4",
  "objc2",
+]
+
+[[package]]
+name = "floom-plugin-file-dialog"
+version = "0.2.0"
+dependencies = [
+ "objc2",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]

@@ -37,6 +37,7 @@
 
 use floom_core::{Align, Axis, Child, ChildKey, Color, LayoutRequest, WidgetAny};
 use floom_platform_mobile::packages::{keyboard::soft_input, system_chrome};
+use floom_plugin_file_dialog as file_dialog;
 use floom_plugin_local_auth as local_auth;
 use floom_plugin_location as location;
 use floom_plugin_notifications as notifications;
@@ -347,6 +348,16 @@ fn run_action(id: &str) {
         // report says "accepted", and the browser window is the human's proof.
         "device::open_url" => open_url::open_url("https://github.com/lapce/floom")
             .map(|()| "accepted — the default browser should be opening".to_string()),
+        // The three outcomes the API promises, kept distinct in the report:
+        // a path (the user chose), "cancelled" (the user's answer), and the
+        // refusal (a platform whose picker needs plumbing this build does not
+        // have — the phone case, spelled out rather than blurred into
+        // "error").
+        "device::pick_file" => match file_dialog::pick_file(&file_dialog::Options::new()) {
+            Ok(Some(path)) => Ok(format!("chose {}", path.display())),
+            Ok(None) => Ok("cancelled — the user's answer, not an error".to_string()),
+            Err(reason) => Err(reason),
+        },
         other => Err(format!("unknown action `{other}`")),
     };
     match outcome {
