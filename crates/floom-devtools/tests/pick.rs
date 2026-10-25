@@ -237,20 +237,16 @@ fn the_highlight_box_can_be_retargeted_in_place() {
 
 #[test]
 fn the_pick_is_a_keyboard_gesture_too() {
+    use floom_devtools::pick::default_pick_shortcut;
     // The picker is armed from the loop, the way the panel is toggled: a key
     // event the app's own handler forwards. `Ctrl+Shift+C` is Chrome's binding.
+    let shortcut = default_pick_shortcut();
     let event = KeyEvent {
         phase: KeyPhase::Down,
         key: Key::Char('c'),
         modifiers: Modifiers::CONTROL.union(Modifiers::SHIFT),
     };
-    let is_pick_shortcut = |e: &KeyEvent| {
-        e.phase == KeyPhase::Down
-            && e.key == Key::Char('c')
-            && e.modifiers.contains(Modifiers::CONTROL)
-            && e.modifiers.contains(Modifiers::SHIFT)
-    };
-    assert!(is_pick_shortcut(&event));
+    assert!(shortcut(&event));
 
     // A plain `c` — typing into a field — does not arm it.
     let typed = KeyEvent {
@@ -258,7 +254,7 @@ fn the_pick_is_a_keyboard_gesture_too() {
         key: Key::Char('c'),
         modifiers: Modifiers::NONE,
     };
-    assert!(!is_pick_shortcut(&typed));
+    assert!(!shortcut(&typed));
 
     // Nor does a release.
     let released = KeyEvent {
@@ -266,7 +262,39 @@ fn the_pick_is_a_keyboard_gesture_too() {
         key: Key::Char('c'),
         modifiers: Modifiers::CONTROL.union(Modifiers::SHIFT),
     };
-    assert!(!is_pick_shortcut(&released));
+    assert!(!shortcut(&released));
+
+    // Neither modifier alone: `Ctrl+C` is copy, and `Shift+C` is a capital C.
+    let ctrl_c = KeyEvent {
+        phase: KeyPhase::Down,
+        key: Key::Char('c'),
+        modifiers: Modifiers::CONTROL,
+    };
+    assert!(!shortcut(&ctrl_c));
+    let shift_c = KeyEvent {
+        phase: KeyPhase::Down,
+        key: Key::Char('c'),
+        modifiers: Modifiers::SHIFT,
+    };
+    assert!(!shortcut(&shift_c));
+
+    // The macOS spelling: the platform layer reports the command key as `META`,
+    // so a picker that only knew `CONTROL` would be unreachable on a Mac.
+    let cmd_shift_c = KeyEvent {
+        phase: KeyPhase::Down,
+        key: Key::Char('c'),
+        modifiers: Modifiers::META.union(Modifiers::SHIFT),
+    };
+    assert!(shortcut(&cmd_shift_c));
+
+    // And the panel's own shortcut is a different key: pressing the devtools
+    // binding must not also arm the picker.
+    let ctrl_shift_i = KeyEvent {
+        phase: KeyPhase::Down,
+        key: Key::Char('i'),
+        modifiers: Modifiers::CONTROL.union(Modifiers::SHIFT),
+    };
+    assert!(!shortcut(&ctrl_shift_i));
 }
 
 #[test]

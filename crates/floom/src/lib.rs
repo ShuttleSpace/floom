@@ -247,6 +247,60 @@ where
         readout: Option<R>,
         runner: Option<AppRunner<VelloGpuPresenter>>,
         devtools: Option<devtools::Devtools>,
+        picker: Option<devtools::PickHandle>,
+        /// Everything the devtools controls from outside the tree, as of the
+        /// last frame hook.
+        ///
+        /// Compared rather than acted on unconditionally: the shortcut and the
+        /// pick are answered in `key`/`pointer`, before the tree, and a consumed
+        /// event produces no platform event at all — so nothing would wake the
+        /// loop and the panel would change without ever being drawn. And a
+        /// per-hook frame request would keep the redraw loop from ever settling,
+        /// because retargeting the highlight goes through `widget_mut`, which
+        /// marks the host dirty.
+        outside_was: Option<OutsideState>,
+    }
+
+    /// The part of the devtools state a frame has to be requested for.
+    ///
+    /// Everything a reader of the panel would notice: whether it is up, which
+    /// tab, which element, and which element the highlight box is around.
+    type OutsideState = (
+        bool,
+        devtools::DevtoolsTab,
+        Option<String>,
+        Option<(Option<String>, bool)>,
+    );
+
+    impl<F, R> DevtoolsApp<F, R> {
+        /// Everything the devtools controls from outside the tree, as one
+        /// comparable value.
+        ///
+        /// The panel's own state is a mutex the platform loop writes and the
+        /// tree reads, so a change to it produces no platform event. Comparing
+        /// this across frame hooks is what turns such a change into a frame.
+        fn outside_state(
+            devtools: Option<&devtools::Devtools>,
+            picker: Option<&devtools::PickHandle>,
+        ) -> OutsideState {
+            let (visible, tab, selected) = devtools.map_or_else(
+                || (false, devtools::DevtoolsTab::default(), None),
+                |devtools| {
+                    let state = devtools.state();
+                    let guard = state.lock().ok();
+                    let visible = guard.as_ref().is_some_and(|s| s.visible());
+                    let tab = guard.as_ref().map(|s| s.tab()).unwrap_or_default();
+                    let selected = guard
+                        .as_ref()
+                        .and_then(|s| s.selected().map(str::to_string));
+                    (visible, tab, selected)
+                },
+            );
+            let highlight = picker.map(|picker| {
+                (picker.highlight_target(), picker.highlight_is_live())
+            });
+            (visible, tab, selected, highlight)
+        }
     }
 
     impl<
@@ -272,7 +326,12 @@ where
             // alternative — a bare `attach` — would leave the panel showing the
             // tree as it was at startup, which is a stale answer.
             let devtools = devtools::attach_with_rows(&mut host, readout);
+            // The picker is mounted alongside the panel: its highlight is a
+            // passthrough overlay above the panel, so the box is visible over
+            // everything and clickable through.
+            let picker = devtools::attach_picker(&mut host, devtools.state());
             self.devtools = Some(devtools);
+            self.picker = Some(picker);
             let Some(presenter) = VelloGpuPresenter::new() else {
                 eprintln!(
                     "floom::run_desktop_with_devtools: no usable GPU adapter; a desktop window needs one to paint"
@@ -283,22 +342,84 @@ where
         }
 
         fn events(&mut self, platform: &mut WinitPlatform) {
+            // Split the borrow up front: the panel and the host are two fields
+            // of the same struct, and `sync` needs one of each.
+            let Self {
+                build: _,
+                readout: _,
+                devtools,
+                picker,
+                runner,
+                outside_was,
+            } = self;
+            let Some(runner) = runner.as_mut() else {
+                return;
+            };
             // Refresh the panel's tree before the frame, so what it shows is the
             // app as it is now rather than as it was when the window opened.
-            if let (Some(devtools), Some(runner)) = (self.devtools.as_ref(), self.runner.as_ref()) {
+            if let Some(devtools) = devtools.as_ref() {
                 devtools.refresh_tree(runner.host());
             }
-            if let Some(runner) = self.runner.as_mut() {
-                runner.pump(platform);
+            // The panel's visibility reaches the overlay stack and the keyboard
+            // here, not in the widget: a hidden drawer that stayed interactive
+            // would eat every press down its column, and a panel that closed
+            // while holding focus would strand the keyboard on a node with no
+            // children. Called every frame — `sync` compares the visibility
+            // itself and does nothing when it has not moved.
+            if let Some(devtools) = devtools.as_mut() {
+                devtools.sync(runner.host_mut());
             }
+            // Everything that drives the devtools lives *outside* the tree: the
+            // shortcut and the pick are answered in `key`/`pointer`, before the
+            // tree, and a consumed event produces no platform event at all — so
+            // nothing would wake the loop and the panel would change without
+            // ever being drawn. The change is noticed here instead, and turned
+            // into a frame request. Only on a change: requesting one per hook
+            // would keep the redraw loop from ever settling.
+            let now = Self::outside_state(devtools.as_ref(), picker.as_ref());
+            if outside_was.as_ref() != Some(&now) {
+                *outside_was = Some(now);
+                // The highlight is retargeted before the frame so the box this
+                // frame paints is around the element the pick just made, not
+                // the one before it.
+                if let Some(picker) = picker.as_ref() {
+                    picker.sync_highlight(runner.host_mut());
+                }
+                runner.request_frame(platform);
+            }
+            runner.pump(platform);
         }
 
         // The shortcut, before the tree: a keystroke that opens the panel should
         // not also type into whatever had focus.
         fn key(&mut self, event: &floom_types::KeyEvent) -> bool {
+            if let Some(picker) = self.picker.as_ref()
+                && picker.handle_key(event)
+            {
+                return true;
+            }
             self.devtools
                 .as_mut()
                 .is_some_and(|devtools| devtools.handle_key(event))
+        }
+
+        // The pick, before the tree: clicking a button to inspect it must not
+        // also press it. The host owns the mapping from a point to a live-tree
+        // key, because it owns the tree.
+        fn pointer(&mut self, event: &floom_types::PointerEvent) -> bool {
+            let (Some(picker), Some(runner)) = (self.picker.as_ref(), self.runner.as_ref()) else {
+                return false;
+            };
+            let host = runner.host();
+            let consumed = picker.pointer(event, |point| {
+                host.element_at(point).map(floom_app::WidgetHost::node_key)
+            });
+            // A committed pick selects the element the readout is about. The
+            // panel only learns that in `update`, so the next frame is requested
+            // from `events` — which compares the state — rather than here, where
+            // there is no platform to ask.
+            picker.commit_selection();
+            consumed
         }
 
         fn about_to_wait(&mut self, platform: &mut WinitPlatform) {
@@ -319,6 +440,8 @@ where
             readout: Some(readout),
             runner: None,
             devtools: None,
+            picker: None,
+            outside_was: None,
         },
         windows,
     )

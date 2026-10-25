@@ -281,7 +281,24 @@ struct OverlaySlot {
     /// Viewport-relative rect the content is positioned and hit-tested against.
     bounds: Rect,
     /// Focus before the overlay opened, restored when it closes.
+    ///
+    /// `None` for a passthrough overlay, which never took focus in the first
+    /// place — see [`WidgetHost::open_overlay_passthrough`].
     previous_focus: Option<ElementId>,
+    /// Whether the overlay is painted but not hit. Kept here so `close_overlay`
+    /// knows not to blur whatever happens to be focused: a passthrough overlay
+    /// closing must leave the keyboard exactly where it was.
+    passthrough: bool,
+    /// Whether a press outside this overlay should close it.
+    ///
+    /// `true` for a popup or a sheet, whose whole contract is "clicking away
+    /// closes me". `false` for a panel that is shown and hidden by its own
+    /// control — the devtools drawer — because closing it unmounts the content,
+    /// and content the host owns is thrown away rather than handed back to an
+    /// opener that could rebuild it. A devtools panel closed by a stray click
+    /// would be gone until the app restarted, with its state still saying it is
+    /// visible.
+    dismissible: bool,
     /// The widget that asked for this overlay, if any. Its content is handed
     /// back to this node through [`floom_core::Widget::overlay_closed`] when
     /// the overlay comes down, which is how an opener learns the result of a
@@ -960,7 +977,29 @@ impl WidgetHost {
     ) -> OverlayHandle {
         let handle = OverlayHandle::new(self.next_overlay_handle);
         self.next_overlay_handle += 1;
-        self.open_overlay_content(handle, None, kind, modal, bounds, Box::new(content))
+        self.open_overlay_content(handle, None, kind, modal, false, bounds, Box::new(content))
+    }
+
+    /// Opens `content` as an overlay that is painted but not hit.
+    ///
+    /// The pointer falls straight through it to whatever is behind, and it does
+    /// not take focus when it opens — so it cannot steal the keyboard from a
+    /// field the user is typing in, and a press on the app still reaches the
+    /// app. A highlight box is the reason: it covers the window so it can
+    /// outline an element anywhere in it, and a covering overlay that also took
+    /// clicks would make the app unclickable while the box was up.
+    ///
+    /// It is still *above* every interactive overlay in paint order, which is
+    /// what makes a box drawn over the devtools panel visible.
+    pub fn open_overlay_passthrough(
+        &mut self,
+        kind: OverlayKind,
+        bounds: Rect,
+        content: impl WidgetAny + 'static,
+    ) -> OverlayHandle {
+        let handle = OverlayHandle::new(self.next_overlay_handle);
+        self.next_overlay_handle += 1;
+        self.open_overlay_content(handle, None, kind, false, true, bounds, Box::new(content))
     }
 
     /// Mounts a finished overlay content box under a handle the caller minted.
@@ -976,6 +1015,7 @@ impl WidgetHost {
         owner: Option<ElementId>,
         kind: OverlayKind,
         modal: bool,
+        passthrough: bool,
         bounds: Rect,
         content: Box<dyn WidgetAny>,
     ) -> OverlayHandle {
@@ -988,16 +1028,35 @@ impl WidgetHost {
         // mid-frame and one opened from an event both begin from the same
         // reference the ticker advances.
         let now = self.anim_clock;
-        let id = self
-            .overlay
-            .push(handle, kind, self.nodes[index].id, bounds, modal, now);
-        let previous_focus = self.focus.focused();
-        self.set_focus(self.nodes[index].id);
+        let id = if passthrough {
+            self.overlay
+                .push_passthrough(handle, kind, self.nodes[index].id, bounds, now)
+        } else {
+            self.overlay
+                .push(handle, kind, self.nodes[index].id, bounds, modal, now)
+        };
+        // A passthrough overlay never held focus, so there is nothing to
+        // restore when it closes and nothing to move when it opens. Recording
+        // the focus as "previous" anyway would make closing it hand focus to
+        // whatever had it *before the last real overlay*, which is not what
+        // `close_overlay` promises.
+        let previous_focus = if passthrough {
+            None
+        } else {
+            let previous = self.focus.focused();
+            self.set_focus(self.nodes[index].id);
+            previous
+        };
         self.overlays.push(OverlaySlot {
             id,
             node: index,
             bounds,
             previous_focus,
+            passthrough,
+            // Interactive overlays are dismissible by default: a popup or a
+            // sheet exists to be answered, and clicking away is one of the
+            // answers. A panel that shows and hides itself turns this off.
+            dismissible: true,
             owner,
         });
         // Tell the opener which handle it got. It is the only chance: the
@@ -1039,11 +1098,16 @@ impl WidgetHost {
             return;
         };
         let slot = self.overlays.remove(pos);
-        match slot.previous_focus {
-            Some(focused) => self.set_focus(focused),
-            None => {
-                self.clear_focus_flag(self.nodes[slot.node].id);
-                self.focus.blur();
+        if slot.passthrough {
+            // Never held focus, so nothing to hand back and nothing to blur:
+            // the field the user was typing in keeps the keyboard.
+        } else {
+            match slot.previous_focus {
+                Some(focused) => self.set_focus(focused),
+                None => {
+                    self.clear_focus_flag(self.nodes[slot.node].id);
+                    self.focus.blur();
+                }
             }
         }
         // Take the content out before unmounting: the opener is about to be
@@ -1115,6 +1179,76 @@ impl WidgetHost {
         self.nodes.get(slot.node).map(|n| n.widget.as_ref())
     }
 
+    /// Makes an open overlay hit-testable or not, without unmounting it.
+    ///
+    /// The two halves have to move together. The overlay stack decides whether a
+    /// press lands on the overlay at all ([`floom_overlay::OverlayManager`]),
+    /// while the main router holds a hit region for every node in its subtree —
+    /// so flipping only the stack leaves `resolve_target` still finding the
+    /// covering node and handing it a click meant for the app beneath. Both are
+    /// flipped here, and the subtree's regions are dropped immediately rather
+    /// than waiting for the next layout pass, because the press that arrives
+    /// before that pass is exactly the one this exists to let through.
+    ///
+    /// A hidden overlay is *not* a closed one: its content stays mounted, so
+    /// flipping back is cheap and a panel that shows and hides itself does not
+    /// have to be rebuilt.
+    pub fn set_overlay_hit(&mut self, id: OverlayHandle, hit: bool) {
+        let Some(slot) = self.overlays.iter_mut().find(|o| o.id == id) else {
+            return;
+        };
+        slot.passthrough = !hit;
+        let node = slot.node;
+        self.overlay.set_passthrough(id, !hit);
+        if !hit {
+            self.clear_subtree_hits(node);
+        }
+        // The regions are rewritten from `bounds` on the next layout pass
+        // (`layout_overlays` runs every frame), so nothing has to be registered
+        // here — only the ones that must stop answering now.
+        self.content_dirty = true;
+    }
+
+    /// Whether a press outside this overlay closes it. See `OverlaySlot::dismissible`.
+    pub fn set_overlay_dismissible(&mut self, id: OverlayHandle, dismissible: bool) {
+        if let Some(slot) = self.overlays.iter_mut().find(|o| o.id == id) {
+            slot.dismissible = dismissible;
+        }
+    }
+
+    /// Drops every hit region registered by `root`'s subtree.
+    ///
+    /// Used when a mounted subtree stops being there without being unmounted —
+    /// a hidden overlay. Removals are cheap and idempotent, so this walks the
+    /// subtree rather than reasoning about which nodes could still be hit.
+    fn clear_subtree_hits(&mut self, root: usize) {
+        let mut stack = vec![root];
+        while let Some(index) = stack.pop() {
+            if self.nodes[index].dead {
+                continue;
+            }
+            for &child in &self.nodes[index].children {
+                if !self.nodes[child].dead {
+                    stack.push(child);
+                }
+            }
+            self.router.hits.remove(self.nodes[index].id);
+        }
+    }
+
+    /// Drops keyboard focus without naming a successor.
+    ///
+    /// [`Self::set_focus`] moves the keyboard *to* something; this is the way to
+    /// take it away and leave it nowhere, which is what a caller needs when it
+    /// has opened an overlay that grabbed focus and wants to put the keyboard
+    /// back exactly where it was — including "nowhere".
+    pub fn clear_focus(&mut self) {
+        if let Some(focused) = self.focus.focused() {
+            self.clear_focus_flag(focused);
+        }
+        self.focus.blur();
+    }
+
     /// The tree node an open overlay's content is mounted at, by handle.
     ///
     /// The door for retargeting a mounted overlay in place: a highlight box that
@@ -1131,6 +1265,29 @@ impl WidgetHost {
 
     fn overlay_node(&self, id: OverlayHandle) -> Option<usize> {
         self.overlays.iter().find(|o| o.id == id).map(|o| o.node)
+    }
+
+    /// Whether `node` is mounted inside the overlay `id`'s subtree, the overlay
+    /// root itself included.
+    ///
+    /// The question a caller asks about focus: an overlay that is hidden but
+    /// still mounted has no children, so the key router has nowhere to send a
+    /// key aimed at a node under it. Whoever hides it has to notice that the
+    /// keyboard is stranded and put it back.
+    pub fn overlay_contains(&self, id: OverlayHandle, node: NodeId) -> bool {
+        let Some(root) = self.overlay_node(id) else {
+            return false;
+        };
+        let mut index = node.0;
+        loop {
+            if index == root {
+                return true;
+            }
+            match self.nodes.get(index).and_then(|n| n.parent) {
+                Some(parent) => index = parent,
+                None => return false,
+            }
+        }
     }
 
     /// True when `index` sits under an overlay root (by ancestry), so the main
@@ -1156,6 +1313,11 @@ impl WidgetHost {
             .map(|s| (s.node, s.bounds, s.id))
             .collect();
         for (index, bounds, id) in slots {
+            let passthrough = self
+                .overlays
+                .iter()
+                .find(|s| s.id == id)
+                .is_some_and(|s| s.passthrough);
             // Start from the node's own style and container intent, exactly as
             // `run_layout` does for the root. An overlay root is usually a
             // composite — a dialog's centred card, a sheet's bottom-aligned
@@ -1171,7 +1333,7 @@ impl WidgetHost {
             self.layout.set_style(self.nodes[index].layout_node, style);
             self.layout
                 .compute(self.nodes[index].layout_node, bounds.size());
-            self.translate_subtree(index, bounds.x0, bounds.y0, OVERLAY_Z_BASE);
+            self.translate_subtree(index, bounds.x0, bounds.y0, OVERLAY_Z_BASE, !passthrough);
             self.overlay.set_bounds(id, self.nodes[index].bounds);
         }
     }
@@ -1179,7 +1341,13 @@ impl WidgetHost {
     /// Walks a subtree, offsetting every node's `bounds` by `(dx, dy)` (the
     /// overlay's viewport origin) and registering a high-z hit region so it
     /// participates in hit-testing on top of the main tree.
-    fn translate_subtree(&mut self, root: usize, dx: f64, dy: f64, z_base: i32) {
+    ///
+    /// `hit` is false for a passthrough overlay: its nodes are still positioned
+    /// (they must paint where the main tree is), but they claim no hit region at
+    /// all. Registering one and then skipping it in `OverlayStack::hit_test`
+    /// would not be enough — the main router's `resolve_target` would still find
+    /// the covering node and hand it a click that was meant for the app beneath.
+    fn translate_subtree(&mut self, root: usize, dx: f64, dy: f64, z_base: i32, hit: bool) {
         let mut stack = vec![root];
         while let Some(index) = stack.pop() {
             if self.nodes[index].dead {
@@ -1194,6 +1362,10 @@ impl WidgetHost {
             let r = out.rect;
             let bounds = Rect::from_origin_size(Point::new(r.x0 + dx, r.y0 + dy), r.size());
             self.nodes[index].bounds = bounds;
+            if !hit {
+                self.router.hits.remove(self.nodes[index].id);
+                continue;
+            }
             let z = z_base + (self.nodes.len() as i32 - index as i32);
             self.router.hits.set_region(
                 self.nodes[index].id,
@@ -1372,6 +1544,17 @@ impl WidgetHost {
     pub fn reconcile_all(&mut self) {
         if let Some(root) = self.root {
             self.reconcile_subtree(root);
+        }
+        // Overlays are separate roots — `open_overlay_content` pushes them with
+        // no parent — so the walk above cannot reach them. A composite mounted
+        // in a drawer or a popup changes its children for the same reasons one
+        // in the tree does, and a widget that reports `mark_children_dirty`
+        // from its own `update` has to be answered by the same frame no matter
+        // which root it hangs under. Without this the overlay keeps whatever it
+        // declared when it opened, and a panel that opens declares nothing.
+        let overlay_roots: Vec<usize> = self.overlays.iter().map(|slot| slot.node).collect();
+        for index in overlay_roots {
+            self.reconcile_subtree(index);
         }
     }
 
@@ -2167,7 +2350,7 @@ impl WidgetHost {
                 continue;
             };
             out.push(HostedNode {
-                key: format!("node-{}", node.id.raw()),
+                key: Self::node_key(node.id),
                 kind: if node.children.is_empty() {
                     HostedKind::Primitive
                 } else {
@@ -2182,6 +2365,31 @@ impl WidgetHost {
             }
         }
         out
+    }
+
+    /// The stable string key [`HostedNode`] carries for an element.
+    ///
+    /// An inspector keys its own rows by these, and it hands them back when it
+    /// wants to retarget something it described a frame ago — so the mapping
+    /// has to be a *function* of the element, not of the position it happened to
+    /// occupy in the last description.
+    pub fn node_key(element: ElementId) -> String {
+        format!("node-{}", element.raw())
+    }
+
+    /// The live node an inspector's key names, if it still exists.
+    ///
+    /// The inverse of [`Self::node_key`]. `None` once the element has been
+    /// unmounted: a panel holding a selection across a rebuild must be able to
+    /// ask, and must get "gone" rather than a node that reused the slot.
+    pub fn node_by_key(&self, key: &str) -> Option<NodeId> {
+        let raw = key.strip_prefix("node-")?.parse::<u64>().ok()?;
+        // `GenerationalId` packs generation above index and has no `from_raw`,
+        // so it is unpacked the same way it was packed. A key minted by another
+        // version of this format (or by hand) lands on a slot whose generation
+        // does not match, and `index_of` answers `None` for it.
+        let element = ElementId::new(raw as u32, (raw >> 32) as u32);
+        self.index_of(element).map(NodeId)
     }
 
     /// The viewport's logical size — what [`Self::set_size`] last set.
@@ -3271,11 +3479,16 @@ impl WidgetHost {
                         bounds,
                         content,
                     } => {
+                        // A widget-requested overlay is always interactive:
+                        // nothing in the event model lets a widget ask for one
+                        // that cannot be clicked, and a request that did would
+                        // have to say what it is for.
                         self.open_overlay_content(
                             handle,
                             Some(owner),
                             kind,
                             modal,
+                            false,
                             bounds,
                             content,
                         );
@@ -3334,11 +3547,21 @@ impl WidgetHost {
         if !matches!(pointer.phase, PointerPhase::Down) {
             return false;
         }
-        let Some(top) = self.overlay.top() else {
+        let Some(top) = self.overlay.top_interactive() else {
             return false;
         };
         let (id, modal, bounds) = (top.id, top.modal, top.bounds);
         if modal || bounds.contains(pointer.position) {
+            return false;
+        }
+        // The overlay stack does not know which slots opted out of dismissal —
+        // that is host state, because it is the host that knows whether closing
+        // would strand a panel it cannot rebuild.
+        if !self
+            .overlays
+            .iter()
+            .any(|o| o.id == id && o.dismissible)
+        {
             return false;
         }
         self.close_overlay(id);
@@ -3724,7 +3947,7 @@ impl WidgetHost {
         // A modal overlay owns the screen. The participant stays bound and is
         // hidden instead of being destroyed: it will be straight back when the
         // modal closes, and recreating an OS view is the expensive part.
-        let modal_up = self.overlay.top().is_some_and(|top| top.modal);
+        let modal_up = self.overlay.top_interactive().is_some_and(|top| top.modal);
         let scale = self.scale;
 
         self.reconcile_clipping(viewport, stats);

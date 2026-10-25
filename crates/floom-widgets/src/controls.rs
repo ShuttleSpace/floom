@@ -110,12 +110,24 @@ pub struct InteractionState {
 impl InteractionState {
     /// The subset that reaches assistive technology.
     pub fn to_semantics(self) -> SemanticsState {
+        self.to_semantics_with(true)
+    }
+
+    /// [`InteractionState::to_semantics`], for a control that is not focusable.
+    ///
+    /// A non-focusable control is still enabled and still clickable, so it keeps
+    /// `ENABLED`; it just does not advertise `FOCUSABLE`, because no key press
+    /// can reach it. Advertising it anyway would put a dead stop in a screen
+    /// reader's tab order.
+    pub fn to_semantics_with(self, focusable: bool) -> SemanticsState {
         let mut state = SemanticsState::empty();
         if self.disabled {
             state |= SemanticsState::DISABLED;
         } else {
             state |= SemanticsState::ENABLED;
-            state |= SemanticsState::FOCUSABLE;
+            if focusable {
+                state |= SemanticsState::FOCUSABLE;
+            }
         }
         if self.focused {
             state |= SemanticsState::FOCUSED;
@@ -201,10 +213,17 @@ pub(crate) enum Press {
 }
 
 /// Applies a pointer event to `state`, reporting how far it got.
+///
+/// `focusable` is the control's own answer to "should a press move the keyboard
+/// here". A press is still consumed when it is `false` — the control answers the
+/// pointer, it just does not take the keyboard — which is what a tool-chrome
+/// button (a devtools tab, say) wants: clicking it must not steal focus from the
+/// app underneath.
 pub(crate) fn track_pointer(
     state: &mut InteractionState,
     cx: &mut dyn EventContext,
     id: ElementId,
+    focusable: bool,
 ) -> Press {
     let Event::Pointer(pointer) = cx.event() else {
         return Press::Ignored;
@@ -225,7 +244,9 @@ pub(crate) fn track_pointer(
         PointerPhase::Down if pointer.button == Some(PointerButton::Primary) => {
             state.hovered = true;
             state.pressed = true;
-            cx.request_focus(id);
+            if focusable {
+                cx.request_focus(id);
+            }
             Press::Consumed
         }
         PointerPhase::Up if pointer.button == Some(PointerButton::Primary) => {
@@ -323,6 +344,13 @@ pub struct Button {
     /// `hover` does.
     press: Option<Color>,
     state: InteractionState,
+    /// Whether a press moves the keyboard here.
+    ///
+    /// `true` for a normal button: pressing it focuses it, so Enter reaches the
+    /// same control the pointer just touched. Tool chrome — the devtools tab bar
+    /// is the one this exists for — turns it off, because a click on the chrome
+    /// must not take the keyboard away from the app underneath.
+    focusable: bool,
     revision: Revision,
     /// The implicit colour transition, when set: hovering / pressing fades the
     /// fill between its old and new colour instead of snapping. `None` (the
@@ -360,6 +388,7 @@ impl Button {
             hover: None,
             press: None,
             state: InteractionState::default(),
+            focusable: true,
             revision: Revision::default(),
             transition: None,
             transition_from: Color::rgb(0x2B, 0x6C, 0xB0),
@@ -443,6 +472,19 @@ impl Button {
         self
     }
 
+    /// Whether a press moves the keyboard here. Defaults to `true`.
+    ///
+    /// Turn it off for chrome: a devtools tab still answers the pointer and
+    /// still runs its callback, but clicking it leaves focus where the user had
+    /// it, so the app underneath keeps receiving keys. Such a button is also
+    /// reported to assistive tech as not focusable, so a screen reader does not
+    /// offer a stop the keyboard cannot reach.
+    pub fn focusable(mut self, focusable: bool) -> Self {
+        self.focusable = focusable;
+        self.revision.bump();
+        self
+    }
+
     pub fn label(&self) -> &str {
         &self.label
     }
@@ -499,7 +541,7 @@ impl Button {
 
     pub fn semantics_hint(&self) -> SemanticsHint {
         SemanticsHint::labeled(SemanticsRole::Button, self.label.clone())
-            .with_state(self.state.to_semantics())
+            .with_state(self.state.to_semantics_with(self.focusable))
     }
 }
 
@@ -533,7 +575,7 @@ impl Widget for Button {
 
     fn event(&mut self, cx: &mut dyn EventContext, id: ElementId) -> bool {
         let before = self.state;
-        let press = track_pointer(&mut self.state, cx, id);
+        let press = track_pointer(&mut self.state, cx, id, self.focusable);
         // Armed once for *every* path rather than inside one branch: releasing a
         // press is `Press::Activate`, and it clears `pressed` — which moves the
         // resolved colour just as leaving does — so arming only on `Consumed`
@@ -910,7 +952,7 @@ impl Widget for Pressable {
 
     fn event(&mut self, cx: &mut dyn EventContext, id: ElementId) -> bool {
         let before = self.state;
-        let consumed = match track_pointer(&mut self.state, cx, id) {
+        let consumed = match track_pointer(&mut self.state, cx, id, true) {
             Press::Activate => {
                 if let Some(callback) = &self.on_click {
                     callback();
@@ -1303,7 +1345,7 @@ impl Widget for Switch {
     }
 
     fn event(&mut self, cx: &mut dyn EventContext, id: ElementId) -> bool {
-        match track_pointer(&mut self.state, cx, id) {
+        match track_pointer(&mut self.state, cx, id, true) {
             Press::Activate => {
                 self.toggle();
                 true

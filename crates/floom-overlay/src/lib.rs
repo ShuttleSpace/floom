@@ -32,6 +32,14 @@ pub struct OverlayEntry {
     pub bounds: Rect,
     pub z: i32,
     pub modal: bool,
+    /// An overlay that is drawn but not *there*: the pointer falls through it
+    /// to whatever is behind.
+    ///
+    /// This is what a highlight box needs. It covers the window — it has to, or
+    /// a box around an element near the edge would be clipped — and an overlay
+    /// that covers the window normally takes every click in it. A passthrough
+    /// entry is paint and nothing else: no hit, no focus, no dismissal.
+    pub passthrough: bool,
     pub focus_scope: FocusScopeId,
     pub anim: Option<AnimId>,
     /// The entry animation's current value, or `None` once it has finished (or
@@ -81,11 +89,47 @@ impl OverlayManager {
         modal: bool,
         now_secs: f64,
     ) -> OverlayHandle {
+        self.push_entry(id, kind, host, bounds, modal, false, now_secs)
+    }
+
+    /// [`Self::push`] for an overlay that is drawn but not hit.
+    ///
+    /// A passthrough overlay paints on top and takes nothing: the pointer falls
+    /// through it to the tree behind, and it does not steal focus when it opens.
+    /// A highlight box is the reason this exists — it covers the window so it
+    /// can outline an element anywhere in it, and a covering overlay that also
+    /// took clicks would make the app unclickable while the box was up.
+    pub fn push_passthrough(
+        &mut self,
+        id: OverlayHandle,
+        kind: OverlayKind,
+        host: ElementId,
+        bounds: Rect,
+        now_secs: f64,
+    ) -> OverlayHandle {
+        self.push_entry(id, kind, host, bounds, false, true, now_secs)
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn push_entry(
+        &mut self,
+        id: OverlayHandle,
+        kind: OverlayKind,
+        host: ElementId,
+        bounds: Rect,
+        modal: bool,
+        passthrough: bool,
+        now_secs: f64,
+    ) -> OverlayHandle {
         let z = self.entries.iter().map(|e| e.z).max().unwrap_or(0) + 1;
         let scope = self.focus.create_scope(None);
-        self.focus.set_active_scope(scope);
-        self.focus.register(scope, host);
-        self.focus.focus(host);
+        if !passthrough {
+            // Decoration does not take the keyboard: a highlight that moved
+            // focus would steal the caret from the field the user is typing in.
+            self.focus.set_active_scope(scope);
+            self.focus.register(scope, host);
+            self.focus.focus(host);
+        }
 
         // Surfaces that enter by sliding start off their own far edge;
         // everything else fades in. The tween's range *is* the unit the
@@ -121,6 +165,9 @@ impl OverlayManager {
             bounds,
             z,
             modal,
+            // Interactive by default: an overlay exists to be used, and a
+            // caller that wants decoration has to say so.
+            passthrough,
             focus_scope: scope,
             anim: Some(anim),
             // Paint the first frame at the animation's start value: the entry
@@ -133,11 +180,12 @@ impl OverlayManager {
 
     pub fn pop(&mut self) -> Option<OverlayEntry> {
         let entry = self.entries.pop()?;
-        if let Some(top) = self.entries.last() {
-            self.focus.set_active_scope(top.focus_scope);
-            self.focus.focus(top.host);
-        } else {
-            self.focus.blur();
+        // Decoration coming down moves nothing. A passthrough entry never took
+        // focus, so restoring it would hand the keyboard somewhere the user did
+        // not ask for — and, when nothing interactive remains, would blur the
+        // field they were typing in.
+        if !entry.passthrough {
+            self.restore_focus();
         }
         Some(entry)
     }
@@ -149,13 +197,27 @@ impl OverlayManager {
     pub fn remove(&mut self, id: OverlayHandle) -> Option<OverlayEntry> {
         let pos = self.entries.iter().position(|e| e.id == id)?;
         let entry = self.entries.remove(pos);
-        if let Some(top) = self.entries.last() {
-            self.focus.set_active_scope(top.focus_scope);
-            self.focus.focus(top.host);
-        } else {
-            self.focus.blur();
+        if !entry.passthrough {
+            self.restore_focus();
         }
         Some(entry)
+    }
+
+    /// Hands focus back to whatever is still interactive at the top of the
+    /// stack, or blurs when nothing is.
+    ///
+    /// A passthrough entry is skipped: it never took focus, so handing focus
+    /// *to* it would leave the keyboard on a decoration.
+    fn restore_focus(&mut self) {
+        let Some((scope, host)) = self
+            .top_interactive()
+            .map(|top| (top.focus_scope, top.host))
+        else {
+            self.focus.blur();
+            return;
+        };
+        self.focus.set_active_scope(scope);
+        self.focus.focus(host);
     }
 
     /// Refreshes an overlay's hit bounds after layout discovers the content is
@@ -164,6 +226,33 @@ impl OverlayManager {
         if let Some(entry) = self.entries.iter_mut().find(|e| e.id == id) {
             entry.bounds = bounds;
         }
+    }
+
+    /// Turns an overlay's hit-testing on or off without unmounting it.
+    ///
+    /// A devtools panel is mounted once and then hidden and shown by flipping a
+    /// bool in a shared cell — it is not closed, because closing it would throw
+    /// away the only widget that knows how to rebuild itself. Hiding it that way
+    /// would leave it covering the window: the stack hit-tests against `bounds`,
+    /// and a drawer that spans the full height claims every press down its whole
+    /// column even while it paints nothing. So visibility has to reach this
+    /// stack, not just the widget.
+    ///
+    /// Flipping back to interactive does not touch focus: the overlay never
+    /// held it while it was hidden, and grabbing it here would take the keyboard
+    /// away from whatever the user was using.
+    pub fn set_passthrough(&mut self, id: OverlayHandle, passthrough: bool) {
+        if let Some(entry) = self.entries.iter_mut().find(|e| e.id == id) {
+            entry.passthrough = passthrough;
+        }
+    }
+
+    /// Whether `id` is currently hit-testable, or `None` for an unknown handle.
+    pub fn is_passthrough(&self, id: OverlayHandle) -> Option<bool> {
+        self.entries
+            .iter()
+            .find(|e| e.id == id)
+            .map(|e| e.passthrough)
     }
 
     pub fn len(&self) -> usize {
@@ -178,9 +267,25 @@ impl OverlayManager {
         self.entries.last()
     }
 
+    /// The topmost overlay that can actually receive a pointer.
+    ///
+    /// [`Self::top`] is the topmost entry, which may be a passthrough one — a
+    /// highlight box over the whole window. A dismissal rule that took `top`
+    /// would ask "was the press outside the highlight?" and close the box on
+    /// every click, including the click it is outlining. So the question the
+    /// dismissal asks is this one.
+    pub fn top_interactive(&self) -> Option<&OverlayEntry> {
+        self.entries.iter().rev().find(|e| !e.passthrough)
+    }
+
     /// Hit-test overlays front-to-back; modal blocks passes-through.
+    ///
+    /// A passthrough entry is skipped entirely: it is drawn, not there.
     pub fn hit_test(&self, point: Point) -> Option<OverlayHandle> {
         for e in self.entries.iter().rev() {
+            if e.passthrough {
+                continue;
+            }
             if e.bounds.contains(point) {
                 return Some(e.id);
             }

@@ -171,3 +171,76 @@ fn remove_drops_a_specific_overlay_not_just_the_top() {
     assert_eq!(om.top().unwrap().id, b);
     assert_eq!(om.focus.focused(), Some(eid(2)));
 }
+
+#[test]
+fn a_passthrough_overlay_is_drawn_but_not_hit() {
+    let mut om = OverlayManager::new();
+    let dialog = om.push(
+        handle(0),
+        OverlayKind::Dialog,
+        eid(1),
+        Rect::from_origin_size(Point::new(100.0, 100.0), Size::new(50.0, 50.0)),
+        false,
+        0.0,
+    );
+    // A highlight box covers the whole window so it can outline anything in it.
+    let highlight = om.push_passthrough(
+        handle(1),
+        OverlayKind::Popup,
+        eid(2),
+        Rect::from_origin_size(Point::ZERO, Size::new(1000.0, 800.0)),
+        0.0,
+    );
+    // It is the topmost entry — it paints above everything — but a click that
+    // lands on it belongs to what is underneath.
+    assert_eq!(om.top().unwrap().id, highlight);
+    assert_eq!(om.hit_test(Point::new(120.0, 120.0)), Some(dialog));
+    // Even over empty space, it is not there to hit.
+    assert_eq!(om.hit_test(Point::new(900.0, 700.0)), None);
+    // And the interactive top is still the dialog, which is what a dismissal
+    // rule must ask: "was the press outside the top *interactive* overlay?"
+    assert_eq!(om.top_interactive().map(|e| e.id), Some(dialog));
+}
+
+#[test]
+fn a_passthrough_overlay_never_takes_the_keyboard() {
+    let mut om = OverlayManager::new();
+    om.focus.focus(eid(7));
+    om.push_passthrough(
+        handle(0),
+        OverlayKind::Popup,
+        eid(2),
+        Rect::from_origin_size(Point::ZERO, Size::new(10.0, 10.0)),
+        0.0,
+    );
+    // Opening a decoration must not steal the caret from the field being typed
+    // in, and closing it must not blur that field either.
+    assert_eq!(om.focus.focused(), Some(eid(7)));
+    om.pop();
+    assert_eq!(om.focus.focused(), Some(eid(7)));
+}
+
+#[test]
+fn closing_a_passthrough_overlay_leaves_the_real_one_in_front() {
+    let mut om = OverlayManager::new();
+    let dialog = om.push(
+        handle(0),
+        OverlayKind::Dialog,
+        eid(1),
+        Rect::from_origin_size(Point::ZERO, Size::new(10.0, 10.0)),
+        true,
+        0.0,
+    );
+    let highlight = om.push_passthrough(
+        handle(1),
+        OverlayKind::Popup,
+        eid(2),
+        Rect::from_origin_size(Point::ZERO, Size::new(10.0, 10.0)),
+        0.0,
+    );
+    assert_eq!(om.focus.focused(), Some(eid(1)));
+    om.remove(highlight);
+    // The dialog keeps focus; closing the box did not re-run focus restoration.
+    assert_eq!(om.focus.focused(), Some(eid(1)));
+    assert_eq!(om.top().map(|e| e.id), Some(dialog));
+}

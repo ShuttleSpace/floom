@@ -1,14 +1,28 @@
 //! The devtools, in a real window.
 //!
-//! The whole integration is two lines: one to mount the panel, one per frame to
-//! keep it current. Everything else — F12 to open it, Escape to close it,
-//! Ctrl+Shift+C to pick an element, the tree, the breadcrumb, the styles, the
-//! layout box, the performance timeline, the console — is the panel's own.
+//! The whole integration is one call: `run_desktop_with_devtools` mounts the
+//! panel, keeps its tree current every frame, and routes the shortcut and the
+//! pick before the app's own tree sees them. What the panel shows is split in
+//! two, and the split is worth knowing:
+//!
+//! - **The engine's half** — the element tree, the breadcrumb to the selected
+//!   node, and that node's style or layout — is composed in by the entry itself,
+//!   from the live tree. The `Elements` / `Style` / `Layout` tabs switch between
+//!   those, and the tree is re-read every frame rather than at startup.
+//! - **The app's half** — the rows this demo's `readout` closure returns — is
+//!   whatever the app knows about itself. This one shows a click counter.
+//!
+//! Performance and the console are not wired here: `performance_rows` and
+//! `console_rows` build those rows, but they need a `PerformanceSnapshot` and a
+//! list of caught `Report`s, which belong to the app (or to a profiler the app
+//! opted into) rather than to the panel. An app that has them appends the rows
+//! from its own closure; this one has neither, so it shows neither rather than
+//! a timeline of nothing.
 //!
 //! ```text
-//! floom::run_desktop_with_devtools(   // the one line, plus the loop's key hook
+//! floom::run_desktop_with_devtools(
 //!     "floom — devtools", size, |host| { /* mount your app */ },
-//!     |state| { /* the panel's rows */ },
+//!     |state| { /* the app's own rows */ },
 //! );
 //! ```
 //!
@@ -17,9 +31,14 @@
 //! | key | what it does |
 //! | --- | --- |
 //! | **F12** | show / hide the panel |
-//! | **Ctrl+Shift+I** | the same, where F12 belongs to the OS |
+//! | **Cmd+Shift+I** (macOS) / **Ctrl+Shift+I** | the same, where F12 belongs to the OS |
 //! | **Ctrl+Shift+C** | arm the pick, then click any element to inspect it |
-//! | **Escape** | close the panel |
+//! | **Escape** | close the panel — and only while it is open, so Escape stays the app's |
+//! | **click a tab** | switch between the tree, the selected element's style, and its layout |
+//!
+//! The panel is chrome rather than a dialog: while it is hidden its column
+//! belongs to the app, clicking a tab does not take the keyboard, and a press
+//! outside the panel does not close it.
 //!
 //! Run with `cargo run -p floom-devtools-demo`.
 
@@ -33,7 +52,8 @@ const WINDOW: Size = Size::new(720.0, 560.0);
 
 fn main() {
     // A little state for the demo app to mutate, so the panel has something
-    // live to look at: the console and the tree both change as you click.
+    // live to look at: the tree changes as you click, because the counter line
+    // is rebuilt from it.
     let clicks = Arc::new(AtomicI32::new(0));
 
     let result = floom::run_desktop_with_devtools(
@@ -82,7 +102,7 @@ fn main() {
                 ));
 
                 // A counter readout: the same atomic the buttons bump, so the
-                // panel's console and this line move together.
+                // panel's tree and this line move together.
                 //
                 // A signal would be the natural spelling, and it does not work
                 // here: a child builder is an `Fn` the host may call from
@@ -106,20 +126,19 @@ fn main() {
         {
             let clicks = clicks.clone();
             move |state| {
-                let mut rows = vec![
-                    // The demo's own line: what the app knows about itself.
+                // The demo's own rows: what the app knows about itself. The
+                // engine's rows — the tree, the breadcrumb, and whichever
+                // readout the tab asks for — are composed in by the entry
+                // itself, which also refreshes the tree every frame. This
+                // closure only answers for the app.
+                vec![
                     floom::devtools::ReadoutRow::heading("demo"),
                     floom::devtools::ReadoutRow::new(
                         "clicks",
                         clicks.load(Ordering::SeqCst).to_string(),
                     ),
-                floom::devtools::ReadoutRow::new("tab", format!("{:?}", state.tab())),
-            ];
-            // The engine's rows — the tree, the breadcrumb, and whichever
-            // readout the tab asks for — are composed in by the entry itself,
-            // which also refreshes the tree every frame. This closure only
-            // answers for the app.
-            rows
+                    floom::devtools::ReadoutRow::new("tab", format!("{:?}", state.tab())),
+                ]
             }
         },
     );

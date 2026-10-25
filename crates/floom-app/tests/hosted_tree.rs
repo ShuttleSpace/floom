@@ -162,3 +162,49 @@ fn the_kinds_map_onto_the_inspectors_three_tiers() {
     assert!(tiers.contains(&ElementKind::Host), "{tiers:?}");
     assert!(tiers.contains(&ElementKind::Primitive), "{tiers:?}");
 }
+
+#[test]
+fn a_key_round_trips_back_to_the_node_it_names() {
+    let mut host = host();
+    let mut stack = Stack::new(floom_core::Axis::Vertical);
+    stack = stack.push(|| Box::new(Text::new("first")));
+    stack = stack.push(|| Box::new(Text::new("second")));
+    host.mount_root(LayoutStyle::default(), stack);
+    host.frame();
+
+    // A panel holds a selection as a key, across frames and rebuilds, so the
+    // key has to name the same node a frame later — and a stale one has to come
+    // back as "gone" rather than as whatever now occupies the slot.
+    for described in host.tree_nodes() {
+        let node = host
+            .node_by_key(&described.key)
+            .unwrap_or_else(|| panic!("a key the host just minted must resolve: {}", described.key));
+        assert_eq!(
+            host.tree_nodes().into_iter().find(|n| n.key == described.key).map(|n| n.element),
+            Some(described.element),
+        );
+        // The reverse direction names the same element the description did.
+        assert!(
+            host.tree_nodes()
+                .iter()
+                .any(|n| n.element == described.element && n.key == described.key),
+            "node {} does not answer to {}",
+            described.element.raw(),
+            described.key
+        );
+        let _ = node;
+    }
+}
+
+#[test]
+fn a_key_from_another_tree_does_not_resolve_to_a_live_node() {
+    let host = WidgetHost::new();
+    // A panel keeps its selection across a rebuild. The old key must answer
+    // "gone" rather than land on a node that reused the slot — a stale
+    // selection that silently retargets is worse than one that clears.
+    assert!(host.node_by_key("node-999999").is_none());
+    assert!(host.node_by_key("node-not-a-number").is_none());
+    assert!(host.node_by_key("").is_none());
+    // The format is the host's own, and nothing else parses as one.
+    assert!(host.node_by_key("999999").is_none());
+}

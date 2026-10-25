@@ -143,11 +143,10 @@ fn clicking_a_button_picks_it_without_pressing_it() {
     // The host's own hit test is what a click uses, so a pick lands on the same
     // node a press would.
     let at = Point::new(48.0, 40.0);
-    let key_of = |p: Point| {
-        host.node_at_point(p)
-            .map(|n| host.node_id(n))
-            .map(|id| format!("node-{}", id.raw()))
-    };
+    // The same key the facade's pointer hook builds: `WidgetHost::node_key`,
+    // not a private `node-{raw}` spelling, so the pick names the node the panel
+    // can look back up with `node_by_key`.
+    let key_of = |p: Point| host.node_at_point(p).map(|n| WidgetHost::node_key(host.node_id(n)));
     assert!(key_of(at).is_some(), "the point is over the button row: {at:?}");
 
     // And the picker consumes the event, so the button never sees it.

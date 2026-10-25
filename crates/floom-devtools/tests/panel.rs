@@ -7,11 +7,13 @@
 
 use std::sync::{Arc, Mutex};
 
-use floom_core::{Key, KeyEvent, KeyPhase, Modifiers, NamedKey, Widget};
+use floom_core::{Key, KeyEvent, KeyPhase, Modifiers, NamedKey, Widget, WidgetAny};
 use floom_devtools::panel::{
     DevtoolsPanel, DevtoolsState, DevtoolsTab, ReadoutRow, default_shortcut, panel_bounds,
 };
-use floom_types::{Point, Rect, Size};
+use floom_types::{ElementId, Event, Point, PointerEvent, Rect, Size};
+use floom_widgets::Button;
+use floom_widgets::testkit::{RecordingUpdateContext, dispatch};
 
 fn f12() -> KeyEvent {
     KeyEvent {
@@ -26,6 +28,17 @@ fn ctrl_shift_i() -> KeyEvent {
         phase: KeyPhase::Down,
         key: Key::Char('i'),
         modifiers: Modifiers::CONTROL.union(Modifiers::SHIFT),
+    }
+}
+
+/// The macOS spelling of the same binding. The platform layer reports the
+/// command key as `META`, so a panel that only knew `CONTROL` would be
+/// unopenable by the shortcut every macOS user tries first.
+fn cmd_shift_i() -> KeyEvent {
+    KeyEvent {
+        phase: KeyPhase::Down,
+        key: Key::Char('i'),
+        modifiers: Modifiers::META.union(Modifiers::SHIFT),
     }
 }
 
@@ -63,6 +76,37 @@ fn ctrl_shift_i_is_the_shortcut_where_f12_belongs_to_the_os() {
     assert!(panel.handle_key(&ctrl_shift_i(), &default_shortcut()));
     assert!(panel.visible());
     assert!(panel.handle_key(&ctrl_shift_i(), &default_shortcut()));
+    assert!(!panel.visible());
+}
+
+#[test]
+fn cmd_shift_i_is_the_same_shortcut_on_macos() {
+    let mut panel = panel();
+    // The command key, not control: the platform layer maps it to `META`, and
+    // this is the binding a macOS user reaches for first.
+    assert!(panel.handle_key(&cmd_shift_i(), &default_shortcut()));
+    assert!(panel.visible());
+    assert!(panel.handle_key(&cmd_shift_i(), &default_shortcut()));
+    assert!(!panel.visible());
+}
+
+#[test]
+fn the_shift_i_shortcut_needs_both_modifiers() {
+    let mut panel = panel();
+    // Command alone is a menu binding, not the devtools.
+    let cmd_i = KeyEvent {
+        phase: KeyPhase::Down,
+        key: Key::Char('i'),
+        modifiers: Modifiers::META,
+    };
+    assert!(!panel.handle_key(&cmd_i, &default_shortcut()));
+    // Control alone likewise.
+    let ctrl_i = KeyEvent {
+        phase: KeyPhase::Down,
+        key: Key::Char('i'),
+        modifiers: Modifiers::CONTROL,
+    };
+    assert!(!panel.handle_key(&ctrl_i, &default_shortcut()));
     assert!(!panel.visible());
 }
 
@@ -218,4 +262,235 @@ fn the_visibility_change_fires_once_per_change() {
     panel.handle_key(&f12(), &default_shortcut());
     panel.handle_key(&f12(), &default_shortcut());
     assert_eq!(*seen.lock().unwrap(), vec![true, false]);
+}
+
+#[test]
+fn opening_the_panel_asks_the_host_to_rebuild_its_children() {
+    let mut panel = panel();
+    let id = ElementId::new(1, 1);
+    let mut cx = RecordingUpdateContext::new();
+    // Hidden, first update: nothing to rebuild — the panel declares the same
+    // (empty) children it always did.
+    panel.update(&mut cx, id);
+    assert!(!cx.reconciled());
+
+    // The shortcut flips the state from outside the widget tree. The next
+    // `update` is the only place that can tell the host its children changed,
+    // so it has to: a repaint alone would leave the host mounting no rows.
+    panel.handle_key(&f12(), &default_shortcut());
+    let mut cx = RecordingUpdateContext::new();
+    panel.update(&mut cx, id);
+    assert!(
+        cx.reconciled(),
+        "opening the panel marks its children dirty, or the host never asks again"
+    );
+    assert!(cx.laid_out_again(), "the rows arrive with a new layout");
+
+    // A settled frame asks for nothing: the flag is per-change, not per-frame.
+    let mut cx = RecordingUpdateContext::new();
+    panel.update(&mut cx, id);
+    assert!(!cx.reconciled());
+
+    // Closing is a change in the other direction, and equally has to be marked.
+    panel.handle_key(&f12(), &default_shortcut());
+    let mut cx = RecordingUpdateContext::new();
+    panel.update(&mut cx, id);
+    assert!(cx.reconciled());
+}
+
+/// The rows are a function of more than visibility: the tab and the selected
+/// element change what the panel declares without changing whether it is up.
+///
+/// Neither comes through an argument to `update` — they are written into the
+/// shared cell from outside the tree — so a panel that only watched visibility
+/// would keep painting the previous tab until some unrelated repaint happened
+/// to rebuild it. That is the bug this test is named after.
+#[test]
+fn switching_tab_or_element_asks_the_host_to_rebuild_the_rows() {
+    let state = Arc::new(Mutex::new(DevtoolsState::new()));
+    let mut panel = DevtoolsPanel::new(state.clone(), |state| {
+        vec![ReadoutRow::new("tab", format!("{:?}", state.tab()))]
+    });
+    let id = ElementId::new(1, 1);
+    panel.handle_key(&f12(), &default_shortcut());
+
+    // Opening is one change.
+    let mut cx = RecordingUpdateContext::new();
+    panel.update(&mut cx, id);
+    assert!(cx.reconciled());
+    // And it settles.
+    let mut cx = RecordingUpdateContext::new();
+    panel.update(&mut cx, id);
+    assert!(!cx.reconciled(), "a settled frame asks for nothing");
+
+    // A tab switch, written straight into the shared cell the way a click on a
+    // tab would: no visibility change, no `update` argument, new rows.
+    state.lock().unwrap().set_tab(DevtoolsTab::Style);
+    let mut cx = RecordingUpdateContext::new();
+    panel.update(&mut cx, id);
+    assert!(
+        cx.reconciled(),
+        "a new tab declares new rows, so the host has to be told"
+    );
+
+    // A selection change, same shape: the readout is about a different element.
+    state.lock().unwrap().select("node-7");
+    let mut cx = RecordingUpdateContext::new();
+    panel.update(&mut cx, id);
+    assert!(cx.reconciled(), "a new selection declares new rows");
+
+    // A second update with nothing changed does not.
+    let mut cx = RecordingUpdateContext::new();
+    panel.update(&mut cx, id);
+    assert!(!cx.reconciled());
+}
+
+/// A hidden panel collapses its row key to `(false, ..)`, so a tab change while
+/// it is down is not remembered as "already mounted" and skipped when it opens.
+///
+/// The panel is hidden most of the time. If the key carried the tab even while
+/// hidden, a tab change made with the panel down would compare equal on the
+/// next update and the rows for the new tab would never be mounted.
+#[test]
+fn a_tab_changed_while_hidden_still_rebuilds_on_open() {
+    let state = Arc::new(Mutex::new(DevtoolsState::new()));
+    let mut panel = DevtoolsPanel::new(state.clone(), |state| {
+        vec![ReadoutRow::new("tab", format!("{:?}", state.tab()))]
+    });
+    let id = ElementId::new(1, 1);
+    // Hidden and settled.
+    let mut cx = RecordingUpdateContext::new();
+    panel.update(&mut cx, id);
+    assert!(!cx.reconciled());
+
+    // The tab changes while the panel is down.
+    state.lock().unwrap().set_tab(DevtoolsTab::Layout);
+    let mut cx = RecordingUpdateContext::new();
+    panel.update(&mut cx, id);
+    assert!(!cx.reconciled(), "hidden: there are still no rows to rebuild");
+
+    // Opening mounts the rows for the tab that is selected *now*, not the one
+    // that was selected when it last had rows.
+    panel.handle_key(&f12(), &default_shortcut());
+    let mut cx = RecordingUpdateContext::new();
+    panel.update(&mut cx, id);
+    assert!(cx.reconciled());
+    assert!(panel.visible());
+}
+
+// --- The tab bar ---------------------------------------------------------
+
+/// Walks a built widget tree and hands every `Button` to `visit`, in the order
+/// the bar shows them.
+fn buttons_in(widget: &mut dyn WidgetAny, visit: &mut impl FnMut(&mut Button) -> bool) -> bool {
+    if let Some(button) = widget.as_any_mut().downcast_mut::<Button>() {
+        return visit(button);
+    }
+    for child in widget.children() {
+        let mut built = child.build();
+        if buttons_in(built.as_mut(), visit) {
+            return true;
+        }
+    }
+    false
+}
+
+fn tab_labels(panel: &DevtoolsPanel) -> Vec<String> {
+    let mut labels = Vec::new();
+    let mut children = panel.children();
+    for child in children.iter_mut() {
+        let mut built = child.build();
+        buttons_in(built.as_mut(), &mut |button| {
+            labels.push(button.label().to_string());
+            false
+        });
+    }
+    labels
+}
+
+fn click_button(panel: &DevtoolsPanel, label: &str) -> bool {
+    let mut children = panel.children();
+    for child in children.iter_mut() {
+        let mut built = child.build();
+        let mut clicked = false;
+        buttons_in(built.as_mut(), &mut |button| {
+            if button.label() != label {
+                return false;
+            }
+            let id = ElementId::new(1, 1);
+            let bounds = Rect::from_origin_size(Point::new(0.0, 0.0), Size::new(80.0, 24.0));
+            let at = Point::new(10.0, 10.0);
+            dispatch(
+                button,
+                id,
+                bounds,
+                Event::Pointer(PointerEvent::primary_down(at)),
+            );
+            dispatch(
+                button,
+                id,
+                bounds,
+                Event::Pointer(PointerEvent::primary_up(at)),
+            );
+            clicked = true;
+            true
+        });
+        if clicked {
+            return true;
+        }
+    }
+    false
+}
+
+#[test]
+fn a_panel_without_tabs_mounts_no_bar() {
+    let mut panel = panel();
+    panel.handle_key(&f12(), &default_shortcut());
+    // No bar means no buttons at all: the first level of children is the rows,
+    // and every one of them is text. A bar the caller did not ask for would be
+    // buttons that switch to a readout this panel cannot fill.
+    assert_eq!(tab_labels(&panel), Vec::<String>::new());
+}
+
+#[test]
+fn the_tab_bar_offers_exactly_the_tabs_it_was_given() {
+    let state = Arc::new(Mutex::new(DevtoolsState::new()));
+    let mut panel =
+        DevtoolsPanel::new(state, |_| Vec::new()).with_tabs(DevtoolsTab::ELEMENTS);
+    panel.handle_key(&f12(), &default_shortcut());
+    // `Tree` is spelled "Elements" on the bar — the word Chrome uses, and the
+    // one that says what the readout is a list of.
+    assert_eq!(tab_labels(&panel), vec!["Elements", "Style", "Layout"]);
+}
+
+#[test]
+fn a_click_on_a_tab_switches_the_readout() {
+    let state = Arc::new(Mutex::new(DevtoolsState::new()));
+    let mut panel =
+        DevtoolsPanel::new(state.clone(), |_| Vec::new()).with_tabs(DevtoolsTab::ALL);
+    panel.handle_key(&f12(), &default_shortcut());
+    assert_eq!(state.lock().unwrap().tab(), DevtoolsTab::Tree);
+
+    assert!(click_button(&panel, "Style"), "the bar offers Style");
+    assert_eq!(state.lock().unwrap().tab(), DevtoolsTab::Style);
+
+    assert!(click_button(&panel, "Layout"), "the bar offers Layout");
+    assert_eq!(state.lock().unwrap().tab(), DevtoolsTab::Layout);
+
+    // Every tab is reachable from every other one: the bar is rebuilt from the
+    // state, not frozen at the tab that was active when it was first mounted.
+    assert!(click_button(&panel, "Elements"));
+    assert_eq!(state.lock().unwrap().tab(), DevtoolsTab::Tree);
+    assert!(click_button(&panel, "Style"));
+    assert_eq!(state.lock().unwrap().tab(), DevtoolsTab::Style);
+}
+
+#[test]
+fn a_click_on_the_active_tab_is_not_a_change() {
+    let state = Arc::new(Mutex::new(DevtoolsState::new()));
+    let mut panel =
+        DevtoolsPanel::new(state.clone(), |_| Vec::new()).with_tabs(DevtoolsTab::ELEMENTS);
+    panel.handle_key(&f12(), &default_shortcut());
+    assert!(click_button(&panel, "Elements"));
+    assert_eq!(state.lock().unwrap().tab(), DevtoolsTab::Tree);
 }

@@ -40,7 +40,7 @@ use floom_core::{
     Axis, Child, ChildKey, Color, ElementId, EventContext, Key, KeyEvent, KeyPhase, LayoutRequest,
     Modifiers, Rect, Widget,
 };
-use floom_widgets::{Stack, Surface, Text};
+use floom_widgets::{Button, Stack, Surface, Text};
 
 use crate::{Inspector, SemanticsEntry, UpdatePath};
 use floom_inspector::TreeNodeInfo;
@@ -53,7 +53,7 @@ use floom_inspector::TreeNodeInfo;
 /// wants `~` instead, say — without this crate learning a keybinding registry.
 pub type DevtoolsShortcut = Arc<dyn Fn(&KeyEvent) -> bool + Send + Sync + 'static>;
 
-/// The default shortcut: F12, or Ctrl+Shift+I.
+/// The default shortcut: F12, or `Ctrl+Shift+I`, or `Cmd+Shift+I` on macOS.
 pub fn default_shortcut() -> DevtoolsShortcut {
     Arc::new(|event: &KeyEvent| {
         if event.phase != KeyPhase::Down {
@@ -62,9 +62,15 @@ pub fn default_shortcut() -> DevtoolsShortcut {
         if event.key == Key::Named(floom_core::NamedKey::Function(12)) {
             return true;
         }
-        event.key == Key::Char('i')
-            && event.modifiers.contains(Modifiers::CONTROL)
-            && event.modifiers.contains(Modifiers::SHIFT)
+        // `Char('i')` rather than `Char('I')`: the platform layer lowercases the
+        // character it maps, because shift is already carried by `modifiers`.
+        // Both modifiers are accepted because the two desktop conventions split
+        // on which one the platform calls "command" — the same panel, one
+        // binding, on the machine the reader is actually using.
+        let is_i = event.key == Key::Char('i');
+        is_i && event.modifiers.contains(Modifiers::SHIFT)
+            && (event.modifiers.contains(Modifiers::CONTROL)
+                || event.modifiers.contains(Modifiers::META))
     })
 }
 
@@ -105,6 +111,46 @@ pub enum DevtoolsTab {
     Updates,
 }
 
+impl DevtoolsTab {
+    /// The tab's name in the tab bar, and the word the readout uses for it.
+    pub fn label(self) -> &'static str {
+        match self {
+            DevtoolsTab::Tree => "Elements",
+            DevtoolsTab::Style => "Style",
+            DevtoolsTab::Layout => "Layout",
+            DevtoolsTab::Semantics => "Semantics",
+            DevtoolsTab::Updates => "Updates",
+        }
+    }
+
+    /// Every tab, in the order the tab bar shows them.
+    ///
+    /// Tree first because it is the one that answers "what is on screen" without
+    /// a selection, and Semantics/Updates last because they are the two a caller
+    /// has to feed — a panel that opened on a dead tab would be a panel whose
+    /// first impression is a button that does nothing.
+    pub const ALL: [DevtoolsTab; 5] = [
+        DevtoolsTab::Tree,
+        DevtoolsTab::Style,
+        DevtoolsTab::Layout,
+        DevtoolsTab::Semantics,
+        DevtoolsTab::Updates,
+    ];
+
+    /// The tabs [`elements_readout`] can fill from the tree alone.
+    ///
+    /// `elements_readout` composes the tree, the breadcrumb, and the selected
+    /// element's style or layout — the three readouts an `Inspector` answers.
+    /// Semantics and Updates need data the inspector does not hold (a semantics
+    /// entry list and an invalidation path), so offering them here would put two
+    /// buttons on the bar that switch to nothing.
+    pub const ELEMENTS: [DevtoolsTab; 3] = [
+        DevtoolsTab::Tree,
+        DevtoolsTab::Style,
+        DevtoolsTab::Layout,
+    ];
+}
+
 impl DevtoolsState {
     pub fn new() -> Self {
         Self {
@@ -139,13 +185,13 @@ impl DevtoolsState {
     }
 
     /// Selects a readout.
+    ///
+    /// The selection is deliberately left alone: Style and Layout are both about
+    /// *the* selected element, so switching between them is a change of what is
+    /// shown, not of what it is shown about. Picking a default here would also
+    /// mean the state needed to know the tree's root, which it does not.
     pub fn set_tab(&mut self, tab: DevtoolsTab) {
         self.tab = tab;
-        if self.selected.is_none() {
-            // A readout about an element needs one; the root is the only one
-            // guaranteed to exist, and it is the useful default anyway.
-            self.selected = None;
-        }
     }
 
     /// The key of the element the readout is about, if one was picked.
@@ -183,6 +229,32 @@ pub struct DevtoolsPanel {
     on_change: Option<Arc<dyn Fn(bool) + Send + Sync + 'static>>,
     /// The visibility as of the last `update`, so a change is a change.
     reported: Option<bool>,
+    /// The visibility the host last mounted children for.
+    ///
+    /// Distinct from `reported` on purpose: that one drives the caller's
+    /// callback and `handle_key` advances it the moment the state flips, before
+    /// any frame has run. This one may only be advanced by `update`, because
+    /// `update` is the only place that can tell the host its children changed.
+    /// It starts at `false` because that is what the host has actually mounted:
+    /// a panel arrives with no rows under it, whatever its state cell says.
+    mounted: bool,
+    /// The readout the host last mounted children for: visibility, tab and
+    /// selection.
+    ///
+    /// Visibility alone is not enough. Switching tab changes every row below
+    /// the breadcrumb, and a pick changes which element the rows are about —
+    /// both arrive through the shared cell rather than through `update`'s
+    /// arguments, so a panel that only compared visibility would keep drawing
+    /// the previous tab's rows until something else happened to dirty it.
+    mounted_rows: Option<(bool, DevtoolsTab, Option<String>)>,
+    /// The tabs to put on the bar, in order. Empty means no bar at all.
+    ///
+    /// Empty is the right default for [`DevtoolsPanel::new`]: the caller's
+    /// readout decides what a tab means, and a panel that offered buttons for
+    /// readouts the caller never wrote would be a panel whose buttons switch to
+    /// nothing. [`DevtoolsPanel::with_tabs`] is how a caller that *does* fill
+    /// several tabs says so.
+    tabs: Vec<DevtoolsTab>,
 }
 
 /// One line of the panel's readout.
@@ -236,12 +308,44 @@ impl DevtoolsPanel {
         state: Arc<Mutex<DevtoolsState>>,
         readout: impl Fn(&DevtoolsState) -> Vec<ReadoutRow> + Send + Sync + 'static,
     ) -> Self {
+        // A panel built while the state already says "shown" is mounted with its
+        // rows: the host reconciles the overlay's subtree as it opens it. So the
+        // baseline is the visibility at construction, not a constant `false`.
+        let mounted = state.lock().map(|s| s.visible()).unwrap_or(false);
+        let mounted_rows = {
+            let guard = state.lock().ok();
+            let visible = guard.as_ref().is_some_and(|s| s.visible());
+            let tab = guard.as_ref().map(|s| s.tab()).unwrap_or_default();
+            let selected = guard.as_ref().and_then(|s| s.selected().map(str::to_string));
+            if visible {
+                Some((true, tab, selected))
+            } else {
+                Some((false, DevtoolsTab::default(), None))
+            }
+        };
         Self {
             state,
             readout: Arc::new(readout),
             on_change: None,
             reported: None,
+            mounted,
+            mounted_rows,
+            tabs: Vec::new(),
         }
+    }
+
+    /// Puts a tab bar above the readout, with one button per tab in `tabs`.
+    ///
+    /// A click flips [`DevtoolsState::tab`] in the shared cell; the panel's next
+    /// `update` sees the change and rebuilds the rows, so the readout closure
+    /// only has to read `state.tab()` — it never has to know a tab bar exists.
+    ///
+    /// Pass [`DevtoolsTab::ELEMENTS`] for [`elements_readout`]: the tabs it can
+    /// actually fill. [`DevtoolsTab::ALL`] is for a caller whose own readout
+    /// answers all five.
+    pub fn with_tabs(mut self, tabs: impl IntoIterator<Item = DevtoolsTab>) -> Self {
+        self.tabs = tabs.into_iter().collect();
+        self
     }
 
     /// Called with the panel's visibility whenever it changes.
@@ -293,6 +397,21 @@ impl DevtoolsPanel {
     pub fn visible(&self) -> bool {
         self.state.lock().map(|s| s.visible()).unwrap_or(false)
     }
+
+    /// What the rows are a function of, as one comparable value.
+    ///
+    /// Visibility, tab and selection: everything `rows()` reads from the shared
+    /// cell that the host cannot see from outside. A hidden panel has no rows at
+    /// all, so it collapses to `(false, ..)` rather than carrying a stale tab.
+    fn mounted_rows_key(&self, visible: bool) -> (bool, DevtoolsTab, Option<String>) {
+        if !visible {
+            return (false, DevtoolsTab::default(), None);
+        }
+        let Ok(state) = self.state.lock() else {
+            return (visible, DevtoolsTab::default(), None);
+        };
+        (visible, state.tab(), state.selected().map(str::to_string))
+    }
 }
 
 impl Widget for DevtoolsPanel {
@@ -307,7 +426,29 @@ impl Widget for DevtoolsPanel {
                 on_change(visible);
             }
         }
-        let _ = (cx, id);
+        // Opening or closing the panel changes what `children()` declares — no
+        // rows when hidden, the whole readout when shown — so the host has to be
+        // told to consult it again. `mark_dirty` alone is a repaint of the
+        // previous frame's children, which for a panel that just opened is
+        // nothing at all: the panel would report itself visible while the host
+        // still mounted no rows.
+        //
+        // Tracked separately from `reported` because `handle_key` advances that
+        // one the moment the state flips, before any frame has run — and a flip
+        // the host has not yet seen still has to be marked.
+        //
+        // The tab and the selection are compared too: both change the rows
+        // without changing visibility, and neither comes through an argument to
+        // `update`. A panel that only watched visibility would show the previous
+        // tab until an unrelated repaint happened to rebuild it.
+        let rows = self.mounted_rows_key(visible);
+        if self.mounted_rows.as_ref() != Some(&rows) || self.mounted != visible {
+            self.mounted = visible;
+            self.mounted_rows = Some(rows);
+            cx.mark_children_dirty(id);
+            cx.mark_layout_dirty(id);
+            cx.mark_dirty(id);
+        }
     }
 
     fn children(&self) -> Vec<Child> {
@@ -316,6 +457,45 @@ impl Widget for DevtoolsPanel {
         }
         let rows = self.rows();
         let mut stack = Stack::new(Axis::Vertical);
+        let mut next_key = 0u64;
+        // The tab bar first, then the rows: the bar is chrome, the rows are the
+        // answer, and a bar below the rows would be a bar the reader has to
+        // scroll to reach.
+        if !self.tabs.is_empty() {
+            let tabs = self.tabs.clone();
+            let state = self.state.clone();
+            stack = stack.push_keyed(next_key, move || {
+                let active = state.lock().map(|s| s.tab()).unwrap_or_default();
+                let mut bar = Stack::new(Axis::Horizontal).gap(4.0);
+                for (index, tab) in tabs.iter().copied().enumerate() {
+                    let state = state.clone();
+                    let selected = tab == active;
+                    // The button is built here rather than captured: `Button`
+                    // owns a `Box<dyn Fn()>` callback and is deliberately not
+                    // `Clone`, while the builder closure has to be replayable.
+                    bar = bar.push_keyed(index as u64, move || {
+                        let state = state.clone();
+                        let mut button = Button::new(tab.label())
+                            .focusable(false)
+                            .radius(3.0)
+                            .color(if selected { tab_active_fill() } else { tab_idle_fill() })
+                            .text_color(if selected {
+                                Color::WHITE
+                            } else {
+                                Color::rgb(0x9a, 0xa2, 0xb2)
+                            });
+                        button = button.on_click(move || {
+                            if let Ok(mut state) = state.lock() {
+                                state.set_tab(tab);
+                            }
+                        });
+                        Box::new(button)
+                    });
+                }
+                Box::new(bar)
+            });
+            next_key += 1;
+        }
         for (index, row) in rows.iter().enumerate() {
             // One indent step per level of depth. A heading carries no value and
             // is drawn heavier; a row's label and value are separated, and the
@@ -329,7 +509,7 @@ impl Widget for DevtoolsPanel {
                 format!("{indent}{}  {}", row.label, row.value)
             };
             let size = if row.heading { 12.0 } else { 11.0 };
-            stack = stack.push_keyed(index as u64, move || {
+            stack = stack.push_keyed(next_key + index as u64, move || {
                 Box::new(Text::new(text.clone()).size(size))
             });
         }
@@ -345,6 +525,7 @@ impl Widget for DevtoolsPanel {
                 Box::new(
                     Surface::new()
                         .background(panel_background())
+                        .padding(floom_core::Insets::uniform(6.0))
                         .push(move || Box::new((*stack).clone())),
                 )
             },
@@ -468,6 +649,21 @@ fn fmt_f32(value: f32) -> String {
 /// whatever the app drew.
 fn panel_background() -> floom_core::Brush {
     floom_core::Brush::from(Color::rgba(24, 26, 32, 242))
+}
+
+/// The fill of the tab the panel is showing.
+fn tab_active_fill() -> Color {
+    Color::rgb(0x3a, 0x3f, 0x4a)
+}
+
+/// The fill of a tab the panel is not showing.
+///
+/// A faint wash rather than nothing at all: a tab with no fill reads as a label,
+/// and the whole point of the bar is that each name is a thing that can be
+/// pressed. It stays well below the active fill so the active one is the one the
+/// eye lands on.
+fn tab_idle_fill() -> Color {
+    Color::rgba(255, 255, 255, 14)
 }
 
 /// The readout a panel shows when the caller has supplied nothing better.

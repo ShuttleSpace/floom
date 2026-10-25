@@ -620,6 +620,53 @@ fn logical_point(position: winit::dpi::PhysicalPosition<f64>, scale: f64) -> Poi
     Point::new(position.x / scale, position.y / scale)
 }
 
+/// The [`floom_types::PointerEvent`] a queued platform event stands for, if it
+/// is one.
+///
+/// The same mapping `floom-app`'s runner does, because the app-side hook has to
+/// answer about the event the tree would receive — not about the winit event,
+/// which carries a physical position and a backend button id.
+/// `crates/floom-app/src/runner.rs::map_button` is the other half and must keep
+/// the same folding of `Auxiliary`/`Other` onto `Middle`; a hook that saw
+/// `Other(7)` would answer about a button the tree never sees.
+fn pointer_event(event: &PlatformEvent) -> Option<floom_types::PointerEvent> {
+    use floom_types::{PointerEvent, PointerKind, PointerPhase};
+    match event {
+        PlatformEvent::PointerMoved {
+            position,
+            modifiers,
+            ..
+        } => Some(PointerEvent::hover(*position).with_modifiers(*modifiers)),
+        PlatformEvent::PointerButton {
+            position,
+            button,
+            pressed,
+            modifiers,
+            ..
+        } => {
+            let button = match button {
+                floom_platform::PointerButton::Primary => floom_types::PointerButton::Primary,
+                floom_platform::PointerButton::Secondary => floom_types::PointerButton::Secondary,
+                floom_platform::PointerButton::Auxiliary
+                | floom_platform::PointerButton::Other(_) => floom_types::PointerButton::Middle,
+            };
+            Some(PointerEvent {
+                phase: if *pressed {
+                    PointerPhase::Down
+                } else {
+                    PointerPhase::Up
+                },
+                kind: PointerKind::Mouse,
+                button: Some(button),
+                position: *position,
+                modifiers: *modifiers,
+                click_count: 1,
+            })
+        }
+        _ => None,
+    }
+}
+
 impl Platform for WinitPlatform {
     fn id(&self) -> PlatformId {
         self.id
@@ -777,6 +824,20 @@ pub trait WinitApp {
         false
     }
 
+    /// A pointer event, before the tree sees it.
+    ///
+    /// The counterpart of [`Self::key`] for the pointer: the event has already
+    /// been mapped into viewport coordinates, and this is the last moment the
+    /// app can consume it without the tree also receiving it.
+    ///
+    /// Returns whether the event was consumed. A consumed event is *not* pushed
+    /// as a [`PlatformEvent::PointerMoved`] / [`PlatformEvent::PointerButton`],
+    /// so an inspector's pick can answer a click without the control underneath
+    /// also being pressed. Returning `false` (the default) forwards it.
+    fn pointer(&mut self, _event: &floom_types::PointerEvent) -> bool {
+        false
+    }
+
     /// The event loop is about to block.
     fn about_to_wait(&mut self, platform: &mut WinitPlatform) {
         let _ = platform;
@@ -862,6 +923,11 @@ impl<A: WinitApp> ApplicationHandler for WinitDriver<A> {
         if consumed && let Some(PlatformEvent::Key { .. }) = platform.events.last() {
             platform.events.pop();
         }
+        // Same shape for the pointer: `translate` pushes at most one pointer
+        // event per call and pushes it last, so the hook sees exactly the event
+        // the tree would have. A consumed one is popped back off the tail, which
+        // is what lets a pick select an element without also pressing it.
+        offer_pointer(app, &mut platform.events);
         app.events(platform);
     }
 
@@ -889,6 +955,30 @@ impl<A: WinitApp> ApplicationHandler for WinitDriver<A> {
         // drop its swap-chain in the meantime, which is what `Suspended` means.
         self.platform.events.push(PlatformEvent::Suspended);
         self.dispatch();
+    }
+}
+
+/// Offers the pointer event at the tail of `events` to the app, popping it if
+/// the app consumed it.
+///
+/// Extracted from `window_event` so the consume-or-forward decision is testable
+/// without a window: it is the whole contract of [`WinitApp::pointer`], and the
+/// bug it prevents — a pick that selects *and* presses — is invisible in a
+/// headless test of the picker alone.
+///
+/// `translate` pushes at most one pointer event per call and pushes it last, so
+/// the hook sees exactly the event the tree would have. A non-pointer tail (a
+/// resize, a focus change) is left alone: the hook is about the pointer, and
+/// offering it something else would let an app consume an unrelated event.
+fn offer_pointer<A: WinitApp + ?Sized>(app: &mut A, events: &mut Vec<PlatformEvent>) {
+    let Some(pointer) = events.last().and_then(pointer_event) else {
+        return;
+    };
+    if app.pointer(&pointer)
+        && let Some(PlatformEvent::PointerMoved { .. } | PlatformEvent::PointerButton { .. }) =
+            events.last()
+    {
+        events.pop();
     }
 }
 
@@ -930,4 +1020,146 @@ pub fn run<A: WinitApp + 'static>(app: A, windows: Vec<WindowConfig>) -> Result<
     event_loop
         .run_app(driver)
         .map_err(|err| format!("event loop: {err}"))
+}
+
+#[cfg(all(test, feature = "winit"))]
+mod pointer_hook {
+    //! The consume-or-forward contract of [`WinitApp::pointer`], without a window.
+    //!
+    //! `offer_pointer` is what `window_event` runs between `translate` and
+    //! `app.events`, so these tests drive the real function with a real event
+    //! queue. What they cannot cover is the winit → `PlatformEvent` half; that
+    //! needs an OS window and is the device case.
+
+    use super::*;
+    use floom_platform::{PlatformEvent, PointerButton as PlatformPointerButton};
+    use floom_types::{Modifiers, Point, WindowId};
+
+    fn window() -> WindowId {
+        WindowId::new(0, 1)
+    }
+
+    fn moved() -> PlatformEvent {
+        PlatformEvent::PointerMoved {
+            window: window(),
+            position: Point::new(12.0, 34.0),
+            modifiers: Modifiers::NONE,
+        }
+    }
+
+    fn pressed() -> PlatformEvent {
+        PlatformEvent::PointerButton {
+            window: window(),
+            position: Point::new(12.0, 34.0),
+            button: PlatformPointerButton::Primary,
+            pressed: true,
+            modifiers: Modifiers::NONE,
+        }
+    }
+
+    /// An app whose pointer hook answers whatever it was told to.
+    struct Stub {
+        answer: bool,
+        seen: Vec<floom_types::PointerEvent>,
+    }
+
+    impl WinitApp for Stub {
+        fn pointer(&mut self, event: &floom_types::PointerEvent) -> bool {
+            self.seen.push(event.clone());
+            self.answer
+        }
+    }
+
+    #[test]
+    fn a_consumed_pointer_event_never_reaches_the_tree() {
+        let mut app = Stub {
+            answer: true,
+            seen: Vec::new(),
+        };
+        let mut events = vec![moved()];
+        offer_pointer(&mut app, &mut events);
+        assert_eq!(app.seen.len(), 1, "the hook was asked");
+        assert!(
+            events.is_empty(),
+            "a consumed move is dropped, so a pick's hover is not also a hover"
+        );
+    }
+
+    #[test]
+    fn a_forwarded_pointer_event_stays_in_the_queue() {
+        let mut app = Stub {
+            answer: false,
+            seen: Vec::new(),
+        };
+        let mut events = vec![pressed()];
+        offer_pointer(&mut app, &mut events);
+        assert_eq!(app.seen.len(), 1);
+        assert_eq!(events.len(), 1, "the tree still receives the click");
+    }
+
+    /// The hook is handed the event the *tree* would receive, in the tree's own
+    /// vocabulary — not the platform's. The button folding is the part that can
+    /// silently differ: `Auxiliary` and the exotic buttons are `Middle` on the
+    /// widget side, and a hook that saw `Other(7)` would answer about a button
+    /// the tree never sees.
+    #[test]
+    fn the_hook_sees_the_tree_vocabulary_not_the_platforms() {
+        let mut app = Stub {
+            answer: false,
+            seen: Vec::new(),
+        };
+        let mut events = vec![
+            PlatformEvent::PointerMoved {
+                window: window(),
+                position: Point::new(1.0, 2.0),
+                modifiers: Modifiers::SHIFT,
+            },
+            PlatformEvent::PointerButton {
+                window: window(),
+                position: Point::new(3.0, 4.0),
+                button: PlatformPointerButton::Auxiliary,
+                pressed: false,
+                modifiers: Modifiers::NONE,
+            },
+        ];
+        // Only the tail is offered: `translate` pushes at most one pointer event
+        // per call, so an older queued one is not this call's business.
+        offer_pointer(&mut app, &mut events);
+        let seen = &app.seen[0];
+        assert_eq!(seen.phase, floom_types::PointerPhase::Up);
+        assert_eq!(seen.button, Some(floom_types::PointerButton::Middle));
+        assert_eq!(seen.position, Point::new(3.0, 4.0));
+        assert_eq!(events.len(), 2, "not consumed, both stay");
+    }
+
+    #[test]
+    fn a_non_pointer_event_is_never_offered_to_the_hook() {
+        let mut app = Stub {
+            answer: true,
+            seen: Vec::new(),
+        };
+        let mut events = vec![PlatformEvent::ModifiersChanged {
+            window: window(),
+            modifiers: Modifiers::META,
+        }];
+        offer_pointer(&mut app, &mut events);
+        assert!(
+            app.seen.is_empty(),
+            "the pointer hook is about the pointer; an app must not be able to \
+             consume an unrelated event through it"
+        );
+        assert_eq!(events.len(), 1);
+    }
+
+    #[test]
+    fn an_empty_queue_is_harmless() {
+        let mut app = Stub {
+            answer: true,
+            seen: Vec::new(),
+        };
+        let mut events = Vec::new();
+        offer_pointer(&mut app, &mut events);
+        assert!(app.seen.is_empty());
+        assert!(events.is_empty());
+    }
 }

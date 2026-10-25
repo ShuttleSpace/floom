@@ -33,11 +33,13 @@ use floom_types::{OverlayKind, Rect};
 
 pub use floom_devtools::Inspector;
 pub use floom_devtools::panel::{
-    DevtoolsPanel, DevtoolsShortcut, DevtoolsState, DevtoolsTab, ReadoutRow, default_shortcut,
-    elements_readout,
+    DevtoolsPanel, DevtoolsShortcut, DevtoolsState, DevtoolsTab, ReadoutRow, console_rows,
+    default_shortcut, elements_readout, layout_rows, performance_rows, semantics_rows, style_rows,
+    tree_rows, update_rows,
 };
 pub use floom_devtools::pick::{
-    HighlightBox, PickPhase, PickState, highlight_is_live, highlight_rect, pick_pointer,
+    HighlightBox, PickPhase, PickShortcut, PickState, default_pick_shortcut, highlight_is_live,
+    highlight_rect, pick_pointer,
 };
 pub use floom_hot_reload::describe;
 
@@ -53,6 +55,25 @@ pub struct Devtools {
     /// The cell the composed readout reads, when the caller used
     /// [`attach_elements`]. `None` for a caller that supplied its own readout.
     tree_cell: Option<Arc<Mutex<Vec<floom_app::HostedNode>>>>,
+    /// The overlay the panel is mounted in, so its visibility can reach the
+    /// overlay stack rather than only the widget.
+    ///
+    /// A hidden panel still has bounds — a full-height drawer down the trailing
+    /// edge — and the stack hit-tests against bounds. Without this the panel
+    /// would eat every press down that column from the first frame, hidden or
+    /// not, and the app under it would be unclickable on its right side.
+    overlay: floom_types::OverlayHandle,
+    /// What had the keyboard before the panel opened.
+    ///
+    /// Opening a non-modal overlay moves focus into it (`open_overlay` promises
+    /// that), but a devtools panel is chrome: it must not take the keyboard from
+    /// the app at startup. So the focus it displaced is remembered here and
+    /// handed back as soon as the panel is mounted.
+    previous_focus: Option<floom_types::ElementId>,
+    /// The visibility the overlay was last told about, so [`Devtools::sync`] only
+    /// touches the host when something actually changed. `None` until the first
+    /// sync, which is what makes the first one always apply.
+    synced_visible: Option<bool>,
 }
 
 impl Devtools {
@@ -94,20 +115,66 @@ impl Devtools {
         }
     }
 
-    /// Handles a key event for the shortcut.
+    /// Handles a key event for the shortcut and for Escape.
     ///
     /// Returns whether the event was consumed; the caller should stop
     /// propagating a consumed event. This is the door the app's own event loop
     /// uses — `attach` cannot hook the loop itself, because the loop belongs to
     /// the platform backend rather than to `floom-app`.
+    ///
+    /// Escape closes the panel only while it is up, and only from here rather
+    /// than from the widget: the widget's own `event` sees a key only when the
+    /// keyboard was routed to the panel's overlay root, which is true exactly
+    /// while the panel holds focus — and the panel deliberately gives focus back
+    /// to the app, so a user who clicked the app first would find Escape did
+    /// nothing. Handling it here means the panel closes whether or not it has
+    /// the keyboard, which is what a drawer is expected to do.
     pub fn handle_key(&mut self, event: &floom_types::KeyEvent) -> bool {
-        let mut panel = DevtoolsPanel::new(self.state.clone(), |_| Vec::<ReadoutRow>::new());
-        panel.handle_key(event, &self.shortcut)
+        // Only the shortcut predicate runs here. The panel that is actually
+        // mounted owns the flip, because it is the widget the host will ask for
+        // `children()` — building a second panel here would flip the shared
+        // state and then throw away the only object that could have told the
+        // host its children changed. The mounted panel notices the flip in its
+        // own `update` and marks itself dirty there.
+        if (self.shortcut)(event) {
+            if let Ok(mut state) = self.state.lock() {
+                state.toggle();
+            }
+            return true;
+        }
+        if !self.visible() {
+            return false;
+        }
+        if event.phase == floom_types::KeyPhase::Down
+            && event.key == floom_types::Key::Named(floom_types::NamedKey::Escape)
+        {
+            self.hide();
+            return true;
+        }
+        false
     }
 
     /// The panel's shortcut, so a caller can test it or log it.
     pub fn shortcut(&self) -> &DevtoolsShortcut {
         &self.shortcut
+    }
+
+    /// The overlay the panel is mounted in.
+    ///
+    /// Exposed because the panel is chrome rather than content: an app that
+    /// wants to restyle, resize or re-raise it needs the handle the host uses,
+    /// and deriving it by counting overlays is a guess that breaks the first
+    /// time anything else opens one.
+    pub fn overlay(&self) -> floom_types::OverlayHandle {
+        self.overlay
+    }
+
+    /// The shared state cell, so a picker can select the element it picked.
+    ///
+    /// The panel reads this cell every frame; writing to it from the picker's
+    /// commit is what makes the pick show up in the readout.
+    pub fn state(&self) -> &Arc<Mutex<DevtoolsState>> {
+        &self.state
     }
 }
 
@@ -125,7 +192,29 @@ pub fn attach<F>(host: &mut WidgetHost, readout: F) -> Devtools
 where
     F: Fn(&DevtoolsState) -> Vec<ReadoutRow> + Send + Sync + 'static,
 {
-    attach_with(host, readout)
+    // No tab bar. The caller's readout decides what a tab means, and a bar over
+    // a readout that ignores `state.tab()` would be a row of buttons that
+    // switch to nothing. A caller whose readout *does* answer several tabs
+    // passes them with [`attach_with_tabs`].
+    attach_with(host, readout, &[])
+}
+
+/// [`attach`] with a tab bar, for a caller whose readout answers several tabs.
+///
+/// The readout must branch on [`DevtoolsState::tab`] — the bar only flips that
+/// value; it cannot know which of its rows belong to which tab. `tabs` is what
+/// appears on the bar, in order, so a caller that fills two readouts passes two
+/// and does not get three dead buttons.
+pub fn attach_with_tabs<F>(
+    host: &mut WidgetHost,
+    readout: F,
+    tabs: impl IntoIterator<Item = DevtoolsTab>,
+) -> Devtools
+where
+    F: Fn(&DevtoolsState) -> Vec<ReadoutRow> + Send + Sync + 'static,
+{
+    let tabs: Vec<DevtoolsTab> = tabs.into_iter().collect();
+    attach_with(host, readout, &tabs)
 }
 
 /// [`attach`], with the tree/style/layout readout already composed in.
@@ -147,7 +236,7 @@ pub fn attach_elements(host: &mut WidgetHost) -> Devtools {
         let live = describe(&nodes);
         let inspector = floom_devtools::Inspector::new(&live);
         elements_readout(&inspector, state)
-    });
+    }, &DevtoolsTab::ELEMENTS);
     devtools.with_tree_cell(shared)
 }
 
@@ -171,26 +260,40 @@ where
         let inspector = floom_devtools::Inspector::new(&live);
         rows.extend(elements_readout(&inspector, state));
         rows
-    });
+    }, &DevtoolsTab::ELEMENTS);
     devtools.with_tree_cell(shared)
 }
 
-fn attach_with<F>(host: &mut WidgetHost, readout: F) -> Devtools
+fn attach_with<F>(host: &mut WidgetHost, readout: F, tabs: &[DevtoolsTab]) -> Devtools
 where
     F: Fn(&DevtoolsState) -> Vec<ReadoutRow> + Send + Sync + 'static,
 {
     let state = Arc::new(Mutex::new(DevtoolsState::new()));
-    let panel = DevtoolsPanel::new(state.clone(), readout);
+    let panel = DevtoolsPanel::new(state.clone(), readout).with_tabs(tabs.iter().copied());
     let viewport = host.size();
     let bounds = floom_devtools::panel::panel_bounds(Rect::from_origin_size(
         floom_types::Point::new(0.0, 0.0),
         viewport,
     ));
-    host.open_overlay(OverlayKind::Drawer, false, bounds, panel);
+    // Opening a non-modal overlay moves focus into it. That is right for a
+    // dialog and wrong for chrome, so the focus it displaced is remembered and
+    // put back immediately: the app must be able to type from the first frame.
+    let previous_focus = host.focused();
+    let overlay = host.open_overlay(OverlayKind::Drawer, false, bounds, panel);
+    match previous_focus {
+        Some(focused) => host.set_focus(focused),
+        None => host.clear_focus(),
+    }
     Devtools {
         state,
         shortcut: default_shortcut(),
         tree_cell: None,
+        overlay,
+        previous_focus,
+        // A panel starts hidden, and its first sync has to reach the stack —
+        // otherwise the bounds of a drawer that paints nothing are still a
+        // claim on every press in its column.
+        synced_visible: None,
     }
 }
 
@@ -214,6 +317,59 @@ impl Devtools {
             }
         }
     }
+
+    /// Pushes the panel's visibility into the host's overlay stack.
+    ///
+    /// Two things have to move when the panel opens or closes, and neither of
+    /// them is the widget: whether the overlay answers the pointer, and where
+    /// the keyboard is.
+    ///
+    /// - **Hidden must be unclickable.** The drawer's bounds span the full
+    ///   height of the trailing edge, and the stack hit-tests against bounds, so
+    ///   a hidden panel that stayed interactive would eat every press down that
+    ///   column. It is not closed — closing it would throw away the only widget
+    ///   that can rebuild the panel — so its hit region is turned off instead.
+    /// - **Closing must hand the keyboard back.** The panel is chrome. While it
+    ///   is up it may hold focus (a tab was clicked, or the user tabbed into
+    ///   it); once it is down, focus that still names a node inside it is
+    ///   stranded, because a hidden panel has no children and the key router
+    ///   drops every event aimed at a node with no children to route it to.
+    ///
+    /// Only visibility is compared, because that is the only thing that changes
+    /// what the host has to do. Tab and selection changes are the panel's own
+    /// business — its `update` sees them and marks itself dirty.
+    ///
+    /// Call once per frame from whatever owns the loop; `run_desktop_with_devtools`
+    /// does. An embedder that drives its own loop calls it after
+    /// [`Devtools::handle_key`], in the same place it calls
+    /// [`Devtools::refresh_tree`].
+    pub fn sync(&mut self, host: &mut WidgetHost) {
+        let visible = self.visible();
+        if self.synced_visible == Some(visible) {
+            return;
+        }
+        self.synced_visible = Some(visible);
+        // A panel that is not dismissible is one whose close would strand the
+        // content: the host owns it and there is no opener to hand it back to.
+        host.set_overlay_dismissible(self.overlay, false);
+        host.set_overlay_hit(self.overlay, visible);
+        if !visible {
+            // Focus that landed inside the panel is stranded by hiding it.
+            // Focus that is somewhere else — the app's own field, usually — is
+            // left exactly where it is: the panel must not steal the keyboard
+            // on the way out any more than on the way in.
+            let inside = host
+                .focused()
+                .and_then(|focused| host.node_for(focused))
+                .is_some_and(|node| host.overlay_contains(self.overlay, node));
+            if inside {
+                match self.previous_focus {
+                    Some(previous) => host.set_focus(previous),
+                    None => host.clear_focus(),
+                }
+            }
+        }
+    }
 }
 
 /// Mounts the pick: Ctrl+Shift+C arms it, and the next click selects whatever
@@ -231,10 +387,12 @@ pub fn attach_picker(host: &mut WidgetHost, panel_state: &Arc<Mutex<DevtoolsStat
     let viewport = host.size();
     let bounds = Rect::from_origin_size(floom_types::Point::new(0.0, 0.0), viewport);
     // The highlight is an overlay of its own, above the panel, so the box is
-    // visible over everything including the devtools.
-    let overlay = host.open_overlay(
+    // visible over everything including the devtools. It is *passthrough*: it
+    // covers the window so it can outline anything in it, and a covering overlay
+    // that also took clicks would make the app unclickable while the box was up
+    // — including unclickable for the pick it exists to serve.
+    let overlay = host.open_overlay_passthrough(
         OverlayKind::Popup,
-        false,
         bounds,
         HighlightBox::new(None, false),
     );
@@ -242,6 +400,7 @@ pub fn attach_picker(host: &mut WidgetHost, panel_state: &Arc<Mutex<DevtoolsStat
         pick,
         overlay,
         panel_state: panel_state.clone(),
+        shortcut: default_pick_shortcut(),
     }
 }
 
@@ -254,6 +413,8 @@ pub struct PickHandle {
     /// The overlay the highlight box lives in, so it can be retargeted.
     overlay: floom_types::OverlayHandle,
     panel_state: Arc<Mutex<DevtoolsState>>,
+    /// The key chord that arms the picker.
+    shortcut: PickShortcut,
 }
 
 impl PickHandle {
@@ -262,6 +423,25 @@ impl PickHandle {
         if let Ok(mut pick) = self.pick.lock() {
             pick.arm();
         }
+    }
+
+    /// Handles a key event for the pick shortcut.
+    ///
+    /// Returns whether the event was consumed. The caller should stop
+    /// propagating a consumed event — the same rule the panel's shortcut
+    /// follows, and for the same reason: `Ctrl+Shift+C` in a text field must
+    /// arm the picker rather than type.
+    pub fn handle_key(&self, event: &floom_types::KeyEvent) -> bool {
+        if !(self.shortcut)(event) {
+            return false;
+        }
+        self.arm();
+        true
+    }
+
+    /// The picker's shortcut, so a caller can test it or log it.
+    pub fn shortcut(&self) -> &PickShortcut {
+        &self.shortcut
     }
 
     /// Whether the picker is waiting for a click.
@@ -290,6 +470,39 @@ impl PickHandle {
             .and_then(|p| p.picked().map(String::from))
     }
 
+    /// Selects the committed pick in the panel, if a click has committed one.
+    ///
+    /// Returns whether a selection was written. The picker holds the panel's
+    /// state cell, so a caller that already owns a `PickHandle` does not need a
+    /// second handle on the panel to make a pick show up in the readout.
+    pub fn commit_selection(&self) -> bool {
+        let Some(key) = self.picked() else {
+            return false;
+        };
+        let Ok(mut state) = self.panel_state.lock() else {
+            return false;
+        };
+        state.select(key);
+        true
+    }
+
+    /// The element the highlight should be drawn around, if any.
+    ///
+    /// A hover wins while picking — the box follows the pointer — and the
+    /// committed pick is what it falls back to once picking stops. The caller
+    /// compares this across frames to know whether the box needs retargeting,
+    /// which is what lets a frame be requested only when it actually moved.
+    pub fn highlight_target(&self) -> Option<String> {
+        let pick = self.pick.lock().ok()?;
+        match pick.phase() {
+            PickPhase::Hovering => pick
+                .hovered()
+                .or_else(|| pick.picked())
+                .map(String::from),
+            _ => pick.picked().map(String::from),
+        }
+    }
+
     /// Whether the highlight is following a hover rather than sitting on a pick.
     pub fn highlight_is_live(&self) -> bool {
         highlight_is_live(&self.pick)
@@ -297,37 +510,43 @@ impl PickHandle {
 
     /// Points the highlight box at the picked or hovered element.
     ///
-    /// `bounds_of` maps a live-tree key to the node's box; the host owns that
-    /// mapping, because it owns the layout. Called once per frame while the
-    /// panel is up — the box follows the pointer, so it has to be retargeted
-    /// rather than rebuilt.
-    pub fn sync_highlight<F>(&self, host: &mut WidgetHost, bounds_of: F)
-    where
-        F: FnOnce(&str) -> Option<Rect>,
-    {
-        let Some(key) = self
-            .pick
-            .lock()
-            .ok()
-            .and_then(|p| p.picked().or_else(|| p.hovered()).map(str::to_string))
-        else {
-            return;
-        };
-        let Some(rect) = bounds_of(&key) else {
-            return;
-        };
+    /// The box follows the pointer, so it has to be retargeted rather than
+    /// rebuilt. Called once per frame while the panel is up; a frame with no
+    /// picked or hovered element clears the box, so a highlight that stops
+    /// following does not stay painted on the last element forever.
+    ///
+    /// The host resolves both halves — the key to a live node, the node to its
+    /// box — because it owns the tree and the layout. Taking a closure for that
+    /// would hand the caller a borrow of the same host this method needs
+    /// mutably, which is why the earlier signature could not be used from the
+    /// frame loop at all.
+    pub fn sync_highlight(&self, host: &mut WidgetHost) {
+        let rect = self.highlight_rect(|key| {
+            let node = host.node_by_key(key)?;
+            Some(host.bounds(node))
+        });
         let live = self.highlight_is_live();
         let Some(node) = host.overlay_node_id(self.overlay) else {
             return;
         };
         if let Some(box_widget) = host.widget_mut::<HighlightBox>(node) {
-            box_widget.set_rect(Some(rect), live);
+            box_widget.set_rect(rect, live);
         }
     }
 
     /// Closes the highlight overlay.
     pub fn close_highlight(&self, host: &mut WidgetHost) {
         host.close_overlay(self.overlay);
+    }
+
+    /// The overlay the highlight box lives in.
+    ///
+    /// The handle is not needed to *use* the picker — [`Self::sync_highlight`]
+    /// retargets the box without it — but it is how a caller checks what got
+    /// mounted: the box's widget is reachable from the overlay's node, and the
+    /// overlay's stacking is what makes the box visible over the panel.
+    pub fn overlay(&self) -> floom_types::OverlayHandle {
+        self.overlay
     }
 
     /// The box the highlight should draw, from the host's layout.

@@ -408,3 +408,183 @@ fn opening_and_closing_an_overlay_repaints() {
     assert!(app.damaged(), "closing the overlay repainted the screen");
     assert_eq!(app.overlay_count(), 0);
 }
+
+/// A passthrough overlay paints on top and takes nothing: the pointer falls
+/// through it to the tree behind, and it never steals the keyboard.
+///
+/// This is what a devtools highlight box is: a rectangle that covers the window
+/// so it can outline an element anywhere in it. A covering overlay that also
+/// took clicks would make the app unclickable while the box was up — including
+/// unclickable for the pick the box exists to serve.
+#[test]
+fn a_passthrough_overlay_lets_clicks_and_focus_through() {
+    let main_clicked = Rc::new(Cell::new(0));
+    let main_sink = main_clicked.clone();
+
+    let mut app = TestApp::new(
+        Size::new(800.0, 600.0),
+        Button::new("main").on_click(move || main_sink.set(main_sink.get() + 1)),
+    );
+    // Focus the main button the way a tab would, so the overlay has something
+    // to steal the keyboard from.
+    app.host_mut().focus_next();
+
+    let box_id = app.host_mut().open_overlay_passthrough(
+        OverlayKind::Popup,
+        Rect::from_origin_size(Point::new(0.0, 0.0), Size::new(800.0, 600.0)),
+        Button::new("highlight"),
+    );
+    app.frame();
+    assert_eq!(app.overlay_count(), 1, "the box is mounted and painted");
+
+    // A click anywhere — over the box, which covers everything — belongs to the
+    // app underneath.
+    app.click(Point::new(400.0, 300.0));
+    assert_eq!(
+        main_clicked.get(),
+        1,
+        "the click fell through the covering overlay"
+    );
+
+    // And the box never took the keyboard: Enter still reaches the main button.
+    app.key(KeyCode::ENTER);
+    assert_eq!(
+        main_clicked.get(),
+        2,
+        "Enter reached the main tree, not the decoration on top"
+    );
+
+    app.host_mut().close_overlay(box_id);
+    assert_eq!(app.overlay_count(), 0);
+}
+
+/// The host's light-dismiss rule asks about the top *interactive* overlay, not
+/// the top entry. Otherwise a press over a highlight box would read as "outside
+/// the box" and close the box — and, worse, a press outside the real popup
+/// beneath it would be compared against the decoration instead.
+#[test]
+fn a_press_over_a_passthrough_overlay_still_dismisses_the_popup_beneath() {
+    let mut app = app_with_root();
+    let popup = open(
+        &mut app,
+        OverlayKind::Popup,
+        false,
+        Rect::from_origin_size(Point::new(300.0, 300.0), Size::new(120.0, 40.0)),
+        Button::new("popup"),
+    );
+    app.host_mut().open_overlay_passthrough(
+        OverlayKind::Popup,
+        Rect::from_origin_size(Point::new(0.0, 0.0), Size::new(800.0, 600.0)),
+        Button::new("highlight"),
+    );
+    app.frame();
+    assert_eq!(app.overlay_count(), 2);
+
+    // Far from the popup, but inside the highlight box.
+    app.click(Point::new(700.0, 500.0));
+    assert!(
+        app.host_mut().overlay_count() <= 1,
+        "the popup took the light dismissal; the box did not shield it"
+    );
+    let _ = popup;
+}
+
+/// A mounted-but-hidden overlay gives its column back to the app.
+///
+/// This is the devtools drawer's case: it is not closed when it is hidden — the
+/// panel is the only thing that knows how to rebuild itself, so closing it would
+/// throw the content away — which means the overlay is still there, still sized,
+/// and still a full-height claim on the trailing edge unless the *hit* is turned
+/// off. Turning it off has to reach both halves: the overlay stack, which
+/// decides whether the press is the overlay's at all, and the main router, whose
+/// hit region for the overlay subtree would otherwise win the contest on its own.
+#[test]
+fn a_hidden_overlay_leaves_its_column_to_the_app_beneath() {
+    let main_clicked = Rc::new(Cell::new(0));
+    let main_sink = main_clicked.clone();
+
+    let mut app = TestApp::new(
+        Size::new(800.0, 600.0),
+        Button::new("main").on_click(move || main_sink.set(main_sink.get() + 1)),
+    );
+    // A drawer down the trailing third, the way the devtools panel docks.
+    let drawer = open(
+        &mut app,
+        OverlayKind::Drawer,
+        false,
+        Rect::from_origin_size(Point::new(520.0, 0.0), Size::new(280.0, 600.0)),
+        Button::new("panel"),
+    );
+
+    // While it is up, its column is its own.
+    app.click(Point::new(600.0, 300.0));
+    assert_eq!(main_clicked.get(), 0, "a press inside the drawer is the drawer's");
+
+    // Hidden, not closed: the overlay is still mounted, still sized, still there.
+    app.host_mut().set_overlay_hit(drawer, false);
+    app.frame();
+    assert_eq!(app.overlay_count(), 1, "hidden, not closed");
+    assert!(
+        !overlaps(app.host().overlay_bounds(drawer), Rect::default()),
+        "the bounds are unchanged"
+    );
+
+    app.click(Point::new(600.0, 300.0));
+    assert_eq!(
+        main_clicked.get(),
+        1,
+        "the press fell through the hidden drawer to the app"
+    );
+
+    // And showing it again takes the column back without a remount.
+    app.host_mut().set_overlay_hit(drawer, true);
+    app.frame();
+    app.click(Point::new(600.0, 300.0));
+    assert_eq!(
+        main_clicked.get(),
+        1,
+        "the drawer answers its own column again"
+    );
+}
+
+/// An overlay that opts out of light dismissal survives a press outside it.
+///
+/// A devtools panel is shown and hidden by its own control. If a press on the
+/// app closed it, `close_overlay` would unmount the content — and content the
+/// host owns has no opener to hand it back to, so the panel would be gone for
+/// good while its state still said it was visible.
+#[test]
+fn a_non_dismissible_overlay_survives_a_press_outside_it() {
+    let mut app = app_with_root();
+    let panel = open(
+        &mut app,
+        OverlayKind::Drawer,
+        false,
+        Rect::from_origin_size(Point::new(520.0, 0.0), Size::new(280.0, 600.0)),
+        Button::new("panel"),
+    );
+    app.host_mut().set_overlay_dismissible(panel, false);
+
+    app.click(Point::new(100.0, 100.0));
+    assert_eq!(
+        app.overlay_count(),
+        1,
+        "the panel is chrome, not a popup: clicking away does not close it"
+    );
+
+    // A dismissible overlay in the same position still goes, so opting out is
+    // per-overlay rather than a global switch.
+    let popup = open(
+        &mut app,
+        OverlayKind::Popup,
+        false,
+        Rect::from_origin_size(Point::new(100.0, 400.0), Size::new(120.0, 40.0)),
+        Button::new("popup"),
+    );
+    app.click(Point::new(700.0, 100.0));
+    assert!(
+        !app.host().has_overlay(popup),
+        "the popup took the light dismissal"
+    );
+    assert!(app.host().has_overlay(panel), "the panel stayed");
+}

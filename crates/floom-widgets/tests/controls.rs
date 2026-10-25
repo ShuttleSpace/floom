@@ -130,6 +130,69 @@ fn button_reports_disabled_and_focusable_semantics() {
     );
 }
 
+#[test]
+fn a_focusable_button_takes_the_keyboard_and_a_chrome_button_does_not() {
+    // A normal button focuses itself on press, so Enter reaches what the
+    // pointer just touched.
+    let mut button = Button::new("Ok");
+    let id = allocate(&button);
+    let mut cx = TestEventContext::pointer(
+        id,
+        ROW,
+        PointerEvent::primary_down(Point::new(10.0, 10.0)),
+    );
+    button.event(&mut cx, id);
+    assert_eq!(cx.focus_requests(), &[id]);
+
+    // A chrome button still answers the pointer — the press is consumed and the
+    // callback still runs — but it leaves the keyboard where it was.
+    let clicks = Rc::new(Cell::new(0));
+    let counter = clicks.clone();
+    let mut chrome = Button::new("Elements")
+        .focusable(false)
+        .on_click(move || counter.set(counter.get() + 1));
+    let chrome_id = allocate(&chrome);
+    let mut cx = TestEventContext::pointer(
+        chrome_id,
+        ROW,
+        PointerEvent::primary_down(Point::new(10.0, 10.0)),
+    );
+    assert!(chrome.event(&mut cx, chrome_id));
+    assert!(
+        cx.focus_requests().is_empty(),
+        "a chrome button must not take the keyboard"
+    );
+    let mut cx = TestEventContext::pointer(
+        chrome_id,
+        ROW,
+        PointerEvent::primary_up(Point::new(10.0, 10.0)),
+    );
+    assert!(chrome.event(&mut cx, chrome_id));
+    assert_eq!(clicks.get(), 1, "and it still activates");
+}
+
+#[test]
+fn a_chrome_button_is_not_offered_as_a_keyboard_stop() {
+    let chrome = Button::new("Elements").focusable(false);
+    let state = chrome.semantics_hint().state;
+    assert!(
+        state.contains(SemanticsState::ENABLED),
+        "still an enabled control"
+    );
+    assert!(
+        !state.contains(SemanticsState::FOCUSABLE),
+        "a control the keyboard cannot reach must not advertise FOCUSABLE"
+    );
+    // A disabled button says so either way.
+    let disabled = Button::new("Elements").focusable(false).disabled(true);
+    assert!(
+        disabled
+            .semantics_hint()
+            .state
+            .contains(SemanticsState::DISABLED)
+    );
+}
+
 // --- Switch ----------------------------------------------------------------
 
 /// `Checkbox` used to open this section. Its two cases moved with the widget to

@@ -42,6 +42,29 @@ const HIGHLIGHT_FILL: u8 = 26;
 /// The outline's width, in logical pixels.
 const HIGHLIGHT_WIDTH: f64 = 1.5;
 
+/// The shortcut that arms the picker, as a predicate over a key event.
+///
+/// `Ctrl+Shift+C`, and `Cmd+Shift+C` on macOS — Chrome's inspect-element
+/// binding, and the one the panel's own documentation names. A predicate rather
+/// than a stored key, for the same reason
+/// [`DevtoolsShortcut`](crate::panel::DevtoolsShortcut) is one.
+pub type PickShortcut = std::sync::Arc<dyn Fn(&floom_types::KeyEvent) -> bool + Send + Sync>;
+
+/// The default pick shortcut: `Ctrl+Shift+C`, or `Cmd+Shift+C` on macOS.
+///
+/// `Char('c')` rather than `Char('C')` because the platform layer lowercases the
+/// character it maps; shift is already carried by `modifiers`.
+pub fn default_pick_shortcut() -> PickShortcut {
+    use floom_types::{Key, KeyPhase, Modifiers};
+    std::sync::Arc::new(|event: &floom_types::KeyEvent| {
+        event.phase == KeyPhase::Down
+            && event.key == Key::Char('c')
+            && event.modifiers.contains(Modifiers::SHIFT)
+            && (event.modifiers.contains(Modifiers::CONTROL)
+                || event.modifiers.contains(Modifiers::META))
+    })
+}
+
 /// What the picker is doing right now.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum PickPhase {
