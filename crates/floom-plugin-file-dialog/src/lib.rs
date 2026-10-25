@@ -15,6 +15,19 @@
 //! changed their mind" as an error path, and collapsing it into some sentinel
 //! path would be worse. The distinction is the API.
 //!
+//! # Asking before offering
+//!
+//! [`SUPPORTED`] answers "does this target have a dialog at all" — `false` on
+//! Android and iOS (see the next section) and on any target with no dialog UI.
+//! It exists because **you cannot probe this by calling**: on a target where
+//! the answer is yes, [`pick_file`] puts a modal dialog on screen and waits for
+//! a human, so a caller that wants to hide the affordance must be able to ask
+//! first.
+//!
+//! The flag is generated from the same list as the arms themselves (see
+//! `dialog_arms!`), so it cannot claim a dialog the crate does not have, or
+//! deny one it does.
+//!
 //! # Where the arms stand — and why two of them refuse
 //!
 //! - **macOS** is real: `NSOpenPanel`/`NSSavePanel` through AppKit, the same
@@ -46,12 +59,135 @@
 
 use std::path::PathBuf;
 
-#[cfg(target_os = "linux")]
-mod linux;
-#[cfg(target_os = "macos")]
-mod macos;
-#[cfg(target_os = "windows")]
-mod windows;
+/// The dialog arms — the crate's one list of them.
+///
+/// The invocation below writes the list **once**, and this macro reads it
+/// everywhere: it gates the arm modules, it is exactly what [`SUPPORTED`]
+/// reports, it picks the arm each call jumps to, and it decides which refusal
+/// exists. "An arm exists but the flag says no" is therefore not an edit this
+/// crate can express — the flag and the arms are the same list.
+///
+/// `desktop` names a target and the module holding its real dialog; `phone` is
+/// a target the crate refuses on, with a reason (see `refused`). A target in
+/// neither list has no dialog at all (see `no_dialog`).
+macro_rules! dialog_arms {
+    (
+        desktop: $($os:literal => $module:ident),+ $(,)?;
+        phone: $($phone:literal),+ $(,)?;
+    ) => {
+        $(
+            #[cfg(target_os = $os)]
+            mod $module;
+        )+
+
+        /// Whether this target can show a file dialog.
+        ///
+        /// `false` means every call in this crate returns `Err` — naming the
+        /// phone's missing result channel, or the target having no dialog to
+        /// show. A caller reads this to hide an affordance it cannot honour,
+        /// because **probing is not an option**: where this is `true`,
+        /// `pick_file` puts a modal dialog on screen and waits for a human to
+        /// answer it.
+        ///
+        /// This is the query the deleted `Capability::FILE_DIALOG` bit would
+        /// have been, kept where the implementation is: `floom-platform`'s
+        /// bit set is answered by the platform adapters, and no adapter can
+        /// see whether this plugin is linked (see `docs/plugin-catalog.md`
+        /// §8.3). The compile-time form of the same question is "is this crate
+        /// in the caller's `Cargo.toml`".
+        pub const SUPPORTED: bool = cfg!(any($(target_os = $os),+));
+
+        /// The arm for `pick_file`, or this target's refusal.
+        fn pick_file_arm(options: &Options) -> Result<Option<PathBuf>, String> {
+            $(
+                #[cfg(target_os = $os)]
+                { return $module::pick_file(options); }
+            )+
+            $(
+                #[cfg(target_os = $phone)]
+                { let _ = options; return refused("pick_file"); }
+            )+
+            #[cfg(not(any($(target_os = $os),+, $(target_os = $phone),+)))]
+            {
+                let _ = options;
+                Err(no_dialog())
+            }
+        }
+
+        /// The arm for `pick_save_file`, or this target's refusal.
+        fn pick_save_file_arm(options: &Options) -> Result<Option<PathBuf>, String> {
+            $(
+                #[cfg(target_os = $os)]
+                { return $module::pick_save_file(options); }
+            )+
+            $(
+                #[cfg(target_os = $phone)]
+                { let _ = options; return refused("pick_save_file"); }
+            )+
+            #[cfg(not(any($(target_os = $os),+, $(target_os = $phone),+)))]
+            {
+                let _ = options;
+                Err(no_dialog())
+            }
+        }
+
+        /// The arm for `pick_directory`, or this target's refusal.
+        fn pick_directory_arm(options: &Options) -> Result<Option<PathBuf>, String> {
+            $(
+                #[cfg(target_os = $os)]
+                { return $module::pick_directory(options); }
+            )+
+            $(
+                #[cfg(target_os = $phone)]
+                { let _ = options; return refused("pick_directory"); }
+            )+
+            #[cfg(not(any($(target_os = $os),+, $(target_os = $phone),+)))]
+            {
+                let _ = options;
+                Err(no_dialog())
+            }
+        }
+
+        /// The phone arms' shared refusal, naming the missing plumbing.
+        ///
+        /// Exists only on the phone targets — the arms that call it are
+        /// cfg-gated to them, and the reason is platform-specific.
+        #[cfg(any($(target_os = $phone),+))]
+        fn refused(call: &str) -> Result<Option<PathBuf>, String> {
+            #[cfg(target_os = "android")]
+            let reason = "the picker's answer arrives as an activity result \
+                          (ACTION_OPEN_DOCUMENT / ACTION_CREATE_DOCUMENT), and the platform layer's \
+                          NativeActivity bridge exposes no onActivityResult channel";
+            #[cfg(target_os = "ios")]
+            let reason = "the picker's answer arrives as a UIDocumentPickerViewController \
+                          delegate callback, and presenting one needs an Objective-C delegate class \
+                          — the native half this plugin shape deliberately does not carry";
+            Err(format!(
+                "{call}: not available on {} yet — {reason}. \
+                 This is platform-layer plumbing (a result channel), not a plugin fix; \
+                 desktop pickers work today",
+                std::env::consts::OS
+            ))
+        }
+
+        /// The refusal for a target with no dialog at all.
+        #[cfg(not(any($(target_os = $os),+, $(target_os = $phone),+)))]
+        fn no_dialog() -> String {
+            format!(
+                "file dialogs need platform UI — macOS, Linux and Windows have it; \
+                 this target ({}) does not",
+                std::env::consts::OS
+            )
+        }
+    };
+}
+
+dialog_arms! {
+    desktop: "linux" => linux,
+             "macos" => macos,
+             "windows" => windows;
+    phone: "android", "ios";
+}
 
 /// What the dialogs are asked, beyond the kind of pick itself.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
@@ -74,35 +210,10 @@ impl Options {
 /// Ask the user to choose an existing file.
 ///
 /// `Ok(None)` is the user cancelling; see the crate doc for why that is not
-/// an error.
+/// an error. Check [`SUPPORTED`] first if you need to hide the affordance
+/// rather than offer one that refuses.
 pub fn pick_file(options: &Options) -> Result<Option<PathBuf>, String> {
-    #[cfg(target_os = "macos")]
-    {
-        macos::pick_file(options)
-    }
-    #[cfg(target_os = "linux")]
-    {
-        linux::pick_file(options)
-    }
-    #[cfg(target_os = "windows")]
-    {
-        windows::pick_file(options)
-    }
-    #[cfg(any(target_os = "android", target_os = "ios"))]
-    {
-        return refused("pick_file");
-    }
-    #[cfg(not(any(
-        target_os = "macos",
-        target_os = "linux",
-        target_os = "windows",
-        target_os = "android",
-        target_os = "ios"
-    )))]
-    {
-        let _ = options;
-        Err(unsupported())
-    }
+    pick_file_arm(options)
 }
 
 /// Ask the user where to save a file.
@@ -111,103 +222,14 @@ pub fn pick_file(options: &Options) -> Result<Option<PathBuf>, String> {
 /// not written — this crate asks, the caller acts. `Ok(None)` is the user
 /// cancelling.
 pub fn pick_save_file(options: &Options) -> Result<Option<PathBuf>, String> {
-    #[cfg(target_os = "macos")]
-    {
-        macos::pick_save_file(options)
-    }
-    #[cfg(target_os = "linux")]
-    {
-        linux::pick_save_file(options)
-    }
-    #[cfg(target_os = "windows")]
-    {
-        windows::pick_save_file(options)
-    }
-    #[cfg(any(target_os = "android", target_os = "ios"))]
-    {
-        return refused("pick_save_file");
-    }
-    #[cfg(not(any(
-        target_os = "macos",
-        target_os = "linux",
-        target_os = "windows",
-        target_os = "android",
-        target_os = "ios"
-    )))]
-    {
-        let _ = options;
-        Err(unsupported())
-    }
+    pick_save_file_arm(options)
 }
 
 /// Ask the user to choose an existing directory.
 ///
 /// `Ok(None)` is the user cancelling.
 pub fn pick_directory(options: &Options) -> Result<Option<PathBuf>, String> {
-    #[cfg(target_os = "macos")]
-    {
-        macos::pick_directory(options)
-    }
-    #[cfg(target_os = "linux")]
-    {
-        linux::pick_directory(options)
-    }
-    #[cfg(target_os = "windows")]
-    {
-        windows::pick_directory(options)
-    }
-    #[cfg(any(target_os = "android", target_os = "ios"))]
-    {
-        return refused("pick_directory");
-    }
-    #[cfg(not(any(
-        target_os = "macos",
-        target_os = "linux",
-        target_os = "windows",
-        target_os = "android",
-        target_os = "ios"
-    )))]
-    {
-        let _ = options;
-        Err(unsupported())
-    }
-}
-
-/// The phone arms' shared refusal, naming the missing plumbing.
-///
-/// Exists only on the phone targets — the arms that call it are cfg-gated to
-/// them, and the reasons are platform-specific.
-#[cfg(any(target_os = "android", target_os = "ios"))]
-fn refused(call: &str) -> Result<Option<PathBuf>, String> {
-    #[cfg(target_os = "android")]
-    let reason = "the picker's answer arrives as an activity result \
-                  (ACTION_OPEN_DOCUMENT / ACTION_CREATE_DOCUMENT), and the platform layer's \
-                  NativeActivity bridge exposes no onActivityResult channel";
-    #[cfg(target_os = "ios")]
-    let reason = "the picker's answer arrives as a UIDocumentPickerViewController \
-                  delegate callback, and presenting one needs an Objective-C delegate class \
-                  — the native half this plugin shape deliberately does not carry";
-    Err(format!(
-        "{call}: not available on {} yet — {reason}. \
-         This is platform-layer plumbing (a result channel), not a plugin fix; \
-         desktop pickers work today",
-        std::env::consts::OS
-    ))
-}
-
-#[cfg(not(any(
-    target_os = "macos",
-    target_os = "linux",
-    target_os = "windows",
-    target_os = "android",
-    target_os = "ios"
-)))]
-fn unsupported() -> String {
-    format!(
-        "file dialogs need platform UI — macOS, Linux and Windows have it; \
-         this target ({}) does not",
-        std::env::consts::OS
-    )
+    pick_directory_arm(options)
 }
 
 #[cfg(test)]
@@ -236,5 +258,47 @@ mod tests {
         // the way out; the assertion pins both halves of the sentence.
         assert!(err.contains("platform-layer plumbing"), "{err}");
         assert!(err.contains("not available on"), "{err}");
+    }
+
+    /// The flag claims a dialog exactly where the crate has one.
+    ///
+    /// The predicate is written out here on purpose: `SUPPORTED` is generated
+    /// from the arm list, and this is the independent restatement that catches
+    /// the flag being changed to something else — hard-coded, or reading a
+    /// different list. A desktop that gained a fourth arm has to update this
+    /// line too, which is the point.
+    ///
+    /// Deliberately **not** written as "if `SUPPORTED` then call it": on a
+    /// target with an arm, that call opens a modal dialog. A drift must cost a
+    /// red assertion, never a dialog on someone's screen.
+    #[test]
+    fn the_flag_claims_a_dialog_exactly_where_the_crate_has_one() {
+        let has_an_arm = cfg!(any(
+            target_os = "linux",
+            target_os = "macos",
+            target_os = "windows"
+        ));
+        assert_eq!(
+            SUPPORTED, has_an_arm,
+            "SUPPORTED and the arms disagree — one of them is claiming a dialog the other does not have"
+        );
+    }
+
+    /// And where there is no dialog, every entry point says so.
+    ///
+    /// This is the only target set where the promise `SUPPORTED == false`
+    /// makes is observable without a human answering a dialog, so it is the
+    /// only place the promise is checked.
+    #[cfg(any(target_os = "android", target_os = "ios"))]
+    #[test]
+    fn unsupported_means_every_call_refuses() {
+        assert!(
+            !SUPPORTED,
+            "the phone arms have no dialog, so the flag must not claim one"
+        );
+        let o = Options::new();
+        assert!(pick_file(&o).is_err());
+        assert!(pick_save_file(&o).is_err());
+        assert!(pick_directory(&o).is_err());
     }
 }

@@ -168,6 +168,13 @@ C4 的另一半。`file_selector` 在 Flutter 侧是 federated 包（6 个分包
   里的 gallery 按钮。
 - **无 filters、无多选**（v1）：每平台的过滤器词汇不同（UTI / MIME /
   DOS pattern），先回答能力问题（「给我一条用户选的路径」）再谈词汇表。
+- **新增 `pub const SUPPORTED: bool`（C4 拍板时补的，2026-10-25）**：宿主得能
+  **不调**就知道这台设备上有没有选择器 —— `pick_file` 在支持的目标上一调就是
+  弹模态框等人答，没法拿它当探针。这个常量与三个臂由同一张 target 表经
+  `dialog_arms!` 生成，不可能和臂脱节；测试
+  `the_flag_claims_a_dialog_exactly_where_the_crate_has_one` 把常量钉在文档声明的
+  那张表上（把常量改成写死 `false` 会立刻转红）。C4 为什么不是加回
+  `Capability::FILE_DIALOG` 位，见 §8.3。
 
 **与 `image_picker` 的分工要写进文档**：`file_selector` 是「任取文件」，
 `image_picker` 是「取图片/视频，含拍照」。后者依赖前者加相机。
@@ -564,13 +571,54 @@ Tier B 的全部 5 个插件都需要它。选项（handoff 第 3 节）：
 作者倾向后者（插件要能独立于框架发布），但这是宿主的调用。
 **Tier A 的 8 个不依赖它**，所以 A 可以先做完。
 
-### 8.3 C4 的最终形态
+### 8.3 C4 的最终形态 —— 已拍板（2026-10-25）
 
-A8 删掉了 `OPEN_URL` / `FILE_DIALOG` 两个 `Capability` 位。本目录的 A2/A3 就是
-C4 选项 (a) 的落地。但要先确认：位加回来时，是加在 `floom-platform` 的
-`Capability` 位集（插件 → 平台的向上依赖，被架构门禁禁止），还是宿主自己查
-「这个插件注册了吗」。**后者更符合分层，但意味着 capability 位不再是查询能力的
-唯一入口**——这个取舍要拍。
+**结论：位不加回来。** 选项 (a) 落地为 A2/A3 两个能力插件；`OPEN_URL` /
+`FILE_DIALOG` 两个 `Capability` 位保持删除。
+
+**为什么"加回位"这条路走不通**（不是口味问题，是结构问题）：
+
+`Capability` 位由**平台适配器**回答 —— `Platform::capabilities()`，也就是
+`floom-platform-desktop` / `-mobile` / `-web` 这些 crate。位要诚实，就得由
+**知道实现是否在链接里**的那一方来置。可适配器看不见插件：实测
+`crates/floom-platform{,-desktop,-mobile}/Cargo.toml` 里 `floom-plugin-*` 依赖
+数为 **0**，而且不能有 —— `floom-platform` 在架构门禁里是必须保持
+platform/GPU-free 的 ABI，插件是它上面的一层，向上依赖被禁止。于是位只能由
+宿主在装配时自己置上，而 `floom-platform` 里就会出现一个"本层无人实现"的位，
+正面违反 `capabilities.rs` 自己写下的规则（"a bit that nothing implements does
+not exist"）和 A8 的结论。**这是把问题绕过去，不是解决。**
+
+**所以能力的两个入口是**：
+
+| 入口 | 形态 | 回答什么 |
+|---|---|---|
+| 编译期 | 这个 crate 在不在你的 `Cargo.toml` 里 | "这个应用有没有这项能力" |
+| 运行期 | 调用返回的 `Err` | "这一次能不能做成" |
+
+**§8.3 原先点名的取舍，照单接受**：capability 位不再是"查询能力"的唯一入口。
+换来的是一条更强的保证——"有能力"这件事由 cargo 依赖图回答，编译期就确定，
+不可能像位那样在运行时和现实脱节。
+
+**但有一个真实缺口，已补上**：`open_url` 可以"试着调一下"（探测无害：不支持的
+目标只是返回 `Err`），`pick_file` **不可以** —— 支持的目标上这一调就是弹一个模态
+框、等人来答。所以宿主想在 Android/iOS 上**藏掉**"打开文件"按钮，必须能不调就
+知道答案。补法是 `floom-plugin-file-dialog` 新增
+
+```rust
+pub const SUPPORTED: bool;
+```
+
+它和三个臂由**同一次宏调用**里的同一张 target 表生成（`dialog_arms!`）：这张表
+既 gate 掉臂模块、又是 `SUPPORTED` 的取值、又决定每个调用跳哪个臂、又决定
+`refused` 与 `no_dialog` 谁存在。"有臂但位说没有"在这个 crate 里写不出来。
+
+`open-url` **不加**同等常量：它的探测本来就无害，"调用即答案"已经够了，
+再加一个查询是为对称而对称。
+
+验证：macOS 3 个测试通过；把 `SUPPORTED` 临时改成常量 `false`，断言
+`the_flag_claims_a_dialog_exactly_where_the_crate_has_one` 立刻转红（有牙）；
+android / ios / windows 三目标 `cargo check --tests` 干净，含只在手机上运行的
+`unsupported_means_every_call_refuses`。
 
 ---
 
@@ -584,7 +632,7 @@ C4 选项 (a) 的落地。但要先确认：位加回来时，是加在 `floom-p
   （A4 第一个做：它最短，用来把第 6 节的清单走通一遍）
 
 批次 2（无需设备）
-  A3 file-dialog ✅ 已完成（2026-10-25）：三桌面真臂 + 手机精确拒绝，C4 另一半落地
+  A3 file-dialog ✅ 已完成（2026-10-25）：三桌面真臂 + 手机精确拒绝 + `SUPPORTED`，C4 另一半落地（§8.3）
   A5 prefs      ✅ 已完成（2026-10-25）：Apple 臂真原生往返测试；gallery 有了
                  证明持久性的行（launch 计数，跨进程验证过）
   A6 wakelock   ✅ 已完成（2026-10-25）：四臂真实现 + host 上走真实 IOKit

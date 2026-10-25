@@ -181,22 +181,26 @@ cargo run -p floom-plugin-nativeview --example native_view
 
 ---
 
-## 4. C4 — OPEN_URL / FILE_DIALOG 重新引入 🟠 需要决策
+## 4. C4 — OPEN_URL / FILE_DIALOG ✅ 已拍板（2026-10-25）
 
 **目标**：A8 把这两个 capability 位**删掉了**（没有实现的位不该存在）。
 现在要么补实现，要么明确说"我们不支持"。
 
-**为什么卡住**：产品决策。这两个是常用能力，删掉会影响宿主迁移；
-但加回来就要有真实实现，否则就是退回 A8 修掉的问题。
+**结论：实现补了（选项 a），位不加回来。**
 
-**需要你决策**：
-- (a) 补实现（作为能力插件，`floom-plugin-open-url` / `floom-plugin-file-dialog`），
-  桌面端用 `open` crate / `rfd`，移动端用 intent / `UIDocumentPicker`
-- (b) 明确不支持，在文档里写明"宿主自己调平台 API"
-- (c) 只在桌面端做，移动端留空
+- 实现：`floom-plugin-open-url`（A2）、`floom-plugin-file-dialog`（A3）两个能力插件，
+  按依赖 opt-in；桌面上是五臂/三臂真实现（不是 `open` crate / `rfd`，理由见
+  catalogue 的 as-built），手机上是精确拒绝。
+- 位：`OPEN_URL` / `FILE_DIALOG` **保持删除**。理由与取舍写在
+  `docs/plugin-catalog.md` §8.3 —— 一句话：位由平台适配器回答，而适配器看不见
+  插件（实测 `floom-platform*` 里 `floom-plugin-*` 依赖为 0，且不能有），
+  加回去只会得到一个"本层无人实现"的位，退回 A8 修掉的问题。
+- 补的真缺口：`floom-plugin-file-dialog::SUPPORTED` —— `pick_file` 不能当探针
+  （支持的目标上会弹模态框），宿主需要不调就知道该不该显示按钮。它和臂由同一张
+  target 表生成，不可能脱节。
 
-**注意**：如果选 (a)，做完必须真的能打开一个 URL / 真的弹出文件选择器——
-这两件事在 macOS 上我能验（有桌面环境），Android 需要设备。
+**仍需设备的部分**：Android 上真的打开一个 URL、真的弹出 picker —— 代码已写完、
+三目标已编译，但需要一台设备按 gallery 的按钮确认。
 
 ---
 
@@ -442,14 +446,19 @@ vello 画投影，于是那四个 gallery 同时**编译不过**和**哈希不�
 第一次尝试还因为磁盘写满被静默杀掉、日志里一个 `test result` 都没有。所以
 debuginfo 是这条检查的成本大头，不是成员数。
 
-**当前状态（2026-10-25 19:30）**：`just gate` 12 项全部实跑过。`fmt` 当前红，
-红在**尚未提交的 `HostedNode` 重构**上（`floom-app/src/lib.rs`、`floom-devtools`、
-`floom-widgets/src/surface.rs` 等 9 个文件），不是门禁本身的问题；`test` 已从红转绿
-（`devtools_demo.rs` 补上 `tree_rows` 新增的第三个参数后）。
-另修了 `floom-plugin-prefs` 两个真缺陷（见 `plugin-catalog.md` A5 的 as-built）：
-测试名在本机 1 µs 时钟下会撞，导致两个测试共用一个 domain、互相抹掉——这是
-`test` 间歇性红的真因；以及 Apple 臂把 `""` 折成 `None`，与另外两臂不一致。
-不写"全绿"——`fmt` 的红灯来自 WIP。
+**当前状态（2026-10-25 19:51）**：`just gate` **12 项全绿**
+（`12 passed, 0 skipped, 0 failed`）。
+
+此前（19:30）`fmt` 曾经红过一阵，红在**尚未提交的 `HostedNode` 重构**上
+（`floom-app/src/lib.rs`、`floom-devtools`、`floom-widgets/src/surface.rs` 等 9 个文件），
+不是门禁本身的问题——重构一提交（`a1d9d851`），`fmt` 立即转绿，**没有被 allowlist 或
+豁免绕过**。同一提交里也带上了两处依赖它才能编译的测试（`devtools_demo.rs` 的
+三参 `tree_rows`、`hosted_tree.rs` 四处 fixture 的 `style`/`layout` 字段）。
+
+门禁此前报过两个真缺陷，都已修（见 `plugin-catalog.md` A5 的 as-built）：
+`floom-plugin-prefs` 的测试名在本机 1 µs 时钟下会撞，导致两个测试共用一个 domain、
+互相抹掉——这是 `test` 间歇性红的真因；以及 Apple 臂把 `""` 折成 `None`，与另外两臂
+不一致。两处都留了会翻红的测试。
 
 
 ---
@@ -458,6 +467,8 @@ debuginfo 是这条检查的成本大头，不是成员数。
 
 1. **第 1 节的剩余部分（真机确认）** —— 代码已写完、三目标已编译、CI 已加护栏，
    只差一台设备把表格填满。你现在就有 Android 工具链。
-2. **第 4 节（C4 决策）** —— 一次拍板，阻塞别人。
-3. **第 3 节（A6b）** —— 等第 2 节有了第二个插件才有意义。
-4. **第 2 节（camera/webview）** —— 最重，放最后。
+2. **第 3 节（A6b）** —— 等有了第二个 native-view 插件才有意义；查找键的取舍在
+   `plugin-catalog.md` §8.2。
+3. **第 2 节（camera/webview）** —— 最重，放最后。
+
+~~第 4 节（C4 决策）~~ —— ✅ 2026-10-25 已拍板，见本节。
