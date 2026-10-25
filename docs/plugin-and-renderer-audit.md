@@ -439,6 +439,15 @@ iOS 分支只是检测已存在的 xcframework 并链接，没有驱动 `xcodebu
 - **`TextInputStyle::padding` 删掉而不是接上。** 它用 paint 路径直接读的两个
   数字拼出一个 `Insets`，没有任何调用者；布局和绘制都已各自算过 padding，
   接上它会变成第三份真相。
+- **交叉目标的探针问错了对象。** `android`/`ios`/`windows` 用
+  `[ -d "$(rustc --print target-libdir --target X)" ]` 决定跑还是跳过，而
+  `rustc` 是 PATH 上那个 —— 这台机器上是 Homebrew 的，它的 `lib/rustlib` 里
+  没有任何交叉目标的 std。三个目标的 std 都装在 rustup 的
+  `1.98-x86_64-apple-darwin` 里，于是三条检查**全部报 SKIP**，理由写着
+  "no … std in this toolchain (`rustup target add …`)" —— 目标其实已安装，
+  照这条建议做也不会修好。门禁现在先问 PATH 上的 `rustc`，不行就遍历
+  `~/.rustup/toolchains/*`，找到就把那个 toolchain 的 `bin` 临时前置；
+  三条检查随后实跑通过（`file-dialog` 的 Windows 臂就是这样第一次被编译到的）。
 
 当前 `just gate`：12 条检查（`fmt`、`clippy`、`test`、`ecosystem`、`doc`、
 `arch`、`probe`、`plugins`、`android`、`ios`、`windows`、`golden`），全部实跑过。

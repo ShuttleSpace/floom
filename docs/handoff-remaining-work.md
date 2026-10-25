@@ -391,8 +391,17 @@ just gate fmt        # 只跑一条
 - **clippy 范围必须等于 CI 的包列表**。门禁此前截断在 `floom-native-ffi`，
   漏掉全部 9 个插件、`floom-app`、`floom-widgets` 和另外 20 个 crate ——
   于是门禁能报 `PASS clippy`，而三分之一的 track 从未被 lint 过。
-- **`android`/`ios` 用 `cargo check --target`**，与 CI 一致；`check` 不链接，
+- **`android`/`ios`/`windows` 用 `cargo check --target`**，与 CI 一致；`check` 不链接，
   所以不需要 NDK，也不该用 `cargo ndk` 把真检查降级成跳过。
+- **交叉目标的 std 要在每个 rustc 里找，不能只问 PATH 上那个**。这台机器
+  PATH 上的 `rustc` 是 Homebrew 的，它的 `lib/rustlib` 里**没有任何**交叉目标
+  的 std；而三个设备目标的 std 都装在 rustup 的 `1.98-x86_64-apple-darwin`
+  里。旧探针只问 PATH 上那个，于是把**已安装**的目标报成缺失，跳过理由写着
+  "no … std in this toolchain (`rustup target add …`)" —— 理由本身是假的，
+  照它做也不会好。这正是这个门禁存在的理由（"不能失败的门禁比没有更糟"），
+  所以探针现在先问 PATH 上的 `rustc`，不行就遍历 `~/.rustup/toolchains/*`，
+  找到就把那个 toolchain 的 `bin` 临时前置；真的一个都没有才跳过，并写明
+  要找的是哪个 toolchain。
 - **`fmt` 要跑每一个 workspace**。仓库里有三个 workspace：根、`crates/ecosystem/floom-ui`、
   `crates/ecosystem/floom-editor`。后两个是独立 workspace，根目录的
   `cargo fmt --all` 一个都到不了；`crates/vendor` 永不格式化。
