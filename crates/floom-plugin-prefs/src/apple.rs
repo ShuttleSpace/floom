@@ -60,6 +60,12 @@ pub fn remove(store: &str, key: &str) -> Result<(), String> {
 /// Exposed for tests: a test store reaches the user's *real* preferences, so it
 /// must leave no domain behind. A production caller has no reason to erase a
 /// whole store — that is the user's settings, not the app's to clear.
+///
+/// `removePersistentDomainForName:` is an *instance* method (the header is
+/// unambiguous, and an earlier draft sent it to the class, which objc2's
+/// runtime check refused — correctly). It empties the domain persistently; the
+/// now-empty plist file is cfprefsd's to delete, asynchronously, so this also
+/// unlinks it best-effort for the common case where it lingers past the run.
 #[cfg(test)]
 pub fn remove_domain(store: &str) {
     unsafe {
@@ -70,6 +76,12 @@ pub fn remove_domain(store: &str) {
             return;
         };
         let _: () = msg_send![defaults, removePersistentDomainForName: name];
+    }
+    if let Some(home) = std::env::var_os("HOME") {
+        let plist = std::path::Path::new(&home)
+            .join("Library/Preferences")
+            .join(format!("{store}.plist"));
+        let _ = std::fs::remove_file(plist);
     }
 }
 
@@ -134,7 +146,7 @@ mod tests {
     #[test]
     fn apple_roundtrip_through_the_real_store() {
         // Named `suite_name`, not `suite`: the local would shadow the
-        // `suite()` helper the cleanup below needs to call.
+        // `suite()` helper this test used to call for cleanup.
         let suite_name = format!(
             "floom-prefs-test-{}.local-{:x}",
             std::process::id(),
@@ -154,23 +166,9 @@ mod tests {
         assert_eq!(get(&suite_name, "greeting"), None);
         assert_eq!(get(&suite_name, "second").as_deref(), Some("2"));
 
-        // Leave no plist behind. `removePersistentDomainForName:` is an
-        // *instance* method (the header is unambiguous about this, and an
-        // earlier draft sent it to the class, which objc2's runtime check
-        // refused — correctly); it removes every value from the named
-        // domain, persistently. The now-empty plist file itself is
-        // cfprefsd's to delete, asynchronously — this best-effort removal
-        // covers the common case where it lingers past the test run.
-        unsafe {
-            let defaults = suite(&suite_name).unwrap();
-            let name = ns_string(&suite_name).unwrap();
-            let _: () = msg_send![defaults, removePersistentDomainForName: name];
-        }
-        if let Some(home) = std::env::var_os("HOME") {
-            let plist = std::path::Path::new(&home)
-                .join("Library/Preferences")
-                .join(format!("{suite_name}.plist"));
-            let _ = std::fs::remove_file(plist);
-        }
+        // Leave no plist behind — the same helper `lib.rs`'s test cleanup
+        // uses, so the cleanup path has one definition and the test exercises
+        // it.
+        remove_domain(&suite_name);
     }
 }
