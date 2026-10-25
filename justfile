@@ -14,9 +14,9 @@ gate-docs:
 arch-deps:
     ./scripts/check-architecture-deps.sh
 
-# The whole local gate: fmt, clippy, tests, docs, architecture, probe, plugins,
-# Android, iOS, goldens. Each check runs on its own and a skip always prints its
-# reason. Pass check names to run a subset: `just gate clippy test`.
+# The whole local gate: fmt, clippy, tests, ecosystem, docs, architecture, probe,
+# plugins, Android, iOS, Windows, goldens. Each check runs on its own and a skip
+# always prints its reason. Pass check names to run a subset: `just gate clippy test`.
 #
 # This exists because CI here never runs: the origin is Gitee and every workflow
 # in `.github/workflows/` is unreachable from it, so a red check that only CI

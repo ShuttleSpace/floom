@@ -388,13 +388,19 @@ just gate fmt        # 只跑一条
 - **clippy 用 `--all-features`**。默认 feature 只编译占位实现，
   `floom-platform-desktop` 的整个 winit 后端在 feature 后面。第一次
   `--all-features` 就找出 7 个此前从未被编译过的错误。
-- **clippy 范围必须等于 CI 的 52 个包**。门禁此前截断在 `floom-native-ffi`，
+- **clippy 范围必须等于 CI 的包列表**。门禁此前截断在 `floom-native-ffi`，
   漏掉全部 9 个插件、`floom-app`、`floom-widgets` 和另外 20 个 crate ——
   于是门禁能报 `PASS clippy`，而三分之一的 track 从未被 lint 过。
 - **`android`/`ios` 用 `cargo check --target`**，与 CI 一致；`check` 不链接，
   所以不需要 NDK，也不该用 `cargo ndk` 把真检查降级成跳过。
-- **`fmt` 要跑两个 workspace**。`crates/ecosystem/floom-ui` 是独立 workspace，
-  根目录的 `cargo fmt --all` 到不了它；`crates/vendor` 永不格式化。
+- **`fmt` 要跑每一个 workspace**。仓库里有三个 workspace：根、`crates/ecosystem/floom-ui`、
+  `crates/ecosystem/floom-editor`。后两个是独立 workspace，根目录的
+  `cargo fmt --all` 一个都到不了；`crates/vendor` 永不格式化。
+- **卫星 workspace 是推导出来的，不是手写的**：`crates/ecosystem/` 下任何
+  含 `[workspace]` 的 `Cargo.toml`。手写列表正是漏掉第三个的原因。
+- **门禁关掉 debuginfo**（`CARGO_PROFILE_DEV_DEBUG=0`、`CARGO_PROFILE_TEST_DEBUG=0`、
+  `CARGO_INCREMENTAL=0`，写在脚本里而不是 `[profile]` 里，免得影响普通
+  `cargo test`）。这是 `ecosystem` 能否跑得动的关键，见下。
 
 **四类包名错误**（同一种病：`--package=` 里写了根 workspace 解析不出来的名字，
 一跑就 `did not match any packages`）：
@@ -406,9 +412,30 @@ just gate fmt        # 只跑一条
 | `floom-theme` | 只在 ecosystem workspace 里（`crates/ecosystem/floom-ui/crates/floom-theme`），根 workspace 永远解析不到 |
 | 漏掉 `floom-renderer-tui`、`floom-renderer-web` | CI 与门禁都漏了 |
 
-现在门禁与 CI 的包列表用脚本做过差集比对，两侧都是 52 个，不再靠眼睛核对。
+现在门禁与 CI 的包列表用脚本做过差集比对，两侧都是 55 个，不再靠眼睛核对。
 
-**当前状态：`just gate` 10 项全绿（10 passed, 0 skipped, 0 failed）。**
+**第 11 条检查：`ecosystem`。** 根 `Cargo.toml` 的 `exclude` 里有
+`crates/ecosystem`，所以根目录的 `cargo test --workspace` 永远到不了那两个卫星
+workspace。这不是理论缺口：四个设计系统的像素 golden 就住在 `floom-ui` 里，
+`d131b5af` 把 `PixelSnapshot::of` 挪到 `ReferencePixels` trait 后面、又教会
+vello 画投影，于是那四个 gallery 同时**编译不过**和**哈希不同**，而门禁和 CI
+都只报绿。`floom-editor` 的 25 个 paint 级测试是同一处境：已提交、手跑能过、
+没有任何东西在跑。现在两边都按推导出的卫星列表循环跑整 workspace。
+
+**实测数字**（这台机器，`CARGO_PROFILE_*_DEBUG=0`）：
+
+| workspace | 成员 | 测试 | 冷 | 热 | target |
+|---|---|---|---|---|---|
+| `crates/ecosystem/floom-ui` | 306 | 961 个 test binary，3602 passed / 0 failed / 16 ignored | 273 s | 68 s | 3.2 GB |
+| `crates/ecosystem/floom-editor` | 4 | 25 passed | 126 s | — | 1.1 GB |
+
+开完整 debuginfo 时同一条 `floom-ui` 测试跑过 **>109 分钟**、target 约 **46 GB**，
+第一次尝试还因为磁盘写满被静默杀掉、日志里一个 `test result` 都没有。所以
+debuginfo 是这条检查的成本大头，不是成员数。
+
+**当前状态：`just gate` 12 项全部实跑过；`fmt` 会因为工作区里未提交的改动而红，
+`ecosystem` 单独跑 97 s 通过（含两个卫星）。** 不写"全绿"——`fmt` 的红灯来自
+尚未提交的 WIP，不是这些改动本身。
 
 
 ---

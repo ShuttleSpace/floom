@@ -23,6 +23,23 @@
 
 set -uo pipefail
 
+# The gate only needs pass/fail, not debuggable binaries, and the two big
+# workspaces here are 306 and 4 members. Measured on this machine:
+#
+#   cargo test --workspace, full debuginfo      >109 min (the first attempt was
+#                                                 killed by a full disk before it
+#                                                 finished)
+#   same, debuginfo off, cold target              273 s
+#   same, debuginfo off, warm target               68 s
+#
+# The target directory also shrinks from ~46 GB to 3.2 GB, which matters on a
+# disk that hit 100% during this work and took every build down with it. Set
+# here rather than in a `[profile]` so a normal `cargo test` outside the gate
+# keeps its debuginfo.
+export CARGO_PROFILE_DEV_DEBUG=0
+export CARGO_PROFILE_TEST_DEBUG=0
+export CARGO_INCREMENTAL=0
+
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
@@ -39,6 +56,26 @@ for arg in "$@"; do
     *) CHECKS+=("$arg") ;;
   esac
 done
+
+# The satellite workspaces, derived rather than listed.
+#
+# There are three workspaces in this repo, not one: the root, plus every
+# `Cargo.toml` directly under `crates/ecosystem/` that opens with `[workspace]`.
+# The root manifest's `members` is `crates/*` and `examples/*` with
+# `crates/ecosystem` excluded, so root `cargo fmt --all` and `cargo test
+# --workspace` stop at that boundary and never reach a satellite.
+#
+# Derived, because a hand-written list is exactly how one of them was missed.
+# `crates/ecosystem/floom-editor` was in the repo for a while before this
+# existed: its committed sources were not rustfmt-clean and its 25 tests were run
+# by nothing, while `fmt` printed PASS claiming "both workspaces". There were
+# three.
+SATELLITE_WORKSPACES=()
+for _manifest in crates/ecosystem/*/Cargo.toml; do
+  [ -f "$_manifest" ] || continue
+  grep -qx '\[workspace\]' "$_manifest" && SATELLITE_WORKSPACES+=("$(dirname "$_manifest")")
+done
+unset _manifest
 
 # The 2.0 track, as the CI job spells it. A v1 regression must not red the
 # signal for work that never touches it, and vice versa.
@@ -180,10 +217,10 @@ has_check() {
 
 if [ "${CHECKS[0]:-}" = "--list" ]; then
   cat <<'EOF'
-fmt        cargo fmt --all --check, both workspaces
+fmt        cargo fmt --all --check, in every workspace
 clippy     cargo clippy on the 2.0 track, warnings denied
 test       cargo test --workspace
-ecosystem  cargo test --workspace in crates/ecosystem/floom-ui
+ecosystem  cargo test --workspace in every crates/ecosystem satellite
 doc        cargo test --doc
 arch       scripts/check-architecture-deps.sh
 probe      the device probe compiles with `--features real`
@@ -201,11 +238,26 @@ echo
 
 # --- formatting -------------------------------------------------------------
 #
-# Both workspaces, because they are separate: `crates/ecosystem/floom-ui` has its
-# own Cargo.toml and `cargo fmt --all` at the root does not reach it.
+# Every workspace in the repo, not just the root. `crates/ecosystem/floom-ui`
+# and `crates/ecosystem/floom-editor` each have their own Cargo.toml, and root
+# `cargo fmt --all` reaches neither.
+#
+# `--all` inside a satellite, which is also what the CI job runs. It does reach
+# that satellite's local path dependencies, and those point back into the root
+# workspace, so a root file that is unformatted is reported twice. Harmless for
+# `--check` — the gate never runs the writing form, and `cargo fmt --all` here is
+# scoped by the working directory, so it cannot rewrite root sources from a
+# satellite. Scoping to `--package=` per member was tried and dropped: the
+# package names have to come from `cargo metadata`, and a grep over that JSON
+# yields target and dependency names too (`gallery`, `paint`, `ide_demo`), which
+# fails the check for a reason that has nothing to do with formatting.
 fmt_check() {
-  cargo fmt --all --check || return 1
-  (cd crates/ecosystem/floom-ui && cargo fmt --all --check)
+  local ws status=0
+  cargo fmt --all --check || status=1
+  for ws in "${SATELLITE_WORKSPACES[@]}"; do
+    (cd "$ws" && cargo fmt --all --check) || status=1
+  done
+  return "$status"
 }
 has_check fmt && run_check fmt "" fmt_check
 
@@ -234,26 +286,34 @@ test_check() {
 }
 has_check test && run_check test "" test_check
 
-# --- the ecosystem workspace ------------------------------------------------
+# --- the satellite workspaces -----------------------------------------------
 #
-# `crates/ecosystem/floom-ui` is a **separate workspace**, so the check above
-# never reaches it: root `members` is `crates/*` and `examples/*`, and the
-# ecosystem tree is explicitly excluded. That gap is not academic — the four
-# design-system pixel goldens live there, and they were stale for two commits
-# because nothing ran them. `d131b5af` moved `PixelSnapshot::of` behind a trait
-# and taught vello to draw drop shadows; the galleries then failed to compile
-# *and* hashed differently, and both facts were invisible to every check here.
+# Root `members` is `crates/*` and `examples/*` with `crates/ecosystem` excluded,
+# so the `test` check above never reaches a satellite. That gap is not academic.
+# The four design-system pixel goldens live in `crates/ecosystem/floom-ui`, and
+# they were stale for two commits because nothing ran them: `d131b5af` moved
+# `PixelSnapshot::of` behind a trait and taught vello to draw drop shadows, so
+# the galleries failed to compile *and* hashed differently, while every check
+# here printed PASS. `crates/ecosystem/floom-editor` was in the same position —
+# 25 paint-level tests, committed, passing when run by hand, run by nothing.
 #
 # The whole workspace, not a `-p` list: the clippy scope was truncated once
 # already, and a hand-written package list is how a third of a track goes
 # unlinted while the gate prints PASS. 306 members is the real shape of the
-# tree, so that is what this runs.
+# `floom-ui` tree, so that is what this runs.
 #
 # No `--exclude`: every member is a headless test. The galleries render through
 # the software renderer into a buffer, so no display and no window is involved —
 # unlike the root's `floom-platform`, which is why that one is excluded above.
+#
+# `--no-fail-fast` per workspace so one red kit does not hide the rest, and the
+# loop keeps going so a red `floom-ui` does not hide `floom-editor`.
 ecosystem_check() {
-  (cd crates/ecosystem/floom-ui && cargo test --workspace --no-fail-fast)
+  local ws status=0
+  for ws in "${SATELLITE_WORKSPACES[@]}"; do
+    (cd "$ws" && cargo test --workspace --no-fail-fast) || status=1
+  done
+  return "$status"
 }
 has_check ecosystem && run_check ecosystem "" ecosystem_check
 

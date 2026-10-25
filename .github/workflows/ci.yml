@@ -284,26 +284,27 @@ jobs:
       - name: Check the device probe against the real backend
         run: cargo check -p floom-probe --features real
 
-  # `crates/ecosystem/floom-ui` is a separate workspace: the root manifest
-  # excludes it, and `members` is `crates/*` + `examples/*`, so no job above
-  # reaches it. Everything in `floom-2.0` could be green while the four
-  # design-system pixel goldens there did not compile.
+  # Every satellite workspace under `crates/ecosystem/`, derived from the
+  # manifests rather than listed: a satellite is a `Cargo.toml` there that opens
+  # with `[workspace]`. The root manifest excludes the whole `crates/ecosystem`
+  # tree, so root `cargo test --workspace` and the `build` job above never reach
+  # either one.
   #
   # That is not hypothetical. `d131b5af` moved `PixelSnapshot::of` behind the
   # `ReferencePixels` trait and separately taught vello to draw drop shadows;
-  # the galleries then failed both to compile *and* to hash the same, and
-  # neither showed up anywhere. This job is the only thing that runs them.
+  # the design-system galleries in `floom-ui` then failed both to compile *and*
+  # to hash the same, and neither showed up anywhere. `floom-editor`'s 25
+  # paint-level tests were committed and run by nothing at all. This job is the
+  # only thing that runs either.
   #
-  # The whole workspace rather than a package list: 306 members, every one a
-  # headless test that renders into a buffer. A hand-maintained `-p` list is how
-  # the `FLOOM2_PACKAGES` scope got truncated once already.
+  # The whole workspace rather than a package list: `floom-ui` alone is 306
+  # members, every one a headless test that renders into a buffer. A
+  # hand-maintained `-p` list is how the `FLOOM2_PACKAGES` scope got truncated
+  # once already.
   ecosystem-check:
-    name: Ecosystem workspace (design-system goldens)
+    name: Ecosystem workspaces (design-system goldens, editor)
     if: github.event.pull_request.draft == false
     runs-on: macos-latest
-    defaults:
-      run:
-        working-directory: crates/ecosystem/floom-ui
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
@@ -314,12 +315,22 @@ jobs:
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
         with:
-          workspaces: crates/ecosystem/floom-ui
+          # Space-separated workspace roots, relative to the repo root.
+          workspaces: crates/ecosystem/floom-ui crates/ecosystem/floom-editor
           key: ecosystem-check
           save-if: ${{ github.event_name != 'merge_group' }}
 
-      - name: Run the ecosystem tests
-        run: cargo test --workspace --no-fail-fast
+      - name: Run the satellite tests
+        run: |
+          status=0
+          for manifest in crates/ecosystem/*/Cargo.toml; do
+            grep -qx '\[workspace\]' "$manifest" || continue
+            dir="$(dirname "$manifest")"
+            echo "::group::$dir"
+            (cd "$dir" && cargo test --workspace --no-fail-fast) || status=1
+            echo "::endgroup::"
+          done
+          exit "$status"
 
   build:
     name: Rust on ${{ matrix.os }}
@@ -408,7 +419,23 @@ jobs:
           rustup component add rustfmt
 
       - name: Run rustfmt
-        run: cargo fmt --all --check
+        # Every workspace, not just the root. `crates/ecosystem/floom-ui` and
+        # `crates/ecosystem/floom-editor` have their own Cargo.toml, and root
+        # `cargo fmt --all` reaches neither -- the same boundary that let the
+        # editor's committed sources sit unformatted while this job was green.
+        #
+        # `status` rather than a bare loop: GitHub's default shell runs under
+        # `set -e`, so an unformatted `floom-ui` would end the step and hide
+        # whatever `floom-editor` had to say. The gate accumulates for the same
+        # reason.
+        run: |
+          status=0
+          cargo fmt --all --check || status=1
+          for manifest in crates/ecosystem/*/Cargo.toml; do
+            grep -qx '\[workspace\]' "$manifest" || continue
+            (cd "$(dirname "$manifest")" && cargo fmt --all --check) || status=1
+          done
+          exit "$status"
 
   clippy:
     name: Clippy on ${{ matrix.os }}

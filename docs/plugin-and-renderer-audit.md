@@ -422,7 +422,7 @@ iOS 分支只是检测已存在的 xcframework 并链接，没有驱动 `xcodebu
   跳过必须打印理由、退出码即失败数。
 - **门禁 clippy 范围截断在 `floom-native-ffi`。** 漏掉全部 9 个能力插件、
   `floom-app`、`floom-widgets` 和另外 20 个 crate。截断期间门禁报 `PASS clippy`，
-  而三分之一的 track 从未被 lint 过。补齐到 CI 的 52 个包后，仅 `floom-app`
+  而三分之一的 track 从未被 lint 过。补齐到 CI 的完整包列表后，仅 `floom-app`
   一处就暴露了 17 个此前从未被编译到的错误。
 - **`--all-features` 是必须的。** 默认 feature 只编译占位实现，
   `floom-platform-desktop` 的整个 winit 后端在 feature 后面。第一次
@@ -431,7 +431,7 @@ iOS 分支只是检测已存在的 xcframework 并链接，没有驱动 `xcodebu
 - **四个包名是错的**（`--package=` 写了根 workspace 解析不出来的名字）：
   `floom-renderer-skia`（已改名 `-skia-abi`）、`floom-runtime`（不存在）、
   `floom-theme`（只在 ecosystem workspace 里）、以及 CI 与门禁都漏了
-  `floom-renderer-tui`/`floom-renderer-web`。现在两侧的 52 个名字用脚本比对过。
+  `floom-renderer-tui`/`floom-renderer-web`。现在两侧的 55 个名字用脚本比对过。
 - **两个 `unsafe` 签名是补契约，不是压 lint。**
   `floom-plugin-nativeview::provider` 和 `boxed_provider` 解引用调用方拥有的
   裸 vtable 指针，之前没有说明。现在都是 `unsafe fn` 并带 `# Safety`，
@@ -440,7 +440,10 @@ iOS 分支只是检测已存在的 xcframework 并链接，没有驱动 `xcodebu
   数字拼出一个 `Insets`，没有任何调用者；布局和绘制都已各自算过 padding，
   接上它会变成第三份真相。
 
-当前 `just gate`：10 passed, 0 skipped, 0 failed。
+当前 `just gate`：12 条检查（`fmt`、`clippy`、`test`、`ecosystem`、`doc`、
+`arch`、`probe`、`plugins`、`android`、`ios`、`windows`、`golden`），全部实跑过。
+`ecosystem` 与 `windows` 是这一轮新加的两条；`ecosystem` 覆盖三个 workspace，
+实测 97 s / 3.2 GB。
 
 ---
 
