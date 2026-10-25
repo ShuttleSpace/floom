@@ -67,6 +67,7 @@ FLOOM2_PACKAGES=(
   --package=floom-plugin-location --package=floom-plugin-notifications
   --package=floom-plugin-sensors --package=floom-plugin-share
   --package=floom-plugin-vibration --package=floom-plugin-package-info
+  --package=floom-plugin-paths
   # The framework tail of the track. It was missing here while CI listed it, so
   # the gate could go green with `floom-app` and `floom-widgets` unclipped.
   --package=floom-accessibility --package=floom-focus --package=floom-gesture
@@ -96,6 +97,7 @@ CAPABILITY_PLUGINS=(
   floom-plugin-share
   floom-plugin-vibration
   floom-plugin-package-info
+  floom-plugin-paths
 )
 
 MOBILE_CAPABILITY_PLUGINS=(
@@ -109,6 +111,7 @@ MOBILE_CAPABILITY_PLUGINS=(
   floom-plugin-share
   floom-plugin-vibration
   floom-plugin-package-info
+  floom-plugin-paths
 )
 
 PASS=0

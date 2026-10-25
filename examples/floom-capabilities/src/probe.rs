@@ -55,6 +55,7 @@ use floom_plugin_local_auth as local_auth;
 use floom_plugin_location as location;
 use floom_plugin_notifications as notifications;
 use floom_plugin_package_info as package_info;
+use floom_plugin_paths as paths;
 use floom_plugin_sensors as sensors;
 use floom_plugin_vibration as vibration;
 
@@ -94,6 +95,20 @@ pub struct Row {
     pub question: &'static str,
     /// What came back.
     pub state: State,
+    /// Whether this row's plugin has a **real arm on desktop targets**, so a
+    /// [`State::Value`] on a host build is a measurement rather than a
+    /// fabrication.
+    ///
+    /// The nine mobile-only plugins set this to `false`: on a host their arms
+    /// are inert by design, and a `Value` there could only be a default the
+    /// OS never set — which is what
+    /// `a_host_build_never_reports_a_value_it_cannot_have_measured` exists to
+    /// catch. The Tier-A catalog plugins (`paths`, and `package_info`'s
+    /// Apple arm) read the *desktop's own conventions* — XDG directories,
+    /// `NSBundle` — so on a host they measure for real. The flag is how the
+    /// invariant stays exact: it forbids unmeasured values, not desktop
+    /// values.
+    pub desktop_real: bool,
 }
 
 impl Row {
@@ -102,6 +117,20 @@ impl Row {
             name,
             question,
             state,
+            desktop_real: false,
+        }
+    }
+
+    /// Like [`Row::value`], for a row whose plugin measures on desktop hosts
+    /// too. See [`Row::desktop_real`] — the distinction is the difference
+    /// between "this row cannot be a `Value` on a laptop" and "it can, because
+    /// the laptop is the source of truth".
+    fn measured_value(name: &'static str, question: &'static str, state: State) -> Self {
+        Self {
+            name,
+            question,
+            state,
+            desktop_real: true,
         }
     }
 }
@@ -202,6 +231,65 @@ pub fn package_info() -> Row {
         Row::value(
             "package_info",
             "this app's name, id, version, build",
+            State::Absent,
+        )
+    }
+}
+
+// --- this app's storage ------------------------------------------------------
+
+/// Where this app may write — the first gallery row backed by a Tier-A catalog
+/// plugin whose **desktop arm is real** ([`Row::measured_value`]).
+///
+/// On Linux and macOS the answer comes from the platform's own conventions
+/// (XDG, `~/Library`), so a host build genuinely measures it — the host is the
+/// source of truth there, not a stand-in for a phone. On Android the JNI
+/// bridge answers. The external-storage question is Android-only by design
+/// (the crate keeps it out of `AppDirectory` precisely because it exists on
+/// one platform), and the row reports its absence as `n/a` rather than
+/// collapsing it into the internal directories, which would rename the
+/// capability out from under the reader.
+pub fn paths() -> Row {
+    #[cfg(any(
+        target_os = "android",
+        target_os = "ios",
+        target_os = "macos",
+        target_os = "linux",
+        target_os = "windows"
+    ))]
+    {
+        let support = paths::app_dir(paths::AppDirectory::ApplicationSupport);
+        let cache = paths::app_dir(paths::AppDirectory::Cache);
+        let external = paths::external_files_dir();
+        let state = match (support, cache) {
+            (Some(support), Some(cache)) => State::Value(format!(
+                "support {} · cache {} · external {}",
+                truncate(&support.display().to_string(), 38),
+                truncate(&cache.display().to_string(), 38),
+                match external {
+                    Some(external) => truncate(&external.display().to_string(), 38),
+                    // Android-only capability; see the row doc.
+                    None => "n/a".to_string(),
+                }
+            )),
+            // Every platform this arm compiles for defines these two
+            // directories, so a miss means the bridge or the conventions
+            // failed — an error, not "no capability".
+            _ => State::Error("the app directories did not resolve".into()),
+        };
+        Row::measured_value("paths", "app support, cache, external storage", state)
+    }
+    #[cfg(not(any(
+        target_os = "android",
+        target_os = "ios",
+        target_os = "macos",
+        target_os = "linux",
+        target_os = "windows"
+    )))]
+    {
+        Row::value(
+            "paths",
+            "app support, cache, external storage",
             State::Absent,
         )
     }
@@ -515,6 +603,8 @@ pub fn all() -> Vec<Row> {
         // identity
         device_info(),
         package_info(),
+        // this app's storage
+        paths(),
         // power and network
         battery(),
         connectivity(),
@@ -542,8 +632,9 @@ pub fn all() -> Vec<Row> {
 /// header is keyed to a row name rather than to an index so that inserting a row
 /// inside a section cannot silently move the boundary; the test below is what
 /// makes that claim true rather than merely intended.
-pub const GROUPS: [(&str, &str); 6] = [
+pub const GROUPS: [(&str, &str); 7] = [
     ("Identity — what this device is", "device_info"),
+    ("This app's storage", "paths"),
     ("Power and network", "battery"),
     ("Input and sensors", "sensors"),
     ("Privacy and authorization", "location"),
@@ -572,9 +663,17 @@ mod tests {
     /// `Absent`, because the packages have two honest ways of refusing and both
     /// are legitimate: `vibration::can_vibrate()` is `cfg`-dispatched, so a host
     /// never even asks the OS (`Absent`), whereas `clipboard::get_text()` is a
-    /// real call whose host arm returns `Err` (`Error`, with the reason). What
-    /// must never happen on a host is a `Value` — because a value here could
-    /// only have come from a default the OS never set.
+    /// real call whose host arm returns `Err` (`Error`, with the reason).
+    ///
+    /// And it does not require every row to avoid `Value` on a host, either —
+    /// only the rows that cannot measure there. The Tier-A catalog plugins
+    /// (`paths`) read the *desktop's own conventions*: the XDG directories on
+    /// Linux, `~/Library` on macOS. A `Value` from such a row on a laptop is a
+    /// measurement the laptop itself made, which is a different thing from the
+    /// fabrication this test exists to catch. [`Row::desktop_real`] is how a
+    /// row claims that status; the assertion holds the line for every row that
+    /// does not, because a `Value` there could only have come from a default
+    /// the OS never set.
     ///
     /// That default is no longer a plausible number: `BatteryState::default()`
     /// used to be `level: 1.0`, which this gallery printed as "100%" on a
@@ -587,6 +686,9 @@ mod tests {
             return; // on-device this assertion is not the contract
         }
         for row in all() {
+            if row.desktop_real {
+                continue; // a desktop-real row measures on a host; see the doc above
+            }
             assert!(
                 !row.state.is_value(),
                 "`{}` reported a value ({:?}) on a host that cannot measure it",

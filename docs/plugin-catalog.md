@@ -73,17 +73,32 @@ SDK 不携带任何能力插件。app 想要电池就连 `floom-plugin-battery`�
 共同特征：同步查询或一次性动作、host-inert 容易写、**桌面臂在本机 macOS 上就能验证**、
 不需要 provider ABI、不卡设备。全部落在 L5，与现有 9 个插件同层。
 
-### A1. `floom-plugin-paths` ← `path_provider`（+ `xdg_directories`）
+### A1. `floom-plugin-paths` ← `path_provider`（+ `xdg_directories`）✅ 已实现（2026-10-25，批次 1）
 
 最该先做的一个：几乎每个 app 都要往磁盘写点东西，而现在没有任何 crate 回答
 「我的应用支持目录在哪」。
 
 - Android `Context.getFilesDir` / `getCacheDir` / `getExternalFilesDir`
-- iOS `NSFileManager URLsForDirectory:inDomains:`（`NSApplicationSupportDirectory` 等）
+- iOS/macOS `NSSearchPathForDirectoriesInDomains`（一个 `apple.rs` 服务两目标）
 - 桌面：`dirs` crate（Linux 走 XDG，macOS `~/Library/Application Support`，
   Windows `%APPDATA%`）
 - host-inert 语义：桌面**不是** host——桌面是这些目录的真正宿主。只有 web/tui
   这类目标才拒绝。
+
+**as-built 记录**（与原方案的出入）：
+
+- **iOS 用的是 C 函数不是 URL 变体**。`NSSearchPathForDirectoriesInDomains`
+  是 Foundation 全局函数，不是任何类的方法——第一版把它当成 `NSFileManager`
+  的类方法去 `msg_send!`，objc2 的运行时检查直接拒绝（`method not found`），
+  这正是类型化边界该拦的错误。最终走 FFI 声明。
+- **Downloads 在 Apple 平台是 `None`**。iOS 没有每 app 的 Downloads 目录
+  （系统走 Files app），macOS 的 search-path API 也不暴露——重定向到 Documents
+  是答非所问，发明 `~/Downloads/<app>` 是 crate 替 app 做策略。
+- **外部存储是独立函数不是枚举变体**。`external_files_dir()` 只在 Android 存在，
+  塞进 `AppDirectory` 会让所有平台的调用方都写一遍 fallback。
+- **gallery 因此第一次出现 host 上的 `=` 行**。host 诚实性测试的教义随之细化：
+  `Row::desktop_real` 标记「桌面臂是真测量」，不变量保持精确——禁止的是
+  没测过的值，不是桌面值。
 
 **注意分工**：`floom-persistence` 提供的是 `KeyValueStore` trait + `FileStore` /
 `MemoryStore` 后端，它**不知道**目录在哪，要调用方给路径。`floom-plugin-paths`
@@ -434,7 +449,7 @@ C4 选项 (a) 的落地。但要先确认：位加回来时，是加在 `floom-p
 
 ```
 批次 1（无需设备，全部本机可验）
-  A1 paths      → 最通用，且不撞任何现有 crate
+  A1 paths      ✅ 已完成（2026-10-25）：gallery 首个 host 真值行，desktop_real 教义细化
   A2 open-url   → 结掉 C4 的一半，桌面臂真能打开 URL
   A4 package-info ✅ 已完成（2026-10-25）：含 gallery 接线，8 处注册走通
   （A4 第一个做：它最短，用来把第 6 节的清单走通一遍）

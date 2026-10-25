@@ -72,6 +72,7 @@ floom-plugin-local-auth = { path = "../../crates/floom-plugin-local-auth", versi
 floom-plugin-location = { path = "../../crates/floom-plugin-location", version = "0.2.0" }
 floom-plugin-notifications = { path = "../../crates/floom-plugin-notifications", version = "0.2.0" }
 floom-plugin-package-info = { path = "../../crates/floom-plugin-package-info", version = "0.2.0" }
+floom-plugin-paths = { path = "../../crates/floom-plugin-paths", version = "0.2.0" }
 floom-plugin-sensors = { path = "../../crates/floom-plugin-sensors", version = "0.2.0" }
 floom-plugin-share = { path = "../../crates/floom-plugin-share", version = "0.2.0" }
 floom-plugin-vibration = { path = "../../crates/floom-plugin-vibration", version = "0.2.0" }
