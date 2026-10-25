@@ -1026,6 +1026,7 @@ dependencies = [
  "floom-plugin-open-url",
  "floom-plugin-package-info",
  "floom-plugin-paths",
+ "floom-plugin-prefs",
  "floom-plugin-sensors",
  "floom-plugin-share",
  "floom-plugin-vibration",
@@ -1570,6 +1571,16 @@ dependencies = [
 
 [[package]]
 name = "floom-plugin-paths"
+version = "0.2.0"
+dependencies = [
+ "dirs",
+ "floom-platform-mobile",
+ "jni 0.22.4",
+ "objc2",
+]
+
+[[package]]
+name = "floom-plugin-prefs"
 version = "0.2.0"
 dependencies = [
  "dirs",

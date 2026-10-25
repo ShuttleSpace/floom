@@ -192,7 +192,7 @@ C4 的另一半。`file_selector` 在 Flutter 侧是 federated 包（6 个分包
 - 字段全部 `Option<String>`：与 battery 的 `level: Option<f32>` 同理，
   `Some("")` 是一个没人测过的值。Apple 臂和 Android 臂都保证「非空才 `Some`」。
 
-### A5. `floom-plugin-prefs` ← `shared_preferences`
+### A5. `floom-plugin-prefs` ← `shared_preferences` ✅ 已实现（2026-10-25，批次 2）
 
 OS 支持的键值存储（`SharedPreferences` / `NSUserDefaults`），
 区别于 `floom-persistence` 的文件后端。
@@ -208,6 +208,23 @@ OS 支持的键值存储（`SharedPreferences` / `NSUserDefaults`），
 
 Flutter 侧这两个也是不同包（`shared_preferences` vs 应用自管的 JSON），
 分工一致。
+
+**as-built 记录**（与原方案的出入）：
+
+- **Android 用 `commit()` 不用 `apply()`**。`apply()` 立即返回、后台写盘——
+  它返回的 `Ok` 是对一个可能还没发生的写的声称，进程死掉会丢最后一次写。
+  `commit()` 阻塞并返回布尔。偏好小而写少，诚实值这几毫秒。
+- **Linux/Windows 是文件臂**（百分比编码的 `key<TAB>value`，config 目录，
+  temp-then-rename 原子写）——和 Flutter 自己的 `_linux`/`_windows` 实现同一
+  形状。无锁也如实文档化（`SharedPreferences` 本身就不多进程安全）。
+- **Apple 臂有真原生往返测试**（host 上跑 set/get/remove 走真实
+  `NSUserDefaults`）。写它的过程踩到并留下记录：
+  `removePersistentDomainForName:` 是**实例方法**不是类方法——头文件一锤定音。
+- **gallery 的 prefs 行是唯一证明持久性的读数**：launch 计数，动作写、行读，
+  沿「读数不改变世界」线拆开。跨进程验证过：`defaults write` 写 7，
+  下一次运行读回「7 launches recorded」。
+- **NUL 是唯一全局拒绝字符**（三条传输都载不动它），其余字符各臂自处；
+  文件臂用编码兜住 `=`、tab、换行。
 
 ### A6. `floom-plugin-wakelock` ← `wakelock_plus`
 
@@ -502,6 +519,8 @@ C4 选项 (a) 的落地。但要先确认：位加回来时，是加在 `floom-p
 
 批次 2（无需设备）
   A3 file-dialog ✅ 已完成（2026-10-25）：三桌面真臂 + 手机精确拒绝，C4 另一半落地
+  A5 prefs      ✅ 已完成（2026-10-25）：Apple 臂真原生往返测试；gallery 有了
+                 证明持久性的行（launch 计数，跨进程验证过）
   A5 prefs       → 要先写清与 floom-persistence 的分工
   A6 wakelock    → 桌面臂非空（Windows/macOS 真有 API）
 

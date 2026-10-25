@@ -107,6 +107,7 @@ FLOOM2_PACKAGES=(
   --package=floom-plugin-paths
   --package=floom-plugin-open-url
   --package=floom-plugin-file-dialog
+  --package=floom-plugin-prefs
   # The framework tail of the track. It was missing here while CI listed it, so
   # the gate could go green with `floom-app` and `floom-widgets` unclipped.
   --package=floom-accessibility --package=floom-focus --package=floom-gesture
@@ -139,6 +140,7 @@ CAPABILITY_PLUGINS=(
   floom-plugin-paths
   floom-plugin-open-url
   floom-plugin-file-dialog
+  floom-plugin-prefs
 )
 
 MOBILE_CAPABILITY_PLUGINS=(
@@ -155,6 +157,7 @@ MOBILE_CAPABILITY_PLUGINS=(
   floom-plugin-paths
   floom-plugin-open-url
   floom-plugin-file-dialog
+  floom-plugin-prefs
 )
 
 # The plugins with real Windows arms. Everything else in the capability list
@@ -167,6 +170,7 @@ WINDOWS_CAPABILITY_PLUGINS=(
   floom-plugin-paths
   floom-plugin-open-url
   floom-plugin-file-dialog
+  floom-plugin-prefs
 )
 
 PASS=0

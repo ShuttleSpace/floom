@@ -54,9 +54,9 @@ use floom_plugin_device_info as device_info;
 use floom_plugin_local_auth as local_auth;
 use floom_plugin_location as location;
 use floom_plugin_notifications as notifications;
-use floom_plugin_file_dialog as file_dialog;
 use floom_plugin_package_info as package_info;
 use floom_plugin_paths as paths;
+use floom_plugin_prefs as prefs;
 use floom_plugin_sensors as sensors;
 use floom_plugin_vibration as vibration;
 
@@ -295,6 +295,56 @@ pub fn paths() -> Row {
         )
     }
 }
+
+/// The number of launches this gallery has recorded, in the OS's own store.
+///
+/// This row exists because it is the one reading that proves the interesting
+/// property: **the value survives the process**. Every other row asks the OS
+/// about the current moment; this one reads what a previous run wrote — on
+/// macOS through `NSUserDefaults`, on Linux and Windows through the config
+/// file, on a phone through `SharedPreferences`. The row only *reads*; the
+/// action that increments it lives in [`actions`], because a reading must
+/// not change the world — and incrementing is precisely a write.
+pub fn prefs() -> Row {
+    #[cfg(any(
+        target_os = "android",
+        target_os = "ios",
+        target_os = "macos",
+        target_os = "linux",
+        target_os = "windows"
+    ))]
+    {
+        let state = match prefs::Preferences::open(PREFS_STORE) {
+            Ok(store) => match store.get("launches") {
+                Some(recorded) => State::Value(format!(
+                    "{} launches recorded — a previous run's write, still here",
+                    recorded.trim()
+                )),
+                // The store exists and the key was never set: the honest
+                // first-run answer, not an absence of the capability.
+                None => State::Value("first run — nothing recorded yet".into()),
+            },
+            Err(reason) => State::Error(reason),
+        };
+        Row::measured_value("prefs", "a value that survives the process", state)
+    }
+    #[cfg(not(any(
+        target_os = "android",
+        target_os = "ios",
+        target_os = "macos",
+        target_os = "linux",
+        target_os = "windows"
+    )))]
+    {
+        Row::value("prefs", "a value that survives the process", State::Absent)
+    }
+}
+
+/// The gallery's own preference store name.
+///
+/// Shared by the row (read) and the action (write) so the pair reads and
+/// writes the same thing a reader would check by hand.
+pub const PREFS_STORE: &str = "floom-capabilities";
 
 // --- power and connectivity ------------------------------------------------
 
@@ -589,6 +639,11 @@ pub fn actions() -> Vec<(&'static str, &'static str)> {
         // promises — a chosen path, the user's cancellation, a refusal —
         // which is the whole point of `Ok(None)` not being `Err`.
         ("file_dialog::pick_file", "device::pick_file"),
+        // The write half of the `prefs` row: the row reads, this increments.
+        // The next run's row will read what this press wrote — the pair is
+        // the persistence demonstration, split along the gallery's
+        // readings-don't-change-the-world line.
+        ("prefs::Preferences::set", "device::count_launch"),
     ]
 }
 
@@ -616,6 +671,7 @@ pub fn all() -> Vec<Row> {
         package_info(),
         // this app's storage
         paths(),
+        prefs(),
         // power and network
         battery(),
         connectivity(),

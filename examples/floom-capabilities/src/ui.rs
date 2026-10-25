@@ -42,6 +42,7 @@ use floom_plugin_local_auth as local_auth;
 use floom_plugin_location as location;
 use floom_plugin_notifications as notifications;
 use floom_plugin_open_url as open_url;
+use floom_plugin_prefs as prefs;
 use floom_plugin_share as share;
 use floom_plugin_vibration as vibration;
 use floom_widgets::{Button, Container, Spacer, Stack, Text};
@@ -358,6 +359,24 @@ fn run_action(id: &str) {
             Ok(None) => Ok("cancelled — the user's answer, not an error".to_string()),
             Err(reason) => Err(reason),
         },
+        // Read, increment, write — through the OS's own store, so the value
+        // the report names is the one a *future process* will read back.
+        "device::count_launch" => prefs::Preferences::open(probe::PREFS_STORE)
+            .and_then(|store| {
+                let previous: u64 = store
+                    .get("launches")
+                    .and_then(|v| v.trim().parse().ok())
+                    .unwrap_or(0);
+                store
+                    .set("launches", &(previous + 1).to_string())
+                    .map(|()| (previous, previous + 1))
+            })
+            .map(|(previous, now)| {
+                format!(
+                    "launch {previous} -> {now} — recorded; the row above will read it \
+                     back on the next run"
+                )
+            }),
         other => Err(format!("unknown action `{other}`")),
     };
     match outcome {
