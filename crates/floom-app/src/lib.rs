@@ -272,6 +272,26 @@ struct TextMeasure {
     weight: FontWeight,
 }
 
+/// How an overlay is placed and how it behaves once it is up.
+///
+/// Grouped rather than passed as four positional arguments because two of them
+/// are bare booleans: `open_overlay(kind, true, false, bounds, …)` is a call
+/// nobody can read, and swapping `modal` and `passthrough` at one of the call
+/// sites would compile. The combination is also not free — `modal` and
+/// `passthrough` are mutually exclusive in effect (a passthrough overlay takes
+/// no clicks, so a scrim over it would swallow the presses it exists to let
+/// through), which is a rule a struct can state in one place instead of at
+/// every caller.
+struct OverlaySpec {
+    kind: OverlayKind,
+    /// Viewport-relative rect the content is positioned and hit-tested against.
+    bounds: Rect,
+    /// Whether a press outside the content is swallowed by a scrim.
+    modal: bool,
+    /// Whether the overlay is painted but not hit, and takes no focus.
+    passthrough: bool,
+}
+
 /// A mounted overlay: an independent widget subtree painted above the main
 /// tree, laid out against the viewport at `bounds`, with hit/focus priority.
 struct OverlaySlot {
@@ -398,12 +418,10 @@ enum OverlayCommand {
         handle: OverlayHandle,
         /// Who asked — receives `overlay_closed` when this overlay comes down.
         owner: ElementId,
-        kind: OverlayKind,
-        modal: bool,
-        bounds: Rect,
         /// Already built, with its handle: the content factory ran while the
         /// event was still dispatching.
         content: Box<dyn WidgetAny>,
+        spec: OverlaySpec,
     },
     Close(OverlayHandle),
 }
@@ -977,7 +995,13 @@ impl WidgetHost {
     ) -> OverlayHandle {
         let handle = OverlayHandle::new(self.next_overlay_handle);
         self.next_overlay_handle += 1;
-        self.open_overlay_content(handle, None, kind, modal, false, bounds, Box::new(content))
+        let spec = OverlaySpec {
+            kind,
+            bounds,
+            modal,
+            passthrough: false,
+        };
+        self.open_overlay_content(handle, None, spec, Box::new(content))
     }
 
     /// Opens `content` as an overlay that is painted but not hit.
@@ -999,7 +1023,13 @@ impl WidgetHost {
     ) -> OverlayHandle {
         let handle = OverlayHandle::new(self.next_overlay_handle);
         self.next_overlay_handle += 1;
-        self.open_overlay_content(handle, None, kind, false, true, bounds, Box::new(content))
+        let spec = OverlaySpec {
+            kind,
+            bounds,
+            modal: false,
+            passthrough: true,
+        };
+        self.open_overlay_content(handle, None, spec, Box::new(content))
     }
 
     /// Mounts a finished overlay content box under a handle the caller minted.
@@ -1013,12 +1043,15 @@ impl WidgetHost {
         &mut self,
         handle: OverlayHandle,
         owner: Option<ElementId>,
-        kind: OverlayKind,
-        modal: bool,
-        passthrough: bool,
-        bounds: Rect,
+        spec: OverlaySpec,
         content: Box<dyn WidgetAny>,
     ) -> OverlayHandle {
+        let OverlaySpec {
+            kind,
+            bounds,
+            modal,
+            passthrough,
+        } = spec;
         let index = self.push(None, LayoutStyle::default(), None, content);
         self.nodes[index].is_overlay = true;
         // Reconcile the content immediately so a composite (e.g. a popup list)
@@ -3474,24 +3507,15 @@ impl WidgetHost {
                     OverlayCommand::Open {
                         handle,
                         owner,
-                        kind,
-                        modal,
-                        bounds,
                         content,
+                        spec,
                     } => {
                         // A widget-requested overlay is always interactive:
                         // nothing in the event model lets a widget ask for one
                         // that cannot be clicked, and a request that did would
                         // have to say what it is for.
-                        self.open_overlay_content(
-                            handle,
-                            Some(owner),
-                            kind,
-                            modal,
-                            false,
-                            bounds,
-                            content,
-                        );
+                        debug_assert!(!spec.passthrough);
+                        self.open_overlay_content(handle, Some(owner), spec, content);
                     }
                     OverlayCommand::Close(handle) => self.close_overlay(handle),
                 }
@@ -3557,11 +3581,7 @@ impl WidgetHost {
         // The overlay stack does not know which slots opted out of dismissal —
         // that is host state, because it is the host that knows whether closing
         // would strand a panel it cannot rebuild.
-        if !self
-            .overlays
-            .iter()
-            .any(|o| o.id == id && o.dismissible)
-        {
+        if !self.overlays.iter().any(|o| o.id == id && o.dismissible) {
             return false;
         }
         self.close_overlay(id);
@@ -4538,10 +4558,13 @@ impl UpdateContext for HostUpdateContext<'_> {
         sink.commands.push(OverlayCommand::Open {
             handle,
             owner,
-            kind: request.kind,
-            modal: request.modal,
-            bounds: request.bounds,
             content,
+            spec: OverlaySpec {
+                kind: request.kind,
+                bounds: request.bounds,
+                modal: request.modal,
+                passthrough: false,
+            },
         });
         true
     }
@@ -5239,10 +5262,13 @@ impl EventContext for NodeEventContext<'_> {
         self.overlays.commands.push(OverlayCommand::Open {
             handle,
             owner,
-            kind: request.kind,
-            modal: request.modal,
-            bounds: request.bounds,
             content,
+            spec: OverlaySpec {
+                kind: request.kind,
+                bounds: request.bounds,
+                modal: request.modal,
+                passthrough: false,
+            },
         });
         true
     }
