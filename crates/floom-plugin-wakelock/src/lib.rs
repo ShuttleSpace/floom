@@ -79,7 +79,8 @@ pub fn keep_screen_on(on: bool) -> Result<(), String> {
 /// Where the platform exposes a readable truth, this reads it; where it does
 /// not, it reports what this crate last asked for (see the crate doc — a
 /// fabricated "the OS said so" would be worse than an honest "we asked").
-pub fn is_keep_screen_on() -> bool {    #[cfg(target_os = "android")]
+pub fn is_keep_screen_on() -> bool {
+    #[cfg(target_os = "android")]
     {
         android::is_keep_screen_on()
     }
