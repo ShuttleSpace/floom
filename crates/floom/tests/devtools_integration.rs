@@ -267,6 +267,27 @@ fn picking_an_element_retargets_the_box_and_selects_it_in_the_panel() {
     // The box stays where the pick landed, no longer live.
     assert!(!picker.highlight_is_live());
     assert_eq!(picker.highlight_target(), Some(target));
+
+    // The selection is written once, not on every later pointer event. A
+    // facade commits after each event because it has no cheaper signal that a
+    // click happened, so a second commit must be a no-op — otherwise the next
+    // ordinary click anywhere would re-select this element and overwrite
+    // whatever the user picked since.
+    assert!(
+        !picker.commit_selection(),
+        "the same pick is not written twice"
+    );
+    devtools
+        .state()
+        .lock()
+        .unwrap()
+        .select("node-999999");
+    assert!(!picker.commit_selection(), "still not re-written");
+    assert_eq!(
+        devtools.state().lock().unwrap().selected(),
+        Some("node-999999"),
+        "a later selection is the user's, not the picker's"
+    );
 }
 
 /// A key that is not the pick chord is left to the app, and the panel's own

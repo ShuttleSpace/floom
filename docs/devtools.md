@@ -268,6 +268,13 @@ A click while picking **selects without pressing**: the picker consumes the
 event before the tree sees it. `commit_selection` writes the pick into the panel
 state, which is what makes the Elements row and the breadcrumb follow the click.
 
+It writes **once per pick**: the pick outlives the click, because it is what the
+highlight keeps sitting on, so it is not cleared on commit — and a caller that
+commits after every pointer event (which is what a frame loop with no cheaper
+signal does) would otherwise re-select the last picked element on the next
+ordinary click, overwriting whatever the user selected since. A second commit
+returns `false` and writes nothing.
+
 The highlight is its own overlay, above the panel, so the box is visible over
 everything including the devtools. It is mounted **passthrough** — it covers the
 window so it can outline an element anywhere in it, and a covering overlay that

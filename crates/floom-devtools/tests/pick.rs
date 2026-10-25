@@ -137,6 +137,45 @@ fn a_click_commits_the_selection_and_stops_picking() {
     ));
 }
 
+/// The pick is handed to the panel once, not once per read.
+///
+/// A pick outlives the click — the highlight keeps sitting on it — so it cannot
+/// be cleared on commit. That means "is there a pick" is not the same question
+/// as "has the panel been told", and the two have to be tracked separately: a
+/// caller that commits after every pointer event (a frame loop with no cheaper
+/// signal) must not re-select the last pick on every later click.
+#[test]
+fn a_pick_is_committed_once_and_then_holds() {
+    let state = state();
+    state.lock().unwrap().arm();
+    pick_pointer(&state, &press_at(20.0, 20.0), key_of(&[BUTTON, LABEL]));
+
+    // First read takes it.
+    assert_eq!(
+        state.lock().unwrap().take_uncommitted(),
+        Some("ok_button".to_string())
+    );
+    assert!(state.lock().unwrap().committed());
+    // Every later read gets nothing, and the pick itself is still there for the
+    // highlight to sit on.
+    assert_eq!(state.lock().unwrap().take_uncommitted(), None);
+    assert_eq!(state.lock().unwrap().picked(), Some("ok_button"));
+
+    // A new pick reopens the one-shot.
+    state.lock().unwrap().arm();
+    pick_pointer(&state, &press_at(20.0, 20.0), key_of(&[BUTTON, LABEL]));
+    assert_eq!(
+        state.lock().unwrap().take_uncommitted(),
+        Some("ok_button".to_string())
+    );
+
+    // And clearing the selection resets it too, so a cleared picker cannot
+    // hand back a key it no longer holds.
+    state.lock().unwrap().clear_picked();
+    assert_eq!(state.lock().unwrap().take_uncommitted(), None);
+    assert_eq!(state.lock().unwrap().picked(), None);
+}
+
 #[test]
 fn a_click_on_empty_space_picks_nothing() {
     let state = state();

@@ -475,8 +475,18 @@ impl PickHandle {
     /// Returns whether a selection was written. The picker holds the panel's
     /// state cell, so a caller that already owns a `PickHandle` does not need a
     /// second handle on the panel to make a pick show up in the readout.
+    ///
+    /// **Once per pick.** A pick outlives the click — it is what the highlight
+    /// keeps sitting on — so it is not cleared on commit, and a caller that
+    /// commits on every pointer event (which is what a frame loop with no
+    /// cheaper signal does) would re-select the last picked element on every
+    /// later click, overwriting whatever the user selected since. The second
+    /// call after a pick returns `false` and writes nothing.
     pub fn commit_selection(&self) -> bool {
-        let Some(key) = self.picked() else {
+        let Ok(mut pick) = self.pick.lock() else {
+            return false;
+        };
+        let Some(key) = pick.take_uncommitted() else {
             return false;
         };
         let Ok(mut state) = self.panel_state.lock() else {

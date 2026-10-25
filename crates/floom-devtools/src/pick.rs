@@ -88,6 +88,15 @@ pub struct PickState {
     hovered: Option<String>,
     /// The node a click committed to.
     picked: Option<String>,
+    /// Whether the panel has already been told about `picked`.
+    ///
+    /// A pick outlives the click that made it — it is what the highlight keeps
+    /// sitting on — so `picked` cannot be cleared on commit. But *writing* it
+    /// into the panel is a one-shot: a caller that commits on every pointer
+    /// event (the facade does, because it has no cheaper way to know a click
+    /// happened) would otherwise re-select the last picked element on every
+    /// later click, overwriting whatever the user selected since.
+    committed: bool,
 }
 
 impl PickState {
@@ -96,6 +105,7 @@ impl PickState {
             phase: PickPhase::Idle,
             hovered: None,
             picked: None,
+            committed: false,
         }
     }
 
@@ -144,11 +154,33 @@ impl PickState {
         self.picked = Some(key);
         self.phase = PickPhase::Idle;
         self.hovered = None;
+        // A new pick has not been shown to the panel yet.
+        self.committed = false;
+    }
+
+    /// Takes the pick if the panel has not been told about it, marking it told.
+    ///
+    /// The one-shot read: whoever writes the selection into the panel calls
+    /// this, so a second caller in the same pick gets `None` rather than
+    /// re-selecting the same element.
+    pub fn take_uncommitted(&mut self) -> Option<String> {
+        if self.committed {
+            return None;
+        }
+        let key = self.picked.clone()?;
+        self.committed = true;
+        Some(key)
+    }
+
+    /// Whether the panel has already been told about the current pick.
+    pub fn committed(&self) -> bool {
+        self.committed
     }
 
     /// Clears the selection without touching the picker.
     pub fn clear_picked(&mut self) {
         self.picked = None;
+        self.committed = false;
     }
 }
 
