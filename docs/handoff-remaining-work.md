@@ -421,7 +421,7 @@ just gate fmt        # 只跑一条
 | `floom-theme` | 只在 ecosystem workspace 里（`crates/ecosystem/floom-ui/crates/floom-theme`），根 workspace 永远解析不到 |
 | 漏掉 `floom-renderer-tui`、`floom-renderer-web` | CI 与门禁都漏了 |
 
-现在门禁与 CI 的包列表用脚本做过差集比对，两侧都是 55 个，不再靠眼睛核对。
+现在门禁与 CI 的包列表用脚本做过差集比对，两侧都是 58 个，不再靠眼睛核对。
 
 **第 11 条检查：`ecosystem`。** 根 `Cargo.toml` 的 `exclude` 里有
 `crates/ecosystem`，所以根目录的 `cargo test --workspace` 永远到不了那两个卫星
@@ -442,9 +442,14 @@ vello 画投影，于是那四个 gallery 同时**编译不过**和**哈希不�
 第一次尝试还因为磁盘写满被静默杀掉、日志里一个 `test result` 都没有。所以
 debuginfo 是这条检查的成本大头，不是成员数。
 
-**当前状态：`just gate` 12 项全部实跑过；`fmt` 会因为工作区里未提交的改动而红，
-`ecosystem` 单独跑 97 s 通过（含两个卫星）。** 不写"全绿"——`fmt` 的红灯来自
-尚未提交的 WIP，不是这些改动本身。
+**当前状态（2026-10-25 19:30）**：`just gate` 12 项全部实跑过。`fmt` 当前红，
+红在**尚未提交的 `HostedNode` 重构**上（`floom-app/src/lib.rs`、`floom-devtools`、
+`floom-widgets/src/surface.rs` 等 9 个文件），不是门禁本身的问题；`test` 已从红转绿
+（`devtools_demo.rs` 补上 `tree_rows` 新增的第三个参数后）。
+另修了 `floom-plugin-prefs` 两个真缺陷（见 `plugin-catalog.md` A5 的 as-built）：
+测试名在本机 1 µs 时钟下会撞，导致两个测试共用一个 domain、互相抹掉——这是
+`test` 间歇性红的真因；以及 Apple 臂把 `""` 折成 `None`，与另外两臂不一致。
+不写"全绿"——`fmt` 的红灯来自 WIP。
 
 
 ---

@@ -431,7 +431,7 @@ iOS 分支只是检测已存在的 xcframework 并链接，没有驱动 `xcodebu
 - **四个包名是错的**（`--package=` 写了根 workspace 解析不出来的名字）：
   `floom-renderer-skia`（已改名 `-skia-abi`）、`floom-runtime`（不存在）、
   `floom-theme`（只在 ecosystem workspace 里）、以及 CI 与门禁都漏了
-  `floom-renderer-tui`/`floom-renderer-web`。现在两侧的 55 个名字用脚本比对过。
+  `floom-renderer-tui`/`floom-renderer-web`。现在两侧的 58 个名字用脚本比对过。
 - **两个 `unsafe` 签名是补契约，不是压 lint。**
   `floom-plugin-nativeview::provider` 和 `boxed_provider` 解引用调用方拥有的
   裸 vtable 指针，之前没有说明。现在都是 `unsafe fn` 并带 `# Safety`，
