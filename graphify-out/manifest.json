@@ -13572,15 +13572,15 @@
     "semantic_hash": ""
   },
   "crates/floom/src/devtools.rs": {
-    "mtime": 1792904702.2454162,
-    "seen": 1792905986.7829802,
-    "ast_hash": "64ef9f8463cb0ae187f512263ae23858",
+    "mtime": 1792906156.639576,
+    "seen": 1792906542.373893,
+    "ast_hash": "d5402d28403791aff8fd22deaab2676e",
     "semantic_hash": ""
   },
   "crates/floom/tests/devtools_integration.rs": {
-    "mtime": 1792904897.9538865,
-    "seen": 1792905986.783067,
-    "ast_hash": "b4b688e1167d7141fb8904b9a408959e",
+    "mtime": 1792906168.9003508,
+    "seen": 1792906542.374049,
+    "ast_hash": "6f2bc8f4fd3f557453ba271c5323ff13",
     "semantic_hash": ""
   },
   "crates/ecosystem/floom-editor/examples/ide/Cargo.toml": {
@@ -13668,15 +13668,15 @@
     "semantic_hash": ""
   },
   "crates/floom-devtools/src/pick.rs": {
-    "mtime": 1792895581.9979045,
-    "seen": 1792900475.997841,
-    "ast_hash": "f96fff5ffba77173882528a8c8da7e16",
+    "mtime": 1792906142.88944,
+    "seen": 1792906542.338331,
+    "ast_hash": "757664f17cc5b8a3c9765bfeb57a0ee3",
     "semantic_hash": ""
   },
   "crates/floom-devtools/tests/pick.rs": {
-    "mtime": 1792896054.7157223,
-    "seen": 1792900475.99792,
-    "ast_hash": "fb79663773cf228bf661d02bdd42e2ba",
+    "mtime": 1792906244.9318907,
+    "seen": 1792906542.338516,
+    "ast_hash": "80e3334d57276c6e9e8304debe7cc298",
     "semantic_hash": ""
   },
   "crates/floom-devtools/tests/readouts.rs": {
@@ -13692,9 +13692,9 @@
     "semantic_hash": ""
   },
   "examples/floom-devtools-demo/Cargo.toml": {
-    "mtime": 1792859808.2247798,
-    "seen": 1792889087.578699,
-    "ast_hash": "50c84f85620ad262ef63826ffe914ed8",
+    "mtime": 1792906030.7675805,
+    "seen": 1792906542.394818,
+    "ast_hash": "20d0266513f9d5d865378cf7fb23ce0a",
     "semantic_hash": ""
   },
   "examples/floom-devtools-demo/src/main.rs": {
@@ -13722,9 +13722,9 @@
     "semantic_hash": ""
   },
   "docs/devtools.md": {
-    "mtime": 1792905664.7068615,
-    "seen": 1792905986.820029,
-    "ast_hash": "1c9235f44feee6893918d1f5aeb4fc35",
+    "mtime": 1792906211.6731684,
+    "seen": 1792906542.411254,
+    "ast_hash": "7cba6da8502ddf3fa452ae0a4730b907",
     "semantic_hash": ""
   },
   "crates/floom-plugin-package-info/Cargo.toml": {
