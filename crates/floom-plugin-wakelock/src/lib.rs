@@ -15,7 +15,7 @@
 //! was accepted, not that the pixels stayed lit — no arm can observe that.
 //! [`is_keep_screen_on`] reads the truth back where the platform exposes a
 //! readable truth (the window flag on Android, `idleTimerDisabled` on iOS,
-//! the assertion we hold on macOS) and tracks it where it does not
+//! `IOPMAssertionCopyProperties` on macOS) and tracks it where it does not
 //! (Windows — `SetThreadExecutionState` has no query; asking for the
 //! current state would change it, which is the one thing a read here must
 //! not do). Linux has no API at all and says so.
@@ -79,8 +79,7 @@ pub fn keep_screen_on(on: bool) -> Result<(), String> {
 /// Where the platform exposes a readable truth, this reads it; where it does
 /// not, it reports what this crate last asked for (see the crate doc — a
 /// fabricated "the OS said so" would be worse than an honest "we asked").
-pub fn is_keep_screen_on() -> bool {
-    #[cfg(target_os = "android")]
+pub fn is_keep_screen_on() -> bool {    #[cfg(target_os = "android")]
     {
         android::is_keep_screen_on()
     }
@@ -120,6 +119,11 @@ mod windows;
 mod tests {
     use super::*;
 
+    /// Serialises the macOS tests: they drive one process-global assertion, and
+    /// the test harness runs them in parallel by default.
+    #[cfg(target_os = "macos")]
+    static MACOS_TEST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
     /// The macOS arm is real on a host build, so this acquires and releases
     /// an actual IOPMAssertion — briefly held, released immediately, and the
     /// test fails if either direction lies about what happened.
@@ -131,6 +135,7 @@ mod tests {
     #[cfg(target_os = "macos")]
     #[test]
     fn enable_and_disable_round_trip_through_the_real_api() {
+        let _serial = MACOS_TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         assert!(
             !is_keep_screen_on(),
             "the test must start with the display not being held awake"
@@ -146,6 +151,43 @@ mod tests {
         assert!(!is_keep_screen_on());
         keep_screen_on(false).expect("disabling while disabled");
         assert!(!is_keep_screen_on());
+    }
+
+    /// `is_keep_screen_on` asks the power manager, not this crate's memory.
+    ///
+    /// The assertion is released through IOKit directly, behind the crate's
+    /// back, so the mutex still says "held" while the ID is already dead. A
+    /// reader that trusted the mutex would answer `true` here; the honest
+    /// answer is `false`, because the power manager no longer knows the ID.
+    /// This is the only way to tell the two implementations apart, which is
+    /// why it is a test rather than a comment.
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn the_read_comes_from_the_power_manager_not_from_our_own_memory() {
+        // Both macOS tests drive the same process-global assertion, so they
+        // must not interleave: one releasing while the other is mid-roundtrip
+        // would fail for a reason that has nothing to do with the code.
+        let _serial = MACOS_TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        keep_screen_on(false).expect("starting from nothing held");
+
+        keep_screen_on(true).expect("acquiring the assertion");
+        let id = macos::held_id().expect("an assertion id while enabled");
+
+        // Release it out from under the crate. The mutex is untouched.
+        assert_eq!(
+            unsafe { macos::release_out_of_band(id) },
+            macos::K_IO_RETURN_SUCCESS
+        );
+        assert!(
+            !is_keep_screen_on(),
+            "the power manager no longer knows the id, so the read must be false"
+        );
+
+        // Put the crate's own view back so a later test is not affected. The
+        // release of an already-dead id is `kIOReturnNotFound`, which is the
+        // goal state, not a failure — that is what this clears.
+        keep_screen_on(false).expect("clearing the stale id");
+        assert!(macos::held_id().is_none(), "the stale id must be gone");
     }
 
     /// On a platform with no API, the refusal names the platform and the

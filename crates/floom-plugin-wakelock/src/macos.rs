@@ -13,6 +13,16 @@
 //! mutex, and the second `keep_screen_on(true)` is a no-op — idempotence is
 //! a correctness requirement here, not a courtesy.
 //!
+//! # Reading it back
+//!
+//! `is_keep_screen_on` asks the power manager about the held ID with
+//! `IOPMAssertionCopyProperties`, which returns `NULL` once the ID is gone.
+//! The mutex alone would be a shadow of what this crate last asked for; the
+//! power manager is the only thing that knows whether the assertion still
+//! stands (it reaps one whose process dies, and it can drop one for its own
+//! reasons). The copy is a read — it neither creates nor changes anything —
+//! and the dictionary it returns is ours to release.
+//!
 //! The assertion dies with the process in any case (the power manager
 //! reaps it), which is the guarantee the crate documents: while your app is
 //! alive and asking.
@@ -31,7 +41,15 @@ const ASSERTION_LEVEL_ON: u32 = 255;
 const K_CF_STRING_ENCODING_UTF8: u32 = 0x0800_0100;
 
 /// `kIOReturnSuccess`.
-const K_IO_RETURN_SUCCESS: i32 = 0;
+pub const K_IO_RETURN_SUCCESS: i32 = 0;
+
+/// `kIOReturnNotFound` — the power manager has no such ID.
+///
+/// For a *release* this is the goal already reached, not a failure: something
+/// else (the reaper, or a release from elsewhere) took the assertion down. For
+/// a create it would be a real error, which is why only the release path
+/// treats it as success.
+const K_IO_RETURN_NOT_FOUND: i32 = -536_870_206;
 
 #[link(name = "IOKit", kind = "framework")]
 unsafe extern "C" {
@@ -42,6 +60,9 @@ unsafe extern "C" {
         assertion_id: *mut u32,
     ) -> i32;
     fn IOPMAssertionRelease(assertion_id: u32) -> i32;
+    /// `NULL` once the power manager no longer knows the ID — which is how
+    /// this arm reads the assertion back instead of trusting its own memory.
+    fn IOPMAssertionCopyProperties(assertion_id: u32) -> *const std::ffi::c_void;
 }
 
 #[link(name = "CoreFoundation", kind = "framework")]
@@ -80,10 +101,12 @@ pub fn keep_screen_on(on: bool) -> Result<(), String> {
         (false, Some(id)) => {
             let rc = unsafe { IOPMAssertionRelease(id) };
             *held = None;
-            if rc != K_IO_RETURN_SUCCESS {
-                // The state is cleared either way — the power manager reaps
-                // what the process held — but the caller hears that the
-                // release itself went wrong.
+            // `kIOReturnNotFound` is the state this call exists to reach:
+            // the assertion is already gone, so the display is free to sleep.
+            // Anything else that is not success is a real error the caller
+            // should hear about — the state is cleared either way, because
+            // the power manager reaps what the process held.
+            if rc != K_IO_RETURN_SUCCESS && rc != K_IO_RETURN_NOT_FOUND {
                 return Err(format!(
                     "keep_screen_on: IOPMAssertionRelease returned {rc}"
                 ));
@@ -94,7 +117,37 @@ pub fn keep_screen_on(on: bool) -> Result<(), String> {
 }
 
 pub fn is_keep_screen_on() -> bool {
-    held().lock().map(|held| held.is_some()).unwrap_or(false)
+    let held = held().lock().ok().and_then(|held| *held);
+    let Some(id) = held else {
+        return false;
+    };
+    // Ask the power manager, not our own memory of what we asked for. This is
+    // a read: `IOPMAssertionCopyProperties` neither creates nor changes an
+    // assertion. A non-null dictionary means the ID is still live; null means
+    // it is gone — reaped, or released behind our back — and reporting `true`
+    // there would be the fabricated "the OS said so" the crate doc rules out.
+    let properties = unsafe { IOPMAssertionCopyProperties(id) };
+    if properties.is_null() {
+        return false;
+    }
+    unsafe { CFRelease(properties) };
+    true
+}
+
+/// The assertion ID this crate is tracking, for the test that proves the read
+/// consults the power manager rather than this mutex.
+#[cfg(test)]
+pub fn held_id() -> Option<u32> {
+    held().lock().ok().and_then(|held| *held)
+}
+
+/// Release an assertion without going through this crate's bookkeeping.
+///
+/// Test-only, and deliberately so: it exists to create the exact state the
+/// reader must handle — the mutex says held, the power manager says gone.
+#[cfg(test)]
+pub unsafe fn release_out_of_band(id: u32) -> i32 {
+    unsafe { IOPMAssertionRelease(id) }
 }
 
 /// One `PreventUserIdleDisplaySleep` assertion, named for this crate.
