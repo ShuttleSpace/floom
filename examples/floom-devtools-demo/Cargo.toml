@@ -4,7 +4,7 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 publish = false
-description = "The Floom 2.0 devtools panel in a real window: one line in, F12 to open, Ctrl+Shift+C to pick"
+description = "The Floom 2.0 devtools panel in a real window: one call in, F12 to open, Ctrl+Shift+C to pick"
 
 # The demo needs the facade's devtools bundle on top of a desktop window and a
 # GPU presenter — the three features `run_desktop_with_devtools` documents.
