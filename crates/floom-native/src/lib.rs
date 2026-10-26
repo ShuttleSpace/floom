@@ -20,6 +20,7 @@ pub mod abi;
 pub mod controller;
 pub mod fake;
 pub mod pool;
+pub mod registry;
 
 pub use abi::{
     ClipSupport, DeviceRect, InputMode, InputModes, NativeCapabilities, NativeCompositionMode,

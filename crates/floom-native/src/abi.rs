@@ -370,6 +370,21 @@ pub enum NativeError {
     AlreadyFrozen(NativeSlot),
     /// `restore` on a slot that is not frozen.
     NotFrozen(NativeSlot),
+    /// Nobody registered a provider for this kind of participant.
+    ///
+    /// The honest bind-time refusal: kinds are declared by the providers that
+    /// actually draw them, so an unimplemented kind cannot be quietly served by
+    /// whatever is linked in — a "success" that draws nothing is the blank
+    /// rectangle no host can tell apart from a view that was never asked for.
+    /// The kind is in the message because a host debugging why its camera did
+    /// not appear deserves the specific name.
+    NoProvider(NativeViewKind),
+    /// A registration claimed a kind another provider already claims.
+    ///
+    /// Raised at registration, not at bind: two providers both answering a
+    /// kind would make which one wins a property of call order, and neither
+    /// would know it lost.
+    KindRegistered(NativeViewKind),
     /// The provider refused.
     ///
     /// A `Cow` rather than a `&'static str` because the reason is often the
@@ -404,6 +419,14 @@ impl fmt::Display for NativeError {
             Self::InvalidScale(scale) => write!(f, "scale {scale} is not a positive finite number"),
             Self::AlreadyFrozen(slot) => write!(f, "slot {slot:?} is already frozen"),
             Self::NotFrozen(slot) => write!(f, "slot {slot:?} is not frozen"),
+            Self::NoProvider(kind) => write!(
+                f,
+                "no provider registered for kind {kind:?} — kinds are claimed by providers that actually draw them"
+            ),
+            Self::KindRegistered(kind) => write!(
+                f,
+                "kind {kind:?} already has a provider — one kind, one provider"
+            ),
             Self::Provider(reason) => write!(f, "provider failed: {reason}"),
         }
     }
