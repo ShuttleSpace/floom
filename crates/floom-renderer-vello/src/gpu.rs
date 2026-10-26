@@ -1594,25 +1594,20 @@ impl VelloGpuPresenter {
                     // offsets into the transform and pass glyph positions
                     // through untouched.
                     //
-                    // The display scale belongs in *this* transform, not in
-                    // the font size. `draw_glyphs` applies the transform to
-                    // the glyph's outline *and* its pen position together, so
-                    // a scaled transform gives glyphs that are drawn at the
-                    // right size at the right place. Scaling the font size
-                    // instead scales only the outline: the ink grows while
-                    // the pen stays where it was, and every line comes out
-                    // over-wide and overlapping — text that has been stretched.
-                    //
-                    // The fragment is appended under `shift * group_affine`,
-                    // which carries the same scale, so this would double it —
-                    // except that a glyph run is encoded into the *resource*
-                    // stream rather than as a transform-bearing node, and
-                    // `append` rewrites the run's own transform, not the glyph
-                    // coordinates it indexes. The scale therefore has to be
-                    // composed here, exactly once.
+                    // The display scale does *not* belong here: the fragment
+                    // is appended under `shift * group_affine`, and
+                    // `Encoding::append` left-multiplies that same affine into
+                    // every glyph run's transform
+                    // (`run.transform = transform * run.transform`). The scale
+                    // therefore arrives once, through the append transform,
+                    // and must not be composed again into the run's own
+                    // transform — doing so would scale every glyph twice and
+                    // the text would come out bloated and unreadable on any
+                    // HiDPI display. The font size likewise stays in logical
+                    // units: `draw_glyphs` rasterises outlines at the size it
+                    // is handed, and the transform positions the result.
                     let transform =
-                        Affine::translate((origin.x + run.origin.x, origin.y + run.origin.y))
-                            * Affine::scale(self.scale);
+                        Affine::translate((origin.x + run.origin.x, origin.y + run.origin.y));
                     let glyphs = run.glyphs.iter().map(|g| vello::Glyph {
                         id: g.id,
                         x: g.x,
@@ -3828,5 +3823,74 @@ mod tests {
             [2.0, 0.0, 0.0, 2.0],
             "the clip sits where the scaled content sits, not at identity"
         );
+    }
+
+    /// A glyph run comes out of `encode` with the display scale applied exactly
+    /// once: through the append transform (`shift * group_affine`), not through
+    /// the run's own transform or a scaled font size.
+    ///
+    /// Vello's `Encoding::append` left-multiplies the append transform into
+    /// every glyph run's transform (`run.transform = transform * run.transform`).
+    /// If we also put the scale into the run's transform *and* append under a
+    /// scaled transform, every glyph is scaled twice and the text bloats into
+    /// unreadable blobs on HiDPI displays — which is what the devtools panel
+    /// looked like after the clip fix exposed it.
+    ///
+    /// The correct split: the run's transform carries only translation, the
+    /// font size stays in logical units (vello rasterises outlines at the size
+    /// it is handed), and the scale arrives once via append.
+    ///
+    /// Adapter-gated like every other GPU test; machines without a usable
+    /// adapter skip, and the pure clip test above is what covers them.
+    #[test]
+    fn a_glyph_run_gets_the_display_scale_from_append_once() {
+        use floom_text::{FontWeight, TextAlign, TextLayoutOptions};
+
+        let Some(mut presenter) = presenter() else {
+            return;
+        };
+        presenter.scale = 2.0;
+
+        let mut shaper = floom_text::TextShaper::new();
+        let laid = shaper.shape(
+            "HI",
+            &TextLayoutOptions {
+                max_width: f64::INFINITY,
+                font_size: 24.0,
+                align: TextAlign::Start,
+                weight: FontWeight::Normal,
+            },
+        );
+        assert!(!laid.runs.is_empty(), "the shaper produced a run");
+
+        let origin = floom_types::Point::new(3.0, 5.0);
+        let mut registry = floom_scene::ResourceRegistry::new();
+        let glyphs = registry.insert(floom_scene::Resource {
+            kind: floom_scene::ResourceKind::glyph_runs(laid.runs.clone()),
+        });
+        let mut scene = Scene::new();
+        scene.begin_update();
+        let _ = scene.insert(SceneNode::Text {
+            origin,
+            size: laid.size,
+            glyphs,
+            color: floom_types::Color::WHITE,
+        });
+        scene.finish_update();
+
+        let _ = presenter.encode(&scene, &registry, (0.0, 0.0));
+        let runs = &presenter.vello_scene.encoding().resources.glyph_runs;
+        assert_eq!(runs.len(), 1, "the text node encoded one glyph run");
+        let transform = runs[0].transform;
+        // The scale arrives once via the append transform (shift carries the
+        // HiDPI scale); the run's own transform is translation only, so its
+        // matrix is uniform scale 2 — not 4 (which would be double scaling).
+        assert_eq!(
+            transform.matrix, [2.0, 0.0, 0.0, 2.0],
+            "the scale comes from append, not from the run's own transform"
+        );
+        // The font size stays in logical units; vello rasterises at this size
+        // and the transform positions the result.
+        assert_eq!(runs[0].font_size, 24.0, "the font size is not pre-scaled");
     }
 }
