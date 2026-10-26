@@ -8,25 +8,31 @@
 //!
 //! The window is winit + vello, through the facade's one-call entry.
 //!
-//! `--render <path>` writes one frame to a PNG through the software renderer
-//! instead of opening a window. That is how the demo's pixels are checked on a
-//! machine with no display, and how a screenshot of a specific state is taken
-//! without a human clicking: `--render` draws the same scene the window would.
+//! Two more ways to run it, both for looking at pixels rather than at the app:
+//!
+//! * `--render <path>` writes one frame as a PPM through the software
+//!   renderer, with no window and no display.
+//! * `--software` opens the *same* window driven by the software renderer
+//!   instead of the GPU one. The two exist so a picture can be attributed:
+//!   a defect that appears in both is the demo's, and one that appears only in
+//!   the GPU window is the presenter's.
 
 use std::path::PathBuf;
 
 use floom::prelude::*;
 use floom_renderer::{FrameInfo, Renderer};
-use floom_renderer_software::SoftwareRenderer;
+use floom_renderer_software::{SoftwarePresenter, SoftwareRenderer};
 use ide_demo::{Ide, mount_ide};
 
 fn main() {
     let mut args = std::env::args().skip(1);
     let mut root: Option<PathBuf> = None;
     let mut render: Option<PathBuf> = None;
+    let mut software = false;
     while let Some(arg) = args.next() {
         match arg.as_str() {
             "--render" => render = args.next().map(PathBuf::from),
+            "--software" => software = true,
             other if root.is_none() => root = Some(PathBuf::from(other)),
             _ => {}
         }
@@ -36,6 +42,11 @@ fn main() {
 
     if let Some(path) = render {
         render_png(&ide, &path);
+        return;
+    }
+
+    if software {
+        run_software_window(ide);
         return;
     }
 
@@ -87,4 +98,61 @@ fn render_png(ide: &Ide, path: &std::path::Path) {
         std::process::exit(1);
     });
     println!("wrote {} ({}x{})", path.display(), WIDTH, HEIGHT);
+}
+
+/// The same window, driven by the software renderer.
+///
+/// `floom::run_desktop` hard-codes the GPU presenter, so this is the same
+/// shape as its `ClosureApp` with the presenter swapped — which is the whole
+/// point: the tree, the host and the frame loop are identical, so a picture
+/// that differs between this and the GPU window is the presenter's doing and
+/// not the demo's.
+fn run_software_window(ide: Ide) {
+    use floom::floom_app::AppRunner;
+    use floom::floom_platform_desktop::winit_backend::{WinitApp, WinitPlatform, run};
+    use floom_platform::WindowConfig;
+
+    struct SoftwareApp {
+        ide: Option<Ide>,
+        runner: Option<AppRunner<SoftwarePresenter>>,
+    }
+
+    impl WinitApp for SoftwareApp {
+        fn window_created(&mut self, _platform: &mut WinitPlatform, _window: floom_types::WindowId) {
+            let Some(ide) = self.ide.take() else {
+                return;
+            };
+            let mut host = WidgetHost::new();
+            mount_ide(&mut host, &ide);
+            self.runner = Some(AppRunner::new(host, SoftwarePresenter::new()));
+        }
+
+        fn events(&mut self, platform: &mut WinitPlatform) {
+            if let Some(runner) = self.runner.as_mut() {
+                runner.pump(platform);
+            }
+        }
+
+        fn about_to_wait(&mut self, platform: &mut WinitPlatform) {
+            if let Some(runner) = self.runner.as_mut() {
+                runner.pump(platform);
+            }
+        }
+    }
+
+    let windows = vec![WindowConfig {
+        title: "floom - IDE (software)".to_string(),
+        size: Size::new(1180.0, 720.0),
+        resizable: true,
+    }];
+    if let Err(error) = run(
+        SoftwareApp {
+            ide: Some(ide),
+            runner: None,
+        },
+        windows,
+    ) {
+        eprintln!("software window failed: {error}");
+        std::process::exit(1);
+    }
 }

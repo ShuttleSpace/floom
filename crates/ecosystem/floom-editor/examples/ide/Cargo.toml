@@ -29,6 +29,9 @@ floom-renderer-software.workspace = true
 # the facade does not re-export — `floom-renderer-software` implements that ABI
 # but does not re-export it either, so naming the trait means naming the crate.
 floom-renderer = { path = "../../../../floom-renderer" }
+# `WindowConfig` for `--software`: the desktop backend re-exports it only
+# privately, so the window description has to come from the crate that owns it.
+floom-platform = { path = "../../../../floom-platform" }
 
 [dev-dependencies]
 # The tests mount the demo in a headless host and read the scene, which is what
