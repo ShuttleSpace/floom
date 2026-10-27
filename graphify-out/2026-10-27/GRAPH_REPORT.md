@@ -1,7 +1,7 @@
 # Graph Report - floem  (2026-10-27)
 
 ## Corpus Check
-- 2282 files · ~2,131,358 words
+- 2282 files · ~2,131,901 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
@@ -10,7 +10,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `9d409081`
+- Built from commit: `20b5763f`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -5550,7 +5550,7 @@ Nodes (5): accepts_updates_without_exposing_them(), accessibility_capabilities()
 
 ### Community 1081 - "交接清单 — 剩余工作与怎么测"
 Cohesion: 0.14
-Nodes (13): 0. 调查中发现的缺口（已修，留作记录）, 1. 八 stub 插件补真实实现 ✅ 代码完成 / 🟠 待设备确认, 2. camera / webview 真能力插件 🟠 需要设备, 3. A6b provider 注册表（按 kind 选 provider）🟠 需要拍 shape, 4. C4 — OPEN_URL / FILE_DIALOG ✅ 已拍板（2026-10-25）, 5. 环境检查（已验证）, 6. 不需要设备的（我可以直接做）, ⚠️ CI 从未执行过：origin 是 Gitee，CI 全在 `.github/workflows/` (+5 more)
+Nodes (13): 0. 调查中发现的缺口（已修，留作记录）, 1. 八 stub 插件补真实实现 ✅ 代码完成 / 🟠 待设备确认, 2. camera / webview 真能力插件 🟠 需要设备, 3. A6b provider 注册表（按 kind 选 provider）✅ 已实现（2026-10-27）, 4. C4 — OPEN_URL / FILE_DIALOG ✅ 已拍板（2026-10-25）, 5. 环境检查（已验证）, 6. 不需要设备的（我可以直接做）, ⚠️ CI 从未执行过：origin 是 Gitee，CI 全在 `.github/workflows/` (+5 more)
 
 ### Community 1082 - "get_text"
 Cohesion: 0.47

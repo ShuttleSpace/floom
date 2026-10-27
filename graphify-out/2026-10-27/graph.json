@@ -20809,14 +20809,14 @@
       "source_location": "L143"
     },
     {
-      "id": "docs_handoff_remaining_work_3_a6b_provider_\u6ce8\u518c\u8868_\u6309_kind_\u9009_provider_\u9700\u8981\u62cd_shape",
-      "label": "3. A6b provider \u6ce8\u518c\u8868\uff08\u6309 kind \u9009 provider\uff09\ud83d\udfe0 \u9700\u8981\u62cd shape",
+      "id": "docs_handoff_remaining_work_3_a6b_provider_\u6ce8\u518c\u8868_\u6309_kind_\u9009_provider_\u5df2\u5b9e\u73b0_2026_10_27",
+      "label": "3. A6b provider \u6ce8\u518c\u8868\uff08\u6309 kind \u9009 provider\uff09\u2705 \u5df2\u5b9e\u73b0\uff082026-10-27\uff09",
       "_origin": "ast",
       "community": 1081,
       "community_name": "\u4ea4\u63a5\u6e05\u5355 \u2014 \u5269\u4f59\u5de5\u4f5c\u4e0e\u600e\u4e48\u6d4b",
       "file_type": "document",
       "node_kind": "heading",
-      "norm_label": "3. a6b provider \u6ce8\u518c\u8868(\u6309 kind \u9009 provider)\ud83d\udfe0 \u9700\u8981\u62cd shape",
+      "norm_label": "3. a6b provider \u6ce8\u518c\u8868(\u6309 kind \u9009 provider)\u2705 \u5df2\u5b9e\u73b0(2026-10-27)",
       "source_file": "docs/handoff-remaining-work.md",
       "source_location": "L166"
     },
@@ -20830,7 +20830,7 @@
       "node_kind": "heading",
       "norm_label": "4. c4 \u2014 open_url / file_dialog \u2705 \u5df2\u62cd\u677f(2026-10-25)",
       "source_file": "docs/handoff-remaining-work.md",
-      "source_location": "L191"
+      "source_location": "L212"
     },
     {
       "id": "docs_handoff_remaining_work_5_\u73af\u5883\u68c0\u67e5_\u5df2\u9a8c\u8bc1",
@@ -20842,7 +20842,7 @@
       "node_kind": "heading",
       "norm_label": "5. \u73af\u5883\u68c0\u67e5(\u5df2\u9a8c\u8bc1)",
       "source_file": "docs/handoff-remaining-work.md",
-      "source_location": "L214"
+      "source_location": "L235"
     },
     {
       "id": "docs_handoff_remaining_work_6_\u4e0d\u9700\u8981\u8bbe\u5907\u7684_\u6211\u53ef\u4ee5\u76f4\u63a5\u505a",
@@ -20854,7 +20854,7 @@
       "node_kind": "heading",
       "norm_label": "6. \u4e0d\u9700\u8981\u8bbe\u5907\u7684(\u6211\u53ef\u4ee5\u76f4\u63a5\u505a)",
       "source_file": "docs/handoff-remaining-work.md",
-      "source_location": "L242"
+      "source_location": "L263"
     },
     {
       "id": "docs_handoff_remaining_work_ci_\u4ece\u672a\u6267\u884c\u8fc7_origin_\u662f_gitee_ci_\u5168\u5728_github_workflows",
@@ -20866,7 +20866,7 @@
       "node_kind": "heading",
       "norm_label": "\u26a0\ufe0f ci \u4ece\u672a\u6267\u884c\u8fc7:origin \u662f gitee,ci \u5168\u5728 `.github/workflows/`",
       "source_file": "docs/handoff-remaining-work.md",
-      "source_location": "L375"
+      "source_location": "L396"
     },
     {
       "id": "docs_handoff_remaining_work_\u4ea4\u63a5\u6e05\u5355_\u5269\u4f59\u5de5\u4f5c\u4e0e\u600e\u4e48\u6d4b",
@@ -20890,7 +20890,7 @@
       "node_kind": "heading",
       "norm_label": "\u4f18\u5148\u7ea7\u5efa\u8bae",
       "source_file": "docs/handoff-remaining-work.md",
-      "source_location": "L473"
+      "source_location": "L494"
     },
     {
       "id": "docs_handoff_remaining_work_\u5df2\u4fee_floom_probe_\u7f16\u8bd1\u4e0d\u8fc7_\u9009_c_\u843d\u5730_\u540c\u65f6\u4fee\u6389\u6839\u56e0",
@@ -20902,7 +20902,7 @@
       "node_kind": "heading",
       "norm_label": "\u2705 \u5df2\u4fee:`floom-probe` \u7f16\u8bd1\u4e0d\u8fc7(\u9009 c \u843d\u5730,\u540c\u65f6\u4fee\u6389\u6839\u56e0)",
       "source_file": "docs/handoff-remaining-work.md",
-      "source_location": "L307"
+      "source_location": "L328"
     },
     {
       "id": "docs_handoff_remaining_work_\u5df2\u4fee_\u9884\u5148\u5b58\u5728\u7684\u7ea2\u706f_\u66fe\u8ba9_build_\u6c38\u4e0d\u6267\u884c",
@@ -20914,7 +20914,7 @@
       "node_kind": "heading",
       "norm_label": "\u2705 \u5df2\u4fee:\u9884\u5148\u5b58\u5728\u7684\u7ea2\u706f(\u66fe\u8ba9 `build` \u6c38\u4e0d\u6267\u884c)",
       "source_file": "docs/handoff-remaining-work.md",
-      "source_location": "L358"
+      "source_location": "L379"
     },
     {
       "id": "docs_handoff_remaining_work_\u9644_\u600e\u4e48\u8dd1\u6d4b\u8bd5_\u5b8c\u6574\u7248_\u5747\u5df2\u9a8c\u8bc1",
@@ -20926,7 +20926,7 @@
       "node_kind": "heading",
       "norm_label": "\u9644:\u600e\u4e48\u8dd1\u6d4b\u8bd5(\u5b8c\u6574\u7248,\u5747\u5df2\u9a8c\u8bc1)",
       "source_file": "docs/handoff-remaining-work.md",
-      "source_location": "L254"
+      "source_location": "L275"
     },
     {
       "id": "crates_floom_platform_mobile_src_packages_clipboard_ios",
@@ -39503,7 +39503,7 @@
       "file_type": "code",
       "norm_label": "a_registered_service_is_discovered_on_this_host()",
       "source_file": "crates/floom-plugin-mdns/src/lib.rs",
-      "source_location": "L214"
+      "source_location": "L221"
     },
     {
       "id": "crates_floom_plugin_mdns_src_lib_browse",
@@ -47692,14 +47692,14 @@
       "source_location": "L556"
     },
     {
-      "id": "docs_plugin_catalog_8_2_a6b_provider_\u6ce8\u518c\u8868\u7684\u67e5\u627e\u952e_\u67e5\u627e\u952e\u5df2\u7531\u4ee3\u7801\u5b9a\u6848_2026_10_25_\u6838\u5bf9",
-      "label": "8.2 A6b provider \u6ce8\u518c\u8868\u7684\u67e5\u627e\u952e \u2014\u2014 \u67e5\u627e\u952e\u5df2\u7531\u4ee3\u7801\u5b9a\u6848\uff082026-10-25 \u6838\u5bf9\uff09",
+      "id": "docs_plugin_catalog_8_2_a6b_provider_\u6ce8\u518c\u8868_\u5df2\u5b9e\u73b0_2026_10_27",
+      "label": "8.2 A6b provider \u6ce8\u518c\u8868 \u2014\u2014 \u5df2\u5b9e\u73b0\uff082026-10-27\uff09",
       "_origin": "ast",
       "community": 12,
       "community_name": "\u5e73\u53f0\u63d2\u4ef6\u8fc1\u79fb\u76ee\u5f55\uff08Flutter \u2192 Floom\uff09",
       "file_type": "document",
       "node_kind": "heading",
-      "norm_label": "8.2 a6b provider \u6ce8\u518c\u8868\u7684\u67e5\u627e\u952e \u2014\u2014 \u67e5\u627e\u952e\u5df2\u7531\u4ee3\u7801\u5b9a\u6848(2026-10-25 \u6838\u5bf9)",
+      "norm_label": "8.2 a6b provider \u6ce8\u518c\u8868 \u2014\u2014 \u5df2\u5b9e\u73b0(2026-10-27)",
       "source_file": "docs/plugin-catalog.md",
       "source_location": "L567"
     },
@@ -47713,7 +47713,7 @@
       "node_kind": "heading",
       "norm_label": "8.3 c4 \u7684\u6700\u7ec8\u5f62\u6001 \u2014\u2014 \u5df2\u62cd\u677f(2026-10-25)",
       "source_file": "docs/plugin-catalog.md",
-      "source_location": "L603"
+      "source_location": "L631"
     },
     {
       "id": "docs_plugin_catalog_8_\u4e09\u4e2a\u672a\u51b3\u95ee\u9898_\u672c\u76ee\u5f55\u4e0d\u62cd\u677f",
@@ -47737,7 +47737,7 @@
       "node_kind": "heading",
       "norm_label": "9. \u5efa\u8bae\u7684\u6267\u884c\u6279\u6b21",
       "source_file": "docs/plugin-catalog.md",
-      "source_location": "L654"
+      "source_location": "L682"
     },
     {
       "id": "docs_plugin_catalog_a1_floom_plugin_paths_path_provider_xdg_directories_\u5df2\u5b9e\u73b0_2026_10_25_\u6279\u6b21_1",
@@ -410814,7 +410814,7 @@
       "node_kind": "heading",
       "norm_label": "[0.1.1]",
       "source_file": "CHANGELOG.md",
-      "source_location": "L162"
+      "source_location": "L163"
     },
     {
       "id": "changelog_0_2_0_2024_11_13",
@@ -410826,7 +410826,7 @@
       "node_kind": "heading",
       "norm_label": "[0.2.0] - 2024-11-13",
       "source_file": "CHANGELOG.md",
-      "source_location": "L18"
+      "source_location": "L19"
     },
     {
       "id": "changelog_bug_fixes",
@@ -410838,7 +410838,7 @@
       "node_kind": "heading",
       "norm_label": "bug fixes",
       "source_file": "CHANGELOG.md",
-      "source_location": "L101"
+      "source_location": "L102"
     },
     {
       "id": "changelog_changelog",
@@ -410862,7 +410862,7 @@
       "node_kind": "heading",
       "norm_label": "changes",
       "source_file": "CHANGELOG.md",
-      "source_location": "L83"
+      "source_location": "L84"
     },
     {
       "id": "changelog_features",
@@ -410874,7 +410874,7 @@
       "node_kind": "heading",
       "norm_label": "features",
       "source_file": "CHANGELOG.md",
-      "source_location": "L20"
+      "source_location": "L21"
     },
     {
       "id": "changelog_internal_changes",
@@ -410886,7 +410886,7 @@
       "node_kind": "heading",
       "norm_label": "internal changes",
       "source_file": "CHANGELOG.md",
-      "source_location": "L125"
+      "source_location": "L126"
     },
     {
       "id": "changelog_unreleased",
@@ -573018,7 +573018,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "crates/floom-plugin-mdns/src/lib.rs",
-      "source_location": "L235",
+      "source_location": "L242",
       "weight": 1.0
     },
     {
@@ -1102327,7 +1102327,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L101",
+      "source_location": "L102",
       "weight": 1.0
     },
     {
@@ -1102338,7 +1102338,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L125",
+      "source_location": "L126",
       "weight": 1.0
     },
     {
@@ -1102349,7 +1102349,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L20",
+      "source_location": "L21",
       "weight": 1.0
     },
     {
@@ -1102360,7 +1102360,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L83",
+      "source_location": "L84",
       "weight": 1.0
     },
     {
@@ -1102371,7 +1102371,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L162",
+      "source_location": "L163",
       "weight": 1.0
     },
     {
@@ -1102382,7 +1102382,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L18",
+      "source_location": "L19",
       "weight": 1.0
     },
     {
@@ -1204242,7 +1204242,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "crates/floom-plugin-mdns/src/lib.rs",
-      "source_location": "L214",
+      "source_location": "L221",
       "weight": 1.0
     },
     {
@@ -1242973,7 +1242973,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/handoff-remaining-work.md",
-      "source_location": "L214",
+      "source_location": "L235",
       "weight": 1.0
     },
     {
@@ -1242989,7 +1242989,7 @@
     },
     {
       "source": "docs_handoff_remaining_work_\u4ea4\u63a5\u6e05\u5355_\u5269\u4f59\u5de5\u4f5c\u4e0e\u600e\u4e48\u6d4b",
-      "target": "docs_handoff_remaining_work_3_a6b_provider_\u6ce8\u518c\u8868_\u6309_kind_\u9009_provider_\u9700\u8981\u62cd_shape",
+      "target": "docs_handoff_remaining_work_3_a6b_provider_\u6ce8\u518c\u8868_\u6309_kind_\u9009_provider_\u5df2\u5b9e\u73b0_2026_10_27",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -1243006,7 +1243006,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/handoff-remaining-work.md",
-      "source_location": "L191",
+      "source_location": "L212",
       "weight": 1.0
     },
     {
@@ -1243017,7 +1243017,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/handoff-remaining-work.md",
-      "source_location": "L242",
+      "source_location": "L263",
       "weight": 1.0
     },
     {
@@ -1243028,7 +1243028,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/handoff-remaining-work.md",
-      "source_location": "L254",
+      "source_location": "L275",
       "weight": 1.0
     },
     {
@@ -1243050,7 +1243050,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/handoff-remaining-work.md",
-      "source_location": "L473",
+      "source_location": "L494",
       "weight": 1.0
     },
     {
@@ -1243072,7 +1243072,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/handoff-remaining-work.md",
-      "source_location": "L307",
+      "source_location": "L328",
       "weight": 1.0
     },
     {
@@ -1243083,7 +1243083,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/handoff-remaining-work.md",
-      "source_location": "L358",
+      "source_location": "L379",
       "weight": 1.0
     },
     {
@@ -1243094,7 +1243094,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/handoff-remaining-work.md",
-      "source_location": "L375",
+      "source_location": "L396",
       "weight": 1.0
     },
     {
@@ -1244309,7 +1244309,7 @@
     },
     {
       "source": "docs_plugin_catalog_8_\u4e09\u4e2a\u672a\u51b3\u95ee\u9898_\u672c\u76ee\u5f55\u4e0d\u62cd\u677f",
-      "target": "docs_plugin_catalog_8_2_a6b_provider_\u6ce8\u518c\u8868\u7684\u67e5\u627e\u952e_\u67e5\u627e\u952e\u5df2\u7531\u4ee3\u7801\u5b9a\u6848_2026_10_25_\u6838\u5bf9",
+      "target": "docs_plugin_catalog_8_2_a6b_provider_\u6ce8\u518c\u8868_\u5df2\u5b9e\u73b0_2026_10_27",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -1244326,7 +1244326,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/plugin-catalog.md",
-      "source_location": "L603",
+      "source_location": "L631",
       "weight": 1.0
     },
     {
@@ -1244425,7 +1244425,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/plugin-catalog.md",
-      "source_location": "L654",
+      "source_location": "L682",
       "weight": 1.0
     },
     {
@@ -1419513,5 +1419513,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "9d409081ac08028d5adfae52e6ed95ab8829b51c"
+  "built_at_commit": "20b5763f2a4902a9864905a2452eb8708bda9c68"
 }

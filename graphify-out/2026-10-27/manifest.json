@@ -8730,9 +8730,9 @@
     "semantic_hash": ""
   },
   "CHANGELOG.md": {
-    "mtime": 1793092132.643964,
-    "seen": 1793092373.636238,
-    "ast_hash": "643feb8643defcc74cce116fbfabc0e1",
+    "mtime": 1793092810.8913577,
+    "seen": 1793093658.073417,
+    "ast_hash": "853e8cb5e926d29e6eb36b4489936fad",
     "semantic_hash": ""
   },
   "CONTRIBUTING.md": {
@@ -13170,9 +13170,9 @@
     "semantic_hash": ""
   },
   "docs/plugin-and-renderer-audit.md": {
-    "mtime": 1792928262.4812887,
-    "seen": 1792928512.32883,
-    "ast_hash": "03dfc2d81858c18d47bf5b89eaf90b8f",
+    "mtime": 1793092820.3341427,
+    "seen": 1793093658.084409,
+    "ast_hash": "7d04b26db4da28e79e3e37d749069f3e",
     "semantic_hash": ""
   },
   "docs/porting-floem-editor-to-2.0.md": {
@@ -13554,9 +13554,9 @@
     "semantic_hash": ""
   },
   "docs/handoff-remaining-work.md": {
-    "mtime": 1792938754.9834213,
-    "seen": 1793092373.6485279,
-    "ast_hash": "de97fe2a21ced47d85e2e24b834c7ff0",
+    "mtime": 1793092796.5668,
+    "seen": 1793093658.084106,
+    "ast_hash": "1d2a82546ace7720f8892a8199a47a91",
     "semantic_hash": ""
   },
   "crates/floom-devtools/src/panel.rs": {
@@ -13752,9 +13752,9 @@
     "semantic_hash": ""
   },
   "docs/plugin-catalog.md": {
-    "mtime": 1792938747.9594615,
-    "seen": 1793092373.64909,
-    "ast_hash": "c45e99de688793bdb241442b46b3386c",
+    "mtime": 1793092785.1862268,
+    "seen": 1793093658.084411,
+    "ast_hash": "44ae20fdcf092c9938d6ad8b85bc0b97",
     "semantic_hash": ""
   },
   "crates/floom-plugin-paths/Cargo.toml": {
@@ -13998,9 +13998,9 @@
     "semantic_hash": ""
   },
   "crates/floom-plugin-mdns/src/lib.rs": {
-    "mtime": 1793018025.730018,
-    "seen": 1793092373.54513,
-    "ast_hash": "82040b3044b2a22bc754a254ad811482",
+    "mtime": 1793092422.6482759,
+    "seen": 1793093658.01656,
+    "ast_hash": "c095af475409f45747ca3efb296708a3",
     "semantic_hash": ""
   }
 }
