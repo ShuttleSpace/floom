@@ -564,12 +564,69 @@ federated plugin 结构（一个能力按平台拆包）。Floom 的对应结构
 因为代码已经是那个形状，且 `floom-platform-mobile` 的 JNI 桥就是为它存在的。
 统一形状是独立的工程决策，不阻塞任何条目。
 
-### 8.2 A6b provider 注册表的查找键
+### 8.2 A6b provider 注册表 —— 已实现（2026-10-27）
 
-Tier B 的全部 5 个插件都需要它。选项（handoff 第 3 节）：
-`NativeViewKind` 枚举（编译期封闭）vs 字符串 kind + `Custom(String)` 兜底。
-作者倾向后者（插件要能独立于框架发布），但这是宿主的调用。
-**Tier A 的 8 个不依赖它**，所以 A 可以先做完。
+原文把这里写成一个二选一（`NativeViewKind` 枚举 vs 字符串 kind）。**这个取舍
+代码早就拍过了，而且是两者兼有**：
+
+```rust
+// crates/floom-types/src/native.rs
+pub enum NativeViewKind {
+    Map,
+    Video,
+    Web,
+    TextInput,          // 焦点态的 participant，框架要让出 IME 所有权
+    Custom(&'static str),
+}
+```
+
+- **类型安全的那半留下了**：框架自己认得的能力是具名变体，编译期封闭；
+  `floom-native-ffi::provider` 已经把它映射到 C ABI
+  （`KIND_MAP` / `KIND_VIDEO` / `KIND_WEB` / `KIND_TEXT_INPUT` / `KIND_CUSTOM`），
+  所以跨语言那一侧也是类型化的。
+- **插件自注册的那半也留下了**：`Custom(&'static str)`。注意它收的是
+  `&'static str` 而**不是** `String` —— 插件要在编译期写出自己的 kind 名，
+  这让 kind 名不分配、不无界，跨 FFI 时也没有"谁拥有这个字符串"的问题。
+  这是本题的正解，原文写的 `Custom(String)` 反而更弱。
+
+**注册表本身（2026-10-27 落地）**：`crates/floom-native/src/registry.rs` 的
+`NativeProviderRegistry`，`WidgetHost` 持有它，`set_native_provider` 已删除。
+
+拍板的是原文没写出来的第三个选择：**显式 kind + miss 即拒 + 无兜底默认**。
+
+- `register(provider, kinds)` 申报**确切**的 kind 集合。一个 provider 可以认领
+  多个 kind（OS host 拥有自己的视图，不能按 kind 复制），但**一个 kind 只能有
+  一个 provider**；重复认领是注册期的 `Err(KindRegistered(kind))`，不是 bind 时
+  的静默后写者赢。
+- 没人认领的 kind 在 **bind 时**被 `Err(NoProvider(kind))` 拒绝，消息里点名
+  是哪个 kind。
+- **没有"接受一切 kind 的默认 provider"。**
+
+最后一条是这次真正的发现，不是风格偏好。desktop 桥的默认工厂是
+`|_, mtm| NSView::new(mtm)` —— 对**任何** kind 都造一个「不画东西」的
+`NSView`，而 `WidgetHost` 自己的文档早就写着：
+
+> a host that cannot composite must not hand out participants that draw
+> nothing, because a blank rectangle is indistinguishable from one that was
+> never asked for.
+
+也就是说，改之前一个 `Custom("camera")` 请求会**"成功"**并拿到一个空白矩形。
+让宿主申报 kind，正是把那句警告变成机制：桥只能申报它真能画的 kind。目前
+`floom-probe` 只申报 `Video`（它演示挂载的唯一 kind），别的 kind 一律拒绝而
+不是画空。
+
+**生命周期仍在每个 provider 后面各有一个 `NativeViewController`**，所以
+bound/frozen/mode/焦点这些不变量一个字没改，每个后端照旧白拿。焦点是
+**注册表级独占**的：在一个 provider 的 participant 上 `focus` 会先去 blur
+另一个 provider 上拿着焦点的那一个，否则 IME 所有权会变成「每个 provider
+一份」。
+
+**留下的口子**：desktop 桥的 kind 申报目前靠调用方传 `kinds`，而不是由
+`NativeViewHost` 的实现自身推导（`MacNativeViewHost::with_factory` 的工厂
+没告诉任何人它能造什么）。理想状态是 `create_view` 对它画不出来的 kind 返回
+错误，这样"能画哪些 kind"就是实现的性质而不是调用方的声明。这需要真实工厂
+存在（webview plugin），届时一并做。
+
 
 ### 8.3 C4 的最终形态 —— 已拍板（2026-10-25）
 

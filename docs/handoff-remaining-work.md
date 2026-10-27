@@ -163,21 +163,49 @@ cargo run -p floom-plugin-nativeview --example native_view
 
 ---
 
-## 3. A6b provider 注册表（按 kind 选 provider）🟡 不需要设备
+## 3. A6b provider 注册表（按 kind 选 provider）✅ 已实现（2026-10-27）
 
-**目标**：现在宿主在 `WidgetHost::set_native_provider` 手动安装单个 provider。
-需要的是**注册表**：宿主说"我要一个 camera 视图"，框架按 `NativeViewKind`
-选出对应的 provider。
+**目标**：宿主说"我要一个 camera 视图"，框架按 `NativeViewKind` 选出对应的
+provider。改之前宿主只能在 `WidgetHost::set_native_provider` 手动装**单个**
+provider，没人管的 kind 就落到它身上。
 
-**为什么卡住**：纯设计决策 + 实现，不卡设备。我之前没做是因为它在等一个真用例——
-没有 camera/webview 插件时，注册表只有一个条目，做了也验证不了价值。
+**查找键**（`plugin-catalog.md` §8.2）：`NativeViewKind` 已经是
+`Map | Video | Web | TextInput | Custom(&'static str)`，`floom-native-ffi` 已经
+把它映射到 C ABI。具名变体管类型安全，`Custom` 管插件自注册，两者兼有。
 
-**需要你决策**：注册表的查找键是什么？
-- `NativeViewKind` 枚举（编译期封闭，加能力要改 scene crate）
-- 字符串 kind（插件可自注册，但失去类型安全）
+**拍板的 shape：显式 kind + miss 即拒 + 无兜底默认。**
+（原文列的"枚举 vs 字符串"是个假二选一；真正的选择是要不要留一个接受一切的
+默认 provider，答案是不要。）
 
-我倾向后者 + 一个 `NativeViewKind::Custom(String)` 兜底，理由是插件本来就要能独立于
-框架发布。但这是你的调用。
+- **新增** `crates/floom-native/src/registry.rs`：`NativeProviderRegistry`。
+- `register(provider, kinds)` 申报**确切**的 kind；一个 provider 可认领多个
+  kind（OS host 拥有自己的视图），一个 kind 只能有一个 provider，冲突是注册期
+  `Err(KindRegistered(kind))`。
+- 没人认领的 kind 在 bind 时 `Err(NoProvider(kind))`，消息点名是哪个 kind。
+- `WidgetHost::set_native_provider` **已删除**，改成
+  `register_native_provider(provider, kinds) -> Result<(), NativeError>`。
+- 生命周期仍是每个 provider 一个 `NativeViewController`，bound/frozen/mode
+  不变量原样下放；焦点改为**注册表级独占**（focus 一个会先 blur 另一个
+  provider 上拿焦点的那一个）。
+- `reconcile_clipping` 改成**按 participant 的 kind** 取 capabilities，
+  不再问一个全局 `capabilities()`。
+
+**为什么"无兜底"是必要的**：desktop 桥的默认工厂是
+`|_, mtm| NSView::new(mtm)`，对任何 kind 都造一个不画东西的 `NSView`。改之前
+一个 `Custom("camera")` 请求会"成功"并拿到空白矩形 —— 正是 `WidgetHost` 文档
+里点名的最坏结果（空白矩形与"从没被请求过"无法区分）。申报 kind 把那句警告
+变成了结构。
+
+**验证**：`floom-native` 66 个测试、`floom-app` 全部 target、
+`floom-ui-composites` 全绿；`cargo check --workspace --all-targets` 干净；
+clippy/rustfmt 干净。`floom-probe` 只申报 `Video`（它演示挂载的唯一 kind），
+其余 kind 现在是拒绝而不是画空。
+
+**留下的口子**：desktop 桥的 kind 申报还靠调用方传 `kinds`，不是由
+`NativeViewHost` 实现自身推导（`MacNativeViewHost::with_factory` 的工厂没告诉
+任何人它能造什么）。理想状态是 `create_view` 对它画不出来的 kind 返回错误，
+让"能画哪些 kind"成为实现的性质。需要真实工厂存在（webview plugin），届时一并做。
+
 
 ---
 
