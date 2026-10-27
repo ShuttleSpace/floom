@@ -264,11 +264,16 @@ adb devices                 # 当前输出空列表
 
 如果你不想碰设备，这几项现在就能推进，都有 CI 保护：
 
-- **B7 的 vello GPU 帧缓冲测试**：给 vello 加 framebuffer 读回对比。需要 GPU，
-  但**你的 M4 Pro 有**——我可以写一个 `#[ignore]` 的测试，你本地
-  `cargo test --features gpu -- --ignored` 跑一次，CI 里跳过。
-- **A6b 注册表**（等你拍板第 3 节的键）
+- ~~**B7 的 vello GPU 帧缓冲测试**~~ ✅ 已完成（2026-10-27）。`VelloGpuPresenter::render_offscreen`
+  把 scene 走**同一条 `encode` 路径**光栅化进离屏纹理再回读成 RGBA；`tests/gpu_pixels.rs`
+  有 4 个测试，断言的是**墨迹在哪**（空场景/实心边界、裁剪边缘、阴影在矩形之外），
+  不是计数器。`#[ignore]`，因为它要真 adapter；门禁新增的 `gpu` 检查在任何机器上
+  **都编译**这条路径（这正是 `gpu` feature 从未被 CI 编译过的补丁），并在有 adapter
+  时报「4 pixel tests ran and passed」、没有时报「skipped — no GPU adapter on this
+  machine」——**跳过从不计成通过**。`FLOOM_REQUIRE_GPU=1` 让缺 adapter 变红。
+- ~~**A6b 注册表**~~ ✅ 已完成（2026-10-27），见第 3 节。
 - ~~**8 个 stub 插件的实现代码**~~ ✅ 已完成（2026-10-24），只剩真机确认。
+
 
 ---
 

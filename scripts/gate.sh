@@ -216,6 +216,15 @@ run_check() {
   if [ "$status" -eq 0 ]; then
     printf 'PASS  %-22s\n' "$name"
     PASS=$((PASS + 1))
+    # A check may describe what it actually did — "4 pixel tests ran" versus
+    # "compiled, tests skipped" are both a pass and are not the same fact. A
+    # gate whose green looks identical whether or not anything executed is how
+    # a skip gets read as coverage.
+    local summary
+    summary=$(printf '%s\n' "$output" | grep -E '^gpu: ' || true)
+    if [ -n "$summary" ]; then
+      printf '%s\n' "$summary" | sed 's/^/      /'
+    fi
   else
     printf 'FAIL  %-22s\n' "$name"
     FAIL=$((FAIL + 1))
@@ -392,6 +401,59 @@ doc_check() {
   cargo test --doc --no-fail-fast
 }
 has_check doc && run_check doc "" doc_check
+
+# --- the GPU path's pixels (B7) ---------------------------------------------
+#
+# `test` above never sees this code: `floom-renderer-vello`'s whole wgpu +
+# vello stack sits behind the non-default `gpu` feature, so a default-feature
+# gate never compiles it and an error there is invisible. That was measured, not
+# assumed — the first run with `--all-features` on `floom-platform-desktop`
+# found seven errors in code no earlier check had ever compiled.
+#
+# Two things are checked here, and the split is deliberate:
+#
+#   1. `--no-run`. The GPU path *compiles*, on every machine, with or without a
+#      GPU. This is the part CI could run and is the part a red gate must be
+#      able to report.
+#
+#   2. The pixel tests, which need a real adapter. Running them unconditionally
+#      would make a runner with no GPU report either a pass (a lie — nothing was
+#      rasterised) or a failure (a lie the other way — the code is fine). So the
+#      outcome is read back and printed as what it actually was: "ran and
+#      passed" or "skipped: no adapter". A skip with a true reason is the only
+#      honest third answer, and it is never counted as a pass.
+#
+# Set FLOOM_REQUIRE_GPU=1 (what a machine with a GPU should do for a release
+# check) to turn a missing adapter into a red check rather than a skip.
+gpu_check() {
+  cargo test -p floom-renderer-vello --features gpu --no-run || return 1
+
+  local out status
+  out=$(cargo test -p floom-renderer-vello --features gpu --test gpu_pixels \
+    -- --ignored --test-threads=1 2>&1)
+  status=$?
+  local skipped ran
+  skipped=$(printf '%s\n' "$out" | grep -c '^SKIP: ' || true)
+  ran=$(printf '%s\n' "$out" | grep -cE '^test .* \.\.\. (ok|FAILED)$' || true)
+
+  if grep -q 'no GPU adapter' <<<"$out"; then
+    if [[ "${FLOOM_REQUIRE_GPU:-0}" == "1" ]]; then
+      echo "gpu: no adapter and FLOOM_REQUIRE_GPU=1 — the GPU path has no pixel evidence on this machine"
+      return 1
+    fi
+    echo "gpu: compiled; pixel tests skipped — no GPU adapter on this machine"
+    echo "     (${ran} tests executed, ${skipped} reported the skip; FLOOM_REQUIRE_GPU=1 makes this red)"
+    return 0
+  fi
+
+  if [[ "$status" -ne 0 ]]; then
+    printf '%s\n' "$out" | grep -E '^(test .*FAILED|---- |assertion|thread .* panicked)' | head -20
+    return 1
+  fi
+  echo "gpu: compiled; ${ran} pixel tests ran and passed"
+  return 0
+}
+has_check gpu && run_check gpu "" gpu_check
 
 # --- architecture -----------------------------------------------------------
 has_check arch && run_check arch "" ./scripts/check-architecture-deps.sh

@@ -209,7 +209,12 @@
 
 **文档会误导后续实现者**，必须重写为本节的矩阵。
 
-### R7 · 像素级回归只有 software 有 🟡
+### R7 · 像素级回归只有 software 有 🟡 → ✅ 已修（B7）
+
+> **这段是修复前的原始发现，保留作记录。** 现状：web / tui / software 都有
+> golden，vello 的 GPU 路径于 2026-10-27 补齐（`VelloGpuPresenter::render_offscreen`
+> + `tests/gpu_pixels.rs`，见第三部分 B7）。只有 `skia` 仍是 ❌ —— 而它按 B2 的
+> 结论**本来就不是渲染器**，不该有像素回归。
 
 | 后端 | tests/ | 像素级断言 |
 |---|---|---|
@@ -266,7 +271,7 @@ macOS 门禁记录过一次真实教训（`docs/gates/macos.md:126-128`）：
 | **B4** | vello 的 blur primitive | — | 🟠 | ✅ **完成（Rect）** — 上游 vello 0.7 **已有** `draw_blurred_rounded_rect`（之前『依赖上游』的判断是错的，从没人去查过）。offset 折进 rect、spread 同时增大 rect 与圆角（中心不动）、blur 按 `CSS_BLUR_TO_SIGMA` 折成 σ；阴影先于填充画。**Path / GlyphRun 的阴影仍跳过**——原语只能糊圆角矩形 |
 | **B5** | 统一后端能力查询 | — | 🟠 | ✅ **完成** — `Renderer::capabilities` 与 `Presenter::capabilities` 返回 `RendererCapabilities{shadows,filters,backdrop_filters,shaders}`；默认**悲观**；五个后端各自诚实回答；`AppRunner::renderer_capabilities()` 透给宿主；5 项测试 |
 | **B6** | 统一降级计数的暴露方式 | B5 | 🟡 | ✅ **完成** — `DegradationReport`（`floom-renderer/src/degradation.rs`）是**视图**而非替换：各后端保留自己的 stats，新增 `degradation()` 转换。四个 kind 分开（不合并成一个数——『丢了六件事』和『丢了六个阴影』是不同事实）。`unexpected(caps)` 减去 capabilities 已声明会发生的事，剩下的就是**意外**——把『capability bit 没有实现比没有更糟』变成运行时事实。tui 的单一 `skipped` 无法归因，报告如实承载总数并写明不能归因 |
-| **B7** | 为 vello / tui / web 补像素级回归 | — | 🟠 | ✅ **完成（web / tui / software）** — `PixelSnapshot::of_buffer` 让**任何**后端都能有 golden（尺寸进哈希）；web 与 software 参考逐像素比对 + 自己的 golden；tui 的 golden 是**字符网格文本**（人能在 diff 里读懂）；software 补**文本渲染层**证据（墨迹是字形形状而非填充块）。**vello 的 GPU 路径仍无**——需要 GPU 上下文 |
+| **B7** | 为 vello / tui / web 补像素级回归 | — | 🟠 | ✅ **完成（2026-10-27，含 vello GPU 路径）** — `PixelSnapshot::of_buffer` 让**任何**后端都能有 golden（尺寸进哈希）；web 与 software 参考逐像素比对 + 自己的 golden；tui 的 golden 是**字符网格文本**（人能在 diff 里读懂）；software 补**文本渲染层**证据（墨迹是字形形状而非填充块）。**vello 的 GPU 路径已补**：`VelloGpuPresenter::render_offscreen` 把 scene 经**同一条 encode 路径**光栅化进离屏纹理并回读成 RGBA（复用公开的编码器而不是第二套实现，否则测的就是会漂移的副本）；4 个测试断言**墨迹在哪**而不只是计数——空场景/实心矩形边界、裁剪在自己边缘处截断、阴影出现在矩形之外。有牙证明：把 encode 替换成空场景，4 个测试全红；只去掉裁剪标记，只有裁剪测试红。`#[ignore]` 因为它需要真 GPU adapter，门禁新增的 `gpu` 检查**无论有无 GPU 都编译**这条路径，并在有 adapter 时报「4 pixel tests ran and passed」、无 adapter 时报「skipped — no GPU adapter on this machine」——**跳过从不被算成通过**；`FLOOM_REQUIRE_GPU=1` 把缺 adapter 变成红灯。顺带发现并修掉 `--deny warnings` 下 `gpu` feature 从未编译过的两处 clippy 错误 |
 | **B8** | shader 在非 GPU 后端的行为明确化 | — | 🟡 | ✅ **完成** — 文档明确"自定义着色器仅 GPU 后端可用"；software / web / tui / skia-abi 均计数 |
 
 ## C 组 · 承接（上一轮的平台后端计划，仍然有效）
@@ -293,7 +298,7 @@ macOS 门禁记录过一次真实教训（`docs/gates/macos.md:126-128`）：
 第二梯队
   A7 → A8 → A9            精简 SDK 结构 + ABI 版本  ✅ 2026-10-22
   B1, B5, B6              文档重写 + 能力查询 + 统计归一 ✅ 2026-10-23
-  B3, B7                  tui 计数 + 像素回归      ✅ 2026-10-22（vello GPU 路径除外）
+  B3, B7                  tui 计数 + 像素回归      ✅ 2026-10-22（vello GPU 路径 2026-10-27 补齐）
   C4, C5, C6              平台后端补齐 + 门禁      ⬜
 
 ## 交接时新发现的两项（2026-10-23，见 docs/handoff-remaining-work.md）

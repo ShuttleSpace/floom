@@ -1199,6 +1199,127 @@ impl VelloGpuPresenter {
         format!("{} ({:?})", info.name, info.backend)
     }
 
+    /// Rasterise `scene` into an offscreen `width × height` RGBA texture and
+    /// read the pixels back to the CPU.
+    ///
+    /// This is the GPU path's *pixel* evidence, and the only route to it that
+    /// does not need a window: everything else here paints into a swap-chain
+    /// image whose pixels nobody can inspect. The point is a regression net
+    /// over the rasteriser itself — a pixel-level golden catches "the shadow
+    /// stopped being drawn" or "the clip moved by the display scale", neither
+    /// of which any counter in [`GpuFrameStats`] can see.
+    ///
+    /// Deliberately not a `Presenter` method: a `Presenter` is driven by a
+    /// window and a damage region, and the honest answer to "draw this once,
+    /// now, into a buffer I own" is a separate entry point rather than a
+    /// half-attached surface.
+    ///
+    /// Returns pixels top-to-bottom, four bytes each, in `Rgba8Unorm` — the
+    /// format [`floom_renderer::PixelSnapshot::of_buffer`] takes. `None` when
+    /// the extent is empty or the readback could not be mapped; the caller is
+    /// expected to treat that as "no evidence", not as a pass.
+    pub fn render_offscreen(
+        &mut self,
+        scene: &Scene,
+        resources: &ResourceRegistry,
+        width: u32,
+        height: u32,
+    ) -> Option<Vec<u8>> {
+        if width == 0 || height == 0 {
+            return None;
+        }
+        // The scene is laid out in logical units; this is the same scale the
+        // live path uses, so a golden taken here matches what a window shows.
+        self.size = floom_types::Size::new(f64::from(width), f64::from(height));
+        self.scale = 1.0;
+        self.needs_present = true;
+        // The encoding pass is the thing under test: it is where clips,
+        // shadows and the display scale are applied. Reusing it verbatim is
+        // what makes this a regression net for the real path rather than for a
+        // second implementation that could drift.
+        let _ = self.encode(scene, resources, (0.0, 0.0));
+
+        let (texture, view) = create_offscreen_target(&self.device, width, height);
+        let params = RenderParams {
+            base_color: PenikoColor::TRANSPARENT,
+            width,
+            height,
+            antialiasing_method: AaConfig::Msaa16,
+        };
+        if self
+            .renderer
+            .render_to_texture(&self.device, &self.queue, &self.vello_scene, &view, &params)
+            .is_err()
+        {
+            return None;
+        }
+
+        // A texel copy's row stride must be a multiple of 256; pad, then copy
+        // each row out at its true width.
+        let row_bytes = width * 4;
+        let stride = 256u32 * row_bytes.div_ceil(256);
+        let staging = self.device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("floom-offscreen-staging"),
+            size: u64::from(stride) * u64::from(height),
+            usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::MAP_READ,
+            mapped_at_creation: false,
+        });
+        let mut encoder = self
+            .device
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("floom-offscreen-copy"),
+            });
+        encoder.copy_texture_to_buffer(
+            wgpu::TexelCopyTextureInfo {
+                texture: &texture,
+                mip_level: 0,
+                origin: wgpu::Origin3d::ZERO,
+                aspect: wgpu::TextureAspect::All,
+            },
+            wgpu::TexelCopyBufferInfo {
+                buffer: &staging,
+                layout: wgpu::TexelCopyBufferLayout {
+                    offset: 0,
+                    bytes_per_row: Some(stride),
+                    rows_per_image: Some(height),
+                },
+            },
+            wgpu::Extent3d {
+                width,
+                height,
+                depth_or_array_layers: 1,
+            },
+        );
+        self.queue.submit([encoder.finish()]);
+
+        let slice = staging.slice(..);
+        let (tx, rx) = std::sync::mpsc::channel();
+        slice.map_async(wgpu::MapMode::Read, move |result| {
+            let _ = tx.send(result);
+        });
+        if self
+            .device
+            .poll(wgpu::PollType::Wait {
+                submission_index: None,
+                timeout: None,
+            })
+            .is_err()
+        {
+            return None;
+        }
+        rx.recv().ok()?.ok()?;
+
+        let mapped = slice.get_mapped_range();
+        let mut out = Vec::with_capacity((width * height * 4) as usize);
+        for row in 0..height {
+            let start = (row * stride) as usize;
+            out.extend_from_slice(&mapped[start..start + row_bytes as usize]);
+        }
+        drop(mapped);
+        staging.unmap();
+        Some(out)
+    }
+
     fn build_surface(&mut self, handles: SurfaceHandles, physical: (u32, u32)) -> Option<()> {
         let (width, height) = physical;
         if width == 0 || height == 0 {
@@ -2136,6 +2257,35 @@ impl VelloGpuPresenter {
     }
 }
 
+/// A texture vello can rasterise into *and* that can be copied back to the CPU.
+///
+/// Separate from [`create_target`] because the usage set differs and the
+/// difference matters: vello writes through a storage binding (so
+/// `STORAGE_BINDING` is mandatory, not optional), and a readback needs
+/// `COPY_SRC`, which the on-screen target never asks for.
+fn create_offscreen_target(
+    device: &wgpu::Device,
+    width: u32,
+    height: u32,
+) -> (wgpu::Texture, wgpu::TextureView) {
+    let texture = device.create_texture(&wgpu::TextureDescriptor {
+        label: Some("floom-offscreen-target"),
+        size: wgpu::Extent3d {
+            width,
+            height,
+            depth_or_array_layers: 1,
+        },
+        mip_level_count: 1,
+        sample_count: 1,
+        dimension: wgpu::TextureDimension::D2,
+        usage: TextureUsages::STORAGE_BINDING | TextureUsages::COPY_SRC,
+        format: TextureFormat::Rgba8Unorm,
+        view_formats: &[],
+    });
+    let view = texture.create_view(&TextureViewDescriptor::default());
+    (texture, view)
+}
+
 fn create_target(
     device: &wgpu::Device,
     width: u32,
@@ -2755,11 +2905,11 @@ mod tests {
             "the whole stream is empty: the tags were {tags:?}"
         );
         assert!(
-            !tags.iter().any(|&raw| raw == BLUR_RECT_TAG),
+            !tags.contains(&BLUR_RECT_TAG),
             "no blur approximation was drawn either"
         );
         assert!(
-            !tags.iter().any(|&raw| raw == COLOR_TAG),
+            !tags.contains(&COLOR_TAG),
             "and the content was not drawn sharp as a substitute"
         );
     }
@@ -3814,10 +3964,7 @@ mod tests {
 
         let _ = presenter.encode(&scene, &empty_registry(), (0.0, 0.0));
         let transforms = &presenter.vello_scene.encoding().transforms;
-        assert!(
-            !transforms.is_empty(),
-            "the clip layer encoded a transform"
-        );
+        assert!(!transforms.is_empty(), "the clip layer encoded a transform");
         assert_eq!(
             transforms[0].matrix,
             [2.0, 0.0, 0.0, 2.0],
@@ -3886,7 +4033,8 @@ mod tests {
         // HiDPI scale); the run's own transform is translation only, so its
         // matrix is uniform scale 2 — not 4 (which would be double scaling).
         assert_eq!(
-            transform.matrix, [2.0, 0.0, 0.0, 2.0],
+            transform.matrix,
+            [2.0, 0.0, 0.0, 2.0],
             "the scale comes from append, not from the run's own transform"
         );
         // The font size stays in logical units; vello rasterises at this size
