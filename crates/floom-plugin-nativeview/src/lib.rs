@@ -104,7 +104,8 @@ pub fn register() {
 /// The provider for this plugin, if the native half has handed one over.
 ///
 /// A host that wants a native view from this plugin asks for it here and
-/// hands it to [`floom_app::WidgetHost::set_native_provider`].
+/// hands it to [`floom_app::WidgetHost::register_native_provider`] with the
+/// kinds this plugin's views answer for.
 ///
 /// `host_window` is the platform's opaque window handle: an `NSWindow *` on
 /// macOS. It is the same handle the host would give its own provider, so

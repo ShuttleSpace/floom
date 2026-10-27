@@ -210,7 +210,9 @@ fn focusing_a_participant_blurs_the_framework_and_masks_the_caret() {
         NativeSurface::new(NativeViewKind::TextInput).focusable(true),
     );
     let (fake, log) = provider();
-    app.host_mut().set_native_provider(fake);
+    app.host_mut()
+        .register_native_provider(fake, &[NativeViewKind::TextInput])
+        .unwrap();
     app.frame();
 
     // The framework composes, and publishes a caret for the OS popup.
@@ -250,7 +252,9 @@ fn handing_focus_back_restores_the_framework() {
         NativeSurface::new(NativeViewKind::TextInput).focusable(true),
     );
     let (fake, log) = provider();
-    app.host_mut().set_native_provider(fake);
+    app.host_mut()
+        .register_native_provider(fake, &[NativeViewKind::TextInput])
+        .unwrap();
     app.frame();
 
     app.focus(field);

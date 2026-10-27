@@ -134,7 +134,7 @@ impl NativeProviderRegistry {
             .by_kind
             .get(&kind)
             .copied()
-            .ok_or_else(|| NativeError::NoProvider(kind))?;
+            .ok_or(NativeError::NoProvider(kind))?;
         let mode = self.entries[index].controller.bind(slot, kind, preferred)?;
         self.owner.insert(slot, index);
         Ok(mode)
@@ -175,10 +175,8 @@ impl NativeProviderRegistry {
     /// one participant blurs whoever held it before, on that participant's own
     /// provider, so the OS focus chain actually moves.
     pub fn focus(&mut self, slot: NativeSlot) -> Result<(), NativeError> {
-        if let Some(prev) = self.focused() {
-            if prev != slot {
-                self.blur(prev)?;
-            }
+        if let Some(prev) = self.focused().filter(|prev| *prev != slot) {
+            self.blur(prev)?;
         }
         self.entry_of_slot(slot)?.controller.focus(slot)
     }
@@ -200,8 +198,8 @@ impl NativeProviderRegistry {
 
     /// The mode a slot was bound in, from whichever provider bound it.
     pub fn mode(&self, slot: NativeSlot) -> Option<NativeCompositionMode> {
-        let &index = self.owner.get(&slot)?;
-        Some(self.entries[index].controller.mode(slot)?)
+        let index = self.owner.get(&slot).copied()?;
+        self.entries[index].controller.mode(slot)
     }
 
     /// The participant currently holding OS focus, whichever provider it
@@ -321,7 +319,12 @@ mod tests {
     #[test]
     fn unserved_kind_is_refused_with_its_name() {
         let mut registry = NativeProviderRegistry::new();
-        registry.register(provider_for(NativeViewKind::Video, NativeCompositionMode::Overlay), &[NativeViewKind::Video]).unwrap();
+        registry
+            .register(
+                provider_for(NativeViewKind::Video, NativeCompositionMode::Overlay),
+                &[NativeViewKind::Video],
+            )
+            .unwrap();
 
         let slot = pool_slot();
         match registry.bind(slot, NativeViewKind::Map, &[NativeCompositionMode::Overlay]) {
@@ -347,11 +350,19 @@ mod tests {
         let slot_video = pool_slot();
         let slot_web = pool_slot();
         assert_eq!(
-            registry.bind(slot_video, NativeViewKind::Video, &[NativeCompositionMode::Overlay]),
+            registry.bind(
+                slot_video,
+                NativeViewKind::Video,
+                &[NativeCompositionMode::Overlay]
+            ),
             Ok(NativeCompositionMode::Overlay)
         );
         assert_eq!(
-            registry.bind(slot_web, NativeViewKind::Web, &[NativeCompositionMode::Overlay]),
+            registry.bind(
+                slot_web,
+                NativeViewKind::Web,
+                &[NativeCompositionMode::Overlay]
+            ),
             Ok(NativeCompositionMode::Overlay)
         );
         assert!(registry.is_bound(slot_video));
@@ -361,12 +372,16 @@ mod tests {
     #[test]
     fn capabilities_are_per_kind() {
         let mut registry = NativeProviderRegistry::new();
-        registry.register(
-            provider_for(NativeViewKind::TextInput, NativeCompositionMode::Overlay),
-            &[NativeViewKind::TextInput],
-        ).unwrap();
+        registry
+            .register(
+                provider_for(NativeViewKind::TextInput, NativeCompositionMode::Overlay),
+                &[NativeViewKind::TextInput],
+            )
+            .unwrap();
 
-        let caps = registry.capabilities_for(NativeViewKind::TextInput).unwrap();
+        let caps = registry
+            .capabilities_for(NativeViewKind::TextInput)
+            .unwrap();
         assert!(caps.focusable);
         assert!(registry.capabilities_for(NativeViewKind::Video).is_none());
     }
@@ -380,19 +395,30 @@ mod tests {
         );
         let slot = pool_slot();
         registry
-            .bind(slot, NativeViewKind::TextInput, &[NativeCompositionMode::Overlay])
+            .bind(
+                slot,
+                NativeViewKind::TextInput,
+                &[NativeCompositionMode::Overlay],
+            )
             .unwrap();
 
         assert!(registry.is_bound(slot));
-        assert!(registry.apply(slot, NativeState {
-            rect: Rect::ZERO,
-            clip: None,
-            scale: 1.0,
-            visible: true,
-            z: 0,
-            input: crate::abi::InputMode::Passthrough,
-            mode: NativeCompositionMode::Overlay,
-        }).is_ok());
+        assert!(
+            registry
+                .apply(
+                    slot,
+                    NativeState {
+                        rect: Rect::ZERO,
+                        clip: None,
+                        scale: 1.0,
+                        visible: true,
+                        z: 0,
+                        input: crate::abi::InputMode::Passthrough,
+                        mode: NativeCompositionMode::Overlay,
+                    }
+                )
+                .is_ok()
+        );
         assert!(registry.focus(slot).is_ok());
         assert_eq!(registry.focused(), Some(slot));
         assert!(registry.blur(slot).is_ok());
@@ -415,10 +441,26 @@ mod tests {
             caps.input = crate::abi::InputModes::PASSTHROUGH_ONLY;
             FakeNativeProvider::with_capabilities(caps)
         };
-        registry.register(focusable(), &[NativeViewKind::Video]).unwrap();
-        registry.register(focusable(), &[NativeViewKind::Web]).unwrap();
-        registry.bind(slot_a, NativeViewKind::Video, &[NativeCompositionMode::Overlay]).unwrap();
-        registry.bind(slot_b, NativeViewKind::Web, &[NativeCompositionMode::Overlay]).unwrap();
+        registry
+            .register(focusable(), &[NativeViewKind::Video])
+            .unwrap();
+        registry
+            .register(focusable(), &[NativeViewKind::Web])
+            .unwrap();
+        registry
+            .bind(
+                slot_a,
+                NativeViewKind::Video,
+                &[NativeCompositionMode::Overlay],
+            )
+            .unwrap();
+        registry
+            .bind(
+                slot_b,
+                NativeViewKind::Web,
+                &[NativeCompositionMode::Overlay],
+            )
+            .unwrap();
         registry.focus(slot_a).unwrap();
         assert_eq!(registry.focused(), Some(slot_a));
         registry.focus(slot_b).unwrap();

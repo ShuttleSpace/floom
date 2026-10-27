@@ -184,7 +184,9 @@ fn a_grant_binds_the_participant_and_applies_its_geometry() {
         NativeSurface::new(NativeViewKind::Video),
     );
     let (fake, log) = provider();
-    app.host_mut().set_native_provider(fake);
+    app.host_mut()
+        .register_native_provider(fake, &[NativeViewKind::Video])
+        .unwrap();
     app.frame();
 
     assert_eq!(app.host().participant_count(), 1);
@@ -234,7 +236,9 @@ fn a_display_change_doubles_the_device_rect_and_leaves_the_rect_alone() {
         NativeSurface::new(NativeViewKind::Video),
     );
     let (fake, log) = provider();
-    app.host_mut().set_native_provider(fake);
+    app.host_mut()
+        .register_native_provider(fake, &[NativeViewKind::Video])
+        .unwrap();
     app.frame();
 
     let before = live_state(&app);
@@ -281,7 +285,9 @@ fn an_idle_frame_tells_the_provider_nothing() {
         NativeSurface::new(NativeViewKind::Video),
     );
     let (fake, log) = provider();
-    app.host_mut().set_native_provider(fake);
+    app.host_mut()
+        .register_native_provider(fake, &[NativeViewKind::Video])
+        .unwrap();
     app.frame();
     assert_eq!(log.count(), 2, "create + apply");
 
@@ -303,7 +309,9 @@ fn moving_a_participant_applies_exactly_one_new_state() {
         NativeSurface::new(NativeViewKind::Video),
     );
     let (fake, log) = provider();
-    app.host_mut().set_native_provider(fake);
+    app.host_mut()
+        .register_native_provider(fake, &[NativeViewKind::Video])
+        .unwrap();
     app.frame();
     let before = log.count();
 
@@ -328,7 +336,9 @@ fn unmounting_destroys_the_participant_exactly_once() {
         NativeSurface::new(NativeViewKind::Video),
     );
     let (fake, log) = provider();
-    app.host_mut().set_native_provider(fake);
+    app.host_mut()
+        .register_native_provider(fake, &[NativeViewKind::Video])
+        .unwrap();
     app.frame();
     assert_eq!(app.host().participant_count(), 1);
 
@@ -365,7 +375,9 @@ fn an_ancestor_clipping_the_participant_hides_it() {
         NativeSurface::new(NativeViewKind::Video),
     );
     let (fake, log) = provider();
-    app.host_mut().set_native_provider(fake);
+    app.host_mut()
+        .register_native_provider(fake, &[NativeViewKind::Video])
+        .unwrap();
     app.frame();
 
     let state = live_state(&app);
@@ -415,7 +427,9 @@ fn a_partial_clip_is_carried_as_a_crop_not_folded_into_the_placement() {
         NativeSurface::new(NativeViewKind::Video),
     );
     let (fake, _log) = provider();
-    app.host_mut().set_native_provider(fake);
+    app.host_mut()
+        .register_native_provider(fake, &[NativeViewKind::Video])
+        .unwrap();
     app.frame();
 
     let state = live_state(&app);
@@ -475,7 +489,9 @@ fn a_provider_that_cannot_crop_is_moved_to_a_mode_the_framework_composites() {
         ]),
     );
     let (fake, log) = cropless_provider();
-    app.host_mut().set_native_provider(fake);
+    app.host_mut()
+        .register_native_provider(fake, &[NativeViewKind::Video])
+        .unwrap();
     app.frame();
 
     let stats = app.host().last_stats();
@@ -555,7 +571,9 @@ fn a_provider_that_can_neither_crop_nor_be_recomposited_hides_the_participant() 
         at(0.0, 50.0, 100.0, 100.0),
         NativeSurface::new(NativeViewKind::Video).modes(&[NativeCompositionMode::Surface]),
     );
-    app.host_mut().set_native_provider(surface_only_cropless());
+    app.host_mut()
+        .register_native_provider(surface_only_cropless(), &[NativeViewKind::Video])
+        .unwrap();
     app.frame();
 
     let stats = app.host().last_stats();
@@ -605,7 +623,9 @@ fn a_participant_off_the_viewport_hides_it() {
         NativeSurface::new(NativeViewKind::Video),
     );
     let (fake, _log) = provider();
-    app.host_mut().set_native_provider(fake);
+    app.host_mut()
+        .register_native_provider(fake, &[NativeViewKind::Video])
+        .unwrap();
     app.frame();
 
     assert!(
@@ -627,7 +647,9 @@ fn a_modal_hides_the_participant_without_destroying_it() {
         NativeSurface::new(NativeViewKind::Video),
     );
     let (fake, log) = provider();
-    app.host_mut().set_native_provider(fake);
+    app.host_mut()
+        .register_native_provider(fake, &[NativeViewKind::Video])
+        .unwrap();
     app.frame();
     assert!(live_state(&app).visible);
 
@@ -683,7 +705,9 @@ fn a_participant_clipped_away_stops_claiming_the_pointer() {
         Button::new("visible").on_click(move || sink.set(sink.get() + 1)),
     );
     let (fake, _log) = provider();
-    app.host_mut().set_native_provider(fake);
+    app.host_mut()
+        .register_native_provider(fake, &[NativeViewKind::Video])
+        .unwrap();
     app.frame();
 
     assert!(
@@ -720,7 +744,9 @@ fn paint_order_decides_z() {
         NativeSurface::new(NativeViewKind::Video),
     );
     let (fake, _log) = provider();
-    app.host_mut().set_native_provider(fake);
+    app.host_mut()
+        .register_native_provider(fake, &[NativeViewKind::Map, NativeViewKind::Video])
+        .unwrap();
     app.frame();
 
     let states = app.host().participant_states();
@@ -756,7 +782,9 @@ fn a_capturing_participant_swallows_the_click() {
         Button::new("underneath").on_click(move || sink.set(sink.get() + 1)),
     );
     let (fake, _log) = provider();
-    app.host_mut().set_native_provider(fake);
+    app.host_mut()
+        .register_native_provider(fake, &[NativeViewKind::Video])
+        .unwrap();
     app.frame();
 
     app.click(Point::new(100.0, 60.0));
@@ -788,7 +816,9 @@ fn a_passthrough_participant_lets_the_widget_underneath_have_it() {
         Button::new("underneath").on_click(move || sink.set(sink.get() + 1)),
     );
     let (fake, _log) = provider();
-    app.host_mut().set_native_provider(fake);
+    app.host_mut()
+        .register_native_provider(fake, &[NativeViewKind::Video])
+        .unwrap();
     app.frame();
 
     app.click(Point::new(100.0, 60.0));
@@ -821,7 +851,9 @@ fn scrolling_a_thousand_rows_keeps_the_slot_count_bounded() {
         );
     }
     let (fake, log) = provider();
-    app.host_mut().set_native_provider(fake);
+    app.host_mut()
+        .register_native_provider(fake, &[NativeViewKind::Video])
+        .unwrap();
     app.frame();
 
     assert_eq!(app.host().participant_count(), ROWS as usize);
@@ -891,7 +923,9 @@ fn clearing_the_provider_tears_every_participant_down() {
         NativeSurface::new(NativeViewKind::Map),
     );
     let (fake, log) = provider();
-    app.host_mut().set_native_provider(fake);
+    app.host_mut()
+        .register_native_provider(fake, &[NativeViewKind::Map, NativeViewKind::Video])
+        .unwrap();
     app.frame();
     assert_eq!(app.host().participant_count(), 2);
 
@@ -935,7 +969,9 @@ fn last_applied(log: &NativeCommandLog) -> floom_native::NativeState {
 fn freezing_a_participant_takes_its_live_view_off_screen() {
     let mut app = empty_app();
     let (fake, log) = provider();
-    app.host_mut().set_native_provider(fake);
+    app.host_mut()
+        .register_native_provider(fake, &[NativeViewKind::Video])
+        .unwrap();
     let slot = bound_surface(&mut app);
     assert!(live_state(&app).visible, "precondition: compositing live");
 
@@ -964,7 +1000,9 @@ fn freezing_a_participant_takes_its_live_view_off_screen() {
 fn a_frozen_participant_is_painted_as_an_image_in_its_own_box() {
     let mut app = empty_app();
     let (fake, _log) = provider();
-    app.host_mut().set_native_provider(fake);
+    app.host_mut()
+        .register_native_provider(fake, &[NativeViewKind::Video])
+        .unwrap();
     let slot = bound_surface(&mut app);
 
     let snapshot = app.host_mut().freeze_native(slot).unwrap().unwrap();
@@ -984,7 +1022,9 @@ fn a_frozen_participant_is_painted_as_an_image_in_its_own_box() {
 fn thawing_restores_the_live_view() {
     let mut app = empty_app();
     let (fake, log) = provider();
-    app.host_mut().set_native_provider(fake);
+    app.host_mut()
+        .register_native_provider(fake, &[NativeViewKind::Video])
+        .unwrap();
     let slot = bound_surface(&mut app);
 
     app.host_mut().freeze_native(slot).unwrap().unwrap();
@@ -1015,7 +1055,9 @@ fn thawing_restores_the_live_view() {
 fn the_freeze_lifecycle_rejects_double_and_stray_calls() {
     let mut app = empty_app();
     let (fake, log) = provider();
-    app.host_mut().set_native_provider(fake);
+    app.host_mut()
+        .register_native_provider(fake, &[NativeViewKind::Video])
+        .unwrap();
     let slot = bound_surface(&mut app);
 
     app.host_mut().freeze_native(slot).unwrap().unwrap();
@@ -1055,7 +1097,9 @@ fn a_provider_that_cannot_snapshot_keeps_the_live_view() {
         focusable: false,
         clip: ClipSupport::Platform,
     });
-    app.host_mut().set_native_provider(cannot);
+    app.host_mut()
+        .register_native_provider(cannot, &[NativeViewKind::Video])
+        .unwrap();
     let slot = bound_surface(&mut app);
 
     assert_eq!(
@@ -1081,7 +1125,9 @@ fn an_unmounting_frozen_participant_hands_ownership_back() {
     let mut app = empty_app();
     let root = app.root();
     let (fake, log) = provider();
-    app.host_mut().set_native_provider(fake);
+    app.host_mut()
+        .register_native_provider(fake, &[NativeViewKind::Video])
+        .unwrap();
     let node = app.host_mut().mount(
         root,
         at(0.0, 0.0, 200.0, 80.0),
@@ -1135,7 +1181,9 @@ fn frozen_bounds(app: &TestApp, resource: ResourceId) -> Option<Rect> {
 fn a_frozen_participant_is_animated_then_goes_live() {
     let mut app = empty_app();
     let (fake, log) = provider();
-    app.host_mut().set_native_provider(fake);
+    app.host_mut()
+        .register_native_provider(fake, &[NativeViewKind::Video])
+        .unwrap();
     let slot = bound_surface(&mut app);
 
     let snapshot = app
@@ -1190,7 +1238,9 @@ fn a_transition_without_a_snapshot_animates_nothing() {
         clip: ClipSupport::Platform,
     });
     let log = cannot.watch();
-    app.host_mut().set_native_provider(cannot);
+    app.host_mut()
+        .register_native_provider(cannot, &[NativeViewKind::Video])
+        .unwrap();
     let slot = bound_surface(&mut app);
 
     assert_eq!(
@@ -1235,7 +1285,9 @@ fn a_plain_widget_still_receives_clicks_with_a_provider_installed() {
         NativeSurface::new(NativeViewKind::Video),
     );
     let (fake, _log) = provider();
-    app.host_mut().set_native_provider(fake);
+    app.host_mut()
+        .register_native_provider(fake, &[NativeViewKind::Video])
+        .unwrap();
     app.frame();
 
     app.click(Point::new(100.0, 240.0));

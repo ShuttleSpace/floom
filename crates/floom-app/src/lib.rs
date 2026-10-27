@@ -42,9 +42,10 @@ use floom_layout::{
     AlignItems as LAlign, FlexDirection, JustifyContent, LayoutEngine, LayoutNode, LayoutStyle,
     MeasureFn, Position as LPosition,
 };
+use floom_native::registry::NativeProviderRegistry;
 use floom_native::{
-    InputMode, NativeCompositionMode, NativeError, NativeSlot, NativeState, NativeViewController,
-    NativeViewId, NativeViewKind, NativeViewPool, NativeViewProvider,
+    InputMode, NativeCompositionMode, NativeError, NativeSlot, NativeState, NativeViewId,
+    NativeViewKind, NativeViewPool, NativeViewProvider,
 };
 use floom_overlay::{CompositorProp, OverlayManager};
 use floom_runtime_core::IdAllocator;
@@ -581,8 +582,10 @@ pub struct WidgetHost {
     finished_declared: Vec<usize>,
     /// Native composition. `None` means every participant request is refused,
     /// which is the honest answer for a host with no OS bridge rather than a
-    /// participant that silently draws nothing.
-    native: Option<NativeViewController<Box<dyn NativeViewProvider>>>,
+    /// participant that silently draws nothing. `Some(registry)` routes each
+    /// participant to the provider that registered its kind; an unclaimed kind
+    /// is refused rather than silently handed a blank rectangle.
+    native: Option<NativeProviderRegistry>,
     /// Live participants, in the order they were bound.
     participants: Vec<Participant>,
     /// Participants frozen into a texture for the duration of a transition.
@@ -2513,9 +2516,9 @@ impl WidgetHost {
             let snapshot = self.frozen_snapshot(index);
             let node = &mut self.nodes[index];
             let native = match self.native.as_mut() {
-                Some(controller) => Some(NativeGrantSink {
+                Some(registry) => Some(NativeGrantSink {
                     node: index,
-                    controller,
+                    registry,
                     participants: &mut self.participants,
                     pool: &mut self.native_pool,
                     next_key: &mut self.next_native_key,
@@ -3667,17 +3670,29 @@ impl WidgetHost {
 
     // --- native composition ------------------------------------------------
 
-    /// Gives the host a provider for native participants.
+    /// Registers `provider` as the implementer of exactly `kinds`.
     ///
-    /// Without one every `NativeRequest` is refused. That is the honest answer:
-    /// a host that cannot composite must not hand out participants that draw
-    /// nothing, because a blank rectangle is indistinguishable from one that
-    /// was never asked for.
-    pub fn set_native_provider(&mut self, provider: impl NativeViewProvider + 'static) {
-        self.native = Some(NativeViewController::boxed(provider));
+    /// Without any provider for a participant's kind, every `NativeRequest`
+    /// for it is refused. That is the honest answer: a host that cannot
+    /// composite must not hand out participants that draw nothing, because a
+    /// blank rectangle is indistinguishable from one that was never asked for.
+    ///
+    /// One provider may claim many kinds (an OS host owns its views and cannot
+    /// be duplicated per kind), but one kind may have exactly one provider —
+    /// claiming a kind another provider already claims is an error here, not a
+    /// silent last-wins at bind time.
+    pub fn register_native_provider(
+        &mut self,
+        provider: impl NativeViewProvider + 'static,
+        kinds: &[NativeViewKind],
+    ) -> Result<(), NativeError> {
+        let mut registry = NativeProviderRegistry::new();
+        registry.register(provider, kinds)?;
+        self.native = Some(registry);
+        Ok(())
     }
 
-    /// Takes the provider away, tearing every participant down first.
+    /// Takes the providers away, tearing every participant down first.
     pub fn clear_native_provider(&mut self) {
         let nodes: Vec<usize> = self.participants.iter().map(|p| p.node).collect();
         for index in nodes {
@@ -3687,7 +3702,10 @@ impl WidgetHost {
     }
 
     pub fn has_native_provider(&self) -> bool {
-        self.native.is_some()
+        self.native
+            .as_ref()
+            .map(|registry| !registry.is_empty())
+            .unwrap_or(false)
     }
 
     /// Live participants.
@@ -3715,20 +3733,20 @@ impl WidgetHost {
     /// never lingers in the host. Empty when nothing was frozen (or no provider
     /// is installed).
     pub fn take_native_captures(&mut self) -> Vec<NativeCapture> {
-        match &mut self.native {
-            Some(controller) => controller.take_native_captures(),
-            None => Vec::new(),
-        }
+        self.native
+            .as_mut()
+            .map(|registry| registry.take_native_captures())
+            .unwrap_or_default()
     }
 
     /// Slots the provider was told to create and never told to destroy. Should
     /// be empty once the tree is torn down; anything left is a native view the
     /// framework can no longer name.
     pub fn unreleased_participants(&self) -> Vec<NativeSlot> {
-        match &self.native {
-            Some(controller) => controller.unreleased().collect(),
-            None => Vec::new(),
-        }
+        self.native
+            .as_ref()
+            .map(|registry| registry.unreleased())
+            .unwrap_or_default()
     }
 
     /// The participant holding OS focus, if any.
@@ -3753,13 +3771,13 @@ impl WidgetHost {
         &mut self,
         slot: NativeSlot,
     ) -> Result<Option<NativeSnapshot>, NativeError> {
-        let Some(controller) = self.native.as_mut() else {
+        let Some(registry) = self.native.as_mut() else {
             return Err(NativeError::NotBound(slot));
         };
         // No "already frozen" check of our own: that invariant belongs to the
         // controller, which is the only thing that can answer it truthfully — a
         // second copy here would be a second answer that can drift.
-        let Some(snapshot) = controller.snapshot(slot)? else {
+        let Some(snapshot) = registry.snapshot(slot)? else {
             // Nothing was frozen, so there is nothing to record — and noting it
             // anyway would make a later `thaw` look legitimate.
             return Ok(None);
@@ -3772,7 +3790,7 @@ impl WidgetHost {
         else {
             // The provider handed back a texture, so ownership travelled; it has
             // to travel straight back or the resource is stranded.
-            let _ = controller.restore(slot);
+            registry.restore(slot)?;
             return Err(NativeError::NotBound(slot));
         };
         self.frozen.push(Frozen {
@@ -3846,14 +3864,14 @@ impl WidgetHost {
     /// and a second `restore` either frees a texture nobody owns or leaks the
     /// one somebody already got. So thawing what is not frozen is an error.
     pub fn thaw_native(&mut self, slot: NativeSlot) -> Result<(), NativeError> {
-        let Some(controller) = self.native.as_mut() else {
+        let Some(registry) = self.native.as_mut() else {
             return Err(NativeError::NotBound(slot));
         };
         // Ownership moves here or it does not move at all: the same reasoning
         // the controller applies to its own invariant set, and deliberately not
         // duplicated. To err after this point would leave the provider holding a
         // frozen view and the host believing it is live.
-        controller.restore(slot)?;
+        registry.restore(slot)?;
         // The record has to go, or it outlives the participant it describes:
         // nothing else consults `frozen` for a slot once the slot is gone. The
         // *next frame* is what puts the live view back on screen, because
@@ -3927,10 +3945,10 @@ impl WidgetHost {
         if let Some(position) = self.frozen.iter().position(|f| f.slot == participant.slot) {
             self.frozen.remove(position);
         }
-        if let Some(controller) = self.native.as_mut() {
+        if let Some(registry) = self.native.as_mut() {
             // A frozen participant is restored first by the controller, so the
             // snapshot texture cannot outlive the view that owned it.
-            let _ = controller.destroy(participant.slot);
+            let _ = registry.destroy(participant.slot);
         }
         self.native_pool.release(&participant.key);
         if self.native_focus == Some(participant.slot) {
@@ -4029,9 +4047,9 @@ impl WidgetHost {
         // Pushed in a scope of its own: recording what was applied needs `self`
         // again, and the controller is borrowed out of `self`.
         let mut applied: Vec<(NativeSlot, NativeState)> = Vec::new();
-        if let Some(controller) = self.native.as_mut() {
+        if let Some(registry) = self.native.as_mut() {
             for (slot, state) in updates {
-                if controller.apply(slot, state).is_ok() {
+                if registry.apply(slot, state).is_ok() {
                     applied.push((slot, state));
                 }
             }
@@ -4080,14 +4098,21 @@ impl WidgetHost {
     /// it back the moment the clip stops biting would destroy and re-create a
     /// native view on every scrolled frame at the boundary.
     fn reconcile_clipping(&mut self, viewport: Rect, stats: &mut FrameStats) {
-        let Some(caps) = self.native.as_ref().map(|c| c.capabilities()) else {
-            return;
-        };
-        if caps.can_crop() {
-            return;
-        }
         for position in 0..self.participants.len() {
             let participant = self.participants[position];
+            // Caps belong to whichever provider registered this kind; an
+            // unclaimed kind means nothing to reconcile here — the participant
+            // was already refused at bind time.
+            let Some(caps) = self
+                .native
+                .as_ref()
+                .and_then(|registry| registry.capabilities_for(participant.kind))
+            else {
+                continue;
+            };
+            if caps.can_crop() {
+                continue;
+            }
             let bounds = self.nodes[participant.node].bounds;
             let clip = self.clip(participant.node, bounds, viewport);
             let needs_crop = clip.is_some_and(|clip| !clip.contains_rect(bounds));
@@ -4102,8 +4127,8 @@ impl WidgetHost {
             }
             match caps.negotiate_croppable(participant.modes) {
                 Some(mode) => {
-                    let rebound = self.native.as_mut().and_then(|controller| {
-                        controller
+                    let rebound = self.native.as_mut().and_then(|registry| {
+                        registry
                             .rebind(participant.slot, participant.kind, &[mode])
                             .ok()
                     });
@@ -4193,10 +4218,10 @@ impl WidgetHost {
         match (slot, self.native_focus) {
             (Some(slot), current) if current == Some(slot) => {}
             (Some(slot), _) => {
-                let Some(controller) = self.native.as_mut() else {
+                let Some(registry) = self.native.as_mut() else {
                     return;
                 };
-                if controller.focus(slot).is_err() {
+                if registry.focus(slot).is_err() {
                     // The provider cannot focus (or the slot is gone). Leaving
                     // the framework focused is the right failure: a focus that
                     // went nowhere at all is worse than one that did not move.
@@ -4213,8 +4238,8 @@ impl WidgetHost {
                 self.native_focus = Some(slot);
             }
             (None, Some(current)) => {
-                if let Some(controller) = self.native.as_mut() {
-                    let _ = controller.blur(current);
+                if let Some(registry) = self.native.as_mut() {
+                    let _ = registry.blur(current);
                 }
                 self.native_focus = None;
                 // Hand focus back, unless the caller has already named a new
@@ -4444,7 +4469,7 @@ struct HostUpdateContext<'a> {
 /// frame it asked, whether it got a native view or has to draw a fallback.
 struct NativeGrantSink<'a> {
     node: usize,
-    controller: &'a mut NativeViewController<Box<dyn NativeViewProvider>>,
+    registry: &'a mut NativeProviderRegistry,
     participants: &'a mut Vec<Participant>,
     pool: &'a mut NativeViewPool<SlotKey>,
     next_key: &'a mut u64,
@@ -4469,7 +4494,7 @@ impl NativeGrantSink<'_> {
             // different view. Either way the old one has to be destroyed
             // before the new one is bound, or the provider is left holding two
             // handles for one slot.
-            let _ = self.controller.destroy(existing.slot);
+            let _ = self.registry.destroy(existing.slot);
             self.pool.release(&existing.key);
             self.participants.remove(position);
         }
@@ -4486,7 +4511,7 @@ impl NativeGrantSink<'_> {
             SlotKey::Minted(minted)
         };
         let slot = self.pool.acquire(key);
-        match self.controller.bind(slot, request.kind, request.modes) {
+        match self.registry.bind(slot, request.kind, request.modes) {
             Ok(mode) => {
                 self.participants.push(Participant {
                     node: self.node,

@@ -263,10 +263,11 @@ impl WinitPlatform {
 
     /// Build the native-view provider over `window`'s content view.
     ///
-    /// The caller installs it — `WidgetHost::set_native_provider` — because the
-    /// provider is the app's to own: this crate knows how to make an AppKit one
-    /// and nothing above it needs to know that AppKit was involved. Handing one
-    /// out is what flips [`Platform::capabilities`](floom_platform::Platform::capabilities)
+    /// The caller installs it — `WidgetHost::register_native_provider` with
+    /// the kinds this bridge can really draw — because the provider is the
+    /// app's to own: this crate knows how to make an AppKit one and nothing
+    /// above it needs to know that AppKit was involved. Handing one out is what
+    /// flips [`Platform::capabilities`](floom_platform::Platform::capabilities)
     /// to advertising [`Capability::NATIVE_VIEW`], which is why the flag is set
     /// here and not at construction.
     ///

@@ -130,7 +130,10 @@ impl WinitApp for ProbeApp {
         {
             match platform.native_view_provider(window) {
                 Ok(provider) => {
-                    self.runner.host_mut().set_native_provider(provider);
+                    self.runner
+                        .host_mut()
+                        .register_native_provider(provider, &[NativeViewKind::Video])
+                        .ok();
                     self.parent = platform.native_view_parent(window).ok();
                     eprintln!(
                         "probe: native views installed, NATIVE_VIEW {}",
