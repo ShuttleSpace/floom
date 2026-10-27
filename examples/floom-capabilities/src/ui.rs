@@ -41,6 +41,7 @@ use floom_plugin_background_work as background_work;
 use floom_plugin_file_dialog as file_dialog;
 use floom_plugin_local_auth as local_auth;
 use floom_plugin_location as location;
+use floom_plugin_mdns as mdns;
 use floom_plugin_notifications as notifications;
 use floom_plugin_open_url as open_url;
 use floom_plugin_prefs as prefs;
@@ -402,6 +403,28 @@ fn run_action(id: &str) {
         .map(|()| {
             "the system will bring this app up in ~30 s (inexact — the OS batches)".to_string()
         }),
+        // Two seconds of real network time, then a snapshot. Empty is a real
+        // answer, and it is printed as one rather than as a failure.
+        "device::browse_lan" => {
+            mdns::browse("_http._tcp.local.", std::time::Duration::from_secs(2)).map(|services| {
+                if services.is_empty() {
+                    "nobody answered within 2 s — an empty network, or filtered \
+                     multicast (the crate doc names the Android case)"
+                        .to_string()
+                } else {
+                    let names: Vec<String> = services
+                        .iter()
+                        .take(3)
+                        .map(|service| service.instance.clone())
+                        .collect();
+                    format!(
+                        "{} services answered — e.g. {}",
+                        services.len(),
+                        names.join(", ")
+                    )
+                }
+            })
+        }
         other => Err(format!("unknown action `{other}`")),
     };
     match outcome {

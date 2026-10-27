@@ -720,6 +720,11 @@ pub fn actions() -> Vec<(&'static str, &'static str)> {
             "background_work::schedule_app_launch",
             "device::schedule_relaunch",
         ),
+        // A bounded browse: the network gets two seconds to answer "who serves
+        // _http._tcp". An action, not a row, because it costs time — and the
+        // empty answer is the interesting half (nobody home, or filtered
+        // multicast; the crate doc names the Android case).
+        ("mdns::browse", "device::browse_lan"),
     ]
 }
 

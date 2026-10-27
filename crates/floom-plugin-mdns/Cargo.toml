@@ -1,0 +1,21 @@
+[package]
+name = "floom-plugin-mdns"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "A Floom plugin: discover services on the local network (mDNS / DNS-SD)"
+rust-version.workspace = true
+publish = false
+
+# A capability plugin: one capability, one crate, opt-in by dependency. It
+# depends on the platform layer and on nothing above it.
+[dependencies]
+# mDNS is a protocol (RFC 6762/6763), not a platform API: the wire format is
+# the same everywhere, so there are no per-platform arms in this crate at all
+# — one implementation serves every target, the way `std`'s sockets serve
+# `local_ip`. `mdns-sd` is that implementation: pure Rust, no C library, and
+# it talks to the network directly rather than going through Avahi or
+# mDNSResponder, which is what keeps a plugin whose siblings link nothing at
+# all honest about what adding this one costs.
+mdns-sd = "0.21"

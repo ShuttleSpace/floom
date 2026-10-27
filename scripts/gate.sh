@@ -111,6 +111,7 @@ FLOOM2_PACKAGES=(
   --package=floom-plugin-wakelock
   --package=floom-plugin-network-info
   --package=floom-plugin-background-work
+  --package=floom-plugin-mdns
   # The framework tail of the track. It was missing here while CI listed it, so
   # the gate could go green with `floom-app` and `floom-widgets` unclipped.
   --package=floom-accessibility --package=floom-focus --package=floom-gesture
@@ -147,6 +148,7 @@ CAPABILITY_PLUGINS=(
   floom-plugin-wakelock
   floom-plugin-network-info
   floom-plugin-background-work
+  floom-plugin-mdns
 )
 
 MOBILE_CAPABILITY_PLUGINS=(
@@ -167,6 +169,7 @@ MOBILE_CAPABILITY_PLUGINS=(
   floom-plugin-wakelock
   floom-plugin-network-info
   floom-plugin-background-work
+  floom-plugin-mdns
 )
 
 # The plugins with real Windows arms. Everything else in the capability list
@@ -183,6 +186,7 @@ WINDOWS_CAPABILITY_PLUGINS=(
   floom-plugin-wakelock
   floom-plugin-network-info
   floom-plugin-background-work
+  floom-plugin-mdns
 )
 
 PASS=0
