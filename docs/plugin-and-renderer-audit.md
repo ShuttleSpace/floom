@@ -125,7 +125,33 @@
 
 ## 2.3 缺口清单
 
-### R1 · skia 在 2.0 里不是渲染器 🔴
+> **先读这张表。** 下面 R1–R7 的小节是**修复前的原始发现**，逐字保留——它们
+> 的价值在推理而不在结论：R2 为什么"背景滤镜在 vello 上结构性无法实现"、
+> R4 为什么"做不到也要计数"，这些论证是 B4 / B3 修法的依据，删掉就等于
+> 把依据丢了。但它们的标题读起来像待办，所以每条都加了「→ ✅ 已修」标记和
+> 一段现状说明。
+>
+> | | 缺口 | 现在 |
+> |---|---|---|
+> | R1 | skia 不是渲染器 | ✅ B2：改名 `floom-renderer-skia-abi`，补计数器与测试 |
+> | R2 | vello 缺三类效果 | 🟡 B4 只修了第一格：`Rect` 阴影已真画；路径/字形阴影**场景里根本没有这个字段**（不是跳过）；滤镜/背景滤镜**结构性**无法实现，均计数 |
+> | R3 | software 没有 shader runtime | ✅ B8：是设计决定，不是缺口 |
+> | R4 | tui 静默忽略 radius/shadow | ✅ B3：各自计数 |
+> | R5 | `Renderer` 没有能力查询 | ✅ B5/B6：`RendererCapabilities` + `DegradationReport` |
+> | R6 | 后端支持文档过时 | ✅ B1：重写为 12×5 矩阵 |
+> | R7 | 只有 software 有像素回归 | ✅ B7：web/tui/software 都有；vello GPU 路径 2026-10-27 补齐 |
+>
+> **真正还开着的只有 R2 的两格**：路径/字形阴影（场景层没有这个字段），以及
+> 滤镜/背景滤镜（vello 结构性无法实现）。前者是**没人做**——不是做不到；
+> 后者是做不到。
+
+### R1 · skia 在 2.0 里不是渲染器 🔴 → ✅ 已修（B2）
+
+> **这段是修复前的原始发现，保留作记录。** 现状：crate 已改名为
+> `floom-renderer-skia-abi`，名字本身就说清它不是渲染器；补了
+> `shaders_skipped` / `filters_skipped` / `shadows_skipped` 三个计数器，
+> 测试从 5 个补到 8 个；facade 不导出它，零外部依赖,只被自己的测试用。
+> 它和真正的后端并排放着仍然容易被误读，但**名字和依赖都说了实话**。
 
 `crates/floom-renderer-skia/src/lib.rs:1`：
 
@@ -144,7 +170,17 @@
 按当前状态，它是一个"意图记录器"，却和真正的后端并排放在 `floom-renderer-*` 命名空间里，
 容易被误认为已实现。
 
-### R2 · vello 没有 blur primitive，GPU 路径缺三类效果 🟠
+### R2 · vello 没有 blur primitive，GPU 路径缺三类效果 🟠 → 🟡 部分已修（B4）
+
+> **这段是修复前的原始发现，保留作记录** —— 下面那三段"已核实无法实现"的
+> 论证仍然成立，是 B4 结论的依据，不要因为标题变了就跳过它。
+>
+> 现状：`Rect` 的阴影已真画（余下三个小节的第一条）。`Path` / `GlyphRun`
+> 的阴影**不是"被跳过"，而是场景本身不表达** —— `SceneNode::Path` 没有
+> `shadow` 字段（`node.rs:61` 起只有 `fill` / `stroke`），所以没有请求可计数。
+> B4 之前那句"仍 `shadows_skipped`"只对 `Rect` 的零 σ / 零 extent 成立。
+> 真的要让路径带阴影，得先给场景加字段，再谈 vello 能不能画——两件事都还没做。
+> 滤镜域与背景滤镜按下面的论证仍然无法实现，两者都计数。
 
 `crates/floom-renderer-vello/src/gpu.rs`：
 
@@ -162,12 +198,22 @@
 
 三者都计数了，符合"不静默"原则。
 
-### R3 · software 没有 shader runtime 🟡
+### R3 · software 没有 shader runtime 🟡 → ✅ 已记录为设计决定（B8）
+
+> **这段是修复前的原始发现，保留作记录。** 现状：不是"待做"，是**决定**。
+> 文档明确写出“自定义着色器仅 GPU 后端可用”，software / web / tui /
+> skia-abi 各自计数。WGSL 只在 vello 上跑。
+>
+> 这个"缺口"不会再被当成待办，因为它已经不是缺口了。
 
 `crates/floom-renderer-software/src/lib.rs:1161-1163`：`shaders_skipped += 1`。
 已计数，符合原则。WGSL 只在 vello 上跑（`gpu.rs` 的 `shaders_drawn`）。
 
-### R4 · tui 覆盖面最窄，且有 3 处静默忽略 🟡
+### R4 · tui 覆盖面最窄，且有 3 处静默忽略 🟡 → ✅ 已修（B3）
+
+> **这段是修复前的原始发现，保留作记录。** 现状：`radius` 与 `shadow` 各自
+> 计数一次（一个同时有圆角和阴影的矩形计两次，`grid.rs:48`），不再被 `..`
+> 吞掉；测试从 21 个补到 23 个。原段的判断——"做不到也要计数"——正是修法。
 
 `crates/floom-renderer-tui/src/grid.rs:216-289`：
 
@@ -181,7 +227,16 @@
 字符网格没有软边缘，阴影与圆角"无法表达"是事实——但按本仓库自己的原则，
 **"做不到"也要计数**，否则一个带阴影的卡片在 TUI 上会静默变成无阴影卡片，没人知道。
 
-### R5 · `Renderer` trait 没有能力查询 🟠（架构缺口）
+### R5 · `Renderer` trait 没有能力查询 🟠 → ✅ 已修（B5）
+
+> **这段是修复前的原始发现，保留作记录** —— 它诊断的问题就是 B5 要解决的
+> 问题，读它比读结论更能明白为什么 `RendererCapabilities` 默认必须是**悲观**的。
+>
+> 现状：`Renderer::capabilities` 与 `Presenter::capabilities` 返回
+> `RendererCapabilities { shadows, filters, backdrop_filters, shaders }`，
+> 默认**悲观**（什么都说不能），五个后端各自诚实回答，
+> `AppRunner::renderer_capabilities()` 透给宿主。B6 的 `DegradationReport`
+> 再在它之上把"意外降级"减出来。
 
 `crates/floom-renderer/src/lib.rs:55-81` 的 `Renderer` trait 只有
 `begin_frame` / `render_scene` / `render_scene_with_resources` / `end_frame` / `trim_caches`。
@@ -193,7 +248,11 @@
 后果：host 无法在运行前知道"这个后端会不会把我的阴影丢掉"，
 也无法把不同后端的降级归一上报给用户。`Capability` 位只描述**平台**，不描述**渲染后端**。
 
-### R6 · `docs/renderer-backend-support.md` 已过时 🟠
+### R6 · `docs/renderer-backend-support.md` 已过时 🟠 → ✅ 已修（B1）
+
+> **这段是修复前的原始发现，保留作记录。** 现状：文档已重写为 2.0 的
+> 12 变体 × 5 后端矩阵，并新增"留下的缺口"一节。下面点名的
+> "web 丢阴影且无计数"那条错误结论已被明确推翻。
 
 该文档基于 v1 的 `PaintContext::draw_shadow` 默认空实现来写
 （`docs/renderer-backend-support.md:12-23`）。但 2.0 里：
@@ -268,7 +327,7 @@ macOS 门禁记录过一次真实教训（`docs/gates/macos.md:126-128`）：
 | **B1** | 重写 `docs/renderer-backend-support.md` 为 2.0 场景节点矩阵 | — | 🟠 | ✅ **完成** — 12 变体 × 5 后端矩阵；修正"web 无阴影计数"的过时结论（2.0 的 web 内部就是 software 渲染器）；新增"留下的缺口"一节 |
 | **B2** | skia 要么补提交路径 + 计数器 + 测试，要么明确降级为"意图记录器" | — | 🔴 | ✅ **完成** — 改名 `floom-renderer-skia-abi`（**它本来就不是渲染器**：零外部依赖、只被自己的测试用、facade 不导出）；补 `shaders_skipped`/`filters_skipped`/`shadows_skipped`；补 3 项测试（5 → 8） |
 | **B3** | tui 补齐静默忽略的计数 | — | 🟡 | ✅ **完成** — `radius` 与 `shadow` 不再被 `..` 吞掉，各计一次；补 2 项测试（21 → 23） |
-| **B4** | vello 的 blur primitive | — | 🟠 | ✅ **完成（Rect）** — 上游 vello 0.7 **已有** `draw_blurred_rounded_rect`（之前『依赖上游』的判断是错的，从没人去查过）。offset 折进 rect、spread 同时增大 rect 与圆角（中心不动）、blur 按 `CSS_BLUR_TO_SIGMA` 折成 σ；阴影先于填充画。**Path / GlyphRun 的阴影仍跳过**——原语只能糊圆角矩形 |
+| **B4** | vello 的 blur primitive | — | 🟠 | ✅ **完成（Rect）** — 上游 vello 0.7 **已有** `draw_blurred_rounded_rect`（之前『依赖上游』的判断是错的，从没人去查过）。offset 折进 rect、spread 同时增大 rect 与圆角（中心不动）、blur 按 `CSS_BLUR_TO_SIGMA` 折成 σ；阴影先于填充画。**路径/字形的阴影不是"被跳过"**：`SceneNode::Path` / `GlyphRun` 根本没有 `shadow` 字段（`node.rs:61` 起只有 `fill` / `stroke`），所以没有请求可计数。真要让路径带阴影得先给场景加字段，再谈 vello 能不能画——两件都没做 |
 | **B5** | 统一后端能力查询 | — | 🟠 | ✅ **完成** — `Renderer::capabilities` 与 `Presenter::capabilities` 返回 `RendererCapabilities{shadows,filters,backdrop_filters,shaders}`；默认**悲观**；五个后端各自诚实回答；`AppRunner::renderer_capabilities()` 透给宿主；5 项测试 |
 | **B6** | 统一降级计数的暴露方式 | B5 | 🟡 | ✅ **完成** — `DegradationReport`（`floom-renderer/src/degradation.rs`）是**视图**而非替换：各后端保留自己的 stats，新增 `degradation()` 转换。四个 kind 分开（不合并成一个数——『丢了六件事』和『丢了六个阴影』是不同事实）。`unexpected(caps)` 减去 capabilities 已声明会发生的事，剩下的就是**意外**——把『capability bit 没有实现比没有更糟』变成运行时事实。tui 的单一 `skipped` 无法归因，报告如实承载总数并写明不能归因 |
 | **B7** | 为 vello / tui / web 补像素级回归 | — | 🟠 | ✅ **完成（2026-10-27，含 vello GPU 路径）** — `PixelSnapshot::of_buffer` 让**任何**后端都能有 golden（尺寸进哈希）；web 与 software 参考逐像素比对 + 自己的 golden；tui 的 golden 是**字符网格文本**（人能在 diff 里读懂）；software 补**文本渲染层**证据（墨迹是字形形状而非填充块）。**vello 的 GPU 路径已补**：`VelloGpuPresenter::render_offscreen` 把 scene 经**同一条 encode 路径**光栅化进离屏纹理并回读成 RGBA（复用公开的编码器而不是第二套实现，否则测的就是会漂移的副本）；4 个测试断言**墨迹在哪**而不只是计数——空场景/实心矩形边界、裁剪在自己边缘处截断、阴影出现在矩形之外。有牙证明：把 encode 替换成空场景，4 个测试全红；只去掉裁剪标记，只有裁剪测试红。`#[ignore]` 因为它需要真 GPU adapter，门禁新增的 `gpu` 检查**无论有无 GPU 都编译**这条路径，并在有 adapter 时报「4 pixel tests ran and passed」、无 adapter 时报「skipped — no GPU adapter on this machine」——**跳过从不被算成通过**；`FLOOM_REQUIRE_GPU=1` 把缺 adapter 变成红灯。顺带发现并修掉 `--deny warnings` 下 `gpu` feature 从未编译过的两处 clippy 错误 |
