@@ -57,7 +57,7 @@ SDK 不携带任何能力插件。app 想要电池就连 `floom-plugin-battery`�
 | `connectivity_plus` | `floom-plugin-connectivity` | `SCNetworkReachability` / `ConnectivityManager` |
 | `device_info_plus` | `floom-plugin-device-info` | `Build` / `UIDevice` |
 | `sensors_plus` | `floom-plugin-sensors` | iOS 的 `Proximity` / `AmbientLight` 恒 false——平台无查询 API，如实报告 |
-| `share_plus` | `floom-plugin-share` | Android `share_files` 缺 `FileProvider` 返回精确 `Err` |
+| `share_plus` | `floom-plugin-share` | Android `share_files` 缺 `FileProvider` 返回精确 `Err`；macOS 臂于 2026-10-27 补上（见 §10），Windows/Linux 点名拒绝 |
 | `local_auth` | `floom-plugin-local-auth` | 两侧 `authenticate` 都返回 `Err`：同步签名无法诚实断言「已认证」 |
 
 这 6 个是 2026-10-24 从 TODO 桩补成真实现的那批（audit 的 A7b 行）。
@@ -715,3 +715,26 @@ android / ios / windows 三目标 `cargo check --tests` 干净，含只在手机
 每个批次做完跑一遍第 7 节的矩阵，并在 `docs/plugin-and-renderer-audit.md`
 里加一行记录——A7b 的教训是**只记「拆分完成」不记「实现是 stub」**，
 所以新条目必须同时记结构和真实度。
+
+---
+
+## 10. 目录之外 —— 按使用量补的那批（2026-10-27）
+
+本目录只覆盖两个官方发布者名下的 90 个包。`docs/plugin-usage-priority.md` 换了一个
+入口：pub.dev 的 `is:plugin` 按人气排序取前 100，再逐个查 `downloadCount30Days`。
+结果说明「发布者范围内」漏掉的不是边角料——前 20 里有 10 个在范围外（5 个 firebase
+之外，还有 `flutter_secure_storage` 5.61M、`permission_handler` 3.87M、`app_links`
+3.51M、`sqflite` 3.15M、`mobile_scanner` 2.03M）。
+
+那条记录只排序、不拍板（和本目录一样）。已经落地的：
+
+| 能力 | 状态 |
+|---|---|
+| `flutter_secure_storage` → `floom-plugin-secure-storage` ✅ | 四臂：Apple Keychain（本机真往返测试）、Android Keystore AES-GCM、Windows DPAPI、Linux libsecret。**不是** `prefs` 的别名：`get` 返回 `Result<Option<String>, String>`，`Err`（钥匙串锁了、Keystore 键被作废）和「没这个键」分开 |
+| `share_plus` 的桌面臂 ✅ macOS | `NSSharingServicePicker` 锚在 key window（AppKit 没有无窗口版本）；Windows/Linux 拒绝并点名门：WinRT `DataTransferManager` / Linux 没有跨桌面 share API |
+| `flutter_local_notifications` 的桌面臂 ✅ macOS | 复用 iOS 臂；先查 bundle id，没有就拒绝——`currentNotificationCenter` 在无 bundle 的进程里抛 Rust 接不住的 ObjC 异常 |
+| `window_manager` → 平台层 `Window::control` ✅ | resize / move / fullscreen / minimize / maximize / always-on-top / decorations / visible / focus。没有窗口管理器的后端默认 `Err`；`Ok` 只表示窗口系统收下了请求，最终尺寸仍走 resize 事件 |
+| `tray_manager` → 未做 | 需要 `tray-icon`（Linux 侧还带 GTK 依赖）加事件循环接线。这是形状问题，按 §8 的规矩另开，不在这一批顺手加 |
+
+`sqflite` 与 `in_app_purchase` 已决定不做。`permission_handler` 不镜像：授权按能力
+各自持有，需要时在那个能力里加 `status()`。
