@@ -45,12 +45,16 @@ use floom_plugin_mdns as mdns;
 use floom_plugin_notifications as notifications;
 use floom_plugin_open_url as open_url;
 use floom_plugin_prefs as prefs;
+use floom_plugin_secure_storage as secure_storage;
 use floom_plugin_share as share;
 use floom_plugin_vibration as vibration;
 use floom_plugin_wakelock as wakelock;
 use floom_widgets::{Button, Container, Spacer, Stack, Text};
 
 use crate::probe::{self, Row, State};
+
+/// The keychain store the gallery's secrets round-trip uses.
+const GALLERY_SECRETS: &str = "com.floom.capability-gallery";
 
 /// Muted ink for the question column, so the values stay the loudest thing.
 const DIM: Color = Color::rgb(0x6b, 0x6b, 0x6b);
@@ -425,6 +429,25 @@ fn run_action(id: &str) {
                 }
             })
         }
+        // Write a value nobody has seen before, read it back, and report the
+        // round trip — not the write alone, since `Ok` from a store that does
+        // not hand the value back would be the interesting failure.
+        "device::store_secret" => (|| {
+            let storage = secure_storage::SecureStorage::open(GALLERY_SECRETS)?;
+            let value = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|d| d.as_secs())
+                .unwrap_or(0)
+                .to_string();
+            storage.set("roundtrip", &value)?;
+            match storage.get("roundtrip")? {
+                Some(read) if read == value => Ok(format!(
+                    "wrote {value} and read it back — the OS's protected store, not a file"
+                )),
+                Some(read) => Err(format!("wrote {value} but read {read}")),
+                None => Err("wrote the value but the store reports it absent".to_string()),
+            }
+        })(),
         other => Err(format!("unknown action `{other}`")),
     };
     match outcome {

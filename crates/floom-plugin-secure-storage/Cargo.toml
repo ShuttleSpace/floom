@@ -1,0 +1,38 @@
+[package]
+name = "floom-plugin-secure-storage"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "A Floom plugin: secrets in the OS's own protected store (Keychain / Keystore / DPAPI / libsecret)"
+rust-version.workspace = true
+publish = false
+
+# A capability plugin: one capability, one crate, opt-in by dependency.
+[dependencies]
+
+# `java.security.KeyStore` and `javax.crypto` are framework APIs, so this arm
+# goes through the JNI bridge the platform layer owns — no Gradle dependency,
+# no app-side Java classes.
+[target.'cfg(target_os = "android")'.dependencies]
+floom-platform-mobile = { path = "../floom-platform-mobile", version = "0.2.0" }
+jni = "0.22"
+
+# The keychain is a C API on both Apple targets; `security-framework` wraps
+# `SecItem*` and the `passwords` module is the generic-password item.
+[target.'cfg(any(target_os = "ios", target_os = "macos"))'.dependencies]
+security-framework = { version = "3", default-features = false }
+
+# Windows has no keychain: the store is a file sealed with `CryptProtectData`
+# (DPAPI), which ties decryption to the current user on this machine.
+[target.'cfg(target_os = "windows")'.dependencies]
+windows-sys = { version = "0.61", features = [
+    "Win32_Foundation",
+    "Win32_Security_Cryptography",
+    "Win32_System_Memory",
+] }
+dirs = "6"
+
+# `secret-tool` is libsecret's command-line face; the crate shell out to it the
+# same way `floom-plugin-open-url` shells out to `xdg-open`.
+[target.'cfg(target_os = "linux")'.dependencies]

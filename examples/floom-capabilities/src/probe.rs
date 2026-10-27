@@ -725,6 +725,11 @@ pub fn actions() -> Vec<(&'static str, &'static str)> {
         // empty answer is the interesting half (nobody home, or filtered
         // multicast; the crate doc names the Android case).
         ("mdns::browse", "device::browse_lan"),
+        // The write-then-read half of `secure_storage`: a timestamp goes into
+        // the OS's protected store and comes back. An action rather than a row
+        // because a secret only reads back after something wrote it, and
+        // because a reading must not change the world.
+        ("secure_storage::SecureStorage::set", "device::store_secret"),
     ]
 }
 

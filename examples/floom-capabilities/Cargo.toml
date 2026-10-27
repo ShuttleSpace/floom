@@ -80,6 +80,7 @@ floom-plugin-wakelock = { path = "../../crates/floom-plugin-wakelock", version =
 floom-plugin-network-info = { path = "../../crates/floom-plugin-network-info", version = "0.2.0" }
 floom-plugin-background-work = { path = "../../crates/floom-plugin-background-work", version = "0.2.0" }
 floom-plugin-mdns = { path = "../../crates/floom-plugin-mdns", version = "0.2.0" }
+floom-plugin-secure-storage = { path = "../../crates/floom-plugin-secure-storage", version = "0.2.0" }
 floom-plugin-sensors = { path = "../../crates/floom-plugin-sensors", version = "0.2.0" }
 floom-plugin-share = { path = "../../crates/floom-plugin-share", version = "0.2.0" }
 floom-plugin-vibration = { path = "../../crates/floom-plugin-vibration", version = "0.2.0" }
