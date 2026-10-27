@@ -48,7 +48,7 @@ use std::time::Instant;
 
 use floom_platform::{
     Clipboard, Ime, KeyCode, Modifiers, Platform, PlatformCapabilities, PlatformEvent,
-    SurfaceConfig, SurfaceTarget, Window, WindowConfig, WindowState,
+    SurfaceConfig, SurfaceTarget, Window, WindowCommand, WindowConfig, WindowState,
 };
 use floom_types::{
     CursorStyle, DisplayInfo, KeyEvent, KeyPhase, PlatformId, Point, ScaleFactor, Size, SurfaceId,
@@ -195,6 +195,69 @@ impl Window for WinitWindowAdapter {
 
     fn surface_target(&self) -> Option<SurfaceTarget> {
         self.target()
+    }
+
+    /// Winit's setters take `&self`, so there is nothing to keep alive here —
+    /// the state this adapter reports is updated from the window's own events
+    /// (`Resized`, `ScaleFactorChanged`), not from the request.
+    fn control(&mut self, command: WindowCommand) -> Result<(), String> {
+        match command {
+            WindowCommand::Resize(size) => {
+                let asked = self.native.request_surface_size(winit::dpi::Size::Logical(
+                    winit::dpi::LogicalSize::new(size.width, size.height),
+                ));
+                if asked.is_none() {
+                    return Err("window control: the window refused a size request — it is \
+                         fullscreen, or its size is fixed"
+                        .into());
+                }
+            }
+            WindowCommand::Move(position) => {
+                self.native
+                    .set_outer_position(winit::dpi::Position::Logical(
+                        winit::dpi::LogicalPosition::new(position.x, position.y),
+                    ));
+            }
+            WindowCommand::Fullscreen(on) => {
+                self.native.set_fullscreen(if on {
+                    Some(winit::monitor::Fullscreen::Borderless(None))
+                } else {
+                    None
+                });
+                self.state = if on {
+                    WindowState::Fullscreen
+                } else {
+                    WindowState::Normal
+                };
+            }
+            WindowCommand::Minimized(on) => {
+                self.native.set_minimized(on);
+                self.state = if on {
+                    WindowState::Minimized
+                } else {
+                    WindowState::Normal
+                };
+            }
+            WindowCommand::Maximized(on) => {
+                self.native.set_maximized(on);
+                self.state = if on {
+                    WindowState::Maximized
+                } else {
+                    WindowState::Normal
+                };
+            }
+            WindowCommand::AlwaysOnTop(on) => {
+                self.native.set_window_level(if on {
+                    winit::window::WindowLevel::AlwaysOnTop
+                } else {
+                    winit::window::WindowLevel::Normal
+                });
+            }
+            WindowCommand::Decorations(on) => self.native.set_decorations(on),
+            WindowCommand::Visible(on) => self.native.set_visible(on),
+            WindowCommand::Focus => self.native.focus_window(),
+        }
+        Ok(())
     }
 }
 
@@ -1066,7 +1129,7 @@ mod pointer_hook {
 
     impl WinitApp for Stub {
         fn pointer(&mut self, event: &floom_types::PointerEvent) -> bool {
-            self.seen.push(event.clone());
+            self.seen.push(*event);
             self.answer
         }
     }

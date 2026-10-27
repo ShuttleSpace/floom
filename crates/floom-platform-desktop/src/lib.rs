@@ -47,7 +47,7 @@ use std::time::Instant;
 
 use floom_platform::{
     Clipboard, Ime, KeyCode, Modifiers, Platform, PlatformCapabilities, PlatformEvent,
-    PointerButton, SurfaceConfig, Window, WindowConfig, WindowState,
+    PointerButton, SurfaceConfig, Window, WindowCommand, WindowConfig, WindowState,
 };
 use floom_types::{DisplayInfo, PlatformId, Point, ScaleFactor, Size, SurfaceId, WindowId};
 
@@ -149,6 +149,27 @@ impl Window for DesktopWindow {
             logical_size: self.size,
             scale_factor: self.scale,
         }
+    }
+
+    /// The reference backend has no window manager, so it records what a real
+    /// one would have applied. That is enough for the parts a test can observe
+    /// (`size`, `state`), and the rest is accepted and forgotten.
+    fn control(&mut self, command: WindowCommand) -> Result<(), String> {
+        match command {
+            WindowCommand::Resize(size) => self.size = size,
+            WindowCommand::Fullscreen(true) => self.state = WindowState::Fullscreen,
+            WindowCommand::Minimized(true) => self.state = WindowState::Minimized,
+            WindowCommand::Maximized(true) => self.state = WindowState::Maximized,
+            WindowCommand::Fullscreen(false)
+            | WindowCommand::Minimized(false)
+            | WindowCommand::Maximized(false) => self.state = WindowState::Normal,
+            WindowCommand::Move(_)
+            | WindowCommand::AlwaysOnTop(_)
+            | WindowCommand::Decorations(_)
+            | WindowCommand::Visible(_)
+            | WindowCommand::Focus => {}
+        }
+        Ok(())
     }
 }
 

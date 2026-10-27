@@ -26,3 +26,25 @@ jni = "0.22"
 # UIKit for the class lookups.
 [target.'cfg(target_os = "ios")'.dependencies]
 objc2 = { version = "0.6", default-features = false, features = ["std"] }
+
+# macOS presents `NSSharingServicePicker`. It is view-anchored, so the arm
+# asks `NSApplication` for the key window rather than taking a handle: the
+# plugin owns a capability, and the window is the host's.
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2 = { version = "0.6", default-features = false, features = ["std"] }
+objc2-app-kit = { version = "0.3", default-features = false, features = [
+    "std",
+    "objc2-core-foundation",
+    "NSApplication",
+    "NSResponder",
+    "NSSharingService",
+    "NSView",
+    "NSWindow",
+] }
+objc2-foundation = { version = "0.3", default-features = false, features = [
+    "std",
+    "NSArray",
+    "NSGeometry",
+    "NSString",
+    "NSURL",
+] }

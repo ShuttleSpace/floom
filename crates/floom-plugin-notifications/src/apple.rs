@@ -1,4 +1,9 @@
-//! iOS local notifications via `UNUserNotificationCenter`.
+//! Apple local notifications via `UNUserNotificationCenter`.
+//!
+//! One arm serves iOS and macOS: the framework and its object graph are the
+//! same on both. The macOS difference is the bundle: `UNUserNotificationCenter`
+//! aborts the process when the main bundle has no identifier, so every entry
+//! point checks for one first and refuses with a reason instead of crashing.
 //!
 //! Adapted from `gpui-mobile` (Apache-2.0).
 //!
@@ -46,6 +51,29 @@ use std::ffi::CString;
 // `objc_getClass`, which only finds them if UserNotifications is loaded.
 #[link(name = "UserNotifications", kind = "framework")]
 unsafe extern "C" {}
+#[link(name = "Foundation", kind = "framework")]
+unsafe extern "C" {}
+
+/// Whether this process has a main bundle identifier.
+///
+/// On iOS: always. On macOS: only when the binary was launched from a `.app` —
+/// and `UNUserNotificationCenter.currentNotificationCenter` raises an
+/// Objective-C exception (which Rust cannot catch) when it has not. Asking
+/// first turns that abort into an `Err`.
+fn bundled() -> bool {
+    unsafe {
+        let bundle: *mut AnyObject = msg_send![class!(NSBundle), mainBundle];
+        if bundle.is_null() {
+            return false;
+        }
+        let identifier: *mut AnyObject = msg_send![bundle, bundleIdentifier];
+        !identifier.is_null()
+    }
+}
+
+const NO_BUNDLE: &str = "notifications: this process has no bundle identifier; \
+     macOS delivers notifications only from an app bundle, and UNUserNotificationCenter \
+     aborts when asked from a bare binary";
 
 /// `UNAuthorizationStatus`.
 ///
@@ -64,6 +92,9 @@ const UNAUTHORIZATION_STATUS_EPHEMERAL: i64 = 4;
 const SETTINGS_TIMEOUT_SECONDS: i64 = 5;
 
 pub fn are_notifications_enabled() -> bool {
+    if !bundled() {
+        return false;
+    }
     use std::sync::Arc;
     use std::sync::atomic::{AtomicBool, Ordering};
 
@@ -133,6 +164,9 @@ pub fn are_notifications_enabled() -> bool {
 }
 
 pub fn request_authorization() -> Result<(), String> {
+    if !bundled() {
+        return Err(NO_BUNDLE.into());
+    }
     unsafe {
         let center: *mut AnyObject =
             msg_send![class!(UNUserNotificationCenter), currentNotificationCenter];
@@ -164,6 +198,9 @@ pub fn request_authorization() -> Result<(), String> {
 pub fn schedule(notification: &Notification) -> Result<(), String> {
     if notification.title.is_empty() {
         return Err("notifications: a notification needs a title".into());
+    }
+    if !bundled() {
+        return Err(NO_BUNDLE.into());
     }
     unsafe {
         let content = notification_content(notification)?;
@@ -202,8 +239,7 @@ unsafe fn notification_content(notification: &Notification) -> Result<*mut AnyOb
         if let Some(badge) = notification.badge {
             // `badge` is an `NSNumber`, so it is boxed rather than passed as an
             // integer — `setBadge:` takes an object.
-            let number: *mut AnyObject =
-                msg_send![class!(NSNumber), numberWithUnsignedInt: badge as u32];
+            let number: *mut AnyObject = msg_send![class!(NSNumber), numberWithUnsignedInt: badge];
             let _: () = msg_send![content, setBadge: number];
         }
         if notification.sound {

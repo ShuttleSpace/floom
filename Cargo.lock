@@ -1650,6 +1650,8 @@ dependencies = [
  "floom-platform-mobile",
  "jni 0.22.4",
  "objc2",
+ "objc2-app-kit",
+ "objc2-foundation",
 ]
 
 [[package]]

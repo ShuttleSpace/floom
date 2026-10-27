@@ -28,7 +28,7 @@ pub use plugins::{
     Plugin, PluginError, plugin, register_plugin, registered_plugins, unregister_plugin,
 };
 pub use surface::{Surface, SurfaceConfig, SurfaceTarget};
-pub use window::{Window, WindowConfig, WindowState};
+pub use window::{Window, WindowCommand, WindowConfig, WindowState};
 
 use floom_types::PlatformId;
 

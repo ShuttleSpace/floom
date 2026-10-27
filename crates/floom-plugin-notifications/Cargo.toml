@@ -22,9 +22,10 @@ publish = false
 floom-platform-mobile = { path = "../floom-platform-mobile", version = "0.2.0" }
 jni = "0.22"
 
-# The iOS half reads `UNUserNotificationCenter` through objc2 and links
-# UserNotifications for the class lookup.
-[target.'cfg(target_os = "ios")'.dependencies]
+# The Apple arm reads `UNUserNotificationCenter` through objc2 and links
+# UserNotifications for the class lookup. iOS and macOS share it: the framework
+# is the same, and the macOS arm differs only in refusing an unbundled process.
+[target.'cfg(any(target_os = "ios", target_os = "macos"))'.dependencies]
 objc2 = { version = "0.6", default-features = false, features = ["std"] }
 # `getNotificationSettingsWithCompletionHandler:` answers through a block on a
 # system queue, and the synchronous API waits for it. `block2` builds the block;

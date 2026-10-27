@@ -72,3 +72,41 @@ fn desktop_clipboard_and_ime() {
     p.set_enabled(win, true);
     assert!(p.ime_is_enabled(win));
 }
+
+/// Runtime window control: the reference backend records what a real window
+/// manager would have applied, so the parts a test can observe — the size and
+/// the state — are asserted here. The winit backend forwards the same commands
+/// to the OS instead.
+#[test]
+fn window_commands_are_applied() {
+    use floom_platform::{WindowCommand, WindowState};
+
+    let mut p = DesktopPlatform::new();
+    let win = p.create_window(WindowConfig::default());
+    let window = p.window_mut(win).unwrap();
+
+    window
+        .control(WindowCommand::Resize(Size::new(640.0, 480.0)))
+        .unwrap();
+    assert_eq!(window.size(), Size::new(640.0, 480.0));
+
+    window.control(WindowCommand::Fullscreen(true)).unwrap();
+    assert_eq!(window.state(), WindowState::Fullscreen);
+    window.control(WindowCommand::Fullscreen(false)).unwrap();
+    assert_eq!(window.state(), WindowState::Normal);
+
+    window.control(WindowCommand::Minimized(true)).unwrap();
+    assert_eq!(window.state(), WindowState::Minimized);
+    window.control(WindowCommand::Maximized(true)).unwrap();
+    assert_eq!(window.state(), WindowState::Maximized);
+
+    for command in [
+        WindowCommand::Move(Point::new(10.0, 10.0)),
+        WindowCommand::AlwaysOnTop(true),
+        WindowCommand::Decorations(false),
+        WindowCommand::Visible(true),
+        WindowCommand::Focus,
+    ] {
+        window.control(command).unwrap();
+    }
+}
