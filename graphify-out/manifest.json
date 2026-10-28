@@ -6120,9 +6120,9 @@
     "semantic_hash": ""
   },
   "crates/floom-platform-desktop/src/lib.rs": {
-    "mtime": 1792853424.2587163,
-    "seen": 1792859460.342017,
-    "ast_hash": "3a0f70c5c9977defaf6da847cc6afa08",
+    "mtime": 1793114462.8968801,
+    "seen": 1793114944.79493,
+    "ast_hash": "875a30cd1b2c826ea6860020619d3d47",
     "semantic_hash": ""
   },
   "crates/floom-platform-desktop/src/native.rs": {
@@ -6138,9 +6138,9 @@
     "semantic_hash": ""
   },
   "crates/floom-platform-desktop/src/winit_backend.rs": {
-    "mtime": 1793017119.7529109,
-    "seen": 1793092373.53192,
-    "ast_hash": "fddeb81819fa7dafee6500556b3b3ed9",
+    "mtime": 1793114669.5982215,
+    "seen": 1793114944.7950878,
+    "ast_hash": "6449969f643c086b10cabfde297e88a1",
     "semantic_hash": ""
   },
   "crates/floom-platform-desktop/src/winit_input.rs": {
@@ -6156,9 +6156,9 @@
     "semantic_hash": ""
   },
   "crates/floom-platform-desktop/tests/lifecycle.rs": {
-    "mtime": 1792653989.937777,
-    "seen": 1792655871.813901,
-    "ast_hash": "304110178dd5ddb390bd82388d4c597e",
+    "mtime": 1793114564.3150349,
+    "seen": 1793114944.795244,
+    "ast_hash": "6042db77a65d02105761d2099b1d6bfd",
     "semantic_hash": ""
   },
   "crates/floom-platform-desktop/tests/winit_capabilities.rs": {
@@ -6426,9 +6426,9 @@
     "semantic_hash": ""
   },
   "crates/floom-platform/src/lib.rs": {
-    "mtime": 1792852113.768717,
-    "seen": 1792859460.346137,
-    "ast_hash": "0be1d35dd32c1f5a247a452cc13baa03",
+    "mtime": 1793114377.975712,
+    "seen": 1793114944.7990458,
+    "ast_hash": "19b12988cbc4018be8a2fccc266644c6",
     "semantic_hash": ""
   },
   "crates/floom-platform/src/surface.rs": {
@@ -6438,9 +6438,9 @@
     "semantic_hash": ""
   },
   "crates/floom-platform/src/window.rs": {
-    "mtime": 1792322015.7057176,
-    "seen": 1792505030.338437,
-    "ast_hash": "420321ac294bed4f6077dc4989922bdc",
+    "mtime": 1793114363.1988652,
+    "seen": 1793114944.7992032,
+    "ast_hash": "fbfdeaf517587d1bd030046bf19112a7",
     "semantic_hash": ""
   },
   "crates/floom-platform/tests/contracts.rs": {
@@ -6480,9 +6480,9 @@
     "semantic_hash": ""
   },
   "crates/floom-renderer-software/src/lib.rs": {
-    "mtime": 1792852486.3088539,
-    "seen": 1792859460.3509052,
-    "ast_hash": "2c5b1e815f9b58b9555068c5bf110949",
+    "mtime": 1793145196.01062,
+    "seen": 1793146478.715317,
+    "ast_hash": "ca0461e72863beff4296fd931e55e0c7",
     "semantic_hash": ""
   },
   "crates/floom-renderer-software/src/presenter.rs": {
@@ -6570,15 +6570,15 @@
     "semantic_hash": ""
   },
   "crates/floom-renderer-vello/src/gpu.rs": {
-    "mtime": 1793109980.0645983,
-    "seen": 1793110843.4591749,
-    "ast_hash": "561ee94cd4a74598d2ae39d7f1d196c2",
+    "mtime": 1793144575.5381937,
+    "seen": 1793146478.716558,
+    "ast_hash": "e358208c68849f03ece5f069bb20eb71",
     "semantic_hash": ""
   },
   "crates/floom-renderer-vello/src/lib.rs": {
-    "mtime": 1792671108.1896727,
-    "seen": 1792672447.780853,
-    "ast_hash": "5a2eead752d3c2c849a716e7d7647845",
+    "mtime": 1793144480.832282,
+    "seen": 1793146478.71656,
+    "ast_hash": "d4196490172b0e7c4d00e961fca13667",
     "semantic_hash": ""
   },
   "crates/floom-renderer-web/Cargo.toml": {
@@ -6612,9 +6612,9 @@
     "semantic_hash": ""
   },
   "crates/floom-renderer/src/lib.rs": {
-    "mtime": 1792731591.2011788,
-    "seen": 1792732768.6450791,
-    "ast_hash": "a4b590124ed0d2ccba93fbe061aa8590",
+    "mtime": 1793144206.783594,
+    "seen": 1793146478.717398,
+    "ast_hash": "8e6ce82182246b6b72799c3b501be67a",
     "semantic_hash": ""
   },
   "crates/floom-renderer/src/present.rs": {
@@ -8598,9 +8598,9 @@
     "semantic_hash": ""
   },
   "scripts/check-architecture-deps.sh": {
-    "mtime": 1792938741.5067587,
-    "seen": 1793092373.633753,
-    "ast_hash": "e0e16af23fc15c0aed9825e83234b615",
+    "mtime": 1793113298.6830924,
+    "seen": 1793114944.845102,
+    "ast_hash": "3e02747e6fa9b28801bbe1112ea9dfb6",
     "semantic_hash": ""
   },
   "scripts/check-perf-budgets.sh": {
@@ -8718,9 +8718,9 @@
     "semantic_hash": ""
   },
   ".github/workflows/ci.yml": {
-    "mtime": 1792938741.50987,
-    "seen": 1793092373.636127,
-    "ast_hash": "3450d65822be4facbad5bc85c57cb27c",
+    "mtime": 1793113308.6224346,
+    "seen": 1793114944.846733,
+    "ast_hash": "ec3119db14182b12aeae0cdf915dd76a",
     "semantic_hash": ""
   },
   ".github/workflows/docs.yml": {
@@ -8730,9 +8730,9 @@
     "semantic_hash": ""
   },
   "CHANGELOG.md": {
-    "mtime": 1793110082.841999,
-    "seen": 1793110843.5119748,
-    "ast_hash": "c969572fb42fca9204e3f16119481187",
+    "mtime": 1793144653.433606,
+    "seen": 1793146478.754794,
+    "ast_hash": "71886d8c9278f2f6b4910748803e0965",
     "semantic_hash": ""
   },
   "CONTRIBUTING.md": {
@@ -9240,9 +9240,9 @@
     "semantic_hash": ""
   },
   "docs/2.0/ARCHITECTURE.md": {
-    "mtime": 1792938741.5079036,
-    "seen": 1793092373.646719,
-    "ast_hash": "220450238515363ebce1bb01abe2b922",
+    "mtime": 1793113308.6256654,
+    "seen": 1793114944.854647,
+    "ast_hash": "930e2ce529df1c06750dc897c644e435",
     "semantic_hash": ""
   },
   "docs/2.0/EXAMPLES.md": {
@@ -9888,9 +9888,9 @@
     "semantic_hash": ""
   },
   "docs/renderer-backend-support.md": {
-    "mtime": 1792741728.7235935,
-    "seen": 1792741893.46322,
-    "ast_hash": "e7c013e2533c9303dda3595f39c7f9b8",
+    "mtime": 1793144646.4618797,
+    "seen": 1793146478.763724,
+    "ast_hash": "3effc14b08f2dfa112a623ae4fe12154",
     "semantic_hash": ""
   },
   "crates/ecosystem/floom-ui/crates/cupertino/cupertino-card/tests/card.rs": {
@@ -10950,9 +10950,9 @@
     "semantic_hash": ""
   },
   "examples/floom-capabilities/Cargo.toml": {
-    "mtime": 1793018108.6612713,
-    "seen": 1793092373.6256452,
-    "ast_hash": "e55f77ef855cbf202d77c982c6e5cb2e",
+    "mtime": 1793113308.6266184,
+    "seen": 1793114944.8404312,
+    "ast_hash": "6c0b40da847c3a87cd043ea724f2fcb2",
     "semantic_hash": ""
   },
   "examples/floom-capabilities/src/android.rs": {
@@ -10986,15 +10986,15 @@
     "semantic_hash": ""
   },
   "examples/floom-capabilities/src/probe.rs": {
-    "mtime": 1793018092.6615937,
-    "seen": 1793092373.626153,
-    "ast_hash": "866273b73e862b0f0e6d5d2c5a069f01",
+    "mtime": 1793113397.118002,
+    "seen": 1793114944.840821,
+    "ast_hash": "97f71644f55ff6fea0bb1cee1cc600d4",
     "semantic_hash": ""
   },
   "examples/floom-capabilities/src/ui.rs": {
-    "mtime": 1793018098.9645486,
-    "seen": 1793092373.626157,
-    "ast_hash": "dd71a10944a2968b6ef320a2169f4066",
+    "mtime": 1793113396.7626965,
+    "seen": 1793114944.8408241,
+    "ast_hash": "ff1790bc4a7593db1fc17c141b934b56",
     "semantic_hash": ""
   },
   "examples/floom-chart/Cargo.toml": {
@@ -13170,9 +13170,9 @@
     "semantic_hash": ""
   },
   "docs/plugin-and-renderer-audit.md": {
-    "mtime": 1793110066.9182053,
-    "seen": 1793110843.521621,
-    "ast_hash": "167e613615223b6074449029efec0ad9",
+    "mtime": 1793144663.4542637,
+    "seen": 1793146478.7634811,
+    "ast_hash": "730d0e1588c7c47f20c365cc07da6105",
     "semantic_hash": ""
   },
   "docs/porting-floem-editor-to-2.0.md": {
@@ -13398,9 +13398,9 @@
     "semantic_hash": ""
   },
   "crates/floom-plugin-notifications/Cargo.toml": {
-    "mtime": 1792798253.4504201,
-    "seen": 1792800303.1255949,
-    "ast_hash": "21037aae2b812e0a007609c17df490cd",
+    "mtime": 1793114010.8055375,
+    "seen": 1793114944.80247,
+    "ast_hash": "01d66ba2f57267b4bc053e05209a71d8",
     "semantic_hash": ""
   },
   "crates/floom-plugin-notifications/src/android.rs": {
@@ -13409,16 +13409,10 @@
     "ast_hash": "26ed55ed3c8ff35c4442b18de62f5038",
     "semantic_hash": ""
   },
-  "crates/floom-plugin-notifications/src/ios.rs": {
-    "mtime": 1792800117.828025,
-    "seen": 1792800303.125599,
-    "ast_hash": "2b33bf1a911059910145fe1f4babbff1",
-    "semantic_hash": ""
-  },
   "crates/floom-plugin-notifications/src/lib.rs": {
-    "mtime": 1792652781.6025243,
-    "seen": 1792653171.5189528,
-    "ast_hash": "7e35caa8696c3f4525b698848cb249ba",
+    "mtime": 1793114010.7694366,
+    "seen": 1793114944.8025532,
+    "ast_hash": "ebcb5cdd3017dd1dd70d6e7f7225e7d6",
     "semantic_hash": ""
   },
   "crates/floom-plugin-sensors/Cargo.toml": {
@@ -13446,9 +13440,9 @@
     "semantic_hash": ""
   },
   "crates/floom-plugin-share/Cargo.toml": {
-    "mtime": 1792798070.7538023,
-    "seen": 1792800303.12571,
-    "ast_hash": "471ac4e3a1882b88d90f4702cd30e681",
+    "mtime": 1793113732.7915833,
+    "seen": 1793114944.80446,
+    "ast_hash": "713dda7ae91edb2a9b6dec4fae63ccea",
     "semantic_hash": ""
   },
   "crates/floom-plugin-share/src/android.rs": {
@@ -13464,9 +13458,9 @@
     "semantic_hash": ""
   },
   "crates/floom-plugin-share/src/lib.rs": {
-    "mtime": 1792652781.6031804,
-    "seen": 1792653171.518965,
-    "ast_hash": "41dc4195b764783870e9a0319e4d30ff",
+    "mtime": 1793113760.0960653,
+    "seen": 1793114944.804615,
+    "ast_hash": "62b99a4cc52252a428d001228b729f4c",
     "semantic_hash": ""
   },
   "crates/floom-plugin-vibration/Cargo.toml": {
@@ -13548,9 +13542,9 @@
     "semantic_hash": ""
   },
   "crates/floom-renderer/tests/degradation.rs": {
-    "mtime": 1792741236.9718301,
-    "seen": 1792741893.4102201,
-    "ast_hash": "1a63ddfb97331e5872587d879726a004",
+    "mtime": 1793145267.759564,
+    "seen": 1793146478.717632,
+    "ast_hash": "c6f6e1cb379638ff27b93e0532e8687e",
     "semantic_hash": ""
   },
   "docs/handoff-remaining-work.md": {
@@ -13704,9 +13698,9 @@
     "semantic_hash": ""
   },
   "scripts/gate.sh": {
-    "mtime": 1793109914.4130006,
-    "seen": 1793110843.5102642,
-    "ast_hash": "673b83f03b28365a671d60e17e5794b5",
+    "mtime": 1793113283.646051,
+    "seen": 1793114944.845172,
+    "ast_hash": "501364b80acdc9b8c07990ab638daef9",
     "semantic_hash": ""
   },
   "crates/ecosystem/floom-editor/examples/ide/workspace/README.md": {
@@ -13752,9 +13746,9 @@
     "semantic_hash": ""
   },
   "docs/plugin-catalog.md": {
-    "mtime": 1793092785.1862268,
-    "seen": 1793093658.084411,
-    "ast_hash": "44ae20fdcf092c9938d6ad8b85bc0b97",
+    "mtime": 1793114778.0092986,
+    "seen": 1793114944.8563552,
+    "ast_hash": "3132f05a26d7cade77c374e98b8e4192",
     "semantic_hash": ""
   },
   "crates/floom-plugin-paths/Cargo.toml": {
@@ -14004,9 +13998,87 @@
     "semantic_hash": ""
   },
   "crates/floom-renderer-vello/tests/gpu_pixels.rs": {
-    "mtime": 1793109959.8048756,
-    "seen": 1793110843.459263,
-    "ast_hash": "03bb5ff30a319e921dccb4230913e53f",
+    "mtime": 1793144513.8352334,
+    "seen": 1793146478.716562,
+    "ast_hash": "575a6abd69c7aaa9a4147935382ebfdf",
+    "semantic_hash": ""
+  },
+  "crates/floom-platform/tests/window_control.rs": {
+    "mtime": 1793114551.1472087,
+    "seen": 1793114944.799283,
+    "ast_hash": "a44681cc3fedc5be785fc5485e271dad",
+    "semantic_hash": ""
+  },
+  "crates/floom-plugin-notifications/src/apple.rs": {
+    "mtime": 1793114586.6908643,
+    "seen": 1793114944.80255,
+    "ast_hash": "8dd5d6e2833529b555697a09c3ad0b54",
+    "semantic_hash": ""
+  },
+  "crates/floom-plugin-secure-storage/Cargo.toml": {
+    "mtime": 1793112887.151008,
+    "seen": 1793114944.80414,
+    "ast_hash": "541bdb59e3c3d57958dee159cb450d2c",
+    "semantic_hash": ""
+  },
+  "crates/floom-plugin-secure-storage/src/android.rs": {
+    "mtime": 1793113324.3758502,
+    "seen": 1793114944.804142,
+    "ast_hash": "862729d6b17fbde793edc3604a3ed160",
+    "semantic_hash": ""
+  },
+  "crates/floom-plugin-secure-storage/src/apple.rs": {
+    "mtime": 1793113324.3774068,
+    "seen": 1793114944.8041441,
+    "ast_hash": "d43a64be60e89443150610e799b845a4",
+    "semantic_hash": ""
+  },
+  "crates/floom-plugin-secure-storage/src/hex.rs": {
+    "mtime": 1793113323.849205,
+    "seen": 1793114944.8041458,
+    "ast_hash": "30fab7eed43b3780f4a0e0affcbbff09",
+    "semantic_hash": ""
+  },
+  "crates/floom-plugin-secure-storage/src/lib.rs": {
+    "mtime": 1793113233.60543,
+    "seen": 1793114944.804147,
+    "ast_hash": "bb6c453dfd98445ba582ec3dcd0d930d",
+    "semantic_hash": ""
+  },
+  "crates/floom-plugin-secure-storage/src/linux.rs": {
+    "mtime": 1793113227.751493,
+    "seen": 1793114944.804149,
+    "ast_hash": "c54edf1443b4b5925b6a87bed8849601",
+    "semantic_hash": ""
+  },
+  "crates/floom-plugin-secure-storage/src/map.rs": {
+    "mtime": 1793113324.3819296,
+    "seen": 1793114944.804151,
+    "ast_hash": "2bd7893ab7451dcac4ce8e2831b46fb4",
+    "semantic_hash": ""
+  },
+  "crates/floom-plugin-secure-storage/src/windows.rs": {
+    "mtime": 1793113324.3839266,
+    "seen": 1793114944.804152,
+    "ast_hash": "a4598d9113c75ebf678848d3537f14e5",
+    "semantic_hash": ""
+  },
+  "crates/floom-plugin-share/src/macos.rs": {
+    "mtime": 1793114586.698088,
+    "seen": 1793114944.804617,
+    "ast_hash": "4f0556ea22d8f7ffa66fda09f49426b9",
+    "semantic_hash": ""
+  },
+  "docs/plugin-usage-priority.md": {
+    "mtime": 1793111595.0663846,
+    "seen": 1793114944.8563578,
+    "ast_hash": "43fabbe17d74cd6ff94f02e1da3c4d7f",
+    "semantic_hash": ""
+  },
+  "crates/floom-renderer/src/blur.rs": {
+    "mtime": 1793145201.300423,
+    "seen": 1793146478.716932,
+    "ast_hash": "398c0aa3d430b9d2b4d313c331026a46",
     "semantic_hash": ""
   }
 }

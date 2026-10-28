@@ -6570,9 +6570,9 @@
     "semantic_hash": ""
   },
   "crates/floom-renderer-vello/src/gpu.rs": {
-    "mtime": 1792977892.1679819,
-    "seen": 1793092373.555285,
-    "ast_hash": "1d570f072711413b4715c605efa905cf",
+    "mtime": 1793109980.0645983,
+    "seen": 1793110843.4591749,
+    "ast_hash": "561ee94cd4a74598d2ae39d7f1d196c2",
     "semantic_hash": ""
   },
   "crates/floom-renderer-vello/src/lib.rs": {
@@ -8730,9 +8730,9 @@
     "semantic_hash": ""
   },
   "CHANGELOG.md": {
-    "mtime": 1793092810.8913577,
-    "seen": 1793093658.073417,
-    "ast_hash": "853e8cb5e926d29e6eb36b4489936fad",
+    "mtime": 1793110082.841999,
+    "seen": 1793110843.5119748,
+    "ast_hash": "c969572fb42fca9204e3f16119481187",
     "semantic_hash": ""
   },
   "CONTRIBUTING.md": {
@@ -13170,9 +13170,9 @@
     "semantic_hash": ""
   },
   "docs/plugin-and-renderer-audit.md": {
-    "mtime": 1793092820.3341427,
-    "seen": 1793093658.084409,
-    "ast_hash": "7d04b26db4da28e79e3e37d749069f3e",
+    "mtime": 1793110066.9182053,
+    "seen": 1793110843.521621,
+    "ast_hash": "167e613615223b6074449029efec0ad9",
     "semantic_hash": ""
   },
   "docs/porting-floem-editor-to-2.0.md": {
@@ -13554,9 +13554,9 @@
     "semantic_hash": ""
   },
   "docs/handoff-remaining-work.md": {
-    "mtime": 1793092796.5668,
-    "seen": 1793093658.084106,
-    "ast_hash": "1d2a82546ace7720f8892a8199a47a91",
+    "mtime": 1793110076.8470292,
+    "seen": 1793110843.5213451,
+    "ast_hash": "0043743b16a4505c95bf1a278164bcfa",
     "semantic_hash": ""
   },
   "crates/floom-devtools/src/panel.rs": {
@@ -13704,9 +13704,9 @@
     "semantic_hash": ""
   },
   "scripts/gate.sh": {
-    "mtime": 1792938741.5056722,
-    "seen": 1793092373.633888,
-    "ast_hash": "a670cee8ac702acda15063b34c29f460",
+    "mtime": 1793109914.4130006,
+    "seen": 1793110843.5102642,
+    "ast_hash": "673b83f03b28365a671d60e17e5794b5",
     "semantic_hash": ""
   },
   "crates/ecosystem/floom-editor/examples/ide/workspace/README.md": {
@@ -14001,6 +14001,12 @@
     "mtime": 1793092422.6482759,
     "seen": 1793093658.01656,
     "ast_hash": "c095af475409f45747ca3efb296708a3",
+    "semantic_hash": ""
+  },
+  "crates/floom-renderer-vello/tests/gpu_pixels.rs": {
+    "mtime": 1793109959.8048756,
+    "seen": 1793110843.459263,
+    "ast_hash": "03bb5ff30a319e921dccb4230913e53f",
     "semantic_hash": ""
   }
 }
