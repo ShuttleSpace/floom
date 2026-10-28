@@ -118,7 +118,11 @@ fn run_software_window(ide: Ide) {
     }
 
     impl WinitApp for SoftwareApp {
-        fn window_created(&mut self, _platform: &mut WinitPlatform, _window: floom_types::WindowId) {
+        fn window_created(
+            &mut self,
+            _platform: &mut WinitPlatform,
+            _window: floom_types::WindowId,
+        ) {
             let Some(ide) = self.ide.take() else {
                 return;
             };
