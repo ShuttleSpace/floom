@@ -40,6 +40,8 @@
 #include "floom_nativeview.h"
 #include "floom_native_provider.h"
 
+static void nativeview_handle_js_message(FloomNativeSlot slot, NSString *body);
+
 /* --- what the provider remembers ---------------------------------------- */
 
 static NSWindow *g_window = nil;
@@ -51,6 +53,25 @@ static NSWindow *g_window = nil;
  * recycled slot is a different key by construction — a view from a previous
  * row can never be mistaken for the current one's.
  */
+
+@interface FloomScriptHandler : NSObject <WKScriptMessageHandler>
+@property(nonatomic, assign) FloomNativeSlot slot;
+- (instancetype)initWithSlot:(FloomNativeSlot)slot;
+@end
+
+@implementation FloomScriptHandler
+- (instancetype)initWithSlot:(FloomNativeSlot)slot {
+    self = [super init];
+    if (self) { _slot = slot; }
+    return self;
+}
+- (void)userContentController:(WKUserContentController *)ucc
+      didReceiveScriptMessage:(WKScriptMessage *)message {
+    NSString *body = [message.body isKindOfClass:[NSString class]] ? message.body : [message.body description];
+    nativeview_handle_js_message(self.slot, body);
+}
+@end
+
 @interface FloomNativeView : NSObject
 @property(nonatomic, strong) NSView *container;
 @property(nonatomic, strong) NSView *content;
@@ -200,6 +221,16 @@ static int32_t nativeview_create(void *self, FloomNativeSlot slot, uint32_t kind
          * embeds.
          */
         WKWebViewConfiguration *config = [[WKWebViewConfiguration alloc] init];
+        /* JS -> Rust bridge: inject a `window.floomNative` shim. */
+        WKUserContentController *ucc = [[WKUserContentController alloc] init];
+        [ucc addScriptMessageHandler:[[FloomScriptHandler alloc] initWithSlot:slot]
+                              name:@"floomNative"];
+        WKUserScript *bootstrap = [[WKUserScript alloc]
+            initWithSource:@"window.floomNative = window.floomNative || { postMessage: function(m){ window.webkit.messageHandlers.floomNative.postMessage(m); } };"
+             injectionTime:WKUserScriptInjectionTimeAtDocumentStart
+          forMainFrameOnly:NO];
+        [ucc addUserScript:bootstrap];
+        config.userContentController = ucc;
         view.web = [[WKWebView alloc] initWithFrame:NSMakeRect(0.0, 0.0, 100.0, 100.0)
                                       configuration:config];
         view.content = view.web;
@@ -376,6 +407,39 @@ int floom_nativeview_load_url(FloomNativeSlot slot, const char *url,
     g_last_url = text;
     [view.web loadRequest:[NSURLRequest requestWithURL:target]];
     return 0;
+}
+
+/* --- JS bridge ------------------------------------------------------ */
+
+static void (*g_message_cb)(FloomNativeSlot, const char *) = NULL;
+
+void floom_nativeview_set_message_callback(void (*cb)(FloomNativeSlot, const char *)) {
+    g_message_cb = cb;
+}
+
+int floom_nativeview_post_message(FloomNativeSlot slot, const char *json,
+                                  char *out_error, uint32_t out_capacity) {
+    FloomNativeView *view = g_views[slot_key(slot)];
+    if (view == nil || view.web == nil) {
+        const char *reason = "no web view is bound to that slot";
+        if (out_error != NULL && out_capacity > 0) {
+            strncpy(out_error, reason, out_capacity - 1);
+            out_error[out_capacity - 1] = '\0';
+        }
+        return 1;
+    }
+    NSString *js = [NSString stringWithFormat:
+        @"if (window.floomNative && window.floomNative.onMessage) { window.floomNative.onMessage(%@); }",
+        [NSString stringWithUTF8String:json ?: "{}"]];
+    [view.web evaluateJavaScript:js completionHandler:nil];
+    return 0;
+}
+
+/* Called from WKScriptMessageHandler shim below. */
+void nativeview_handle_js_message(FloomNativeSlot slot, NSString *body) {
+    if (g_message_cb == NULL) return;
+    const char *utf8 = body.UTF8String;
+    g_message_cb(slot, utf8 != nil ? utf8 : "");
 }
 
 /* The URL most recently handed to a web view, or NULL. */

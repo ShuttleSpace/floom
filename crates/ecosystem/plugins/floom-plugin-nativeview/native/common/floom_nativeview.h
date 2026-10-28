@@ -36,6 +36,21 @@ void floom_nativeview_register_provider(const void *provider);
 
 /* --- the web view ------------------------------------------------------- */
 
+/* Bridge: send a JSON message from Rust to the web view's JS.
+
+ * Returns 0 when handed to WebKit, non-zero when the slot holds no web view.
+ * The message is delivered to `window.floomNative.onMessage(json)` if defined.
+ */
+int floom_nativeview_post_message(FloomNativeSlot slot, const char *json,
+                                  char *out_error, uint32_t out_capacity);
+
+/* Bridge: register the Rust callback invoked when JS calls
+ * `window.floomNative.postMessage(json)`. Pass NULL to unregister.
+ * The callback receives the slot and a NUL-terminated JSON string owned by
+ * the caller for the duration of the call.
+ */
+void floom_nativeview_set_message_callback(void (*cb)(FloomNativeSlot, const char *));
+
 /* Loads `url` into the web participant bound to `slot`.
  *
  * Returns 0 when WebKit accepted the request, non-zero when the slot holds no
