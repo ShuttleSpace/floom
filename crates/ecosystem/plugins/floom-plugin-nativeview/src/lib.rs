@@ -129,7 +129,7 @@ mod macos {
     /// a web view shows* is not part of that contract. The host calls this after
     /// binding a [`NativeViewKind::Web`] participant.
     /// Send a JSON message from Rust to the web view's JS.
-    pub unsafe fn post_message(
+    pub fn post_message(
         slot: floom_native_ffi::floom_native::NativeSlot,
         json: &str,
     ) -> Result<(), String> {
@@ -157,7 +157,7 @@ mod macos {
         unsafe { floom_nativeview_set_message_callback(cb) };
     }
 
-    pub unsafe fn load_url(
+    pub fn load_url(
         slot: floom_native_ffi::floom_native::NativeSlot,
         url: &str,
     ) -> Result<(), String> {

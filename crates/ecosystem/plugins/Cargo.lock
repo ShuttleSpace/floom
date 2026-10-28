@@ -458,6 +458,8 @@ dependencies = [
  "cc",
  "floom-native-ffi",
  "floom-platform",
+ "floom-platform-mobile",
+ "jni",
  "objc2",
  "objc2-app-kit",
  "objc2-foundation",

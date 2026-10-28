@@ -17,6 +17,13 @@ publish = false
 floom-native-ffi = { path = "../../../floom-native-ffi", version = "0.2.0" }
 floom-platform = { path = "../../../floom-platform", version = "0.2.0" }
 
+# Android-only: the JNI bridge to the Java half (FloomCameraView). Other
+# targets do not link it — `src/android.rs` is `#[cfg(target_os = "android")]`
+# and the `jni` dependency is gated the same way.
+[target.'cfg(target_os = "android")'.dependencies]
+jni = "0.22"
+floom-platform-mobile = { path = "../../../floom-platform-mobile" }
+
 [build-dependencies]
 cc = "1"
 
@@ -28,6 +35,8 @@ objc2-app-kit = { version = "0.3", default-features = false, features = [
     "NSView",
     "NSResponder",
     "NSWindow",
+    "NSApplication",
+    "NSRunningApplication",
     # `NSWindow`'s initialiser and `NSBackingStoreType` live behind the
     # graphics feature.
     "NSGraphics",
@@ -37,4 +46,7 @@ objc2-foundation = { version = "0.3", default-features = false, features = [
     "objc2-core-foundation",
     "NSGeometry",
     "NSObject",
+    "NSString",
+    "NSRunLoop",
+    "NSDate",
 ] }

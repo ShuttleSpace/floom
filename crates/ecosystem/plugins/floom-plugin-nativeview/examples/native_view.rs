@@ -27,17 +27,24 @@
 //! cargo run -p floom-plugin-nativeview --example native_view
 //! ```
 //!
-//! The window is never shown: the point is the composition and the load
-//! request, not the pixels — a load that needs the network would make this
-//! example fail on a machine with none, for a reason that has nothing to do
-//! with the plugin.
+//! The window **is** shown, and it stays up for a few seconds so the web view
+//! can be seen. The page it loads is a `data:` URL, so the example still works
+//! on a machine with no network: what is being demonstrated is that a real
+//! `WKWebView` was created, placed and painted, not that a site answered.
+//!
+//! The two `refused` lines in the output are assertions that passed, not
+//! errors: the example proves that a kind this plugin cannot build is turned
+//! away with a reason that names it.
 
 use std::ffi::c_void;
 
 use objc2::rc::Retained;
 use objc2::{MainThreadMarker, msg_send};
-use objc2_app_kit::{NSBackingStoreType, NSWindow, NSWindowStyleMask};
-use objc2_foundation::{NSPoint, NSRect, NSSize};
+use objc2_app_kit::{
+    NSApplication, NSApplicationActivationPolicy, NSBackingStoreType, NSWindow,
+    NSWindowStyleMask,
+};
+use objc2_foundation::{NSDate, NSPoint, NSRect, NSRunLoop, NSSize};
 
 use floom_native_ffi::floom_native::{
     NativeCompositionMode, NativeState, NativeViewController, NativeViewId, NativeViewKind, Rect,
@@ -51,15 +58,28 @@ fn main() {
     let mtm = MainThreadMarker::new().expect("an example runs on the main thread");
 
     // A real window. It is never shown — the point is the composition.
-    let rect = NSRect::new(NSPoint::new(0.0, 0.0), NSSize::new(400.0, 300.0));
+    //
+    // A real window, shown on screen. A titled, closable window rather than a
+    // borderless one so the app can be moved and quit the way any other window
+    // is — this example is meant to be looked at.
+    let app = NSApplication::sharedApplication(mtm);
+    app.setActivationPolicy(NSApplicationActivationPolicy::Regular);
+    let rect = NSRect::new(NSPoint::new(200.0, 200.0), NSSize::new(480.0, 360.0));
     let window: Retained<NSWindow> = unsafe {
         let this = mtm.alloc::<NSWindow>();
         msg_send![this,
             initWithContentRect: rect,
-            styleMask: NSWindowStyleMask(0),
+            styleMask: NSWindowStyleMask::Titled
+                | NSWindowStyleMask::Closable
+                | NSWindowStyleMask::Resizable,
             backing: NSBackingStoreType::Buffered,
             defer: false]
     };
+    window.setTitle(&objc2_foundation::NSString::from_str(
+        "floom nativeview — a real WKWebView from an Objective-C plugin",
+    ));
+    window.makeKeyAndOrderFront(None);
+    app.activate();
     println!("window: {window:?}");
 
     // The plugin's provider, with the window as its host.
@@ -165,11 +185,18 @@ fn main() {
 
     // --- load a page ---
     //
-    // `about:blank` because this example must pass on a machine with no
-    // network. What is being checked is that the request reached WebKit,
-    // not that a particular site answered.
-    load_url(slot, "about:blank").expect("WebKit accepted the request");
-    println!("loaded about:blank");
+    // A `data:` URL rather than a site: the example must pass on a machine
+    // with no network, and what is being shown is the web view rendering
+    // content of its own, not a particular server answering.
+    let page = "data:text/html;charset=utf-8,\
+        <html><body style='font-family:-apple-system;background:%23222;color:%23eee;\
+        margin:0;display:flex;align-items:center;justify-content:center;height:100vh'>\
+        <div style='text-align:center'>\
+        <h1 style='margin:0 0 8px'>WKWebView</h1>\
+        <p style='margin:0;opacity:.7'>created by the nativeview plugin</p>\
+        </div></body></html>";
+    load_url(slot, page).expect("WebKit accepted the request");
+    println!("loaded an inline data: page");
 
     // A malformed URL is refused by the plugin's own ABI rather than handed to
     // WebKit to fail silently.
@@ -204,8 +231,33 @@ fn main() {
         "the views are out of the window"
     );
 
-    println!(
-        "\nthe native half did all of it: a real web view created, placed, loaded, and destroyed,"
-    );
+    // Put a web view back on screen so the run ends with something to look at
+    // rather than an empty window, then hold the window up for a few seconds.
+    let shown = slot_of(3);
+    controller
+        .bind(shown, NativeViewKind::Web, &[NativeCompositionMode::Overlay])
+        .expect("a web view to leave on screen");
+    let state = NativeState {
+        rect: Rect {
+            x0: 40.0,
+            y0: 40.0,
+            x1: 440.0,
+            y1: 340.0,
+        },
+        clip: None,
+        scale: 1.0,
+        visible: true,
+        z: 0,
+        input: floom_native_ffi::floom_native::InputMode::Capture,
+        mode: NativeCompositionMode::Overlay,
+    };
+    controller.apply(shown, state).expect("placed");
+    load_url(shown, page).expect("loaded");
+
+    println!("\nthe native half did all of it: a real web view created, placed, loaded, and destroyed,");
     println!("and a kind it cannot build refused with a reason that names it.");
+    println!("the window stays up for 10 more seconds — close it to quit early.");
+
+    let deadline = NSDate::dateWithTimeIntervalSinceNow(10.0);
+    NSRunLoop::mainRunLoop().runUntilDate(&deadline);
 }

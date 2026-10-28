@@ -245,6 +245,11 @@ static int32_t nativeview_create(void *self, FloomNativeSlot slot, uint32_t kind
     }
 
     [view.container addSubview:view.content];
+    /* The content follows the container on every resize: the container carries
+     * the placement, so a window that grows must grow its web view too, or the
+     * page is clipped at the size it happened to be created with. */
+    view.container.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
+    view.content.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
     if (g_window != nil) {
         /* The view is a sibling of the framework's own surface, so it goes
          * into the window's content view and composites above the scene. */
