@@ -1,9 +1,10 @@
 [workspace]
 resolver = "3"
 # `crates/vendor/` holds forked upstream trees wired in via `[patch]` / path deps.
-# `crates/ecosystem/` holds the satellite projects (floom-editor, floem-ui);
-# each is its own workspace, so the root `cargo test --workspace` stays focused
-# on the core. Build them from their own directory.
+# `crates/ecosystem/` holds the satellite projects (floom-editor, floem-ui,
+# plugins); each is its own workspace, so the root `cargo test --workspace`
+# stays focused on the core. Build them from their own directory, or by path
+# from an application — `plugins/` is where every capability plugin lives.
 exclude = ["crates/vendor", "crates/ecosystem"]
 members = [
   "crates/floom-accessibility",
@@ -29,7 +30,6 @@ members = [
   "crates/floom-signal",
   "crates/floom-native",
   "crates/floom-native-ffi",
-  "crates/floom-plugin-nativeview",
   "crates/floom-navigation",
   "crates/floom-overlay",
   "crates/floom-persistence",
@@ -40,25 +40,6 @@ members = [
   "crates/floom-platform-harmony",
   "crates/floom-platform-ios",
   "crates/floom-platform-mobile",
-  "crates/floom-plugin-battery",
-  "crates/floom-plugin-connectivity",
-  "crates/floom-plugin-device-info",
-  "crates/floom-plugin-local-auth",
-  "crates/floom-plugin-location",
-  "crates/floom-plugin-notifications",
-  "crates/floom-plugin-sensors",
-  "crates/floom-plugin-share",
-  "crates/floom-plugin-vibration",
-  "crates/floom-plugin-package-info",
-  "crates/floom-plugin-paths",
-  "crates/floom-plugin-open-url",
-  "crates/floom-plugin-file-dialog",
-  "crates/floom-plugin-prefs",
-  "crates/floom-plugin-secure-storage",
-  "crates/floom-plugin-wakelock",
-  "crates/floom-plugin-network-info",
-  "crates/floom-plugin-background-work",
-  "crates/floom-plugin-mdns",
   "crates/floom-platform-tui",
   "crates/floom-platform-web",
   "crates/floom-profiler",
@@ -111,7 +92,6 @@ default-members = [
   "crates/floom-signal",
   "crates/floom-native",
   "crates/floom-native-ffi",
-  "crates/floom-plugin-nativeview",
   "crates/floom-navigation",
   "crates/floom-overlay",
   "crates/floom-persistence",
@@ -122,25 +102,6 @@ default-members = [
   "crates/floom-platform-harmony",
   "crates/floom-platform-ios",
   "crates/floom-platform-mobile",
-  "crates/floom-plugin-battery",
-  "crates/floom-plugin-connectivity",
-  "crates/floom-plugin-device-info",
-  "crates/floom-plugin-local-auth",
-  "crates/floom-plugin-location",
-  "crates/floom-plugin-notifications",
-  "crates/floom-plugin-sensors",
-  "crates/floom-plugin-share",
-  "crates/floom-plugin-vibration",
-  "crates/floom-plugin-package-info",
-  "crates/floom-plugin-paths",
-  "crates/floom-plugin-open-url",
-  "crates/floom-plugin-file-dialog",
-  "crates/floom-plugin-prefs",
-  "crates/floom-plugin-secure-storage",
-  "crates/floom-plugin-wakelock",
-  "crates/floom-plugin-network-info",
-  "crates/floom-plugin-background-work",
-  "crates/floom-plugin-mdns",
   "crates/floom-platform-tui",
   "crates/floom-platform-web",
   "crates/floom-profiler",

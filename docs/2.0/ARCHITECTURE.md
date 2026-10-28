@@ -27,7 +27,7 @@ Companion pages: [`EXAMPLES.md`](EXAMPLES.md) (the golden examples),
 | `floom-native` | L4 | native view composition: capability negotiation, slots, pooling |
 | `floom-native-ffi` | L4 | the C ABI for native composition providers: a Swift, Java, C++ or ArkTS provider, driven by Rust |
 | `floom-plugin-nativeview` | L5 | a plugin whose capability is a native view, written in Objective-C |
-| `floom-plugin-battery`, `floom-plugin-connectivity`, `floom-plugin-device-info`, `floom-plugin-local-auth`, `floom-plugin-location`, `floom-plugin-notifications`, `floom-plugin-sensors`, `floom-plugin-share`, `floom-plugin-vibration`, `floom-plugin-package-info`, `floom-plugin-paths`, `floom-plugin-open-url`, `floom-plugin-file-dialog`, `floom-plugin-prefs`, `floom-plugin-wakelock`, `floom-plugin-network-info`, `floom-plugin-background-work`, `floom-plugin-mdns`, `floom-plugin-secure-storage` | L5 | the capability plugins: one capability each, opt-in by dependency |
+| `floom-plugin-battery`, `floom-plugin-connectivity`, `floom-plugin-device-info`, `floom-plugin-local-auth`, `floom-plugin-location`, `floom-plugin-notifications`, `floom-plugin-sensors`, `floom-plugin-share`, `floom-plugin-vibration`, `floom-plugin-package-info`, `floom-plugin-paths`, `floom-plugin-open-url`, `floom-plugin-file-dialog`, `floom-plugin-prefs`, `floom-plugin-wakelock`, `floom-plugin-network-info`, `floom-plugin-background-work`, `floom-plugin-mdns`, `floom-plugin-secure-storage` | L5 | the capability plugins: one capability each, opt-in by dependency. They live in `crates/ecosystem/plugins/`, their own workspace: the SDK ships none of them and does not build them |
 | `floom-platform-mobile` | L4 | mobile OS capabilities (camera, location, sensors, vibration) behind one ABI, with `jni` / `objc2` backends |
 | `floom-animation`, `floom-focus`, `floom-gesture`, `floom-overlay`, `floom-store`, `floom-task`, `floom-forms`, `floom-navigation`, `floom-persistence`, `floom-services`, `floom-error`, `floom-ime`, `floom-editor`, `floom-editor-core` | L5 | framework services, widget-free by design |
 | _(design systems)_ | — | `floom-theme`, `floom-design`, `floom-material`, `floom-cupertino`, `floom-fluent`, `floom-harmony` live in the `floom-ui` workspace, which the root workspace `exclude`s. They emit `floom-style` property values rather than paint calls, and their own dependency graph is checked by that workspace's build, not by `scripts/check-architecture-deps.sh`. |
@@ -44,7 +44,10 @@ Two crates sit outside the ladder on purpose:
   table, and the only 2.0 → v1 edge still live is the reactive graph
   (`floom-legacy-reactive`), which the gate reports as a note, not a failure.
 - **`examples/*`, `crates/ecosystem/*`, `crates/vendor/*`** — not layered (examples are
-  leaves; the satellite repos are separate workspaces).
+  leaves; the satellite repos are separate workspaces). The one exception is
+  `crates/ecosystem/plugins/`: its members *are* in this table at L5, and the gate
+  loads that workspace's metadata as a second source so their edges are checked
+  whether or not an example happens to depend on them.
 
 ## Dependency diagram
 

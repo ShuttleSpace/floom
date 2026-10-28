@@ -1554,18 +1554,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "floom-plugin-nativeview"
-version = "0.2.0"
-dependencies = [
- "cc",
- "floom-native-ffi",
- "floom-platform",
- "objc2",
- "objc2-app-kit",
- "objc2-foundation",
-]
-
-[[package]]
 name = "floom-plugin-network-info"
 version = "0.2.0"
 dependencies = [

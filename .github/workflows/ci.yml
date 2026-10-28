@@ -55,21 +55,6 @@ jobs:
         --package=floom-text --package=floom-editor --package=floom-ime
         --package=floom-layout --package=floom-style --package=floom-virtual
         --package=floom-native --package=floom-native-ffi
-        --package=floom-plugin-nativeview
-        --package=floom-plugin-battery --package=floom-plugin-connectivity
-        --package=floom-plugin-device-info --package=floom-plugin-local-auth
-        --package=floom-plugin-location --package=floom-plugin-notifications
-        --package=floom-plugin-sensors --package=floom-plugin-share
-        --package=floom-plugin-vibration --package=floom-plugin-package-info
-        --package=floom-plugin-paths
-        --package=floom-plugin-open-url
-        --package=floom-plugin-file-dialog
-        --package=floom-plugin-prefs
-        --package=floom-plugin-wakelock
-        --package=floom-plugin-network-info
-        --package=floom-plugin-background-work
-        --package=floom-plugin-mdns
-        --package=floom-plugin-secure-storage
         --package=floom-accessibility --package=floom-focus --package=floom-gesture
         --package=floom-animation --package=floom-overlay --package=floom-store --package=floom-task
         --package=floom-forms --package=floom-navigation --package=floom-persistence --package=floom-services
@@ -126,7 +111,61 @@ jobs:
       # covered by the test suite on every platform.
       - name: Run the native-view example
         if: matrix.os == 'macos-latest'
-        run: cargo run -p floom-plugin-nativeview --example native_view
+        run: >
+          cargo run
+          --manifest-path crates/ecosystem/plugins/Cargo.toml
+          -p floom-plugin-nativeview --example native_view
+
+  # The capability plugins are their own workspace (`crates/ecosystem/plugins`),
+  # so the job above builds none of them: a plugin is not a member of the root,
+  # and `cargo fmt $FLOOM2_PACKAGES` cannot reach across that boundary. This job
+  # is what keeps them formatted, linted and tested.
+  #
+  # Both runners, not one: each host compiles a *different* set of `cfg` arms
+  # (AppKit on macOS, `dirs`/`secret-tool` on Linux), so a single-OS job would
+  # report green over code it never compiled.
+  plugins:
+    name: Capability plugins on ${{ matrix.os }}
+    if: github.event.pull_request.draft == false
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - macos-latest
+          - ubuntu-latest
+    runs-on: ${{ matrix.os }}
+    env:
+      PLUGIN_MANIFEST: crates/ecosystem/plugins/Cargo.toml
+    defaults:
+      run:
+        working-directory: crates/ecosystem/plugins
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Update toolchain & add rustfmt
+        run: |
+          rustup update --no-self-update
+          rustup component add rustfmt
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: plugins-${{ matrix.os }}
+          workspaces: crates/ecosystem/plugins -> target
+          save-if: ${{ github.event_name != 'merge_group' }}
+
+      - name: Fetch dependencies
+        run: cargo fetch
+
+      - name: Check formatting
+        run: cargo fmt --all --check
+
+      - name: Run tests
+        run: cargo test --workspace --no-fail-fast
+
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets --all-features -- --deny warnings
 
   # Floom 2.0's mobile platform code lives behind `#[cfg(target_os = "android")]`,
   # so nothing above compiles it: the `floom-2.0` job builds the *host* arm of
@@ -178,6 +217,12 @@ jobs:
       - name: Fetch dependencies
         run: cargo fetch --target aarch64-linux-android
 
+      - name: Fetch the capability plugins' dependencies
+        run: >
+          cargo fetch
+          --manifest-path crates/ecosystem/plugins/Cargo.toml
+          --target aarch64-linux-android
+
       - name: Check the Android arms of the platform crates
         run: >
           cargo check
@@ -188,6 +233,7 @@ jobs:
       - name: Check the Android arms of the capability plugins
         run: >
           cargo check
+          --manifest-path crates/ecosystem/plugins/Cargo.toml
           --package=floom-plugin-battery
           --package=floom-plugin-connectivity
           --package=floom-plugin-device-info
@@ -242,9 +288,16 @@ jobs:
       - name: Fetch dependencies
         run: cargo fetch --target aarch64-apple-ios
 
+      - name: Fetch the capability plugins' dependencies
+        run: >
+          cargo fetch
+          --manifest-path crates/ecosystem/plugins/Cargo.toml
+          --target aarch64-apple-ios
+
       - name: Check the iOS arms of the capability plugins
         run: >
           cargo check
+          --manifest-path crates/ecosystem/plugins/Cargo.toml
           --package=floom-plugin-battery
           --package=floom-plugin-connectivity
           --package=floom-plugin-device-info

@@ -77,6 +77,13 @@ for _manifest in crates/ecosystem/*/Cargo.toml; do
 done
 unset _manifest
 
+# The capability plugins live in that satellite, not in the root workspace: the
+# SDK ships none of them. Every `cargo` call below that names a plugin therefore
+# needs this manifest path, and a call that forgets it fails loudly (cargo does
+# not resolve a `-p` across a workspace boundary) rather than checking nothing.
+PLUGIN_WORKSPACE=crates/ecosystem/plugins
+PLUGIN_MANIFEST="$PLUGIN_WORKSPACE/Cargo.toml"
+
 # The 2.0 track, as the CI job spells it. A v1 regression must not red the
 # signal for work that never touches it, and vice versa.
 FLOOM2_PACKAGES=(
@@ -94,25 +101,10 @@ FLOOM2_PACKAGES=(
   --package=floom-text --package=floom-editor --package=floom-ime
   --package=floom-layout --package=floom-style --package=floom-virtual
   --package=floom-native --package=floom-native-ffi
-  # The plugins are part of the 2.0 track, not an extra: each one is a crate
-  # this branch added, and their `cfg` arms are where the platform work lives.
-  # Leaving them out of the scoped clippy run is how `provider()` kept a raw
-  # pointer parameter without an `unsafe` signature while the gate stayed green.
-  --package=floom-plugin-nativeview
-  --package=floom-plugin-battery --package=floom-plugin-connectivity
-  --package=floom-plugin-device-info --package=floom-plugin-local-auth
-  --package=floom-plugin-location --package=floom-plugin-notifications
-  --package=floom-plugin-sensors --package=floom-plugin-share
-  --package=floom-plugin-vibration --package=floom-plugin-package-info
-  --package=floom-plugin-paths
-  --package=floom-plugin-open-url
-  --package=floom-plugin-file-dialog
-  --package=floom-plugin-prefs
-  --package=floom-plugin-wakelock
-  --package=floom-plugin-network-info
-  --package=floom-plugin-background-work
-  --package=floom-plugin-mdns
-  --package=floom-plugin-secure-storage
+  # No plugins here: they are a separate workspace (`$PLUGIN_WORKSPACE`), and
+  # `plugins` below is where they are linted. They used to be listed here, and
+  # leaving them out entirely is how `provider()` kept a raw pointer parameter
+  # without an `unsafe` signature while the gate stayed green.
   # The framework tail of the track. It was missing here while CI listed it, so
   # the gate could go green with `floom-app` and `floom-widgets` unclipped.
   --package=floom-accessibility --package=floom-focus --package=floom-gesture
@@ -476,11 +468,33 @@ else
 fi
 
 # --- capability plugins -----------------------------------------------------
+#
+# The lists above are hand-written; the workspace members are a glob. A plugin
+# added to the workspace but to no list would then be checked by `cargo clippy
+# --workspace` and by nothing else — no device arm compiled, which is the same
+# hole the vibration iOS arm sat in. This is the guard that fires on that.
+plugin_manifest_check() {
+  local missing
+  missing=$(comm -23 \
+    <(cargo metadata --manifest-path "$PLUGIN_MANIFEST" --no-deps \
+        --format-version 1 \
+      | grep -o '"name":"floom-plugin-[a-z-]*"' \
+      | sed 's/.*"\(floom-plugin-[a-z-]*\)"$/\1/' | sort -u) \
+    <(printf '%s\n' "${CAPABILITY_PLUGINS[@]}" | sort -u))
+  if [ -n "$missing" ]; then
+    printf 'in the plugin workspace but in no gate list: %s\n' "$missing" >&2
+    return 1
+  fi
+}
+
+#
+# The whole plugin workspace, linted in one pass. `--deny warnings` is the same
+# bar the root clippy run holds, and `--all-features` keeps a plugin whose real
+# arm sits behind a feature from being checked as its placeholder.
 plugins_check() {
-  local p
-  for p in "${CAPABILITY_PLUGINS[@]}"; do
-    cargo check -p "$p" || return 1
-  done
+  plugin_manifest_check || return 1
+  ( cd "$PLUGIN_WORKSPACE" &&
+    cargo clippy --workspace --all-targets --all-features -- --deny warnings )
 }
 has_check plugins && run_check plugins "" plugins_check
 
@@ -496,7 +510,8 @@ android_check() {
   cargo check --target aarch64-linux-android \
     -p floom-platform-mobile -p floom-platform-android || return 1
   for p in "${MOBILE_CAPABILITY_PLUGINS[@]}"; do
-    cargo check --target aarch64-linux-android -p "$p" || return 1
+    cargo check --manifest-path "$PLUGIN_MANIFEST" \
+      --target aarch64-linux-android -p "$p" || return 1
   done
 }
 run_cross_check android aarch64-linux-android android_check
@@ -506,7 +521,8 @@ run_cross_check android aarch64-linux-android android_check
 ios_check() {
   local p
   for p in "${MOBILE_CAPABILITY_PLUGINS[@]}"; do
-    cargo check --target aarch64-apple-ios -p "$p" || return 1
+    cargo check --manifest-path "$PLUGIN_MANIFEST" \
+      --target aarch64-apple-ios -p "$p" || return 1
   done
 }
 run_cross_check ios aarch64-apple-ios ios_check
@@ -518,7 +534,8 @@ run_cross_check ios aarch64-apple-ios ios_check
 windows_check() {
   local p
   for p in "${WINDOWS_CAPABILITY_PLUGINS[@]}"; do
-    cargo check --target x86_64-pc-windows-msvc -p "$p" || return 1
+    cargo check --manifest-path "$PLUGIN_MANIFEST" \
+      --target x86_64-pc-windows-msvc -p "$p" || return 1
   done
 }
 run_cross_check windows x86_64-pc-windows-msvc windows_check

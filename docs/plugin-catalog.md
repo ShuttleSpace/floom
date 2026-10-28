@@ -499,25 +499,43 @@ federated plugin 结构（一个能力按平台拆包）。Floom 的对应结构
 
 ---
 
-## 6. 每个新 crate 要动的 8 个地方
+## 6. 每个新 crate 要动的几处
+
+插件不在 SDK 的 workspace 里：它们在 `crates/ecosystem/plugins/`，自成 workspace
+（和 `floom-ui` / `floom-editor` 一样），根 `Cargo.toml` 的 `exclude` 覆盖了它。
+**SDK 不构建任何插件**，应用按 path 或按版本挑自己要的那几个。代价是根 workspace
+的 `cargo test/clippy/fmt --workspace` 全部够不到插件，所以覆盖靠下面这张表。
 
 漏一个的后果不同，但都会在某个 gate 上炸。按「漏了会怎样」排：
 
 | # | 位置 | 漏了的后果 |
 |---|---|---|
-| 1 | 根 `Cargo.toml` 的 `members` | `cargo test --workspace` 不覆盖它 |
-| 2 | 根 `Cargo.toml` 的 `default-members` | 裸 `cargo build` 不构建它 |
-| 3 | `scripts/gate.sh` 的 `FLOOM2_PACKAGES` | **clippy 完全不跑它**——`provider()` 的裸指针签名就是这么溜过去的 |
-| 4 | `scripts/gate.sh` 的 `MOBILE_CAPABILITY_PLUGINS`（仅移动插件） | `android` / `ios` check 不跑它，原生半边编译不过也看不见 |
-| 5 | `scripts/check-architecture-deps.sh` 的 `LAYERS`（L5 组） | `arch` check **直接失败**：`UNREGISTERED 2.0 library crate(s)` |
-| 6 | `docs/2.0/ARCHITECTURE.md` 的 layer 表 | `docs_parity.rs::the_layer_table_matches_the_architecture_gate` 失败 |
-| 7 | `.github/workflows/ci.yml` 的 `FLOOM2_PACKAGES` + `android-check` + `ios-check` | CI 三个 job 不跑它（同 #3 #4） |
-| 8 | `CHANGELOG.md` 的 `Unreleased` | 无自动失败，但发布政策要求记录 |
+| 1 | crate 目录放在 `crates/ecosystem/plugins/floom-plugin-<name>/` | workspace 的 `members = ["floom-plugin-*"]` 是 glob，放进去就自动收；放到 `crates/` 下则**两个 workspace 都不认它** |
+| 2 | `scripts/gate.sh` 的 `CAPABILITY_PLUGINS` | `plugins` check 的完整性守卫会打印「in the plugin workspace but in no gate list」并失败——这是唯一会发现「新插件没人查」的地方 |
+| 3 | `scripts/gate.sh` 的 `MOBILE_CAPABILITY_PLUGINS`（仅移动插件） | `android` / `ios` check 不跑它，原生半边编译不过也看不见 |
+| 4 | `scripts/check-architecture-deps.sh` 的 `LAYERS`（L5 组） | `arch` check **直接失败**：`UNREGISTERED 2.0 library crate(s)` |
+| 5 | `docs/2.0/ARCHITECTURE.md` 的 layer 表 | `docs_parity.rs::the_layer_table_matches_the_architecture_gate` 失败 |
+| 6 | `.github/workflows/ci.yml` 的 `plugins` job 不需要改（它跑整个 workspace），但 `android-check` / `ios-check` 的 `-p` 列表要加 | CI 不编译那条臂（同 #3） |
+| 7 | `CHANGELOG.md` 的 `Unreleased` | 无自动失败，但发布政策要求记录 |
 
 **再加 example 接线**（如果它要出现在 `floom-capabilities` 的画廊里）：
-`Cargo.toml` 加依赖、`probe.rs` 加 `use`、写一个 `pub fn <name>() -> Row`、
-插进 `all()` 的 `vec!`、按需改 `GROUPS`（定长数组，长度变了要改长度数字）；
-有副作用按钮的还要改 `actions()` 和 `ui.rs` 的 `run_action()` match。
+`Cargo.toml` 加依赖（路径是 `../../crates/ecosystem/plugins/floom-plugin-<name>`，
+跨 workspace 的 path 依赖是允许的，`floom-capabilities` 现在就是这么接的）、
+`probe.rs` 加 `use`、写一个 `pub fn <name>() -> Row`、插进 `all()` 的 `vec!`、
+按需改 `GROUPS`（定长数组，长度变了要改长度数字）；有副作用按钮的还要改
+`actions()` 和 `ui.rs` 的 `run_action()` match。
+
+**如果插件有真 Windows 臂**（A2 起）：把它加进 `scripts/gate.sh` 的
+`WINDOWS_CAPABILITY_PLUGINS`。没有 CI job 编译 Windows 臂，这个检查是唯一
+防线——vibration 的 iOS 臂就是在没人编译的环境里烂掉的。
+
+**本地跑插件的任何一条命令**都要带 `--manifest-path`，否则 cargo 报「package not
+found」：
+
+```bash
+cargo test --manifest-path crates/ecosystem/plugins/Cargo.toml -p floom-plugin-<name>
+```
+
 
 **如果插件有真 Windows 臂**（A2 起）：把它加进 `scripts/gate.sh` 的
 `WINDOWS_CAPABILITY_PLUGINS`。没有 CI job 编译 Windows 臂，这个检查是唯一
@@ -531,9 +549,9 @@ federated plugin 结构（一个能力按平台拆包）。Floom 的对应结构
 
 | 目标 | 命令 | 能证明什么 |
 |---|---|---|
-| host | `cargo test -p floom-plugin-<name>` | host-inert：不编译失败、不返回假值 |
-| Android | `cargo check -p ... --target aarch64-linux-android` | 原生半边**编译得过**（CI 加 android-check 之前，8 个插件的原生半边从未被编译过） |
-| iOS | `cargo check -p ... --target aarch64-apple-ios` | 同上；`vibration` 的 iOS 半边就带着两个 edition-2024 硬错误躺了很久 |
+| host | `cargo test --manifest-path crates/ecosystem/plugins/Cargo.toml -p floom-plugin-<name>` | host-inert：不编译失败、不返回假值 |
+| Android | `cargo check --manifest-path crates/ecosystem/plugins/Cargo.toml -p ... --target aarch64-linux-android` | 原生半边**编译得过**（CI 加 android-check 之前，8 个插件的原生半边从未被编译过） |
+| iOS | `cargo check --manifest-path crates/ecosystem/plugins/Cargo.toml -p ... --target aarch64-apple-ios` | 同上；`vibration` 的 iOS 半边就带着两个 edition-2024 硬错误躺了很久 |
 | 真机 | 设备上手 | 「编译通过 ≠ 能用」 |
 
 **host 测试要断言什么**（这是 A7b 留下的关键教训）：断言 inert 值，

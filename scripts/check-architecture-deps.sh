@@ -31,13 +31,33 @@ else
   echo "warning: using --no-deps metadata; dependency edges limited" >&2
 fi
 
-python3 - "$META_FILE" <<'PY'
+# The capability plugins are their own workspace, so the root metadata above
+# does not list them as members and its resolve graph carries them only while
+# something in `examples/` depends on them. Their layer rule has to hold
+# whether or not an example happens to link them, so their graph is loaded
+# separately and merged. An empty path means "no plugin workspace" — the
+# checks below then report the plugins as absent instead of silently passing.
+PLUGIN_META_FILE=
+if cargo metadata --manifest-path crates/ecosystem/plugins/Cargo.toml \
+     --format-version 1 >/tmp/floom-arch-plugin-meta.json 2>/dev/null; then
+  PLUGIN_META_FILE=/tmp/floom-arch-plugin-meta.json
+fi
+
+python3 - "$META_FILE" "$PLUGIN_META_FILE" <<'PY'
 import json, sys
 from pathlib import Path
 
 meta = json.loads(Path(sys.argv[1]).read_text())
+plugin_meta_path = sys.argv[2] if len(sys.argv) > 2 else ""
+plugin_meta = (
+    json.loads(Path(plugin_meta_path).read_text()) if plugin_meta_path else None
+)
+plugin_packages = plugin_meta["packages"] if plugin_meta else []
+all_packages = list(meta["packages"]) + list(plugin_packages)
 resolve = meta.get("resolve")
 nodes = {n["id"]: n for n in resolve["nodes"]} if resolve else {}
+if plugin_meta and plugin_meta.get("resolve"):
+    nodes.update({n["id"]: n for n in plugin_meta["resolve"]["nodes"]})
 
 
 def norm(name: str) -> str:
@@ -50,11 +70,11 @@ def norm(name: str) -> str:
     return name.replace("-", "_")
 
 
-packages = {norm(p["name"]): p for p in meta["packages"]}
+packages = {norm(p["name"]): p for p in all_packages}
 
 # Map package id → name for resolve nodes
 id_to_name = {}
-for p in meta["packages"]:
+for p in all_packages:
     id_to_name[p["id"]] = p["name"]
 
 # Package ids of this workspace's own members. Names are not unique in the
@@ -62,13 +82,17 @@ for p in meta["packages"]:
 # in by a path dependency) can shadow ours, and "first node whose name matches"
 # then checks the wrong crate. Always resolve within the workspace first.
 workspace_members = set(meta.get("workspace_members", []))
+# The plugin workspace is a second, disjoint set of members: a plugin resolved
+# by name must find *its own* node in its own graph, not an example's copy.
+plugin_members = set(plugin_meta.get("workspace_members", [])) if plugin_meta else set()
+local_members = workspace_members | plugin_members
 
 
 def resolve_node(name: str):
     """The resolve node for a *workspace member* named `name`, if there is one."""
     wanted = norm(name)
     for nid, node in nodes.items():
-        if nid in workspace_members and norm(id_to_name.get(nid, "")) == wanted:
+        if nid in local_members and norm(id_to_name.get(nid, "")) == wanted:
             return node
     for nid, node in nodes.items():
         if norm(id_to_name.get(nid, "")) == wanted:
@@ -405,6 +429,15 @@ for _pid in workspace_members:
         and _name not in LAYERS
     ):
         unregistered.append(f"{_name} ({_rel})")
+# The plugin workspace is excluded from the loop above by directory, so its
+# members get their own registration guard: a plugin that is not in LAYERS is a
+# plugin whose "no upward edge" rule never ran.
+for _pid in plugin_members:
+    _name = norm(id_to_name.get(_pid, ""))
+    if _name not in LAYERS:
+        unregistered.append(
+            f"{_name} ({Path(packages[_name]['manifest_path']).parent.name}/)"
+        )
 if unregistered:
     failures.append(
         "UNREGISTERED 2.0 library crate(s) missing from LAYERS: "

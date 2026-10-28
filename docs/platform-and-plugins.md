@@ -46,7 +46,10 @@ A capability is a plugin when it satisfies any of: it needs a native host
 library; it is only meaningful on some platforms; or it is large enough that
 its API would otherwise destabilise the core.
 
-1. **One capability, one crate**, under `crates/floom-plugin-<capability>/`.
+1. **One capability, one crate**, under
+   `crates/ecosystem/plugins/floom-plugin-<capability>/`. The plugins are their own
+   workspace: the SDK ships none of them, and adding one to an application is a
+   dependency the application opts into.
 2. **Reach the OS through a host library, not ad-hoc JNI.** Each plugin owns a
    Kotlin/Java (`.kt`/`.java`) or Swift host module and exposes a narrow
    `extern "C"` ABI; Rust never touches platform objects directly. Crossings
@@ -90,7 +93,7 @@ compile-time macro cannot answer that.
 ### The layout
 
 ```
-crates/floom-plugin-<capability>/
+crates/ecosystem/plugins/floom-plugin-<capability>/
 ├── Cargo.toml
 ├── build.rs                 compiles the native half, emits the cfg
 ├── src/lib.rs               the `extern "C"` declarations and the Rust API
@@ -185,13 +188,13 @@ find it.
 
 ### A worked example
 
-`crates/floom-plugin-nativeview` is a plugin whose capability is a **native
-view**, and its native half is **Objective-C** — the language AppKit is
-written in, because a plugin that contributes a view has to reach the
+`crates/ecosystem/plugins/floom-plugin-nativeview` is a plugin whose capability
+is a **native view**, and its native half is **Objective-C** — the language
+AppKit is written in, because a plugin that contributes a view has to reach the
 framework it contributes to.
 
 ```
-crates/floom-plugin-nativeview/
+crates/ecosystem/plugins/floom-plugin-nativeview/
 ├── build.rs                      compiles native/macos/floom_nativeview.m
 ├── native/
 │   ├── common/floom_nativeview.h         the plugin's own four-function ABI

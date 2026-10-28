@@ -152,7 +152,7 @@ JS 桥。两者都无法在 CI 里验。
 
 ```bash
 # macOS 侧先跑通的链路（这个现在就能跑，不需要设备）
-cargo run -p floom-plugin-nativeview --example native_view
+cargo run --manifest-path crates/ecosystem/plugins/Cargo.toml -p floom-plugin-nativeview --example native_view
 ```
 
 应该看到：真实 `NSWindow` 里出现一个由 Objective-C 插件创建的真实 `NSView`，
@@ -288,16 +288,19 @@ cargo check -p floom-probe --features real   # CI 的 probe-check job 跑这条
 
 # 八个能力插件的三目标编译矩阵（CI 已自动跑前两条）
 cargo test \
+  --manifest-path crates/ecosystem/plugins/Cargo.toml \
   -p floom-plugin-battery -p floom-plugin-connectivity -p floom-plugin-device-info \
   -p floom-plugin-local-auth -p floom-plugin-location -p floom-plugin-notifications \
   -p floom-plugin-sensors -p floom-plugin-share -p floom-plugin-vibration
 cargo check \
+  --manifest-path crates/ecosystem/plugins/Cargo.toml \
   -p floom-plugin-battery -p floom-plugin-connectivity -p floom-plugin-device-info \
   -p floom-plugin-local-auth -p floom-plugin-location -p floom-plugin-notifications \
   -p floom-plugin-sensors -p floom-plugin-share -p floom-plugin-vibration \
   --target aarch64-apple-ios
 # Android 侧：CI 用 --target aarch64-linux-android，本机用 cargo ndk
 cargo ndk -t arm64-v8a check \
+  --manifest-path crates/ecosystem/plugins/Cargo.toml \
   -p floom-plugin-battery -p floom-plugin-connectivity -p floom-plugin-device-info \
   -p floom-plugin-local-auth -p floom-plugin-location -p floom-plugin-notifications \
   -p floom-plugin-sensors -p floom-plugin-share -p floom-plugin-vibration
@@ -315,7 +318,7 @@ cargo test -p floom-renderer-tui --test tui_pixels        # 5 项 ✓
 cargo run -p floom-capabilities
 
 # 原生视图插件（macOS，不需要设备）✓ 已验证跑通
-cargo run -p floom-plugin-nativeview --example native_view
+cargo run --manifest-path crates/ecosystem/plugins/Cargo.toml -p floom-plugin-nativeview --example native_view
 # 输出：window: <NSWindow: 0x...> / bound in mode Overlay / placed at 10,15 100x50
 #       the native half did all of it: one view created, placed, and destroyed.
 
