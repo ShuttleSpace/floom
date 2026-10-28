@@ -8,6 +8,8 @@
 #ifndef FLOOM_NATIVEVIEW_H
 #define FLOOM_NATIVEVIEW_H
 
+#include "floom_native_provider.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -31,6 +33,41 @@ int floom_nativeview_capability(void);
  * constructor runs before `main`.
  */
 void floom_nativeview_register_provider(const void *provider);
+
+/* --- the web view ------------------------------------------------------- */
+
+/* Loads `url` into the web participant bound to `slot`.
+ *
+ * Returns 0 when WebKit accepted the request, non-zero when the slot holds no
+ * web view or the URL does not parse. `Ok` means the load *started*; whether
+ * the page arrives is the page's own business and arrives asynchronously.
+ *
+ * A separate function rather than a provider verb because the provider ABI
+ * (create / place / destroy) describes a composited rectangle, and what a web
+ * view displays is not part of that contract.
+ */
+int floom_nativeview_load_url(FloomNativeSlot slot, const char *url,
+                              char *out_error, uint32_t out_capacity);
+
+/* The URL most recently handed to a web view, or NULL before the first. */
+const char *floom_nativeview_last_url(void);
+
+/* The message the most recent refusal carried, or NULL when none was refused. */
+const char *floom_nativeview_last_refusal(void);
+
+/* --- diagnostics -------------------------------------------------------- */
+
+/* How many `create` calls were refused for a kind this plugin cannot build. */
+int floom_nativeview_refused_count(void);
+
+/* How many participants are alive right now. */
+int floom_nativeview_live_count(void);
+
+/* Whether the participant in `slot` holds a real web view. */
+int floom_nativeview_slot_is_web(FloomNativeSlot slot);
+
+/* Whether the participant in `slot` is really in the window's content view. */
+int floom_nativeview_slot_is_attached(FloomNativeSlot slot);
 
 #ifdef __cplusplus
 }} /* extern "C" */

@@ -140,28 +140,84 @@ scripts/build.sh floom-capabilities android \
 
 ---
 
-## 2. camera / webview 真能力插件 🟠 需要设备
+## 2. camera / webview 真能力插件 🟠 webview ✅ / camera 待做
 
 **目标**：A6 验证了原生视图合成链路（Objective-C 插件 → C ABI → 真 `NSView`），
 但用的是演示视图。camera 和 webview 才是这条链路真正要服务的能力。
 
-**为什么卡住**：camera 要真机 + 摄像头权限；webview 要能加载真实 URL 并观察
-JS 桥。两者都无法在 CI 里验。
+### webview — ✅ 已实现（2026-10-28，macOS）
 
-**怎么验证**：
+`create` 以前**忽略 kind**，对任何请求都造一个空白 `NSView`。现在按 kind 建：
 
-```bash
-# macOS 侧先跑通的链路（这个现在就能跑，不需要设备）
-cargo run --manifest-path crates/ecosystem/plugins/Cargo.toml -p floom-plugin-nativeview --example native_view
+- `FLOOM_NATIVE_KIND_WEB` → 真 `WKWebView`
+- 其它 kind → **拒绝**，消息点名是哪个 kind
+
+配套的改动，每一条都是"不静默"原则要求的：
+
+- **按 slot 管理视图**，不再是单个全局 `g_view`。一个场景可以同时有两个
+  participant，旧的单例会让第二个 `create` 抢走第一个的句柄 —— 在全是空白
+  `NSView` 时看不出来，换成真 web view 就是泄漏。
+- **capabilities 变诚实**：`input.capture = true`（web view 要吃点击，否则链接
+  和滚动都不工作）、`focusable = true`（网页有输入框）。改之前是
+  `passthrough` + 不可聚焦，即"看起来能交互，实际是张截图"。
+- **新增 `floom_nativeview_load_url(slot, url)`**。不是 provider 的动词，因为
+  provider ABI 描述的是"一个被合成的矩形"，而"网页显示什么"不属于这个契约。
+- **URL 校验要求 scheme 非空**。实测 `NSURL URLWithString:` 会接受
+  `"not a url"` 并返回一个没有 scheme 的对象 —— 交给 WebKit 只会得到一张空白页，
+  而不是一个失败。所以"拒绝"必须自己做。
+
+验证（`cargo run -p floom-plugin-nativeview --example native_view`，本机跑通）：
+
+```
+camera kind refused: provider failed: this plugin builds web views only, not kind 4 (example.camera)
+bound web participant in mode Overlay
+placed at 10,15 100x50 (points)
+loaded about:blank
+malformed url refused: Err("not a URL with a scheme: not a url")
 ```
 
-应该看到：真实 `NSWindow` 里出现一个由 Objective-C 插件创建的真实 `NSView`，
-框架经 C ABI 完成 bind / place / destroy 全流程。窗口不显示，只看组合结果。
+**有牙证明**：把拒绝分支关掉（回到"任何 kind 都给个视图"），example 立刻在
+`bind` 处 panic —— `this plugin builds web views only: Overlay`。
+
+**踩到的两个真坑**：
+
+1. **`NativeSlot` 没有 `#[repr(C)]`**，我直接把它传进 `extern "C"`，进程
+   `SIGSEGV`。跨边界必须用 `FloomNativeSlot`（`#[repr(C)]`）转换。
+2. **`WKWebView` 强制主线程**。原来的测试能在测试线程上造 `NSView`，换成
+   `WKWebView` 后进程直接 `SIGTRAP` —— 而且它**从输出里消失**了，不是报错。
+   现在那个测试明确打印 skip 原因，创建路径由 example 覆盖（example 跑在主线程）。
+
+### camera — 🟠 待做，有一个结构性障碍
+
+**这台机器现在有设备**（Redmi、Android 16 / API 36、`/dev/video*` 存在）。
+
+障碍不在硬件，在架构：**`hasCode="false"` 的 Android 示例没有 Java 类**，
+而 Camera2 的 `SurfaceHolder.Callback` 需要 Java 实现（或用 JNI 注册 native
+回调）。这和当初 `background-work` 撞的是同一堵墙 —— 那次靠"`AlarmManager` +
+启动自己的 activity"绕过去了，camera 没有等价物。
+
+`hasCode="false"` 的另一个后果：Camera2 还需要 `CAMERA` 运行时权限，而
+`hasCode="false"` 的应用**没有 Activity 可以用来请求它**（权限请求是
+`Activity.requestPermissions`）。
+
+**需要你先决定**：为 camera 引入 Java 半边（`classes.dex` + 一个 `Activity`），
+还是先用 JNI 注册 native callback 试通（不改 `hasCode="false"`，但要确认
+Camera2 能不能在没有 `SurfaceHolder` 的情况下工作 —— 大概率不能）。
 
 **camera 的验收**：app 里一个矩形区域显示摄像头实时画面，退到后台再回来画面恢复。
-**webview 的验收**：加载一个页面，页面里的 JS 能调到 Rust 侧一个函数并拿到返回值。
+**webview 的验收**（macOS 部分已完成）：加载一个页面，页面里的 JS 能调到 Rust
+侧一个函数并拿到返回值 —— **JS 桥本身还没做**，见下。
+
+### webview 还差的：JS ↔ Rust 桥
+
+当前实现是"能加载、能显示、能交互"，但**页面里的 JS 还不能调用 Rust**。
+`WKWebView` 的 `addScriptMessageHandler` 需要一个实现了
+`WKScriptMessageHandler` 协议的 Objective-C 对象，把消息转成 C 回调。
+这是下一步，需要先定 Rust 侧的接收形态（回调？队列？还是 poll）。
 
 ---
+
+## 3. A6b provider 注册表（按 kind 选 provider）✅ 已实现（2026-10-27）
 
 ## 3. A6b provider 注册表（按 kind 选 provider）✅ 已实现（2026-10-27）
 

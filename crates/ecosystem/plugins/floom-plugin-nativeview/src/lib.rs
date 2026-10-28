@@ -30,7 +30,7 @@
 use std::ffi::{CStr, c_char, c_int, c_void};
 use std::sync::OnceLock;
 
-use floom_native_ffi::abi::FloomNativeProviderV1;
+use floom_native_ffi::abi::{FloomNativeProviderV1, FloomNativeSlot};
 use floom_native_ffi::floom_native::NativeViewProvider;
 use floom_native_ffi::{CProvider, CProviderError};
 
@@ -40,6 +40,12 @@ unsafe extern "C" {
     fn floom_nativeview_enable() -> c_int;
     fn floom_nativeview_disable();
     fn floom_nativeview_capability() -> c_int;
+    fn floom_nativeview_load_url(
+        slot: FloomNativeSlot,
+        url: *const c_char,
+        out_error: *mut c_char,
+        out_capacity: u32,
+    ) -> c_int;
 }
 
 /// The provider vtable, once the native half has handed it over.
@@ -96,6 +102,63 @@ pub fn capability() -> i32 {
     unsafe { floom_nativeview_capability() }
 }
 
+/// Loads `url` into the web participant bound to `slot`.
+///
+/// A separate entry point from the provider ABI because the two answer
+/// different questions: the provider places a composited rectangle, and *what
+/// a web view shows* is not part of that contract. The host calls this after
+/// binding a [`NativeViewKind::Web`] participant.
+///
+/// `Ok` claims WebKit accepted the request — the load *started*. Whether the
+/// page arrives is the page's own business and arrives asynchronously; a
+/// caller that needs the load to finish waits for WebKit's own delegate, which
+/// this ABI deliberately does not wrap.
+pub fn load_url(slot: floom_native_ffi::floom_native::NativeSlot, url: &str) -> Result<(), String> {
+    let Ok(c_url) = std::ffi::CString::new(url) else {
+        return Err(format!("url contains a NUL byte: {url:?}"));
+    };
+    // The native half writes a NUL-terminated message on refusal; 256 bytes is
+    // enough for every reason it can produce and keeps this off the allocator.
+    let mut error = [0i8; 256];
+    // SAFETY: `c_url` is NUL-terminated and outlives the call; `error` is a
+    // live buffer of the length passed; `ffi_slot` is a `#[repr(C)]` copy of
+    // the slot, which is what crosses the boundary (see [`ffi_slot`]).
+    let rc = unsafe {
+        floom_nativeview_load_url(
+            ffi_slot(slot),
+            c_url.as_ptr(),
+            error.as_mut_ptr(),
+            error.len() as u32,
+        )
+    };
+    if rc == 0 {
+        return Ok(());
+    }
+    // SAFETY: the native half NUL-terminates whatever it writes.
+    let message = unsafe { CStr::from_ptr(error.as_ptr()) }
+        .to_string_lossy()
+        .into_owned();
+    Err(if message.is_empty() {
+        format!("the native half refused to load the url with code {rc}")
+    } else {
+        message
+    })
+}
+
+/// The slot, in the layout the C ABI declares.
+///
+/// `NativeSlot` is a Rust struct with no `#[repr(C)]`, so passing it straight
+/// to a `extern "C"` function is undefined behaviour — the layout is
+/// unspecified and the callee reads a different pair of integers than the
+/// caller wrote. This conversion is the boundary, and it is the same one
+/// `floom-native-ffi` performs for the vtable's own arguments.
+fn ffi_slot(slot: floom_native_ffi::floom_native::NativeSlot) -> FloomNativeSlot {
+    FloomNativeSlot {
+        index: slot.id.index(),
+        generation: slot.generation,
+    }
+}
+
 /// Registers this plugin with the process-wide table.
 pub fn register() {
     floom_platform::register_plugin("nativeview", enable);
@@ -141,19 +204,48 @@ pub unsafe fn provider(host_window: *const c_void) -> Result<CProvider, CProvide
 /// knowing anything about AppKit. The counts are cumulative since the
 /// process started.
 pub mod diagnostics {
+    use floom_native_ffi::abi::FloomNativeSlot;
+
     unsafe extern "C" {
         fn floom_nativeview_created_count() -> i32;
         fn floom_nativeview_destroyed_count() -> i32;
         fn floom_nativeview_applied_count() -> i32;
         fn floom_nativeview_focused_count() -> i32;
+        fn floom_nativeview_refused_count() -> i32;
+        fn floom_nativeview_live_count() -> i32;
+        fn floom_nativeview_slot_is_web(slot: FloomNativeSlot) -> i32;
+        fn floom_nativeview_slot_is_attached(slot: FloomNativeSlot) -> i32;
         fn floom_nativeview_last_frame(x: *mut f64, y: *mut f64, w: *mut f64, h: *mut f64);
-        fn floom_nativeview_view_is_attached() -> i32;
     }
 
     /// How many participants the native half created.
     pub fn created() -> i32 {
         // SAFETY: the native half returns a plain integer.
         unsafe { floom_nativeview_created_count() }
+    }
+
+    /// How many `create` calls were refused for a kind this plugin cannot
+    /// build.
+    ///
+    /// The number that stops a refusal from being invisible: this plugin draws
+    /// web views and refuses everything else, so a non-zero count on a host
+    /// that asked for a camera is the true reason nothing appeared.
+    pub fn refused() -> i32 {
+        // SAFETY: the native half returns a plain integer.
+        unsafe { floom_nativeview_refused_count() }
+    }
+
+    /// How many participants are alive right now.
+    pub fn live() -> i32 {
+        // SAFETY: the native half returns a plain integer.
+        unsafe { floom_nativeview_live_count() }
+    }
+
+    /// Whether the participant in `slot` holds a real `WKWebView`.
+    pub fn slot_is_web(slot: floom_native_ffi::floom_native::NativeSlot) -> bool {
+        // SAFETY: the native half returns a plain integer, and `ffi_slot`
+        // crosses the boundary in the ABI's own layout.
+        unsafe { floom_nativeview_slot_is_web(super::ffi_slot(slot)) != 0 }
     }
 
     /// How many participants the native half tore down.
@@ -190,9 +282,16 @@ pub mod diagnostics {
     /// The check that matters: a provider that created a view and did not
     /// put it anywhere has not contributed a native view, and the difference
     /// is invisible from the framework's side.
-    pub fn view_is_attached() -> bool {
-        // SAFETY: the native half returns a plain integer.
-        unsafe { floom_nativeview_view_is_attached() != 0 }
+    ///
+    /// Per slot, because a scene can hold several participants at once and
+    /// "some view is attached" says nothing about the one being asked about.
+    /// There is deliberately no whole-table version: the old one answered for
+    /// whichever slot happened to be created last, which was a true statement
+    /// about a view nobody had asked about.
+    pub fn slot_is_attached(slot: floom_native_ffi::floom_native::NativeSlot) -> bool {
+        // SAFETY: the native half returns a plain integer, and `ffi_slot`
+        // crosses the boundary in the ABI's own layout.
+        unsafe { floom_nativeview_slot_is_attached(super::ffi_slot(slot)) != 0 }
     }
 }
 

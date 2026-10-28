@@ -1,14 +1,20 @@
-//! A native view, contributed by an Objective-C plugin, inside a real window.
+//! A **web view**, contributed by an Objective-C plugin, inside a real window.
 //!
-//! The plugin's native half is Objective-C and reaches AppKit. This example
-//! is the whole chain, end to end:
+//! The plugin's native half is Objective-C and reaches AppKit and WebKit. This
+//! example is the whole chain, end to end:
 //!
 //! 1. a real `NSWindow` is made;
 //! 2. the plugin's provider is handed that window;
 //! 3. the framework drives the provider — bind, place, destroy;
-//! 4. the Objective-C half makes a real `NSView`, puts it in the window's
+//! 4. the Objective-C half makes a real `WKWebView`, puts it in the window's
 //!    content view, and places it;
-//! 5. the example checks that the view really is in the window.
+//! 5. the example asks the native half to load a URL, and checks that the
+//!    object it built really is a `WKWebView`.
+//!
+//! It also checks the *other* half of the claim: a kind this plugin cannot
+//! build is refused, and the refusal names the kind. That is the difference
+//! between a plugin that answers "web" and one that answers "anything" with a
+//! blank rectangle.
 //!
 //! It is an example rather than a test for one reason: **AppKit wants the
 //! main thread**, and a test harness does not give one. A `cargo test` runs
@@ -21,7 +27,10 @@
 //! cargo run -p floom-plugin-nativeview --example native_view
 //! ```
 //!
-//! The window is never shown: the point is the composition, not the pixels.
+//! The window is never shown: the point is the composition and the load
+//! request, not the pixels — a load that needs the network would make this
+//! example fail on a machine with none, for a reason that has nothing to do
+//! with the plugin.
 
 use std::ffi::c_void;
 
@@ -34,7 +43,7 @@ use floom_native_ffi::floom_native::{
     NativeCompositionMode, NativeState, NativeViewController, NativeViewId, NativeViewKind, Rect,
 };
 
-use floom_plugin_nativeview::{diagnostics, provider};
+use floom_plugin_nativeview::{diagnostics, load_url, provider};
 
 fn main() {
     // The main thread: the example's `main` is the process's main thread, so
@@ -45,14 +54,13 @@ fn main() {
     let rect = NSRect::new(NSPoint::new(0.0, 0.0), NSSize::new(400.0, 300.0));
     let window: Retained<NSWindow> = unsafe {
         let this = mtm.alloc::<NSWindow>();
-        let window: Retained<NSWindow> = msg_send![this,
+        msg_send![this,
             initWithContentRect: rect,
             styleMask: NSWindowStyleMask(0),
             backing: NSBackingStoreType::Buffered,
-            defer: false];
-        window
+            defer: false]
     };
-    println!("window: {:?}", window);
+    println!("window: {window:?}");
 
     // The plugin's provider, with the window as its host.
     let host = Retained::as_ptr(&window) as *const c_void;
@@ -63,28 +71,64 @@ fn main() {
     let mut controller = NativeViewController::boxed(provider);
     let caps = controller.capabilities();
     println!(
-        "capabilities: modes={:?} snapshot={} focusable={}",
+        "capabilities: modes={:?} snapshot={} focusable={} input={:?}",
         caps.modes.as_ref(),
         caps.snapshot,
-        caps.focusable
+        caps.focusable,
+        caps.input
+    );
+    // A web view takes the pointer and can be focused: it is a browser, and a
+    // browser that cannot be clicked or typed into is a screenshot.
+    assert!(caps.focusable, "a web view has text fields");
+    assert!(
+        caps.input
+            .supports(floom_native_ffi::floom_native::InputMode::Capture),
+        "a web view takes clicks — links and scrolling need them"
     );
 
-    // Bind a participant: the native half creates its view.
-    let slot = floom_native_ffi::floom_native::NativeSlot {
-        id: NativeViewId::new(1, 0),
+    let slot_of = |index: u32| floom_native_ffi::floom_native::NativeSlot {
+        id: NativeViewId::new(index, 0),
         generation: 0,
     };
+
+    // --- the kind this plugin cannot build is refused ---
+    //
+    // Asked *first*, so the refusal cannot be confused with a failure caused
+    // by something having been created already.
+    let camera_kind = NativeViewKind::Custom("example.camera");
+    let refusal = controller
+        .bind(slot_of(0), camera_kind, &[NativeCompositionMode::Overlay])
+        .expect_err("this plugin builds web views only");
+    let reason = format!("{refusal}");
+    println!("camera kind refused: {reason}");
+    assert!(
+        reason.contains("example.camera"),
+        "the refusal names the kind that was asked for, got: {reason}"
+    );
+    assert_eq!(
+        diagnostics::refused(),
+        1,
+        "the native half counted the refusal"
+    );
+    assert_eq!(
+        diagnostics::live(),
+        0,
+        "a refused kind creates nothing — no half-built view is left behind"
+    );
+
+    // --- the kind it can build ---
+    let slot = slot_of(1);
     let mode = controller
-        .bind(
-            slot,
-            NativeViewKind::Custom("example.nativeview"),
-            &[NativeCompositionMode::Overlay],
-        )
-        .expect("the native half offers overlay");
-    println!("bound in mode {mode:?}");
+        .bind(slot, NativeViewKind::Web, &[NativeCompositionMode::Overlay])
+        .expect("a web view is what this plugin is for");
+    println!("bound web participant in mode {mode:?}");
     assert_eq!(diagnostics::created(), 1, "the native half made one view");
     assert!(
-        diagnostics::view_is_attached(),
+        diagnostics::slot_is_web(slot),
+        "the object it built is a WKWebView, not a container standing in for one"
+    );
+    assert!(
+        diagnostics::slot_is_attached(slot),
         "the view is in the window's content view"
     );
 
@@ -107,7 +151,7 @@ fn main() {
         scale: 1.0,
         visible: true,
         z: 0,
-        input: floom_native_ffi::floom_native::InputMode::Passthrough,
+        input: floom_native_ffi::floom_native::InputMode::Capture,
         mode: NativeCompositionMode::Overlay,
     };
     controller.apply(slot, state).expect("placed");
@@ -119,17 +163,49 @@ fn main() {
         "the device pixels became points, divided by the backing scale exactly once"
     );
 
-    // Tear it down: the native half takes the view out of the window.
-    controller.destroy(slot).expect("destroyed");
-    assert_eq!(
-        diagnostics::destroyed(),
-        1,
-        "the native half tore the view down"
-    );
+    // --- load a page ---
+    //
+    // `about:blank` because this example must pass on a machine with no
+    // network. What is being checked is that the request reached WebKit,
+    // not that a particular site answered.
+    load_url(slot, "about:blank").expect("WebKit accepted the request");
+    println!("loaded about:blank");
+
+    // A malformed URL is refused by the plugin's own ABI rather than handed to
+    // WebKit to fail silently.
+    let bad = load_url(slot, "not a url");
+    println!("malformed url refused: {bad:?}");
+    assert!(bad.is_err(), "a url that does not parse is refused");
+
+    // --- a second participant, of the same kind ---
+    //
+    // The case one global view could not serve: two live web views at once.
+    let second = slot_of(2);
+    controller
+        .bind(
+            second,
+            NativeViewKind::Web,
+            &[NativeCompositionMode::Overlay],
+        )
+        .expect("a second web view");
+    assert_eq!(diagnostics::live(), 2, "both participants are alive");
     assert!(
-        !diagnostics::view_is_attached(),
-        "the view is out of the window"
+        diagnostics::slot_is_web(second) && diagnostics::slot_is_web(slot),
+        "the second create did not steal the first one's view"
     );
 
-    println!("\nthe native half did all of it: one view created, placed, and destroyed.");
+    // --- teardown ---
+    controller.destroy(second).expect("destroyed");
+    controller.destroy(slot).expect("destroyed");
+    assert_eq!(diagnostics::destroyed(), 2, "both were torn down");
+    assert_eq!(diagnostics::live(), 0, "nothing is left behind");
+    assert!(
+        !diagnostics::slot_is_attached(slot),
+        "the views are out of the window"
+    );
+
+    println!(
+        "\nthe native half did all of it: a real web view created, placed, loaded, and destroyed,"
+    );
+    println!("and a kind it cannot build refused with a reason that names it.");
 }

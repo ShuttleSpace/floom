@@ -59,9 +59,12 @@ fn main() {
         .warnings(true)
         .compile("floom_nativeview");
 
-    // AppKit and Foundation: the frameworks the native half reaches.
+    // AppKit and Foundation: the frameworks the native half reaches. WebKit
+    // because a `WKWebView` comes from it — the capability this plugin now
+    // really provides, rather than a blank `NSView` standing in for one.
     println!("cargo:rustc-link-lib=framework=AppKit");
     println!("cargo:rustc-link-lib=framework=Foundation");
+    println!("cargo:rustc-link-lib=framework=WebKit");
 
     println!("cargo:rustc-cfg=floom_plugin_native");
 }
