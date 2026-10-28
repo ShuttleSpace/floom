@@ -134,16 +134,16 @@
 > | | 缺口 | 现在 |
 > |---|---|---|
 > | R1 | skia 不是渲染器 | ✅ B2：改名 `floom-renderer-skia-abi`，补计数器与测试 |
-> | R2 | vello 缺三类效果 | 🟡 B4 只修了第一格：`Rect` 阴影已真画；路径/字形阴影**场景里根本没有这个字段**（不是跳过）；滤镜/背景滤镜**结构性**无法实现，均计数 |
+> | R2 | vello 缺三类效果 | 🟡 阴影 ✅（B4）；**滤镜域 ✅（2026-10-28，离屏+共享模糊核）**；路径/字形阴影**场景里没有字段**；背景滤镜仍不可行 |
 > | R3 | software 没有 shader runtime | ✅ B8：是设计决定，不是缺口 |
 > | R4 | tui 静默忽略 radius/shadow | ✅ B3：各自计数 |
 > | R5 | `Renderer` 没有能力查询 | ✅ B5/B6：`RendererCapabilities` + `DegradationReport` |
 > | R6 | 后端支持文档过时 | ✅ B1：重写为 12×5 矩阵 |
 > | R7 | 只有 software 有像素回归 | ✅ B7：web/tui/software 都有；vello GPU 路径 2026-10-27 补齐 |
 >
-> **真正还开着的只有 R2 的两格**：路径/字形阴影（场景层没有这个字段），以及
-> 滤镜/背景滤镜（vello 结构性无法实现）。前者是**没人做**——不是做不到；
-> 后者是做不到。
+> **真正还开着的只有背景滤镜**（结构性：vello 每趟渲染都清空目标，而背景滤镜
+> 要的是流中段已有的像素），以及路径/字形的阴影——后者是**场景层没有这个字段**，
+> 不是渲染器做不到。
 
 ### R1 · skia 在 2.0 里不是渲染器 🔴 → ✅ 已修（B2）
 
@@ -170,33 +170,52 @@
 按当前状态，它是一个"意图记录器"，却和真正的后端并排放在 `floom-renderer-*` 命名空间里，
 容易被误认为已实现。
 
-### R2 · vello 没有 blur primitive，GPU 路径缺三类效果 🟠 → 🟡 部分已修（B4）
+### R2 · vello 没有 blur primitive，GPU 路径缺三类效果 🟠 → 🟡 大部分已修（B4 + 滤镜域）
 
-> **这段是修复前的原始发现，保留作记录** —— 下面那三段"已核实无法实现"的
-> 论证仍然成立，是 B4 结论的依据，不要因为标题变了就跳过它。
+> **这段是修复前的原始发现，保留作记录。** 下面那段"已核实无法实现"的论证
+> 是 B4 结论的依据，但它**有一个错误已经实测推翻**，见本节末尾。
 >
-> 现状：`Rect` 的阴影已真画（余下三个小节的第一条）。`Path` / `GlyphRun`
-> 的阴影**不是"被跳过"，而是场景本身不表达** —— `SceneNode::Path` 没有
-> `shadow` 字段（`node.rs:61` 起只有 `fill` / `stroke`），所以没有请求可计数。
-> B4 之前那句"仍 `shadows_skipped`"只对 `Rect` 的零 σ / 零 extent 成立。
-> 真的要让路径带阴影，得先给场景加字段，再谈 vello 能不能画——两件事都还没做。
-> 滤镜域与背景滤镜按下面的论证仍然无法实现，两者都计数。
+> 现状：
+> - `Rect` 的阴影**已真画**（B4）。
+> - 路径/字形的阴影**不是"被跳过"，而是场景本身不表达** —— `SceneNode::Path`
+>   没有 `shadow` 字段（`node.rs:61` 起只有 `fill` / `stroke`），所以没有请求可计数。
+>   真要让路径带阴影得先给场景加字段，再谈 vello 能不能画——两件都没做。
+> - **滤镜域已实现（2026-10-28）**：不再"内容照常画 + 计数跳过"。作用域内的节点
+>   离屏渲染 → 回读 → 用 `floom_renderer::blur::blur_rgba`（**与 software 同一份
+>   实现**）模糊 → 作为图像画回原处覆盖自身。`filters_drawn` 计数真的模糊了的，
+>   `filters_skipped` 只剩"作用域为空/渲染失败"。`RendererCapabilities.filters`
+>   在 GPU presenter 上改为 `true`。
+> - 背景滤镜仍计数跳过，理由见下（但论证里"结构性不可能"的部分需要修正）。
 
 `crates/floom-renderer-vello/src/gpu.rs`：
 
 - 阴影：**已修复（B4）** —— `Rect` 的阴影经 `draw_blurred_rounded_rect` 真画出来
   （offset 折进 rect、spread 同时增大 rect 与圆角、blur 折成 σ），`shadows_drawn` 计数。
-  `Path` / `GlyphRun` 的阴影仍 `shadows_skipped`——原语只能糊圆角矩形。
-- 滤镜域：`gpu.rs` —— 内容照常画（不模糊），`totals.filters_skipped += 1`
+- 滤镜域：~~内容照常画（不模糊），`totals.filters_skipped += 1`~~ →
+  **已实现**，见上。
 - 背景滤镜：`gpu.rs` —— 什么都不画，`stats.filter_skips += 1`
 
-后两者**已核实无法实现**，不是没人做：
+背景滤镜仍**无法实现**，但论证要修正一处。原文说：
 ① vello 全部 13 个命令无一读回已光栅化像素；② 层机制只做 blend 合成、无后处理钩子；
-③ **栅格化只发生一次且在最后**——`BackdropFilter` 在流中段时整个 scene 已编码完，
-要兑现它就得把前半光栅化→读回→模糊→画成图像→后半光栅化，而 API 一次只渲染一个 scene。
-所以这是**缺一个落脚点**，不是缺一个 blur。software 能做到只因为它自己拥有像素缓冲。
+③ **栅格化只发生一次且在最后**。
 
-三者都计数了，符合"不静默"原则。
+第一、二条成立。第三条**方向对但理由错**：我实测了多趟渲染——
+
+```
+ONE PASS   left=[220,40,40,255]  right=[40,200,90,255]
+TWO PASSES left=[0,0,0,0]        right=[40,200,90,255]
+```
+
+第二趟把第一趟**整个清掉**。所以"分多趟合成"不可行的真正原因是
+**vello 每趟都清空目标**，而不是"API 不提供分段"。这个区别重要：它说明
+滤镜域可以靠"整段渲染 → 回读 → 回贴"实现（已经这么做了），而背景滤镜要求
+的是"流中段已有的像素"，那需要把 scene 在任意点切开并保留之前的结果——
+这正是实测失败的那条路。
+
+software 能做到只因为它自己拥有像素缓冲。
+
+三者都计数了，符合"不静默"原则；滤镜现在计的是"画了"而不是"跳过了"。
+
 
 ### R3 · software 没有 shader runtime 🟡 → ✅ 已记录为设计决定（B8）
 
@@ -327,7 +346,7 @@ macOS 门禁记录过一次真实教训（`docs/gates/macos.md:126-128`）：
 | **B1** | 重写 `docs/renderer-backend-support.md` 为 2.0 场景节点矩阵 | — | 🟠 | ✅ **完成** — 12 变体 × 5 后端矩阵；修正"web 无阴影计数"的过时结论（2.0 的 web 内部就是 software 渲染器）；新增"留下的缺口"一节 |
 | **B2** | skia 要么补提交路径 + 计数器 + 测试，要么明确降级为"意图记录器" | — | 🔴 | ✅ **完成** — 改名 `floom-renderer-skia-abi`（**它本来就不是渲染器**：零外部依赖、只被自己的测试用、facade 不导出）；补 `shaders_skipped`/`filters_skipped`/`shadows_skipped`；补 3 项测试（5 → 8） |
 | **B3** | tui 补齐静默忽略的计数 | — | 🟡 | ✅ **完成** — `radius` 与 `shadow` 不再被 `..` 吞掉，各计一次；补 2 项测试（21 → 23） |
-| **B4** | vello 的 blur primitive | — | 🟠 | ✅ **完成（Rect）** — 上游 vello 0.7 **已有** `draw_blurred_rounded_rect`（之前『依赖上游』的判断是错的，从没人去查过）。offset 折进 rect、spread 同时增大 rect 与圆角（中心不动）、blur 按 `CSS_BLUR_TO_SIGMA` 折成 σ；阴影先于填充画。**路径/字形的阴影不是"被跳过"**：`SceneNode::Path` / `GlyphRun` 根本没有 `shadow` 字段（`node.rs:61` 起只有 `fill` / `stroke`），所以没有请求可计数。真要让路径带阴影得先给场景加字段，再谈 vello 能不能画——两件都没做 |
+| **B4** | vello 的 blur primitive | — | 🟠 | ✅ **完成（Rect）** — 上游 vello 0.7 **已有** `draw_blurred_rounded_rect`（之前『依赖上游』的判断是错的，从没人去查过）。offset 折进 rect、spread 同时增大 rect 与圆角（中心不动）、blur 按 `CSS_BLUR_TO_SIGMA` 折成 σ；阴影先于填充画。**路径/字形的阴影不是"被跳过"**：`SceneNode::Path` / `GlyphRun` 根本没有 `shadow` 字段（`node.rs:61` 起只有 `fill` / `stroke`），所以没有请求可计数。真要让路径带阴影得先给场景加字段，再谈 vello 能不能画——两件都没做。**2026-10-28 补充**：滤镜域已另行实现（离屏 + 共享模糊核），见 R2 与 CHANGELOG |
 | **B5** | 统一后端能力查询 | — | 🟠 | ✅ **完成** — `Renderer::capabilities` 与 `Presenter::capabilities` 返回 `RendererCapabilities{shadows,filters,backdrop_filters,shaders}`；默认**悲观**；五个后端各自诚实回答；`AppRunner::renderer_capabilities()` 透给宿主；5 项测试 |
 | **B6** | 统一降级计数的暴露方式 | B5 | 🟡 | ✅ **完成** — `DegradationReport`（`floom-renderer/src/degradation.rs`）是**视图**而非替换：各后端保留自己的 stats，新增 `degradation()` 转换。四个 kind 分开（不合并成一个数——『丢了六件事』和『丢了六个阴影』是不同事实）。`unexpected(caps)` 减去 capabilities 已声明会发生的事，剩下的就是**意外**——把『capability bit 没有实现比没有更糟』变成运行时事实。tui 的单一 `skipped` 无法归因，报告如实承载总数并写明不能归因 |
 | **B7** | 为 vello / tui / web 补像素级回归 | — | 🟠 | ✅ **完成（2026-10-27，含 vello GPU 路径）** — `PixelSnapshot::of_buffer` 让**任何**后端都能有 golden（尺寸进哈希）；web 与 software 参考逐像素比对 + 自己的 golden；tui 的 golden 是**字符网格文本**（人能在 diff 里读懂）；software 补**文本渲染层**证据（墨迹是字形形状而非填充块）。**vello 的 GPU 路径已补**：`VelloGpuPresenter::render_offscreen` 把 scene 经**同一条 encode 路径**光栅化进离屏纹理并回读成 RGBA（复用公开的编码器而不是第二套实现，否则测的就是会漂移的副本）；4 个测试断言**墨迹在哪**而不只是计数——空场景/实心矩形边界、裁剪在自己边缘处截断、阴影出现在矩形之外。有牙证明：把 encode 替换成空场景，4 个测试全红；只去掉裁剪标记，只有裁剪测试红。`#[ignore]` 因为它需要真 GPU adapter，门禁新增的 `gpu` 检查**无论有无 GPU 都编译**这条路径，并在有 adapter 时报「4 pixel tests ran and passed」、无 adapter 时报「skipped — no GPU adapter on this machine」——**跳过从不被算成通过**；`FLOOM_REQUIRE_GPU=1` 把缺 adapter 变成红灯。顺带发现并修掉 `--deny warnings` 下 `gpu` feature 从未编译过的两处 clippy 错误 |

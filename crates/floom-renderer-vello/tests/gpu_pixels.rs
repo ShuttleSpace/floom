@@ -242,6 +242,97 @@ fn a_shadow_puts_ink_outside_the_rect_it_belongs_to() {
 }
 
 // ---------------------------------------------------------------------------
+// F1 — filter scopes
+// ---------------------------------------------------------------------------
+
+/// A filter scope really blurs its contents: the ink inside the scope stops
+/// having a hard edge.
+///
+/// This is the claim `filters_drawn` was raised for, checked against pixels
+/// rather than against the counter. The control is the same scene without the
+/// scope — a sharp rect whose edge is exactly where the bounds say — so "the
+/// edge is soft" cannot pass on a scene that drew nothing.
+#[test]
+#[ignore = "needs a GPU adapter; run with --features gpu -- --ignored"]
+fn a_filter_scope_blurs_its_contents() {
+    if let Some(reason) = no_adapter_reason() {
+        eprintln!("SKIP: {reason}");
+        return;
+    }
+
+    let sharp = render(vec![fill(rect(16.0, 16.0, 48.0, 48.0), INK)]);
+
+    let blurred = render(vec![
+        SceneNode::FilterPush {
+            filter: floom_types::Filter::blur(6.0),
+        },
+        fill(rect(16.0, 16.0, 48.0, 48.0), INK),
+        SceneNode::FilterPop,
+    ]);
+
+    // The control's edge is hard: the pixel just outside the rect is clear.
+    assert_eq!(
+        alpha(&sharp, 12, 32),
+        0,
+        "control: nothing outside the rect"
+    );
+    // The blurred one spreads past the same edge — that is the halo a blur
+    // produces and a sharp draw cannot.
+    assert!(
+        alpha(&blurred, 12, 32) > 0,
+        "the blur must spread outside the rect it filtered, got {}",
+        alpha(&blurred, 12, 32)
+    );
+    // And the middle is still inked, so the scope did not erase its content.
+    assert!(
+        is_ink(&blurred, 32, 32),
+        "the filtered content is still there, just blurred"
+    );
+    // The *edge* is where a blur shows: the pixel just inside it has to be a
+    // mix of the rect's colour and what surrounds it, so it cannot be the
+    // rect's own colour. Checking the middle instead would pass on a scope that
+    // silently did nothing — the middle of a 32px square is pure ink either way.
+    assert_eq!(
+        pixel(&sharp, 17, 32),
+        [INK.r, INK.g, INK.b, 255],
+        "control: the pixel just inside the edge is the ink colour"
+    );
+    assert_ne!(
+        pixel(&blurred, 17, 32),
+        pixel(&sharp, 17, 32),
+        "at the edge the blurred frame must differ from the sharp one"
+    );
+}
+
+/// A filter scope that covers nothing is counted as skipped, not drawn: there
+/// are no contents to blur, and inventing a box would smear empty space into a
+/// visible smudge.
+#[test]
+#[ignore = "needs a GPU adapter; run with --features gpu -- --ignored"]
+fn an_empty_filter_scope_draws_nothing() {
+    if let Some(reason) = no_adapter_reason() {
+        eprintln!("SKIP: {reason}");
+        return;
+    }
+    let rgba = render(vec![
+        SceneNode::FilterPush {
+            filter: floom_types::Filter::blur(8.0),
+        },
+        SceneNode::FilterPop,
+        fill(rect(48.0, 48.0, 62.0, 62.0), MARK),
+    ]);
+    assert!(
+        is_mark(&rgba, 55, 55),
+        "the node after the empty scope still draws"
+    );
+    assert_eq!(
+        alpha(&rgba, 8, 8),
+        0,
+        "an empty scope must not smear anything into the empty corner"
+    );
+}
+
+// ---------------------------------------------------------------------------
 // Golden
 // ---------------------------------------------------------------------------
 

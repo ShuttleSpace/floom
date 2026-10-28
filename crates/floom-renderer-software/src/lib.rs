@@ -47,14 +47,6 @@ type GlyphCacheKey = (usize, u32, u32, u32);
 /// entries beyond this, trading a re-rasterisation for a bounded footprint.
 const GLYPH_CACHE_LIMIT: usize = 4096;
 
-/// Box-blur passes used to approximate a Gaussian.
-///
-/// Three is the usual trade: one pass is a square kernel (visible banding at
-/// the edges of a large blur), two still shows its corners, three reads as a
-/// Gaussian to the eye. Each pass costs one O(pixels) sweep, and the radius is
-/// split across them, so the *spread* stays the filter's radius.
-const BLUR_PASSES: usize = 3;
-
 /// Default ceiling on the mask *bytes* the cache holds. Masks vary wildly in
 /// size — a 10px glyph is tens of bytes, a 96px one is tens of kilobytes — so
 /// an entry count alone says nothing about the memory actually retained. This
@@ -820,9 +812,9 @@ impl SoftwareRenderer {
         // 2. Three box-blur passes; the CSS-style blur radius halves into the
         //    kernel radius.
         let br = (blur / 2.0).round().max(1.0) as usize;
-        box_blur(&mut alpha, w, h, br);
-        box_blur(&mut alpha, w, h, br);
-        box_blur(&mut alpha, w, h, br);
+        for _ in 0..floom_renderer::blur::BLUR_PASSES {
+            floom_renderer::blur::box_blur(&mut alpha, w, h, br);
+        }
 
         // 3. Composite: walk the mapped silhouette's on-screen extent, map each
         //    pixel back into node space, and read the (offset) blurred field.
@@ -1231,7 +1223,7 @@ impl SoftwareRenderer {
         let layer_pixels = std::mem::take(&mut self.pixels);
         self.pixels = layer.parent;
         let (mut bytes, w, h) = extract_window(&layer_pixels, self.width as usize, window);
-        blur_window(&mut bytes, w, h, &layer.filter, self.scale);
+        floom_renderer::blur::blur_rgba(&mut bytes, w, h, &layer.filter, self.scale);
         // Where the result may land: the damage the frame promised to rebuild,
         // narrowed by whatever clip is in force at the pop — the blur spreads
         // past where the content was drawn, and that spread is clipped too.
@@ -1292,7 +1284,7 @@ impl SoftwareRenderer {
             self.height,
         );
         let (mut bytes, w, h) = extract_window(&self.pixels, self.width as usize, read);
-        blur_window(&mut bytes, w, h, &filter, scale);
+        floom_renderer::blur::blur_rgba(&mut bytes, w, h, &filter, scale);
         let (rx0, ry0) = (read.0, read.1);
         for y in write.1..write.3 {
             for x in write.0..write.2 {
@@ -1405,124 +1397,6 @@ fn extract_window(pixels: &[u8], width: usize, window: Clip) -> (Vec<u8>, usize,
         out[dst..dst + w * 4].copy_from_slice(&pixels[src..src + w * 4]);
     }
     (out, w, h)
-}
-
-/// Blurs a tightly packed RGBA window **in place**.
-///
-/// Premultiplied, because the buffer holds straight alpha: blurring straight
-/// channels averages a transparent pixel's colour in as if it were ink, which
-/// haloes every edge. Three passes of a box blur of radius `r / 3` spread by
-/// `r` in total — which is what lets [`Filter::reach`] report the whole spread
-/// instead of a per-pass detail.
-fn blur_window(bytes: &mut [u8], w: usize, h: usize, filter: &Filter, scale: f64) {
-    let Filter::Blur { radius_x, radius_y } = *filter;
-    // A radius too small to survive the three-way split still gets a one-pixel
-    // kernel: rounding it to zero would make a 1px blur silently do nothing.
-    let kernel = |radius: f64| -> usize {
-        if !(radius.is_finite() && radius > 0.0) {
-            return 0;
-        }
-        ((radius * scale) / f64::from(BLUR_PASSES as u32))
-            .round()
-            .max(1.0) as usize
-    };
-    let (rx, ry) = (kernel(radius_x), kernel(radius_y));
-    if w == 0 || h == 0 || (rx == 0 && ry == 0) {
-        // Nothing to smear: the window passes through untouched, which is what
-        // an identity filter asked for and what a zero-area window must do.
-        return;
-    }
-    let mut fields: Vec<Vec<f32>> = (0..4).map(|_| vec![0.0f32; w * h]).collect();
-    for i in 0..(w * h) {
-        let a = f32::from(bytes[i * 4 + 3]) / 255.0;
-        fields[3][i] = a;
-        for c in 0..3 {
-            fields[c][i] = f32::from(bytes[i * 4 + c]) / 255.0 * a;
-        }
-    }
-    for field in fields.iter_mut() {
-        for _ in 0..BLUR_PASSES {
-            box_blur_xy(field, w, h, rx, ry);
-        }
-    }
-    for i in 0..(w * h) {
-        let a = fields[3][i];
-        let inv = if a > 1e-6 { 1.0 / a } else { 0.0 };
-        for c in 0..3 {
-            let v = fields[c][i] * inv * 255.0;
-            bytes[i * 4 + c] = v.round().clamp(0.0, 255.0) as u8;
-        }
-        bytes[i * 4 + 3] = (a * 255.0).round().clamp(0.0, 255.0) as u8;
-    }
-}
-
-/// One horizontal+vertical pass of a box blur over a single-channel field,
-/// `radius` pixels wide, via a sliding window — O(pixels), independent of
-/// radius. Window edges clamp to the field, which is the edge behaviour a
-/// shadow wants (the blur does not fall off a cliff at the pad boundary).
-fn box_blur(field: &mut [f32], width: usize, height: usize, radius: usize) {
-    box_blur_xy(field, width, height, radius, radius);
-}
-
-/// [`box_blur`] with a radius per axis: a horizontal motion smear and a
-/// frosted panel are both real requests, and collapsing them into one number
-/// would force a caller to pick.
-fn box_blur_xy(field: &mut [f32], width: usize, height: usize, radius_x: usize, radius_y: usize) {
-    if width == 0 || height == 0 {
-        return;
-    }
-    let mut tmp = vec![0.0f32; field.len()];
-
-    if radius_x == 0 {
-        // A zero-width window averages one pixel, so the horizontal pass is a
-        // copy — running the sliding window anyway would only burn time.
-        tmp.copy_from_slice(field);
-    } else {
-        // Horizontal: rows of `width`, window [x-radius, x+radius] clamped.
-        for y in 0..height {
-            let row = y * width;
-            let mut lo = 0usize;
-            let mut hi = radius_x.min(width - 1);
-            let mut sum: f32 = field[row..=row + hi].iter().sum();
-            for x in 0..width {
-                tmp[row + x] = sum / (hi - lo + 1) as f32;
-                let nlo = (x + 1).saturating_sub(radius_x);
-                let nhi = (x + 1 + radius_x).min(width - 1);
-                while hi < nhi {
-                    hi += 1;
-                    sum += field[row + hi];
-                }
-                while lo < nlo {
-                    sum -= field[row + lo];
-                    lo += 1;
-                }
-            }
-        }
-    }
-
-    if radius_y == 0 {
-        field.copy_from_slice(&tmp);
-        return;
-    }
-    // Vertical: columns of `height` over the horizontal result.
-    for x in 0..width {
-        let mut lo = 0usize;
-        let mut hi = radius_y.min(height - 1);
-        let mut sum: f32 = (0..=hi).map(|y| tmp[y * width + x]).sum();
-        for y in 0..height {
-            field[y * width + x] = sum / (hi - lo + 1) as f32;
-            let nlo = (y + 1).saturating_sub(radius_y);
-            let nhi = (y + 1 + radius_y).min(height - 1);
-            while hi < nhi {
-                hi += 1;
-                sum += tmp[hi * width + x];
-            }
-            while lo < nlo {
-                sum -= tmp[lo * width + x];
-                lo += 1;
-            }
-        }
-    }
 }
 
 /// `clip` grown by `reach` pixels on every side, held inside a `width` ×

@@ -2,6 +2,7 @@
 //!
 //! Concrete GPU backends live in separate crates and must not pull widgets.
 
+pub mod blur;
 mod degradation;
 mod external;
 mod frame_queue;

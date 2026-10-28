@@ -241,14 +241,22 @@ pub struct GpuFrameStats {
     /// primitive cannot express — a path or a glyph run carrying a shadow, or
     /// one whose parameters degenerate (zero σ, or an over-eroded spread).
     pub shadows_skipped: u64,
-    /// Filter requests this backend did not apply: a filtered scope whose
-    /// content was drawn sharp instead, and a backdrop filter drawn as nothing.
+    /// Filter requests this backend did not apply: a filtered scope that could
+    /// not be rendered offscreen, and a backdrop filter drawn as nothing.
     ///
-    /// One count rather than one per kind because the answer is the same for
-    /// both — vello has no blur primitive, so neither can be honoured — and
-    /// because what a caller needs from this number is "was my filter dropped",
-    /// not which of the two it was.
+    /// One count rather than one per kind because what a caller needs from this
+    /// number is "was my filter dropped", not which of the two it was. A filter
+    /// scope that *did* apply is counted in [`Self::filters_drawn`] instead —
+    /// the two are disjoint, so a caller can assert on either.
     pub filters_skipped: u64,
+    /// Filter scopes this backend really blurred and composited: rendered
+    /// offscreen, read back, blurred with the shared kernel, drawn back over the
+    /// content it hides. This is the "did my filter run" number.
+    ///
+    /// Separate from `filters_skipped` rather than one net figure, because "a
+    /// filter ran" and "a filter was dropped" are different facts and a single
+    /// counter would hide which happened.
+    pub filters_drawn: u64,
     /// Custom-shader nodes this backend actually ran on the GPU — a WGSL
     /// program compiled into a pipeline and rendered to an offscreen texture.
     /// This is the "did my shader run" number; the software rasteriser and the
@@ -301,6 +309,25 @@ struct ScratchTarget {
     view: wgpu::TextureView,
     width: u32,
     height: u32,
+}
+
+/// A filter scope whose content has to be rendered as its own pass.
+///
+/// vello rasterises once, at the end of the whole scene, so "the content of
+/// this scope, as pixels" does not exist while the walk is running. The scope's
+/// stream span is recorded instead, and rendered on its own afterwards, then
+/// blurred and composited back where the scope was.
+///
+/// A span rather than a copy of the nodes: the walk already knows how to turn
+/// any node into commands, so the cheap thing is to remember *which* nodes and
+/// re-walk them — and that keeps one encoder rather than two that could
+/// disagree.
+#[derive(Debug)]
+struct PendingFilterScope {
+    filter: floom_types::Filter,
+    /// Index of the first node inside the scope, and how many follow.
+    start: usize,
+    len: usize,
 }
 
 /// What encoding one scene node produced: the draw commands land in a
@@ -911,6 +938,10 @@ pub struct VelloGpuPresenter {
     /// Seconds handed to custom shaders as `u.time`, advanced one frame's worth
     /// per `present` so an animated program actually moves.
     shader_clock: f32,
+    /// Filter scopes the last `encode` found. Their pixels can only be produced
+    /// after the whole scene has been encoded, so `encode` records the spans and
+    /// `render_filter_scopes` renders, blurs and composites them.
+    pending_filters: Vec<PendingFilterScope>,
 }
 
 impl std::fmt::Debug for VelloGpuPresenter {
@@ -1018,6 +1049,7 @@ impl VelloGpuPresenter {
             shader_programs: HashMap::new(),
             shader_textures: Vec::new(),
             shader_clock: 0.0,
+            pending_filters: Vec::new(),
         })
     }
 
@@ -1238,7 +1270,22 @@ impl VelloGpuPresenter {
         // what makes this a regression net for the real path rather than for a
         // second implementation that could drift.
         let _ = self.encode(scene, resources, (0.0, 0.0));
+        // The offscreen path runs the same filter pass a window does, so a
+        // golden taken here covers filters too.
+        let mut filter_stats = GpuFrameStats::default();
+        self.render_filter_scopes(scene, resources, width, height, &mut filter_stats);
+        self.rasterize_offscreen(width, height)
+    }
 
+    /// Rasterises the encoded `vello_scene` into a fresh offscreen texture and
+    /// reads the RGBA back.
+    ///
+    /// The GPU half of [`Self::render_offscreen`], split out so the filter path
+    /// can render several scene segments through it. A second pass into the
+    /// *same* texture would not compose — vello clears the target per call, a
+    /// fact worth stating because the obvious "just render the next segment
+    /// again" is exactly what does not work.
+    fn rasterize_offscreen(&mut self, width: u32, height: u32) -> Option<Vec<u8>> {
         let (texture, view) = create_offscreen_target(&self.device, width, height);
         let params = RenderParams {
             base_color: PenikoColor::TRANSPARENT,
@@ -1318,6 +1365,157 @@ impl VelloGpuPresenter {
         drop(mapped);
         staging.unmap();
         Some(out)
+    }
+
+    /// Renders each filter scope found by the last `encode`, blurs it, and
+    /// draws the result over the main scene.
+    ///
+    /// The mechanism is the one `run_shader_to_image` already uses — render
+    /// offscreen, read back, hand the pixels to vello as an image — applied to
+    /// scene *content* instead of a shader program. Three things make it work:
+    ///
+    /// 1. **The span, not the stream.** Each scope re-walks only its own nodes
+    ///    into a fresh scene, so the blur sees the scope's content and nothing
+    ///    else. Blurring the whole frame and masking it would smear across the
+    ///    scope's boundary, which is the bug a naive layer-based approach has.
+    /// 2. **The shared kernel.** `floom_renderer::blur::blur_rgba` is the same
+    ///    function the software rasteriser uses, so a `Filter::blur(8.0)` looks
+    ///    the same on both backends. A second implementation here would drift.
+    /// 3. **Cover, not blend.** The unblurred content is already in the main
+    ///    scene underneath; the blurred image is drawn opaque over the same
+    ///    rect, so it hides its own source rather than compositing with it
+    ///    (which would double every edge).
+    ///
+    /// Bounds come from the scope's contents grown by the filter's reach — a
+    /// blur reads pixels outside what it writes, so a tight box would clip the
+    /// halo. Returns how many scopes were actually blurred; a scope that failed
+    /// to render is counted as skipped rather than silently leaving sharp
+    /// content described as filtered.
+    fn render_filter_scopes(
+        &mut self,
+        scene: &Scene,
+        resources: &ResourceRegistry,
+        width: u32,
+        height: u32,
+        stats: &mut GpuFrameStats,
+    ) {
+        let pending = std::mem::take(&mut self.pending_filters);
+        if pending.is_empty() {
+            return;
+        }
+        // The main scene is kept aside; each scope renders into `vello_scene`
+        // and the result goes back on top of the saved one.
+        let main = std::mem::replace(&mut self.vello_scene, VelloScene::new());
+        let mut composited = main;
+
+        for scope in pending {
+            let span: Vec<&SceneNode> = scene
+                .iter()
+                .skip(scope.start)
+                .take(scope.len)
+                .map(|(_, node)| node)
+                .collect();
+            let bounds: Option<floom_types::Rect> = span
+                .iter()
+                .filter_map(|n| n.bounds_hint())
+                .reduce(|a, b| floom_types::Rect {
+                    x0: a.x0.min(b.x0),
+                    y0: a.y0.min(b.y0),
+                    x1: a.x1.max(b.x1),
+                    y1: a.y1.max(b.y1),
+                });
+            let Some(bounds) = bounds else {
+                // An empty scope has nothing to blur, and inventing a box
+                // would blur empty space into a visible smudge.
+                stats.filters_skipped += 1;
+                continue;
+            };
+            let reach = scope.filter.reach();
+            let padded = floom_types::Rect {
+                x0: bounds.x0 - reach,
+                y0: bounds.y0 - reach,
+                x1: bounds.x1 + reach,
+                y1: bounds.y1 + reach,
+            };
+            // Device pixels, clipped to the frame: the blurred image is drawn
+            // back in logical units at the same rect it was taken from.
+            let scale = self.scale;
+            let px = |v: f64| (v * scale).round() as i64;
+            let x0 = px(padded.x0).clamp(0, i64::from(width)) as u32;
+            let y0 = px(padded.y0).clamp(0, i64::from(height)) as u32;
+            let x1 = px(padded.x1).clamp(0, i64::from(width)) as u32;
+            let y1 = px(padded.y1).clamp(0, i64::from(height)) as u32;
+            if x1 <= x0 || y1 <= y0 {
+                stats.filters_skipped += 1;
+                continue;
+            }
+            let (sw, sh) = (x1 - x0, y1 - y0);
+
+            // Re-walk this scope's nodes into a scene of their own, shifted so
+            // the target rect's origin is the texture's origin.
+            self.vello_scene.reset();
+            let mut used_images: HashSet<u64> = HashSet::new();
+            for node in &span {
+                let mut fragment = VelloScene::new();
+                self.encode_node(&mut fragment, node, resources, &mut used_images);
+                self.vello_scene.append(&fragment, None);
+            }
+            // vello always renders the whole texture, so the content has to be
+            // translated into it rather than cropped by the target extent.
+            let mut shifted = VelloScene::new();
+            shifted.append(
+                &self.vello_scene,
+                Some(Affine::translate((
+                    -f64::from(x0) / scale,
+                    -f64::from(y0) / scale,
+                ))),
+            );
+            self.vello_scene = shifted;
+
+            let Some(mut pixels) = self.rasterize_offscreen(sw, sh) else {
+                stats.filters_skipped += 1;
+                continue;
+            };
+
+            floom_renderer::blur::blur_rgba(
+                &mut pixels,
+                sw as usize,
+                sh as usize,
+                &scope.filter,
+                scale,
+            );
+
+            let shared: std::sync::Arc<dyn AsRef<[u8]> + Send + Sync> = std::sync::Arc::new(pixels);
+            let brush = ImageBrush {
+                image: ImageData {
+                    data: Blob::new(std::sync::Arc::clone(&shared)),
+                    format: ImageFormat::Rgba8,
+                    alpha_type: ImageAlphaType::AlphaPremultiplied,
+                    width: sw,
+                    height: sh,
+                },
+                sampler: ImageSampler::default(),
+            };
+            let target = floom_types::Rect {
+                x0: f64::from(x0) / scale,
+                y0: f64::from(y0) / scale,
+                x1: f64::from(x1) / scale,
+                y1: f64::from(y1) / scale,
+            };
+            let sx = target.width() / f64::from(sw);
+            let sy = target.height() / f64::from(sh);
+            draw_image_at(
+                &mut composited,
+                &brush,
+                Affine::translate((target.x0, target.y0)) * Affine::scale_non_uniform(sx, sy),
+                sw,
+                sh,
+                u8::MAX,
+            );
+            stats.filters_drawn += 1;
+        }
+
+        self.vello_scene = composited;
     }
 
     fn build_surface(&mut self, handles: SurfaceHandles, physical: (u32, u32)) -> Option<()> {
@@ -1461,7 +1659,18 @@ impl VelloGpuPresenter {
         // push is genuinely harmless here.
         let mut group_stack: Vec<Affine> = Vec::new();
         let mut group_affine = Affine::IDENTITY;
-        for (id, node) in scene.iter() {
+        // Filter scopes seen this frame, in stream order. Each one's span is
+        // rendered as its own pass by `render_filter_scopes`; the walk records
+        // where the nodes are and carries on, because vello has no pixels to
+        // blur until every node has been encoded.
+        let mut filter_scopes: Vec<PendingFilterScope> = Vec::new();
+        // The scope currently open, and the node index the next node will take.
+        // Nested scopes are not supported (a blur inside a blur would need a
+        // pass inside a pass); the innermost one wins and the outer sees the
+        // same nodes, which is what "no nesting" degrades to honestly.
+        let mut open_scope: Option<(usize, floom_types::Filter)> = None;
+        for (node_index, (id, node)) in scene.iter().enumerate() {
+            let here = node_index;
             match node {
                 SceneNode::ClipPush { region } => {
                     // The same affine the content that follows is appended
@@ -1501,18 +1710,35 @@ impl VelloGpuPresenter {
                     }
                     continue;
                 }
-                // A filter scope is consumed here and drawn as an ordinary
-                // band of picture: vello has no blur primitive, so the content
-                // inside it lands sharp. The alternative — dropping the
-                // content too — would make a filtered card invisible, which is
-                // a worse answer to "cannot blur" than "did not blur".
+                // A filter scope needs pixels vello cannot produce inline: its
+                // rasterisation happens once, at the end of the whole scene, so
+                // there is no point inside the walk where "the content so far"
+                // exists as pixels. So the walk records the scope's *span* and
+                // carries on drawing its contents into the main scene exactly
+                // as before; `render_filter_scopes` then renders that span on
+                // its own, blurs the readback, and composites the result over
+                // the top. The unblurred copy underneath is invisible because
+                // the blurred one covers it.
                 SceneNode::FilterPush { filter } => {
-                    if !filter.is_identity() {
-                        totals.filters_skipped += 1;
+                    if open_scope.is_none() && !filter.is_identity() {
+                        open_scope = Some((here + 1, *filter));
                     }
                     continue;
                 }
-                SceneNode::FilterPop => continue,
+                SceneNode::FilterPop => {
+                    if let Some((start, filter)) = open_scope.take() {
+                        // `here` is the pop's own index, so the span is
+                        // everything between the markers.
+                        if here > start {
+                            filter_scopes.push(PendingFilterScope {
+                                filter,
+                                start,
+                                len: here - start,
+                            });
+                        }
+                    }
+                    continue;
+                }
                 _ => {}
             }
             let fingerprint = node_fingerprint(node);
@@ -1610,6 +1836,10 @@ impl VelloGpuPresenter {
         // construction.
         self.fragments.retain(|key, _| used_fragments.contains(key));
         self.image_cache.retain(|key, _| used_images.contains(key));
+        // Hand the scopes to the caller: the pixels they need can only be
+        // produced after the whole scene has been encoded, and that requires
+        // the device.
+        self.pending_filters = filter_scopes;
         totals
     }
 
@@ -2449,6 +2679,11 @@ impl Presenter for VelloGpuPresenter {
         }
         let offset = region.map_or((0.0, 0.0), |(x, y, _, _)| (f64::from(x), f64::from(y)));
         let encoded = self.encode(scene, resources, offset);
+        // Filter scopes need the device, so they are rendered here rather than
+        // inside `encode`. `encoded` is taken as mutable because this pass adds
+        // its own draw/skip counts to the same frame's stats.
+        let mut encoded = encoded;
+        self.render_filter_scopes(scene, resources, pw, ph, &mut encoded);
         // After `encode`, the fragment table is this frame's scene — which is
         // what says whether an external texture is still being drawn.
         self.prune_external();
@@ -2630,7 +2865,12 @@ impl Presenter for VelloGpuPresenter {
     fn capabilities(&self) -> RendererCapabilities {
         RendererCapabilities {
             shadows: true,
-            filters: false,
+            // Filter scopes are really blurred: the scope is rendered
+            // offscreen, read back, blurred with the shared kernel and drawn
+            // back over its own content. What is *not* supported is a backdrop
+            // filter — it needs pixels that already exist at a point in the
+            // stream, and vello has no such point.
+            filters: true,
             backdrop_filters: false,
             shaders: true,
         }

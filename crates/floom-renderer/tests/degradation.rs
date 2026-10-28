@@ -256,11 +256,17 @@ fn the_terminal_reports_its_one_counter_as_shadows_and_says_so() {
 /// The check that makes a capability bit accountable, run against the real
 /// vello backend.
 ///
-/// Vello claims shadows and shaders, and does *not* claim filters or backdrop
-/// filters. So a frame in which it dropped only filters must report **no
+/// Vello claims shadows, **filters** and shaders, and does *not* claim backdrop
+/// filters. So a frame in which it dropped only backdrops must report **no
 /// surprises** — the caller was told, and what happened is what it was told
-/// would happen. If vello ever started dropping a shadow while still claiming
-/// `shadows: true`, this is the test that would go red.
+/// would happen. If vello ever started dropping a filter scope (or a shadow)
+/// while still claiming the bit, this is the test that would go red.
+///
+/// The filter count here is deliberately zero: filters are drawn now, so a
+/// dropped one would be a genuine surprise and this test would catch it. Before
+/// the offscreen filter pass existed, a non-zero `filters_skipped` was the
+/// *declared* case and this test asserted it was unsurprising — which is why
+/// the assertion had to change when the capability did.
 #[test]
 fn vellos_claims_and_its_drops_agree() {
     let Some(presenter) = floom_renderer_vello::VelloGpuPresenter::new() else {
@@ -272,9 +278,11 @@ fn vellos_claims_and_its_drops_agree() {
     let caps = <floom_renderer_vello::VelloGpuPresenter as floom_renderer::Presenter>::capabilities(
         &presenter,
     );
+    assert!(caps.filters, "vello draws filter scopes now");
     let frame = DegradationReport {
-        // What vello actually drops today: filters and backdrops, declared.
-        filters_skipped: 3,
+        // What vello actually drops today: backdrops only, and that is
+        // declared.
+        filters_skipped: 0,
         backdrop_filters_skipped: 1,
         // And a path's shadow, which `shadows: true` does not cover — the
         // residual a bit cannot express.
@@ -282,12 +290,36 @@ fn vellos_claims_and_its_drops_agree() {
         shaders_skipped: 0,
     };
     let surprises = frame.unexpected(&caps);
-    // The declared drops are expected.
-    assert_eq!(surprises.filters_skipped, 0, "filters were declared");
-    assert_eq!(surprises.backdrop_filters_skipped, 0, "so were backdrops");
+    assert_eq!(
+        surprises.backdrop_filters_skipped, 0,
+        "backdrops were declared"
+    );
     // The shadow is the honest residual: the bit says shadows work, the
     // counter says one did not. That is exactly the signal a host should see.
     assert_eq!(surprises.shadows_skipped, 1);
+    assert_eq!(surprises.filters_skipped, 0);
+}
+
+/// The same check inverted: a dropped filter scope **is** a surprise now that
+/// vello claims `filters: true`. Without this, `unexpected()` could stop
+/// subtracting filters entirely and the test above would still pass.
+#[test]
+fn a_dropped_filter_is_a_surprise_once_the_bit_claims_it() {
+    let Some(presenter) = floom_renderer_vello::VelloGpuPresenter::new() else {
+        return;
+    };
+    let caps = <floom_renderer_vello::VelloGpuPresenter as floom_renderer::Presenter>::capabilities(
+        &presenter,
+    );
+    let frame = DegradationReport {
+        filters_skipped: 2,
+        ..DegradationReport::default()
+    };
+    assert_eq!(
+        frame.unexpected(&caps).filters_skipped,
+        2,
+        "a claimed capability that dropped something must surface as a surprise"
+    );
 }
 
 /// The skia adapter records; it does not draw. Its report is what its own

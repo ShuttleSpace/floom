@@ -39,7 +39,7 @@ The 2.0 scene vocabulary is `floom-scene`'s `SceneNode` — twelve variants:
 | Backend | Renders pixels? | Rounded corners | Drop shadow | Filter scope | Backdrop filter | Custom shader | Pixel-level tests |
 |---|---|---|---|---|---|---|---|
 | `floom-renderer-software` | **yes** | **yes** | **yes**, honouring `spread` | **yes** | **yes** | ⏭️ counted | **yes** |
-| `floom-renderer-vello` | **yes** (GPU) | **yes** | **yes** on rects; ⏭️ counted on paths | ⏭️ counted | ⏭️ counted | **yes** | **yes** (command-stream, no GPU needed) |
+| `floom-renderer-vello` | **yes** (GPU) | **yes** | **yes** on rects; ⏭️ counted on paths | **yes** (offscreen + shared kernel) | ⏭️ counted | **yes** | **yes** (command-stream, plus GPU pixel tests with `--features gpu`) |
 | `floom-renderer-web` | **yes** (CPU, blitted to a `<canvas>`) | **yes** | **yes** | **yes** | **yes** | ⏭️ counted | no |
 | `floom-renderer-tui` | **yes** (character cells) | ⏭️ counted | ⏭️ counted | ⏭️ counted | ⏭️ counted | ⏭️ counted | no |
 | `floom-renderer-skia-abi` | **no** — it records | ⏭️ counted | ⏭️ counted | ⏭️ counted | ⏭️ counted | ⏭️ counted | n/a |
@@ -62,19 +62,30 @@ rasteriser is not one.
 Its pixel-level tests (`crates/floom-renderer-software/tests/`) are the
 discipline the other backends copy.
 
-### `floom-renderer-vello` — the GPU path, and its two remaining gaps
+### `floom-renderer-vello` — the GPU path, and its one remaining gap
 
 The default desktop and Android backend. It renders shapes, paths, images,
 text and custom shaders.
 
-It has **no way to filter pixels that are already drawn**, so two requests are
-degraded:
+**Filter scopes are drawn.** vello rasterises once, at the end of the whole
+scene, so nothing exists to blur while the walk is running. The scope's span is
+therefore rendered as its own offscreen pass, read back, blurred with
+`floom_renderer::blur::blur_rgba` — the *same* kernel the software rasteriser
+uses, so a `Filter::blur(8.0)` looks the same on both — and drawn back over the
+content it covers. `filters_drawn` counts the ones that really blurred.
 
-- a filter scope draws its content sharp rather than filtered
-  (`filters_skipped`);
-- a backdrop filter draws nothing (`filters_skipped`).
+What it still cannot do is a **backdrop filter**: that wants the pixels already
+drawn at a point in the middle of the stream, and there is no such point.
+Rendering several passes into one target does not work either — vello clears
+the target on every `render_to_texture` call, which was measured rather than
+assumed:
 
-Both are counted, so the degradation is a number rather than an absence.
+```
+one pass   left=[220,40,40,255]  right=[40,200,90,255]
+two passes left=[0,0,0,0]        right=[40,200,90,255]
+```
+
+So a backdrop filter draws nothing and counts it (`filters_skipped`).
 
 **Drop shadows are drawn.** vello 0.7 grew `draw_blurred_rounded_rect` — a
 superellipse-plus-erf approximation of a Gaussian-convolved rounded rect — and
@@ -182,18 +193,33 @@ that vocabulary.
   pixels from a program while a backdrop filter needs pixels that already
   exist.
 
-  A drop shadow on a **rect** is drawn; a shadow on a path is not, because
-  the primitive blurs a rounded rectangle. Counting is not rendering, so a
-  card with a shadow on a rounded rect now has one, and the rest is a visible
-  number (`filters_skipped`).
-- **Pixel-level tests for the GPU path.** The web, the terminal and the
-  software backend have pixel evidence now — the web compares itself against
-  the reference buffer pixel for pixel, the terminal's golden is its
-  character grid as text, and the software backend has text evidence that
-  the ink is a glyph *shape* rather than a filled box. The vello GPU path has
-  no framebuffer test, because producing a comparable buffer from it needs a
-  GPU context and CI has none — but it does have command-stream tests, which
-  assert on the encoding rather than the raster and so run without an adapter.
+  **Correction (2026-10-28):** point 3's *conclusion* still holds but its
+  stated reason was wrong, and the difference mattered. The obstacle is not
+  that "the API renders one scene per call" — it is that **vello clears the
+  target on every `render_to_texture`**, so two passes into the same texture
+  do not compose. Measured, not assumed:
+
+  ```
+  one pass   left=[220,40,40,255]  right=[40,200,90,255]
+  two passes left=[0,0,0,0]        right=[40,200,90,255]
+  ```
+
+  That distinction is what made filter *scopes* implementable (render the
+  scope's span as its own pass, read back, blur, draw it back) while leaving
+  backdrop filters blocked: a scope can be rendered whole, a backdrop filter
+  needs the prefix to survive into the suffix.
+
+  A drop shadow on a **rect** is drawn, and so is a filter scope. A shadow on
+  a path is not — `SceneNode::Path` has no `shadow` field, so there is no
+  request to drop — and a backdrop filter still draws nothing and counts it.
+- **Pixel-level tests for the GPU path.** ✅ Web, terminal and software have
+  pixel evidence; the vello GPU path has had it since 2026-10-27 —
+  `VelloGpuPresenter::render_offscreen` rasterises through the same `encode`
+  the window uses and reads the pixels back, so `tests/gpu_pixels.rs` asserts
+  on ink positions rather than on counters. They need a real adapter, so the
+  gate compiles the `gpu` feature everywhere and reports honestly whether the
+  tests ran or were skipped (`FLOOM_REQUIRE_GPU=1` makes a missing adapter
+  red).
 - **The CJK case is only covered where the font is.** `floom-text` asserts
   that CJK does not shape to `.notdef`, and that test is macOS-gated
   because it needs a font that is installed — an environment property

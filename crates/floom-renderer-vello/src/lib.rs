@@ -203,12 +203,14 @@ impl Renderer for VelloRendererAdapter {
         self.last_cmd_len = 0;
     }
 
-    /// Shadows and filters are degraded, shaders are not.
+    /// What the *recorder* can be said to honour, which is nothing that needs
+    /// pixels.
     ///
-    /// Vello has no blur primitive, so a drop shadow, a filter scope and a
-    /// backdrop filter are all requests it cannot honour — it counts them,
-    /// and this says so before the frame is drawn. A custom shader it *can*
-    /// run: the WGSL program is compiled into a pipeline and rendered.
+    /// This is the headless command recorder, not the GPU presenter: it turns a
+    /// scene into a command list and never rasterises, so it cannot claim a
+    /// shadow, a filter or a shader was drawn. `VelloGpuPresenter` is the one
+    /// that answers for pixels, and its answer differs — it draws shadows, and
+    /// as of the offscreen filter pass it blurs filter scopes too.
     fn capabilities(&self) -> RendererCapabilities {
         RendererCapabilities {
             shadows: false,
