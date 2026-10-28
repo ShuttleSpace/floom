@@ -752,7 +752,58 @@ android / ios / windows 三目标 `cargo check --tests` 干净，含只在手机
 | `share_plus` 的桌面臂 ✅ macOS | `NSSharingServicePicker` 锚在 key window（AppKit 没有无窗口版本）；Windows/Linux 拒绝并点名门：WinRT `DataTransferManager` / Linux 没有跨桌面 share API |
 | `flutter_local_notifications` 的桌面臂 ✅ macOS | 复用 iOS 臂；先查 bundle id，没有就拒绝——`currentNotificationCenter` 在无 bundle 的进程里抛 Rust 接不住的 ObjC 异常 |
 | `window_manager` → 平台层 `Window::control` ✅ | resize / move / fullscreen / minimize / maximize / always-on-top / decorations / visible / focus。没有窗口管理器的后端默认 `Err`；`Ok` 只表示窗口系统收下了请求，最终尺寸仍走 resize 事件 |
-| `tray_manager` → 未做 | 需要 `tray-icon`（Linux 侧还带 GTK 依赖）加事件循环接线。这是形状问题，按 §8 的规矩另开，不在这一批顺手加 |
+| `tray_manager` → `floom-plugin-tray` ✅ | 三臂原生：macOS `NSStatusItem`、Windows `Shell_NotifyIconW` + 自建 message-only 窗口、Linux `StatusNotifierItem` + `com.canonical.dbusmenu`（zbus 阻塞 API，不引 tokio）。**没有**用 `tray-icon`：0.26.1 硬依赖 `winit` 0.30 / `tao` / `eframe` / `gtk`，会在 `floem-winit` 25.10.0 fork 旁边再拉一份 winit，Linux 侧还要 GTK。详见 §10.1 |
 
 `sqflite` 与 `in_app_purchase` 已决定不做。`permission_handler` 不镜像：授权按能力
 各自持有，需要时在那个能力里加 `status()`。
+
+### 10.1 `floom-plugin-tray` —— 三平台全做（2026-10-28）
+
+`tray_manager` 的形状问题是「谁拥有事件循环」。绕开的办法是**不要事件循环**：托盘
+自己不泵消息，它把用户动作写进一个队列，应用在自己的循环里调 `events()` 取走。
+
+```rust
+let mut tray = Tray::show("floom", &[
+    MenuItem::new(1, "Show window"),
+    MenuItem::separator(),
+    MenuItem::new(2, "Quit").disabled(),
+])?;
+for event in tray.events() { /* 每帧或每次输入后 */ }
+drop(tray); // 图标随之消失，不需要 `remove()`
+```
+
+三臂的成本不一样，这一段是本插件最值得读的地方：
+
+| | 托盘对象 | 谁泵消息 | 失败长什么样 |
+|---|---|---|---|
+| macOS | `NSStatusItem` + `NSMenu`，action 目标是 `define_class!` 出来的 ObjC 类 | AppKit（菜单跟踪时它自己的嵌套循环） | 非主线程 → `Err`，点名 main thread |
+| Windows | `Shell_NotifyIconW` + 自建 message-only `HWND` + `HMENU` | 应用的 `GetMessage`/`DispatchMessage`（winit 的循环就是） | `Shell_NotifyIconW(NIM_ADD)` 被拒（桌面没有通知区）→ `Err` |
+| Linux | D-Bus 上的 `org.kde.StatusNotifierItem` + `com.canonical.dbusmenu` | zbus 自己的线程 | 没有 session bus，或总线上没有 `org.kde.StatusNotifierWatcher`（没跑面板）→ `Err` 点名缺的是哪个 |
+
+刻意的取舍：
+
+- **图标是文字标签，不是图片。** menu bar 的 title / 托盘 tooltip / SNI 的 `Title`
+  是三个平台唯一都能渲染、且不需要打包资源的东西。Windows 的 `HICON` 不能为空，
+  那一臂给系统标准应用图标并写明理由——不是假装调用方给了图标。
+- **id 限定 `1..=0xFFFF`。** `0` 是 Win32 报「菜单被取消」的值，上界是 `WM_COMMAND`
+  命令字之外。与其让 Windows 臂把两个 id 重新解释，不如三臂共用的 `show` 直接拒。
+- **Linux 用 `IconName` 而不是 pixmap。** SNI 两者都要，但只有主题图标名能在没有
+  资源管线的前提下承诺存在；`application-x-executable` 是标准图标集里必有的。
+- **菜单静态**：没有 label 更新、子菜单、勾选项，也没有 macOS 上的左右键区分。
+  每一项都是三份形状，加一项是决策不是开关；crate doc 的 "deliberately not here"
+  已经把它们列在那里，而不是留成读代码才能发现的空缺。
+
+验证矩阵（哪些是真跑过的）：
+
+| 目标 | 证据 |
+|---|---|
+| macOS 创建 / 移除 | ✅ `cargo run -p floom-plugin-tray --example tray`：真实 `NSStatusItem` 进 menu bar，10 秒后移除，进程未 abort（ObjC 异常是 abort，不是 panic，所以这条有牙齿） |
+| macOS 点击路径 | ⚠️ 需要人点：example 打印点到的行；`define_class!` 的 target/action 只有真点击才走得到 |
+| 非主线程 | ✅ 单测：worker 线程上 `Tray::show` 返回 `Err("… main thread …")` |
+| id / 空 label 校验 | ✅ 5 个单测（0、越界、重复、空行、合法菜单） |
+| Windows 臂 | ✅ `cargo check --target x86_64-pc-windows-msvc`；本机没有 Windows，未在真机跑 |
+| Linux 臂 | ✅ `cargo check --target x86_64-unknown-linux-gnu` + CI `plugins` job 在 ubuntu 上原生编译并跑单测；未在真面板上跑 |
+| Android / iOS 拒绝臂 | ✅ 两个 target 上走 `unsupported.rs` 的精确拒绝，不是空实现 |
+
+画廊接线是 `device::show_tray` / `device::poll_tray` **两个**按钮：托盘的可观察点在
+handler 返回之后（图标得先活下来，点击才可能到达），所以读数只能是第二次按下。

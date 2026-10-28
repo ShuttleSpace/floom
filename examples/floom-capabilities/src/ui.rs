@@ -47,6 +47,7 @@ use floom_plugin_open_url as open_url;
 use floom_plugin_prefs as prefs;
 use floom_plugin_secure_storage as secure_storage;
 use floom_plugin_share as share;
+use floom_plugin_tray as tray;
 use floom_plugin_vibration as vibration;
 use floom_plugin_wakelock as wakelock;
 use floom_widgets::{Button, Container, Spacer, Stack, Text};
@@ -55,6 +56,17 @@ use crate::probe::{self, Row, State};
 
 /// The keychain store the gallery's secrets round-trip uses.
 const GALLERY_SECRETS: &str = "com.floom.capability-gallery";
+
+thread_local! {
+    /// The tray the show action puts up. It lives here rather than on the stack
+    /// because the icon lives exactly as long as this value: dropping it takes
+    /// the icon away, and a tray that vanished when the button's handler
+    /// returned would be gone before the reader reached the menu bar. The
+    /// macOS arm is main-thread-only, which is why this is a thread local
+    /// rather than a `static`.
+    static TRAY: std::cell::RefCell<Option<tray::Tray>> =
+        const { std::cell::RefCell::new(None) };
+}
 
 /// Muted ink for the question column, so the values stay the loudest thing.
 const DIM: Color = Color::rgb(0x6b, 0x6b, 0x6b);
@@ -448,6 +460,46 @@ fn run_action(id: &str) {
                 None => Err("wrote the value but the store reports it absent".to_string()),
             }
         })(),
+        // A tray needs two presses because one is not enough. `show` puts the
+        // icon up and has to return — the app's own event loop is what
+        // delivers the click — so the report of what was clicked has to be a
+        // second press. That is the same split as every reading/action pair
+        // here, only the reader is the one in the middle.
+        "device::show_tray" => (|| {
+            let items = [
+                tray::MenuItem::new(1, "Say hello"),
+                tray::MenuItem::separator(),
+                tray::MenuItem::new(2, "Not available").disabled(),
+            ];
+            let opened = tray::Tray::show("floom", &items)?;
+            TRAY.with(|slot| *slot.borrow_mut() = Some(opened));
+            Ok("the icon is up — click it, then press tray::events".to_string())
+        })(),
+        // Drains what arrived since the last press. An empty answer is a real
+        // one ("nobody clicked"), not a failure, and saying so is how a reader
+        // tells "the arm works and is idle" from "the arm is inert".
+        "device::poll_tray" => TRAY.with(|slot| match slot.borrow_mut().as_mut() {
+            Some(opened) => {
+                let events = opened.events();
+                if events.is_empty() {
+                    Ok("no clicks since the last press — the icon is still up".to_string())
+                } else {
+                    let named: Vec<String> = events
+                        .iter()
+                        .map(|event| match event {
+                            tray::TrayEvent::Menu(id) => format!("menu row {id}"),
+                            tray::TrayEvent::Activate => "the icon itself".to_string(),
+                        })
+                        .collect();
+                    Ok(format!("clicked: {}", named.join(", ")))
+                }
+            }
+            None => Err(
+                "nothing is up — press tray::show first, and note that dropping the \
+                 `Tray` is what removes the icon"
+                    .to_string(),
+            ),
+        }),
         other => Err(format!("unknown action `{other}`")),
     };
     match outcome {

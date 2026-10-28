@@ -730,6 +730,12 @@ pub fn actions() -> Vec<(&'static str, &'static str)> {
         // because a secret only reads back after something wrote it, and
         // because a reading must not change the world.
         ("secure_storage::SecureStorage::set", "device::store_secret"),
+        // Two buttons, because a tray is not observable in one press: the icon
+        // has to survive the handler returning (the app loop is what delivers
+        // the click), and the click is only readable afterwards. On a phone
+        // both refuse and say why — a mobile app has no tray to put an icon in.
+        ("tray::Tray::show", "device::show_tray"),
+        ("tray::Tray::events", "device::poll_tray"),
     ]
 }
 

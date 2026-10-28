@@ -24,9 +24,14 @@
 4. **已有插件的平台覆盖不全，补齐比新增便宜。** `share`（share_plus 4.94M）和
    `notifications`（flutter_local_notifications 3.56M）都只有 Android + iOS 臂；
    两个上游包都是全桌面。桌面用户按同一个能力名调用会得到「不可用」。
-5. **桌面三件套里只有一件该做成插件。** `window_manager`（876k）和 `tray_manager`
-   （229k）必须有宿主（窗口、事件循环），属于 `floom-platform-desktop`/`floom-app`；
-   `screen_brightness`（226k）可以是普通 L5 插件。
+5. **桌面三件套里两件该做成插件。** 这条原本写的是「只有一件」：当时把
+   `tray_manager`（229k）和 `window_manager`（876k）一起归给平台层，理由是
+   「必须有宿主」。前半对、后半错——窗口属于宿主，所以 `window_manager` 的能力
+   落在 `floom-platform-desktop` 的 `Window::control`；**托盘不属于宿主**，
+   `NSStatusItem`、`Shell_NotifyIconW` 的 message-only 窗口、D-Bus 上的
+   `StatusNotifierItem` 都是插件自己造的对象，所以我把它做成了
+   `floom-plugin-tray`（2026-10-28，三平台，见 `plugin-catalog.md` §10.1）。
+   `screen_brightness`（226k）仍然是普通 L5 插件。
 
 ## 1. 方法
 
@@ -98,7 +103,7 @@
 | 292,244 | 2,220 | `home_widget` | abaus.dev | ✗ 桌面小组件 |
 | 268,482 | 1,363 | `flutter_webrtc` | cloudwebrtc.dev | ⚠ 大件，不是能力插件 |
 | 265,974 | 505 | `background_downloader` | 4t.dev | ○ C5 |
-| 228,814 | 291 | `tray_manager` | leanflutter.dev | ⚠ 平台层（无托盘） |
+| 228,814 | 291 | `tray_manager` | leanflutter.dev | ✅ `tray` 三桌面（手机无托盘） |
 | 226,384 | 170 | `screen_brightness` | aaassseee.dev | ✗ 屏幕亮度 |
 | 207,053 | 1,135 | `quick_actions` | flutter.dev | ○ C1 |
 | 205,649 | 964 | `map_launcher` | mohameddev.dev | ✗ 唤起地图 app |

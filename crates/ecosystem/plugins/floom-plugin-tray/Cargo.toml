@@ -1,0 +1,69 @@
+[package]
+name = "floom-plugin-tray"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "A Floom plugin: a tray icon with a menu, in the system tray or menu bar"
+rust-version.workspace = true
+publish = false
+
+# A capability plugin: one capability, one crate, opt-in by dependency.
+#
+# Unlike its siblings this one does not depend on `floom-platform` at all, and
+# that is not an accident of implementation: a tray owns its own OS object (a
+# status item, a hidden message window, a D-Bus object) and never needs a host
+# handle to make one. It reaches up into the UI only through the events its
+# caller drains, so it sits at the same layer as any other capability and adds
+# nothing to a build that does not name it.
+[dependencies]
+
+# `NSStatusItem` lives in the menu bar, which is what a macOS tray is. The
+# status item is created on the main thread and must be removed from it.
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2 = { version = "0.6", default-features = false, features = ["std"] }
+objc2-app-kit = { version = "0.3", default-features = false, features = [
+    "std",
+    "objc2-core-foundation",
+    "NSApplication",
+    "NSButton",
+    "NSControl",
+    "NSMenu",
+    "NSMenuItem",
+    "NSResponder",
+    "NSStatusBar",
+    "NSStatusBarButton",
+    "NSStatusItem",
+    "NSView",
+] }
+objc2-foundation = { version = "0.3", default-features = false, features = [
+    "std",
+    "NSDate",
+    "NSObject",
+    "NSRunLoop",
+    "NSString",
+] }
+
+# `Shell_NotifyIconW` needs a window to receive its callback messages, so the
+# arm creates a message-only window of its own and lets the app's message pump
+# dispatch to it. `TrackPopupMenu` is the menu half; there is no Win32 tray
+# without both.
+[target.'cfg(target_os = "windows")'.dependencies]
+windows-sys = { version = "0.61", features = [
+    "Win32_Foundation",
+    "Win32_Graphics_Gdi",
+    "Win32_System_LibraryLoader",
+    "Win32_UI_Shell",
+    "Win32_UI_WindowsAndMessaging",
+] }
+
+# Linux has no cross-desktop tray API, only a D-Bus convention: a
+# `StatusNotifierItem` object that a panel (the "watcher") finds by name, plus
+# `com.canonical.dbusmenu` for the menu. zbus supplies the bus and the object
+# server in blocking form — this arm needs no async runtime of its own.
+[target.'cfg(target_os = "linux")'.dependencies]
+serde = { version = "1", features = ["derive"] }
+zbus = { version = "5", default-features = false, features = [
+    "async-io",
+    "blocking-api",
+] }

@@ -143,8 +143,12 @@ CAPABILITY_PLUGINS=(
   floom-plugin-background-work
   floom-plugin-mdns
   floom-plugin-secure-storage
+  floom-plugin-tray
 )
 
+# Checked against the phone targets too. `floom-plugin-tray` is here for its
+# refusal rather than for a feature — its mobile arm is the message that a phone
+# has no tray, and an arm no check compiles is an arm free to rot.
 MOBILE_CAPABILITY_PLUGINS=(
   floom-plugin-battery
   floom-plugin-connectivity
@@ -165,6 +169,7 @@ MOBILE_CAPABILITY_PLUGINS=(
   floom-plugin-background-work
   floom-plugin-mdns
   floom-plugin-secure-storage
+  floom-plugin-tray
 )
 
 # The plugins with real Windows arms. Everything else in the capability list
@@ -183,6 +188,7 @@ WINDOWS_CAPABILITY_PLUGINS=(
   floom-plugin-background-work
   floom-plugin-mdns
   floom-plugin-secure-storage
+  floom-plugin-tray
 )
 
 PASS=0

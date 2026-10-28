@@ -84,6 +84,7 @@ floom-plugin-secure-storage = { path = "../../crates/ecosystem/plugins/floom-plu
 floom-plugin-sensors = { path = "../../crates/ecosystem/plugins/floom-plugin-sensors", version = "0.2.0" }
 floom-plugin-share = { path = "../../crates/ecosystem/plugins/floom-plugin-share", version = "0.2.0" }
 floom-plugin-vibration = { path = "../../crates/ecosystem/plugins/floom-plugin-vibration", version = "0.2.0" }
+floom-plugin-tray = { path = "../../crates/ecosystem/plugins/floom-plugin-tray", version = "0.2.0" }
 floom-types = { path = "../../crates/floom-types", version = "0.2.0" }
 floom-widgets = { path = "../../crates/floom-widgets", version = "0.2.0" }
 
