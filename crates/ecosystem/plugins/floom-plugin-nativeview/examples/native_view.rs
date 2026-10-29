@@ -41,8 +41,7 @@ use std::ffi::c_void;
 use objc2::rc::Retained;
 use objc2::{MainThreadMarker, msg_send};
 use objc2_app_kit::{
-    NSApplication, NSApplicationActivationPolicy, NSBackingStoreType, NSWindow,
-    NSWindowStyleMask,
+    NSApplication, NSApplicationActivationPolicy, NSBackingStoreType, NSWindow, NSWindowStyleMask,
 };
 use objc2_foundation::{NSDate, NSPoint, NSRect, NSRunLoop, NSSize};
 
@@ -235,7 +234,11 @@ fn main() {
     // rather than an empty window, then hold the window up for a few seconds.
     let shown = slot_of(3);
     controller
-        .bind(shown, NativeViewKind::Web, &[NativeCompositionMode::Overlay])
+        .bind(
+            shown,
+            NativeViewKind::Web,
+            &[NativeCompositionMode::Overlay],
+        )
         .expect("a web view to leave on screen");
     let state = NativeState {
         rect: Rect {
@@ -254,7 +257,9 @@ fn main() {
     controller.apply(shown, state).expect("placed");
     load_url(shown, page).expect("loaded");
 
-    println!("\nthe native half did all of it: a real web view created, placed, loaded, and destroyed,");
+    println!(
+        "\nthe native half did all of it: a real web view created, placed, loaded, and destroyed,"
+    );
     println!("and a kind it cannot build refused with a reason that names it.");
     println!("the window stays up for 10 more seconds — close it to quit early.");
 

@@ -39,8 +39,7 @@ use std::ffi::{CStr, c_char, c_void};
 use objc2::rc::Retained;
 use objc2::{MainThreadMarker, msg_send};
 use objc2_app_kit::{
-    NSApplication, NSApplicationActivationPolicy, NSBackingStoreType, NSWindow,
-    NSWindowStyleMask,
+    NSApplication, NSApplicationActivationPolicy, NSBackingStoreType, NSWindow, NSWindowStyleMask,
 };
 use objc2_foundation::{NSDate, NSPoint, NSRect, NSRunLoop, NSSize, NSString};
 
@@ -159,7 +158,11 @@ fn main() {
         generation: 0,
     };
     controller
-        .bind(pslot, NativeViewKind::Web, &[NativeCompositionMode::Overlay])
+        .bind(
+            pslot,
+            NativeViewKind::Web,
+            &[NativeCompositionMode::Overlay],
+        )
         .expect("a web view");
 
     // The window's content view is 560×420 points; the rect crosses as
@@ -240,9 +243,14 @@ extern "C" fn on_js_message(slot: floom_native_ffi::abi::FloomNativeSlot, body: 
     } else {
         // SAFETY: the plugin documents the pointer as NUL-terminated and valid
         // for the duration of this call; nothing outlives it.
-        unsafe { CStr::from_ptr(body) }.to_string_lossy().into_owned()
+        unsafe { CStr::from_ptr(body) }
+            .to_string_lossy()
+            .into_owned()
     };
-    println!("js -> rust  [slot {}:{}] {text}", slot.index, slot.generation);
+    println!(
+        "js -> rust  [slot {}:{}] {text}",
+        slot.index, slot.generation
+    );
 
     // Answer through the same slot the message arrived on, so a scene with
     // several participants cannot answer the wrong one.

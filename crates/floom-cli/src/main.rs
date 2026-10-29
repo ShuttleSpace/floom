@@ -291,10 +291,12 @@ fn create_app(opts: &CreateOpts, root: &Path) -> Result<(), String> {
 /// native half into the same binary as `src/lib.rs`, so the app calls
 /// `extern "C"` directly and the plugin is resolved at link time.
 fn create_plugin(opts: &CreateOpts, root: &Path) -> Result<(), String> {
+    let android = opts.platforms.iter().any(|p| p == "android");
+
     // --- Rust half -----------------------------------------------------
     write(
         &root.join("Cargo.toml"),
-        &templates::plugin_cargo_toml(&opts.name, opts.platform_path.as_deref()),
+        &templates::plugin_cargo_toml(&opts.name, opts.platform_path.as_deref(), &opts.platforms),
     )?;
     write(
         &root.join("build.rs"),
@@ -302,8 +304,14 @@ fn create_plugin(opts: &CreateOpts, root: &Path) -> Result<(), String> {
     )?;
     write(
         &root.join("src/lib.rs"),
-        &templates::plugin_lib_rs(&opts.name),
+        &templates::plugin_lib_rs(&opts.name, android),
     )?;
+    if android {
+        write(
+            &root.join("src/android.rs"),
+            &templates::plugin_android_rs(&opts.name),
+        )?;
+    }
 
     // The C ABI sits at `native/common/`, beside `src/` and every platform
     // directory, because it belongs to the plugin rather than to any one
@@ -589,7 +597,15 @@ fn emit_app_platform(opts: &CreateOpts, root: &Path, platform: &str) -> Result<(
 /// `native/desktop/` and a `src/lib.rs` that a reader cannot connect to the
 /// Kotlin file three directories away.
 fn emit_plugin_platform(opts: &CreateOpts, root: &Path, platform: &str) -> Result<(), String> {
-    let dir = root.join("native").join(platform);
+    // Android's half is a Gradle *library* beside `src/`, the Flutter plugin
+    // shape: `android/build.gradle.kts`, `android/src/main/java/…`, and the
+    // manifest that declares the plugin's permissions. The Rust edge is
+    // `src/android.rs`; there is no `native/` directory for it.
+    let dir = if platform == "android" {
+        root.join("android")
+    } else {
+        root.join("native").join(platform)
+    };
     fs::create_dir_all(&dir).map_err(|e| format!("{}: {e}", dir.display()))?;
     let lib = native_project::lib_name(&opts.name);
 
@@ -607,13 +623,6 @@ fn emit_plugin_platform(opts: &CreateOpts, root: &Path, platform: &str) -> Resul
             // A plugin project is a single Gradle module: `build.gradle.kts` is
             // both the root and the library, so it is written once, and it
             // carries the `repositories` block itself.
-            //
-            // Writing a root file and then overwriting it with the library file is
-            // the shape of bug that costs an afternoon: the overwrite drops
-            // `allprojects { repositories { ... } }` and the build fails at
-            // `compileDebugKotlin` with "Cannot resolve external dependency
-            // org.jetbrains.kotlin:kotlin-stdlib because no repositories are
-            // defined" — a message about Kotlin, in a file that never mentioned it.
             write(
                 &dir.join("build.gradle.kts"),
                 &native_project::android_plugin_build_gradle(&opts.name, &lib),
@@ -631,21 +640,19 @@ fn emit_plugin_platform(opts: &CreateOpts, root: &Path, platform: &str) -> Resul
                 &dir.join("src/main/AndroidManifest.xml"),
                 &native_project::android_plugin_manifest(&opts.name),
             )?;
+            let class = native_project::android_java_class(&opts.name);
+            let package_dir = format!("dev/floom/plugin/{}", opts.name.replace('-', "_"));
             write(
                 &dir.join(format!(
-                    "src/main/kotlin/dev/floom/plugin/{}Plugin.kt",
-                    native_project::kotlin_class_name(&opts.name)
+                    "src/main/java/{package_dir}/{}Plugin.java",
+                    class.strip_suffix("Plugin").unwrap_or(&class)
                 )),
-                &native_project::android_plugin_kotlin(&opts.name),
+                &native_project::android_plugin_java(&opts.name),
             )?;
-            // The C shim: the C ABI, implemented over JNI. Kotlin cannot export
-            // a C symbol, so this is where the four entry points live.
-            let cpp_dir = dir.join("src").join("main").join("cpp");
-            fs::create_dir_all(&cpp_dir).map_err(|e| format!("{}: {e}", cpp_dir.display()))?;
-            write(
-                &cpp_dir.join(format!("floom_{}_android.c", opts.name.replace('-', "_"))),
-                &native_project::android_plugin_c_shim(&opts.name),
-            )?;
+            specific_readme = Some(templates::plugin_platform_readme(
+                "Android",
+                "Android Studio",
+            ));
         }
         "ios" => {
             write(
@@ -816,10 +823,9 @@ mod tests {
         // plugin links against symbols that do not exist — and the failure
         // appears as an undefined symbol at link time, on a machine that is
         // not the one that wrote the code.
-        let dir = scaffold("symbols", &["android", "ios", "macos"]);
+        let dir = scaffold("symbols", &["ios"]);
         let header = read(&dir, "native/common/floom_symbols.h");
         let desktop = read(&dir, "native/desktop/floom_symbols.c");
-        let android = read(&dir, "native/android/src/main/cpp/floom_symbols_android.c");
         let swift = read(&dir, "native/ios/Classes/SymbolsPlugin.swift");
 
         for sym in ABI_SYMBOLS {
@@ -828,10 +834,6 @@ mod tests {
             assert!(
                 desktop.contains(&symbol),
                 "the desktop half must define {symbol}"
-            );
-            assert!(
-                android.contains(&symbol),
-                "the Android shim must define {symbol}"
             );
             assert!(
                 swift.contains(&symbol),
@@ -844,7 +846,6 @@ mod tests {
         // built against.
         assert!(header.contains("floom_symbols_abi_version"));
         assert!(desktop.contains("floom_symbols_abi_version"));
-        assert!(android.contains("floom_symbols_abi_version"));
         assert!(swift.contains("floom_symbols_abi_version"));
     }
 
@@ -880,32 +881,72 @@ mod tests {
     }
 
     #[test]
-    fn the_kotlin_half_is_called_by_rather_than_calling_out() {
-        // `external fun` in Kotlin declares the *opposite* contract — Rust
-        // exporting to Kotlin — and the two halves then disagree about who
-        // owns the capability. The Kotlin half is reached by the C shim over
-        // JNI, so its methods are ordinary static methods.
+    fn the_android_half_is_java_and_the_rust_edge_calls_it_over_jni() {
+        // The capability is Java, compiled into the host's dex, and the Rust
+        // half is a JNI call: JNI *is* the FFI here, and a C shim would be the
+        // same JNI code moved into a third language with no isolation gained.
         let dir = scaffold("kotlin", &["android"]);
-        let kotlin = read(
+        let java = read(
             &dir,
-            "native/android/src/main/kotlin/dev/floom/plugin/KotlinPlugin.kt",
+            "android/src/main/java/dev/floom/plugin/kotlin/KotlinPlugin.java",
+        );
+        let android_rs = read(&dir, "src/android.rs");
+        let lib_rs = read(&dir, "src/lib.rs");
+        let cargo_toml = read(&dir, "Cargo.toml");
+        let build_rs = read(&dir, "build.rs");
+        let gradle = read(&dir, "android/build.gradle.kts");
+
+        assert!(
+            !declares_external_fun(&java),
+            "the Java half must not declare an `external fun`: that is the \
+             opposite contract, and the JNI call is what reaches it"
+        );
+        assert!(
+            java.contains("public static boolean enable(Context context)"),
+            "the Java half has to be reachable as a static method"
+        );
+        assert!(java.contains("public static void disable()"));
+
+        assert!(
+            android_rs.contains("bridge::app_class"),
+            "the Rust edge must resolve the class through the app's class loader"
+        );
+        assert!(
+            android_rs.contains("dev/floom/plugin/kotlin/KotlinPlugin"),
+            "the class name the Rust side looks up"
+        );
+        assert!(
+            android_rs.contains("jni::jni_str!(\"enable\")"),
+            "the edge must call the Java half's enable"
         );
 
         assert!(
-            !declares_external_fun(&kotlin),
-            "the Kotlin half must not declare `external fun`: that is the \
-             opposite contract, and the C shim is what reaches Kotlin"
+            lib_rs.contains("#[cfg(target_os = \"android\")]"),
+            "the Rust half has to be split from the C half on android"
+        );
+        assert!(lib_rs.contains("android::enable"));
+        assert!(lib_rs.contains("android::disable"));
+        assert!(lib_rs.contains("return Some(CAPABILITY_ID)"));
+
+        assert!(
+            cargo_toml.contains("floom-platform-mobile"),
+            "the android edge needs the JNI bridge from the platform layer"
         );
         assert!(
-            kotlin.contains("@JvmStatic"),
-            "the C shim looks the methods up as static methods, so they need \
-             `@JvmStatic` or `GetStaticMethodID` fails"
+            cargo_toml.contains("jni = \"0.22\""),
+            "the edge drives the JVM through the jni crate"
         );
+
         assert!(
-            dir.join("native/android/src/main/cpp/floom_kotlin_android.c")
-                .is_file(),
-            "the C shim is where the C ABI is implemented on Android"
+            build_rs.contains("if target_os == \"android\""),
+            "build.rs must let the Java half through without looking for C sources"
         );
+        assert!(gradle.contains("com.android.library"));
+        assert!(
+            !gradle.contains("org.jetbrains.kotlin.android"),
+            "the java half means no Kotlin plugin: d8 consumes javac output directly"
+        );
+        assert!(!dir.join("native/android").exists());
     }
 
     #[test]
@@ -1043,27 +1084,41 @@ mod tests {
 
     #[test]
     fn the_native_half_lives_where_build_rs_looks_for_it() {
-        // `build.rs` reads `native/<platform>/`; the platform halves are
-        // written to the root. A plugin whose files are in two places has a
-        // build script that finds nothing and a reader who cannot connect the
-        // Kotlin file to the header it includes.
-        let dir = scaffold("layout", &["android", "ios", "macos"]);
+        // `build.rs` reads `native/<platform>/` for the platforms whose half is
+        // C, Swift or ArkTS; Android is the exception, written into `build.rs`
+        // and `src/lib.rs` itself: its half is Java, so the Rust edge owns
+        // `src/android.rs` and the capability owns `android/`.
+        let dir = scaffold("layout", &["macos"]);
 
         for rel in [
             "native/common/floom_layout.h",
             "native/desktop/floom_layout.c",
-            "native/android/src/main/cpp/floom_layout_android.c",
-            "native/ios/Classes/LayoutPlugin.swift",
         ] {
             assert!(dir.join(rel).is_file(), "{rel} must exist under native/");
         }
         assert!(
             !dir.join("android").exists(),
-            "the platform half must not be written beside src/"
+            "the native half must not live beside src/ for a non-android target"
         );
         assert!(
             !dir.join("ios").exists(),
-            "the platform half must not be written beside src/"
+            "the native half must not live beside src/ for a non-ios target"
+        );
+
+        let android_dir = scaffold("nativedroid", &["android"]);
+        assert!(
+            android_dir
+                .join("android/src/main/java/dev/floom/plugin/nativedroid/NativedroidPlugin.java")
+                .is_file(),
+            "the java half lives in the android library module"
+        );
+        assert!(
+            android_dir.join("src/android.rs").is_file(),
+            "the rust edge lives beside src/"
+        );
+        assert!(
+            !android_dir.join("native/android").exists(),
+            "there is no native/ directory for the java half"
         );
     }
 }

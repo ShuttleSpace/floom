@@ -1,6 +1,8 @@
-//! Android share via `Intent.ACTION_SEND` and a chooser.
+//! Android share via `SharePlugin`.
 //!
-//! Adapted from `gpui-mobile` (Apache-2.0).
+//! The capability is Java: building an `ACTION_SEND` intent, wrapping it in a
+//! chooser and starting it are Android APIs, and `SharePlugin` owns them. This
+//! file only carries the ask across JNI.
 //!
 //! # Text works, files do not
 //!
@@ -24,8 +26,11 @@
 //! pass that authority down) rather than something this plugin can do from the
 //! Rust side.
 
-use floom_platform_mobile::jni::{self as jni_helpers, JniExt};
-use jni::objects::{JObject, JValue};
+use floom_platform_mobile::jni::{self as bridge, JniExt};
+use jni::objects::JValue;
+
+/// `SharePlugin`'s class, as `ClassLoader.loadClass` expects it.
+const CLASS: &str = "dev.floom.plugin.share.SharePlugin";
 
 pub fn share_text(text: &str) -> Result<(), String> {
     if text.is_empty() {
@@ -33,34 +38,25 @@ pub fn share_text(text: &str) -> Result<(), String> {
         // target app gets a blank body. That is a caller bug worth naming.
         return Err("share_text: the text to share is empty".into());
     }
-    jni_helpers::with_env(|env| {
-        let activity = jni_helpers::activity(env)?;
-        let intent = send_intent(env)?;
-
-        // `intent.setType("text/plain")` — the MIME type is what makes the
-        // chooser offer messaging and mail apps rather than only file handlers.
-        let mime = env.new_string("text/plain").e()?;
-        env.call_method(
-            &intent,
-            jni::jni_str!("setType"),
-            jni::jni_sig!("(Ljava/lang/String;)Landroid/content/Intent;"),
-            &[JValue::Object(&mime)],
-        )
-        .e()?;
-
-        // `EXTRA_TEXT` is a `static final String` on `Intent`; it is fetched by
-        // name so the wire format is the platform's, not a literal copy.
-        let extra_text = static_string(env, "EXTRA_TEXT")?;
+    bridge::with_env(|env| {
+        let class = class(env)?;
+        let context = bridge::activity(env)?;
         let body = env.new_string(text).e()?;
-        env.call_method(
-            &intent,
-            jni::jni_str!("putExtra"),
-            jni::jni_sig!("(Ljava/lang/String;Ljava/lang/CharSequence;)Landroid/content/Intent;"),
-            &[JValue::Object(&extra_text), JValue::Object(&body)],
-        )
-        .e()?;
-
-        start_chooser(env, &activity, &intent)
+        let shared = env
+            .call_static_method(
+                &class,
+                jni::jni_str!("shareText"),
+                jni::jni_sig!("(Landroid/content/Context;Ljava/lang/String;)Z"),
+                &[JValue::Object(&context), JValue::Object(&body)],
+            )
+            .e()?
+            .z()
+            .e()?;
+        if shared {
+            Ok(())
+        } else {
+            Err("share_text: SharePlugin.shareText reported the chooser did not start".into())
+        }
     })
 }
 
@@ -85,80 +81,6 @@ pub fn share_files(paths: &[&str]) -> Result<(), String> {
     )
 }
 
-/// `new Intent(Intent.ACTION_SEND)`.
-fn send_intent<'local>(env: &mut jni::Env<'local>) -> Result<JObject<'local>, String> {
-    let intent_class = env
-        .find_class(jni::jni_str!("android/content/Intent"))
-        .e()?;
-    let action = env
-        .get_static_field(
-            &intent_class,
-            jni::jni_str!("ACTION_SEND"),
-            jni::jni_sig!("Ljava/lang/String;"),
-        )
-        .e()?
-        .l()
-        .e()?;
-    env.new_object(
-        &intent_class,
-        jni::jni_sig!("(Ljava/lang/String;)V"),
-        &[JValue::Object(&action)],
-    )
-    .e()
-}
-
-/// Wrap the intent in a chooser and start it.
-///
-/// `Intent.createChooser` is used rather than `startActivity(intent)` so the
-/// user gets the system picker: `ACTION_SEND` on a device with one matching app
-/// would otherwise launch it directly, which is not what a "share" button means.
-fn start_chooser(
-    env: &mut jni::Env,
-    activity: &JObject<'_>,
-    intent: &JObject<'_>,
-) -> Result<(), String> {
-    let intent_class = env
-        .find_class(jni::jni_str!("android/content/Intent"))
-        .e()?;
-    let title = env.new_string("Share via").e()?;
-    let chooser = env
-        .call_static_method(
-            &intent_class,
-            jni::jni_str!("createChooser"),
-            jni::jni_sig!(
-                "(Landroid/content/Intent;Ljava/lang/CharSequence;)Landroid/content/Intent;"
-            ),
-            &[JValue::Object(intent), JValue::Object(&title)],
-        )
-        .e()?
-        .l()
-        .e()?;
-    // `startActivity` returns `void`, so there is no value to convert — only
-    // the error path matters.
-    env.call_method(
-        activity,
-        jni::jni_str!("startActivity"),
-        jni::jni_sig!("(Landroid/content/Intent;)V"),
-        &[JValue::Object(&chooser)],
-    )
-    .e()?;
-    Ok(())
-}
-
-/// A `static final String` field of `android.content.Intent`.
-fn static_string<'local>(
-    env: &mut jni::Env<'local>,
-    name: &str,
-) -> Result<JObject<'local>, String> {
-    let class = env
-        .find_class(jni::jni_str!("android/content/Intent"))
-        .e()?;
-    env.get_static_field(
-        &class,
-        jni::strings::JNIString::from(name),
-        jni::jni_sig!("Ljava/lang/String;"),
-    )
-    .e()?
-    .l()
-    .e()
+fn class<'local>(env: &mut jni::Env<'local>) -> Result<jni::objects::JClass<'local>, String> {
+    bridge::app_class(env, CLASS)
 }

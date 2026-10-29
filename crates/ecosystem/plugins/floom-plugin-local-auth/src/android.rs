@@ -1,6 +1,7 @@
-//! Android local authentication via `KeyguardManager`.
+//! Android local authentication via `LocalAuthPlugin`.
 //!
-//! Adapted from `gpui-mobile` (Apache-2.0).
+//! The capability is Java: `KeyguardManager` is an Android API, and
+//! `LocalAuthPlugin` owns it. This file only carries the ask across JNI.
 //!
 //! # What this arm actually uses, and why
 //!
@@ -39,49 +40,34 @@
 //! unavailable, rather than returning `Ok` when the intent was merely started.
 
 use super::BiometricKind;
-use floom_platform_mobile::jni::{self as jni_helpers, JniExt};
-use jni::objects::{JObject, JValue};
+use floom_platform_mobile::jni::{self as bridge, JniExt};
+use jni::objects::JValue;
+
+/// `LocalAuthPlugin`'s class, as `ClassLoader.loadClass` expects it.
+const CLASS: &str = "dev.floom.plugin.local_auth.LocalAuthPlugin";
+
+/// `LocalAuthPlugin.BIOMETRIC_NONE`.
+const BIOMETRIC_NONE: i32 = 0;
+/// `LocalAuthPlugin.BIOMETRIC_FINGERPRINT`.
+const BIOMETRIC_FINGERPRINT: i32 = 1;
 
 pub fn available_biometric() -> BiometricKind {
-    jni_helpers::with_env(|env| {
-        let keyguard = keyguard_manager(env)?;
-        // `isDeviceSecure()` is API 23+; on 16–22 the deprecated
-        // `isKeyguardSecure()` answers the same question. Both are tried in
-        // order so the plugin does not report "no biometric" on a secured
-        // older device.
-        let secure = match env
-            .call_method(
-                &keyguard,
-                jni::jni_str!("isDeviceSecure"),
-                jni::jni_sig!("()Z"),
-                &[],
+    bridge::with_env(|env| {
+        let class = class(env)?;
+        let context = bridge::activity(env)?;
+        let kind = env
+            .call_static_method(
+                &class,
+                jni::jni_str!("availableBiometric"),
+                jni::jni_sig!("(Landroid/content/Context;)I"),
+                &[JValue::Object(&context)],
             )
-            .and_then(|v| v.z())
-        {
-            Ok(secure) => secure,
-            Err(_) => {
-                env.exception_clear();
-                env.call_method(
-                    &keyguard,
-                    jni::jni_str!("isKeyguardSecure"),
-                    jni::jni_sig!("()Z"),
-                    &[],
-                )
-                .and_then(|v| v.z())
-                .unwrap_or(false)
-            }
-        };
-        if !secure {
-            return Ok(BiometricKind::None);
-        }
-        // The device is secured. If it has a fingerprint sensor, that is the
-        // modality the system will offer; otherwise the credential is a PIN or
-        // pattern, which has no `BiometricKind` and is reported as `None` — the
-        // enum names biometrics, not "a lock screen exists".
-        Ok(if has_fingerprint(env)? {
-            BiometricKind::Fingerprint
-        } else {
-            BiometricKind::None
+            .e()?
+            .i()
+            .e()?;
+        Ok(match kind {
+            BIOMETRIC_FINGERPRINT => BiometricKind::Fingerprint,
+            _ => BiometricKind::None,
         })
     })
     .unwrap_or(BiometricKind::None)
@@ -91,26 +77,22 @@ pub fn authenticate(reason: &str) -> Result<(), String> {
     if reason.is_empty() {
         return Err("local-auth: the prompt reason is empty".into());
     }
-    jni_helpers::with_env(|env| {
-        let keyguard = keyguard_manager(env)?;
-        let activity = jni_helpers::activity(env)?;
-
-        let intent = env
-            .call_method(
-                &keyguard,
-                jni::jni_str!("createConfirmDeviceCredentialIntent"),
-                jni::jni_sig!(
-                    "(Ljava/lang/CharSequence;Ljava/lang/CharSequence;)Landroid/content/Intent;"
-                ),
-                &[
-                    JValue::Object(&JObject::null()),
-                    JValue::Object(&JObject::null()),
-                ],
+    let reason_for_msg = reason.to_string();
+    bridge::with_env(|env| {
+        let class = class(env)?;
+        let context = bridge::activity(env)?;
+        let reason = env.new_string(reason).e()?;
+        let launched = env
+            .call_static_method(
+                &class,
+                jni::jni_str!("authenticate"),
+                jni::jni_sig!("(Landroid/content/Context;Ljava/lang/String;)Z"),
+                &[JValue::Object(&context), JValue::Object(&reason)],
             )
             .e()?
-            .l()
+            .z()
             .e()?;
-        if intent.is_null() {
+        if !launched {
             // The platform returns null when no credential is enrolled; there
             // is nothing to prompt for.
             return Err(
@@ -119,20 +101,8 @@ pub fn authenticate(reason: &str) -> Result<(), String> {
                     .into(),
             );
         }
-
-        // `startActivityForResult` needs a request code; the result is what the
-        // NativeActivity glue does not forward, which is why this function
-        // cannot report success.
-        env.call_method(
-            &activity,
-            jni::jni_str!("startActivityForResult"),
-            jni::jni_sig!("(Landroid/content/Intent;I)V"),
-            &[JValue::Object(&intent), JValue::Int(0)],
-        )
-        .e()?;
-
         Err(format!(
-            "local-auth: the device-credential prompt was launched for {reason:?}, \
+            "local-auth: the device-credential prompt was launched for {reason_for_msg:?}, \
              but its result arrives in onActivityResult, which the \
              hasCode=\"false\" NativeActivity does not forward to Floom. \
              Treat this call as \"prompt shown\", not \"authenticated\"."
@@ -140,57 +110,6 @@ pub fn authenticate(reason: &str) -> Result<(), String> {
     })
 }
 
-/// `Context.getSystemService(KeyguardManager.class)`.
-fn keyguard_manager<'local>(env: &mut jni::Env<'local>) -> Result<JObject<'local>, String> {
-    let activity = jni_helpers::activity(env)?;
-    let class = env
-        .find_class(jni::jni_str!("android/app/KeyguardManager"))
-        .e()?;
-    env.call_method(
-        &activity,
-        jni::jni_str!("getSystemService"),
-        jni::jni_sig!("(Ljava/lang/Class;)Ljava/lang/Object;"),
-        &[JValue::Object(&JObject::from(class))],
-    )
-    .e()?
-    .l()
-    .e()
-}
-
-/// `PackageManager.hasSystemFeature(FEATURE_FINGERPRINT)`.
-fn has_fingerprint(env: &mut jni::Env) -> Result<bool, String> {
-    let activity = jni_helpers::activity(env)?;
-    let manager = env
-        .call_method(
-            &activity,
-            jni::jni_str!("getPackageManager"),
-            jni::jni_sig!("()Landroid/content/pm/PackageManager;"),
-            &[],
-        )
-        .e()?
-        .l()
-        .e()?;
-    // The class is resolved into a local first: `get_static_field` already
-    // borrows `env` mutably, so looking it up inline is a second borrow.
-    let package_manager = env
-        .find_class(jni::jni_str!("android/content/pm/PackageManager"))
-        .e()?;
-    let feature = env
-        .get_static_field(
-            &package_manager,
-            jni::jni_str!("FEATURE_FINGERPRINT"),
-            jni::jni_sig!("Ljava/lang/String;"),
-        )
-        .e()?
-        .l()
-        .e()?;
-    env.call_method(
-        &manager,
-        jni::jni_str!("hasSystemFeature"),
-        jni::jni_sig!("(Ljava/lang/String;)Z"),
-        &[JValue::Object(&feature)],
-    )
-    .e()?
-    .z()
-    .e()
+fn class<'local>(env: &mut jni::Env<'local>) -> Result<jni::objects::JClass<'local>, String> {
+    bridge::app_class(env, CLASS)
 }

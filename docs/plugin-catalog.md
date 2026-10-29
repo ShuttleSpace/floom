@@ -582,6 +582,22 @@ cargo test --manifest-path crates/ecosystem/plugins/Cargo.toml -p floom-plugin-<
 因为代码已经是那个形状，且 `floom-platform-mobile` 的 JNI 桥就是为它存在的。
 统一形状是独立的工程决策，不阻塞任何条目。
 
+**分叉已闭合（2026-10-29）**：教义与代码的分叉不再是一条前进的道路。统一形状收敛
+为 **Java 库模块形状**（Android）+ **Swift C ABI**（iOS）+ **C 半边**（桌面）：
+
+- Android：能力半边是 `{Name}Plugin` Java class（静态方法，`Context` 入参），
+  由 Gradle library module（`android/build.gradle.kts`）编译进宿主 APK 的 dex；
+  Rust 边是 `src/android.rs` 里的 JNI static-method 调用，**JNI 即 FFI**，不再有
+  C shim（脚手架生成体不再写 `native/android/src/main/cpp/`）。契约方向统一为
+  "原生实现、Rust 调用"。
+- iOS：Swift `@_cdecl` 导出 C ABI，不变。
+- 桌面：C 半边，不变。
+
+`floom create --plugin --platforms android` 现在直接生成 Java 库模块形状；迁移目录
+按这个形状推进（battery 为 pilot，2026-10-29 在 Android 模拟器上端到端跑通：
+Java → dex → JNI → 真值读出 battery 61% · charging）。其余插件按同一形状逐个
+迁移；`google-sign-in`（Tier C）按既定决定不迁移，属例外。
+
 ### 8.2 A6b provider 注册表 —— 已实现（2026-10-27）
 
 原文把这里写成一个二选一（`NativeViewKind` 枚举 vs 字符串 kind）。**这个取舍

@@ -1,10 +1,8 @@
-//! Android device facts via `android.os.Build`.
+//! Android device facts via `DeviceInfoPlugin`.
 //!
-//! Adapted from `gpui-mobile` (Apache-2.0).
-//!
-//! Every field is read through the JNI bridge in `floom_platform_mobile::jni`.
-//! `Build` holds the hardware facts as `public static final` fields; the OS
-//! version and API level live in the nested `Build.VERSION` class.
+//! The capability is Java: `Build` fields are public static final fields; the
+//! OS version and API level live in the nested `Build.VERSION` class.
+//! `DeviceInfoPlugin` owns them. This file only carries the ask across JNI.
 //!
 //! # Why the reads are defensive
 //!
@@ -21,17 +19,17 @@
 //! otherwise be told the truth about the wrong machine.
 
 use super::DeviceInfo;
-use floom_platform_mobile::jni::{self as jni_helpers};
-use jni::objects::{JClass, JObject, JString};
-use jni::strings::JNIString;
+use floom_platform_mobile::jni::{self as bridge, JniExt};
+use jni::objects::JObjectArray;
+
+/// `DeviceInfoPlugin`'s class, as `ClassLoader.loadClass` expects it.
+const CLASS: &str = "dev.floom.plugin.device_info.DeviceInfoPlugin";
 
 pub fn device_info() -> DeviceInfo {
-    jni_helpers::with_env(|env| {
-        let model = build_string(env, "MODEL", "");
-        let manufacturer = build_string(env, "MANUFACTURER", "");
-        let fingerprint = build_string(env, "FINGERPRINT", "");
-        let os_version = build_string(env, "RELEASE", "VERSION");
-        let sdk_int = build_int(env, "SDK_INT", "VERSION");
+    bridge::with_env(|env| {
+        let array = array(env)?;
+        let (model, manufacturer, fingerprint, os_version, sdk_version, locale) =
+            basics(env, &array)?;
 
         // The emulator's fingerprint starts with `generic` (or carries
         // `vbox`/`generic_sdk`); a real device's does not. This is the cheapest
@@ -48,9 +46,9 @@ pub fn device_info() -> DeviceInfo {
             manufacturer,
             os_name: "Android".to_string(),
             os_version,
-            sdk_version: sdk_int,
+            sdk_version: Some(sdk_version),
             is_physical_device: is_physical,
-            locale: locale(env),
+            locale,
         })
     })
     .unwrap_or_default()
@@ -62,109 +60,63 @@ pub fn device_name() -> String {
     // (API 25+) or `Settings.Secure.bluetooth_name`, neither readable without a
     // permission. `Build.MODEL` is the honest public answer, and it is what the
     // user sees in most places anyway.
-    jni_helpers::with_env(|env| Ok(build_string(env, "MODEL", ""))).unwrap_or_default()
+    bridge::with_env(|env| {
+        let array = array(env)?;
+        Ok(basics(env, &array)?.0)
+    })
+    .unwrap_or_default()
 }
 
-/// `Build$<class>.<field>` as a Rust string, or empty when it cannot be read.
-///
-/// An empty `class` means `Build` itself, where the hardware facts live;
-/// `"VERSION"` means the nested class, where the OS ones do.
-///
-/// The field name is a runtime `JNIString`, which is what lets one helper
-/// serve every field. The signature is a `jni_sig!` literal because that macro
-/// takes only literals — and there are only two signatures in this module, so
-/// the asymmetry costs nothing.
-fn build_string(env: &mut jni::Env, field: &str, class: &str) -> String {
-    let Some(cls) = build_class(env, class) else {
-        return String::new();
-    };
-    let Ok(value) = env.get_static_field(
-        &cls,
-        JNIString::from(field),
-        jni::jni_sig!("Ljava/lang/String;"),
-    ) else {
-        return String::new();
-    };
-    let Ok(obj) = value.l() else {
-        return String::new();
-    };
-    object_to_string(env, &obj)
+/// `[model, manufacturer, fingerprint, osVersion, sdkInt, locale]`.
+fn basics<'local>(
+    env: &mut jni::Env<'local>,
+    array: &JObjectArray<'local>,
+) -> Result<(String, String, String, String, i32, String), String> {
+    let model = string_at(array, env, 0).unwrap_or_default();
+    let manufacturer = string_at(array, env, 1).unwrap_or_default();
+    let fingerprint = string_at(array, env, 2).unwrap_or_default();
+    let os_version = string_at(array, env, 3).unwrap_or_default();
+    let sdk_version = string_at(array, env, 4)
+        .and_then(|s| s.parse().ok())
+        .unwrap_or_default();
+    let locale = string_at(array, env, 5).unwrap_or_default();
+    Ok((
+        model,
+        manufacturer,
+        fingerprint,
+        os_version,
+        sdk_version,
+        locale,
+    ))
 }
 
-/// `Build$<class>.<field>` as an `i32`.
-fn build_int(env: &mut jni::Env, field: &str, class: &str) -> Option<i32> {
-    let cls = build_class(env, class)?;
-    let value = env
-        .get_static_field(&cls, JNIString::from(field), jni::jni_sig!("I"))
-        .ok()?;
-    value.i().ok()
-}
-
-/// The `Build` class, or one of its nested classes.
-///
-/// The nested classes' JNI names use a `$`: `Build$VERSION`. An empty `class`
-/// is `Build` itself.
-fn build_class<'local>(env: &mut jni::Env<'local>, class: &str) -> Option<JClass<'local>> {
-    // `find_class` takes an `AsRef<JNIStr>`, and a `JNIString` is the runtime
-    // constructor for one — `jni_str!` only accepts a literal, so a nested class
-    // name assembled with `format!` would be looked up as the literal text
-    // `"{name}"` and never resolve.
-    let name = if class.is_empty() {
-        "android/os/Build".to_string()
-    } else {
-        format!("android/os/Build${class}")
-    };
-    env.find_class(JNIString::from(name)).ok()
-}
-
-/// A `java.lang.String` object as a Rust `String`.
-///
-/// Empty when the object is null or is not a string — which is what a
-/// defensively-read `Build` field can hand over. `as_cast` is the safe route:
-/// it borrows the object, checks at runtime that it really is a
-/// `java.lang.String`, and hands back a wrapper that derefs to `JString`. No
-/// cast of the raw handle is involved, and the original reference stays valid.
-fn object_to_string(env: &mut jni::Env, obj: &JObject<'_>) -> String {
-    if obj.is_null() {
-        return String::new();
+/// Element `index` of a `String[]`, or `None` when it is null or blank.
+fn string_at(array: &JObjectArray, env: &mut jni::Env, index: usize) -> Option<String> {
+    let value = array.get_element(env, index).ok()?;
+    if value.is_null() {
+        return None;
     }
-    let Ok(string) = env.as_cast::<JString<'_>>(obj) else {
-        return String::new();
-    };
-    // `try_to_string` is the non-deprecated route: it borrows the JString and
-    // releases the characters itself, where `Env::get_string` leaks a guard the
-    // caller has to remember to drop.
-    string.try_to_string(env).unwrap_or_default()
+    let string = env.as_cast::<jni::objects::JString<'_>>(&value).ok()?;
+    let s = string.try_to_string(env).ok()?;
+    if s.is_empty() { None } else { Some(s) }
 }
 
-/// The device's locale as a BCP-47 tag, via `Locale.getDefault()`.
-fn locale(env: &mut jni::Env) -> String {
-    let Ok(cls) = env.find_class(jni::jni_str!("java/util/Locale")) else {
-        return String::new();
-    };
-    let Ok(default) = env
+/// `DeviceInfoPlugin.basics()` as a `String[]`, or `None`.
+fn array<'local>(env: &mut jni::Env<'local>) -> Result<JObjectArray<'local>, String> {
+    let class = class(env)?;
+    let array = env
         .call_static_method(
-            &cls,
-            jni::jni_str!("getDefault"),
-            jni::jni_sig!("()Ljava/util/Locale;"),
+            &class,
+            jni::jni_str!("basics"),
+            jni::jni_sig!("()[Ljava/lang/String;"),
             &[],
         )
-        .and_then(|v| v.l())
-    else {
-        return String::new();
-    };
-    let Ok(tag) = env
-        .call_method(
-            &default,
-            jni::jni_str!("toLanguageTag"),
-            jni::jni_sig!("()Ljava/lang/String;"),
-            &[],
-        )
-        .and_then(|v| v.l())
-    else {
-        return String::new();
-    };
-    // `toLanguageTag()` is the BCP-47 form (`en-US`); `toString()` gives
-    // `en_US`, which is not what the field documents.
-    object_to_string(env, &tag)
+        .e()?
+        .l()
+        .e()?;
+    env.cast_local::<JObjectArray>(array).e()
+}
+
+fn class<'local>(env: &mut jni::Env<'local>) -> Result<jni::objects::JClass<'local>, String> {
+    bridge::app_class(env, CLASS)
 }

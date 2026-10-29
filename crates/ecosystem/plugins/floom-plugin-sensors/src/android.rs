@@ -1,6 +1,7 @@
-//! Android sensor availability via `SensorManager`.
+//! Android sensor availability via `SensorsPlugin`.
 //!
-//! Adapted from `gpui-mobile` (Apache-2.0).
+//! The capability is Java: `SensorManager` is an Android API, and
+//! `SensorsPlugin` owns it. This file only carries the ask across JNI.
 //!
 //! # Why `getDefaultSensor` per kind
 //!
@@ -21,8 +22,11 @@
 //! example prints.
 
 use super::SensorKind;
-use floom_platform_mobile::jni::{self as jni_helpers, JniExt};
-use jni::objects::{JObject, JValue};
+use floom_platform_mobile::jni::{self as bridge, JniExt};
+use jni::objects::JValue;
+
+/// `SensorsPlugin`'s class, as `ClassLoader.loadClass` expects it.
+const CLASS: &str = "dev.floom.plugin.sensors.SensorsPlugin";
 
 /// `android.hardware.Sensor` type constants.
 ///
@@ -47,7 +51,7 @@ pub fn available_sensors() -> Vec<SensorKind> {
 }
 
 pub fn is_sensor_available(kind: SensorKind) -> bool {
-    jni_helpers::with_env(|env| Ok(has_sensor(env, sensor_type(kind))?)).unwrap_or(false)
+    bridge::with_env(|env| Ok(has_sensor(env, sensor_type(kind))?)).unwrap_or(false)
 }
 
 /// The `Sensor.TYPE_*` constant for a crate kind.
@@ -64,35 +68,21 @@ fn sensor_type(kind: SensorKind) -> i32 {
 
 /// `SensorManager.getDefaultSensor(type) != null`.
 fn has_sensor(env: &mut jni::Env, sensor_type: i32) -> Result<bool, String> {
-    let manager = sensor_manager(env)?;
-    let sensor = env
-        .call_method(
-            &manager,
-            jni::jni_str!("getDefaultSensor"),
-            jni::jni_sig!("(I)Landroid/hardware/Sensor;"),
-            &[JValue::Int(sensor_type)],
+    let class = class(env)?;
+    let context = bridge::activity(env)?;
+    let present = env
+        .call_static_method(
+            &class,
+            jni::jni_str!("hasSensor"),
+            jni::jni_sig!("(Landroid/content/Context;I)Z"),
+            &[JValue::Object(&context), JValue::Int(sensor_type)],
         )
         .e()?
-        .l()
+        .z()
         .e()?;
-    // `getDefaultSensor` returns `null` when no sensor of that type exists; it
-    // does not throw, so a null here is the platform's own "not present".
-    Ok(!sensor.is_null())
+    Ok(present)
 }
 
-/// `Context.getSystemService(SensorManager.class)`.
-fn sensor_manager<'local>(env: &mut jni::Env<'local>) -> Result<JObject<'local>, String> {
-    let activity = jni_helpers::activity(env)?;
-    let class = env
-        .find_class(jni::jni_str!("android/hardware/SensorManager"))
-        .e()?;
-    env.call_method(
-        &activity,
-        jni::jni_str!("getSystemService"),
-        jni::jni_sig!("(Ljava/lang/Class;)Ljava/lang/Object;"),
-        &[JValue::Object(&JObject::from(class))],
-    )
-    .e()?
-    .l()
-    .e()
+fn class<'local>(env: &mut jni::Env<'local>) -> Result<jni::objects::JClass<'local>, String> {
+    bridge::app_class(env, CLASS)
 }

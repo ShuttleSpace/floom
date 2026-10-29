@@ -118,6 +118,53 @@ pub fn activity<'local>(env: &mut jni::Env<'local>) -> Result<JObject<'local>, S
     Ok(local)
 }
 
+/// Resolve a class from the app's own dex by its JNI name
+/// (`dev/floom/plugin/battery/BatteryPlugin`).
+///
+/// # Why not `FindClass`
+///
+/// `FindClass` resolves against the class loader of the current JNI frame. A
+/// thread that reached the JVM through `AttachCurrentThread` has no Java frame,
+/// so it falls back to the system loader, which cannot see the application's
+/// classes. A capability called from a worker thread would then fail to find a
+/// class that is in the APK. The activity is already in hand, and the loader
+/// that loaded it is the one that can see every plugin class, so the lookup
+/// goes through that.
+pub fn app_class<'local>(
+    env: &mut jni::Env<'local>,
+    name: &str,
+) -> Result<jni::objects::JClass<'local>, String> {
+    let activity = activity(env)?;
+    // `Context.getClassLoader()` (not `activity.getClass().getClassLoader()`):
+    // the latter asks `java.lang.Class`, which reports the loader that loaded
+    // the framework's `NativeActivity` — the boot loader, which cannot see the
+    // app's dex. `Context` is overridden to return the app's own loader.
+    let loader = env
+        .call_method(
+            &activity,
+            jni::jni_str!("getClassLoader"),
+            jni::jni_sig!("()Ljava/lang/ClassLoader;"),
+            &[],
+        )
+        .e()?
+        .l()
+        .e()?;
+    if loader.is_null() {
+        return Err(format!("{name}: the activity has no class loader"));
+    }
+    let name = env.new_string(name).map(JObject::from).e()?;
+    env.call_method(
+        &loader,
+        jni::jni_str!("loadClass"),
+        jni::jni_sig!("(Ljava/lang/String;)Ljava/lang/Class;"),
+        &[JValue::Object(&name)],
+    )
+    .e()?
+    .l()
+    .and_then(|class| env.cast_local::<jni::objects::JClass>(class))
+    .e()
+}
+
 /// Convenience: `Result::err()` mapped to `String`, for the jni 0.22 API which
 /// returns rich error types.
 pub trait JniExt {

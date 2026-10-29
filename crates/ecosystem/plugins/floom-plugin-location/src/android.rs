@@ -1,6 +1,7 @@
-//! Android location via `LocationManager`.
+//! Android location via `LocationPlugin`.
 //!
-//! Adapted from `gpui-mobile` (Apache-2.0).
+//! The capability is Java: `LocationManager` is an Android API, and
+//! `LocationPlugin` owns it. This file only carries the ask across JNI.
 //!
 //! # Why `LocationManager` and not `FusedLocationProviderClient`
 //!
@@ -33,69 +34,59 @@
 //!   report `Ok` for a prompt that never appears.
 
 use super::{Location, LocationAuthorization};
-use floom_platform_mobile::jni::{self as jni_helpers, JniExt};
-use jni::objects::{JObject, JValue};
+use floom_platform_mobile::jni::{self as bridge, JniExt};
+use jni::objects::JValue;
 
-/// `Manifest.permission.ACCESS_FINE_LOCATION`.
-const ACCESS_FINE_LOCATION: &str = "android.permission.ACCESS_FINE_LOCATION";
-/// `Manifest.permission.ACCESS_BACKGROUND_LOCATION`.
-const ACCESS_BACKGROUND_LOCATION: &str = "android.permission.ACCESS_BACKGROUND_LOCATION";
+/// `LocationPlugin`'s class, as `ClassLoader.loadClass` expects it.
+const CLASS: &str = "dev.floom.plugin.location.LocationPlugin";
 
-/// `PackageManager.PERMISSION_GRANTED`.
-const PERMISSION_GRANTED: i32 = 0;
+/// `LocationPlugin.AUTH_*` discriminants.
+const AUTH_NOT_DETERMINED: i32 = 0;
+const AUTH_WHEN_IN_USE: i32 = 1;
+const AUTH_ALWAYS: i32 = 2;
+const AUTH_DENIED: i32 = 3;
+const AUTH_RESTRICTED: i32 = 4;
 
 pub fn authorization_status() -> LocationAuthorization {
-    jni_helpers::with_env(|env| {
-        let activity = jni_helpers::activity(env)?;
-        let fine = check_permission(env, &activity, ACCESS_FINE_LOCATION)?;
-        if fine != PERMISSION_GRANTED {
-            // Denied or never asked: Android does not distinguish "denied" from
-            // "not yet asked" through this API, and `shouldShowRequestPermissionRationale`
-            // is the only signal — it returns false for both. Reporting
-            // `NotDetermined` keeps the caller's next step (ask) correct either
-            // way.
-            return Ok(LocationAuthorization::NotDetermined);
-        }
-        let background = check_permission(env, &activity, ACCESS_BACKGROUND_LOCATION)?;
-        Ok(if background == PERMISSION_GRANTED {
-            LocationAuthorization::AuthorizedAlways
-        } else {
-            LocationAuthorization::AuthorizedWhenInUse
+    bridge::with_env(|env| {
+        let class = class(env)?;
+        let context = bridge::activity(env)?;
+        let code = env
+            .call_static_method(
+                &class,
+                jni::jni_str!("authorizationStatus"),
+                jni::jni_sig!("(Landroid/content/Context;)I"),
+                &[JValue::Object(&context)],
+            )
+            .e()?
+            .i()
+            .e()?;
+        Ok(match code {
+            AUTH_WHEN_IN_USE => LocationAuthorization::AuthorizedWhenInUse,
+            AUTH_ALWAYS => LocationAuthorization::AuthorizedAlways,
+            AUTH_DENIED => LocationAuthorization::Denied,
+            AUTH_RESTRICTED => LocationAuthorization::Restricted,
+            _ => LocationAuthorization::NotDetermined,
         })
     })
     .unwrap_or(LocationAuthorization::NotDetermined)
 }
 
 pub fn is_location_enabled() -> bool {
-    jni_helpers::with_env(|env| {
-        let manager = location_manager(env)?;
-        // `isLocationEnabled()` is API 28+. On older devices the closest
-        // equivalent is asking whether the GPS provider is enabled, which is
-        // what the system switch gates.
-        match env
-            .call_method(
-                &manager,
+    bridge::with_env(|env| {
+        let class = class(env)?;
+        let context = bridge::activity(env)?;
+        let enabled = env
+            .call_static_method(
+                &class,
                 jni::jni_str!("isLocationEnabled"),
-                jni::jni_sig!("()Z"),
-                &[],
+                jni::jni_sig!("(Landroid/content/Context;)Z"),
+                &[JValue::Object(&context)],
             )
-            .and_then(|v| v.z())
-        {
-            Ok(enabled) => Ok(enabled),
-            Err(_) => {
-                env.exception_clear();
-                let provider = env.new_string("gps").e()?;
-                env.call_method(
-                    &manager,
-                    jni::jni_str!("isProviderEnabled"),
-                    jni::jni_sig!("(Ljava/lang/String;)Z"),
-                    &[JValue::Object(&provider)],
-                )
-                .e()?
-                .z()
-                .e()
-            }
-        }
+            .e()?
+            .z()
+            .e()?;
+        Ok(enabled)
     })
     .unwrap_or(false)
 }
@@ -115,27 +106,24 @@ pub fn request_authorization() -> Result<(), String> {
              The user has to re-grant it from Settings → Apps → Permissions."
                 .into(),
         ),
-        LocationAuthorization::NotDetermined => jni_helpers::with_env(|env| {
-            let activity = jni_helpers::activity(env)?;
-            let permission = env.new_string(ACCESS_FINE_LOCATION).e()?;
-            let permission_array = env
-                .new_object_array(1, jni::jni_str!("java/lang/String"), &permission)
+        LocationAuthorization::NotDetermined => bridge::with_env(|env| {
+            let class = class(env)?;
+            let context = bridge::activity(env)?;
+            let requested = env
+                .call_static_method(
+                    &class,
+                    jni::jni_str!("requestPermissions"),
+                    jni::jni_sig!("(Landroid/content/Context;)Z"),
+                    &[JValue::Object(&context)],
+                )
+                .e()?
+                .z()
                 .e()?;
-            // The request code is arbitrary: the result is delivered to
-            // `onRequestPermissionsResult`, which this plugin does not
-            // implement, so the value is never read back. The prompt still
-            // appears, which is the whole job of this call.
-            env.call_method(
-                &activity,
-                jni::jni_str!("requestPermissions"),
-                jni::jni_sig!("([Ljava/lang/String;I)V"),
-                &[
-                    JValue::Object(&JObject::from(permission_array)),
-                    JValue::Int(0),
-                ],
-            )
-            .e()?;
-            Ok(())
+            if requested {
+                Ok(())
+            } else {
+                Err("location: requestPermissions did not run (no Activity context)".into())
+            }
         }),
     }
 }
@@ -148,37 +136,32 @@ pub fn current_location() -> Result<Location, String> {
              authorization_status() first"
             .into());
     }
-    jni_helpers::with_env(|env| {
-        let manager = location_manager(env)?;
-        // `GPS_PROVIDER` first, then `NETWORK_PROVIDER`: a GPS fix is more
-        // accurate, and the network provider is the fallback for an indoor
-        // device. Both are last-known reads, so neither blocks.
-        let mut fix = last_known(env, &manager, "gps")?;
-        if fix.is_none() {
-            fix = last_known(env, &manager, "network")?;
-        }
-        let location = fix.ok_or_else(|| {
-            "location: no last-known fix is cached; the OS has not produced one \
-             since boot, so there is nothing to report"
-                .to_string()
-        })?;
-
-        let latitude = call_double(env, &location, "getLatitude")?;
-        let longitude = call_double(env, &location, "getLongitude")?;
-        let altitude = call_double(env, &location, "getAltitude")?;
-        let accuracy = call_float(env, &location, "getAccuracy")?;
-        // `Location.getTime()` is Unix milliseconds; the crate's field is
-        // seconds, so this is the one conversion the struct requires.
-        let time_ms = env
-            .call_method(
-                &location,
-                jni::jni_str!("getTime"),
-                jni::jni_sig!("()J"),
-                &[],
+    bridge::with_env(|env| {
+        let class = class(env)?;
+        let context = bridge::activity(env)?;
+        let array = env
+            .call_static_method(
+                &class,
+                jni::jni_str!("currentLocation"),
+                jni::jni_sig!("(Landroid/content/Context;)[D"),
+                &[JValue::Object(&context)],
             )
             .e()?
-            .j()
+            .l()
             .e()?;
+        if array.is_null() {
+            return Err(
+                "location: no last-known fix is cached; the OS has not produced one \
+                 since boot, so there is nothing to report"
+                    .into(),
+            );
+        }
+        let array = env.cast_local::<jni::objects::JDoubleArray>(array).e()?;
+        let mut values = [0.0f64; 5];
+        env.get_double_array_region(&array, 0, &mut values).e()?;
+        let (latitude, longitude, altitude, accuracy) =
+            (values[0], values[1], values[2], values[3]);
+        let time_ms = values[4];
 
         Ok(Location {
             latitude,
@@ -189,89 +172,11 @@ pub fn current_location() -> Result<Location, String> {
             // is API 26+ and returns `0` when unknown, which the crate documents
             // as "unavailable" through a negative value.
             vertical_accuracy: -1.0,
-            timestamp: time_ms / 1000,
+            timestamp: (time_ms / 1000.0) as i64,
         })
     })
 }
 
-/// `LocationManager.getLastKnownLocation(provider)`.
-fn last_known<'local>(
-    env: &mut jni::Env<'local>,
-    manager: &JObject<'_>,
-    provider: &str,
-) -> Result<Option<JObject<'local>>, String> {
-    let name = env.new_string(provider).e()?;
-    let location = env
-        .call_method(
-            manager,
-            jni::jni_str!("getLastKnownLocation"),
-            jni::jni_sig!("(Ljava/lang/String;)Landroid/location/Location;"),
-            &[JValue::Object(&name)],
-        )
-        .e()?
-        .l()
-        .e()?;
-    // A provider that exists but has no fix returns null, which is the
-    // documented "nothing cached" answer.
-    Ok(if location.is_null() {
-        None
-    } else {
-        Some(location)
-    })
-}
-
-/// `Context.checkSelfPermission(permission)`.
-fn check_permission(
-    env: &mut jni::Env,
-    activity: &JObject<'_>,
-    permission: &str,
-) -> Result<i32, String> {
-    let name = env.new_string(permission).e()?;
-    Ok(env
-        .call_method(
-            activity,
-            jni::jni_str!("checkSelfPermission"),
-            jni::jni_sig!("(Ljava/lang/String;)I"),
-            &[JValue::Object(&name)],
-        )
-        .e()?
-        .i()
-        .e()?)
-}
-
-/// `Context.getSystemService(LocationManager.class)`.
-fn location_manager<'local>(env: &mut jni::Env<'local>) -> Result<JObject<'local>, String> {
-    let activity = jni_helpers::activity(env)?;
-    let class = env
-        .find_class(jni::jni_str!("android/location/LocationManager"))
-        .e()?;
-    env.call_method(
-        &activity,
-        jni::jni_str!("getSystemService"),
-        jni::jni_sig!("(Ljava/lang/Class;)Ljava/lang/Object;"),
-        &[JValue::Object(&JObject::from(class))],
-    )
-    .e()?
-    .l()
-    .e()
-}
-
-/// `Location.getLatitude()` / `getLongitude()` / `getAltitude()`.
-fn call_double(env: &mut jni::Env, location: &JObject<'_>, method: &str) -> Result<f64, String> {
-    let name = jni::strings::JNIString::from(method);
-    Ok(env
-        .call_method(location, name, jni::jni_sig!("()D"), &[])
-        .e()?
-        .d()
-        .e()?)
-}
-
-/// `Location.getAccuracy()`.
-fn call_float(env: &mut jni::Env, location: &JObject<'_>, method: &str) -> Result<f32, String> {
-    let name = jni::strings::JNIString::from(method);
-    Ok(env
-        .call_method(location, name, jni::jni_sig!("()F"), &[])
-        .e()?
-        .f()
-        .e()?)
+fn class<'local>(env: &mut jni::Env<'local>) -> Result<jni::objects::JClass<'local>, String> {
+    bridge::app_class(env, CLASS)
 }

@@ -27,6 +27,7 @@ const WINDOW: Size = Size::new(360.0, 720.0);
 
 struct CapabilitiesAndroidApp {
     runner: AppRunner<VelloGpuPresenter>,
+    reported: bool,
 }
 
 impl AndroidRunner for CapabilitiesAndroidApp {
@@ -35,6 +36,15 @@ impl AndroidRunner for CapabilitiesAndroidApp {
     }
 
     fn about_to_wait(&mut self, platform: &mut AndroidPlatform) {
+        // The first wait, not `android_main`: `run` hands the JVM and the
+        // activity to the capability bridge as it starts, so a report printed
+        // earlier would read every Java-backed row as "no bridge" and print the
+        // defaults as if they were answers.
+        if !self.reported {
+            self.reported = true;
+            #[cfg(feature = "headless")]
+            crate::headless::print_report();
+        }
         // No `request_frame` here on purpose: it would make every wake-up
         // produce another redraw, so the loop never parks. The runner asks for
         // a frame when the tree is dirty, which is what drives the first one.
@@ -64,6 +74,7 @@ pub fn android_main(app: AndroidApp) {
 
     let app = CapabilitiesAndroidApp {
         runner: AppRunner::new(host, presenter),
+        reported: false,
     };
     let windows = vec![WindowConfig {
         title: "floom — platform capabilities".into(),

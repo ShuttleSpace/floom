@@ -241,8 +241,33 @@ pub fn root_readme(name: &str, platforms: &[String]) -> String {
 /// half for still compiles, and its `enable` says so instead of failing to
 /// link. That is the difference between "this plugin does not support Linux"
 /// and "this crate does not build on Linux".
-pub fn plugin_lib_rs(name: &str) -> String {
+pub fn plugin_lib_rs(name: &str, android: bool) -> String {
     let ident = name.replace('-', "_");
+    let android_mod = if android {
+        "#[cfg(target_os = \"android\")]\nmod android;\n"
+    } else {
+        ""
+    };
+    let android_version = if android {
+        "    #[cfg(target_os = \"android\")]\n    {\n        return env!(\"CARGO_PKG_VERSION\").to_string();\n    }\n"
+    } else {
+        ""
+    };
+    let android_enable = if android {
+        "    #[cfg(target_os = \"android\")]\n    {\n        return android::enable();\n    }\n"
+    } else {
+        ""
+    };
+    let android_disable = if android {
+        "    #[cfg(target_os = \"android\")]\n    {\n        android::disable();\n        return;\n    }\n"
+    } else {
+        ""
+    };
+    let android_capability = if android {
+        "    #[cfg(target_os = \"android\")]\n    {\n        return Some(CAPABILITY_ID);\n    }\n"
+    } else {
+        ""
+    };
     format!(
         r#"//! {name} — a Floom plugin.
 //!
@@ -265,12 +290,13 @@ pub fn plugin_lib_rs(name: &str) -> String {
 //! | Platform | Native half | Transport |
 //! |---|---|---|
 //! | desktop | C | linked into this crate |
-//! | Android | Kotlin | a C shim, over JNI |
+//! | Android | Java | called from `src/android.rs` over JNI |
 //! | iOS | Swift | `@_cdecl`, linked as a framework |
 //! | web | JavaScript | imported by the wasm module |
 //! | OpenHarmony | ArkTS | N-API |
 //! | TUI | — | none: the terminal has no native surface, and the plugin says so |
 
+{android_mod}
 /// The capability id this plugin answers with.
 ///
 /// Stable across releases: the Rust side matches it against the enum it was
@@ -512,7 +538,7 @@ pub mod ohos {{
 /// Falls back to this crate's version when there is no native half, so the
 /// number is never a lie: it says what the caller can actually get.
 pub fn version() -> String {{
-    #[cfg(floom_plugin_native)]
+{android_version}    #[cfg(floom_plugin_native)]
     {{
         ffi::version()
     }}
@@ -530,7 +556,7 @@ pub fn version() -> String {{
 /// [`floom_platform::PluginError::Failed`], and a wrapper here would only be
 /// stripped again.
 pub fn enable() -> Result<(), String> {{
-    #[cfg(floom_plugin_native)]
+{android_enable}    #[cfg(floom_plugin_native)]
     {{
         let abi = ffi::abi_version();
         if abi != ABI_VERSION {{
@@ -555,7 +581,7 @@ pub fn enable() -> Result<(), String> {{
 /// Safe to call without a matching enable, and a no-op when there is no
 /// native half.
 pub fn disable() {{
-    #[cfg(floom_plugin_native)]
+{android_disable}    #[cfg(floom_plugin_native)]
     {{
         ffi::disable();
     }}
@@ -567,7 +593,7 @@ pub fn disable() {{
 /// capability, rather than reporting the default one and looking like a
 /// plugin that happens to do nothing.
 pub fn capability() -> Option<i32> {{
-    #[cfg(floom_plugin_native)]
+{android_capability}    #[cfg(floom_plugin_native)]
     {{
         Some(ffi::capability())
     }}
@@ -656,17 +682,95 @@ mod tests {{
     fn capability_agrees_with_the_presence_of_a_native_half() {{
         // A plugin with no native half must not claim a capability: a caller
         // that branches on `capability().is_some()` would otherwise take the
-        // native path and fail at the first call.
+        // native path and fail at the first call. Android is the exception
+        // written into `src/android.rs`: its half is Java, not a linked C
+        // symbol, so `floom_plugin_native` is false there and the capability
+        // still exists.
         assert_eq!(
             capability().is_some(),
-            cfg!(floom_plugin_native),
-            "a capability must exist exactly when there is a native half to answer for it"
+            cfg!(floom_plugin_native) || cfg!(target_os = "android"),
+            "a capability must exist exactly when there is a half to answer for it"
         );
     }}
 }}
 "#,
         name = name,
-        ident = ident
+        ident = ident,
+        android_mod = android_mod,
+        android_version = android_version,
+        android_enable = android_enable,
+        android_disable = android_disable,
+        android_capability = android_capability
+    )
+}
+
+/// The Android edge of a plugin: `src/android.rs`.
+///
+/// The capability itself is in `android/src/main/java`; this file is the JNI
+/// call that reaches it and nothing else. Two rules keep it honest:
+///
+/// * the class is resolved through the activity's class loader, because
+///   `FindClass` on a thread that reached the JVM through
+///   `AttachCurrentThread` searches the system loader and cannot see the app's
+///   dex;
+/// * the class name is a string, so the generated Java and this file have to
+///   agree — there is no compiler to catch a rename.
+pub fn plugin_android_rs(name: &str) -> String {
+    let class = format!("{}Plugin", crate::native_project::kotlin_class_name(name));
+    let package = format!("dev/floom/plugin/{}", name.replace('-', "_"));
+    format!(
+        r#"//! The Android edge of the `{name}` plugin.
+//!
+//! The capability lives in
+//! `android/src/main/java/{package}/{class}.java`; this file reaches it over
+//! JNI. `{class}` must keep its package and its name: the lookup below is a
+//! string, so a rename shows up on the device as a `ClassNotFoundException`
+//! rather than as a compile error.
+
+use floom_platform_mobile::jni::{{self as bridge, JniExt}};
+use jni::objects::JValue;
+
+const CLASS: &str = "{package}/{class}";
+
+/// Calls the Java half's `enable(Context)`.
+pub fn enable() -> Result<(), String> {{
+    bridge::with_env(|env| {{
+        let class = bridge::app_class(env, CLASS)?;
+        let context = bridge::activity(env)?;
+        let enabled = env
+            .call_static_method(
+                &class,
+                jni::jni_str!("enable"),
+                jni::jni_sig!("(Landroid/content/Context;)Z"),
+                &[JValue::Object(&context)],
+            )
+            .e()?
+            .z()
+            .e()?;
+        if enabled {{
+            Ok(())
+        }} else {{
+            Err(format!("{{CLASS}}.enable returned false"))
+        }}
+    }})
+}}
+
+/// Calls the Java half's `disable()`.
+///
+/// A failure is ignored on purpose: `disable` has no return value in the
+/// plugin API, and a half that throws on teardown is the case where the caller
+/// has nothing left to do about it.
+pub fn disable() {{
+    let _ = bridge::with_env(|env| {{
+        let class = bridge::app_class(env, CLASS)?;
+        env.call_static_method(&class, jni::jni_str!("disable"), jni::jni_sig!("()V"), &[])
+            .e()?;
+        Ok(())
+    }});
+}}
+"#,
+        name = name,
+        class = class
     )
 }
 
@@ -681,7 +785,7 @@ mod tests {{
 /// * `build.rs` is declared, because the native half is compiled at build time;
 /// * `cc` is a build dependency, because `build.rs` compiles the native half's
 ///   C sources with it.
-pub fn plugin_cargo_toml(name: &str, floom_path: Option<&str>) -> String {
+pub fn plugin_cargo_toml(name: &str, floom_path: Option<&str>, platforms: &[String]) -> String {
     let dep = match floom_path {
         Some(p) => format!(
             "floom-platform = {{ path = \"{p}\" }}\n\
@@ -689,6 +793,30 @@ pub fn plugin_cargo_toml(name: &str, floom_path: Option<&str>) -> String {
              # floom-platform = {{ version = \"0.2\" }}"
         ),
         None => "floom-platform = { version = \"0.2\" }".to_string(),
+    };
+    let android = if platforms.iter().any(|p| p == "android") {
+        let mobile = match floom_path.and_then(|p| {
+            std::path::Path::new(p)
+                .parent()
+                .map(|dir| dir.join("floom-platform-mobile"))
+        }) {
+            Some(path) => format!(
+                "floom-platform-mobile = {{ path = \"{}\" }}",
+                path.display()
+            ),
+            None => "floom-platform-mobile = { version = \"0.2\" }".to_string(),
+        };
+        format!(
+            "\n\
+             [target.'cfg(target_os = \"android\")'.dependencies]\n\
+             # The JNI bridge — the JavaVM and the activity — is platform\n\
+             # plumbing, so the plugin reaches down for it rather than owning a\n\
+             # second copy of it.\n\
+             {mobile}\n\
+             jni = \"0.22\"\n\n"
+        )
+    } else {
+        String::new()
     };
     format!(
         "[package]\n\
@@ -718,7 +846,7 @@ pub fn plugin_cargo_toml(name: &str, floom_path: Option<&str>) -> String {
          # `wasm-bindgen` is what declares that import and what the bundler\n\
          # processes, so it is a dependency of the wasm build only.\n\
          wasm-bindgen = \"0.2\"\n\
-         \n\
+         {android}\
          [dev-dependencies]\n\
          # A plugin is tested without a device: the pure-Rust half is an ordinary\n\
          # crate, so `cargo test` covers it and the native half is covered by the\n\
@@ -777,6 +905,13 @@ fn main() {{
     let target_env = std::env::var("CARGO_CFG_TARGET_ENV").unwrap_or_default();
     let target_arch = std::env::var("CARGO_CFG_TARGET_ARCH").unwrap_or_default();
 
+    // Android's half is Java. It is compiled into the app's dex, not linked into
+    // this crate, and `src/android.rs` reaches it over JNI — so there is no C
+    // source to look for here and no warning to print.
+    if target_os == "android" {{
+        return;
+    }}
+
     // Which directory holds this target's native half.
     //
     // The desktop half is one directory for all three desktop targets: the C
@@ -795,7 +930,6 @@ fn main() {{
     }} else {{
         match (target_os.as_str(), target_env.as_str()) {{
             ("linux", "ohos") => "ohos",
-            ("android", _) => "android",
             ("ios", _) => "ios",
             ("linux", _) | ("macos", _) | ("windows", _) => "desktop",
             _ => "",

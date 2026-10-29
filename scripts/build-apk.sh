@@ -32,6 +32,9 @@
 #   --java <file>           Optional Java activity source to compile into a
 #                           `classes.dex` (needed for runtime file shares /
 #                           file-dialog results).
+#   --no-plugins            Do not package the Java halves of the plugins the
+#                           crate depends on (they are found through
+#                           `cargo metadata`; default is to include them).
 #   -h, --help
 #
 # Requires: Android SDK (build-tools + a platform), `cargo-ndk`, the matching
@@ -49,10 +52,13 @@ PKG=""
 MANIFEST=""
 ABI="arm64-v8a"
 PROFILE="release"
+MIN_SDK=24
+TARGET_SDK=34
 SKIP_BUILD=0
 INSTALL=0
 LIB=""
 JAVA_SRC=""
+NO_PLUGINS=0
 EXTRA_FEATURES=()
 
 die()  { echo "error: $*" >&2; exit 1; }
@@ -82,6 +88,7 @@ while [[ $# -gt 0 ]]; do
     --install)    INSTALL=1; shift ;;
     --lib)        LIB="$2"; shift 2 ;;
     --java)       JAVA_SRC="$2"; shift 2 ;;
+    --no-plugins) NO_PLUGINS=1; shift ;;
     -h|--help)    usage; exit 0 ;;
     *)            die "unknown argument: $1 (try --help)" ;;
   esac
@@ -121,6 +128,29 @@ fi
 [[ -n "$CRATE_DIR" ]] || CRATE_DIR="$ROOT/examples/$PKG"
 [[ -n "$MANIFEST" ]] || MANIFEST="$CRATE_DIR/AndroidManifest.xml"
 [[ -f "$MANIFEST" ]] || die "manifest not found: $MANIFEST (pass --manifest)"
+
+# ------------------------------------------------------- plugin Java modules
+#
+# A plugin's Java half is not compiled by Cargo and not linked into the `.so`,
+# so the packaging step has to find it. The list comes from the dependency
+# graph (`scripts/android-plugin-modules.py`), not from a hand-written list: a
+# plugin is packaged exactly when the app links it, which is also the only way
+# it is reachable at runtime.
+PLUGIN_NAMES=()
+PLUGIN_DIRS=()
+if (( ! NO_PLUGINS )) && command -v python3 >/dev/null 2>&1; then
+  PLUGIN_LIST="$(python3 "$SCRIPT_DIR/android-plugin-modules.py" \
+    --manifest-path "$ROOT/Cargo.toml" --package "$PKG")" \
+    || die "could not read the dependency graph for $PKG"
+  while IFS=$'\t' read -r plugin_name plugin_dir; do
+    [[ -n "$plugin_name" ]] || continue
+    PLUGIN_NAMES+=("$plugin_name")
+    PLUGIN_DIRS+=("$plugin_dir")
+  done <<< "$PLUGIN_LIST"
+fi
+if (( ${#PLUGIN_NAMES[@]} > 0 )); then
+  info "plugin Java modules: ${PLUGIN_NAMES[*]}"
+fi
 
 info "package=$PKG lib=$LIB abi=$ABI profile=$PROFILE"
 
@@ -181,26 +211,39 @@ else
     FEATURE_FLAG+=(--features "$f")
   done
 
-  info "cargo ndk -t $ABI build $PROFILE_FLAG -p $PKG ${FEATURE_FLAG[*]:-}"
-  cargo ndk -t "$ABI" -o "$STAGE/lib" build $PROFILE_FLAG -p "$PKG" \
+  info "cargo ndk -t $ABI -P $MIN_SDK build $PROFILE_FLAG -p $PKG --lib ${FEATURE_FLAG[*]:-}"
+  cargo ndk -t "$ABI" -P "$MIN_SDK" -o "$STAGE/lib" build $PROFILE_FLAG -p "$PKG" --lib \
     ${FEATURE_FLAG[@]+"${FEATURE_FLAG[@]}"}
 fi
 
-# ------------------------------------------- optional Java activity -> DEX
-# A Java activity subclass (e.g. `FloomNativeActivity`, which forwards
-# onActivityResult / onNewIntent to Floom) lets the app receive runtime
-# file-dialog results and runtime file shares. `cargo ndk` never touches Java,
-# so we compile it here with `javac` and turn the class into a `classes.dex`
-# with `d8` (falling back to the legacy `dx`). Without a Java subclass the
-# manifest must keep `android:name="android.app.NativeActivity"` and
-# `android:hasCode="false"`.
+# ------------------------------------------- Java halves -> DEX
+# A plugin's capability lives in its Java half (`<crate>/android/src/main/java`),
+# and Rust reaches it through JNI. `cargo ndk` never touches Java, so every
+# source the app links is compiled here with `javac` and turned into one
+# `classes.dex` with `d8` (falling back to the legacy `dx`). One dex, not one
+# per plugin: the classes are in the same package and the same class loader.
+#
+# `--java` stays for a single Java activity subclass (e.g.
+# `FloomNativeActivity`, which forwards onActivityResult / onNewIntent to
+# Floom); it is compiled together with the plugin sources.
 if [[ -z "$JAVA_SRC" && -f "$CRATE_DIR/FloomNativeActivity.java" ]]; then
   JAVA_SRC="$CRATE_DIR/FloomNativeActivity.java"
 fi
+
+JAVA_SOURCES=()
 if [[ -n "$JAVA_SRC" ]]; then
-  [[ -f "$JAVA_SRC" ]] || die "java source not found: $JAVA_SRC"
-  info "compiling $(basename "$JAVA_SRC") -> classes.dex"
-  command -v javac >/dev/null || die "javac not found on PATH (required to build the Java activity)"
+  JAVA_SOURCES+=("$JAVA_SRC")
+fi
+for plugin_dir in ${PLUGIN_DIRS[@]+"${PLUGIN_DIRS[@]}"}; do
+  while IFS= read -r source; do
+    JAVA_SOURCES+=("$source")
+  done < <(find "$plugin_dir/android/src/main/java" -type f -name '*.java' | sort)
+done
+
+HAS_CODE=false
+if (( ${#JAVA_SOURCES[@]} > 0 )); then
+  info "compiling ${#JAVA_SOURCES[@]} Java source(s) -> classes.dex"
+  command -v javac >/dev/null || die "javac not found on PATH (required for the Java halves)"
   D8="$BUILD_TOOLS/d8"
   [[ -x "$D8" ]] || D8="$BUILD_TOOLS/dx"
   [[ -x "$D8" ]] || die "neither d8 nor dx found under $BUILD_TOOLS (required for classes.dex)"
@@ -208,14 +251,34 @@ if [[ -n "$JAVA_SRC" ]]; then
   rm -rf "$JAVAC_OUT"; mkdir -p "$JAVAC_OUT"
   # `--release 17` pins the class-file version (61) so the bundled `d8` (R8)
   # accepts it; the host JDK may be far newer and emit a class version d8
-  # rejects. The source only uses basic Android/Java APIs, so 17 is safe.
-  javac --release 17 -cp "$ANDROID_JAR" -d "$JAVAC_OUT" "$JAVA_SRC" \
-    || die "javac failed for $JAVA_SRC"
-  mapfile -t CLASSES < <(find "$JAVAC_OUT" -name '*.class')
+  # rejects. The sources only use basic Android/Java APIs, so 17 is safe.
+  javac --release 17 -cp "$ANDROID_JAR" -d "$JAVAC_OUT" "${JAVA_SOURCES[@]}" \
+    || die "javac failed"
+  CLASSES=()
+  while IFS= read -r class_file; do
+    CLASSES+=("$class_file")
+  done < <(find "$JAVAC_OUT" -name '*.class')
   [[ ${#CLASSES[@]} -gt 0 ]] || die "javac produced no .class files"
   "$D8" --lib "$ANDROID_JAR" --output "$STAGE" "${CLASSES[@]}" \
     || die "d8 failed to build classes.dex"
+  HAS_CODE=true
 fi
+
+# ------------------------------- manifest merge (plugin permissions + hasCode)
+# `aapt2 link` takes one manifest, and AGP's manifest merger is not in this
+# pipeline, so the parts a plugin contributes (`<uses-permission>`,
+# `<uses-feature>`) and the `hasCode` flag that matches the dex are applied
+# here. Anything else in a plugin manifest is refused rather than guessed at.
+MERGE_ARGS=(--app "$MANIFEST" --out "$STAGE/AndroidManifest.xml" --has-code "$HAS_CODE")
+for plugin_dir in ${PLUGIN_DIRS[@]+"${PLUGIN_DIRS[@]}"}; do
+  plugin_manifest="$plugin_dir/android/src/main/AndroidManifest.xml"
+  [[ -f "$plugin_manifest" ]] || die "plugin manifest not found: $plugin_manifest"
+  MERGE_ARGS+=(--plugin "$plugin_manifest")
+done
+command -v python3 >/dev/null || die "python3 not found on PATH (required to merge Android manifests)"
+python3 "$SCRIPT_DIR/android-manifest-merge.py" "${MERGE_ARGS[@]}" \
+  || die "manifest merge failed"
+MANIFEST="$STAGE/AndroidManifest.xml"
 
 SO="$STAGE/lib/$ABI/lib$LIB.so"
 [[ -f "$SO" ]] || die "expected $SO — is the crate a cdylib? (see [lib] crate-type in Cargo.toml)"
@@ -226,7 +289,7 @@ info "bundling $(basename "$SO") ($(du -h "$SO" | cut -f1))"
 info "aapt2 link"
 (cd "$STAGE" && "$AAPT2" link -I "$ANDROID_JAR" \
   --manifest "$MANIFEST" \
-  --min-sdk-version 24 --target-sdk-version 34 \
+  --min-sdk-version "$MIN_SDK" --target-sdk-version "$TARGET_SDK" \
   -o "$STAGE/unsigned.apk")
 
 # aapt2 has no native-lib flag; add the (uncompressed) libs AND optional dex.

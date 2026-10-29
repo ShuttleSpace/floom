@@ -15,9 +15,10 @@ Two costs drove this split.
    against the NDK without reimplementing Camera2/CameraX or AVFoundation. Doing
    it per-call in JNI is worse: the bridge is chatty, every call crosses the
    JNI boundary, and object lifetimes must be hand-managed. The maintainable
-   shape is one small Kotlin/Java (or Swift) host library per capability that
-   owns the platform objects and exposes a narrow C ABI, with Rust calling into
-   it.
+   shape is one small host library per capability that owns the platform
+   objects and exposes a narrow ABI, with Rust calling into it — Swift through
+   `@_cdecl` exporting the C ABI, Kotlin/Java through plain static methods called
+   over JNI, OpenHarmony through the ArkTS bridge.
 2. **Backend count.** Every capability added to the core multiplies across nine
    platforms. `floom-platform-android`, `-ios`, `-harmony`, `-web`, `-desktop`,
    `-mobile`, `-tui`, `-embedded` would each grow a camera arm. As plugins, a
@@ -51,8 +52,10 @@ its API would otherwise destabilise the core.
    workspace: the SDK ships none of them, and adding one to an application is a
    dependency the application opts into.
 2. **Reach the OS through a host library, not ad-hoc JNI.** Each plugin owns a
-   Kotlin/Java (`.kt`/`.java`) or Swift host module and exposes a narrow
-   `extern "C"` ABI; Rust never touches platform objects directly. Crossings
+   Kotlin/Java (`.java`) or Swift host module and exposes a narrow ABI over the
+   transport its platform gives: Swift through `@_cdecl` exporting the C ABI,
+   Kotlin and Java through static methods called over JNI, OpenHarmony through
+   the ArkTS bridge. Rust never touches platform objects directly. Crossings
    happen at coarse granularity (open a camera session, deliver one frame),
    never per widget property.
 3. **Be host-inert.** On an unsupported target the API must still compile and
@@ -77,8 +80,12 @@ int floom_<capability>_abi_version(void);
 
 **The native half implements these; the Rust half calls them.** That direction
 is what makes one header portable: a C file implements them directly, Swift
-implements them with `@_cdecl`, and Kotlin is reached through a C shim that
-forwards over JNI. The Rust side is identical for all three.
+implements them with `@_cdecl`, and on Android the Java half is a plain class
+with static methods that the plugin's Rust edge (`src/android.rs`) calls over
+JNI — JNI *is* the FFI there, so the capability is implemented in Java and the
+call crosses into it without any C shim in between. The Rust side takes the
+same direction on every platform: it calls into the half that implements the
+capability.
 
 The opposite direction — Rust exports, native calls — is what Kotlin's
 `external fun` gives you, and it is a *different* contract: it cannot express
@@ -95,19 +102,21 @@ compile-time macro cannot answer that.
 ```
 crates/ecosystem/plugins/floom-plugin-<capability>/
 ├── Cargo.toml
-├── build.rs                 compiles the native half, emits the cfg
+├── build.rs                 compiles the C halves, emits the cfg
 ├── src/lib.rs               the `extern "C"` declarations and the Rust API
+├── src/android.rs           the Android edge: JNI calls into the Java half
+├── android/                 the Android half (Gradle library module + Java)
 └── native/
     ├── common/              the C ABI header — the single source of truth
     ├── desktop/             the desktop half (C)
-    ├── android/             the Android half (Gradle + Kotlin + a C shim)
     ├── ios/                 the iOS half (Swift, exported with `@_cdecl`)
     ├── ohos/                the OpenHarmony half (ArkTS + a C shim)
     ├── web/                 the web half (JavaScript)
     └── tui/                 nothing: the terminal has no native surface
 ```
 
-`build.rs` is what compiles the native half, and it emits
+`build.rs` compiles the halves that are C (the desktop half for the current
+target; the OpenHarmony helper on Harmony) and emits
 `cargo:rustc-cfg=floom_plugin_native` **only** when it found and compiled one
 for the current target. The Rust half's `extern` block is behind that flag, so
 it never names a symbol the linker cannot find.
@@ -116,7 +125,11 @@ That flag is not a `target_os` check on purpose. "Which OS am I on" is not the
 same question as "does this plugin have a native half for this OS" — a plugin
 generated for Android only, compiled on Linux, has no Linux half, and a
 `target_os` check would declare the extern block anyway and fail at link time
-in a crate that should have compiled.
+in a crate that should have compiled. Android is the same exception in the
+other direction: its half is Java, compiled into the host app's dex by the
+Gradle library module, so `build.rs` lets the crate through without compiling
+anything and emits no `floom_plugin_native` cfg — the halves are split by
+`#[cfg(target_os = "android")]` instead.
 
 ### How each platform reaches its native half
 
@@ -126,7 +139,7 @@ difference lives in the plugin's own crate — never in the contract.
 | Platform | Native half | Transport |
 |---|---|---|
 | desktop | C | compiled by `build.rs` and linked in |
-| Android | Kotlin | a C shim that reaches Kotlin over JNI |
+| Android | Java | the Rust edge (`src/android.rs`) calls the library's `{Name}Plugin` static methods over JNI; no C shim |
 | iOS | Swift | `@_cdecl`, linked as a framework |
 | web | JavaScript | imported by the wasm module (`wasm-bindgen`) |
 | OpenHarmony | ArkTS | a C shim that reaches ArkTS through a Rust-exported helper |
@@ -240,8 +253,8 @@ the test suite on every platform.
 `floom create --plugin` scaffolds the whole thing, and the generated crate's
 own tests assert that the version it reports comes from the native half — a
 check that fails if the boundary is stubbed. The CLI's tests assert that the
-header, the desktop half, the Android shim and the Swift half all name the
-same symbols, because that is the failure the single-header design exists to
+header, the desktop half, the Java half and the Swift half all name the same
+symbols, because that is the failure the single-header design exists to
 prevent.
 
 For the provider ABI, the proof is stronger, because the failure it prevents
@@ -276,10 +289,11 @@ back in.
 
 `camera` is intentionally **not** there yet: it is a streaming media surface
 rather than a single-shot query, so it is the first real test of rule 2 — it
-wants a Kotlin host library (`CameraX`) and a Swift one (`AVFoundation`), with
-frames handed over as an external texture rather than copied per frame. It
-would be a plugin, and it would be the one that contributes a **native view**,
-so it is the first thing to need the provider ABI.
+wants a Java host library (`CameraX`, which ships as a Java artifact the
+host's d8 step compiles) and a Swift one (`AVFoundation`), with frames handed
+over as an external texture rather than copied per frame. It would be a
+plugin, and it would be the one that contributes a **native view**, so it is
+the first thing to need the provider ABI.
 
 ## Relationship to `floom/src/platform`
 

@@ -65,7 +65,9 @@ mod macos {
             out_error: *mut c_char,
             out_capacity: u32,
         ) -> c_int;
-        fn floom_nativeview_set_message_callback(cb: Option<unsafe extern "C" fn(FloomNativeSlot, *const c_char)>);
+        fn floom_nativeview_set_message_callback(
+            cb: Option<unsafe extern "C" fn(FloomNativeSlot, *const c_char)>,
+        );
     }
 
     /// The provider vtable, once the native half has handed it over.
@@ -134,7 +136,7 @@ mod macos {
         json: &str,
     ) -> Result<(), String> {
         let Ok(c) = std::ffi::CString::new(json) else {
-            return Err(format!("json contains a NUL byte"));
+            return Err("json contains a NUL byte".to_string());
         };
         let mut error = [0i8; 256];
         let rc = unsafe {
@@ -145,15 +147,24 @@ mod macos {
                 error.len() as u32,
             )
         };
-        if rc == 0 { return Ok(()); }
+        if rc == 0 {
+            return Ok(());
+        }
         let message = unsafe { std::ffi::CStr::from_ptr(error.as_ptr()) }
-            .to_string_lossy().into_owned();
-        Err(if message.is_empty() { format!("post_message refused with code {rc}") } else { message })
+            .to_string_lossy()
+            .into_owned();
+        Err(if message.is_empty() {
+            format!("post_message refused with code {rc}")
+        } else {
+            message
+        })
     }
 
     /// Register the Rust callback invoked when JS calls
     /// `window.floomNative.postMessage(json)`.
-    pub fn set_message_callback(cb: Option<unsafe extern "C" fn(FloomNativeSlot, *const std::ffi::c_char)>) {
+    pub fn set_message_callback(
+        cb: Option<unsafe extern "C" fn(FloomNativeSlot, *const std::ffi::c_char)>,
+    ) {
         unsafe { floom_nativeview_set_message_callback(cb) };
     }
 
@@ -227,7 +238,8 @@ mod macos {
         let vtable = raw as *const FloomNativeProviderV1;
         let provider = unsafe { CProvider::from_raw(vtable) };
         // SAFETY: the handle outlives the provider by the caller's contract.
-        unsafe { provider.with_host(host_window) }.map(|p| Box::new(p) as Box<dyn NativeViewProvider>)
+        unsafe { provider.with_host(host_window) }
+            .map(|p| Box::new(p) as Box<dyn NativeViewProvider>)
     }
 
     /// The provider, boxed, for a host that wants the trait object.

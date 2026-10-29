@@ -1,57 +1,32 @@
-//! Android haptics and vibration via JNI.
+//! Android haptics and vibration via `VibrationPlugin`.
 //!
-//! Adapted from `gpui-mobile` (Apache-2.0). Uses the minimal bridge in
-//! [`floom_platform_mobile::jni`] instead of `gpui-mobile`'s full `android/jni.rs`.
+//! The capability is Java: `Vibrator`, `VibrationEffect` and the view
+//! hierarchy are Android APIs, and `VibrationPlugin` owns them. This file
+//! only carries the ask across JNI.
 
 use super::HapticFeedback;
-use floom_platform_mobile::jni::{self as jni_helpers, JniExt, obj};
-use jni::objects::{JObject, JValue};
+use floom_platform_mobile::jni::{self as bridge, JniExt};
+use jni::objects::JValue;
+
+/// `VibrationPlugin`'s class, as `ClassLoader.loadClass` expects it.
+const CLASS: &str = "dev.floom.plugin.vibration.VibrationPlugin";
 
 pub fn vibrate(duration_ms: u32) -> Result<(), String> {
-    jni_helpers::with_env(|env| {
-        let activity = jni_helpers::activity(env)?;
-
-        let vibrator = get_vibrator_service(env, &activity)?;
-
-        // Try VibrationEffect.createOneShot (API 26+)
-        if let Ok(ve_cls) = env.find_class(jni::jni_str!("android/os/VibrationEffect")) {
-            if let Ok(effect) = env
-                .call_static_method(
-                    &ve_cls,
-                    jni::jni_str!("createOneShot"),
-                    jni::jni_sig!("(JI)Landroid/os/VibrationEffect;"),
-                    &[JValue::Long(duration_ms as i64), JValue::Int(-1)], // DEFAULT_AMPLITUDE = -1
-                )
-                .and_then(|v| v.l())
-            {
-                if !effect.is_null() {
-                    let _ = env.call_method(
-                        &vibrator,
-                        jni::jni_str!("vibrate"),
-                        jni::jni_sig!("(Landroid/os/VibrationEffect;)V"),
-                        &[obj(&effect)],
-                    );
-                    env.exception_clear();
-                    return Ok(());
-                }
-            }
-            env.exception_clear();
-        }
-
-        // Fallback: vibrator.vibrate(long) for older APIs
-        let _ = env.call_method(
-            &vibrator,
+    bridge::with_env(|env| {
+        let class = class(env)?;
+        let context = bridge::activity(env)?;
+        env.call_static_method(
+            &class,
             jni::jni_str!("vibrate"),
-            jni::jni_sig!("(J)V"),
-            &[JValue::Long(duration_ms as i64)],
-        );
-        env.exception_clear();
+            jni::jni_sig!("(Landroid/content/Context;J)Z"),
+            &[JValue::Object(&context), JValue::Long(duration_ms as i64)],
+        )
+        .e()?;
         Ok(())
     })
 }
 
 pub fn haptic_feedback(feedback: HapticFeedback) -> Result<(), String> {
-    // Map to Android HapticFeedbackConstants
     let constant: i32 = match feedback {
         HapticFeedback::Light => 1,     // VIRTUAL_KEY
         HapticFeedback::Medium => 1,    // VIRTUAL_KEY
@@ -62,81 +37,39 @@ pub fn haptic_feedback(feedback: HapticFeedback) -> Result<(), String> {
         HapticFeedback::Error => 0,     // LONG_PRESS
     };
 
-    jni_helpers::with_env(|env| {
-        let activity = jni_helpers::activity(env)?;
-
-        // activity.getWindow().getDecorView().performHapticFeedback(constant)
-        let window = env
-            .call_method(
-                &activity,
-                jni::jni_str!("getWindow"),
-                jni::jni_sig!("()Landroid/view/Window;"),
-                &[],
-            )
-            .and_then(|v| v.l())
-            .e()?;
-        if window.is_null() {
-            return Err("getWindow returned null".into());
-        }
-
-        let decor = env
-            .call_method(
-                &window,
-                jni::jni_str!("getDecorView"),
-                jni::jni_sig!("()Landroid/view/View;"),
-                &[],
-            )
-            .and_then(|v| v.l())
-            .e()?;
-        if decor.is_null() {
-            return Err("getDecorView returned null".into());
-        }
-
-        let _ = env.call_method(
-            &decor,
-            jni::jni_str!("performHapticFeedback"),
-            jni::jni_sig!("(I)Z"),
-            &[JValue::Int(constant)],
-        );
-        env.exception_clear();
+    bridge::with_env(|env| {
+        let class = class(env)?;
+        let context = bridge::activity(env)?;
+        env.call_static_method(
+            &class,
+            jni::jni_str!("hapticFeedback"),
+            jni::jni_sig!("(Landroid/content/Context;I)Z"),
+            &[JValue::Object(&context), JValue::Int(constant)],
+        )
+        .e()?;
         Ok(())
     })
 }
 
 pub fn can_vibrate() -> bool {
-    jni_helpers::with_env(|env| {
-        let activity = jni_helpers::activity(env)?;
-        let vibrator = get_vibrator_service(env, &activity)?;
-        let result = env
-            .call_method(
-                &vibrator,
+    bridge::with_env(|env| {
+        let class = class(env)?;
+        let context = bridge::activity(env)?;
+        let ok = env
+            .call_static_method(
+                &class,
                 jni::jni_str!("hasVibrator"),
-                jni::jni_sig!("()Z"),
-                &[],
+                jni::jni_sig!("(Landroid/content/Context;)Z"),
+                &[JValue::Object(&context)],
             )
-            .and_then(|v| v.z())
-            .unwrap_or(false);
-        Ok(result)
+            .e()?
+            .z()
+            .e()?;
+        Ok(ok)
     })
     .unwrap_or(false)
 }
 
-fn get_vibrator_service<'local>(
-    env: &mut jni::Env<'local>,
-    activity: &JObject<'_>,
-) -> Result<JObject<'local>, String> {
-    let service_name = env.new_string("vibrator").e()?;
-    let vibrator = env
-        .call_method(
-            activity,
-            jni::jni_str!("getSystemService"),
-            jni::jni_sig!("(Ljava/lang/String;)Ljava/lang/Object;"),
-            &[JValue::Object(&service_name)],
-        )
-        .and_then(|v| v.l())
-        .e()?;
-    if vibrator.is_null() {
-        return Err("Vibrator service not available".into());
-    }
-    Ok(vibrator)
+fn class<'local>(env: &mut jni::Env<'local>) -> Result<jni::objects::JClass<'local>, String> {
+    bridge::app_class(env, CLASS)
 }

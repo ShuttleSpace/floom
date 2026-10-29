@@ -28,7 +28,7 @@
 | 槽位池 | `crates/floom-native/src/pool.rs` | ✅ generation 复位的回收语义 |
 | CLI 插件脚手架 | `crates/floom-cli/src/main.rs:295` `create_plugin` | ✅ 生成 `Cargo.toml` + `build.rs` + `src/lib.rs` + `floom.h` + 各平台原生半边 + `example/` + README |
 | C ABI 头模板 | `crates/floom-cli/src/templates.rs:504` `plugin_header_rs` | ✅ 4 个符号：`version` / `enable` / `disable` / `capability`，带 ABI version 宏 |
-| Kotlin 插件半边 | `crates/floom-cli/src/native_project.rs:874` | ⚠️ 有代码，但契约方向与 C ABI 头相反（见 G3） |
+| Java 插件半边 | `crates/floom-cli/src/native_project.rs::android_plugin_java` | ✅ JNI 静态方法半边（`{Name}Plugin` 静态方法），由 `src/android.rs` 经 JNI 调用；契约方向已统一为"原生实现、Rust 调用"（G3） |
 | Swift 插件半边 | `crates/floom-cli/src/native_project.rs:981` | ⚠️ 有代码，但没有导出 C ABI 符号（见 G4） |
 | 桌面 CMake 半边 | `crates/floom-cli/src/native_project.rs:1050` | ✅ GTK / AppKit / Win32 三套 |
 | 可运行示例 | `examples/floom-native-plugin/src/main.rs` | ✅ 协商 + 生命周期 + 池化三段断言 |
@@ -43,7 +43,7 @@
 |---|---|---|---|
 | G1 | `build.rs` 是空操作，原生代码从不被编译或链接 | **已修** | `templates.rs::plugin_build_rs` 现在按目标平台探测 `native/<platform>/`，用 `cc` 编译 `.c` 并发出 `cargo:rustc-cfg=floom_plugin_native`。生成工程的 `target/debug/build/*/output` 里有该 cfg；`nm` 显示 `_floom_sample_enable` 等 4 个符号已在二进制里 |
 | G2 | Rust 半边不绑定也不调用 C ABI | **已修** | `templates.rs::plugin_lib_rs` 现在有真正的 `unsafe extern "C"` 块，`version()`/`enable()`/`disable()`/`capability()` 全部走原生。生成工程的测试 `the_version_comes_from_the_native_half` 断言版本号来自原生半边（原生返回 `"sample 0.1.0"`，crate 版本是 `"0.1.0"`）——这是唯一能证明调用真的跨过边界的断言 |
-| G3 | Kotlin 半边与 C ABI 头方向相反 | **已修** | `native_project.rs::android_plugin_kotlin` 去掉了 `external fun`，改为 `@JvmStatic` 普通方法，由 `native_project.rs::android_plugin_c_shim`（JNI C shim）调用。方向统一为"原生实现、Rust 调用" |
+| G3 | Kotlin 半边与 C ABI 头方向相反 | **已修** | 分叉已闭合：半边从 `@JvmStatic` + C shim 收紧为直接 Java 库模块半边（静态方法、`Context` 入参），Rust 边 `src/android.rs` 经 JNI static-method 调用，`JNI` 即 FFI，C shim 已删。方向统一为"原生实现、Rust 调用" |
 | G4 | Swift 半边没有实现 C ABI | **已修** | `native_project.rs::ios_plugin_swift` 增加 `@_cdecl("floom_<name>_enable")` 等 4 个导出 |
 | G8 | 头文件路径不一致 | **已修** | 统一到 `native/common/floom_<name>.h`；`build.rs` 监视 `native/` 整目录；C 源 `#include "floom_<name>.h"` |
 
@@ -67,11 +67,11 @@
 
 | 测试 | 守住什么 |
 |---|---|
-| `the_header_and_every_native_half_agree_on_the_symbol_names` | 头、C 半边、Android shim、Swift 半边**四者符号名一致**——这是"两份契约"缺陷（G3/G4）的自动拦截 |
+| `the_header_and_every_native_half_agree_on_the_symbol_names` | 头、C 半边、Java 半边、Swift 半边**四者符号名一致**——这是"两份契约"缺陷（G3/G4）的自动拦截 |
 | `the_version_comes_from_the_native_half`（生成工程内） | 证明调用真的跨过了边界，而非返回常量 |
 | `the_c_abi_header_is_the_one_the_native_half_includes` | C 源按 `build.rs` 给的 include 路径引用头文件 |
 | `the_rust_half_calls_the_abi_behind_the_flag_build_rs_emits` | `extern` 块与 `build.rs` 发出的 cfg 一致 |
-| `the_kotlin_half_is_called_by_rather_than_calling_out` | Kotlin 不声明 `external fun`（只看声明，不看散文） |
+| `the_android_half_is_java_and_the_rust_edge_calls_it_over_jni` | Java 半边不经 C shim，由 `src/android.rs` 经 JNI static 方法调用（只看声明，不看散文） |
 | `the_swift_half_exports_the_c_abi` | Swift 用 `@_cdecl` 导出 |
 | `the_generated_plugin_is_its_own_workspace` | 插件 manifest 有 `[workspace]` 且 `cc` 是 build-dependency |
 | `the_native_half_lives_where_build_rs_looks_for_it` | 平台半边落在 `native/<platform>/`，不是根目录 |
@@ -326,7 +326,7 @@ macOS 门禁记录过一次真实教训（`docs/gates/macos.md:126-128`）：
 
 | ID | 任务 | 依赖 | 级别 | 状态 | 验收标准 |
 |---|---|---|---|---|---|
-| **A1** | 统一插件契约方向：C ABI 头为唯一事实源 | — | 🔴 | ✅ **完成** | 头文件明确"原生实现、Rust 调用"；Kotlin 半边改为 `@JvmStatic` + C shim；Swift 半边 `@_cdecl` 导出 |
+| **A1** | 统一插件契约方向：C ABI 头为唯一事实源 | — | 🔴 | ✅ **完成** | 头文件明确"原生实现、Rust 调用"；Java 半边改为静态方法 + JNI FFI（`JNI` 即边界），Swift 半边 `@_cdecl` 导出 |
 | **A2** | 实现 `build.rs`：按目标平台编译并链接原生半边 | A1 | 🔴 | ✅ **完成（桌面）** | `nm` 能看到 `floom_<name>_enable` 符号；桌面走 `cc`。**Android/iOS 的构建接线仍待设备验证** |
 | **A3** | Rust 半边绑定 C ABI | A1 | 🔴 | ✅ **完成** | `version()` / `enable()` / `disable()` / `capability()` 真实走 `extern "C"`，由生成工程的测试断言 |
 | **A4** | 修路径不一致（G8） | — | 🟡 | ✅ **完成** | 头文件统一到 `native/common/floom_<name>.h`；`build.rs` 监视路径、C 源 `#include` 三者一致 |
