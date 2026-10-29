@@ -366,6 +366,27 @@ pub trait PaintContext {
         let _ = (origin, text, size, weight, color);
     }
 
+    /// A run of text in a caller-chosen family.
+    ///
+    /// The family is a *request*, not a guarantee: a backend that cannot
+    /// resolve it falls back to the same stack the default face uses, so a
+    /// caller can name a font the device may not ship without risking blank
+    /// text. It is a separate op rather than a parameter on
+    /// [`Self::fill_text`] because the default forwards to it, which keeps
+    /// every existing backend correct without it having to know about fonts.
+    fn fill_text_in(
+        &mut self,
+        origin: Point,
+        text: &str,
+        size: f32,
+        weight: FontWeight,
+        color: Color,
+        family: &floom_types::FontFamily,
+    ) {
+        let _ = family;
+        self.fill_text(origin, text, size, weight, color);
+    }
+
     /// Text described in *ranges* rather than as one string.
     ///
     /// The plain [`Self::fill_text`] op carries one string in one ink. An

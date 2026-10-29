@@ -63,8 +63,8 @@ use floom_types::{
 };
 use parley::layout::{Alignment, AlignmentOptions, Layout, PositionedLayoutItem};
 use parley::style::{
-    FontFamily as ParleyFontFamily, FontStack, FontStyle as ParleyFontStyle, GenericFamily,
-    LineHeight as ParleyLineHeight, OverflowWrap, StyleProperty, TextWrapMode,
+    FontStyle as ParleyFontStyle, LineHeight as ParleyLineHeight, OverflowWrap, StyleProperty,
+    TextWrapMode,
 };
 use parley::{Affinity, Cursor, FontContext, LayoutContext, Selection};
 use peniko::FontData;
@@ -122,34 +122,10 @@ impl CaretAffinity {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct TextBrush(pub Color);
 
-/// A font family, as the shaper wants it.
-///
-/// [`floom_types::FontFamily`] is the renderer-neutral spelling; this is the
-/// lowering of it.
-fn to_parley_family(family: &FontFamily) -> ParleyFontFamily<'static> {
-    match family {
-        FontFamily::Serif => ParleyFontFamily::Generic(GenericFamily::Serif),
-        FontFamily::SansSerif => ParleyFontFamily::Generic(GenericFamily::SansSerif),
-        FontFamily::Monospace => ParleyFontFamily::Generic(GenericFamily::Monospace),
-        FontFamily::Cursive => ParleyFontFamily::Generic(GenericFamily::Cursive),
-        FontFamily::Fantasy => ParleyFontFamily::Generic(GenericFamily::Fantasy),
-        FontFamily::Named(name) => ParleyFontFamily::Named(std::borrow::Cow::Owned(name.clone())),
-    }
-}
-
-/// The font stack a layout is shaped in.
-///
-/// The named family comes first and the platform's generic families follow it,
-/// so a family the platform does not have still resolves to something with
-/// coverage rather than to `.notdef` boxes.
-fn to_parley_stack(family: &FontFamily) -> FontStack<'static> {
-    let primary = to_parley_family(family);
-    FontStack::List(std::borrow::Cow::Owned(vec![
-        primary,
-        ParleyFontFamily::Generic(GenericFamily::SansSerif),
-        ParleyFontFamily::Generic(GenericFamily::Monospace),
-    ]))
-}
+// The family → parley lowering lives in `layout::font_stack` and is shared with
+// the plain text path, so a named family and the default both end up on the
+// same CJK-capable fallback stack. Two copies of that list is how the editor's
+// text ends up as tofu boxes on a device the plain text path handles fine.
 
 /// Where a tab expanded to, so a byte offset in the source can be mapped to one
 /// in the shaped text and back.
@@ -679,7 +655,9 @@ impl TextLayout {
         let mut builder = layout_cx.ranged_builder(font_cx, display, 1.0, true);
         builder.push_default(StyleProperty::FontSize(styled.base.size));
         builder.push_default(StyleProperty::FontWeight(parley_weight(styled.base.weight)));
-        builder.push_default(StyleProperty::FontStack(to_parley_stack(&styled.family)));
+        builder.push_default(StyleProperty::FontStack(crate::layout::font_stack(
+            &styled.family,
+        )));
         builder.push_default(StyleProperty::FontStyle(ParleyFontStyle::Normal));
         builder.push_default(StyleProperty::Brush(TextBrush(styled.base.color)));
 

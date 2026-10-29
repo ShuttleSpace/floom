@@ -16,6 +16,7 @@ fn glyph_positions_advance_across_the_run() {
         font_size: 20.0,
         align: TextAlign::Start,
         weight: FontWeight::Normal,
+        family: floom_types::FontFamily::SansSerif,
     };
     let laid = shaper.shape("click me", &opts);
     let run = &laid.runs[0];
@@ -42,6 +43,7 @@ fn ascii_wraps_to_multiple_lines() {
         font_size: 14.0,
         align: TextAlign::Start,
         weight: FontWeight::Normal,
+        family: floom_types::FontFamily::SansSerif,
     };
     let laid = shaper.shape("hello world from floom text", &opts);
     assert!(
@@ -188,6 +190,7 @@ fn a_heavier_weight_measures_wider() {
         font_size: 20.0,
         align: TextAlign::Start,
         weight,
+        family: floom_types::FontFamily::SansSerif,
     };
     let mut shaper = TextShaper::new();
     let regular = shaper
@@ -221,6 +224,7 @@ fn the_weight_reaches_the_shaper_rather_than_being_defaulted() {
         font_size: 32.0,
         align: TextAlign::Start,
         weight,
+        family: floom_types::FontFamily::SansSerif,
     };
     let mut shaper = TextShaper::new();
     let normal = shaper.shape("Weight matters here", &options(FontWeight::Normal));
@@ -253,6 +257,7 @@ fn the_cache_does_not_answer_one_weight_with_another_weights_runs() {
         font_size: 20.0,
         align: TextAlign::Start,
         weight,
+        family: floom_types::FontFamily::SansSerif,
     };
     let mut cache = LayoutCache::new();
     let mut shaper = TextShaper::new();
@@ -287,6 +292,52 @@ fn the_cache_does_not_answer_one_weight_with_another_weights_runs() {
     assert_eq!(again_width, normal_width);
 }
 
+/// The cache must not answer a family request with another family's runs.
+///
+/// This is the `Text::family` setter's correctness condition: two faces shape
+/// the same string to different advances, so a hit across families would lay out
+/// one face and paint another. The control — the same request twice is a hit —
+/// keeps "everything misses now" from passing as the fix.
+#[test]
+fn the_cache_does_not_answer_one_family_with_another_familys_runs() {
+    use floom_types::FontFamily;
+    let options = |family: FontFamily| TextLayoutOptions {
+        max_width: f64::INFINITY,
+        font_size: 20.0,
+        align: TextAlign::Start,
+        weight: FontWeight::Normal,
+        family,
+    };
+    let mut cache = LayoutCache::new();
+    let mut shaper = TextShaper::new();
+    let text = "iiii";
+
+    let sans = cache
+        .get_or_insert_with(text, &options(FontFamily::SansSerif), || {
+            shaper.shape(text, &options(FontFamily::SansSerif))
+        })
+        .size
+        .width;
+    let mono = cache
+        .get_or_insert_with(text, &options(FontFamily::Monospace), || {
+            shaper.shape(text, &options(FontFamily::Monospace))
+        })
+        .size
+        .width;
+    assert_ne!(
+        sans, mono,
+        "the monospace request was served the proportional face's glyphs"
+    );
+
+    let again = cache
+        .get_or_insert_with(text, &options(FontFamily::SansSerif), || {
+            panic!("a repeated identical request must not re-shape")
+        })
+        .size
+        .width;
+    assert_eq!(again, sans);
+}
+
 /// The hash has to carry the weight too, or two weights land in the same bucket:
 /// the retained key would then catch the mismatch and merely re-shape every time,
 /// which is a performance bug wearing the costume of a correctness one. Proved by
@@ -298,6 +349,7 @@ fn two_weights_of_one_string_do_not_share_a_bucket() {
         font_size: 18.0,
         align: TextAlign::Start,
         weight,
+        family: floom_types::FontFamily::SansSerif,
     };
     let mut cache = LayoutCache::new();
     let mut shaper = TextShaper::new();

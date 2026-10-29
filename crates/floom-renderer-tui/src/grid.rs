@@ -537,6 +537,7 @@ mod tests {
             font_size: 10.0,
             align: TextAlign::Start,
             weight: FontWeight::Normal,
+            family: floom_types::FontFamily::SansSerif,
         };
         let laid = shaper.shape("AB", &options);
         assert_eq!(

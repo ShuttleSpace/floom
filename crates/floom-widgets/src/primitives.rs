@@ -20,7 +20,7 @@ use floom_core::{
     Axis, Brush, Color, CreateContext, Edges, ElementId, Filter, LayoutRequest, PaintContext,
     PaintStyle, Point, Rect, ResourceId, SemanticsContext, Shadow, Size, UpdateContext, Widget,
 };
-use floom_types::{FontWeight, Path, Stroke};
+use floom_types::{FontFamily, FontWeight, Path, Stroke};
 
 /// How an [`Image`] maps its intrinsic size onto the bounds it is given.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
@@ -226,6 +226,10 @@ pub struct Text {
     /// call, because a widget that measured at `Normal` and painted at `Medium`
     /// would lay out a box too narrow for the glyphs it draws.
     weight: FontWeight,
+    /// The typeface the run is set in. Defaults to the platform's own face; a
+    /// named family is a request that falls back to the same stack, so setting
+    /// one cannot make the text disappear on a device that lacks it.
+    family: FontFamily,
     color: Color,
     /// Overrides the accessibility label; defaults to `content`.
     label: Option<String>,
@@ -238,6 +242,7 @@ impl Text {
             content: content.into(),
             size: 14.0,
             weight: FontWeight::Normal,
+            family: FontFamily::SansSerif,
             color: Color::BLACK,
             label: None,
             revision: Revision::default(),
@@ -255,6 +260,18 @@ impl Text {
     /// weight call sites, so those two are the ones that matter in practice.
     pub fn weight(mut self, weight: FontWeight) -> Self {
         self.weight = weight;
+        self.revision.bump();
+        self
+    }
+
+    /// The typeface the text is set in.
+    ///
+    /// The family reaches both the measure and the paint call. Measuring in the
+    /// default face and painting in a monospace one would size the box for the
+    /// wrong advances and clip the text — the same class of bug as measuring at
+    /// `Normal` and painting at `Medium`.
+    pub fn family(mut self, family: FontFamily) -> Self {
+        self.family = family;
         self.revision.bump();
         self
     }
@@ -289,6 +306,17 @@ impl Text {
 
     pub fn font_weight(&self) -> FontWeight {
         self.weight
+    }
+
+    pub fn font_family(&self) -> &FontFamily {
+        &self.family
+    }
+
+    /// In-place family change, for a theme switch on an already-mounted text.
+    pub fn set_family(&mut self, family: FontFamily) -> &mut Self {
+        self.family = family;
+        self.revision.bump();
+        self
     }
 
     /// In-place weight change, for a text that is already mounted — a theme
@@ -330,8 +358,13 @@ impl Widget for Text {
         if self.content.is_empty() || self.size <= 0.0 {
             return None;
         }
-        let measured =
-            floom_text::measure_weighted_text(&self.content, self.size, self.weight, f64::INFINITY);
+        let measured = floom_text::measure_weighted_text_in(
+            &self.family,
+            &self.content,
+            self.size,
+            self.weight,
+            f64::INFINITY,
+        );
         if measured.width <= 0.0 || measured.height <= 0.0 {
             return None;
         }
@@ -351,7 +384,14 @@ impl Widget for Text {
             return;
         }
         let origin = cx.bounds().origin();
-        cx.fill_text(origin, &self.content, self.size, self.weight, self.color);
+        cx.fill_text_in(
+            origin,
+            &self.content,
+            self.size,
+            self.weight,
+            self.color,
+            &self.family,
+        );
     }
 
     fn semantics(&self, cx: &mut dyn SemanticsContext, _id: ElementId) {

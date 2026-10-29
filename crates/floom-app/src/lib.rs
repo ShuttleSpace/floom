@@ -4647,6 +4647,9 @@ struct GlyphCacheEntry {
     /// The CSS number, because that is what the hash carries; keeping the enum
     /// here as well would be a second representation that can drift from it.
     weight: u16,
+    /// The typeface the runs were shaped in. Compared, not just hashed, so a
+    /// collision degrades to a re-shape rather than to the wrong face.
+    family: floom_types::FontFamily,
     id: ResourceId,
 }
 
@@ -4712,12 +4715,22 @@ fn styled_glyph_hash(styled: &StyledText) -> u64 {
 /// for its own text, which is the same string at the same size in the wrong
 /// face, and the only symptom is that every weighted label in a design
 /// system renders flat.
-fn glyph_hash(text: &str, font_size: f32, weight: FontWeight) -> u64 {
+fn glyph_hash(
+    text: &str,
+    font_size: f32,
+    weight: FontWeight,
+    family: &floom_types::FontFamily,
+) -> u64 {
     use std::hash::{Hash, Hasher};
     let mut hasher = std::collections::hash_map::DefaultHasher::new();
     text.hash(&mut hasher);
     font_size.to_bits().hash(&mut hasher);
     weight.to_value().hash(&mut hasher);
+    // The family changes the glyph ids and the advances outright, so a cache
+    // that forgot it would answer a monospace request with the proportional
+    // runs for the same string — same text, same size, wrong face, and nothing
+    // downstream can tell.
+    family.hash(&mut hasher);
     hasher.finish()
 }
 
@@ -4773,12 +4786,16 @@ impl NodePaintContext<'_> {
         text: &str,
         font_size: f32,
         weight: FontWeight,
+        family: &floom_types::FontFamily,
     ) -> Option<ResourceId> {
-        let entry = self.glyphs.get(&glyph_hash(text, font_size, weight))?;
+        let entry = self
+            .glyphs
+            .get(&glyph_hash(text, font_size, weight, family))?;
         (entry.text == text
             && entry.size_bits == font_size.to_bits()
-            && entry.weight == weight.to_value())
-        .then_some(entry.id)
+            && entry.weight == weight.to_value()
+            && entry.family == *family)
+            .then_some(entry.id)
     }
 
     /// The interned text nodes for a styled description, one per ink.
@@ -4859,9 +4876,10 @@ impl NodePaintContext<'_> {
         text: &str,
         font_size: f32,
         weight: FontWeight,
+        family: &floom_types::FontFamily,
         runs: Vec<floom_text::GlyphRun>,
     ) -> ResourceId {
-        if let Some(id) = self.cached_glyph_id(text, font_size, weight) {
+        if let Some(id) = self.cached_glyph_id(text, font_size, weight, family) {
             return id;
         }
         // The string the runs were shaped from travels with the resource. It is
@@ -4872,11 +4890,12 @@ impl NodePaintContext<'_> {
             kind: ResourceKind::glyph_runs_with_text(runs, text),
         });
         self.glyphs.insert(
-            glyph_hash(text, font_size, weight),
+            glyph_hash(text, font_size, weight, family),
             GlyphCacheEntry {
                 text: text.to_string(),
                 size_bits: font_size.to_bits(),
                 weight: weight.to_value(),
+                family: family.clone(),
                 id,
             },
         );
@@ -4988,6 +5007,25 @@ impl PaintContext for NodePaintContext<'_> {
         weight: FontWeight,
         color: floom_types::Color,
     ) {
+        self.fill_text_in(
+            origin,
+            text,
+            size,
+            weight,
+            color,
+            &floom_types::FontFamily::SansSerif,
+        );
+    }
+
+    fn fill_text_in(
+        &mut self,
+        origin: Point,
+        text: &str,
+        size: f32,
+        weight: FontWeight,
+        color: floom_types::Color,
+        family: &floom_types::FontFamily,
+    ) {
         if text.is_empty() || size <= 0.0 {
             return;
         }
@@ -5018,13 +5056,14 @@ impl PaintContext for NodePaintContext<'_> {
             font_size: size,
             align: TextAlign::Start,
             weight,
+            family: family.clone(),
         };
         // The intern cache is checked *before* any shaping: a repeat frame
         // must not re-shape, clone the shaped runs, or mint a key String for
         // a text that has not changed. Shaping is the expensive part (parse /
         // script segmentation / glyph placement); the cache hit keeps glyph
         // runs — and their font data — stable across frames.
-        let glyphs = match self.cached_glyph_id(text, size, weight) {
+        let glyphs = match self.cached_glyph_id(text, size, weight, family) {
             Some(id) => id,
             None => {
                 let shaper = &mut *self.shaper;
@@ -5032,7 +5071,7 @@ impl PaintContext for NodePaintContext<'_> {
                     .layout_cache
                     .get_or_insert_with(text, &options, || shaper.shape(text, &options));
                 let runs = laid.runs.clone();
-                self.intern_glyphs(text, size, weight, runs)
+                self.intern_glyphs(text, size, weight, family, runs)
             }
         };
         // The laid-out extent is a cheap cache lookup either way (no clones,

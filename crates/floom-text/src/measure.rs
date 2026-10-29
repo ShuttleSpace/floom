@@ -7,7 +7,7 @@
 
 use std::cell::RefCell;
 
-use floom_types::{FontWeight, Size};
+use floom_types::{FontFamily, FontWeight, Size};
 
 use crate::LayoutCache;
 use crate::layout::{TextAlign, TextLayoutOptions, TextShaper};
@@ -43,6 +43,17 @@ pub fn measure_weighted_text(
     weight: FontWeight,
     max_width: f64,
 ) -> Size {
+    measure_weighted_text_in(&FontFamily::SansSerif, text, font_size, weight, max_width)
+}
+
+/// [`measure_weighted_text`] in a caller-chosen family.
+pub fn measure_weighted_text_in(
+    family: &FontFamily,
+    text: &str,
+    font_size: f32,
+    weight: FontWeight,
+    max_width: f64,
+) -> Size {
     measure(
         text,
         &TextLayoutOptions {
@@ -50,6 +61,7 @@ pub fn measure_weighted_text(
             font_size,
             align: TextAlign::Start,
             weight,
+            family: family.clone(),
         },
     )
 }

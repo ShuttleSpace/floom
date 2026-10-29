@@ -27,6 +27,16 @@ fn host_with_text(content: &str, size: f32) -> WidgetHost {
     host
 }
 
+fn host_with_family(content: &str, size: f32, family: floom_types::FontFamily) -> WidgetHost {
+    let mut host = WidgetHost::new();
+    host.mount_root(
+        LayoutStyle::default(),
+        Text::new(content).size(size).family(family),
+    );
+    host.frame();
+    host
+}
+
 /// Finds the first text scene node and its glyph resource id.
 fn first_text_node(host: &WidgetHost) -> (floom_types::Size, ResourceId) {
     for (_id, node) in host.scene().iter() {
@@ -64,6 +74,44 @@ fn text_frame_produces_a_shaped_glyph_resource() {
         node_size.height >= f64::from(24.0),
         "laid-out height covers the font size, got {}",
         node_size.height
+    );
+}
+
+/// `Text::family` reaches the measure *and* the paint path.
+///
+/// The two halves are asserted separately because they can drift: a widget that
+/// measured in the default face and painted in the requested one sizes the box
+/// for the wrong advances, and a widget that painted in the default face while
+/// measuring in the requested one floats or clips its glyphs. In a monospace
+/// face `iiii` is wider in both places, so one assertion per half is enough to
+/// tell "the family arrived" from "the family was dropped".
+#[test]
+fn a_text_family_reaches_measure_and_paint() {
+    use floom_types::FontFamily;
+
+    let sans = host_with_family("iiii", 20.0, FontFamily::SansSerif);
+    let mono = host_with_family("iiii", 20.0, FontFamily::Monospace);
+
+    let (sans_size, sans_glyphs) = first_text_node(&sans);
+    let (mono_size, mono_glyphs) = first_text_node(&mono);
+    assert!(
+        mono_size.width > sans_size.width,
+        "the box must be measured in the family it paints: sans {} vs mono {}",
+        sans_size.width,
+        mono_size.width
+    );
+
+    let advance = |runs: Vec<floom_text::GlyphRun>| -> f32 {
+        runs.iter()
+            .flat_map(|run| &run.glyphs)
+            .map(|glyph| glyph.advance)
+            .sum()
+    };
+    let sans_advance = advance(glyph_runs(&sans, sans_glyphs));
+    let mono_advance = advance(glyph_runs(&mono, mono_glyphs));
+    assert!(
+        mono_advance > sans_advance,
+        "the painted runs must be shaped in the family: sans {sans_advance} vs mono {mono_advance}"
     );
 }
 

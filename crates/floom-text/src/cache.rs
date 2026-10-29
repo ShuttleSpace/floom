@@ -36,6 +36,10 @@ struct CacheKey {
     font_size_bits: u32,
     align: u8,
     weight: u16,
+    /// The typeface request, because it changes the glyph ids and the advances
+    /// outright: a hit for a `Monospace` request must never answer with the
+    /// proportional runs for the same string.
+    family: floom_types::FontFamily,
 }
 
 impl CacheKey {
@@ -46,6 +50,7 @@ impl CacheKey {
             font_size_bits: options.font_size.to_bits(),
             align: options.align as u8,
             weight: options.weight.to_value(),
+            family: options.family.clone(),
         }
     }
 
@@ -55,6 +60,7 @@ impl CacheKey {
             && self.font_size_bits == options.font_size.to_bits()
             && self.align == options.align as u8
             && self.weight == options.weight.to_value()
+            && self.family == options.family
     }
 }
 
@@ -68,6 +74,7 @@ fn cache_key_hash(text: &str, options: &TextLayoutOptions) -> u64 {
     options.font_size.to_bits().hash(&mut hasher);
     (options.align as u8).hash(&mut hasher);
     options.weight.to_value().hash(&mut hasher);
+    options.family.hash(&mut hasher);
     hasher.finish()
 }
 

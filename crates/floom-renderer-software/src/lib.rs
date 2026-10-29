@@ -1769,6 +1769,7 @@ mod tests {
                 font_size: 24.0,
                 align: TextAlign::Start,
                 weight: FontWeight::Normal,
+                family: floom_types::FontFamily::SansSerif,
             },
         );
         assert!(!laid.runs.is_empty(), "shaper produced runs");
@@ -1834,6 +1835,7 @@ mod tests {
                 font_size: 20.0,
                 align: TextAlign::Start,
                 weight: FontWeight::Normal,
+                family: floom_types::FontFamily::SansSerif,
             },
         );
         let width = laid.size.width.ceil() as u32;
@@ -1966,6 +1968,7 @@ mod tests {
                     font_size: size,
                     align: TextAlign::Start,
                     weight: FontWeight::Normal,
+                    family: floom_types::FontFamily::SansSerif,
                 },
             )
         };
@@ -2107,6 +2110,7 @@ mod tests {
                         font_size: size,
                         align: TextAlign::Start,
                         weight: FontWeight::Normal,
+                        family: floom_types::FontFamily::SansSerif,
                     },
                 );
                 (size.to_bits(), laid.runs.clone())
@@ -2172,6 +2176,7 @@ mod tests {
                         font_size: size,
                         align: TextAlign::Start,
                         weight: FontWeight::Normal,
+                        family: floom_types::FontFamily::SansSerif,
                     },
                 );
                 (size.to_bits(), laid.runs.clone())

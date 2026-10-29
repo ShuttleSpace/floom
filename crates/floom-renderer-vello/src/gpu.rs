@@ -973,6 +973,23 @@ fn scene_transform(offset: (f64, f64), scale: f64) -> Affine {
     Affine::translate((-offset.0, -offset.1)) * Affine::scale(scale)
 }
 
+/// The size a glyph run must be rasterised at, and the transform that cancels
+/// the extra factor again.
+///
+/// Vello flattens a glyph's outline at `font_size` and then applies the run's
+/// transform — which, for us, is the one carrying the display scale. Handing it
+/// the logical size therefore flattens a 20px glyph and magnifies the resulting
+/// polygon by the display density: on a 2.75× phone every curve comes out as
+/// visible straight segments. Rasterising at `font_size * scale` and undoing
+/// that factor with `glyph_transform` keeps the on-screen size identical and
+/// puts the outline's resolution at the pixels it lands on.
+fn device_glyph_scale(font_size: f32, scale: f64) -> (f32, Option<Affine>) {
+    if !scale.is_finite() || scale <= 0.0 || (scale - 1.0).abs() <= f64::EPSILON {
+        return (font_size, None);
+    }
+    (font_size * scale as f32, Some(Affine::scale(1.0 / scale)))
+}
+
 impl VelloGpuPresenter {
     /// Create a presenter, or `None` when no usable GPU adapter exists.
     ///
@@ -1257,13 +1274,37 @@ impl VelloGpuPresenter {
         width: u32,
         height: u32,
     ) -> Option<Vec<u8>> {
+        self.render_offscreen_scaled(scene, resources, width, height, 1.0)
+    }
+
+    /// [`Self::render_offscreen`] at a display density other than 1×.
+    ///
+    /// `width` and `height` are the *device* extent of the texture, so the scene
+    /// is laid out in `width / scale` × `height / scale` logical units — exactly
+    /// what a window of that density shows. The density-dependent parts of the
+    /// encoder (glyph rasterisation, filter scopes) can only be checked against
+    /// pixels when a test can ask for a density other than 1, and "looks fine at
+    /// 1×" is how text ships blocky on a phone.
+    pub fn render_offscreen_scaled(
+        &mut self,
+        scene: &Scene,
+        resources: &ResourceRegistry,
+        width: u32,
+        height: u32,
+        scale: f64,
+    ) -> Option<Vec<u8>> {
         if width == 0 || height == 0 {
             return None;
         }
+        let scale = if scale.is_finite() && scale > 0.0 {
+            scale
+        } else {
+            1.0
+        };
         // The scene is laid out in logical units; this is the same scale the
         // live path uses, so a golden taken here matches what a window shows.
-        self.size = floom_types::Size::new(f64::from(width), f64::from(height));
-        self.scale = 1.0;
+        self.size = floom_types::Size::new(f64::from(width) / scale, f64::from(height) / scale);
+        self.scale = scale;
         self.needs_present = true;
         // The encoding pass is the thing under test: it is where clips,
         // shadows and the display scale are applied. Reusing it verbatim is
@@ -1452,7 +1493,11 @@ impl VelloGpuPresenter {
             let (sw, sh) = (x1 - x0, y1 - y0);
 
             // Re-walk this scope's nodes into a scene of their own, shifted so
-            // the target rect's origin is the texture's origin.
+            // the target rect's origin is the texture's origin. The display
+            // scale belongs in this transform: the texture is `sw × sh`
+            // *device* pixels and the nodes are in logical units, so without
+            // it the scope's content is rasterised at 1:1 into the top-left
+            // corner of a density-times-larger texture.
             self.vello_scene.reset();
             let mut used_images: HashSet<u64> = HashSet::new();
             for node in &span {
@@ -1465,10 +1510,7 @@ impl VelloGpuPresenter {
             let mut shifted = VelloScene::new();
             shifted.append(
                 &self.vello_scene,
-                Some(Affine::translate((
-                    -f64::from(x0) / scale,
-                    -f64::from(y0) / scale,
-                ))),
+                Some(Affine::translate((-f64::from(x0), -f64::from(y0))) * Affine::scale(scale)),
             );
             self.vello_scene = shifted;
 
@@ -1496,18 +1538,15 @@ impl VelloGpuPresenter {
                 },
                 sampler: ImageSampler::default(),
             };
-            let target = floom_types::Rect {
-                x0: f64::from(x0) / scale,
-                y0: f64::from(y0) / scale,
-                x1: f64::from(x1) / scale,
-                y1: f64::from(y1) / scale,
-            };
-            let sx = target.width() / f64::from(sw);
-            let sy = target.height() / f64::from(sh);
+            // `composited` is the main scene, already appended under `shift`,
+            // so it is in *device* pixels — the blurred image has to be placed
+            // in device pixels too, or a 2× display puts it at half the size
+            // and half the position. One texel is one device pixel, so the
+            // transform is the region's origin and nothing else.
             draw_image_at(
                 &mut composited,
                 &brush,
-                Affine::translate((target.x0, target.y0)) * Affine::scale_non_uniform(sx, sy),
+                Affine::translate((f64::from(x0), f64::from(y0))),
                 sw,
                 sh,
                 u8::MAX,
@@ -1741,7 +1780,14 @@ impl VelloGpuPresenter {
                 }
                 _ => {}
             }
-            let fingerprint = node_fingerprint(node);
+            // The display scale is part of the fingerprint, not just the
+            // position: glyph outlines are rasterised at the device size (see
+            // the `Text` arm of `encode_node`), so a fragment encoded at 1× is
+            // the wrong ink at 2×. Folding the scale in re-encodes on a
+            // density change instead of reusing glyphs flattened for another
+            // display.
+            let fingerprint =
+                node_fingerprint(node) ^ self.scale.to_bits().wrapping_mul(0x9E37_79B9_7F4A_7C15);
             let key = id.raw();
             // A shader node's pixels are dynamic (`u.time` advances each
             // present): serving it from the fragment cache would freeze the
@@ -1945,20 +1991,22 @@ impl VelloGpuPresenter {
                     // offsets into the transform and pass glyph positions
                     // through untouched.
                     //
-                    // The display scale does *not* belong here: the fragment
-                    // is appended under `shift * group_affine`, and
-                    // `Encoding::append` left-multiplies that same affine into
-                    // every glyph run's transform
-                    // (`run.transform = transform * run.transform`). The scale
-                    // therefore arrives once, through the append transform,
-                    // and must not be composed again into the run's own
-                    // transform — doing so would scale every glyph twice and
-                    // the text would come out bloated and unreadable on any
-                    // HiDPI display. The font size likewise stays in logical
-                    // units: `draw_glyphs` rasterises outlines at the size it
-                    // is handed, and the transform positions the result.
+                    // The display scale does *not* belong in this transform:
+                    // the fragment is appended under `shift * group_affine`,
+                    // and `Encoding::append` left-multiplies that same affine
+                    // into every glyph run's transform
+                    // (`run.transform = transform * run.transform`). It does
+                    // belong in the rasterisation size, though: vello flattens
+                    // the outline at the size it is handed and then scales the
+                    // polygon, so passing the logical size would flatten 20px
+                    // text and blow it up by the density — blocky on a phone.
+                    // `device_glyph_scale` hands over the device size and
+                    // cancels the extra factor, so the ink lands at the same
+                    // place at the device's resolution.
                     let transform =
                         Affine::translate((origin.x + run.origin.x, origin.y + run.origin.y));
+                    let (font_size, glyph_transform) =
+                        device_glyph_scale(run.font_size, self.scale);
                     let glyphs = run.glyphs.iter().map(|g| vello::Glyph {
                         id: g.id,
                         x: g.x,
@@ -1966,7 +2014,8 @@ impl VelloGpuPresenter {
                     });
                     target
                         .draw_glyphs(&run.font)
-                        .font_size(run.font_size)
+                        .font_size(font_size)
+                        .glyph_transform(glyph_transform)
                         .transform(transform)
                         .brush(PenikoColor::from_rgba8(color.r, color.g, color.b, color.a))
                         .draw(Fill::NonZero, glyphs);
@@ -2906,6 +2955,56 @@ mod tests {
     /// A registry with nothing in it, for nodes that cannot reach one.
     fn empty_registry() -> floom_scene::ResourceRegistry {
         floom_scene::ResourceRegistry::new()
+    }
+
+    /// Glyphs are rasterised at the device size, and the extra factor is undone
+    /// so the on-screen size does not change.
+    ///
+    /// This is the whole fix for blocky text on a dense display: vello flattens
+    /// the outline at the size it is handed and then scales the polygon by the
+    /// run transform, so a logical size is a magnified polygon. The pair is
+    /// asserted together because either half alone is wrong — the size without
+    /// the compensating transform draws text `scale`× too large, and the
+    /// transform without the size draws it at the right place with the wrong
+    /// resolution, which is exactly the bug that is invisible on a 1× monitor.
+    #[test]
+    fn glyphs_rasterise_at_the_device_size_and_cancel_the_extra_scale() {
+        let (size, transform) = device_glyph_scale(20.0, 2.75);
+        assert!(
+            (size - 55.0).abs() < 1e-4,
+            "the outline has to be flattened at 20 × 2.75 = 55, got {size}"
+        );
+        let transform = transform.expect("a non-1× density needs the compensating transform");
+        let doubled = transform * Affine::scale(2.75);
+        assert!(
+            (doubled.as_coeffs()[0] - 1.0).abs() < 1e-9
+                && (doubled.as_coeffs()[3] - 1.0).abs() < 1e-9,
+            "the glyph transform must cancel the display scale exactly, got {:?}",
+            doubled.as_coeffs()
+        );
+    }
+
+    /// At 1× there is nothing to compensate, and the run is encoded exactly as
+    /// before — the fix must not perturb the common case.
+    #[test]
+    fn a_1x_display_needs_no_glyph_transform() {
+        let (size, transform) = device_glyph_scale(14.0, 1.0);
+        assert_eq!(size, 14.0);
+        assert!(transform.is_none());
+    }
+
+    /// A degenerate density (a presenter that has not been attached yet) falls
+    /// back to the logical size rather than producing a zero or infinite one.
+    #[test]
+    fn a_degenerate_density_keeps_the_logical_size() {
+        for scale in [0.0, -2.0, f64::NAN, f64::INFINITY] {
+            let (size, transform) = device_glyph_scale(16.0, scale);
+            assert_eq!(size, 16.0, "scale {scale} must not change the size");
+            assert!(
+                transform.is_none(),
+                "scale {scale} must not emit a transform"
+            );
+        }
     }
 
     /// A shadow, folded into the blur primitive's own parameters.
@@ -4246,6 +4345,7 @@ mod tests {
                 font_size: 24.0,
                 align: TextAlign::Start,
                 weight: FontWeight::Normal,
+                family: floom_types::FontFamily::SansSerif,
             },
         );
         assert!(!laid.runs.is_empty(), "the shaper produced a run");
@@ -4277,8 +4377,25 @@ mod tests {
             [2.0, 0.0, 0.0, 2.0],
             "the scale comes from append, not from the run's own transform"
         );
-        // The font size stays in logical units; vello rasterises at this size
-        // and the transform positions the result.
-        assert_eq!(runs[0].font_size, 24.0, "the font size is not pre-scaled");
+        // The outline is flattened at the *device* size, so a 24px run on a 2×
+        // display is rasterised at 48 — otherwise vello magnifies a 24px
+        // polygon and the curves come out as straight segments.
+        assert_eq!(
+            runs[0].font_size, 48.0,
+            "the outline is rasterised at the device size"
+        );
+        // …and the extra factor is cancelled by the glyph transform, so the ink
+        // still occupies 24 logical px. The pair is asserted together because
+        // either half alone draws the text at the wrong size.
+        let glyph_transform = runs[0]
+            .glyph_transform
+            .expect("a 2× display needs the compensating glyph transform");
+        assert_eq!(glyph_transform.matrix, [0.5, 0.0, 0.0, 0.5]);
+        let net = transform * glyph_transform;
+        assert_eq!(
+            net.matrix,
+            [1.0, 0.0, 0.0, 1.0],
+            "the display scale and the glyph transform must cancel"
+        );
     }
 }

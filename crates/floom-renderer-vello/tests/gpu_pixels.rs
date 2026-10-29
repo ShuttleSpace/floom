@@ -92,6 +92,52 @@ fn render(nodes: Vec<SceneNode>) -> Vec<u8> {
         .expect("offscreen readback mapped")
 }
 
+/// Rasterises `nodes` into an `extent × extent` device-pixel texture at
+/// `scale`, i.e. the scene is laid out in `extent / scale` logical units — the
+/// same relationship a window has to its swap chain.
+fn render_at(
+    nodes: Vec<SceneNode>,
+    resources: &ResourceRegistry,
+    extent: u32,
+    scale: f64,
+) -> Vec<u8> {
+    let Some(mut gpu) = presenter() else {
+        panic!("{}", no_adapter_reason().unwrap());
+    };
+    let mut scene = Scene::new();
+    scene.begin_update();
+    for node in nodes {
+        let _ = scene.insert(node);
+    }
+    scene.finish_update();
+    gpu.render_offscreen_scaled(&scene, resources, extent, extent, scale)
+        .expect("offscreen readback mapped")
+}
+
+/// The bounding box of everything with ink, in the buffer's pixels.
+fn ink_bounds(rgba: &[u8], extent: u32) -> Option<(f64, f64, f64, f64)> {
+    let mut bounds: Option<(u32, u32, u32, u32)> = None;
+    for y in 0..extent {
+        for x in 0..extent {
+            let index = ((y as usize) * extent as usize + x as usize) * 4;
+            if rgba[index + 3] > 8 {
+                bounds = Some(match bounds {
+                    Some((x0, y0, x1, y1)) => (x0.min(x), y0.min(y), x1.max(x), y1.max(y)),
+                    None => (x, y, x, y),
+                });
+            }
+        }
+    }
+    bounds.map(|(x0, y0, x1, y1)| {
+        (
+            f64::from(x0),
+            f64::from(y0),
+            f64::from(x1 + 1),
+            f64::from(y1 + 1),
+        )
+    })
+}
+
 fn pixel(rgba: &[u8], x: u32, y: u32) -> [u8; 4] {
     let index = ((y as usize) * W as usize + x as usize) * 4;
     [
@@ -329,6 +375,141 @@ fn an_empty_filter_scope_draws_nothing() {
         alpha(&rgba, 8, 8),
         0,
         "an empty scope must not smear anything into the empty corner"
+    );
+}
+
+// ---------------------------------------------------------------------------
+// F3 — text at a display density
+// ---------------------------------------------------------------------------
+
+/// Shapes `text` and interns the runs the way the app's paint path does.
+fn text_nodes(
+    text: &str,
+    font_size: f32,
+    origin: floom_types::Point,
+    resources: &mut ResourceRegistry,
+) -> Vec<SceneNode> {
+    let mut shaper = floom_text::TextShaper::new();
+    let laid = shaper.shape(
+        text,
+        &floom_text::TextLayoutOptions {
+            font_size,
+            ..Default::default()
+        },
+    );
+    assert!(
+        !laid.runs.is_empty(),
+        "no glyph run for {text:?}: the shaping step is the premise of this test"
+    );
+    let glyphs = resources.insert(floom_scene::Resource {
+        kind: floom_scene::ResourceKind::glyph_runs_with_text(laid.runs.clone(), text),
+    });
+    vec![SceneNode::Text {
+        origin,
+        size: laid.size,
+        glyphs,
+        color: INK,
+    }]
+}
+
+/// Text lands in the same *logical* place at 2× as at 1×, and it is drawn at
+/// both densities.
+///
+/// The two ways this breaks are opposite and both invisible on a 1× monitor:
+/// forgetting the compensating glyph transform draws the text at the display
+/// density's size (twice as large at 2×), and composing the scale twice draws
+/// it at a quarter. Comparing logical bounding boxes catches both, and the
+/// control case (both renders have ink) keeps "nothing was drawn" from passing
+/// as "the geometry agrees".
+#[test]
+#[ignore = "needs a GPU adapter; run with --features gpu -- --ignored"]
+fn text_keeps_its_logical_geometry_at_a_hidpi_scale() {
+    if let Some(reason) = no_adapter_reason() {
+        eprintln!("SKIP: {reason}");
+        return;
+    }
+
+    let mut resources = ResourceRegistry::new();
+    let nodes = text_nodes(
+        "Hg",
+        20.0,
+        floom_types::Point::new(8.0, 16.0),
+        &mut resources,
+    );
+
+    let one = render_at(nodes.clone(), &resources, 96, 1.0);
+    let two = render_at(nodes, &resources, 192, 2.0);
+
+    let one = ink_bounds(&one, 96).expect("the 1× render has ink");
+    let two = ink_bounds(&two, 192).expect("the 2× render has ink");
+
+    // Both boxes in logical units: the 2× buffer has twice the pixels for the
+    // same logical area, so its box halves.
+    let two = (two.0 / 2.0, two.1 / 2.0, two.2 / 2.0, two.3 / 2.0);
+    for (name, a, b) in [
+        ("left", one.0, two.0),
+        ("top", one.1, two.1),
+        ("right", one.2, two.2),
+        ("bottom", one.3, two.3),
+    ] {
+        assert!(
+            (a - b).abs() <= 1.0,
+            "the {name} edge moved by {:.1} logical px between 1× and 2×: \
+             1× box {one:?}, 2× box {two:?}",
+            (a - b).abs()
+        );
+    }
+}
+
+/// A filter scope's contents are rasterised at the device resolution, so at 2×
+/// the blurred rect still covers the same *device* rect the sharp one would.
+///
+/// The offscreen pass is a separate encode of the scope's span, and the display
+/// scale has to be part of it: the texture is `scale`× larger than the logical
+/// region, so without the scale the scope's content is drawn 1:1 into a corner
+/// of it and the blur is composited at half size. This is the "the filtered
+/// card is a quarter of its size on a phone" failure.
+#[test]
+#[ignore = "needs a GPU adapter; run with --features gpu -- --ignored"]
+fn a_filter_scope_covers_its_device_rect_at_a_hidpi_scale() {
+    if let Some(reason) = no_adapter_reason() {
+        eprintln!("SKIP: {reason}");
+        return;
+    }
+
+    let rgba = render_at(
+        vec![
+            SceneNode::FilterPush {
+                filter: floom_types::Filter::blur(6.0),
+            },
+            fill(rect(16.0, 16.0, 48.0, 48.0), INK),
+            SceneNode::FilterPop,
+        ],
+        &ResourceRegistry::new(),
+        128,
+        2.0,
+    );
+
+    // Logical (16..48) is device (32..96) at 2×. The near corner of that rect
+    // is where the half-size composite would have stopped, so ink there is the
+    // difference between "the scope kept its size" and "the scope shrank".
+    // The sharp copy of the scope's content is still drawn underneath, so the
+    // probe has to sit in the *halo*: outside the rect (device 32..96) and
+    // inside the blur's reach. Only a scope rasterised at the device size puts
+    // ink there — a half-size composite stops at device ~70.
+    let halo = (64 * 128 + 104) * 4;
+    assert!(
+        rgba[halo + 3] > 0,
+        "the blur must spread to device (104, 64), just outside the rect; alpha there is {}",
+        rgba[halo + 3]
+    );
+    // And the control: outside the rect and its blur halo stays clear, so the
+    // assertion above cannot pass on a scope that painted the whole frame.
+    let outside = (2 * 4 * 128 + 2 * 4) * 4;
+    assert_eq!(
+        rgba[outside + 3],
+        0,
+        "nothing outside the scope's reach may be inked"
     );
 }
 

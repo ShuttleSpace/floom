@@ -2,7 +2,7 @@
 
 use std::borrow::Cow;
 
-use floom_types::{FontWeight, Point, Size};
+use floom_types::{FontFamily as FloomFontFamily, FontWeight, Point, Size};
 use parley::layout::{Alignment, AlignmentOptions, PositionedLayoutItem};
 use parley::style::{
     FontFamily, FontStack, FontWeight as ParleyFontWeight, GenericFamily, StyleProperty,
@@ -41,8 +41,24 @@ static DEFAULT_FONT_STACK: &[FontFamily<'static>] = &[
 ];
 
 /// The default [`FontStack`] used when a caller does not specify one.
-fn default_font_stack() -> FontStack<'static> {
-    FontStack::List(Cow::Borrowed(DEFAULT_FONT_STACK))
+///
+/// Kept as a function so the family request and the fallback list are composed
+/// in exactly one place: a named family that the device does not ship has to
+/// land on the same CJK-capable stack the default does, or a phone with a
+/// Chinese locale renders `你好` as tofu boxes while Latin text looks fine.
+pub(crate) fn font_stack(family: &FloomFontFamily) -> FontStack<'static> {
+    let primary = match family {
+        FloomFontFamily::Serif => FontFamily::Generic(GenericFamily::Serif),
+        FloomFontFamily::SansSerif => FontFamily::Generic(GenericFamily::SansSerif),
+        FloomFontFamily::Monospace => FontFamily::Generic(GenericFamily::Monospace),
+        FloomFontFamily::Cursive => FontFamily::Generic(GenericFamily::Cursive),
+        FloomFontFamily::Fantasy => FontFamily::Generic(GenericFamily::Fantasy),
+        FloomFontFamily::Named(name) => FontFamily::Named(Cow::Owned(name.clone())),
+    };
+    let mut stack = Vec::with_capacity(DEFAULT_FONT_STACK.len() + 1);
+    stack.push(primary);
+    stack.extend(DEFAULT_FONT_STACK.iter().cloned());
+    FontStack::List(Cow::Owned(stack))
 }
 
 /// Horizontal alignment for laid-out paragraphs.
@@ -81,6 +97,13 @@ pub struct TextLayoutOptions {
     /// How heavy the run is drawn. Default is `Normal`, which is what every text
     /// path that does not ask gets.
     pub weight: FontWeight,
+    /// The typeface the run is set in.
+    ///
+    /// `SansSerif` — the default — is the platform's own default with the CJK
+    /// fallbacks behind it. A `Named` family is a *request*: a device that does
+    /// not ship it falls back to the same stack, which is what makes setting one
+    /// safe on a phone whose fonts the app cannot know.
+    pub family: FloomFontFamily,
 }
 
 impl Default for TextLayoutOptions {
@@ -90,6 +113,7 @@ impl Default for TextLayoutOptions {
             font_size: 16.0,
             align: TextAlign::Start,
             weight: FontWeight::Normal,
+            family: FloomFontFamily::SansSerif,
         }
     }
 }
@@ -182,7 +206,7 @@ impl TextShaper {
         builder.push_default(StyleProperty::FontWeight(ParleyFontWeight::new(
             options.weight.to_value().into(),
         )));
-        builder.push_default(StyleProperty::FontStack(default_font_stack()));
+        builder.push_default(StyleProperty::FontStack(font_stack(&options.family)));
         let mut layout = builder.build(text);
 
         let width = if options.max_width.is_finite() {
@@ -305,6 +329,36 @@ mod tests {
         );
         let tofu = laid.runs.iter().flat_map(|r| &r.glyphs).any(|g| g.id == 0);
         assert!(!tofu, "CJK glyphs resolved to .notdef (tofu box)");
+    }
+
+    /// A family request reaches the shaper.
+    ///
+    /// Monospace glyphs all advance by the same amount, so `iiii` is wider in a
+    /// monospace face than in a proportional one. If the request were dropped —
+    /// the failure this covers — the two shapings would be identical, which is
+    /// invisible in a screenshot of a single string and is exactly how a
+    /// `family()` setter that nobody wired up survives review.
+    #[test]
+    fn a_family_request_changes_the_shaped_advance() {
+        let mut shaper = TextShaper::new();
+        let proportional = shaper
+            .shape("iiii", &TextLayoutOptions::default())
+            .size
+            .width;
+        let monospace = shaper
+            .shape(
+                "iiii",
+                &TextLayoutOptions {
+                    family: FloomFontFamily::Monospace,
+                    ..Default::default()
+                },
+            )
+            .size
+            .width;
+        assert!(
+            monospace > proportional,
+            "monospace `iiii` ({monospace}) must be wider than proportional ({proportional})"
+        );
     }
 
     /// The default stack still resolves plain Latin text to valid glyphs, so the

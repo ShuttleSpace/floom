@@ -44,6 +44,32 @@ fn text_scene_snapshot() {
     );
 }
 
+/// The family is carried and reaches the intrinsic size.
+///
+/// `iiii` in a monospace face is wider than in the default one, so the box the
+/// widget asks for is the box it will paint in. A `family()` setter that only
+/// stored the value would pass a getter test and still lay out the wrong width.
+#[test]
+fn a_text_family_changes_the_intrinsic_size() {
+    use floom_types::FontFamily;
+
+    let proportional = Text::new("iiii").size(20.0);
+    let monospace = Text::new("iiii").size(20.0).family(FontFamily::Monospace);
+    assert_eq!(monospace.font_family(), &FontFamily::Monospace);
+    assert_eq!(proportional.font_family(), &FontFamily::SansSerif);
+
+    let width = |text: &Text| match text.layout_request().and_then(|r| r.width) {
+        Some(floom_types::Length::Px(px)) => px,
+        other => panic!("expected a pixel width, got {other:?}"),
+    };
+    assert!(
+        width(&monospace) > width(&proportional),
+        "monospace {} must be wider than proportional {}",
+        width(&monospace),
+        width(&proportional)
+    );
+}
+
 #[test]
 fn text_semantics_snapshot() {
     let widget = Text::new("Hello");
