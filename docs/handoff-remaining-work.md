@@ -1,6 +1,6 @@
 # 交接清单 — 剩余工作与怎么测
 
-生成于 2026-10-23，最后更新 2026-10-24。A/B 两组已全部完成（见
+生成于 2026-10-23，最后更新 2026-10-29。A/B 两组已全部完成（见
 `docs/plugin-and-renderer-audit.md`）。这份清单只列**还没做的**，每项写清四件事：
 目标、为什么卡住、需要你提供什么、怎么验证。
 
@@ -140,7 +140,7 @@ scripts/build.sh floom-capabilities android \
 
 ---
 
-## 2. camera / webview 真能力插件 🟠 webview ✅ / camera 待做
+## 2. camera / webview 真能力插件 🟠 webview ✅（含 JS 桥）/ camera 待做
 
 **目标**：A6 验证了原生视图合成链路（Objective-C 插件 → C ABI → 真 `NSView`），
 但用的是演示视图。camera 和 webview 才是这条链路真正要服务的能力。
@@ -187,33 +187,73 @@ malformed url refused: Err("not a URL with a scheme: not a url")
    `WKWebView` 后进程直接 `SIGTRAP` —— 而且它**从输出里消失**了，不是报错。
    现在那个测试明确打印 skip 原因，创建路径由 example 覆盖（example 跑在主线程）。
 
-### camera — 🟠 待做，有一个结构性障碍
+### camera — 🟠 代码已写，待真机验证（Java 半边 + Rust JNI 已落地）
 
 **这台机器现在有设备**（Redmi、Android 16 / API 36、`/dev/video*` 存在）。
 
-障碍不在硬件，在架构：**`hasCode="false"` 的 Android 示例没有 Java 类**，
-而 Camera2 的 `SurfaceHolder.Callback` 需要 Java 实现（或用 JNI 注册 native
-回调）。这和当初 `background-work` 撞的是同一堵墙 —— 那次靠"`AlarmManager` +
-启动自己的 activity"绕过去了，camera 没有等价物。
+障碍不在硬件，在架构：**`hasCode="false"` 的 Android 示例没有 Java 类**。
+Camera2 需要 Java 实现（`SurfaceHolder.Callback` / `TextureView.SurfaceTextureListener`），
+也需要 `CAMERA` 运行时权限，而权限请求是 `Activity.requestPermissions` ——
+两者在纯 `NativeActivity` 里都没有落点。这和当初 `background-work` 撞的是
+同一堵墙，那次靠"`AlarmManager` + 启动自己的 activity"绕过去了，camera 没有等价物。
 
-`hasCode="false"` 的另一个后果：Camera2 还需要 `CAMERA` 运行时权限，而
-`hasCode="false"` 的应用**没有 Activity 可以用来请求它**（权限请求是
-`Activity.requestPermissions`）。
+**2026-10-28 已按"引入 Java 半边"的方向落地代码**（未提交，等真机验证）：
 
-**需要你先决定**：为 camera 引入 Java 半边（`classes.dex` + 一个 `Activity`），
-还是先用 JNI 注册 native callback 试通（不改 `hasCode="false"`，但要确认
-Camera2 能不能在没有 `SurfaceHolder` 的情况下工作 —— 大概率不能）。
+- `native/android/FloomCameraView.java` —— `TextureView` + Camera2，自己开
+  `HandlerThread`、选后置摄像头、建 capture session；`openCamera` /
+  `closeCamera` / `setPosition` / `setVisible` 由 Rust 调用。
+- `src/android.rs` —— `CameraProvider` 实现 `NativeViewProvider`，通过 JNI
+  创建 Java 视图、挂到 `decorView`、驱动几何与可见性；kind 不是
+  `Custom("camera")` 时拒绝。
+- 交叉编译已验证：`cargo check -p floom-plugin-nativeview --target
+  aarch64-linux-android` 零错误。
+
+**仍然缺的一步**：示例的 `AndroidManifest.xml` 还是 `hasCode="false"`，
+没有 `classes.dex` 装载 `FloomCameraView`，也没有 Activity 去请求 `CAMERA`
+运行时权限。也就是说：**代码能编译，但真机上的类找不到、权限也拿不到**。
+下一步要么把 Java 半边打进示例的 `classes.dex` 并加一个请求权限的 Activity，
+要么在 Rust 侧用 `Activity.requestPermissions` 的 JNI 调用补上（仍需要
+Activity 存在）。
 
 **camera 的验收**：app 里一个矩形区域显示摄像头实时画面，退到后台再回来画面恢复。
-**webview 的验收**（macOS 部分已完成）：加载一个页面，页面里的 JS 能调到 Rust
-侧一个函数并拿到返回值 —— **JS 桥本身还没做**，见下。
+**webview 的验收**（macOS 已完成）：加载一个页面，页面里的 JS 能调到 Rust
+侧一个函数并拿到返回值 —— 已由 `webview_demo` 覆盖，见下。
 
-### webview 还差的：JS ↔ Rust 桥
+### webview JS ↔ Rust 桥 — ✅ 已实现（2026-10-28，macOS）
 
-当前实现是"能加载、能显示、能交互"，但**页面里的 JS 还不能调用 Rust**。
-`WKWebView` 的 `addScriptMessageHandler` 需要一个实现了
-`WKScriptMessageHandler` 协议的 Objective-C 对象，把消息转成 C 回调。
-这是下一步，需要先定 Rust 侧的接收形态（回调？队列？还是 poll）。
+没有引入 JS 引擎，也没有引入 channel 机制：桥就是 `WKWebView` 自带的
+message handler，跨 FFI 仍然走 `floom-native-ffi` 的 C ABI。
+
+- **JS → Rust**：`WKUserContentController` 在 document start 注入
+  `window.floomNative.postMessage`，它转给名为 `floomNative` 的
+  `WKScriptMessageHandler`；native half 再调用 Rust 注册的 C 回调
+  `void (*)(FloomNativeSlot, const char *)`。
+- **Rust → JS**：`floom_nativeview_post_message(slot, json)` →
+  `evaluateJavaScript`，投递到 `window.floomNative.onMessage(json)`。
+- 接收形态选的是**同步回调**，不是队列或 poll：WebKit 本来就在主线程投递，
+  再排队只是把同一件事推迟一帧，还多一个需要清理的队列。
+
+验证（`cargo run -p floom-plugin-nativeview --example webview_demo`，本机跑通）：
+
+```
+web view placed, backing scale 2
+loaded the built-in demo page
+
+bridge ready — press the button in the window, or close it to quit.
+js -> rust  [slot 1:0] {"type":"ready"}
+rust -> js  {"type":"pong","echo":{"type":"ready"}}
+```
+
+`FLOOM_DEMO_URL=https://www.bing.com` 加载真实站点同样可用；shim 在页面自己的
+脚本之前注入，所以站点可以在加载时就调用桥。
+
+**踩到的坑**：内联 demo 页面最初是 `data:` URL，里面带 `#`（CSS 颜色、`#log`
+选择器）。`#` 在 URL 里是 fragment 分隔符，页面被截断，脚本根本没执行 ——
+表现为"加载成功但桥一条消息都没有"。改成 `rgb(...)` 和 class 选择器。
+
+**还没做的**：Android / iOS / Linux / Windows 的等价桥。当前仓库里只有 macOS
+有 webview 实现，其余平台要等各自的 native half 存在后，按同一 C ABI 接
+`JavaScriptInterface` / `WKScriptMessageHandler` / WebView2 / WebKitGTK。
 
 ---
 
@@ -374,7 +414,7 @@ cargo test -p floom-renderer-tui --test tui_pixels        # 5 项 ✓
 cargo run -p floom-capabilities
 
 # 原生视图插件（macOS，不需要设备）✓ 已验证跑通
-cargo run --manifest-path crates/ecosystem/plugins/Cargo.toml -p floom-plugin-nativeview --example native_view
+cargo run --manifest-path crates/ecosystem/plugins/Cargo.toml -p floom-plugin-nativeview --example webview_demo
 # 输出：window: <NSWindow: 0x...> / bound in mode Overlay / placed at 10,15 100x50
 #       the native half did all of it: one view created, placed, and destroyed.
 
