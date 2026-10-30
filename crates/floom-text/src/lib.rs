@@ -5,6 +5,7 @@
 
 mod cache;
 mod editor_layout;
+pub mod glyph;
 mod layout;
 mod measure;
 

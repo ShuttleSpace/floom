@@ -28,6 +28,7 @@ pub use presenter::SoftwarePresenter;
 
 use floom_renderer::{FrameInfo, RenderTarget, Renderer, RendererCapabilities};
 use floom_scene::{DamageRegion, Rect, ResourceKind, ResourceRegistry, Scene, SceneNode};
+use floom_text::glyph::{GlyphMask, rasterize_glyph};
 use floom_types::{Brush, Color, Filter, Point, Polyline, Shadow, Transform};
 use raster::{ClipStack, Scissor};
 use std::collections::HashMap;
@@ -1412,42 +1413,6 @@ fn inflate_clip(clip: Clip, reach: u32, width: u32, height: u32) -> Clip {
         (clip.2.saturating_add(reach)).min(width),
         (clip.3.saturating_add(reach)).min(height),
     )
-}
-
-struct GlyphMask {
-    placement: swash::zeno::Placement,
-    data: Vec<u8>,
-}
-
-/// Rasterises one glyph as an 8-bit alpha mask at the given font size.
-fn rasterize_glyph(font: swash::FontRef<'_>, font_size: f32, glyph_id: u32) -> Option<GlyphMask> {
-    use swash::scale::image::Content;
-    use swash::scale::{Render, ScaleContext, Source, StrikeWith};
-    use swash::zeno::Format;
-
-    thread_local! {
-        static SCALE_CONTEXT: std::cell::RefCell<ScaleContext> =
-            std::cell::RefCell::new(ScaleContext::new());
-    }
-
-    SCALE_CONTEXT.with_borrow_mut(|context| {
-        let mut scaler = context.builder(font).size(font_size).build();
-        let mut render = Render::new(&[
-            Source::ColorOutline(0),
-            Source::ColorBitmap(StrikeWith::BestFit),
-            Source::Outline,
-        ]);
-        render.format(Format::Alpha);
-        let image = render.render(&mut scaler, glyph_id as u16)?;
-        if image.content != Content::Mask {
-            // Colour glyphs (emoji) have no representation in an alpha mask.
-            return None;
-        }
-        Some(GlyphMask {
-            placement: image.placement,
-            data: image.data,
-        })
-    })
 }
 
 impl Renderer for SoftwareRenderer {

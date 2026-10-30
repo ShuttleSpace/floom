@@ -269,6 +269,14 @@ impl<R: Presenter> AppRunner<R> {
                 // scale over here or every participant lands at 1x — half-sized,
                 // in the middle of a view that is drawn correctly.
                 self.host.set_scale(scale);
+                // The presenter needs the density too: it renders at
+                // `size * scale` device pixels. `attach` applies it only when
+                // surface handles are already available, and a window born at
+                // its final size (Android) never emits a later resize — so
+                // without this the presenter stays at 1x and the compositor
+                // upscales a logical-resolution frame, which shows up as
+                // banded, blurry text over a clean solid background.
+                self.presenter.resize(size, scale);
                 self.attach(platform, window);
                 platform.request_frame(window);
                 self.stats.redraws_requested += 1;

@@ -10,6 +10,7 @@ rust-version.workspace = true
 [dependencies]
 floom-renderer = { path = "../floom-renderer", version = "0.2.0" }
 floom-scene = { path = "../floom-scene", version = "0.2.0" }
+floom-text = { path = "../floom-text", version = "0.2.0" }
 floom-types = { path = "../floom-types", version = "0.2.0" }
 # CPU glyph rasterisation for the software text path (same engine vger and
 # tiny-skia use on their cache misses).
@@ -17,7 +18,6 @@ swash.workspace = true
 peniko.workspace = true
 
 [dev-dependencies]
-floom-text = { path = "../floom-text", version = "0.2.0" }
 criterion = { version = "0.8.1", features = ["html_reports"] }
 
 [[bench]]

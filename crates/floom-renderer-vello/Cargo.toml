@@ -14,18 +14,18 @@ default = []
 # headless builds, tests and benchmarks.
 # `vello` re-exports its own `wgpu`, so no separate wgpu dependency is declared
 # and the two can never drift out of sync.
-gpu = ["dep:vello", "dep:pollster"]
+gpu = ["dep:vello", "dep:pollster", "dep:floom-text"]
 
 [dependencies]
 floom-renderer = { path = "../floom-renderer", version = "0.2.0" }
 floom-scene = { path = "../floom-scene", version = "0.2.0" }
+floom-text = { path = "../floom-text", version = "0.2.0", optional = true }
 floom-types = { path = "../floom-types", version = "0.2.0" }
 vello = { version = "0.7.0", optional = true }
 pollster = { version = "0.4.0", optional = true }
 
 [dev-dependencies]
 criterion = { version = "0.8.1", features = ["html_reports"] }
-floom-text = { path = "../floom-text" }
 
 [[bench]]
 name = "scene_render"

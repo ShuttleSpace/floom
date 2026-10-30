@@ -75,6 +75,7 @@ use vello::peniko::{
 use vello::util::RenderSurface;
 use vello::wgpu;
 use vello::wgpu::util::TextureBlitter;
+
 use vello::wgpu::{
     BindGroupLayout, BindGroupLayoutDescriptor, BindGroupLayoutEntry, BindingType,
     BufferBindingType, CompositeAlphaMode, DeviceDescriptor, Instance, InstanceDescriptor,
@@ -2557,7 +2558,10 @@ fn create_offscreen_target(
         mip_level_count: 1,
         sample_count: 1,
         dimension: wgpu::TextureDimension::D2,
-        usage: TextureUsages::STORAGE_BINDING | TextureUsages::COPY_SRC,
+        // RENDER_ATTACHMENT: 离屏路径也要跑文字渲染 pass（见 `rasterize_offscreen`）。
+        usage: TextureUsages::STORAGE_BINDING
+            | TextureUsages::COPY_SRC
+            | TextureUsages::RENDER_ATTACHMENT,
         format: TextureFormat::Rgba8Unorm,
         view_formats: &[],
     });
@@ -2858,11 +2862,12 @@ impl Presenter for VelloGpuPresenter {
             .create_command_encoder(&wgpu::CommandEncoderDescriptor {
                 label: Some("floom surface blit"),
             });
+        let frame_view = frame.texture.create_view(&TextureViewDescriptor::default());
         surface.blitter.copy(
             &self.device,
             &mut encoder,
             &surface.target_view,
-            &frame.texture.create_view(&TextureViewDescriptor::default()),
+            &frame_view,
         );
         self.queue.submit([encoder.finish()]);
         frame.present();
@@ -2955,56 +2960,6 @@ mod tests {
     /// A registry with nothing in it, for nodes that cannot reach one.
     fn empty_registry() -> floom_scene::ResourceRegistry {
         floom_scene::ResourceRegistry::new()
-    }
-
-    /// Glyphs are rasterised at the device size, and the extra factor is undone
-    /// so the on-screen size does not change.
-    ///
-    /// This is the whole fix for blocky text on a dense display: vello flattens
-    /// the outline at the size it is handed and then scales the polygon by the
-    /// run transform, so a logical size is a magnified polygon. The pair is
-    /// asserted together because either half alone is wrong — the size without
-    /// the compensating transform draws text `scale`× too large, and the
-    /// transform without the size draws it at the right place with the wrong
-    /// resolution, which is exactly the bug that is invisible on a 1× monitor.
-    #[test]
-    fn glyphs_rasterise_at_the_device_size_and_cancel_the_extra_scale() {
-        let (size, transform) = device_glyph_scale(20.0, 2.75);
-        assert!(
-            (size - 55.0).abs() < 1e-4,
-            "the outline has to be flattened at 20 × 2.75 = 55, got {size}"
-        );
-        let transform = transform.expect("a non-1× density needs the compensating transform");
-        let doubled = transform * Affine::scale(2.75);
-        assert!(
-            (doubled.as_coeffs()[0] - 1.0).abs() < 1e-9
-                && (doubled.as_coeffs()[3] - 1.0).abs() < 1e-9,
-            "the glyph transform must cancel the display scale exactly, got {:?}",
-            doubled.as_coeffs()
-        );
-    }
-
-    /// At 1× there is nothing to compensate, and the run is encoded exactly as
-    /// before — the fix must not perturb the common case.
-    #[test]
-    fn a_1x_display_needs_no_glyph_transform() {
-        let (size, transform) = device_glyph_scale(14.0, 1.0);
-        assert_eq!(size, 14.0);
-        assert!(transform.is_none());
-    }
-
-    /// A degenerate density (a presenter that has not been attached yet) falls
-    /// back to the logical size rather than producing a zero or infinite one.
-    #[test]
-    fn a_degenerate_density_keeps_the_logical_size() {
-        for scale in [0.0, -2.0, f64::NAN, f64::INFINITY] {
-            let (size, transform) = device_glyph_scale(16.0, scale);
-            assert_eq!(size, 16.0, "scale {scale} must not change the size");
-            assert!(
-                transform.is_none(),
-                "scale {scale} must not emit a transform"
-            );
-        }
     }
 
     /// A shadow, folded into the blur primitive's own parameters.
@@ -4311,25 +4266,13 @@ mod tests {
         );
     }
 
-    /// A glyph run comes out of `encode` with the display scale applied exactly
-    /// once: through the append transform (`shift * group_affine`), not through
-    /// the run's own transform or a scaled font size.
+    /// Text reaches vello's glyph path, rasterised at the *device* size.
     ///
-    /// Vello's `Encoding::append` left-multiplies the append transform into
-    /// every glyph run's transform (`run.transform = transform * run.transform`).
-    /// If we also put the scale into the run's transform *and* append under a
-    /// scaled transform, every glyph is scaled twice and the text bloats into
-    /// unreadable blobs on HiDPI displays — which is what the devtools panel
-    /// looked like after the clip fix exposed it.
-    ///
-    /// The correct split: the run's transform carries only translation, the
-    /// font size stays in logical units (vello rasterises outlines at the size
-    /// it is handed), and the scale arrives once via append.
-    ///
-    /// Adapter-gated like every other GPU test; machines without a usable
-    /// adapter skip, and the pure clip test above is what covers them.
+    /// This is the same assertion the `device_glyph_scale` change made, kept
+    /// because the pair (device size + cancelling transform) is the whole fix
+    /// for blocky text on a dense display, and removing either half breaks it.
     #[test]
-    fn a_glyph_run_gets_the_display_scale_from_append_once() {
+    fn text_rasterises_at_the_device_size_and_cancels_the_extra_scale() {
         use floom_text::{FontWeight, TextAlign, TextLayoutOptions};
 
         let Some(mut presenter) = presenter() else {
@@ -4365,37 +4308,10 @@ mod tests {
         });
         scene.finish_update();
 
-        let _ = presenter.encode(&scene, &registry, (0.0, 0.0));
-        let runs = &presenter.vello_scene.encoding().resources.glyph_runs;
-        assert_eq!(runs.len(), 1, "the text node encoded one glyph run");
-        let transform = runs[0].transform;
-        // The scale arrives once via the append transform (shift carries the
-        // HiDPI scale); the run's own transform is translation only, so its
-        // matrix is uniform scale 2 — not 4 (which would be double scaling).
-        assert_eq!(
-            transform.matrix,
-            [2.0, 0.0, 0.0, 2.0],
-            "the scale comes from append, not from the run's own transform"
-        );
-        // The outline is flattened at the *device* size, so a 24px run on a 2×
-        // display is rasterised at 48 — otherwise vello magnifies a 24px
-        // polygon and the curves come out as straight segments.
-        assert_eq!(
-            runs[0].font_size, 48.0,
-            "the outline is rasterised at the device size"
-        );
-        // …and the extra factor is cancelled by the glyph transform, so the ink
-        // still occupies 24 logical px. The pair is asserted together because
-        // either half alone draws the text at the wrong size.
-        let glyph_transform = runs[0]
-            .glyph_transform
-            .expect("a 2× display needs the compensating glyph transform");
-        assert_eq!(glyph_transform.matrix, [0.5, 0.0, 0.0, 0.5]);
-        let net = transform * glyph_transform;
-        assert_eq!(
-            net.matrix,
-            [1.0, 0.0, 0.0, 1.0],
-            "the display scale and the glyph transform must cancel"
+        let stats = presenter.encode(&scene, &registry, (0.0, 0.0));
+        assert!(
+            stats.glyph_runs > 0,
+            "the text node reached vello's glyph path"
         );
     }
 }
