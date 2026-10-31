@@ -126,17 +126,17 @@ that is visible but cannot be clicked, or hidden but still eats its column.
 ## Try it
 
 ```sh
-cargo run -p floom-devtools-demo
+cargo run -p floom-showcase
 ```
 
-A window with a heading, a row of three buttons and a counter, on white. Press
-**F12** (or **Cmd+Shift+I** on macOS, **Ctrl+Shift+I** elsewhere) and
-the panel docks over the trailing edge; **Ctrl+Shift+C** arms the pick, and
-clicking a button selects it without pressing it. The bar at the top of the panel
-switches between **Elements**, **Style** and **Layout** — click a tab rather than
-typing a chord, the way Chrome does it. In the tree, click a name to select and a
+A window with a sidebar and six routes, on white. Press **F12** (or
+**Cmd+Shift+I** on macOS, **Ctrl+Shift+I** elsewhere) and the panel docks over
+the trailing edge; **Ctrl+Shift+C** arms the pick, and clicking a nav item or a
+button selects it without pressing it. The bar at the top of the panel switches
+between **Elements**, **Style** and **Layout** — click a tab rather than typing a
+chord, the way Chrome does it. In the tree, click a name to select and a
 triangle to fold; right-click for the row's menu. **Escape** closes the panel
-again. The demo is one call — `run_desktop_with_devtools` plus the readout
+again. The app is one call — `run_desktop_with_devtools` plus the readout
 closure — and the whole point of it is that there is nothing else to write.
 
 The demo paints the app's own side white on purpose. The panel is a dark card,

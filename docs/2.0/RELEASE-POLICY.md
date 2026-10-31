@@ -96,9 +96,9 @@ Facade and compatibility:
 
 | example | bytes |
 | --- | --- |
-| `floom-hello` | 2,694,256 (≈ 2.6 MiB) — the headless floor |
-| `floom-counter` | 2,835,248 (≈ 2.7 MiB) |
-| `floom-window` (`--features real`) | 11,626,912 (≈ 11.1 MiB) — what desktop + GPU costs on top |
+| `floom-native-plugin` | 485,904 (≈ 0.5 MiB) — the headless floor |
+| `floom-showcase` | 12,488,476 (≈ 11.9 MiB) — the application: desktop + GPU + three kit crates + the editor |
+| `floom-window` (`--features real`) | 11,626,912 (≈ 11.1 MiB) — desktop + GPU |
 
 A release that grows the headless floor by more than 10 % without a written
 reason is a question, not a merge.
@@ -158,11 +158,10 @@ by a redraw or two between runs — they count the startup redraw and whatever t
 window server sends in the first second — so they are recorded, not gated. A
 window that keeps producing frames while nothing is happening fails the release.
 
-**Scale.** The two virtualization claims are asserted, not asserted-once:
-`examples/floom-virtual-list` proves 38 elements materialized for 100 000 rows
-(0.04 %), and `examples/floom-datagrid` proves equal paint ops (44 vs 44) for
-1 000 versus 100 000 rows, with a row pool capped at 16. Both are re-run by
-`scripts/run-golden-examples.sh`.
+**Scale.** The virtualization claims are covered by unit and integration tests
+in the crates that own row pooling (`floom-widgets`' list and grid suites),
+rather than by a standalone example binary. `scripts/run-golden-examples.sh`
+runs the remaining headless examples.
 
 ## Deprecation policy
 

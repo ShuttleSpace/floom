@@ -118,9 +118,8 @@ Child::new(ChildKey::index(0), LayoutRequest::new(), || Box::new(Text::new("firs
 
 The key is what makes reconciliation cheap: keep the key and the widget
 survives, change the key and it is replaced. This is the contract a v1
-`dyn_stack` / `virtual_stack` user is moving to — see
-`examples/floom-list` (keyed rows survive a reorder) and
-`examples/floom-virtual-list` (38 elements materialized for 100 000 rows).
+`dyn_stack` / `virtual_stack` user is moving to; the row-pooling suites live in
+`crates/floom-widgets-data/tests/`.
 
 ## Step 3 — identity: `ViewId` → `NodeId`
 
