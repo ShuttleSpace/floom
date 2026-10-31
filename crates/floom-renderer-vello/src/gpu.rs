@@ -1330,7 +1330,7 @@ impl VelloGpuPresenter {
     fn rasterize_offscreen(&mut self, width: u32, height: u32) -> Option<Vec<u8>> {
         let (texture, view) = create_offscreen_target(&self.device, width, height);
         let params = RenderParams {
-            base_color: PenikoColor::TRANSPARENT,
+            base_color: PenikoColor::WHITE,
             width,
             height,
             antialiasing_method: AaConfig::Msaa16,
@@ -2791,8 +2791,12 @@ impl Presenter for VelloGpuPresenter {
             // pixels the last frame left there.
             Some(view) => {
                 let (rx, ry, w, h) = region.expect("a partial frame always carries its region");
+                // Partial rasterisation paints into scratch then copies onto the
+                // persistent target; everything outside the region keeps the
+                // pixels the previous full frame left — which are WHITE. Keep
+                // scratch white too so a region painted fresh is never black.
                 let params = RenderParams {
-                    base_color: PenikoColor::TRANSPARENT,
+                    base_color: PenikoColor::WHITE,
                     width: w,
                     height: h,
                     antialiasing_method: AaConfig::Msaa16,
@@ -2835,8 +2839,10 @@ impl Presenter for VelloGpuPresenter {
             }
             // Full frame: rasterise straight into the target, as before.
             None => {
+                // Full frame: every pixel outside what the scene paints stays
+                // WHITE, so unclipped areas are not black on screen.
                 let params = RenderParams {
-                    base_color: PenikoColor::TRANSPARENT,
+                    base_color: PenikoColor::WHITE,
                     width: surface.config.width,
                     height: surface.config.height,
                     antialiasing_method: AaConfig::Msaa16,

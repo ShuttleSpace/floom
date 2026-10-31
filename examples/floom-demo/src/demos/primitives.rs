@@ -54,7 +54,20 @@ pub(super) fn demos() -> Vec<Demo> {
 fn build_text() -> Box<dyn WidgetAny> {
     Box::new(
         Stack::new(Axis::Vertical)
-            .gap(6.0)
+            .gap(10.0)
+            .push_layout(
+                LayoutRequest::new().width(340.0).height(44.0),
+                || {
+                    Box::new(
+                        Container::new()
+                            .background(Color::rgb(70, 120, 220))
+                            .radius(6.0),
+                    )
+                },
+            )
+            .push_layout(LayoutRequest::new(), || {
+                Box::new(Text::new("中文显示 English text — 18 pt on blue").size(18.0))
+            })
             .push_layout(LayoutRequest::new(), || {
                 Box::new(Text::new("Display — 24 pt").size(24.0))
             })
@@ -63,6 +76,12 @@ fn build_text() -> Box<dyn WidgetAny> {
             })
             .push_layout(LayoutRequest::new(), || {
                 Box::new(Text::new("Caption — 11 pt").size(11.0))
+            })
+            .push_layout(LayoutRequest::new(), || {
+                Box::new(Text::new("混合中文 English 8 pt small").size(8.0))
+            })
+            .push_layout(LayoutRequest::new(), || {
+                Box::new(Text::new("大号中文 English 32 pt display").size(32.0))
             }),
     )
 }
