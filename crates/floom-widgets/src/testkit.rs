@@ -863,6 +863,8 @@ pub struct TestEventContext {
     event: Event,
     /// Every id passed to [`EventContext::request_focus`], in order.
     pub focus_requests: Vec<ElementId>,
+    /// The IME caret area the widget reported, if any.
+    pub ime_caret: Option<Rect>,
     overlays: Vec<OverlayCall>,
     /// Mimics the host's handle counter, so a widget that stores the handle it
     /// was given can be driven through a realistic open/close cycle.
@@ -900,6 +902,7 @@ impl TestEventContext {
             viewport: Rect::ZERO,
             event,
             focus_requests: Vec::new(),
+            ime_caret: None,
             overlays: Vec::new(),
             next_handle: 0,
         }
@@ -1012,6 +1015,10 @@ impl EventContext for TestEventContext {
 
     fn request_focus(&mut self, id: ElementId) {
         self.focus_requests.push(id);
+    }
+
+    fn set_ime_cursor_area(&mut self, area: Option<Rect>) {
+        self.ime_caret = area;
     }
 
     fn open_overlay(&mut self, request: floom_core::OverlayRequest) -> bool {

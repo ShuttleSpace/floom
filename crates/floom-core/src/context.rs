@@ -83,6 +83,30 @@ pub trait UpdateContext {
         Rect::ZERO
     }
 
+    /// Asks the host to move keyboard focus to `id`.
+    ///
+    /// The state-driven twin of [`EventContext::request_focus`]: focus is
+    /// sometimes a consequence of *what mounted*, not of a click — a page whose
+    /// editor is its content wants the keyboard there without the user having
+    /// to find the box first. The request is applied after the update pass,
+    /// because a widget is borrowed out of the host while `update` runs.
+    ///
+    /// Defaults to a no-op for hosts without a focus manager.
+    fn request_focus(&mut self, id: ElementId) {
+        let _ = id;
+    }
+
+    /// Reports the on-screen rectangle the IME composition caret occupies, so
+    /// the runner can anchor the OS input-method popup above the right glyph.
+    ///
+    /// The state-driven twin of [`EventContext::set_ime_cursor_area`]: a caret
+    /// that moved without an event (an edit from a toolbar button, a programmatic
+    /// selection) still has to re-anchor the popup. `Some(rect)` while a
+    /// composition is open; `None` once it ends.
+    fn set_ime_cursor_area(&mut self, area: Option<Rect>) {
+        let _ = area;
+    }
+
     /// Asks the host to place `request.content` above the whole tree.
     ///
     /// The state-driven twin of [`EventContext::open_overlay`]; the same rules

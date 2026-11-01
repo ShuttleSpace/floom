@@ -14,11 +14,12 @@
 //!   and redo.
 //! - **Pointer**: a primary click focuses the editor and moves the caret to the
 //!   end of the document. Per-glyph hit testing is a follow-up.
+//! - **IME**: a composition in progress is drawn at the caret in the accent ink
+//!   and is not part of the document until the OS commits it (the commit
+//!   arrives as character keys and replaces the preedit).
 //!
 //! ## What it deliberately does not do
 //!
-//! - IME preedit is accepted at the document level but not yet rendered as a
-//!   separate composition layer.
 //! - Multi-caret, rectangular selection, and rich styles are out of scope.
 //!
 //! [`TextShaper`]: floom_text::TextShaper
@@ -32,7 +33,7 @@ use floom_core::{
     Point, Rect, SemanticsContext, SemanticsHint, SemanticsRole, UpdateContext, Widget, WidgetAny,
 };
 use floom_text::{LaidOutText, TextAlign, TextLayoutOptions, TextShaper};
-use floom_types::{Color, Event, FontFamily, Key, KeyPhase, Modifiers, PointerPhase};
+use floom_types::{Color, Event, FontFamily, ImeUpdate, Key, KeyPhase, Modifiers, PointerPhase};
 use floom_widgets::primitives::Revision;
 
 const EDITOR_FONT_SIZE: f64 = 16.0;
@@ -46,6 +47,9 @@ const SELECTION_ALPHA: u8 = 76; // ~0.30
 const SELECTION_FILL: Color = Color::rgba(0x2B, 0x6C, 0xB0, SELECTION_ALPHA);
 /// Caret colour.
 const CARET_FILL: Color = Color::BLACK;
+/// The IME composition is drawn in the accent ink, so an in-progress
+/// composition is visibly not part of the document yet.
+const COMPOSITION_FILL: Color = Color::rgb(0x2B, 0x6C, 0xB0);
 
 /// A mounted text editor. Owns its document and undo manager; callers drive it
 /// through the builders below and the host drives it through [`Widget`].
@@ -60,6 +64,28 @@ pub struct EditorWidget {
     font_size: f64,
     color: Color,
     revision: Revision,
+    /// The IME composition in progress, drawn after the caret and *not* part of
+    /// the document until a commit turns it into character keys.
+    preedit: String,
+    /// Caret position inside [`Self::preedit`], in bytes.
+    preedit_caret: usize,
+    /// Whether the page wants the keyboard here as soon as the editor mounts.
+    autofocus: bool,
+    /// The element the autofocus request was made for. The editor widget is
+    /// shared across page rebuilds, so "have I focused yet" is per mount, not
+    /// per widget — returning to the page has to take the keyboard again.
+    auto_focused_for: Option<ElementId>,
+    /// The element this widget was last updated as, so a remount can reset the
+    /// focus flag the old element left behind.
+    mounted_id: Option<ElementId>,
+    /// Mirrors `Widget::set_focused`, so `update` knows when to report the IME
+    /// caret area and `paint` can show that the editor has the keyboard.
+    focused: bool,
+    /// The IME caret area last reported, so an unchanged caret does not reshape
+    /// the document every frame just to answer the same rectangle.
+    ime_area: Option<Rect>,
+    /// Set whenever the caret moved; the next `update` re-reports the area.
+    ime_dirty: bool,
 }
 
 impl Default for EditorWidget {
@@ -78,6 +104,14 @@ impl EditorWidget {
             font_size: EDITOR_FONT_SIZE,
             color: Color::BLACK,
             revision: Revision::default(),
+            preedit: String::new(),
+            preedit_caret: 0,
+            autofocus: false,
+            auto_focused_for: None,
+            mounted_id: None,
+            focused: false,
+            ime_area: None,
+            ime_dirty: false,
         }
     }
 
@@ -88,6 +122,17 @@ impl EditorWidget {
         w
     }
 
+    /// Take the keyboard as soon as the editor mounts.
+    ///
+    /// Off by default: an editor in a form is one of several fields, and the
+    /// form decides which one starts focused. A page whose editor *is* the
+    /// content — the showcase's `/editor` — turns it on, so typing works
+    /// without a click first.
+    pub fn autofocus(mut self, autofocus: bool) -> Self {
+        self.autofocus = autofocus;
+        self
+    }
+
     /// The document's current text.
     pub fn text(&self) -> String {
         self.document.text()
@@ -96,6 +141,14 @@ impl EditorWidget {
     /// The document's current selection.
     pub fn selection(&self) -> Selection {
         self.document.selection()
+    }
+
+    /// The IME composition in progress, empty when nothing is composing.
+    ///
+    /// Deliberately *not* part of [`Self::text`]: a composition is not in the
+    /// document until the OS commits it.
+    pub fn preedit(&self) -> &str {
+        &self.preedit
     }
 
     /// Whether the editor has an undoable edit.
@@ -111,6 +164,7 @@ impl EditorWidget {
     /// Undo the last commit.
     pub fn undo(&mut self) {
         if self.undo.undo(&mut self.document) {
+            self.ime_dirty = true;
             self.revision.bump();
         }
     }
@@ -118,6 +172,7 @@ impl EditorWidget {
     /// Redo the last undo.
     pub fn redo(&mut self) {
         if self.undo.redo(&mut self.document) {
+            self.ime_dirty = true;
             self.revision.bump();
         }
     }
@@ -126,6 +181,9 @@ impl EditorWidget {
     pub fn set_text(&mut self, text: &str) {
         self.document = TextDocument::from_text(text);
         self.undo.clear();
+        self.preedit.clear();
+        self.preedit_caret = 0;
+        self.ime_dirty = true;
         self.revision.bump();
     }
 
@@ -134,6 +192,7 @@ impl EditorWidget {
     fn commit(&mut self, tx: Transaction) {
         let inverse = self.document.apply(&tx);
         self.undo.push(inverse);
+        self.ime_dirty = true;
         self.revision.bump();
     }
 
@@ -154,9 +213,22 @@ impl EditorWidget {
         self.commit(Transaction::replace(sel.start(), sel.end(), "\n"));
     }
 
+    /// Drops the in-progress composition. Called when the OS finalizes it (the
+    /// committed text arrives as character keys) or abandons it.
+    fn cancel_preedit(&mut self) {
+        if self.preedit.is_empty() && self.preedit_caret == 0 {
+            return;
+        }
+        self.preedit.clear();
+        self.preedit_caret = 0;
+        self.ime_dirty = true;
+        self.revision.bump();
+    }
+
     /// Deletes the selection, or the character before the caret.
     fn backspace(&mut self) {
         self.document.delete_selection_or_backward();
+        self.ime_dirty = true;
         self.revision.bump();
     }
 
@@ -192,6 +264,59 @@ impl EditorWidget {
             .position(|l| offset < l.text_range.end)
             .unwrap_or_else(|| laid.lines.len().saturating_sub(1))
     }
+
+    /// The caret's box, in the editor's own coordinates.
+    ///
+    /// Shared by paint (to draw it) and `update` (to report the IME area), so
+    /// the OS composition popup anchors to the same glyph the user sees.
+    fn caret_rect(&self, bounds: Rect, laid: &LaidOutText) -> Rect {
+        let origin = Point::new(bounds.x0 + EDITOR_PADDING, bounds.y0 + EDITOR_PADDING);
+        let sel = self.document.selection();
+        let head = self.line_for_offset(laid, sel.end());
+        match laid.lines.get(head) {
+            Some(line) => {
+                let in_line = sel.end().saturating_sub(line.text_range.start);
+                let x = origin.x + (in_line as f64 * self.font_size * 0.6).min(line.width as f64);
+                let top = origin.y + head as f64 * EDITOR_LINE_PITCH + line.min_coord as f64;
+                Rect {
+                    x0: x,
+                    y0: top,
+                    x1: x + CARET_WIDTH,
+                    y1: top + (line.max_coord - line.min_coord) as f64,
+                }
+            }
+            None => Rect {
+                x0: origin.x,
+                y0: origin.y,
+                x1: origin.x + CARET_WIDTH,
+                y1: origin.y + EDITOR_LINE_PITCH,
+            },
+        }
+    }
+
+    /// Re-reports the IME caret area after a move, so the OS composition popup
+    /// follows the caret. Reshaping is only paid for when the caret moved.
+    fn sync_ime_area(&mut self, cx: &mut dyn UpdateContext) {
+        if !self.ime_dirty {
+            return;
+        }
+        self.ime_dirty = false;
+        let area = if self.focused {
+            let bounds = cx.bounds();
+            if bounds.width() > 0.0 {
+                let laid = self.laid_out((bounds.width() - 2.0 * EDITOR_PADDING).max(0.0));
+                Some(self.caret_rect(bounds, &laid))
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+        if area != self.ime_area {
+            self.ime_area = area;
+            cx.set_ime_cursor_area(area);
+        }
+    }
 }
 
 impl Widget for EditorWidget {
@@ -200,7 +325,20 @@ impl Widget for EditorWidget {
     }
 
     fn update(&mut self, cx: &mut dyn UpdateContext, id: ElementId) {
+        // A page whose editor *is* the content asks for the keyboard on mount:
+        // typing then works without a click first. Keyed by element, because a
+        // rebuilt page mounts the shared editor under a new id and has to take
+        // the keyboard again.
+        if self.mounted_id != Some(id) {
+            self.mounted_id = Some(id);
+            self.focused = false;
+        }
+        if self.autofocus && self.auto_focused_for != Some(id) {
+            self.auto_focused_for = Some(id);
+            cx.request_focus(id);
+        }
         self.revision.sync(cx, id);
+        self.sync_ime_area(cx);
     }
 
     /// The editor wants a content-derived height so the host can size the box.
@@ -278,25 +416,84 @@ impl Widget for EditorWidget {
             y += EDITOR_LINE_PITCH;
         }
 
-        // Caret: a thin vertical bar at the selection head.
+        // Caret: a thin vertical bar at the selection head, plus a focus ring on
+        // the box so it is obvious whether typing will land here.
+        let caret = self.caret_rect(bounds, &laid);
         if sel.is_caret() {
-            let head_line = self.line_for_offset(&laid, sel.end());
-            if let Some(line) = laid.lines.get(head_line) {
-                let head_in_line = sel.end().saturating_sub(line.text_range.start);
-                let char_width = self.font_size * 0.6; // rough em-width estimate
-                let x = origin.x + (head_in_line as f64 * char_width).min(line.width as f64);
-                let line_top = y - EDITOR_LINE_PITCH + line.min_coord as f64;
-                let line_bottom = y - EDITOR_LINE_PITCH + line.max_coord as f64;
-                cx.fill_rect(
-                    Rect {
-                        x0: x,
-                        y0: line_top,
-                        x1: x + CARET_WIDTH,
-                        y1: line_bottom,
-                    },
-                    CARET_FILL,
-                );
+            cx.fill_rect(caret, CARET_FILL);
+        }
+        if self.focused {
+            // A 1px focus ring, drawn as four bands along the inside edge: the
+            // editor is a large white box, and without a mark it is impossible
+            // to tell whether typing will land in it.
+            const RING: Color = Color::rgb(0x4C, 0x9A, 0xFF);
+            let t = 1.0;
+            let i = 1.0;
+            for rect in [
+                Rect {
+                    x0: bounds.x0 + i,
+                    y0: bounds.y0 + i,
+                    x1: bounds.x1 - i,
+                    y1: bounds.y0 + t,
+                },
+                Rect {
+                    x0: bounds.x0 + i,
+                    y0: bounds.y1 - t,
+                    x1: bounds.x1 - i,
+                    y1: bounds.y1 - i,
+                },
+                Rect {
+                    x0: bounds.x0 + i,
+                    y0: bounds.y0 + i,
+                    x1: bounds.x0 + t,
+                    y1: bounds.y1 - i,
+                },
+                Rect {
+                    x0: bounds.x1 - t,
+                    y0: bounds.y0 + i,
+                    x1: bounds.x1 - i,
+                    y1: bounds.y1 - i,
+                },
+            ] {
+                cx.fill_rect(rect, RING);
             }
+        }
+
+        // IME composition: the in-progress text is drawn at the caret in the
+        // accent ink and underlined, so a composition is visible *before* it is
+        // committed. A commit arrives as character keys and replaces it.
+        if !self.preedit.is_empty() {
+            let baseline = caret.y1 - (caret.y1 - caret.y0) * 0.2;
+            cx.fill_text_in(
+                Point::new(caret.x0, baseline),
+                &self.preedit,
+                self.font_size as f32,
+                FontWeight::Normal,
+                COMPOSITION_FILL,
+                &FontFamily::SansSerif,
+            );
+            let width = self.preedit.chars().count() as f64 * self.font_size * 0.6;
+            cx.fill_rect(
+                Rect {
+                    x0: caret.x0,
+                    y0: caret.y1 - 1.0,
+                    x1: caret.x0 + width,
+                    y1: caret.y1,
+                },
+                COMPOSITION_FILL,
+            );
+            let head = self.preedit_caret.min(self.preedit.len());
+            let chars = self.preedit[..head].chars().count() as f64;
+            let x = caret.x0 + chars * self.font_size * 0.6;
+            cx.fill_rect(
+                Rect {
+                    x0: x,
+                    y0: caret.y0,
+                    x1: x + CARET_WIDTH,
+                    y1: caret.y1,
+                },
+                COMPOSITION_FILL,
+            );
         }
     }
 
@@ -307,6 +504,8 @@ impl Widget for EditorWidget {
                     let len = self.document.len();
                     self.document
                         .set_selection(Selection::caret(len.min(self.document.len())));
+                    self.cancel_preedit();
+                    self.ime_dirty = true;
                     self.revision.bump();
                     cx.request_focus(id);
                     true
@@ -337,9 +536,12 @@ impl Widget for EditorWidget {
                     }
                 }
 
-                // Text input.
+                // Text input. A character key while a composition is open is
+                // the OS finalizing it: the committed text replaces the
+                // preedit, so the preedit is dropped first.
                 if key.is_text_input() {
                     if let Key::Char(ch) = key.key {
+                        self.cancel_preedit();
                         self.insert_char(ch);
                         return true;
                     }
@@ -347,14 +549,17 @@ impl Widget for EditorWidget {
 
                 match key.key {
                     Key::Named(floom_types::NamedKey::Enter) => {
+                        self.cancel_preedit();
                         self.insert_newline();
                         true
                     }
                     Key::Named(floom_types::NamedKey::Backspace) => {
+                        self.cancel_preedit();
                         self.backspace();
                         true
                     }
                     Key::Named(floom_types::NamedKey::Delete) => {
+                        self.cancel_preedit();
                         self.delete_forward();
                         true
                     }
@@ -362,7 +567,44 @@ impl Widget for EditorWidget {
                 }
             }
             Event::Scroll(_) => false,
-            Event::Ime(_) => false,
+            // The composition in progress. It is drawn after the caret and is
+            // *not* part of the document; a commit arrives as character keys
+            // and replaces it (see the key arm above). Ignoring these events is
+            // what makes typing under an input method look like a dead widget:
+            // the letters go into a composition the editor never showed.
+            Event::Ime(update) => match update {
+                ImeUpdate::OpenChanged(open) => {
+                    if !open {
+                        self.cancel_preedit();
+                    }
+                    true
+                }
+                ImeUpdate::Preedit { text, caret, .. } => {
+                    self.preedit = text;
+                    self.preedit_caret = caret;
+                    self.ime_dirty = true;
+                    self.revision.bump();
+                    // The OS popup has to follow the composition *now*: the
+                    // runner reads the host's area right after this dispatch.
+                    let bounds = cx.bounds();
+                    let area = if bounds.width() > 0.0 {
+                        let laid = self.laid_out((bounds.width() - 2.0 * EDITOR_PADDING).max(0.0));
+                        Some(self.caret_rect(bounds, &laid))
+                    } else {
+                        None
+                    };
+                    cx.set_ime_cursor_area(area);
+                    true
+                }
+            },
+        }
+    }
+
+    fn set_focused(&mut self, focused: bool) {
+        if self.focused != focused {
+            self.focused = focused;
+            self.ime_dirty = true;
+            self.revision.bump();
         }
     }
 
@@ -439,6 +681,75 @@ mod tests {
     fn editor_widget_is_send_and_sync() {
         fn assert_send_sync<T: Send + Sync>() {}
         assert_send_sync::<EditorWidget>();
+    }
+
+    #[test]
+    fn ime_preedit_is_shown_but_not_inserted() {
+        use floom_widgets::testkit::TestEventContext;
+
+        let mut w = EditorWidget::from_text("hi");
+        let before = w.text();
+        let id = floom_core::ElementId::INVALID;
+        let bounds = Rect {
+            x0: 0.0,
+            y0: 0.0,
+            x1: 400.0,
+            y1: 200.0,
+        };
+        let mut cx = TestEventContext::new(
+            id,
+            bounds,
+            Event::Ime(ImeUpdate::Preedit {
+                text: "ni".into(),
+                caret: 2,
+                selection: None,
+            }),
+        );
+        assert!(w.event(&mut cx, id), "a preedit is handled");
+        assert_eq!(w.preedit(), "ni");
+        assert_eq!(w.text(), before, "a composition is not in the document");
+        assert!(
+            cx.ime_caret.is_some(),
+            "the composition caret anchors the OS popup"
+        );
+
+        // The commit arrives as a character key: it replaces the preedit.
+        let mut cx = TestEventContext::new(
+            id,
+            bounds,
+            Event::Key(floom_types::KeyEvent::down(Key::Char('你'))),
+        );
+        assert!(w.event(&mut cx, id));
+        assert_eq!(w.text(), "hi你");
+        assert_eq!(w.preedit(), "", "the commit consumed the composition");
+    }
+
+    #[test]
+    fn closing_the_composition_drops_the_preedit() {
+        use floom_widgets::testkit::TestEventContext;
+
+        let mut w = EditorWidget::from_text("hi");
+        let id = floom_core::ElementId::INVALID;
+        let bounds = Rect {
+            x0: 0.0,
+            y0: 0.0,
+            x1: 400.0,
+            y1: 200.0,
+        };
+        let mut cx = TestEventContext::new(
+            id,
+            bounds,
+            Event::Ime(ImeUpdate::Preedit {
+                text: "n".into(),
+                caret: 1,
+                selection: None,
+            }),
+        );
+        w.event(&mut cx, id);
+        let mut cx = TestEventContext::new(id, bounds, Event::Ime(ImeUpdate::OpenChanged(false)));
+        w.event(&mut cx, id);
+        assert_eq!(w.preedit(), "");
+        assert_eq!(w.text(), "hi");
     }
 
     #[test]

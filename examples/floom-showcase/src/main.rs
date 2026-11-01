@@ -155,7 +155,9 @@ impl AppState {
             kit_clicks: SyncBaseSignal::new(0),
             kit_checked: SyncBaseSignal::new(true),
             route: SyncBaseSignal::new(AppRoute::Home.id() as u8),
-            editor: Mutex::new(Arc::new(Mutex::new(EditorWidget::from_text(SAMPLE)))),
+            editor: Mutex::new(Arc::new(Mutex::new(
+                EditorWidget::from_text(SAMPLE).autofocus(true),
+            ))),
         }
     }
 
@@ -1292,7 +1294,7 @@ fn page_editor(state: Arc<AppState>) -> Stack {
 
     page = page.child(paragraph(
         "hint",
-        "Click the editor to focus it. Mod+Z / Mod+Y, Enter, Backspace and Delete are handled by the widget.",
+        "The editor takes the keyboard when this page opens; click it to put the caret at the end. Mod+Z / Mod+Y, Enter, Backspace and Delete are handled by the widget.",
         13.0,
         FontWeight::Normal,
         MUTED,
@@ -1658,6 +1660,10 @@ impl Widget for SharedEditor {
         self.inner.lock().unwrap().event(cx, id)
     }
 
+    fn set_focused(&mut self, focused: bool) {
+        self.inner.lock().unwrap().set_focused(focused);
+    }
+
     fn paint(&self, cx: &mut dyn PaintContext, id: ElementId) {
         self.inner.lock().unwrap().paint(cx, id);
     }
@@ -1789,5 +1795,92 @@ fn main() {
     if let Err(err) = result {
         eprintln!("window loop failed: {err}");
         std::process::exit(1);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use floom_testkit::{Selector, TestApp};
+
+    /// The editor page focuses its editor on mount, so typing works without
+    /// the user having to find the box first.
+    #[test]
+    fn the_editor_page_takes_the_keyboard_on_mount() {
+        let state = Arc::new(AppState::new());
+        let mut app = TestApp::unpinned(WINDOW, ShowcaseShell::new(state.clone()));
+
+        // Navigate the way a user does: press the sidebar item.
+        let nav = app.node(Selector::label("Editor"));
+        app.tap(nav);
+
+        let before = state.editor().lock().unwrap().text();
+        app.commit("x");
+        let after = state.editor().lock().unwrap().text();
+        assert_ne!(
+            before, after,
+            "typing after navigating to /editor did not reach the document"
+        );
+    }
+
+    /// Leaving the page and coming back takes the keyboard again: the editor
+    /// widget outlives the page, but its focus does not.
+    #[test]
+    fn returning_to_the_editor_page_takes_the_keyboard_again() {
+        let state = Arc::new(AppState::new());
+        let mut app = TestApp::unpinned(WINDOW, ShowcaseShell::new(state.clone()));
+
+        app.tap(app.node(Selector::label("Editor")));
+        app.tap(app.node(Selector::label("Home")));
+        app.tap(app.node(Selector::label("Editor")));
+
+        let before = state.editor().lock().unwrap().text();
+        app.commit("y");
+        assert_ne!(before, state.editor().lock().unwrap().text());
+    }
+
+    /// The devtools panel is mounted as a drawer at startup. While hidden it
+    /// must not eat the clicks in its column — the editor spans most of the
+    /// window, so a press on its right half has to reach the editor.
+    #[test]
+    fn the_hidden_devtools_drawer_does_not_eat_editor_clicks() {
+        let state = Arc::new(AppState::new());
+        let mut host = WidgetHost::new();
+        host.set_size(WINDOW);
+        host.mount_root(
+            LayoutStyle::default(),
+            ShowcaseShell::new_at(state.clone(), AppRoute::Editor),
+        );
+        let mut devtools = floom::devtools::attach_with_rows(&mut host, |_| Vec::new());
+        devtools.sync(&mut host);
+        host.frame();
+
+        let bounds = host
+            .tree_nodes()
+            .into_iter()
+            .find_map(|n| {
+                host.node_for(n.element)
+                    .filter(|&nid| host.widget::<SharedEditor>(nid).is_some())
+                    .map(|nid| host.bounds(nid))
+            })
+            .expect("the editor page mounts the editor");
+
+        // The right-hand third is where the hidden drawer sits.
+        let point =
+            floom::floom_types::Point::new(bounds.x1 - 20.0, bounds.y0 + bounds.height() / 2.0);
+        host.dispatch(PointerEvent::primary_down(point).into());
+        host.dispatch(PointerEvent::primary_up(point).into());
+        host.frame();
+        assert!(
+            host.focused().is_some(),
+            "a press on the editor focused nothing"
+        );
+
+        let before = state.editor().lock().unwrap().text();
+        host.dispatch(floom::floom_types::Event::Key(
+            floom::floom_types::KeyEvent::down(floom::floom_types::Key::Char('x')),
+        ));
+        host.frame();
+        assert_ne!(state.editor().lock().unwrap().text(), before);
     }
 }

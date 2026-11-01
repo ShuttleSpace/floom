@@ -2127,6 +2127,8 @@ impl WidgetHost {
             snapshot: None,
             overlays: None,
             native: None,
+            focus_requests: None,
+            ime_caret: None,
         };
         let id = self.nodes[index].id;
         self.nodes[index].widget.animation_finished(&mut cx, id);
@@ -2506,6 +2508,11 @@ impl WidgetHost {
                 *slot = self.content_size(i);
             }
         }
+        // Focus and IME-caret requests a widget makes from `update` (a page
+        // focusing its editor when it mounts). Applied after the walk, when the
+        // host can be borrowed again.
+        let mut update_focus_requests: Vec<ElementId> = Vec::new();
+        let mut ime_caret: Option<Rect> = self.ime_caret;
         for index in 0..self.nodes.len() {
             if self.nodes[index].dead {
                 continue;
@@ -2540,6 +2547,8 @@ impl WidgetHost {
                     owner: node.id,
                 }),
                 native,
+                focus_requests: Some(&mut update_focus_requests),
+                ime_caret: Some(&mut ime_caret),
             };
             node.widget.update(&mut cx, node.id);
             // A queued repaint request rides the same dirty flag a widget's
@@ -2567,6 +2576,13 @@ impl WidgetHost {
                     retext.push(index);
                 }
             }
+        }
+        // The IME caret a text widget reported during the walk, and any focus it
+        // asked for. Focus is applied here rather than inside `update` because
+        // moving it needs the host the node was just taken out of.
+        self.ime_caret = ime_caret;
+        for id in update_focus_requests {
+            self.set_focus(id);
         }
         // Widgets declare the motion they want on their own elements; the host
         // owns what is running. Reconciled exactly for the nodes that reported
@@ -4458,6 +4474,14 @@ struct HostUpdateContext<'a> {
     overlays: Option<UpdateOverlaySink<'a>>,
     /// The native door, present when the host has a provider.
     native: Option<NativeGrantSink<'a>>,
+    /// Focus requests made from `update` — a page that focuses its editor when
+    /// it mounts, say. Drained after the pass, when the host can borrow itself
+    /// again. `None` for lifecycle callbacks, which must not move focus.
+    focus_requests: Option<&'a mut Vec<ElementId>>,
+    /// The IME caret area a focused text widget reported this pass. Shared so
+    /// the frame can hand it to the runner after the walk; `None` where no
+    /// widget may write it.
+    ime_caret: Option<&'a mut Option<Rect>>,
 }
 
 /// The host-side half of [`UpdateContext::request_native`].
@@ -4551,6 +4575,8 @@ impl HostUpdateContext<'_> {
             snapshot: None,
             overlays: None,
             native: None,
+            focus_requests: None,
+            ime_caret: None,
         }
     }
 }
@@ -4585,6 +4611,23 @@ impl UpdateContext for HostUpdateContext<'_> {
 
     fn viewport(&self) -> Rect {
         self.viewport
+    }
+
+    /// Focus asked for from `update`, queued for the host to apply once the
+    /// pass is over: a widget cannot move focus while it is borrowed out of the
+    /// host. This is how a page focuses its editor when it mounts.
+    fn request_focus(&mut self, id: ElementId) {
+        if let Some(queue) = self.focus_requests.as_mut() {
+            queue.push(id);
+        }
+    }
+
+    /// The IME composition caret a focused text widget reports, written through
+    /// to the host so the runner can anchor the OS popup above the right glyph.
+    fn set_ime_cursor_area(&mut self, area: Option<Rect>) {
+        if let Some(slot) = self.ime_caret.as_mut() {
+            **slot = area;
+        }
     }
 
     fn open_overlay(&mut self, request: OverlayRequest) -> bool {

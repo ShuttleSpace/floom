@@ -23,3 +23,6 @@ floom-widget-md-text = { path = "../../crates/ecosystem/floom-ui/crates/material
 floom-widget-md-button = { path = "../../crates/ecosystem/floom-ui/crates/material/md-button" }
 floom-widget-md-checkbox = { path = "../../crates/ecosystem/floom-ui/crates/material/md-checkbox" }
 floom-core-theme = { path = "../../crates/ecosystem/floom-ui/crates/floom-core-theme", features = ["material"] }
+
+[dev-dependencies]
+floom-testkit = { path = "../../crates/floom-testkit", version = "0.2.0" }
