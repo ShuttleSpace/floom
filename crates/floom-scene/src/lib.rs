@@ -10,7 +10,7 @@ pub use node::SceneNode;
 pub use resources::{Resource, ResourceKind, ResourceRegistry};
 
 use floom_types::SceneNodeId as Id;
-use std::collections::VecDeque;
+use std::collections::BTreeSet;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum SlotState {
@@ -24,7 +24,14 @@ pub struct Scene {
     slots: Vec<SlotState>,
     nodes: Vec<Option<SceneNode>>,
     /// Freed indices with the generation to use on next alloc.
-    free: VecDeque<(u32, u32)>,
+    ///
+    /// A set, not a queue, because slot order is draw order: the walk hands
+    /// out ids in paint order, so a reused slot must always be the *lowest*
+    /// free one or a rebuilt subtree lands behind the picture that covers it
+    /// (a page swap recycles every slot it held, in unmount order, which is
+    /// post-order — a queue would hand the new page's background a slot
+    /// behind its own children's).
+    free: BTreeSet<(u32, u32)>,
     updating: bool,
     damage: DamageRegion,
     tx_damage: DamageRegion,
@@ -121,7 +128,7 @@ impl Scene {
         };
         let next_generation = generation.wrapping_add(1).max(1);
         self.slots[index] = SlotState::Free;
-        self.free.push_back((id.index(), next_generation));
+        self.free.insert((id.index(), next_generation));
     }
 
     pub fn finish_update(&mut self) {
@@ -144,8 +151,13 @@ impl Scene {
     }
 
     /// Allocate an id without inserting a node (for external upsert).
+    ///
+    /// Always the *lowest* free index: the walk allocates in paint order, and
+    /// the stream draws in slot order, so lowest-first is what keeps a rebuilt
+    /// subtree's slots ascending with the order it paints in.
     pub fn alloc_id(&mut self) -> Id {
-        if let Some((index, generation)) = self.free.pop_front() {
+        if let Some(&(index, generation)) = self.free.iter().next() {
+            self.free.remove(&(index, generation));
             self.slots[index as usize] = SlotState::Live { generation };
             if self.nodes.len() <= index as usize {
                 self.nodes.resize_with(index as usize + 1, || None);
