@@ -47,22 +47,6 @@ impl<'a> Lower<'a> {
         TsxError::new(message).at(line, col)
     }
 
-    /// Lower the root, always producing a single root node (a fragment is
-    /// wrapped in a `Stack` so the document has one `root` key).
-    fn root(&mut self) -> Result<NodeKey> {
-        match &self.parsed.root {
-            RootJsx::Element(el) => self.element(el),
-            RootJsx::Fragment(frag) => {
-                let key = self.next_key();
-                let children = self.children(&frag.children)?;
-                let node = UiNode::new(key.clone(), NodeKind::Stack)
-                    .with_slot(Slot::default_slot(children));
-                self.nodes.push(node);
-                Ok(key)
-            }
-        }
-    }
-
     /// Lower a JSX element into a fresh node and return its key.
     fn element(&mut self, el: &ast::JSXElement) -> Result<NodeKey> {
         let key = self.next_key();
@@ -431,6 +415,10 @@ impl<'a> Lower<'a> {
 
 /// Lower a parsed TSX module into a validated `UiDocument`.
 pub fn lower(parsed: &Parsed) -> Result<UiDocument> {
+    // Module-level signal/context declarations are the authoritative bindings;
+    // JSX-derived refs/handlers reference them and must not be duplicated.
+    let module_bindings = collect_module_signals(&parsed.module);
+
     let mut lower = Lower {
         parsed,
         nodes: Vec::new(),
@@ -439,14 +427,39 @@ pub fn lower(parsed: &Parsed) -> Result<UiDocument> {
         _classes: HashMap::new(),
         counter: 0,
     };
-    let root = lower.root()?;
+    let root = match &parsed.root {
+        Some(RootJsx::Element(el)) => lower.element(el)?,
+        Some(RootJsx::Fragment(frag)) => {
+            let key = lower.next_key();
+            let children = lower.children(&frag.children)?;
+            let node = UiNode::new(key.clone(), NodeKind::Stack).with_slot(Slot::default_slot(children));
+            lower.nodes.push(node);
+            key
+        }
+        // No JSX root (signal-only module): emit a synthetic root so the
+        // document still validates.
+        None => {
+            let key = lower.next_key();
+            lower.nodes.push(UiNode::new(key.clone(), NodeKind::Stack));
+            key
+        }
+    };
 
-    let mut bindings: Vec<Binding> = lower
-        .value_bindings
+    let mut bindings: HashMap<String, Binding> = module_bindings
         .into_iter()
-        .map(|(name, ty)| Binding::value(name, ty))
+        .map(|b| (b.name.clone(), b))
         .collect();
-    bindings.extend(lower.handler_bindings.into_keys().map(Binding::handler));
+    // JSX-derived value refs: only add if no module binding already claims the
+    // name (the module binding is the source of truth for its type).
+    for (name, ty) in lower.value_bindings.drain() {
+        bindings
+            .entry(name.clone())
+            .or_insert_with(|| Binding::value(name, ty));
+    }
+    for name in lower.handler_bindings.keys().cloned() {
+        bindings.entry(name.clone()).or_insert_with(|| Binding::handler(name));
+    }
+    let bindings: Vec<Binding> = bindings.into_values().collect();
 
     let doc = UiDocument {
         version: floom_ui_ir::IrVersion::CURRENT,
@@ -457,4 +470,137 @@ pub fn lower(parsed: &Parsed) -> Result<UiDocument> {
     doc.validate()
         .map_err(|e| TsxError::new(format!("IR validation failed: {e}")))?;
     Ok(doc)
+}
+
+/// Recognize module-level signal/context declarations and turn them into
+/// `Binding`s. This is the compile-time half of the reactive shim: a TSX
+/// `createSignal` becomes a `floom_signal` value binding, `provideContext` /
+/// `useContext` become context bindings, and `createEffect` is recognized but
+/// emits no binding (its body runs as an effect at runtime).
+fn collect_module_signals(module: &ast::Module) -> Vec<Binding> {
+    let mut out = Vec::new();
+    for item in &module.body {
+        match item {
+            ast::ModuleItem::Stmt(stmt) => match stmt {
+                ast::Stmt::Decl(ast::Decl::Var(var)) => {
+                    for decl in &var.decls {
+                        if let Some(b) = var_decl_signal(decl) {
+                            out.push(b);
+                        }
+                    }
+                }
+                ast::Stmt::Expr(expr_stmt) => {
+                    if let Some(b) = expr_stmt_signal(&expr_stmt.expr) {
+                        out.push(b);
+                    }
+                }
+                _ => {}
+            },
+            _ => {}
+        }
+    }
+    out
+}
+
+/// `const [count, setCount] = createSignal(0)` / `createMemo(..)` /
+/// `const t = useContext("theme")`.
+fn var_decl_signal(decl: &ast::VarDeclarator) -> Option<Binding> {
+    let init = decl.init.as_ref()?;
+    let call = match init.as_ref() {
+        ast::Expr::Call(c) => c,
+        _ => return None,
+    };
+    let callee = call_name(call)?;
+    match callee.as_str() {
+        "createSignal" | "createMemo" => {
+            // `[count, setCount]` or `double`.
+            let name = array_first_name(&decl.name).or_else(|| pat_ident_name(&decl.name))?;
+            let ty = call
+                .args
+                .first()
+                .map(|a| lit_type(a.expr.as_ref()))
+                .unwrap_or(ValueType::Text);
+            Some(Binding::value(name, ty))
+        }
+        "useContext" => {
+            let name = pat_ident_name(&decl.name)?;
+            Some(Binding::value(name, ValueType::Text))
+        }
+        _ => None,
+    }
+}
+
+/// `createEffect(() => …)` (no binding) and `provideContext("theme", "dark")`.
+fn expr_stmt_signal(expr: &ast::Expr) -> Option<Binding> {
+    let call = match expr {
+        ast::Expr::Call(c) => c,
+        _ => return None,
+    };
+    let callee = call_name(call)?;
+    match callee.as_str() {
+        // Recognized but emits no binding: its body runs as an effect.
+        "createEffect" => None,
+        "provideContext" => {
+            let name = match call.args.first() {
+                Some(a) => match a.expr.as_ref() {
+                    ast::Expr::Lit(ast::Lit::Str(s)) => {
+                        s.value.as_str().unwrap_or_default().to_string()
+                    }
+                    _ => return None,
+                },
+                None => return None,
+            };
+            let ty = call
+                .args
+                .get(1)
+                .map(|a| lit_type(a.expr.as_ref()))
+                .unwrap_or(ValueType::Text);
+            Some(Binding::value(name, ty))
+        }
+        _ => None,
+    }
+}
+
+/// The callee name of a call expression, if it is a bare identifier.
+fn call_name(call: &ast::CallExpr) -> Option<String> {
+    if let ast::Callee::Expr(e) = &call.callee {
+        if let ast::Expr::Ident(id) = e.as_ref() {
+            return Some(id.sym.as_str().to_string());
+        }
+    }
+    None
+}
+
+/// The identifier bound by `[a, b]` destructuring, or `None`.
+fn array_first_name(pat: &ast::Pat) -> Option<String> {
+    if let ast::Pat::Array(arr) = pat {
+        if let Some(Some(ast::Pat::Ident(id))) = arr.elems.first() {
+            return Some(id.id.sym.as_str().to_string());
+        }
+    }
+    None
+}
+
+/// The identifier bound by a plain `const x = …` pattern, or `None`.
+fn pat_ident_name(pat: &ast::Pat) -> Option<String> {
+    if let ast::Pat::Ident(id) = pat {
+        return Some(id.id.sym.as_str().to_string());
+    }
+    None
+}
+
+/// Infer a `ValueType` from a literal initial expression (default `Text`).
+fn lit_type(expr: &ast::Expr) -> ValueType {
+    match expr {
+        ast::Expr::Lit(ast::Lit::Num(n)) => {
+            if n.value.fract() == 0.0 {
+                ValueType::Int
+            } else {
+                ValueType::Number
+            }
+        }
+        ast::Expr::Lit(ast::Lit::Str(_)) => ValueType::Text,
+        ast::Expr::Lit(ast::Lit::Bool(_)) => ValueType::Bool,
+        _ => ValueType::Text,
+    }
 }

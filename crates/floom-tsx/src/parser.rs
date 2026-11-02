@@ -20,8 +20,13 @@ pub enum RootJsx {
 }
 
 /// A parsed TSX module plus the `SourceMap` needed to localize errors.
+///
+/// `root` is `None` when the module holds only signal/context declarations and
+/// no JSX — `compile` then emits a synthetic root so the document still
+/// validates.
 pub struct Parsed {
-    pub root: RootJsx,
+    pub root: Option<RootJsx>,
+    pub module: swc_ecma_ast::Module,
     pub cm: Lrc<SourceMap>,
 }
 
@@ -33,21 +38,24 @@ impl Parsed {
     }
 }
 
-/// Parse `source`, wrapping a bare JSX expression as a default export so callers
-/// can pass either a full component module or a plain `<Stack>…</Stack>` snippet.
+/// Parse `source`. A bare JSX expression is wrapped as a default export so
+/// callers can pass either a full component module or a plain
+/// `<Stack>…</Stack>` snippet. Modules with only signal declarations and no JSX
+/// are valid too (`root` will be `None`).
 pub fn parse(source: &str) -> Result<Parsed> {
-    parse_inner(source)
-        .or_else(|| {
-            // Fall back to treating the whole source as a default-exported
-            // expression, which lets `compile("<Stack/>")` work without ceremony.
+    match parse_inner(source) {
+        Ok(parsed) => Ok(parsed),
+        // A bare JSX expression is not a valid statement on its own; retry as a
+        // default export, which is how `compile("<Stack/>")` is meant to be used.
+        Err(_) => {
             let wrapped = format!("export default ( {source} );");
             parse_inner(&wrapped)
-        })
-        .ok_or_else(|| TsxError::new("no JSX element or fragment found at the module root"))
+        }
+    }
 }
 
-/// Run the swc parser once and extract the first JSX root.
-fn parse_inner(source: &str) -> Option<Parsed> {
+/// Run the swc parser once and extract the first JSX root (if any).
+fn parse_inner(source: &str) -> Result<Parsed> {
     let cm: Lrc<SourceMap> = Default::default();
     let fm = cm.new_source_file(FileName::Anon.into(), source.to_string());
     let comments = SingleThreadedComments::default();
@@ -61,8 +69,11 @@ fn parse_inner(source: &str) -> Option<Parsed> {
         Some(&comments),
     );
     let mut parser = Parser::new_from(lexer);
-    let module = parser.parse_module().ok()?;
-    extract_root(&module).map(|root| Parsed { root, cm })
+    let module = parser
+        .parse_module()
+        .map_err(|e| TsxError::new(format!("TSX parse error: {e:?}")))?;
+    let root = extract_root(&module);
+    Ok(Parsed { root, module, cm })
 }
 
 /// Find the first JSX tree in a module: a default-exported expression, a
