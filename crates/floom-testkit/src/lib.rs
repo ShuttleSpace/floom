@@ -144,6 +144,44 @@ impl TestApp {
         Self::boot(size, root, false)
     }
 
+    /// Like [`new`](Self::new) but for an already type-erased root (e.g. a tree
+    /// emitted by `floom-dsl`, which returns `Box<dyn WidgetAny>`).
+    pub fn new_boxed(size: Size, root: Box<dyn WidgetAny>) -> Self {
+        Self::boot_boxed(size, root, true)
+    }
+
+    fn boot_boxed(size: Size, root: Box<dyn WidgetAny>, pinned: bool) -> Self {
+        let mut platform = FakePlatform::new();
+        let mut host = WidgetHost::new();
+        let style = if pinned {
+            LayoutStyle {
+                width: Some(Length::Px(size.width as f32)),
+                height: Some(Length::Px(size.height as f32)),
+                ..LayoutStyle::default()
+            }
+        } else {
+            host.set_size(size);
+            LayoutStyle::default()
+        };
+        host.mount_root_boxed(style, root);
+        let runner = AppRunner::new(host, SoftwarePresenter::new());
+        let window = platform.create_window(WindowConfig {
+            title: "test".into(),
+            size,
+            resizable: true,
+        });
+        let mut app = Self {
+            platform,
+            runner,
+            window,
+            size,
+        };
+        for _ in 0..6 {
+            app.runner.pump(&mut app.platform);
+        }
+        app
+    }
+
     fn boot(size: Size, root: impl WidgetAny + 'static, pinned: bool) -> Self {
         let mut platform = FakePlatform::new();
         let mut host = WidgetHost::new();

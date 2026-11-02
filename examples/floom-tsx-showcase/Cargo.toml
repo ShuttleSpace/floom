@@ -31,3 +31,7 @@ floom-renderer-vello = { path = "../../crates/floom-renderer-vello", version = "
 [build-dependencies]
 floom-tsx = { path = "../../crates/floom-tsx" }
 floom-dsl = { path = "../../crates/floom-dsl" }
+
+[dev-dependencies]
+floom-testkit = { path = "../../crates/floom-testkit" }
+floom-types = { path = "../../crates/floom-types" }

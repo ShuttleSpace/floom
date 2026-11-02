@@ -1573,6 +1573,7 @@ dependencies = [
  "floom-platform",
  "floom-platform-desktop",
  "floom-renderer-vello",
+ "floom-testkit",
  "floom-tsx",
  "floom-types",
  "floom-widgets",
