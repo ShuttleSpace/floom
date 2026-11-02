@@ -332,7 +332,8 @@ fn a_definite_child_width_is_stretched_by_the_default_cross_axis() {
 }
 
 /// `SpaceBetween` through the host: a title at the start edge and an action at
-/// the end edge, which is v1's `justify_between()` and 38 floem-ui call sites.
+/// the end edge, matching the `justify_between()` layout used at 38 floem-ui
+/// call sites.
 #[test]
 fn space_between_pushes_content_to_both_edges() {
     let mut host = WidgetHost::new();

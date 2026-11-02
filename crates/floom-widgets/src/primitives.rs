@@ -140,7 +140,7 @@ pub fn emit_semantics(hint: SemanticsHint, cx: &mut dyn SemanticsContext) {
 /// Strokes a rounded outline of `width` px just inside `bounds`.
 ///
 /// Shared by [`Container`]'s border and by a composite that draws its own
-/// outline — 2.0's decoration boxes are leaves, so a widget that both decorates
+/// outline — decoration boxes are leaves, so a widget that both decorates
 /// *and* holds children has to trace the outline itself rather than wrap itself
 /// in a `Container`.
 ///
@@ -659,8 +659,8 @@ impl Widget for Image {
 /// with a gradient; a plain colour still fits through `impl Into<Brush>`, which
 /// is why every pre-gradient call site reads exactly as it did.
 ///
-/// There is deliberately **no padding here.** v1's `Container` held a child and
-/// could pad it; 2.0's holds no children (composition moved to the parent), so a
+/// There is deliberately **no padding here.** The decoration box holds no children
+/// (composition moved to the parent), so a
 /// box with nothing inside it has nothing to pad, and a field that is stored and
 /// never read is worse than an absent one — it makes a caller believe an inset
 /// is being applied. The inset is a *margin on the content's own slot* instead:
@@ -670,7 +670,7 @@ pub struct Container {
     background: Option<Brush>,
     radius: f32,
     /// The outline drawn just inside this box's edge, if any. A separate field
-    /// from `background` because it is a stroke and not a fill — 2.0's paint
+    /// from `background` because it is a stroke and not a fill — the paint
     /// contract grew `stroke_path` with the vector work, and a design system's
     /// hairline divider is the reason it is reachable from a box at all.
     border: Option<Border>,
@@ -718,8 +718,7 @@ impl Container {
 
     /// Draws a `width`-px outline just inside this box's edge.
     ///
-    /// v1 spelled this `.border(1.0).border_color(..)` on any view; 2.0's
-    /// decoration boxes are `Container`s, so it lands here. It is a *stroke* —
+    /// The border lands on the decoration box: it is a *stroke* —
     /// the path is traced and the band drawn along it — because filling an outer
     /// rounded rect in the border colour and an inset one in the background
     /// colour cannot work for the common case: a bordered box with a
@@ -765,7 +764,7 @@ impl Container {
     /// Casts this card's own shadow: its silhouette, blurred by `shadow.blur`
     /// and pushed by its offset, drawn *behind* the background rather than as
     /// a second hard-edged rect underneath it — which is what "elevation"
-    /// used to mean here, and what every pseudo-shadow in v1 was.
+    /// used to mean here, and what every pseudo-shadow represents.
     pub fn shadow(mut self, shadow: Shadow) -> Self {
         self.shadow = Some(shadow);
         self.revision.bump();
@@ -1148,8 +1147,8 @@ impl Widget for Spacer {
 ///
 /// ## Why this is a parameter and not a decision
 ///
-/// The three v1 design systems (`md_divider`, `cupertino_divider`,
-/// `fluent_divider`) all wrote the same thing: a horizontal rule with
+/// The `md_divider`, `cupertino_divider`, and `fluent_divider` kits all wrote
+/// the same thing: a horizontal rule with
 /// `height(thickness).width_full()` and no vertical placement at all. In a
 /// container taller than the rule, "no placement" means the rule lands on the
 /// container's **start edge** — the top.
@@ -1162,14 +1161,14 @@ impl Widget for Spacer {
 ///
 /// Centring stays the default because it is what every existing caller already
 /// gets and two golden tests pin it. `Start` exists so the ported kits can
-/// reproduce v1 exactly rather than being silently moved.
+/// reproduce those kits exactly rather than being silently moved.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RuleAlignment {
     /// Centred on the cross axis. The default, and this widget's original
     /// behaviour.
     Center,
     /// Flush with the cross axis' start edge — top for a horizontal rule, left
-    /// for a vertical one. **What all three v1 kits produced.**
+    /// for a vertical one. **What all three kits produced.**
     Start,
 }
 
@@ -1241,9 +1240,9 @@ impl Divider {
             Axis::Horizontal => {
                 let y = match self.alignment {
                     RuleAlignment::Center => bounds.y0 + (bounds.height() - thickness) / 2.0,
-                    // v1 wrote no vertical placement, which puts the rule on the
+                    // No vertical placement is written, which puts the rule on the
                     // container's top edge. Reproduced rather than corrected: a
-                    // ported kit that silently moved its rule is a visual
+                    // kit whose rule silently shifted would introduce a visual
                     // regression nobody would attribute to this change.
                     RuleAlignment::Start => bounds.y0,
                 };

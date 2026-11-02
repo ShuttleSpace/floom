@@ -9,10 +9,9 @@
 //! (`cx.dirty`), so the request costs a repaint and nothing else: no relayout,
 //! no semantics rebuild beyond the element's own upsert.
 //!
-//! This is the 2.0 equivalent of v1's `id.request_paint()`: there, the
-//! reactive runtime *was* the app shell, so an effect could reach into the
-//! view directly. Here the host is widget-agnostic and knows nothing about
-//! signals, so the channel is deliberately dumb — a queue of ids. The reactive
+//! This is the repaint request channel: the host is widget-agnostic and knows
+//! nothing about signals, so the channel is deliberately dumb — a queue of ids.
+//! The reactive
 //! half lives with the caller: `Canvas::repaint_on`, for instance, runs a
 //! reactive effect that turns a signal ping into a request for its own
 //! element, which is how "a signal changed, so redraw my chart" works without

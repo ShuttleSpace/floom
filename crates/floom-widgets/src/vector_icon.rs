@@ -1,7 +1,7 @@
 //! `VectorIcon` — an icon drawn from vector path data.
 //!
-//! v1 rendered icons by handing SVG markup to the renderer (`usvg` +
-//! `Renderer::draw_svg`). 2.0's paint contract has no SVG: a widget draws with
+//! Icons used to be handed as SVG markup to the renderer (`usvg` +
+//! `Renderer::draw_svg`). Floom's paint contract has no SVG: a widget draws with
 //! rectangles, text and [`Path`]s. Rather than port a document renderer into a
 //! widget crate, this draws the one shape every icon set is made of — a filled
 //! outline — and [`crate::svg_path`] parses the `d` attribute.

@@ -8,7 +8,7 @@
 //!
 //! [`Button`] and friends draw their own content; [`Pressable`] is the one that
 //! does not — it makes an arbitrary subtree act as a single clickable surface,
-//! which is what v1's `.on_event(listener::Click, ..)` decorator was for.
+//! which is what a clickable subtree is for.
 
 use std::sync::Arc;
 
@@ -736,9 +736,9 @@ impl Widget for Button {
 
 /// A single-child wrapper that makes its child act as one clickable surface.
 ///
-/// This is the missing half of v1's `Decorators::on_event`: v1 let *any* view
+/// This is the missing half of Decorators::on_event: let any view take
 /// take `.on_event(listener::Click, ..)`, which is why 360 call sites across 146
-/// floom-ui files use it. 2.0's only clickable widget is [`Button`], and
+/// floom-ui files use it. The only other clickable widget is [], and
 /// `Button` *is* its label — it paints a run of text and nothing else — so it
 /// cannot carry a row of widgets. An expansion-panel header is a title plus a
 /// chevron; a list row is an icon, two labels and a trailing icon. Those need
@@ -1060,7 +1060,7 @@ impl Default for SwitchPalette {
 /// with no design system at all — which is the point of it living in the
 /// primitive layer rather than in a kit.
 ///
-/// The three v1 kits (`md-switch`, `cupertino-switch`, `fluent-switch`) each
+/// `The `md-switch, cupertino-switch, and fluent-switch` (`md-switch`, `cupertino-switch`, `fluent-switch`) each
 /// supplied three *independent* numbers instead — 52 × 32 with a 24 knob — and
 /// none of those three satisfy the derivation above (`52 * 0.5 != 32`, and a 24
 /// knob inside a 32-tall track does not fill it). So a kit that passes tokens
@@ -1070,12 +1070,10 @@ impl Default for SwitchPalette {
 /// Hence the three overrides below. Each defaults to the derivation, so every
 /// existing caller is unaffected, and a kit can state its own numbers.
 ///
-/// `knob_inset` deserves a note: v1 got its 2px gap by putting `padding(2.0)`
-/// on the *track* and centring the knob inside it, which is a layout decision
-/// expressed as decoration. The knob's position depends on that padding, so it
-/// is a geometric parameter here, not a paint one. Reproducing v1 with a 52-wide
-/// track and no inset would put the knob flush against the track's end and leave
-/// a visibly different gap.
+/// `knob_inset` deserves a note: the 2px gap between the knob and the track
+/// end is a layout decision expressed as decoration — the knob's position
+/// depends on that padding, so it is a geometric parameter here, not a paint
+/// one. Setting it too large would put the knob flush against the track's end.
 pub struct Switch {
     label: String,
     on: bool,
@@ -1091,9 +1089,8 @@ pub struct Switch {
     /// Whether hover and press shift the track's colour.
     ///
     /// On by default, because feedback on an interactive control is worth more
-    /// than palette fidelity. All three v1 kits had no hover or press styling at
-    /// all, so a kit reproducing them turns this off rather than passing four
-    /// near-identical colours to achieve the same result.
+    /// than palette fidelity. Turning this off avoids passing four near-identical
+    /// colours to achieve the same result.
     tints: bool,
     state: InteractionState,
     revision: Revision,
@@ -1136,9 +1133,8 @@ impl Switch {
 
     /// An explicit track size, overriding the derived height.
     ///
-    /// Without this the height is half the width, which no v1 kit's tokens
-    /// satisfy. A caller passing both numbers gets exactly the box it asked
-    /// for rather than a shape related to it.
+    /// Without this the height is half the width. A caller passing both numbers
+    /// gets exactly the box it asked for rather than a shape related to it.
     pub fn track_size(mut self, width: f64, height: f64) -> Self {
         self.track_width = width;
         self.track_height = Some(height);
@@ -1158,7 +1154,7 @@ impl Switch {
 
     /// The gap between the knob and the track end it rests against.
     ///
-    /// Defaults to flush. All three v1 kits used 2.
+    /// Defaults to flush.
     pub fn knob_inset(mut self, inset: f64) -> Self {
         self.knob_inset = inset;
         self.revision.bump();

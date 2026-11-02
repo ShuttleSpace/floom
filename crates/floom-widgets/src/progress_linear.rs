@@ -34,8 +34,8 @@
 //!
 //! ## The sliding segment has no driver, and that is recorded rather than faked
 //!
-//! v1's Material arm spawned an OS thread that slept 16 ms and wrote an
-//! `ArcRwSignal` from it. That is not portable to 2.0 and should not be: a widget
+//! Material's indeterminate bar used an off-thread thread that slept 16 ms and wrote an
+//! `ArcRwSignal`. That is not portable to 2.0 and should not be: a widget
 //! that mutates shared state off-thread is exactly the shape 2.0's
 //! `Arc<Mutex<..>>` state exists to avoid.
 //!
@@ -47,12 +47,9 @@
 //! exists, Material's indeterminate bar sits still at the left edge, which is
 //! Cupertino's and Fluent's behaviour and is visibly wrong for Material.
 //!
-//! ## One token reads one way here and another in v1
-//!
-//! `ProgressLinearTokens::border_radius` is documented "Corner radius of the track
-//! **and fill**". Material applies it to the track only. The token's doc is the
-//! outlier, and it is left alone — fixing it would change a published token's
-//! meaning, and the disagreement that matters is Material's behaviour, which is
+//! ## One token reads one way here and another: the documentation is the outlier,
+//! and it is left alone — fixing it would change a published token's meaning, and
+//! the disagreement that matters is Material's behaviour, which is
 //! preserved.
 
 use floom_accessibility::SemanticsRole;
@@ -144,7 +141,7 @@ pub fn fill_percent(value: f32, indeterminate: Indeterminate, rounding: PercentR
     }
     let clamped = value.clamp(0.0, 100.0);
     match rounding {
-        // `clamped.trunc()` rather than v1's `(value / 100.0 * 100.0) as f64`:
+        // `clamped.trunc()` rather than `(value / 100.0 * 100.0) as f64`:
         // the value is already clamped non-negative, so `as` on an f32 and `trunc`
         // agree exactly, and the round trip reads as an accident.
         PercentRounding::Exact => clamped as f64,
@@ -222,8 +219,8 @@ impl LinearProgress {
     /// A bar showing `value`, a percentage in `0..=100`.
     ///
     /// Not clamped here: clamping happens in [`Self::fill_percent`] so that a value
-    /// read back is the value that was set. v1 clamped at the top of `view()`,
-    /// which meant the props and the drawing could disagree.
+    /// read back is the value that was set. Clamping at the top of `view()` meant
+    /// the props and the drawing could disagree.
     pub fn new(value: f32) -> Self {
         LinearProgress {
             value,

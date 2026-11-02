@@ -6,16 +6,14 @@ use floom_types::ElementId;
 
 /// High-level UI description. Implementations must not depend on concrete renderers.
 ///
-/// The `on_unimplemented` diagnostic is the Phase 29.2 migration hook: the
-/// most common cross-version mistake is handing a v1 `floom::view::View`
-/// value to a Floom 2.0 mount point. The unsatisfied bound then reports the
-/// migration path at the exact line that needs it, instead of a bare
-/// "trait bound not satisfied".
+/// The `on_unimplemented` diagnostic turns a bare "trait bound not satisfied"
+/// into a message at the exact call site that expects a widget, so a value that
+/// is not one reports what it actually is instead of a generic trait failure.
 #[diagnostic::on_unimplemented(
-    message = "`{Self}` is not a Floom 2.0 `Widget`",
-    label = "not a Floom 2.0 `Widget`",
-    note = "v1 `floom::view::View` values are compatibility APIs and cannot be mounted into a Floom 2.0 host",
-    note = "rebuild the subtree from `floom2::prelude` widgets, or keep the application on the v1 `floom` crate (preserved for the current major version)"
+    message = "`{Self}` is not a Floem `Widget`",
+    label = "not a Floem `Widget`",
+    note = "this value is not a widget and cannot be mounted into a host",
+    note = "rebuild the subtree from `floom::prelude` widgets"
 )]
 pub trait Widget {
     fn create(&self, cx: &mut dyn CreateContext) -> ElementId;

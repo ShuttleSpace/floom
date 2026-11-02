@@ -99,12 +99,11 @@ impl PointerPhase {
 
 /// The pointer shape a control asks the host to show.
 ///
-/// Three variants, and three is the whole of what the v1 design-system kits
-/// ever used (`Pointer` 178 times, `Default` 13, `Text` 10). Adding a fourth is
-/// not free: every platform backend would have to guess what it means, and a
-/// backend that guesses wrong shows the user a shape nobody designed. Add one
-/// when a control genuinely needs it, and give the backends the same sentence
-/// to go on.
+/// Three variants cover the whole set (`Pointer`, `Default`, `Text`). Adding
+/// a fourth is not free: every platform backend would have to guess what it
+/// means, and a backend that guesses wrong shows the user a shape nobody
+/// designed. Add one when a control genuinely needs it, and give the backends
+/// the same sentence to go on.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum CursorStyle {
     /// The platform's own arrow. What a control that is not asking for anything

@@ -411,7 +411,7 @@ fn a_divider_centres_on_its_cross_axis_by_default() {
 }
 
 /// A horizontal rule in `Start` sits on the box's top edge — which is what all
-/// three v1 kits produced by writing no vertical placement at all.
+/// three kits produce by writing no vertical placement at all.
 #[test]
 fn a_horizontal_rule_in_start_sits_on_the_top_edge() {
     let widget = Divider::new().alignment(RuleAlignment::Start);
@@ -457,13 +457,13 @@ fn start_changes_only_where_the_rule_sits() {
     assert_ne!(c.y0, s.y0, "but the cross axis moves");
 }
 
-/// **The v1 reproduction, stated as a claim.** With `Start`, a horizontal rule in
+/// **The kit geometry, stated as a claim.** With `Start`, a horizontal rule in
 /// a container taller than its thickness lands at the container's top — the
-/// exact pixel v1's `height(thickness).width_full()` with no vertical placement
+/// exact pixel `height(thickness).width_full()` with no vertical placement
 /// produced. This is the assertion that makes the parameter a port and not a
 /// preference.
 #[test]
-fn start_reproduces_what_v1_wrote() {
+fn start_reproduces_the_kit_geometry() {
     let widget = Divider::new().alignment(RuleAlignment::Start);
     let tall = Rect::from_origin_size(Point::ZERO, Size::new(200.0, 300.0));
     let rule = widget.resolve_bounds(tall);

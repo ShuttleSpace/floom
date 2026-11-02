@@ -3,7 +3,7 @@
 //! Every name a beginner is promised must resolve from a single glob import.
 //! If a surface item is removed or renamed, this file stops compiling — that
 //! is the stability contract. The *negative* surface (what must NOT be here:
-//! the v1 reactive graph, the v1 `View` lifecycle, type-erasure internals) is
+//! the reactive graph, the `View` lifecycle, type-erasure internals) is
 //! pinned by the compile-fail doctests in the crate docs.
 
 use floom::prelude::*;

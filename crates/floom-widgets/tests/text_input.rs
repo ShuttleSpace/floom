@@ -1,11 +1,11 @@
 //! The engine's [`TextInput`]: the shared buffer, the editing keys, and the two
 //! things that are easy to get subtly wrong — UTF-8 boundaries and IME.
 //!
-//! The buffer is the whole design (see the module note): v1's input took an
-//! `RwSignal<String>` from the caller, which cannot cross a `Send + Sync` slot
+//! The buffer is the whole design (see the module note): the input used to take
+//! an `RwSignal<String>` from the caller, which cannot cross a `Send + Sync` slot
 //! boundary, so it became an `Arc<Mutex<String>>`. That makes the *external write*
-//! path a first-class case rather than a bonus — and it is the one a signal gave away
-//! for free and this widget has to notice for itself.
+//! path a first-class case rather than a bonus — and it is the one a signal gave
+//! away for free and this widget has to notice for itself.
 
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
@@ -75,9 +75,9 @@ fn a_caller_reads_what_was_typed_through_its_own_handle() {
 
 /// And the other direction: a caller writing to the handle reaches the widget.
 ///
-/// This is the case v1 got from the signal and this widget has to notice itself. The
-/// widget's `update` compares what it last read, so the adoption happens on the next
-/// frame — which is exactly what the test drives.
+/// This is the case a signal gave away for free, and this widget has to notice
+/// itself. The widget's `update` compares what it last read, so the adoption
+/// happens on the next frame — which is exactly what the test drives.
 #[test]
 fn a_caller_can_write_and_the_widget_notices_on_its_next_update() {
     let mut field = input("old");
@@ -451,8 +451,8 @@ fn enter_reports_but_does_not_insert_a_newline() {
 
 /// Escape fires its callback and **does not** clear the field.
 ///
-/// v1's input had no escape behaviour, so inventing "escape reverts" would be a
-/// decision a text field should not make on its own.
+/// Other text inputs had no escape behaviour, so inventing "escape reverts" would
+/// be a decision a text field should not make on its own.
 #[test]
 fn escape_reports_and_does_not_clear() {
     let fired = Arc::new(AtomicUsize::new(0));

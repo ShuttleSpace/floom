@@ -1,4 +1,4 @@
-//! Tier-0 primitive widgets for Floom 2.0.
+//! Tier-0 primitive widgets for Floom.
 //!
 //! The widget set mirrors the architecture's tier list: this crate holds the
 //! Tier-0 primitives ([`primitives`]); interactive controls, navigation and
@@ -76,7 +76,7 @@ pub use progress_linear::{
     PercentRounding, SLIDING_TRAVEL_PCT, fill_percent,
 };
 pub use ripple::{Phase, Ripple, ripple};
-/// A decorated box with children: v1's `Container::new(child).style(..)`.
+/// A decorated box with children.
 pub use surface::Surface;
 /// SVG path data -> `Path`, for the icon sets the kits ship as `d="..."`.
 pub use svg_path::parse_path_data;
@@ -85,5 +85,5 @@ pub use text_input::{
     clamp_to_char_boundary, read_flag, read_list, shared_flag, shared_list, shared_map, write_flag,
     write_list,
 };
-/// An icon drawn from an outline, for kits with no SVG pipeline in 2.0.
+/// An icon drawn from an outline, for kits with no SVG pipeline.
 pub use vector_icon::VectorIcon;

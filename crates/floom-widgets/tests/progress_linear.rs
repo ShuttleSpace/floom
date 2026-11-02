@@ -145,8 +145,8 @@ fn an_indeterminate_bar_is_forty_percent_whatever_the_value() {
     }
 }
 
-/// ...and the rounding is irrelevant there too, because v1 put the indeterminate
-/// branch *before* the conversion in all three kits. Cupertino wrote
+/// ...and the rounding is irrelevant there too, because the indeterminate
+/// branch goes *before* the conversion in all three kits. Cupertino wrote
 /// `if indeterminate { 40.0 } else { (ratio * 100.0) as f64 }`.
 #[test]
 fn an_indeterminate_bar_ignores_the_rounding_rule() {

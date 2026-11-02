@@ -200,9 +200,10 @@ fn the_diameter_covers_the_whole_box_from_the_pointer() {
 
 #[test]
 fn the_setters_follow_a_theme_change() {
-    // v1 re-evaluated `radius_fn` against the theme on every use. 2.0 mounts the
-    // tree once, so a kit pushes the new value in through these instead -- which
-    // only works if each one bumps the revision, or the change would sit unread.
+    // The radius function used to re-evaluate against the theme on every use. The
+    // tree is mounted once, so a kit pushes the new value in through these instead
+    // -- which only works if each one bumps the revision, or the change would sit
+    // unread.
     let mut ripple = Ripple::new().radius(4.0).ink(Color::rgba(1, 2, 3, 4));
     assert_eq!(ripple.clip_radius(), 4.0);
 

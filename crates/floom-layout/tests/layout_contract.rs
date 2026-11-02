@@ -331,10 +331,10 @@ fn measure_nodes_remeasure_under_per_node_constraints() {
     );
 }
 
-/// A margin is space *outside* a box, inside its parent — which is how 2.0
-/// spells v1's `Container::new(child).style(|s| s.padding(..))`. The inset has
-/// to push the child off the parent's edge, and it has to be counted in the
-/// parent's own size rather than clipped away.
+/// A margin is space *outside* a box, inside its parent — which is how a
+/// decorated box spells `Container::new(child).style(|s| s.padding(..))`. The
+/// inset has to push the child off the parent's edge, and it has to be counted
+/// in the parent's own size rather than clipped away.
 #[test]
 fn a_margin_insets_the_child_inside_its_parent() {
     let mut eng = LayoutEngine::new();
@@ -392,9 +392,9 @@ fn a_margin_does_not_shrink_the_childs_box() {
     assert!((rect.x0 - 16.0).abs() < 0.01);
 }
 
-/// `Insets` per side, because v1's `padding_horiz` / `padding_vert` are the
-/// common call and a single number cannot express the expansion panels' header
-/// inset (horizontal only).
+/// `Insets` per side, because `padding_horiz` / `padding_vert` are the common
+/// call and a single number cannot express the expansion panels' header inset
+/// (horizontal only).
 #[test]
 fn a_margin_is_per_side() {
     let mut eng = LayoutEngine::new();

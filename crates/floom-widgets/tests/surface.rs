@@ -1,8 +1,9 @@
-//! `Surface` — the decorated box 2.0 was missing.
+//! `Surface` — the decorated box that the leaf `Container` could not be.
 //!
-//! v1's most common shape by far is `Container::new(child).style(|s| s
-//! .background(..).padding(..))`: a decorated box with something in it. 2.0's
-//! `Container` is a leaf, so that shape had no spelling at all. These tests pin
+//! The most common shape by far is `Container::new(child).style(|s| s
+//! .background(..).padding(..))`: a decorated box with something in it. The leaf
+//! `Container` cannot hold children, so that shape had no spelling at all. These
+//! tests pin
 //! the two halves that matter and that a wrong implementation would get right by
 //! accident: the padding has to be *inside* the box (the `md-card` bug), and the
 //! decoration has to be drawn by the same code a bare `Container` uses.

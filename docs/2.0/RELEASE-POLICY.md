@@ -23,8 +23,8 @@ to be inferred:
   locked surface. Because this is 0.x, breaking changes ship in a minor
   release; each one gets a changelog entry with a pointer to the migration
   section that covers it.
-- **major** — reserved for the retirement of the v1 monolith, at which point
-  the facade takes the `floom` name.
+- **major** — reserved for a breaking change too large for a minor; the facade
+  keeps the `floom` name.
 
 ### What is semver-locked
 
@@ -34,11 +34,10 @@ to be inferred:
 | `floom` feature-bundle names (`desktop`, `mobile`, `web`, `embedded`, `renderer-gpu`, `renderer-software`, `devtools`) | locked | `crates/floom/tests/feature_graph.rs` |
 | `floom-core::Widget` / `WidgetAny` | locked | the whole workspace compiles against them |
 | `floom-renderer::Renderer`, `floom-platform::{Platform, Window, Surface, Clipboard, Ime}`, `floom-native::{NativeViewProvider, NativeViewController}` | locked — these are the plugin ABIs | the ABI contract suites below |
-| `floom-app::WidgetHost` | locked | prelude + migration tests |
+| `floom-app::WidgetHost` | locked | prelude + host API tests |
 | `floom-widgets` public widget API | locked | `crates/floom-widgets` tests |
 | `floom::advanced`, L5 framework crates, design systems | stable: may change in a minor release with a changelog entry | — |
 | L8 tooling (`floom-testkit` … `floom-agent`) | **no** compatibility guarantee — dev-time only, never shipped in an app binary | the `default` feature graph test |
-| ~~`floom` (the v1 monolith)~~ | **removed** — the crate is gone; see [Deprecation](#deprecation-policy) | `crates/floom/tests/migration.rs` asserts v1 source no longer compiles |
 ## Supported targets and tested OS ranges
 
 "Tested" means the criteria at the bottom of this page were run on that target
@@ -83,12 +82,7 @@ Facade and compatibility:
 - `crates/floom/tests/prelude_surface.rs` — the beginner surface is pinned by name
 - `crates/floom/tests/feature_graph.rs` — the default build links no windowing,
   renderer, GPU or tooling crate; each bundle adds exactly its own
-- `crates/floom/tests/migration.rs` — the before/after snippets in
-  `docs/2.0/MIGRATION.md` compile and behave as documented
-- `crates/floom/tests/docs_parity.rs` — the three docs pages agree with the tree
-- `crates/floom/tests/migration.rs` — the v1 snippets in `docs/2.0/MIGRATION.md`
-  are `compile_fail` doctests: they assert that v1 source no longer builds,
-  which is the property a porting app actually needs checked
+- `crates/floom/tests/docs_parity.rs` — the docs pages agree with the tree
 
 ## Performance, size and scale gates
 
@@ -165,17 +159,11 @@ runs the remaining headless examples.
 
 ## Deprecation policy
 
-- **The v1 compat tier.** `floom::prelude` and `floom::compat::v1_prelude` are
-  guaranteed for the current major version of the `floom` crate. Removing a
-  name from it requires: one release carrying `#[deprecated]` with the
-  replacement in the message, an entry in `docs/2.0/MIGRATION.md`, and a
-  changelog line. The v1 crate is not deleted while any example or test in this
-  workspace still imports it (342 files do today).
-- **2.0 deprecations.** Mark with `#[deprecated]` and a replacement, then
-  remove at the next minor release. No silent removals from a locked surface.
-- **The `floom` name.** Held by the monolith. The facade is `floom` until the
-  monolith retires; renaming it is then a one-line change, and it is a major
-  event, not a minor one.
+- **Deprecations.** Mark a locked-surface member with `#[deprecated]` and a
+  replacement, then remove at the next minor release. No silent removals from a
+  locked surface.
+- **The `floom` name.** The facade is `floom`; it is the public name, and
+  renaming it is a major event, not a minor one.
 
 ## The gate
 

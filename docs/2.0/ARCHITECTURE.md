@@ -9,8 +9,7 @@ This document is the human-readable mirror of that gate. The layer table below
 is parsed by `crates/floom/tests/docs_parity.rs`, which fails if the two drift
 apart — so this page cannot quietly become wrong.
 
-Companion pages: [`EXAMPLES.md`](EXAMPLES.md) (the golden examples),
-[`MIGRATION.md`](MIGRATION.md) (v1 → 2.0) and
+Companion pages: [`EXAMPLES.md`](EXAMPLES.md) (the golden examples) and
 [`RELEASE-POLICY.md`](RELEASE-POLICY.md) (what a release has to pass).
 
 ## Layer table
@@ -19,7 +18,7 @@ Companion pages: [`EXAMPLES.md`](EXAMPLES.md) (the golden examples),
 | --- | --- | --- |
 | `floom-types` | L0 | engine-neutral value types: geometry, ids, events vocabulary |
 | `floom-core` | L1 | the element/widget contract: `Widget`, `WidgetAny`, contexts, semantics vocabulary |
-| `floom-runtime-core`, `floom-scheduler`, `floom-signal` | L2 | element arena, dirty propagation, task ordering, and the reactive runtime that drives them (it was `floom-legacy-reactive`; it is v2's own and sits here, not at L0) |
+| `floom-runtime-core`, `floom-scheduler`, `floom-signal` | L2 | element arena, dirty propagation, task ordering, and the reactive runtime that drives them |
 | `floom-layout`, `floom-style`, `floom-text`, `floom-scene`, `floom-virtual`, `floom-accessibility` | L3 | layout engine, style resolution, text shaping, the retained scene, virtualization geometry, the semantics schema |
 | `floom-renderer`, `floom-renderer-software`, `floom-renderer-vello`, `floom-renderer-tui`, `floom-renderer-web` | L4 | the renderer ABI plus concrete backends (including one whose target is a character grid rather than pixels, and one that blits a raster buffer to a `<canvas>`) |
 | `floom-renderer-skia-abi` | L4 | the **recording** side of the Skia ABI: a scene becomes Skia-shaped commands, and the counters say what a real submit path would have to honour. Not a renderer — it draws no pixels |
@@ -38,11 +37,10 @@ Companion pages: [`EXAMPLES.md`](EXAMPLES.md) (the golden examples),
 
 Two crates sit outside the ladder on purpose:
 
-- **`floom`** — the v1 monolith (`src/`). It is unlayered and allowlisted in the
-  gate: it mixes app, widget, platform and paint concerns by construction. It is
-  the *only* crate the 2.0 stack is allowed to depend on that is not in this
-  table, and the only 2.0 → v1 edge still live is the reactive graph
-  (`floom-legacy-reactive`), which the gate reports as a note, not a failure.
+- **`floom`** — the public facade (`src/`). It is unlayered and sits above the
+  ladder on purpose: it re-exports the layered crates under their own names and
+  curates the beginner-facing prelude. It is the *only* crate the stack is allowed
+  to depend on that is not in the table, and it reaches every layer to do so.
 - **`examples/*`, `crates/ecosystem/*`, `crates/vendor/*`** — not layered (examples are
   leaves; the satellite repos are separate workspaces). The one exception is
   `crates/ecosystem/plugins/`: its members *are* in this table at L5, and the gate
@@ -84,7 +82,7 @@ Two crates sit outside the ladder on purpose:
                                         │
    L1  core (Widget contract, contexts)
                                         │
-   L0  types ── and, below everything, the v1 legacy crates
+   L0  types ── and, below everything, the platform/renderer implementations
 ```
 
 Arrows point down. `floom` is the only crate that may reach L8; no crate below

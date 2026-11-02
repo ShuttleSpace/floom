@@ -2,16 +2,16 @@
 //!
 //! ## Why this exists, and why it is shaped the way it is
 //!
-//! `combobox` and `autocomplete` both build on a text input, and 2.0 had none — so
-//! this is the first *primitive* in the port that is not a port of anything, and its
+//! `combobox` and `autocomplete` both build on a text input, so this is the first
+//! *primitive* in the port that is not a port of anything, and its
 //! shape is worth stating.
 //!
-//! v1's `TextInput::new` took an `RwSignal<String>`: **the caller owned the buffer**.
-//! That cannot carry over, for the same reason `md-dialog` cannot own its `open`
-//! signal — `RwSignal` is `Rc`-based and a 2.0 slot closure must be `Send + Sync`.
-//! The translation is an [`Arc<Mutex<String>>`]: `Send + Sync`, so it can be captured
-//! by a builder, and *shared*, so a caller can still hold a handle and read or write
-//! it. It is the same move as `TreeView`'s forest, and for the same reason.
+//! A text input buffer cannot be an `RwSignal<String>`: `RwSignal` is `Rc`-based
+//! and a slot closure must be `Send + Sync`, for the same reason `md-dialog`
+//! cannot own its `open` signal. The buffer is an [`Arc<Mutex<String>>`]: `Send +
+//! Sync`, so it can be captured by a builder, and *shared*, so a caller can still
+//! hold a handle and read or write it. It is the same move as `TreeView`'s forest,
+//! and for the same reason.
 //!
 //! So:
 //!
@@ -19,8 +19,8 @@
 //!   a caller does not need a signal to bind to, and can use the same handle from two
 //!   places;
 //! * [`TextInput::on_change`] fires when the buffer differs from what the widget last
-//!   saw, which covers **both** directions: a keystroke and an external write. v1 got
-//!   the second for free from the signal; here it has to be noticed, and that is what
+//!   saw, which covers **both** directions: a keystroke and an external write. The
+//!   external write is not delivered by a signal, so it has to be noticed; that is what
 //!   the widget's `update` is for.
 //!
 //! ## Two limits worth knowing before using it
@@ -57,7 +57,7 @@ pub type SharedBuffer = Arc<Mutex<String>>;
 ///
 /// The same shape as [`SharedBuffer`] and for the same reason, and named separately
 /// because `SharedBuffer` is `Arc<Mutex<String>>` and a type that says `Buffer` while
-/// holding a `bool` is a lie at every call site. It exists because v1's dialogs exposed
+/// holding a `bool` is a lie at every call site. It exists because dialogs expose
 /// `open_signal()` — "so an external trigger (e.g. a button) can drive it" — and an
 /// `RwSignal` is `Rc`-based and cannot cross a `Send + Sync` slot boundary.
 pub type SharedFlag = Arc<Mutex<bool>>;
@@ -66,8 +66,8 @@ pub type SharedFlag = Arc<Mutex<bool>>;
 ///
 /// The third of the family, and for the same reason as the other two: a value a
 /// caller can read and write from outside the tree, in a form a `Send + Sync`
-/// slot closure can hold. v1's providers held their overrides in an
-/// `RwSignal<HashMap<String, String>>` -- `Rc`-based, so it could not cross a
+/// slot closure can hold. A caller's overrides are held where they can be read and
+/// written from outside the tree; an `Rc`-based form could not cross a slot boundary.
 /// slot boundary at all.
 pub type SharedMap = Arc<Mutex<HashMap<String, String>>>;
 
@@ -148,7 +148,7 @@ pub struct TextInputStyle {
     pub caret_color: Color,
     pub caret_width: f32,
     /// Space between the text and the box's edge. Horizontal and vertical, because
-    /// v1's `.padding(..)` was uniform and a caret needs room above and below.
+    /// Horizontal and vertical, because a caret needs room above and below the text.
     pub padding_horiz: f64,
     pub padding_vert: f64,
     /// `None` draws no fill, which is how a field inside another surface is written.
@@ -284,8 +284,8 @@ impl TextInput {
 
     /// Called on Escape.
     ///
-    /// Escape does **not** clear the buffer: v1's `TextInput` had no escape
-    /// behaviour, and inventing "escape reverts" would be a decision a text field
+    /// Escape does **not** clear the buffer: clearing the field on escape is a behaviour
+    /// this widget does not assume, and inventing "escape reverts" would be a decision a text field
     /// should not make on its own.
     pub fn on_escape(mut self, callback: impl Fn() + Send + Sync + 'static) -> Self {
         self.on_escape = Some(Arc::new(callback));
@@ -325,8 +325,8 @@ impl TextInput {
     /// The widget's accessibility description.
     ///
     /// A text field is a `TextField` whose name is its current value. The value *as*
-    /// the name is a compromise, and it is the same one v1's absent accessibility
-    /// story forced: a field's accessible name should be its label, and this widget
+    /// the name is a compromise, and it is the same one a missing label forces: a
+    /// field's accessible name should be its label, and this widget
     /// has no separate label, so it publishes what it holds rather than nothing.
     /// Recorded here rather than left to be discovered.
     fn hint(&self) -> crate::primitives::SemanticsHint {

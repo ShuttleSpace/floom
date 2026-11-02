@@ -22,10 +22,7 @@
 //!
 //! ## The rotation is the caller's, not this crate's
 //!
-//! Material's indeterminate arc rotates continuously, and v1 did it by spawning
-//! a thread that wrote to a signal every 16 milliseconds -- which is how a
-//! background thread ends up driving a widget. 2.0 has an animation channel
-//! that a *host* drives, and this widget does not own a clock, so the rotation
+//! Material's indeterminate arc rotates continuously. This widget does not own a clock, so the rotation is a value the caller sets through
 //! is a value the caller sets through [`CircularProgress::set_rotation`].
 //!
 //! Nothing inside this crate advances it, for the same reason
@@ -36,7 +33,7 @@
 //!
 //! ## The radius
 //!
-//! v1's Cupertino wrote `r = (size - sw).max(1.0) / 2.0` and the other two
+//! Cupertino wrote `r = (size - sw).max(1.0) / 2.0` and the other two
 //! wrote `r = size / 2.0 - sw / 2.0`. The two agree for any ring wider than its
 //! stroke, which is every ring a person sees; they differ only for a ring
 //! narrower than its own stroke, where the other two go negative and the
@@ -280,8 +277,7 @@ impl Widget for CircularProgress {
             &Stroke::new(self.stroke_width, self.track_color),
         );
 
-        // The arc: the progress, with rounded ends -- v1's
-        // `stroke-linecap="round"`.
+        // The arc: the progress, with rounded ends (`stroke-linecap="round"`).
         let sweep = self.sweep_rad();
         if sweep > 0.0 {
             let mut stroke = Stroke::new(self.stroke_width, self.fill_color);

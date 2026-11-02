@@ -1,10 +1,10 @@
 //! `Surface` — a decorated box that holds its children.
 //!
-//! This is the 2.0 spelling of v1's `Container::new(child).style(..)`, which is
-//! the most common shape in floem-ui (165 `Container::new` uses, nearly all of
-//! them wrapping something) and the one 2.0 could not express: its `Container`
-//! is a *leaf*, so a box can be filled, rounded, outlined, shadowed and filtered
-//! — and can hold no content to put those things around.
+//! This is the spelling of `Container::new(child).style(..)`, the most common
+//! shape in floem-ui (165 `Container::new` uses, nearly all of them wrapping
+//! something) and the one 2.0 could not express: its `Container` is a *leaf*, so
+//! a box can be filled, rounded, outlined, shadowed and filtered — and can hold
+//! no content to put those things around.
 //!
 //! ## Why a separate type rather than a child on `Container`
 //!
@@ -17,12 +17,11 @@
 //!
 //! ## Padding lives here, not on `Container`
 //!
-//! v1 padded the box that held the content. A leaf has nothing to inset, which
-//! is why `Container` once carried a `padding` field that was stored and never
-//! read, and why `md-card` rendered with its text against the edge while its
-//! test passed. `Surface` is a node with children, so its `padding` is real: it
-//! goes out as [`LayoutRequest::padding`] and insets the children inside the
-//! box.
+//! A leaf has nothing to inset, which is why `Container` once carried a `padding`
+//! field that was stored and never read, and why `md-card` rendered with its text
+//! against the edge while its test passed. `Surface` is a node with children, so
+//! its `padding` is real: it goes out as [`LayoutRequest::padding`] and insets
+//! the children inside the box.
 //!
 //! A margin would *almost* work — with one child the two are geometrically
 //! identical — and "almost" is why they are not interchangeable: a margin is per
@@ -86,8 +85,8 @@ impl std::fmt::Debug for Surface {
 
 impl Surface {
     /// A decorated box with nothing in it yet — the same thing a bare
-    /// `Container` is, and the starting point for the common port of v1's
-    /// `Container::new(child).style(..)`:
+    /// `Container` is, and the starting point for constructing a decorated box
+    /// like `Container::new(child).style(..)`:
     ///
     /// ```ignore
     /// Surface::new()

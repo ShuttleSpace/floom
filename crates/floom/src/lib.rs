@@ -7,11 +7,6 @@
 //! prelude stays reachable but explicit: custom-widget contracts in
 //! [`advanced`], full crates as top-level re-exports.
 //!
-//! The v1 crate (`floom`, the legacy monolith) is a different, compatibility
-//! world: its reactive `View` API is preserved through the current major
-//! version at `floom::prelude` / `floom::compat::v1_prelude`, and it is
-//! deliberately *not* importable here.
-//!
 //! # The beginner surface
 //!
 //! A complete hello app uses nothing but the prelude:
@@ -35,39 +30,35 @@
 //!
 //! # Unsupported patterns (compile-fail)
 //!
-//! The v1 reactive graph is not part of the 2.0 prelude — a v1 signal
-//! constructor does not resolve through it:
+//! The prelude is curated: it does not re-export the raw signal constructor,
+//! which lives in `floom::reactive`:
 //!
 //! ```compile_fail
 //! use floom::prelude::*;
 //! let _ = create_signal(1);
 //! ```
 //!
-//! Neither is the v1 `View` trait family:
+//! It also does not expose a `View` trait family for building trees:
 //!
 //! ```compile_fail
 //! use floom::prelude::*;
 //! fn take_view<V: IntoView>(_: V) {}
-//! take_view(|| "still the v1 API".to_string());
+//! take_view(|| "not a widget".to_string());
 //! ```
 //!
-//! And the mount point only accepts Floom 2.0 widgets. A value that is not a
-//! Floom 2.0 widget fails to compile, and the failure carries the migration
-//! diagnostic:
+//! And the mount point only accepts widgets. A value that is not a widget
+//! fails to compile, and the failure carries the diagnostic that names the
+//! missing trait:
 //!
 //! ```compile_fail
 //! use floom::prelude::*;
-//! let v1_label = || "v1 label".to_string();
+//! let label = || "not a widget".to_string();
 //! let mut host = WidgetHost::new();
-//! host.mount_root(LayoutStyle::default(), v1_label);
+//! host.mount_root(LayoutStyle::default(), label);
 //! ```
 //!
-//! The original form of that doctest linked the v1 monolith and handed a real
-//! `floom::views::label` to `mount_root`. Stage D deleted that crate, which
-//! turned the doctest into a vacuous pass: `compile_fail` is satisfied by a
-//! missing crate just as happily as by a rejected type, so the test would
-//! have gone on passing while asserting nothing. The substitution above keeps
-//! the assertion real - a closure is not a widget - with no v1 dependency.
+//! The last example asserts something real - a closure is not a widget - so
+//! the `compile_fail` is meaningful rather than a vacuous missing-crate pass.
 
 #![forbid(unsafe_code)]
 
@@ -668,9 +659,10 @@ where
 ///   (`Point`, `Size`, `Rect`), tree vocabulary (`Child`, `ChildKey`,
 ///   `LayoutRequest`), input events, and the app shell (`WidgetHost`,
 ///   `AppRunner`).
-/// - **No v1 API**: the legacy reactive graph and the v1 `View` lifecycle
-///   live in the `floom` crate and are rejected here (see the crate-level
-///   compile-fail examples).
+/// - **Curated, not comprehensive**: the prelude exposes widgets and the value
+///   types an app writes; the reactive graph and the widget contracts live in
+///   their own modules (`floom::reactive`, `floom::advanced`) and are reached
+///   explicitly (see the crate-level compile-fail examples).
 /// - **Advanced APIs stay explicit**: `WidgetAny`, the create/update/event
 ///   contexts, semantics roles — all under [`crate::advanced`].
 ///
@@ -776,7 +768,7 @@ pub mod prelude {
     // NOTE: `RwSignal` used to live here. It does not any more, and the reason is
     // worth keeping.
     //
-    // The signals are v2's own reactive primitives and they are genuinely useful --
+    // The signals are Floom's own reactive primitives and they are genuinely useful --
     // but they arrived in the prelude as an inheritance rather than a decision. A
     // beginner writing `Counter` should reach for `counter.value(0)` and not have to
     // know a signal exists; a beginner who *does* need mutable state should be told
@@ -808,7 +800,7 @@ pub mod prelude {
 ///
 /// `RwSignal`, `ReadSignal`, `WriteSignal`; the `SignalGet` / `SignalUpdate` /
 /// `SignalWith` traits; `Scope` and the effect / memo / derived constructors.
-/// This is v2's own reactive system, re-exported from [`floom_signal`].
+/// This is Floom's reactive system, re-exported from [`floom_signal`].
 ///
 /// ## The name
 ///

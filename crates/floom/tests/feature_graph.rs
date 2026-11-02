@@ -71,19 +71,19 @@ fn default_features_are_headless_and_backend_free() {
     ] {
         assert_absent(&graph, backend);
     }
-    // The v1 monolith must not be a normal dependency of the facade.
+    // The facade must not depend on itself through the monolith path.
     //
     // Matched by *path*, not by package name. The package-name form of this
     // assertion was `name != "floom"`, and it became wrong the moment the
     // facade itself was renamed from `floom2` to `floom`: cargo tree printed the
     // facade's own name and the test read it as the monolith it was trying to
-    // forbid. The intent -- "nothing in this graph is the v1 tree" -- is better
+    // forbid. The intent -- "nothing in this graph is the monolith" -- is better
     // expressed by where a package lives than by what it is called, and it stays
     // true under any future rename.
     for line in graph.lines() {
         assert!(
             !line.contains("crates/floom/"),
-            "the v1 monolith must not be a normal dependency of the facade:\n{graph}"
+            "the facade must not depend on the monolith path:\n{graph}"
         );
     }
 }

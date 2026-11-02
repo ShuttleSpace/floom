@@ -14,14 +14,14 @@ use std::any::Any;
 /// accessibility description.
 ///
 /// This trait is what real mount points take (`mount_root(impl WidgetAny)`),
-/// so it carries the Phase 29.2 migration diagnostic: a v1 `floom::view::View`
-/// value handed to a Floom 2.0 host reports the cross-version migration path
-/// here, at the call site, rather than a bare "trait bound not satisfied".
+/// so the `on_unimplemented` diagnostic fires here, at the call site, when a
+/// non-widget value is handed to a host — a precise message instead of a bare
+/// "trait bound not satisfied".
 #[diagnostic::on_unimplemented(
-    message = "`{Self}` is not a Floom 2.0 `Widget`",
-    label = "not a Floom 2.0 `Widget`",
-    note = "v1 `floom::view::View` values are compatibility APIs and cannot be mounted into a Floom 2.0 host",
-    note = "rebuild the subtree from `floom2::prelude` widgets, or keep the application on the v1 `floom` crate (preserved for the current major version)"
+    message = "`{Self}` is not a Floem `Widget`",
+    label = "not a Floem `Widget`",
+    note = "this value is not a widget and cannot be mounted into a host",
+    note = "rebuild the subtree from `floom::prelude` widgets"
 )]
 pub trait WidgetAny: crate::Widget + Any {
     fn as_any(&self) -> &dyn Any;

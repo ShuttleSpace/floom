@@ -86,7 +86,7 @@ fn the_track_and_the_arc_are_in_their_own_colours() {
     assert_eq!(stroked[1].1, fill, "the arc is the fill colour");
 }
 
-/// The arc's ends are rounded, as v1's `stroke-linecap="round"` said.
+/// The arc's ends are rounded, matching SVG's `stroke-linecap="round"`.
 #[test]
 fn the_arc_has_rounded_ends() {
     let mut p = CircularProgress::determinate(0.5);

@@ -1,6 +1,6 @@
 //! SVG path data -> [`Path`].
 //!
-//! 2.0 has no SVG pipeline. v1 rendered icon sets through `usvg` inside the
+//! //! The renderer only knows how to fill a [`Path`]. The gap is closed once, in this module, so every kit that ships icons as `<path d="..">` data gets a working icon for the price of one parse (see [`crate::vector_icon::VectorIcon::from_path_data`]).
 //! renderer (`Renderer::draw_svg`); here the renderer only knows how to fill a
 //! [`Path`]. The gap is closed once, in this module, so every kit that ships
 //! icons as `<path d="..">` data gets a working icon for the price of one

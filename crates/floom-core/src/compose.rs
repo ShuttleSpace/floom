@@ -47,7 +47,7 @@ pub enum Align {
     ///
     /// Only meaningful as a `main_align`, which is why it is here rather than in
     /// the padding vocabulary: it distributes, it does not place one box. floem-ui
-    /// asks for it 38 times, nearly always as v1's `justify_between()`.
+    /// asks for it 38 times, nearly always as `justify_between()`.
     SpaceBetween,
 }
 
@@ -103,9 +103,9 @@ pub struct LayoutRequest {
     ///
     /// Separate from `height` on purpose, and this is the whole reason: a row that
     /// must be *at least* a touch target tall but may grow with its content cannot
-    /// say `height`, because `height` is that content's height now. v1's
-    /// `min_height(..)` is the direct translation, and the first component to need
-    /// it was the list item, whose row is exactly that shape.
+    /// say `height`, because `height` is that content's height now. The direct
+    /// translation is `min_height(..)`, and the first component to need it was the
+    /// list item, whose row is exactly that shape.
     ///
     /// `None` means "no floor", which is what taffy's `auto` means — so the default
     /// is the absent constraint rather than zero, which would pin every box.
@@ -128,7 +128,7 @@ pub struct LayoutRequest {
     ///
     /// The other dimension is derived rather than stated, which is the whole
     /// point: a media box that must be 16:9 cannot say "width 200, height 112.5"
-    /// without knowing its width first. v1's `aspect_ratio(..)` was the same
+    /// without knowing its width first. `aspect_ratio(..)` expresses the same
     /// idea, and the first component to need it was the responsive media box.
     pub aspect_ratio: Option<f32>,
     /// Direction this box lays out *its own* children in.
@@ -146,8 +146,8 @@ pub struct LayoutRequest {
     ///
     /// Only meaningful on a node that declares children — the engine's word for
     /// it is the box model's, and a leaf has nothing to inset. This is the direct
-    /// translation of v1's `Container::new(child).style(|s| s.padding(..))`,
-    /// which padded the box that held the content.
+    /// translation of the box-model padding: the padding a child's own slot asks
+    /// for when it wants room around itself, inside the box that holds it.
     ///
     /// The two are not interchangeable: a margin is outside the box and so
     /// changes where the box sits among its siblings, while padding is inside it

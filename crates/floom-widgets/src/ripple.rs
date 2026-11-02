@@ -24,7 +24,7 @@
 //!   reconciled. It is the one requirement, and
 //!   `floom-app/tests/event_animation.rs` is the control that pins it.
 //!
-//! Unlike v1, this needs no layout-change listener to learn its own box:
+//! This needs no layout-change listener to learn its own box:
 //! `paint` is handed `cx.bounds()` and `event` is handed `cx.bounds()`, so the
 //! ink diameter can be derived from the real laid-out box at press time.
 
@@ -148,9 +148,9 @@ impl Ripple {
     /// Re-clip the ink to a new corner radius.
     ///
     /// The builder form takes a plain value because this widget is
-    /// theme-agnostic, but a kit still has to follow a theme change: v1's
-    /// `radius_fn` re-evaluated against the theme on every use. In 2.0 the tree
-    /// is mounted once and mutated through `WidgetHost::widget_mut`, so the kit
+    /// theme-agnostic, but a kit still has to follow a theme change: the radius
+    /// function used to re-evaluate against the theme on every use. The tree is
+    /// mounted once and mutated through `WidgetHost::widget_mut`, so the kit
     /// resolves the theme and pushes the new value in here. Same for
     /// [`Ripple::set_ink`] and [`Ripple::set_disabled`].
     pub fn set_radius(&mut self, radius: f64) {

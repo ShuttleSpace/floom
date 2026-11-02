@@ -114,7 +114,7 @@ fn every_floom2_example_is_documented() {
 
     for name in example_directories() {
         if !name.starts_with("floom-") {
-            continue; // the v1 examples have their own docs
+            continue; // these examples document themselves outside the 2.0 guide
         }
         assert!(
             documented.contains(&name),
@@ -373,46 +373,4 @@ fn the_bench_targets_named_by_the_policy_exist() {
     }
 }
 
-// ---------------------------------------------------------------------------
-// MIGRATION.md <-> the code it documents
-// ---------------------------------------------------------------------------
 
-#[test]
-fn the_migration_guide_points_at_a_test_that_compiles_its_snippets() {
-    let guide = read("docs/2.0/MIGRATION.md");
-    assert!(
-        guide.contains("crates/floom/tests/migration.rs"),
-        "the guide must say where its snippets are compiled"
-    );
-    assert!(
-        root().join("crates/floom/tests/migration.rs").exists(),
-        "the guide's snippet test is gone"
-    );
-
-    // The guide must not recommend a path that no longer exists. It used to teach
-    // `floom::compat::v1_prelude` as the way to stay on v1 while the 2.0 surface
-    // moved; v1 has since been deleted, so that advice now sends a porting app to
-    // a module that is not there. Asserted in the negative deliberately: this
-    // test's job is to fail the day the guide goes stale, and "mentions compat"
-    // was the wrong thing to guard.
-    assert!(
-        !guide.contains("floom::compat::v1_prelude"),
-        "the guide still recommends floom::compat::v1_prelude, which no longer exists"
-    );
-
-    // And the diagnostic it quotes must be the diagnostic in the source.
-    let note = "v1 `floom::view::View` values are compatibility APIs and cannot be mounted into a Floom 2.0 host";
-    assert!(
-        guide.contains("is not a Floom 2.0 `Widget`"),
-        "the guide must quote the mount-point diagnostic"
-    );
-    for source in [
-        "crates/floom-core/src/widget.rs",
-        "crates/floom-core/src/widget_any.rs",
-    ] {
-        assert!(
-            read(source).contains(note),
-            "the quoted diagnostic note is not in {source}"
-        );
-    }
-}

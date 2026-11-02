@@ -251,9 +251,9 @@ impl Insets {
 ///
 /// A percentage is not a convenience — it is a different thing to measure, and
 /// the difference is the whole reason a full-width row can fill its parent while
-/// a fixed 200px row cannot. v1 had `width(..)` and `width_pct(..)` as two
-/// builders over one field, and 2.0 had only the first, so the 310
-/// `width_pct` / `height_pct` calls across floem-ui had no spelling at all.
+/// a fixed 200px row cannot. `width(..)` and `width_pct(..)` were once two
+/// builders over one field; only one survived, so the `width_pct` / `height_pct`
+/// calls across floem-ui had no spelling at all.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Length {
     /// A fixed extent in logical pixels.

@@ -212,7 +212,7 @@ fn switch_knob_tracks_state() {
 /// **The control for every override test below.** Without any override the
 /// switch derives half-as-tall and a knob that fills the track, flush to one
 /// end. Every override assertion is therefore "and *not* this", and the three
-/// numbers v1 used (52 / 32 / 24) satisfy none of the derivations — which is
+/// numbers the kits use (52 / 32 / 24) satisfy none of the derivations — which is
 /// why they need overrides rather than a scaled default.
 #[test]
 fn a_switch_derives_its_geometry_by_default() {
@@ -228,9 +228,9 @@ fn a_switch_derives_its_geometry_by_default() {
 }
 
 /// An explicit track size is honoured as given, not rounded toward the
-/// derivation. 52 × 32 is v1's, and `52 * 0.5` is 26 — so a switch that
-/// derived here would be 6px short and every kit would silently get a squashed
-/// track.
+/// derivation. 52 × 32 is the kit geometry, and `52 * 0.5` is 26 — so a switch
+/// that derived here would be 6px short and every kit would silently get a
+/// squashed track.
 #[test]
 fn an_explicit_track_size_is_used_verbatim() {
     let track = Switch::new("x").track_size(52.0, 32.0).track_bounds(ROW);
@@ -242,11 +242,10 @@ fn an_explicit_track_size_is_used_verbatim() {
     );
 }
 
-/// **The v1 reproduction, stated as a claim.** Track 52 × 32, knob 24, inset 2 —
-/// which is exactly what v1's `padding(2.0)` + `justify_start/end()` produced.
-/// The knob does not fill the track and does not touch either end.
+/// The switch reproduces the kit geometry exactly: track 52 × 32, knob 24,
+/// inset 2 — the knob does not fill the track and does not touch either end.
 #[test]
-fn v1_tokens_are_reproducible_exactly() {
+fn switch_tokens_reproduce_kit_geometry() {
     let off = Switch::new("x")
         .track_size(52.0, 32.0)
         .knob_size(24.0)
@@ -263,7 +262,7 @@ fn v1_tokens_are_reproducible_exactly() {
     assert_eq!(
         off.x0,
         ROW.x0 + 2.0,
-        "2px from the start, as padding(2.0) gave"
+        "2px from the start"
     );
     assert_eq!(on.x1, ROW.x0 + 52.0 - 2.0, "2px from the far end");
     assert_eq!(off.x1, ROW.x0 + 26.0);
