@@ -259,13 +259,17 @@ impl<'a> Lower<'a> {
         }
     }
 
-    /// Recognize `createSignal`/`createMemo` calls so a prop can carry a live
-    /// signal reference (the binding is registered by the caller's scope pass).
+    /// Recognize a signal reference in an attribute value.
+    ///
+    /// `count()` — a zero-argument call to a bare identifier — is how the TSX
+    /// shim reads a signal, so it lowers to `PropValue::Ref("count")`. A
+    /// `createSignal`/`createMemo` call in attribute position is an error: the
+    /// signal must be bound with `const [name] = ...` at module scope.
     fn call_value(
         &mut self,
         _node_key: &NodeKey,
-        _kind: NodeKind,
-        _name: &str,
+        kind: NodeKind,
+        name: &str,
         call: &ast::CallExpr,
     ) -> Result<PropValue> {
         if let ast::Callee::Expr(e) = &call.callee {
@@ -276,6 +280,13 @@ impl<'a> Lower<'a> {
                         call.span,
                         format!("{callee} must be bound with `const [name] = ...` at module scope"),
                     ));
+                }
+                if call.args.is_empty() {
+                    let ty = floom_ui_ir::prop_spec(kind, name)
+                        .map(|spec| spec.ty)
+                        .unwrap_or(ValueType::Text);
+                    self.value_bindings.insert(callee.clone(), ty);
+                    return Ok(PropValue::Ref(callee));
                 }
             }
         }

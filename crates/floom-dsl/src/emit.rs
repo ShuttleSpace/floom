@@ -33,7 +33,9 @@
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::fmt;
 
-use floom_ui_ir::{IrError, NativeKind, NodeKind, PropValue, Rgba, UiDocument, UiNode};
+use floom_ui_ir::{
+    BindingKind, IrError, NativeKind, NodeKind, PropValue, Rgba, UiDocument, UiNode, ValueType,
+};
 
 /// Which widget set the emitted program calls into.
 ///
@@ -112,6 +114,18 @@ pub struct EmitOptions {
     pub repeat_threshold: usize,
     /// Which widget set the emitted program calls into.
     pub widgets: WidgetSource,
+    /// Emit signal-backed properties as reactive closures.
+    ///
+    /// When a property value is a `PropValue::Ref(name)`, the emitted program
+    /// declares `name` as a `floom_signal::SyncBaseSignal` at the top of
+    /// `build()` and reads it with `.get()` inside the per-child `push(move ||
+    /// …)` closure — Floom re-runs that closure when the signal changes. This
+    /// is the closure-capture seam: reactivity lives in the builder tree, not in
+    /// a runtime host lookup.
+    ///
+    /// Off by default so a program with no signals keeps its static form and
+    /// needs no `floom_signal` dependency.
+    pub reactive: bool,
 }
 
 impl Default for EmitOptions {
@@ -122,6 +136,7 @@ impl Default for EmitOptions {
             strict: false,
             repeat_threshold: 4,
             widgets: WidgetSource::default(),
+            reactive: false,
         }
     }
 }
@@ -266,7 +281,12 @@ fn seat(kind: NodeKind, source: WidgetSource) -> Option<Seat> {
 pub fn emit(document: &UiDocument, options: &EmitOptions) -> Result<Emitted, EmitError> {
     document.validate().map_err(EmitError::Invalid)?;
 
-    let mut emitter = Emitter::new(document, options.repeat_threshold, options.widgets);
+    let mut emitter = Emitter::new(
+        document,
+        options.repeat_threshold,
+        options.widgets,
+        options.reactive,
+    );
     let code = emitter.run(document);
     let unmapped = emitter.unmapped;
     if options.strict
@@ -297,10 +317,17 @@ struct Emitter<'a> {
     threshold: usize,
     /// Which widget set the emitted program calls into.
     source: WidgetSource,
+    /// Emit signal-backed properties as reactive closures.
+    reactive: bool,
 }
 
 impl<'a> Emitter<'a> {
-    fn new(document: &'a UiDocument, threshold: usize, source: WidgetSource) -> Self {
+    fn new(
+        document: &'a UiDocument,
+        threshold: usize,
+        source: WidgetSource,
+        reactive: bool,
+    ) -> Self {
         let nodes: BTreeMap<&str, &UiNode> = document
             .nodes
             .iter()
@@ -316,6 +343,7 @@ impl<'a> Emitter<'a> {
             unmapped: Vec::new(),
             threshold: threshold.max(2),
             source,
+            reactive,
         }
     }
 
@@ -324,65 +352,78 @@ impl<'a> Emitter<'a> {
         // holds `&UiNode`, which does not borrow from `self`.
         let order = self.order.clone();
 
-        // Fingerprint everything first: a node can only be shared once the
-        // whole document is known.
-        let mut counts: HashMap<String, usize> = HashMap::new();
-        for node in &order {
-            let fingerprint = self.fingerprint(node.key.as_str());
-            *counts.entry(fingerprint).or_default() += 1;
-        }
-        let repeated: Vec<String> = {
-            let mut repeated: Vec<String> = counts
-                .into_iter()
-                .filter(|(_, count)| *count >= self.threshold)
-                .map(|(fingerprint, _)| fingerprint)
-                .collect();
-            // Sorted, so function numbering does not depend on hash iteration.
-            repeated.sort();
-            repeated
-        };
-        for (index, fingerprint) in repeated.into_iter().enumerate() {
-            self.shared.insert(fingerprint, format!("shared_{index}"));
-        }
-
-        // Each function's body is the fingerprint's representative: the first
-        // node in document order, so the output does not depend on which
-        // occurrence a walk happened to reach first.
-        let mut representatives: BTreeMap<String, String> = BTreeMap::new();
-        for node in &order {
-            let fingerprint = self.fingerprint(node.key.as_str());
-            if self.shared.contains_key(&fingerprint) {
-                representatives
-                    .entry(fingerprint)
-                    .or_insert_with(|| node.key.to_string());
+        // Structural sharing extracts a repeated subtree into a top-level `fn`,
+        // but a reactive subtree must read its signal from its closure's scope,
+        // so a top-level `fn` cannot capture it. Sharing is therefore disabled
+        // in reactive mode: every subtree stays inline in its `push` closure.
+        let bodies: Vec<(String, String)> = if self.reactive {
+            Vec::new()
+        } else {
+            // Fingerprint everything first: a node can only be shared once the
+            // whole document is known.
+            let mut counts: HashMap<String, usize> = HashMap::new();
+            for node in &order {
+                let fingerprint = self.fingerprint(node.key.as_str());
+                *counts.entry(fingerprint).or_default() += 1;
             }
-        }
-        // Copied out for the same reason as `order`, and sorted by name so the
-        // emitted functions appear in call order.
-        let mut definitions: Vec<(String, String)> = self
-            .shared
-            .iter()
-            .map(|(fingerprint, name)| {
-                let key = representatives
-                    .get(fingerprint)
-                    .expect("a shared fingerprint has a representative node")
-                    .clone();
-                (name.clone(), key)
-            })
-            .collect();
-        definitions.sort();
-        let bodies: Vec<(String, String)> = definitions
-            .into_iter()
-            .map(|(name, key)| {
-                let node = *self.nodes.get(key.as_str()).expect("indexed node");
-                // `build`, not `resolve`: the representative must not become a
-                // call to the function being defined.
-                let body = self.build(node);
-                (name, body)
-            })
-            .collect();
+            let repeated: Vec<String> = {
+                let mut repeated: Vec<String> = counts
+                    .into_iter()
+                    .filter(|(_, count)| *count >= self.threshold)
+                    .map(|(fingerprint, _)| fingerprint)
+                    .collect();
+                // Sorted, so function numbering does not depend on hash iteration.
+                repeated.sort();
+                repeated
+            };
+            for (index, fingerprint) in repeated.into_iter().enumerate() {
+                self.shared.insert(fingerprint, format!("shared_{index}"));
+            }
+
+            // Each function's body is the fingerprint's representative: the first
+            // node in document order, so the output does not depend on which
+            // occurrence a walk happened to reach first.
+            let mut representatives: BTreeMap<String, String> = BTreeMap::new();
+            for node in &order {
+                let fingerprint = self.fingerprint(node.key.as_str());
+                if self.shared.contains_key(&fingerprint) {
+                    representatives
+                        .entry(fingerprint)
+                        .or_insert_with(|| node.key.to_string());
+                }
+            }
+            // Copied out for the same reason as `order`, and sorted by name so the
+            // emitted functions appear in call order.
+            let mut definitions: Vec<(String, String)> = self
+                .shared
+                .iter()
+                .map(|(fingerprint, name)| {
+                    let key = representatives
+                        .get(fingerprint)
+                        .expect("a shared fingerprint has a representative node")
+                        .clone();
+                    (name.clone(), key)
+                })
+                .collect();
+            definitions.sort();
+            definitions
+                .into_iter()
+                .map(|(name, key)| {
+                    let node = *self.nodes.get(key.as_str()).expect("indexed node");
+                    // `build`, not `resolve`: the representative must not become a
+                    // call to the function being defined.
+                    let body = self.build(node);
+                    (name, body)
+                })
+                .collect()
+        };
 
         let mut out = header(self.source);
+        if self.reactive {
+            // Signals are read with `.get()`; `SyncBaseSignal` is the `Send +
+            // Sync` signal a `push` closure can capture.
+            out.push_str("use floom_signal::{SignalGet, SyncBaseSignal};\n\n");
+        }
         for (name, body) in bodies {
             let _ = std::fmt::Write::write_fmt(
                 &mut out,
@@ -396,9 +437,12 @@ impl<'a> Emitter<'a> {
             // function total rather than because it is reachable.
             None => String::from("Box::new(Container::new())"),
         };
+        let signal_decls = self.signal_decls(document);
         let _ = std::fmt::Write::write_fmt(
             &mut out,
-            format_args!("pub fn build() -> Box<dyn WidgetAny> {{\n    {root_expr}\n}}\n"),
+            format_args!(
+                "pub fn build() -> Box<dyn WidgetAny> {{\n    {signal_decls}{root_expr}\n}}\n"
+            ),
         );
 
         self.report_leftovers();
@@ -542,6 +586,7 @@ impl<'a> Emitter<'a> {
         let mut out = String::from("{\n        let mut v = ");
         out.push_str(&base);
         out.push_str(";\n");
+        let kw = self.move_kw();
         for (run, child) in self.runs(children) {
             match run {
                 Some((count, fingerprint)) => {
@@ -559,14 +604,14 @@ impl<'a> Emitter<'a> {
                             let _ = std::fmt::Write::write_fmt(
                                 &mut out,
                                 format_args!(
-                                    "        v = v.push_layout({layout}, || {{ {child_expr} }});\n"
+                                    "        v = v.push_layout({layout}, {kw} {{ {child_expr} }});\n"
                                 ),
                             );
                         }
                         None => {
                             let _ = std::fmt::Write::write_fmt(
                                 &mut out,
-                                format_args!("        v = v.push(|| {{ {child_expr} }});\n"),
+                                format_args!("        v = v.push({kw} {{ {child_expr} }});\n"),
                             );
                         }
                     }
@@ -617,9 +662,10 @@ impl<'a> Emitter<'a> {
                 .layout_request(child)
                 .unwrap_or_else(|| String::from("LayoutRequest::new()"));
             let child_expr = self.resolve(child);
+            let kw = self.move_kw();
             let _ = std::fmt::Write::write_fmt(
                 &mut base,
-                format_args!(".show_with(0usize, {layout}, || {{ {child_expr} }})"),
+                format_args!(".show_with(0usize, {layout}, {kw} {{ {child_expr} }})"),
             );
         }
         if children.len() > 1 {
@@ -642,8 +688,8 @@ impl<'a> Emitter<'a> {
     fn base_expr(&mut self, node: &UiNode) -> String {
         let mut out = match node.kind {
             NodeKind::Text => {
-                let label = self.text(node, "label").unwrap_or_default();
-                let mut out = format!("Text::new({})", lit(&label));
+                let label = self.label_expr(node);
+                let mut out = format!("Text::new({label})");
                 // `size` is Text's own font size; `font_size` is the shared
                 // style property. Either satisfies it, and the specific one
                 // wins — so read `font_size` only when `size` is absent, or the
@@ -698,8 +744,8 @@ impl<'a> Emitter<'a> {
                 }
             }
             NodeKind::Button => {
-                let label = self.text(node, "label").unwrap_or_default();
-                let mut out = format!("Button::new({})", lit(&label));
+                let label = self.label_expr(node);
+                let mut out = format!("Button::new({label})");
                 if let Some(disabled) = self.boolean(node, "disabled") {
                     let _ =
                         std::fmt::Write::write_fmt(&mut out, format_args!(".disabled({disabled})"));
@@ -972,6 +1018,58 @@ impl<'a> Emitter<'a> {
         out
     }
 
+    /// Signal declarations prepended to `build()` in reactive mode.
+    ///
+    /// One `SyncBaseSignal` per value binding, seeded with a type default — the
+    /// IR carries a binding's type but not its TSX initializer, so a signal
+    /// starts at `0` / `""` / `false` rather than the value in `createSignal(0)`.
+    /// The trailing newline+indent is included so this splices directly before
+    /// the root expression.
+    fn signal_decls(&self, document: &UiDocument) -> String {
+        if !self.reactive {
+            return String::new();
+        }
+        let mut out = String::new();
+        for binding in &document.bindings {
+            if let BindingKind::Value(ty) = binding.kind {
+                let _ = std::fmt::Write::write_fmt(
+                    &mut out,
+                    format_args!(
+                        "let {} = SyncBaseSignal::new({});\n    ",
+                        binding.name,
+                        default_lit(ty)
+                    ),
+                );
+            }
+        }
+        out
+    }
+
+    /// The signal name a property reads, if its value is a `Ref`.
+    fn ref_prop(&mut self, node: &UiNode, name: &str) -> Option<String> {
+        match self.prop(node, name) {
+            Some(PropValue::Ref(reference)) => Some(reference.clone()),
+            _ => None,
+        }
+    }
+
+    /// The `Text`/`Button` label argument: a string literal, or a signal read
+    /// when reactive.
+    fn label_expr(&mut self, node: &UiNode) -> String {
+        if self.reactive {
+            if let Some(name) = self.ref_prop(node, "label") {
+                return format!("format!(\"{{}}\", {name}.get())");
+            }
+        }
+        lit(&self.text(node, "label").unwrap_or_default())
+    }
+
+    /// The closure keyword for a child build: `move` when reactive, so the
+    /// closure captures its signal by value.
+    fn move_kw(&self) -> &'static str {
+        if self.reactive { "move ||" } else { "||" }
+    }
+
     // --- property reads ----------------------------------------------------
     //
     // Each marks the property as carried, so a read that happens and a report
@@ -1139,6 +1237,21 @@ fn render_value(value: &PropValue) -> String {
             format!("list:[{}]", inner.join(","))
         }
         PropValue::Ref(name) => format!("ref:{name}"),
+    }
+}
+
+/// A type-appropriate default literal for a signal's initial value.
+///
+/// The IR records a binding's type but not its TSX initializer, so a signal is
+/// seeded from its type's zero value rather than `createSignal(..)`'s argument.
+fn default_lit(ty: ValueType) -> String {
+    match ty {
+        ValueType::Bool => "false".to_string(),
+        ValueType::Int => "0i64".to_string(),
+        ValueType::Number => "0.0f64".to_string(),
+        ValueType::Text | ValueType::Ident => "String::new()".to_string(),
+        ValueType::Color => "floom_types::Color::BLACK".to_string(),
+        ValueType::List => "Vec::new()".to_string(),
     }
 }
 
