@@ -84,7 +84,12 @@ fn ts_type(ty: ValueType) -> &'static str {
     }
 }
 
-/// `Click` becomes `onClick`.
+/// `Click` becomes `onClick` (camelCase, as TSX authors write it).
 fn event_handler_name(event: EventName) -> String {
-    format!("on{}", event.name())
+    let name = event.name();
+    let mut chars = name.chars();
+    match chars.next() {
+        Some(first) => format!("on{}{}", first.to_uppercase(), chars.as_str()),
+        None => String::from("on"),
+    }
 }
