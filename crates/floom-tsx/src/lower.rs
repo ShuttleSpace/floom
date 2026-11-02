@@ -29,8 +29,6 @@ struct Lower<'a> {
     /// Bindings referenced by refs/handlers, keyed by name.
     value_bindings: HashMap<String, ValueType>,
     handler_bindings: HashMap<String, ()>,
-    /// `class="..."` tokens collected per node key, resolved later (Task 9).
-    _classes: HashMap<String, Vec<String>>,
     counter: usize,
 }
 
@@ -54,9 +52,19 @@ impl<'a> Lower<'a> {
 
         let mut props = Vec::new();
         let mut events = Vec::new();
+        let mut class_tokens: Vec<String> = Vec::new();
         for attr in &el.opening.attrs {
             if let ast::JSXAttrOrSpread::JSXAttr(attr) = attr {
-                self.attribute(&key, kind, attr, &mut props, &mut events)?;
+                self.attribute(&key, kind, attr, &mut props, &mut events, &mut class_tokens)?;
+            }
+        }
+        // Resolve `class="text-primary"` tokens into style props after the
+        // explicit attributes, so an explicit `foreground=` wins over a token.
+        for token in class_tokens {
+            if let Some((prop_name, value)) = resolve_class(&token) {
+                if !props.iter().any(|p| p.name == prop_name) {
+                    props.push(Prop::new(prop_name, value));
+                }
             }
         }
 
@@ -121,6 +129,7 @@ impl<'a> Lower<'a> {
         attr: &ast::JSXAttr,
         props: &mut Vec<Prop>,
         events: &mut Vec<EventBinding>,
+        class_tokens: &mut Vec<String>,
     ) -> Result<()> {
         let name = match &attr.name {
             ast::JSXAttrName::Ident(id) => id.sym.as_str().to_string(),
@@ -129,10 +138,7 @@ impl<'a> Lower<'a> {
 
         if name == "class" {
             if let Some(values) = self.attr_string_value(attr)? {
-                self._classes
-                    .entry(node_key.as_str().to_string())
-                    .or_default()
-                    .extend(values.split_whitespace().map(str::to_string));
+                class_tokens.extend(values.split_whitespace().map(str::to_string));
             }
             return Ok(());
         }
@@ -435,7 +441,6 @@ pub fn lower(parsed: &Parsed) -> Result<UiDocument> {
         nodes: Vec::new(),
         value_bindings: HashMap::new(),
         handler_bindings: HashMap::new(),
-        _classes: HashMap::new(),
         counter: 0,
     };
     let root = match &parsed.root {
@@ -598,6 +603,24 @@ fn pat_ident_name(pat: &ast::Pat) -> Option<String> {
         return Some(id.id.sym.as_str().to_string());
     }
     None
+}
+
+/// Resolve a `class="…"` design token to an IR style property.
+///
+/// A deliberately small built-in table: the real token vocabulary belongs to a
+/// design system, not the compiler. Unrecognized tokens are ignored (the IR has
+/// no place to carry a raw class name). `foreground`/`background` are declared
+/// style colours the IR already validates.
+fn resolve_class(token: &str) -> Option<(&'static str, PropValue)> {
+    let color = |r, g, b| PropValue::Color(Rgba::opaque(r, g, b));
+    match token {
+        "text-primary" => Some(("foreground", color(26, 115, 232))),
+        "text-muted" => Some(("foreground", color(95, 99, 104))),
+        "text-inverse" => Some(("foreground", color(255, 255, 255))),
+        "bg-surface" => Some(("background", color(255, 255, 255))),
+        "bg-primary" => Some(("background", color(26, 115, 232))),
+        _ => None,
+    }
 }
 
 /// Infer a `ValueType` from a literal initial expression (default `Text`).
