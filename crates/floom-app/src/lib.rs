@@ -945,6 +945,18 @@ impl WidgetHost {
         NodeId(index)
     }
 
+    /// Mount an already type-erased root.
+    ///
+    /// A generated builder (e.g. `floom-dsl`'s emitted `build()`) returns
+    /// `Box<dyn WidgetAny>`, which is the type the host stores internally but
+    /// which does not itself implement `WidgetAny`; this is the door for it.
+    pub fn mount_root_boxed(&mut self, style: LayoutStyle, widget: Box<dyn WidgetAny>) -> NodeId {
+        let index = self.push(None, style, None, widget);
+        self.root = Some(index);
+        self.semantics_dirty = true;
+        NodeId(index)
+    }
+
     pub fn mount(
         &mut self,
         parent: NodeId,

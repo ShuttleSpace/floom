@@ -258,10 +258,34 @@ impl<'a> Lower<'a> {
                 Ok(PropValue::Ref(sig))
             }
             ast::Expr::Call(call) => self.call_value(node_key, kind, name, call),
+            ast::Expr::Lit(lit) => {
+                let spec_ty = floom_ui_ir::prop_spec(kind, name).map(|spec| spec.ty);
+                self.lit_value(lit, spec_ty)
+            }
             _ => Err(self.err(
                 span,
                 "only literal values, signal refs, and signal calls are supported here",
             )),
+        }
+    }
+
+    /// Lower a literal expression (`{16}`, `{"hi"}`, `{true}`), coercing to the
+    /// schema's declared type so a `Number` seat never receives an `Int` (or
+    /// vice versa).
+    fn lit_value(&self, lit: &ast::Lit, spec_ty: Option<ValueType>) -> Result<PropValue> {
+        match lit {
+            ast::Lit::Str(s) => self.string_value(s, spec_ty),
+            ast::Lit::Bool(b) => Ok(PropValue::Bool(b.value)),
+            ast::Lit::Num(n) => {
+                let f = n.value;
+                match spec_ty {
+                    Some(ValueType::Int) => Ok(PropValue::Int(f as i64)),
+                    Some(ValueType::Number) => Ok(PropValue::Number(f)),
+                    _ if f.fract() == 0.0 => Ok(PropValue::Int(f as i64)),
+                    _ => Ok(PropValue::Number(f)),
+                }
+            }
+            _ => Err(TsxError::new("unsupported literal in attribute")),
         }
     }
 

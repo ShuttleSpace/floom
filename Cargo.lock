@@ -1563,6 +1563,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "floom-tsx-showcase"
+version = "0.2.0"
+dependencies = [
+ "floom-app",
+ "floom-core",
+ "floom-dsl",
+ "floom-layout",
+ "floom-platform",
+ "floom-platform-desktop",
+ "floom-renderer-vello",
+ "floom-tsx",
+ "floom-types",
+ "floom-widgets",
+]
+
+[[package]]
 name = "floom-types"
 version = "0.2.0"
 
