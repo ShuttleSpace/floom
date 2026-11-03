@@ -6,7 +6,9 @@
 //! schema tables carry, surfaced for editors — nsh emits an analogous
 //! `.nsh/types` for its components.
 
-use floom_ui_ir::{EventName, NodeKind, UiDocument, ValueType, all_prop_names, events_for, prop_spec};
+use floom_ui_ir::{
+    all_prop_names, events_for, prop_spec, EventName, NodeKind, UiDocument, ValueType,
+};
 
 /// Generate a `.d.ts` string describing every widget kind used by `doc`.
 pub fn generate(doc: &UiDocument) -> String {
@@ -26,8 +28,45 @@ pub fn generate(doc: &UiDocument) -> String {
         out.push_str(&interface_for(kind));
         out.push('\n');
     }
+
+    // The entry surface: `mount`, and the `window` / `app` / `platform` handles
+    // a TSX module drives the runtime through. These mirror what `entry::resolve`
+    // accepts, so the editor flags unknown methods.
+    out.push_str(ENTRY_DECL);
     out
 }
+
+/// `declare module "floom"` — the TSX side of the unified runtime entry.
+///
+/// `mount(App)` replaces the older "export a default view" shape with an
+/// nsh-like one: the module names its root component and tweaks the window and
+/// platform through small callable handles, all at module scope.
+const ENTRY_DECL: &str = r#"
+export type JSXElementConstructor = () => JSX.Element;
+
+export declare function mount(component: JSXElementConstructor): void;
+
+export declare const app: {
+  /** Default window title; `window.setTitle` overrides it. */
+  setName(name: string): void;
+};
+
+export declare const window: {
+  setTitle(title: string): void;
+  setSize(width: number, height: number): void;
+  setSize(size: string): void;
+  setResizable(resizable: boolean): void;
+};
+
+export declare const platform: {
+  /**
+   * Require a capability from the compiled-in backend.
+   * @param capability one of windowing, clipboard, ime, accessibility, webgpu, software_render, touch, native_view
+   * @param onUnsupported warn | fail | exit
+   */
+  require(capability: string, onUnsupported: string): void;
+};
+"#;
 
 /// One `interface` per kind, listing its props and event handlers.
 fn interface_for(kind: NodeKind) -> String {
