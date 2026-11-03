@@ -1,0 +1,49 @@
+[package]
+name = "floom-ui-composites"
+version = "0.1.0"
+edition = "2021"
+
+# Composite controls that are not the property of any one design system.
+#
+# These used to live in floom-widgets, which is the wrong layer for them. A
+# counter, a tab bar and a tree are *design decisions someone made*, not
+# primitives: there is no reason for the engine to have an opinion about what a
+# navigation rail looks like or which glyph a tree row carries. A primitive has
+# no way to take a design system's answer, so these widgets either hard-coded
+# one (which is a design system smuggled into the engine) or exposed enough
+# knobs to be a kit in miniature.
+#
+# What is left in floom-widgets is what a kit composes *out of*: boxes, text,
+# icons, pressable surfaces. This crate is one layer above that, and floom-ui's
+# per-design-system crates are one layer above this.
+#
+# It lives here rather than in floom-widgets because the dependency runs the
+# other way: the kits depend on floom-widgets, so anything in floom-widgets
+# that depended on this would close the loop.
+
+[dependencies]
+floom-core = { path = "../../../../floom-core" }
+# The widgets name accessibility roles directly, so this is not dev-only.
+floom-accessibility = { path = "../../../../floom-accessibility" }
+floom-types = { path = "../../../../floom-types" }
+floom-scene = { path = "../../../../floom-scene" }
+floom-widgets = { path = "../../../../floom-widgets" }
+floom-navigation = { path = "../../../../floom-navigation" }
+floom-signal = { path = "../../../../floom-signal" }
+floom-text = { path = "../../../../floom-text" }
+# TextField owns the IME composition state machine; the crate is below the widgets.
+floom-ime = { path = "../../../../floom-ime" }
+floom-overlay = { path = "../../../../floom-overlay" }
+
+[dev-dependencies]
+# The select/form binding test needs the form model, which lives below the widgets.
+floom-forms = { path = "../../../../floom-forms" }
+# The popup test drives real platform events through TestApp.
+floom-platform = { path = "../../../../floom-platform" }
+floom-testkit = { path = "../../../../floom-testkit" }
+floom-app = { path = "../../../../floom-app" }
+floom-layout = { path = "../../../../floom-layout" }
+# The IME/routing tests drive a real AppRunner to a SoftwarePresenter.
+floom-renderer-software = { path = "../../../../floom-renderer-software" }
+# The native-composition tests need a fake provider to hand focus to.
+floom-native = { path = "../../../../floom-native" }

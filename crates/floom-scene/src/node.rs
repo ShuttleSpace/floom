@@ -1,0 +1,251 @@
+//! Retained scene node payloads (no GPU / OS types).
+
+use floom_types::{
+    Brush, ClipRegion, Color, Filter, Path, Point, Rect, ResourceId, Shader, Shadow, Size, Stroke,
+    Transform,
+};
+use std::sync::Arc;
+
+/// Drawable / structural node in the retained scene.
+#[derive(Debug, Clone, PartialEq)]
+pub enum SceneNode {
+    /// Opens a transform scope: every scene node that follows, up to the
+    /// matching [`SceneNode::GroupPop`], is drawn through `transform` —
+    /// the child coordinates the backends see are already in scope space, so
+    /// a subtree can rotate or scale as one picture.
+    ///
+    /// A stream marker, not a nested node, for the same reason the clip
+    /// markers are (see [`SceneNode::ClipPush`]): the retained scene is one
+    /// flat ordered stream, and a nested `children` list would either double
+    /// draw (children also present in the stream) or fight the positional
+    /// `upsert` reuse. Pushes and pops are stream-position, not nesting.
+    GroupPush { transform: Transform },
+    /// Closes the innermost open [`SceneNode::GroupPush`]. See that variant
+    /// for the marker semantics.
+    GroupPop,
+    Rect {
+        bounds: Rect,
+        /// What the rect is filled with — a solid colour in the common case,
+        /// a linear or radial gradient where the design asks for one.
+        fill: Brush,
+        /// Corner radius in logical px; `0.0` is a plain right-angle rect.
+        /// A single node rather than a separate variant: rounded corners are
+        /// the same fill, just a different shape, and every painter wants a
+        /// uniform path for the common case.
+        radius: f32,
+        /// Drop shadow drawn behind the fill, if the widget casts one.
+        ///
+        /// On `Rect` rather than a separate node because a shadow is not an
+        /// independent drawing — it belongs to exactly one shape, must sit
+        /// directly beneath it in the z-order, and a separate node would let
+        /// the two drift apart in the stream the way two nodes can.
+        shadow: Option<Shadow>,
+    },
+    /// An arbitrary vector path, filled and/or stroked.
+    ///
+    /// One node rather than two so "fill it, then outline it" stays a single
+    /// unit of work with a single position in the draw order — the shape is
+    /// flattened once by a backend that needs the segments, and the fill and
+    /// the stroke cannot drift apart in the z-order the way two nodes could.
+    ///
+    /// `fill: None` with a stroke, or the reverse, is normal: a line chart
+    /// strokes and does not fill, a chart area fills and does not stroke.
+    Path {
+        /// Behind an `Arc` for the same reason [`ClipRegion::Path`] is: the
+        /// scene node is rebuilt on every frame the widget paints, and a
+        /// retained path handed in as a clone of the same `Arc` costs a
+        /// pointer bump instead of a deep copy of every segment. An
+        /// immediate-mode caller that builds a fresh path each frame pays one
+        /// allocation either way.
+        path: Arc<Path>,
+        fill: Option<Brush>,
+        stroke: Option<Stroke>,
+    },
+    /// Pushes a clip region onto the renderer's clip stack.
+    ///
+    /// The stack, not a folded intersection: the intersection of two rounded
+    /// rectangles is not a rounded rectangle, and of two paths is neither, so
+    /// a scene that carried one pre-combined region would have to approximate
+    /// what a stack applies exactly.
+    ///
+    /// Pushes and pops are **stream-position, not nesting** — they arrive in
+    /// the order the host painted them, and a well-formed scene never pops an
+    /// empty stack. The walk may, however, *end* with regions still pushed: a
+    /// renderer must therefore begin every walk with an empty stack rather than
+    /// carrying one over from the previous frame. Nothing is drawn after the
+    /// last node, so a trailing push has no visual effect; inheriting it would.
+    ClipPush { region: ClipRegion },
+    /// Pops one clip region. See [`SceneNode::ClipPush`].
+    ClipPop,
+    /// Opens a filter scope: everything drawn from here to the matching
+    /// [`SceneNode::FilterPop`] is painted into its own layer, and the layer is
+    /// filtered *once* before it is composited onto what preceded it.
+    ///
+    /// A stream marker for exactly the reason the clip and group markers are,
+    /// and for one more of its own: a filter cannot live inside a node because
+    /// what it filters is the *composite* of several nodes — blurring each of
+    /// them separately would double-blur every overlap, which is not the same
+    /// picture. This is Compose's `Modifier.blur` / Flutter's `ImageFiltered`.
+    ///
+    /// What it does **not** cover is filtering what was drawn *before* the
+    /// marker — a frosted panel over a photo. That is
+    /// [`SceneNode::BackdropFilter`], and it is a separate node rather than a
+    /// flag on this one because the two need opposite things from the renderer:
+    /// this one starts from an empty layer, that one starts from the pixels
+    /// already on screen.
+    FilterPush { filter: Filter },
+    /// Closes the innermost open [`SceneNode::FilterPush`]: filters the layer
+    /// and composites it. See that variant for the marker semantics.
+    FilterPop,
+    /// Filters what has **already been drawn** inside `rect`: the pixels there
+    /// are replaced by their filtered selves, and nothing inside the filter
+    /// scope is redrawn.
+    ///
+    /// Flutter's `BackdropFilter` — the frosted-glass case. It needs its own
+    /// node because the content it filters precedes it in the stream, which no
+    /// push/pop pair can reach: a `FilterPush` here would open an empty layer
+    /// and have nothing to blur.
+    ///
+    /// `rect` is the *result* area, not the area read: a blur samples a
+    /// `reach`-wide halo outside it, which is why
+    /// [`bounds_hint`](Self::bounds_hint) reports the inflated rect.
+    BackdropFilter { rect: Rect, filter: Filter },
+    /// A custom shader filling `bounds`.
+    ///
+    /// A `Shader` carries the caller's WGSL fragment program; the backends that
+    /// own a shader runtime (vello/wgpu) compile and run it, rendering `bounds`
+    /// from the program. A backend without one (the software rasteriser, skia
+    /// when it cannot consume WGSL) skips the node and counts the skip — the
+    /// degradation is recorded, never silent, exactly as a `Filter` a backend
+    /// cannot honour.
+    ///
+    /// A real draw node, not a stream marker: it paints pixels of its own, so it
+    /// carries `bounds` and reports them from [`bounds_hint`].
+    Shader { bounds: Rect, shader: Shader },
+    Image {
+        bounds: Rect,
+        image: ResourceId,
+        /// Per-node alpha, `255` meaning opaque.
+        ///
+        /// An image carries its own pixels and no tint, which is what made
+        /// `Rect`-style fading impossible here for a long time — and why an
+        /// overlay containing an image used to fade around it. The composite
+        /// path scales this exactly the way it scales a `Rect`'s `fill.a`.
+        alpha: u8,
+    },
+    Text {
+        origin: Point,
+        size: Size,
+        glyphs: ResourceId,
+        color: Color,
+    },
+}
+
+impl SceneNode {
+    /// An opaque image filling `bounds`.
+    ///
+    /// Every construction site wants 255, and writing a literal at each one is
+    /// how a future field gets forgotten in half of them.
+    pub fn image(bounds: Rect, image: ResourceId) -> Self {
+        Self::Image {
+            bounds,
+            image,
+            alpha: u8::MAX,
+        }
+    }
+
+    /// A custom shader filling `bounds`.
+    ///
+    /// `shader` is the caller's WGSL fragment program; see [`Shader`] for the
+    /// uniform contract the backends honour.
+    pub fn shader(bounds: Rect, shader: Shader) -> Self {
+        Self::Shader { bounds, shader }
+    }
+
+    /// A filled path. Takes anything that becomes a `Brush`, so a caller with
+    /// a plain colour keeps its old shape and a caller with a gradient hands
+    /// the brush straight over.
+    pub fn filled_path(path: impl Into<Arc<Path>>, fill: impl Into<Brush>) -> Self {
+        Self::Path {
+            path: path.into(),
+            fill: Some(fill.into()),
+            stroke: None,
+        }
+    }
+
+    /// A stroked path.
+    pub fn stroked_path(path: impl Into<Arc<Path>>, stroke: Stroke) -> Self {
+        Self::Path {
+            path: path.into(),
+            fill: None,
+            stroke: Some(stroke),
+        }
+    }
+
+    /// The node's painted extent, when it has one.
+    ///
+    /// `None` for the structural variants — `Group`, and the clip markers.
+    /// This is not "unknown": it is the statement "this node paints nothing of
+    /// its own, and what it affects is bounded by its children". Both consumers
+    /// read it that way — a node with no hint is never culled (it may still
+    /// have to run for its children, or for the clip stack), and a *change* to
+    /// one is treated as full-frame damage rather than a guess at a region.
+    pub fn bounds_hint(&self) -> Option<Rect> {
+        match self {
+            SceneNode::GroupPush { .. } | SceneNode::GroupPop => None,
+            SceneNode::Rect { bounds, shadow, .. } => {
+                // The shadow reaches past the shape itself; damage computed
+                // from the bare box would clip the blur's outer edge.
+                let Some(shadow) = shadow else {
+                    return Some(*bounds);
+                };
+                let reach = shadow.reach();
+                Some(Rect {
+                    x0: bounds.x0 - reach,
+                    y0: bounds.y0 - reach,
+                    x1: bounds.x1 + reach,
+                    y1: bounds.y1 + reach,
+                })
+            }
+            SceneNode::Path { path, fill, stroke } => {
+                if fill.is_none() && stroke.is_none() {
+                    return None;
+                }
+                let mut bounds = path.bounds();
+                if let Some(stroke) = stroke {
+                    // A miter can reach `miter_limit` half-widths out; anything
+                    // less would report damage that misses the spike the
+                    // stroke actually painted.
+                    let reach = match stroke.join {
+                        floom_types::LineJoin::Miter => stroke.half_width() * stroke.miter_limit,
+                        _ => stroke.half_width(),
+                    };
+                    bounds = bounds.union(Rect {
+                        x0: bounds.x0 - reach,
+                        y0: bounds.y0 - reach,
+                        x1: bounds.x1 + reach,
+                        y1: bounds.y1 + reach,
+                    });
+                }
+                Some(bounds)
+            }
+            SceneNode::ClipPush { .. } | SceneNode::ClipPop => None,
+            SceneNode::FilterPush { .. } | SceneNode::FilterPop => None,
+            // The blur samples a halo outside the rect it fills, so damage
+            // has to cover that halo or the outer edge of the blur is left
+            // un-rendered (stale) instead of soft.
+            SceneNode::BackdropFilter { rect, filter } => {
+                let reach = filter.reach();
+                Some(Rect {
+                    x0: rect.x0 - reach,
+                    y0: rect.y0 - reach,
+                    x1: rect.x1 + reach,
+                    y1: rect.y1 + reach,
+                })
+            }
+            SceneNode::Image { bounds, .. } => Some(*bounds),
+            SceneNode::Shader { bounds, .. } => Some(*bounds),
+            SceneNode::Text { origin, size, .. } => Some(Rect::from_origin_size(*origin, *size)),
+        }
+    }
+}

@@ -1,0 +1,17 @@
+[package]
+name = "floom-widget-fluent-icon"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+floom-core-theme = { workspace = true }
+floom-widget-runtime = { workspace = true, features = ["fluent"] }
+floom-widget-fluent-icon-paths = { path = "../fluent-icon-paths" }
+floom-signal = { path = "../../../../../floom-signal" }
+floom-core = { path = "../../../../../floom-core" }
+floom-types = { path = "../../../../../floom-types" }
+floom-widgets = { path = "../../../../../floom-widgets" }
+
+[dev-dependencies]
+floom-core-theme = { workspace = true }
+floom-types = { path = "../../../../../floom-types" }

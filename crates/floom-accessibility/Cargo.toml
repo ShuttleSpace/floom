@@ -1,0 +1,19 @@
+[package]
+name = "floom-accessibility"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Semantics tree and accessibility adapter ABI for Floom 2.0"
+rust-version.workspace = true
+
+[dependencies]
+floom-types = { path = "../floom-types", version = "0.2.0" }
+bitflags = "2.9"
+
+[dev-dependencies]
+criterion = { version = "0.8.1", features = ["html_reports"] }
+
+[[bench]]
+name = "tree"
+harness = false

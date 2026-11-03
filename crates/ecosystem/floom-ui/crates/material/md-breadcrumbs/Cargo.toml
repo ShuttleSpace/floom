@@ -1,0 +1,21 @@
+[package]
+name = "floom-widget-md-breadcrumbs"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+# Ported off the v1 `floom` monolith (see docs/porting-floem-ui-to-2.0.md).
+floom-widget-runtime = { workspace = true, features = ["material"] }
+floom-core-theme = { workspace = true }
+# The engine's Pressable names accessibility roles directly.
+floom-accessibility = { path = "../../../../../floom-accessibility" }
+floom-signal = { path = "../../../../../floom-signal" }
+floom-core = { path = "../../../../../floom-core" }
+floom-types = { path = "../../../../../floom-types" }
+floom-widgets = { path = "../../../../../floom-widgets" }
+
+[dev-dependencies]
+floom-core-theme = { workspace = true, features = ["material"] }
+floom-core = { path = "../../../../../floom-core" }
+floom-types = { path = "../../../../../floom-types" }
+floom-widgets = { path = "../../../../../floom-widgets" }

@@ -1,0 +1,9 @@
+[package]
+name = "playground"
+version = "0.1.0"
+edition = "2021"
+description = "A tiny expression language, read in the floom-editor IDE demo"
+
+[dependencies]
+# Deliberately empty: the playground is a prop for the editor.
+thiserror = "2"

@@ -1,0 +1,1 @@
+{"nodes": [{"id": "$graphify-root$_crates_ecosystem_plugins_floom_plugin_battery_android_build_gradle_kts", "label": "build.gradle.kts", "file_type": "code", "source_file": "crates/ecosystem/plugins/floom-plugin-battery/android/build.gradle.kts", "source_location": "L1"}], "edges": [], "raw_calls": []}

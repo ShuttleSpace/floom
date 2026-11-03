@@ -2,18 +2,18 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Build an experimental `floem::embedder` API that lets non-winit backends drive Floem through a shared protocol while preserving the default winit launch path.
+**Goal:** Build an experimental `floom::embedder` API that lets non-winit backends drive Floom through a shared protocol while preserving the default winit launch path.
 
-**Architecture:** Add a data-oriented protocol layer under `src/embedder/`, then add Rust adapter traits over that protocol. Convert the current winit path incrementally so `Application` and `WindowHandle` can consume Floem-level embedder events and emit command objects, while a headless backend proves the contract without a real window.
+**Architecture:** Add a data-oriented protocol layer under `crates/floom/src/embedder/`, then add Rust adapter traits over that protocol. Convert the current winit path incrementally so `Application` and `WindowHandle` can consume Floom-level embedder events and emit command objects, while a headless backend proves the contract without a real window.
 
-**Tech Stack:** Rust 2024, Floem core, `winit`, `ui-events`, `ui-events-winit`, `raw-window-handle`, `peniko::kurbo`, existing `floem-test` integration tests.
+**Tech Stack:** Rust 2024, Floom core, `winit`, `ui-events`, `ui-events-winit`, `raw-window-handle`, `peniko::kurbo`, existing `floom-test` integration tests.
 
 ## Global Constraints
 
-- `floem::embedder` is public but experimental.
-- `floem::launch(...)` must remain available and easy to use through the default winit backend.
+- `floom::embedder` is public but experimental.
+- `floom::launch(...)` must remain available and easy to use through the default winit backend.
 - Mobile, TUI, and HarmonyOS SDK dependencies must not be added to default features.
-- The existing `floem_renderer` abstraction and Vello, Vger, Skia, and tiny-skia strategy remain in place.
+- The existing `floom_renderer` abstraction and Vello, Vger, Skia, and tiny-skia strategy remain in place.
 - First phase implements winit and headless/embedder; it does not fully implement Android, iOS, TUI, or HarmonyOS backends.
 - First phase defines accessibility, safe area, virtual keyboard, and URL-opening protocol support, but unsupported services must degrade explicitly.
 - Small breaking changes to semi-public internals are allowed only when examples remain easy to update.
@@ -23,21 +23,21 @@
 
 ## File Structure
 
-- Create `src/embedder/mod.rs`: public experimental module entry point and re-exports.
-- Create `src/embedder/id.rs`: platform-neutral `EmbedderWindowId` and `EmbedderPointerId` aliases/wrappers.
-- Create `src/embedder/capabilities.rs`: `BackendCapabilities` and individual service capability structs.
-- Create `src/embedder/surface.rs`: `SurfaceKind`, `SurfaceDescriptor`, `SurfaceEvent`, and size/scale surface metadata.
-- Create `src/embedder/ime.rs`: `ImeState`, `ImeEvent`, `ImePurpose`, and `ImeHint`.
-- Create `src/embedder/event.rs`: `EmbedderEvent`, window lifecycle events, focus events, raw gesture events, drag/drop event data.
-- Create `src/embedder/command.rs`: `EmbedderCommand`, command batching, and command sink helpers.
-- Create `src/embedder/services.rs`: Rust adapter traits `EmbedderRuntime`, `EmbedderWindow`, `SurfaceHandle`, and `PlatformServices`.
-- Create `src/embedder/runtime.rs`: core translation boundary from `EmbedderEvent` into existing Floem window/event APIs and command collection from Floem to backend.
-- Create `src/embedder/headless.rs`: headless backend proof of concept and command capture utility.
-- Create `src/app/winit_embedder.rs`: winit implementation of protocol translation and adapter trait glue.
-- Modify `src/lib.rs`: expose `pub mod embedder;`.
-- Modify `src/app/mod.rs` and `src/app/handle.rs`: route winit events through `winit_embedder` and preserve `floem::launch`.
-- Modify `src/window/handle.rs`: add methods that accept embedder-level lifecycle, input, IME, focus, and surface events.
-- Modify `src/headless.rs`: delegate event driving to the headless embedder where possible while preserving existing test helper methods.
+- Create `crates/floom/src/embedder/mod.rs`: public experimental module entry point and re-exports.
+- Create `crates/floom/src/embedder/id.rs`: platform-neutral `EmbedderWindowId` and `EmbedderPointerId` aliases/wrappers.
+- Create `crates/floom/src/embedder/capabilities.rs`: `BackendCapabilities` and individual service capability structs.
+- Create `crates/floom/src/embedder/surface.rs`: `SurfaceKind`, `SurfaceDescriptor`, `SurfaceEvent`, and size/scale surface metadata.
+- Create `crates/floom/src/embedder/ime.rs`: `ImeState`, `ImeEvent`, `ImePurpose`, and `ImeHint`.
+- Create `crates/floom/src/embedder/event.rs`: `EmbedderEvent`, window lifecycle events, focus events, raw gesture events, drag/drop event data.
+- Create `crates/floom/src/embedder/command.rs`: `EmbedderCommand`, command batching, and command sink helpers.
+- Create `crates/floom/src/embedder/services.rs`: Rust adapter traits `EmbedderRuntime`, `EmbedderWindow`, `SurfaceHandle`, and `PlatformServices`.
+- Create `crates/floom/src/embedder/runtime.rs`: core translation boundary from `EmbedderEvent` into existing Floom window/event APIs and command collection from Floom to backend.
+- Create `crates/floom/src/embedder/headless.rs`: headless backend proof of concept and command capture utility.
+- Create `crates/floom/src/app/winit_embedder.rs`: winit implementation of protocol translation and adapter trait glue.
+- Modify `crates/floom/src/lib.rs`: expose `pub mod embedder;`.
+- Modify `crates/floom/src/app/mod.rs` and `crates/floom/src/app/handle.rs`: route winit events through `winit_embedder` and preserve `floom::launch`.
+- Modify `crates/floom/src/window/handle.rs`: add methods that accept embedder-level lifecycle, input, IME, focus, and surface events.
+- Modify `crates/floom/src/headless.rs`: delegate event driving to the headless embedder where possible while preserving existing test helper methods.
 - Create `test/tests/embedder_protocol.rs`: protocol shape, capability defaults, command batching tests.
 - Create `test/tests/embedder_headless.rs`: headless backend event flow and command capture tests.
 - Create `test/tests/embedder_input.rs`: pointer, touch capture, keyboard, focus, and IME flow tests through the embedder boundary.
@@ -48,20 +48,20 @@
 ### Task 1: Public Protocol Types
 
 **Files:**
-- Create: `src/embedder/mod.rs`
-- Create: `src/embedder/id.rs`
-- Create: `src/embedder/capabilities.rs`
-- Create: `src/embedder/surface.rs`
-- Create: `src/embedder/ime.rs`
-- Create: `src/embedder/event.rs`
-- Create: `src/embedder/command.rs`
-- Modify: `src/lib.rs`
+- Create: `crates/floom/src/embedder/mod.rs`
+- Create: `crates/floom/src/embedder/id.rs`
+- Create: `crates/floom/src/embedder/capabilities.rs`
+- Create: `crates/floom/src/embedder/surface.rs`
+- Create: `crates/floom/src/embedder/ime.rs`
+- Create: `crates/floom/src/embedder/event.rs`
+- Create: `crates/floom/src/embedder/command.rs`
+- Modify: `crates/floom/src/lib.rs`
 - Test: `test/tests/embedder_protocol.rs`
 
 **Interfaces:**
-- Consumes: existing public `ui_events::{keyboard, pointer}`, `peniko::kurbo::{Point, Rect, Size}`, `winit::window::Theme` only where existing Floem public API already exposes it.
+- Consumes: existing public `ui_events::{keyboard, pointer}`, `peniko::kurbo::{Point, Rect, Size}`, `winit::window::Theme` only where existing Floom public API already exposes it.
 - Produces:
-  - `pub mod floem::embedder`
+  - `pub mod floom::embedder`
   - `pub type EmbedderWindowId = u64`
   - `pub type EmbedderPointerId = u64`
   - `pub struct BackendCapabilities`
@@ -79,7 +79,7 @@
 Add this test to `test/tests/embedder_protocol.rs`:
 
 ```rust
-use floem::embedder::{
+use floom::embedder::{
     BackendCapabilities, CommandBatch, EmbedderCommand, EmbedderEvent, ImeHint, ImePurpose,
     ImeState, SurfaceDescriptor, SurfaceEvent, SurfaceKind,
 };
@@ -141,19 +141,19 @@ fn embedder_protocol_types_are_public_and_constructible() {
 
 - [ ] **Step 2: Run the protocol test and verify it fails**
 
-Run: `cargo test -p floem-test --test embedder_protocol embedder_protocol_types_are_public_and_constructible`
+Run: `cargo test -p floom-test --test embedder_protocol embedder_protocol_types_are_public_and_constructible`
 
-Expected: FAIL because `floem::embedder` does not exist.
+Expected: FAIL because `floom::embedder` does not exist.
 
 - [ ] **Step 3: Add the module export**
 
-Modify `src/lib.rs` near the existing module declarations:
+Modify `crates/floom/src/lib.rs` near the existing module declarations:
 
 ```rust
 pub mod embedder;
 ```
 
-- [ ] **Step 4: Add `src/embedder/mod.rs`**
+- [ ] **Step 4: Add `crates/floom/src/embedder/mod.rs`**
 
 ```rust
 //! Experimental platform embedder API.
@@ -176,14 +176,14 @@ pub use ime::{ImeEvent, ImeHint, ImePurpose, ImeState};
 pub use surface::{SurfaceDescriptor, SurfaceEvent, SurfaceKind};
 ```
 
-- [ ] **Step 5: Add `src/embedder/id.rs`**
+- [ ] **Step 5: Add `crates/floom/src/embedder/id.rs`**
 
 ```rust
 pub type EmbedderWindowId = u64;
 pub type EmbedderPointerId = u64;
 ```
 
-- [ ] **Step 6: Add `src/embedder/capabilities.rs`**
+- [ ] **Step 6: Add `crates/floom/src/embedder/capabilities.rs`**
 
 ```rust
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
@@ -208,7 +208,7 @@ pub struct BackendCapabilities {
 }
 ```
 
-- [ ] **Step 7: Add `src/embedder/surface.rs`**
+- [ ] **Step 7: Add `crates/floom/src/embedder/surface.rs`**
 
 ```rust
 use peniko::kurbo::Size;
@@ -242,7 +242,7 @@ pub enum SurfaceEvent {
 }
 ```
 
-- [ ] **Step 8: Add `src/embedder/ime.rs`**
+- [ ] **Step 8: Add `crates/floom/src/embedder/ime.rs`**
 
 ```rust
 use peniko::kurbo::Rect;
@@ -287,7 +287,7 @@ pub enum ImeEvent {
 }
 ```
 
-- [ ] **Step 9: Add `src/embedder/event.rs`**
+- [ ] **Step 9: Add `crates/floom/src/embedder/event.rs`**
 
 ```rust
 use std::path::PathBuf;
@@ -343,7 +343,7 @@ pub enum EmbedderEvent {
 }
 ```
 
-- [ ] **Step 10: Add `src/embedder/command.rs`**
+- [ ] **Step 10: Add `crates/floom/src/embedder/command.rs`**
 
 ```rust
 use super::{EmbedderWindowId, ImeState};
@@ -389,7 +389,7 @@ Run:
 
 ```bash
 cargo fmt
-cargo test -p floem-test --test embedder_protocol embedder_protocol_types_are_public_and_constructible
+cargo test -p floom-test --test embedder_protocol embedder_protocol_types_are_public_and_constructible
 ```
 
 Expected: PASS.
@@ -397,7 +397,7 @@ Expected: PASS.
 - [ ] **Step 12: Commit**
 
 ```bash
-git add src/lib.rs src/embedder test/tests/embedder_protocol.rs
+git add crates/floom/src/lib.rs crates/floom/src/embedder test/tests/embedder_protocol.rs
 git commit -m "feat: add experimental embedder protocol"
 ```
 
@@ -406,9 +406,9 @@ git commit -m "feat: add experimental embedder protocol"
 ### Task 2: Adapter Traits And Command Sink
 
 **Files:**
-- Create: `src/embedder/services.rs`
-- Modify: `src/embedder/mod.rs`
-- Modify: `src/embedder/command.rs`
+- Create: `crates/floom/src/embedder/services.rs`
+- Modify: `crates/floom/src/embedder/mod.rs`
+- Modify: `crates/floom/src/embedder/command.rs`
 - Test: `test/tests/embedder_protocol.rs`
 
 **Interfaces:**
@@ -426,7 +426,7 @@ git commit -m "feat: add experimental embedder protocol"
 Append to `test/tests/embedder_protocol.rs`:
 
 ```rust
-use floem::embedder::{
+use floom::embedder::{
     CommandSink, EmbedderCommand, EmbedderRuntime, EmbedderWindow, EmbedderWindowId,
     PlatformServices, SurfaceDescriptor, SurfaceHandle, SurfaceKind, VecCommandSink,
 };
@@ -494,13 +494,13 @@ fn adapter_traits_are_object_safe_enough_for_backend_storage() {
 
 - [ ] **Step 2: Run the adapter trait test and verify it fails**
 
-Run: `cargo test -p floem-test --test embedder_protocol adapter_traits_are_object_safe_enough_for_backend_storage`
+Run: `cargo test -p floom-test --test embedder_protocol adapter_traits_are_object_safe_enough_for_backend_storage`
 
 Expected: FAIL because the adapter traits do not exist.
 
 - [ ] **Step 3: Add `CommandSink` and `VecCommandSink`**
 
-Extend `src/embedder/command.rs`:
+Extend `crates/floom/src/embedder/command.rs`:
 
 ```rust
 pub trait CommandSink {
@@ -524,7 +524,7 @@ impl CommandSink for VecCommandSink {
 }
 ```
 
-- [ ] **Step 4: Add `src/embedder/services.rs`**
+- [ ] **Step 4: Add `crates/floom/src/embedder/services.rs`**
 
 ```rust
 use super::{EmbedderWindowId, SurfaceDescriptor};
@@ -553,7 +553,7 @@ pub trait PlatformServices {
 
 - [ ] **Step 5: Re-export adapter traits**
 
-Modify `src/embedder/mod.rs`:
+Modify `crates/floom/src/embedder/mod.rs`:
 
 ```rust
 pub mod services;
@@ -568,7 +568,7 @@ Run:
 
 ```bash
 cargo fmt
-cargo test -p floem-test --test embedder_protocol
+cargo test -p floom-test --test embedder_protocol
 ```
 
 Expected: PASS.
@@ -576,7 +576,7 @@ Expected: PASS.
 - [ ] **Step 7: Commit**
 
 ```bash
-git add src/embedder test/tests/embedder_protocol.rs
+git add crates/floom/src/embedder test/tests/embedder_protocol.rs
 git commit -m "feat: add embedder adapter traits"
 ```
 
@@ -585,9 +585,9 @@ git commit -m "feat: add embedder adapter traits"
 ### Task 3: Runtime Event Translation Boundary
 
 **Files:**
-- Create: `src/embedder/runtime.rs`
-- Modify: `src/embedder/mod.rs`
-- Modify: `src/window/handle.rs`
+- Create: `crates/floom/src/embedder/runtime.rs`
+- Modify: `crates/floom/src/embedder/mod.rs`
+- Modify: `crates/floom/src/window/handle.rs`
 - Test: `test/tests/embedder_input.rs`
 
 **Interfaces:**
@@ -603,12 +603,12 @@ git commit -m "feat: add embedder adapter traits"
 Create `test/tests/embedder_input.rs`:
 
 ```rust
-use floem::embedder::{
+use floom::embedder::{
     CommandSink, EmbedderEvent, EmbedderRuntimeState, VecCommandSink,
 };
-use floem::event::{Event, EventListener};
-use floem::headless::{HeadlessHarness, TestRoot};
-use floem::prelude::*;
+use floom::event::{Event, EventListener};
+use floom::headless::{HeadlessHarness, TestRoot};
+use floom::prelude::*;
 use std::cell::Cell;
 use std::rc::Rc;
 use ui_events::keyboard::{Code, Key, KeyState, KeyboardEvent, Location, Modifiers, NamedKey};
@@ -625,7 +625,7 @@ fn enter_down() -> KeyboardEvent {
 }
 
 #[test]
-fn embedder_keyboard_event_reaches_floem_dispatch() {
+fn embedder_keyboard_event_reaches_floom_dispatch() {
     let root = TestRoot::new();
     let hits = Rc::new(Cell::new(0));
     let hits_for_handler = hits.clone();
@@ -658,11 +658,11 @@ fn embedder_keyboard_event_reaches_floem_dispatch() {
 
 - [ ] **Step 2: Run the keyboard test and verify it fails**
 
-Run: `cargo test -p floem-test --test embedder_input embedder_keyboard_event_reaches_floem_dispatch`
+Run: `cargo test -p floom-test --test embedder_input embedder_keyboard_event_reaches_floom_dispatch`
 
 Expected: FAIL because `EmbedderRuntimeState`, `HeadlessHarness::focus_root`, `HeadlessHarness::embedder_window_id`, and `HeadlessHarness::window_handle_mut` do not exist.
 
-- [ ] **Step 3: Add `src/embedder/runtime.rs`**
+- [ ] **Step 3: Add `crates/floom/src/embedder/runtime.rs`**
 
 ```rust
 use super::{CommandSink, EmbedderEvent};
@@ -688,7 +688,7 @@ impl EmbedderRuntimeState {
 
 - [ ] **Step 4: Re-export `EmbedderRuntimeState`**
 
-Modify `src/embedder/mod.rs`:
+Modify `crates/floom/src/embedder/mod.rs`:
 
 ```rust
 pub mod runtime;
@@ -698,7 +698,7 @@ pub use runtime::EmbedderRuntimeState;
 
 - [ ] **Step 5: Add `WindowHandle::handle_embedder_event`**
 
-In `src/window/handle.rs`, add this method inside `impl WindowHandle`:
+In `crates/floom/src/window/handle.rs`, add this method inside `impl WindowHandle`:
 
 ```rust
 pub(crate) fn handle_embedder_event(
@@ -767,7 +767,7 @@ pub(crate) fn handle_embedder_event(
 
 - [ ] **Step 6: Add focused headless accessors for tests**
 
-In `src/headless.rs`, add methods to `impl HeadlessHarness`:
+In `crates/floom/src/headless.rs`, add methods to `impl HeadlessHarness`:
 
 ```rust
 pub fn window_handle_mut(&mut self) -> &mut WindowHandle {
@@ -791,7 +791,7 @@ Run:
 
 ```bash
 cargo fmt
-cargo test -p floem-test --test embedder_input embedder_keyboard_event_reaches_floem_dispatch
+cargo test -p floom-test --test embedder_input embedder_keyboard_event_reaches_floom_dispatch
 ```
 
 Expected: PASS.
@@ -799,8 +799,8 @@ Expected: PASS.
 - [ ] **Step 8: Commit**
 
 ```bash
-git add src/embedder src/window/handle.rs src/headless.rs test/tests/embedder_input.rs
-git commit -m "feat: route embedder events into floem runtime"
+git add crates/floom/src/embedder crates/floom/src/window/handle.rs crates/floom/src/headless.rs test/tests/embedder_input.rs
+git commit -m "feat: route embedder events into floom runtime"
 ```
 
 ---
@@ -808,9 +808,9 @@ git commit -m "feat: route embedder events into floem runtime"
 ### Task 4: Headless Embedder Proof Of Concept
 
 **Files:**
-- Create: `src/embedder/headless.rs`
-- Modify: `src/embedder/mod.rs`
-- Modify: `src/headless.rs`
+- Create: `crates/floom/src/embedder/headless.rs`
+- Modify: `crates/floom/src/embedder/mod.rs`
+- Modify: `crates/floom/src/headless.rs`
 - Test: `test/tests/embedder_headless.rs`
 
 **Interfaces:**
@@ -827,11 +827,11 @@ git commit -m "feat: route embedder events into floem runtime"
 Create `test/tests/embedder_headless.rs`:
 
 ```rust
-use floem::embedder::{
+use floom::embedder::{
     EmbedderCommand, EmbedderEvent, HeadlessEmbedder, SurfaceDescriptor, SurfaceEvent, SurfaceKind,
 };
-use floem::headless::TestRoot;
-use floem::prelude::*;
+use floom::headless::TestRoot;
+use floom::prelude::*;
 use peniko::kurbo::Size;
 
 #[test]
@@ -861,11 +861,11 @@ fn headless_embedder_drives_surface_resize_without_real_window() {
 
 - [ ] **Step 2: Run the headless test and verify it fails**
 
-Run: `cargo test -p floem-test --test embedder_headless headless_embedder_drives_surface_resize_without_real_window`
+Run: `cargo test -p floom-test --test embedder_headless headless_embedder_drives_surface_resize_without_real_window`
 
 Expected: FAIL because `HeadlessEmbedder` does not exist.
 
-- [ ] **Step 3: Add `src/embedder/headless.rs`**
+- [ ] **Step 3: Add `crates/floom/src/embedder/headless.rs`**
 
 ```rust
 use super::{
@@ -906,7 +906,7 @@ impl HeadlessEmbedder {
 
 - [ ] **Step 4: Re-export `HeadlessEmbedder`**
 
-Modify `src/embedder/mod.rs`:
+Modify `crates/floom/src/embedder/mod.rs`:
 
 ```rust
 pub mod headless;
@@ -920,7 +920,7 @@ Run:
 
 ```bash
 cargo fmt
-cargo test -p floem-test --test embedder_headless
+cargo test -p floom-test --test embedder_headless
 ```
 
 Expected: PASS.
@@ -928,7 +928,7 @@ Expected: PASS.
 - [ ] **Step 6: Commit**
 
 ```bash
-git add src/embedder src/headless.rs test/tests/embedder_headless.rs
+git add crates/floom/src/embedder crates/floom/src/headless.rs test/tests/embedder_headless.rs
 git commit -m "feat: add headless embedder proof of concept"
 ```
 
@@ -937,9 +937,9 @@ git commit -m "feat: add headless embedder proof of concept"
 ### Task 5: Winit Embedder Translation Layer
 
 **Files:**
-- Create: `src/app/winit_embedder.rs`
-- Modify: `src/app/mod.rs`
-- Modify: `src/app/handle.rs`
+- Create: `crates/floom/src/app/winit_embedder.rs`
+- Modify: `crates/floom/src/app/mod.rs`
+- Modify: `crates/floom/src/app/handle.rs`
 - Test: `test/tests/embedder_protocol.rs`
 
 **Interfaces:**
@@ -955,7 +955,7 @@ Append to `test/tests/embedder_protocol.rs`:
 ```rust
 #[test]
 fn embedder_window_ids_are_plain_values() {
-    let id: floem::embedder::EmbedderWindowId = 42;
+    let id: floom::embedder::EmbedderWindowId = 42;
     assert_eq!(id, 42);
 }
 ```
@@ -964,11 +964,11 @@ This test is intentionally small because `winit::WindowId` cannot be constructed
 
 - [ ] **Step 2: Run the protocol test**
 
-Run: `cargo test -p floem-test --test embedder_protocol embedder_window_ids_are_plain_values`
+Run: `cargo test -p floom-test --test embedder_protocol embedder_window_ids_are_plain_values`
 
 Expected: PASS after Task 1. This protects the public id type while the winit helper remains crate-private.
 
-- [ ] **Step 3: Add `src/app/winit_embedder.rs`**
+- [ ] **Step 3: Add `crates/floom/src/app/winit_embedder.rs`**
 
 ```rust
 use smallvec::SmallVec;
@@ -1122,7 +1122,7 @@ pub(crate) fn translate_window_event(
 
 - [ ] **Step 4: Register the module**
 
-Modify `src/app/mod.rs`:
+Modify `crates/floom/src/app/mod.rs`:
 
 ```rust
 pub(crate) mod winit_embedder;
@@ -1130,7 +1130,7 @@ pub(crate) mod winit_embedder;
 
 - [ ] **Step 5: Route `ApplicationHandle::handle_window_event` through the translator**
 
-In `src/app/handle.rs`, replace the direct `window_handle.event_reducer.reduce(...)` block with:
+In `crates/floom/src/app/handle.rs`, replace the direct `window_handle.event_reducer.reduce(...)` block with:
 
 ```rust
 let embedder_window_id = crate::app::winit_embedder::winit_window_id(window_id);
@@ -1154,8 +1154,8 @@ Run:
 
 ```bash
 cargo fmt
-cargo check -p floem
-cargo test -p floem-test --test embedder_protocol
+cargo check -p floom
+cargo test -p floom-test --test embedder_protocol
 ```
 
 Expected: PASS.
@@ -1163,7 +1163,7 @@ Expected: PASS.
 - [ ] **Step 7: Commit**
 
 ```bash
-git add src/app src/window/handle.rs test/tests/embedder_protocol.rs
+git add crates/floom/src/app crates/floom/src/window/handle.rs test/tests/embedder_protocol.rs
 git commit -m "feat: translate winit events through embedder protocol"
 ```
 
@@ -1172,8 +1172,8 @@ git commit -m "feat: translate winit events through embedder protocol"
 ### Task 6: Command Emission For Redraw, Cursor, And IME
 
 **Files:**
-- Modify: `src/window/handle.rs`
-- Modify: `src/embedder/command.rs`
+- Modify: `crates/floom/src/window/handle.rs`
+- Modify: `crates/floom/src/embedder/command.rs`
 - Test: `test/tests/embedder_headless.rs`
 - Test: `test/tests/embedder_input.rs`
 
@@ -1189,7 +1189,7 @@ git commit -m "feat: translate winit events through embedder protocol"
 Append to `test/tests/embedder_headless.rs`:
 
 ```rust
-use floem::embedder::{CommandSink, VecCommandSink};
+use floom::embedder::{CommandSink, VecCommandSink};
 
 #[test]
 fn headless_embedder_captures_redraw_request_command() {
@@ -1213,13 +1213,13 @@ fn headless_embedder_captures_redraw_request_command() {
 Append to `test/tests/embedder_input.rs`:
 
 ```rust
-use floem::embedder::{ImeHint, ImePurpose, ImeState};
+use floom::embedder::{ImeHint, ImePurpose, ImeState};
 use peniko::kurbo::Rect;
 
 #[test]
 fn embedder_ime_state_command_is_captured() {
     let root = TestRoot::new();
-    let mut embedder = floem::embedder::HeadlessEmbedder::new(
+    let mut embedder = floom::embedder::HeadlessEmbedder::new(
         root,
         empty().style(|s| s.size(100.0, 100.0)),
     );
@@ -1249,15 +1249,15 @@ fn embedder_ime_state_command_is_captured() {
 Run:
 
 ```bash
-cargo test -p floem-test --test embedder_headless headless_embedder_captures_redraw_request_command
-cargo test -p floem-test --test embedder_input embedder_ime_state_command_is_captured
+cargo test -p floom-test --test embedder_headless headless_embedder_captures_redraw_request_command
+cargo test -p floom-test --test embedder_input embedder_ime_state_command_is_captured
 ```
 
 Expected: FAIL because the test helpers do not exist.
 
 - [ ] **Step 4: Add command helper methods to `HeadlessEmbedder`**
 
-In `src/embedder/headless.rs`, add:
+In `crates/floom/src/embedder/headless.rs`, add:
 
 ```rust
 pub fn request_redraw_for_test(&mut self) {
@@ -1275,7 +1275,7 @@ pub fn set_ime_state_for_test(&mut self, state: super::ImeState) {
 
 - [ ] **Step 5: Add `WindowHandle::request_embedder_redraw`**
 
-In `src/window/handle.rs`, add:
+In `crates/floom/src/window/handle.rs`, add:
 
 ```rust
 pub(crate) fn request_embedder_redraw(
@@ -1294,8 +1294,8 @@ Run:
 
 ```bash
 cargo fmt
-cargo test -p floem-test --test embedder_headless
-cargo test -p floem-test --test embedder_input
+cargo test -p floom-test --test embedder_headless
+cargo test -p floom-test --test embedder_input
 ```
 
 Expected: PASS.
@@ -1303,7 +1303,7 @@ Expected: PASS.
 - [ ] **Step 7: Commit**
 
 ```bash
-git add src/embedder src/window/handle.rs test/tests/embedder_headless.rs test/tests/embedder_input.rs
+git add crates/floom/src/embedder crates/floom/src/window/handle.rs test/tests/embedder_headless.rs test/tests/embedder_input.rs
 git commit -m "feat: capture embedder redraw and ime commands"
 ```
 
@@ -1312,10 +1312,10 @@ git commit -m "feat: capture embedder redraw and ime commands"
 ### Task 7: Capabilities And Platform Service Degradation
 
 **Files:**
-- Modify: `src/embedder/capabilities.rs`
-- Modify: `src/embedder/services.rs`
-- Modify: `src/embedder/headless.rs`
-- Modify: `src/app/winit_embedder.rs`
+- Modify: `crates/floom/src/embedder/capabilities.rs`
+- Modify: `crates/floom/src/embedder/services.rs`
+- Modify: `crates/floom/src/embedder/headless.rs`
+- Modify: `crates/floom/src/app/winit_embedder.rs`
 - Test: `test/tests/embedder_protocol.rs`
 - Test: `test/tests/embedder_headless.rs`
 
@@ -1334,7 +1334,7 @@ Append to `test/tests/embedder_protocol.rs`:
 ```rust
 #[test]
 fn capability_presets_describe_winit_and_headless() {
-    let winit = floem::embedder::BackendCapabilities::winit_default();
+    let winit = floom::embedder::BackendCapabilities::winit_default();
     assert!(winit.clipboard);
     assert!(winit.cursor);
     assert!(winit.timers);
@@ -1343,7 +1343,7 @@ fn capability_presets_describe_winit_and_headless() {
     assert!(winit.gpu_surface || winit.software_surface);
     assert!(!winit.headless);
 
-    let headless = floem::embedder::BackendCapabilities::headless();
+    let headless = floom::embedder::BackendCapabilities::headless();
     assert!(headless.headless);
     assert!(!headless.clipboard);
     assert!(!headless.file_dialog);
@@ -1354,13 +1354,13 @@ fn capability_presets_describe_winit_and_headless() {
 
 - [ ] **Step 2: Run the capability test and verify it fails**
 
-Run: `cargo test -p floem-test --test embedder_protocol capability_presets_describe_winit_and_headless`
+Run: `cargo test -p floom-test --test embedder_protocol capability_presets_describe_winit_and_headless`
 
 Expected: FAIL because the presets do not exist.
 
 - [ ] **Step 3: Add capability presets**
 
-Extend `src/embedder/capabilities.rs`:
+Extend `crates/floom/src/embedder/capabilities.rs`:
 
 ```rust
 impl BackendCapabilities {
@@ -1397,7 +1397,7 @@ impl BackendCapabilities {
 
 - [ ] **Step 4: Add capabilities to `PlatformServices`**
 
-Modify `src/embedder/services.rs`:
+Modify `crates/floom/src/embedder/services.rs`:
 
 ```rust
 use super::{BackendCapabilities, EmbedderWindowId, SurfaceDescriptor};
@@ -1419,7 +1419,7 @@ fn capabilities(&self) -> BackendCapabilities {
 
 - [ ] **Step 5: Add no-op headless services**
 
-In `src/embedder/headless.rs`, add:
+In `crates/floom/src/embedder/headless.rs`, add:
 
 ```rust
 #[derive(Debug, Default)]
@@ -1446,8 +1446,8 @@ Run:
 
 ```bash
 cargo fmt
-cargo test -p floem-test --test embedder_protocol
-cargo test -p floem-test --test embedder_headless
+cargo test -p floom-test --test embedder_protocol
+cargo test -p floom-test --test embedder_headless
 ```
 
 Expected: PASS.
@@ -1455,7 +1455,7 @@ Expected: PASS.
 - [ ] **Step 7: Commit**
 
 ```bash
-git add src/embedder test/tests/embedder_protocol.rs test/tests/embedder_headless.rs
+git add crates/floom/src/embedder test/tests/embedder_protocol.rs test/tests/embedder_headless.rs
 git commit -m "feat: describe embedder backend capabilities"
 ```
 
@@ -1465,9 +1465,9 @@ git commit -m "feat: describe embedder backend capabilities"
 
 **Files:**
 - Modify: `test/tests/embedder_input.rs`
-- Modify: `src/embedder/runtime.rs`
-- Modify: `src/window/handle.rs`
-- Modify: `src/headless.rs`
+- Modify: `crates/floom/src/embedder/runtime.rs`
+- Modify: `crates/floom/src/window/handle.rs`
+- Modify: `crates/floom/src/headless.rs`
 
 **Interfaces:**
 - Consumes: Task 3 event routing.
@@ -1487,15 +1487,15 @@ fn embedder_focus_event_updates_window_focus() {
     let root = TestRoot::new();
     let gained = std::rc::Rc::new(std::cell::Cell::new(0));
     let gained_for_handler = gained.clone();
-    let view = empty().on_event(floem::event::listener::WindowGainedFocus, move |_, _| {
+    let view = empty().on_event(floom::event::listener::WindowGainedFocus, move |_, _| {
         gained_for_handler.set(gained_for_handler.get() + 1);
     });
-    let mut embedder = floem::embedder::HeadlessEmbedder::new(root, view);
+    let mut embedder = floom::embedder::HeadlessEmbedder::new(root, view);
     let window_id = embedder.window_id();
 
     embedder.send(EmbedderEvent::Focus {
         window_id,
-        event: floem::embedder::FocusEvent::WindowFocused(true),
+        event: floom::embedder::FocusEvent::WindowFocused(true),
     });
 
     assert_eq!(gained.get(), 1);
@@ -1510,23 +1510,23 @@ Append to `test/tests/embedder_input.rs`:
 #[test]
 fn embedder_ime_preedit_and_commit_do_not_panic() {
     let root = TestRoot::new();
-    let mut embedder = floem::embedder::HeadlessEmbedder::new(root, text_input(""));
+    let mut embedder = floom::embedder::HeadlessEmbedder::new(root, text_input(""));
     let window_id = embedder.window_id();
 
     embedder.send(EmbedderEvent::Ime {
         window_id,
-        event: floem::embedder::ImeEvent::EnabledChanged(true),
+        event: floom::embedder::ImeEvent::EnabledChanged(true),
     });
     embedder.send(EmbedderEvent::Ime {
         window_id,
-        event: floem::embedder::ImeEvent::PreeditChanged {
+        event: floom::embedder::ImeEvent::PreeditChanged {
             text: "ni".into(),
             cursor_byte_range: Some((2, 2)),
         },
     });
     embedder.send(EmbedderEvent::Ime {
         window_id,
-        event: floem::embedder::ImeEvent::CommitText("你".into()),
+        event: floom::embedder::ImeEvent::CommitText("你".into()),
     });
 
     assert!(embedder.take_commands().len() <= 8);
@@ -1541,7 +1541,7 @@ Append to `test/tests/embedder_input.rs`:
 #[test]
 fn embedder_touch_events_keep_implicit_capture_flow() {
     let root = TestRoot::new();
-    let mut embedder = floem::embedder::HeadlessEmbedder::new(
+    let mut embedder = floom::embedder::HeadlessEmbedder::new(
         root,
         empty().style(|s| s.size(100.0, 100.0)),
     );
@@ -1558,16 +1558,16 @@ fn embedder_touch_events_keep_implicit_capture_flow() {
 Run:
 
 ```bash
-cargo test -p floem-test --test embedder_input embedder_focus_event_updates_window_focus
-cargo test -p floem-test --test embedder_input embedder_ime_preedit_and_commit_do_not_panic
-cargo test -p floem-test --test embedder_input embedder_touch_events_keep_implicit_capture_flow
+cargo test -p floom-test --test embedder_input embedder_focus_event_updates_window_focus
+cargo test -p floom-test --test embedder_input embedder_ime_preedit_and_commit_do_not_panic
+cargo test -p floom-test --test embedder_input embedder_touch_events_keep_implicit_capture_flow
 ```
 
 Expected: FAIL because the headless inspection helpers do not exist.
 
 - [ ] **Step 5: Add headless inspection helpers**
 
-In `src/embedder/headless.rs`, add:
+In `crates/floom/src/embedder/headless.rs`, add:
 
 ```rust
 pub fn touch_down_for_test(&mut self, x: f64, y: f64) {
@@ -1583,7 +1583,7 @@ pub fn has_pointer_capture_for_test(&self) -> bool {
 }
 ```
 
-Add matching read-only helpers to `src/headless.rs`:
+Add matching read-only helpers to `crates/floom/src/headless.rs`:
 
 ```rust
 pub fn window_handle(&self) -> &WindowHandle {
@@ -1602,7 +1602,7 @@ Run:
 
 ```bash
 cargo fmt
-cargo test -p floem-test --test embedder_input
+cargo test -p floom-test --test embedder_input
 ```
 
 Expected: PASS.
@@ -1610,7 +1610,7 @@ Expected: PASS.
 - [ ] **Step 7: Commit**
 
 ```bash
-git add src/embedder src/headless.rs src/window test/tests/embedder_input.rs
+git add crates/floom/src/embedder crates/floom/src/headless.rs crates/floom/src/window test/tests/embedder_input.rs
 git commit -m "test: cover embedder input edge cases"
 ```
 
@@ -1637,16 +1637,16 @@ Create:
 ```markdown
 # Experimental Embedder API
 
-`floem::embedder` is an experimental API for integrating Floem with platform backends other than the default winit desktop backend.
+`floom::embedder` is an experimental API for integrating Floom with platform backends other than the default winit desktop backend.
 
 The API has two layers:
 
 - Protocol types such as `EmbedderEvent`, `EmbedderCommand`, `SurfaceDescriptor`, `ImeState`, and `BackendCapabilities`.
 - Rust adapter traits such as `EmbedderRuntime`, `EmbedderWindow`, `SurfaceHandle`, and `PlatformServices`.
 
-Ordinary application code should continue to use `floem::launch(...)`.
+Ordinary application code should continue to use `floom::launch(...)`.
 
-Backend authors can either implement the Rust adapter traits or feed `EmbedderEvent` values into Floem and execute returned `EmbedderCommand` values.
+Backend authors can either implement the Rust adapter traits or feed `EmbedderEvent` values into Floom and execute returned `EmbedderCommand` values.
 
 ## Minimal Flow
 
@@ -1658,7 +1658,7 @@ Backend authors can either implement the Rust adapter traits or feed `EmbedderEv
 
 ## Current Implementations
 
-- winit desktop backend: default path used by `floem::launch(...)`.
+- winit desktop backend: default path used by `floom::launch(...)`.
 - headless backend: testing proof of concept with no real platform window or paint surface.
 
 ## Stability
@@ -1671,7 +1671,7 @@ The module is public for experimentation, but it is not stable. Type names, enum
 Add this short paragraph after the feature list:
 
 ```markdown
-Backend authors can experiment with the public but unstable [`floem::embedder`](docs/embedder.md) API. Ordinary applications should continue to use `floem::launch(...)`.
+Backend authors can experiment with the public but unstable [`floom::embedder`](docs/embedder.md) API. Ordinary applications should continue to use `floom::launch(...)`.
 ```
 
 - [ ] **Step 3: Verify default dependency boundaries**
@@ -1679,8 +1679,8 @@ Backend authors can experiment with the public but unstable [`floem::embedder`](
 Run:
 
 ```bash
-cargo tree -p floem --no-default-features
-cargo tree -p floem
+cargo tree -p floom --no-default-features
+cargo tree -p floom
 ```
 
 Expected: output contains existing desktop/web dependencies only and does not contain Android SDK, iOS SDK wrapper crates, HarmonyOS SDK crates, or TUI crates such as `ratatui` or `crossterm`.
@@ -1690,9 +1690,9 @@ Expected: output contains existing desktop/web dependencies only and does not co
 Run:
 
 ```bash
-cargo test -p floem-test --test embedder_protocol
-cargo test -p floem-test --test embedder_headless
-cargo test -p floem-test --test embedder_input
+cargo test -p floom-test --test embedder_protocol
+cargo test -p floom-test --test embedder_headless
+cargo test -p floom-test --test embedder_input
 ```
 
 Expected: PASS.
@@ -1703,7 +1703,7 @@ Run:
 
 ```bash
 cargo check --workspace
-cargo test -p floem-test
+cargo test -p floom-test
 cargo bench --no-run
 ```
 
@@ -1732,10 +1732,10 @@ git commit -m "docs: explain experimental embedder api"
 Run:
 
 ```bash
-cargo doc -p floem --no-deps
+cargo doc -p floom --no-deps
 ```
 
-Expected: PASS and `floem::embedder` appears in generated documentation.
+Expected: PASS and `floom::embedder` appears in generated documentation.
 
 - [ ] **Step 2: Run all required checks**
 
@@ -1744,7 +1744,7 @@ Run:
 ```bash
 cargo fmt --check
 cargo check --workspace
-cargo test -p floem-test
+cargo test -p floom-test
 cargo test --workspace --tests
 cargo bench --no-run
 ```
@@ -1766,7 +1766,7 @@ Expected: PASS for existing examples, including `counter`, `widget-gallery`, and
 Run:
 
 ```bash
-rg -n "Box<dyn|Vec<|collect\\(|to_vec\\(|clone\\(" src/embedder src/app/winit_embedder.rs src/window/handle.rs
+rg -n "Box<dyn|Vec<|collect\\(|to_vec\\(|clone\\(" crates/floom/src/embedder crates/floom/src/app/winit_embedder.rs crates/floom/src/window/handle.rs
 ```
 
 Expected: Review each result. `VecCommandSink` and test helpers may allocate. Event translation should use `SmallVec` for the common path and must not allocate for ordinary keyboard, pointer, focus, resize, scale, theme, occlusion, or redraw events.

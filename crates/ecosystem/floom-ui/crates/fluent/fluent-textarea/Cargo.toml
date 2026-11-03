@@ -1,0 +1,21 @@
+[package]
+name = "floom-widget-fluent-textarea"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+# Ported off the v1 `floom` monolith (see docs/porting-floem-ui-to-2.0.md).
+floom-core-theme = { workspace = true }
+# The theme binding is still an `RwSignal<MultiTheme>`, exactly as in the
+# timeline and empty-state ports: what went is the widget's state, not the
+# kit's theme.
+floom-signal = { path = "../../../../../floom-signal" }
+floom-core = { path = "../../../../../floom-core" }
+floom-types = { path = "../../../../../floom-types" }
+floom-widgets = { path = "../../../../../floom-widgets" }
+
+[dev-dependencies]
+floom-core-theme = { workspace = true, features = ["fluent"] }
+floom-core = { path = "../../../../../floom-core" }
+floom-types = { path = "../../../../../floom-types" }
+floom-widgets = { path = "../../../../../floom-widgets" }

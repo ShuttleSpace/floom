@@ -1,0 +1,22 @@
+[package]
+name = "floom-widget-fluent-snackbar"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+# Ported off the v1 `floom` monolith (see docs/porting-floem-ui-to-2.0.md).
+floom-core-theme = { workspace = true }
+floom-signal = { path = "../../../../../floom-signal" }
+floom-core = { path = "../../../../../floom-core" }
+floom-types = { path = "../../../../../floom-types" }
+floom-widgets = { path = "../../../../../floom-widgets" }
+# The snackbar is a layer over the page: the engine's `Overlay` lives with
+# the composites, and the kit adapts its tokens to it.
+floom-ui-composites = { path = "../../floom-ui-composites" }
+
+[dev-dependencies]
+floom-core-theme = { workspace = true, features = ["fluent"] }
+floom-core = { path = "../../../../../floom-core" }
+floom-types = { path = "../../../../../floom-types" }
+floom-widgets = { path = "../../../../../floom-widgets" }
+floom-ui-composites = { path = "../../floom-ui-composites" }

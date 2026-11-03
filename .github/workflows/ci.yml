@@ -2,6 +2,7 @@ on:
   push:
     branches:
       - main
+      - floom-2.0
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
 
@@ -12,6 +13,399 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # The 2.0 track lives in its own crate tree (foundation/ runtime/ scene/ render/
+  # platform/ text/ layout/ native/ framework/ widgets/ app/ tooling/) and is
+  # scoped separately on purpose: a regression in the legacy v1 crates must not
+  # red the signal for work that never touches them, and vice versa. Every check
+  # below names those packages explicitly -- see FLOOM2_PACKAGES -- so the job
+  # neither depends on the workspace default members nor inherits v1's setup.
+  floom-2.0:
+    name: Floom 2.0 on ${{ matrix.os }}
+    if: github.event.pull_request.draft == false
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - macos-latest
+          - ubuntu-latest
+    runs-on: ${{ matrix.os }}
+    env:
+      # Every 2.0 crate, as one shell word each, so all three cargo steps below
+      # receive the whole track without naming it again. Adding a 2.0 crate means
+      # adding it here and nowhere else.
+      #
+      # Spelled `--package=NAME` rather than the shorter `-p NAME` on purpose:
+      # cargo-fmt takes `--package` as a variadic option and folds a following
+      # space-separated list into a single package spec, so with the short form
+      # "cargo fmt -p a -p b" looks up a package literally named " a -p b" and
+      # only ever works for one crate. The `=` form keeps each package one argv
+      # entry for cargo, cargo-fmt and the doc-test pass alike.
+      #
+      # The list is expanded unquoted, i.e. by shell word splitting -- bash is
+      # what GitHub runs `run:` with on both macOS and Ubuntu. Quoting it would
+      # pass the entire list as a single package argument.
+      FLOOM2_PACKAGES: >-
+        --package=floom-types --package=floom-core
+        --package=floom-runtime-core --package=floom-scheduler
+        --package=floom-scene
+        --package=floom-renderer --package=floom-renderer-vello --package=floom-renderer-software --package=floom-renderer-skia-abi --package=floom-renderer-tui --package=floom-renderer-web
+        --package=floom-platform --package=floom-platform-desktop --package=floom-platform-android
+        --package=floom-platform-ios --package=floom-platform-harmony --package=floom-platform-web
+        --package=floom-platform-embedded --package=floom-platform-mobile
+        --package=floom-text --package=floom-editor --package=floom-ime
+        --package=floom-layout --package=floom-style --package=floom-virtual
+        --package=floom-native --package=floom-native-ffi
+        --package=floom-accessibility --package=floom-focus --package=floom-gesture
+        --package=floom-animation --package=floom-overlay --package=floom-store --package=floom-task
+        --package=floom-forms --package=floom-navigation --package=floom-persistence --package=floom-services
+        --package=floom-error
+        --package=floom-widgets
+        --package=floom-app
+        --package=floom-testkit
+    steps:
+      - name: Free disk space on Ubuntu
+        if: startsWith(matrix.os, 'ubuntu')
+        run: |
+          df -h
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /opt/hostedtoolcache/CodeQL
+          df -h
+
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Update toolchain & add rustfmt
+        run: |
+          rustup update --no-self-update
+          rustup component add rustfmt
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: floom-2.0
+          save-if: ${{ github.event_name != 'merge_group' }}
+
+      - name: Fetch dependencies
+        run: cargo fetch
+
+      # Scoped rather than the repo-wide `--all` the fmt job runs: the 2.0 tree
+      # is kept rustfmt-clean on its own, so a formatting question about the
+      # legacy crates cannot red the 2.0 signal (and vice versa).
+      - name: Check formatting
+        run: cargo fmt $FLOOM2_PACKAGES --check
+
+      - name: Run tests
+        run: cargo test $FLOOM2_PACKAGES --no-fail-fast
+
+      - name: Run doc tests
+        run: cargo test $FLOOM2_PACKAGES --doc --no-fail-fast
+
+      - name: Check architecture dependency boundaries
+        run: ./scripts/check-architecture-deps.sh
+
+      # The native-view plugin's native half is Objective-C and reaches AppKit,
+      # so the window half of its verification only runs on macOS. The
+      # framework-side half -- the C ABI, the provider, the lifecycle -- is
+      # covered by the test suite on every platform.
+      - name: Run the native-view example
+        if: matrix.os == 'macos-latest'
+        run: >
+          cargo run
+          --manifest-path crates/ecosystem/plugins/Cargo.toml
+          -p floom-plugin-nativeview --example native_view
+
+  # The capability plugins are their own workspace (`crates/ecosystem/plugins`),
+  # so the job above builds none of them: a plugin is not a member of the root,
+  # and `cargo fmt $FLOOM2_PACKAGES` cannot reach across that boundary. This job
+  # is what keeps them formatted, linted and tested.
+  #
+  # Both runners, not one: each host compiles a *different* set of `cfg` arms
+  # (AppKit on macOS, `dirs`/`secret-tool` on Linux), so a single-OS job would
+  # report green over code it never compiled.
+  plugins:
+    name: Capability plugins on ${{ matrix.os }}
+    if: github.event.pull_request.draft == false
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - macos-latest
+          - ubuntu-latest
+    runs-on: ${{ matrix.os }}
+    env:
+      PLUGIN_MANIFEST: crates/ecosystem/plugins/Cargo.toml
+    defaults:
+      run:
+        working-directory: crates/ecosystem/plugins
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Update toolchain & add rustfmt
+        run: |
+          rustup update --no-self-update
+          rustup component add rustfmt
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: plugins-${{ matrix.os }}
+          workspaces: crates/ecosystem/plugins -> target
+          save-if: ${{ github.event_name != 'merge_group' }}
+
+      - name: Fetch dependencies
+        run: cargo fetch
+
+      - name: Check formatting
+        run: cargo fmt --all --check
+
+      - name: Run tests
+        run: cargo test --workspace --no-fail-fast
+
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets --all-features -- --deny warnings
+
+  # Floom 2.0's mobile platform code lives behind `#[cfg(target_os = "android")]`,
+  # so nothing above compiles it: the `floom-2.0` job builds the *host* arm of
+  # every crate, which for these two crates is a headless stand-in. That gap is
+  # not hypothetical. `floom-platform-mobile`'s entire Android half (the JNI
+  # bridge plus every capability package's `android.rs`) and `floom-platform-android`'s
+  # whole winit-backed `android` module had never been compiled by CI, and a
+  # JNI module sitting there with five hard errors went unnoticed until a device
+  # build finally pulled it in.
+  #
+  # So this job compiles those cfg'd arms for a real Android target. It is a
+  # `cargo check`: no NDK is required — `android-activity`'s build script only
+  # invokes `cc` for its `game-activity` backend, which nothing here enables —
+  # and nothing is linked or run.
+  #
+  # The capability plugins are named here too, and that is the point of this
+  # comment: their `android.rs` halves reach the JNI bridge and are invisible to
+  # the host build above, so a plugin whose Android arm does not compile would
+  # otherwise pass every check in this file. `floom-plugin-vibration`'s iOS arm
+  # spent months with two hard edition-2024 errors for exactly this reason,
+  # found only when someone cross-compiled it by hand.
+  #
+  # Deliberately NOT covered: `examples/floom2-android`. Its Android module is
+  # gated on `--features real` as well as the target, and `real` drags wgpu +
+  # vello through a cross build for no extra coverage of the platform seams this
+  # job exists to check. That example is compiled by `scripts/build-apk.sh`,
+  # i.e. by the device workflow, and by nothing in CI. If it starts breaking
+  # unnoticed, that is why — add it here with `--features real` and accept the
+  # build time.
+  android-check:
+    name: Floom 2.0 for aarch64-linux-android
+    if: github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Update toolchain & add the Android target
+        run: |
+          rustup update --no-self-update
+          rustup target add aarch64-linux-android
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: android-check
+          save-if: ${{ github.event_name != 'merge_group' }}
+
+      - name: Fetch dependencies
+        run: cargo fetch --target aarch64-linux-android
+
+      - name: Fetch the capability plugins' dependencies
+        run: >
+          cargo fetch
+          --manifest-path crates/ecosystem/plugins/Cargo.toml
+          --target aarch64-linux-android
+
+      - name: Check the Android arms of the platform crates
+        run: >
+          cargo check
+          --package=floom-platform-mobile
+          --package=floom-platform-android
+          --target aarch64-linux-android
+
+      - name: Check the Android arms of the capability plugins
+        run: >
+          cargo check
+          --manifest-path crates/ecosystem/plugins/Cargo.toml
+          --package=floom-plugin-battery
+          --package=floom-plugin-connectivity
+          --package=floom-plugin-device-info
+          --package=floom-plugin-local-auth
+          --package=floom-plugin-location
+          --package=floom-plugin-notifications
+          --package=floom-plugin-sensors
+          --package=floom-plugin-share
+          --package=floom-plugin-vibration
+          --package=floom-plugin-package-info
+          --package=floom-plugin-paths
+          --package=floom-plugin-open-url
+          --package=floom-plugin-file-dialog
+          --package=floom-plugin-prefs
+          --package=floom-plugin-wakelock
+          --package=floom-plugin-network-info
+          --package=floom-plugin-background-work
+          --package=floom-plugin-mdns
+          --package=floom-plugin-secure-storage
+          --target aarch64-linux-android
+
+  # The same gap, on the other mobile target. Every plugin's `ios.rs` sits behind
+  # `#[cfg(target_os = "ios")]`, so a host build on macOS compiles none of it —
+  # which is how `floom-plugin-vibration`'s iOS arm kept two edition-2024
+  # `extern blocks must be unsafe` errors while its host tests stayed green.
+  #
+  # A `cargo check` is enough for the type-level half, and deliberately no
+  # further: it does **not** link, so a missing
+  # `#[link(name = "...", kind = "framework")]` is invisible here. That
+  # distinction is real — `class!(Foo)` resolves at runtime, not at link time —
+  # so this job catches signature and ownership errors and the device workflow
+  # catches the rest.
+  ios-check:
+    name: Floom 2.0 for aarch64-apple-ios
+    if: github.event.pull_request.draft == false
+    runs-on: macos-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Update toolchain & add the iOS target
+        run: |
+          rustup update --no-self-update
+          rustup target add aarch64-apple-ios
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: ios-check
+          save-if: ${{ github.event_name != 'merge_group' }}
+
+      - name: Fetch dependencies
+        run: cargo fetch --target aarch64-apple-ios
+
+      - name: Fetch the capability plugins' dependencies
+        run: >
+          cargo fetch
+          --manifest-path crates/ecosystem/plugins/Cargo.toml
+          --target aarch64-apple-ios
+
+      - name: Check the iOS arms of the capability plugins
+        run: >
+          cargo check
+          --manifest-path crates/ecosystem/plugins/Cargo.toml
+          --package=floom-plugin-battery
+          --package=floom-plugin-connectivity
+          --package=floom-plugin-device-info
+          --package=floom-plugin-local-auth
+          --package=floom-plugin-location
+          --package=floom-plugin-notifications
+          --package=floom-plugin-sensors
+          --package=floom-plugin-share
+          --package=floom-plugin-vibration
+          --package=floom-plugin-package-info
+          --package=floom-plugin-paths
+          --package=floom-plugin-open-url
+          --package=floom-plugin-file-dialog
+          --package=floom-plugin-prefs
+          --package=floom-plugin-wakelock
+          --package=floom-plugin-network-info
+          --package=floom-plugin-background-work
+          --package=floom-plugin-mdns
+          --package=floom-plugin-secure-storage
+          --target aarch64-apple-ios
+
+  # `examples/floom-probe` is the one crate whose only binary sits behind
+  # `required-features = ["real"]`, so a plain `cargo build` / `cargo nextest`
+  # never compiles it. That is how it came to import six composite widgets from
+  # `floom-widgets`, which does not and cannot export them, while every gate
+  # stayed green — the breakage was invisible rather than tolerated.
+  #
+  # macOS, not Ubuntu: most of this probe is `#[cfg(target_os = "macos")]` — the
+  # native-view provider install and the `NSView` frame readback that its device
+  # assertions rest on. A Linux check would skip exactly those arms and pass
+  # while the code that matters rotted.
+  #
+  # This job is deliberately not behind `needs: [fmt, clippy]` like `build` is.
+  # Those two jobs are red on this branch for reasons unrelated to the probe, and
+  # anything gated on them would never run — which is the same "check that never
+  # executes" problem this job exists to fix.
+  #
+  # `cargo check` is the right depth. The failures this catches are type-level —
+  # a widget missing `WidgetAny`, a module that does not exist — and none of them
+  # need a link step.
+  probe-check:
+    name: Device probe compiles with the real backend
+    if: github.event.pull_request.draft == false
+    runs-on: macos-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Update toolchain
+        run: rustup update --no-self-update
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: probe-check
+          save-if: ${{ github.event_name != 'merge_group' }}
+
+      - name: Check the device probe against the real backend
+        run: cargo check -p floom-probe --features real
+
+  # Every satellite workspace under `crates/ecosystem/`, derived from the
+  # manifests rather than listed: a satellite is a `Cargo.toml` there that opens
+  # with `[workspace]`. The root manifest excludes the whole `crates/ecosystem`
+  # tree, so root `cargo test --workspace` and the `build` job above never reach
+  # either one.
+  #
+  # That is not hypothetical. `d131b5af` moved `PixelSnapshot::of` behind the
+  # `ReferencePixels` trait and separately taught vello to draw drop shadows;
+  # the design-system galleries in `floom-ui` then failed both to compile *and*
+  # to hash the same, and neither showed up anywhere. `floom-editor`'s 25
+  # paint-level tests were committed and run by nothing at all. This job is the
+  # only thing that runs either.
+  #
+  # The whole workspace rather than a package list: `floom-ui` alone is 306
+  # members, every one a headless test that renders into a buffer. A
+  # hand-maintained `-p` list is how the `FLOOM2_PACKAGES` scope got truncated
+  # once already.
+  ecosystem-check:
+    name: Ecosystem workspaces (design-system goldens, editor)
+    if: github.event.pull_request.draft == false
+    runs-on: macos-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Update toolchain
+        run: rustup update --no-self-update
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          # Space-separated workspace roots, relative to the repo root.
+          workspaces: crates/ecosystem/floom-ui crates/ecosystem/floom-editor
+          key: ecosystem-check
+          save-if: ${{ github.event_name != 'merge_group' }}
+
+      - name: Run the satellite tests
+        run: |
+          status=0
+          for manifest in crates/ecosystem/*/Cargo.toml; do
+            grep -qx '\[workspace\]' "$manifest" || continue
+            dir="$(dirname "$manifest")"
+            echo "::group::$dir"
+            (cd "$dir" && cargo test --workspace --no-fail-fast) || status=1
+            echo "::endgroup::"
+          done
+          exit "$status"
+
   build:
     name: Rust on ${{ matrix.os }}
     if: github.event.pull_request.draft == false
@@ -73,6 +467,19 @@ jobs:
         run: cargo test --doc --no-fail-fast
 
 
+  architecture-deps:
+    name: Architecture dependency boundaries
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Update toolchain
+        run: rustup update --no-self-update
+
+      - name: Check architecture dependency boundaries
+        run: ./scripts/check-architecture-deps.sh
+
   fmt:
     name: Rustfmt
     runs-on: ubuntu-latest
@@ -86,7 +493,23 @@ jobs:
           rustup component add rustfmt
 
       - name: Run rustfmt
-        run: cargo fmt --all --check
+        # Every workspace, not just the root. `crates/ecosystem/floom-ui` and
+        # `crates/ecosystem/floom-editor` have their own Cargo.toml, and root
+        # `cargo fmt --all` reaches neither -- the same boundary that let the
+        # editor's committed sources sit unformatted while this job was green.
+        #
+        # `status` rather than a bare loop: GitHub's default shell runs under
+        # `set -e`, so an unformatted `floom-ui` would end the step and hide
+        # whatever `floom-editor` had to say. The gate accumulates for the same
+        # reason.
+        run: |
+          status=0
+          cargo fmt --all --check || status=1
+          for manifest in crates/ecosystem/*/Cargo.toml; do
+            grep -qx '\[workspace\]' "$manifest" || continue
+            (cd "$(dirname "$manifest")" && cargo fmt --all --check) || status=1
+          done
+          exit "$status"
 
   clippy:
     name: Clippy on ${{ matrix.os }}

@@ -1,0 +1,10 @@
+[package]
+name = "floom-error"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Error boundaries: recoverable capture, fallbacks and diagnostics for Floom 2.0"
+rust-version.workspace = true
+
+[dependencies]

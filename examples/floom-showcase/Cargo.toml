@@ -1,0 +1,28 @@
+[package]
+name = "floom-showcase"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+description = "One application over the engine, signals, the ported kits, and the editor"
+
+[dependencies]
+floom = { path = "../../crates/floom", version = "0.2.0", features = [
+    "desktop",
+    "renderer-gpu",
+    "devtools",
+] }
+floom-navigation = { path = "../../crates/floom-navigation", version = "0.2.0" }
+floom-signal = { path = "../../crates/floom-signal", version = "0.2.0" }
+floom-editor = { path = "../../crates/floom-editor", version = "0.2.0" }
+
+# Only the ported kits are imported. `crates/ecosystem/floom-ui` is a satellite
+# workspace with 300+ members; pulling the workspace in whole would build kits
+# this demo does not show. See the module doc in `src/main.rs`.
+floom-widget-md-text = { path = "../../crates/ecosystem/floom-ui/crates/material/md-text" }
+floom-widget-md-button = { path = "../../crates/ecosystem/floom-ui/crates/material/md-button" }
+floom-widget-md-checkbox = { path = "../../crates/ecosystem/floom-ui/crates/material/md-checkbox" }
+floom-core-theme = { path = "../../crates/ecosystem/floom-ui/crates/floom-core-theme", features = ["material"] }
+
+[dev-dependencies]
+floom-testkit = { path = "../../crates/floom-testkit", version = "0.2.0" }

@@ -1,0 +1,1 @@
+  Rect { bounds: Rect { x0: 0.0, y0: 0.0, x1: 8.0, y1: 8.0 }, fill: Solid(Color { r: 200, g: 100, b: 50, a: 255 }), radius: 0.0, shadow: None }

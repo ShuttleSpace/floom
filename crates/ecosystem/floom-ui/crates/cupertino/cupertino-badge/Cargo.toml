@@ -1,0 +1,29 @@
+[package]
+name = "floom-widget-cupertino-badge"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+# Ported off the v1 monolith (see docs/porting-floem-ui-to-2.0.md). The theme
+# signal comes from floom-widget-runtime, which is already ported.
+#
+# `features = ["cupertino"]`. All three design-system features are the *same* gate
+# -- `#[cfg(any(feature = "material", feature = "cupertino", feature = "fluent"))]`
+# -- so enabling the wrong one compiles just as well. These are presence flags,
+# not data selectors: nothing but reading the manifest catches a kit asking for
+# the wrong one.
+floom-core-theme = { workspace = true }
+floom-widget-runtime = { workspace = true, features = ["cupertino"] }
+# The theme binding, which is `RwSignal<MultiTheme>` exactly as in the other
+# ported kits.
+floom-signal = { path = "../../../../../floom-signal" }
+# The engine colour type, which `BadgeStyle` speaks.
+floom-types = { path = "../../../../../floom-types" }
+# The engine badge; this kit resolves the palette and hands the bubble the
+# explicit values 2.0 wants rather than reading a global theme signal.
+floom-ui-composites = { path = "../../floom-ui-composites" }
+
+[dev-dependencies]
+# The paint assertions read back a recorded scene, which needs the testkit the
+# engine ships.
+floom-core-theme = { workspace = true }

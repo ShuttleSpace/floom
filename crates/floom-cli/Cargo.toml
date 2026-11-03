@@ -1,0 +1,18 @@
+[package]
+name = "floom-cli"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Command line tools for Floom: scaffold a Flutter-style multi-platform project"
+readme = "README.md"
+
+# Deliberately dependency-free. The CLI is installed on machines that are only
+# about to run `floom create`, so it must build from std alone rather than
+# dragging an argument parser (and its tree) into that first step.
+[dependencies]
+
+[[bin]]
+name = "floom"
+path = "src/main.rs"

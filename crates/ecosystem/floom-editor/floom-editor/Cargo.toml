@@ -1,0 +1,30 @@
+[package]
+name = "floom-editor"
+edition.workspace = true
+license.workspace = true
+version.workspace = true
+description = "Floom text and code editor views"
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+floom-core.workspace = true
+floom-editor-core = { path = "../../../floom-editor-core" }
+floom-text.workspace = true
+floom-types.workspace = true
+floom-widgets.workspace = true
+lapce-xi-rope = "0.4.0"
+serde = { version = "1.0", optional = true }
+
+[dev-dependencies]
+# The paint-level tests mount the editor in a host and read the scene, which
+# is the discipline the port is held to: a widget that compiles and does
+# nothing passes every test that looks at its own state.
+floom-app.workspace = true
+floom-layout.workspace = true
+floom-scene.workspace = true
+
+[features]
+default = ["serde"]
+serde = ["dep:serde", "floom-editor-core/serde"]

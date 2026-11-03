@@ -1,0 +1,51 @@
+{
+  "name": "Profile Card",
+  "root": {
+    "name": "card",
+    "role": "frame",
+    "auto_layout": { "axis": "vertical", "gap": 8.0, "padding": 16.0 },
+    "size": { "width": 320.0, "height": 160.0 },
+    "fill": "#ffffff",
+    "corner_radius": 12.0,
+    "stroke": { "width": 1.0, "color": "#e0e0e0" },
+    "variants": [],
+    "children": [
+      {
+        "name": "avatar",
+        "role": "frame",
+        "auto_layout": null,
+        "size": { "width": 48.0, "height": 48.0 },
+        "fill": "#2266ff",
+        "corner_radius": 24.0,
+        "stroke": null,
+        "text": null,
+        "variants": [],
+        "children": []
+      },
+      {
+        "name": "name",
+        "role": "text",
+        "auto_layout": null,
+        "size": null,
+        "fill": "#111111",
+        "corner_radius": 0.0,
+        "stroke": null,
+        "text": { "content": "Ada Lovelace", "font_size": 16.0 },
+        "variants": [],
+        "children": []
+      },
+      {
+        "name": "follow",
+        "role": "button",
+        "auto_layout": null,
+        "size": { "width": 96.0, "height": 32.0 },
+        "fill": "#2266ff",
+        "corner_radius": 8.0,
+        "stroke": null,
+        "text": { "content": "Follow", "font_size": 14.0 },
+        "variants": ["filled", "outlined"],
+        "children": []
+      }
+    ]
+  }
+}

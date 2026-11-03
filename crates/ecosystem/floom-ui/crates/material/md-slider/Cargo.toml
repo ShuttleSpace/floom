@@ -1,0 +1,23 @@
+[package]
+name = "floom-widget-md-slider"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+floom-core-theme = { workspace = true }
+floom-widget-runtime = { workspace = true, features = ["material"] }
+# The theme signal, so a host that swaps the app theme re-themes the slider.
+floom-signal = { path = "../../../../../floom-signal" }
+# The engine's colour type, which `floom-ui-composites`' `SliderStyle` speaks.
+floom-types = { path = "../../../../../floom-types" }
+# The engine's `Slider` moved up a layer; this kit adapts its tokens to the
+# composite, not to the widget crate it left.
+floom-ui-composites = { path = "../../floom-ui-composites" }
+
+[dev-dependencies]
+floom-core = { path = "../../../../../floom-core" }
+# The paint assertions read back a recorded scene, which needs the testkit the
+# engine ships.
+floom-widgets = { path = "../../../../../floom-widgets" }
+floom-types = { path = "../../../../../floom-types" }
+floom-core-theme = { workspace = true }

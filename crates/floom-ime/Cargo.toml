@@ -1,0 +1,10 @@
+[package]
+name = "floom-ime"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Platform-neutral IME state machine for Floom 2.0"
+rust-version.workspace = true
+
+[dependencies]

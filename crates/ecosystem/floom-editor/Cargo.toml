@@ -1,0 +1,45 @@
+[workspace]
+resolver = "3"
+members = ["floom-editor", "examples/editor", "examples/ide", "examples/syntax-editor"]
+
+[workspace.package]
+edition = "2024"
+license = "MIT"
+version = "0.1.0"
+
+[workspace.dependencies]
+# The public facade, for the examples' `run_desktop` entry point. The satellite
+# reaches the framework crates directly (below) rather than through it, the way
+# the `floom-ui` satellite does.
+floom = { path = "../../floom", default-features = false, features = ["desktop", "renderer-gpu"] }
+
+# The framework crates the ported editor is built on.
+floom-core = { path = "../../floom-core" }
+floom-ime = { path = "../../floom-ime" }
+floom-signal = { path = "../../floom-signal" }
+floom-task = { path = "../../floom-task" }
+floom-text = { path = "../../floom-text" }
+floom-types = { path = "../../floom-types" }
+floom-widgets = { path = "../../floom-widgets" }
+
+# The app shell and the harnesses the tests drive.
+floom-app = { path = "../../floom-app" }
+floom-layout = { path = "../../floom-layout" }
+floom-platform = { path = "../../floom-platform" }
+floom-renderer-software = { path = "../../floom-renderer-software" }
+floom-scene = { path = "../../floom-scene" }
+floom-testkit = { path = "../../floom-testkit" }
+
+# `floom` is reached by path, and a `[patch]` only applies to the workspace that
+# declares it — floom's own patches do not reach this nested workspace. So the
+# vendored lapce/winit tree is pinned here too, exactly as the monorepo root
+# pins it, so both workspaces resolve the same `floem-winit-core` and `dpi`
+# instances. A mismatch would make `ApplicationHandler` two distinct traits.
+#
+# No `[patch.crates-io]` is needed any more: floom consumes the retargeted OHOS
+# fork through a path dependency (`crates/vendor/floom-winit-ohos`), not a crates.io
+# package.
+[patch."https://github.com/lapce/winit"]
+floem-winit = { path = "../../vendor/floem-winit/winit" }
+floem-winit-core = { path = "../../vendor/floem-winit/winit-core" }
+dpi = { path = "../../vendor/floem-winit/dpi" }

@@ -1,0 +1,232 @@
+# Renderer backend support matrix
+
+What each renderer backend actually answers, and what it silently does not.
+
+This exists because "a backend without a blur primitive can still draw the
+offset silhouette and count what it could not do — *the degradation is
+recorded, never silent*" is a stated design principle (`floom-types::Shadow`),
+and a principle with no ledger decays. This file is the ledger.
+
+## The rule
+
+A request a backend cannot honour is **counted**, and the count is surfaced
+through the backend's stats. A silent skip reads as a feature that quietly
+does nothing, and there is no way to tell that apart from a feature that was
+never asked for.
+
+Every backend has a `*Stats` struct with the counters below. The names match
+across backends on purpose: a caller reads one number the same way whichever
+backend produced it.
+
+## The vocabulary
+
+The 2.0 scene vocabulary is `floom-scene`'s `SceneNode` — twelve variants:
+
+| Variant | What it asks for |
+|---|---|
+| `GroupPush` / `GroupPop` | a transform scope |
+| `Rect { bounds, fill, radius, shadow }` | a shape, optionally rounded, optionally shadowed |
+| `Path { path, fill, stroke }` | a vector path, filled and/or stroked |
+| `ClipPush` / `ClipPop` | a clip region |
+| `FilterPush` / `FilterPop` | a filter scope |
+| `BackdropFilter { rect, filter }` | a filter over the pixels already drawn |
+| `Shader { bounds, shader }` | a custom WGSL program |
+| `Image { bounds, image, alpha }` | a raster image |
+| `Text { origin, size, glyphs, color }` | laid-out text |
+
+## The matrix
+
+| Backend | Renders pixels? | Rounded corners | Drop shadow | Filter scope | Backdrop filter | Custom shader | Pixel-level tests |
+|---|---|---|---|---|---|---|---|
+| `floom-renderer-software` | **yes** | **yes** | **yes**, honouring `spread` | **yes** | **yes** | ⏭️ counted | **yes** |
+| `floom-renderer-vello` | **yes** (GPU) | **yes** | **yes** on rects; ⏭️ counted on paths | **yes** (offscreen + shared kernel) | ⏭️ counted | **yes** | **yes** (command-stream, plus GPU pixel tests with `--features gpu`) |
+| `floom-renderer-web` | **yes** (CPU, blitted to a `<canvas>`) | **yes** | **yes** | **yes** | **yes** | ⏭️ counted | no |
+| `floom-renderer-tui` | **yes** (character cells) | ⏭️ counted | ⏭️ counted | ⏭️ counted | ⏭️ counted | ⏭️ counted | no |
+| `floom-renderer-skia-abi` | **no** — it records | ⏭️ counted | ⏭️ counted | ⏭️ counted | ⏭️ counted | ⏭️ counted | n/a |
+
+Legend: **yes** = rendered · ⏭️ counted = skipped, and the count says so.
+
+## Per-backend notes
+
+### `floom-renderer-software` — the reference
+
+The only backend that answers per pixel, and the one every other backend is
+checked against. It renders rounded corners, drop shadows (with `spread`
+dilating the silhouette *before* the blur, as CSS does), filter scopes,
+backdrop filters, images and text.
+
+It has no shader runtime, so a `Shader` node is skipped and counted
+(`shaders_skipped`). A WGSL program needs a GPU runtime, and the software
+rasteriser is not one.
+
+Its pixel-level tests (`crates/floom-renderer-software/tests/`) are the
+discipline the other backends copy.
+
+### `floom-renderer-vello` — the GPU path, and its one remaining gap
+
+The default desktop and Android backend. It renders shapes, paths, images,
+text and custom shaders.
+
+**Filter scopes are drawn.** vello rasterises once, at the end of the whole
+scene, so nothing exists to blur while the walk is running. The scope's span is
+therefore rendered as its own offscreen pass, read back, blurred with
+`floom_renderer::blur::blur_rgba` — the *same* kernel the software rasteriser
+uses, so a `Filter::blur(8.0)` looks the same on both — and drawn back over the
+content it covers. `filters_drawn` counts the ones that really blurred.
+
+What it still cannot do is a **backdrop filter**: that wants the pixels already
+drawn at a point in the middle of the stream, and there is no such point.
+Rendering several passes into one target does not work either — vello clears
+the target on every `render_to_texture` call, which was measured rather than
+assumed:
+
+```
+one pass   left=[220,40,40,255]  right=[40,200,90,255]
+two passes left=[0,0,0,0]        right=[40,200,90,255]
+```
+
+So a backdrop filter draws nothing and counts it (`filters_skipped`).
+
+**Drop shadows are drawn.** vello 0.7 grew `draw_blurred_rounded_rect` — a
+superellipse-plus-erf approximation of a Gaussian-convolved rounded rect — and
+a `Rect` carrying a `Shadow` is folded into it. The fold is where the two
+vocabularies are reconciled:
+
+| `Shadow` | vello |
+|---|---|
+| `offset_x` / `offset_y` | the rect moves (the primitive has no offset of its own) |
+| `spread` | the rect grows on all four sides **and** the corner radius grows with it, centre fixed |
+| `blur` | the sigma, via `CSS_BLUR_TO_SIGMA` — CSS's blur radius is the half-response point, a Gaussian's sigma is the `e^-1/2` point, and they are not the same number |
+
+The spread dilates the silhouette rather than widening the blur, which is the
+CSS reading and the one the software backend already pins. The shadow is drawn
+*before* the fill: vello composites in stream order, so the other order paints
+the silhouette over the card's own face.
+
+The remaining limit is shape, not softness: the primitive blurs a **rounded
+rectangle**, so a path or a glyph run carrying a shadow still has no
+representation and still lands in `shadows_skipped`. `capabilities()` reports
+`shadows: true` because the *shadow* is honoured — a bit cannot carry a
+per-shape answer, and one that claimed to would be lying. A caller that needs
+to know which shapes get shadows reads that counter, not the bit.
+
+### `floom-renderer-web` — the software path, blitted
+
+The web presenter rasterises on the CPU through `SoftwareRenderer` and blits
+the buffer into a `<canvas>`, so it inherits the software backend's coverage
+exactly: rounded corners, drop shadows with `spread`, filter scopes and
+backdrop filters all work.
+
+What it does not have is a shader runtime, so a `Shader` node is skipped and
+counted, the same as on the software path.
+
+### `floom-renderer-tui` — a character grid
+
+The narrowest backend, and honest about it. It renders solid-filled rects and
+text; everything else is skipped and counted.
+
+Two of the degradations are worth naming because they used to be **silent**:
+
+- a **rounded corner** and a **drop shadow** are both impossible on a
+  character grid, and both were swallowed by a `..` in the match arm. They are
+  counted now, so a card that lost its shadow is a number rather than an
+  absence.
+
+The clip is tracked as a stack of rects, because a pushed region applies to
+everything drawn after the marker. A path clip is approximated by its declared
+extent, which is conservative in the safe direction: a glyph inside the
+bounds but outside the path is still drawn.
+
+### `floom-renderer-skia-abi` — a recorder, not a renderer
+
+This one links no Skia, opens no surface and puts no pixel on a screen. It
+turns a scene into **Skia-shaped commands** — `canvas.save()`,
+`canvas.concat(matrix)`, `canvas.clipPath` — and counts what a submit path
+would have to degrade.
+
+It was called `floom-renderer-skia` until 2026-10-22, and that name was a
+backend-shaped lie: a crate that sits among the backends and draws nothing
+is one. The rename says what it is, so nobody reaches for it expecting
+pixels.
+
+The commands are already in Skia's own vocabulary, so a real submit path is a
+translation rather than a redesign, and the contract tests in the crate pin
+that vocabulary.
+
+## The rules for whoever implements a submit path
+
+1. **Dilate, do not blur-alias.** Apply `spread` to the silhouette *before*
+   the blur; see `Shadow::spread` and the software backend's SDF. Folding it
+   into the blur instead is a different, and much rarer, effect.
+2. **Account for it in `reach()`.** A damage region built from
+   `Shadow::reach()` must contain a dilated shadow. Negative spread is
+   clamped at zero there, because erosion cannot extend reach.
+3. **Count what you could not do.** Add a `*_skipped` counter and surface it,
+   rather than overwriting a default no-op body.
+4. **Test against the software backend.** It answers per pixel and is the
+   reference; `crates/floom-renderer-software/tests/` holds the discipline to
+   copy.
+
+## The gaps that remain
+
+- **vello's filters.** Verified rather than assumed, because the shadow next
+  door looked blocked and was not. Three findings, in the code:
+
+  1. **No command reads back rasterised pixels.** Vello's vocabulary is 13
+     commands (`CMD_FILL` … `CMD_BLUR_RECT`, `shader/shared/ptcl.wgsl`). Not
+     one takes the frame buffer as an input.
+  2. **Layers composite, they do not process.** `push_layer`/`pop_layer`
+     carry a blend mode and an alpha; the fine shader's `CMD_END_CLIP` does
+     `blend_mix_compose` and nothing else. There is no hook between "the
+     layer finished drawing" and "the layer lands on the frame".
+  3. **The raster happens once, at the end** — the structural one. A
+     `BackdropFilter` node sits mid-stream, and by the time anything is
+     rasterised the whole scene has already been encoded. Honouring it would
+     need the prefix rasterised, read back, blurred, drawn as an image, then
+     the suffix rasterised into the same target, and the API renders one
+     scene per call.
+
+  So this is not a missing blur, it is a missing *place to stand*. The
+  software backend can do it only because it owns the pixel buffer and can
+  read and write it mid-walk; the readback path vello already has
+  (`run_shader_to_image`) cannot be reused, because a shader generates its
+  pixels from a program while a backdrop filter needs pixels that already
+  exist.
+
+  **Correction (2026-10-28):** point 3's *conclusion* still holds but its
+  stated reason was wrong, and the difference mattered. The obstacle is not
+  that "the API renders one scene per call" — it is that **vello clears the
+  target on every `render_to_texture`**, so two passes into the same texture
+  do not compose. Measured, not assumed:
+
+  ```
+  one pass   left=[220,40,40,255]  right=[40,200,90,255]
+  two passes left=[0,0,0,0]        right=[40,200,90,255]
+  ```
+
+  That distinction is what made filter *scopes* implementable (render the
+  scope's span as its own pass, read back, blur, draw it back) while leaving
+  backdrop filters blocked: a scope can be rendered whole, a backdrop filter
+  needs the prefix to survive into the suffix.
+
+  A drop shadow on a **rect** is drawn, and so is a filter scope. A shadow on
+  a path is not — `SceneNode::Path` has no `shadow` field, so there is no
+  request to drop — and a backdrop filter still draws nothing and counts it.
+- **Pixel-level tests for the GPU path.** ✅ Web, terminal and software have
+  pixel evidence; the vello GPU path has had it since 2026-10-27 —
+  `VelloGpuPresenter::render_offscreen` rasterises through the same `encode`
+  the window uses and reads the pixels back, so `tests/gpu_pixels.rs` asserts
+  on ink positions rather than on counters. They need a real adapter, so the
+  gate compiles the `gpu` feature everywhere and reports honestly whether the
+  tests ran or were skipped (`FLOOM_REQUIRE_GPU=1` makes a missing adapter
+  red).
+- **The CJK case is only covered where the font is.** `floom-text` asserts
+  that CJK does not shape to `.notdef`, and that test is macOS-gated
+  because it needs a font that is installed — an environment property
+  rather than a code one. The rendering-level evidence is therefore Latin,
+  and the CJK evidence stays where the font is known to exist.
+- **One vocabulary for the counters.** The capability query is in place
+  (`Renderer::capabilities` and `Presenter::capabilities`), and a host can
+  ask before it draws. The *counters* are still spelled slightly differently
+  between backends, so a caller that wants to report "how much was dropped"
+  across backends has to know which one it is holding.

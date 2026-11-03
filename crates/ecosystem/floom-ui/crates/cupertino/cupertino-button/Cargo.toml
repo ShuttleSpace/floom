@@ -1,0 +1,18 @@
+[package]
+name = "floom-widget-cupertino-button"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+# Ported off the v1 `floom` monolith (see docs/porting-floem-ui-to-2.0.md).
+floom-core-theme = { workspace = true }
+floom-signal = { path = "../../../../../floom-signal" }
+floom-core = { path = "../../../../../floom-core" }
+floom-types = { path = "../../../../../floom-types" }
+floom-widgets = { path = "../../../../../floom-widgets" }
+
+[dev-dependencies]
+# The design-system feature, so the kit can select the design system in its
+# own tests: `set_design_system` is gated on one of them being enabled.
+floom-core-theme = { workspace = true, features = ["cupertino"] }
+floom-types = { path = "../../../../../floom-types" }

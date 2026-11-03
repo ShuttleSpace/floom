@@ -1,0 +1,26 @@
+[package]
+name = "floom-editor-core"
+edition.workspace = true
+license.workspace = true
+version.workspace = true
+description = "The core of the floom text editor"
+repository.workspace = true
+rust-version.workspace = true
+
+# This crate is deliberately framework-free: it is the editor's *model* — a rope
+# buffer, a cursor, a selection, modes, registers, movement and word motions —
+# and it reaches for nothing from the UI layer. That is what makes it portable
+# to the 2.0 widget model without a single line of change: the port's risk lives
+# in the view layer, not here.
+[dependencies]
+serde = { workspace = true, optional = true }
+strum = { workspace = true }
+strum_macros = { workspace = true }
+ui-events = { workspace = true }
+lapce-xi-rope = { workspace = true }
+itertools = "0.14.0"
+bitflags = "2.4.2"
+memchr = "2.7.1"
+
+[features]
+serde = ["dep:serde"]

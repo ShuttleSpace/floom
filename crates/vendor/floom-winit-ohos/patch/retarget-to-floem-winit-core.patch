@@ -1,0 +1,134 @@
+diff -ru tgui-orig/Cargo.toml tgui-new/Cargo.toml
+--- tgui-orig/Cargo.toml	2026-08-11 22:27:45
++++ tgui-new/Cargo.toml	2026-08-11 22:27:45
+@@ -38,7 +38,7 @@
+ 
+ [features]
+ default = []
+-serde = ["winit-core/serde"]
++serde = ["floem-winit-core/serde"]
+ 
+ [lib]
+ name = "tgui_winit_ohos"
+@@ -64,7 +64,9 @@
+ version = "0.1.40"
+ default-features = false
+ 
+-[dependencies.winit-core]
+-version = "0.31.0-beta.2"
++[dependencies.floem-winit-core]
++git = "https://github.com/lapce/winit"
++rev = "133268de675a4fda70816d78a7a1435eb972fea1"
++package = "floem-winit-core"
+ 
+ [dev-dependencies]
+diff -ru tgui-orig/src/event_loop.rs tgui-new/src/event_loop.rs
+--- tgui-orig/src/event_loop.rs	2026-08-11 22:27:45
++++ tgui-new/src/event_loop.rs	2026-08-11 22:27:45
+@@ -10,24 +10,24 @@
+ use raw_window_handle as rwh_06;
+ use smol_str::SmolStr;
+ use tracing::warn;
+-use winit_core::application::ApplicationHandler;
+-use winit_core::cursor::{Cursor, CustomCursor, CustomCursorSource};
+-use winit_core::error::{EventLoopError, NotSupportedError, RequestError};
+-use winit_core::event::{
++use floem_winit_core::application::ApplicationHandler;
++use floem_winit_core::cursor::{Cursor, CustomCursor, CustomCursorSource};
++use floem_winit_core::error::{EventLoopError, NotSupportedError, RequestError};
++use floem_winit_core::event::{
+     self, ButtonSource, DeviceId, FingerId, Force, KeyEvent, Modifiers, MouseButton,
+     MouseScrollDelta, PointerKind, PointerSource, StartCause, SurfaceSizeWriter, TouchPhase,
+     WindowEvent,
+ };
+-use winit_core::event_loop::pump_events::{EventLoopExtPumpEvents, PumpStatus};
+-use winit_core::event_loop::run_on_demand::EventLoopExtRunOnDemand;
+-use winit_core::event_loop::{
++use floem_winit_core::event_loop::pump_events::{EventLoopExtPumpEvents, PumpStatus};
++use floem_winit_core::event_loop::run_on_demand::EventLoopExtRunOnDemand;
++use floem_winit_core::event_loop::{
+     ActiveEventLoop as RootActiveEventLoop, ControlFlow, DeviceEvents,
+     EventLoopProxy as CoreEventLoopProxy, EventLoopProxyProvider,
+     OwnedDisplayHandle as CoreOwnedDisplayHandle,
+ };
+-use winit_core::keyboard::{ModifiersKeys, ModifiersState};
+-use winit_core::monitor::{Fullscreen, MonitorHandle as CoreMonitorHandle};
+-use winit_core::window::{
++use floem_winit_core::keyboard::{ModifiersKeys, ModifiersState};
++use floem_winit_core::monitor::{Fullscreen, MonitorHandle as CoreMonitorHandle};
++use floem_winit_core::window::{
+     self, CursorGrabMode, ImeCapabilities, ImePurpose, ImeRequest, ImeRequestError,
+     ResizeDirection, Theme, Window as CoreWindow, WindowAttributes, WindowButtons, WindowId,
+     WindowLevel,
+@@ -50,8 +50,8 @@
+ #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+ pub struct PlatformSpecificWindowAttributes;
+ 
+-impl winit_core::window::PlatformWindowAttributes for PlatformSpecificWindowAttributes {
+-    fn box_clone(&self) -> Box<dyn winit_core::window::PlatformWindowAttributes> {
++impl floem_winit_core::window::PlatformWindowAttributes for PlatformSpecificWindowAttributes {
++    fn box_clone(&self) -> Box<dyn floem_winit_core::window::PlatformWindowAttributes> {
+         Box::new(*self)
+     }
+ }
+@@ -1068,7 +1068,7 @@
+ 
+     fn set_window_level(&self, _level: WindowLevel) {}
+ 
+-    fn set_window_icon(&self, _window_icon: Option<winit_core::icon::Icon>) {}
++    fn set_window_icon(&self, _window_icon: Option<floem_winit_core::icon::Icon>) {}
+ 
+     fn set_ime_cursor_area(&self, _position: Position, _size: Size) {}
+ 
+@@ -1245,7 +1245,7 @@
+ 
+     use crate::WindowExtOhos;
+     use raw_window_handle::{HandleError, HasWindowHandle};
+-    use winit_core::event_loop::pump_events::PumpStatus;
++    use floem_winit_core::event_loop::pump_events::PumpStatus;
+ 
+     #[derive(Default)]
+     struct RecordingApp {
+diff -ru tgui-orig/src/ffi.rs tgui-new/src/ffi.rs
+--- tgui-orig/src/ffi.rs	2026-08-11 22:27:45
++++ tgui-new/src/ffi.rs	2026-08-11 22:27:45
+@@ -6,8 +6,8 @@
+ use std::thread::{self, JoinHandle};
+ use std::time::Duration;
+ 
+-use winit_core::application::ApplicationHandler;
+-use winit_core::event_loop::pump_events::{EventLoopExtPumpEvents, PumpStatus};
++use floem_winit_core::application::ApplicationHandler;
++use floem_winit_core::event_loop::pump_events::{EventLoopExtPumpEvents, PumpStatus};
+ 
+ use crate::{
+     EventLoop, OhosApp, OhosKeyAction, OhosMouseAction, OhosMouseButton, OhosPointerSource,
+diff -ru tgui-orig/src/keycodes.rs tgui-new/src/keycodes.rs
+--- tgui-orig/src/keycodes.rs	2026-08-11 22:27:45
++++ tgui-new/src/keycodes.rs	2026-08-11 22:27:45
+@@ -1,5 +1,5 @@
+ use smol_str::SmolStr;
+-use winit_core::keyboard::{
++use floem_winit_core::keyboard::{
+     Key, KeyCode, KeyLocation, NamedKey, NativeKey, NativeKeyCode, PhysicalKey,
+ };
+ 
+diff -ru tgui-orig/src/lib.rs tgui-new/src/lib.rs
+--- tgui-orig/src/lib.rs	2026-08-11 22:27:45
++++ tgui-new/src/lib.rs	2026-08-11 22:27:45
+@@ -18,12 +18,12 @@
+     DEFAULT_LOG_DOMAIN, DEFAULT_LOG_TAG, LOG_PREFIX, OhosLogLevel, deveco_log, deveco_log_with,
+     deveco_log_with_level,
+ };
+-pub use winit_core::event_loop::EventLoopProxy;
++pub use floem_winit_core::event_loop::EventLoopProxy;
+ 
+ use std::ffi::c_void;
+ 
+-use winit_core::event_loop::ActiveEventLoop as CoreActiveEventLoop;
+-use winit_core::window::Window as CoreWindow;
++use floem_winit_core::event_loop::ActiveEventLoop as CoreActiveEventLoop;
++use floem_winit_core::window::Window as CoreWindow;
+ 
+ pub trait ActiveEventLoopExtOhos {
+     fn ohos_app(&self) -> &OhosApp;

@@ -1,0 +1,18 @@
+[package]
+name = "floom-editor"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Shared text editing model for Floom 2.0"
+rust-version.workspace = true
+
+[dependencies]
+lapce-xi-rope = { workspace = true }
+floom-core = { path = "../floom-core", version = "0.2.0" }
+floom-types = { path = "../floom-types", version = "0.2.0" }
+floom-text = { path = "../floom-text", version = "0.2.0" }
+floom-widgets = { path = "../floom-widgets", version = "0.2.0" }
+floom-accessibility = { path = "../floom-accessibility", version = "0.2.0" }
+
+[dev-dependencies]

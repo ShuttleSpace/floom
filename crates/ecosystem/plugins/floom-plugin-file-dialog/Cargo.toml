@@ -1,0 +1,40 @@
+[package]
+name = "floom-plugin-file-dialog"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "A Floom plugin: ask the user for a file path — open, save-as, pick a directory"
+rust-version.workspace = true
+publish = false
+
+# A capability plugin: one capability, one crate, opt-in by dependency. It
+# depends on the platform layer and on nothing above it.
+#
+# The Android and iOS arms carry no platform dependency at all: they are honest
+# refusals naming the plumbing they need (an activity-result channel, a picker
+# delegate) — the `share_files` precedent — so there is no code there for a
+# bridge to reach.
+[dependencies]
+
+# macOS answers through `NSOpenPanel`/`NSSavePanel` (AppKit).
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2 = { version = "0.6", default-features = false, features = ["std"] }
+
+# Linux answers through `zenity`, falling back to `kdialog` — the same
+# spawn-the-desktop's-tool shape the `open-url` plugin uses for `xdg-open`.
+# No crate dependency: the tool is the platform's own surface.
+
+# Windows: the classic dialog pair — `GetOpenFileNameW`/`GetSaveFileNameW`
+# (comdlg32) for files, `SHBrowseForFolderW` (shell32) for directories.
+# windows-sys is already in the lock (dirs-sys pulls it), so this adds no new
+# package to the graph. The COM `IFileDialog` is the modern spelling, but it
+# costs a vtable walk hand-written without a Windows machine to test on; the
+# legacy pair is fully supported, dramatically simpler, and honest about what
+# it is. The gate's `windows` check compiles this arm.
+[target.'cfg(target_os = "windows")'.dependencies]
+windows-sys = { version = "0.61", features = [
+  "Win32_UI_Controls_Dialogs",
+  "Win32_UI_Shell_Common",
+  "Win32_System_Com",
+] }

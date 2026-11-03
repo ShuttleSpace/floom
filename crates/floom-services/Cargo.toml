@@ -1,0 +1,10 @@
+[package]
+name = "floom-services"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Scoped typed service registry (DI) with disposal for Floom 2.0"
+rust-version.workspace = true
+
+[dependencies]

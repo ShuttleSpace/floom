@@ -1,0 +1,28 @@
+[package]
+name = "floom-plugin-sensors"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "A Floom plugin: the device's motion and environment sensors"
+rust-version.workspace = true
+publish = false
+
+# A plugin owns a *capability* and the host owns the *transport*. It depends
+# on the platform layer and on nothing above it: no widget stack, no renderer,
+# no facade. An app that wants this capability adds this crate; an app that
+# does not, does not link it.
+[dependencies]
+
+# The JNI bridge — the JavaVM, the activity — is platform
+# plumbing, so it lives in the platform layer and a plugin reaches
+# for it. A plugin reaching *down* to the platform is the allowed
+# direction; the platform reaching up to a plugin is not.
+[target.'cfg(target_os = "android")'.dependencies]
+floom-platform-mobile = { path = "../../../floom-platform-mobile", version = "0.2.0" }
+jni = "0.22"
+
+# The iOS half reads `CMMotionManager` and `CMAltimeter` through objc2 and links
+# CoreMotion for the two class lookups.
+[target.'cfg(target_os = "ios")'.dependencies]
+objc2 = { version = "0.6", default-features = false, features = ["std"] }

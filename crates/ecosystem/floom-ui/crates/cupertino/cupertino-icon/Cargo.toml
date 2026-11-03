@@ -1,0 +1,17 @@
+[package]
+name = "floom-widget-cupertino-icon"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+floom-core-theme = { workspace = true }
+floom-widget-runtime = { workspace = true, features = ["cupertino"] }
+floom-widget-cupertino-icon-paths = { path = "../cupertino-icon-paths" }
+floom-signal = { path = "../../../../../floom-signal" }
+floom-core = { path = "../../../../../floom-core" }
+floom-types = { path = "../../../../../floom-types" }
+floom-widgets = { path = "../../../../../floom-widgets" }
+
+[dev-dependencies]
+floom-core-theme = { workspace = true }
+floom-types = { path = "../../../../../floom-types" }

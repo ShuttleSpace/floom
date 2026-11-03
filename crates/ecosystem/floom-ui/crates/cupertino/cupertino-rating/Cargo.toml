@@ -1,0 +1,20 @@
+[package]
+name = "floom-widget-cupertino-rating"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+# Ported off the v1 `floom` monolith (see docs/porting-floem-ui-to-2.0.md).
+floom-core-theme = { workspace = true }
+floom-signal = { path = "../../../../../floom-signal" }
+floom-core = { path = "../../../../../floom-core" }
+floom-types = { path = "../../../../../floom-types" }
+floom-widgets = { path = "../../../../../floom-widgets" }
+# The star glyph comes from this kit's own icon table.
+floom-widget-cupertino-icon = { workspace = true }
+
+[dev-dependencies]
+floom-core-theme = { workspace = true, features = ["cupertino"] }
+floom-core = { path = "../../../../../floom-core" }
+floom-types = { path = "../../../../../floom-types" }
+floom-widgets = { path = "../../../../../floom-widgets" }

@@ -1,0 +1,17 @@
+# Capability plugins: one capability, one crate, opt-in by dependency.
+#
+# This is deliberately its own workspace, like `floom-ui` and `floom-editor`
+# next door: the SDK ships no plugin, so building the SDK does not build these.
+# An application adds the ones it wants by path or by version. The path back to
+# the platform layer crosses the workspace boundary on purpose — that edge is
+# the only thing a plugin is allowed to depend on.
+[workspace]
+resolver = "3"
+members = ["floom-plugin-*"]
+
+[workspace.package]
+license = "MIT"
+version = "0.2.0"
+edition = "2024"
+rust-version = "1.91"
+repository = "https://github.com/lapce/floom"

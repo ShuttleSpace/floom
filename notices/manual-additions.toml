@@ -1,0 +1,24 @@
+# cargo-about manual license additions.
+#
+# Floom vendors forked upstream crates in `crates/vendor/`. They are not on crates.io,
+# so cargo-about cannot auto-detect their licenses. Record them here, taken from
+# each fork's upstream project (see `crates/vendor/*/NOTICE.md` for the full source +
+# delta note).
+
+[[annotations]]
+id = "crates/vendor/floem-winit"
+license = "Apache-2.0 OR MIT"
+notes = "Fork of lapce/winit @ 133268de. See crates/vendor/floem-winit/NOTICE.md."
+
+[[annotations]]
+id = "crates/vendor/floom-winit-ohos"
+license = "Apache-2.0 OR MIT"
+notes = "Fork of tgui-winit-ohos 0.4.11 (renamed to floom-winit-ohos). See crates/vendor/floom-winit-ohos/NOTICE.md."
+
+# The third fork — `ui-events/floem-winit`, a fork of endoli/ui-events'
+# `ui-events-winit` 0.1.0 (upstream is Apache-2.0 OR MIT) — needs no entry here:
+# it is a workspace *member*, so it declares a licence in its own manifest
+# (inherited `license.workspace`) and cargo-about detects it automatically. It
+# still carries a NOTICE.md recording its provenance; the upstream
+# LICENSE-APACHE / LICENSE-MIT files are kept verbatim in that directory.
+# See ui-events/floem-winit/NOTICE.md.

@@ -1,0 +1,19 @@
+[package]
+name = "floom-renderer-tui"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Terminal (character-cell) Scene renderer and presenter for Floom 2.0"
+rust-version.workspace = true
+
+[dependencies]
+floom-renderer = { path = "../floom-renderer", version = "0.2.0" }
+floom-scene = { path = "../floom-scene", version = "0.2.0" }
+floom-types = { path = "../floom-types", version = "0.2.0" }
+
+[dev-dependencies]
+floom-text = { path = "../floom-text", version = "0.2.0" }
+# The golden-file comparison comes from `floom-renderer` (already a
+# dependency, so no new edge): the terminal's picture is a character grid,
+# and the snapshot is that grid as text.

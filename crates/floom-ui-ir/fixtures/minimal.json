@@ -1,0 +1,24 @@
+{
+  "version": {
+    "major": 1,
+    "minor": 0
+  },
+  "root": "r",
+  "bindings": [],
+  "nodes": [
+    {
+      "key": "r",
+      "kind": "Text",
+      "props": [
+        {
+          "name": "label",
+          "value": {
+            "Text": "hello"
+          }
+        }
+      ],
+      "slots": [],
+      "events": []
+    }
+  ]
+}

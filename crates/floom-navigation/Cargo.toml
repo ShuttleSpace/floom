@@ -1,0 +1,10 @@
+[package]
+name = "floom-navigation"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Typed routing, navigation stacks and deep links for Floom 2.0"
+rust-version.workspace = true
+
+[dependencies]

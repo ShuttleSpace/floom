@@ -1,0 +1,37 @@
+[package]
+name = "floom-tsx-showcase"
+version.workspace = true
+edition.workspace = true
+publish = false
+description = "floom-tsx build-time TSX -> Rust GUI demo (Task 7)"
+
+# The real-window stack (winit + vello GPU) is optional so the default build
+# stays dependency-light and only proves the TSX -> emit -> compile path.
+[features]
+default = []
+real = [
+    "dep:floom-platform-desktop",
+    "dep:floom-renderer-vello",
+    "floom-platform-desktop/winit",
+    "floom-renderer-vello/gpu",
+]
+
+[dependencies]
+floom-app = { path = "../../crates/floom-app", version = "0.2.0" }
+floom-core = { path = "../../crates/floom-core", version = "0.2.0" }
+floom-layout = { path = "../../crates/floom-layout", version = "0.2.0" }
+floom-platform = { path = "../../crates/floom-platform", version = "0.2.0" }
+floom-types = { path = "../../crates/floom-types", version = "0.2.0" }
+# Referenced by the generated `ui_gen.rs`.
+floom-widgets = { path = "../../crates/floom-widgets", version = "0.2.0" }
+# Only needed when the window actually runs.
+floom-platform-desktop = { path = "../../crates/floom-platform-desktop", version = "0.2.0", optional = true }
+floom-renderer-vello = { path = "../../crates/floom-renderer-vello", version = "0.2.0", optional = true }
+
+[build-dependencies]
+floom-tsx = { path = "../../crates/floom-tsx" }
+floom-dsl = { path = "../../crates/floom-dsl" }
+
+[dev-dependencies]
+floom-testkit = { path = "../../crates/floom-testkit" }
+floom-types = { path = "../../crates/floom-types" }

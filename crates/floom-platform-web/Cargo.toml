@@ -1,0 +1,39 @@
+[package]
+name = "floom-platform-web"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Web/WASM platform adapter for Floom 2.0"
+rust-version.workspace = true
+
+[features]
+default = []
+# Enable when a WASM navigator.gpu probe is linked.
+webgpu-probe = []
+
+[dependencies]
+floom-accessibility = { path = "../floom-accessibility", version = "0.2.0" }
+floom-platform = { path = "../floom-platform", version = "0.2.0" }
+floom-types = { path = "../floom-types", version = "0.2.0" }
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+wasm-bindgen = "0.2"
+js-sys = "0.3"
+web-sys = { version = "0.3", features = [
+    "Window",
+    "Document",
+    "Element",
+    "HtmlCanvasElement",
+    "CanvasRenderingContext2d",
+    "CssStyleDeclaration",
+    "ImageData",
+    "Event",
+    "EventTarget",
+    "KeyboardEvent",
+    "MouseEvent",
+    "PointerEvent",
+    "WheelEvent",
+    "CompositionEvent",
+] }
+

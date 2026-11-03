@@ -1,0 +1,22 @@
+[package]
+name = "floom-widget-md-color_picker"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+# Ported off the v1 `floom` monolith (see docs/porting-floem-ui-to-2.0.md).
+floom-widget-runtime = { workspace = true, features = ["material"] }
+floom-core-theme = { workspace = true }
+floom-signal = { path = "../../../../../floom-signal" }
+floom-core = { path = "../../../../../floom-core" }
+floom-types = { path = "../../../../../floom-types" }
+floom-widgets = { path = "../../../../../floom-widgets" }
+# The engine's ColorPicker: a square, two strips, a preview and a hex
+# field.
+floom-ui-composites = { path = "../../floom-ui-composites" }
+
+[dev-dependencies]
+floom-core-theme = { workspace = true, features = ["material"] }
+floom-core = { path = "../../../../../floom-core" }
+floom-types = { path = "../../../../../floom-types" }
+floom-widgets = { path = "../../../../../floom-widgets" }

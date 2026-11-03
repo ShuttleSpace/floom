@@ -1,0 +1,6 @@
+  Text { origin: Point { x: 0.0, y: 0.0 }, size: Size { width: 21.7861328125, height: 14.0 }, glyphs: ResourceId(GenerationalId { raw: 4294967296 }), color: Color { r: 0, g: 0, b: 0, a: 255 } }
+  Rect { bounds: Rect { x0: 0.0, y0: 22.0, x1: 48.0, y1: 44.0 }, fill: Solid(Color { r: 43, g: 108, b: 176, a: 255 }), radius: 4.0, shadow: None }
+  Text { origin: Point { x: 8.0, y: 26.0 }, size: Size { width: 31.91015625, height: 14.0 }, glyphs: ResourceId(GenerationalId { raw: 4294967297 }), color: Color { r: 255, g: 255, b: 255, a: 255 } }
+  Rect { bounds: Rect { x0: 0.0, y0: 52.0, x1: 40.0, y1: 72.0 }, fill: Solid(Color { r: 56, g: 161, b: 105, a: 255 }), radius: 10.0, shadow: None }
+  Rect { bounds: Rect { x0: 20.0, y0: 52.0, x1: 40.0, y1: 72.0 }, fill: Solid(Color { r: 255, g: 255, b: 255, a: 255 }), radius: 10.0, shadow: None }
+  Text { origin: Point { x: 46.0, y: 52.0 }, size: Size { width: 92.5791015625, height: 14.0 }, glyphs: ResourceId(GenerationalId { raw: 4294967298 }), color: Color { r: 0, g: 0, b: 0, a: 255 } }

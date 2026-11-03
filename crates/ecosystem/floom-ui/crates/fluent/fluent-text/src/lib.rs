@@ -1,0 +1,108 @@
+//! Fluent text, ported to the Floom 2.0 widget API.
+
+use floom_signal::{RwSignal, SignalGet};
+use floom_types::{Color as PaintColor, FontWeight};
+
+use floom_widgets::Text;
+
+use floom_core_theme::props::text::TextProps;
+use floom_core_theme::theme::{MultiTheme, Theme};
+use floom_core_theme::tokens::color::to_engine_color as to_paint;
+use floom_core_theme::tokens::color::Color;
+use floom_core_theme::tokens::typography::{FontWeight as ThemeFontWeight, TextStyle};
+
+const DESIGN_SYSTEM: &str = "fluent";
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct FluentTextStyle {
+    pub design_system: &'static str,
+    pub color: Color,
+    pub font_size: f32,
+    pub line_height: f32,
+    pub typography: TextStyle,
+}
+
+pub struct FluentText {
+    props: TextProps,
+    theme: RwSignal<MultiTheme>,
+}
+
+impl FluentText {
+    pub fn new(content: impl Into<String>) -> Self {
+        Self {
+            props: TextProps {
+                content: content.into(),
+                ..Default::default()
+            },
+            theme: RwSignal::new(MultiTheme::new_for(
+                floom_core_theme::global_theme::DesignSystem::Fluent,
+            )),
+        }
+    }
+
+    /// see the module note.
+    pub fn max_lines(mut self, max_lines: usize) -> Self {
+        self.props.max_lines = Some(max_lines);
+        self
+    }
+
+    /// the module note.
+    pub fn selectable(mut self, selectable: bool) -> Self {
+        self.props.is_selectable = selectable;
+        self
+    }
+
+    pub fn props(&self) -> &TextProps {
+        &self.props
+    }
+
+    pub fn theme(&self) -> RwSignal<MultiTheme> {
+        self.theme
+    }
+
+    pub fn with_theme(mut self, theme: MultiTheme) -> Self {
+        self.theme = RwSignal::new(theme);
+        self
+    }
+
+    pub fn resolved_style(&self) -> FluentTextStyle {
+        let theme = self.theme.get();
+        let typography = theme.typography().body.medium.clone();
+        FluentTextStyle {
+            design_system: DESIGN_SYSTEM,
+            color: theme.colors().on_surface,
+            font_size: typography.font_size,
+            line_height: typography.line_height,
+            typography,
+        }
+    }
+
+    pub fn view(self) -> Text {
+        let style = self.resolved_style();
+        let content = self.props.content.clone();
+        Text::new(content)
+            .size(style.font_size)
+            .weight(to_engine_weight(style.typography.font_weight))
+            .color(to_paint(style.color))
+    }
+}
+
+impl Default for FluentText {
+    fn default() -> Self {
+        Self::new(String::new())
+    }
+}
+
+pub fn to_engine_weight(w: ThemeFontWeight) -> FontWeight {
+    match w {
+        ThemeFontWeight::Thin => FontWeight::Thin,
+        ThemeFontWeight::ExtraLight => FontWeight::ExtraLight,
+        ThemeFontWeight::Light => FontWeight::Light,
+        ThemeFontWeight::Regular => FontWeight::Normal,
+        ThemeFontWeight::Medium => FontWeight::Medium,
+        ThemeFontWeight::SemiBold => FontWeight::SemiBold,
+        ThemeFontWeight::Bold => FontWeight::Bold,
+        ThemeFontWeight::ExtraBold => FontWeight::ExtraBold,
+        ThemeFontWeight::Black => FontWeight::Black,
+    }
+}

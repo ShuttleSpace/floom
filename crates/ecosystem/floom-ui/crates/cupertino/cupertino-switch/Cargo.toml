@@ -1,0 +1,27 @@
+[package]
+name = "floom-widget-cupertino-switch"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+# Ported off the v1 `floom` monolith (see docs/porting-floem-ui-to-2.0.md).
+# The theme signal comes from floom-widget-runtime, which is already ported.
+#
+# `features = ["cupertino"]`. All three design-system features are the *same* gate --
+# `#[cfg(any(feature = "material", feature = "cupertino", feature = "fluent"))]` --
+# so enabling the wrong one compiles just as well, which is how a generated
+# manifest once said `["material"]` in a Cupertino crate and still built. These
+# features are presence flags, not data selectors.
+floom-core-theme = { workspace = true }
+floom-widget-runtime = { workspace = true, features = ["cupertino"] }
+floom-signal = { path = "../../../../../floom-signal" }
+floom-core = { path = "../../../../../floom-core" }
+floom-types = { path = "../../../../../floom-types" }
+floom-widgets = { path = "../../../../../floom-widgets" }
+
+[dev-dependencies]
+floom-core-theme = { workspace = true }
+floom-core = { path = "../../../../../floom-core" }
+floom-types = { path = "../../../../../floom-types" }
+floom-widgets = { path = "../../../../../floom-widgets" }
+floom-signal = { path = "../../../../../floom-signal" }

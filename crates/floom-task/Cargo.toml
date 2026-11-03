@@ -1,0 +1,13 @@
+[package]
+name = "floom-task"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Task and Resource primitives for Floom 2.0"
+rust-version.workspace = true
+
+[dependencies]
+floom-signal = { path = "../floom-signal", version = "0.2.0" }
+
+[dev-dependencies]
